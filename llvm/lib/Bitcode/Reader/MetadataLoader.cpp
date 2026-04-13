@@ -1937,7 +1937,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPILE_UNIT: {
-    if (Record.size() < 14 || Record.size() > 23)
+    if (Record.size() < 14 || Record.size() > 24)
       return error("Invalid record");
 
     // Ignore Record[0], which indicates whether this compile unit is
@@ -1965,7 +1965,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Record.size() <= 18 ? 0 : Record[18],
         Record.size() <= 19 ? false : Record[19],
         Record.size() <= 20 ? nullptr : getMDString(Record[20]),
-        Record.size() <= 21 ? nullptr : getMDString(Record[21]));
+        Record.size() <= 21 ? nullptr : getMDString(Record[21]),
+        // Record layout matches ModuleBitcodeWriter::writeDICompileUnit. Index
+        // 22 is the source-language version (0 when unversioned), not dialect.
+        // Optional dialect is index 23; it is omitted when Record.size() <= 23.
+        Record.size() <= 23 ? nullptr : getMDString(Record[23]));
 
     MetadataList.assignValue(CU, NextMetadataNo);
     NextMetadataNo++;

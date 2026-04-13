@@ -2080,7 +2080,8 @@ private:
           DIImportedEntityArray ImportedEntities, DIMacroNodeArray Macros,
           uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
           unsigned NameTableKind, bool RangesBaseAddress, StringRef SysRoot,
-          StringRef SDK, StorageType Storage, bool ShouldCreate = true) {
+          StringRef SDK, StringRef Dialect, StorageType Storage,
+          bool ShouldCreate = true) {
     return getImpl(
         Context, SourceLanguage, File, getCanonicalMDString(Context, Producer),
         IsOptimized, getCanonicalMDString(Context, Flags), RuntimeVersion,
@@ -2089,7 +2090,9 @@ private:
         ImportedEntities.get(), Macros.get(), DWOId, SplitDebugInlining,
         DebugInfoForProfiling, NameTableKind, RangesBaseAddress,
         getCanonicalMDString(Context, SysRoot),
-        getCanonicalMDString(Context, SDK), Storage, ShouldCreate);
+        getCanonicalMDString(Context, SDK),
+        Dialect.empty() ? nullptr : getCanonicalMDString(Context, Dialect),
+        Storage, ShouldCreate);
   }
   LLVM_ABI static DICompileUnit *
   getImpl(LLVMContext &Context, DISourceLanguageName SourceLanguage,
@@ -2100,7 +2103,7 @@ private:
           Metadata *Macros, uint64_t DWOId, bool SplitDebugInlining,
           bool DebugInfoForProfiling, unsigned NameTableKind,
           bool RangesBaseAddress, MDString *SysRoot, MDString *SDK,
-          StorageType Storage, bool ShouldCreate = true);
+          MDString *Dialect, StorageType Storage, bool ShouldCreate = true);
 
   TempDICompileUnit cloneImpl() const {
     return getTemporary(
@@ -2109,7 +2112,7 @@ private:
         getEmissionKind(), getEnumTypes(), getRetainedTypes(),
         getGlobalVariables(), getImportedEntities(), getMacros(), DWOId,
         getSplitDebugInlining(), getDebugInfoForProfiling(), getNameTableKind(),
-        getRangesBaseAddress(), getSysRoot(), getSDK());
+        getRangesBaseAddress(), getSysRoot(), getSDK(), getDialect());
   }
 
 public:
@@ -2126,12 +2129,12 @@ public:
        DIImportedEntityArray ImportedEntities, DIMacroNodeArray Macros,
        uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
        DebugNameTableKind NameTableKind, bool RangesBaseAddress,
-       StringRef SysRoot, StringRef SDK),
+       StringRef SysRoot, StringRef SDK, StringRef Dialect = StringRef()),
       (SourceLanguage, File, Producer, IsOptimized, Flags, RuntimeVersion,
        SplitDebugFilename, EmissionKind, EnumTypes, RetainedTypes,
        GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining,
        DebugInfoForProfiling, (unsigned)NameTableKind, RangesBaseAddress,
-       SysRoot, SDK))
+       SysRoot, SDK, Dialect))
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
       (DISourceLanguageName SourceLanguage, Metadata *File, MDString *Producer,
@@ -2141,11 +2144,12 @@ public:
        Metadata *ImportedEntities, Metadata *Macros, uint64_t DWOId,
        bool SplitDebugInlining, bool DebugInfoForProfiling,
        unsigned NameTableKind, bool RangesBaseAddress, MDString *SysRoot,
-       MDString *SDK),
+       MDString *SDK, MDString *Dialect = nullptr),
       (SourceLanguage, File, Producer, IsOptimized, Flags, RuntimeVersion,
        SplitDebugFilename, EmissionKind, EnumTypes, RetainedTypes,
        GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining,
-       DebugInfoForProfiling, NameTableKind, RangesBaseAddress, SysRoot, SDK))
+       DebugInfoForProfiling, NameTableKind, RangesBaseAddress, SysRoot, SDK,
+       Dialect))
 
   TempDICompileUnit clone() const { return cloneImpl(); }
 
@@ -2192,6 +2196,13 @@ public:
   }
   StringRef getSysRoot() const { return getStringOperand(9); }
   StringRef getSDK() const { return getStringOperand(10); }
+  /// Target-specific language dialect for DWARF. Empty when unset.
+  StringRef getDialect() const {
+    if (getNumOperands() <= 11)
+      return {};
+    auto *S = dyn_cast_or_null<MDString>(getOperand(11));
+    return S ? S->getString() : StringRef{};
+  }
 
   MDString *getRawProducer() const { return getOperandAs<MDString>(1); }
   MDString *getRawFlags() const { return getOperandAs<MDString>(2); }
@@ -2205,6 +2216,9 @@ public:
   Metadata *getRawMacros() const { return getOperand(8); }
   MDString *getRawSysRoot() const { return getOperandAs<MDString>(9); }
   MDString *getRawSDK() const { return getOperandAs<MDString>(10); }
+  MDString *getRawDialect() const {
+    return getNumOperands() > 11 ? getOperandAs<MDString>(11) : nullptr;
+  }
 
   /// Replace arrays.
   ///

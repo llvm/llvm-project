@@ -149,14 +149,14 @@ DICompileUnit *DIBuilder::createCompileUnit(
     DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId,
     bool SplitDebugInlining, bool DebugInfoForProfiling,
     DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress,
-    StringRef SysRoot, StringRef SDK) {
+    StringRef SysRoot, StringRef SDK, StringRef Dialect) {
 
   assert(!CUNode && "Can only make one compile unit per DIBuilder instance");
   CUNode = DICompileUnit::getDistinct(
       VMContext, Lang, File, Producer, isOptimized, Flags, RunTimeVer,
       SplitName, Kind, nullptr, nullptr, nullptr, nullptr, nullptr, DWOId,
       SplitDebugInlining, DebugInfoForProfiling, NameTableKind,
-      RangesBaseAddress, SysRoot, SDK);
+      RangesBaseAddress, SysRoot, SDK, Dialect);
 
   // Create a named metadata so that it is easier to find cu in a module.
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");

@@ -145,6 +145,8 @@ namespace llvm {
     /// \param SysRoot       The clang system root (value of -isysroot).
     /// \param SDK           The SDK name. On Darwin, this is the last component
     ///                      of the sysroot.
+    /// \param Dialect       Optional target-specific language dialect string
+    ///                      for DWARF; empty when unset.
     LLVM_ABI DICompileUnit *
     createCompileUnit(DISourceLanguageName Lang, DIFile *File,
                       StringRef Producer, bool isOptimized, StringRef Flags,
@@ -156,7 +158,7 @@ namespace llvm {
                       DICompileUnit::DebugNameTableKind NameTableKind =
                           DICompileUnit::DebugNameTableKind::Default,
                       bool RangesBaseAddress = false, StringRef SysRoot = {},
-                      StringRef SDK = {});
+                      StringRef SDK = {}, StringRef Dialect = {});
 
     /// Create a file descriptor to hold debugging information for a file.
     /// \param Filename  File name.

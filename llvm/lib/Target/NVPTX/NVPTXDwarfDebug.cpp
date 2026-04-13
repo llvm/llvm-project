@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -278,4 +279,20 @@ void NVPTXDwarfDebug::addTargetVariableAttributes(
 
   CU.addUInt(Die, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
              TargetAddrSpace.value_or(DefaultAddrSpace));
+}
+
+void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
+                                                 DwarfCompileUnit &NewCU) {
+  StringRef Dialect = DIUnit.getDialect();
+  if (!Dialect.empty()) {
+    if (Dialect != "simt" && Dialect != "tile") {
+      std::string Msg = ("unknown NVPTX language dialect '" + Dialect +
+                         "' on DICompileUnit; expected 'simt' or 'tile'")
+                            .str();
+      DIUnit.getContext().diagnose(
+          DiagnosticInfoGeneric(Twine(Msg), DS_Warning));
+    }
+    NewCU.addString(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
+                    Dialect);
+  }
 }

@@ -6128,7 +6128,7 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
 ///                      splitDebugFilename: "abc.debug",
 ///                      emissionKind: FullDebug, enums: !1, retainedTypes: !2,
 ///                      globals: !4, imports: !5, macros: !6, dwoId: 0x0abcd,
-///                      sysroot: "/", sdk: "MacOSX.sdk")
+///                      sysroot: "/", sdk: "MacOSX.sdk", dialect: "simt")
 bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
     return tokError("missing 'distinct', required for !DICompileUnit");
@@ -6157,7 +6157,8 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(nameTableKind, NameTableKindField, );                               \
   OPTIONAL(rangesBaseAddress, MDBoolField, = false);                           \
   OPTIONAL(sysroot, MDStringField, );                                          \
-  OPTIONAL(sdk, MDStringField, );
+  OPTIONAL(sdk, MDStringField, );                                              \
+  OPTIONAL(dialect, MDStringField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -6182,7 +6183,7 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
       splitDebugFilename.Val, emissionKind.Val, enums.Val, retainedTypes.Val,
       globals.Val, imports.Val, macros.Val, dwoId.Val, splitDebugInlining.Val,
       debugInfoForProfiling.Val, nameTableKind.Val, rangesBaseAddress.Val,
-      sysroot.Val, sdk.Val);
+      sysroot.Val, sdk.Val, dialect.Val);
   return false;
 }
 

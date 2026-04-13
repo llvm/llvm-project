@@ -840,7 +840,8 @@ private:
         RetainedTypes, GlobalVariables, ImportedEntities, CU->getMacros(),
         CU->getDWOId(), CU->getSplitDebugInlining(),
         CU->getDebugInfoForProfiling(), CU->getNameTableKind(),
-        CU->getRangesBaseAddress(), CU->getSysRoot(), CU->getSDK());
+        CU->getRangesBaseAddress(), CU->getSysRoot(), CU->getSDK(),
+        CU->getDialect());
   }
 
   DILocation *getReplacementMDLocation(DILocation *MLD) {
