@@ -1,7 +1,10 @@
 ; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon -output-asm-variant=1 -show-encoding -print-imm-hex < %s | FileCheck %s
 ; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+ite -filetype=obj < %s | llvm-objdump -d --mattr=+ite --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-ITE
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+ite -filetype=obj < %s | llvm-objdump -d --mattr=-ite --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-NO-ITE
 ; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+gcs -filetype=obj < %s | llvm-objdump -d --mattr=+gcs --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-GCS
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+gcs -filetype=obj < %s | llvm-objdump -d --mattr=-gcs --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-NO-GCS
 ; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+brbe -filetype=obj < %s | llvm-objdump -d --mattr=+brbe --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-BRBE
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+brbe -filetype=obj < %s | llvm-objdump -d --mattr=-brbe --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-NO-BRBE
 ; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon -filetype=obj < %s | llvm-objdump -d --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-RME
 
 foo:
@@ -532,28 +535,39 @@ foo:
 
   sys #3, c7, c2, #7, x2
 ; CHECK-ITE: trcit x2
+; CHECK-NO-ITE: sys #3, c7, c2, #7, x2
 
   sys #3, c7, c7, #2, x20
 ; CHECK-GCS: gcsss1 x20
+; CHECK-NO-GCS: sys #3, c7, c7, #2, x20
   sysl x23, #3, c7, c7, #3
 ; CHECK-GCS: gcsss2 x23
+; CHECK-NO-GCS: sysl x23, #3, c7, c7, #3
   sys #3, c7, c7, #0, x24
 ; CHECK-GCS: gcspushm x24
+; CHECK-NO-GCS: sys #3, c7, c7, #0, x24
   sysl xzr, #3, c7, c7, #1
 ; CHECK-GCS: gcspopm
+; CHECK-NO-GCS: sysl xzr, #3, c7, c7, #1
   sysl x24, #3, c7, c7, #1
 ; CHECK-GCS: gcspopm x24
+; CHECK-NO-GCS: sysl x24, #3, c7, c7, #1
   sys #0, c7, c7, #4
 ; CHECK-GCS: gcspushx
+; CHECK-NO-GCS: sys #0, c7, c7, #4
   sys #0, c7, c7, #5
 ; CHECK-GCS: gcspopcx
+; CHECK-NO-GCS: sys #0, c7, c7, #5
   sys #0, c7, c7, #6
 ; CHECK-GCS: gcspopx
+; CHECK-NO-GCS: sys #0, c7, c7, #6
 
   sys #1, c7, c2, #4
 ; CHECK-BRBE: brb iall
+; CHECK-NO-BRBE: sys #1, c7, c2, #4
   sys #1, c7, c2, #5
 ; CHECK-BRBE: brb inj
+; CHECK-NO-BRBE: sys #1, c7, c2, #5
 
   sys #6, c7, c0, #0, x3
 ; CHECK-RME: apas x3

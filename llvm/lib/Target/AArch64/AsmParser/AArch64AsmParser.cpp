@@ -4033,9 +4033,9 @@ void AArch64AsmParser::createSysAlias(uint16_t Encoding, OperandVector &Operands
       AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));
 }
 
-/// parseSysAlias - The IC, DC, AT, TLBI, MLBI, APAS, BRB, TRCIT, GCS aliases,
-/// GIC{R} and GSB instructions are simple aliases for the SYS instruction.
-/// Parse them specially so that we create a SYS MCInst.
+/// parseSysAlias - The IC, DC, AT, TLBI, MLBI and GIC{R} and GSB instructions
+/// are simple aliases for the SYS instruction. Parse them specially so that
+/// we create a SYS MCInst.
 bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
                                    OperandVector &Operands) {
   if (Name.contains('.'))
@@ -4043,86 +4043,6 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
 
   Mnemonic = Name;
   Operands.push_back(AArch64Operand::CreateToken("sys", NameLoc, getContext()));
-
-  if (Mnemonic == "apas") {
-    const uint16_t Encoding = (6 << 11) | (7 << 7);
-    createSysAlias(Encoding, Operands, getLoc());
-
-    if (parseRegister(Operands))
-      return TokError("expected register operand");
-
-    if (parseToken(AsmToken::EndOfStatement,
-                   "unexpected token in argument list"))
-      return true;
-
-    return false;
-  }
-
-  if (Mnemonic == "trcit") {
-    if (!(getSTI().hasFeature(AArch64::FeatureAll) ||
-          getSTI().hasFeature(AArch64::FeatureITE)))
-      return Error(NameLoc, "instruction requires: ite");
-
-    const uint16_t Encoding = (3 << 11) | (7 << 7) | (2 << 3) | 7;
-    createSysAlias(Encoding, Operands, getLoc());
-
-    if (parseRegister(Operands))
-      return TokError("expected register operand");
-
-    if (parseToken(AsmToken::EndOfStatement,
-                   "unexpected token in argument list"))
-      return true;
-
-    return false;
-  }
-
-  if (Mnemonic == "gcspushx" || Mnemonic == "gcspopcx" ||
-      Mnemonic == "gcspopx") {
-    if (!(getSTI().hasFeature(AArch64::FeatureAll) ||
-          getSTI().hasFeature(AArch64::FeatureGCS)))
-      return Error(NameLoc, "instruction requires: gcs");
-
-    uint16_t Encoding = (7 << 7) | (7 << 3);
-    if (Mnemonic == "gcspushx")
-      Encoding |= 4;
-    else if (Mnemonic == "gcspopcx")
-      Encoding |= 5;
-    else
-      Encoding |= 6;
-    createSysAlias(Encoding, Operands, getLoc());
-
-    if (parseToken(AsmToken::EndOfStatement,
-                   "unexpected token in argument list"))
-      return true;
-
-    return false;
-  }
-
-  if (Mnemonic == "brb") {
-    if (!(getSTI().hasFeature(AArch64::FeatureAll) ||
-          getSTI().hasFeature(AArch64::FeatureBRBE)))
-      return Error(NameLoc, "instruction requires: brbe");
-
-    const AsmToken &Tok = getTok();
-    StringRef Op = Tok.getString();
-    SMLoc S = Tok.getLoc();
-    uint16_t Encoding = 0;
-    if (Op.equals_insensitive("iall"))
-      Encoding = (1 << 11) | (7 << 7) | (2 << 3) | 4;
-    else if (Op.equals_insensitive("inj"))
-      Encoding = (1 << 11) | (7 << 7) | (2 << 3) | 5;
-    else
-      return TokError("invalid operand for BRB instruction");
-
-    createSysAlias(Encoding, Operands, S);
-    Lex(); // Eat operand.
-
-    if (parseToken(AsmToken::EndOfStatement,
-                   "unexpected token in argument list"))
-      return true;
-
-    return false;
-  }
 
   const AsmToken &Tok = getTok();
   StringRef Op = Tok.getString();
@@ -5586,14 +5506,11 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   size_t Start = 0, Next = Name.find('.');
   StringRef Head = Name.slice(Start, Next);
 
-  // IC, DC, AT, TLBI, MLBI, PLBI, APAS, BRB, TRCIT, GCS aliases, GIC{R},
-  // GSB and Prediction invalidation
+  // IC, DC, AT, TLBI, MLBI, PLBI, GIC{R}, GSB and Prediction invalidation
   // instructions are aliases for the SYS instruction.
   if (Head == "ic" || Head == "dc" || Head == "at" || Head == "tlbi" ||
       Head == "cfp" || Head == "dvp" || Head == "cpp" || Head == "cosp" ||
-      Head == "mlbi" || Head == "plbi" || Head == "gic" || Head == "gsb" ||
-      Head == "apas" || Head == "brb" || Head == "trcit" ||
-      Head == "gcspushx" || Head == "gcspopcx" || Head == "gcspopx")
+      Head == "mlbi" || Head == "plbi" || Head == "gic" || Head == "gsb")
     return parseSysAlias(Head, NameLoc, Operands);
 
   // GICR instructions are aliases for the SYSL instruction.

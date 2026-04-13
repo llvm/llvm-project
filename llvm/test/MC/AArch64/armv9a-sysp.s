@@ -45,6 +45,14 @@ sysp #4, c2, c1, #0, x0, x1// VTTBR_EL2     3  4  2  1  0
 // CHECK-INST: sysp #4, c2, c1, #0, x0, x1
 // CHECK-ENCODING: encoding: [0x00,0x21,0x4c,0xd5]
 
+sysp #0, c8, c2, #2, x8, x9
+// CHECK-INST: sysp #0, c8, c2, #2, x8, x9
+// CHECK-ENCODING: encoding: [0x48,0x82,0x48,0xd5]
+
+sysp #0, c8, c2, #2, xzr, xzr
+// CHECK-INST: sysp #0, c8, c2, #2
+// CHECK-ENCODING: encoding: [0x5f,0x82,0x48,0xd5]
+
 sysp #0, c2, c0, #0, x0, x1
 // CHECK-INST: sysp #0, c2, c0, #0, x0, x1
 // CHECK-ENCODING: encoding: [0x00,0x20,0x48,0xd5]

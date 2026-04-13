@@ -2163,16 +2163,16 @@ class SystemLXtI<bit L, string asm>
        (ins GPR64:$Rt, imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
             imm0_7:$op2), asm>;
 
-// GCS SYSL operations preserve the old destination value when GCS is disabled
-// at runtime, so codegen needs a tied def/use form for those cases only.
+// Codegen-only GCS SYSL operations need a tied def/use on Rt because they
+// preserve the old destination value when GCS is disabled at runtime.
 class GCSTiedSystemLXtI<bit L, string asm>
   : BaseSystemLXtI<L, (outs GPR64:$Rt),
-       (ins GPR64:$src, imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
+       (ins GPR64:$_Rt, imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
             imm0_7:$op2), asm> {
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 1;
-  let Constraints = "$src = $Rt";
+  let Constraints = "$Rt = $_Rt";
 }
 
 def RangePrefetchOperand : AsmOperandClass {

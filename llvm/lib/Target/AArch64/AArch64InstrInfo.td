@@ -2497,6 +2497,20 @@ def SYSLxt_GCS : GCSTiedSystemLXtI<1, "sysl"> {
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
                 (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
                  sys_cr_op:$Cm, timm32_0_7:$op2, XZR)>;
+def : InstAlias<"apas $Xt",
+                (SYSxt 6, 7, 0, 0, GPR64:$Xt)>;
+def : InstAlias<"brb\tiall",
+                (SYSxt 1, 7, 2, 4, XZR)>, Requires<[HasBRBE]>;
+def : InstAlias<"brb\tinj",
+                (SYSxt 1, 7, 2, 5, XZR)>, Requires<[HasBRBE]>;
+def : InstAlias<"trcit $Rt",
+                (SYSxt 3, 7, 2, 7, GPR64:$Rt)>, Requires<[HasITE]>;
+def : InstAlias<"gcspushx",
+                (SYSxt 0, 7, 7, 4, XZR)>, Requires<[HasGCS]>;
+def : InstAlias<"gcspopcx",
+                (SYSxt 0, 7, 7, 5, XZR)>, Requires<[HasGCS]>;
+def : InstAlias<"gcspopx",
+                (SYSxt 0, 7, 7, 6, XZR)>, Requires<[HasGCS]>;
 def : InstAlias<"gcspushm $Rt",
                 (SYSxt 3, 7, 7, 0, GPR64:$Rt)>, Requires<[HasGCS]>;
 def : InstAlias<"gcsss1 $Rt",

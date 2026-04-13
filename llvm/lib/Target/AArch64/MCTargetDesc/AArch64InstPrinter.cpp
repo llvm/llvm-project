@@ -1065,8 +1065,8 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
             STI.hasFeature(AArch64::FeatureGCS)))
         return false;
 
-      Name = "";
       RegSep = "\t";
+      Name = "";
       switch (Op1Val) {
       default:
         return false;
@@ -1174,8 +1174,8 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
 bool AArch64InstPrinter::printSyslAlias(const MCInst *MI,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-#ifndef NDEBUG
   unsigned Opcode = MI->getOpcode();
+#ifndef NDEBUG
   assert((Opcode == AArch64::SYSLxt || Opcode == AArch64::SYSLxt_GCS) &&
          "Invalid opcode for SYSL alias!");
 #endif
