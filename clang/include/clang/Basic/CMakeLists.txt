@@ -135,6 +135,10 @@ clang_tablegen(BuiltinsSPIRVCL.inc -gen-clang-builtins
   SOURCE BuiltinsSPIRVCL.td
   TARGET ClangBuiltinsSPIRVCL)
 
+clang_tablegen(BuiltinsSystemZ.inc -gen-clang-builtins
+  SOURCE BuiltinsSystemZ.td
+  TARGET ClangBuiltinsSystemZ)
+
 clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
   SOURCE BuiltinsX86.td
   TARGET ClangBuiltinsX86)
