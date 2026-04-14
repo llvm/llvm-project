@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
-// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -fixit %t/test_source.cpp
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -Werror=lifetime-safety-suggestions %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -I%S -Werror=lifetime-safety-suggestions %t/test_source.cpp
 
 View definition_before_header(View a);
 
@@ -62,26 +62,12 @@ struct ReturnThisPointer {
 };
 
 
-namespace std {
-template<class> class function;
-template<class R, class... Args>
-class function<R(Args...)> {
-public:
-  template<class F> function(F) {}
-  function(const function&) {}
-  function(function&&) {}
-  template<class F> function& operator=(F) { return *this; }
-  function& operator=(const function&) { return *this; }
-  function& operator=(function&&) { return *this; }
-  ~function();
-};
-} // namespace std
-
 #endif // TEST_HEADER_H
 
 //--- test_source.cpp
 
 #include "test_header.h"
+#include "Inputs/lifetime-analysis.h"
 
 View definition_before_header(View a) {
   return a;                               // expected-note {{param returned here}}
