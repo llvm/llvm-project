@@ -29,12 +29,18 @@ _CLC_OVERLOAD _CLC_CONSTFN long long __spirv_ocl_s_max(long long, long long);
 _CLC_OVERLOAD _CLC_CONSTFN int __spirv_ocl_s_min(int, int);
 _CLC_OVERLOAD _CLC_CONSTFN long __spirv_ocl_s_min(long, long);
 _CLC_OVERLOAD _CLC_CONSTFN long long __spirv_ocl_s_min(long long, long long);
-_CLC_OVERLOAD _CLC_CONSTFN unsigned int __spirv_ocl_u_max(unsigned int, unsigned int);
-_CLC_OVERLOAD _CLC_CONSTFN unsigned long __spirv_ocl_u_max(unsigned long, unsigned long);
-_CLC_OVERLOAD _CLC_CONSTFN unsigned long long __spirv_ocl_u_max(unsigned long long, unsigned long long);
-_CLC_OVERLOAD _CLC_CONSTFN unsigned int __spirv_ocl_u_min(unsigned int, unsigned int);
-_CLC_OVERLOAD _CLC_CONSTFN unsigned long __spirv_ocl_u_min(unsigned long, unsigned long);
-_CLC_OVERLOAD _CLC_CONSTFN unsigned long long __spirv_ocl_u_min(unsigned long long, unsigned long long);
+_CLC_OVERLOAD _CLC_CONSTFN unsigned int __spirv_ocl_u_max(unsigned int,
+                                                          unsigned int);
+_CLC_OVERLOAD _CLC_CONSTFN unsigned long __spirv_ocl_u_max(unsigned long,
+                                                           unsigned long);
+_CLC_OVERLOAD _CLC_CONSTFN unsigned long long
+__spirv_ocl_u_max(unsigned long long, unsigned long long);
+_CLC_OVERLOAD _CLC_CONSTFN unsigned int __spirv_ocl_u_min(unsigned int,
+                                                          unsigned int);
+_CLC_OVERLOAD _CLC_CONSTFN unsigned long __spirv_ocl_u_min(unsigned long,
+                                                           unsigned long);
+_CLC_OVERLOAD _CLC_CONSTFN unsigned long long
+__spirv_ocl_u_min(unsigned long long, unsigned long long);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_acos(float);
 _CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_acos(double);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_acosh(float);
@@ -155,7 +161,6 @@ _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_rint(float);
 _CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_rint(double);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_fclamp(float, float, float);
 _CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_fclamp(double, double, double);
-
 
 #if defined(__cplusplus)
 } // extern "C"
