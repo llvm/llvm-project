@@ -445,7 +445,7 @@ double RTNAME(Timef)() {
 
     current = b.tms_utime + b.tms_stime;
 
-    if (start == (clock_t)-1) {
+    if (start == static_cast<clock_t>(-1)) {
       start = current;
       return 0.0;
     }
