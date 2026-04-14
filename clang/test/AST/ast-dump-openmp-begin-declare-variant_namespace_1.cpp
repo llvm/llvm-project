@@ -63,7 +63,7 @@ int main() {
   return explicit1() + implicit2();
 }
 
-// CHECK:      |-NamespaceDecl [[ADDR_0:0x[a-z0-9]*]] <{{.*}}, line:7:1> line:3:11 A
+// CHECK:      |-NamespaceDecl [[ADDR_0:0x[a-z0-9]*]] <{{.*}}, line:7:1> line:3:11 referenced A
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_1:0x[a-z0-9]*]] <line:4:1, line:6:1> line:4:5 used foo 'int ({{.*}})'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_2:0x[a-z0-9]*]] <col:15, line:6:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_3:0x[a-z0-9]*]] <line:5:3, col:10>
@@ -75,7 +75,7 @@ int main() {
 // CHECK-NEXT: |   |   `-IntegerLiteral [[ADDR_9:0x[a-z0-9]*]] <col:10> 'int' 1
 // CHECK-NEXT: |   `-OMPDeclareVariantAttr [[ADDR_10:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CHECK-NEXT: |     `-DeclRefExpr [[ADDR_11:0x[a-z0-9]*]] <line:34:1> 'int ({{.*}})' Function [[ADDR_12:0x[a-z0-9]*]] 'bar[implementation={vendor(llvm)}]' 'int ({{.*}})'
-// CHECK-NEXT: |-NamespaceDecl [[ADDR_13:0x[a-z0-9]*]] <line:15:1, line:19:1> line:15:11 C
+// CHECK-NEXT: |-NamespaceDecl [[ADDR_13:0x[a-z0-9]*]] <line:15:1, line:19:1> line:15:11 referenced C
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_14:0x[a-z0-9]*]] <line:16:1, line:18:1> line:16:5 used baz 'int ({{.*}})'
 // CHECK-NEXT: |   |-CompoundStmt [[ADDR_15:0x[a-z0-9]*]] <col:15, line:18:1>
 // CHECK-NEXT: |   | `-ReturnStmt [[ADDR_16:0x[a-z0-9]*]] <line:17:3, col:10>
@@ -91,7 +91,7 @@ int main() {
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_28:0x[a-z0-9]*]] <col:15, line:26:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_29:0x[a-z0-9]*]] <line:25:3, col:10>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_30:0x[a-z0-9]*]] <col:10> 'int' 3
-// CHECK-NEXT: |-NamespaceDecl [[ADDR_31:0x[a-z0-9]*]] prev [[ADDR_5]] <line:28:1, line:37:1> line:28:11 B
+// CHECK-NEXT: |-NamespaceDecl [[ADDR_31:0x[a-z0-9]*]] prev [[ADDR_5]] <line:28:1, line:37:1> line:28:11 referenced B
 // CHECK-NEXT: | |-original Namespace [[ADDR_5]] 'B'
 // CHECK-NEXT: | |-FunctionDecl [[ADDR_27]] <line:30:1, line:32:1> line:30:1 foo[implementation={vendor(llvm)}] 'int ({{.*}})'
 // CHECK-NEXT: | | `-CompoundStmt [[ADDR_32:0x[a-z0-9]*]] <col:15, line:32:1>
