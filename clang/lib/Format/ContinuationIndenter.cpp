@@ -1017,10 +1017,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
        (Previous.is(BK_BracedInit) &&
-        (Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall ||
-         !Previous.Previous ||
-         Previous.Previous->isNoneOf(tok::identifier, tok::l_paren,
-                                     BK_BracedInit))) ||
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall) ||
        Previous.is(TT_VerilogMultiLineListLParen)) &&
       !IsInTemplateString(Current, false)) {
     CurrentState.Indent = State.Column + Spaces;
