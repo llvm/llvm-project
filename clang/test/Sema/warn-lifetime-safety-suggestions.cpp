@@ -554,7 +554,9 @@ void uaf_via_inferred_lifetimebound() {
   std::function<void()> f = []() {};
   {
     int local;
-    f = return_lambda_capturing_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+    f = return_lambda_capturing_param(local); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                              // expected-note {{function call result aliases the storage of 'local'}} \
+                                              // expected-note {{variable 'f' aliases the storage of 'local'}}
   } // expected-note {{destroyed here}}
   (void)f; // expected-note {{later used here}}
 }

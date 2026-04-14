@@ -3074,16 +3074,18 @@ std::function<void()> direct_return() {
 
 std::function<void()> copy_function() {
   int x;
-  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}}
-  std::function<void()> f2 = f;
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}} \
+                                                 // expected-note {{variable 'f' aliases the storage of 'x'}}
+  std::function<void()> f2 = f;                  // expected-note {{variable 'f2' aliases the storage of 'x'}}
   return f2; // expected-note {{returned here}}
 }
 
 std::function<void()> copy_assign() {
   int x;
-  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}}
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}} \
+                                                 // expected-note {{variable 'f' aliases the storage of 'x'}}
   std::function<void()> f2 = []() {};
-  f2 = f;
+  f2 = f;                                        // expected-note {{variable 'f2' aliases the storage of 'x'}}
   return f2; // expected-note {{returned here}}
 }
 
@@ -3102,7 +3104,8 @@ std::function<void()> reassign_safe_then_unsafe() {
   static int safe = 1;
   int local = 2;
   std::function<void()> f = []() { (void)safe; };
-  f = [&local]() { (void)local; }; // expected-warning {{address of stack memory is returned later}}
+  f = [&local]() { (void)local; }; // expected-warning {{address of stack memory is returned later}} \
+                                   // expected-note {{variable 'f' aliases the storage of 'local'}}
   return f; // expected-note {{returned here}}
 }
 
@@ -3145,7 +3148,9 @@ void uaf_via_lifetimebound() {
   std::function<void()> f = []() {};
   {
     int local;
-    f = capture_lifetimebound_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+    f = capture_lifetimebound_param(local); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                            // expected-note {{function call result aliases the storage of 'local'}} \
+                                            // expected-note {{variable 'f' aliases the storage of 'local'}}
   } // expected-note {{destroyed here}}
   (void)f; // expected-note {{later used here}}
 }
@@ -3165,6 +3170,7 @@ struct [[gsl::Pointer]] function_ref {
 // avoid this warning for non-capturing lambdas.
 void assign_non_capturing_to_function_ref(function_ref &r) {
   r = []() {}; // expected-warning {{object whose reference is captured does not live long enough}} \
+               // expected-note {{variable 'r' aliases the storage of the temporary}} \
                // expected-note {{destroyed here}}
   (void)r; // expected-note {{later used here}}
 }

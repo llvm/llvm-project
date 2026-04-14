@@ -224,7 +224,8 @@ struct HasCallback {
 
   void set_callback() {
     int local;
-    callback = [&local]() { (void)local; }; // expected-warning {{address of stack memory escapes to a field}}
+    callback = [&local]() { (void)local; }; // expected-warning {{address of stack memory escapes to a field}} \
+                                            // expected-note {{variable 'callback' aliases the storage of 'local'}}
   }
 };
 
