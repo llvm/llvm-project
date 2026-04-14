@@ -156,6 +156,12 @@ struct basic_string_view {
 };
 using string_view = basic_string_view<char>;
 
+template<typename T>
+struct span {
+  span();
+  span(const vector<T>&);
+};
+
 template<class _Mystr> struct iter {
     iter& operator-=(int);
 
@@ -191,6 +197,7 @@ template<typename T>
 struct unique_ptr {
   unique_ptr();
   unique_ptr(unique_ptr<T>&&);
+  unique_ptr& operator=(unique_ptr<T>&&);
   ~unique_ptr();
   T* release();
   T &operator*();
@@ -261,4 +268,18 @@ struct true_type {
 template<class T> struct is_pointer : false_type {};
 template<class T> struct is_pointer<T*> : true_type {};
 template<class T> struct is_pointer<T* const> : true_type {};
+
+template<class> class function;
+template<class R, class... Args>
+class function<R(Args...)> {
+public:
+  template<class F> function(F) {}
+  function(const function&) {}
+  function(function&&) {}
+  template<class F> function& operator=(F) { return *this; }
+  function& operator=(const function&) { return *this; }
+  function& operator=(function&&) { return *this; }
+  ~function();
+};
+
 }

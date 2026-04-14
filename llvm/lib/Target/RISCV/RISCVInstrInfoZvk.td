@@ -1047,6 +1047,7 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
     defvar Pseudo = !cast<Instruction>(
         !if(isSEWAware, instruction#"_VI_"#vti.LMul.MX#"_E"#vti.SEW,
                         instruction#"_VI_"#vti.LMul.MX));
+    defvar InvRotImm = !cast<SDNodeXForm>("InvRot" # vti.SEW # "Imm");
     let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     def : Pat<(vti.Vector (Intr (vti.Vector vti.RegClass:$passthru),
                           (vti.Vector vti.RegClass:$rs2),
@@ -1054,7 +1055,7 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
                           VLOpFrag)),
                           (Pseudo (vti.Vector vti.RegClass:$passthru),
                           (vti.Vector vti.RegClass:$rs2),
-                          (InvRot64Imm uimm6:$rs1),
+                          (InvRotImm uimm6:$rs1),
                           GPR:$vl, vti.Log2SEW, TU_MU)>;
 
     defvar IntrMask = !cast<Intrinsic>(intrinsic#"_mask");
@@ -1069,7 +1070,7 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
                           VLOpFrag, (XLenVT timm:$policy))),
                           (PseudoMask (vti.Vector vti.RegClass:$passthru),
                           (vti.Vector vti.RegClass:$rs2),
-                          (InvRot64Imm uimm6:$rs1),
+                          (InvRotImm uimm6:$rs1),
                           (vti.Mask VMV0:$vm),
                           GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
     }

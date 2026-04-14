@@ -15,7 +15,7 @@ contains
   type(t) :: v
 !$acc host_data use_device(v%c)
   !DEF: /foo EXTERNAL (Subroutine) ProcEntity
-  !DEF: /m/sub/OpenACCConstruct1/v ObjectEntity TYPE(t)
+  !REF: /m/sub/v
   !REF: /m/t/c
   call foo(v%c)
 !$acc end host_data

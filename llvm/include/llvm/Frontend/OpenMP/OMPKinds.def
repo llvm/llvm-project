@@ -524,6 +524,8 @@ __OMP_RTL(__last, false, Void, )
 #define EnumAttr(Kind) Attribute::get(Ctx, Attribute::AttrKind::Kind)
 #define EnumAttrInt(Kind, N) Attribute::get(Ctx, Attribute::AttrKind::Kind, N)
 #define AllocSizeAttr(N, M) Attribute::getWithAllocSizeArgs(Ctx, N, M)
+#define AllocKindAttr(Kind) Attribute::getWithAllocKind(Ctx, Kind)
+#define AllocFamilyAttr(Name) Attribute::get(Ctx, "alloc-family", Name)
 #define MemoryAttr(ME) Attribute::getWithMemoryEffects(Ctx, ME)
 #define NoCaptureAttr Attribute::getWithCaptureInfo(Ctx, CaptureInfo::none())
 #define AttributeSet(...)                                                      \
@@ -616,11 +618,6 @@ __OMP_ATTRS_SET(ReadOnlyPtrAttrs,
                     ? AttributeSet(EnumAttr(ReadOnly), EnumAttr(NoFree),
                                    NoCaptureAttr)
                     : AttributeSet())
-
-__OMP_ATTRS_SET(DeviceAllocAttrs,
-                OptimisticAttributes
-                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync))
-                    : AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync)))
 
 #if 0
 __OMP_ATTRS_SET(WriteOnlyPtrAttrs,
@@ -989,9 +986,16 @@ __OMP_RTL_ATTRS(__kmpc_doacross_fini, BarrierAttrs, AttributeSet(),
 
 __OMP_RTL_ATTRS(__kmpc_alloc_shared,
                 AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync),
-                             AllocSizeAttr(0, std::nullopt)),
+                             AllocSizeAttr(0, std::nullopt),
+                             AllocKindAttr(AllocFnKind::Alloc |
+                                           AllocFnKind::Uninitialized),
+                             AllocFamilyAttr("__kmpc_alloc_shared")),
                 ReturnPtrAttrs, ParamAttrs(SizeTyExt))
-__OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
+__OMP_RTL_ATTRS(__kmpc_free_shared,
+                AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync),
+                             AllocKindAttr(AllocFnKind::Free),
+                             AllocFamilyAttr("__kmpc_alloc_shared")),
+                AttributeSet(),
                 ParamAttrs(AttributeSet(NoCaptureAttr,
                                         EnumAttr(AllocatedPointer)),
                            SizeTyExt))
@@ -1110,6 +1114,8 @@ __OMP_RTL_ATTRS(__kmpc_is_spmd_exec_mode, AttributeSet(), SExt, ParamAttrs())
 #undef EnumAttrInt
 #undef ParamAttrs
 #undef AllocSizeAttr
+#undef AllocKindAttr
+#undef AllocFamilyAttr
 
 ///}
 
@@ -1135,6 +1141,9 @@ __OMP_IDENT_FLAG(BARRIER_IMPL_FOR, 0x0040)
 __OMP_IDENT_FLAG(BARRIER_IMPL_SECTIONS, 0x00C0)
 __OMP_IDENT_FLAG(BARRIER_IMPL_SINGLE, 0x0140)
 __OMP_IDENT_FLAG(BARRIER_IMPL_WORKSHARE, 0x01C0)
+__OMP_IDENT_FLAG(WORK_LOOP, 0x200)
+__OMP_IDENT_FLAG(WORK_SECTIONS, 0x400)
+__OMP_IDENT_FLAG(WORK_DISTRIBUTE, 0x800)
 
 #undef __OMP_IDENT_FLAG
 #undef OMP_IDENT_FLAG

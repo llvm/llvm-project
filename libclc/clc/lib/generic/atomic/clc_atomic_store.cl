@@ -17,7 +17,7 @@
 
 #undef __CLC_CASTTYPE
 #undef __CLC_AS_CASTTYPE
-#define __CLC_CASTTYPE __CLC_BIT_INTN
+#define __CLC_CASTTYPE __CLC_S_GENTYPE
 #define __CLC_AS_CASTTYPE __CLC_AS_S_GENTYPE
 
 #define __CLC_BODY "clc_atomic_def.inc"

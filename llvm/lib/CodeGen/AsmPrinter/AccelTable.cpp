@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <cstddef>
@@ -225,8 +226,8 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   void emitAbbrevs() const;
   void emitEntry(
       const DWARF5AccelTableData &Entry,
-      const DenseMap<OffsetAndUnitID, MCSymbol *> &DIEOffsetToAccelEntryLabel,
-      DenseSet<MCSymbol *> &EmittedAccelEntrySymbols);
+      const DenseMap<OffsetAndUnitID, uint64_t> &DIEOffsetToAccelEntryOffset);
+  uint64_t getEntrySize(const DWARF5AccelTableData &Entry) const;
   void emitData();
 
 public:
@@ -523,8 +524,7 @@ void Dwarf5AccelTableWriter::emitAbbrevs() const {
 
 void Dwarf5AccelTableWriter::emitEntry(
     const DWARF5AccelTableData &Entry,
-    const DenseMap<OffsetAndUnitID, MCSymbol *> &DIEOffsetToAccelEntryLabel,
-    DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) {
+    const DenseMap<OffsetAndUnitID, uint64_t> &DIEOffsetToAccelEntryOffset) {
   unsigned AbbrevIndex = Entry.getAbbrevNumber() - 1;
   assert(AbbrevIndex < AbbreviationsVector.size() &&
          "Entry abbrev index is outside of abbreviations vector range.");
@@ -533,16 +533,6 @@ void Dwarf5AccelTableWriter::emitEntry(
       getIndexForEntry(Entry);
   std::optional<OffsetAndUnitID> MaybeParentOffset =
       Entry.getParentDieOffsetAndUnitID();
-  auto EntrySymbolIt =
-      DIEOffsetToAccelEntryLabel.find(Entry.getDieOffsetAndUnitID());
-  assert(EntrySymbolIt != DIEOffsetToAccelEntryLabel.end());
-  MCSymbol *EntrySymbol = EntrySymbolIt->getSecond();
-
-  // Emit the label for this Entry, so that IDX_parents may refer to it.
-  // Note: a DIE may have multiple accelerator Entries; this check avoids
-  // creating/emitting multiple labels for the same DIE.
-  if (EmittedAccelEntrySymbols.insert(EntrySymbol).second)
-    Asm->OutStreamer->emitLabel(EntrySymbol);
 
   Asm->emitULEB128(Entry.getAbbrevNumber(), "Abbreviation code");
 
@@ -563,9 +553,9 @@ void Dwarf5AccelTableWriter::emitEntry(
     case dwarf::DW_IDX_parent: {
       if (AttrEnc.Form == dwarf::Form::DW_FORM_flag_present)
         break;
-      auto ParentSymbolIt = DIEOffsetToAccelEntryLabel.find(*MaybeParentOffset);
-      assert(ParentSymbolIt != DIEOffsetToAccelEntryLabel.end());
-      Asm->emitLabelDifference(ParentSymbolIt->getSecond(), EntryPool, 4);
+      auto It = DIEOffsetToAccelEntryOffset.find(*MaybeParentOffset);
+      assert(It != DIEOffsetToAccelEntryOffset.end());
+      Asm->emitInt32(It->second);
       break;
     }
     default:
@@ -574,20 +564,57 @@ void Dwarf5AccelTableWriter::emitEntry(
   }
 }
 
-void Dwarf5AccelTableWriter::emitData() {
-  DenseMap<OffsetAndUnitID, MCSymbol *> DIEOffsetToAccelEntryLabel;
+uint64_t
+Dwarf5AccelTableWriter::getEntrySize(const DWARF5AccelTableData &Entry) const {
+  unsigned AbbrevIndex = Entry.getAbbrevNumber() - 1;
+  assert(AbbrevIndex < AbbreviationsVector.size());
+  DebugNamesAbbrev *Abbrev = AbbreviationsVector[AbbrevIndex];
+  uint64_t Size = getULEB128Size(Entry.getAbbrevNumber());
+  std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
+      getIndexForEntry(Entry);
+  for (const auto &AttrEnc : Abbrev->getAttributes()) {
+    switch (AttrEnc.Index) {
+    case dwarf::DW_IDX_compile_unit:
+    case dwarf::DW_IDX_type_unit:
+      Size += DIEInteger(EntryRet->Index)
+                  .sizeOf(Asm->getDwarfFormParams(), AttrEnc.Form);
+      break;
+    case dwarf::DW_IDX_die_offset:
+      Size += 4;
+      break;
+    case dwarf::DW_IDX_parent:
+      if (AttrEnc.Form != dwarf::Form::DW_FORM_flag_present)
+        Size += 4;
+      break;
+    default:
+      llvm_unreachable("Unexpected index attribute!");
+    }
+  }
+  return Size;
+}
 
-  for (OffsetAndUnitID Offset : IndexedOffsets)
-    DIEOffsetToAccelEntryLabel.insert({Offset, Asm->createTempSymbol("")});
+void Dwarf5AccelTableWriter::emitData() {
+  // Pre-compute entry pool offsets for DW_IDX_parent references.
+  DenseMap<OffsetAndUnitID, uint64_t> DIEOffsetToAccelEntryOffset;
+  uint64_t Offset = 0;
+  for (auto &Bucket : Contents.getBuckets()) {
+    for (auto *Hash : Bucket) {
+      for (const auto *Value : Hash->getValues<DWARF5AccelTableData *>()) {
+        DIEOffsetToAccelEntryOffset.try_emplace(Value->getDieOffsetAndUnitID(),
+                                                Offset);
+        Offset += getEntrySize(*Value);
+      }
+      Offset += 1; // End of list
+    }
+  }
 
   Asm->OutStreamer->emitLabel(EntryPool);
-  DenseSet<MCSymbol *> EmittedAccelEntrySymbols;
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
       // Remember to emit the label for our offset.
       Asm->OutStreamer->emitLabel(Hash->Sym);
       for (const auto *Value : Hash->getValues<DWARF5AccelTableData *>())
-        emitEntry(*Value, DIEOffsetToAccelEntryLabel, EmittedAccelEntrySymbols);
+        emitEntry(*Value, DIEOffsetToAccelEntryOffset);
       Asm->OutStreamer->AddComment("End of list: " + Hash->Name.getString());
       Asm->emitInt8(0);
     }

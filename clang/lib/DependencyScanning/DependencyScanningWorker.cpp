@@ -10,8 +10,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
-#include "clang/Driver/Driver.h"
-#include "clang/Driver/Tool.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/VirtualFileSystem.h"

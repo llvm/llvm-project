@@ -38,6 +38,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/GenericLoopInfoImpl.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -1283,8 +1284,6 @@ PreservedAnalyses LoopVerifierPass::run(Function &F,
 /// visit blocks during the initial traversal.
 void LoopBlocksDFS::perform(const LoopInfo *LI) {
   LoopBlocksTraversal Traversal(*this, LI);
-  for (LoopBlocksTraversal::POTIterator POI = Traversal.begin(),
-                                        POE = Traversal.end();
-       POI != POE; ++POI)
+  for ([[maybe_unused]] BasicBlock *BB : Traversal)
     ;
 }

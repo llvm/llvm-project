@@ -194,8 +194,8 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
   case SK_ForeachLoop: {
     // The variable is a loop iterator?
     if (CurLoop->IterVar) {
-      const auto *IterVar = dyn_cast<VarInit>(CurLoop->IterVar);
-      if (IterVar && IterVar->getNameInit() == Name)
+      const VarInit *IterVar = CurLoop->IterVar;
+      if (IterVar->getNameInit() == Name)
         return IterVar;
     }
     break;
@@ -1089,29 +1089,9 @@ void TGParser::ParseRangeList(SmallVectorImpl<unsigned> &Result) {
 }
 
 /// ParseOptionalRangeList - Parse either a range list in <>'s or nothing.
-///   OptionalRangeList ::= '<' RangeList '>'
+///   OptionalRangeList ::= '{' RangeList '}'
 ///   OptionalRangeList ::= /*empty*/
 bool TGParser::ParseOptionalRangeList(SmallVectorImpl<unsigned> &Ranges) {
-  SMLoc StartLoc = Lex.getLoc();
-  if (!consume(tgtok::less))
-    return false;
-
-  // Parse the range list.
-  ParseRangeList(Ranges);
-  if (Ranges.empty())
-    return true;
-
-  if (!consume(tgtok::greater)) {
-    TokError("expected '>' at end of range list");
-    return Error(StartLoc, "to match this '<'");
-  }
-  return false;
-}
-
-/// ParseOptionalBitList - Parse either a bit list in {}'s or nothing.
-///   OptionalBitList ::= '{' RangeList '}'
-///   OptionalBitList ::= /*empty*/
-bool TGParser::ParseOptionalBitList(SmallVectorImpl<unsigned> &Ranges) {
   SMLoc StartLoc = Lex.getLoc();
   if (!consume(tgtok::l_brace))
     return false;
@@ -3687,7 +3667,7 @@ LetModeAndName TGParser::ParseLetModeAndName() {
 /// ParseBodyItem - Parse a single item within the body of a def or class.
 ///
 ///   BodyItem ::= Declaration ';'
-///   BodyItem ::= LET [append|prepend] ID OptionalBitList '=' Value ';'
+///   BodyItem ::= LET [append|prepend] ID OptionalRangeList '=' Value ';'
 ///   BodyItem ::= Defvar
 ///   BodyItem ::= Dump
 ///   BodyItem ::= Assert
@@ -3721,7 +3701,7 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
   const StringInit *FieldName = StringInit::get(Records, FieldNameStr);
 
   SmallVector<unsigned, 16> BitList;
-  if (ParseOptionalBitList(BitList))
+  if (ParseOptionalRangeList(BitList))
     return true;
   std::reverse(BitList.begin(), BitList.end());
 

@@ -65,8 +65,8 @@ IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
     if (!llvm::Regex{Header}.isValid())
       configurationDiag("Invalid ignore headers regex '%0'") << Header;
     std::string HeaderSuffix{Header.str()};
-    if (!Header.ends_with("$"))
-      HeaderSuffix += "$";
+    if (!Header.ends_with('$'))
+      HeaderSuffix += '$';
     IgnoreHeadersRegex.emplace_back(HeaderSuffix);
   }
 
@@ -227,7 +227,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     for (const auto &Inc : Missing) {
       const std::string Spelling = include_cleaner::spellHeader(
           {Inc.Missing, PP->getHeaderSearchInfo(), MainFile});
-      const bool Angled = StringRef{Spelling}.starts_with("<");
+      const bool Angled = StringRef{Spelling}.starts_with('<');
       // We might suggest insertion of an existing include in edge cases, e.g.,
       // include is present in a PP-disabled region, or spelling of the header
       // turns out to be the same as one of the unresolved includes in the

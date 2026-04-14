@@ -54,7 +54,7 @@ define void @test0(ptr noalias %M3, ptr noalias %A, ptr noalias %B) {
 entry:
   br label %if.then1165.us
 
-if.then1165.us:                                   ; preds = %if.then1165.us, %entry
+if.then1165.us:
   %indvars.iv1783 = phi i64 [ 0, %entry ], [ %indvars.iv.next1784, %if.then1165.us ]
   %gep.A  = getelementptr inbounds i16, ptr %A, i64 %indvars.iv1783
   %l.A = load i16, ptr %gep.A
@@ -70,7 +70,7 @@ if.then1165.us:                                   ; preds = %if.then1165.us, %en
   %exitcond1785 = icmp eq i64 %indvars.iv.next1784, 16
   br i1 %exitcond1785, label %for.inc1286.loopexit, label %if.then1165.us
 
-for.inc1286.loopexit:                             ; preds = %if.then1165.us
+for.inc1286.loopexit:
   ret void
 }
 
@@ -128,7 +128,7 @@ define void @test1(ptr noalias %M3, ptr noalias %A, ptr noalias %B, ptr noalias 
 entry:
   br label %if.then1165.us
 
-if.then1165.us:                                   ; preds = %if.then1165.us, %entry
+if.then1165.us:
   %indvars.iv1783 = phi i64 [ 0, %entry ], [ %indvars.iv.next1784, %if.then1165.us ]
   %fptr = load i32, ptr %C, align 4
   %gep.A  = getelementptr inbounds i16, ptr %A, i64 %indvars.iv1783
@@ -145,6 +145,6 @@ if.then1165.us:                                   ; preds = %if.then1165.us, %en
   %exitcond1785 = icmp eq i64 %indvars.iv.next1784, 16
   br i1 %exitcond1785, label %for.inc1286.loopexit, label %if.then1165.us
 
-for.inc1286.loopexit:                             ; preds = %if.then1165.us
+for.inc1286.loopexit:
   ret void
 }

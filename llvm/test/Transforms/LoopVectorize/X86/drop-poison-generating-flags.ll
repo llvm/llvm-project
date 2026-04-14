@@ -19,9 +19,9 @@ target triple = "x86_64-pc-linux-gnu"
 
 ; Drop poison-generating flags from 'sub' and 'getelementptr' feeding a masked load.
 ; Test for PR52111.
-define void @drop_scalar_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @drop_scalar_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @drop_scalar_nuw_nsw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -61,9 +61,9 @@ loop.exit:
 }
 
 ; Variant with getelementptr nusw.
-define void @drop_scalar_gep_nusw(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @drop_scalar_gep_nusw(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @drop_scalar_gep_nusw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -103,9 +103,9 @@ loop.exit:
 }
 
 ; Variant with getelementptr nuw.
-define void @drop_scalar_gep_nuw(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @drop_scalar_gep_nuw(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @drop_scalar_gep_nuw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -146,9 +146,9 @@ loop.exit:
 
 ; Drop poison-generating flags from 'sub' and 'getelementptr' feeding a masked load.
 ; In this case, 'sub' and 'getelementptr' are not guarded by the predicate.
-define void @drop_nonpred_scalar_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @drop_nonpred_scalar_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @drop_nonpred_scalar_nuw_nsw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -188,9 +188,9 @@ loop.exit:
 }
 
 ; Preserve poison-generating flags from vector 'sub', 'mul' and 'getelementptr' feeding a masked gather.
-define void @preserve_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @preserve_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @preserve_vector_nuw_nsw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -231,9 +231,9 @@ loop.exit:
 }
 
 ; Drop poison-generating flags from vector 'sub' and 'gep' feeding a masked load.
-define void @drop_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output, ptr noalias %ptrs) local_unnamed_addr #0 {
+define void @drop_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output, ptr noalias %ptrs) #0 {
 ; CHECK-LABEL: define void @drop_vector_nuw_nsw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]], ptr noalias [[PTRS:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]], ptr noalias [[PTRS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -279,9 +279,9 @@ loop.exit:
 ; Same as @drop_vector_nuw_nsw, except built with avx1; in this case,
 ; we make scalar clones of the 'sub' operation. These clones also need
 ; cleared flags.
-define void @drop_nonvector_nuw_nsw_avx1(ptr noalias nocapture readonly %input, ptr %output, ptr noalias %ptrs) local_unnamed_addr #1 {
+define void @drop_nonvector_nuw_nsw_avx1(ptr noalias nocapture readonly %input, ptr %output, ptr noalias %ptrs) #1 {
 ; CHECK-LABEL: define void @drop_nonvector_nuw_nsw_avx1(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]], ptr noalias [[PTRS:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]], ptr noalias [[PTRS:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -335,9 +335,9 @@ loop.exit:
 
 ; Preserve poison-generating flags from 'sub', which is not contributing to any address computation
 ; of any masked load/store/gather/scatter.
-define void @preserve_nuw_nsw_no_addr(ptr %output) local_unnamed_addr #0 {
+define void @preserve_nuw_nsw_no_addr(ptr %output) #0 {
 ; CHECK-LABEL: define void @preserve_nuw_nsw_no_addr(
-; CHECK-SAME: ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -372,9 +372,9 @@ loop.exit:
 }
 
 ; Drop poison-generating flags from 'sdiv' and 'getelementptr' feeding a masked load.
-define void @drop_scalar_exact(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @drop_scalar_exact(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @drop_scalar_exact(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -467,9 +467,9 @@ exit:
 }
 
 ; Preserve poison-generating flags from 'sdiv' and 'getelementptr' feeding a masked gather.
-define void @preserve_vector_exact_no_addr(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @preserve_vector_exact_no_addr(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @preserve_vector_exact_no_addr(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -513,9 +513,9 @@ loop.exit:
 
 ; Preserve poison-generating flags from 'sdiv', which is not contributing to any address computation
 ; of any masked load/store/gather/scatter.
-define void @preserve_exact_no_addr(ptr %output) local_unnamed_addr #0 {
+define void @preserve_exact_no_addr(ptr %output) #0 {
 ; CHECK-LABEL: define void @preserve_exact_no_addr(
-; CHECK-SAME: ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -551,9 +551,9 @@ loop.exit:
 
 ; Make sure we don't vectorize a loop with a phi feeding a poison value to
 ; a masked load/gather.
-define void @dont_vectorize_poison_phi(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @dont_vectorize_poison_phi(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @dont_vectorize_poison_phi(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
@@ -833,7 +833,7 @@ exit:
   ret void
 }
 
-attributes #0 = { noinline nounwind uwtable "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
+attributes #0 = { noinline "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
 attributes #1 = { "target-features"="+avx" }
 
 !0 = !{}

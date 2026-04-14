@@ -297,7 +297,9 @@ namespace {
 /// Implement the interface to convert MemRef to LLVM.
 struct ControlFlowToLLVMDialectInterface
     : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  ControlFlowToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

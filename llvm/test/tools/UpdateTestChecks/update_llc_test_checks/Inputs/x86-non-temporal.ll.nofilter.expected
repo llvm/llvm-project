@@ -7,19 +7,19 @@ define i32 @f(<8 x float> %A, i8* %B, <4 x double> %C, <4 x i64> %E, <8 x i32> %
 ; CHECK-NEXT:    movl (%rsi), %eax
 ; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    vmovntps %ymm0, (%rdi)
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm0 # [1,2,3,4]
 ; CHECK-NEXT:    addl (%rsi), %eax
 ; CHECK-NEXT:    vmovntdq %ymm0, (%rdi)
 ; CHECK-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; CHECK-NEXT:    addl (%rsi), %eax
 ; CHECK-NEXT:    vmovntpd %ymm0, (%rdi)
-; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm0 # [1,2,3,4,5,6,7,8]
 ; CHECK-NEXT:    addl (%rsi), %eax
 ; CHECK-NEXT:    vmovntdq %ymm0, (%rdi)
-; CHECK-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm0
+; CHECK-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm0 # [1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8]
 ; CHECK-NEXT:    addl (%rsi), %eax
 ; CHECK-NEXT:    vmovntdq %ymm0, (%rdi)
-; CHECK-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm0
+; CHECK-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm0 # [1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8]
 ; CHECK-NEXT:    addl (%rsi), %eax
 ; CHECK-NEXT:    vmovntdq %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper

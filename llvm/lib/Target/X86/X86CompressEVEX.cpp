@@ -237,6 +237,9 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
       Opc != X86::VPMOVB2MZ128kr && Opc != X86::VPMOVB2MZ256kr)
     return false;
 
+  if (usesExtendedRegister(MI))
+    return false;
+
   Register MaskReg = MI.getOperand(0).getReg();
   Register SrcVecReg = MI.getOperand(1).getReg();
 
@@ -447,6 +450,10 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
 
   if (!NewOpc)
     return false;
+  // NF (No Flags) instructions cannot compress to VEX/legacy encoding.
+  // NF_ND can still compress to NF (both remain EVEX).
+  assert((IsND || !(TSFlags & X86II::EVEX_NF)) &&
+         "Unexpected to compress NF instructions without ND.");
 
   const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(NewOpc);
   MI.setDesc(NewDesc);

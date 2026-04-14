@@ -956,8 +956,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  llvm::DenseMap<const DeclaratorDecl *, std::pair<llvm::Value *, llvm::Type *>>
-      OutputSemantic;
+  SmallVector<std::pair<llvm::Value *, llvm::Type *>> OutputSemantic;
 
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
@@ -965,7 +964,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       SRetOffset = 1;
       llvm::Type *VarType = Param.getParamStructRetType();
       llvm::Value *Var = B.CreateAlloca(VarType);
-      OutputSemantic.try_emplace(FD, std::make_pair(Var, VarType));
+      OutputSemantic.push_back(std::make_pair(Var, VarType));
       Args.push_back(Var);
       continue;
     }
@@ -1002,17 +1001,17 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   if (Fn->getReturnType() != CGM.VoidTy)
     // Element type is unused, so set to dummy value (NULL).
-    OutputSemantic.try_emplace(FD, std::make_pair(CI, nullptr));
+    OutputSemantic.push_back(std::make_pair(CI, nullptr));
 
-  for (auto &[Decl, SourcePair] : OutputSemantic) {
+  for (auto &SourcePair : OutputSemantic) {
     llvm::Value *Source = SourcePair.first;
     llvm::Type *ElementType = SourcePair.second;
     AllocaInst *AI = dyn_cast<AllocaInst>(Source);
     llvm::Value *SourceValue = AI ? B.CreateLoad(ElementType, Source) : Source;
 
-    auto AttrBegin = Decl->specific_attr_begin<HLSLAppliedSemanticAttr>();
-    auto AttrEnd = Decl->specific_attr_end<HLSLAppliedSemanticAttr>();
-    handleSemanticStore(B, FD, SourceValue, Decl, AttrBegin, AttrEnd);
+    auto AttrBegin = FD->specific_attr_begin<HLSLAppliedSemanticAttr>();
+    auto AttrEnd = FD->specific_attr_end<HLSLAppliedSemanticAttr>();
+    handleSemanticStore(B, FD, SourceValue, FD, AttrBegin, AttrEnd);
   }
 
   B.CreateRetVoid();
@@ -1162,6 +1161,8 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>())
+    addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
+  if (auto Attr = VD->getAttr<HLSLVkExtBuiltinOutputAttr>())
     addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
 }
 

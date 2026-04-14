@@ -2206,9 +2206,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           << /*array*/ 2
           << (*ArraySize ? (*ArraySize)->getSourceRange() : TypeRange));
 
-    InitializedEntity Entity =
-        InitializedEntity::InitializeNew(StartLoc, AllocType,
-                                         /*VariableLengthArrayNew=*/false);
+    InitializedEntity Entity = InitializedEntity::InitializeNew(
+        StartLoc, AllocType, InitializedEntity::NewArrayKind::KnownLength);
     AllocType = DeduceTemplateSpecializationFromInitializer(
         AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
@@ -2592,7 +2591,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     bool VariableLengthArrayNew = ArraySize && *ArraySize && !KnownArraySize;
     InitializedEntity Entity = InitializedEntity::InitializeNew(
-        StartLoc, InitType, VariableLengthArrayNew);
+        StartLoc, InitType,
+        VariableLengthArrayNew ? InitializedEntity::NewArrayKind::UnknownLength
+                               : InitializedEntity::NewArrayKind::KnownLength);
     InitializationSequence InitSeq(*this, Entity, Kind, Exprs);
     ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind, Exprs);
     if (FullInit.isInvalid())
@@ -3444,6 +3445,13 @@ void Sema::DeclareGlobalNewDelete() {
     AlignValT->setIntegerType(Context.getSizeType());
     AlignValT->setPromotionType(Context.getSizeType());
     AlignValT->setImplicit(true);
+
+    // Add to the std namespace so that the module merger can find it via
+    // noload_lookup and merge it with the module's explicit definition.
+    // We want the created EnumDecl to be available for redeclaration lookups,
+    // but not for regular name lookups (same pattern as
+    // getOrCreateStdNamespace).
+    getOrCreateStdNamespace()->addDecl(AlignValT);
 
     StdAlignValT = AlignValT;
   }
@@ -6631,6 +6639,9 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
       ObjCMethodDecl *D = nullptr;
       if (ObjCMessageExpr *Send = dyn_cast<ObjCMessageExpr>(E)) {
         D = Send->getMethodDecl();
+      } else if (auto *OL = dyn_cast<ObjCObjectLiteral>(E);
+                 OL && OL->isGlobalAllocation()) {
+        return E;
       } else if (ObjCBoxedExpr *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
         D = BoxedExpr->getBoxingMethod();
       } else if (ObjCArrayLiteral *ArrayLit = dyn_cast<ObjCArrayLiteral>(E)) {
@@ -6641,8 +6652,8 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
           return E;
 
         D = ArrayLit->getArrayWithObjectsMethod();
-      } else if (ObjCDictionaryLiteral *DictLit
-                                        = dyn_cast<ObjCDictionaryLiteral>(E)) {
+      } else if (ObjCDictionaryLiteral *DictLit =
+                     dyn_cast<ObjCDictionaryLiteral>(E)) {
         // Don't do reclaims if we're using the zero-element dictionary
         // constant.
         if (DictLit->getNumElements() == 0 &&
@@ -7497,7 +7508,7 @@ static void MaybeDecrementCount(
   if ((IsCompoundAssign || isIncrementDecrementUnaryOp) &&
       VD->getType().isVolatileQualified())
     return;
-  auto iter = RefsMinusAssignments.find(VD);
+  auto iter = RefsMinusAssignments.find(VD->getCanonicalDecl());
   if (iter == RefsMinusAssignments.end())
     return;
   iter->getSecond()--;

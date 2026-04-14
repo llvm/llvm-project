@@ -1450,7 +1450,8 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
   // Look through GEPs after checking they're the same except for the last
   // index.
   if (GEPA->getNumOperands() != GEPB->getNumOperands() ||
-      GEPA->getPointerOperand() != GEPB->getPointerOperand())
+      GEPA->getPointerOperand() != GEPB->getPointerOperand() ||
+      GEPA->getSourceElementType() != GEPB->getSourceElementType())
     return std::nullopt;
   gep_type_iterator GTIA = gep_type_begin(GEPA);
   gep_type_iterator GTIB = gep_type_begin(GEPB);

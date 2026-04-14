@@ -1539,33 +1539,33 @@ let isConvertibleToThreeAddress = 1, isPseudo = 1,
 let isCommutable = 1 in {
 def ADD8rr_DB   : I<0, Pseudo, (outs GR8:$dst), (ins GR8:$src1, GR8:$src2),
                     "", // orb/addb REG, REG
-                    [(set GR8:$dst, (or_is_add GR8:$src1, GR8:$src2))]>;
+                    [(set GR8:$dst, (or_disjoint GR8:$src1, GR8:$src2))]>;
 def ADD16rr_DB  : I<0, Pseudo, (outs GR16:$dst), (ins GR16:$src1, GR16:$src2),
                     "", // orw/addw REG, REG
-                    [(set GR16:$dst, (or_is_add GR16:$src1, GR16:$src2))]>;
+                    [(set GR16:$dst, (or_disjoint GR16:$src1, GR16:$src2))]>;
 def ADD32rr_DB  : I<0, Pseudo, (outs GR32:$dst), (ins GR32:$src1, GR32:$src2),
                     "", // orl/addl REG, REG
-                    [(set GR32:$dst, (or_is_add GR32:$src1, GR32:$src2))]>;
+                    [(set GR32:$dst, (or_disjoint GR32:$src1, GR32:$src2))]>;
 def ADD64rr_DB  : I<0, Pseudo, (outs GR64:$dst), (ins GR64:$src1, GR64:$src2),
                     "", // orq/addq REG, REG
-                    [(set GR64:$dst, (or_is_add GR64:$src1, GR64:$src2))]>;
+                    [(set GR64:$dst, (or_disjoint GR64:$src1, GR64:$src2))]>;
 } // isCommutable
 
 def ADD8ri_DB :   I<0, Pseudo,
                     (outs GR8:$dst), (ins GR8:$src1, i8imm:$src2),
                     "", // orb/addb REG, imm8
-                    [(set GR8:$dst, (or_is_add GR8:$src1, imm:$src2))]>;
+                    [(set GR8:$dst, (or_disjoint GR8:$src1, imm:$src2))]>;
 def ADD16ri_DB  : I<0, Pseudo, (outs GR16:$dst), (ins GR16:$src1, i16imm:$src2),
                     "", // orw/addw REG, imm
-                    [(set GR16:$dst, (or_is_add GR16:$src1, imm:$src2))]>;
+                    [(set GR16:$dst, (or_disjoint GR16:$src1, imm:$src2))]>;
 def ADD32ri_DB  : I<0, Pseudo, (outs GR32:$dst), (ins GR32:$src1, i32imm:$src2),
                     "", // orl/addl REG, imm
-                    [(set GR32:$dst, (or_is_add GR32:$src1, imm:$src2))]>;
+                    [(set GR32:$dst, (or_disjoint GR32:$src1, imm:$src2))]>;
 def ADD64ri32_DB : I<0, Pseudo,
                      (outs GR64:$dst), (ins GR64:$src1, i64i32imm:$src2),
                      "", // orq/addq REG, imm
-                     [(set GR64:$dst, (or_is_add GR64:$src1,
-                                                 i64immSExt32:$src2))]>;
+                     [(set GR64:$dst, (or_disjoint GR64:$src1,
+                                                   i64immSExt32:$src2))]>;
 }
 } // AddedComplexity, SchedRW
 
@@ -2230,9 +2230,9 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate PredNDD, Predicate PredND
   // Increment/Decrement reg.
   // Do not make INC/DEC if it is slow
   let Predicates = [UseIncDec, PredNDD] in {
-    def : Pat<(add GR8:$src, 1),   (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
-    def : Pat<(add GR16:$src, 1),  (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
-    def : Pat<(add GR32:$src, 1),  (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
+    def : Pat<(add_like GR8:$src, 1),   (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
+    def : Pat<(add_like GR16:$src, 1),  (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
+    def : Pat<(add_like GR32:$src, 1),  (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
     def : Pat<(add GR8:$src, -1),  (!cast<Instruction>(DEC8r#suffix) GR8:$src)>;
     def : Pat<(add GR16:$src, -1), (!cast<Instruction>(DEC16r#suffix) GR16:$src)>;
     def : Pat<(add GR32:$src, -1), (!cast<Instruction>(DEC32r#suffix) GR32:$src)>;
@@ -2243,18 +2243,13 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate PredNDD, Predicate PredND
     def : Pat<(X86sub_flag_nocf GR8:$src, -1),  (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
     def : Pat<(X86sub_flag_nocf GR16:$src, -1), (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
     def : Pat<(X86sub_flag_nocf GR32:$src, -1), (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
-
-    def : Pat<(or_is_add GR8:$src, 1),   (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
-    def : Pat<(or_is_add GR16:$src, 1),  (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
-    def : Pat<(or_is_add GR32:$src, 1),  (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
   }
 
   let Predicates = [UseIncDec, PredNDDI] in {
-    def : Pat<(add GR64:$src, 1),  (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
+    def : Pat<(add_like GR64:$src, 1),  (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
     def : Pat<(add GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
     def : Pat<(X86add_flag_nocf GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
     def : Pat<(X86sub_flag_nocf GR64:$src, -1), (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
-    def : Pat<(or_is_add GR64:$src, 1),  (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
   }
 }
 
