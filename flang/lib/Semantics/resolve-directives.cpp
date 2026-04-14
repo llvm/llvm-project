@@ -2693,15 +2693,15 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
 
     Scope &scope{context_.FindScope(dirContext.directiveSource)};
 
-    auto initSymbolDSA = [&](const Symbol *symbol, Symbol::Flags &dsa) {
-      auto it{scope.find(symbol->name())};
+    auto initSymbolDSA = [&](const Symbol *sym, Symbol::Flags &dsa) {
+      auto it{scope.find(sym->name())};
       if (it != scope.end()) {
         // There is already a symbol in the current scope, use its DSA.
         dsa = GetSymbolDSA(*it->second);
       } else {
         for (auto symMap : dirContext.objectWithDSA) {
-          if (symMap.first->name() == symbol->name()) {
-            // `symbol` already has a data-sharing attribute in the current
+          if (symMap.first->name() == sym->name()) {
+            // `sym` already has a data-sharing attribute in the current
             // context, use it.
             dsa.set(symMap.second);
             break;
