@@ -48,7 +48,7 @@ public:
 };
 
 // Shared helper used by both
-// PostLegalizerCombiner and RegBankCombiner 
+// PostLegalizerCombiner and RegBankCombiner
 bool matchFmulWithSelectToFldexpImpl(
     MachineInstr &MI, MachineInstr &Sel,
     std::function<void(MachineIRBuilder &)> &MatchInfo,
