@@ -4592,13 +4592,8 @@ mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
         mlir::LLVM::PoisonOp::create(rewriter, op->getLoc(), llvmPtrType);
   }
 
-  // Get successor operands through the adaptor to ensure type conversion.
-  llvm::SmallVector<mlir::ValueRange> succOperands;
-  for (unsigned i = 0; i < op.getSuccessors().size(); ++i)
-    succOperands.push_back(adaptor.getSuccOperands()[i]);
-
   rewriter.replaceOpWithNewOp<mlir::LLVM::IndirectBrOp>(
-      op, targetAddr, succOperands, op.getSuccessors());
+      op, targetAddr, adaptor.getSuccOperands(), op.getSuccessors());
   return mlir::success();
 }
 
