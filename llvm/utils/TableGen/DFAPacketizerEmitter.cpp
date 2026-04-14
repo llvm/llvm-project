@@ -103,7 +103,7 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
 
   struct RecordNameLess {
     bool operator()(const Record *LHS, const Record *RHS) const {
-        return LHS->getName() < RHS->getName();
+      return LHS->getName() < RHS->getName();
     }
   };
 
