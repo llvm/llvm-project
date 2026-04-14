@@ -139,6 +139,7 @@ interesting areas to contribute to lldb.
    use/symbolfilejson
    use/lldbdap
    use/mcp
+   use/settings
    use/troubleshooting
    use/links
    Man Page <man/lldb>
