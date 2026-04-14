@@ -356,6 +356,11 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
   BasicBlock *PostLoopPreHeader = PostLoop->getLoopPreheader();
   IRBuilder<> Builder(&PostLoopPreHeader->front());
 
+  // Replace exit branch target of pre-loop by post-loop's preheader.
+  if (L.getExitBlock() == ExitingCond.BI->getSuccessor(0))
+    ExitingCond.BI->setSuccessor(0, PostLoopPreHeader);
+  else
+    ExitingCond.BI->setSuccessor(1, PostLoopPreHeader);
   // Update phi nodes in header of post-loop.
   bool isExitingLatch = L.getExitingBlock() == L.getLoopLatch();
   Value *ExitingCondLCSSAPhi = nullptr;
@@ -419,11 +424,6 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
       cast<CondBrInst>(VMap[SplitCandidateCond.BI]);
   ClonedSplitCandidateBI->setCondition(ConstantInt::getFalse(Context));
 
-  // Replace exit branch target of pre-loop by post-loop's preheader.
-  if (L.getExitBlock() == ExitingCond.BI->getSuccessor(0))
-    ExitingCond.BI->setSuccessor(0, PostLoopPreHeader);
-  else
-    ExitingCond.BI->setSuccessor(1, PostLoopPreHeader);
 
   // Update phi node in exit block of post-loop.
   Builder.SetInsertPoint(PostLoopPreHeader, PostLoopPreHeader->begin());
