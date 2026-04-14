@@ -175,7 +175,7 @@ define <8 x i64> @test_bf16_i64(<8 x i64> %v, <8 x bfloat> %v2, ptr %p) {
 ; CHECK-NEXT:    vsetvli zero, zero, e16alt, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa5, v12
 ; CHECK-NEXT:    fmv.w.x fa4, zero
-; CHECK-NEXT:    vsetvli zero, zero, e64alt, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v12, v16, v16
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
