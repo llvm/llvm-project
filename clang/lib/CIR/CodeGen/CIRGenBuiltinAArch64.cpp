@@ -2571,8 +2571,17 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vpminnm_v:
   case NEON::BI__builtin_neon_vpminnmq_v:
   case NEON::BI__builtin_neon_vsqrth_f16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vsqrt_v:
-  case NEON::BI__builtin_neon_vsqrtq_v:
+  case NEON::BI__builtin_neon_vsqrtq_v: {
+    // TODO: implement vsqrt and vsqrtq
+    // refer:
+    // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#square-root
+    return emitNeonCall(cgm, builder, {ty}, ops, "sqrt", ty, loc);
+  }
   case NEON::BI__builtin_neon_vrbit_v:
   case NEON::BI__builtin_neon_vrbitq_v:
   case NEON::BI__builtin_neon_vmaxv_f16:
