@@ -5610,6 +5610,32 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Result;
   }
 
+  if (BuiltinID == AArch64::BI__ldapr8 || BuiltinID == AArch64::BI__ldapr16 ||
+      BuiltinID == AArch64::BI__ldapr32 || BuiltinID == AArch64::BI__ldapr64) {
+    unsigned IntrID;
+    switch (BuiltinID) {
+    case AArch64::BI__ldapr8:
+      IntrID = Intrinsic::aarch64_ldapr8;
+      break;
+    case AArch64::BI__ldapr16:
+      IntrID = Intrinsic::aarch64_ldapr16;
+      break;
+    case AArch64::BI__ldapr32:
+      IntrID = Intrinsic::aarch64_ldapr32;
+      break;
+    default:
+      IntrID = Intrinsic::aarch64_ldapr64;
+      break;
+    }
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *Result = Builder.CreateCall(CGM.getIntrinsic(IntrID), Ptr);
+    // LDAPRB/H return i32 (zero-extended); truncate to match the declared type.
+    llvm::Type *RetTy = ConvertType(E->getType());
+    if (Result->getType() != RetTy)
+      Result = Builder.CreateTrunc(Result, RetTy);
+    return Result;
+  }
+
   if (BuiltinID == NEON::BI__builtin_neon_vcvth_bf16_f32)
     return Builder.CreateFPTrunc(
         Builder.CreateBitCast(EmitScalarExpr(E->getArg(0)),
