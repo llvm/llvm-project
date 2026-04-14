@@ -884,3 +884,28 @@ func.func @custom_types_bar(%arg: !test.test_tensor<[4, 4], f64>)
   // CHECK: return %[[out]]
   return %out : !test.test_tensor<[4, 8], f64>
 }
+
+// -----
+
+// Test inter-procedural fixed-point analysis with mutually recursive functions.
+// Fixed-point analysis should handle this case correctly by iterating until convergence.
+
+// CHECK-LABEL: func.func @mutual_recursive_foo(
+// CHECK-SAME:     %[[arg0:.*]]: memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>> {
+func.func @mutual_recursive_foo(%t: tensor<5xf32>) -> tensor<5xf32> {
+  // Fixed-point analysis should analyze that %t is only read, not written.
+  // CHECK: %[[call:.*]] = call @mutual_recursive_bar(%[[arg0]])
+  %0 = call @mutual_recursive_bar(%t) : (tensor<5xf32>) -> tensor<5xf32>
+  // CHECK: return %[[call]]
+  return %0 : tensor<5xf32>
+}
+
+// CHECK-LABEL: func.func @mutual_recursive_bar(
+// CHECK-SAME:     %[[arg0:.*]]: memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>> {
+func.func @mutual_recursive_bar(%t: tensor<5xf32>) -> tensor<5xf32> {
+  // Fixed-point analysis should analyze that %t is only read, not written.
+  // CHECK: %[[call:.*]] = call @mutual_recursive_foo(%[[arg0]])
+  %0 = call @mutual_recursive_foo(%t) : (tensor<5xf32>) -> tensor<5xf32>
+  // CHECK: return %[[call]]
+  return %0 : tensor<5xf32>
+}
