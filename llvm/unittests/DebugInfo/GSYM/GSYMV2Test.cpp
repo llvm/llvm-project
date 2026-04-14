@@ -13,11 +13,11 @@
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV1.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
-#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -57,14 +57,14 @@ static Expected<SmallString<512>> encodeV2(const GsymCreatorV2 &GC,
 /// Helper to decode the HeaderV2 from raw bytes.
 static Expected<HeaderV2> decodeHeaderV2(StringRef Bytes,
                                          llvm::endianness ByteOrder) {
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, 8);
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   return HeaderV2::decode(Data);
 }
 
 /// Helper to decode a GlobalData entry at a given offset.
 static GlobalData decodeGlobalDataEntry(StringRef Bytes, uint64_t &Offset,
                                         llvm::endianness ByteOrder) {
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, 8);
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   GlobalData GD;
   GD.Type = static_cast<GlobalInfoType>(Data.getU32(&Offset));
   GD.FileOffset = Data.getU64(&Offset);
@@ -263,7 +263,7 @@ TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
 
   // Each AddrInfoOffset is relative to the FunctionInfo section and should
   // be within [0, FISize).
-  DataExtractor Data(Bytes, /*IsLittleEndian=*/true, 8);
+  GsymDataExtractor Data(Bytes, /*IsLittleEndian=*/true);
   uint64_t AIOffset = AIOffsetsOffset;
   for (uint32_t I = 0; I < 3; ++I) {
     uint64_t RelOff = Data.getUnsigned(&AIOffset, AddrInfoOffSize);
@@ -606,8 +606,8 @@ TEST(GSYMV2Test, TestReaderV2TruncatedFileTable) {
   // GlobalData entries start at offset 24 (after HeaderV2).
   // Each entry is 20 bytes: Type(4) + FileOffset(8) + FileSize(8).
   // We need to find the FileTable entry and modify its FileSize.
-  DataExtractor Data(StringRef(Bytes.data(), Bytes.size()),
-                     llvm::endianness::native == llvm::endianness::little, 8);
+  GsymDataExtractor Data(StringRef(Bytes.data(), Bytes.size()),
+                         llvm::endianness::native == llvm::endianness::little);
   uint64_t Offset = HeaderV2::getEncodedSize();
   while (Offset < Bytes.size()) {
     uint64_t EntryOffset = Offset;

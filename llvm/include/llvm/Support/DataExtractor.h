@@ -39,7 +39,6 @@ class DataExtractor {
   StringRef Data;
   uint8_t IsLittleEndian;
   uint8_t AddressSize;
-  uint8_t StringOffsetSize = 4;
 
 public:
   /// A class representing a position in a DataExtractor, as well as any error
@@ -98,10 +97,6 @@ public:
   uint8_t getAddressSize() const { return AddressSize; }
   /// Set the address size for this extractor.
   void setAddressSize(uint8_t Size) { AddressSize = Size; }
-  /// Get the string offset size for this extractor.
-  uint8_t getStringOffsetSize() const { return StringOffsetSize; }
-  /// Set the string offset size for this extractor.
-  void setStringOffsetSize(uint8_t Size) { StringOffsetSize = Size; }
 
   /// Extract a C string from \a *offset_ptr.
   ///
@@ -335,18 +330,6 @@ public:
   /// cursor. In case of an extraction error, or if the cursor is already in
   /// an error state, zero is returned.
   uint64_t getAddress(Cursor &C) const { return getUnsigned(C, AddressSize); }
-
-  /// Extract a string offset of StringOffsetSize bytes from \a *offset_ptr.
-  uint64_t getStringOffset(uint64_t *offset_ptr) const {
-    return getUnsigned(offset_ptr, StringOffsetSize);
-  }
-
-  /// Extract a string offset of StringOffsetSize bytes from the location given
-  /// by the cursor. In case of an extraction error, or if the cursor is already
-  /// in an error state, zero is returned.
-  uint64_t getStringOffset(Cursor &C) const {
-    return getUnsigned(C, StringOffsetSize);
-  }
 
   /// Extract a uint8_t value from \a *offset_ptr.
   ///

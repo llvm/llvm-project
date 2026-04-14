@@ -9,10 +9,10 @@
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
-#include "llvm/Support/DataExtractor.h"
 #include <optional>
 
 using namespace llvm;
@@ -39,7 +39,7 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
   return OS;
 }
 
-llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
+llvm::Expected<FunctionInfo> FunctionInfo::decode(GsymDataExtractor &Data,
                                                   uint64_t BaseAddr) {
   FunctionInfo FI;
   uint64_t Offset = 0;
@@ -70,9 +70,7 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
       return createStringError(std::errc::io_error,
           "0x%8.8" PRIx64 ": missing FunctionInfo data for InfoType %u",
           Offset, IT);
-    DataExtractor InfoData(Data.getData().substr(Offset, InfoLength),
-                           Data.isLittleEndian(), Data.getAddressSize());
-    InfoData.setStringOffsetSize(Data.getStringOffsetSize());
+    GsymDataExtractor InfoData(Data, Offset, InfoLength);
     switch (IT) {
       case InfoType::EndOfList:
         Done = true;
@@ -239,9 +237,9 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
 }
 
 llvm::Expected<LookupResult>
-FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
+FunctionInfo::lookup(GsymDataExtractor &Data, const GsymReader &GR,
                      uint64_t FuncAddr, uint64_t Addr,
-                     std::optional<DataExtractor> *MergedFuncsData) {
+                     std::optional<GsymDataExtractor> *MergedFuncsData) {
   LookupResult LR;
   LR.LookupAddr = Addr;
   uint64_t Offset = 0;
@@ -268,7 +266,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
   LR.FuncName = GR.getString(NameOffset);
   bool Done = false;
   std::optional<LineEntry> LineEntry;
-  std::optional<DataExtractor> InlineInfoData;
+  std::optional<GsymDataExtractor> InlineInfoData;
   while (!Done) {
     if (!Data.isValidOffsetForDataOfSize(Offset, 8))
       return createStringError(std::errc::io_error,
@@ -279,9 +277,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
     if (InfoLength != InfoBytes.size())
       return createStringError(std::errc::io_error,
                                "FunctionInfo data is truncated");
-    DataExtractor InfoData(InfoBytes, Data.isLittleEndian(),
-                           Data.getAddressSize());
-    InfoData.setStringOffsetSize(Data.getStringOffsetSize());
+    GsymDataExtractor InfoData(Data, Offset, InfoLength);
     switch (IT) {
       case InfoType::EndOfList:
         Done = true;
@@ -358,7 +354,6 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
     return LR;
   // We have inline information. Try to augment the lookup result with this
   // data.
-  InlineInfoData->setStringOffsetSize(Data.getStringOffsetSize());
   llvm::Error Err = InlineInfo::lookup(GR, *InlineInfoData, FuncAddr, Addr,
                                        LR.Locations);
   if (Err)

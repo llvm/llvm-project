@@ -27,8 +27,8 @@ using namespace gsym;
 GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer,
                        llvm::endianness Endian)
     : MemBuffer(std::move(Buffer)), Endian(Endian),
-      AddrInfoOffsetsData(StringRef(), true, 0),
-      FileEntryData(StringRef(), true, 0) {}
+      AddrInfoOffsetsData(StringRef(), true), FileEntryData(StringRef(), true) {
+}
 
 /// Check magic bytes, determine endianness, and return the GSYM version and
 /// endianness. If magic bytes are invalid, return error.
@@ -41,7 +41,7 @@ checkMagicAndDetectVersionEndian(StringRef Bytes) {
   const auto HostEndian = llvm::endianness::native;
   const bool IsHostLittleEndian = (HostEndian == llvm::endianness::little);
   // Read magic bytes using host endian
-  DataExtractor Data(Bytes, IsHostLittleEndian, 4);
+  GsymDataExtractor Data(Bytes, IsHostLittleEndian);
   uint64_t Offset = 0;
   uint32_t Magic = Data.getU32(&Offset);
   llvm::endianness FileEndian;
@@ -52,8 +52,8 @@ checkMagicAndDetectVersionEndian(StringRef Bytes) {
   } else if (Magic == GSYM_CIGAM) {
     FileEndian =
         IsHostLittleEndian ? llvm::endianness::big : llvm::endianness::little;
-    // Re-create DataExtractor with correct endianness to read version.
-    Data = DataExtractor(Bytes, !IsHostLittleEndian, 4);
+    // Re-create GsymDataExtractor with correct endianness to read version.
+    Data = GsymDataExtractor(Bytes, !IsHostLittleEndian);
   } else {
     return createStringError(std::errc::invalid_argument,
                              "not a GSYM file (bad magic)");
@@ -170,7 +170,7 @@ llvm::Error GsymReader::parseGlobalDataEntries(uint64_t Offset) {
 
   const StringRef Buf = MemBuffer->getBuffer();
   const uint64_t BufSize = Buf.size();
-  DataExtractor Data(Buf, isLittleEndian(), 8 /* address size, unused */);
+  GsymDataExtractor Data(Buf, isLittleEndian());
   while (Offset + sizeof(GlobalData) <= BufSize) {
     auto GDOrErr = GlobalData::decode(Data, Offset);
     if (!GDOrErr)
@@ -214,7 +214,7 @@ llvm::Error GsymReader::parseAddrOffsets(StringRef Bytes) {
   }
 
   // Parse the swap case
-  DataExtractor Data(Bytes, isLittleEndian(), 8);
+  GsymDataExtractor Data(Bytes, isLittleEndian());
   uint64_t Offset = 0;
   SwappedAddrOffsets.resize(TotalBytes);
   switch (AddrOffSize) {
@@ -250,8 +250,7 @@ llvm::Error GsymReader::parseAddrOffsets(StringRef Bytes) {
 }
 
 llvm::Error GsymReader::setAddrInfoOffsetsData(StringRef Bytes) {
-  AddrInfoOffsetsData =
-      DataExtractor(Bytes, isLittleEndian(), getAddressInfoOffsetSize());
+  AddrInfoOffsetsData = GsymDataExtractor(Bytes, isLittleEndian());
   return Error::success();
 }
 
@@ -262,7 +261,7 @@ llvm::Error GsymReader::setStringTableData(StringRef Bytes) {
 
 llvm::Error GsymReader::setFileTableData(StringRef Bytes) {
   const uint8_t StrpSize = getStringOffsetSize();
-  DataExtractor Data(Bytes, isLittleEndian(), getAddressInfoOffsetSize());
+  GsymDataExtractor Data(Bytes, isLittleEndian(), StrpSize);
   uint64_t Offset = 0;
   uint32_t NumFiles = Data.getU32(&Offset);
   uint64_t EntriesSize =
@@ -271,9 +270,7 @@ llvm::Error GsymReader::setFileTableData(StringRef Bytes) {
     return createStringError(std::errc::invalid_argument,
                              "FileTable section too small for %u files",
                              NumFiles);
-  FileEntryData = DataExtractor(Bytes.substr(Offset, EntriesSize),
-                                isLittleEndian(), Data.getAddressSize());
-  FileEntryData.setStringOffsetSize(StrpSize);
+  FileEntryData = GsymDataExtractor(Data, Offset, EntriesSize);
   return Error::success();
 }
 
@@ -367,7 +364,7 @@ Expected<uint64_t> GsymReader::getAddressIndex(const uint64_t Addr) const {
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
 }
 
-llvm::Expected<DataExtractor>
+llvm::Expected<GsymDataExtractor>
 GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
                                           uint64_t &FuncStartAddr) const {
   Expected<uint64_t> ExpectedAddrIdx = getAddressIndex(Addr);
@@ -410,7 +407,7 @@ GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
 }
 
-llvm::Expected<DataExtractor>
+llvm::Expected<GsymDataExtractor>
 GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
                                        uint64_t &FuncStartAddr) const {
   const std::optional<uint64_t> AddrInfoOffset = getAddressInfoOffset(AddrIdx);
@@ -429,8 +426,7 @@ GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
     return createStringError(std::errc::invalid_argument,
                              "failed to extract address[%" PRIu64 "]", AddrIdx);
   FuncStartAddr = *OptFuncStartAddr;
-  auto Data = DataExtractor(Bytes, isLittleEndian(), 4);
-  Data.setStringOffsetSize(getStringOffsetSize());
+  GsymDataExtractor Data(Bytes, isLittleEndian(), getStringOffsetSize());
   return Data;
 }
 
@@ -451,9 +447,9 @@ GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
     return ExpectedData.takeError();
 }
 
-llvm::Expected<LookupResult>
-GsymReader::lookup(uint64_t Addr,
-                   std::optional<DataExtractor> *MergedFunctionsData) const {
+llvm::Expected<LookupResult> GsymReader::lookup(
+    uint64_t Addr,
+    std::optional<GsymDataExtractor> *MergedFunctionsData) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
     return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr,
@@ -465,7 +461,7 @@ GsymReader::lookup(uint64_t Addr,
 llvm::Expected<std::vector<LookupResult>>
 GsymReader::lookupAll(uint64_t Addr) const {
   std::vector<LookupResult> Results;
-  std::optional<DataExtractor> MergedFunctionsData;
+  std::optional<GsymDataExtractor> MergedFunctionsData;
 
   // First perform a lookup to get the primary function info result.
   auto MainResult = lookup(Addr, &MergedFunctionsData);
@@ -484,7 +480,7 @@ GsymReader::lookupAll(uint64_t Addr) const {
       return ExpectedMergedFuncExtractors.takeError();
 
     // Process each merged function data.
-    for (DataExtractor &MergedData : *ExpectedMergedFuncExtractors) {
+    for (GsymDataExtractor &MergedData : *ExpectedMergedFuncExtractors) {
       if (auto FI = FunctionInfo::lookup(MergedData, *this,
                                          MainResult->FuncRange.start(), Addr)) {
         Results.push_back(std::move(*FI));

@@ -141,7 +141,7 @@ struct FunctionInfo {
   ///
   /// \returns An FunctionInfo or an error describing the issue that was
   /// encountered during decoding.
-  LLVM_ABI static llvm::Expected<FunctionInfo> decode(DataExtractor &Data,
+  LLVM_ABI static llvm::Expected<FunctionInfo> decode(GsymDataExtractor &Data,
                                                       uint64_t BaseAddr);
 
   /// Encode this object into FileWriter stream.
@@ -191,7 +191,7 @@ struct FunctionInfo {
   ///
   /// \param Addr The address to lookup.
   ///
-  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
+  /// \param MergedFuncsData A pointer to an optional GsymDataExtractor that, if
   /// non-null, will be set to the raw data of the MergedFunctionInfo, if
   /// present.
   ///
@@ -199,9 +199,9 @@ struct FunctionInfo {
   /// encountered during decoding. An error should only be returned if the
   /// address is not contained in the FunctionInfo or if the data is corrupted.
   LLVM_ABI static llvm::Expected<LookupResult>
-  lookup(DataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
+  lookup(GsymDataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
          uint64_t Addr,
-         std::optional<DataExtractor> *MergedFuncsData = nullptr);
+         std::optional<GsymDataExtractor> *MergedFuncsData = nullptr);
 
   uint64_t startAddress() const { return Range.start(); }
   uint64_t endAddress() const { return Range.end(); }

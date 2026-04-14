@@ -8,7 +8,7 @@
 
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -53,7 +53,7 @@ llvm::Error HeaderV2::checkForError() const {
   return Error::success();
 }
 
-llvm::Expected<HeaderV2> HeaderV2::decode(DataExtractor &Data) {
+llvm::Expected<HeaderV2> HeaderV2::decode(GsymDataExtractor &Data) {
   uint64_t Offset = 0;
   // The fixed portion of the HeaderV2 is 20 bytes:
   //   Magic(4) + Version(2) + AddrOffSize(1) + StrTableEncoding(1) +

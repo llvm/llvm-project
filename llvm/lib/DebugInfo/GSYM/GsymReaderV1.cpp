@@ -11,8 +11,8 @@
 #include <assert.h>
 #include <inttypes.h>
 
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
-#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
@@ -48,7 +48,7 @@ llvm::Error GsymReaderV1::parseHeaderAndGlobalDataEntries() {
   Offset += AddrInfoOffsetsSize;
 
   // FileTable: read NumFiles to compute the size.
-  DataExtractor Data(Buf, isLittleEndian(), 4);
+  GsymDataExtractor Data(Buf, isLittleEndian());
   uint64_t FTOffset = Offset;
   uint32_t NumFiles = Data.getU32(&FTOffset);
   uint64_t FileTableSize =

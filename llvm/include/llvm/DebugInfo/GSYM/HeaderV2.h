@@ -18,10 +18,10 @@
 
 namespace llvm {
 class raw_ostream;
-class DataExtractor;
 
 namespace gsym {
 class FileWriter;
+class GsymDataExtractor;
 
 /// Encoding format for the string table.
 enum class StringTableEncoding : uint8_t {
@@ -115,7 +115,7 @@ struct HeaderV2 {
   ///
   /// \returns A HeaderV2 or an error describing the issue that was
   /// encountered during decoding.
-  LLVM_ABI static llvm::Expected<HeaderV2> decode(DataExtractor &Data);
+  LLVM_ABI static llvm::Expected<HeaderV2> decode(GsymDataExtractor &Data);
 
   /// Encode this object into FileWriter stream.
   ///

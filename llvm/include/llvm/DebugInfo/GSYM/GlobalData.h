@@ -14,10 +14,10 @@
 #include <cstdint>
 
 namespace llvm {
-class DataExtractor;
 
 namespace gsym {
 class FileWriter;
+class GsymDataExtractor;
 
 /// GlobalInfoType allows GSYM files to encode global information within a GSYM
 /// file in a way that is extensible for future versions of GSYM. It is
@@ -73,7 +73,7 @@ struct GlobalData {
   /// \param GsymData The binary stream to read from.
   /// \param Offset The offset to start reading from. Updated on success.
   /// \returns A GlobalData entry or an error.
-  LLVM_ABI static llvm::Expected<GlobalData> decode(DataExtractor &GsymData,
+  LLVM_ABI static llvm::Expected<GlobalData> decode(GsymDataExtractor &GsymData,
                                                     uint64_t &Offset);
 };
 

@@ -8,7 +8,7 @@
 
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include <inttypes.h>
 
 using namespace llvm;
@@ -20,7 +20,7 @@ void GlobalData::encode(FileWriter &O) const {
   O.writeU64(FileSize);
 }
 
-llvm::Expected<GlobalData> GlobalData::decode(DataExtractor &GsymData,
+llvm::Expected<GlobalData> GlobalData::decode(GsymDataExtractor &GsymData,
                                               uint64_t &Offset) {
   if (!GsymData.isValidOffsetForDataOfSize(Offset, 20))
     return createStringError(std::errc::invalid_argument,

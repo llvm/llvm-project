@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV1.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
@@ -24,7 +25,6 @@
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
-#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Testing/Support/Error.h"
 
@@ -194,9 +194,8 @@ static void TestFunctionInfoDecodeError(llvm::endianness ByteOrder,
                                         StringRef Bytes,
                                         const uint64_t BaseAddr,
                                         std::string ExpectedErrorMsg) {
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  Data.setStringOffsetSize(sizeof(StrpT));
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little,
+                         sizeof(StrpT));
   llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -319,9 +318,8 @@ static void TestFunctionInfoEncodeDecode(llvm::endianness ByteOrder,
   // Verify we got the encoded offset back from the encode function.
   ASSERT_EQ(ExpectedOffset.get(), 0ULL);
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  Data.setStringOffsetSize(sizeof(StrpT));
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little,
+                         sizeof(StrpT));
   llvm::Expected<FunctionInfo> Decoded =
       FunctionInfo::decode(Data, FI.Range.start());
   // Make sure decoding succeeded.
@@ -404,9 +402,8 @@ static void TestInlineInfoEncodeDecode(llvm::endianness ByteOrder,
   llvm::Error Err = Inline.encode(FW, BaseAddr);
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  Data.setStringOffsetSize(sizeof(StrpT));
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little,
+                         sizeof(StrpT));
   llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
@@ -418,9 +415,8 @@ template <typename StrpT>
 static void TestInlineInfoDecodeError(llvm::endianness ByteOrder,
                                       StringRef Bytes, const uint64_t BaseAddr,
                                       std::string ExpectedErrorMsg) {
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  Data.setStringOffsetSize(sizeof(StrpT));
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little,
+                         sizeof(StrpT));
   llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -704,8 +700,7 @@ static void TestFileWriterHelper(llvm::endianness ByteOrder) {
   FW.fixup32(U32, FixupOffset);
 
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   uint64_t Offset = 0;
   EXPECT_EQ(Data.getU8(&Offset), U8);
   EXPECT_EQ(Data.getU16(&Offset), U16);
@@ -742,7 +737,7 @@ static void TestWriteUnsignedHelper(llvm::endianness ByteOrder) {
   FW.writeUnsigned(0x0102030405060708, 8);
 
   std::string Bytes(OutStrm.str());
-  DataExtractor Data(Bytes, IsLittleEndian, 8);
+  GsymDataExtractor Data(Bytes, IsLittleEndian);
   uint64_t Offset = 0;
 
   EXPECT_EQ(0x01U, Data.getUnsigned(&Offset, 1));
@@ -777,8 +772,7 @@ TEST(GSYMTest, TestAddressRangeEncodeDecode) {
   encodeRange(Range1, FW, BaseAddr);
   encodeRange(Range2, FW, BaseAddr);
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
 
   AddressRange DecodedRange1, DecodedRange2;
   uint64_t Offset = 0;
@@ -797,8 +791,7 @@ static void TestAddressRangeEncodeDecodeHelper(const AddressRanges &Ranges,
   encodeRanges(Ranges, FW, BaseAddr);
 
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
 
   AddressRanges DecodedRanges;
   uint64_t Offset = 0;
@@ -836,8 +829,7 @@ static void TestLineTableHelper(llvm::endianness ByteOrder,
   llvm::Error Err = LT.encode(FW, BaseAddr);
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<LineTable> Decoded = LineTable::decode(Data, BaseAddr);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
@@ -906,8 +898,7 @@ TEST(GSYMTest, TestLineTable) {
 static void TestLineTableDecodeError(llvm::endianness ByteOrder,
                                      StringRef Bytes, const uint64_t BaseAddr,
                                      std::string ExpectedErrorMsg) {
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<LineTable> Decoded = LineTable::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -995,7 +986,7 @@ static void TestHeaderEncodeError(const HeaderT &H,
 template <typename HeaderT>
 static void TestHeaderDecodeError(StringRef Bytes,
                                   std::string ExpectedErrorMsg) {
-  DataExtractor Data(Bytes, /*IsLittleEndian=*/true, /*AddressSize=*/4);
+  GsymDataExtractor Data(Bytes, /*IsLittleEndian=*/true);
   llvm::Expected<HeaderT> Decoded = HeaderT::decode(Data);
   ASSERT_FALSE((bool)Decoded);
   checkError(ExpectedErrorMsg, Decoded.takeError());
@@ -1120,14 +1111,13 @@ TEST(GSYMTest, TestHeaderV2DecodeErrors) {
 template <typename HeaderT>
 static void TestHeaderEncodeDecode(const HeaderT &H,
                                    llvm::endianness ByteOrder) {
-  uint8_t AddressSize = 4;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
   llvm::Error Err = H.encode(FW);
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  GsymDataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<HeaderT> Decoded = HeaderT::decode(Data);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
@@ -5521,9 +5511,8 @@ TEST(GSYMTest, TestFunctionInfoLargeNameOffset) {
   ASSERT_THAT_EXPECTED(EncResult, Succeeded());
 
   // Decode.
-  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                     8);
-  Data.setStringOffsetSize(8);
+  GsymDataExtractor Data(StringRef(Buf.data(), Buf.size()),
+                         /*IsLittleEndian=*/true, 8);
   auto DecResult = FunctionInfo::decode(Data, BaseAddr);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 
@@ -5551,9 +5540,8 @@ TEST(GSYMTest, TestInlineInfoLargeNameOffset) {
   ASSERT_FALSE(bool(EncErr));
 
   // Decode.
-  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                     8);
-  Data.setStringOffsetSize(8);
+  GsymDataExtractor Data(StringRef(Buf.data(), Buf.size()),
+                         /*IsLittleEndian=*/true, 8);
   auto DecResult = InlineInfo::decode(Data, BaseAddr);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 
@@ -5583,9 +5571,8 @@ TEST(GSYMTest, TestCallSiteInfoLargeMatchRegex) {
   ASSERT_FALSE(bool(EncErr));
 
   // Decode.
-  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                     8);
-  Data.setStringOffsetSize(8);
+  GsymDataExtractor Data(StringRef(Buf.data(), Buf.size()),
+                         /*IsLittleEndian=*/true, 8);
   uint64_t Offset = 0;
   auto DecResult = CallSiteInfo::decode(Data, Offset);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
@@ -5616,9 +5603,8 @@ TEST(GSYMTest, TestCallSiteInfoCollectionLargeMatchRegex) {
   ASSERT_FALSE(bool(EncErr));
 
   // Decode.
-  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                     8);
-  Data.setStringOffsetSize(8);
+  GsymDataExtractor Data(StringRef(Buf.data(), Buf.size()),
+                         /*IsLittleEndian=*/true, 8);
   auto DecResult = CallSiteInfoCollection::decode(Data);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 
@@ -5659,9 +5645,8 @@ TEST(GSYMTest, TestFunctionInfoAllFieldsLargeOffsets) {
   ASSERT_THAT_EXPECTED(EncResult, Succeeded());
 
   // Decode.
-  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                     8);
-  Data.setStringOffsetSize(8);
+  GsymDataExtractor Data(StringRef(Buf.data(), Buf.size()),
+                         /*IsLittleEndian=*/true, 8);
   auto DecResult = FunctionInfo::decode(Data, BaseAddr);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 
@@ -5693,9 +5678,8 @@ TEST(GSYMTest, TestMergedFunctionsInfoLargeOffsets) {
   ASSERT_FALSE(bool(EncErr));
 
   // Decode.
-  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                     8);
-  Data.setStringOffsetSize(8);
+  GsymDataExtractor Data(StringRef(Buf.data(), Buf.size()),
+                         /*IsLittleEndian=*/true, 8);
   auto DecResult = MergedFunctionsInfo::decode(Data, BaseAddr);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 

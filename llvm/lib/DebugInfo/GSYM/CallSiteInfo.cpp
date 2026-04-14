@@ -10,8 +10,8 @@
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -31,7 +31,7 @@ Error CallSiteInfo::encode(FileWriter &O) const {
   return Error::success();
 }
 
-Expected<CallSiteInfo> CallSiteInfo::decode(DataExtractor &Data,
+Expected<CallSiteInfo> CallSiteInfo::decode(GsymDataExtractor &Data,
                                             uint64_t &Offset) {
   CallSiteInfo CSI;
 
@@ -77,7 +77,7 @@ Error CallSiteInfoCollection::encode(FileWriter &O) const {
 }
 
 Expected<CallSiteInfoCollection>
-CallSiteInfoCollection::decode(DataExtractor &Data) {
+CallSiteInfoCollection::decode(GsymDataExtractor &Data) {
   CallSiteInfoCollection CSC;
   uint64_t Offset = 0;
 

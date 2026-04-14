@@ -13,11 +13,11 @@
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -54,8 +54,8 @@ protected:
   std::map<GlobalInfoType, GlobalData> GlobalDataSections;
   ArrayRef<uint8_t> AddrOffsets;
   std::vector<uint8_t> SwappedAddrOffsets;
-  DataExtractor AddrInfoOffsetsData;
-  DataExtractor FileEntryData;
+  GsymDataExtractor AddrInfoOffsetsData;
+  GsymDataExtractor FileEntryData;
   StringTable StrTab;
 
   GsymReader(std::unique_ptr<MemoryBuffer> Buffer, llvm::endianness Endian);
@@ -142,7 +142,7 @@ public:
   ///
   /// \param Addr A virtual address from the orignal object file to lookup.
   ///
-  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
+  /// \param MergedFuncsData A pointer to an optional GsymDataExtractor that, if
   /// non-null, will be set to the raw data of the MergedFunctionInfo, if
   /// present.
   ///
@@ -151,7 +151,7 @@ public:
   /// for failing to lookup the address.
   LLVM_ABI llvm::Expected<LookupResult>
   lookup(uint64_t Addr,
-         std::optional<DataExtractor> *MergedFuncsData = nullptr) const;
+         std::optional<GsymDataExtractor> *MergedFuncsData = nullptr) const;
 
   /// Lookup all merged functions for a given address.
   ///
@@ -343,8 +343,8 @@ protected:
       // Non-swap case. Mmap the header.
       OutHdr = reinterpret_cast<const HeaderT *>(Buf.data());
     } else {
-      // Swap case. Decode with a DataExtractor with the correct endianness.
-      DataExtractor Data(Buf, isLittleEndian(), 8 /* address size, unused */);
+      // Swap case. Decode with a GsymDataExtractor with the correct endianness.
+      GsymDataExtractor Data(Buf, isLittleEndian());
       OutSwappedHdr = std::make_unique<HeaderT>();
       auto ExpectedHdr = HeaderT::decode(Data);
       if (!ExpectedHdr)
@@ -517,7 +517,7 @@ protected:
   ///
   /// \returns An valid data extractor on success, or an error if we fail to
   /// find the address in a function info or corrrectly decode the data
-  LLVM_ABI llvm::Expected<llvm::DataExtractor>
+  LLVM_ABI llvm::Expected<GsymDataExtractor>
   getFunctionInfoDataForAddress(uint64_t Addr, uint64_t &FuncStartAddr) const;
 
   /// Get the function data and address given an address index.
@@ -527,7 +527,7 @@ protected:
   /// \returns An expected FunctionInfo that contains the function info object
   /// or an error object that indicates reason for failing to lookup the
   /// address.
-  LLVM_ABI llvm::Expected<llvm::DataExtractor>
+  LLVM_ABI llvm::Expected<GsymDataExtractor>
   getFunctionInfoDataAtIndex(uint64_t AddrIdx, uint64_t &FuncStartAddr) const;
 };
 

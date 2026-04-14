@@ -13,7 +13,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
@@ -41,7 +41,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   /// in the exact order it appears in the GSYM data.
   const StringRef Buf = MemBuffer->getBuffer();
   const uint64_t BufSize = Buf.size();
-  DataExtractor Data(Buf, isLittleEndian(), 8 /* address size, unused */);
+  GsymDataExtractor Data(Buf, isLittleEndian());
   uint64_t Offset = HeaderV2::getEncodedSize();
   while (Offset + sizeof(GlobalData) <= BufSize) {
     auto GDOrErr = GlobalData::decode(Data, Offset);

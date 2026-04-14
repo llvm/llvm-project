@@ -17,10 +17,10 @@
 
 namespace llvm {
 class raw_ostream;
-class DataExtractor;
 
 namespace gsym {
 class FileWriter;
+class GsymDataExtractor;
 
 constexpr uint32_t GSYM_MAGIC = 0x4753594d; // 'GSYM'
 constexpr uint32_t GSYM_CIGAM = 0x4d595347; // 'MYSG'
@@ -120,7 +120,7 @@ struct Header {
   ///
   /// \returns A Header or an error describing the issue that was
   /// encountered during decoding.
-  LLVM_ABI static llvm::Expected<Header> decode(DataExtractor &Data);
+  LLVM_ABI static llvm::Expected<Header> decode(GsymDataExtractor &Data);
 
   /// Encode this object into FileWriter stream.
   ///

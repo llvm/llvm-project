@@ -10,8 +10,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
-#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/InterleavedRange.h"
 #include <inttypes.h>
 
@@ -68,7 +68,8 @@ InlineInfo::getInlineStack(uint64_t Addr) const {
 ///
 /// \param SkippedRanges If true, address ranges have already been skipped.
 
-static bool skip(DataExtractor &Data, uint64_t &Offset, bool SkippedRanges) {
+static bool skip(GsymDataExtractor &Data, uint64_t &Offset,
+                 bool SkippedRanges) {
   if (!SkippedRanges) {
     if (skipRanges(Data, Offset) == 0)
       return false;
@@ -100,9 +101,9 @@ static bool skip(DataExtractor &Data, uint64_t &Offset, bool SkippedRanges) {
 /// \param BaseAddr The address that the relative address range offsets are
 ///                 relative to.
 
-static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
-                   uint64_t BaseAddr, uint64_t Addr, SourceLocations &SrcLocs,
-                   llvm::Error &Err) {
+static bool lookup(const GsymReader &GR, GsymDataExtractor &Data,
+                   uint64_t &Offset, uint64_t BaseAddr, uint64_t Addr,
+                   SourceLocations &SrcLocs, llvm::Error &Err) {
   InlineInfo Inline;
   decodeRanges(Inline.Ranges, Data, BaseAddr, Offset);
   if (Inline.Ranges.empty())
@@ -151,7 +152,7 @@ static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
   return true;
 }
 
-llvm::Error InlineInfo::lookup(const GsymReader &GR, DataExtractor &Data,
+llvm::Error InlineInfo::lookup(const GsymReader &GR, GsymDataExtractor &Data,
                                uint64_t BaseAddr, uint64_t Addr,
                                SourceLocations &SrcLocs) {
   // Call our recursive helper function starting at offset zero.
@@ -171,8 +172,8 @@ llvm::Error InlineInfo::lookup(const GsymReader &GR, DataExtractor &Data,
 /// \param BaseAddr The base address to use when decoding address ranges.
 /// \returns An InlineInfo or an error describing the issue that was
 /// encountered during decoding.
-static llvm::Expected<InlineInfo> decode(DataExtractor &Data, uint64_t &Offset,
-                                         uint64_t BaseAddr) {
+static llvm::Expected<InlineInfo> decode(GsymDataExtractor &Data,
+                                         uint64_t &Offset, uint64_t BaseAddr) {
   InlineInfo Inline;
   if (!Data.isValidOffset(Offset))
     return createStringError(std::errc::io_error,
@@ -215,7 +216,7 @@ static llvm::Expected<InlineInfo> decode(DataExtractor &Data, uint64_t &Offset,
   return Inline;
 }
 
-llvm::Expected<InlineInfo> InlineInfo::decode(DataExtractor &Data,
+llvm::Expected<InlineInfo> InlineInfo::decode(GsymDataExtractor &Data,
                                               uint64_t BaseAddr) {
   uint64_t Offset = 0;
   return ::decode(Data, Offset, BaseAddr);
