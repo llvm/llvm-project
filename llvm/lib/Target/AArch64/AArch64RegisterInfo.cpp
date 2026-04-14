@@ -1115,7 +1115,7 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   }
 }
 
-static bool HandleMatchCmpPredicateHint(
+static bool HandleDestructivePredicateHint(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
     SmallVectorImpl<MCPhysReg> &Hints, const VirtRegMap *VRM,
     const MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
@@ -1158,7 +1158,7 @@ static bool HandleMatchCmpPredicateHint(
 
   Hints.append(Order.begin(), Order.end());
   llvm::stable_sort(Hints, [&](Register A, Register B) {
-    return B == Op1Reg &&
+    return A != B && B == Op1Reg &&
            (!CSRs.contains(A) || !MRI.def_empty(A) || Matrix->isPhysRegUsed(A));
   });
   return true;
@@ -1253,8 +1253,8 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       return ConsiderOnlyHints;
   }
 
-  if (HandleMatchCmpPredicateHint(VirtReg, Order, Hints, VRM, MRI, *TII, ST,
-                                  Matrix))
+  if (HandleDestructivePredicateHint(VirtReg, Order, Hints, VRM, MRI, *TII, ST,
+                                     Matrix))
     return ConsiderOnlyHints;
 
   if (!ST.hasSME() || !ST.isStreaming())
