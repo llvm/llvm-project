@@ -392,3 +392,7 @@ define {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>} @vector_deinterl
   ret {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>} %retval
 }
 
+define {<4 x float>, <4 x float>, <4 x float>} @vector_deinterleave3_v4f32_v12f32(<12 x float> %vec) {
+  %retval = call {<4 x float>, <4 x float>, <4 x float>} @llvm.vector.deinterleave3.v12f32(<12 x float> %vec)
+  ret {<4 x float>, <4 x float>, <4 x float>} %retval
+}

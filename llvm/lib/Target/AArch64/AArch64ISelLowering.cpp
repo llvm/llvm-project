@@ -32322,30 +32322,45 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op->getVTList(), Ops);
   }
 
+  // For v2f64 and v2i64, each vector part of the interleaved v6f64 vector can
+  // be made with one shuffle only, as the interleave factor is greater than the
+  // number of elements in the vector. a0, a1 | b0, b1 | c0, c1
+  //  ->
+  // a0, b0 | c0, a1 | b1, c1
   if (Op->getNumOperands() == 3 && (OpVT == MVT::v2f64 || OpVT == MVT::v2i64)) {
     SDValue A = Op->getOperand(0);
     SDValue B = Op->getOperand(1);
     SDValue C = Op->getOperand(2);
-
-    // a0, a1 | b0, b1 | c0, c1
-    //  ->
-    // a0, b0 | c0, a1 | b1, c1
     SDValue Shuffle0 = DAG.getVectorShuffle(OpVT, DL, A, B, {0, 2});
     SDValue Shuffle1 = DAG.getVectorShuffle(OpVT, DL, A, C, {2, 1});
     SDValue Shuffle2 = DAG.getVectorShuffle(OpVT, DL, B, C, {1, 3});
 
     return DAG.getMergeValues({Shuffle0, Shuffle1, Shuffle2}, DL);
   }
+
+  // When the interleave factor is less than the number of vector elements we
+  // need two shuffles to mix three vector's elements together:
+  //  step1: a0, b0, __, a1, | b1, __, a2, b2 | ...
+  //  step2: a0, b0, c0, a1  | b1, c1, a2, b2 | ...
   if (Op->getNumOperands() == 3 && OpVT.isFixedLengthVector()) {
     unsigned NElements = OpVT.getVectorNumElements();
     SDValue A = Op->getOperand(0);
     SDValue B = Op->getOperand(1);
     SDValue C = Op->getOperand(2);
+    //  Build two masks for the two shuffles. The first mask shuffles elements
+    //  from A and B, and with elements of C represented with -1 to be ignored.
+    //  The second shuffle then replaces -1 values with the actual
+    //  indices from C like so:
 
-    //  Build two masks for two shuffles. The first mask shuffles elements from
-    //  A and B, and with elements of C represented with -1 so the shuffle
-    //  ignores them. The second shuffle then replaces -1 values with the actual
-    //  indices from C.
+    //  0   1   2   3   4   5   6   7
+    // a0, a1, a2, a3, b0, b1, b2, b3
+    // t55: v4f32 = vector_shuffle<0,4,u,1> A, B
+    // t55 = a0, b0, -1, a1
+    //
+    //  0   1   2   3   4   5   6   7
+    // a0, b0, -1, a1, c0, c1, c2, c3
+    // t56: v4f32 = vector_shuffle<0,1,4,3> t55, C
+    // t56 = a0, b0, c1, a1
     SmallVector<int> ABMask;
     for (unsigned E = 0; E < NElements; E++) {
       for (unsigned F = 0; F < 3; F++) {
@@ -32362,7 +32377,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
         if (ABMask[F * NElements + E] == -1)
           ABCMask.push_back(NElements + Idx++);
         else
-          ABCMask.push_back(Idx);
+          ABCMask.push_back(E);
       }
     }
 
