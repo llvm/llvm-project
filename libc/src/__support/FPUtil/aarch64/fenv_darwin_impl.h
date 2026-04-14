@@ -29,13 +29,47 @@ namespace fputil {
 
 struct FEnv {
   struct FPState {
-    uint64_t StatusWord;
-    uint64_t ControlWord;
+    struct Word {
+      unsigned char Bytes[sizeof(uint32_t)];
+
+      LIBC_INLINE operator uint32_t() const {
+        uint32_t value;
+        __builtin_memcpy(&value, Bytes, sizeof(value));
+        return value;
+      }
+
+      LIBC_INLINE Word &operator=(uint32_t value) {
+        __builtin_memcpy(Bytes, &value, sizeof(value));
+        return *this;
+      }
+    };
+
+    Word ControlWord;
+    Word StatusWord;
   };
 
   static_assert(
       sizeof(fenv_t) == sizeof(FPState),
       "Internal floating point state does not match the public fenv_t type.");
+  static_assert(
+      alignof(fenv_t) == alignof(FPState),
+      "Internal floating point state alignment does not match the public "
+      "fenv_t type.");
+
+#ifndef FE_FLUSHTOZERO
+#ifdef FE_DENORM
+  static constexpr uint32_t FE_FLUSHTOZERO = FE_DENORM;
+#else
+  static constexpr uint32_t FE_FLUSHTOZERO = 0;
+#endif
+#endif
+
+  static constexpr uint32_t __fpcr_trap_invalid = 0x100;
+  static constexpr uint32_t __fpcr_trap_overflow = 0x200;
+  static constexpr uint32_t __fpcr_trap_underflow = 0x400;
+  static constexpr uint32_t __fpcr_trap_divbyzero = 0x800;
+  static constexpr uint32_t __fpcr_trap_inexact = 0x1000;
+  static constexpr uint32_t __fpcr_flush_to_zero = 0x1000000;
 
   static constexpr uint32_t TONEAREST = 0x0;
   static constexpr uint32_t UPWARD = 0x1;
