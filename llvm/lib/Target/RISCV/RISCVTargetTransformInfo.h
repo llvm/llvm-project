@@ -373,8 +373,6 @@ public:
         Intrinsic::vp_add,
         Intrinsic::vp_and,
         Intrinsic::vp_ashr,
-        Intrinsic::vp_bitreverse,
-        Intrinsic::vp_bswap,
         Intrinsic::vp_cttz_elts,
         Intrinsic::vp_fadd,
         Intrinsic::vp_fcmp,
@@ -456,6 +454,7 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::FindLast:
       return true;
     case RecurKind::AnyOf:
     case RecurKind::FAdd:

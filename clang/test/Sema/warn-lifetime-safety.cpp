@@ -2531,3 +2531,24 @@ int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
 }
 
 } // namespace conditional_operator_control_flow
+
+namespace CXXDefaultInitExprTests {
+struct Holder {
+  std::string_view view = std::string("temporary"); // expected-warning {{address of stack memory escapes to a field}} expected-note {{this field dangles}}
+  Holder() {}
+};
+} // namespace CXXDefaultInitExprTests
+
+namespace base_class_fields {
+struct X { int* x; }; // expected-note {{this field dangles}}
+struct Y : X {
+  int* y;
+  void bar() {
+    {
+      int a;
+      x = &a; // expected-warning {{address of stack memory escapes to a field}}
+    }
+    (void)x;
+  }
+};
+} // namespace base_class_fields
