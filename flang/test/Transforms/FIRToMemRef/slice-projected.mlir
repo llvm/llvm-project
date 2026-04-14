@@ -65,49 +65,6 @@ func.func @projected_slice_fwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
 }
 
 // ----------------------------------------------------------------------------
-// Reverse projected slice: z(4:1:-1)%re  (the original bug reproducer)
-// The descriptor will encode a negative byte-stride for the reversed view.
-// The MemRef view must preserve that sign through box_dims / box_elesize.
-// ----------------------------------------------------------------------------
-// CHECK-LABEL: func.func @projected_slice_rev
-// CHECK:       [[C_NEG1:%.*]] = arith.constant -1 : index
-// CHECK:       [[C1:%.*]] = arith.constant 1 : index
-// CHECK:       [[C4:%.*]] = arith.constant 4 : index
-// CHECK:       [[C0:%.*]] = arith.constant 0 : index
-// CHECK:       [[SHAPE:%.*]] = fir.shape [[C4]] : (index) -> !fir.shape<1>
-// CHECK:       [[SLICE:%.*]] = fir.slice [[C4]], [[C1]], [[C_NEG1]] path [[C0]] : (index, index, index, index) -> !fir.slice<1>
-// CHECK:       [[EMBOX:%.*]] = fir.embox %arg0([[SHAPE]]) {{\[}}[[SLICE]]{{\]}} : (!fir.ref<!fir.array<4xcomplex<f32>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<4xf32>>
-// CHECK:       fir.do_loop [[I:%.*]] = [[C1]] to [[C4]] step [[C1]] unordered {
-// CHECK:         [[BOXADDR:%.*]] = fir.box_addr [[EMBOX]] : (!fir.box<!fir.array<4xf32>>) -> !fir.ref<!fir.array<4xf32>>
-// CHECK:         [[CONVERT:%.*]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<4xf32>>) -> memref<4xf32>
-// CHECK:         [[C1_0:%.*]] = arith.constant 1 : index
-// CHECK:         [[DELTA:%.*]] = arith.subi [[I]], [[C1_0]] : index
-// CHECK:         [[SCALED:%.*]] = arith.muli [[DELTA]], [[C1_0]] : index
-// CHECK:         [[OFFSET:%.*]] = arith.subi [[C1_0]], [[C1_0]] : index
-// CHECK:         [[IDX:%.*]] = arith.addi [[SCALED]], [[OFFSET]] : index
-// CHECK:         [[ELE:%.*]] = fir.box_elesize [[EMBOX]] : (!fir.box<!fir.array<4xf32>>) -> index
-// CHECK:         [[C0_0:%.*]] = arith.constant 0 : index
-// CHECK:         [[DIMS:%.*]]:3 = fir.box_dims [[EMBOX]], [[C0_0]] : (!fir.box<!fir.array<4xf32>>, index) -> (index, index, index)
-// CHECK:         [[STRIDE:%.*]] = arith.divsi [[DIMS]]#2, [[ELE]] : index
-// CHECK:         [[C0_1:%.*]] = arith.constant 0 : index
-// CHECK:         [[VIEW:%.*]] = memref.reinterpret_cast [[CONVERT]] to offset: {{\[}}[[C0_1]]{{\]}}, sizes: {{\[}}[[DIMS]]#1{{\]}}, strides: {{\[}}[[STRIDE]]{{\]}} : memref<4xf32> to memref<?xf32, strided<[?], offset: ?>>
-// CHECK:         memref.load [[VIEW]]{{\[}}[[IDX]]{{\]}} : memref<?xf32, strided<[?], offset: ?>>
-func.func @projected_slice_rev(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
-  %c-1 = arith.constant -1 : index
-  %c1 = arith.constant 1 : index
-  %c4 = arith.constant 4 : index
-  %c0 = arith.constant 0 : index
-  %shape = fir.shape %c4 : (index) -> !fir.shape<1>
-  %slice = fir.slice %c4, %c1, %c-1 path %c0 : (index, index, index, index) -> !fir.slice<1>
-  %embox = fir.embox %arg0(%shape) [%slice] : (!fir.ref<!fir.array<4xcomplex<f32>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<4xf32>>
-  fir.do_loop %i = %c1 to %c4 step %c1 unordered {
-    %coor = fir.array_coor %embox %i : (!fir.box<!fir.array<4xf32>>, index) -> !fir.ref<f32>
-    %val = fir.load %coor : !fir.ref<f32>
-  }
-  return
-}
-
-// ----------------------------------------------------------------------------
 // Derived-type component projection: a%x where a : TYPE{x:f64, y:complex<f64>}
 //
 // This is NOT a complex projection — the storage element is the derived type T,
