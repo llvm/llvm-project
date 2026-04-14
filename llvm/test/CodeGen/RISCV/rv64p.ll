@@ -157,9 +157,8 @@ define i64 @pli_w_slli_i64() {
 define i64 @pli_w_srli_i64() {
 ; CHECK-LABEL: pli_w_srli_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 32768
-; CHECK-NEXT:    addi a0, a0, -1022
-; CHECK-NEXT:    pack a0, a0, a0
+; CHECK-NEXT:    pli.w a0, -480
+; CHECK-NEXT:    srli a0, a0, 5
 ; CHECK-NEXT:    ret
   ret i64 u0x07fffff107fffff1
 }
