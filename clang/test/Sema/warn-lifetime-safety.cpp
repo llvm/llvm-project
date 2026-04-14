@@ -2532,6 +2532,73 @@ int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
 
 } // namespace conditional_operator_control_flow
 
+namespace method_call_uses_field_origins {
+int GLOBAL_INT;
+std::string GLOBAL_STRING{"123"};
+
+struct S {
+  int* p_;
+  void bar();
+  void foo() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar();             // expected-note {{later used here}}
+    this->p_ = &GLOBAL_INT;
+  }
+  void baz() {
+    {
+      int num;
+      this->p_ = &num;
+    }
+    this->p_ = &GLOBAL_INT;
+    bar();
+  }
+};
+
+struct T {
+  std::string_view v;
+  void bar();
+  void foo() {
+    v = std::string("tmp"); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+    bar();                  // expected-note {{later used here}}
+  }
+};
+
+// FIXME: false-negative
+void foo() {
+  S s;
+  {
+    int num;
+    s.p_ = &num; // does not warn
+  }
+  s.bar();
+  s.p_ = &GLOBAL_INT;
+}
+
+struct S2 : S {
+  void bar2();
+  void foo2() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar();             // expected-note {{later used here}}
+    this->p_ = &GLOBAL_INT;
+  }
+  void baz2() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar2();            // expected-note {{later used here}}
+    this->p_ = nullptr;
+  }
+};
+
+} // namespace method_call_uses_field_origins
+
 namespace CXXDefaultInitExprTests {
 struct Holder {
   std::string_view view = std::string("temporary"); // expected-warning {{address of stack memory escapes to a field}} expected-note {{this field dangles}}
