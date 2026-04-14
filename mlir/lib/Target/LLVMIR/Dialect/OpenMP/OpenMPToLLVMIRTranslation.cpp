@@ -34,7 +34,9 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -8167,19 +8169,21 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   if (shouldAllocate && isTargetDevice) {
     llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
     llvm::Triple targetTriple(llvmModule->getTargetTriple());
-    if (targetTriple.isAMDGCN() || targetTriple.isNVPTX()) {
-      unsigned sharedAddressSpace = 3;
-      llvm::GlobalVariable *sharedVar = new llvm::GlobalVariable(
-          *llvmModule, varType, /*isConstant=*/false,
-          llvm::GlobalValue::InternalLinkage, llvm::PoisonValue::get(varType),
-          varName, /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
-          sharedAddressSpace,
-          /*isExternallyInitialized=*/false);
-      resultPtr = sharedVar;
-    } else {
+    unsigned sharedAddressSpace;
+    if (targetTriple.isAMDGCN())
+      sharedAddressSpace = llvm::AMDGPUAS::LOCAL_ADDRESS;
+    else if (targetTriple.isNVPTX())
+      sharedAddressSpace = llvm::NVPTXAS::ADDRESS_SPACE_SHARED;
+    else
       return opInst.emitError() << "groupprivate is not supported for target: "
                                 << targetTriple.str();
-    }
+    llvm::GlobalVariable *sharedVar = new llvm::GlobalVariable(
+        *llvmModule, varType, /*isConstant=*/false,
+        llvm::GlobalValue::InternalLinkage, llvm::PoisonValue::get(varType),
+        varName, /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+        sharedAddressSpace,
+        /*isExternallyInitialized=*/false);
+    resultPtr = sharedVar;
   } else {
     // Use original global address on host or when not allocating
     // group-private storage.

@@ -2535,7 +2535,8 @@ def IteratorOp : OpenMP_Op<"iterator",
 // [6.0] groupprivate Directive
 //===----------------------------------------------------------------------===//
 
-def GroupprivateOp : OpenMP_Op<"groupprivate", [Pure]> {
+def GroupprivateOp : OpenMP_Op<"groupprivate",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "groupprivate directive";
   let description = [{
     The groupprivate directive specifies that variables are replicated, with
@@ -2555,9 +2556,8 @@ def GroupprivateOp : OpenMP_Op<"groupprivate", [Pure]> {
   );
   let results = (outs OpenMP_PointerLikeType:$gp_addr);
   let assemblyFormat = [{
-    $sym_name `:` type($gp_addr) (`,` `device_type` $device_type^)? attr-dict
+    $sym_name (`device_type` $device_type^)? `:` type($gp_addr) attr-dict
   }];
-  let hasVerifier = 1;
 }
 
 #endif // OPENMP_OPS

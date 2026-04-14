@@ -3965,16 +3965,16 @@ func.func @omp_groupprivate_device_type() {
   // CHECK: {{.*}} = omp.groupprivate @gp : !llvm.ptr
   %group_private_addr = omp.groupprivate @gp : !llvm.ptr
 
-  // CHECK: {{.*}} = omp.groupprivate @any : !llvm.ptr, device_type (any)
-  %group_private_any = omp.groupprivate @any : !llvm.ptr, device_type(any)
+  // CHECK: {{.*}} = omp.groupprivate @any device_type (any) : !llvm.ptr
+  %group_private_any = omp.groupprivate @any device_type(any) : !llvm.ptr
   llvm.store %1, %group_private_any : i32, !llvm.ptr
 
-  // CHECK: {{.*}} = omp.groupprivate @host : !llvm.ptr, device_type (host)
-  %group_private_host = omp.groupprivate @host : !llvm.ptr, device_type(host)
+  // CHECK: {{.*}} = omp.groupprivate @host device_type (host) : !llvm.ptr
+  %group_private_host = omp.groupprivate @host device_type(host) : !llvm.ptr
   llvm.store %1, %group_private_host : i32, !llvm.ptr
 
-  // CHECK: {{.*}} = omp.groupprivate @nohost : !llvm.ptr, device_type (nohost)
-  %group_private_nohost = omp.groupprivate @nohost : !llvm.ptr, device_type(nohost)
+  // CHECK: {{.*}} = omp.groupprivate @nohost device_type (nohost) : !llvm.ptr
+  %group_private_nohost = omp.groupprivate @nohost device_type(nohost) : !llvm.ptr
   llvm.store %1, %group_private_nohost : i32, !llvm.ptr
 
   return

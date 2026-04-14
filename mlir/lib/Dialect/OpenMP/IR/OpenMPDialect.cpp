@@ -5037,8 +5037,9 @@ LogicalResult IteratorOp::verify() {
 // GroupprivateOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult GroupprivateOp::verify() {
-  auto *symbol = SymbolTable::lookupNearestSymbolFrom(*this, getSymNameAttr());
+LogicalResult
+GroupprivateOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto *symbol = symbolTable.lookupNearestSymbolFrom(*this, getSymNameAttr());
   if (!symbol)
     return emitOpError() << "expected symbol reference '" << getSymName()
                          << "' to point to a global variable";
