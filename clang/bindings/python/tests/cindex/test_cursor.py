@@ -256,7 +256,8 @@ class TestCursor(unittest.TestCase):
         self.assertTrue(q.Volatile)
         self.assertTrue(q.Restrict)
 
-        # Explicit object member functions have no method qualifiers
+    def test_get_method_qualifiers_explicit_object(self):
+        """Ensure explicit object member functions have no method qualifiers."""
         source = """
         struct S {
             void explicit_const(this const S&);
