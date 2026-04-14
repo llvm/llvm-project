@@ -15,37 +15,32 @@ define <4 x i1>  @f(ptr %out, <4 x half> %v) {
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    f32.const 0x0p0
 ; CHECK-NEXT:    f32.ne
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i16x8.splat
-; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32x4.splat
 ; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    f32.const 0x0p0
 ; CHECK-NEXT:    f32.ne
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i16x8.replace_lane 1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
-; CHECK-NEXT:    i64x2.extend_low_i32x4_s
-; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32x4.replace_lane 2
+; CHECK-NEXT:    i32.const 63
+; CHECK-NEXT:    i64x2.shl
+; CHECK-NEXT:    i32.const 63
+; CHECK-NEXT:    i64x2.shr_s
 ; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    f32.const 0x0p0
 ; CHECK-NEXT:    f32.ne
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i16x8.splat
-; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32x4.splat
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    f32.const 0x0p0
 ; CHECK-NEXT:    f32.ne
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i16x8.replace_lane 1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
-; CHECK-NEXT:    i64x2.extend_low_i32x4_s
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
+; CHECK-NEXT:    i32x4.replace_lane 2
+; CHECK-NEXT:    i32.const 63
+; CHECK-NEXT:    i64x2.shl
+; CHECK-NEXT:    i32.const 63
+; CHECK-NEXT:    i64x2.shr_s
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
 ; CHECK-NEXT:    # fallthrough-return
   %cmp = fcmp une <4 x half> %v, zeroinitializer
   ret <4 x i1> %cmp
