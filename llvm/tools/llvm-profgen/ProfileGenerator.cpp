@@ -244,10 +244,10 @@ bool ProfileGeneratorBase::filterAmbiguousProfile(FunctionSamples &FS) {
 // from the profile map during the profile generation time. The profiles are all
 // cold functions, it won't have perf impact.
 void ProfileGeneratorBase::filterAmbiguousProfile(SampleProfileMap &Profiles) {
-  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
+  for (auto I = Profiles.begin(); I != Profiles.end();) {
     auto FS = I++;
     if (filterAmbiguousProfile(FS->second))
-      ProfileMap.erase(FS);
+      Profiles.erase(FS);
   }
 }
 
@@ -529,15 +529,14 @@ void ProfileGeneratorBase::markAllContextPreinlined(
 
 void ProfileGenerator::postProcessProfiles() {
   computeSummaryAndThreshold(ProfileMap);
-  trimColdProfiles(ProfileMap, ColdCountThreshold);
+  trimColdProfiles(ColdCountThreshold);
   filterAmbiguousProfile(ProfileMap);
   if (MarkAllContextPreinlined)
     markAllContextPreinlined(ProfileMap);
   calculateAndShowDensity(ProfileMap);
 }
 
-void ProfileGenerator::trimColdProfiles(const SampleProfileMap &Profiles,
-                                        uint64_t ColdCntThreshold) {
+void ProfileGenerator::trimColdProfiles(uint64_t ColdCntThreshold) {
   if (!TrimColdProfile)
     return;
 

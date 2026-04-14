@@ -351,36 +351,32 @@ ScopBuilder::getPwAff(BasicBlock *BB,
 /// @param IsStrictUpperBound holds information on the predicate relation
 /// between TestVal and UpperBound, i.e,
 /// TestVal < UpperBound  OR  TestVal <= UpperBound
-__isl_give isl_set *ScopBuilder::buildUnsignedConditionSets(
-    BasicBlock *BB, Value *Condition, __isl_keep isl_set *Domain,
+isl::set ScopBuilder::buildUnsignedConditionSets(
+    BasicBlock *BB, Value *Condition, const isl::set &Domain,
     const SCEV *SCEV_TestVal, const SCEV *SCEV_UpperBound,
     DenseMap<BasicBlock *, isl::set> &InvalidDomainMap, bool IsStrictUpperBound,
     bool IsInsideDomain) {
   // Do not take NonNeg assumption on TestVal
   // as it might have MSB (Sign bit) set.
-  isl_pw_aff *TestVal = getPwAff(BB, InvalidDomainMap, SCEV_TestVal,
-                                 /*NonNegative=*/false, IsInsideDomain)
-                            .release();
+  isl::pw_aff TestVal = getPwAff(BB, InvalidDomainMap, SCEV_TestVal,
+                                 /*NonNegative=*/false, IsInsideDomain);
   // Take NonNeg assumption on UpperBound.
-  isl_pw_aff *UpperBound = getPwAff(BB, InvalidDomainMap, SCEV_UpperBound,
-                                    /*NonNegative=*/true, IsInsideDomain)
-                               .release();
+  isl::pw_aff UpperBound = getPwAff(BB, InvalidDomainMap, SCEV_UpperBound,
+                                    /*NonNegative=*/true, IsInsideDomain);
 
   // 0 <= TestVal
-  isl_set *First =
-      isl_pw_aff_le_set(isl_pw_aff_zero_on_domain(isl_local_space_from_space(
-                            isl_pw_aff_get_domain_space(TestVal))),
-                        isl_pw_aff_copy(TestVal));
+  isl::set First =
+      isl::pw_aff(isl::local_space(TestVal.domain_space())).le_set(TestVal);
 
-  isl_set *Second;
+  isl::set Second;
   if (IsStrictUpperBound)
     // TestVal < UpperBound
-    Second = isl_pw_aff_lt_set(TestVal, UpperBound);
+    Second = TestVal.lt_set(std::move(UpperBound));
   else
     // TestVal <= UpperBound
-    Second = isl_pw_aff_le_set(TestVal, UpperBound);
+    Second = TestVal.le_set(std::move(UpperBound));
 
-  isl_set *ConsequenceCondSet = isl_set_intersect(First, Second);
+  isl::set ConsequenceCondSet = First.intersect(std::move(Second));
   return ConsequenceCondSet;
 }
 
@@ -505,23 +501,31 @@ bool ScopBuilder::buildConditionSets(
     switch (ICond->getPredicate()) {
     case ICmpInst::ICMP_ULT:
       ConsequenceCondSet = buildUnsignedConditionSets(
-          BB, Condition, Domain, LeftOperand, RightOperand, InvalidDomainMap,
-          /*IsStrictUpperBound=*/true, IsInsideDomain);
+                               BB, Condition, isl::manage_copy(Domain),
+                               LeftOperand, RightOperand, InvalidDomainMap,
+                               /*IsStrictUpperBound=*/true, IsInsideDomain)
+                               .release();
       break;
     case ICmpInst::ICMP_ULE:
       ConsequenceCondSet = buildUnsignedConditionSets(
-          BB, Condition, Domain, LeftOperand, RightOperand, InvalidDomainMap,
-          /*IsStrictUpperBound=*/false, IsInsideDomain);
+                               BB, Condition, isl::manage_copy(Domain),
+                               LeftOperand, RightOperand, InvalidDomainMap,
+                               /*IsStrictUpperBound=*/false, IsInsideDomain)
+                               .release();
       break;
     case ICmpInst::ICMP_UGT:
       ConsequenceCondSet = buildUnsignedConditionSets(
-          BB, Condition, Domain, RightOperand, LeftOperand, InvalidDomainMap,
-          /*IsStrictUpperBound=*/true, IsInsideDomain);
+                               BB, Condition, isl::manage_copy(Domain),
+                               RightOperand, LeftOperand, InvalidDomainMap,
+                               /*IsStrictUpperBound=*/true, IsInsideDomain)
+                               .release();
       break;
     case ICmpInst::ICMP_UGE:
       ConsequenceCondSet = buildUnsignedConditionSets(
-          BB, Condition, Domain, RightOperand, LeftOperand, InvalidDomainMap,
-          /*IsStrictUpperBound=*/false, IsInsideDomain);
+                               BB, Condition, isl::manage_copy(Domain),
+                               RightOperand, LeftOperand, InvalidDomainMap,
+                               /*IsStrictUpperBound=*/false, IsInsideDomain)
+                               .release();
       break;
     default:
       LHS = getPwAff(BB, InvalidDomainMap, LeftOperand, NonNeg, IsInsideDomain)

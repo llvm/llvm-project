@@ -896,6 +896,5 @@ exit:
   ret i32 %min.idx.next
 }
 
-declare i32 @llvm.umin.i32(i32, i32)
 
 attributes #0 = { optsize "target-cpu"="neoverse-v2" }

@@ -6807,7 +6807,7 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
 
 MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex,
+    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
     LiveIntervals *LIS, VirtRegMap *VRM) const {
   // This is a bit of a hack. Consider this instruction:
   //
@@ -10801,9 +10801,7 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
 
   BuildMI(MBB, MBB.begin(), DebugLoc(), TII->get(AArch64::PAUTH_PROLOGUE))
       .setMIFlag(MachineInstr::FrameSetup);
-  BuildMI(MBB, MBB.getFirstInstrTerminator(), DebugLoc(),
-          TII->get(AArch64::PAUTH_EPILOGUE))
-      .setMIFlag(MachineInstr::FrameDestroy);
+  TII->createPauthEpilogueInstr(MBB, DebugLoc());
 }
 
 void AArch64InstrInfo::buildOutlinedFrame(
@@ -11292,6 +11290,17 @@ unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
     return AArch64::BLRNoIP;
   else
     return AArch64::BLR;
+}
+
+void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
+                                                DebugLoc DL) const {
+  MachineBasicBlock::iterator InsertPt = MBB.getFirstTerminator();
+  auto Builder = BuildMI(MBB, InsertPt, DL, get(AArch64::PAUTH_EPILOGUE))
+                     .setMIFlag(MachineInstr::FrameDestroy);
+
+  const auto *AFI = MBB.getParent()->getInfo<AArch64FunctionInfo>();
+  if (AFI->branchProtectionPAuthLR() && !Subtarget.hasPAuthLR())
+    Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
 }
 
 MachineBasicBlock::iterator

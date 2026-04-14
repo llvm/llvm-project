@@ -197,7 +197,7 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_ref",
             "values": {
                 "c++20": 201806,
-                "c++26": 202411,  # P2835R7: Expose std::atomic_ref 's object address
+                "c++26": 202603,
             },
             "headers": ["atomic"],
         },
@@ -1221,7 +1221,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_saturation_arithmetic",
-            "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
+            "values": {"c++26": 202603},  # P0543R3 Saturation arithmetic
             "headers": ["numeric"],
         },
         {
