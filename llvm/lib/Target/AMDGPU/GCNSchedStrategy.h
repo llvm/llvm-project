@@ -369,9 +369,6 @@ protected:
   // RP after scheduling the current region.
   GCNRegPressure PressureAfter;
 
-  // Whether checkScheduling reverted the schedule for the current region.
-  bool ScheduleReverted = false;
-
   std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
 
   GCNSchedStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG);
@@ -720,14 +717,11 @@ private:
     std::vector<MachineInstr *> OrigMIOrder;
     /// Maximum pressure recorded in the region.
     GCNRegPressure MaxPressure;
-    /// Whether the region was already reverted by per-region checkScheduling.
-    bool AlreadyReverted = false;
 
     RegionSchedRevert(unsigned RegionIdx, ArrayRef<MachineInstr *> OrigMIOrder,
-                      const GCNRegPressure &MaxPressure,
-                      bool AlreadyReverted = false)
+                      const GCNRegPressure &MaxPressure)
         : RegionIdx(RegionIdx), OrigMIOrder(OrigMIOrder),
-          MaxPressure(MaxPressure), AlreadyReverted(AlreadyReverted) {}
+          MaxPressure(MaxPressure) {}
   };
   /// After re-scheduling, contains pre-re-scheduling data for all re-scheduled
   /// regions.
