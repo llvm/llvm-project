@@ -1309,7 +1309,6 @@ public:
                                    QualType type, Destroyer *destroyer,
                                    bool useEHCleanupForArray);
 
-
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
   /// Start generating a thunk function.
