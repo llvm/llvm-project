@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_UNIQUEBBID_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 
@@ -31,6 +32,14 @@ struct UniqueBBID {
 struct CallsiteID {
   UniqueBBID BBID;
   unsigned CallsiteIndex;
+};
+
+// This represents a prefetch hint to be injected at site `SiteID`, targeting
+// `TargetID` in function `TargetFunction`.
+struct PrefetchHint {
+  CallsiteID SiteID;
+  StringRef TargetFunction;
+  CallsiteID TargetID;
 };
 
 // Provides DenseMapInfo for UniqueBBID.

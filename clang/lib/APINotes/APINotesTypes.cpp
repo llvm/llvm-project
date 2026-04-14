@@ -49,8 +49,8 @@ LLVM_DUMP_METHOD void CommonTypeInfo::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void ContextInfo::dump(llvm::raw_ostream &OS) {
   static_cast<CommonTypeInfo &>(*this).dump(OS);
-  if (HasDefaultNullability)
-    OS << "DefaultNullability: " << DefaultNullability << ' ';
+  if (NullabilityKindOrNone K = getDefaultNullability())
+    OS << "DefaultNullability: " << *K << ' ';
   if (HasDesignatedInits)
     OS << "[HasDesignatedInits] ";
   if (SwiftImportAsNonGenericSpecified)
@@ -62,8 +62,8 @@ LLVM_DUMP_METHOD void ContextInfo::dump(llvm::raw_ostream &OS) {
 
 LLVM_DUMP_METHOD void VariableInfo::dump(llvm::raw_ostream &OS) const {
   static_cast<const CommonEntityInfo &>(*this).dump(OS);
-  if (NullabilityAudited)
-    OS << "Audited Nullability: " << Nullable << ' ';
+  if (NullabilityKindOrNone K = getNullability())
+    OS << "Audited Nullability: " << *K << ' ';
   if (!Type.empty())
     OS << "C Type: " << Type << ' ';
   OS << '\n';

@@ -25,11 +25,11 @@ using namespace llvm::mustache;
 namespace clang {
 namespace doc {
 
-static OwnedPtr<MustacheTemplateFile> NamespaceTemplate = nullptr;
+static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
 
-static OwnedPtr<MustacheTemplateFile> RecordTemplate = nullptr;
+static std::unique_ptr<MustacheTemplateFile> RecordTemplate = nullptr;
 
-static OwnedPtr<MustacheTemplateFile> IndexTemplate = nullptr;
+static std::unique_ptr<MustacheTemplateFile> IndexTemplate = nullptr;
 
 class HTMLGenerator : public MustacheGenerator {
 public:

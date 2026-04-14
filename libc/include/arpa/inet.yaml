@@ -1,5 +1,6 @@
 header: arpa/inet.h
-header_template: inet.h.def
+standards:
+  - posix
 macros: []
 types:
   - type_name: in_addr

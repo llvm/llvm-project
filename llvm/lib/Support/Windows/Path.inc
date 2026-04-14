@@ -1199,8 +1199,8 @@ void mapped_file_region::willNeedImpl() {
         llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
     if (!kernelM)
       return nullptr;
-    return (PrefetchVirtualMemory_t)::GetProcAddress(kernelM,
-                                                     "PrefetchVirtualMemory");
+    return (PrefetchVirtualMemory_t)(void *)::GetProcAddress(
+        kernelM, "PrefetchVirtualMemory");
   }();
   if (pfnPrefetchVirtualMemory) {
     MEMORY_RANGE_ENTRY Range{Mapping, Size};

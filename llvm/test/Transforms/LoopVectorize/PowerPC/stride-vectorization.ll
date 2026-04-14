@@ -9,10 +9,10 @@ entry:
 ; CHECK-LABEL: @foo
 ; CHECK: <2 x double>
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = shl nsw i64 %indvars.iv, 1
   %odd.idx = add nsw i64 %0, 1

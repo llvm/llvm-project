@@ -300,17 +300,32 @@ void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
                                           const InputInfoList &Inputs,
                                           const ArgList &Args,
                                           const char *LinkingOutput) const {
-  std::string DxvPath = getToolChain().GetProgramPath("dxv");
-  assert(DxvPath != "dxv" && "cannot find dxv");
-
   ArgStringList CmdArgs;
   assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
   const InputInfo &Input = Inputs[0];
-  CmdArgs.push_back(Input.getFilename());
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(Output.getFilename());
 
-  const char *Exec = Args.MakeArgString(DxvPath);
+  const llvm::Triple &T = getToolChain().getTriple();
+  std::string ExecPath;
+  if (T.isSPIRV()) {
+    ExecPath = getToolChain().GetProgramPath("spirv-val");
+    assert(ExecPath != "spirv-val" && "cannot find spirv-val");
+
+    CmdArgs.push_back("--target-env");
+    CmdArgs.push_back(Args.MakeArgString(T.getOSName()));
+    CmdArgs.push_back("--scalar-block-layout");
+    CmdArgs.push_back(Input.getFilename());
+  } else if (T.isDXIL()) {
+    ExecPath = getToolChain().GetProgramPath("dxv");
+    assert(ExecPath != "dxv" && "cannot find dxv");
+
+    CmdArgs.push_back(Input.getFilename());
+    CmdArgs.push_back("-o");
+    CmdArgs.push_back(Output.getFilename());
+  } else {
+    llvm_unreachable("unexpected triple for HLSL validation");
+  }
+
+  const char *Exec = Args.MakeArgString(ExecPath);
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Input));
 }
@@ -384,6 +399,9 @@ HLSLToolChain::HLSLToolChain(const Driver &D, const llvm::Triple &Triple,
   if (Args.hasArg(options::OPT_dxc_validator_path_EQ))
     getProgramPaths().push_back(
         Args.getLastArgValue(options::OPT_dxc_validator_path_EQ).str());
+  if (Args.hasArg(options::OPT_spirv_validator_path_EQ))
+    getProgramPaths().push_back(
+        Args.getLastArgValue(options::OPT_spirv_validator_path_EQ).str());
 }
 
 Tool *clang::driver::toolchains::HLSLToolChain::getTool(
@@ -574,19 +592,43 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   return DAL;
 }
 
-bool HLSLToolChain::requiresValidation(DerivedArgList &Args) const {
-  if (!Args.hasArg(options::OPT_dxc_Fo))
-    return false;
+HLSLToolChain::ValidationInfo
+HLSLToolChain::getValidationInfo(DerivedArgList &Args, bool Diagnose) const {
+  ValidationInfo Info;
 
-  if (Args.getLastArg(options::OPT_dxc_disable_validation))
-    return false;
+  bool HasFo = Args.hasArg(options::OPT_dxc_Fo);
+  bool DisableValidation =
+      Args.getLastArg(options::OPT_dxc_disable_validation) != nullptr;
 
-  std::string DxvPath = GetProgramPath("dxv");
-  if (DxvPath != "dxv")
-    return true;
+  if (DisableValidation || !HasFo)
+    return Info;
 
-  getDriver().Diag(diag::warn_drv_dxc_missing_dxv);
-  return false;
+  if (getTriple().isDXIL()) {
+    std::string DxvPath = GetProgramPath("dxv");
+    if (DxvPath != "dxv") {
+      Info.NeedsValidation = true;
+      Info.ProducesOutput = true;
+      return Info;
+    }
+
+    if (Diagnose)
+      getDriver().Diag(diag::warn_drv_dxc_missing_dxv);
+    return Info;
+  }
+
+  if (getTriple().isSPIRV()) {
+    std::string SpirvValPath = GetProgramPath("spirv-val");
+    if (SpirvValPath != "spirv-val") {
+      Info.NeedsValidation = true;
+      Info.ProducesOutput = false;
+      return Info;
+    }
+
+    if (Diagnose)
+      getDriver().Diag(diag::warn_drv_dxc_missing_spirv_val);
+  }
+
+  return Info;
 }
 
 bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
@@ -599,13 +641,17 @@ bool HLSLToolChain::requiresObjcopy(DerivedArgList &Args) const {
           Args.hasArg(options::OPT_dxc_Frs) || isRootSignatureTarget(Args));
 }
 
-bool HLSLToolChain::isLastJob(DerivedArgList &Args,
-                              Action::ActionClass AC) const {
+bool HLSLToolChain::isLastOutputProducingJob(DerivedArgList &Args,
+                                             Action::ActionClass AC) const {
   // Note: we check in the reverse order of execution
   if (requiresBinaryTranslation(Args))
     return AC == Action::Action::BinaryTranslatorJobClass;
-  if (requiresValidation(Args))
-    return AC == Action::Action::BinaryAnalyzeJobClass;
+  auto ValInfo = getValidationInfo(Args, /*Diagnose=*/false);
+  if (ValInfo.NeedsValidation) {
+    if (ValInfo.ProducesOutput)
+      return AC == Action::Action::BinaryAnalyzeJobClass;
+    return AC == Action::Action::AssembleJobClass;
+  }
   if (requiresObjcopy(Args))
     return AC == Action::Action::ObjcopyJobClass;
 

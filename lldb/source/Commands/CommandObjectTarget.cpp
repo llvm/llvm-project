@@ -1930,7 +1930,7 @@ protected:
             FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matched == 0) {
           result.AppendWarningWithFormatv(
-              "Unable to find an image that matches '{0}'.", arg_cstr);
+              "unable to find an image that matches '{0}'", arg_cstr);
         }
       }
       // Dump all the modules we found.
@@ -2068,7 +2068,7 @@ protected:
           }
         } else
           result.AppendWarningWithFormatv(
-              "Unable to find an image that matches '{0}'.", arg_cstr);
+              "unable to find an image that matches '{0}'", arg_cstr);
       }
     }
 
@@ -2153,7 +2153,7 @@ protected:
               Module::GetAllocationModuleCollectionMutex());
 
           result.AppendWarningWithFormatv(
-              "Unable to find an image that matches '{0}'.", arg_cstr);
+              "unable to find an image that matches '{0}'", arg_cstr);
         }
       }
     }
@@ -2286,7 +2286,7 @@ protected:
             Module::GetAllocationModuleCollectionMutex());
 
         result.AppendWarningWithFormatv(
-            "Unable to find an image that matches '{0}'.", arg.c_str());
+            "unable to find an image that matches '{0}'", arg.c_str());
         continue;
       }
 
@@ -2370,7 +2370,7 @@ protected:
           }
         } else
           result.AppendWarningWithFormatv(
-              "Unable to find an image that matches '{0}'.", arg_cstr);
+              "unable to find an image that matches '{0}'", arg_cstr);
       }
     }
 
@@ -2437,8 +2437,8 @@ protected:
               num_dumped++;
           }
           if (num_dumped == 0)
-            result.AppendWarningWithFormatv(
-                "No source filenames matched '{0}'.", arg_cstr);
+            result.AppendWarningWithFormatv("no source filenames matched '{0}'",
+                                            arg_cstr);
           else
             total_num_dumped += num_dumped;
         }
@@ -2597,7 +2597,7 @@ protected:
           }
         } else
           result.AppendWarningWithFormatv(
-              "Unable to find an image that matches '{0}'.", arg_cstr);
+              "unable to find an image that matches '{0}'", arg_cstr);
       }
     }
 
@@ -2646,7 +2646,7 @@ protected:
                 DumpOsoFilesTable(strm, *files);
               } else {
                 result.AppendWarningWithFormatv(
-                    "Found unsupported debug info type '{0}'.", type);
+                    "found unsupported debug info type '{0}'", type);
               }
               return true;
             });
@@ -4123,7 +4123,7 @@ protected:
           }
         } else
           result.AppendWarningWithFormatv(
-              "Unable to find an image that matches '{0}'.", arg_cstr);
+              "unable to find an image that matches '{0}'", arg_cstr);
       }
     }
 

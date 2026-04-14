@@ -424,6 +424,19 @@ bool GCNRPTarget::isSaveBeneficial(Register Reg) const {
   return (UnifiedRF && Excess.VGPR) || Excess.ArchVGPR;
 }
 
+bool GCNRPTarget::isSaveBeneficial(const GCNRegPressure &SaveRP) const {
+  RegExcess Excess(MF, RP, *this);
+  if (SaveRP.getSGPRNum() != 0 && Excess.SGPR != 0)
+    return true;
+  if (SaveRP.getArchVGPRNum() != 0 && Excess.ArchVGPR != 0)
+    return true;
+  if (SaveRP.getAGPRNum() != 0 && Excess.AGPR != 0)
+    return true;
+  if (UnifiedRF && Excess.VGPR != 0)
+    return SaveRP.getArchVGPRNum() != 0 || SaveRP.getAGPRNum() != 0;
+  return false;
+}
+
 unsigned GCNRPTarget::getNumRegsBenefit(const GCNRegPressure &SaveRP) const {
   RegExcess Excess(MF, RP, *this);
   const unsigned NumVGPRAboveAddrLimit =

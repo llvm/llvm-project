@@ -119,7 +119,32 @@ llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
       /*AlignInBits=*/0, attr.getEncoding(), llvm::DINode::FlagZero);
 }
 
+llvm::TempDICompileUnit
+DebugTranslation::translateTemporaryImpl(DICompileUnitAttr attr) {
+  return llvm::DICompileUnit::getTemporary(
+      llvmCtx,
+      static_cast<llvm::DISourceLanguageName>(attr.getSourceLanguage()),
+      /*File=*/nullptr, "", attr.getIsOptimized(),
+      /*Flags=*/"", /*RuntimeVersion=*/0,
+      /*splitDebugFileName=*/"",
+      static_cast<llvm::DICompileUnit::DebugEmissionKind>(
+          attr.getEmissionKind()),
+      /*EnumTypes=*/nullptr, /*RetainedTypes=*/nullptr,
+      /*GlobalVariables=*/nullptr, /*ImportedEntities=*/nullptr,
+      /*Macros=*/nullptr,
+      /*DWOId=*/0, /*SplitDebugInlining=*/true,
+      attr.getIsDebugInfoForProfiling(),
+      static_cast<llvm::DICompileUnit::DebugNameTableKind>(
+          attr.getNameTableKind()),
+      /*RangesBaseAddress=*/false, /*SysRoot=*/"", /*SDK=*/"");
+}
+
 llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
+  if (attr.getId())
+    if (auto iter = distinctAttrToNode.find(attr.getId());
+        iter != distinctAttrToNode.end())
+      return cast<llvm::DICompileUnit>(iter->second);
+
   llvm::DIBuilder builder(llvmModule);
   llvm::DICompileUnit *cu = builder.createCompileUnit(
       attr.getSourceLanguage(), translate(attr.getFile()),
@@ -139,6 +164,9 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
     importNodes.push_back(translate(importNode));
   if (!importNodes.empty())
     cu->replaceImportedEntities(llvm::MDTuple::get(llvmCtx, importNodes));
+
+  if (attr.getId())
+    distinctAttrToNode.try_emplace(attr.getId(), cu);
 
   return cu;
 }
@@ -307,6 +335,13 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
             setRecursivePlaceholder(temporary.get());
             // Must call `translateImpl` directly instead of `translate` to
             // avoid handling the recursive interface again.
+            auto *concrete = translateImpl(attr);
+            temporary->replaceAllUsesWith(concrete);
+            return concrete;
+          })
+          .Case([&](DICompileUnitAttr attr) {
+            auto temporary = translateTemporaryImpl(attr);
+            setRecursivePlaceholder(temporary.get());
             auto *concrete = translateImpl(attr);
             temporary->replaceAllUsesWith(concrete);
             return concrete;

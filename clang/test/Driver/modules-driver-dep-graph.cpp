@@ -2,6 +2,7 @@
 // generation are correct.
 // This test does not make use of any system inputs.
 
+// RUN: rm -rf %t
 // RUN: split-file %s %t
 
 // RUN: %clang -std=c++23 -nostdlib -fmodules \

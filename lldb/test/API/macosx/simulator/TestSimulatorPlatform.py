@@ -97,7 +97,6 @@ class TestSimulatorPlatformLaunching(TestBase):
                 device_udid,
                 self.getBuildArtifact("a.out"),
                 exe_args=[],
-                stderr_lines_to_read=1,  # in hello.cpp, the pid is printed first
                 stderr_patterns=[r"PID: (.*)"],
                 log=self.trace,
             )

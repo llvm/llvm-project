@@ -83,7 +83,7 @@ entry:
   %ntrunc = trunc i64 %n to i32
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i64 [ %i.next, %latch ], [ 0, %entry ]
   %i1 = getelementptr inbounds i32, ptr %b, i64 %i
   %i2 = load i32, ptr %i1, align 8
@@ -104,7 +104,7 @@ latch:
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -176,7 +176,7 @@ entry:
   %cmp = icmp eq i32 %ntrunc, %k
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i64 [ %i.next, %latch ], [ 0, %entry ]
   %i1 = getelementptr inbounds i32, ptr %b, i64 %i
   %i2 = load i32, ptr %i1, align 8
@@ -196,7 +196,7 @@ latch:
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -262,7 +262,7 @@ entry:
   %cmp = icmp eq i32 %ntrunc, %k
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
   %i0 = phi i32 [ %i3, %for.body ], [ 0, %entry ]
   %i1 = getelementptr inbounds i32, ptr %b, i64 %i
@@ -273,7 +273,7 @@ for.body:                                         ; preds = %for.body, %entry
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   %rdx.lcssa = phi i32 [ %i3, %for.body ]
   ret i32 %rdx.lcssa
 }

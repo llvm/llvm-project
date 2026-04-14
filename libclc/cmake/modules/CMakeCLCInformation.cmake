@@ -11,32 +11,14 @@ if(NOT CMAKE_CLC_COMPILE_OBJECT)
     "<CMAKE_CLC_COMPILER> -x cl <DEFINES> <INCLUDES> <FLAGS> -c -o <OBJECT> <SOURCE>")
 endif()
 
-# Finds a required LLVM tool by searching the CLC compiler directory first.
-function(find_llvm_tool name out_var)
-  cmake_path(GET CMAKE_CLC_COMPILER PARENT_PATH llvm_bin_dir)
-  find_program(${out_var}
-    NAMES ${name}
-    HINTS "${llvm_bin_dir}"
-    DOC "libclc: path to the ${name} tool"
-  )
-  if(NOT ${out_var})
-    message(FATAL_ERROR "${name} not found for libclc build.")
-  endif()
-endfunction()
-
-find_llvm_tool(llvm-ar CLC_AR)
-find_llvm_tool(llvm-ranlib CLC_RANLIB)
-
 if(NOT DEFINED CMAKE_CLC_ARCHIVE_CREATE)
-  set(CMAKE_CLC_ARCHIVE_CREATE "${CLC_AR} qc <TARGET> <OBJECTS>")
+  set(CMAKE_CLC_ARCHIVE_CREATE "<CMAKE_AR> qc <TARGET> <LINK_FLAGS> <OBJECTS>")
 endif()
-
 if(NOT DEFINED CMAKE_CLC_ARCHIVE_APPEND)
-  set(CMAKE_CLC_ARCHIVE_APPEND "${CLC_AR} q <TARGET> <OBJECTS>")
+  set(CMAKE_CLC_ARCHIVE_APPEND "<CMAKE_AR> q <TARGET> <LINK_FLAGS> <OBJECTS>")
 endif()
-
 if(NOT DEFINED CMAKE_CLC_ARCHIVE_FINISH)
-  set(CMAKE_CLC_ARCHIVE_FINISH "${CLC_RANLIB} <TARGET>")
+  set(CMAKE_CLC_ARCHIVE_FINISH "<CMAKE_RANLIB> <TARGET>")
 endif()
 
 set(CMAKE_CLC_USE_LINKER_INFORMATION FALSE)

@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.6-vulkan1.3-library %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-library %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 ; Test that uses of cbuffer members are handled correctly.
 
 ; CHECK-DAG: OpDecorate %[[MyCBuffer:[0-9]+]] DescriptorSet 0
@@ -27,7 +28,7 @@
 @MyCBuffer.str = private unnamed_addr constant [10 x i8] c"MyCBuffer\00", align 1
 @.str = private unnamed_addr constant [7 x i8] c"output\00", align 1
 
-define void @main() {
+define void @main() #0 {
 entry:
 ; CHECK: %[[tmp:[0-9]+]] = OpCopyObject %[[wrapper_ptr_t]] %[[MyCBuffer]]
   %MyCBuffer.cb_h.i.i = tail call target("spirv.VulkanBuffer", %__cblayout_MyCBuffer, 2, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @MyCBuffer.str)
@@ -49,6 +50,8 @@ entry:
   store float %add, ptr addrspace(11) %get_output_ptr, align 4
   ret void
 }
+
+attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 !hlsl.cbs = !{!0}
 !0 = !{ptr @MyCBuffer.cb, ptr addrspace(12) @s, ptr addrspace(12) @v}

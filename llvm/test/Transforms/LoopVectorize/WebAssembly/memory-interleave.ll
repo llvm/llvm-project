@@ -39,10 +39,10 @@ define hidden void @two_ints_same_op(ptr noalias nocapture noundef writeonly %0,
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %21, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.TwoInts, ptr %1, i32 %8
   %10 = load i32, ptr %9, align 4
@@ -84,10 +84,10 @@ define hidden void @two_ints_vary_op(ptr noalias nocapture noundef writeonly %0,
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %21, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.TwoInts, ptr %1, i32 %8
   %10 = load i32, ptr %9, align 4
@@ -123,10 +123,10 @@ define hidden void @three_ints(ptr noalias nocapture noundef writeonly %0, ptr n
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %27, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.ThreeInts, ptr %1, i32 %8
   %10 = load i32, ptr %9, align 4
@@ -173,10 +173,10 @@ define hidden void @three_shorts(ptr noalias nocapture noundef writeonly %0, ptr
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %27, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.ThreeShorts, ptr %1, i32 %8
   %10 = load i16, ptr %9, align 2
@@ -244,10 +244,10 @@ define hidden void @four_shorts_same_op(ptr noalias nocapture noundef writeonly 
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.FourShorts, ptr %1, i32 %8
   %10 = load i16, ptr %9, align 2
@@ -322,10 +322,10 @@ define hidden void @four_shorts_split_op(ptr noalias nocapture noundef writeonly
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.FourShorts, ptr %1, i32 %8
   %10 = load i16, ptr %9, align 2
@@ -400,10 +400,10 @@ define hidden void @four_shorts_interleave_op(ptr noalias nocapture noundef writ
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.FourShorts, ptr %1, i32 %8
   %10 = load i16, ptr %9, align 2
@@ -488,10 +488,10 @@ define hidden void @five_shorts(ptr noalias nocapture noundef writeonly %0, ptr 
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %39, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.FiveBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -565,10 +565,10 @@ define hidden void @two_bytes_same_op(ptr noalias nocapture noundef writeonly %0
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %21, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.TwoBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -621,10 +621,10 @@ define hidden void @two_bytes_vary_op(ptr noalias nocapture noundef writeonly %0
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %21, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.TwoBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -668,10 +668,10 @@ define hidden void @three_bytes_same_op(ptr noalias nocapture noundef writeonly 
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %27, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.ThreeBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -722,10 +722,10 @@ define hidden void @three_bytes_interleave_op(ptr noalias nocapture noundef writ
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %27, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.ThreeBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -797,10 +797,10 @@ define hidden void @four_bytes_same_op(ptr noalias nocapture noundef writeonly %
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.FourBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -879,10 +879,10 @@ define hidden void @four_bytes_split_op(ptr noalias nocapture noundef writeonly 
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.FourBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -962,10 +962,10 @@ define hidden void @four_bytes_interleave_op(ptr noalias nocapture noundef write
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.FourBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -1084,10 +1084,10 @@ define hidden void @eight_bytes_same_op(ptr noalias nocapture noundef writeonly 
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %57, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.EightBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -1233,10 +1233,10 @@ define hidden void @eight_bytes_split_op(ptr noalias nocapture noundef writeonly
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %57, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.EightBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -1382,10 +1382,10 @@ define hidden void @eight_bytes_interleave_op(ptr noalias nocapture noundef writ
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %57, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.EightBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -1481,10 +1481,10 @@ define hidden void @four_bytes_into_four_ints_same_op(ptr noalias nocapture noun
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %49, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.FourBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -1563,10 +1563,10 @@ define hidden void @four_bytes_into_four_ints_vary_op(ptr noalias nocapture noun
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
 
-6:                                                ; preds = %7, %4
+6:
   ret void
 
-7:                                                ; preds = %4, %7
+7:
   %8 = phi i32 [ %40, %7 ], [ 0, %4 ]
   %9 = getelementptr inbounds %struct.FourBytes, ptr %1, i32 %8
   %10 = load i8, ptr %9, align 1
@@ -1636,7 +1636,7 @@ define hidden void @scale_uv_row_down2(ptr nocapture noundef readonly %0, i32 no
   %5 = icmp sgt i32 %3, 0
   br i1 %5, label %6, label %19
 
-6:                                                ; preds = %4, %6
+6:
   %7 = phi i32 [ %17, %6 ], [ 0, %4 ]
   %8 = phi ptr [ %15, %6 ], [ %0, %4 ]
   %9 = phi ptr [ %16, %6 ], [ %2, %4 ]
@@ -1653,7 +1653,7 @@ define hidden void @scale_uv_row_down2(ptr nocapture noundef readonly %0, i32 no
   %18 = icmp eq i32 %17, %3
   br i1 %18, label %19, label %6
 
-19:                                               ; preds = %6, %4
+19:
   ret void
 }
 
@@ -1699,13 +1699,13 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
   %5 = icmp sgt i32 %3, 0
   br i1 %5, label %6, label %54
 
-6:                                                ; preds = %4
+6:
   %7 = add nsw i32 %1, 2
   %8 = add nsw i32 %1, 1
   %9 = add nsw i32 %1, 3
   br label %10
 
-10:                                               ; preds = %6, %10
+10:
   %11 = phi i32 [ 0, %6 ], [ %52, %10 ]
   %12 = phi ptr [ %0, %6 ], [ %50, %10 ]
   %13 = phi ptr [ %2, %6 ], [ %51, %10 ]
@@ -1753,7 +1753,7 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
   %53 = icmp eq i32 %52, %3
   br i1 %53, label %54, label %10
 
-54:                                               ; preds = %10, %4
+54:
   ret void
 }
 
@@ -1796,7 +1796,7 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
   %5 = icmp sgt i32 %3, 0
   br i1 %5, label %6, label %34
 
-6:                                                ; preds = %4, %6
+6:
   %7 = phi i32 [ %32, %6 ], [ 0, %4 ]
   %8 = phi ptr [ %30, %6 ], [ %0, %4 ]
   %9 = phi ptr [ %31, %6 ], [ %2, %4 ]
@@ -1828,7 +1828,7 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
   %33 = icmp eq i32 %32, %3
   br i1 %33, label %34, label %6
 
-34:                                               ; preds = %6, %4
+34:
   ret void
 }
 
@@ -1854,10 +1854,10 @@ entry:
   %cmp21.not = icmp eq i32 %N, 0
   br i1 %cmp21.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.022 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.022
   %0 = load float, ptr %arrayidx, align 4
@@ -1900,10 +1900,10 @@ entry:
   %cmp20.not = icmp eq i32 %N, 0
   br i1 %cmp20.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.021 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.021
   %0 = load float, ptr %arrayidx, align 4
@@ -1947,10 +1947,10 @@ entry:
   %cmp24.not = icmp eq i32 %N, 0
   br i1 %cmp24.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.025 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.TwoBytes, ptr %a, i32 %i.025
   %0 = load i8, ptr %arrayidx, align 1
@@ -1998,10 +1998,10 @@ entry:
   %cmp23.not = icmp eq i32 %N, 0
   br i1 %cmp23.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.024 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.TwoBytes, ptr %a, i32 %i.024
   %0 = load i8, ptr %arrayidx, align 1
@@ -2048,10 +2048,10 @@ entry:
   %cmp22.not = icmp eq i32 %N, 0
   br i1 %cmp22.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.023
   %0 = load float, ptr %arrayidx, align 4
@@ -2096,10 +2096,10 @@ entry:
   %cmp21.not = icmp eq i32 %N, 0
   br i1 %cmp21.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.022 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.022
   %0 = load float, ptr %arrayidx, align 4
@@ -2146,10 +2146,10 @@ entry:
   %cmp24.not = icmp eq i32 %N, 0
   br i1 %cmp24.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.025 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.TwoShorts, ptr %a, i32 %i.025
   %0 = load i16, ptr %arrayidx, align 2
@@ -2198,10 +2198,10 @@ entry:
   %cmp23.not = icmp eq i32 %N, 0
   br i1 %cmp23.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.024 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.TwoShorts, ptr %a, i32 %i.024
   %0 = load i16, ptr %arrayidx, align 2
@@ -2250,10 +2250,10 @@ entry:
   %cmp22.not = icmp eq i32 %N, 0
   br i1 %cmp22.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.023
   %0 = load float, ptr %arrayidx, align 4
@@ -2300,10 +2300,10 @@ entry:
   %cmp21.not = icmp eq i32 %N, 0
   br i1 %cmp21.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.022 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.022
   %0 = load float, ptr %arrayidx, align 4
@@ -2346,10 +2346,10 @@ entry:
   %cmp45.not = icmp eq i32 %N, 0
   br i1 %cmp45.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.046 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.046
   %0 = load float, ptr %arrayidx, align 4
@@ -2414,10 +2414,10 @@ entry:
   %cmp42.not = icmp eq i32 %N, 0
   br i1 %cmp42.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.043 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.043
   %0 = load float, ptr %arrayidx, align 4
@@ -2481,10 +2481,10 @@ entry:
   %cmp52.not = icmp eq i32 %N, 0
   br i1 %cmp52.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.053 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.FourBytes, ptr %a, i32 %i.053
   %0 = load i8, ptr %arrayidx, align 1
@@ -2556,10 +2556,10 @@ entry:
   %cmp49.not = icmp eq i32 %N, 0
   br i1 %cmp49.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.050 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.FourBytes, ptr %a, i32 %i.050
   %0 = load i8, ptr %arrayidx, align 1
@@ -2631,10 +2631,10 @@ entry:
   %cmp48.not = icmp eq i32 %N, 0
   br i1 %cmp48.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.049 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.049
   %0 = load float, ptr %arrayidx, align 4
@@ -2702,10 +2702,10 @@ entry:
   %cmp45.not = icmp eq i32 %N, 0
   br i1 %cmp45.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.046 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.046
   %0 = load float, ptr %arrayidx, align 4
@@ -2776,10 +2776,10 @@ entry:
   %cmp52.not = icmp eq i32 %N, 0
   br i1 %cmp52.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.053 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.FourShorts, ptr %a, i32 %i.053
   %0 = load i16, ptr %arrayidx, align 2
@@ -2854,10 +2854,10 @@ entry:
   %cmp49.not = icmp eq i32 %N, 0
   br i1 %cmp49.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.050 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.FourShorts, ptr %a, i32 %i.050
   %0 = load i16, ptr %arrayidx, align 2
@@ -2932,10 +2932,10 @@ entry:
   %cmp48.not = icmp eq i32 %N, 0
   br i1 %cmp48.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.049 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.049
   %0 = load float, ptr %arrayidx, align 4
@@ -3006,10 +3006,10 @@ entry:
   %cmp45.not = icmp eq i32 %N, 0
   br i1 %cmp45.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.046 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.046
   %0 = load float, ptr %arrayidx, align 4

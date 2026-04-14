@@ -13,6 +13,7 @@
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
@@ -31,10 +32,10 @@
 
 namespace lldb_dap {
 
-bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                     const llvm::ArrayRef<protocol::String> &commands,
-                     llvm::raw_ostream &strm, bool parse_command_directives,
-                     bool echo_commands) {
+static bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
+                            const llvm::ArrayRef<protocol::String> &commands,
+                            llvm::raw_ostream &strm,
+                            bool parse_command_directives, bool echo_commands) {
   if (commands.empty())
     return true;
 
@@ -74,15 +75,8 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
       }
     }
 
-    {
-      // Prevent simultaneous calls to HandleCommand, e.g. EventThreadFunction
-      // may asynchronously call RunExitCommands when we are already calling
-      // RunTerminateCommands.
-      static std::mutex handle_command_mutex;
-      std::lock_guard<std::mutex> locker(handle_command_mutex);
-      interp.HandleCommand(command.str().c_str(), result,
-                           /*add_to_history=*/true);
-    }
+    interp.HandleCommand(command.str().c_str(), result,
+                         /*add_to_history=*/true);
 
     const bool got_error = !result.Succeeded();
     // The if statement below is assuming we always print out `!` prefixed
@@ -114,10 +108,13 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
   return true;
 }
 
-std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
+std::string RunLLDBCommands(lldb::SBDebugger &debugger, lldb::SBMutex mutex,
+                            llvm::StringRef prefix,
                             const llvm::ArrayRef<protocol::String> &commands,
                             bool &required_command_failed,
                             bool parse_command_directives, bool echo_commands) {
+  // Ensure a single command is evaluated at a time.
+  std::lock_guard<lldb::SBMutex> guard(mutex);
   required_command_failed = false;
   std::string s;
   llvm::raw_string_ostream strm(s);

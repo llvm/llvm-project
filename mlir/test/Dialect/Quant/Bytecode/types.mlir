@@ -10,6 +10,18 @@ module @parseAnyFullySpecified attributes {
   bytecode.test = !quant.any<i8<-8:7>:f32>
 } {}
 
+// CHECK-LABEL: parseAnyFullySpecifiedUi8
+module @parseAnyFullySpecifiedUi8 attributes {
+  // CHECK: bytecode.test = !quant.any<ui8<0:7>:f32>
+  bytecode.test = !quant.any<ui8<0:7>:f32>
+} {}
+
+// CHECK-LABEL: parseAnyFullySpecifiedSi8
+module @parseAnyFullySpecifiedSi8 attributes {
+  // CHECK: bytecode.test = !quant.any<si8<-8:7>:f32>
+  bytecode.test = !quant.any<si8<-8:7>:f32>
+} {}
+
 // CHECK-LABEL: parseAnyNoExpressedType
 module @parseAnyNoExpressedType attributes {
   // CHECK: bytecode.test = !quant.any<i8<-8:7>>
@@ -18,8 +30,8 @@ module @parseAnyNoExpressedType attributes {
 
 // CHECK-LABEL: parseAnyOnlyStorageType
 module @parseAnyOnlyStorageType attributes {
-  // CHECK: bytecode.test = !quant.any<i8<-8:7>>
-  bytecode.test = !quant.any<i8<-8:7>>
+  // CHECK: bytecode.test = !quant.any<i8>
+  bytecode.test = !quant.any<i8>
 } {}
 
 //===----------------------------------------------------------------------===//

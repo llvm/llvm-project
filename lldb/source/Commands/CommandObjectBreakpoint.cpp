@@ -1104,7 +1104,7 @@ protected:
         if (!func_regexp.empty()) {
           if (func_regexp[0] == '*' || func_regexp[0] == '?')
             result.AppendWarning(
-                "Function name regex does not accept glob patterns.");
+                "function name regex does not accept glob patterns");
         }
         return;
       }
@@ -1911,7 +1911,7 @@ protected:
           if (m_options.m_func_regexp[0] == '*' ||
               m_options.m_func_regexp[0] == '?')
             result.AppendWarning(
-                "Function name regex does not accept glob patterns.");
+                "function name regex does not accept glob patterns");
         }
         return;
       }

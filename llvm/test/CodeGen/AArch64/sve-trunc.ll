@@ -158,8 +158,8 @@ define <vscale x 4 x i1> @trunc_i64toi1_split(<vscale x 4 x i64> %in) {
 ; CHECK-NEXT:    and z0.d, z0.d, #0x1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
+; CHECK-NEXT:    cmpne p2.d, p0/z, z0.d, #0
+; CHECK-NEXT:    uzp1 p0.s, p2.s, p1.s
 ; CHECK-NEXT:    ret
 entry:
   %out = trunc <vscale x 4 x i64> %in to <vscale x 4 x i1>
@@ -276,8 +276,8 @@ define <vscale x 1 x i1> @trunc_nxv1i32_to_nxv1i1(<vscale x 1 x i32> %in) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.s, z0.s, #0x1
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
   %out = trunc <vscale x 1 x i32> %in to <vscale x 1 x i1>

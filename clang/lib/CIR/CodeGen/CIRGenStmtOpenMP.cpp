@@ -470,6 +470,11 @@ CIRGenFunction::emitOMPReverseDirective(const OMPReverseDirective &s) {
   return mlir::failure();
 }
 mlir::LogicalResult
+CIRGenFunction::emitOMPSplitDirective(const OMPSplitDirective &s) {
+  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPSplitDirective");
+  return mlir::failure();
+}
+mlir::LogicalResult
 CIRGenFunction::emitOMPInterchangeDirective(const OMPInterchangeDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(),
                              "OpenMP OMPInterchangeDirective");

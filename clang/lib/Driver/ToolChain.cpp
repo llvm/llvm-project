@@ -39,6 +39,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VersionTuple.h"
@@ -103,6 +104,112 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     getFilePaths().push_back(*Path);
   for (const auto &Path : getArchSpecificLibPaths())
     addIfExists(getFilePaths(), Path);
+}
+
+ToolChain::OrderedMultilibs ToolChain::getOrderedMultilibs() const {
+  if (!SelectedMultilibs.empty())
+    return llvm::reverse(SelectedMultilibs);
+
+  static const llvm::SmallVector<Multilib> Default = {Multilib()};
+  return llvm::reverse(Default);
+}
+
+bool ToolChain::loadMultilibsFromYAML(const llvm::opt::ArgList &Args,
+                                      const Driver &D, StringRef Fallback) {
+  std::optional<std::string> MultilibPath =
+      findMultilibsYAML(Args, D, Fallback);
+  if (!MultilibPath)
+    return false;
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
+      D.getVFS().getBufferForFile(*MultilibPath);
+  if (!MB)
+    return false;
+
+  Multilib::flags_list Flags = getMultilibFlags(Args);
+  llvm::ErrorOr<MultilibSet> ErrorOrMultilibSet =
+      MultilibSet::parseYaml(*MB.get());
+  if (ErrorOrMultilibSet.getError())
+    return false;
+
+  Multilibs = std::move(ErrorOrMultilibSet.get());
+
+  SmallVector<StringRef> CustomFlagMacroDefines;
+  bool Result =
+      Multilibs.select(D, Flags, SelectedMultilibs, &CustomFlagMacroDefines);
+
+  // Custom flag macro defines are set by processCustomFlags regardless of
+  // whether variant selection succeeds.
+  MultilibMacroDefines.clear();
+  for (StringRef Define : CustomFlagMacroDefines)
+    MultilibMacroDefines.push_back(Define.str());
+
+  if (!Result) {
+    D.Diag(clang::diag::warn_drv_missing_multilib) << llvm::join(Flags, " ");
+    SmallString<0> Data;
+    raw_svector_ostream OS(Data);
+    for (const Multilib &M : Multilibs)
+      if (!M.isError())
+        OS << "\n" << llvm::join(M.flags(), " ");
+    D.Diag(clang::diag::note_drv_available_multilibs) << OS.str();
+
+    for (const Multilib &M : SelectedMultilibs)
+      if (M.isError())
+        D.Diag(clang::diag::err_drv_multilib_custom_error)
+            << M.getErrorMessage();
+
+    SelectedMultilibs.clear();
+    return false;
+  }
+
+  // Prepend variant-specific library paths. The YAML's parent directory is
+  // the base for file paths; getRuntimePath() is the base for runtime paths.
+  StringRef YAMLBase = llvm::sys::path::parent_path(*MultilibPath);
+  std::optional<std::string> RuntimeDir = getRuntimePath();
+  size_t FileInsertPos = 0;
+  size_t LibInsertPos = 0;
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    SmallString<128> FilePath(YAMLBase);
+    llvm::sys::path::append(FilePath, M.gccSuffix());
+    getFilePaths().insert(getFilePaths().begin() + FileInsertPos,
+                          std::string(FilePath));
+    ++FileInsertPos;
+    if (RuntimeDir) {
+      SmallString<128> LibPath(*RuntimeDir);
+      llvm::sys::path::append(LibPath, M.gccSuffix());
+      getLibraryPaths().insert(getLibraryPaths().begin() + LibInsertPos,
+                               std::string(LibPath));
+      ++LibInsertPos;
+    }
+  }
+
+  return true;
+}
+
+std::optional<std::string>
+ToolChain::findMultilibsYAML(const llvm::opt::ArgList &Args, const Driver &D,
+                             StringRef FallbackDir) {
+  if (Arg *A = Args.getLastArg(options::OPT_multi_lib_config)) {
+    SmallString<128> MultilibPath(A->getValue());
+    if (!D.getVFS().exists(MultilibPath)) {
+      D.Diag(clang::diag::err_drv_no_such_file) << MultilibPath.str();
+      return std::nullopt;
+    }
+    return std::string(MultilibPath);
+  }
+
+  SmallString<128> MultilibPath;
+  if (!FallbackDir.empty())
+    MultilibPath = FallbackDir;
+  else if (std::optional<std::string> StdlibDir = getStdlibPath())
+    MultilibPath = *StdlibDir;
+  else
+    return std::nullopt;
+  llvm::sys::path::append(MultilibPath, "multilib.yaml");
+  if (!D.getVFS().exists(MultilibPath))
+    return std::nullopt;
+  return std::string(MultilibPath);
 }
 
 void ToolChain::setTripleEnvironment(llvm::Triple::EnvironmentType Env) {
@@ -725,6 +832,8 @@ StringRef ToolChain::getOSLibName() const {
     return "sunos";
   case llvm::Triple::AIX:
     return "aix";
+  case llvm::Triple::Serenity:
+    return "serenity";
   default:
     return getOS();
   }
@@ -1365,7 +1474,8 @@ ToolChain::UnwindLibType ToolChain::GetUnwindLibType(
   else if (LibName == "platform" || LibName == "") {
     ToolChain::RuntimeLibType RtLibType = GetRuntimeLibType(Args);
     if (RtLibType == ToolChain::RLT_CompilerRT) {
-      if (getTriple().isAndroid() || getTriple().isOSAIX())
+      if (getTriple().isAndroid() || getTriple().isOSAIX() ||
+          getTriple().isOSSerenity())
         unwindLibType = ToolChain::UNW_CompilerRT;
       else
         unwindLibType = ToolChain::UNW_None;
@@ -1664,7 +1774,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       getTriple().getArch() == llvm::Triple::arm ||
       getTriple().getArch() == llvm::Triple::thumb || getTriple().isWasm() ||
       getTriple().isAArch64() || getTriple().isRISCV() ||
-      getTriple().isLoongArch64())
+      getTriple().isLoongArch64() ||
+      getTriple().getArch() == llvm::Triple::hexagon)
     Res |= SanitizerKind::CFIICall;
   if (getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().isAArch64(64) || getTriple().isRISCV())

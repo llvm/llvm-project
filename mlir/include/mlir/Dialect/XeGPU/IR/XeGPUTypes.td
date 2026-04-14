@@ -82,7 +82,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     static-dim-list ::= decimal-literal `x` decimal-literal
     attr-list = (, encoding-attr)? (, layout-attr)?
     enconding-attr = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
-    layout-attr = (, layout `<`sg_layout = value, sg_data = value, inst_data = value, lane_layout = value, lane_data = value, order = value`>`)?
+    layout-attr = DistributeLayoutAttr
     ```
 
     Examples:
@@ -158,8 +158,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return llvm::dyn_cast_if_present<T>(getEncoding());
     }
 
-    LayoutAttr getLayoutAttr() const {
-      return llvm::dyn_cast_if_present<LayoutAttr>(getLayout());
+    DistributeLayoutAttr getLayoutAttr() const {
+      return llvm::dyn_cast_if_present<DistributeLayoutAttr>(getLayout());
     }
 
     xegpu::MemorySpace getMemorySpace() const {

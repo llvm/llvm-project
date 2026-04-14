@@ -917,7 +917,7 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
 
   if (interpreter &&
       !interpreter->CheckObjectExists(m_options.m_class_name.c_str())) {
-    result.AppendWarning("The provided class does not exist - please define it "
+    result.AppendWarning("the provided class does not exist - please define it "
                          "before attempting to use this frame recognizer");
   }
 

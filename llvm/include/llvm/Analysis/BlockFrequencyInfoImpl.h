@@ -1464,12 +1464,12 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
   while (!Queue.empty()) {
     const BlockT *SrcBB = Queue.front();
     Queue.pop();
-    for (const BlockT *DstBB : children<const BlockT *>(SrcBB)) {
-      auto EP = BPI->getEdgeProbability(SrcBB, DstBB);
+    for (auto It : enumerate(children<const BlockT *>(SrcBB))) {
+      auto EP = BPI->getEdgeProbability(SrcBB, It.index());
       if (EP.isZero())
         continue;
-      if (Reachable.insert(DstBB).second)
-        Queue.push(DstBB);
+      if (Reachable.insert(It.value()).second)
+        Queue.push(It.value());
     }
   }
 
@@ -1518,7 +1518,8 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
   for (size_t Src = 0; Src < NumBlocks; Src++) {
     const BlockT *BB = Blocks[Src];
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
-    for (const auto SI : children<const BlockT *>(BB)) {
+    for (auto It : enumerate(children<const BlockT *>(BB))) {
+      const BlockT *SI = It.value();
       // Ignore cold blocks
       auto BlockIndexIt = BlockIndex.find(SI);
       if (BlockIndexIt == BlockIndex.end())
@@ -1527,7 +1528,7 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
       if (!UniqueSuccs.insert(SI).second)
         continue;
       // Ignore jumps with zero probability
-      auto EP = BPI->getEdgeProbability(BB, SI);
+      auto EP = BPI->getEdgeProbability(BB, It.index());
       if (EP.isZero())
         continue;
 
@@ -1626,12 +1627,10 @@ BlockFrequencyInfoImpl<BT>::propagateMassToSuccessors(LoopData *OuterLoop,
       return false;
   } else {
     const BlockT *BB = getBlock(Node);
-    for (auto SI = GraphTraits<const BlockT *>::child_begin(BB),
-              SE = GraphTraits<const BlockT *>::child_end(BB);
-         SI != SE; ++SI)
+    for (auto It : enumerate(children<const BlockT *>(BB)))
       if (!addToDist(
-              Dist, OuterLoop, Node, getNode(*SI),
-              getWeightFromBranchProb(BPI->getEdgeProbability(BB, SI))))
+              Dist, OuterLoop, Node, getNode(It.value()),
+              getWeightFromBranchProb(BPI->getEdgeProbability(BB, It.index()))))
         // Irreducible backedge.
         return false;
   }
@@ -1808,7 +1807,8 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     if (!BPI)
       return Str;
 
-    BranchProbability BP = BPI->getEdgeProbability(Node, EI);
+    unsigned SuccIdx = std::distance(succ_begin(Node), EI);
+    BranchProbability BP = BPI->getEdgeProbability(Node, SuccIdx);
     uint32_t N = BP.getNumerator();
     uint32_t D = BP.getDenominator();
     double Percent = 100.0 * N / D;

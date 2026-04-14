@@ -47,6 +47,7 @@ if (SPHINX_FOUND)
       dirent
       endian
       errno
+      fcntl
       fenv
       float
       glob

@@ -362,18 +362,21 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     RatiolessInfo.setAVL(Info);
     Info = RatiolessInfo;
   } else {
+    unsigned SEW =
+        ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
+            .getSEW();
     Info.setVTYPE(
         ((Demanded.LMUL || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
             .getVLMUL(),
-        ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
-            .getSEW(),
+        SEW,
         // Prefer tail/mask agnostic since it can be relaxed to undisturbed
         // later if needed.
         (Demanded.TailPolicy ? IncomingInfo : Info).getTailAgnostic() ||
             IncomingInfo.getTailAgnostic(),
         (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
             IncomingInfo.getMaskAgnostic(),
-        (Demanded.AltFmt ? IncomingInfo : Info).getAltFmt(),
+        // AltFmt requires SEW < 32.
+        (Demanded.AltFmt ? IncomingInfo : Info).getAltFmt() && SEW < 32,
         Demanded.TWiden ? IncomingInfo.getTWiden() : 0);
   }
 }

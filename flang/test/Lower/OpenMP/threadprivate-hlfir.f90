@@ -55,7 +55,6 @@ end subroutine
 
 module mod_01
   integer, save :: a
-  !CHECK: fir.global @_QMmod_01Ea : i32
   !$omp threadprivate(a)
 end module
 
@@ -71,6 +70,7 @@ subroutine sub_05()
   !$omp end parallel
 end subroutine
 
+!CHECK: fir.global @_QMmod_01Ea : i32
 
 !CHECK:  fir.global internal @_QFsubEa : i32
 

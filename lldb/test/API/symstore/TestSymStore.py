@@ -91,7 +91,6 @@ class HTTPServer:
 
 
 class SymStoreTests(TestBase):
-    SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def build_inferior(self):

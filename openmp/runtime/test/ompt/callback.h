@@ -1055,7 +1055,9 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
                            ompt_callback_sync_region_t);
   register_ompt_callback_t(ompt_callback_reduction,
                            ompt_callback_sync_region_t);
+#ifndef _OMPT_DISABLE_CONTROL_TOOL
   register_ompt_callback(ompt_callback_control_tool);
+#endif
   register_ompt_callback(ompt_callback_flush);
   register_ompt_callback(ompt_callback_cancel);
   register_ompt_callback(ompt_callback_implicit_task);

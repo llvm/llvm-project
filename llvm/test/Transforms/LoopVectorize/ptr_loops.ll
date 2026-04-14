@@ -13,7 +13,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define i32 @_Z5test1v() {
   br label %1
 
-; <label>:1                                       ; preds = %0, %1
+; <label>:
   %p.02 = phi ptr [ getelementptr inbounds ([36 x i32], ptr @A, i64 0, i64 18), %0 ], [ %4, %1 ]
   %b.01 = phi ptr [ @B, %0 ], [ %5, %1 ]
   %2 = load i32, ptr %b.01, align 4
@@ -24,7 +24,7 @@ define i32 @_Z5test1v() {
   %6 = icmp eq ptr %4, getelementptr ([36 x i32], ptr @A, i64 128102389400760775, i64 3)
   br i1 %6, label %7, label %1
 
-; <label>:7                                       ; preds = %1
+; <label>:
   ret i32 0
 }
 
@@ -36,7 +36,7 @@ define i32 @_Z5test1v() {
 define i32 @_Z5test2v() {
   br label %1
 
-; <label>:1                                       ; preds = %0, %1
+; <label>:
   %p.02 = phi ptr [ getelementptr inbounds ([36 x i32], ptr @A, i64 0, i64 25), %0 ], [ %3, %1 ]
   %b.01 = phi ptr [ getelementptr inbounds ([36 x i32], ptr @B, i64 0, i64 2), %0 ], [ %4, %1 ]
   %2 = load i32, ptr %b.01, align 4
@@ -46,7 +46,7 @@ define i32 @_Z5test2v() {
   %5 = icmp eq ptr %4, getelementptr inbounds ([36 x i32], ptr @A, i64 0, i64 18)
   br i1 %5, label %6, label %1
 
-; <label>:6                                       ; preds = %1
+; <label>:
   ret i32 0
 }
 
@@ -58,7 +58,7 @@ define i32 @_Z5test2v() {
 define i32 @_Z5test3v() {
   br label %1
 
-; <label>:1                                       ; preds = %0, %1
+; <label>:
   %p.02 = phi ptr [ getelementptr inbounds ([36 x i32], ptr @A, i64 0, i64 29), %0 ], [ %3, %1 ]
   %b.01 = phi ptr [ getelementptr inbounds ([36 x i32], ptr @B, i64 0, i64 5), %0 ], [ %4, %1 ]
   %2 = load i32, ptr %b.01, align 4
@@ -68,6 +68,6 @@ define i32 @_Z5test3v() {
   %5 = icmp eq ptr %3, getelementptr ([36 x i32], ptr @A, i64 128102389400760775, i64 3)
   br i1 %5, label %6, label %1
 
-; <label>:6                                       ; preds = %1
+; <label>:
   ret i32 0
 }

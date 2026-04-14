@@ -225,22 +225,22 @@ define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, pt
 ; CHECK-NEXT:    mov z6.d, z0.d
 ; CHECK-NEXT:    mov z7.d, z1.d
 ; CHECK-NEXT:    add x8, x8, x10
-; CHECK-NEXT:    cmpne p1.d, p1/z, z2.d, #0
-; CHECK-NEXT:    zip2 p2.d, p1.d, p1.d
-; CHECK-NEXT:    zip1 p1.d, p1.d, p1.d
-; CHECK-NEXT:    ld1d { z2.d }, p2/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1d { z4.d }, p2/z, [x1, #1, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p1/z, [x0]
-; CHECK-NEXT:    ld1d { z5.d }, p1/z, [x1]
+; CHECK-NEXT:    cmpne p2.d, p1/z, z2.d, #0
+; CHECK-NEXT:    zip2 p1.d, p2.d, p2.d
+; CHECK-NEXT:    zip1 p2.d, p2.d, p2.d
+; CHECK-NEXT:    ld1d { z2.d }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1d { z4.d }, p1/z, [x1, #1, mul vl]
+; CHECK-NEXT:    ld1d { z3.d }, p2/z, [x0]
+; CHECK-NEXT:    ld1d { z5.d }, p2/z, [x1]
 ; CHECK-NEXT:    add x1, x1, x11
 ; CHECK-NEXT:    add x0, x0, x11
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #90
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #90
-; CHECK-NEXT:    mov z1.d, p2/m, z7.d
-; CHECK-NEXT:    mov z0.d, p1/m, z6.d
+; CHECK-NEXT:    mov z1.d, p1/m, z7.d
 ; CHECK-NEXT:    whilelo p1.d, x8, x9
+; CHECK-NEXT:    mov z0.d, p2/m, z6.d
 ; CHECK-NEXT:    b.mi .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
 ; CHECK-NEXT:    uzp1 z2.d, z0.d, z1.d

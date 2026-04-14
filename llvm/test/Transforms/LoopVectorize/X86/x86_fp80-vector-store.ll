@@ -116,7 +116,7 @@ define void @test_replicating_store_x86_fp80_cost(i32 %n, ptr %dst) #0 {
 entry:
   br label %loop
 
-loop:                            ; preds = %loop, %entry
+loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %iv.ext = zext i32 %iv to i64
   %gep.dst = getelementptr x86_fp80, ptr %dst, i64 %iv.ext

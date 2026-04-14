@@ -176,7 +176,7 @@ define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr
 entry:
   br label %loop.header
 
-loop.header:                                     ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %ec = icmp eq i64 %iv, %N
   br i1 %ec, label %exit, label %continue

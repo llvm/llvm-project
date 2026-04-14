@@ -2932,8 +2932,8 @@ static bool HasNoSignedZerosOrNaNs(SDValue Op, SelectionDAG &DAG) {
           (DAG.isKnownNeverNaN(Op->getOperand(0)) &&
            DAG.isKnownNeverNaN(Op->getOperand(1)))) &&
          (Op->getFlags().hasNoSignedZeros() ||
-          DAG.isKnownNeverZeroFloat(Op->getOperand(0)) ||
-          DAG.isKnownNeverZeroFloat(Op->getOperand(1)));
+          DAG.isKnownNeverLogicalZero(Op->getOperand(0)) ||
+          DAG.isKnownNeverLogicalZero(Op->getOperand(1)));
 }
 
 SDValue WebAssemblyTargetLowering::LowerFMIN(SDValue Op,

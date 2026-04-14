@@ -97,15 +97,13 @@ end subroutine
 ! CHECK:  hlfir.assign %[[VAL_9]] to %[[VAL_11]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:  %[[VAL_12:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:  %[[VAL_13:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.logical<4>>
-! CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_12]] : (!fir.logical<4>) -> i1
-! CHECK:  %[[VAL_15:.*]] = fir.convert %[[VAL_13]] : (!fir.logical<4>) -> i1
-! CHECK:  %[[VAL_16:.*]] = arith.andi %[[VAL_14]], %[[VAL_15]] : i1
-! CHECK:  %[[VAL_17:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_10]])  : (!fir.heap<!fir.array<2x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
-! CHECK:  hlfir.assign %[[VAL_16]] to %[[VAL_17]] : i1, !fir.ref<!fir.logical<4>>
-! CHECK:  %[[VAL_18:.*]] = arith.constant true
-! CHECK:  %[[VAL_19:.*]] = hlfir.as_expr %[[VAL_8]]#0 move %[[VAL_18]] : (!fir.heap<!fir.array<2x!fir.logical<4>>>, i1) -> !hlfir.expr<2x!fir.logical<4>>
+! CHECK:  %[[VAL_14:.*]] = fir.logical_and %[[VAL_12]], %[[VAL_13]] : !fir.logical<4>
+! CHECK:  %[[VAL_15:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_10]])  : (!fir.heap<!fir.array<2x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
+! CHECK:  hlfir.assign %[[VAL_14]] to %[[VAL_15]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK:  %[[VAL_16:.*]] = arith.constant true
+! CHECK:  %[[VAL_17:.*]] = hlfir.as_expr %[[VAL_8]]#0 move %[[VAL_16]] : (!fir.heap<!fir.array<2x!fir.logical<4>>>, i1) -> !hlfir.expr<2x!fir.logical<4>>
 ! CHECK:  fir.call
-! CHECK:  hlfir.destroy %[[VAL_19]] : !hlfir.expr<2x!fir.logical<4>>
+! CHECK:  hlfir.destroy %[[VAL_17]] : !hlfir.expr<2x!fir.logical<4>>
 
 subroutine test_implied_do(n)
   integer(8) :: n

@@ -50,7 +50,7 @@ body.1:
   %v.2.add = add i32 %v.2, 10
   br i1 %c.2, label %loop.latch, label %body.2
 
-body.2:                                             ; preds = %bb11
+body.2:
   %add.1 = add i32 %v.2.add, 20
   %xor = xor i32 %a, 1
   %add.2 = add i32 %add.1, %xor

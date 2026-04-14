@@ -176,12 +176,12 @@ entry:
   %cmp10 = icmp sgt i32 %Length, 0, !dbg !12
   br i1 %cmp10, label %loop, label %exit, !dbg !12, !llvm.loop !14
 
-loop:                                         ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !16
   %0 = trunc i64 %iv to i32, !dbg !16
   %ld = load i32, ptr %arrayidx, align 4
-  store i32 %0, ptr %arrayidx, align 4, !dbg !16, !tbaa !18
+  store i32 %0, ptr %arrayidx, align 4, !dbg !16
   %cmp3 = icmp sle i32 %ld, %Length, !dbg !22
   %iv.next = add nuw nsw i64 %iv, 1, !dbg !12
   %1 = trunc i64 %iv.next to i32
@@ -189,7 +189,7 @@ loop:                                         ; preds = %entry, %loop
   %or.cond = and i1 %cmp3, %cmp, !dbg !22
   br i1 %or.cond, label %loop, label %exit, !dbg !22
 
-exit:                                          ; preds = %loop, %entry
+exit:
   ret void, !dbg !24
 }
 
@@ -202,17 +202,17 @@ entry:
   %cmp4 = icmp sgt i32 %Length, 0, !dbg !25
   br i1 %cmp4, label %loop, label %exit, !dbg !25, !llvm.loop !27
 
-loop:                                         ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !30
   %0 = trunc i64 %iv to i32, !dbg !30
-  store i32 %0, ptr %arrayidx, align 4, !dbg !30, !tbaa !18
+  store i32 %0, ptr %arrayidx, align 4, !dbg !30
   %iv.next = add nuw nsw i64 %iv, 1, !dbg !25
   %lftr.wideiv = trunc i64 %iv.next to i32, !dbg !25
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !25
   br i1 %exitcond, label %exit, label %loop, !dbg !25, !llvm.loop !27
 
-exit:                                          ; preds = %loop, %entry
+exit:
   ret void, !dbg !31
 }
 
@@ -225,18 +225,18 @@ entry:
   %cmp9 = icmp sgt i32 %Length, 0, !dbg !32
   br i1 %cmp9, label %loop.preheader, label %exit, !dbg !32, !llvm.loop !34
 
-loop.preheader:                               ; preds = %entry
+loop.preheader:
   br label %loop, !dbg !32
 
-loop:                                         ; preds = %loop.preheader, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i64 %iv, !dbg !35
-  %0 = load i32, ptr %arrayidx, align 4, !dbg !35, !tbaa !18
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !35
   %idxprom1 = sext i32 %0 to i64, !dbg !35
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %idxprom1, !dbg !35
-  %1 = load i32, ptr %arrayidx2, align 4, !dbg !35, !tbaa !18
+  %1 = load i32, ptr %arrayidx2, align 4, !dbg !35
   %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !35
-  store i32 %1, ptr %arrayidx4, align 4, !dbg !35, !tbaa !18
+  store i32 %1, ptr %arrayidx4, align 4, !dbg !35
   %iv.next = add nuw nsw i64 %iv, 1, !dbg !32
   %lftr.wideiv = trunc i64 %iv.next to i32, !dbg !32
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !32
@@ -254,7 +254,7 @@ define i32 @test_multiple_failures(ptr nocapture readonly %A) !dbg !46 {
 entry:
   br label %loop, !dbg !38
 
-loop:                                         ; preds = %entry, %for.inc
+loop:
   %i.09 = phi i32 [ 0, %entry ], [ %add, %for.inc ]
   %k.09 = phi i32 [ 0, %entry ], [ %k.1, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.09, !dbg !40
@@ -262,19 +262,19 @@ loop:                                         ; preds = %entry, %for.inc
   %tobool = icmp eq i32 %0, 0, !dbg !40
   br i1 %tobool, label %for.inc, label %if.then, !dbg !40
 
-if.then:                                          ; preds = %loop
+if.then:
   %call = tail call i32 (...) @foo(), !dbg !41
   %.pre = load i32, ptr %arrayidx, align 4
   br label %for.inc, !dbg !42
 
-for.inc:                                          ; preds = %loop, %if.then
+for.inc:
   %1 = phi i32 [ %.pre, %if.then ], [ 0, %loop ], !dbg !43
   %k.1 = phi i32 [ %call, %if.then ], [ %k.09, %loop ]
   %add = add nsw i32 %1, %i.09, !dbg !44
   %cmp = icmp slt i32 %add, 1000, !dbg !45
   br i1 %cmp, label %loop, label %exit, !dbg !38
 
-exit:                                 ; preds = %for.inc
+exit:
   ret i32 %k.1, !dbg !39
 }
 
@@ -306,7 +306,6 @@ declare i32 @foo(...)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}
-!llvm.ident = !{!11}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0", isOptimized: true, runtimeVersion: 6, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "source.cpp", directory: ".")
@@ -318,17 +317,12 @@ declare i32 @foo(...)
 !8 = distinct !DISubprogram(name: "test_array_bounds", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 16, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !9 = !{i32 2, !"Dwarf Version", i32 2}
 !10 = !{i32 2, !"Debug Info Version", i32 3}
-!11 = !{!"clang version 3.5.0"}
 !12 = !DILocation(line: 3, column: 8, scope: !13)
 !13 = distinct !DILexicalBlock(line: 3, column: 3, file: !1, scope: !4)
 !14 = !{!14, !15, !15}
 !15 = !{!"llvm.loop.vectorize.enable", i1 true}
 !16 = !DILocation(line: 4, column: 5, scope: !17)
 !17 = distinct !DILexicalBlock(line: 3, column: 36, file: !1, scope: !13)
-!18 = !{!19, !19, i64 0}
-!19 = !{!"int", !20, i64 0}
-!20 = !{!"omnipotent char", !21, i64 0}
-!21 = !{!"Simple C/C++ TBAA"}
 !22 = !DILocation(line: 5, column: 9, scope: !23)
 !23 = distinct !DILexicalBlock(line: 5, column: 9, file: !1, scope: !17)
 !24 = !DILocation(line: 8, column: 1, scope: !4)

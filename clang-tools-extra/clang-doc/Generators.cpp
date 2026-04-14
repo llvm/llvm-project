@@ -53,7 +53,7 @@ Error createFileOpenError(StringRef FileName, std::error_code EC) {
 }
 
 Error MustacheGenerator::setupTemplate(
-    OwnedPtr<MustacheTemplateFile> &Template, StringRef TemplatePath,
+    std::unique_ptr<MustacheTemplateFile> &Template, StringRef TemplatePath,
     std::vector<std::pair<StringRef, StringRef>> Partials) {
   auto T = MustacheTemplateFile::createMustacheFile(TemplatePath);
   if (Error Err = T.takeError())

@@ -120,6 +120,11 @@ OUTPUT OPTIONS
 
  Do not use curses based progress bar.
 
+.. option:: --min-output-interval INTERVAL
+
+ Only output updates to the progress bar and status line at most once per
+ INTERVAL seconds. Has no effect if the curses based progress bar is not used.
+
 .. option:: --show-excluded
 
  Show excluded tests.

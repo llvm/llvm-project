@@ -224,6 +224,8 @@ void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
     RecsByNumber[Number] = Rec->getName();
   }
   if (IIT_Base.size() > 0) {
+    if (RecsByNumber[0] != "IIT_Done")
+      PrintFatalError("IIT_Done expected to have value 0");
     for (unsigned I = 0, E = RecsByNumber.size(); I < E; ++I)
       if (!RecsByNumber[I].empty())
         OS << "  " << RecsByNumber[I] << " = " << I << ",\n";
@@ -351,7 +353,11 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   // If we can compute a 16/32-bit fixed encoding for this intrinsic, do so and
   // capture it in this vector, otherwise store a ~0U.
   std::vector<FixedEncodingTy> FixedEncodings;
-  SequenceToOffsetTable<TypeSigTy> LongEncodingTable;
+
+  // Each IIT encoding sequence in the long encoding table is terminated by
+  // IIT_Done(=0) token.
+  constexpr unsigned char IIT_Done = 0;
+  SequenceToOffsetTable<TypeSigTy> LongEncodingTable(IIT_Done);
 
   FixedEncodings.reserve(Ints.size());
 

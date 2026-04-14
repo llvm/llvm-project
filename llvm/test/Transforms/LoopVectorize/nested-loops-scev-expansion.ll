@@ -171,14 +171,14 @@ define void @pr49900(i32 %x, ptr %ptr) {
 entry:
   br label %loop.0
 
-loop.0:                                              ; preds = %bb2, %bb
+loop.0:
   %ec.0 = icmp slt i32 %x, 0
   br i1 %ec.0, label %loop.0, label %loop.1.ph
 
-loop.1.ph:                                              ; preds = %bb2
+loop.1.ph:
   br label %loop.1
 
-loop.1:                                             ; preds = %bb33, %bb5
+loop.1:
   %iv.1 = phi i32 [ 0, %loop.1.ph ], [ %iv.3.next, %loop.1.latch ]
   br label %loop.2
 

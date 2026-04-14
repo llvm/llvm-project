@@ -130,7 +130,7 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 entry:
   br label %loop
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %ptr.iv = phi ptr [ %m, %entry ], [ %ptr.iv.next, %loop ]
   %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
   %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 8
@@ -144,7 +144,7 @@ loop:                                         ; preds = %loop, %entry
   %tobool.not = icmp eq i32 %iv, 100
   br i1 %tobool.not, label %exit, label %loop
 
-exit:                       ; preds = %loop
+exit:
   ret ptr %p.4
 }
 

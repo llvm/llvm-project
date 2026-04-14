@@ -368,35 +368,40 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
                                   uint32_t NumThreads[3],
                                   uint32_t NumBlocks[3]) const {
 
-  if (KernelEnvironment.Configuration.ExecMode != OMP_TGT_EXEC_MODE_BARE) {
-    // For non-bare mode, the groups are already set in the launch.
-    KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
-    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), NumThreads[0],
-                      NumThreads[1], NumThreads[2]);
-    return Plugin::success();
-  }
-
-  int32_t NumTeams = NumBlocks[0];
-  int32_t ThreadLimit = NumThreads[0];
-  if (NumTeams < 0)
-    NumTeams = 0;
-  if (ThreadLimit < 0)
-    ThreadLimit = 0;
+  bool HasUserDefinedGroups = NumThreads[0] != 0 && NumThreads[1] != 0 &&
+                              NumThreads[2] != 0 && NumBlocks[0] != 0 &&
+                              NumBlocks[1] != 0 && NumBlocks[2] != 0;
 
   uint32_t GroupSizes[3];
-  auto DeviceId = l0Device.getDeviceId();
-  auto &KernelPR = KEnv.KernelPR;
-  // Check if we can reuse previous group parameters.
-  bool GroupParamsReused =
-      KernelPR.reuseGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
+  bool CanReuseParams = false;
 
-  if (!GroupParamsReused) {
-    if (auto Err =
-            getGroupsShape(l0Device, NumTeams, ThreadLimit, GroupSizes, KEnv))
-      return Err;
-    KernelPR.cacheGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
+  if (HasUserDefinedGroups) {
+    KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
+    GroupSizes[0] = NumThreads[0];
+    GroupSizes[1] = NumThreads[1];
+    GroupSizes[2] = NumThreads[2];
+  } else {
+    int32_t NumTeams = NumBlocks[0];
+    int32_t ThreadLimit = NumThreads[0];
+    if (NumTeams < 0)
+      NumTeams = 0;
+    if (ThreadLimit < 0)
+      ThreadLimit = 0;
+
+    auto &KernelPR = KEnv.KernelPR;
+    // Check if we can reuse previous group parameters.
+    CanReuseParams =
+        KernelPR.reuseGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
+
+    if (!CanReuseParams) {
+      if (auto Err =
+              getGroupsShape(l0Device, NumTeams, ThreadLimit, GroupSizes, KEnv))
+        return Err;
+      KernelPR.cacheGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
+    }
   }
 
+  auto DeviceId = l0Device.getDeviceId();
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n", GroupSizes[0],
        GroupSizes[1], GroupSizes[2]);
@@ -405,7 +410,7 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
        KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
        KEnv.GroupCounts.groupCountZ);
 
-  if (!GroupParamsReused) {
+  if (!CanReuseParams) {
     CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), GroupSizes[0],
                       GroupSizes[1], GroupSizes[2]);
   }

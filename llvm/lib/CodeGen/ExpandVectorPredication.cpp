@@ -285,6 +285,7 @@ bool CachingVPExpander::expandPredicationToFPCall(
 
   switch (UnpredicatedIntrinsicID) {
   case Intrinsic::fabs:
+  case Intrinsic::copysign:
   case Intrinsic::sqrt:
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
@@ -619,6 +620,7 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_fshr:
     return expandPredicationToIntCall(Builder, VPI);
   case Intrinsic::vp_fabs:
+  case Intrinsic::vp_copysign:
   case Intrinsic::vp_sqrt:
   case Intrinsic::vp_maxnum:
   case Intrinsic::vp_minnum:

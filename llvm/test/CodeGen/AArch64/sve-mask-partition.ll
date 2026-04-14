@@ -101,8 +101,8 @@ define <16 x i1> @mask_exclude_active_v16(<16 x i1> %mask.in) {
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> %mask.in, i1 false)
@@ -116,8 +116,8 @@ define <8 x i1> @mask_exclude_active_v8(<8 x i1> %mask.in) {
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> %mask.in, i1 false)
@@ -131,8 +131,8 @@ define <4 x i1> @mask_exclude_active_v4(<4 x i1> %mask.in) {
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
-; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> %mask.in, i1 false)
@@ -146,8 +146,8 @@ define <2 x i1> @mask_exclude_active_v2(<2 x i1> %mask.in) {
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> %mask.in, i1 false)
@@ -161,8 +161,8 @@ define <16 x i1> @mask_include_active_v16(<16 x i1> %mask.in) {
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    brka p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    brka p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> %mask.in, i1 false)
@@ -177,8 +177,8 @@ define <8 x i1> @mask_include_active_v8(<8 x i1> %mask.in) {
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    brka p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    brka p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> %mask.in, i1 false)
@@ -193,8 +193,8 @@ define <4 x i1> @mask_include_active_v4(<4 x i1> %mask.in) {
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
-; CHECK-NEXT:    brka p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    brka p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> %mask.in, i1 false)
@@ -209,8 +209,8 @@ define <2 x i1> @mask_include_active_v2(<2 x i1> %mask.in) {
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; CHECK-NEXT:    brka p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    brka p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> %mask.in, i1 false)
@@ -316,7 +316,7 @@ define <32 x i1> @mask_exclude_active_v32(<32 x i1> %mask.in) {
 ; CHECK-NEXT:    add z4.d, z4.d, #8 // =0x8
 ; CHECK-NEXT:    movprfx z5, z0
 ; CHECK-NEXT:    add z5.d, z5.d, #6 // =0x6
-; CHECK-NEXT:    brkb p0.b, p0/z, p2.b
+; CHECK-NEXT:    brkb p2.b, p0/z, p2.b
 ; CHECK-NEXT:    movprfx z6, z0
 ; CHECK-NEXT:    add z6.d, z6.d, #4 // =0x4
 ; CHECK-NEXT:    movprfx z7, z0
@@ -326,7 +326,7 @@ define <32 x i1> @mask_exclude_active_v32(<32 x i1> %mask.in) {
 ; CHECK-NEXT:    add z17.d, z17.d, #30 // =0x1e
 ; CHECK-NEXT:    movprfx z18, z0
 ; CHECK-NEXT:    add z18.d, z18.d, #28 // =0x1c
-; CHECK-NEXT:    cntp x10, p0, p0.b
+; CHECK-NEXT:    cntp x10, p2, p2.b
 ; CHECK-NEXT:    movprfx z19, z0
 ; CHECK-NEXT:    add z19.d, z19.d, #26 // =0x1a
 ; CHECK-NEXT:    movprfx z20, z0
@@ -442,8 +442,8 @@ define <4 x i1> @mask_exclude_active_narrower_result_type_fixed(<8 x i1> %mask.i
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
-; CHECK-NEXT:    cntp x8, p0, p0.b
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    cntp x8, p1, p1.b
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -459,8 +459,8 @@ define <16 x i1> @mask_exclude_active_wider_result_type_fixed(<8 x i1> %mask.in)
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts(<8 x i1> %mask.in, i1 false)

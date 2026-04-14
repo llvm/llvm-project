@@ -529,8 +529,8 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
 }
 
 OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
-  // Single parallel dim, this is a noop.
-  if (getSourceVectorType().getRank() == 1 && !isReducedDim(0))
+  // No reduction dims: this is a noop regardless of rank.
+  if (getReductionDims().empty())
     return getSource();
   return {};
 }

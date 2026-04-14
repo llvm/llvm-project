@@ -551,6 +551,26 @@ unwind:
   resume ptr null
 }
 
+; tan(x) is never NaN when x is finite and not NaN (tan(±Inf) = NaN).
+define i1 @isKnownNeverNaN_tan_nonan_noinf(double nofpclass(nan inf) %x) {
+; CHECK-LABEL: @isKnownNeverNaN_tan_nonan_noinf(
+; CHECK-NEXT:    ret i1 false
+;
+  %e = call double @llvm.tan.f64(double %x)
+  %r = fcmp uno double %e, 0.0
+  ret i1 %r
+}
+
+; atan2 is never NaN when neither operand is NaN.
+define i1 @isKnownNeverNaN_atan2_nonan(double nofpclass(nan) %x, double nofpclass(nan) %y) {
+; CHECK-LABEL: @isKnownNeverNaN_atan2_nonan(
+; CHECK-NEXT:    ret i1 false
+;
+  %e = call double @llvm.atan2.f64(double %x, double %y)
+  %r = fcmp uno double %e, 0.0
+  ret i1 %r
+}
+
 ; This should not fold to false because fmul 0 * inf = nan
 define i1 @issue63316(i64 %arg) {
 ; CHECK-LABEL: @issue63316(

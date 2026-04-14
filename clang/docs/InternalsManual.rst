@@ -2910,7 +2910,8 @@ After substitution in the mapping, we substitute in the constraint expression
 using that copy of the ``MultiLevelTemplateArgumentList``, and then evaluate it.
 
 Because this is expensive, it is cached in
-``UnsubstitutedConstraintSatisfactionCache``.
+``UnsubstitutedConstraintSatisfactionCache``. Also we will cache the instantiation
+result of parameter mappings to avoid unnecessary semantic checking.
 
 Any error during satisfaction is recorded in ``ConstraintSatisfaction``.
 for nested requirements, ``ConstraintSatisfaction`` is stored (including

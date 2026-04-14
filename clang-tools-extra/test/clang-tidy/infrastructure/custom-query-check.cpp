@@ -5,6 +5,8 @@
 // Using cqc-main.cpp in the hope that we don't have a file with that name in
 // our source tree. See: https://github.com/llvm/llvm-project/issues/182526
 // RUN: sed -e "s:INPUT_DIR:%S/Inputs/custom-query-check:g" -e "s:OUT_DIR:%t:g" -e "s:MAIN_FILE:%s:g" %S/Inputs/custom-query-check/vfsoverlay.yaml > %t.yaml
+// RUN: mkdir -p %t
+// RUN: echo '[{"file": "cqc-main.cpp", "directory": "%t", "command": "clang++ -c cqc-main.cpp"}]' > %t/compile_commands.json
 // RUN: clang-tidy --experimental-custom-checks %t/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml | FileCheck %s --check-prefix=CHECK-SAME-DIR
 // RUN: clang-tidy --experimental-custom-checks %t/subdir/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml | FileCheck %s --check-prefix=CHECK-SUB-DIR-BASE
 // RUN: clang-tidy --experimental-custom-checks %t/subdir-override/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml | FileCheck %s --check-prefix=CHECK-SUB-DIR-OVERRIDE

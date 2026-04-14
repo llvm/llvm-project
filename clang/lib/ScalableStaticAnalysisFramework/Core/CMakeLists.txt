@@ -17,6 +17,7 @@ add_clang_library(clangScalableStaticAnalysisFrameworkCore
   Serialization/JSONFormat/LUSummaryEncoding.cpp
   Serialization/JSONFormat/TUSummary.cpp
   Serialization/JSONFormat/TUSummaryEncoding.cpp
+  Serialization/JSONFormat/WPASuite.cpp
   Serialization/SerializationFormatRegistry.cpp
   SummaryData/LUSummaryConsumer.cpp
   SummaryData/SummaryDataBuilderRegistry.cpp

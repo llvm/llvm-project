@@ -2522,7 +2522,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
             child_valobj_sp = root->GetSyntheticArrayMember(index, true);
           if (!child_valobj_sp)
             if (root->HasSyntheticValue() &&
-                llvm::expectedToStdOptional(
+                llvm::expectedToOptional(
                     root->GetSyntheticValue()->GetNumChildren())
                         .value_or(0) > index)
               child_valobj_sp =

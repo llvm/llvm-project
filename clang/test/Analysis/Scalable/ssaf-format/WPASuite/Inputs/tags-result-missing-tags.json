@@ -1,0 +1,15 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "PairsAnalysisResult",
+      "result": {
+        "pair_counts": []
+      }
+    },
+    {
+      "analysis_name": "TagsAnalysisResult",
+      "result": {}
+    }
+  ]
+}

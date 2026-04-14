@@ -123,19 +123,19 @@ entry:
   %cmp6 = icmp sgt i32 %size, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %size to i64
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %add.lcssa = phi double [ %add, %for.body ]
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi double [ 0.000000e+00, %entry ], [ %add.lcssa, %for.cond.cleanup.loopexit ]
   ret double %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %res.07 = phi double [ 0.000000e+00, %for.body.preheader ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %offset, i64 %indvars.iv

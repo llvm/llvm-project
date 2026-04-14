@@ -767,6 +767,12 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
     if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
       continue;
 
+    // An effect on a non-addressable resource cannot affect
+    // memory pointed to by 'location'.
+    mlir::SideEffects::Resource *resource = effect.getResource();
+    if (!resource->isAddressable())
+      continue;
+
     // Check for an alias between the effect and our memory location.
     AliasResult aliasResult = AliasResult::MayAlias;
     if (Value effectValue = effect.getValue())

@@ -605,7 +605,6 @@ exit:
   ret void
 }
 
-declare void @llvm.assume(i1)
 
 ; Test case for https://github.com/llvm/llvm-project/issues/121897.
 define void @scev_expand_step(i64 %x, ptr %dst) {

@@ -12,7 +12,7 @@
 ; CHECK-NEXT: @bar1 = internal addrspace(3) global [4 x %class.ExpAmdWorkgroupWaveBarrier] poison, !absolute_symbol !2
 ; CHECK-NEXT: @bar1.kernel1 = internal addrspace(3) global [4 x %class.ExpAmdWorkgroupWaveBarrier] poison, !absolute_symbol !2
 
-; SOUT:        .set func1.num_named_barrier, 7
+; SOUT:        .set .Lfunc1.num_named_barrier, 7
 define void @func1() {
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar3, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar3)
@@ -20,7 +20,7 @@ define void @func1() {
     ret void
 }
 
-; SOUT:        .set func2.num_named_barrier, 2
+; SOUT:        .set .Lfunc2.num_named_barrier, 2
 define void @func2() {
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
@@ -29,7 +29,7 @@ define void @func2() {
 }
 
 ; SOUT:                .amdhsa_named_barrier_count 2
-; SOUT:        .set kernel1.num_named_barrier, max(6, func1.num_named_barrier, func2.num_named_barrier)
+; SOUT:        .set .Lkernel1.num_named_barrier, max(6, .Lfunc1.num_named_barrier, .Lfunc2.num_named_barrier)
 define amdgpu_kernel void @kernel1() #0 {
 ; CHECK-DAG: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1.kernel1, i32 11)
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 11)
@@ -43,7 +43,7 @@ define amdgpu_kernel void @kernel1() #0 {
 }
 
 ; SOUT:                .amdhsa_named_barrier_count 2
-; SOUT:        .set kernel2.num_named_barrier, max(6, func2.num_named_barrier)
+; SOUT:        .set .Lkernel2.num_named_barrier, max(6, .Lfunc2.num_named_barrier)
 define amdgpu_kernel void @kernel2() #0 {
 ; CHECK-DAG: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)

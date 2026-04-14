@@ -507,12 +507,12 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
                       IdxTy)
           .getAs<NonLoc>();
 
+  if (!Offset)
+    return State;
+
   // Retrieve the index of the last element.
   const NonLoc One = SVB.makeIntVal(1, IdxTy).castAs<NonLoc>();
   SVal LastIdx = SVB.evalBinOpNN(State, BO_Sub, *Offset, One, IdxTy);
-
-  if (!Offset)
-    return State;
 
   SVal LastElementVal =
       State->getLValue(ElemTy, LastIdx, loc::MemRegionVal(SuperR));

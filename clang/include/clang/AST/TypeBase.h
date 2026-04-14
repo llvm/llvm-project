@@ -3133,7 +3133,7 @@ public:
   /// Note that nullability is only captured as sugar within the type
   /// system, not as part of the canonical type, so nullability will
   /// be lost by canonicalization and desugaring.
-  std::optional<NullabilityKind> getNullability() const;
+  NullabilityKindOrNone getNullability() const;
 
   /// Determine whether the given type can have a nullability
   /// specifier applied to it, i.e., if it is any kind of pointer type.
@@ -6716,7 +6716,7 @@ public:
 
   bool isCallingConv() const;
 
-  std::optional<NullabilityKind> getImmediateNullability() const;
+  NullabilityKindOrNone getImmediateNullability() const;
 
   /// Strip off the top-level nullability annotation on the given
   /// type, if it's there.
@@ -6727,7 +6727,7 @@ public:
   /// to the underlying modified type.
   ///
   /// \returns the top-level nullability, if present.
-  static std::optional<NullabilityKind> stripOuterNullability(QualType &T);
+  static NullabilityKindOrNone stripOuterNullability(QualType &T);
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getAttrKind(), ModifiedType, EquivalentType, Attribute);

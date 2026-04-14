@@ -450,7 +450,6 @@ for.body:
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-declare i64 @llvm.vscale.i64()
 
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 attributes #1 = { "target-features"="+sve" }

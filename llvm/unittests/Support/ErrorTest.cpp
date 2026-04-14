@@ -1245,8 +1245,7 @@ TEST(Error, NonNullFails) {
                "Expected a non-null pointer but got a null pointer")
       << "checkNotNull(NullPtr) did not cause an abort for null pointer";
 
-  auto UniquePtr = std::make_unique<int>(0);
-  UniquePtr.release();
+  std::unique_ptr<int> UniquePtr;
   EXPECT_DEATH(auto TmpUniquePtr = checkNotNull(std::move(UniquePtr)),
                "Expected a non-null pointer but got a null pointer")
       << "checkNotNull(NullPtr) did not cause an abort for null pointer";

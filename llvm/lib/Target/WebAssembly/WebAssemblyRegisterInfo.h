@@ -45,6 +45,9 @@ public:
   getPointerRegClass(unsigned Kind = 0) const override;
   // This does not apply to wasm.
   const uint32_t *getNoPreservedMask() const override { return nullptr; }
+
+  const TargetRegisterClass *getConstrainedRegClassForOperand(
+      const MachineOperand &MO, const MachineRegisterInfo &MRI) const override;
 };
 
 } // end namespace llvm

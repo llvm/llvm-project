@@ -61,11 +61,11 @@ export namespace std {
 
 #if _LIBCPP_STD_VER >= 26
   // [numeric.sat], saturation arithmetic
-  using std::add_sat;
-  using std::div_sat;
-  using std::mul_sat;
-  using std::saturate_cast;
-  using std::sub_sat;
+  using std::saturating_add;
+  using std::saturating_cast;
+  using std::saturating_div;
+  using std::saturating_mul;
+  using std::saturating_sub;
 #endif
 
 } // namespace std

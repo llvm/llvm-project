@@ -66,7 +66,7 @@ define i32 @two_direct_branch(ptr %src) {
 entry:
   br label %loop
 
-loop:                              ; preds = %for.inc3, %entry
+loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %src.gep = getelementptr inbounds i32, ptr %src, i32 %iv
   %lv = load i32, ptr %src.gep

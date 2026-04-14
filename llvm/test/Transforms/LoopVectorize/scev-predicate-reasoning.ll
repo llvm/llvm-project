@@ -102,7 +102,7 @@ entry:
   %mul = shl i32 %x, 1
   br label %for.cond
 
-for.cond:                                         ; preds = %for.body, %entry
+for.cond:
   %iv = phi i32 [ 30, %entry ], [ %inc, %for.cond ]
   %p.0 = phi ptr [ %start, %entry ], [ %add.ptr, %for.cond ]
   %add.ptr = getelementptr i8, ptr %p.0, i32 %mul
@@ -112,7 +112,7 @@ for.cond:                                         ; preds = %for.body, %entry
   %tobool.not = icmp eq i32 %iv, 1024
   br i1 %tobool.not, label %for.end, label %for.cond
 
-for.end:                                          ; preds = %for.cond
+for.end:
   ret void
 }
 

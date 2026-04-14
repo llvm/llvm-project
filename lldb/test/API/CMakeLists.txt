@@ -21,17 +21,15 @@ function(add_python_test_target name test_script args comment)
   add_dependencies(${name} lldb-test-depends)
 endfunction()
 
-# The default architecture with which to compile test executables is the
-# default LLVM target architecture, which itself defaults to the host
-# architecture.
-if(NOT LLDB_DEFAULT_TEST_ARCH)
-  string(REGEX MATCH "^[^-]*" LLDB_DEFAULT_TEST_ARCH ${LLVM_HOST_TRIPLE})
-endif ()
+if (DEFINED LLVM_TARGET_TRIPLE)
+  set(default_lldb_test_triple ${LLVM_TARGET_TRIPLE})
+else()
+  set(default_lldb_test_triple ${LLVM_HOST_TRIPLE})
+endif()
 
-# Allow the user to override the default by setting LLDB_TEST_ARCH
-set(LLDB_TEST_ARCH
-  ${LLDB_DEFAULT_TEST_ARCH}
-  CACHE STRING "Specify the architecture to run LLDB tests as (x86|x64).  Determines whether tests are compiled with -m32 or -m64")
+set(LLDB_TEST_TRIPLE
+  ${default_lldb_test_triple}
+  CACHE STRING "The target triple used to build test inferiors.")
 
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS

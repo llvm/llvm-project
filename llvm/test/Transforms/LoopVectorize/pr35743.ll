@@ -13,10 +13,10 @@ define i8 @test_01(i8 %c) #0 {
 entry:
   br label %loop
 
-exit:                                           ; preds = %loop
+exit:
   ret i8 %accum.plus
 
-loop:                                            ; preds = %loop, %entry
+loop:
   %accum.phi = phi i8 [ %c, %entry ], [ %accum.plus, %loop ]
   %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
   %accum.and = and i8 %accum.phi, 1
@@ -35,11 +35,11 @@ define void @test_02(i8 %c) #0 {
 entry:
   br label %loop
 
-exit:                                           ; preds = %loop
+exit:
   %lcssa = phi i8 [ %accum.plus, %loop ]
   ret void
 
-loop:                                            ; preds = %loop, %entry
+loop:
   %accum.phi = phi i8 [ %c, %entry ], [ %accum.plus, %loop ]
   %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
   %accum.and = and i8 %accum.phi, 1
@@ -59,12 +59,12 @@ define i1 @test_03(i8 %c) #0 {
 entry:
   br label %loop
 
-exit:                                           ; preds = %loop
+exit:
   %lcssa = phi i8 [ %accum.plus, %loop ]
   %trunc = trunc i8 %lcssa to i1
   ret i1 %trunc
 
-loop:                                            ; preds = %loop, %entry
+loop:
   %accum.phi = phi i8 [ %c, %entry ], [ %accum.plus, %loop ]
   %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
   %accum.and = and i8 %accum.phi, 1
@@ -86,12 +86,12 @@ define i4 @test_04(i8 %c) #0 {
 entry:
   br label %loop
 
-exit:                                           ; preds = %loop
+exit:
   %lcssa = phi i8 [ %accum.plus, %loop ]
   %trunc = trunc i8 %lcssa to i4
   ret i4 %trunc
 
-loop:                                            ; preds = %loop, %entry
+loop:
   %accum.phi = phi i8 [ %c, %entry ], [ %accum.plus, %loop ]
   %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
   %accum.and = and i8 %accum.phi, 1

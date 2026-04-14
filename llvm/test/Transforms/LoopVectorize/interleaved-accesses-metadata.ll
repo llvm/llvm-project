@@ -51,7 +51,7 @@ define void @merge_tbaa_interleave_group(ptr nocapture readonly %p, ptr noalias 
 entry:
   br label %loop
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %x = getelementptr inbounds %struct.Vec4r, ptr %p, i64 %iv, i32 0
   %0 = load double, ptr %x, align 8, !tbaa !3

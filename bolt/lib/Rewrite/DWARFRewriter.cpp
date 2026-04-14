@@ -1139,10 +1139,7 @@ void DWARFRewriter::updateUnitDebugInfo(
                   const_cast<DIEBlock *>(&LocAttrInfo.getDIEBlock());
               AttrLocValList = static_cast<DIEValueList *>(BlockAttr);
             }
-            ArrayRef<uint8_t> Expr = ArrayRef<uint8_t>(Sblock);
-            DataExtractor Data(
-                StringRef((const char *)Expr.data(), Expr.size()),
-                Unit.getContext().isLittleEndian(), 0);
+            DataExtractor Data(Sblock, Unit.getContext().isLittleEndian());
             DWARFExpression LocExpr(Data, Unit.getAddressByteSize(),
                                     Unit.getFormParams().Format);
             uint32_t PrevOffset = 0;
@@ -1745,7 +1742,7 @@ static void UpdateStrAndStrOffsets(StringRef StrDWOContent,
   const uint64_t NumOffsets =
       (StrOffsetsContent.size() - HeaderOffset) / SizeOfOffset;
 
-  DataExtractor Extractor(StrOffsetsContent, IsLittleEndian, 0);
+  DataExtractor Extractor(StrOffsetsContent, IsLittleEndian);
   uint64_t ExtractionOffset = HeaderOffset;
 
   using StringFragment = DWARFUnitIndex::Entry::SectionContribution;

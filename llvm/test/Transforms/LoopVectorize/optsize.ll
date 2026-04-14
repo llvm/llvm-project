@@ -66,7 +66,7 @@ define i32 @foo_optsize() #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -77,7 +77,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, 202
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -139,7 +139,7 @@ define i32 @foo_minsize() #1 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -150,7 +150,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, 202
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -228,7 +228,7 @@ define i32 @foo_pgso() !prof !14 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -239,7 +239,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, 202
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -975,7 +975,7 @@ define void @pr46652(i16 %stride) {
 entry:
   br label %for.body
 
-for.body:                                        ; preds = %for.body, %entry
+for.body:
   %l1.02 = phi i16 [ 1, %entry ], [ %inc9, %for.body ]
   %mul = mul nsw i16 %l1.02, %stride
   %arrayidx6 = getelementptr inbounds [1 x i16], ptr @g, i16 0, i16 %mul
@@ -984,7 +984,7 @@ for.body:                                        ; preds = %for.body, %entry
   %exitcond.not = icmp eq i16 %inc9, 16
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                        ; preds = %for.body
+for.end:
   ret void
 }
 

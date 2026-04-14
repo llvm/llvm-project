@@ -133,7 +133,7 @@ public:
 
   void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
-                                     const Expr *EscapeExpr) override {
+                                     EscapingTarget Target) override {
     unsigned DiagID =
         (Scope == SuggestionScope::CrossTU)
             ? diag::warn_lifetime_safety_cross_tu_param_suggestion
@@ -150,9 +150,15 @@ public:
     S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
-    S.Diag(EscapeExpr->getBeginLoc(),
-           diag::note_lifetime_safety_suggestion_returned_here)
-        << EscapeExpr->getSourceRange();
+
+    if (const auto *EscapeExpr = Target.dyn_cast<const Expr *>())
+      S.Diag(EscapeExpr->getBeginLoc(),
+             diag::note_lifetime_safety_suggestion_returned_here)
+          << EscapeExpr->getSourceRange();
+    else if (const auto *EscapeField = Target.dyn_cast<const FieldDecl *>())
+      S.Diag(EscapeField->getLocation(),
+             diag::note_lifetime_safety_escapes_to_field_here)
+          << EscapeField->getSourceRange();
   }
 
   void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

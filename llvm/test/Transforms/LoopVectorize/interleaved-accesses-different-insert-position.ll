@@ -33,7 +33,7 @@ define void @gep_for_first_member_does_not_dominate_insert_point(ptr %str, ptr n
 entry:
   br label %loop
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %iv2 = phi i64 [ 0, %entry ], [ %iv2.next, %loop ]
   %or.1 = or disjoint i64 %iv2, 1
@@ -107,7 +107,7 @@ define void @test_ig_insert_pos_at_end_of_vpbb(ptr noalias %dst, ptr noalias %sr
 entry:
   br label %loop.header
 
-loop.header:                                     ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %gep.2 = getelementptr nusw { i16, i16, i16, i16 }, ptr %src, i64 %iv, i32 2
   %l.1 = load i16, ptr %gep.2, align 2

@@ -3401,6 +3401,17 @@ llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
 
 // -----
 
+// Test that ArrayAttr of StringAttrs (e.g. "riscv-isa") is exported as an
+// MDTuple of MDStrings for a lossless round-trip.
+
+llvm.module_flags [#llvm.mlir.module_flag<error, "riscv-isa", ["rv64i2p1", "m2p0"]>]
+
+// CHECK: !llvm.module.flags = !{![[#RISCV:]], {{.*}}}
+// CHECK: ![[#RISCV]] = !{i32 1, !"riscv-isa", ![[#ISA:]]}
+// CHECK: ![[#ISA]] = !{!"rv64i2p1", !"m2p0"}
+
+// -----
+
 module attributes {llvm.dependent_libraries = ["foo", "bar"]} {}
 
 // CHECK: !llvm.dependent-libraries =  !{![[#LIBFOO:]], ![[#LIBBAR:]]}

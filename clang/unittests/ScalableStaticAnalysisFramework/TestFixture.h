@@ -19,6 +19,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/WPASuite.h"
 #include "gtest/gtest.h"
 #include <iosfwd>
 
@@ -26,6 +27,8 @@ namespace clang::ssaf {
 
 class TestFixture : public ::testing::Test {
 protected:
+  static WPASuite makeWPASuite() { return WPASuite(); }
+
 #define FIELD(CLASS, FIELD_NAME)                                               \
   static const auto &get##FIELD_NAME(const CLASS &X) { return X.FIELD_NAME; }  \
   static auto &get##FIELD_NAME(CLASS &X) { return X.FIELD_NAME; }

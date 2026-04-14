@@ -436,8 +436,8 @@ protected:
         }
       }
       if (!context_found_for_symbol)
-        result.AppendWarningWithFormatv("Unable to find line information"
-                                        " for matching symbol '{0}'.\n",
+        result.AppendWarningWithFormatv("unable to find line information"
+                                        " for matching symbol '{0}'\n",
                                         sc.GetFunctionName());
     }
     if (sc_list_lines.GetSize() == 0) {
@@ -543,7 +543,7 @@ protected:
           ModuleSpec module_spec(module_file_spec);
           target.GetImages().FindModules(module_spec, m_module_list);
           if (m_module_list.IsEmpty())
-            result.AppendWarningWithFormatv("No module found for '{0}'.",
+            result.AppendWarningWithFormatv("no module found for '{0}'",
                                             m_options.modules[i]);
         }
       }

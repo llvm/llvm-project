@@ -4,7 +4,7 @@
 
 ; Function with 129 VGPRs, which is too many with a block size of 16.
 ;
-; ERR-DAG: .set func129.num_vgpr, 129
+; ERR-DAG: .set .Lfunc129.num_vgpr, 129
 ; ERR-DAG: too many DVGPR blocks for _dvgpr$ symbol for 'func129'
 ;
 define amdgpu_cs_chain void @func129(<121 x float> %arg) #0 {

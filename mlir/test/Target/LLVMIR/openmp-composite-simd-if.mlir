@@ -30,7 +30,7 @@ llvm.func @_QPfoo(%arg0: !llvm.ptr {fir.bindc_name = "array", llvm.nocapture}, %
 // CHECK:         store i32 0, ptr %[[LB_ADDR:.*]], align 4
 // CHECK:         store i32 9, ptr %[[UB_ADDR:.*]], align 4
 // CHECK:         store i32 1, ptr %[[STEP_ADDR:.*]], align 4
-// CHECK:         %[[VAL_15:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK:         %[[VAL_15:.*]] = call i32 @__kmpc_global_thread_num(ptr @2)
 // CHECK:         call void @__kmpc_for_static_init_4u(ptr @1, i32 %[[VAL_15]], i32 34, ptr %{{.*}}, ptr %[[LB_ADDR]], ptr %[[UB_ADDR]], ptr %[[STEP_ADDR]], i32 1, i32 0)
 // CHECK:         %[[LB:.*]] = load i32, ptr %[[LB_ADDR]], align 4
 // CHECK:         %[[UB:.*]] = load i32, ptr %[[UB_ADDR]], align 4
@@ -88,8 +88,8 @@ llvm.func @_QPfoo(%arg0: !llvm.ptr {fir.bindc_name = "array", llvm.nocapture}, %
 
 // CHECK:       omp_loop.exit:                                    ; preds = %[[OMP_LOOP_COND]]
 // CHECK:         call void @__kmpc_for_static_fini(ptr @1, i32 %[[VAL_15]])
-// CHECK:         %[[VAL_45:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_45]])
+// CHECK:         %[[VAL_45:.*]] = call i32 @__kmpc_global_thread_num(ptr @2)
+// CHECK:         call void @__kmpc_barrier(ptr @3, i32 %[[VAL_45]])
 
 // CHECK: !1 = distinct !{}
 // CHECK: !2 = distinct !{!2, !3}

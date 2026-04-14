@@ -167,7 +167,7 @@ int RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
 void *CUFAllocPinned(
     std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
   void *p;
-  cudaMallocHost((void **)&p, sizeInBytes);
+  CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&p, sizeInBytes));
   return p;
 }
 
@@ -176,12 +176,14 @@ void CUFFreePinned(void *p) { cudaFreeHost(p); }
 void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t *asyncObject) {
   void *p;
   if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
-    cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal);
+    CUDA_REPORT_IF_ERROR(
+        cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
   } else {
     if (asyncObject == nullptr) {
-      cudaMalloc(&p, sizeInBytes);
+      CUDA_REPORT_IF_ERROR(cudaMalloc(&p, sizeInBytes));
     } else {
-      cudaMallocAsync(&p, sizeInBytes, (cudaStream_t)*asyncObject);
+      CUDA_REPORT_IF_ERROR(
+          cudaMallocAsync(&p, sizeInBytes, (cudaStream_t)*asyncObject));
       insertAllocation(p, sizeInBytes, (cudaStream_t)*asyncObject);
     }
   }
@@ -194,20 +196,21 @@ void CUFFreeDevice(void *p) {
   if (pos >= 0) {
     cudaStream_t stream = deviceAllocations[pos].stream;
     eraseAllocation(pos);
-    cudaFreeAsync(p, stream);
+    CUDA_REPORT_IF_ERROR(cudaFreeAsync(p, stream));
   } else {
-    cudaFree(p);
+    CUDA_REPORT_IF_ERROR(cudaFree(p));
   }
 }
 
 void *CUFAllocManaged(
     std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
   void *p;
-  cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal);
+  CUDA_REPORT_IF_ERROR(
+      cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
   return reinterpret_cast<void *>(p);
 }
 
-void CUFFreeManaged(void *p) { cudaFree(p); }
+void CUFFreeManaged(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
 
 void *CUFAllocUnified(
     std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {

@@ -16,6 +16,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -1395,6 +1396,23 @@ public:
     // Nested cleanup scopes and try operations must be flattened before the
     // enclosing cleanup scope so that EH cleanup inside them is properly
     // handled. Fail the match so the pattern rewriter processes them first.
+    //
+    // Before checking, erase any trivially dead nested cleanup scopes. These
+    // arise from deactivated cleanups (e.g. partial-construction guards for
+    // lambda captures). The greedy rewriter may have already DCE'd them, but
+    // when a trivially dead nested op is erased first, the parent isn't always
+    // re-added to the worklist, so we handle it here. These types of operations
+    // will normally be removed by the canonicalizer, but we handle it here
+    // also, because DCE can run between pattern matches in the current pass,
+    // and if a trivially dead operation makes it this far, we will fail.
+    llvm::SmallVector<cir::CleanupScopeOp> deadNestedOps;
+    cleanupOp.getBodyRegion().walk([&](cir::CleanupScopeOp nested) {
+      if (mlir::isOpTriviallyDead(nested))
+        deadNestedOps.push_back(nested);
+    });
+    for (auto op : deadNestedOps)
+      rewriter.eraseOp(op);
+
     bool hasNestedOps = cleanupOp.getBodyRegion()
                             .walk([&](mlir::Operation *op) {
                               if (isa<cir::CleanupScopeOp, cir::TryOp>(op))

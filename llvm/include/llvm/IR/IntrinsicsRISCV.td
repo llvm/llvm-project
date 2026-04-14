@@ -1940,6 +1940,59 @@ let TargetPrefix = "riscv" in {
   defm vwabdau : RISCVTernaryWide;
 } // TargetPrefix = "riscv"
 
+// Zvzip - Reordering Structured Data in Vector Registers
+//===----------------------------------------------------------------------===//
+let TargetPrefix = "riscv" in {
+  multiclass RISCVZip {
+    // Input: (passthru, vector_in, vector_in, vl)
+    def "int_riscv_" # NAME :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMMatchType<1>, llvm_anyint_ty],
+                            [IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 3;
+    }
+
+    // Input: (maskedoff, vector_in, vector_in, mask, vl, policy)
+    def "int_riscv_" # NAME # "_mask" :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMMatchType<1>,
+                             LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                             llvm_anyint_ty, LLVMMatchType<2>],
+                            [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 4;
+    }
+  }
+
+  multiclass RISCVUnzip {
+    // Input: (passthru, vector_in, vl)
+    def "int_riscv_" # NAME :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             llvm_anyint_ty],
+                            [IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 2;
+    }
+
+    // Input: (maskedoff, vector_in, mask, vl, policy)
+    def "int_riscv_" # NAME # "_mask" :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                             llvm_anyint_ty, LLVMMatchType<2>],
+                            [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 3;
+    }
+  }
+
+  defm vzip    : RISCVZip;
+  defm vunzipe : RISCVUnzip;
+  defm vunzipo : RISCVUnzip;
+  defm vpaire  : RISCVBinaryAAA;
+  defm vpairo  : RISCVBinaryAAA;
+}
+
 //===----------------------------------------------------------------------===//
 // Zvdot4a8i - Vector 4-element Dot Product of packed 8-bit Integers
 //

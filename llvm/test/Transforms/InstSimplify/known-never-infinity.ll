@@ -728,28 +728,6 @@ define i1 @isNotKnownNeverInfinity_sqrt(double %x) {
   ret i1 %r
 }
 
-; No source check required
-define i1 @isKnownNeverInfinity_sin(double %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_sin
-; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    ret i1 true
-;
-  %e = call double @llvm.sin.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
-  ret i1 %r
-}
-
-; No source check required
-define i1 @isKnownNeverInfinity_cos(double %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_cos
-; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    ret i1 true
-;
-  %e = call double @llvm.cos.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
-  ret i1 %r
-}
-
 define i1 @isKnownNeverInfinity_log(double %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverInfinity_log
 ; CHECK-SAME: (double [[X:%.*]]) {
@@ -1213,7 +1191,6 @@ declare double @llvm.arithmetic.fence.f64(double)
 declare double @llvm.canonicalize.f64(double)
 declare double @llvm.ceil.f64(double)
 declare double @llvm.copysign.f64(double, double)
-declare double @llvm.cos.f64(double)
 declare double @llvm.exp2.f64(double)
 declare double @llvm.exp.f64(double)
 declare double @llvm.fabs.f64(double)
@@ -1234,7 +1211,6 @@ declare double @llvm.powi.f64.i32(double, i32)
 declare double @llvm.rint.f64(double)
 declare double @llvm.roundeven.f64(double)
 declare double @llvm.round.f64(double)
-declare double @llvm.sin.f64(double)
 declare double @llvm.sqrt.f64(double)
 declare double @llvm.trunc.f64(double)
 declare float @llvm.fptrunc.round.f32.f64(double, metadata)

@@ -1107,6 +1107,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs);
 
+  if (!TC.useIntegratedAs())
+    CmdArgs.push_back("-no-integrated-as");
+
   llvm::Reloc::Model RelocationModel =
       std::get<0>(ParsePICArgs(getToolChain(), Args));
   // Add MCModel information

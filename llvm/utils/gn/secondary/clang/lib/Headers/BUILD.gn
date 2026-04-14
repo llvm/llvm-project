@@ -87,8 +87,6 @@ copy("tablegen_headers") {
     ":arm_sme",
     ":arm_sve",
     ":arm_vector_types",
-    ":hlsl_alias_intrinsics_gen",
-    ":hlsl_inline_intrinsics_gen",
     ":riscv_vector",
   ]
   sources = []
@@ -98,8 +96,26 @@ copy("tablegen_headers") {
   outputs = [ "$clang_resource_dir/include/{{source_file_part}}" ]
 }
 
+# These need a separate copy target since {{source_file_part}} would strip
+# the hlsl/ directory prefix.
+copy("hlsl_tablegen_headers") {
+  visibility = [ ":Headers" ]
+  deps = [
+    ":hlsl_alias_intrinsics_gen",
+    ":hlsl_inline_intrinsics_gen",
+  ]
+  sources = []
+  foreach(dep, deps) {
+    sources += get_target_outputs(dep)
+  }
+  outputs = [ "$clang_resource_dir/include/hlsl/{{source_file_part}}" ]
+}
+
 copy("Headers") {
-  deps = [ ":tablegen_headers" ]
+  deps = [
+    ":hlsl_tablegen_headers",
+    ":tablegen_headers",
+  ]
 
   sources = [
     "__clang_cuda_builtin_vars.h",

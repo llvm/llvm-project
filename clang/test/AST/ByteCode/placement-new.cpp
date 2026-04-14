@@ -524,3 +524,44 @@ static_assert(intDestArray() == 0); // both-error {{not an integral constant exp
 
 constexpr void invalidDest() { new (undefinedfunction()) int; } // both-error {{use of undeclared identifier 'undefinedfunction'}}
 static_assert((invalidDest(), true)); // both-error {{not an integral constant expression}}
+
+namespace DirectBaseHasNoRecord {
+  constexpr int test_multidim_single_start() {
+    struct S {
+      union {
+        int storage[2][3];
+      };
+    };
+    S s;
+    new (&s.storage[0][0]) int(1); // both-note {{construction of subobject of member 'storage' of union with no active member is not allowed in a constant expression}}
+    return 13;
+  }
+  static_assert(test_multidim_single_start() == 13); // both-error {{not an integral constant expression}} \
+                                                     // both-note {{in call to}}
+}
+
+namespace PrimArray {
+  constexpr int test_start_lifetime_array() {
+    struct S {
+      union { int storage[4]; };
+    };
+    S s;
+    s.storage[0] = 10;
+    ::new (&s.storage[0]) int(10);
+    ::new (&s.storage[1]) int(20);
+    return s.storage[0] + s.storage[1];
+  }
+  static_assert(test_start_lifetime_array() == 30);
+
+
+  constexpr int primElem() {
+    union {int a[2]; };
+
+    new (&a[1]) int(30); // both-note {{construction of subobject of member 'a' of union with no active member is not allowed in a constant expression}}
+    return a[1];
+  }
+  static_assert(primElem() == 30); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+
+
+}

@@ -136,11 +136,11 @@ entry:
   %wide.trip.count = zext nneg i32 %div27 to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ %sub, %for.body ]
   ret i32 %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %res = phi i32 [ 0, %entry ], [ %sub, %for.body ]
   %a.ptr = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
@@ -287,11 +287,11 @@ entry:
   %wide.trip.count = zext nneg i32 %div27 to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ %add.2, %for.body ]
   ret i32 %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %res = phi i32 [ 0, %entry ], [ %add.2, %for.body ]
   %a.ptr = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
@@ -441,11 +441,11 @@ entry:
   %wide.trip.count = zext nneg i32 %div27 to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %res = phi i32 [ 0, %entry ], [ %add, %for.body ]
 
@@ -597,11 +597,11 @@ entry:
   %wide.trip.count = zext nneg i32 %div27 to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ %sub.2, %for.body ]
   ret i32 %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %res = phi i32 [ 0, %entry ], [ %sub.2, %for.body ]
 
@@ -757,11 +757,11 @@ entry:
   %wide.trip.count = zext nneg i32 %div27 to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ %sub.2, %for.body ]
   ret i32 %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %res = phi i32 [ 0, %entry ], [ %sub.2, %for.body ]
 
@@ -923,11 +923,11 @@ entry:
   %wide.trip.count = zext nneg i32 %div27 to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ %sub.2, %for.body ]
   ret i32 %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %res = phi i32 [ 0, %entry ], [ %sub.2, %for.body ]
 
@@ -1077,11 +1077,11 @@ entry:
   %wide.trip.count = zext nneg i32 %div27 to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ %add2, %for.body ]
   ret i32 %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %res = phi i32 [ 0, %entry ], [ %add2, %for.body ]
   %a.ptr = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
@@ -1213,11 +1213,11 @@ entry:
   %wide.trip.count = zext nneg i32 %div27 to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ %add2, %for.body ]
   ret i32 %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %res = phi i32 [ 0, %entry ], [ %add2, %for.body ]
   %a.ptr = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
@@ -1358,11 +1358,11 @@ entry:
   %wide.trip.count = zext nneg i32 %div27 to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ %add2, %for.body ]
   ret i32 %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %res = phi i32 [ 0, %entry ], [ %add2, %for.body ]
   %a.ptr = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv

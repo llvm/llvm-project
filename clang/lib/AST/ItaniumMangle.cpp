@@ -513,6 +513,10 @@ private:
   void mangleUnscopedTemplateName(GlobalDecl GD, const DeclContext *DC,
                                   const AbiTagList *AdditionalAbiTags);
   void mangleSourceName(const IdentifierInfo *II);
+  void mangleConstructorName(const CXXConstructorDecl *CCD,
+                             const AbiTagList *AdditionalAbiTags);
+  void mangleDestructorName(const CXXDestructorDecl *CDD,
+                            const AbiTagList *AdditionalAbiTags);
   void mangleRegCallName(const IdentifierInfo *II);
   void mangleDeviceStubName(const IdentifierInfo *II);
   void mangleOCLDeviceStubName(const IdentifierInfo *II);
@@ -1687,48 +1691,12 @@ void CXXNameMangler::mangleUnqualifiedName(
   case DeclarationName::ObjCMultiArgSelector:
     llvm_unreachable("Can't mangle Objective-C selector names here!");
 
-  case DeclarationName::CXXConstructorName: {
-    const CXXRecordDecl *InheritedFrom = nullptr;
-    TemplateName InheritedTemplateName;
-    const TemplateArgumentList *InheritedTemplateArgs = nullptr;
-    if (auto Inherited =
-            cast<CXXConstructorDecl>(ND)->getInheritedConstructor()) {
-      InheritedFrom = Inherited.getConstructor()->getParent();
-      InheritedTemplateName =
-          TemplateName(Inherited.getConstructor()->getPrimaryTemplate());
-      InheritedTemplateArgs =
-          Inherited.getConstructor()->getTemplateSpecializationArgs();
-    }
-
-    if (ND == Structor)
-      // If the named decl is the C++ constructor we're mangling, use the type
-      // we were given.
-      mangleCXXCtorType(static_cast<CXXCtorType>(StructorType), InheritedFrom);
-    else
-      // Otherwise, use the complete constructor name. This is relevant if a
-      // class with a constructor is declared within a constructor.
-      mangleCXXCtorType(Ctor_Complete, InheritedFrom);
-
-    // FIXME: The template arguments are part of the enclosing prefix or
-    // nested-name, but it's more convenient to mangle them here.
-    if (InheritedTemplateArgs)
-      mangleTemplateArgs(InheritedTemplateName, *InheritedTemplateArgs);
-
-    writeAbiTags(ND, AdditionalAbiTags);
+  case DeclarationName::CXXConstructorName:
+    mangleConstructorName(cast<CXXConstructorDecl>(ND), AdditionalAbiTags);
     break;
-  }
 
   case DeclarationName::CXXDestructorName:
-    if (ND == Structor)
-      // If the named decl is the C++ destructor we're mangling, use the type we
-      // were given.
-      mangleCXXDtorType(static_cast<CXXDtorType>(StructorType));
-    else
-      // Otherwise, use the complete destructor name. This is relevant if a
-      // class with a destructor is declared within a destructor.
-      mangleCXXDtorType(Dtor_Complete);
-    assert(ND);
-    writeAbiTags(ND, AdditionalAbiTags);
+    mangleDestructorName(cast<CXXDestructorDecl>(ND), AdditionalAbiTags);
     break;
 
   case DeclarationName::CXXOperatorName:
@@ -1753,6 +1721,50 @@ void CXXNameMangler::mangleUnqualifiedName(
   case DeclarationName::CXXUsingDirective:
     llvm_unreachable("Can't mangle a using directive name!");
   }
+}
+
+void CXXNameMangler::mangleConstructorName(
+    const CXXConstructorDecl *CCD, const AbiTagList *AdditionalAbiTags) {
+  const CXXRecordDecl *InheritedFrom = nullptr;
+  TemplateName InheritedTemplateName;
+  const TemplateArgumentList *InheritedTemplateArgs = nullptr;
+  if (const auto Inherited = CCD->getInheritedConstructor()) {
+    InheritedFrom = Inherited.getConstructor()->getParent();
+    InheritedTemplateName =
+        TemplateName(Inherited.getConstructor()->getPrimaryTemplate());
+    InheritedTemplateArgs =
+        Inherited.getConstructor()->getTemplateSpecializationArgs();
+  }
+
+  if (CCD == Structor)
+    // If the named decl is the C++ constructor we're mangling, use the type
+    // we were given.
+    mangleCXXCtorType(static_cast<CXXCtorType>(StructorType), InheritedFrom);
+  else
+    // Otherwise, use the complete constructor name. This is relevant if a
+    // class with a constructor is declared within a constructor.
+    mangleCXXCtorType(Ctor_Complete, InheritedFrom);
+
+  // FIXME: The template arguments are part of the enclosing prefix or
+  // nested-name, but it's more convenient to mangle them here.
+  if (InheritedTemplateArgs)
+    mangleTemplateArgs(InheritedTemplateName, *InheritedTemplateArgs);
+
+  writeAbiTags(CCD, AdditionalAbiTags);
+}
+
+void CXXNameMangler::mangleDestructorName(const CXXDestructorDecl *CDD,
+                                          const AbiTagList *AdditionalAbiTags) {
+  if (CDD == Structor)
+    // If the named decl is the C++ destructor we're mangling, use the type we
+    // were given.
+    mangleCXXDtorType(static_cast<CXXDtorType>(StructorType));
+  else
+    // Otherwise, use the complete destructor name. This is relevant if a
+    // class with a destructor is declared within a destructor.
+    mangleCXXDtorType(Dtor_Complete);
+  assert(CDD);
+  writeAbiTags(CDD, AdditionalAbiTags);
 }
 
 void CXXNameMangler::mangleRegCallName(const IdentifierInfo *II) {
@@ -2206,6 +2218,29 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
   const NamedDecl *ND = cast<NamedDecl>(DC);
   if (mangleSubstitution(ND))
     return;
+
+  // Constructors and destructors can't be represented as a plain GlobalDecl,
+  // and prefix mangling only needs their spelling.
+  if (isa<CXXConstructorDecl>(ND)) {
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND);
+        const TemplateDecl *TD = FD->getPrimaryTemplate()) {
+      mangleTemplatePrefix(TD);
+      mangleTemplateArgs(asTemplateName(TD),
+                         *FD->getTemplateSpecializationArgs());
+    } else {
+      manglePrefix(Context.getEffectiveDeclContext(ND), NoFunction);
+      mangleConstructorName(cast<CXXConstructorDecl>(ND), nullptr);
+    }
+    addSubstitution(ND);
+    return;
+  }
+
+  if (isa<CXXDestructorDecl>(ND)) {
+    manglePrefix(Context.getEffectiveDeclContext(ND), NoFunction);
+    mangleDestructorName(cast<CXXDestructorDecl>(ND), nullptr);
+    addSubstitution(ND);
+    return;
+  }
 
   // Check if we have a template-prefix or a closure-prefix.
   const TemplateArgumentList *TemplateArgs = nullptr;

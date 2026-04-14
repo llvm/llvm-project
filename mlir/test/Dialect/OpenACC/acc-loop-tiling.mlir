@@ -102,3 +102,54 @@ func.func @unknown_tile_size(%arg0: memref<1000xf32>) {
   } attributes {independent = [#acc.device_type<none>]}
   return
 }
+
+// Test loop with no tile values: pattern should not apply and loop is unchanged.
+
+// CHECK-LABEL: func.func @no_tile_values
+// CHECK:         acc.loop control(%{{.*}} : index) = (%{{.*}} : index) to (%{{.*}} : index) step (%{{.*}} : index) {
+// CHECK-NOT:       acc.loop
+// CHECK:           acc.yield
+// CHECK:         }
+func.func @no_tile_values() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  acc.loop control(%i : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>]}
+  return
+}
+
+// Test loop tiling when the body contains ops with nested regions.
+// Exercises the walk() in moveOpsAndReplaceIVs that must notify the rewriter
+// about nested ops (required by MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS).
+
+// CHECK-LABEL: func.func @body_with_nested_region
+// CHECK:         acc.loop control(%[[TILE_IV:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK:           acc.loop control(%[[ELEM_IV:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK:             scf.if
+// CHECK:               arith.index_castui %[[ELEM_IV]]
+// CHECK:             acc.yield
+// CHECK:           }
+// CHECK:           acc.yield
+// CHECK:         }
+func.func @body_with_nested_region(%arg0: memref<10xi32>) {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  acc.loop tile({%c2 : index}) control(%i : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
+    %threshold = arith.constant 5 : index
+    %cond = arith.cmpi ult, %i, %threshold : index
+    %val = scf.if %cond -> (i32) {
+      %cast = arith.index_castui %i : index to i32
+      scf.yield %cast : i32
+    } else {
+      %c99 = arith.constant 99 : i32
+      scf.yield %c99 : i32
+    }
+    memref.store %val, %arg0[%i] : memref<10xi32>
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>]}
+  return
+}

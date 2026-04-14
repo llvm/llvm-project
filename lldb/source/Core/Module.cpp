@@ -1077,7 +1077,7 @@ void Module::ReportWarningOptimization(
   StreamString ss;
   ss << file_name
      << " was compiled with optimization - stepping may behave "
-        "oddly; variables may not be available.";
+        "oddly; variables may not be available";
   llvm::StringRef msg = ss.GetString();
   Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
 }
@@ -1085,10 +1085,10 @@ void Module::ReportWarningOptimization(
 void Module::ReportWarningUnsupportedLanguage(
     LanguageType language, std::optional<lldb::user_id_t> debugger_id) {
   StreamString ss;
-  ss << "This version of LLDB has no plugin for the language \""
+  ss << "this version of LLDB has no plugin for the language \""
      << Language::GetNameForLanguageType(language)
      << "\". "
-        "Inspection of frame variables will be limited.";
+        "Inspection of frame variables will be limited";
   llvm::StringRef msg = ss.GetString();
   Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
 }

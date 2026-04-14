@@ -16,13 +16,13 @@
 namespace clang {
 using namespace llvm;
 namespace doc {
-static OwnedPtr<MustacheTemplateFile> RecordTemplate = nullptr;
+static std::unique_ptr<MustacheTemplateFile> RecordTemplate = nullptr;
 
-static OwnedPtr<MustacheTemplateFile> NamespaceTemplate = nullptr;
+static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
 
-static OwnedPtr<MustacheTemplateFile> AllFilesTemplate = nullptr;
+static std::unique_ptr<MustacheTemplateFile> AllFilesTemplate = nullptr;
 
-static OwnedPtr<MustacheTemplateFile> IndexTemplate = nullptr;
+static std::unique_ptr<MustacheTemplateFile> IndexTemplate = nullptr;
 
 struct MDMustacheGenerator : public MustacheGenerator {
   static const char *Format;

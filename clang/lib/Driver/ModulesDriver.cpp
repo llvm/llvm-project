@@ -25,10 +25,12 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/DirectedGraph.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/JSON.h"
@@ -747,6 +749,8 @@ public:
   CGNode(const NodeKind K) : Kind(K) {}
   CGNode(const CGNode &) = delete;
   CGNode(CGNode &&) = delete;
+  CGNode &operator=(const CGNode &) = delete;
+  CGNode &operator=(CGNode &&) = delete;
   virtual ~CGNode() = 0;
 
   NodeKind getKind() const { return Kind; }
@@ -891,6 +895,10 @@ public:
   };
 
   CGEdge(CGNode &N, EdgeKind K) : CGEdgeBase(N), Kind(K) {}
+  CGEdge(const CGEdge &) = delete;
+  CGEdge &operator=(const CGEdge &) = delete;
+  CGEdge(CGEdge &&) = delete;
+  CGEdge &operator=(CGEdge &&) = delete;
 
   EdgeKind getKind() const { return Kind; }
 
@@ -907,7 +915,10 @@ class CompilationGraph : public CGBase {
 public:
   CompilationGraph() = default;
   CompilationGraph(const CompilationGraph &) = delete;
+  CompilationGraph &operator=(const CompilationGraph &) = delete;
   CompilationGraph(CompilationGraph &&G) = default;
+  CompilationGraph &operator=(CompilationGraph &&) = default;
+  ~CompilationGraph() = default;
 
   CGNode &getRoot() const {
     assert(Root && "Root node has not yet been created!");
@@ -1221,7 +1232,7 @@ static SmallVector<JobNode *> createNodesForUnusedStdlibModuleJobs(
 }
 
 /// Creates a job for the Clang module described by \p MD.
-static std::unique_ptr<CC1Command>
+static std::unique_ptr<Command>
 createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
                                const deps::ModuleDeps &MD) {
   DerivedArgList &Args = C.getArgs();
@@ -1241,27 +1252,28 @@ createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
   for (const auto &Arg : BuildArgs)
     JobArgs.push_back(TCArgs.MakeArgString(Arg));
 
-  return std::make_unique<CC1Command>(
+  const auto &D = C.getDriver();
+  return std::make_unique<Command>(
       *PA, ImportingJob.getCreator(), ResponseFileSupport::AtFileUTF8(),
-      C.getDriver().getClangProgramPath(), JobArgs,
+      D.getClangProgramPath(), JobArgs,
       /*Inputs=*/ArrayRef<InputInfo>{},
-      /*Outputs=*/ArrayRef<InputInfo>{});
+      /*Outputs=*/ArrayRef<InputInfo>{}, D.getPrependArg());
 }
 
-/// Creates a ClangModuleJobNode and its job for each unique Clang module
-/// in \p ModuleDepGraphsForScannedJobs.
+/// Creates a \c ClangModuleJobNode with associated job for each unique Clang
+/// module in \p ModuleDepGraphsForScannedJobs.
 ///
-/// Only the jobs at indices \p ScannedJobIndices in \p Jobs are expected to be
-/// non-null.
+/// \param ImportingJobs Jobs whose module dependencies were scanned.
+/// \param ModuleDepGraphsForScannedJobs Full Clang module dependency graphs
+/// corresponding to \p ImportingJobs, in order.
 static void createClangModuleJobsAndNodes(
     CompilationGraph &Graph, Compilation &C,
-    ArrayRef<std::unique_ptr<Command>> Jobs, ArrayRef<size_t> ScannedJobIndices,
+    ArrayRef<std::unique_ptr<Command>> ImportingJobs,
     SmallVectorImpl<deps::ModuleDepsGraph> &&ModuleDepGraphsForScannedJobs) {
   llvm::DenseSet<deps::ModuleID> AlreadySeen;
-  for (auto &&[ScanIndex, ModuleDepsGraph] :
-       llvm::enumerate(ModuleDepGraphsForScannedJobs)) {
-    const auto &ImportingJob = *Jobs[ScannedJobIndices[ScanIndex]];
-
+  for (auto &&[ImportingJob, ModuleDepsGraph] :
+       llvm::zip_equal(llvm::make_pointee_range(ImportingJobs),
+                       ModuleDepGraphsForScannedJobs)) {
     for (auto &MD : ModuleDepsGraph) {
       const auto Inserted = AlreadySeen.insert(MD.ID).second;
       if (!Inserted)
@@ -1271,6 +1283,31 @@ static void createClangModuleJobsAndNodes(
       Graph.createJobNode<ClangModuleJobNode>(std::move(ClangModuleJob),
                                               std::move(MD));
     }
+  }
+}
+
+/// Installs the command lines produced by the dependency scan into
+/// \p ScannedJobs.
+static void
+installScanCommandLines(Compilation &C,
+                        MutableArrayRef<std::unique_ptr<Command>> ScannedJobs,
+                        ArrayRef<InputDependencies> InputDepsForScannedJobs) {
+  for (auto &&[Job, InputDeps] : llvm::zip_equal(
+           llvm::make_pointee_range(ScannedJobs), InputDepsForScannedJobs)) {
+    const auto &BuildArgs = InputDeps.BuildArgs;
+    ArgStringList JobArgs;
+    JobArgs.reserve(BuildArgs.size());
+
+    const auto &SourceAction = Job.getSource();
+    const auto &TC = Job.getCreator().getToolChain();
+    auto &TCArgs =
+        C.getArgsForToolChain(&TC, SourceAction.getOffloadingArch(),
+                              SourceAction.getOffloadingDeviceKind());
+
+    for (const auto &Arg : BuildArgs)
+      JobArgs.push_back(TCArgs.MakeArgString(Arg));
+
+    Job.replaceArguments(std::move(JobArgs));
   }
 }
 
@@ -1469,6 +1506,19 @@ static void createAndConnectRoot(CompilationGraph &Graph) {
   }
 }
 
+/// Moves jobs from \p Graph into \p C in the graph's topological order.
+static void feedJobsBackIntoCompilation(Compilation &C,
+                                        CompilationGraph &&Graph) {
+  llvm::ReversePostOrderTraversal<CompilationGraph *> TopologicallySortedNodes(
+      &Graph);
+  assert(isa<RootNode>(*TopologicallySortedNodes.begin()) &&
+         "First node in topological order must be the root!");
+  auto TopologicallySortedJobNodes = llvm::map_range(
+      llvm::drop_begin(TopologicallySortedNodes), llvm::CastTo<JobNode>);
+  for (auto *JN : TopologicallySortedJobNodes)
+    C.addCommand(std::move(JN->Job));
+}
+
 void driver::modules::runModulesDriver(
     Compilation &C, ArrayRef<StdModuleManifest::Module> ManifestEntries) {
   llvm::PrettyStackTraceString CrashInfo("Running modules driver.");
@@ -1506,16 +1556,17 @@ void driver::modules::runModulesDriver(
       Graph, takeJobsAtIndices(Jobs, ScanResult.NonScannableJobIndices));
   auto UnusedStdlibModuleJobNodes = createNodesForUnusedStdlibModuleJobs(
       Graph, takeJobsAtIndices(Jobs, ScanResult.UnusedStdlibModuleJobIndices));
+
+  auto ScannedJobs = takeJobsAtIndices(Jobs, ScanResult.ScannedJobIndices);
   createClangModuleJobsAndNodes(
-      Graph, C, Jobs, ScanResult.ScannedJobIndices,
+      Graph, C, /*ImportingJobs*/ ScannedJobs,
       std::move(ScanResult.ModuleDepGraphsForScannedJobs));
-  createNodesForScannedJobs(
-      Graph, takeJobsAtIndices(Jobs, ScanResult.ScannedJobIndices),
-      std::move(ScanResult.InputDepsForScannedJobs));
+  installScanCommandLines(C, ScannedJobs, ScanResult.InputDepsForScannedJobs);
+  createNodesForScannedJobs(Graph, std::move(ScannedJobs),
+                            std::move(ScanResult.InputDepsForScannedJobs));
+
   createRegularEdges(Graph);
-
   pruneUnusedStdlibModuleJobs(Graph, UnusedStdlibModuleJobNodes);
-
   if (!createModuleDependencyEdges(Graph, Diags))
     return;
   createAndConnectRoot(Graph);
@@ -1524,12 +1575,7 @@ void driver::modules::runModulesDriver(
   if (!Diags.isLastDiagnosticIgnored())
     llvm::WriteGraph<const CompilationGraph *>(llvm::errs(), &Graph);
 
-  // TODO: Install all updated command-lines produced by the dependency scan.
   // TODO: Fix-up command-lines for named module imports.
 
-  // TODO: Sort the graph topologically before adding jobs back to the
-  // Compilation being built.
-  for (auto *N : Graph)
-    if (auto *JN = dyn_cast<JobNode>(N))
-      C.addCommand(std::move(JN->Job));
+  feedJobsBackIntoCompilation(C, std::move(Graph));
 }

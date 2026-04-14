@@ -382,4 +382,12 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
 
   return InvalidatingMethods->contains(MD.getName());
 }
+
+bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
+  if (!RD || !isInStlNamespace(RD))
+    return false;
+  StringRef Name = getName(*RD);
+  return Name == "function" || Name == "move_only_function";
+}
+
 } // namespace clang::lifetimes

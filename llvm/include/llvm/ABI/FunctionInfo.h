@@ -45,14 +45,19 @@ public:
 
 private:
   const Type *CoercionType = nullptr;
+  // Alignment is optional for direct arguments, but required for indirect
+  // arguments. This invariant is enforced by the methods of this class.
+  //
+  // The field is not part of DirectAttrInfo/IndirectAttrInfo because it would
+  // make the union non-trivial, disabling implicit copy/move constructors and
+  // assignment operators for the entire class.
+  MaybeAlign Alignment;
 
   struct DirectAttrInfo {
     unsigned Offset;
-    MaybeAlign Alignment;
   };
 
   struct IndirectAttrInfo {
-    Align Alignment;
     unsigned AddrSpace;
   };
 
@@ -84,8 +89,8 @@ public:
                            MaybeAlign Align = std::nullopt) {
     ArgInfo AI(Direct);
     AI.CoercionType = T;
+    AI.Alignment = Align;
     AI.DirectAttr.Offset = Offset;
-    AI.DirectAttr.Alignment = Align;
     return AI;
   }
 
@@ -95,8 +100,8 @@ public:
 
     ArgInfo AI(Extend);
     AI.CoercionType = T;
+    AI.Alignment = std::nullopt;
     AI.DirectAttr.Offset = 0;
-    AI.DirectAttr.Alignment = std::nullopt;
 
     const IntegerType *IntTy = cast<IntegerType>(T);
     if (IntTy->isSigned())
@@ -112,7 +117,7 @@ public:
   static ArgInfo getIndirect(Align Align, bool ByVal, unsigned AddrSpace = 0,
                              bool Realign = false) {
     ArgInfo AI(Indirect);
-    AI.IndirectAttr.Alignment = Align;
+    AI.Alignment = Align;
     AI.IndirectAttr.AddrSpace = AddrSpace;
     AI.IndirectByVal = ByVal;
     AI.IndirectRealign = Realign;
@@ -148,12 +153,14 @@ public:
 
   MaybeAlign getDirectAlign() const {
     assert((isDirect() || isExtend()) && "Not a direct or extend kind");
-    return DirectAttr.Alignment;
+    return Alignment;
   }
 
   Align getIndirectAlign() const {
     assert(isIndirect() && "Invalid Kind!");
-    return IndirectAttr.Alignment;
+    assert(Alignment.has_value() &&
+           "Indirect arguments must have an alignment");
+    return *Alignment;
   }
 
   unsigned getIndirectAddrSpace() const {

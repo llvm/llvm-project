@@ -257,6 +257,12 @@ private:
   void FetchOnlyConcreteFramesUpTo(uint32_t end_idx);
   void SynthesizeTailCallFrames(StackFrame &next_frame);
 
+  /// Synthesize inline frames for \p frame_sp by walking the inlined
+  /// scope chain via GetParentOfInlinedScope and appending frames to the
+  /// list. Returns the number of inline frames created.
+  uint32_t SynthesizeInlineFrames(lldb::StackFrameSP frame_sp,
+                                  lldb::addr_t cfa);
+
   StackFrameList(const StackFrameList &) = delete;
   const StackFrameList &operator=(const StackFrameList &) = delete;
 };

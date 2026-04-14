@@ -703,8 +703,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   case CK_VectorSplat: {
     assert(!canClassify(E->getType()));
-    assert(canClassify(SubExpr->getType()));
     assert(E->getType()->isVectorType());
+
+    if (!canClassify(SubExpr->getType()))
+      return false;
 
     if (!Initializing) {
       UnsignedOrNone LocalIndex = allocateLocal(E);
@@ -2724,16 +2726,27 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   assert(Initializing);
   assert(!DiscardResult);
 
+  const Expr *Common = E->getCommonExpr();
+  const Expr *SubExpr = E->getSubExpr();
+  OptPrimType SubExprT = classify(SubExpr);
+  size_t Size = E->getArraySize().getZExtValue();
+
+  if (SubExprT) {
+    // Unwrap the OpaqueValueExpr so we don't cache something we won't reuse.
+    Common = cast<OpaqueValueExpr>(Common)->getSourceExpr();
+
+    if (!this->visit(Common))
+      return false;
+    return this->emitCopyArray(*SubExprT, 0, 0, Size, E);
+  }
+
   // We visit the common opaque expression here once so we have its value
   // cached.
-  if (!this->discard(E->getCommonExpr()))
+  if (!this->discard(Common))
     return false;
 
   // TODO: This compiles to quite a lot of bytecode if the array is larger.
   //   Investigate compiling this to a loop.
-  const Expr *SubExpr = E->getSubExpr();
-  size_t Size = E->getArraySize().getZExtValue();
-  OptPrimType SubExprT = classify(SubExpr);
 
   // So, every iteration, we execute an assignment here
   // where the LHS is on the stack (the target array)

@@ -50,7 +50,7 @@ define void @foo(ptr %start, ptr %end) {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %count.09 = phi i32 [ %add, %while.body ], [ 0, %entry ]
   %add = add nsw i32 -1, %count.09
   %G = getelementptr i8, ptr %end, i32 %add
@@ -58,6 +58,6 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp = icmp ult ptr %start, %G
   br i1 %cmp, label %while.body, label %while.end.loopexit
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }

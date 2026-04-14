@@ -64,6 +64,8 @@ void mlir::populateConvertMathToEmitCPatterns(
                                                          languageTarget);
   patterns.insert<LowerToEmitCCallOpaque<math::RoundOp>>(context, "round",
                                                          languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::RoundEvenOp>>(
+      context, "roundeven", languageTarget);
   patterns.insert<LowerToEmitCCallOpaque<math::ExpOp>>(context, "exp",
                                                        languageTarget);
   patterns.insert<LowerToEmitCCallOpaque<math::CosOp>>(context, "cos",
@@ -81,5 +83,7 @@ void mlir::populateConvertMathToEmitCPatterns(
   patterns.insert<LowerToEmitCCallOpaque<math::AbsFOp>>(context, "fabs",
                                                         languageTarget);
   patterns.insert<LowerToEmitCCallOpaque<math::PowFOp>>(context, "pow",
+                                                        languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::SqrtOp>>(context, "sqrt",
                                                         languageTarget);
 }

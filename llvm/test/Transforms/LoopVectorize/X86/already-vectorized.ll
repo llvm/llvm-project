@@ -16,7 +16,7 @@ define i32 @vect() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
 ; We need to make sure we did vectorize the loop
 ; CHECK: LV: Found a loop: for.body
 ; CHECK: LV: We can vectorize this loop!
@@ -35,7 +35,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: for.body:
 ; CHECK: br {{.*}} label %for.body{{.*}}, !llvm.loop [[scalar:![0-9]+]]
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 %add
 }
 

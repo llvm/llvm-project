@@ -18,7 +18,7 @@ define i32 @sum_array(ptr %A, i32 %n) readonly noinline {
   %3 = icmp eq i32 %n, 0
   br i1 %3, label %_ZSt10accumulateIPiiET0_T_S2_S1_.exit, label %.lr.ph.i
 
-.lr.ph.i:                                         ; preds = %0, %.lr.ph.i
+.lr.ph.i:
   %.03.i = phi ptr [ %6, %.lr.ph.i ], [ %A, %0 ]
   %.012.i = phi i32 [ %5, %.lr.ph.i ], [ 0, %0 ]
   %4 = load i32, ptr %.03.i, align 4
@@ -27,7 +27,7 @@ define i32 @sum_array(ptr %A, i32 %n) readonly noinline {
   %7 = icmp eq ptr %6, %2
   br i1 %7, label %_ZSt10accumulateIPiiET0_T_S2_S1_.exit, label %.lr.ph.i
 
-_ZSt10accumulateIPiiET0_T_S2_S1_.exit:            ; preds = %.lr.ph.i, %0
+_ZSt10accumulateIPiiET0_T_S2_S1_.exit:
   %.01.lcssa.i = phi i32 [ 0, %0 ], [ %5, %.lr.ph.i ]
   ret i32 %.01.lcssa.i
 }
@@ -45,7 +45,7 @@ define i32 @sum_array_as1(ptr addrspace(1) %A, i32 %n) readonly noinline {
   %3 = icmp eq i32 %n, 0
   br i1 %3, label %_ZSt10accumulateIPiiET0_T_S2_S1_.exit, label %.lr.ph.i
 
-.lr.ph.i:                                         ; preds = %0, %.lr.ph.i
+.lr.ph.i:
   %.03.i = phi ptr addrspace(1) [ %6, %.lr.ph.i ], [ %A, %0 ]
   %.012.i = phi i32 [ %5, %.lr.ph.i ], [ 0, %0 ]
   %4 = load i32, ptr addrspace(1) %.03.i, align 4
@@ -54,7 +54,7 @@ define i32 @sum_array_as1(ptr addrspace(1) %A, i32 %n) readonly noinline {
   %7 = icmp eq ptr addrspace(1) %6, %2
   br i1 %7, label %_ZSt10accumulateIPiiET0_T_S2_S1_.exit, label %.lr.ph.i
 
-_ZSt10accumulateIPiiET0_T_S2_S1_.exit:            ; preds = %.lr.ph.i, %0
+_ZSt10accumulateIPiiET0_T_S2_S1_.exit:
   %.01.lcssa.i = phi i32 [ 0, %0 ], [ %5, %.lr.ph.i ]
   ret i32 %.01.lcssa.i
 }

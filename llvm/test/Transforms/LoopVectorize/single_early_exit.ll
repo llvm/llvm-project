@@ -469,7 +469,6 @@ exit:
   ret i64 %res
 }
 
-declare i32 @llvm.smin.i32(i32, i32)
 
 @A = external global [100 x {i32, i8} ]
 

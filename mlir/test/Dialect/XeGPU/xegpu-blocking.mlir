@@ -257,7 +257,7 @@ gpu.module @test_kernel {
 
 // -----
 #l = #xegpu.layout<inst_data = [16, 16]>
-#r = #xegpu.layout<inst_data = [16]>
+#r = #xegpu.slice<#xegpu.layout<inst_data = [16, 16]>, dims = [0]>
 gpu.module @test_kernel  {
   gpu.func @reduce_dim_0(%a: memref<16x512xf32>, %b: memref<512xf32>)  kernel attributes {VectorComputeFunctionINTEL, spirv.entry_point_abi = #spirv.entry_point_abi<>} {
     %acc = arith.constant {layout_result_0 = #r} dense<0.0> : vector<64xf32>
@@ -277,7 +277,7 @@ gpu.module @test_kernel  {
 
 // -----
 #l = #xegpu.layout<inst_data = [16, 16]>
-#r = #xegpu.layout<inst_data = [16]>
+#r = #xegpu.slice<#xegpu.layout<inst_data = [16, 16]>, dims = [1]>
 gpu.module @test_kernel   {
   gpu.func @reduce_dim_1(%a: memref<512x32xf32>, %b: memref<512xf32>)  kernel attributes {VectorComputeFunctionINTEL, spirv.entry_point_abi = #spirv.entry_point_abi<>} {
     %c1 = arith.constant 1 : index

@@ -129,6 +129,53 @@ class ScriptedFrameProviderTestCase(TestBase):
         frame_n_plus_1 = thread.GetFrameAtIndex(new_frame_count - 1)
         self.assertEqual(frame_n_plus_1.GetPC(), 0x10)
 
+    def test_scripted_frame_thread_member(self):
+        """Test that ScriptedFrame.thread is correctly set via GetThreadByID.
+
+        This is a regression test for a bug where ScriptedFrame.__init__ used
+        GetThreadByIndexID(tid) instead of GetThreadByID(tid). Since thread ID
+        and index ID differ, the wrong API would produce an invalid thread.
+        """
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.ThreadValidatingFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+        self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
+
+        # The ThreadValidatingFrame encodes thread validity in its function name.
+        frame0 = thread.GetFrameAtIndex(0)
+        func_name = frame0.GetFunctionName()
+
+        # If GetThreadByIndexID were used instead of GetThreadByID, the thread
+        # would be invalid and the function name would be "thread_INVALID".
+        self.assertNotEqual(
+            func_name,
+            "thread_INVALID",
+            "ScriptedFrame.thread should be valid "
+            "(GetThreadByID vs GetThreadByIndexID)",
+        )
+        self.assertIn("thread_valid_id_", func_name)
+
+        # Verify the encoded thread ID matches the actual thread ID.
+        expected_tid = thread.GetThreadID()
+        self.assertIn(
+            hex(expected_tid),
+            func_name,
+            f"ScriptedFrame.thread ID should match: expected {expected_tid:#x} "
+            f"in '{func_name}'",
+        )
+
     def test_scripted_frame_objects(self):
         """Test that provider can return ScriptedFrame objects."""
         self.build()
@@ -1187,3 +1234,29 @@ class ScriptedFrameProviderTestCase(TestBase):
             expected_thread_ids,
             "All threads should broadcast eBroadcastBitStackChanged on clear",
         )
+
+    def test_incremental_fetch_synthetic_frame_identity(self):
+        """Test that incrementally fetched PC-less synthetic frames each get a
+        unique StackID so they resolve to the correct frame."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        error = lldb.SBError()
+        target.RegisterScriptedFrameProvider(
+            "test_frame_providers.PythonSourceFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertSuccess(error)
+
+        # Fetch frames one at a time to trigger separate FetchFramesUpTo calls.
+        frame0 = thread.GetFrameAtIndex(0)
+        frame1 = thread.GetFrameAtIndex(1)
+
+        self.assertEqual(frame0.GetFunctionName(), "compute_fibonacci")
+        self.assertEqual(frame1.GetFunctionName(), "process_data")

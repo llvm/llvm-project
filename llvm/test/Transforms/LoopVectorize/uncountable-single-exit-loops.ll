@@ -20,7 +20,7 @@ define void @latch_exit_cannot_compute_btc_due_to_step(ptr %dst, i64 %step) {
 entry:
   br label %loop
 
-loop:                                   ; preds = %loop, %for.cond.us
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %iv.next = add i64 %iv, %step
   %gep = getelementptr i8, ptr %dst, i64 %iv

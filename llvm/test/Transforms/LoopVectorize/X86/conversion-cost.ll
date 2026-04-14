@@ -81,7 +81,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
   %1 = icmp sgt i32 %n, 3
   br i1 %1, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 3, %0 ]
   %2 = trunc i64 %indvars.iv to i8
   %3 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv
@@ -91,7 +91,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   ret void
 }
 
@@ -160,7 +160,7 @@ define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) {
   %1 = icmp sgt i32 %n, 9
   br i1 %1, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 9, %0 ]
   %add = add nsw i64 %indvars.iv, 3
   %tofp = sitofp i64 %add to float
@@ -171,6 +171,6 @@ define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) {
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   ret void
 }

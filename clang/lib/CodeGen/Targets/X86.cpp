@@ -1309,9 +1309,10 @@ class X86_64ABIInfo : public ABIInfo {
                                        unsigned &NeededSSE,
                                        unsigned &MaxVectorWidth) const;
 
-  ABIArgInfo classifyRegCallStructTypeImpl(QualType Ty, unsigned &NeededInt,
-                                           unsigned &NeededSSE,
-                                           unsigned &MaxVectorWidth) const;
+  bool passRegCallStructTypeDirectly(QualType Ty,
+                                     SmallVectorImpl<llvm::Type *> &CoerceElts,
+                                     unsigned &NeededInt, unsigned &NeededSSE,
+                                     unsigned &MaxVectorWidth) const;
 
   bool IsIllegalVectorType(QualType Ty) const;
 
@@ -2189,8 +2190,9 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
     if (Ty->isBitIntType())
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                              : ABIArgInfo::getDirect());
+    llvm::Type *IRTy = CGT.ConvertType(Ty);
+    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
+                                              : ABIArgInfo::getDirect(IRTy));
   }
 
   return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
@@ -2228,8 +2230,9 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
     if (const auto *ED = Ty->getAsEnumDecl())
       Ty = ED->getIntegerType();
 
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                              : ABIArgInfo::getDirect());
+    llvm::Type *IRTy = CGT.ConvertType(Ty);
+    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
+                                              : ABIArgInfo::getDirect(IRTy));
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
@@ -2860,74 +2863,101 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
   return ABIArgInfo::getDirect(ResType);
 }
 
-ABIArgInfo
-X86_64ABIInfo::classifyRegCallStructTypeImpl(QualType Ty, unsigned &NeededInt,
-                                             unsigned &NeededSSE,
-                                             unsigned &MaxVectorWidth) const {
+// Returns true if the struct can be passed directly in registers. If so, the
+// number of registers required will be returned in `NeededInt` and `NeededSSE`,
+// and `CoerceElts` will contain an expanded sequence of LLVM IR types that each
+// field should coerce to.
+bool X86_64ABIInfo::passRegCallStructTypeDirectly(
+    QualType Ty, SmallVectorImpl<llvm::Type *> &CoerceElts, unsigned &NeededInt,
+    unsigned &NeededSSE, unsigned &MaxVectorWidth) const {
+
   auto *RD =
       cast<RecordType>(Ty.getCanonicalType())->getDecl()->getDefinitionOrSelf();
-
   if (RD->hasFlexibleArrayMember())
-    return getIndirectReturnResult(Ty);
+    return false;
 
-  // Sum up bases
+  // Classify the bases.
   if (auto CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-    if (CXXRD->isDynamicClass()) {
-      NeededInt = NeededSSE = 0;
-      return getIndirectReturnResult(Ty);
-    }
+    if (CXXRD->isDynamicClass())
+      return false;
 
-    for (const auto &I : CXXRD->bases())
-      if (classifyRegCallStructTypeImpl(I.getType(), NeededInt, NeededSSE,
-                                        MaxVectorWidth)
-              .isIndirect()) {
-        NeededInt = NeededSSE = 0;
-        return getIndirectReturnResult(Ty);
-      }
+    for (const auto &I : CXXRD->bases()) {
+      QualType BaseTy = I.getType();
+      if (isEmptyRecord(getContext(), BaseTy, true))
+        continue;
+      if (!passRegCallStructTypeDirectly(BaseTy, CoerceElts, NeededInt,
+                                         NeededSSE, MaxVectorWidth))
+        return false;
+    }
   }
 
-  // Sum up members
+  // Classify the members.
   for (const auto *FD : RD->fields()) {
     QualType MTy = FD->getType();
     if (MTy->isRecordType() && !MTy->isUnionType()) {
-      if (classifyRegCallStructTypeImpl(MTy, NeededInt, NeededSSE,
-                                        MaxVectorWidth)
-              .isIndirect()) {
-        NeededInt = NeededSSE = 0;
-        return getIndirectReturnResult(Ty);
-      }
-    } else {
-      unsigned LocalNeededInt, LocalNeededSSE;
-      if (classifyArgumentType(MTy, UINT_MAX, LocalNeededInt, LocalNeededSSE,
-                               true, true)
-              .isIndirect()) {
-        NeededInt = NeededSSE = 0;
-        return getIndirectReturnResult(Ty);
-      }
-      if (const auto *AT = getContext().getAsConstantArrayType(MTy))
-        MTy = AT->getElementType();
-      if (const auto *VT = MTy->getAs<VectorType>())
-        if (getContext().getTypeSize(VT) > MaxVectorWidth)
-          MaxVectorWidth = getContext().getTypeSize(VT);
-      NeededInt += LocalNeededInt;
-      NeededSSE += LocalNeededSSE;
+      if (isEmptyRecord(getContext(), MTy, true))
+        continue;
+      if (!passRegCallStructTypeDirectly(MTy, CoerceElts, NeededInt, NeededSSE,
+                                         MaxVectorWidth))
+        return false;
+      continue;
     }
+
+    const auto *AT = getContext().getAsConstantArrayType(MTy);
+    if (AT)
+      MTy = AT->getElementType();
+
+    unsigned LocalNeededInt, LocalNeededSSE;
+    ABIArgInfo AI = classifyArgumentType(MTy, UINT_MAX, LocalNeededInt,
+                                         LocalNeededSSE, true, true);
+    if (AI.isIgnore())
+      continue;
+    if (AI.isIndirect())
+      return false;
+
+    llvm::Type *CoerceTy = AI.getCoerceToType();
+    assert(CoerceTy && "ABI info for struct member has no coerce type");
+    if (AT) {
+      uint64_t NumElts = AT->getZExtSize();
+      LocalNeededInt *= NumElts;
+      LocalNeededSSE *= NumElts;
+      CoerceElts.push_back(llvm::ArrayType::get(CoerceTy, NumElts));
+    } else {
+      CoerceElts.push_back(CoerceTy);
+    }
+
+    if (const auto *VT = MTy->getAs<VectorType>())
+      if (getContext().getTypeSize(VT) > MaxVectorWidth)
+        MaxVectorWidth = getContext().getTypeSize(VT);
+
+    NeededInt += LocalNeededInt;
+    NeededSSE += LocalNeededSSE;
   }
 
-  return ABIArgInfo::getDirect();
+  return true;
 }
 
 ABIArgInfo
 X86_64ABIInfo::classifyRegCallStructType(QualType Ty, unsigned &NeededInt,
                                          unsigned &NeededSSE,
                                          unsigned &MaxVectorWidth) const {
-
   NeededInt = 0;
   NeededSSE = 0;
   MaxVectorWidth = 0;
 
-  return classifyRegCallStructTypeImpl(Ty, NeededInt, NeededSSE,
-                                       MaxVectorWidth);
+  if (isEmptyRecord(getContext(), Ty, true))
+    return ABIArgInfo::getIgnore();
+
+  SmallVector<llvm::Type *, 16> CoerceElts;
+  if (!passRegCallStructTypeDirectly(Ty, CoerceElts, NeededInt, NeededSSE,
+                                     MaxVectorWidth)) {
+    NeededInt = NeededSSE = 0;
+    return getIndirectReturnResult(Ty);
+  }
+
+  assert(!CoerceElts.empty() && "Non-empty struct produced no element types");
+  return ABIArgInfo::getDirect(
+      llvm::StructType::get(getVMContext(), CoerceElts));
 }
 
 void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
@@ -2982,6 +3012,10 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   // The chain argument effectively gives us another free register.
   if (FI.isChainCall())
     ++FreeIntRegs;
+
+  // RegCall lets us reuse the return registers.
+  if (IsRegCall)
+    FreeSSERegs = 16;
 
   unsigned NumRequiredArgs = FI.getNumRequiredArgs();
   // AMD64-ABI 3.2.3p3: Once arguments are classified, the registers

@@ -137,9 +137,6 @@ public:
   LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
                                                 const BasicBlock *Dst) const;
 
-  LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
-                                                const_succ_iterator Dst) const;
-
   /// Test if an edge is hot relative to other out-edges of the Src.
   ///
   /// Check whether this edge out of the source block is 'hot'. We define hot

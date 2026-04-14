@@ -54,6 +54,12 @@ tests with the following command:
 
    ninja -C build libc libm check-libc
 
+To build just the generated headers (useful for troubleshooting):
+
+.. code-block:: sh
+
+   ninja -C build generate-libc-headers
+
 To run a specific unit test for a function, you can target it directly using its
 full name:
 

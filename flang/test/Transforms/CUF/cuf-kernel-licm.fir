@@ -80,3 +80,34 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.array<10xf32>> {cuf.data_attr = #cuf.cud
   }
   return
 }
+
+// -----
+
+// Verify that Pure fir.address_of operation is not hoisted by LICM
+// out of cuf.kernel.
+// CHECK-LABEL: func.func @_QQmain() {
+// CHECK-NOT: fir.address_of
+// CHECK: cuf.kernel
+func.func @_QQmain() {
+  %c100 = arith.constant 100 : index
+  %c4_i32 = arith.constant 4 : i32
+  %c6_i32 = arith.constant 6 : i32
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = cuf.alloc i32 {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<i32>
+  %2 = fir.declare %1 {data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+  %4 = fir.declare %3 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  cuf.kernel<<<*, *>>> (%arg0 : index) = (%c1 : index) to (%c100 : index)  step (%c1 : index) {
+    %5 = fir.convert %arg0 : (index) -> i32
+    fir.store %5 to %4 : !fir.ref<i32>
+    %6 = fir.address_of(@_QQclXb12241cc4e2d1775ec743d7d1b7d73f7) : !fir.ref<!fir.char<1,38>>
+    %7 = fir.convert %6 : (!fir.ref<!fir.char<1,38>>) -> !fir.ref<i8>
+    %8 = fir.call @_FortranAioBeginExternalListOutput(%c6_i32, %7, %c4_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+    %9 = fir.load %2 : !fir.ref<i32>
+    %10 = fir.call @_FortranAioOutputInteger32(%8, %9) fastmath<contract> : (!fir.ref<i8>, i32) -> i1
+    %11 = fir.call @_FortranAioEndIoStatement(%8) fastmath<contract> : (!fir.ref<i8>) -> i32
+    "fir.end"() : () -> ()
+  }
+  return
+}

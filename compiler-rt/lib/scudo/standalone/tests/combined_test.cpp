@@ -517,12 +517,6 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateSame) {
     for (scudo::uptr I = 0; I < scudo::Min(CurrentSize, NewSize); I++)
       EXPECT_EQ((reinterpret_cast<char *>(NewP))[I], Marker);
 
-    // Verify that new bytes are set according to FillContentsMode.
-    for (scudo::uptr I = CurrentSize; I < NewSize; I++) {
-      unsigned char V = (reinterpret_cast<unsigned char *>(NewP))[I];
-      EXPECT_TRUE(V == scudo::PatternFillByte || V == 0);
-    }
-
     checkMemoryTaggingMaybe(Allocator, NewP, NewSize, 0);
     CurrentSize = NewSize;
   }

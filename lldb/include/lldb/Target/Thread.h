@@ -1477,10 +1477,6 @@ protected:
   mutable llvm::DenseMap<lldb::frame_list_id_t, lldb::StackFrameListWP>
       m_frame_lists_by_id;
 
-  /// Counter for assigning unique provider IDs. Starts at 1 since 0 is
-  /// reserved for normal unwinder frames. Persists across ClearStackFrames.
-  lldb::frame_list_id_t m_next_provider_id = 1;
-
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info
                                 // for this thread?

@@ -8,6 +8,7 @@
 
 #include "Pointer.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "Context.h"
 #include "Floating.h"
 #include "Function.h"
@@ -668,6 +669,11 @@ void Pointer::activate() const {
   };
 
   Pointer B = *this;
+  // Primitive array elements can't be activated individually, so
+  // look at the array root instead.
+  if (B.getFieldDesc()->isPrimitiveArray() && B.isArrayElement())
+    B = B.getArray();
+
   while (!B.isRoot() && B.inUnion()) {
     activate(B);
 
@@ -738,6 +744,15 @@ bool Pointer::pointsToStringLiteral() const {
 
   const Expr *E = block()->getDescriptor()->asExpr();
   return isa_and_nonnull<StringLiteral>(E);
+}
+
+bool Pointer::pointsToLabel() const {
+  if (isZero() || !isBlockPointer())
+    return false;
+
+  if (const Expr *E = BS.Pointee->getDescriptor()->asExpr())
+    return isa<AddrLabelExpr>(E);
+  return false;
 }
 
 std::optional<std::pair<Pointer, Pointer>>

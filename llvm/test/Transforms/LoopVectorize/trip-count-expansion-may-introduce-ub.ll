@@ -1304,7 +1304,6 @@ exit:
   ret i64 %p
 }
 
-declare i64 @llvm.umax.i64(i64, i64)
 
 
 ;.

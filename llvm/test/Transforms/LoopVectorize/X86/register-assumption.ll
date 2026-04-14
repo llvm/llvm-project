@@ -7,16 +7,16 @@ entry:
   %alloca = alloca float, align 4
   br label %loop_exit.dim.11.critedge
 
-loop_exit.dim.11.critedge:                        ; preds = %loop_body.dim.0
+loop_exit.dim.11.critedge:
   %ptrint = ptrtoint ptr %alloca to i64
   %maskedptr = and i64 %ptrint, 4
   %maskcond = icmp eq i64 %maskedptr, 0
   br label %loop_header.dim.017.preheader
 
-loop_header.dim.017.preheader:                    ; preds = %loop_exit.dim.016, %loop_exit.dim.11.critedge
+loop_header.dim.017.preheader:
   br label %loop_body.dim.018
 
-loop_body.dim.018:                                ; preds = %loop_body.dim.018, %loop_header.dim.017.preheader
+loop_body.dim.018:
   %invar_address.dim.019.0135 = phi i64 [ 0, %loop_header.dim.017.preheader ], [ %0, %loop_body.dim.018 ]
   call void @llvm.assume(i1 %maskcond)
 ; CHECK:     call void @llvm.assume(
@@ -26,4 +26,3 @@ loop_body.dim.018:                                ; preds = %loop_body.dim.018, 
   br i1 %1, label %loop_header.dim.017.preheader, label %loop_body.dim.018
 }
 
-declare void @llvm.assume(i1)

@@ -2428,3 +2428,262 @@ func.func @test_omp_wsloop_nested_canMoveFromDescendant(%arg0: !fir.ref<!fir.arr
   }
   return
 }
+
+// -----
+// Test that fir.undefined and fir.insert_value (used for complex constant
+// creation) are hoisted out of loops as pure operations.
+// CHECK-LABEL:   func.func @test_hoist_complex_constant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<complex<f32>>)
+// CHECK:           %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[UNDEF:.*]] = fir.undefined complex<f32>
+// CHECK:           %[[INS0:.*]] = fir.insert_value %[[UNDEF]], %[[CST]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+// CHECK:           %[[INS1:.*]] = fir.insert_value %[[INS0]], %[[CST]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[INS1]] to %[[ARG0]] : !fir.ref<complex<f32>>
+func.func @test_hoist_complex_constant(%arg0: !fir.ref<complex<f32>>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.undefined complex<f32>
+    %1 = fir.insert_value %0, %cst, [0 : index] : (complex<f32>, f32) -> complex<f32>
+    %2 = fir.insert_value %1, %cst, [1 : index] : (complex<f32>, f32) -> complex<f32>
+    fir.store %2 to %arg0 : !fir.ref<complex<f32>>
+  }
+  return
+}
+
+// -----
+// Test that fir.zero_bits is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_zero_bits(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.ptr<f32>>)
+// CHECK:           %[[ZERO:.*]] = fir.zero_bits !fir.ptr<f32>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[ZERO]] to %[[ARG0]] : !fir.ref<!fir.ptr<f32>>
+func.func @test_hoist_zero_bits(%arg0: !fir.ref<!fir.ptr<f32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.zero_bits !fir.ptr<f32>
+    fir.store %0 to %arg0 : !fir.ref<!fir.ptr<f32>>
+  }
+  return
+}
+
+// -----
+// Test that fir.emboxchar is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_emboxchar(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.char<1>>,
+// CHECK-SAME:      %[[ARG1:.*]]: i32,
+// CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<!fir.boxchar<1>>)
+// CHECK:           %[[BC:.*]] = fir.emboxchar %[[ARG0]], %[[ARG1]] : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[BC]] to %[[ARG2]] : !fir.ref<!fir.boxchar<1>>
+func.func @test_hoist_emboxchar(%arg0: !fir.ref<!fir.char<1>>, %arg1: i32, %arg2: !fir.ref<!fir.boxchar<1>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg3 = %c1 to %c10 step %c1 {
+    %0 = fir.emboxchar %arg0, %arg1 : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
+    fir.store %0 to %arg2 : !fir.ref<!fir.boxchar<1>>
+  }
+  return
+}
+
+// -----
+// Test that fir.extract_value is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_extract_value(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.type<derived{f:f32}>,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<f32>)
+// CHECK:           %[[EV:.*]] = fir.extract_value %[[ARG0]], ["f", !fir.type<derived{f:f32}>] : (!fir.type<derived{f:f32}>) -> f32
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[EV]] to %[[ARG1]] : !fir.ref<f32>
+func.func @test_hoist_extract_value(%arg0: !fir.type<derived{f:f32}>, %arg1: !fir.ref<f32>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.extract_value %arg0, ["f", !fir.type<derived{f:f32}>] : (!fir.type<derived{f:f32}>) -> f32
+    fir.store %0 to %arg1 : !fir.ref<f32>
+  }
+  return
+}
+
+// -----
+// Test that fir.insert_on_range is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_insert_on_range(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xi32>>)
+// CHECK:           %[[C1:.*]] = arith.constant 1 : i32
+// CHECK:           %[[ARR:.*]] = fir.zero_bits !fir.array<10xi32>
+// CHECK:           %[[INS:.*]] = fir.insert_on_range %[[ARR]], %[[C1]] from (0) to (9) : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
+// CHECK:           fir.do_loop
+func.func @test_hoist_insert_on_range(%arg0: !fir.ref<!fir.array<10xi32>>) {
+  %c1_i32 = arith.constant 1 : i32
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.zero_bits !fir.array<10xi32>
+    %1 = fir.insert_on_range %0, %c1_i32 from (0) to (9) : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
+    fir.store %1 to %arg0 : !fir.ref<!fir.array<10xi32>>
+  }
+  return
+}
+
+// -----
+// Test that fir.string_lit is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_string_lit(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.char<1,5>>)
+// CHECK:           %[[STR:.*]] = fir.string_lit "hello"(5) : !fir.char<1,5>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[STR]] to %[[ARG0]] : !fir.ref<!fir.char<1,5>>
+func.func @test_hoist_string_lit(%arg0: !fir.ref<!fir.char<1,5>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.string_lit "hello"(5) : !fir.char<1,5>
+    fir.store %0 to %arg0 : !fir.ref<!fir.char<1,5>>
+  }
+  return
+}
+
+// -----
+// Test that fir.address_of is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_address_of(
+// CHECK-SAME:      %[[ARG0:.*]]: f32)
+// CHECK:           %[[ADDR:.*]] = fir.address_of(@_QMtestEglobal) : !fir.ref<f32>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[ARG0]] to %[[ADDR]] : !fir.ref<f32>
+fir.global @_QMtestEglobal : f32
+func.func @test_hoist_address_of(%arg0: f32) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.address_of(@_QMtestEglobal) : !fir.ref<f32>
+    fir.store %arg0 to %0 : !fir.ref<f32>
+  }
+  return
+}
+
+// -----
+// Test that fir.type_desc is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_type_desc(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i64>)
+// CHECK:           %[[TD:.*]] = fir.type_desc !fir.type<t>
+// CHECK:           %[[CVT:.*]] = fir.convert %[[TD]] : (!fir.tdesc<!fir.type<t>>) -> i64
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[CVT]] to %[[ARG0]] : !fir.ref<i64>
+func.func @test_hoist_type_desc(%arg0: !fir.ref<i64>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.type_desc !fir.type<t>
+    %1 = fir.convert %0 : (!fir.tdesc<!fir.type<t>>) -> i64
+    fir.store %1 to %arg0 : !fir.ref<i64>
+  }
+  return
+}
+
+// -----
+// Test that fir.absent is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_absent(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.array<?xf32>>>)
+// CHECK:           %[[ABS:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[ABS]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
+func.func @test_hoist_absent(%arg0: !fir.ref<!fir.box<!fir.array<?xf32>>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.absent !fir.box<!fir.array<?xf32>>
+    fir.store %0 to %arg0 : !fir.ref<!fir.box<!fir.array<?xf32>>>
+  }
+  return
+}
+
+// -----
+// Test that fir.box_offset is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_box_offset(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>)
+// CHECK:           %[[OFF:.*]] = fir.box_offset %[[ARG0]] base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.llvm_ptr<!fir.ref<i32>>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[OFF]] to %[[ARG1]] : !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>
+func.func @test_hoist_box_offset(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>, %arg1: !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.box_offset %arg0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.llvm_ptr<!fir.ref<i32>>
+    fir.store %0 to %arg1 : !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>
+  }
+  return
+}
+
+// -----
+// Test that fir.assumed_size_extent is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_assumed_size_extent(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<index>)
+// CHECK:           %[[EXT:.*]] = fir.assumed_size_extent : index
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[EXT]] to %[[ARG0]] : !fir.ref<index>
+func.func @test_hoist_assumed_size_extent(%arg0: !fir.ref<index>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.assumed_size_extent : index
+    fir.store %0 to %arg0 : !fir.ref<index>
+  }
+  return
+}
+
+// -----
+// Test that fir.is_assumed_size_extent is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_is_assumed_size_extent(
+// CHECK-SAME:      %[[ARG0:.*]]: index,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<i1>)
+// CHECK:           %[[RES:.*]] = fir.is_assumed_size_extent %[[ARG0]] : (index) -> i1
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[RES]] to %[[ARG1]] : !fir.ref<i1>
+func.func @test_hoist_is_assumed_size_extent(%arg0: index, %arg1: !fir.ref<i1>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.is_assumed_size_extent %arg0 : (index) -> i1
+    fir.store %0 to %arg1 : !fir.ref<i1>
+  }
+  return
+}
+
+// -----
+// Test that fir.no_reassoc is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_no_reassoc(
+// CHECK-SAME:      %[[ARG0:.*]]: f64,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<f64>)
+// CHECK:           %[[NR:.*]] = fir.no_reassoc %[[ARG0]] : f64
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[NR]] to %[[ARG1]] : !fir.ref<f64>
+func.func @test_hoist_no_reassoc(%arg0: f64, %arg1: !fir.ref<f64>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.no_reassoc %arg0 : f64
+    fir.store %0 to %arg1 : !fir.ref<f64>
+  }
+  return
+}
+
+// -----
+// Test that hlfir.null is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_hlfir_null(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i64>)
+// CHECK:           %[[NULL:.*]] = hlfir.null !fir.ref<none>
+// CHECK:           %[[CVT:.*]] = fir.convert %[[NULL]] : (!fir.ref<none>) -> i64
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[CVT]] to %[[ARG0]] : !fir.ref<i64>
+func.func @test_hoist_hlfir_null(%arg0: !fir.ref<i64>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = hlfir.null !fir.ref<none>
+    %1 = fir.convert %0 : (!fir.ref<none>) -> i64
+    fir.store %1 to %arg0 : !fir.ref<i64>
+  }
+  return
+}

@@ -46,7 +46,7 @@ static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
     if (!PropName.empty())
       OS << PropName;
     else
-      OS << format("DW_APPLE_PROPERTY_0x%" PRIx64, Bit);
+      OS << formatv("DW_APPLE_PROPERTY_{0:x}", Bit);
     if (!(Val ^= Bit))
       break;
     OS << ", ";
@@ -678,7 +678,7 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
     uint32_t abbrCode = debug_info_data.getULEB128(&offset);
     if (DumpOpts.ShowAddresses)
       WithColor(OS, HighlightColor::Address).get()
-          << format("\n0x%8.8" PRIx64 ": ", Offset);
+          << formatv("\n{0:x8}: ", Offset);
 
     if (abbrCode) {
       auto AbbrevDecl = getAbbreviationDeclarationPtr();
@@ -686,11 +686,11 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
         WithColor(OS, HighlightColor::Tag).get().indent(Indent)
             << formatv("{0}", getTag());
         if (DumpOpts.Verbose) {
-          OS << format(" [%u] %c", abbrCode,
-                       AbbrevDecl->hasChildren() ? '*' : ' ');
+          OS << formatv(" [{0}] {1}", abbrCode,
+                        AbbrevDecl->hasChildren() ? '*' : ' ');
           if (std::optional<uint32_t> ParentIdx = Die->getParentIdx())
-            OS << format(" (0x%8.8" PRIx64 ")",
-                         U->getDIEAtIndex(*ParentIdx).getOffset());
+            OS << formatv(" ({0:x8})",
+                          U->getDIEAtIndex(*ParentIdx).getOffset());
         }
         OS << '\n';
 

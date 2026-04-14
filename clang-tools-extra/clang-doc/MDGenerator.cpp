@@ -111,12 +111,12 @@ private:
     switch (I.Kind) {
     case CommentKind::CK_FullComment:
       for (const auto &Child : I.Children)
-        writeTableSafeComment(*Child);
+        writeTableSafeComment(Child);
       break;
 
     case CommentKind::CK_ParagraphComment:
       for (const auto &Child : I.Children)
-        writeTableSafeComment(*Child);
+        writeTableSafeComment(Child);
       // Next content after a paragraph needs a break
       NeedsParagraphBreak = true;
       break;
@@ -132,7 +132,7 @@ private:
     // Handle other comment types (BlockCommand, InlineCommand, etc.)
     default:
       for (const auto &Child : I.Children)
-        writeTableSafeComment(*Child);
+        writeTableSafeComment(Child);
       break;
     }
   }
@@ -153,19 +153,19 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
   switch (I.Kind) {
   case CommentKind::CK_FullComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
 
   case CommentKind::CK_ParagraphComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     writeNewLine(OS);
     break;
 
   case CommentKind::CK_BlockCommandComment:
     OS << genEmphasis(I.Name) << " ";
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
 
   case CommentKind::CK_InlineCommandComment:
@@ -177,13 +177,13 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
     std::string Direction = I.Explicit ? (" " + I.Direction).str() : "";
     OS << genEmphasis(I.ParamName) << I.Text << Direction << " ";
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
   }
 
   case CommentKind::CK_VerbatimBlockComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
 
   case CommentKind::CK_VerbatimBlockLineComment:

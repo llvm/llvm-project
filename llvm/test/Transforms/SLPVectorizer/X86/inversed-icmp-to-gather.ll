@@ -5,22 +5,11 @@ define i16 @test(i64 %0) {
 ; CHECK-LABEL: define i16 @test(
 ; CHECK-SAME: i64 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP12_NOT_NOT:%.*]] = icmp eq i64 [[TMP0]], 0
-; CHECK-NEXT:    [[CMP80:%.*]] = icmp ne i64 [[TMP0]], 0
-; CHECK-NEXT:    [[CMP96:%.*]] = icmp ne i64 [[TMP0]], 0
-; CHECK-NEXT:    [[CMP112:%.*]] = icmp ne i64 [[TMP0]], 0
-; CHECK-NEXT:    [[CMP128:%.*]] = icmp ne i64 [[TMP0]], 0
-; CHECK-NEXT:    [[CMP144:%.*]] = icmp ne i64 [[TMP0]], 0
-; CHECK-NEXT:    [[CMP160:%.*]] = icmp ne i64 [[TMP0]], 0
-; CHECK-NEXT:    [[CMP176:%.*]] = icmp ne i64 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i1> poison, i1 [[CMP80]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i1> [[TMP1]], i1 [[CMP96]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i1> [[TMP2]], i1 [[CMP112]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i1> [[TMP3]], i1 [[CMP128]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i1> [[TMP4]], i1 [[CMP144]], i32 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i1> [[TMP5]], i1 [[CMP160]], i32 5
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i1> [[TMP6]], i1 [[CMP176]], i32 6
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i1> [[TMP7]], i1 [[CMP12_NOT_NOT]], i32 7
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> poison, i64 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <8 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <8 x i1> [[TMP8]], <8 x i16> splat (i16 1), <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 2>
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP9]])
 ; CHECK-NEXT:    ret i16 [[TMP10]]

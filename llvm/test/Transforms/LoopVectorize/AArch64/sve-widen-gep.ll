@@ -77,7 +77,7 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 entry:
   br label %loop.body
 
-loop.body:                                    ; preds = %loop.body, %entry
+loop.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.body ]
   %ptr.iv.1 = phi ptr [ %start.1, %entry ], [ %ptr.iv.1.next, %loop.body ]
   %ptr.iv.2 = phi ptr [ %start.2, %entry ], [ %ptr.iv.2.next, %loop.body ]
@@ -91,7 +91,7 @@ loop.body:                                    ; preds = %loop.body, %entry
   %c = icmp ne i64 %iv.next, %N
   br i1 %c, label %loop.body, label %exit, !llvm.loop !0
 
-exit:                            ; preds = %loop.body
+exit:
   ret void
 }
 

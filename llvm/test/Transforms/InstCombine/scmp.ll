@@ -797,3 +797,30 @@ define i8 @scmp_ashr_slt_pattern_neg(i8 %a) {
   %retval = select i1 %cmp, i8 %a.lobit, i8 1
   ret i8 %retval
 }
+
+define i64 @sext_scmp(i32 %x, i32 %y) {
+; CHECK-LABEL: define i64 @sext_scmp(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.scmp.i64.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %cmp = call i8 @llvm.scmp(i32 %x, i32 %y)
+  %ext = sext i8 %cmp to i64
+  ret i64 %ext
+}
+
+; Don't fold when scmp has multiple uses: would leave the narrow scmp alive
+; and add a second wider scmp.
+define i64 @sext_scmp_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: define i64 @sext_scmp_multiuse(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    call void @use(i8 [[CMP]])
+; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[CMP]] to i64
+; CHECK-NEXT:    ret i64 [[EXT]]
+;
+  %cmp = call i8 @llvm.scmp(i32 %x, i32 %y)
+  call void @use(i8 %cmp)
+  %ext = sext i8 %cmp to i64
+  ret i64 %ext
+}

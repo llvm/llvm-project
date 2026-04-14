@@ -155,8 +155,20 @@ void UpdateVCEPass::runOnOperation() {
 
     // Special treatment for global variables, whose type requirements are
     // conveyed by type attributes.
-    if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op))
+    if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op)) {
       valueTypes.push_back(globalVar.getType());
+
+      // The `DescriptorSet` and `Binding` decorations (represented by the
+      // `binding` and `descriptor_set` attributes) require the `Shader`
+      // capability per the SPIR-V spec Decoration table.
+      if (globalVar.getBinding() || globalVar.getDescriptorSet()) {
+        spirv::Capability shader = spirv::Capability::Shader;
+        SmallVector<ArrayRef<spirv::Capability>, 1> caps = {shader};
+        if (failed(checkAndUpdateCapabilityRequirements(op, targetEnv, caps,
+                                                        deducedCapabilities)))
+          return WalkResult::interrupt();
+      }
+    }
 
     // If the op is FunctionLike make sure to process input and result types.
     if (auto funcOpInterface = dyn_cast<FunctionOpInterface>(op)) {

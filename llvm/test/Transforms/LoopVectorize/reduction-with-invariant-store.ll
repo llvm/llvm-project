@@ -582,7 +582,7 @@ entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
   br label %for.body
 
-for.body:                                         ; preds = %latch, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
   %sum = phi i32 [ 0, %entry ], [ %sum.2, %latch ]
   %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
@@ -591,11 +591,11 @@ for.body:                                         ; preds = %latch, %entry
   %cmp = icmp sgt i32 %0, 0
   br i1 %cmp, label %predicated, label %latch
 
-predicated:                                       ; preds = %for.body
+predicated:
   store i32 %sum.1, ptr %gep.dst, align 4
   br label %latch
 
-latch:                                            ; preds = %predicated, %for.body
+latch:
   %1 = or disjoint i64 %iv, 1
   %gep.src.1 = getelementptr inbounds i32, ptr %src, i64 %1
   %2 = load i32, ptr %gep.src.1, align 4
@@ -605,7 +605,7 @@ latch:                                            ; preds = %predicated, %for.bo
   %cmp.1 = icmp slt i64 %iv.next, 1000
   br i1 %cmp.1, label %for.body, label %exit
 
-exit:                                 ; preds = %latch
+exit:
   ret void
 }
 
@@ -650,7 +650,7 @@ entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
   br label %for.body
 
-for.body:                                         ; preds = %latch, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
   %sum = phi i32 [ 0, %entry ], [ %sum.1, %latch ]
   %arrayidx = getelementptr inbounds i32, ptr %src, i64 %iv
@@ -664,16 +664,16 @@ for.body:                                         ; preds = %latch, %entry
   %cmp1 = icmp sgt i32 %2, 0
   br i1 %cmp1, label %predicated, label %latch
 
-predicated:                                       ; preds = %for.body
+predicated:
   store i32 %sum.2, ptr %gep.dst, align 4
   br label %latch
 
-latch:                                            ; preds = %predicated, %for.body
+latch:
   %iv.next = add nuw nsw i64 %iv, 2
   %cmp = icmp slt i64 %iv.next, 1000
   br i1 %cmp, label %for.body, label %exit
 
-exit:                                 ; preds = %latch
+exit:
   ret void
 }
 
@@ -897,7 +897,7 @@ define i32 @non_reduc_store_invariant_addr_not_hoisted(ptr %dst, ptr readonly %s
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
@@ -909,7 +909,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %iv.next, 1000
   br i1 %exitcond, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
 }

@@ -3721,8 +3721,6 @@ llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
   if (!descriptor.IsValid())
     return llvm::createStringError("invalid frame provider descriptor");
 
-  uint32_t descriptor_id = descriptor.GetID();
-
   llvm::StringRef name = descriptor.GetName();
   if (name.empty())
     return llvm::createStringError(
@@ -3731,12 +3729,27 @@ llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
   {
     std::unique_lock<std::recursive_mutex> guard(
         m_frame_provider_descriptors_mutex);
-    m_frame_provider_descriptors[descriptor_id] = descriptor;
+
+    // Check for duplicate: same class name and args (content hash).
+    uint32_t descriptor_hash = descriptor.GetHash();
+    for (const auto &entry : m_frame_provider_descriptors) {
+      if (entry.second.GetHash() == descriptor_hash)
+        GetDebugger().ReportWarning(
+            llvm::formatv("frame provider idx={0} with the same class name and "
+                          "arguments is already registered",
+                          entry.second.GetID())
+                .str());
+    }
+
+    uint32_t descriptor_id = m_next_frame_provider_id++;
+    ScriptedFrameProviderDescriptor new_descriptor = descriptor;
+    new_descriptor.SetID(descriptor_id);
+    m_frame_provider_descriptors[descriptor_id] = new_descriptor;
+
+    InvalidateThreadFrameProviders();
+
+    return descriptor_id;
   }
-
-  InvalidateThreadFrameProviders();
-
-  return descriptor_id;
 }
 
 bool Target::RemoveScriptedFrameProviderDescriptor(uint32_t id) {
@@ -3757,6 +3770,7 @@ void Target::ClearScriptedFrameProviderDescriptors() {
     std::lock_guard<std::recursive_mutex> guard(
         m_frame_provider_descriptors_mutex);
     m_frame_provider_descriptors.clear();
+    m_next_frame_provider_id = 1;
   }
 
   InvalidateThreadFrameProviders();

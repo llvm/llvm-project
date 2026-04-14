@@ -45,7 +45,7 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 entry:
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %entry, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02 = phi i32 [ %l7, %.lr.ph ], [ 0, %entry ]
   %l2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -56,7 +56,7 @@ entry:
   %exitcond = icmp eq i32 %lftr.wideiv, 256
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph
+._crit_edge:
   %sum.0.lcssa = phi i32 [ %l7, %.lr.ph ]
   ret i32 %sum.0.lcssa
 }
@@ -344,7 +344,7 @@ define i32 @predicated(ptr noalias nocapture %A) {
 entry:
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %entry, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02 = phi i32 [ %l7, %.lr.ph ], [ 0, %entry ]
   %l2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -355,7 +355,7 @@ entry:
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %._crit_edge, label %.lr.ph, !llvm.loop !6
 
-._crit_edge:                                      ; preds = %.lr.ph
+._crit_edge:
   %sum.0.lcssa = phi i32 [ %l7, %.lr.ph ]
   ret i32 %sum.0.lcssa
 }

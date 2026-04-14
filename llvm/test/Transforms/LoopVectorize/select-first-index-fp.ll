@@ -522,10 +522,3 @@ exit:
   ret i64 %res
 }
 
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maxnum.f32(float, float)
-declare float @llvm.minimum.f32(float, float)
-declare float @llvm.maximum.f32(float, float)
-declare float @llvm.minimumnum.f32(float, float)
-declare float @llvm.maximumnum.f32(float, float)
-declare double @llvm.minnum.f64(double, double)

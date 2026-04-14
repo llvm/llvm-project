@@ -12468,14 +12468,14 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:    ALU 101, @16, KC0[], KC1[]
 ; CM-NEXT:    ALU 101, @118, KC0[], KC1[]
 ; CM-NEXT:    ALU 40, @220, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T36, T42.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T35, T42.X
 ; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T38, T41.X
 ; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T37, T40.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T35, T39.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T36, T39.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    Fetch clause starting at 10:
 ; CM-NEXT:     VTX_READ_128 T37.XYZW, T35.X, 16, #1
-; CM-NEXT:     VTX_READ_128 T36.XYZW, T35.X, 0, #1
+; CM-NEXT:     VTX_READ_128 T35.XYZW, T35.X, 0, #1
 ; CM-NEXT:    ALU clause starting at 14:
 ; CM-NEXT:     MOV * T0.Y, T16.X,
 ; CM-NEXT:     MOV * T35.X, KC0[2].Z,
@@ -12507,7 +12507,7 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.y,
 ; CM-NEXT:    65535(9.183409e-41), 16711680(2.341805e-38)
-; CM-NEXT:     OR_INT * T35.Y, PV.Z, PV.W,
+; CM-NEXT:     OR_INT * T36.Y, PV.Z, PV.W,
 ; CM-NEXT:     MOV T17.X, PV.Y,
 ; CM-NEXT:     MOV * T0.Y, T12.X,
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
@@ -12535,7 +12535,7 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.y,
 ; CM-NEXT:    65535(9.183409e-41), 16711680(2.341805e-38)
-; CM-NEXT:     OR_INT * T35.W, PV.Z, PV.W,
+; CM-NEXT:     OR_INT * T36.W, PV.Z, PV.W,
 ; CM-NEXT:     MOV T13.X, PV.W,
 ; CM-NEXT:     MOV * T0.Y, T8.X,
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
@@ -12597,12 +12597,12 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:     MOV T5.X, PV.W,
 ; CM-NEXT:     MOV * T0.Y, T32.X,
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
-; CM-NEXT:     AND_INT * T1.W, T36.X, literal.y,
+; CM-NEXT:     AND_INT * T1.W, T35.X, literal.y,
 ; CM-NEXT:    -65536(nan), 255(3.573311e-43)
 ; CM-NEXT:     OR_INT * T1.W, PV.Z, PV.W,
 ; CM-NEXT:     MOV * T32.X, PV.W,
 ; CM-NEXT:     MOV T0.Y, PV.X,
-; CM-NEXT:     LSHL * T1.W, T36.X, literal.x,
+; CM-NEXT:     LSHL * T1.W, T35.X, literal.x,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.y,
@@ -12611,12 +12611,12 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:     MOV T32.X, PV.W,
 ; CM-NEXT:     MOV * T0.Y, T33.X,
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
-; CM-NEXT:     BFE_UINT * T1.W, T36.X, literal.y, T0.W,
+; CM-NEXT:     BFE_UINT * T1.W, T35.X, literal.y, T0.W,
 ; CM-NEXT:    -65536(nan), 16(2.242078e-44)
 ; CM-NEXT:     OR_INT * T1.W, PV.Z, PV.W,
 ; CM-NEXT:     MOV * T33.X, PV.W,
 ; CM-NEXT:     MOV T0.Y, PV.X,
-; CM-NEXT:     LSHR * T1.W, T36.X, literal.x,
+; CM-NEXT:     LSHR * T1.W, T35.X, literal.x,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.y,
@@ -12625,12 +12625,12 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:     MOV T33.X, PV.Y,
 ; CM-NEXT:     MOV * T0.Y, T28.X,
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
-; CM-NEXT:     AND_INT * T1.W, T36.Y, literal.y,
+; CM-NEXT:     AND_INT * T1.W, T35.Y, literal.y,
 ; CM-NEXT:    -65536(nan), 255(3.573311e-43)
 ; CM-NEXT:     OR_INT * T1.W, PV.Z, PV.W,
 ; CM-NEXT:     MOV * T28.X, PV.W,
 ; CM-NEXT:     MOV T0.Y, PV.X,
-; CM-NEXT:     LSHL * T1.W, T36.Y, literal.x,
+; CM-NEXT:     LSHL * T1.W, T35.Y, literal.x,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.y,
@@ -12639,12 +12639,12 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:     MOV T28.X, PV.W,
 ; CM-NEXT:     MOV * T0.Y, T29.X,
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
-; CM-NEXT:     BFE_UINT * T1.W, T36.Y, literal.y, T0.W,
+; CM-NEXT:     BFE_UINT * T1.W, T35.Y, literal.y, T0.W,
 ; CM-NEXT:    -65536(nan), 16(2.242078e-44)
 ; CM-NEXT:     OR_INT * T1.W, PV.Z, PV.W,
 ; CM-NEXT:     MOV * T29.X, PV.W,
 ; CM-NEXT:     MOV T0.Y, PV.X,
-; CM-NEXT:     LSHR * T1.W, T36.Y, literal.x,
+; CM-NEXT:     LSHR * T1.W, T35.Y, literal.x,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.y,
@@ -12653,12 +12653,12 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:     MOV T29.X, PV.W,
 ; CM-NEXT:     MOV * T0.Y, T24.X,
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
-; CM-NEXT:     AND_INT * T1.W, T36.Z, literal.y,
+; CM-NEXT:     AND_INT * T1.W, T35.Z, literal.y,
 ; CM-NEXT:    -65536(nan), 255(3.573311e-43)
 ; CM-NEXT:     OR_INT * T1.W, PV.Z, PV.W,
 ; CM-NEXT:     MOV * T24.X, PV.W,
 ; CM-NEXT:     MOV T0.Y, PV.X,
-; CM-NEXT:     LSHL * T1.W, T36.Z, literal.x,
+; CM-NEXT:     LSHL * T1.W, T35.Z, literal.x,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.y,
@@ -12667,27 +12667,27 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:     MOV T24.X, PV.W,
 ; CM-NEXT:     MOV * T0.Y, T25.X,
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
-; CM-NEXT:     BFE_UINT * T1.W, T36.Z, literal.y, T0.W,
+; CM-NEXT:     BFE_UINT * T1.W, T35.Z, literal.y, T0.W,
 ; CM-NEXT:    -65536(nan), 16(2.242078e-44)
 ; CM-NEXT:     OR_INT * T1.W, PV.Z, PV.W,
 ; CM-NEXT:     MOV * T25.X, PV.W,
 ; CM-NEXT:     MOV T0.Y, PV.X,
-; CM-NEXT:     LSHR * T1.W, T36.Z, literal.x,
+; CM-NEXT:     LSHR * T1.W, T35.Z, literal.x,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.y,
 ; CM-NEXT:    65535(9.183409e-41), 16711680(2.341805e-38)
-; CM-NEXT:     OR_INT * T36.Y, PV.Z, PV.W,
+; CM-NEXT:     OR_INT * T35.Y, PV.Z, PV.W,
 ; CM-NEXT:     MOV T25.X, PV.Y,
 ; CM-NEXT:     MOV * T0.Y, T20.X,
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
-; CM-NEXT:     AND_INT * T1.W, T36.W, literal.y,
+; CM-NEXT:     AND_INT * T1.W, T35.W, literal.y,
 ; CM-NEXT:    -65536(nan), 255(3.573311e-43)
 ; CM-NEXT:     OR_INT * T1.W, PV.Z, PV.W,
 ; CM-NEXT:     MOV * T20.X, PV.W,
 ; CM-NEXT:    ALU clause starting at 220:
 ; CM-NEXT:     MOV T0.Y, T20.X,
-; CM-NEXT:     LSHL * T1.W, T36.W, literal.x,
+; CM-NEXT:     LSHL * T1.W, T35.W, literal.x,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.y,
@@ -12696,7 +12696,7 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:     MOV T20.X, PV.W,
 ; CM-NEXT:     MOV * T0.Y, T21.X,
 ; CM-NEXT:     AND_INT T0.Z, PV.Y, literal.x,
-; CM-NEXT:     BFE_UINT * T0.W, T36.W, literal.y, T0.W,
+; CM-NEXT:     BFE_UINT * T0.W, T35.W, literal.y, T0.W,
 ; CM-NEXT:    -65536(nan), 16(2.242078e-44)
 ; CM-NEXT:     OR_INT * T0.W, PV.Z, PV.W,
 ; CM-NEXT:     MOV * T21.X, PV.W,
@@ -12707,7 +12707,7 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.y,
 ; CM-NEXT:    2(2.802597e-45), 48(6.726233e-44)
 ; CM-NEXT:     LSHR T40.X, PV.W, literal.x,
-; CM-NEXT:     LSHR * T0.W, T36.W, literal.y,
+; CM-NEXT:     LSHR * T0.W, T35.W, literal.y,
 ; CM-NEXT:    2(2.802597e-45), 8(1.121039e-44)
 ; CM-NEXT:     LSHR T41.X, KC0[2].Y, literal.x,
 ; CM-NEXT:     AND_INT T0.Y, T0.Y, literal.y,
@@ -12716,17 +12716,17 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 ; CM-NEXT:    2(2.802597e-45), 65535(9.183409e-41)
 ; CM-NEXT:    16711680(2.341805e-38), 16(2.242078e-44)
 ; CM-NEXT:     LSHR T42.X, PV.W, literal.x,
-; CM-NEXT:     OR_INT * T36.W, PV.Y, PV.Z,
+; CM-NEXT:     OR_INT * T35.W, PV.Y, PV.Z,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; CM-NEXT:     MOV * T21.X, PV.W,
-; CM-NEXT:     MOV T35.X, T16.X,
-; CM-NEXT:     MOV * T35.Z, T12.X, BS:VEC_120/SCL_212
+; CM-NEXT:     MOV T36.X, T16.X,
+; CM-NEXT:     MOV * T36.Z, T12.X, BS:VEC_120/SCL_212
 ; CM-NEXT:     MOV T37.X, T8.X,
 ; CM-NEXT:     MOV * T37.Z, T4.X, BS:VEC_120/SCL_212
 ; CM-NEXT:     MOV T38.X, T32.X,
 ; CM-NEXT:     MOV * T38.Z, T28.X, BS:VEC_120/SCL_212
-; CM-NEXT:     MOV T36.X, T24.X,
-; CM-NEXT:     MOV * T36.Z, T20.X, BS:VEC_120/SCL_212
+; CM-NEXT:     MOV T35.X, T24.X,
+; CM-NEXT:     MOV * T35.Z, T20.X, BS:VEC_120/SCL_212
   %load = load <32 x i8>, ptr addrspace(1) %in
   %ext = zext <32 x i8> %load to <32 x i16>
   store <32 x i16> %ext, ptr addrspace(1) %out

@@ -1047,23 +1047,35 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     const Expr *CallSite = SFC->getCallSite();
     if (CallSite) {
       const Decl *CalleeDecl = SFC->getDecl();
-      bool ValidParam = true;
+      bool CurrentParam = true;
       if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
-        ValidParam =
+        CurrentParam =
             (Index < FD->param_size() && FD->getParamDecl(Index) == PVD);
       } else if (const auto *BD = dyn_cast<BlockDecl>(CalleeDecl)) {
-        ValidParam =
+        CurrentParam =
             (Index < BD->param_size() && BD->getParamDecl(Index) == PVD);
       }
 
-      if (ValidParam) {
+      if (CurrentParam) {
+        // If this is a parameter of the *current* stack frame, we can
+        // represent it with a `ParamVarRegion`.
         return getSubRegion<ParamVarRegion>(CallSite, Index,
                                             getStackArgumentsRegion(SFC));
+      } else {
+        // TODO: Parameters of other stack frames (which may have been be
+        // captured by a lambda or a block) are currently represented by
+        // `NonParamVarRegion`s. This behavior is present since commit
+        // 98db1f990fc273adc1ae36d4ce97ce66fd27ac30 which introduced
+        // `ParamVarRegion` in 2020; and appears to work (at least to some
+        // extent); but it would be nice to clean this up (if somebody has time
+        // and knowledge for a proper investigation).
       }
-      // FIXME: If ValidParam was false, this method would "fall through" and
-      // eventually return a NonParamVarRegion for this ParamVarDecl. That
-      // seems to be buggy, so I strongly suspect that ValidParam always ends
-      // up being true.
+    } else {
+      // TODO: Parameters of the entrypoint stack frame (where `CallSite` is
+      // null) are currently represented by `NonParamVarRegion`s. This behavior
+      // is also present since 98db1f990fc273adc1ae36d4ce97ce66fd27ac30 which
+      // introduced `ParamVarRegion` in 2020, but it would be nice to clean it
+      // up for the sake of clarity and consistency.
     }
   }
 

@@ -1618,6 +1618,14 @@ enum NodeType {
   LOOP_DEPENDENCE_WAR_MASK,
   LOOP_DEPENDENCE_RAW_MASK,
 
+  /// Masked vector arithmetic that returns poison on disabled lanes. Disabled
+  /// lanes do not have undefined behaviour on division by zero or overflow. The
+  /// first two operands are input vectors, the third operand is the mask.
+  MASKED_UDIV,
+  MASKED_SDIV,
+  MASKED_UREM,
+  MASKED_SREM,
+
   /// llvm.clear_cache intrinsic
   /// Operands: Input Chain, Start Addres, End Address
   /// Outputs: Output Chain
@@ -1649,6 +1657,10 @@ LLVM_ABI NodeType getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc);
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
 LLVM_ABI NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
+
+/// Given a \p MaskedOpc of ISD::MASKED_(U|S)(DIV|REM), returns the unmasked
+/// ISD::(U|S)(DIV|REM).
+LLVM_ABI NodeType getUnmaskedBinOpOpcode(unsigned MaskedOpc);
 
 /// Whether this is a vector-predicated Opcode.
 LLVM_ABI bool isVPOpcode(unsigned Opcode);

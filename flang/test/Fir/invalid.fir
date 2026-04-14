@@ -1539,3 +1539,20 @@ func.func @bitcast_size_mismatch(%arg0: i32) -> f64 {
   %0 = fir.bitcast %arg0 : (i32) -> f64
   return %0 : f64
 }
+
+// -----
+
+func.func @logical_and_type_mismatch(%a: !fir.logical<4>, %b: !fir.logical<2>) {
+  // expected-note@-1 {{prior use here}}
+  // expected-error@+1 {{use of value '%b' expects different type than prior uses: '!fir.logical<4>' vs '!fir.logical<2>'}}
+  %0 = fir.logical_and %a, %b : !fir.logical<4>
+  return
+}
+
+// -----
+
+func.func @logical_or_float(%a: f32, %b: f32) {
+  // expected-error@+1 {{'fir.logical_or' op operand #0 must be fir.logical or signless integer, but got 'f32'}}
+  %0 = fir.logical_or %a, %b : f32
+  return
+}

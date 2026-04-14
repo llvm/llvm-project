@@ -66,14 +66,6 @@ module polymorphic_test
     lhs%b = rhs
   End Subroutine
 
-! CHECK-LABEL: func.func @_QMpolymorphic_testPhost_assoc(
-! CHECK-SAME: %[[THIS:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>) {
-! CHECK: %[[TUPLE:.*]] = fir.alloca tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
-! CHECK: %[[POS_IN_TUPLE:.*]] = arith.constant 0 : i32
-! CHECK: %[[COORD_OF_CLASS:.*]] = fir.coordinate_of %[[TUPLE]], %[[POS_IN_TUPLE]] : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>>, i32) -> !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
-! CHECK: fir.store %[[THIS]] to %[[COORD_OF_CLASS]] : !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
-! CHECK: fir.call @_QMpolymorphic_testFhost_assocPinternal(%[[TUPLE]]) {{.*}} : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>>) -> ()
-
   elemental integer function elemental_fct(this)
     class(p1), intent(in) :: this
     elemental_fct = this%a
@@ -514,6 +506,14 @@ module polymorphic_test
 ! CHECK: }
 ! CHECK: fir.array_merge_store %[[LOAD_PA]], %[[DO_RES]] to %[[PA]] : !fir.array<3x!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>, !fir.array<3x!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>, !fir.ref<!fir.array<3x!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
 ! CHECK: return
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPhost_assoc(
+! CHECK-SAME: %[[THIS:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>> {fir.bindc_name = "this"}) {
+! CHECK: %[[TUPLE:.*]] = fir.alloca tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
+! CHECK: %[[POS_IN_TUPLE:.*]] = arith.constant 0 : i32
+! CHECK: %[[COORD_OF_CLASS:.*]] = fir.coordinate_of %[[TUPLE]], %[[POS_IN_TUPLE]] : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>>, i32) -> !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
+! CHECK: fir.store %[[THIS]] to %[[COORD_OF_CLASS]] : !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
+! CHECK: fir.call @_QMpolymorphic_testFhost_assocPinternal(%[[TUPLE]]) {{.*}} : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>>) -> ()
 
   subroutine host_assoc(this)
     class(p1) :: this

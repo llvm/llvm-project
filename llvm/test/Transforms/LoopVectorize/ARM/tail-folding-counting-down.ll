@@ -419,7 +419,7 @@ for.body:
   %add = add nuw nsw i32 %i.022, 1
   br label %for.body4
 
-for.body4:                                        ; preds = %for.body, %for.body4
+for.body4:
   %j.020 = phi i32 [ %add, %for.body ], [ %dec, %for.body4 ]
   %arrayidx = getelementptr inbounds i8, ptr %a, i32 %j.020
   %0 = load i8, ptr %arrayidx, align 1

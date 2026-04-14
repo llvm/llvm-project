@@ -25,7 +25,7 @@ typedef struct test_struct {
 } test_struct;
 
 kernel void test_single(int_single input, global int* output) {
-// CHECK: spir_kernel
+// CHECK: define dso_local void @test_single
 // AMDGCN: define{{.*}} amdgpu_kernel void @test_single
 // CHECK: ptr {{.*}} byval(%struct.int_single) align 4 captures(none)
 // CHECK: ptr noundef writeonly align 4 captures(none) initializes((0, 4)) %output
@@ -33,7 +33,7 @@ kernel void test_single(int_single input, global int* output) {
 }
 
 kernel void test_pair(int_pair input, global int* output) {
-// CHECK: spir_kernel
+// CHECK: define dso_local void @test_pair
 // AMDGCN: define{{.*}} amdgpu_kernel void @test_pair
 // CHECK: ptr {{.*}} byval(%struct.int_pair) align 8 captures(none)
 // CHECK: ptr noundef writeonly align 4 captures(none) initializes((0, 8)) %output
@@ -42,7 +42,7 @@ kernel void test_pair(int_pair input, global int* output) {
 }
 
 kernel void test_kernel(test_struct input, global int* output) {
-// CHECK: spir_kernel
+// CHECK: define dso_local void @test_kernel
 // AMDGCN: define{{.*}} amdgpu_kernel void @test_kernel
 // CHECK: ptr {{.*}} byval(%struct.test_struct) align 8 captures(none)
 // CHECK: ptr noundef writeonly align 4 captures(none) initializes((0, 32)) %output
@@ -57,7 +57,7 @@ kernel void test_kernel(test_struct input, global int* output) {
 };
 
 void test_function(int_pair input, global int* output) {
-// CHECK-NOT: spir_kernel
+// CHECK: define dso_local void @test_function
 // AMDGCN-NOT: define{{.*}} amdgpu_kernel void @test_function
 // CHECK: i64 %input.coerce0, i64 %input.coerce1, ptr noundef writeonly captures(none) initializes((0, 8)) %output
  output[0] = (int)input.a;

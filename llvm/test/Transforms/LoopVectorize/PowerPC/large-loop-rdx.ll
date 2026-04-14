@@ -331,10 +331,10 @@ entry:
   %cmp24 = icmp sgt i32 %n, 0
   br i1 %cmp24, label %for.cond1.preheader.preheader, label %for.end13
 
-for.cond1.preheader.preheader:                    ; preds = %entry
+for.cond1.preheader.preheader:
   br label %for.cond1.preheader
 
-for.cond1.preheader:                              ; preds = %for.cond1.preheader.preheader, %for.cond1.preheader
+for.cond1.preheader:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.cond1.preheader ], [ 0, %for.cond1.preheader.preheader ]
   %sum.026 = phi double [ %add10.2, %for.cond1.preheader ], [ 0.000000e+00, %for.cond1.preheader.preheader ]
   %arrayidx5.realp = getelementptr inbounds [3 x { float, float }], ptr %a, i64 %indvars.iv, i64 0, i32 0
@@ -369,12 +369,12 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.cond.for.end13_crit_edge, label %for.cond1.preheader
 
-for.cond.for.end13_crit_edge:                     ; preds = %for.cond1.preheader
+for.cond.for.end13_crit_edge:
   %add10.2.lcssa = phi double [ %add10.2, %for.cond1.preheader ]
   %phitmp = fptrunc double %add10.2.lcssa to float
   br label %for.end13
 
-for.end13:                                        ; preds = %for.cond.for.end13_crit_edge, %entry
+for.end13:
   %sum.0.lcssa = phi float [ %phitmp, %for.cond.for.end13_crit_edge ], [ 0.000000e+00, %entry ]
   store float %sum.0.lcssa, ptr %r, align 4
   ret void

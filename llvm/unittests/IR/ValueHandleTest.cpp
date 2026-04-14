@@ -491,6 +491,23 @@ TEST_F(ValueHandle, PoisoningVH_DoesNotFollowRAUW) {
   EXPECT_TRUE(DenseMapInfo<PoisoningVH<Value>>::isEqual(VH, BitcastV.get()));
 }
 
+TEST_F(ValueHandle, AssertingVH_MoveConstructor) {
+  AssertingVH<Value> AVH(BitcastV.get());
+  AssertingVH<Value> Moved(std::move(AVH));
+  EXPECT_EQ(BitcastV.get(), Moved);
+  // After move, AVH should be null.
+  EXPECT_EQ(nullptr, (Value *)AVH);
+}
+
+TEST_F(ValueHandle, AssertingVH_MoveAssignment) {
+  AssertingVH<Value> AVH(BitcastV.get());
+  AssertingVH<Value> Other;
+  Other = std::move(AVH);
+  EXPECT_EQ(BitcastV.get(), Other);
+  // After move, AVH should be null.
+  EXPECT_EQ(nullptr, (Value *)AVH);
+}
+
 TEST_F(ValueHandle, AssertingVH_DenseMap) {
   DenseMap<AssertingVH<Value>, int> Map;
   Map.insert({BitcastV.get(), 1});

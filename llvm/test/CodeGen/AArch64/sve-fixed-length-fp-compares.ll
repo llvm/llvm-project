@@ -442,9 +442,8 @@ define void @fcmp_ugt_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z1.h, z0.h
-; CHECK-NEXT:    mov z1.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -488,9 +487,8 @@ define void @fcmp_ult_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -534,9 +532,8 @@ define void @fcmp_uge_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    fcmgt p1.h, p0/z, z1.h, z0.h
-; CHECK-NEXT:    mov z1.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -580,9 +577,8 @@ define void @fcmp_ule_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -626,9 +622,8 @@ define void @fcmp_ord_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    fcmuo p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a

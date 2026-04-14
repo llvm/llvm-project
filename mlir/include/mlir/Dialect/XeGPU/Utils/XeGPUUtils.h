@@ -219,10 +219,11 @@ void setTemporaryLayout(const T &operandOrResult,
 /// Helper function to check if the layout is packed. Layout is packed if it is
 /// 2D and lane_data[0] != 1 (data packed from col dimension).
 /// TODO: Move to target info.
-bool requirePacked(const LayoutAttr layout);
+bool requirePacked(const DistributeLayoutAttr layout);
 
 /// Helper function to check if the layout requires a transpose effect.
-bool requireTranspose(const LayoutAttr layout, const uArch::uArch *uArch);
+bool requireTranspose(const DistributeLayoutAttr layout,
+                      const uArch::uArch *uArch);
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
 bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,

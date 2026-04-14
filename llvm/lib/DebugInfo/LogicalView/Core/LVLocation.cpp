@@ -33,7 +33,7 @@ std::string LVOperation::getOperandsDWARFInfo() {
     // 2.5.1.1 Literal encodings.
     //-----------------------------------------------------------------------
     if (dwarf::DW_OP_lit0 <= Code && Code <= dwarf::DW_OP_lit31) {
-      Stream << format("lit%d", Code - dwarf::DW_OP_lit0);
+      Stream << formatv("lit{0}", Code - dwarf::DW_OP_lit0);
       return;
     }
 
@@ -42,8 +42,8 @@ std::string LVOperation::getOperandsDWARFInfo() {
     //-----------------------------------------------------------------------
     if (dwarf::DW_OP_breg0 <= Code && Code <= dwarf::DW_OP_breg31) {
       std::string RegisterName(getReader().getRegisterName(Code, Operands));
-      Stream << format("breg%d+%d%s", Code - dwarf::DW_OP_breg0, Operands[0],
-                       RegisterName.c_str());
+      Stream << formatv("breg{0}+{1}{2}", Code - dwarf::DW_OP_breg0,
+                        Operands[0], RegisterName);
       return;
     }
 
@@ -52,12 +52,11 @@ std::string LVOperation::getOperandsDWARFInfo() {
     //-----------------------------------------------------------------------
     if (dwarf::DW_OP_reg0 <= Code && Code <= dwarf::DW_OP_reg31) {
       std::string RegisterName(getReader().getRegisterName(Code, Operands));
-      Stream << format("reg%d%s", Code - dwarf::DW_OP_reg0,
-                       RegisterName.c_str());
+      Stream << formatv("reg{0}{1}", Code - dwarf::DW_OP_reg0, RegisterName);
       return;
     }
 
-    Stream << format("#0x%02x ", Code) << hexString(Operands[0]) << " "
+    Stream << formatv("#{0:x2} ", Code) << hexString(Operands[0]) << " "
            << hexString(Operands[1]) << "#";
   };
 
@@ -100,14 +99,14 @@ std::string LVOperation::getOperandsDWARFInfo() {
     break;
   case dwarf::DW_OP_bregx: {
     std::string RegisterName(getReader().getRegisterName(Opcode, Operands));
-    Stream << format("bregx %d%s+%d", Operands[0], RegisterName.c_str(),
-                     unsigned(Operands[1]));
+    Stream << formatv("bregx {0}{1}+{2}", Operands[0], RegisterName,
+                      unsigned(Operands[1]));
     break;
   }
   case dwarf::DW_OP_regval_type: {
     std::string RegisterName(getReader().getRegisterName(Opcode, Operands));
-    Stream << format("regval_type %d%s+%d", Operands[0], RegisterName.c_str(),
-                     unsigned(Operands[1]));
+    Stream << formatv("regval_type {0}{1}+{2}", Operands[0], RegisterName,
+                      unsigned(Operands[1]));
     break;
   }
 
@@ -390,7 +389,7 @@ std::string LVOperation::getOperandsCodeViewInfo() {
     break;
 
   default:
-    Stream << format("#0x%02x: ", Opcode) << hexString(Operands[0]) << " "
+    Stream << formatv("#{0:x2}: ", Opcode) << hexString(Operands[0]) << " "
            << hexString(Operands[1]) << "#";
     break;
   }
@@ -639,10 +638,10 @@ void LVLocation::print(LVLocations *Locations, raw_ostream &OS, bool Full) {
     // The coverage is dependent on the kind of location.
     std::string String;
     raw_string_ostream Stream(String);
-    Stream << format("%.2f%%", Percentage);
+    Stream << formatv("{0:f2}%", Percentage);
     if (!Location->getIsLocationSimple())
-      Stream << format(" (%d/%d)", Symbol->getCoverageFactor(),
-                       Symbol->getParentScope()->getCoverageFactor());
+      Stream << formatv(" ({0}/{1})", Symbol->getCoverageFactor(),
+                        Symbol->getParentScope()->getCoverageFactor());
     Symbol->printAttributes(OS, Full, "{Coverage} ", Symbol, StringRef(String),
                             /*UseQuotes=*/false,
                             /*PrintRef=*/false);

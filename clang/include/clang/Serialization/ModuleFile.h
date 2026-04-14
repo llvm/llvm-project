@@ -32,6 +32,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -120,6 +121,18 @@ public:
   bool isNotFound() const { return Val.getInt() == NotFound; }
 };
 
+/// Describes a single change detected in a module file or input file.
+struct Change {
+  enum ModificationKind {
+    Size,
+    ModTime,
+    Content,
+    None,
+  } Kind = None;
+  std::optional<int64_t> Old = std::nullopt;
+  std::optional<int64_t> New = std::nullopt;
+};
+
 /// Specifies the high-level result of validating input files.
 enum class InputFilesValidation {
   /// Initial value, before the validation has been performed.
@@ -145,7 +158,11 @@ enum class InputFilesValidation {
 class ModuleFile {
 public:
   ModuleFile(ModuleKind Kind, ModuleFileKey FileKey, unsigned Generation)
-      : Kind(Kind), FileKey(std::move(FileKey)), Generation(Generation) {}
+      : Kind(Kind), FileKey(std::move(FileKey)), Generation(Generation),
+        InputFilesValidationStatus(Kind == MK_ExplicitModule ||
+                                           Kind == MK_PrebuiltModule
+                                       ? InputFilesValidation::Disabled
+                                       : InputFilesValidation::NotStarted) {}
   ~ModuleFile();
 
   // === General information ===
@@ -302,8 +319,7 @@ public:
   /// Useful when encountering a changed input file. This way, we can check
   /// what kind of validation has been done already and can try to figure out
   /// why a changed file hasn't been discovered earlier.
-  InputFilesValidation InputFilesValidationStatus =
-      InputFilesValidation::NotStarted;
+  InputFilesValidation InputFilesValidationStatus;
 
   // === Source Locations ===
 

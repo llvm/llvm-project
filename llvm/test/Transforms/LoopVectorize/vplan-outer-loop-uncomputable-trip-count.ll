@@ -26,20 +26,20 @@ define void @test() {
 entry:
   br label %for1.header
 
-for1.header:                                  ; preds = %for.cond.cleanup3, %for.cond1.preheader.lr.ph
+for1.header:
   br label %for2.header
 
-for2.header:                                       ; preds = %for.body10, %for.body10.preheader
+for2.header:
   %indvars.iv = phi i64 [ 0, %for1.header ], [ %indvars.iv.next, %for2.header ]
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 0
   br i1 %exitcond, label %for1.latch, label %for2.header
 
-for1.latch:                                ; preds = %for.cond.cleanup9
+for1.latch:
   %c = call i1 @cond()
   br i1 %c, label %exit, label %for1.header, !llvm.loop !0
 
-exit:                                 ; preds = %for.cond.cleanup3, %entry
+exit:
   ret void
 }
 

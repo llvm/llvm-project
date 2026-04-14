@@ -110,29 +110,6 @@ public:
   /// frame.
   ExecutionContextRef(Thread *thread, bool adopt_selected);
 
-  /// Construct using an execution context scope.
-  ///
-  /// If the ExecutionContextScope object is valid and refers to a frame, make
-  /// weak references too the frame, thread, process and target. If the
-  /// ExecutionContextScope object is valid and refers to a thread, make weak
-  /// references too the thread, process and target. If the
-  /// ExecutionContextScope object is valid and refers to a process, make weak
-  /// references too the process and target. If the ExecutionContextScope
-  /// object is valid and refers to a target, make weak references too the
-  /// target.
-  ExecutionContextRef(ExecutionContextScope *exe_scope);
-
-  /// Construct using an execution context scope.
-  ///
-  /// If the ExecutionContextScope object refers to a frame, make weak
-  /// references too the frame, thread, process and target. If the
-  /// ExecutionContextScope object refers to a thread, make weak references
-  /// too the thread, process and target. If the ExecutionContextScope object
-  /// refers to a process, make weak references too the process and target. If
-  /// the ExecutionContextScope object refers to a target, make weak
-  /// references too the target.
-  ExecutionContextRef(ExecutionContextScope &exe_scope);
-
   ~ExecutionContextRef();
 
   /// Assignment operator

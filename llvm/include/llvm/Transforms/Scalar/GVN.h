@@ -264,14 +264,20 @@ private:
   class LeaderMap {
   public:
     struct LeaderTableEntry {
-      Value *Val;
+      // Use AssertingVH here to catch dangling Value*'s in the leader table.
+      // Will crash if the value gets deleted before the AssertingVH is
+      // destroyed.
+      AssertingVH<Value> Val;
       const BasicBlock *BB;
+      LeaderTableEntry(Value *V, const BasicBlock *BB) : Val(V), BB(BB) {}
     };
 
   private:
     struct LeaderListNode {
       LeaderTableEntry Entry;
       LeaderListNode *Next;
+      LeaderListNode(Value *V, const BasicBlock *BB, LeaderListNode *Next)
+          : Entry(V, BB), Next(Next) {}
     };
     DenseMap<uint32_t, LeaderListNode> NumToLeaders;
     BumpPtrAllocator TableAllocator;
@@ -315,8 +321,18 @@ private:
 
     LLVM_ABI void insert(uint32_t N, Value *V, const BasicBlock *BB);
     LLVM_ABI void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
-    LLVM_ABI void verifyRemoved(const Value *Inst) const;
     void clear() {
+      // Manually destroy non-head nodes (in BumpPtrAllocator) to properly
+      // clean up AssertingVH handles before Reset(). Head nodes are destroyed
+      // by NumToLeaders.clear() below.
+      for (auto &[_, HeadNode] : NumToLeaders) {
+        LeaderListNode *N = HeadNode.Next;
+        while (N) {
+          auto *Next = N->Next;
+          N->~LeaderListNode();
+          N = Next;
+        }
+      }
       NumToLeaders.clear();
       TableAllocator.Reset();
     }

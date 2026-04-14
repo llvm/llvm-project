@@ -381,6 +381,17 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   return nullptr;
 }
 
+/// Infers the layout attribute for mask and offset operand for Chunked load
+/// and store, given the anchor layout attribute for the value being load/store.
+xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
+    xegpu::DistributeLayoutAttr payloadLayout, int chunkSize) {
+  auto rank = payloadLayout.getRank();
+  if (chunkSize > 1)
+    return payloadLayout.dropDims(
+        llvm::to_vector(llvm::seq<int64_t>(rank - 1, rank)));
+  return payloadLayout;
+}
+
 /// Sets up layout for reduction operations by creating a SliceAttr for the
 /// result.
 ///

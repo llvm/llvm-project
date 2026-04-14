@@ -93,7 +93,7 @@ define i32 @chained_smax(i32 %x, ptr %src) {
 entry:
   br label %loop
 
-loop:                              ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %max = phi i32 [ 0, %entry ], [ %max.next, %loop ]
   %gep.src = getelementptr [3 x i32], ptr %src, i64 %iv
@@ -390,7 +390,7 @@ define i32 @chained_instructions_feeding_max1(i32 %x, ptr %src) {
 entry:
   br label %loop
 
-loop:                              ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %max = phi i32 [ 0, %entry ], [ %max.next, %loop ]
   %gep.src = getelementptr [3 x i32], ptr %src, i64 %iv
@@ -428,7 +428,7 @@ define i32 @chained_instructions_feeding_max2(i32 %x, ptr %src) {
 entry:
   br label %loop
 
-loop:                              ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %max = phi i32 [ 0, %entry ], [ %max.next, %loop ]
   %gep.src = getelementptr [3 x i32], ptr %src, i64 %iv

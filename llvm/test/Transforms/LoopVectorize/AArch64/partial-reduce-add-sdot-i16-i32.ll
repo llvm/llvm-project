@@ -9,6 +9,10 @@
 ; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-FIXED
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=8 \
 ; RUN:     -enable-epilogue-vectorization=false -debug-only=loop-vectorize         \
+; RUN:     -mattr=+f16f32dot -scalable-vectorization=off                           \
+; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-FIXED-F16F32DOT
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=8 \
+; RUN:     -enable-epilogue-vectorization=false -debug-only=loop-vectorize         \
 ; RUN:     -mattr=+sve2p1 -scalable-vectorization=on                               \
 ; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALABLE
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=8 \
@@ -29,6 +33,7 @@
 ; LV: Checking a loop in 'fpext_reduction_half_to_float'
 ; CHECK-FIXED-BASE: Cost of 4 for VF 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.fadd (ir<%load> reassoc contract fpext to float)
 ; CHECK-FIXED: Cost of 1 for VF 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.fadd (ir<%load> reassoc contract fpext to float)
+; CHECK-FIXED-F16F32DOT: Cost of 1 for VF 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.fadd (ir<%load> reassoc contract fpext to float)
 ; CHECK-SCALABLE: Cost of 1 for VF vscale x 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.fadd (ir<%load> reassoc contract fpext to float)
 target triple = "aarch64"
 

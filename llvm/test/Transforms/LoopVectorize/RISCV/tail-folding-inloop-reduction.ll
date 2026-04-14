@@ -1657,9 +1657,6 @@ for.end:
   ret i32 %anyof
 }
 
-declare float @llvm.minimum.f32(float, float)
-declare float @llvm.maximum.f32(float, float)
-declare float @llvm.fmuladd.f32(float, float, float)
 
 
 !0 = distinct !{!0, !1}

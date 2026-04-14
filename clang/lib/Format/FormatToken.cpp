@@ -33,10 +33,10 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
-static constexpr std::array<StringRef, 14> QtPropertyKeywords = {
-    "BINDABLE",   "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",
-    "NOTIFY",     "READ",     "REQUIRED",   "RESET", "REVISION",
-    "SCRIPTABLE", "STORED",   "USER",       "WRITE",
+static constexpr std::array<StringRef, 16> QtPropertyKeywords = {
+    "BINDABLE", "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",   "NOTIFY",
+    "OVERRIDE", "READ",     "REQUIRED",   "RESET", "REVISION", "SCRIPTABLE",
+    "STORED",   "USER",     "VIRTUAL",    "WRITE",
 };
 
 bool FormatToken::isQtProperty() const {

@@ -585,7 +585,7 @@ DistributeLayoutAttr LayoutAttr::dropDims(SmallVector<int64_t> dimGroup) {
     int64_t offset = llvm::count_if(dimGroup, [&](int64_t s) { return s < d; });
     newOrder.push_back(d - offset);
   }
-  if (sgLayout.empty() && laneLayout.empty())
+  if ((sgLayout.empty() && laneLayout.empty()) || newOrder.size() == 1)
     newOrder.clear();
 
   auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
@@ -1318,7 +1318,7 @@ mlir::Type TensorDescType::parse(AsmParser &parser) {
     mlir::Attribute attr;
     ParseResult res = parser.parseAttribute(attr);
     if (mlir::succeeded(res)) {
-      if (mlir::isa<LayoutAttr>(attr)) {
+      if (mlir::isa<DistributeLayoutAttr>(attr)) {
         layout = attr;
         continue;
       }

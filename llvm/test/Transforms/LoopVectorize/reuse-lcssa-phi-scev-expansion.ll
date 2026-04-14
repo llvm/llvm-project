@@ -466,6 +466,3 @@ exit:
   ret void
 }
 
-declare double @llvm.cos.f64(double) #0
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

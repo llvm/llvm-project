@@ -25,7 +25,7 @@ define void @test(ptr %data) {
 entry:
   br label %loop
 
-loop:                                             ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %or.iv.1 = or disjoint i64 %iv, 1
   %gep.postscale = getelementptr [64 x float], ptr @postscale, i64 0, i64 %or.iv.1
@@ -37,7 +37,7 @@ loop:                                             ; preds = %loop, %entry
   %exit.cond = icmp eq i64 %iv.next, 8
   br i1 %exit.cond, label %end, label %loop
 
-end:                                              ; preds = %loop
+end:
   ret void
 }
 

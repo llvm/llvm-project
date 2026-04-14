@@ -68,10 +68,10 @@ entry:
   %cmp.not19 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not19, label %while.end, label %while.body.preheader
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %pSrc.addr.022 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrc, %while.body.preheader ]
   %blkCnt.021 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
   %pDst.addr.020 = phi ptr [ %incdec.ptr13, %while.body ], [ %pDst, %while.body.preheader ]
@@ -88,10 +88,10 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end.loopexit, label %while.body
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   ret void
 }
 
@@ -163,10 +163,10 @@ entry:
   %cmp.not20 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not20, label %while.end, label %while.body.preheader
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %pSrc.addr.023 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrc, %while.body.preheader ]
   %blkCnt.022 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
   %pDst.addr.021 = phi ptr [ %incdec.ptr13, %while.body ], [ %pDst, %while.body.preheader ]
@@ -183,10 +183,10 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end.loopexit, label %while.body
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   ret void
 }
 
@@ -258,10 +258,10 @@ entry:
   %cmp.not14 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not14, label %while.end, label %while.body.preheader
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %pSrc.addr.017 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrc, %while.body.preheader ]
   %blkCnt.016 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
   %pDst.addr.015 = phi ptr [ %incdec.ptr7, %while.body ], [ %pDst, %while.body.preheader ]
@@ -278,10 +278,10 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end.loopexit, label %while.body
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   ret void
 }
 

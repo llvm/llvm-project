@@ -761,6 +761,12 @@ inline UnaryOp_match<SrcTy, TargetOpcode::G_FSQRT> m_GFSqrt(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FSQRT>(Src);
 }
 
+template <typename SrcTy>
+inline UnaryOp_match<SrcTy, TargetOpcode::G_FFLOOR>
+m_GFFloor(const SrcTy &Src) {
+  return UnaryOp_match<SrcTy, TargetOpcode::G_FFLOOR>(Src);
+}
+
 // General helper for generic MI compares, i.e. G_ICMP and G_FCMP
 // TODO: Allow checking a specific predicate.
 template <typename Pred_P, typename LHS_P, typename RHS_P, unsigned Opcode,

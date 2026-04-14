@@ -146,7 +146,6 @@ exit:
   ret void
 }
 
-declare float @llvm.minimumnum.f32(float, float)
 
 define void @fmax32(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
 ; CHECK-LABEL: define void @fmax32(
@@ -291,7 +290,6 @@ exit:
   ret void
 }
 
-declare float @llvm.maximumnum.f32(float, float)
 
 define void @fmin64(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
 ; CHECK-LABEL: define void @fmin64(
@@ -436,7 +434,6 @@ exit:
   ret void
 }
 
-declare double @llvm.minimumnum.f64(double, double)
 
 define void @fmax64(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
 ; CHECK-LABEL: define void @fmax64(
@@ -581,7 +578,6 @@ exit:
   ret void
 }
 
-declare double @llvm.maximumnum.f64(double, double)
 
 define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
 ; CHECK-LABEL: define void @fmin16(
@@ -714,7 +710,6 @@ exit:
   ret void
 }
 
-declare half @llvm.minimumnum.f16(half, half)
 
 define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
 ; CHECK-LABEL: define void @fmax16(
@@ -847,7 +842,6 @@ exit:
   ret void
 }
 
-declare half @llvm.maximumnum.f16(half, half)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

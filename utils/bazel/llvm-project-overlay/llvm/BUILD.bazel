@@ -5935,6 +5935,7 @@ cc_binary(
     deps = [
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":BinaryFormat",
         ":Core",
         ":DebugInfoDWARF",
         ":DebugInfoPDB",

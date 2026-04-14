@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of sycl::kernel_id and its implementation
+/// counterpart, which represent a kernel identificator.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_KERNEL_ID
 #define _LIBSYCL_KERNEL_ID

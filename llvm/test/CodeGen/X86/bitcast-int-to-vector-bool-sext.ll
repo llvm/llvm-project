@@ -660,30 +660,32 @@ define <8 x i32> @PR157382(ptr %p0, ptr %p1, ptr %p2) {
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    movdqu (%rdi), %xmm3
 ; SSE2-SSSE3-NEXT:    movdqu 16(%rdi), %xmm2
-; SSE2-SSSE3-NEXT:    movdqu (%rsi), %xmm5
+; SSE2-SSSE3-NEXT:    movdqu (%rsi), %xmm0
 ; SSE2-SSSE3-NEXT:    movdqu 16(%rsi), %xmm4
 ; SSE2-SSSE3-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-SSSE3-NEXT:    pxor %xmm6, %xmm6
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm6
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm6
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm7, %xmm7
 ; SSE2-SSSE3-NEXT:    pxor %xmm7, %xmm6
 ; SSE2-SSSE3-NEXT:    pxor %xmm8, %xmm8
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm8
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm8
 ; SSE2-SSSE3-NEXT:    pxor %xmm7, %xmm8
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm4
-; SSE2-SSSE3-NEXT:    por %xmm6, %xmm4
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm5
-; SSE2-SSSE3-NEXT:    por %xmm8, %xmm5
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm5, %xmm0
+; SSE2-SSSE3-NEXT:    por %xmm6, %xmm0
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm5, %xmm4
+; SSE2-SSSE3-NEXT:    por %xmm8, %xmm4
+; SSE2-SSSE3-NEXT:    packssdw %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-SSSE3-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpeqb %xmm5, %xmm1
 ; SSE2-SSSE3-NEXT:    pxor %xmm7, %xmm1
-; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    por %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSE2-SSSE3-NEXT:    por %xmm5, %xmm0
-; SSE2-SSSE3-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
-; SSE2-SSSE3-NEXT:    por %xmm4, %xmm1
+; SSE2-SSSE3-NEXT:    psrad $16, %xmm0
 ; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm0
+; SSE2-SSSE3-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; SSE2-SSSE3-NEXT:    pslld $31, %xmm1
+; SSE2-SSSE3-NEXT:    psrad $31, %xmm1
 ; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm1
 ; SSE2-SSSE3-NEXT:    retq
 ;
@@ -691,27 +693,28 @@ define <8 x i32> @PR157382(ptr %p0, ptr %p1, ptr %p2) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqu (%rdi), %ymm0
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtd %xmm0, %xmm2, %xmm3
 ; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vpcmpgtd %xmm0, %xmm3, %xmm5
+; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vpcmpgtd %xmm5, %xmm2, %xmm5
 ; AVX1-NEXT:    vpxor %xmm4, %xmm5, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
-; AVX1-NEXT:    vmovdqu (%rsi), %xmm5
-; AVX1-NEXT:    vmovdqu 16(%rsi), %xmm6
-; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm6, %xmm6
-; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm5, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
-; AVX1-NEXT:    vorps %ymm5, %ymm2, %ymm2
-; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqu (%rsi), %xmm6
+; AVX1-NEXT:    vmovdqu 16(%rsi), %xmm7
+; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm6, %xmm6
+; AVX1-NEXT:    vpor %xmm6, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm7, %xmm6
+; AVX1-NEXT:    vpor %xmm6, %xmm5, %xmm5
+; AVX1-NEXT:    vpackssdw %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
-; AVX1-NEXT:    vorps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    vpmovsxbw %xmm1, %xmm1
+; AVX1-NEXT:    vpor %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vpmovsxwd %xmm1, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; AVX1-NEXT:    vpmovsxwd %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;

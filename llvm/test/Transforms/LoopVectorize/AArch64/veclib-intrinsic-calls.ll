@@ -15,8 +15,6 @@ target triple = "aarch64-unknown-linux-gnu"
 ; are checking fixed width vectorization with NEON and scalable vectorization
 ; with SVE.
 
-declare double @llvm.acos.f64(double)
-declare float @llvm.acos.f32(float)
 
 define void @acos_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @acos_f64
@@ -114,8 +112,6 @@ define void @acos_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.asin.f64(double)
-declare float @llvm.asin.f32(float)
 
 define void @asin_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @asin_f64
@@ -213,8 +209,6 @@ define void @asin_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.atan.f64(double)
-declare float @llvm.atan.f32(float)
 
 define void @atan_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @atan_f64
@@ -312,8 +306,6 @@ define void @atan_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.atan2.f64(double, double)
-declare float @llvm.atan2.f32(float, float)
 
 define void @atan2_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @atan2_f64
@@ -411,8 +403,6 @@ define void @atan2_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.ceil.f64(double)
-declare float @llvm.ceil.f32(float)
 
 define void @ceil_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @ceil_f64
@@ -510,8 +500,6 @@ define void @ceil_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.copysign.f64(double, double)
-declare float @llvm.copysign.f32(float, float)
 
 define void @copysign_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @copysign_f64
@@ -609,8 +597,6 @@ define void @copysign_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.cos.f64(double)
-declare float @llvm.cos.f32(float)
 
 define void @cos_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @cos_f64
@@ -708,8 +694,6 @@ define void @cos_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.cosh.f64(double)
-declare float @llvm.cosh.f32(float)
 
 define void @cosh_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @cosh_f64
@@ -807,8 +791,6 @@ define void @cosh_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.exp.f64(double)
-declare float @llvm.exp.f32(float)
 
 define void @exp_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @exp_f64
@@ -906,8 +888,6 @@ define void @exp_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.exp10.f64(double)
-declare float @llvm.exp10.f32(float)
 
 define void @exp10_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @exp10_f64
@@ -1005,8 +985,6 @@ define void @exp10_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.exp2.f64(double)
-declare float @llvm.exp2.f32(float)
 
 define void @exp2_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @exp2_f64
@@ -1104,8 +1082,6 @@ define void @exp2_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.fabs.f64(double)
-declare float @llvm.fabs.f32(float)
 
 define void @fabs_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @fabs_f64
@@ -1203,8 +1179,6 @@ define void @fabs_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.floor.f64(double)
-declare float @llvm.floor.f32(float)
 
 define void @floor_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @floor_f64
@@ -1302,8 +1276,6 @@ define void @floor_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.fma.f64(double, double, double)
-declare float @llvm.fma.f32(float, float, float)
 
 define void @fma_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @fma_f64
@@ -1401,8 +1373,6 @@ define void @fma_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.log.f64(double)
-declare float @llvm.log.f32(float)
 
 define void @log_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @log_f64
@@ -1500,8 +1470,6 @@ define void @log_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.log10.f64(double)
-declare float @llvm.log10.f32(float)
 
 define void @log10_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @log10_f64
@@ -1599,8 +1567,6 @@ define void @log10_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.log2.f64(double)
-declare float @llvm.log2.f32(float)
 
 define void @log2_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @log2_f64
@@ -1698,8 +1664,6 @@ define void @log2_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.maxnum.f64(double, double)
-declare float @llvm.maxnum.f32(float, float)
 
 define void @maxnum_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @maxnum_f64
@@ -1797,8 +1761,6 @@ define void @maxnum_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.minnum.f64(double, double)
-declare float @llvm.minnum.f32(float, float)
 
 define void @minnum_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @minnum_f64
@@ -1896,8 +1858,6 @@ define void @minnum_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare { double, double } @llvm.modf.f64(double)
-declare { float, float } @llvm.modf.f32(float)
 
 define void @modf_f64(ptr noalias %in.ptr, ptr %out_a.ptr, ptr %out_b.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @modf_f64
@@ -2015,8 +1975,6 @@ define void @modf_f32(ptr noalias %in.ptr, ptr %out_a.ptr, ptr %out_b.ptr) {
   ret void
 }
 
-declare double @llvm.nearbyint.f64(double)
-declare float @llvm.nearbyint.f32(float)
 
 define void @nearbyint_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @nearbyint_f64
@@ -2114,8 +2072,6 @@ define void @nearbyint_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.pow.f64(double, double)
-declare float @llvm.pow.f32(float, float)
 
 define void @pow_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @pow_f64
@@ -2213,8 +2169,6 @@ define void @pow_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.rint.f64(double)
-declare float @llvm.rint.f32(float)
 
 define void @rint_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @rint_f64
@@ -2312,8 +2266,6 @@ define void @rint_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.round.f64(double)
-declare float @llvm.round.f32(float)
 
 define void @round_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @round_f64
@@ -2411,8 +2363,6 @@ define void @round_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.sin.f64(double)
-declare float @llvm.sin.f32(float)
 
 define void @sin_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @sin_f64
@@ -2510,8 +2460,6 @@ define void @sin_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare { double, double } @llvm.sincos.f64(double)
-declare { float, float } @llvm.sincos.f32(float)
 
 define void @sincos_f64(ptr noalias %in.ptr, ptr %out_a.ptr, ptr %out_b.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @sincos_f64
@@ -2629,8 +2577,6 @@ define void @sincos_f32(ptr noalias %in.ptr, ptr %out_a.ptr, ptr %out_b.ptr) {
   ret void
 }
 
-declare { double, double } @llvm.sincospi.f64(double)
-declare { float, float } @llvm.sincospi.f32(float)
 
 define void @sincospi_f64(ptr noalias %in.ptr, ptr %out_a.ptr, ptr %out_b.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @sincospi_f64
@@ -2748,8 +2694,6 @@ define void @sincospi_f32(ptr noalias %in.ptr, ptr %out_a.ptr, ptr %out_b.ptr) {
   ret void
 }
 
-declare double @llvm.sinh.f64(double)
-declare float @llvm.sinh.f32(float)
 
 define void @sinh_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @sinh_f64
@@ -2847,8 +2791,6 @@ define void @sinh_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.sqrt.f64(double)
-declare float @llvm.sqrt.f32(float)
 
 define void @sqrt_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @sqrt_f64
@@ -2946,8 +2888,6 @@ define void @sqrt_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.tan.f64(double)
-declare float @llvm.tan.f32(float)
 
 define void @tan_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @tan_f64
@@ -3045,8 +2985,6 @@ define void @tan_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.tanh.f64(double)
-declare float @llvm.tanh.f32(float)
 
 define void @tanh_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @tanh_f64
@@ -3144,8 +3082,6 @@ define void @tanh_f32(ptr noalias %in.ptr, ptr %out.ptr) {
   ret void
 }
 
-declare double @llvm.trunc.f64(double)
-declare float @llvm.trunc.f32(float)
 
 define void @trunc_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @trunc_f64

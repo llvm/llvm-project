@@ -511,38 +511,6 @@ func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, te
 
 // -----
 
-// This test is used to verify whether CSE can correctly
-// handle region operations that contain dead ops.
-
-func.func @cse_multiple_regions_with_dead_op(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, tensor<5xf32>) {
-  %r1 = scf.if %c -> (tensor<5xf32>) {
-    %0 = tensor.empty() : tensor<5xf32>
-    %1 = arith.constant 1: index
-    scf.yield %0 : tensor<5xf32>
-  } else {
-    scf.yield %t : tensor<5xf32>
-  }
-  %r2 = scf.if %c -> (tensor<5xf32>) {
-    %0 = tensor.empty() : tensor<5xf32>
-    scf.yield %0 : tensor<5xf32>
-  } else {
-    scf.yield %t : tensor<5xf32>
-  }
-  return %r1, %r2 : tensor<5xf32>, tensor<5xf32>
-}
-
-// CHECK-LABEL: func @cse_multiple_regions_with_dead_op
-//       CHECK:   %[[if:.*]] = scf.if {{.*}} {
-//       CHECK:     tensor.empty
-//       CHECK:     scf.yield
-//       CHECK:   } else {
-//       CHECK:     scf.yield
-//       CHECK:   }
-//   CHECK-NOT:   scf.if
-//       CHECK:   return %[[if]], %[[if]]
-
-// -----
-
 // CHECK-LABEL: @cse_recursive_effects_success
 func.func @cse_recursive_effects_success() -> (i32, i32, i32) {
   // CHECK-NEXT: %[[READ_VALUE:.*]] = "test.op_with_memread"() : () -> i32

@@ -219,7 +219,7 @@ define void @PR40816() #1 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   store i32 %0, ptr @b, align 1
   %arrayidx1 = getelementptr inbounds [3 x i32], ptr @a, i32 0, i32 %0
@@ -228,7 +228,7 @@ for.body:                                         ; preds = %for.body, %entry
   %inc = add nuw nsw i32 %0, 1
   br i1 %cmp2, label %return, label %for.body
 
-return:                                           ; preds = %for.body
+return:
   ret void
 }
 

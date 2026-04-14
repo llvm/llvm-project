@@ -118,13 +118,13 @@ int main(void) {
   // CUDA-NEW: } else {
   // CUDA-NEW:   cir.const #cir.int<42> : !s32i
   // CUDA-NEW:   cir.const #cir.fp<1.000000e+00> : !cir.float
-  // CUDA-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<_Z6kernelif>} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
+  // CUDA-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<"_Z6kernelif">} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
   // CUDA-NEW: }
   // HIP-NEW: cir.if %{{.*}} {
   // HIP-NEW: } else {
   // HIP-NEW:   cir.const #cir.int<42> : !s32i
   // HIP-NEW:   cir.const #cir.fp<1.000000e+00> : !cir.float
-  // HIP-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<_Z6kernelif>} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
+  // HIP-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<"_Z6kernelif">} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
   // HIP-NEW: }
   kernel<<<1, 1>>>(42, 1.0f);
 }

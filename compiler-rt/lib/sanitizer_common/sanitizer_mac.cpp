@@ -170,6 +170,10 @@ uptr internal_close(fd_t fd) {
   return close(fd);
 }
 
+uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags) {
+  return -1;  // Not supported.
+}
+
 uptr internal_open(const char *filename, int flags) {
   return open(filename, flags);
 }
@@ -1288,6 +1292,25 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
   return shadow_start;
 }
 
+// Returns a list of ranges which must be covered by shadow memory,
+// and cannot overlap with any fixed mappings made by a sanitizer.
+// This can ensure that the sanitizer runtime does not map over
+// platform-reserved regions.
+void GetAppReservedRanges(InternalMmapVector<ReservedRange>& ranges) {
+  ranges.clear();
+
+#  if SANITIZER_OSX
+  // On macOS, the first 512GB are platform-reserved (some of which
+  // may also be available to applications).
+  ranges.push_back({0x1000UL, 0x8000000000UL});
+#  endif
+
+  VReport(2, "App ranges:\n");
+  for (auto& [range_start, range_end] : ranges) {
+    VReport(2, "  [%p, %p]\n", range_start, range_end);
+  }
+}
+
 uptr MapDynamicShadowAndAliases(uptr shadow_size, uptr alias_size,
                                 uptr num_aliases, uptr ring_buffer_size) {
   CHECK(false && "HWASan aliasing is unimplemented on Mac");
@@ -1300,6 +1323,16 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
   const mach_vm_address_t max_vm_address = GetMaxVirtualAddress() + 1;
   mach_vm_address_t address = GAP_SEARCH_START_ADDRESS;
   mach_vm_address_t free_begin = GAP_SEARCH_START_ADDRESS;
+
+  // Restrict the search to be after any reserved ranges
+  InternalMmapVector<ReservedRange> app_ranges;
+  GetAppReservedRanges(app_ranges);
+
+  for (auto& [range_start, range_end] : app_ranges) {
+    address = Max(address, (mach_vm_address_t)range_end);
+    free_begin = Max(free_begin, (mach_vm_address_t)range_end);
+  }
+
   kern_return_t kr = KERN_SUCCESS;
   if (largest_gap_found) *largest_gap_found = 0;
   if (max_occupied_addr) *max_occupied_addr = 0;

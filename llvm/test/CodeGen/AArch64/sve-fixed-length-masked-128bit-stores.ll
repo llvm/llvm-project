@@ -13,9 +13,9 @@ define void @masked_store_v16i8(ptr %dst, <16 x i1> %mask) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p1, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v16i8(<16 x i8> zeroinitializer, ptr %dst, i32 8, <16 x i1> %mask)
   ret void
@@ -27,9 +27,9 @@ define void @masked_store_v8f16(ptr %dst, <8 x i1> %mask) {
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v8f16(<8 x half> zeroinitializer, ptr %dst, i32 8, <8 x i1> %mask)
   ret void
@@ -41,9 +41,9 @@ define void @masked_store_v4f32(ptr %dst, <4 x i1> %mask) {
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v4f32(<4 x float> zeroinitializer, ptr %dst, i32 8, <4 x i1> %mask)
   ret void
@@ -55,9 +55,9 @@ define void @masked_store_v2f64(ptr %dst, <2 x i1> %mask) {
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    shl v0.2d, v0.2d, #63
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p1, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v2f64(<2 x double> zeroinitializer, ptr %dst, i32 8, <2 x i1> %mask)
   ret void

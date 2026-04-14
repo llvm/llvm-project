@@ -29,18 +29,18 @@ Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
 
 void ExecutorBase::reportImmediateUB(StringRef Msg) {
   // Check if we have already reported an immediate UB.
-  if (!Status)
+  if (hasProgramExited())
     return;
-  Status = false;
+  requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   // TODO: Provide stack trace information.
   Handler.onImmediateUB(Msg);
 }
 
 void ExecutorBase::reportError(StringRef Msg) {
   // Check if we have already reported an error message.
-  if (!Status)
+  if (hasProgramExited())
     return;
-  Status = false;
+  requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   Handler.onError(Msg);
 }
 
@@ -123,5 +123,25 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
                           Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
                           /*IsStore=*/true))
     Ctx.store(*MO, *Offset, Val, ValTy);
+}
+
+void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
+                                      uint64_t ExitCode) {
+  ExitInfo.emplace(Kind, ExitCode);
+  Handler.onProgramExit(*ExitInfo);
+}
+
+void ExecutorBase::setFailed() {
+  requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+}
+
+bool ExecutorBase::hasProgramExited() const { return ExitInfo.has_value(); }
+
+std::optional<ProgramExitInfo> ExecutorBase::getExitInfo() const {
+  return ExitInfo;
+}
+
+unsigned ExecutorBase::getIntSize() const {
+  return CurrentFrame->TLI.getIntSize();
 }
 } // namespace llvm::ubi

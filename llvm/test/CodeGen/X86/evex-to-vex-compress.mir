@@ -904,6 +904,10 @@ body: |
   ; CHECK: $eax = VPMOVMSKBYrr                 $ymm0
   $k0 = VPMOVB2MZ256kr                         $ymm0
   $eax = KMOVDrk                               $k0
+  ; CHECK: $k3 = VPMOVB2MZ256kr                $ymm23
+  ; CHECK: $edx = KMOVDrk                      $k3
+  $k3 = VPMOVB2MZ256kr                         $ymm23
+  $edx = KMOVDrk                               $k3
   ; CHECK: $k0 = VPMOVD2MZ256kr                $ymm0
   ; CHECK: $eax = KMOVBrk                      $k0
   ; CHECK: $ebx = KMOVBrk                      $k0
@@ -1789,6 +1793,10 @@ body: |
   ; CHECK: $eax = VPMOVMSKBrr                  $xmm0
   $k0 = VPMOVB2MZ128kr                         $xmm0
   $eax = KMOVWrk                               $k0
+  ; CHECK: $k3 = VPMOVB2MZ128kr                $xmm23
+  ; CHECK: $edx = KMOVWrk                      $k3
+  $k3 = VPMOVB2MZ128kr                         $xmm23
+  $edx = KMOVWrk                               $k3
   ; CHECK: $k0 = VPMOVD2MZ128kr                $xmm0
   ; CHECK: $eax = KMOVBrk                      $k0
   ; CHECK: $ebx = KMOVBrk                      $k0

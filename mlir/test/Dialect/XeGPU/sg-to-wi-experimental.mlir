@@ -445,7 +445,8 @@ gpu.module @xevm_module{
 
 // -----
 // CHECK-LABEL: gpu.func @vector_broadcast_1d_to_2d_broadcast_within_lane({{.*}}) {
-// CHECK: %[[BCAST:.*]] = vector.broadcast %{{.*}} : vector<1xf16> to vector<16xf16>
+// CHECK: %[[RED:.*]] = vector.reduction <add>, %{{.*}}, %{{.*}} : vector<16xf16> into f16
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[RED]] : f16 to vector<16xf16>
 gpu.module @xevm_module{
    gpu.func @vector_broadcast_1d_to_2d_broadcast_within_lane(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>) {
     %c0 = arith.constant 0 : index

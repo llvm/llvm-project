@@ -54,7 +54,7 @@ define void @test_array_load2_store2(i32 %C, i32 %D) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx0 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %indvars.iv
   %tmp = load i32, ptr %arrayidx0, align 4
@@ -71,7 +71,7 @@ for.body:                                         ; preds = %for.body, %entry
   %cmp = icmp slt i64 %indvars.iv.next, 1024
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -127,7 +127,7 @@ define void @test_struct_array_load3_store3() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %ptr.016 = phi ptr [ @A, %entry ], [ %incdec.ptr2, %for.body ]
   %incdec.ptr = getelementptr inbounds i32, ptr %ptr.016, i64 1
@@ -149,7 +149,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -206,7 +206,7 @@ define i32 @test_struct_load4(ptr nocapture readonly %S) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %r.022 = phi i32 [ 0, %entry ], [ %sub8, %for.body ]
   %x = getelementptr inbounds %struct.ST4, ptr %S, i64 %indvars.iv, i32 0
@@ -225,7 +225,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 %sub8
 }
 
@@ -274,10 +274,10 @@ define void @test_struct_store4(ptr noalias nocapture readonly %A, ptr noalias n
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %ptr.024 = phi ptr [ %A, %entry ], [ %incdec.ptr, %for.body ]
   %incdec.ptr = getelementptr inbounds i32, ptr %ptr.024, i64 1
@@ -356,10 +356,10 @@ define void @test_reversed_load2_store2(ptr noalias nocapture readonly %A, ptr n
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 1023, %entry ], [ %indvars.iv.next, %for.body ]
   %x = getelementptr inbounds %struct.ST2, ptr %A, i64 %indvars.iv, i32 0
   %tmp = load i32, ptr %x, align 4
@@ -428,10 +428,10 @@ define void @even_load_static_tc(ptr noalias nocapture readonly %A, ptr noalias 
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %tmp = load i32, ptr %arrayidx, align 4
@@ -505,10 +505,10 @@ define void @even_load_dynamic_tc(ptr noalias nocapture readonly %A, ptr noalias
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %tmp = load i32, ptr %arrayidx, align 4
@@ -664,10 +664,10 @@ define void @mixed_load2_store2(ptr noalias nocapture readonly %A, ptr noalias n
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %tmp = load i32, ptr %arrayidx, align 4
@@ -732,10 +732,10 @@ define void @mixed_load3_store3(ptr nocapture %A) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.013 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %A.addr.012 = phi ptr [ %A, %entry ], [ %incdec.ptr3, %for.body ]
   %incdec.ptr = getelementptr inbounds i32, ptr %A.addr.012, i64 1
@@ -815,12 +815,12 @@ define void @int_float_struct(ptr nocapture readonly %A) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   store i32 %add, ptr @SA, align 4
   store float %add3, ptr @SB, align 4
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %SumB.014 = phi float [ 0.0e+00, %entry ], [ %add3, %for.body ]
   %SumA.013 = phi i32 [ 0, %entry ], [ %add, %for.body ]

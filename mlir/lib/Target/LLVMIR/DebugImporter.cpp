@@ -65,7 +65,8 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
         imports.push_back(nodeAttr);
   }
   return DICompileUnitAttr::get(
-      context, getOrCreateDistinctID(node),
+      context, /*recId=*/DistinctAttr{}, /*isRecSelf=*/false,
+      getOrCreateDistinctID(node),
       node->getSourceLanguage().getUnversionedName(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
       node->isOptimized(), emissionKind.value(),
@@ -434,8 +435,9 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
   return nullptr;
 }
 
-/// Get the `getRecSelf` constructor for the translated type of `node` if its
-/// translated DITypeAttr supports recursion. Otherwise, returns nullptr.
+/// Get the `getRecSelf` constructor for the translated node if it participates
+/// in CyclicReplacerCache cycle breaking (recursive composite types,
+/// subprograms, or compile units).
 static function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
 getRecSelfConstructor(llvm::DINode *node) {
   using CtorType = function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;
@@ -445,6 +447,9 @@ getRecSelfConstructor(llvm::DINode *node) {
       })
       .Case([&](llvm::DISubprogram *) {
         return CtorType(DISubprogramAttr::getRecSelf);
+      })
+      .Case([&](llvm::DICompileUnit *) {
+        return CtorType(DICompileUnitAttr::getRecSelf);
       })
       .Default(CtorType());
 }

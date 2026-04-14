@@ -65,7 +65,7 @@ entry:
   %cmp6 = icmp sgt i64 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %iv
   %lv = load float, ptr %arrayidx, align 4
@@ -76,7 +76,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -144,7 +144,7 @@ entry:
   %cmp6 = icmp sgt i64 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %iv
   %lv = load float, ptr %arrayidx, align 4
@@ -157,7 +157,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -232,16 +232,16 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
   %cmp = icmp ult i64 %i, 5
   br i1 %cmp, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %tmp4 = udiv i64 %n, %i
   br label %for.inc
 
-for.inc:                                          ; preds = %if.then, %for.body
+for.inc:
   %d = phi i64 [ 0, %for.body ], [ %tmp4, %if.then ]
   %idx = getelementptr i64, ptr %x, i64 %i
   store i64 %d, ptr %idx
@@ -249,7 +249,7 @@ for.inc:                                          ; preds = %if.then, %for.body
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -467,8 +467,6 @@ exit:
   ret void
 }
 
-declare float @llvm.sqrt.f32(float) nounwind readnone
-declare float @llvm.fmuladd.f32(float, float, float)
 
 define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-LABEL: VPlan for loop in 'print_expand_scev'
@@ -532,7 +530,7 @@ entry:
   %inc = add i64 %div, 1
   br label %loop
 
-loop:                                             ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
   %v2 = trunc i64 %iv to i8
   %v3 = add nuw i8 %v2, 1

@@ -254,6 +254,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 
   if (ctx.arg.formatBinary) {
     files.push_back(std::make_unique<BinaryFile>(ctx, mbref));
+    if (!isInGroup)
+      ++nextGroupId;
     return;
   }
 
@@ -321,7 +323,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
         ctx, mbref, withLOption ? path::filename(path) : path);
     f->init();
     files.push_back(std::move(f));
-    return;
+    break;
   }
   case file_magic::bitcode:
     files.push_back(std::make_unique<BitcodeFile>(ctx, mbref, "", 0, inLib));
@@ -332,7 +334,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     break;
   default:
     ErrAlways(ctx) << path << ": unknown file type";
+    return;
   }
+  // All files within the same --{start,end}-group get the same group ID.
+  // Otherwise, a new file will get a new group ID.
+  if (!isInGroup)
+    ++nextGroupId;
 }
 
 // Add a given library by searching it from input search paths.

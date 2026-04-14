@@ -21,9 +21,9 @@ define <vscale x 16 x i1> @match_nxv16i8_v2i8(<vscale x 16 x i8> %op1, <2 x i8> 
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    mov z1.b, w8
+; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z2.b
 ; CHECK-NEXT:    cmpeq p2.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    cmpeq p1.b, p1/z, z0.b, z2.b
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
+; CHECK-NEXT:    sel p1.b, p3, p3.b, p2.b
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <2 x i8> %op2, <vscale x 16 x i1> %mask)
@@ -142,8 +142,8 @@ define <16 x i1> @match_v16i8_v8i8(<16 x i8> %op1, <8 x i8> %op2, <16 x i1> %mas
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z1.d, d1
-; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    cmpne p1.b, p0/z, z2.b, #0
+; CHECK-NEXT:    match p0.b, p1/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -158,8 +158,8 @@ define <16 x i1> @match_v16i8_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %m
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    cmpne p1.b, p0/z, z2.b, #0
+; CHECK-NEXT:    match p0.b, p1/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -175,8 +175,8 @@ define <8 x i1> @match_v8i8_v8i8(<8 x i8> %op1, <8 x i8> %op2, <8 x i1> %mask) #
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.d, d1
-; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    cmpne p1.b, p0/z, z2.b, #0
+; CHECK-NEXT:    match p0.b, p1/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -203,8 +203,8 @@ define <8 x i1> @match_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) #0 
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    shl v2.8h, v2.8h, #15
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    match p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    match p0.h, p1/z, z0.h, z1.h
 ; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
@@ -221,8 +221,8 @@ define <8 x i1> @match_v8i8_v16i8(<8 x i8> %op1, <16 x i8> %op2, <8 x i1> %mask)
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    cmpne p1.b, p0/z, z2.b, #0
+; CHECK-NEXT:    match p0.b, p1/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -490,8 +490,8 @@ define <vscale x 2 x i1> @match_nxv2xi64_v2i64(<vscale x 2 x i64> %op1, <2 x i64
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    mov z1.d, d1
 ; CHECK-NEXT:    cmpeq p2.d, p1/z, z0.d, z2.d
-; CHECK-NEXT:    cmpeq p1.d, p1/z, z0.d, z1.d
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
+; CHECK-NEXT:    cmpeq p3.d, p1/z, z0.d, z1.d
+; CHECK-NEXT:    sel p1.b, p3, p3.b, p2.b
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 2 x i1> @llvm.experimental.vector.match(<vscale x 2 x i64> %op1, <2 x i64> %op2, <vscale x 2 x i1> %mask)

@@ -70,13 +70,13 @@ entry:
   %x = load double, ptr %a, align 8
   br label %loop_header
 
-loop_header:                                      ; preds = %loop_body, %entry
+loop_header:
   %sum.1 = phi double [ %sum.0, %entry ], [ %sum.next, %loop_body ]
   %i = phi i32 [ 0, %entry ], [ %i.next, %loop_body ]
   %cond = icmp sgt i32 %i, %n
   br i1 %cond, label %exit, label %loop_body
 
-loop_body:                                        ; preds = %loop_header
+loop_body:
   store double %sum.1, ptr %b, align 8
   %sum.next = fadd reassoc double %sum.1, %x
   %i.next = add i32 %i, 1

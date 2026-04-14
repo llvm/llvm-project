@@ -448,6 +448,10 @@ PrototypeDescriptor::parsePrototypeDescriptor(
     PT = BaseTypeModifier::Vector;
     VTM = VectorTypeModifier::Widening2XVector;
     break;
+  case 'd':
+    PT = BaseTypeModifier::Vector;
+    VTM = VectorTypeModifier::DoubleLMULVector;
+    break;
   case 'q':
     PT = BaseTypeModifier::Vector;
     VTM = VectorTypeModifier::Widening4XVector;
@@ -736,6 +740,10 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     if (ScalarType == ScalarTypeKind::FloatE4M3 ||
         ScalarType == ScalarTypeKind::FloatE5M2)
       ScalarType = ScalarTypeKind::BFloat;
+    break;
+  case VectorTypeModifier::DoubleLMULVector:
+    LMUL.MulLog2LMUL(1);
+    Scale = LMUL.getScale(ElementBitwidth);
     break;
   case VectorTypeModifier::Widening4XVector:
     ElementBitwidth *= 4;
@@ -1217,7 +1225,7 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
 
 SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
   SmallVector<PrototypeDescriptor> PrototypeDescriptors;
-  const StringRef Primaries("evwqom0ztulf");
+  const StringRef Primaries("evwdqom0ztulf");
   while (!Prototypes.empty()) {
     size_t Idx = 0;
     // Skip over complex prototype because it could contain primitive type

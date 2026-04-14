@@ -346,7 +346,7 @@ def ROCDL_DsBpermuteOp : ROCDL_ConcreteNonMemIntrOp<"ds_bpermute", [], 1>,
 
     Each lane reads the value of `src` from the lane whose byte address is
     given by `index` (i.e. lane id = `index / 4`).
-    
+
     This is “backward” (pull) in contrast to `ds_permute_b32`, which is
     “forward” (push/scatter).
 
@@ -573,6 +573,8 @@ def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 
   Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$memberCnt)> {
   let description = [{
     Available on gfx1250+.
+
+    If `memberCnt` is 0, the member count is retained from a previous initialization.
 
     Example:
     ```mlir

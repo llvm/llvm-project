@@ -232,18 +232,17 @@ private:
 struct ParenState {
   ParenState(const FormatToken *Tok, IndentationAndAlignment Indent,
              unsigned LastSpace, bool AvoidBinPacking, bool NoLineBreak)
-      : Tok(Tok), Indent(Indent), LastSpace(LastSpace),
-        NestedBlockIndent(Indent.Total), IsAligned(false),
-        BreakBeforeClosingBrace(false), BreakBeforeClosingParen(false),
-        BreakBeforeClosingAngle(false), AvoidBinPacking(AvoidBinPacking),
-        BreakBeforeParameter(false), NoLineBreak(NoLineBreak),
-        NoLineBreakInOperand(false), LastOperatorWrapped(true),
-        ContainsLineBreak(false), ContainsUnwrappedBuilder(false),
-        AlignColons(true), ObjCSelectorNameFound(false),
-        HasMultipleNestedBlocks(false), NestedBlockInlined(false),
-        IsInsideObjCArrayLiteral(false), IsCSharpGenericTypeConstraint(false),
-        IsChainedConditional(false), IsWrappedConditional(false),
-        UnindentOperator(false) {}
+      : Tok(Tok), Indent(Indent), AlignedTo(nullptr), LastSpace(LastSpace),
+        NestedBlockIndent(Indent.Total), BreakBeforeClosingBrace(false),
+        BreakBeforeClosingParen(false), BreakBeforeClosingAngle(false),
+        AvoidBinPacking(AvoidBinPacking), BreakBeforeParameter(false),
+        NoLineBreak(NoLineBreak), NoLineBreakInOperand(false),
+        LastOperatorWrapped(true), ContainsLineBreak(false),
+        ContainsUnwrappedBuilder(false), AlignColons(true),
+        ObjCSelectorNameFound(false), HasMultipleNestedBlocks(false),
+        NestedBlockInlined(false), IsInsideObjCArrayLiteral(false),
+        IsCSharpGenericTypeConstraint(false), IsChainedConditional(false),
+        IsWrappedConditional(false), UnindentOperator(false) {}
 
   /// The token opening this parenthesis level, or nullptr if this level is
   /// opened by fake parenthesis.
@@ -255,6 +254,9 @@ struct ParenState {
   /// The position to which a specific parenthesis level needs to be
   /// indented.
   IndentationAndAlignment Indent;
+
+  /// The token in one of the previous lines this state wants to align to.
+  const FormatToken *AlignedTo;
 
   /// The position of the last space on each level.
   ///
@@ -298,9 +300,6 @@ struct ParenState {
   ///
   /// Used to align further variables if necessary.
   unsigned VariablePos = 0;
-
-  /// Whether this block's indentation is used for alignment.
-  bool IsAligned : 1;
 
   /// Whether a newline needs to be inserted before the block's closing
   /// brace.
@@ -399,8 +398,8 @@ struct ParenState {
       return NestedBlockIndent < Other.NestedBlockIndent;
     if (FirstLessLess != Other.FirstLessLess)
       return FirstLessLess < Other.FirstLessLess;
-    if (IsAligned != Other.IsAligned)
-      return IsAligned;
+    if (AlignedTo != Other.AlignedTo)
+      return AlignedTo < Other.AlignedTo;
     if (BreakBeforeClosingBrace != Other.BreakBeforeClosingBrace)
       return BreakBeforeClosingBrace;
     if (BreakBeforeClosingParen != Other.BreakBeforeClosingParen)

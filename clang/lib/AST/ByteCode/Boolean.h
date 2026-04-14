@@ -61,11 +61,10 @@ public:
   bool isMin() const { return isZero(); }
 
   constexpr static bool isMinusOne() { return false; }
-
   constexpr static bool isSigned() { return false; }
-
   constexpr static bool isNegative() { return false; }
   constexpr static bool isPositive() { return !isNegative(); }
+  constexpr static bool isNumber() { return true; }
 
   ComparisonCategoryResult compare(const Boolean &RHS) const {
     return Compare(V, RHS.V);

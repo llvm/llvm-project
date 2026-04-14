@@ -24,18 +24,12 @@ class CFGuardPass : public PassInfoMixin<CFGuardPass> {
 public:
   enum class Mechanism { Check, Dispatch };
 
-  CFGuardPass(Mechanism M = Mechanism::Check) : GuardMechanism(M) {}
+  CFGuardPass() {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-
-private:
-  Mechanism GuardMechanism;
 };
 
-/// Insert Control FLow Guard checks on indirect function calls.
-LLVM_ABI FunctionPass *createCFGuardCheckPass();
-
-/// Insert Control FLow Guard dispatches on indirect function calls.
-LLVM_ABI FunctionPass *createCFGuardDispatchPass();
+/// Insert Control Flow Guard checks on indirect function calls.
+LLVM_ABI FunctionPass *createCFGuardPass();
 
 LLVM_ABI bool isCFGuardCall(const CallBase *CB);
 LLVM_ABI bool isCFGuardFunction(const GlobalValue *GV);

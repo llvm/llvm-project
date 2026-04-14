@@ -108,4 +108,3 @@ exit:
 ret void
 }
 
-declare double @llvm.fabs.f64(double)

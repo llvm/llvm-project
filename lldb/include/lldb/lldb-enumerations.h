@@ -1446,6 +1446,19 @@ enum DILMode {
   eDILModeFull
 };
 
+/// When the Process plugin can retrieve information
+/// about all binaries loaded in the target process,
+/// or given a list of binary load addresses, this
+/// enum specifies how much information needed from
+/// the Process plugin; there may be performance reasons
+/// to limit the amount of information returned.
+enum BinaryInformationLevel {
+  eBinaryInformationLevelAddrOnly,
+  eBinaryInformationLevelAddrName,
+  eBinaryInformationLevelAddrNameUUID,
+  eBinaryInformationLevelFull
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H

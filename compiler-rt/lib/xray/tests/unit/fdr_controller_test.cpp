@@ -67,7 +67,7 @@ TEST_F(FunctionSequenceTest, DefaultInitFinalizeFlush) {
 
   // Serialize the buffers then test to see we find the expected records.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(
       TraceOrErr,
@@ -91,7 +91,7 @@ TEST_F(FunctionSequenceTest, BoundaryFuncIdEncoding) {
 
   // Serialize the buffers then test to see we find the expected records.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(
       TraceOrErr,
@@ -112,7 +112,7 @@ TEST_F(FunctionSequenceTest, ThresholdsAreEnforced) {
   // Serialize the buffers then test to see we find the *no* records, because
   // the function entry-exit comes under the cycle threshold.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(TraceOrErr, HasValue(IsEmpty()));
 }
@@ -127,7 +127,7 @@ TEST_F(FunctionSequenceTest, ArgsAreHandledAndKept) {
   // Serialize the buffers then test to see we find the function enter arg
   // record with the specified argument.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(
       TraceOrErr,
@@ -151,7 +151,7 @@ TEST_F(FunctionSequenceTest, PreservedCallsHaveCorrectTSC) {
   // Serialize the buffers then test to see if we find the remaining records,
   // because the function entry-exit comes under the cycle threshold.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(
       TraceOrErr,
@@ -175,7 +175,7 @@ TEST_F(FunctionSequenceTest, PreservedCallsSupportLargeDeltas) {
   // Serialize the buffer then test to see if we find the right TSC with a large
   // delta.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(
       TraceOrErr,
@@ -208,7 +208,7 @@ TEST_F(FunctionSequenceTest, RewindingMultipleCalls) {
   // Serialize the buffers then test to see we find that all the calls have been
   // unwound because all of them are under the cycle counter threshold.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(TraceOrErr, HasValue(IsEmpty()));
 }
@@ -242,7 +242,7 @@ TEST_F(FunctionSequenceTest, RewindingIntermediaryTailExits) {
   // Serialize the buffers then test to see we find that all the calls have been
   // unwound because all of them are under the cycle counter threshold.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(TraceOrErr, HasValue(IsEmpty()));
 }
@@ -280,7 +280,7 @@ TEST_F(FunctionSequenceTest, RewindingAfterMigration) {
   // Serialize buffers then test that we can find all the events that span the
   // CPU migration.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(
       TraceOrErr,
@@ -326,7 +326,7 @@ TEST_F(BufferManagementTest, HandlesOverflow) {
   ASSERT_THAT(BQ->finalize(), Eq(BufferQueue::ErrorCode::Ok));
 
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(TraceOrErr, HasValue(SizeIs(kBuffers * 2)));
 }
@@ -343,7 +343,7 @@ TEST_F(BufferManagementTest, HandlesOverflowWithArgs) {
   ASSERT_THAT(BQ->finalize(), Eq(BufferQueue::ErrorCode::Ok));
 
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(TraceOrErr, HasValue(SizeIs(kBuffers)));
 }
@@ -361,7 +361,7 @@ TEST_F(BufferManagementTest, HandlesOverflowWithCustomEvents) {
   ASSERT_THAT(BQ->finalize(), Eq(BufferQueue::ErrorCode::Ok));
 
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
 
   // We expect to also now count the kBuffers/2 custom event records showing up
@@ -389,7 +389,7 @@ TEST_F(BufferManagementTest, HandlesFinalizedBufferQueue) {
   // We expect that we'll only be able to find the function enter event, but not
   // the function exit event.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(
       TraceOrErr, HasValue(ElementsAre(AllOf(
@@ -412,7 +412,7 @@ TEST_F(BufferManagementTest, HandlesGenerationalBufferQueue) {
   // not the function enter event, since we only have information about the new
   // generation of the buffers.
   std::string Serialized = serialize(*BQ, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(
       TraceOrErr, HasValue(ElementsAre(AllOf(

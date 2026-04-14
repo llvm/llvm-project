@@ -38,7 +38,7 @@ define void @block_with_dead_inst_1(ptr %src, i64 %N) #0 {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %cond.end7, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %xor1315 = phi i16 [ 1, %entry ], [ %xor, %loop.latch ]
   %xor = xor i16 0, 0
@@ -92,7 +92,7 @@ define void @block_with_dead_inst_2(ptr %src) #0 {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %cond.end7, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %xor1315 = phi i16 [ 0, %entry ], [ %xor, %loop.latch ]
   %xor = xor i16 0, 0
@@ -146,7 +146,7 @@ define void @multiple_blocks_with_dead_insts_3(ptr %src) #0 {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %cond.end7, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %xor1315 = phi i16 [ 0, %entry ], [ %xor, %loop.latch ]
   %xor = xor i16 0, 0
@@ -207,7 +207,7 @@ define void @multiple_blocks_with_dead_insts_4(ptr %src, i64 %N) #0 {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %cond.end7, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %xor1315 = phi i16 [ 1, %entry ], [ %xor, %loop.latch ]
   %xor = xor i16 0, 0
@@ -268,7 +268,7 @@ define void @multiple_blocks_with_dead_inst_multiple_successors_5(ptr %src) #0 {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %cond.end7, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %xor1315 = phi i16 [ 1, %entry ], [ %xor, %loop.latch ]
   %xor = xor i16 0, 0
@@ -335,7 +335,7 @@ define void @multiple_blocks_with_dead_inst_multiple_successors_6(ptr %src, i1 %
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %cond.end7, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %xor1315 = phi i16 [ 1, %entry ], [ %xor, %loop.latch ]
   %xor = xor i16 0, 0
@@ -397,7 +397,7 @@ define void @empty_block_with_phi_1(ptr %src, i64 %N) #0 {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %cond.end7, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %xor1315 = phi i32 [ 1, %entry ], [ %xor, %loop.latch ]
   %xor = xor i32 0, 0
@@ -449,7 +449,7 @@ define void @empty_block_with_phi_2(ptr %src, i64 %N) #0 {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %cond.end7, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %xor1315 = phi i32 [ 1, %entry ], [ %xor, %loop.latch ]
   %xor = xor i32 0, 0

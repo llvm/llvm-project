@@ -9,6 +9,8 @@
 // TODO(yln): temporary failing due to refactoring
 // UNSUPPORTED: ubsan
 
+// XFAIL: tysan
+
 #include <sanitizer/common_interface_defs.h>
 
 static inline void FooBarBaz() {

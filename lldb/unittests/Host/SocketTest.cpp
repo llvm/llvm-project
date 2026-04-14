@@ -45,20 +45,23 @@ TEST_F(SocketTest, DecodeHostAndPort) {
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("google.com:65536"),
       llvm::FailedWithMessage(
-          "invalid host:port specification: 'google.com:65536'"));
+          "invalid host:port specification: 'google.com:65536', both IPv4 "
+          "(e.g., localhost:8080) or IPv6 (e.g, [2001:db8::1]:8080) formats "
+          "are supported"));
 
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("google.com:-1138"),
       llvm::FailedWithMessage(
-          "invalid host:port specification: 'google.com:-1138'"));
+          "invalid host:port specification: 'google.com:-1138', both IPv4 "
+          "(e.g., localhost:8080) or IPv6 (e.g, [2001:db8::1]:8080) formats "
+          "are supported"));
 
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("google.com:65536"),
       llvm::FailedWithMessage(
-          "invalid host:port specification: 'google.com:65536'"));
-
-  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("12345"),
-                       llvm::HasValue(Socket::HostAndPort{"", 12345}));
+          "invalid host:port specification: 'google.com:65536', both IPv4 "
+          "(e.g., localhost:8080) or IPv6 (e.g, [2001:db8::1]:8080) formats "
+          "are supported"));
 
   EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("*:0"),
                        llvm::HasValue(Socket::HostAndPort{"*", 0}));

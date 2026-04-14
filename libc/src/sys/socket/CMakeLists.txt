@@ -10,6 +10,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  accept
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.accept
+)
+
+add_entrypoint_object(
   bind
   ALIAS
   DEPENDS
@@ -21,6 +28,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.connect
+)
+
+add_entrypoint_object(
+  listen
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.listen
 )
 
 add_entrypoint_object(

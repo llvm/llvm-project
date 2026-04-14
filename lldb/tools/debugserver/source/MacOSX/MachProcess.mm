@@ -953,7 +953,7 @@ bool MachProcess::GetMachOInformationFromMemory(
 // with all the details we want to send to lldb.
 JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     const std::vector<struct binary_image_information> &image_infos,
-    bool report_load_commands) {
+    DNBBinaryInformationLevel info_level) {
 
   JSONGenerator::ArraySP image_infos_array_sp(new JSONGenerator::Array());
 
@@ -963,19 +963,20 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     // If we should report the Mach-O header and load commands,
     // and those were unreadable, don't report anything about this
     // binary.
-    if (report_load_commands && !image_infos[i].is_valid_mach_header)
+    if (info_level == eBinaryInformationLevelFull &&
+        !image_infos[i].is_valid_mach_header)
       continue;
     JSONGenerator::DictionarySP image_info_dict_sp(
         new JSONGenerator::Dictionary());
     image_info_dict_sp->AddIntegerItem("load_address",
                                        image_infos[i].load_address);
-    // TODO: lldb currently rejects a response without this, but it
-    // is always zero from dyld.  It can be removed once we've had time
-    // for lldb's that require it to be present are obsolete.
-    image_info_dict_sp->AddIntegerItem("mod_date", 0);
-    image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
+    if (info_level == eBinaryInformationLevelAddrOnly) {
+      image_infos_array_sp->AddItem(image_info_dict_sp);
+      continue;
+    }
 
-    if (!report_load_commands) {
+    image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
+    if (info_level == eBinaryInformationLevelAddrName) {
       image_infos_array_sp->AddItem(image_info_dict_sp);
       continue;
     }
@@ -983,6 +984,10 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     uuid_string_t uuidstr;
     uuid_unparse_upper(image_infos[i].macho_info.uuid, uuidstr);
     image_info_dict_sp->AddStringItem("uuid", uuidstr);
+    if (info_level == eBinaryInformationLevelAddrNameUUID) {
+      image_infos_array_sp->AddItem(image_info_dict_sp);
+      continue;
+    }
 
     if (!image_infos[i].macho_info.min_version_os_name.empty() &&
         !image_infos[i].macho_info.min_version_os_version.empty()) {
@@ -1119,12 +1124,12 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
 // macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP
 MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
-                                        bool report_load_commands) {
+                                        DNBBinaryInformationLevel info_level) {
 
   int pointer_size = GetInferiorAddrSize(pid);
   std::vector<struct binary_image_information> image_infos;
   GetAllLoadedBinariesViaDYLDSPI(image_infos);
-  if (report_load_commands) {
+  if (info_level == eBinaryInformationLevelFull) {
     uint32_t platform = GetPlatform();
     const size_t image_count = image_infos.size();
     for (size_t i = 0; i < image_count; i++) {
@@ -1135,7 +1140,7 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
       }
     }
   }
-  return FormatDynamicLibrariesIntoJSON(image_infos, report_load_commands);
+  return FormatDynamicLibrariesIntoJSON(image_infos, info_level);
 }
 
 std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
@@ -1159,7 +1164,8 @@ MachProcess::GetMainBinaryCPUTypes(nub_process_t pid) {
 // using the
 // dyld SPIs that exist in macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
-    nub_process_t pid, std::vector<uint64_t> &macho_addresses) {
+    nub_process_t pid, DNBBinaryInformationLevel info_level,
+    std::vector<uint64_t> &macho_addresses) {
 
   int pointer_size = GetInferiorAddrSize(pid);
 
@@ -1202,8 +1208,7 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
         image_infos[i].is_valid_mach_header = true;
       }
     }
-    return FormatDynamicLibrariesIntoJSON(image_infos,
-                                          /* report_load_commands =  */ true);
+    return FormatDynamicLibrariesIntoJSON(image_infos, info_level);
 }
 
 bool MachProcess::GetDebugserverSharedCacheInfo(

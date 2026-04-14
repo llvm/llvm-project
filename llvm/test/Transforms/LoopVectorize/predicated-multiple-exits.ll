@@ -851,4 +851,3 @@ loop.end:
   ret i32 %retval
 }
 
-declare void @llvm.trap()

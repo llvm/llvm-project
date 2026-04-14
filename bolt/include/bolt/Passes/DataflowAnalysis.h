@@ -404,10 +404,12 @@ public:
       // Propagate information from first instruction down to the last one
       StateTy *PrevState = &St;
       const MCInst *LAST = nullptr;
-      if (!Backward)
-        LAST = &*BB->rbegin();
-      else
-        LAST = &*BB->begin();
+      if (!BB->empty()) {
+        if (!Backward)
+          LAST = &*BB->rbegin();
+        else
+          LAST = &*BB->begin();
+      }
 
       auto doNext = [&](MCInst &Inst, const BinaryBasicBlock &BB) {
         StateTy CurState = derived().computeNext(Inst, *PrevState);

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Boolean.h"
+#include "Char.h"
 #include "Context.h"
 #include "EvaluationResult.h"
 #include "FixedPoint.h"
@@ -149,7 +150,14 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
   }
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_GREEN, true});
-    OS << getName() << " " << (const void *)this << "\n";
+    if (const FunctionDecl *FD = getDecl()) {
+      FD->getNameForDiagnostic(
+          OS, P.getContext().getASTContext().getPrintingPolicy(),
+          /*Qualified=*/true);
+    } else {
+      OS << getName();
+    }
+    OS << " " << (const void *)this << "\n";
   }
   OS << "frame size: " << getFrameSize() << "\n";
   OS << "arg size:   " << getArgSize() << "\n";

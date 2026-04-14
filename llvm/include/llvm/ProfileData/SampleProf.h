@@ -1227,8 +1227,12 @@ public:
 
   static StringRef getCanonicalCoroFnName(StringRef FnName,
                                           StringRef Attr = "selected") {
+    // A local coroutine function from another CU can be promoted to a global
+    // function during ThinLTO import. This will create a linkage name like
+    // "_Zfoo.llvm.xxxx.cleanup". Remove the ".llvm." suffix after stripping all
+    // the coroutine suffixes to avoid pseudo probe mismatch.
     const SmallVector<StringRef, 3> CoroSuffixes{".cleanup", ".destroy",
-                                                 ".resume"};
+                                                 ".resume", LLVMSuffix};
     return getCanonicalFnName(FnName, CoroSuffixes, Attr);
   }
 

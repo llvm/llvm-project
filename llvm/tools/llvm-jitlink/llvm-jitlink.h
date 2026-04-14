@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/LazyObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
+#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
@@ -60,14 +61,16 @@ struct Session {
 
   struct LazyLinkingSupport {
     LazyLinkingSupport(
+        std::unique_ptr<orc::MemoryAccess> MemAccess,
         std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
         std::shared_ptr<orc::SimpleLazyReexportsSpeculator> Speculator,
         std::unique_ptr<orc::LazyReexportsManager> LRMgr,
         orc::ObjectLinkingLayer &ObjLinkingLayer)
-        : RSMgr(std::move(RSMgr)), Speculator(std::move(Speculator)),
-          LRMgr(std::move(LRMgr)),
+        : MemAccess(std::move(MemAccess)), RSMgr(std::move(RSMgr)),
+          Speculator(std::move(Speculator)), LRMgr(std::move(LRMgr)),
           LazyObjLinkingLayer(ObjLinkingLayer, *this->LRMgr) {}
 
+    std::unique_ptr<orc::MemoryAccess> MemAccess;
     std::unique_ptr<orc::RedirectableSymbolManager> RSMgr;
     std::shared_ptr<orc::SimpleLazyReexportsSpeculator> Speculator;
     std::unique_ptr<orc::LazyReexportsManager> LRMgr;

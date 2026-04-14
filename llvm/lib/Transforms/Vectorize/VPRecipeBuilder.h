@@ -52,11 +52,6 @@ class VPRecipeBuilder {
   /// Range. The function should not be called for memory instructions or calls.
   bool shouldWiden(Instruction *I, VFRange &Range) const;
 
-  /// Check if the load or store instruction \p VPI should widened for \p
-  /// Range.Start and potentially masked. Such instructions are handled by a
-  /// recipe that takes an additional VPInstruction for the mask.
-  VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
-
   /// Optimize the special case where the operand of \p VPI is a constant
   /// integer induction variable.
   VPWidenIntOrFpInductionRecipe *
@@ -72,13 +67,6 @@ class VPRecipeBuilder {
   /// cost-model indicates that widening should be performed.
   VPWidenRecipe *tryToWiden(VPInstruction *VPI);
 
-  /// Makes Histogram count operations safe for vectorization, by emitting a
-  /// llvm.experimental.vector.histogram.add intrinsic in place of the
-  /// Load + Add|Sub + Store operations that perform the histogram in the
-  /// original scalar loop.
-  VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
-                                         VPInstruction *VPI);
-
 public:
   VPRecipeBuilder(VPlan &Plan, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
@@ -89,6 +77,26 @@ public:
   /// created within the given VF \p Range.
   VPRecipeBase *tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                                              VFRange &Range);
+
+  /// Check if the load or store instruction \p VPI should widened for \p
+  /// Range.Start and potentially masked. Such instructions are handled by a
+  /// recipe that takes an additional VPInstruction for the mask.
+  VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
+
+  /// If \p VPI represents a histogram operation (as determined by
+  /// LoopVectorizationLegality) make that safe for vectorization, by emitting a
+  /// llvm.experimental.vector.histogram.add intrinsic in place of the Load +
+  /// Add|Sub + Store operations that perform the histogram in the original
+  /// scalar loop.
+  VPHistogramRecipe *widenIfHistogram(VPInstruction *VPI);
+
+  /// If \p VPI is a store of a reduction into an invariant address, delete it.
+  /// If it is the final store of a reduction result, a uniform store recipe
+  /// will be created for it in the middle block. Returns `true` if replacement
+  /// took place. The order of stores must be preserved, hence \p
+  /// FinalRedStoresBuidler.
+  bool replaceWithFinalIfReductionStore(VPInstruction *VPI,
+                                        VPBuilder &FinalRedStoresBuilder);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {

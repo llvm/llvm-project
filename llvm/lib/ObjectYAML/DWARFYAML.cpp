@@ -256,6 +256,12 @@ void MappingTraits<DWARFYAML::File>::mapping(IO &IO, DWARFYAML::File &File) {
   IO.mapRequired("Length", File.Length);
 }
 
+void MappingTraits<DWARFYAML::LnctForm>::mapping(
+    IO &IO, DWARFYAML::LnctForm &LnctForm) {
+  IO.mapRequired("ContentType", LnctForm.ContentType);
+  IO.mapRequired("Form", LnctForm.Form);
+}
+
 void MappingTraits<DWARFYAML::LineTableOpcode>::mapping(
     IO &IO, DWARFYAML::LineTableOpcode &LineTableOpcode) {
   IO.mapRequired("Opcode", LineTableOpcode.Opcode);
@@ -280,6 +286,10 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapOptional("Format", LineTable.Format, dwarf::DWARF32);
   IO.mapOptional("Length", LineTable.Length);
   IO.mapRequired("Version", LineTable.Version);
+  if (LineTable.Version >= 5) {
+    IO.mapRequired("AddressSize", LineTable.AddressSize);
+    IO.mapOptional("SegmentSelectorSize", LineTable.SegmentSelectorSize, 0);
+  }
   IO.mapOptional("PrologueLength", LineTable.PrologueLength);
   IO.mapRequired("MinInstLength", LineTable.MinInstLength);
   if(LineTable.Version >= 4)
@@ -289,8 +299,22 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapRequired("LineRange", LineTable.LineRange);
   IO.mapOptional("OpcodeBase", LineTable.OpcodeBase);
   IO.mapOptional("StandardOpcodeLengths", LineTable.StandardOpcodeLengths);
-  IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
-  IO.mapOptional("Files", LineTable.Files);
+  if (LineTable.Version >= 5) {
+    IO.mapRequired("DirectoryEntryFormat", LineTable.DirectoryEntryFormat);
+    IO.mapOptional("DirectoryEntryFormatCount",
+                   LineTable.DirectoryEntryFormatCount,
+                   LineTable.DirectoryEntryFormat.size());
+
+    IO.mapRequired("FileNameEntryFormat", LineTable.FileNameEntryFormat);
+    IO.mapOptional("FileNameEntryFormatCount",
+                   LineTable.FileNameEntryFormatCount,
+                   LineTable.FileNameEntryFormat.size());
+
+    // TODO: Add support for directory and file entries.
+  } else {
+    IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
+    IO.mapOptional("Files", LineTable.Files);
+  }
   IO.mapOptional("Opcodes", LineTable.Opcodes);
 }
 

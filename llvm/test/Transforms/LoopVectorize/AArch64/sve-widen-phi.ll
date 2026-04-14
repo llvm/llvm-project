@@ -89,7 +89,7 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %ptr.014 = phi ptr [ %incdec.ptr1, %for.body ], [ %c, %entry ]
   %i.013 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %incdec.ptr = getelementptr inbounds i32, ptr %ptr.014, i64 1
@@ -106,7 +106,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                                 ; preds = %for.body
+for.exit:
   ret void
 }
 
@@ -183,7 +183,7 @@ define void @widen_2ptrs_phi_unrolled(ptr noalias nocapture %dst, ptr noalias no
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %S.010 = phi ptr [ %incdec.ptr1, %for.body ], [ %src, %entry ]
   %D.09 = phi ptr [ %incdec.ptr, %for.body ], [ %dst, %entry ]
@@ -196,7 +196,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 }
 
@@ -331,23 +331,23 @@ define void @phi_used_in_vector_compare_and_scalar_indvar_update_and_store(ptr %
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %if.end, %entry
+for.body:
   %iv = phi i64 [ %inc, %if.end ], [ 0, %entry ]
   %iv.ptr = phi ptr [ %incdec.iv.ptr, %if.end ], [ %ptr, %entry ]
   %cmp.i = icmp ne ptr %iv.ptr, null
   br i1 %cmp.i, label %if.end.sink.split, label %if.end
 
-if.end.sink.split:                             ; preds = %for.body
+if.end.sink.split:
   store i16 0, ptr %iv.ptr, align 2
   br label %if.end
 
-if.end:                                        ; preds = %if.end.sink.split, %for.body
+if.end:
   %incdec.iv.ptr = getelementptr inbounds i16, ptr %iv.ptr, i64 1
   %inc = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp ult i64 %inc, 1024
   br i1 %exitcond.not, label %for.body, label %for.end, !llvm.loop !6
 
-for.end:                            ; preds = %if.end, %for.end
+for.end:
   %iv.ptr.1.lcssa = phi ptr [ %incdec.iv.ptr, %if.end ]
   ret void
 }

@@ -766,7 +766,7 @@ protected:
       if (m_options.m_step_count > 1) {
         if (!new_plan_sp->SetIterationCount(m_options.m_step_count)) {
           result.AppendWarning(
-              "step operation does not support iteration count.");
+              "step operation does not support iteration count");
         }
       }
 
@@ -1722,7 +1722,7 @@ protected:
     // "thread return -- -5".
     if (command.starts_with("-x")) {
       if (command.size() != 2U)
-        result.AppendWarning("Return values ignored when returning from user "
+        result.AppendWarning("return values ignored when returning from user "
                              "called expressions");
 
       Thread *thread = m_exe_ctx.GetThreadPtr();

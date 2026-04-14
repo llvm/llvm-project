@@ -46,7 +46,7 @@ RESOURCE<float> Buffer;
 
 #endif
 
-// CHECK: ClassTemplateDecl {{.*}} implicit [[RESOURCE]]
+// CHECK: ClassTemplateDecl {{.*}} implicit referenced [[RESOURCE]]
 // CHECK-NEXT: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 element_type
 // CHECK-NEXT: ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}}  '__is_typed_resource_element_compatible'
 // CHECK-NEXT: ImplicitConceptSpecializationDecl

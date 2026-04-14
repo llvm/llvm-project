@@ -201,8 +201,8 @@ multiclass SICommonWriteRes {
   def : HWWriteRes<Write16PassMAI, [HWXDL], 16>;
 
   let NumMicroOps = 0 in {
-  def : HWWriteRes<WriteVALUDummy, [HWVALU],  0>;
-  def : HWWriteRes<WriteSALUDummy, [HWSALU],  0>;
+  def : HWWriteRes<WriteVALUDummy, [HWVALU],  1>;
+  def : HWWriteRes<WriteSALUDummy, [HWSALU],  1>;
   }
 
   def : UnsupportedWriteRes<WriteSFPU>;
@@ -413,8 +413,8 @@ def : UnsupportedWriteRes<WriteSFPU>;
 def : UnsupportedWriteRes<WritePseudoScalarTrans>;
 
 let NumMicroOps = 0 in {
-def : HWWriteRes<WriteVALUDummy, [HWVALU],  0>;
-def : HWWriteRes<WriteSALUDummy, [HWSALU],  0>;
+def : HWWriteRes<WriteVALUDummy, [HWVALU],  5>;
+def : HWWriteRes<WriteSALUDummy, [HWSALU],  2>;
 }
 
 } // End RetireOOO = 1
@@ -455,8 +455,8 @@ def : UnsupportedWriteRes<WritePseudoScalarTrans>;
 def : InstRW<[WriteCopy], (instrs COPY)>;
 
 let NumMicroOps = 0 in {
-def : HWWriteRes<WriteVALUDummy, [HWVALU],  0>;
-def : HWWriteRes<WriteSALUDummy, [HWSALU],  0>;
+def : HWWriteRes<WriteVALUDummy, [HWVALU],  5>;
+def : HWWriteRes<WriteSALUDummy, [HWSALU],  2>;
 }
 
 }  // End SchedModel = GFX11SpeedModel
@@ -488,8 +488,8 @@ def : HWWriteRes<WriteBarrier,           [HWBranch],       2000>;
 def : InstRW<[WriteCopy], (instrs COPY)>;
 
 let NumMicroOps = 0 in {
-def : HWWriteRes<WriteVALUDummy, [HWVALU],  0>;
-def : HWWriteRes<WriteSALUDummy, [HWSALU],  0>;
+def : HWWriteRes<WriteVALUDummy, [HWVALU],  5>;
+def : HWWriteRes<WriteSALUDummy, [HWSALU],  2>;
 }
 
 }  // End SchedModel = GFX12SpeedModel
@@ -544,8 +544,8 @@ def : InstRW<[Write4PassWMMA],    (instregex "^V_WMMA_F32_16X16X4_F32_w32")>;
 def : InstRW<[WriteXDL2PassWMMA], (instregex "^V_WMMA.*_F32_32X16X128_F4")>;
 
 let NumMicroOps = 0 in {
-def : HWWriteRes<WriteVALUDummy, [HWVALU],  0>;
-def : HWWriteRes<WriteSALUDummy, [HWSALU],  0>;
+def : HWWriteRes<WriteVALUDummy, [HWVALU],  5>;
+def : HWWriteRes<WriteSALUDummy, [HWSALU],  2>;
 }
 
 } // End GFX125xCommonWriteRes

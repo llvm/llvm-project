@@ -1,0 +1,12 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s
+
+program t
+real :: a(10000)
+!$cuf kernel do(1) <<<100,100>>>
+do concurrent (i = 1:10000)
+  a(i) = a(i) + 1.0
+end do
+print *,sum(a)
+end
+
+! CHECK: cuf.kernel

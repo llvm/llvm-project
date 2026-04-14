@@ -91,7 +91,7 @@ defvar NumericTypesNoDbl = [Int16Ty, UInt16Ty, HalfTy, IntTy, UIntTy,
 // These classes are usable in both argument and return type positions.
 //===----------------------------------------------------------------------===//
 
-// The varying type — expanded per VaryingTypes.
+// The varying type - expanded per VaryingTypes.
 // As an argument: the arg type varies with each overload.
 // As a return type: returns the same type as the varying arg.
 def Varying : HLSLArgType, HLSLReturnType;
@@ -210,7 +210,7 @@ class HLSLBuiltin<string name, string builtin = ""> {
   // Whether the function has the convergent attribute
   bit IsConvergent = 0;
 
-  // Argument element types — drives overload expansion.
+  // Argument element types - drives overload expansion.
   // One overload set is generated per type (scalar + vectors + matrices).
   // Only used when Args contains Varying entries.
   list<HLSLType> VaryingTypes = [];
@@ -324,14 +324,14 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
   let VaryingMatDims = [];
 }
 
-// Unsigned abs is a constexpr identity — unsigned values are already non-negative.
+// Unsigned abs is a constexpr identity - unsigned values are already non-negative.
 def hlsl_abs_unsigned : HLSLOneArgInlineBuiltin<"abs"> {
   let Doc = [{
 \fn T abs(T Val)
 \brief Returns the absolute value of the input value, \a Val.
 \param Val The input value.
 
-Unsigned overload — unsigned values are already non-negative, so this
+Unsigned overload - unsigned values are already non-negative, so this
 function returns its input unchanged.
 }];
   let ParamNames = ["V"];
