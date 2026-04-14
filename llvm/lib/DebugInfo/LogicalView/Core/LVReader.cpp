@@ -81,8 +81,8 @@ bool checkIntegrityScopesTree(LVScope *Root) {
 
     std::string RootName(Root->getName());
     dbgs() << formatv("{0}\n", fmt_repeat('=', 72));
-    dbgs() << formatv("Root: '{0}'\nDuplicated elements: {1}\n",
-                      RootName, Duplicate.size());
+    dbgs() << formatv("Root: '{0}'\nDuplicated elements: {1}\n", RootName,
+                      Duplicate.size());
     dbgs() << formatv("{0}\n", fmt_repeat('=', 72));
 
     unsigned Index = 0;
