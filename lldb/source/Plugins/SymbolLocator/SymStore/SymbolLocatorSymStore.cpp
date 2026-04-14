@@ -154,11 +154,11 @@ ParseSrvEntry(llvm::StringRef entry) {
   case 2:
     return MakeLookupEntry(parts[1]);
   case 3: {
-    if (llvm::sys::path::is_absolute(parts[1]))
-      return MakeLookupEntry(parts[2], parts[1]);
-    // Fall back to LLDB's default cache for empty and invalid cache values.
-    return MakeLookupEntry(parts[2],
-                           SymbolLocatorSymStore::GetDefaultCachePath());
+    // Fall back to LLDB's default cache for empty values.
+    if (parts[1].empty())
+      return MakeLookupEntry(parts[2],
+                             SymbolLocatorSymStore::GetDefaultCachePath());
+    return MakeLookupEntry(parts[2], parts[1]);
   }
   default:
     return {}; // Ignore entries with invalid number of parts.
@@ -178,8 +178,8 @@ std::optional<std::string> ParseCacheEntry(llvm::StringRef entry) {
   if (parts.size() == 2)
     value = parts.back();
 
-  // Fall back to LLDB's default cache for empty and invalid values.
-  if (!llvm::sys::path::is_absolute(value))
+  // Fall back to LLDB's default cache for empty values.
+  if (value.empty())
     return SymbolLocatorSymStore::GetDefaultCachePath();
 
   return value.str();
@@ -229,7 +229,7 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
     return {};
   }
 
-  // Download into a temporary file. Cache coming soon.
+  // Download into a temporary file.
   llvm::SmallString<128> tmp_file;
   constexpr bool erase_on_reboot = true;
   path::system_temp_directory(erase_on_reboot, tmp_file);
@@ -343,29 +343,25 @@ LocateSymStoreEntry(const SymbolLocatorSymStore::LookupEntry &entry,
 
   llvm::StringRef url = entry.source;
   if (url.starts_with("http://") || url.starts_with("https://")) {
+    // Always fall back LLDB default cache. After all, once the files have been
+    // successfully downloaded, we want to save them somewhere.
+    std::string cache_path = GetGlobalPluginProperties().GetCachePath();
+
+    // Override, if the entry has a valid cache path.
+    if (entry.cache && llvm::sys::path::is_absolute(*entry.cache))
+      cache_path = *entry.cache;
+
     // Check cache first.
-    if (entry.cache) {
-      if (auto spec = FindFileInLocalSymStore(*entry.cache, key, pdb_name)) {
-        LLDB_LOG_VERBOSE(log, "Found {0} in SymStore cache {1}", pdb_name,
-                         *entry.cache);
-        return *spec;
-      }
-    } else {
-      // Check LLDB default cache to avoid duplicate downloads in the same
-      // session.
-      if (auto spec = FindFileInLocalSymStore(default_cache, key, pdb_name)) {
-        LLDB_LOG_VERBOSE(log, "Found {0} in SymStore cache {1}", pdb_name,
-                         default_cache);
-        return *spec;
-      }
+    if (auto spec = FindFileInLocalSymStore(cache_path, key, pdb_name)) {
+      LLDB_LOG(log, "Found {0} in SymStore cache {1}", pdb_name, cache_path);
+      return *spec;
     }
 
     // Download and move to cache.
     if (auto spec = RequestFileFromSymStoreServerHTTP(url, key, pdb_name)) {
-      LLDB_LOG_VERBOSE(log, "Downloaded {0} from SymStore {1}", pdb_name, url);
-      std::string cache = entry.cache.value_or(default_cache);
-      spec = MoveToLocalSymStore(cache, key, pdb_name, *spec);
-      LLDB_LOG_VERBOSE(log, "Added {0} to SymStore cache {1}", pdb_name, cache);
+      LLDB_LOG(log, "Downloaded {0} from SymStore {1}", pdb_name, url);
+      spec = MoveToLocalSymStore(cache_path, key, pdb_name, *spec);
+      LLDB_LOG(log, "Added {0} to SymStore cache {1}", pdb_name, cache_path);
       return *spec;
     }
 
