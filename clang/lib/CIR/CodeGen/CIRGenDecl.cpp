@@ -1007,6 +1007,23 @@ void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
   pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
 }
 
+void CIRGenFunction::pushDestroyAndDeferDeactivation(
+    QualType::DestructionKind dtorKind, Address addr, QualType type) {
+  assert(dtorKind && "cannot push destructor for trivial type");
+
+  CleanupKind cleanupKind = getCleanupKind(dtorKind);
+  pushDestroyAndDeferDeactivation(
+      cleanupKind, addr, type, getDestroyer(dtorKind), cleanupKind & EHCleanup);
+}
+
+void CIRGenFunction::pushDestroyAndDeferDeactivation(
+    CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
+    bool useEHCleanupForArray) {
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
+  pushCleanupAndDeferDeactivation<DestroyObject>(cleanupKind, addr, type,
+                                                 destroyer);
+}
+
 void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
                                                  Address addr, QualType type,
                                                  Destroyer *destroyer,
@@ -1018,10 +1035,9 @@ void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
 
   // Classic codegen also uses pushDestroyAndDeferDeactivation here to push an
   // EH cleanup that protects the temporary during the rest of the full
-  // expression, then deactivates it when the full expression ends. We don't
-  // have deferred deactivation yet, so we only queue the lifetime-extended
-  // cleanup below. When deferred deactivation is implemented, add the
-  // pushDestroyAndDeferDeactivation call here.
+  // expression, then deactivates it when the full expression ends. Deferred
+  // deactivation is being implemented now, but it wasn't when this code was
+  // implemented. This will be updated in a separate change.
   if (getLangOpts().Exceptions) {
     cgm.errorNYI("lifetime-extended cleanup with exceptions enabled");
     return;

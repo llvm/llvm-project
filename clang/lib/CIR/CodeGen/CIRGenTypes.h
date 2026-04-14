@@ -29,6 +29,7 @@ class ASTContext;
 class FunctionType;
 class GlobalDecl;
 class QualType;
+class TargetInfo;
 class Type;
 } // namespace clang
 
@@ -131,6 +132,11 @@ public:
   cir::FuncType getFunctionType(const CIRGenFunctionInfo &info);
 
   cir::FuncType getFunctionType(clang::GlobalDecl gd);
+
+  /// Determine if a C++ inheriting constructor should have parameters matching
+  /// those of its inherited constructor.
+  bool inheritingCtorHasParams(const InheritedConstructor &inherited,
+                               CXXCtorType type);
 
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue

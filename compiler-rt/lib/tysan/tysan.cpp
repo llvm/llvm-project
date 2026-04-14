@@ -265,33 +265,33 @@ static void SetShadowType(tysan_type_descriptor *td,
                           tysan_type_descriptor **shadowData,
                           uint64_t AccessSize) {
   *shadowData = td;
-  uint64_t shadowDataInt = (uint64_t)shadowData;
+  uptr shadowDataInt = (uptr)shadowData;
 
   for (uint64_t i = 1; i < AccessSize; ++i) {
-    int64_t dataOffset = i << PtrShift();
-    int64_t *badShadowData = (int64_t *)(shadowDataInt + dataOffset);
-    int64_t badTD = int64_t(i) * -1;
+    uptr dataOffset = i << PtrShift();
+    sptr *badShadowData = (sptr *)(shadowDataInt + dataOffset);
+    sptr badTD = sptr(i) * -1;
     *badShadowData = badTD;
   }
 }
 
 ALWAYS_INLINE
-static bool GetNotAllBadTD(uint64_t ShadowDataInt, uint64_t AccessSize) {
+static bool GetNotAllBadTD(uptr ShadowDataInt, uint64_t AccessSize) {
   bool notAllBadTD = false;
   for (uint64_t i = 1; i < AccessSize; ++i) {
-    int64_t **unkShadowData = (int64_t **)(ShadowDataInt + (i << PtrShift()));
-    int64_t *ILdTD = *unkShadowData;
+    sptr **unkShadowData = (sptr **)(ShadowDataInt + (i << PtrShift()));
+    sptr *ILdTD = *unkShadowData;
     notAllBadTD = notAllBadTD || (ILdTD != nullptr);
   }
   return notAllBadTD;
 }
 
 ALWAYS_INLINE
-static bool GetNotAllUnkTD(uint64_t ShadowDataInt, uint64_t AccessSize) {
+static bool GetNotAllUnkTD(uptr ShadowDataInt, uint64_t AccessSize) {
   bool notAllBadTD = false;
   for (uint64_t i = 1; i < AccessSize; ++i) {
-    int64_t *badShadowData = (int64_t *)(ShadowDataInt + (i << PtrShift()));
-    int64_t ILdTD = *badShadowData;
+    sptr *badShadowData = (sptr *)(ShadowDataInt + (i << PtrShift()));
+    sptr ILdTD = *badShadowData;
     notAllBadTD = notAllBadTD || (ILdTD >= 0);
   }
   return notAllBadTD;
@@ -307,9 +307,8 @@ __tysan_instrument_mem_inst(char *dest, char *src, uint64_t size,
     return;
   }
 
-  uint64_t srcInt = (uint64_t)src;
-  uint64_t srcShadowInt = ((srcInt & AppMask()) << PtrShift()) + ShadowAddr();
-  uint64_t *srcShadow = (uint64_t *)srcShadowInt;
+  uptr srcShadowInt = ((((uptr)src) & AppMask()) << PtrShift()) + ShadowAddr();
+  void *srcShadow = (void *)srcShadowInt;
 
   if (needsMemMove) {
     internal_memmove((char *)destShadowDataPtr, srcShadow, size << PtrShift());
@@ -389,7 +388,7 @@ __tysan_instrument_with_shadow_update(void *ptr, tysan_type_descriptor *td,
       if (shadowIsNull) {
         // We're about to set the type. Make sure that all bytes in the value
         // are also of unknown type.
-        bool isAllUnknownTD = GetNotAllUnkTD((uint64_t)shadowData, accessSize);
+        bool isAllUnknownTD = GetNotAllUnkTD((uptr)shadowData, accessSize);
         if (isAllUnknownTD) {
           GET_CALLER_PC_BP_SP;
           __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
@@ -402,7 +401,7 @@ __tysan_instrument_with_shadow_update(void *ptr, tysan_type_descriptor *td,
     } else {
       // We appear to have the right type. Make sure that all other bytes in
       // the type are still marked as interior bytes. If not, call the runtime.
-      bool isNotAllBadTD = GetNotAllBadTD((uint64_t)shadowData, accessSize);
+      bool isNotAllBadTD = GetNotAllBadTD((uptr)shadowData, accessSize);
       if (isNotAllBadTD) {
         GET_CALLER_PC_BP_SP;
         __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
