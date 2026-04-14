@@ -1502,6 +1502,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_s_nop,
                     amdgcn_s_sethalt,
                     amdgcn_s_setprio,
+                    amdgcn_s_setprio_inc_wg,
                     amdgcn_s_sleep,
                     amdgcn_s_ttracedata_imm,
                     amdgcn_s_wait_asynccnt,
@@ -1788,6 +1789,22 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_ds_read_tr16_b64})
       .Any({{DivV4S16}, {{VgprV4S16}, {IntrId, VgprP3}}});
 
+  addRulesForIOpcs({amdgcn_interp_p1}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Imm, Imm, SgprB32_M0}});
+
+  addRulesForIOpcs({amdgcn_interp_p1_f16}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Imm, Imm, Imm, SgprB32_M0}});
+
+  addRulesForIOpcs({amdgcn_interp_p2}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Imm, Imm, SgprB32_M0}});
+
+  addRulesForIOpcs({amdgcn_interp_p2_f16}, Standard)
+      .Div(S16,
+           {{Vgpr16}, {IntrId, Vgpr32, Vgpr32, Imm, Imm, Imm, SgprB32_M0}});
+
+  addRulesForIOpcs({amdgcn_interp_mov}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Imm, Imm, Imm, SgprB32_M0}});
+
   addRulesForIOpcs({amdgcn_interp_inreg_p10, amdgcn_interp_inreg_p2,
                     amdgcn_interp_inreg_p10_f16, amdgcn_interp_p10_rtz_f16},
                    Standard)
@@ -1819,9 +1836,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64, Vcc}, {IntrId, Vgpr64, Vgpr64}})
       .Uni(S64, {{UniInVgprS64, UniInVcc}, {IntrId, Vgpr64, Vgpr64}});
 
-  addRulesForIOpcs({amdgcn_udot2, amdgcn_sdot2}, Standard)
+  addRulesForIOpcs({amdgcn_fdot2, amdgcn_sdot2, amdgcn_udot2}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, VgprV2S16, VgprV2S16, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, VgprV2S16, VgprV2S16, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_fdot2_f16_f16}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, VgprV2S16, VgprV2S16, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {IntrId, VgprV2S16, VgprV2S16, Vgpr16}});
 
   addRulesForIOpcs({amdgcn_sudot4, amdgcn_sudot8}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Imm, Vgpr32, Imm, Vgpr32, Vgpr32}})

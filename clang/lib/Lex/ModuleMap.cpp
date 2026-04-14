@@ -2346,6 +2346,17 @@ bool ModuleMap::parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
     ModuleMapLoader Loader(SourceMgr, Diags, *this, ID, Dir, IsSystem,
                            ImplicitlyDiscovered);
     Result = Loader.parseAndLoadModuleMapFile(*MMF);
+
+    // Also record that this was parsed if it wasn't previously. This is used
+    // for diagnostics.
+    llvm::DenseMap<const FileEntry *,
+                   const modulemap::ModuleMapFile *>::iterator PKnown =
+        ParsedModuleMap.find(File);
+    if (PKnown == ParsedModuleMap.end()) {
+      ParsedModuleMaps.push_back(
+          std::make_unique<modulemap::ModuleMapFile>(std::move(*MMF)));
+      ParsedModuleMap[File] = &*ParsedModuleMaps.back();
+    }
   }
   LoadedModuleMap[File] = Result;
 

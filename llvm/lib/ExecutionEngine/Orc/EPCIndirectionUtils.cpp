@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
 
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <future>
@@ -154,7 +155,7 @@ Error EPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
     }
   }
 
-  auto &MemAccess = EPCIU.getExecutorProcessControl().getMemoryAccess();
+  auto &MemAccess = EPCIU.getMemoryAccess();
   switch (EPCIU.getABISupport().getPointerSize()) {
   case 4: {
     unsigned ASIdx = 0;
@@ -208,7 +209,7 @@ Error EPCIndirectStubsManager::updatePointer(StringRef Name,
     PtrAddr = I->second.first.PointerAddress;
   }
 
-  auto &MemAccess = EPCIU.getExecutorProcessControl().getMemoryAccess();
+  auto &MemAccess = EPCIU.getMemoryAccess();
   switch (EPCIU.getABISupport().getPointerSize()) {
   case 4: {
     tpctypes::UInt32Write PUpdate(PtrAddr, NewAddr.getValue());
@@ -232,7 +233,8 @@ namespace orc {
 EPCIndirectionUtils::ABISupport::~ABISupport() = default;
 
 Expected<std::unique_ptr<EPCIndirectionUtils>>
-EPCIndirectionUtils::Create(ExecutorProcessControl &EPC) {
+EPCIndirectionUtils::Create(ExecutorProcessControl &EPC,
+                            MemoryAccess &MemAccess) {
   const auto &TT = EPC.getTargetTriple();
   switch (TT.getArch()) {
   default:
@@ -241,32 +243,32 @@ EPCIndirectionUtils::Create(ExecutorProcessControl &EPC) {
         inconvertibleErrorCode());
   case Triple::aarch64:
   case Triple::aarch64_32:
-    return CreateWithABI<OrcAArch64>(EPC);
+    return CreateWithABI<OrcAArch64>(EPC, MemAccess);
 
   case Triple::x86:
-    return CreateWithABI<OrcI386>(EPC);
+    return CreateWithABI<OrcI386>(EPC, MemAccess);
 
   case Triple::loongarch64:
-    return CreateWithABI<OrcLoongArch64>(EPC);
+    return CreateWithABI<OrcLoongArch64>(EPC, MemAccess);
 
   case Triple::mips:
-    return CreateWithABI<OrcMips32Be>(EPC);
+    return CreateWithABI<OrcMips32Be>(EPC, MemAccess);
 
   case Triple::mipsel:
-    return CreateWithABI<OrcMips32Le>(EPC);
+    return CreateWithABI<OrcMips32Le>(EPC, MemAccess);
 
   case Triple::mips64:
   case Triple::mips64el:
-    return CreateWithABI<OrcMips64>(EPC);
+    return CreateWithABI<OrcMips64>(EPC, MemAccess);
 
   case Triple::riscv64:
-    return CreateWithABI<OrcRiscv64>(EPC);
+    return CreateWithABI<OrcRiscv64>(EPC, MemAccess);
 
   case Triple::x86_64:
     if (TT.getOS() == Triple::OSType::Win32)
-      return CreateWithABI<OrcX86_64_Win32>(EPC);
+      return CreateWithABI<OrcX86_64_Win32>(EPC, MemAccess);
     else
-      return CreateWithABI<OrcX86_64_SysV>(EPC);
+      return CreateWithABI<OrcX86_64_SysV>(EPC, MemAccess);
   }
 }
 
@@ -337,8 +339,9 @@ LazyCallThroughManager &EPCIndirectionUtils::createLazyCallThroughManager(
 }
 
 EPCIndirectionUtils::EPCIndirectionUtils(ExecutorProcessControl &EPC,
+                                         MemoryAccess &MemAccess,
                                          std::unique_ptr<ABISupport> ABI)
-    : EPC(EPC), ABI(std::move(ABI)) {
+    : EPC(EPC), MemAccess(MemAccess), ABI(std::move(ABI)) {
   assert(this->ABI && "ABI can not be null");
 
   assert(EPC.getPageSize() > getABISupport().getStubSize() &&
