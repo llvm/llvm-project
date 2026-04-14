@@ -262,9 +262,8 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
           GetRanges(FormValue, U);
       if (!RangesOrError) {
         LLVM_DEBUG({
-          std::string TheError(toString(RangesOrError.takeError()));
           dbgs() << formatv("error decoding address ranges = {0}",
-                            TheError.c_str());
+                            fmt_consume(RangesOrError.takeError()));
         });
         consumeError(RangesOrError.takeError());
         break;
