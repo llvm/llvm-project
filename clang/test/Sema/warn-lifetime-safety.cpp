@@ -2973,7 +2973,8 @@ struct S {
   void foo() {
     {
       int num;
-      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}} \
+                       // expected-note {{variable 'p_' aliases the storage of 'num'}}
     }                  // expected-note {{destroyed here}}
     bar();             // expected-note {{later used here}}
     this->p_ = &GLOBAL_INT;
@@ -2992,7 +2993,8 @@ struct T {
   std::string_view v;
   void bar();
   void foo() {
-    v = std::string("tmp"); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+    v = std::string("tmp"); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}} \
+                            // expected-note {{variable 'v' aliases the storage of the temporary}}
     bar();                  // expected-note {{later used here}}
   }
 };
