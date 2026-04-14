@@ -8766,14 +8766,14 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
 }
 
 /// Fold: fabs(uitofp(a) - uitofp(b)) pred C --> a == b
-/// where 'pred' is olt, ult, ogt, ugt, oge or uge and C is a positive, Non-NaN float
-/// when the uitofp casts are exact and C is in the valid range.
+/// where 'pred' is olt, ult, ogt, ugt, oge or uge and C is a positive, Non-NaN
+/// float when the uitofp casts are exact and C is in the valid range.
 ///
 /// Since exact uitofp means distinct integers map to distinct floats, the only
 /// values fabs(uitofp(a) - uitofp(b)) can take are {0.0, 1.0, 2.0, ...}.
 /// There are no values in the open interval (0, 1), so:
 ///   fabs(...) <  C  where 0 < C <= 1.0  -->  a == b  (strict lt: C=1.0 ok)
-//    fabs(..) >= C where C >= 1.0 -> a != b 
+//    fabs(..) >= C where C >= 1.0 -> a != b
 ///
 /// The same logic applies to sitofp.
 static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
@@ -8788,7 +8788,7 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
   FCmpInst::Predicate Pred = I.getPredicate();
   bool IsStrictLt = Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT;
   bool IsStrictGt = Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT;
-  bool IsGe       = Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE;
+  bool IsGe = Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE;
   if (!IsStrictLt && !IsStrictGt && !IsGe)
     return nullptr;
 
@@ -8833,7 +8833,7 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
     return nullptr;
 
   ICmpInst::Predicate ResultPred =
-    (IsStrictLt) ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+      (IsStrictLt) ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
   return new ICmpInst(ResultPred, A, B);
 }
 
