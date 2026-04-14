@@ -18,10 +18,6 @@
 #include <fstream>
 #include <map>
 
-#ifdef HAVE_OPENCSD
-#include "opencsd/c_api/opencsd_c_api.h"
-#endif
-
 namespace llvm {
 
 class CleanupInstaller;
@@ -757,24 +753,7 @@ public:
   ETMReader(ProfiledBinary *Binary, StringRef TraceFile)
       : PerfReaderBase(Binary, TraceFile) {}
   void parsePerfTraces() override;
-
-private:
   void recordProcessedRange(uint64_t Start, uint64_t End, uint64_t Count);
-
-#ifdef HAVE_OPENCSD
-  // Trace processing and Callback handling.
-  static ocsd_datapath_resp_t
-  processTrace(const void *PContext, const ocsd_trc_index_t /*IndexSOP*/,
-               const uint8_t /*TrcChanID*/,
-               const ocsd_generic_trace_elem *Element);
-
-  // Initialize the decoder for microcontroller-class targets.
-  void setupDecoder(dcd_tree_handle_t DcdTree, ProfiledBinary &Binary);
-
-  // Identify and register executable ELF segments with the OpenCSD decoder
-  // to provide opcode access for different memory regions.
-  void mapELFSegments(dcd_tree_handle_t DcdTree, ProfiledBinary &Binary);
-#endif
 };
 
 } // end namespace sampleprof

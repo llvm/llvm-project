@@ -11,6 +11,7 @@
 #include "ProfileGenerator.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/ProfileData/ETMTraceDecoder.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -1383,119 +1384,15 @@ void ETMReader::recordProcessedRange(uint64_t Start, uint64_t End,
   }
 }
 
-#ifdef HAVE_OPENCSD
-ocsd_datapath_resp_t ETMReader::processTrace(
-    const void *PContext, const ocsd_trc_index_t /*IndexSOP*/,
-    const uint8_t /*TrcChanID*/, const ocsd_generic_trace_elem *Element) {
-  auto *Reader = static_cast<ETMReader *>(const_cast<void *>(PContext));
-  if (!Reader || !Element)
-    return OCSD_RESP_FATAL_SYS_ERR;
+class ETMCallback : public ETMDecoder::Callback {
+  ETMReader *Reader;
 
-  // Process instruction ranges reconstructed by the decoder.
-  if (Element->elem_type == OCSD_GEN_TRC_ELEM_INSTR_RANGE) {
-    uint64_t Start = Element->st_addr;
-    uint64_t End = Element->en_addr;
-
-    // OpenCSD ranges are exclusive at the end [Start, End).
-    // llvm-profgen range counters expect inclusive bounds [Start, End].
-    // Adjust the exclusive end address provided by OpenCSD to include
-    // the last executed instruction within the reported range.
-    if (End > Start)
-      Reader->recordProcessedRange(Start, End - 1, 1);
+public:
+  ETMCallback(ETMReader *R) : Reader(R) {}
+  void processInstructionRange(uint64_t Start, uint64_t End) override {
+    Reader->recordProcessedRange(Start, End, 1);
   }
-
-  return OCSD_RESP_CONT;
-}
-
-// Iterate through the ELF program headers to collect all executable LOAD
-// segments. These are registered as a single transaction to the OpenCSD memory
-// manager to prevent overlap/collision errors between different memory
-// regions.
-void ETMReader::mapELFSegments(dcd_tree_handle_t DcdTree,
-                               ProfiledBinary &Binary) {
-  std::string ExePath = Binary.getPath().str();
-
-  auto BinaryOrErr = object::createBinary(Binary.getPath());
-  if (!BinaryOrErr)
-    exitWithError("Failed to open binary for ETM mapping", Binary.getPath());
-
-  object::Binary &SourceBin = *BinaryOrErr.get().getBinary();
-  auto *ElfBase = dyn_cast<object::ELFObjectFileBase>(&SourceBin);
-  if (!ElfBase)
-    return;
-
-  std::vector<ocsd_file_mem_region_t> Regions;
-  auto ProcessHeaders = [&](const auto &ElfFile) {
-    auto ProgramHeaders = ElfFile.program_headers();
-    if (!ProgramHeaders)
-      return;
-
-    for (const auto &Phdr : *ProgramHeaders) {
-      // Only map segments that are loadable and executable (code sections).
-      if (Phdr.p_type == llvm::ELF::PT_LOAD &&
-          (Phdr.p_flags & llvm::ELF::PF_X)) {
-        ocsd_file_mem_region_t Region;
-        memset(&Region, 0, sizeof(Region));
-        Region.start_address = (uint64_t)Phdr.p_vaddr;
-        Region.file_offset = (uint64_t)Phdr.p_offset;
-        Region.region_size = (uint64_t)Phdr.p_filesz;
-        Regions.push_back(Region);
-      }
-    }
-  };
-
-  if (auto *O = dyn_cast<object::ELF32LEObjectFile>(ElfBase))
-    ProcessHeaders(O->getELFFile());
-  else if (auto *O = dyn_cast<object::ELF64LEObjectFile>(ElfBase))
-    ProcessHeaders(O->getELFFile());
-  else if (auto *O = dyn_cast<object::ELF32BEObjectFile>(ElfBase))
-    ProcessHeaders(O->getELFFile());
-  else if (auto *O = dyn_cast<object::ELF64BEObjectFile>(ElfBase))
-    ProcessHeaders(O->getELFFile());
-
-  if (!Regions.empty()) {
-    // Single transaction mapping to avoid overlap errors.
-    if (ocsd_dt_add_binfile_region_mem_acc(
-            DcdTree, Regions.data(), (uint32_t)Regions.size(),
-            OCSD_MEM_SPACE_ANY, ExePath.c_str()) != 0) {
-      exitWithError("OpenCSD: Failed to map ELF executable segments.");
-    }
-  }
-}
-
-// Configure the decoder for microcontroller-class targets based on the binary's
-// architecture.
-void ETMReader::setupDecoder(dcd_tree_handle_t DcdTree,
-                             ProfiledBinary &Binary) {
-  ocsd_etmv4_cfg Config;
-  memset(&Config, 0, sizeof(Config));
-
-  const Triple &BinaryTriple = Binary.getTriple();
-  // Identify microcontroller-class hardware (Cortex-M) by checking the
-  // architecture family or the instruction set mode in the target triple.
-  if (BinaryTriple.isArmMClass() || BinaryTriple.isThumb()) {
-    Config.arch_ver = ARCH_V8;
-    Config.core_prof = profile_CortexM;
-  } else {
-    // Application-class (Cortex-A) support might be added in the future.
-    exitWithError(
-        "OpenCSD: Unsupported processor architecture. "
-        "Only microcontroller-class (Cortex-M) is currently supported.");
-  }
-
-  // Manually associate this decoder with Trace ID 0x10 to enable immediate
-  // stream processing without waiting for hardware synchronization packets.
-  uint8_t CSID = 0x10;
-  Config.reg_traceidr = CSID;
-
-  // Enable full instruction-level decoding to reconstruct the complete program
-  // flow from raw trace packets and the provided binary.
-  uint32_t Flags = OCSD_CREATE_FLG_FULL_DECODER | OCSD_OPFLG_CHK_RANGE_CONTINUE;
-
-  if (ocsd_dt_create_decoder(DcdTree, OCSD_BUILTIN_DCD_ETMV4I, Flags,
-                             (void *)&Config, &CSID) != 0)
-    exitWithError("OpenCSD: Failed to initialize the instruction decoder.");
-}
+};
 
 void ETMReader::parsePerfTraces() {
   auto BufferOrErr = MemoryBuffer::getFile(PerfTraceFile);
@@ -1522,61 +1419,15 @@ void ETMReader::parsePerfTraces() {
     exitWithError("No synchronization header (0x80) found in the bitstream.");
   ArrayRef<uint8_t> TraceSlice = Data.slice(StartIdx);
 
-  dcd_tree_handle_t DcdTree = ocsd_create_dcd_tree(OCSD_TRC_SRC_SINGLE, 0);
-  if (!DcdTree)
-    exitWithError("Failed to create OpenCSD decoder tree.");
+  auto DecoderOrErr = ETMDecoder::create(Binary->getPath());
+  if (!DecoderOrErr)
+    exitWithError(toString(DecoderOrErr.takeError()));
+  auto Decoder = std::move(*DecoderOrErr);
 
-  // Configure and initialize the instruction-level decoder.
-  setupDecoder(DcdTree, *Binary);
-
-  // Extract and map executable segments from the ELF binary.
-  mapELFSegments(DcdTree, *Binary);
-
-  // Register the high-level packet callback. The 'processTrace' function
-  // will be invoked for every decoded instruction range.
-  ocsd_dt_set_gen_elem_outfn(DcdTree, processTrace, this);
-
-  // Initial reset to prime the decoder.
-  ocsd_dt_process_data(DcdTree, OCSD_OP_RESET, 0, 0, nullptr, nullptr);
-
-  const uint8_t *DataPtr = TraceSlice.data();
-  uint32_t TotalSize = TraceSlice.size();
-  uint32_t Processed = 0;
-
-  // Core Decoding Loop.
-  while (Processed < TotalSize) {
-    uint32_t Consumed = 0;
-    uint32_t Remaining = TotalSize - Processed;
-    ocsd_datapath_resp_t Response =
-        ocsd_dt_process_data(DcdTree, OCSD_OP_DATA, Processed, Remaining,
-                             DataPtr + Processed, &Consumed);
-
-    if (Response == OCSD_RESP_WAIT) {
-      // Decoder buffers are full; flush to drain internal states.
-      ocsd_dt_process_data(DcdTree, OCSD_OP_FLUSH, 0, 0, nullptr, nullptr);
-    } else if (Consumed == 0 && Processed < TotalSize) {
-      // Decoder stalled; skip byte and reset to find next sync point.
-      Processed++;
-      ocsd_dt_process_data(DcdTree, OCSD_OP_RESET, 0, 0, nullptr, nullptr);
-    } else {
-      // Successfully consumed bytes of the bitstream.
-      Processed += Consumed;
-    }
-
-    if (Response >= OCSD_RESP_FATAL_INVALID_DATA)
-      break;
-  }
-
-  // Finalize the decoding session by flushing the EOT (End of Trace) marker.
-  ocsd_dt_process_data(DcdTree, OCSD_OP_EOT, 0, 0, nullptr, nullptr);
-  // Deallocate the decoder tree resources.
-  ocsd_destroy_dcd_tree(DcdTree);
+  ETMCallback CB(this);
+  if (Error E = Decoder->processTrace(TraceSlice, CB))
+    exitWithError(toString(std::move(E)));
 }
-#else
-void ETMReader::parsePerfTraces() {
-  exitWithError("OpenCSD support was not found or enabled.");
-}
-#endif
 
 } // end namespace sampleprof
 } // end namespace llvm
