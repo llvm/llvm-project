@@ -469,8 +469,6 @@ SDValue BPFTargetLowering::LowerFormalArguments(
   return Chain;
 }
 
-const size_t BPFTargetLowering::MaxRegArgs = 5;
-
 static void resetRegMaskBit(const TargetRegisterInfo *TRI, uint32_t *RegMask,
                             MCRegister Reg) {
   for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
@@ -532,9 +530,7 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
 
   // Walk arg assignments
-  size_t OutValsSize = OutVals.size();
-  int StackArgInBytes = (OutValsSize - MaxRegArgs) * 8;
-  for (size_t i = 0; i < OutValsSize; ++i) {
+  for (size_t i = 0; i < OutVals.size(); ++i) {
     CCValAssign &VA = ArgLocs[i];
     SDValue &Arg = OutVals[i];
 
@@ -562,10 +558,7 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
 
     if (VA.isMemLoc()) {
-      // For example, two stack arguments,
-      //   arg1:  Off = -16
-      //   arg2:  off = -8
-      int Off = -StackArgInBytes + VA.getLocMemOffset();
+      int Off = -8 - VA.getLocMemOffset();
       if (Off < INT16_MIN) {
         fail(CLI.DL, DAG, "extra parameter stack depth exceeded limit");
         break;

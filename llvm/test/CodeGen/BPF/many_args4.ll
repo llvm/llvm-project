@@ -60,6 +60,6 @@ define dso_local range(i64 -4294967296, 4294967295) i64 @bar(i32 noundef %0, i32
 ; CHECK:         r[[#]] = *(u64 *)(r11 + 16)
 ; CHECK:         *(u64 *)(r11 - 8) = r[[#]]
 ; CHECK:         call foo1
-; CHECK:         *(u64 *)(r11 - 16) = r[[#]]
 ; CHECK:         *(u64 *)(r11 - 8) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 16) = r[[#]]
 ; CHECK:         call foo2
