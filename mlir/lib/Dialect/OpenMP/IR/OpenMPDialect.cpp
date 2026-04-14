@@ -948,6 +948,7 @@ static ParseResult parseDynGroupprivateClause(
 
   bool parsedAccessGroup = false;
   bool parsedFallback = false;
+  bool parsedSize = false;
 
   return parser.parseCommaSeparatedList([&]() -> ParseResult {
     // Parse AccessGroupModifier.
@@ -993,7 +994,11 @@ static ParseResult parseDynGroupprivateClause(
     // Parse size operand.
     OpAsmParser::UnresolvedOperand operand;
     if (succeeded(parser.parseOperand(operand))) {
+      if (parsedSize)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate size operand");
       dynGroupprivateSize = operand;
+      parsedSize = true;
       if (failed(parser.parseColon()) || failed(parser.parseType(sizeType)))
         return parser.emitError(parser.getCurrentLocation(),
                                 "expected ':' and type after size operand");

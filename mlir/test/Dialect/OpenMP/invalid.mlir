@@ -1540,6 +1540,16 @@ func.func @test_teams_dyn_groupprivate_errors_5() {
 
 // -----
 
+func.func @test_teams_dyn_groupprivate_errors_6(%s1: i32, %s2: i32) {
+  // expected-error @below {{duplicate size operand}}
+  omp.teams dyn_groupprivate(%s1 : i32, %s2 : i32) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.sections" (%data_var) ({
