@@ -75,8 +75,9 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
 
   return UsageOfThis.Used;
 }
+} // namespace
 
-bool hasSameParameterTypes(const CXXMethodDecl &MD1, const CXXMethodDecl &MD2) {
+static bool hasSameParameterTypes(const CXXMethodDecl &MD1, const CXXMethodDecl &MD2) {
   if (MD1.getNumParams() != MD2.getNumParams())
     return false;
   for (unsigned I = 0, E = MD1.getNumParams(); I < E; ++I)
@@ -86,7 +87,7 @@ bool hasSameParameterTypes(const CXXMethodDecl &MD1, const CXXMethodDecl &MD2) {
   return true;
 }
 
-AST_MATCHER(CXXMethodDecl, hasNonConstOverload) {
+static bool hasNonConstOverload(const CXXMethodDecl &Node) {
   const auto *Method = &Node;
   const DeclContext::lookup_result LookupResult =
       Method->getParent()->lookup(Method->getNameInfo().getName());
@@ -101,8 +102,6 @@ AST_MATCHER(CXXMethodDecl, hasNonConstOverload) {
       });
 }
 
-} // namespace
-
 void ConvertMemberFunctionsToStaticCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
@@ -112,7 +111,7 @@ void ConvertMemberFunctionsToStaticCheck::registerMatchers(
               isVirtual(), isStatic(), hasTrivialBody(), isOverloadedOperator(),
               cxxConstructorDecl(), cxxDestructorDecl(), cxxConversionDecl(),
               isExplicitObjectMemberFunction(), isTemplate(),
-              isDependentContext(), allOf(isConst(), hasNonConstOverload()),
+              isDependentContext(),
               ofClass(anyOf(
                   isLambda(),
                   hasAnyDependentBases()) // Method might become virtual
@@ -159,6 +158,9 @@ static SourceRange getLocationOfConst(const TypeSourceInfo *TSI,
 void ConvertMemberFunctionsToStaticCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Definition = Result.Nodes.getNodeAs<CXXMethodDecl>("x");
+
+  if (Definition->isConst() && hasNonConstOverload(*Definition))
+    return;
 
   // TODO: For out-of-line declarations, don't modify the source if the header
   // is excluded by the -header-filter option.
