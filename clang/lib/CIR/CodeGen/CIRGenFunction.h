@@ -166,6 +166,7 @@ public:
   ImplicitParamDecl *cxxabiThisDecl = nullptr;
   mlir::Value cxxabiThisValue = nullptr;
   mlir::Value cxxThisValue = nullptr;
+  clang::CharUnits cxxabiThisAlignment;
   clang::CharUnits cxxThisAlignment;
 
   /// When generating code for a constructor or destructor, this will hold the
@@ -177,11 +178,16 @@ public:
   /// expression.
   Address cxxDefaultInitExprThis = Address::invalid();
 
+  /// The values of function arguments to use when evaluating
+  /// CXXInheritedCtorInitExprs within this context.
+  CallArgList cxxInheritedCtorInitExprArgs;
+
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
   /// This is the inner-most code context, which includes blocks.
   const clang::Decl *curCodeDecl = nullptr;
   const CIRGenFunctionInfo *curFnInfo = nullptr;
+  QualType fnRetTy;
 
   /// The current function or global initializer that is generated code for.
   /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
@@ -1621,6 +1627,15 @@ public:
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
 
+  void emitInheritedCXXConstructorCall(const CXXConstructorDecl *d,
+                                       bool forVirtualBase, Address thisAddr,
+                                       bool inheritedFromVBase,
+                                       const CXXInheritedCtorInitExpr *e);
+
+  void emitInlinedInheritingCXXConstructorCall(
+      SourceLocation loc, const CXXConstructorDecl *d, CXXCtorType ctorType,
+      bool forVirtualBase, bool delegating, CallArgList &args);
+
   void emitCXXDeleteExpr(const CXXDeleteExpr *e);
 
   void emitCXXDestructorCall(const CXXDestructorDecl *dd, CXXDtorType type,
@@ -2453,6 +2468,62 @@ public:
 
 private:
   QualType getVarArgType(const Expr *arg);
+
+  class InlinedInheritingConstructorScope {
+  public:
+    InlinedInheritingConstructorScope(CIRGenFunction &cgf, GlobalDecl gd)
+        : cgf(cgf), oldCurGD(cgf.curGD), oldCurFuncDecl(cgf.curFuncDecl),
+          oldCurCodeDecl(cgf.curCodeDecl),
+          oldCxxabiThisDecl(cgf.cxxabiThisDecl),
+          oldCxxThisValue(cgf.cxxThisValue),
+          oldCxxabiThisAlignment(cgf.cxxabiThisAlignment),
+          oldCxxThisAlignment(cgf.cxxThisAlignment),
+          oldReturnValue(cgf.returnValue), oldFnRetTy(cgf.fnRetTy),
+          oldCxxInheritedCtorInitExprArgs(
+              std::move(cgf.cxxInheritedCtorInitExprArgs)) {
+      cgf.curGD = gd;
+      cgf.curFuncDecl = cast<CXXConstructorDecl>(gd.getDecl());
+      cgf.curCodeDecl = cgf.curFuncDecl;
+      cgf.cxxabiThisDecl = nullptr;
+      cgf.cxxabiThisValue = nullptr;
+      cgf.cxxThisValue = nullptr;
+      cgf.cxxThisAlignment = CharUnits();
+      cgf.cxxabiThisAlignment = CharUnits();
+      cgf.returnValue = Address::invalid();
+      cgf.fnRetTy = QualType();
+      cgf.cxxInheritedCtorInitExprArgs.clear();
+      // FIXME: at one point when we want to call one of these, we'll need
+      // CXXInheritedCtorInitExprArgs here too.
+    }
+    ~InlinedInheritingConstructorScope() {
+      cgf.curGD = oldCurGD;
+      cgf.curFuncDecl = oldCurFuncDecl;
+      cgf.curCodeDecl = oldCurCodeDecl;
+      cgf.cxxabiThisDecl = oldCxxabiThisDecl;
+      cgf.cxxabiThisValue = oldCxxabiThisValue;
+      cgf.cxxThisValue = oldCxxThisValue;
+      cgf.cxxThisAlignment = oldCxxThisAlignment;
+      cgf.cxxabiThisAlignment = oldCxxabiThisAlignment;
+      cgf.returnValue = oldReturnValue;
+      cgf.fnRetTy = oldFnRetTy;
+      cgf.cxxInheritedCtorInitExprArgs =
+          std::move(oldCxxInheritedCtorInitExprArgs);
+    }
+
+  private:
+    CIRGenFunction &cgf;
+    GlobalDecl oldCurGD;
+    const Decl *oldCurFuncDecl;
+    const Decl *oldCurCodeDecl;
+    ImplicitParamDecl *oldCxxabiThisDecl;
+    mlir::Value oldCxxabiThisValue;
+    mlir::Value oldCxxThisValue;
+    clang::CharUnits oldCxxabiThisAlignment;
+    clang::CharUnits oldCxxThisAlignment;
+    Address oldReturnValue;
+    QualType oldFnRetTy;
+    CallArgList oldCxxInheritedCtorInitExprArgs;
+  };
 };
 
 } // namespace clang::CIRGen
