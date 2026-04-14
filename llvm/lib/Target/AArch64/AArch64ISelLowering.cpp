@@ -32322,6 +32322,63 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op->getVTList(), Ops);
   }
 
+  if (Op->getNumOperands() == 3 && (OpVT == MVT::v2f64 || OpVT == MVT::v2i64)) {
+    SDValue A = Op->getOperand(0);
+    SDValue B = Op->getOperand(1);
+    SDValue C = Op->getOperand(2);
+
+    // a0, a1 | b0, b1 | c0, c1
+    //  ->
+    // a0, b0 | c0, a1 | b1, c1
+    SDValue Shuffle0 = DAG.getVectorShuffle(OpVT, DL, A, B, {0, 2});
+    SDValue Shuffle1 = DAG.getVectorShuffle(OpVT, DL, A, C, {2, 1});
+    SDValue Shuffle2 = DAG.getVectorShuffle(OpVT, DL, B, C, {1, 3});
+
+    return DAG.getMergeValues({Shuffle0, Shuffle1, Shuffle2}, DL);
+  }
+  if (Op->getNumOperands() == 3 && OpVT.isFixedLengthVector()) {
+    unsigned NElements = OpVT.getVectorNumElements();
+    SDValue A = Op->getOperand(0);
+    SDValue B = Op->getOperand(1);
+    SDValue C = Op->getOperand(2);
+
+    //  Build two masks for two shuffles. The first mask shuffles elements from
+    //  A and B, and with elements of C represented with -1 so the shuffle
+    //  ignores them. The second shuffle then replaces -1 values with the actual
+    //  indices from C.
+    SmallVector<int> ABMask;
+    for (unsigned E = 0; E < NElements; E++) {
+      for (unsigned F = 0; F < 3; F++) {
+        if (F == 2)
+          ABMask.push_back(-1);
+        else
+          ABMask.push_back(F * NElements + E);
+      }
+    }
+
+    std::vector<int> ABCMask;
+    for (unsigned F = 0, Idx = 0; F < 3; F++) {
+      for (unsigned E = 0; E < NElements; E++) {
+        if (ABMask[F * NElements + E] == -1)
+          ABCMask.push_back(NElements + Idx++);
+        else
+          ABCMask.push_back(Idx);
+      }
+    }
+
+    SmallVector<SDValue, 3> Shuffles;
+    for (unsigned I = 0; I < 3; I++) {
+      SDValue AB = DAG.getVectorShuffle(
+          OpVT, DL, A, B,
+          ArrayRef<int>(ABMask.data() + NElements * I, NElements));
+      Shuffles.push_back(DAG.getVectorShuffle(
+          OpVT, DL, AB, C,
+          ArrayRef<int>(ABCMask.data() + NElements * I, NElements)));
+    }
+
+    return DAG.getMergeValues(Shuffles, DL);
+  }
+
   if (Op->getNumOperands() != 2)
     return SDValue();
 
