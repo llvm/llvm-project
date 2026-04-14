@@ -61,8 +61,7 @@ define void @pli_b_store_i32(ptr %p) {
 define i32 @plui_h_i32(ptr %p) {
 ; CHECK-LABEL: plui_h_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 523272
-; CHECK-NEXT:    addi a0, a0, -64
+; CHECK-NEXT:    plui.h a0, 511
 ; CHECK-NEXT:    ret
   ret i32 u0x7fc07fc0
 }
