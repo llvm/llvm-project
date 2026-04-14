@@ -202,6 +202,8 @@ enum IIT_Info {
 #include "llvm/IR/IntrinsicImpl.inc"
 };
 
+static_assert(IIT_Done == 0, "IIT_Done expected to be 0");
+
 static void
 DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
               IIT_Info LastInfo,
@@ -354,42 +356,39 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::Pointer, Infos[NextElt++]));
     return;
   case IIT_ANY: {
-    unsigned OverloadInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadInfo = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Overloaded, OverloadInfo));
     return;
   }
   case IIT_EXTEND_ARG: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Extend, OverloadIndex));
     return;
   }
   case IIT_TRUNC_ARG: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Trunc, OverloadIndex));
     return;
   }
   case IIT_ONE_NTH_ELTS_VEC_ARG: {
-    unsigned short OverloadIndex =
-        (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
-    unsigned short N = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned short OverloadIndex = Infos[NextElt++];
+    unsigned short N = Infos[NextElt++];
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::OneNthEltsVec,
                                              /*Hi=*/N, /*Lo=*/OverloadIndex));
     return;
   }
   case IIT_SAME_VEC_WIDTH_ARG: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::SameVecWidth, OverloadIndex));
     return;
   }
   case IIT_VEC_OF_ANYPTRS_TO_ELT: {
-    unsigned short OverloadIndex =
-        (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
-    unsigned short RefOverloadIndex =
-        (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned short OverloadIndex = Infos[NextElt++];
+    unsigned short RefOverloadIndex = Infos[NextElt++];
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::VecOfAnyPtrsToElt,
                                              /*Hi=*/RefOverloadIndex,
                                              /*Lo=*/OverloadIndex));
@@ -409,19 +408,19 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   }
   case IIT_SUBDIVIDE2_ARG: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Subdivide2, OverloadIndex));
     return;
   }
   case IIT_SUBDIVIDE4_ARG: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Subdivide4, OverloadIndex));
     return;
   }
   case IIT_VEC_ELEMENT: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::VecElement, OverloadIndex));
     return;
@@ -431,7 +430,7 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   }
   case IIT_VEC_OF_BITCASTS_TO_INT: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::VecOfBitcastsToInt, OverloadIndex));
     return;
@@ -457,8 +456,13 @@ void Intrinsic::getIntrinsicInfoTableEntries(
 
   // Array to hold the inlined fixed encoding values expanded from nibbles to
   // bytes. Its size can be be atmost FixedEncodingBits / 4 i.e., number
-  // of nibbles that can fit in `FixedEncodingTy`.
-  unsigned char IITValues[FixedEncodingBits / 4];
+  // of nibbles that can fit in `FixedEncodingTy` + 1 (the IIT_Done terminator
+  // that is not explicitly encoded). Note that if there are trailing 0 bytes
+  // in the encoding (for example, payload following one of the IIT tokens),
+  // the inlined encoding does not encode the actual size of the encoding, so
+  // we always assume its size of this maximum length possible, followed by the
+  // IIT_Done terminator token (whose value is 0).
+  unsigned char IITValues[FixedEncodingBits / 4 + 1] = {0};
 
   ArrayRef<unsigned char> IITEntries;
   unsigned NextElt = 0;
@@ -478,13 +482,13 @@ void Intrinsic::getIntrinsicInfoTableEntries(
       TableVal >>= 4;
     } while (TableVal);
 
-    IITEntries = ArrayRef(IITValues).take_front(NextElt);
+    IITEntries = IITValues;
     NextElt = 0;
   }
 
   // Okay, decode the table into the output vector of IITDescriptors.
   DecodeIITType(NextElt, IITEntries, IIT_Done, T);
-  while (NextElt != IITEntries.size() && IITEntries[NextElt] != 0)
+  while (IITEntries[NextElt] != IIT_Done)
     DecodeIITType(NextElt, IITEntries, IIT_Done, T);
 }
 
@@ -493,8 +497,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              LLVMContext &Context) {
   using namespace Intrinsic;
 
-  IITDescriptor D = Infos.front();
-  Infos = Infos.slice(1);
+  IITDescriptor D = Infos.consume_front();
 
   switch (D.Kind) {
   case IITDescriptor::Void:
@@ -862,8 +865,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return false;
   };
 
-  IITDescriptor D = Infos.front();
-  Infos = Infos.slice(1);
+  IITDescriptor D = Infos.consume_front();
 
   switch (D.Kind) {
   case IITDescriptor::Void:
@@ -997,7 +999,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::SameVecWidth: {
     if (D.getOverloadIndex() >= OverloadTys.size()) {
       // Defer check and subsequent check for the vector element type.
-      Infos = Infos.slice(1);
+      Infos.consume_front();
       return IsDeferredCheck || DeferCheck(Ty);
     }
     auto *ReferenceType =
@@ -1114,8 +1116,7 @@ bool Intrinsic::matchIntrinsicVarArg(
     return true;
 
   // Check and verify the descriptor.
-  IITDescriptor D = Infos.front();
-  Infos = Infos.slice(1);
+  IITDescriptor D = Infos.consume_front();
   if (D.Kind == IITDescriptor::VarArg)
     return !isVarArg;
 
