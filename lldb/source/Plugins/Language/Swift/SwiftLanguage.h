@@ -134,7 +134,7 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "swift"; }
 
-  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+  bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
 
   llvm::StringRef GetInstanceVariableName() override { return "self"; }
 

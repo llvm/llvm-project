@@ -117,12 +117,8 @@ void TypeSystemSwift::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
   // TODO: What to dump?
 }
 
-bool TypeSystemSwift::IsFloatingPointType(opaque_compiler_type_t type,
-                                          uint32_t &count, bool &is_complex) {
-  count = 0;
-  is_complex = false;
+bool TypeSystemSwift::IsFloatingPointType(opaque_compiler_type_t type) {
   if (GetTypeInfo(type, nullptr) & eTypeIsFloat) {
-    count = 1;
     return true;
   }
   return false;
@@ -198,6 +194,11 @@ CompilerType
 TypeSystemSwift::GetUInt8Type(swift::Mangle::ManglingFlavor flavor) {
   return GetTypeFromMangledTypename(
       ConstString(SwiftLanguageRuntime::MakeMangledName("s5UInt8VD", flavor)));
+}
+
+CompilerType TypeSystemSwift::GetAnyType(swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("ypD", flavor)));
 }
 
 bool TypeSystemSwift::ShouldTreatScalarValueAsAddress(

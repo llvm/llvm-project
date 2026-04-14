@@ -35439,6 +35439,101 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBExpressionOptions_GetBooleanLanguageOption(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBExpressionOptions *arg1 = 0 ;
+  char *arg2 = 0 ;
+  lldb::SBError *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject *swig_obj[3] ;
+  bool result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBExpressionOptions_GetBooleanLanguageOption", 3, 3, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_GetBooleanLanguageOption" "', argument " "1"" of type '" "lldb::SBExpressionOptions const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBExpressionOptions_GetBooleanLanguageOption" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3, SWIGTYPE_p_lldb__SBError,  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "SBExpressionOptions_GetBooleanLanguageOption" "', argument " "3"" of type '" "lldb::SBError &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "SBExpressionOptions_GetBooleanLanguageOption" "', argument " "3"" of type '" "lldb::SBError &""'"); 
+  }
+  arg3 = reinterpret_cast< lldb::SBError * >(argp3);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)((lldb::SBExpressionOptions const *)arg1)->GetBooleanLanguageOption((char const *)arg2,*arg3);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetBooleanLanguageOption(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBExpressionOptions *arg1 = 0 ;
+  char *arg2 = 0 ;
+  bool arg3 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  bool val3 ;
+  int ecode3 = 0 ;
+  PyObject *swig_obj[3] ;
+  lldb::SBError result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBExpressionOptions_SetBooleanLanguageOption", 3, 3, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_SetBooleanLanguageOption" "', argument " "1"" of type '" "lldb::SBExpressionOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBExpressionOptions_SetBooleanLanguageOption" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  ecode3 = SWIG_AsVal_bool(swig_obj[2], &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "SBExpressionOptions_SetBooleanLanguageOption" "', argument " "3"" of type '" "bool""'");
+  } 
+  arg3 = static_cast< bool >(val3);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->SetBooleanLanguageOption((char const *)arg2,arg3);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBError(result)), SWIGTYPE_p_lldb__SBError, SWIG_POINTER_OWN |  0 );
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *SBExpressionOptions_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *obj = NULL;
   if (!SWIG_Python_UnpackTuple(args, "swigregister", 1, 1, &obj)) return NULL;
@@ -99563,6 +99658,14 @@ static PyMethodDef SwigMethods[] = {
 		"SBExpressionOptions_SetAllowJIT(SBExpressionOptions self, bool allow)\n"
 		"Sets whether to JIT an expression if it cannot be interpreted.\n"
 		""},
+	 { "SBExpressionOptions_GetBooleanLanguageOption", _wrap_SBExpressionOptions_GetBooleanLanguageOption, METH_VARARGS, "\n"
+		"SBExpressionOptions_GetBooleanLanguageOption(SBExpressionOptions self, char const * option_name, SBError error) -> bool\n"
+		"Gets language-plugin specific boolean option for expression evaluation. LLDB currently doesn't validate whether the option being retrieved is one that is understood by the expression evaluator.\n"
+		""},
+	 { "SBExpressionOptions_SetBooleanLanguageOption", _wrap_SBExpressionOptions_SetBooleanLanguageOption, METH_VARARGS, "\n"
+		"SBExpressionOptions_SetBooleanLanguageOption(SBExpressionOptions self, char const * option_name, bool value) -> SBError\n"
+		"Sets language-plugin specific boolean option for expression evaluation. LLDB currently doesn't validate whether the option being set is understood by the expression evaluator.\n"
+		""},
 	 { "SBExpressionOptions_swigregister", SBExpressionOptions_swigregister, METH_O, NULL},
 	 { "SBExpressionOptions_swiginit", SBExpressionOptions_swiginit, METH_VARARGS, NULL},
 	 { "new_SBFile", _wrap_new_SBFile, METH_VARARGS, "\n"
@@ -107084,6 +107187,7 @@ SWIGINTERN int SWIG_mod_exec(PyObject *m) {
   SWIG_Python_SetConstant(d, "eTypeOptionNonCacheable",SWIG_From_int(static_cast< int >(lldb::eTypeOptionNonCacheable)));
   SWIG_Python_SetConstant(d, "eTypeOptionHideEmptyAggregates",SWIG_From_int(static_cast< int >(lldb::eTypeOptionHideEmptyAggregates)));
   SWIG_Python_SetConstant(d, "eTypeOptionFrontEndWantsDereference",SWIG_From_int(static_cast< int >(lldb::eTypeOptionFrontEndWantsDereference)));
+  SWIG_Python_SetConstant(d, "eTypeOptionCustomSubscripting",SWIG_From_int(static_cast< int >(lldb::eTypeOptionCustomSubscripting)));
   SWIG_Python_SetConstant(d, "eFrameCompareInvalid",SWIG_From_int(static_cast< int >(lldb::eFrameCompareInvalid)));
   SWIG_Python_SetConstant(d, "eFrameCompareUnknown",SWIG_From_int(static_cast< int >(lldb::eFrameCompareUnknown)));
   SWIG_Python_SetConstant(d, "eFrameCompareEqual",SWIG_From_int(static_cast< int >(lldb::eFrameCompareEqual)));

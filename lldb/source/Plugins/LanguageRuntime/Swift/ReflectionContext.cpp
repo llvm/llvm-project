@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "swift/RemoteInspection/ReflectionContext.h"
+#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "ReflectionContextInterface.h"
 #include "SwiftLanguageRuntime.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -133,11 +134,10 @@ public:
   }
 
   llvm::Expected<const swift::reflection::TypeRef &>
-  GetTypeRef(StringRef mangled_type_name,
-             swift::reflection::DescriptorFinder *descriptor_finder) override {
+  GetTypeRef(StringRef mangled_type_name) override {
     swift::Demangle::Demangler dem;
     swift::Demangle::NodePointer node = dem.demangleSymbol(mangled_type_name);
-    return GetTypeRef(dem, node, descriptor_finder);
+    return GetTypeRef(dem, node);
   }
 
   /// Sets the descriptor finder, and on scope exit clears it out.
@@ -149,9 +149,8 @@ public:
   }
 
   llvm::Expected<const swift::reflection::TypeRef &>
-  GetTypeRef(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
-             swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
+  GetTypeRef(swift::Demangle::Demangler &dem,
+             swift::Demangle::NodePointer node) override {
     auto type_ref_or_err =
         swift::Demangle::decodeMangledType(m_reflection_ctx.getBuilder(), node);
     if (type_ref_or_err.isError())
@@ -187,36 +186,13 @@ public:
   }
 
   llvm::Expected<const swift::reflection::TypeInfo &>
-  GetTypeInfo(const swift::reflection::TypeRef &type_ref,
-              swift::remote::TypeInfoProvider *provider,
+  GetTypeInfo(CompilerType type, swift::remote::TypeInfoProvider *provider,
               swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
-
-    Log *log(GetLog(LLDBLog::Types));
-    if (log && log->GetVerbose()) {
-      std::stringstream ss;
-      type_ref.dump(ss);
-      LLDB_LOG(log,
-               "[TargetReflectionContext[{0:x}]::getTypeInfo] Getting type "
-               "info for typeref {1}",
-               provider ? provider->getId() : 0, ss.str());
-    }
-
-    auto type_info_or_err = m_reflection_ctx.getTypeInfo(type_ref, provider);
-    if (!type_info_or_err)
-      return llvm::joinErrors(
-          llvm::createStringError(
-              "Could not find reflection metadata for type"),
-          type_info_or_err.takeError());
-
-    if (log && log->GetVerbose()) {
-      std::stringstream ss;
-      type_info_or_err->dump(ss);
-      LLDB_LOG(log,
-               "[TargetReflectionContext::getTypeInfo] Found type info {0}",
-               ss.str());
-    }
-    return *type_info_or_err;
+    auto type_ref_or_err = GetCanonicalTypeRef(type);
+    if (!type_ref_or_err)
+      return type_ref_or_err.takeError();
+    return GetTypeInfoFromTypeRef(*type_ref_or_err, provider,
+                                  descriptor_finder);
   }
 
   llvm::Expected<const swift::reflection::TypeInfo &> GetTypeInfoFromInstance(
@@ -318,15 +294,23 @@ public:
     return {};
   }
 
-  std::optional<std::pair<const swift::reflection::TypeRef *,
-                          swift::reflection::RemoteAddress>>
+  llvm::Expected<std::pair<const swift::reflection::TypeRef *,
+                           swift::reflection::RemoteAddress>>
   ProjectExistentialAndUnwrapClass(
       swift::reflection::RemoteAddress existential_address,
-      const swift::reflection::TypeRef &existential_tr,
+      CompilerType existential_type,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
+    auto type_ref_or_err = GetCanonicalTypeRef(existential_type);
+    if (!type_ref_or_err)
+      return type_ref_or_err.takeError();
+    auto &existential_tr = *type_ref_or_err;
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
-    return m_reflection_ctx.projectExistentialAndUnwrapClass(
+    auto result = m_reflection_ctx.projectExistentialAndUnwrapClass(
         existential_address, existential_tr);
+    if (!result)
+      return llvm::createStringError(
+          "failed to project existential and unwrap class");
+    return *result;
   }
 
   llvm::Expected<const swift::reflection::TypeRef &>
@@ -461,7 +445,8 @@ private:
   GetRecordTypeInfo(const swift::reflection::TypeRef &type_ref,
                     swift::remote::TypeInfoProvider *tip,
                     swift::reflection::DescriptorFinder *descriptor_finder) {
-    auto type_info_or_err = GetTypeInfo(type_ref, tip, descriptor_finder);
+    auto type_info_or_err =
+        GetTypeInfoFromTypeRef(type_ref, tip, descriptor_finder);
     if (!type_info_or_err)
       return type_info_or_err.takeError();
     auto *type_info = &*type_info_or_err;
@@ -475,6 +460,39 @@ private:
     type_ref.dump(ss);
     return llvm::createStringError(
         "Could not get record type info for typeref: " + ss.str());
+  }
+
+  llvm::Expected<const swift::reflection::TypeInfo &> GetTypeInfoFromTypeRef(
+      const swift::reflection::TypeRef &type_ref,
+      swift::remote::TypeInfoProvider *provider,
+      swift::reflection::DescriptorFinder *descriptor_finder) {
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
+
+    Log *log(GetLog(LLDBLog::Types));
+    if (log && log->GetVerbose()) {
+      std::stringstream ss;
+      type_ref.dump(ss);
+      LLDB_LOG(log,
+               "[TargetReflectionContext[{0:x}]::getTypeInfo] Getting type "
+               "info for typeref {1}",
+               provider ? provider->getId() : 0, ss.str());
+    }
+
+    auto type_info_or_err = m_reflection_ctx.getTypeInfo(type_ref, provider);
+    if (!type_info_or_err)
+      return llvm::joinErrors(
+          llvm::createStringError(
+              "Could not find reflection metadata for type"),
+          type_info_or_err.takeError());
+
+    if (log && log->GetVerbose()) {
+      std::stringstream ss;
+      type_info_or_err->dump(ss);
+      LLDB_LOG(log,
+               "[TargetReflectionContext::getTypeInfo] Found type info {0}",
+               ss.str());
+    }
+    return *type_info_or_err;
   }
 };
 } // namespace
@@ -516,4 +534,29 @@ ReflectionContextInterface::CreateReflectionContext(
   }
   return {};
 }
+
+llvm::Expected<const swift::reflection::TypeRef &>
+ReflectionContextInterface::GetCanonicalTypeRef(CompilerType type) {
+  auto tss = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!tss)
+    return llvm::createStringError("not a Swift type");
+  auto tr_ts = tss->GetTypeSystemSwiftTypeRef();
+  if (!tr_ts)
+    return llvm::createStringError("no TypeSystemSwiftTypeRef");
+
+  ConstString mangled_name = type.GetMangledTypeName();
+  swift::Demangle::Demangler dem;
+  swift::Demangle::NodePointer node =
+      tr_ts->GetCanonicalDemangleTree(dem, mangled_name);
+  if (!node)
+    return llvm::createStringError("could not canonically demangle type");
+
+  auto flavor =
+      SwiftLanguageRuntime::GetManglingFlavor(mangled_name.GetStringRef());
+  auto node_or_err = tr_ts->RemoveMarkerProtocols(dem, node, flavor);
+  if (!node_or_err)
+    return node_or_err.takeError();
+  return GetTypeRef(dem, *node_or_err);
+}
+
 } // namespace lldb_private

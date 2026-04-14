@@ -23,14 +23,18 @@ class TestSwiftPOValueTypes(TestBase):
         """Test 'po' on a variety of value types with and without custom descriptions."""
         self.build()
         (_,_,_,_) = lldbutil.run_to_source_breakpoint(self, "Break here to run tests", lldb.SBFileSpec("main.swift"))
-        
+
         self.expect("po dm", substrs=['a', '12', 'b', '24'])
         self.expect("po cm", substrs=['c', '36'])
         self.expect("po cm", substrs=['12', '24'], matching=False)
         self.expect("po cs", substrs=['CustomDebugStringConvertible'])
         self.expect("po cs", substrs=['CustomStringConvertible'], matching=False)
-        self.expect("po cs", substrs=['a', '12', 'b', '24'])
-        self.expect("script lldb.frame.FindVariable('cs').GetObjectDescription()", substrs=['a', '12', 'b', '24'])
+        self.expect("po cs", substrs=["abc", "12", "def", "24"], matching=False)
+        self.expect(
+            "script lldb.frame.FindVariable('cs').GetObjectDescription()",
+            patterns=["abc", "12", "def", "24"],
+            matching=False,
+        )
         self.expect("po (12,24,36,48)", substrs=['12', '24', '36', '48'])
         self.expect("po (dm as Any, cm as Any,48 as Any)", substrs=['12', '24', '36', '48'])
         self.expect("po patatino", substrs=['foo'])
@@ -48,6 +52,3 @@ class TestSwiftPOValueTypes(TestBase):
         # As part of the po expression we should auto-continue past the breakpoint so this succeeds:
         self.expect("po cs", substrs=['CustomDebugStringConvertible'])
         self.assertEqual(po_bkpt.GetHitCount(), 1, "Did hit the breakpoint")
-
-        
-        
