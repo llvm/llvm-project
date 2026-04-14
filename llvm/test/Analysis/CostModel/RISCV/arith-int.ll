@@ -1700,3 +1700,26 @@ define i32 @xor() {
   xor <vscale x 8 x i64> undef, undef
   ret i32 undef
 }
+
+define void @transforms() {
+; CHECK-LABEL: 'transforms'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %udiv.nonpow2 = udiv i16 poison, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %udiv.pow2 = udiv i16 poison, 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %urem.nonpow2 = urem i16 poison, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %urem.pow2 = urem i16 poison, 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; SIFIVE-X280-LABEL: 'transforms'
+; SIFIVE-X280-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %udiv.nonpow2 = udiv i16 poison, 7
+; SIFIVE-X280-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %udiv.pow2 = udiv i16 poison, 8
+; SIFIVE-X280-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %urem.nonpow2 = urem i16 poison, 3
+; SIFIVE-X280-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %urem.pow2 = urem i16 poison, 4
+; SIFIVE-X280-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %udiv.nonpow2 = udiv i16 poison, 7
+  %udiv.pow2 = udiv i16 poison, 8
+
+  %urem.nonpow2 = urem i16 poison, 3
+  %urem.pow2 = urem i16 poison, 4
+  ret void
+}
