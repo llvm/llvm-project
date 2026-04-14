@@ -5086,6 +5086,162 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   return true;
 }
 
+/// Try to canonicalize a homogeneous, tightly-packed struct to a vector type.
+///
+/// For structs where all elements have the same type and are tightly packed
+/// (no padding), we can represent them as a fixed vector which enables better
+/// optimization (e.g., vector selects instead of memcpy).
+///
+/// \param STy The struct type to try to canonicalize.
+/// \param DL The DataLayout for size/alignment queries.
+/// \returns The equivalent vector type, or nullptr if not applicable.
+static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
+                                                      const DataLayout &DL) {
+  unsigned NumElts = STy->getNumElements();
+  if (NumElts != 2 && NumElts != 4)
+    return nullptr;
+
+  // All elements must be the same type.
+  Type *EltTy = STy->getElementType(0);
+  for (unsigned I = 1; I < NumElts; ++I)
+    if (STy->getElementType(I) != EltTy)
+      return nullptr;
+
+  // Element type must be valid for vectors.
+  if (!VectorType::isValidElementType(EltTy))
+    return nullptr;
+
+  // Only allow integer types >= 8 bits or floating point.
+  if (auto *IT = dyn_cast<IntegerType>(EltTy)) {
+    if (IT->getBitWidth() < 8)
+      return nullptr;
+  } else if (!EltTy->isFloatingPointTy()) {
+    return nullptr;
+  }
+
+  // Element size must be fixed and non-zero.
+  TypeSize EltTS = DL.getTypeAllocSize(EltTy);
+  if (!EltTS.isFixed())
+    return nullptr;
+  uint64_t EltSize = EltTS.getFixedValue();
+  if (EltSize < 1)
+    return nullptr;
+
+  const StructLayout *SL = DL.getStructLayout(STy);
+  uint64_t StructSize = SL->getSizeInBytes();
+  if (StructSize == 0)
+    return nullptr;
+
+  // Must be tightly packed: size == NumElts * EltSize.
+  if (StructSize != NumElts * EltSize)
+    return nullptr;
+
+  // Verify each element is at the expected offset (no padding).
+  for (unsigned I = 0; I < NumElts; ++I)
+    if (SL->getElementOffset(I) != I * EltSize)
+      return nullptr;
+
+  return FixedVectorType::get(EltTy, NumElts);
+}
+
+/// Decide whether it is profitable to canonicalize a homogeneous struct
+/// partition to a vector after the usual promotion choices have already failed.
+///
+/// This helper is intentionally conservative: we only canonicalize when the
+/// partition has a non-splittable whole-partition use and does not have any
+/// non-splittable sub-element loads.
+///
+/// Default allow case:
+/// - a real whole-partition use, because that is the clearest signal that a
+///   vector type can carry a whole value profitably.
+///
+/// Default reject case:
+/// - sub-element loads, because they usually turn the vector back into lane
+///   extraction traffic.
+///
+/// We also recover a narrow class of memcpy-only integer cases, even though
+/// they are classified as splittable rather than whole-partition uses:
+/// - interior i64 partitions within a larger fixed-size allocation
+/// - original full-record integer aggregates of size >= 32 bytes
+///
+/// Rationale:
+/// - Some memcpy-only integer cases are real wins and stay in whole-value form
+///   after canonicalization.
+/// - But recovering all full-record memcpy-only cases is too broad: an
+///   original full-record 16-byte {i64, i64} helper can look locally
+///   profitable while still making later code generation worse.
+/// - So the fallback stays narrow and uses the current partition's offsets plus
+///   allocation size to distinguish the safer recovered cases from the broader
+///   risky bucket.
+///
+/// Intuition:
+/// - Good: whole-value traffic can benefit from a vector type.
+///     %tmp = load { i64, i64 }, ptr %src
+///     store { i64, i64 } %tmp, ptr %dst
+///   Canonicalizing to <2 x i64> exposes a single whole-value load/store.
+///
+/// - Bad: field-by-field reads become extractelement traffic.
+///     %x = load i32, ptr %p
+///     %y = load i32, ptr (gep %p, 4)
+///   Canonicalizing { i32, i32 } to <2 x i32> only adds lane extraction.
+///
+/// - Bad: a store-only FP tail can seed later SLP divergence without a clear
+///   SROA win.
+///     store float %a, ptr %p0
+///     store float %b, ptr %p1
+///     store float %c, ptr %p2
+///     store float %d, ptr %p3
+///   Canonicalizing this to a temporary <4 x float> store was enough to change
+///   later vectorization without a clear benefit.
+static bool shouldCanonicalizeHomogeneousStructToVector(Partition &P,
+                                                        const DataLayout &DL,
+                                                        AllocaInst &AI,
+                                                        bool IsI64Candidate) {
+  bool HasWholePartitionUse = false;
+  bool HasSubElementLoad = false;
+  bool HasRecoverableSplittableTransfer = false;
+  std::optional<TypeSize> AllocSize = AI.getAllocationSize(DL);
+  bool IsInteriorSubaggregate = AllocSize && AllocSize->isFixed() &&
+                                P.beginOffset() != 0 &&
+                                P.endOffset() < AllocSize->getFixedValue();
+  bool IsOriginalFullRecord = P.beginOffset() == 0 && AllocSize &&
+                              AllocSize->isFixed() &&
+                              AllocSize->getFixedValue() == P.size();
+
+  for (const Slice &S : P) {
+    if (S.isDead())
+      continue;
+
+    auto *U = S.getUse();
+    if (!U)
+      continue;
+
+    if (S.isSplittable()) {
+      if (IsI64Candidate && IsInteriorSubaggregate &&
+          S.beginOffset() == P.beginOffset() &&
+          S.endOffset() == P.endOffset() && isa<MemIntrinsic>(U->getUser()))
+        HasRecoverableSplittableTransfer = true;
+      if (IsI64Candidate && IsOriginalFullRecord && P.size() >= 32 &&
+          S.beginOffset() == P.beginOffset() &&
+          S.endOffset() == P.endOffset() && isa<MemIntrinsic>(U->getUser()))
+        HasRecoverableSplittableTransfer = true;
+      continue;
+    }
+
+    uint64_t SliceSize = S.endOffset() - S.beginOffset();
+    if (SliceSize < P.size()) {
+      if (isa<LoadInst>(U->getUser()))
+        HasSubElementLoad = true;
+      continue;
+    }
+
+    HasWholePartitionUse = true;
+  }
+
+  return (HasWholePartitionUse || HasRecoverableSplittableTransfer) &&
+         !HasSubElementLoad;
+}
+
 /// Select a partition type for an alloca partition.
 ///
 /// Try to compute a friendly type for this partition of the alloca. This
@@ -5100,6 +5256,26 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
                     LLVMContext &C) {
+  auto LogChoice = [&](StringRef Path, Type *ChosenTy, VectorType *ChosenVecTy,
+                       bool ChosenIntWidening) {
+    LLVM_DEBUG({
+      dbgs() << "selectPartitionType path=" << Path
+             << " func=" << AI.getFunction()->getName() << " alloca=";
+      if (AI.hasName())
+        dbgs() << AI.getName();
+      else
+        dbgs() << "<unnamed>";
+      dbgs() << " partition=[" << P.beginOffset() << "," << P.endOffset()
+             << ") size=" << P.size();
+      if (std::optional<TypeSize> AllocSize = AI.getAllocationSize(DL))
+        dbgs() << " alloc-size=" << AllocSize->getKnownMinValue();
+      if (ChosenTy)
+        dbgs() << " chosen=" << *ChosenTy;
+      if (ChosenVecTy)
+        dbgs() << " vec=" << *ChosenVecTy;
+      dbgs() << " intwiden=" << ChosenIntWidening << "\n";
+    });
+  };
   // First check if the partition is viable for vector promotion.
   //
   // We prefer vector promotion over integer widening promotion when:
@@ -5116,8 +5292,10 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // promotion. If the vector has one element, let the below code select
   // whether we promote with the vector or scalar.
   if (VecTy && VecTy->getElementType()->isFloatingPointTy() &&
-      VecTy->getElementCount().getFixedValue() > 1)
+      VecTy->getElementCount().getFixedValue() > 1) {
+    LogChoice("direct-fp-vecty", VecTy, VecTy, false);
     return {VecTy, false, VecTy};
+  }
 
   // Check if there is a common type that all slices of the partition use that
   // spans the partition.
@@ -5129,10 +5307,13 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
       // We prefer vector promotion here because if vector promotion is viable
       // and there is a common type used, then it implies the second listed
       // condition for preferring vector promotion is true.
-      if (VecTy)
+      if (VecTy) {
+        LogChoice("common-type-vecty", VecTy, VecTy, false);
         return {VecTy, false, VecTy};
-      return {CommonUseTy, isIntegerWideningViable(P, CommonUseTy, DL),
-              nullptr};
+      }
+      bool IntWiden = isIntegerWideningViable(P, CommonUseTy, DL);
+      LogChoice("common-type", CommonUseTy, nullptr, IntWiden);
+      return {CommonUseTy, IntWiden, nullptr};
     }
   }
 
@@ -5148,32 +5329,83 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         DL.isLegalInteger(P.size() * 8))
       TypePartitionTy = Type::getIntNTy(C, P.size() * 8);
     // There was no common type used, so we prefer integer widening promotion.
-    if (isIntegerWideningViable(P, TypePartitionTy, DL))
+    if (isIntegerWideningViable(P, TypePartitionTy, DL)) {
+      LogChoice("type-partition-intwiden", TypePartitionTy, nullptr, true);
       return {TypePartitionTy, true, nullptr};
-    if (VecTy)
+    }
+    if (VecTy) {
+      LogChoice("type-partition-vecty", VecTy, VecTy, false);
       return {VecTy, false, VecTy};
+    }
     // If we couldn't promote with TypePartitionTy, try with the largest
     // integer type used.
     if (LargestIntTy &&
         DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size() &&
-        isIntegerWideningViable(P, LargestIntTy, DL))
+        isIntegerWideningViable(P, LargestIntTy, DL)) {
+      LogChoice("largest-int-intwiden", LargestIntTy, nullptr, true);
       return {LargestIntTy, true, nullptr};
+    }
+
+    // Try homogeneous struct to vector canonicalization.
+    //
+    // This is intentionally more conservative than tryCanonicalize...
+    // alone: after the normal promotion paths above fail, we only want the
+    // struct-to-vector fallback when it can expose a real whole-value use,
+    // not when it would merely create vector lanes that later passes have to
+    // unpack again.
+    if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
+      if (auto *VTy = tryCanonicalizeStructToVector(STy, DL)) {
+        // Recover only a narrow integer memcpy-only subset here. Broader
+        // fallback recovery was too aggressive:
+        // - full-record 16-byte { i64, i64 } cases reopened regressions
+        // - FP and lane-oriented cases were more likely to trigger bad later
+        //   codegen
+        //
+        // So this path is restricted to 64-bit integer lanes, and only for
+        // interior partitions or original full records of size >= 32 bytes.
+        bool AllowStructFallback = shouldCanonicalizeHomogeneousStructToVector(
+            P, DL, AI, VTy->getElementType()->isIntegerTy(64));
+        LLVM_DEBUG({
+          dbgs() << "selectPartitionType struct-fallback-candidate"
+                 << " func=" << AI.getFunction()->getName() << " alloca=";
+          if (AI.hasName())
+            dbgs() << AI.getName();
+          else
+            dbgs() << "<unnamed>";
+          dbgs() << " partition=[" << P.beginOffset() << "," << P.endOffset()
+                 << ") size=" << P.size() << " type-partition=" << *STy
+                 << " candidate-vec=" << *VTy
+                 << " allow=" << AllowStructFallback << "\n";
+        });
+        if (AllowStructFallback) {
+          LogChoice("struct-fallback-vecty", VTy, nullptr, false);
+          return {VTy, false, nullptr};
+        }
+      }
 
     // Fallback to TypePartitionTy and we probably won't promote.
+    LogChoice("type-partition-fallback", TypePartitionTy, nullptr, false);
     return {TypePartitionTy, false, nullptr};
   }
 
   // Select the largest integer type used if it spans the partition.
   if (LargestIntTy &&
-      DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size())
+      DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size()) {
+    LogChoice("largest-int-fallback", LargestIntTy, nullptr, false);
     return {LargestIntTy, false, nullptr};
+  }
 
   // Select a legal integer type if it spans the partition.
-  if (DL.isLegalInteger(P.size() * 8))
-    return {Type::getIntNTy(C, P.size() * 8), false, nullptr};
+  if (DL.isLegalInteger(P.size() * 8)) {
+    Type *IntTy = Type::getIntNTy(C, P.size() * 8);
+    LogChoice("legal-int-fallback", IntTy, nullptr, false);
+    return {IntTy, false, nullptr};
+  }
 
   // Fallback to an i8 array.
-  return {ArrayType::get(Type::getInt8Ty(C), P.size()), false, nullptr};
+  Type *ArrayTy = ArrayType::get(Type::getInt8Ty(C), P.size());
+  LogChoice("byte-array-fallback", ArrayTy, nullptr, false);
+  return {ArrayTy, false, nullptr};
 }
 
 /// Rewrite an alloca partition's users.
