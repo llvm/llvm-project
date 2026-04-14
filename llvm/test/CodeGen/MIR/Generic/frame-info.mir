@@ -36,6 +36,7 @@ tracksRegLiveness: true
 # CHECK-NEXT: maxAlignment:
 # CHECK-NEXT: adjustsStack: false
 # CHECK-NEXT: hasCalls: false
+# CHECK-NEXT: framePointerPolicy: none
 # CHECK-NEXT: stackProtector:  ''
 # CHECK-NEXT: functionContext:  ''
 # CHECK-NEXT: maxCallFrameSize:
@@ -70,6 +71,7 @@ stack:
 # CHECK-NEXT: maxAlignment:
 # CHECK-NEXT: adjustsStack: true
 # CHECK-NEXT: hasCalls: true
+# CHECK-NEXT: framePointerPolicy: non-leaf
 # CHECK-NEXT: stackProtector:  ''
 # CHECK-NEXT: functionContext:  '%stack.0'
 # CHECK-NEXT: maxCallFrameSize: 4
@@ -89,6 +91,7 @@ frameInfo:
   maxAlignment:    4
   adjustsStack:    true
   hasCalls:        true
+  framePointerPolicy: non-leaf
   functionContext: '%stack.0'
   maxCallFrameSize: 4
   cvBytesOfCalleeSavedRegisters: 8
@@ -100,4 +103,3 @@ frameInfo:
 body: |
   bb.0.entry:
 ...
-
