@@ -52,7 +52,7 @@ public:
 
   /// Returns true if we know the value of all bits.
   bool isConstant() const {
-    if (Zero.isSingleWord())
+    if (LLVM_LIKELY(Zero.isSingleWord()))
       return (Zero.getZExtValue() | One.getZExtValue()) ==
              llvm::maskTrailingOnes<uint64_t>(getBitWidth());
     return isConstantSlowCase();
