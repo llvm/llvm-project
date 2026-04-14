@@ -4428,8 +4428,10 @@ const char *StyleOptionHelpDescription =
     "   --style=\"{BasedOnStyle: llvm, IndentWidth: 8}\"";
 
 static FormatStyle::LanguageKind getLanguageByFileName(StringRef &FileName) {
-  constexpr std::array TemplateSuffixes{llvm::StringLiteral{".in"},
-                                        llvm::StringLiteral{".template"}};
+  static constexpr std::array<llvm::StringLiteral, 2> TemplateSuffixes{
+      ".in",
+      ".template",
+  };
   for (auto Suffix : TemplateSuffixes)
     if (FileName.consume_back(Suffix))
       break;
