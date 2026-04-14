@@ -4,7 +4,7 @@
 ;
 ; RUN: opt < %s -passes=hwasan -hwasan-mapping-offset-dynamic=ifunc -hwasan-with-frame-record=0 -S | FileCheck %s --check-prefixes=DYNAMIC-SHADOW
 ; RUN: opt < %s -passes=hwasan -hwasan-mapping-offset=0 -hwasan-with-frame-record=0 -S | FileCheck %s --check-prefixes=ZERO-BASED-SHADOW
-; RUN: opt < %s -passes=hwasan -hwasan-mapping-offset=0 -hwasan-with-frame-record=0 -S | FileCheck %s --check-prefixes=ZERO-BASED-SHADOW-NON-NEGATIVE
+; RUN: opt < %s -passes=hwasan -hwasan-mapping-offset=0 -hwasan-with-frame-record=0  -hwasan-tag-bits=7 -S | FileCheck %s --check-prefixes=ZERO-BASED-SHADOW-NON-NEGATIVE
 
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -119,31 +119,33 @@ define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 20
 ; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = and i64 [[TMP3]], 127
 ; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP1]], 56
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[HWASAN_UAR_TAG:%.*]] = and i64 [[TMP4]], 127
 ; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:      #dbg_value(!DIArgList(ptr [[X]], ptr [[X]]), [[META11:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_tag_offset, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_tag_offset, 0, DW_OP_plus, DW_OP_deref), [[META13:![0-9]+]])
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP20:%.*]] = xor i64 [[TMP3]], 0, !dbg [[DBG14:![0-9]+]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP5:%.*]] = and i64 [[TMP21]], 72057594037927935, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP20]], 56, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]], !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to ptr, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP20]] to i8, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 72057594037927935, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP11:%.*]] = lshr i64 [[TMP10]], 4, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i32 0, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    store i8 4, ptr [[TMP13]], align 1, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[X]], i32 15, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    store i8 [[TMP8]], ptr [[TMP14]], align 1, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP5:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0, !dbg [[DBG14:![0-9]+]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], -9151314442816847873, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 56, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP9:%.*]] = or i64 [[TMP7]], [[TMP8]], !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP9]] to ptr, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP5]] to i8, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP12:%.*]] = and i64 [[TMP11]], -9151314442816847873, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP12]], 4, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP13]] to ptr, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP14]], i32 0, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    store i8 4, ptr [[TMP15]], align 1, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[X]], i32 15, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    store i8 [[TMP10]], ptr [[TMP16]], align 1, !dbg [[DBG14]]
 ; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]]), !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP4]] to i8, !dbg [[DBG15:![0-9]+]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG15]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP17:%.*]] = and i64 [[TMP16]], 72057594037927935, !dbg [[DBG15]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP18:%.*]] = lshr i64 [[TMP17]], 4, !dbg [[DBG15]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr, !dbg [[DBG15]]
-; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP19]], i8 [[TMP15]], i64 1, i1 false), !dbg [[DBG15]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP17:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8, !dbg [[DBG15:![0-9]+]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP18:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG15]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP19:%.*]] = and i64 [[TMP18]], -9151314442816847873, !dbg [[DBG15]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP20:%.*]] = lshr i64 [[TMP19]], 4, !dbg [[DBG15]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    [[TMP21:%.*]] = inttoptr i64 [[TMP20]] to ptr, !dbg [[DBG15]]
+; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP21]], i8 [[TMP17]], i64 1, i1 false), !dbg [[DBG15]]
 ; ZERO-BASED-SHADOW-NON-NEGATIVE-NEXT:    ret void, !dbg [[DBG15]]
 ;
 entry:
