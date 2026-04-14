@@ -68,7 +68,6 @@ protected:
   friend class ShuffleVectorInst;  // For getTopmostLLVMInstruction().
   friend class ExtractValueInst;   // For getTopmostLLVMInstruction().
   friend class InsertValueInst;    // For getTopmostLLVMInstruction().
-  friend class BranchInst;         // For getTopmostLLVMInstruction().
   friend class LoadInst;           // For getTopmostLLVMInstruction().
   friend class StoreInst;          // For getTopmostLLVMInstruction().
   friend class ReturnInst;         // For getTopmostLLVMInstruction().
@@ -1019,33 +1018,9 @@ public:
   }
 };
 
-class BranchInst : public SingleLLVMInstructionImpl<llvm::BranchInst> {
-  /// Use Context::createBranchInst(). Don't call the constructor directly.
-  BranchInst(llvm::BranchInst *BI, Context &Ctx)
-      : SingleLLVMInstructionImpl(ClassID::Br, Opcode::Br, BI, Ctx) {}
-  friend Context; // for BranchInst()
-
-public:
-  LLVM_ABI static BranchInst *create(BasicBlock *IfTrue, InsertPosition Pos,
-                                     Context &Ctx);
-  LLVM_ABI static BranchInst *create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                                     Value *Cond, InsertPosition Pos,
-                                     Context &Ctx);
-  /// For isa/dyn_cast.
-  LLVM_ABI static bool classof(const Value *From);
-  bool isUnconditional() const {
-    return cast<llvm::BranchInst>(Val)->isUnconditional();
-  }
-  bool isConditional() const {
-    return cast<llvm::BranchInst>(Val)->isConditional();
-  }
-  LLVM_ABI Value *getCondition() const;
-  void setCondition(Value *V) { setOperand(0, V); }
-  unsigned getNumSuccessors() const { return 1 + isConditional(); }
-  LLVM_ABI BasicBlock *getSuccessor(unsigned SuccIdx) const;
-  LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
-  void swapSuccessors() { swapOperandsInternal(1, 2); }
-
+/// Both UncondBrInst and CondBrInst inherit from this to avoid duplication of
+/// the successor iterators and successors(). Does not hold any state.
+class BrInstCommon {
 private:
   struct LLVMBBToSBBB {
     Context &Ctx;
@@ -1059,31 +1034,97 @@ private:
     LLVM_ABI const BasicBlock *operator()(const llvm::BasicBlock *BB) const;
   };
 
-public:
+protected:
+  template <typename LLVMBrTy>
   using sb_succ_op_iterator =
-      mapped_iterator<llvm::BranchInst::succ_iterator, LLVMBBToSBBB>;
-  iterator_range<sb_succ_op_iterator> successors() {
-    iterator_range<llvm::BranchInst::succ_iterator> LLVMRange =
-        cast<llvm::BranchInst>(Val)->successors();
+      mapped_iterator<typename LLVMBrTy::succ_iterator, LLVMBBToSBBB>;
+  template <typename LLVMBrTy>
+  iterator_range<sb_succ_op_iterator<LLVMBrTy>> successors(llvm::Value *Val,
+                                                           Context &Ctx) {
+    iterator_range<typename LLVMBrTy::succ_iterator> LLVMRange =
+        cast<LLVMBrTy>(Val)->successors();
     LLVMBBToSBBB BBMap(Ctx);
-    sb_succ_op_iterator MappedBegin = map_iterator(LLVMRange.begin(), BBMap);
-    sb_succ_op_iterator MappedEnd = map_iterator(LLVMRange.end(), BBMap);
+    sb_succ_op_iterator<LLVMBrTy> MappedBegin =
+        map_iterator(LLVMRange.begin(), BBMap);
+    sb_succ_op_iterator<LLVMBrTy> MappedEnd =
+        map_iterator(LLVMRange.end(), BBMap);
     return make_range(MappedBegin, MappedEnd);
   }
 
+  template <typename LLVMBrTy>
   using const_sb_succ_op_iterator =
-      mapped_iterator<llvm::BranchInst::const_succ_iterator, ConstLLVMBBToSBBB>;
-  iterator_range<const_sb_succ_op_iterator> successors() const {
-    iterator_range<llvm::BranchInst::const_succ_iterator> ConstLLVMRange =
-        static_cast<const llvm::BranchInst *>(cast<llvm::BranchInst>(Val))
-            ->successors();
+      mapped_iterator<typename LLVMBrTy::const_succ_iterator,
+                      ConstLLVMBBToSBBB>;
+  template <typename LLVMBrTy>
+  iterator_range<const_sb_succ_op_iterator<LLVMBrTy>>
+  successors(llvm::Value *Val, Context &Ctx) const {
+    llvm::iterator_range<typename LLVMBrTy::const_succ_iterator>
+        ConstLLVMRange =
+            static_cast<const LLVMBrTy *>(cast<LLVMBrTy>(Val))->successors();
     ConstLLVMBBToSBBB ConstBBMap(Ctx);
-    const_sb_succ_op_iterator ConstMappedBegin =
+    const_sb_succ_op_iterator<LLVMBrTy> ConstMappedBegin =
         map_iterator(ConstLLVMRange.begin(), ConstBBMap);
-    const_sb_succ_op_iterator ConstMappedEnd =
+    const_sb_succ_op_iterator<LLVMBrTy> ConstMappedEnd =
         map_iterator(ConstLLVMRange.end(), ConstBBMap);
     return make_range(ConstMappedBegin, ConstMappedEnd);
   }
+};
+
+class UncondBrInst : public SingleLLVMInstructionImpl<llvm::UncondBrInst>,
+                     public BrInstCommon {
+  /// Use Context::createUncondBrInst(). Don't call the constructor directly.
+  UncondBrInst(llvm::UncondBrInst *UBI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::UncondBr, Opcode::UncondBr, UBI,
+                                  Ctx) {}
+  friend Context; // for UncondBrInst()
+
+public:
+  static UncondBrInst *create(BasicBlock *Target, InsertPosition InsertBefore,
+                              Context &Ctx);
+  LLVM_ABI BasicBlock *getSuccessor() const;
+  LLVM_ABI void setSuccessor(BasicBlock *NewSucc);
+  unsigned getNumSuccessors() const { return 1; }
+  using succ_op_iterator = sb_succ_op_iterator<llvm::UncondBrInst>;
+  using const_succ_op_iterator = const_sb_succ_op_iterator<llvm::UncondBrInst>;
+  iterator_range<succ_op_iterator> successors() {
+    return BrInstCommon::successors<llvm::UncondBrInst>(Val, Ctx);
+  }
+  iterator_range<const_succ_op_iterator> successors() const {
+    return BrInstCommon::successors<llvm::UncondBrInst>(Val, Ctx);
+  }
+
+  /// For isa/dyn_cast.
+  LLVM_ABI static bool classof(const Value *From);
+};
+
+class CondBrInst : public SingleLLVMInstructionImpl<llvm::CondBrInst>,
+                   public BrInstCommon {
+  /// Use Context::createUncondBrInst(). Don't call the constructor directly.
+  CondBrInst(llvm::CondBrInst *CBI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::CondBr, Opcode::CondBr, CBI, Ctx) {}
+  friend Context; // for UcnondBrInst()
+
+public:
+  static CondBrInst *create(Value *Cond, BasicBlock *IfTrue,
+                            BasicBlock *IfFalse, InsertPosition InsertBefore,
+                            Context &Ctx);
+  LLVM_ABI Value *getCondition() const;
+  void setCondition(Value *V);
+  LLVM_ABI BasicBlock *getSuccessor(unsigned SuccIdx) const;
+  LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
+  unsigned getNumSuccessors() const { return 2; }
+  void swapSuccessors() { swapOperandsInternal(1, 2); }
+  using succ_op_iterator = sb_succ_op_iterator<llvm::CondBrInst>;
+  using const_succ_op_iterator = const_sb_succ_op_iterator<llvm::CondBrInst>;
+  iterator_range<succ_op_iterator> successors() {
+    return BrInstCommon::successors<llvm::CondBrInst>(Val, Ctx);
+  }
+  iterator_range<const_succ_op_iterator> successors() const {
+    return BrInstCommon::successors<llvm::CondBrInst>(Val, Ctx);
+  }
+
+  /// For isa/dyn_cast.
+  LLVM_ABI static bool classof(const Value *From);
 };
 
 /// An abstract class, parent of unary instructions.

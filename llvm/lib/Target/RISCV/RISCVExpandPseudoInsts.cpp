@@ -338,53 +338,90 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
   if (!STI->hasVendorXqcicm())
     return false;
 
+  MachineOperand &LHS = MI.getOperand(MI.getNumExplicitOperands() - 2);
+  MachineOperand &RHS = MI.getOperand(MI.getNumExplicitOperands() - 1);
+
   // FIXME: Would be wonderful to support LHS=X0, but not very easy.
-  if (MI.getOperand(MI.getNumExplicitOperands() - 2).getReg() == RISCV::X0 ||
-      MI.getOperand(1).getReg() == RISCV::X0 ||
+  if (LHS.getReg() == RISCV::X0 || MI.getOperand(1).getReg() == RISCV::X0 ||
       MI.getOperand(2).getReg() == RISCV::X0)
     return false;
 
   // Use branch opcode to select appropriate Xqcicm instruction
   unsigned BCC = MI.getOperand(MI.getNumExplicitOperands() - 3).getImm();
-  unsigned CMovOpcode, CMovIOpcode;
+  std::optional<unsigned> CMovRegOpcode;
+  unsigned CMovImmOpcode;
   switch (BCC) {
   default:
     return false; // Unhandled branch opcodes
   case RISCV::BNE:
-    CMovOpcode = RISCV::QC_MVEQ;
-    CMovIOpcode = RISCV::QC_MVEQI;
+    CMovRegOpcode = RISCV::QC_MVEQ;
+    CMovImmOpcode = RISCV::QC_MVEQI;
     break;
   case RISCV::BEQ:
-    CMovOpcode = RISCV::QC_MVNE;
-    CMovIOpcode = RISCV::QC_MVNEI;
+    CMovRegOpcode = RISCV::QC_MVNE;
+    CMovImmOpcode = RISCV::QC_MVNEI;
     break;
   case RISCV::BGE:
-    CMovOpcode = RISCV::QC_MVLT;
-    CMovIOpcode = RISCV::QC_MVLTI;
+    CMovRegOpcode = RISCV::QC_MVLT;
+    CMovImmOpcode = RISCV::QC_MVLTI;
     break;
   case RISCV::BLT:
-    CMovOpcode = RISCV::QC_MVGE;
-    CMovIOpcode = RISCV::QC_MVGEI;
+    CMovRegOpcode = RISCV::QC_MVGE;
+    CMovImmOpcode = RISCV::QC_MVGEI;
     break;
   case RISCV::BGEU:
-    CMovOpcode = RISCV::QC_MVLTU;
-    CMovIOpcode = RISCV::QC_MVLTUI;
+    CMovRegOpcode = RISCV::QC_MVLTU;
+    CMovImmOpcode = RISCV::QC_MVLTUI;
     break;
   case RISCV::BLTU:
-    CMovOpcode = RISCV::QC_MVGEU;
-    CMovIOpcode = RISCV::QC_MVGEUI;
+    CMovRegOpcode = RISCV::QC_MVGEU;
+    CMovImmOpcode = RISCV::QC_MVGEUI;
+    break;
+  case RISCV::QC_BEQI:
+    CMovImmOpcode = RISCV::QC_MVEQI;
+    break;
+  case RISCV::QC_BNEI:
+    CMovImmOpcode = RISCV::QC_MVNEI;
+    break;
+  case RISCV::QC_BLTI:
+    CMovImmOpcode = RISCV::QC_MVLTI;
+    break;
+  case RISCV::QC_BGEI:
+    CMovImmOpcode = RISCV::QC_MVGEI;
+    break;
+  case RISCV::QC_BLTUI:
+    CMovImmOpcode = RISCV::QC_MVLTUI;
+    break;
+  case RISCV::QC_BGEUI:
+    CMovImmOpcode = RISCV::QC_MVGEUI;
     break;
   }
 
-  if (MI.getOperand(MI.getNumExplicitOperands() - 1).getReg() == RISCV::X0) {
-    // $dst = PseudoCCMOVGPR $lhs, X0, $cc, $falsev (=$dst), $truev
-    // $dst = PseudoCCMOVGPRNoX0 $lhs, X0, $cc, $falsev (=$dst), $truev
+  if (RHS.isImm() && isInt<5>(RHS.getImm())) {
+    // $dst = PseudoCCMOVGPR $falsev(=$dst), $truev, $opcode, $lhs, $rhs_imm
+    // $dst = PseudoCCMOVGPRNoX0 $falsev(=$dst), $truev, $opcode, $lhs, $rhs_imm
     // =>
-    // $dst = QC_MVccI $falsev (=$dst), $lhs, 0, $truev
-    BuildMI(MBB, MBBI, DL, TII->get(CMovIOpcode))
+    // $dst = QC_MVccI $falsev (=$dst), $lhs, $rhs_imm, $truev
+    BuildMI(MBB, MBBI, DL, TII->get(CMovImmOpcode))
         .addDef(MI.getOperand(0).getReg())
         .addReg(MI.getOperand(1).getReg())
-        .addReg(MI.getOperand(MI.getNumExplicitOperands() - 2).getReg())
+        .addReg(LHS.getReg())
+        .add(RHS)
+        .addReg(MI.getOperand(2).getReg());
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (RHS.getReg() == RISCV::X0) {
+    // $dst = PseudoCCMOVGPR $falsev (=$dst), $truev, $opcode, $lhs, X0
+    // $dst = PseudoCCMOVGPRNoX0 $falsev (=$dst), $truev, $opcode, $lhs, X0
+    // =>
+    // $dst = QC_MVccI $falsev (=$dst), $lhs, 0, $truev
+    BuildMI(MBB, MBBI, DL, TII->get(CMovImmOpcode))
+        .addDef(MI.getOperand(0).getReg())
+        .addReg(MI.getOperand(1).getReg())
+        .addReg(LHS.getReg())
         .addImm(0)
         .addReg(MI.getOperand(2).getReg());
 
@@ -392,15 +429,18 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     return true;
   }
 
-  // $dst = PseudoCCMOVGPR $lhs, $rhs, $cc, $falsev (=$dst), $truev
-  // $dst = PseudoCCMOVGPRNoX0 $lhs, $rhs, $cc, $falsev (=$dst), $truev
+  if (!CMovRegOpcode)
+    return false;
+
+  // $dst = PseudoCCMOVGPR $falsev (=$dst), $truev, $opcode, $lhs, $rhs
+  // $dst = PseudoCCMOVGPRNoX0 $falsev (=$dst), $truev, $opcode, $lhs, $rhs
   // =>
   // $dst = QC_MVcc $falsev (=$dst), $lhs, $rhs, $truev
-  BuildMI(MBB, MBBI, DL, TII->get(CMovOpcode))
+  BuildMI(MBB, MBBI, DL, TII->get(*CMovRegOpcode))
       .addDef(MI.getOperand(0).getReg())
       .addReg(MI.getOperand(1).getReg())
-      .addReg(MI.getOperand(MI.getNumExplicitOperands() - 2).getReg())
-      .addReg(MI.getOperand(MI.getNumExplicitOperands() - 1).getReg())
+      .addReg(LHS.getReg())
+      .addReg(RHS.getReg())
       .addReg(MI.getOperand(2).getReg());
   MI.eraseFromParent();
   return true;

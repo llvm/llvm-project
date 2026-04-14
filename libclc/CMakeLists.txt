@@ -18,14 +18,6 @@ include( GNUInstallDirs )
 
 set( LIBCLC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 
-# A runtimes cross-build should only use the requested target.
-set( LIBCLC_DEFAULT_TARGET "all" )
-if( LLVM_RUNTIMES_BUILD AND LLVM_DEFAULT_TARGET_TRIPLE MATCHES "^nvptx|^amdgcn" )
-  set( LIBCLC_DEFAULT_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE} )
-endif()
-set( LIBCLC_TARGETS_TO_BUILD ${LIBCLC_DEFAULT_TARGET}
-    CACHE STRING "Semicolon-separated list of libclc targets to build, or 'all'." )
-
 option(
   LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
 )
@@ -38,7 +30,19 @@ set( LIBCLC_TARGETS_ALL
   nvptx64--
   nvptx64--nvidiacl
   nvptx64-nvidia-cuda
+  spirv-mesa3d-
+  spirv64-mesa3d-
 )
+
+set(LIBCLC_TARGET ${LLVM_RUNTIMES_TARGET})
+
+if(NOT LIBCLC_TARGET)
+  message(FATAL_ERROR "libclc target is empty\n")
+endif()
+if(NOT "${LIBCLC_TARGET}" IN_LIST LIBCLC_TARGETS_ALL)
+  message(FATAL_ERROR "Unknown libclc target: ${LIBCLC_TARGET}\n"
+    "Valid targets are: ${LIBCLC_TARGETS_ALL}\n")
+endif()
 
 if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   set( LIBCLC_STANDALONE_BUILD TRUE )
@@ -94,27 +98,20 @@ if( NOT LIBCLC_USE_SPIRV_BACKEND )
   else()
     find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
     set( llvm-spirv_exe "${LLVM_SPIRV}" )
-    set( llvm-spirv_target )
   endif()
 endif()
 
-if( LIBCLC_USE_SPIRV_BACKEND OR llvm-spirv_exe )
-  list( APPEND LIBCLC_TARGETS_ALL spirv-mesa3d- spirv64-mesa3d- )
-endif()
+message(STATUS "libclc target '${LIBCLC_TARGET}' is enabled")
 
-if( LIBCLC_TARGETS_TO_BUILD STREQUAL "all" )
-  set( LIBCLC_TARGETS_TO_BUILD ${LIBCLC_TARGETS_ALL} )
-else()
-  foreach(TARGET_TO_BUILD ${LIBCLC_TARGETS_TO_BUILD})
-    if (NOT ${TARGET_TO_BUILD} IN_LIST LIBCLC_TARGETS_ALL)
-      message( FATAL_ERROR
-        "Unknown target in LIBCLC_TARGETS_TO_BUILD: \"${TARGET_TO_BUILD}\"\n"
-        "Valid targets are: ${LIBCLC_TARGETS_ALL}\n")
-    endif()
-  endforeach()
-endif()
+string( REPLACE "-" ";" TRIPLE  ${LIBCLC_TARGET} )
+list(GET TRIPLE 0 ARCH)
+list(GET TRIPLE 2 OS)
 
-list( SORT LIBCLC_TARGETS_TO_BUILD )
+if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
+  if(NOT LIBCLC_USE_SPIRV_BACKEND AND NOT llvm-spirv_exe)
+    message(FATAL_ERROR "SPIR-V backend or llvm-spirv is required for libclc ${LIBCLC_TARGET}")
+  endif()
+endif()
 
 foreach( tool IN ITEMS opt llvm-link )
   if( NOT EXISTS "${${tool}_exe}" AND "${${tool}_target}" STREQUAL "" )
@@ -123,159 +120,156 @@ foreach( tool IN ITEMS opt llvm-link )
 endforeach()
 
 add_subdirectory(clc/lib/generic)
-add_subdirectory(clc/lib/amdgpu)
-add_subdirectory(clc/lib/ptx-nvidiacl)
-add_subdirectory(clc/lib/spirv)
-add_subdirectory(clc/lib/clspv)
-
 add_subdirectory(opencl/lib/generic)
-add_subdirectory(opencl/lib/amdgpu)
-add_subdirectory(opencl/lib/clspv)
-add_subdirectory(opencl/lib/spirv)
+
+if(ARCH STREQUAL amdgcn)
+  add_subdirectory(clc/lib/amdgpu)
+  add_subdirectory(opencl/lib/amdgpu)
+elseif(ARCH STREQUAL nvptx64)
+  add_subdirectory(clc/lib/ptx-nvidiacl)
+elseif(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
+  add_subdirectory(clc/lib/spirv)
+  add_subdirectory(opencl/lib/spirv)
+elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
+  add_subdirectory(clc/lib/clspv)
+  add_subdirectory(opencl/lib/clspv)
+endif()
 
 add_custom_target( libclc ALL )
 
 add_custom_target( libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins" )
 add_dependencies( libclc libclc-opencl-builtins )
 
-foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
-  message( STATUS "libclc target '${t}' is enabled" )
-  string( REPLACE "-" ";" TRIPLE  ${t} )
-  list( GET TRIPLE 0 ARCH )
-  list( GET TRIPLE 1 VENDOR )
-  list( GET TRIPLE 2 OS )
+# Determine the clang target triple.
+set(clang_triple ${LIBCLC_TARGET})
+if(ARCH STREQUAL spirv AND LIBCLC_USE_SPIRV_BACKEND)
+  set(clang_triple spirv32--)
+elseif(ARCH STREQUAL spirv64 AND LIBCLC_USE_SPIRV_BACKEND)
+  set(clang_triple spirv64--)
+elseif(ARCH STREQUAL spirv OR ARCH STREQUAL clspv)
+  set(clang_triple spir--)
+elseif(ARCH STREQUAL spirv64 OR ARCH STREQUAL clspv64)
+  set(clang_triple spir64--)
+endif()
 
-  # Determine the clang target triple.
-  set(clang_triple ${t})
-  if(ARCH STREQUAL spirv AND LIBCLC_USE_SPIRV_BACKEND)
-    set(clang_triple spirv32--)
-  elseif(ARCH STREQUAL spirv64 AND LIBCLC_USE_SPIRV_BACKEND)
-    set(clang_triple spirv64--)
-  elseif(ARCH STREQUAL spirv OR ARCH STREQUAL clspv)
-    set(clang_triple spir--)
-  elseif(ARCH STREQUAL spirv64 OR ARCH STREQUAL clspv64)
-    set(clang_triple spir64--)
-  endif()
+# Determine the preprocessor identifier for this target.
+set(MACRO_ARCH ${ARCH})
+if(ARCH STREQUAL spirv)
+  set(MACRO_ARCH SPIRV32)
+elseif(ARCH STREQUAL spirv64)
+  set(MACRO_ARCH SPIRV64)
+elseif(ARCH STREQUAL clspv)
+  set(MACRO_ARCH CLSPV32)
+elseif(ARCH STREQUAL clspv64)
+  set(MACRO_ARCH CLSPV64)
+endif()
+string(TOUPPER "CLC_${MACRO_ARCH}" target_define)
 
-  # Determine the preprocessor identifier for this target.
-  set(MACRO_ARCH ${ARCH})
-  if(ARCH STREQUAL spirv)
-    set(MACRO_ARCH SPIRV32)
-  elseif(ARCH STREQUAL spirv64)
-    set(MACRO_ARCH SPIRV64)
-  elseif(ARCH STREQUAL clspv)
-    set(MACRO_ARCH CLSPV32)
-  elseif(ARCH STREQUAL clspv64)
-    set(MACRO_ARCH CLSPV64)
-  endif()
-  string(TOUPPER "CLC_${MACRO_ARCH}" target_define)
+# Address space values.
+set(private_addrspace_val 0)
+set(generic_addrspace_val 0)
+if(ARCH STREQUAL amdgcn)
+  set(private_addrspace_val 5)
+endif()
+if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
+  set(generic_addrspace_val 4)
+endif()
 
-  # Address space values.
-  set(private_addrspace_val 0)
-  set(generic_addrspace_val 0)
+# Target-specific compile flags and defines.
+set(target_compile_flags)
+set(target_extra_defines)
+set(opt_flags -O3)
+
+if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
+  list(APPEND target_compile_flags -O0 -finline-hint-functions)
+  list(APPEND target_extra_defines CLC_SPIRV)
+  set(opt_flags)
+elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
+  list(APPEND target_compile_flags -Wno-unknown-assumption -U__opencl_c_int64)
+  list(APPEND target_extra_defines CLC_CLSPV)
+elseif(ARCH STREQUAL amdgcn)
+  list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")
+endif()
+
+# Collect CLC sources; target-specific sources override generic ones by basename.
+set(_clc_overrides)
+if(ARCH STREQUAL amdgcn)
+  list(APPEND _clc_overrides ${CLC_AMDGPU_SOURCES})
+elseif(ARCH STREQUAL nvptx64 AND (OS STREQUAL nvidiacl OR OS STREQUAL cuda))
+  list(APPEND _clc_overrides ${CLC_PTX_NVIDIACL_SOURCES})
+elseif(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
+  list(APPEND _clc_overrides ${CLC_SPIRV_SOURCES})
+elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
+  list(APPEND _clc_overrides ${CLC_CLSPV_SOURCES})
+endif()
+libclc_merge_sources(clc_sources ${CLC_GENERIC_SOURCES} ${_clc_overrides})
+
+# Collect OpenCL sources. SPIR-V and Clspv targets use self-contained
+# subsets while others merge with target-specific overrides.
+if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
+  set(opencl_sources ${OPENCL_SPIRV_SOURCES})
+elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
+  set(opencl_sources ${OPENCL_CLSPV_SOURCES})
+else()
+  set(_opencl_overrides)
   if(ARCH STREQUAL amdgcn)
-    set(private_addrspace_val 5)
+    list(APPEND _opencl_overrides ${OPENCL_AMDGCN_SOURCES})
   endif()
-  if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
-    set(generic_addrspace_val 4)
-  endif()
+  libclc_merge_sources(opencl_sources
+    ${OPENCL_GENERIC_SOURCES} ${_opencl_overrides})
+endif()
 
-  # Target-specific compile flags and defines.
-  set(target_compile_flags)
-  set(target_extra_defines)
-  set(opt_flags -O3)
+# Common compile options shared by CLC and OpenCL libraries.
+set(compile_flags
+  -flto
+  --target=${clang_triple}
+  -nostdlib
+  -nostdlibinc
+  -cl-no-stdinc
+  -cl-std=CL3.0
+  -include opencl-c-base.h
+  -Werror=undef
+  -Wall
+  -Wextra
+  -fdiscard-value-names
+  -ffp-contract=fast-honor-pragmas
+  -fdenormal-fp-math=dynamic
+  ${target_compile_flags}
+)
 
-  if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
-    list(APPEND target_compile_flags -O0 -finline-hint-functions)
-    list(APPEND target_extra_defines CLC_SPIRV)
-    set(opt_flags)
-  elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
-    list(APPEND target_compile_flags -Wno-unknown-assumption)
-    list(APPEND target_extra_defines CLC_CLSPV)
-  elseif(ARCH STREQUAL amdgcn)
-    list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")
-  endif()
+set(_common_defs
+  ${target_define}
+  ${target_extra_defines}
+  __CLC_PRIVATE_ADDRSPACE_VAL=${private_addrspace_val}
+  __CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
+)
 
-  # Collect CLC sources; target-specific sources override generic ones by basename.
-  set(_clc_overrides)
-  if(ARCH STREQUAL amdgcn)
-    list(APPEND _clc_overrides ${CLC_AMDGPU_SOURCES})
-  elseif(ARCH STREQUAL nvptx64 AND (OS STREQUAL nvidiacl OR OS STREQUAL cuda))
-    list(APPEND _clc_overrides ${CLC_PTX_NVIDIACL_SOURCES})
-  elseif(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
-    list(APPEND _clc_overrides ${CLC_SPIRV_SOURCES})
-  elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
-    list(APPEND _clc_overrides ${CLC_CLSPV_SOURCES})
-  endif()
-  libclc_merge_sources(clc_sources ${CLC_GENERIC_SOURCES} ${_clc_overrides})
+# Build the CLC internal builtins library.
+string(REPLACE "-" "_" lib_suffix ${LIBCLC_TARGET})
+set(clc_lib clc_builtins_${lib_suffix})
+add_libclc_builtin_library(${clc_lib}
+  SOURCES ${clc_sources}
+  COMPILE_OPTIONS ${compile_flags}
+  INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
+  COMPILE_DEFINITIONS ${_common_defs}
+  FOLDER "libclc/Device IR/CLC"
+)
 
-  # Collect OpenCL sources. SPIR-V and Clspv targets use self-contained
-  # subsets while others merge with target-specific overrides.
-  if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
-    set(opencl_sources ${OPENCL_SPIRV_SOURCES})
-  elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
-    set(opencl_sources ${OPENCL_CLSPV_SOURCES})
-  else()
-    set(_opencl_overrides)
-    if(ARCH STREQUAL amdgcn)
-      list(APPEND _opencl_overrides ${OPENCL_AMDGCN_SOURCES})
-    endif()
-    libclc_merge_sources(opencl_sources
-      ${OPENCL_GENERIC_SOURCES} ${_opencl_overrides})
-  endif()
-
-  # Common compile options shared by CLC and OpenCL libraries.
-  set(compile_flags
-    -flto
-    --target=${clang_triple}
-    -nostdlib
-    -nostdlibinc
-    -cl-no-stdinc
-    -cl-std=CL3.0
-    -include opencl-c-base.h
-    -Werror=undef
-    -Wall
-    -Wextra
-    -fdiscard-value-names
-    -ffp-contract=fast-honor-pragmas
-    -fdenormal-fp-math=dynamic
-    ${target_compile_flags}
-  )
-
-  set(_common_defs
-    ${target_define}
-    ${target_extra_defines}
-    __CLC_PRIVATE_ADDRSPACE_VAL=${private_addrspace_val}
-    __CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
-  )
-
-  # Build the CLC internal builtins library.
-  string(REPLACE "-" "_" lib_suffix ${t})
-  set(clc_lib clc_builtins_${lib_suffix})
-  add_libclc_builtin_library(${clc_lib}
-    SOURCES ${clc_sources}
-    COMPILE_OPTIONS ${compile_flags}
-    INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
-    COMPILE_DEFINITIONS ${_common_defs}
-    FOLDER "libclc/Device IR/CLC"
-  )
-
-  # Build, link, and install the final OpenCL builtins library.
-  add_libclc_library(libclc-${t}
-    ARCH ${ARCH}
-    TRIPLE ${clang_triple}
-    TARGET_TRIPLE ${t}
-    SOURCES ${opencl_sources}
-    COMPILE_OPTIONS ${compile_flags} "SHELL:-Xclang -fdeclare-opencl-builtins"
-    INCLUDE_DIRS
-      ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
-      ${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
-    COMPILE_DEFINITIONS ${_common_defs}
-    INTERNALIZE_LIBRARIES ${clc_lib}
-    OPT_FLAGS ${opt_flags}
-    OUTPUT_FILENAME libclc
-    PARENT_TARGET libclc-opencl-builtins
-  )
-endforeach()
+# Build, link, and install the final OpenCL builtins library.
+add_libclc_library(libclc-${LIBCLC_TARGET}
+  ARCH ${ARCH}
+  TRIPLE ${clang_triple}
+  TARGET_TRIPLE ${LIBCLC_TARGET}
+  SOURCES ${opencl_sources}
+  COMPILE_OPTIONS ${compile_flags} "SHELL:-Xclang -fdeclare-opencl-builtins"
+  INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
+  COMPILE_DEFINITIONS ${_common_defs}
+  INTERNALIZE_LIBRARIES ${clc_lib}
+  OPT_FLAGS ${opt_flags}
+  OUTPUT_FILENAME libclc
+  PARENT_TARGET libclc-opencl-builtins
+)
 
 add_subdirectory(test)

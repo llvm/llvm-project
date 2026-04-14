@@ -975,6 +975,12 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
       break;
     }
     if (PrintSymbolicInlineAsmOps && MI.isInlineAsm()) {
+      if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
+        unsigned ExtraInfo = Op.getImm();
+        interleave(InlineAsm::getExtraInfoNames(ExtraInfo), OS, " ");
+        break;
+      }
+
       int FlagIdx = MI.findInlineAsmFlagIdx(OpIdx);
       if (FlagIdx >= 0 && (unsigned)FlagIdx == OpIdx) {
         InlineAsm::Flag F(Op.getImm());

@@ -1626,7 +1626,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
         if (CF->isNegative()) {
           APFloat F(CF->getValueAPF());
           F.changeSign();
-          Factor = ConstantFP::get(CF->getContext(), F);
+          Factor = ConstantFP::get(CF->getType(), F);
           if (!Duplicates.insert(Factor).second)
             continue;
           unsigned Occ = ++FactorOccurrences[Factor];

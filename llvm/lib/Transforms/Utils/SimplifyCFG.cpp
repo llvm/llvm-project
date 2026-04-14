@@ -201,11 +201,6 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
     "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
-static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
-    "max-jump-threading-live-blocks", cl::Hidden, cl::init(24),
-    cl::desc("Limit number of blocks a define in a threaded block is allowed "
-             "to be live in"));
-
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // end namespace llvm
@@ -3044,10 +3039,13 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
   unsigned MaxNumInstToLookAt = 9;
   // Skip pseudo probe intrinsic calls which are not really killing any memory
   // accesses.
-  for (Instruction &CurI : reverse(BrBB->instructionsWithoutDebug(true))) {
+  for (Instruction &CurI : reverse(*BrBB)) {
     if (!MaxNumInstToLookAt)
       break;
     --MaxNumInstToLookAt;
+
+    if (isa<PseudoProbeInst>(CurI))
+      continue;
 
     // Could be calling an instruction that affects memory like free().
     if (CurI.mayWriteToMemory() && !isa<StoreInst>(CurI))
@@ -3441,33 +3439,14 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   return true;
 }
 
-using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
-
-// Return false if number of blocks searched is too much.
-static bool findReaching(BasicBlock *BB, BasicBlock *DefBB,
-                         BlocksSet &ReachesNonLocalUses) {
-  if (BB == DefBB)
-    return true;
-  if (!ReachesNonLocalUses.insert(BB).second)
-    return true;
-
-  if (ReachesNonLocalUses.size() > MaxJumpThreadingLiveBlocks)
-    return false;
-  for (BasicBlock *Pred : predecessors(BB))
-    if (!findReaching(Pred, DefBB, ReachesNonLocalUses))
-      return false;
-  return true;
-}
-
 /// Return true if we can thread a branch across this block.
-static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
-                                               BlocksSet &NonLocalUseBlocks) {
+static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   int Size = 0;
   EphemeralValueTracker EphTracker;
 
   // Walk the loop in reverse so that we can identify ephemeral values properly
   // (values only feeding assumes).
-  for (Instruction &I : reverse(BB->instructionsWithoutDebug(false))) {
+  for (Instruction &I : reverse(*BB)) {
     // Can't fold blocks that contain noduplicate or convergent calls.
     if (CallInst *CI = dyn_cast<CallInst>(&I))
       if (CI->cannotDuplicate() || CI->isConvergent())
@@ -3481,16 +3460,12 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
         return false; // Don't clone large BB's.
     }
 
-    // Record blocks with non-local uses of values defined in the current basic
-    // block.
+    // We can only support instructions that do not define values that are
+    // live outside of the current basic block.
     for (User *U : I.users()) {
       Instruction *UI = cast<Instruction>(U);
-      BasicBlock *UsedInBB = UI->getParent();
-      if (UsedInBB == BB) {
-        if (isa<PHINode>(UI))
-          return false;
-      } else
-        NonLocalUseBlocks.insert(UsedInBB);
+      if (UI->getParent() != BB || isa<PHINode>(UI))
+        return false;
     }
 
     // Looks ok, continue checking.
@@ -3549,37 +3524,18 @@ foldCondBranchOnValueKnownInPredecessorImpl(CondBrInst *BI, DomTreeUpdater *DTU,
     return false;
 
   // Now we know that this block has multiple preds and two succs.
-  // Check that the block is small enough and record which non-local blocks use
-  // values defined in the block.
-
-  BlocksSet NonLocalUseBlocks;
-  BlocksSet ReachesNonLocalUseBlocks;
-  if (!blockIsSimpleEnoughToThreadThrough(BB, NonLocalUseBlocks))
+  // Check that the block is small enough and values defined in the block are
+  // not used outside of it.
+  if (!blockIsSimpleEnoughToThreadThrough(BB))
     return false;
-
-  // Jump-threading can only be done to destinations where no values defined
-  // in BB are live.
-
-  // Quickly check if both destinations have uses.  If so, jump-threading cannot
-  // be done.
-  if (NonLocalUseBlocks.contains(BI->getSuccessor(0)) &&
-      NonLocalUseBlocks.contains(BI->getSuccessor(1)))
-    return false;
-
-  // Search backward from NonLocalUseBlocks to find which blocks
-  // reach non-local uses.
-  for (BasicBlock *UseBB : NonLocalUseBlocks)
-    // Give up if too many blocks are searched.
-    if (!findReaching(UseBB, BB, ReachesNonLocalUseBlocks))
-      return false;
 
   for (const auto &Pair : KnownValues) {
+    // Okay, we now know that all edges from PredBB should be revectored to
+    // branch to RealDest.
     ConstantInt *CB = Pair.first;
     ArrayRef<BasicBlock *> PredBBs = Pair.second.getArrayRef();
     BasicBlock *RealDest = BI->getSuccessor(!CB->getZExtValue());
 
-    // Okay, we now know that all edges from PredBB should be revectored to
-    // branch to RealDest.
     if (RealDest == BB)
       continue; // Skip self loops.
 
@@ -3587,10 +3543,6 @@ foldCondBranchOnValueKnownInPredecessorImpl(CondBrInst *BI, DomTreeUpdater *DTU,
     if (any_of(PredBBs, [](BasicBlock *PredBB) {
           return isa<IndirectBrInst>(PredBB->getTerminator());
         }))
-      continue;
-
-    // Only revector to RealDest if no values defined in BB are live.
-    if (ReachesNonLocalUseBlocks.contains(RealDest))
       continue;
 
     LLVM_DEBUG({
@@ -4362,7 +4314,7 @@ static bool mergeConditionalStoreToAddress(
     InstructionCost Cost = 0;
     InstructionCost Budget =
         PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
-    for (auto &I : BB->instructionsWithoutDebug(false)) {
+    for (auto &I : *BB) {
       // Consider terminator instruction to be free.
       if (I.isTerminator())
         continue;
@@ -4676,7 +4628,7 @@ static bool SimplifyCondBranchToCondBranch(CondBrInst *PBI, CondBrInst *BI,
   // fold the conditions into logical ops and one cond br.
 
   // Ignore dbg intrinsics.
-  if (&*BB->instructionsWithoutDebug(false).begin() != BI)
+  if (&*BB->begin() != BI)
     return false;
 
   int PBIOp, BIOp;
@@ -4813,7 +4765,7 @@ static bool SimplifyCondBranchToCondBranch(CondBrInst *PBI, CondBrInst *BI,
       if (auto *SI = dyn_cast<SelectInst>(Cond)) {
         assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
         // The select is predicated on PBICond
-        assert(dyn_cast<SelectInst>(SI)->getCondition() == PBICond);
+        assert(SI->getCondition() == PBICond);
         // The corresponding probabilities are what was referred to above as
         // PredCommon and PredOther.
         setFittedBranchWeights(*SI, {PredCommon, PredOther},
@@ -6387,7 +6339,7 @@ getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
   // which we can constant-propagate the CaseVal, continue to its successor.
   SmallDenseMap<Value *, Constant *> ConstantPool;
   ConstantPool.insert(std::make_pair(SI->getCondition(), CaseVal));
-  for (Instruction &I : CaseDest->instructionsWithoutDebug(false)) {
+  for (Instruction &I : *CaseDest) {
     if (I.isTerminator()) {
       // If the terminator is a simple branch, continue to the next block.
       if (I.getNumSuccessors() != 1 || I.isSpecialTerminator())
@@ -8246,7 +8198,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
 
     // If the block only contains the switch, see if we can fold the block
     // away into any preds.
-    if (SI == &*BB->instructionsWithoutDebug(false).begin())
+    if (SI == &*BB->begin())
       if (foldValueComparisonIntoPredecessors(SI, Builder))
         return requestResimplify();
   }
@@ -8604,15 +8556,15 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
         return requestResimplify();
 
     // This block must be empty, except for the setcond inst, if it exists.
-    // Ignore dbg and pseudo intrinsics.
-    auto I = BB->instructionsWithoutDebug(true).begin();
-    if (&*I == BI) {
-      if (foldValueComparisonIntoPredecessors(BI, Builder))
-        return requestResimplify();
-    } else if (&*I == cast<Instruction>(BI->getCondition())) {
-      ++I;
-      if (&*I == BI && foldValueComparisonIntoPredecessors(BI, Builder))
-        return requestResimplify();
+    // Ignore pseudo intrinsics.
+    for (auto &I : *BB) {
+      if (isa<PseudoProbeInst>(I) ||
+          &I == cast<Instruction>(BI->getCondition()))
+        continue;
+      if (&I == BI)
+        if (foldValueComparisonIntoPredecessors(BI, Builder))
+          return requestResimplify();
+      break;
     }
   }
 

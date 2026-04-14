@@ -50,6 +50,7 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // hlsl_private
     0,   // hlsl_device
     0,   // hlsl_input
+    0,   // hlsl_output
     0,   // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
@@ -256,6 +257,16 @@ public:
       // Check that the register size is 32-bit.
       HasSizeMismatch = RegSize != 32;
       return true;
+    }
+    if (RegName.ends_with("di")) {
+      if (getTargetOpts().FeatureMap.lookup("reserve-edi")) {
+        if (RegName == "edi") {
+          HasSizeMismatch = RegSize != 32;
+        } else if (RegName == "di") {
+          HasSizeMismatch = RegSize != 16;
+        }
+        return true;
+      }
     }
 
     return false;
@@ -815,8 +826,22 @@ public:
     if (Reg64.back() == 'd' || Reg64.back() == 'w' || Reg64.back() == 'b') {
       Reg64 = Reg64.substr(0, Reg64.size() - 1);
     }
-    if (getTargetOpts().FeatureMap.lookup(("reserve-" + Reg64).str()))
+    if (getTargetOpts().FeatureMap.lookup(("reserve-" + Reg64).str())) {
+      switch (RegName.back()) {
+      case 'd':
+        HasSizeMismatch = RegSize != 32;
+        break;
+      case 'w':
+        HasSizeMismatch = RegSize != 16;
+        break;
+      case 'b':
+        HasSizeMismatch = RegSize != 8;
+        break;
+      default:
+        HasSizeMismatch = RegSize != 64;
+      }
       return true;
+    }
 
     // Check if the register is a 32-bit register the backend can handle.
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,

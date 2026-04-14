@@ -1306,6 +1306,10 @@ public:
   /// for the CFI instructions.
   uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
+    // Signal frames cannot be encoded in compact unwind.
+    if (FI->IsSignalFrame)
+      return CU::UNWIND_MODE_DWARF;
+
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty()) return 0;
     if (!isDarwinCanonicalPersonality(FI->Personality) &&

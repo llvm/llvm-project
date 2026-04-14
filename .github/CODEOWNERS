@@ -37,6 +37,7 @@
 
 /clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
 /clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
 /clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
 
 /lldb/ @JDevlieghere
@@ -134,10 +135,10 @@
 /mlir/**/*TransformOps* @ftynse @nicolasvasilache @rolfmorel
 
 # SPIR-V Dialect in MLIR.
-/mlir/**/SPIRV/ @antiagainst @kuhar
-/mlir/**/SPIRVTo*/ @antiagainst @kuhar
-/mlir/**/*ToSPIRV/ @antiagainst @kuhar
-/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar
+/mlir/**/SPIRV/ @antiagainst @kuhar @IgWod
+/mlir/**/SPIRVTo*/ @antiagainst @kuhar @IgWod
+/mlir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod
+/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod
 
 # MLIR Sparsifier.
 /mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer

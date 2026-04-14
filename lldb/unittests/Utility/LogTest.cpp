@@ -371,7 +371,7 @@ TEST_F(LogChannelEnabledTest, LogVerboseThread) {
 
   // Start logging on one thread. Concurrently, try enabling the log channel
   // (with different log options).
-  std::thread log_thread([this] { LLDB_LOGV(getLog(), "Hello World"); });
+  std::thread log_thread([this] { LLDB_LOG_VERBOSE(getLog(), "Hello World"); });
   EXPECT_TRUE(
       EnableChannel(getLogHandler(), LLDB_LOG_OPTION_VERBOSE, "chan", {}, err));
   log_thread.join();

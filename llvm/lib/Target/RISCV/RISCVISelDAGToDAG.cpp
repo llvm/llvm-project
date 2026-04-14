@@ -1443,6 +1443,38 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, SRAI);
     return;
   }
+  case ISD::SIGN_EXTEND_INREG: {
+    // Optimize (sext_inreg (srl X, C), i8/i16) ->
+    //          (srai (slli X, XLen-ExtSize-C), XLen-ExtSize)
+    // This is a bitfield extract pattern where we're extracting a signed
+    // 8-bit or 16-bit field from position C.
+    SDValue N0 = Node->getOperand(0);
+    if (N0.getOpcode() != ISD::SRL || !N0.hasOneUse())
+      break;
+
+    auto *ShAmtC = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+    if (!ShAmtC)
+      break;
+
+    unsigned ExtSize =
+        cast<VTSDNode>(Node->getOperand(1))->getVT().getSizeInBits();
+    unsigned ShAmt = ShAmtC->getZExtValue();
+    unsigned XLen = Subtarget->getXLen();
+
+    // Only handle types less than 32, and make sure the shift amount is valid.
+    if (ExtSize >= 32 || ShAmt >= XLen - ExtSize)
+      break;
+
+    unsigned LShAmt = XLen - ExtSize - ShAmt;
+    SDNode *SLLI =
+        CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0.getOperand(0),
+                               CurDAG->getTargetConstant(LShAmt, DL, VT));
+    SDNode *SRAI = CurDAG->getMachineNode(
+        RISCV::SRAI, DL, VT, SDValue(SLLI, 0),
+        CurDAG->getTargetConstant(XLen - ExtSize, DL, VT));
+    ReplaceNode(Node, SRAI);
+    return;
+  }
   case ISD::OR: {
     if (tryShrinkShlLogicImm(Node))
       return;
@@ -1928,8 +1960,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         int ConstantVal = ConstantOffset->getSExtValue();
         Simm12 = isInt<12>(ConstantVal);
         if (Simm12)
-          Offset = CurDAG->getTargetConstant(ConstantVal, SDLoc(Offset),
-                                             Offset.getValueType());
+          Offset = CurDAG->getSignedTargetConstant(ConstantVal, SDLoc(Offset),
+                                                   Offset.getValueType());
       }
 
       unsigned Opcode = 0;
@@ -2920,6 +2952,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     unsigned EltSize = VT.getVectorElementType().getSizeInBits();
     APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
+
+    // Use LI for all ones since it can be compressed to c.li.
+    if (Val.isAllOnes()) {
+      SDNode *NewNode = CurDAG->getMachineNode(
+          RISCV::ADDI, DL, VT, CurDAG->getRegister(RISCV::X0, VT),
+          CurDAG->getAllOnesConstant(DL, XLenVT, /*IsTarget=*/true));
+      ReplaceNode(Node, NewNode);
+      return;
+    }
 
     // Find the smallest splat.
     if (Val.getBitWidth() > 16 && Val.isSplat(16))

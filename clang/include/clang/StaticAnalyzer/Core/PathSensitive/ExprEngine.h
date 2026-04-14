@@ -83,14 +83,12 @@ class CheckerManager;
 class ConstraintManager;
 class ExplodedNodeSet;
 class ExplodedNode;
-class IndirectGotoNodeBuilder;
 class MemRegion;
 class NodeBuilderContext;
 class ProgramState;
 class ProgramStateManager;
 class RegionAndSymbolInvalidationTraits;
 class SymbolManager;
-class SwitchNodeBuilder;
 
 /// Hints for figuring out of a call should be inlined during evalCall().
 struct EvalCallOptions {
@@ -422,8 +420,8 @@ public:
 
   /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a computed goto jump.
-  void processIndirectGoto(IndirectGotoNodeBuilder &Builder,
-                           ExplodedNode *Pred);
+  void processIndirectGoto(ExplodedNodeSet &Dst, const Expr *Tgt,
+                           const CFGBlock *Dispatch, ExplodedNode *Pred);
 
   /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
@@ -801,7 +799,7 @@ public:
   /// A multi-dimensional array is also a continuous memory location in a
   /// row major order, so for arr[0][0] Idx is 0 and for arr[3][3] Idx is 8.
   SVal computeObjectUnderConstruction(const Expr *E, ProgramStateRef State,
-                                      const NodeBuilderContext *BldrCtx,
+                                      unsigned NumVisitedCaller,
                                       const LocationContext *LCtx,
                                       const ConstructionContext *CC,
                                       EvalCallOptions &CallOpts,
@@ -823,8 +821,8 @@ public:
       const LocationContext *LCtx, const ConstructionContext *CC,
       EvalCallOptions &CallOpts, unsigned Idx = 0) {
 
-    SVal V = computeObjectUnderConstruction(E, State, BldrCtx, LCtx, CC,
-                                            CallOpts, Idx);
+    SVal V = computeObjectUnderConstruction(E, State, BldrCtx->blockCount(),
+                                            LCtx, CC, CallOpts, Idx);
     State = updateObjectsUnderConstruction(V, E, State, LCtx, CC, CallOpts);
 
     return std::make_pair(State, V);

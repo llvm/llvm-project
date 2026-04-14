@@ -76,7 +76,7 @@ public:
   void SetOffset(lldb::addr_t offset);
 
   lldb::addr_t GetOffset() const { return m_offset; }
-  lldb::addr_t GetOffsetIsInsnCount() const { return m_offset_is_insn_count; }
+  bool GetOffsetIsInsnCount() const { return m_offset_is_insn_count; }
 
   /// In response to this method the resolver scans all the modules in the
   /// breakpoint's target, and adds any new locations it finds.

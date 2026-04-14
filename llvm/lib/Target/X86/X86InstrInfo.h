@@ -34,7 +34,7 @@ enum X86MachineCombinerPattern : unsigned {
 
 namespace X86 {
 
-enum AsmComments {
+enum AsmComments : MachineInstr::AsmPrinterFlagTy {
   // For instr that was compressed from EVEX to LEGACY.
   AC_EVEX_2_LEGACY = MachineInstr::TAsmComments,
   // For instr that was compressed from EVEX to VEX.
@@ -340,9 +340,10 @@ public:
                                     int &FrameIndex) const override;
 
   bool isReMaterializableImpl(const MachineInstr &MI) const override;
-  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig) const override;
+  void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   /// Given an operand within a MachineInstr, insert preceding code to put it
   /// into the right format for a particular kind of LEA instruction. This may
@@ -491,19 +492,19 @@ public:
   /// is likely that the referenced instruction has been changed.
   ///
   /// \returns true on success.
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineBasicBlock::iterator InsertPt,
+                                      int FrameIndex, MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   /// Same as the previous version except it allows folding of any load and
   /// store from / to any address, not just from a specific stack slot.
   MachineInstr *foldMemoryOperandImpl(
       MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
       MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const override;
+      MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr) const override;
 
   bool
   unfoldMemoryOperand(MachineFunction &MF, MachineInstr &MI, Register Reg,
@@ -581,7 +582,8 @@ public:
                                       ArrayRef<MachineOperand> MOs,
                                       MachineBasicBlock::iterator InsertPt,
                                       unsigned Size, Align Alignment,
-                                      bool AllowCommute) const;
+                                      bool AllowCommute, MachineInstr *&CopyMI,
+                                      VirtRegMap *VRM = nullptr) const;
 
   bool isHighLatencyDef(int opc) const override;
 
@@ -766,6 +768,11 @@ private:
   /// \returns the index of operand that is commuted with \p Idx1. If the method
   /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
+
+  MachineInstr *
+  insertCodePrefetchInstr(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsertBefore,
+                          const GlobalValue *GV) const override;
 };
 } // namespace llvm
 

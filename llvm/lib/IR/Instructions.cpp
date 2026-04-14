@@ -1189,11 +1189,13 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 //                        UncondBrInst Implementation
 //===----------------------------------------------------------------------===//
 
-UncondBrInst::UncondBrInst(BasicBlock *IfTrue, InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::UncondBr,
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
+UncondBrInst::UncondBrInst(BasicBlock *Target, InsertPosition InsertBefore)
+    : BranchInst(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
                  AllocMarker, InsertBefore) {
-  assert(IfTrue && "Branch destination may not be null!");
-  Op<-1>() = IfTrue;
+  Op<-1>() = Target;
 }
 
 UncondBrInst::UncondBrInst(const UncondBrInst &BI)
@@ -1242,6 +1244,9 @@ void CondBrInst::swapSuccessors() {
   // expectations.
   swapProfMetadata();
 }
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                        AllocaInst Implementation
@@ -1493,6 +1498,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fmaximum";
   case AtomicRMWInst::FMinimum:
     return "fminimum";
+  case AtomicRMWInst::FMaximumNum:
+    return "fmaximumnum";
+  case AtomicRMWInst::FMinimumNum:
+    return "fminimumnum";
   case AtomicRMWInst::UIncWrap:
     return "uinc_wrap";
   case AtomicRMWInst::UDecWrap:

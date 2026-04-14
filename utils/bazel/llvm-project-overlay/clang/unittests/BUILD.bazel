@@ -795,6 +795,7 @@ cc_test(
         "//clang:basic",
         "//clang:frontend",
         "//clang:lex",
+        "//clang:scalable_static_analysis_analyses",
         "//clang:scalable_static_analysis_core",
         "//clang:scalable_static_analysis_frontend",
         "//clang:support",

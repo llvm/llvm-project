@@ -453,7 +453,7 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
 
   Function *NewF =
       Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
-                       OrigF.getName() + Suffix);
+                       OrigF.getAddressSpace(), OrigF.getName() + Suffix);
 
   M->getFunctionList().insert(InsertBefore, NewF);
 
@@ -1102,8 +1102,7 @@ void coro::SwitchCloner::create() {
 
   // Replacing coro.free with 'null' in cleanup to suppress deallocation code.
   if (FKind == coro::CloneKind::SwitchCleanup)
-    coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
-                          /*Elide=*/FKind == coro::CloneKind::SwitchCleanup);
+    elideCoroFree(NewFramePtr);
 }
 
 static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
@@ -1163,10 +1162,9 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
   auto *CoroBegin = Shape.CoroBegin;
   switch (Shape.ABI) {
   case coro::ABI::Switch: {
-    auto SwitchId = Shape.getSwitchCoroId();
-    auto *AllocInst = SwitchId->getCoroAlloc();
-    coro::replaceCoroFree(SwitchId, /*Elide=*/AllocInst != nullptr);
-    if (AllocInst) {
+    if (auto *AllocInst = Shape.getSwitchCoroId()->getCoroAlloc()) {
+      coro::elideCoroFree(CoroBegin);
+
       IRBuilder<> Builder(AllocInst);
       // Create an alloca for a byte array of the frame size
       auto *FrameTy = ArrayType::get(Type::getInt8Ty(Builder.getContext()),
@@ -1423,8 +1421,8 @@ struct SwitchCoroutineSplitter {
 
     auto *NewFnTy = FunctionType::get(OrigFnTy->getReturnType(), NewParams,
                                       OrigFnTy->isVarArg());
-    Function *NoAllocF =
-        Function::Create(NewFnTy, F.getLinkage(), F.getName() + ".noalloc");
+    Function *NoAllocF = Function::Create(
+        NewFnTy, F.getLinkage(), F.getAddressSpace(), F.getName() + ".noalloc");
 
     ValueToValueMapTy VMap;
     unsigned int Idx = 0;
@@ -1441,9 +1439,8 @@ struct SwitchCoroutineSplitter {
     if (Shape.CoroBegin) {
       auto *NewCoroBegin =
           cast_if_present<CoroBeginInst>(VMap[Shape.CoroBegin]);
-      auto *NewCoroId = cast<CoroIdInst>(NewCoroBegin->getId());
-      coro::replaceCoroFree(NewCoroId, /*Elide=*/true);
-      coro::suppressCoroAllocs(NewCoroId);
+      coro::elideCoroFree(NewCoroBegin);
+      coro::suppressCoroAllocs(cast<CoroIdInst>(NewCoroBegin->getId()));
       NewCoroBegin->replaceAllUsesWith(NoAllocF->getArg(FrameIdx));
       NewCoroBegin->eraseFromParent();
     }

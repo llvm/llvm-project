@@ -75,7 +75,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: class AOpGenericAdaptor : public detail::AOpGenericAdaptorBase {
 // CHECK: public:
 // CHECK:   AOpGenericAdaptor(RangeT values, ::mlir::DictionaryAttr attrs, const Properties &properties, ::mlir::RegionRange regions = {}) : Base(attrs, properties, regions), odsOperands(values) {}
-// CHECK:   AOpGenericAdaptor(RangeT values, ::mlir::DictionaryAttr attrs, ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions = {}) : AOpGenericAdaptor(values, attrs, (properties ? *properties.as<Properties *>() : Properties{}), regions) {}
+// CHECK:   AOpGenericAdaptor(RangeT values, ::mlir::DictionaryAttr attrs, ::mlir::PropertyRef properties, ::mlir::RegionRange regions = {}) : AOpGenericAdaptor(values, attrs, (properties ? *properties.as<Properties *>() : Properties{}), regions) {}
 // CHECK:   AOpGenericAdaptor(RangeT values, ::mlir::DictionaryAttr attrs = nullptr) : AOpGenericAdaptor(values, attrs, Properties{}, {}) {}
 // CHECK:   AOpGenericAdaptor(RangeT values, const AOpGenericAdaptorBase &base) : Base(base), odsOperands(values) {}
 // CHECK:   RangeT getODSOperands(unsigned index) {

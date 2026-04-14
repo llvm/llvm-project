@@ -263,6 +263,23 @@ unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (NumBytes == 0)
       NumBytes = 4;
     break;
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const Function &F = MF->getFunction();
+    if (F.hasFnAttribute("patchable-function-entry")) {
+      unsigned Num;
+      if (F.getFnAttribute("patchable-function-entry")
+              .getValueAsString()
+              .getAsInteger(10, Num))
+        return 0;
+      return Num * 4;
+    }
+    [[fallthrough]];
+  }
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    // Size of xray sled (branch + 11 nops).
+    return 12 * 4;
   }
   return NumBytes;
 }

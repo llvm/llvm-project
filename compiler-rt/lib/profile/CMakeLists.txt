@@ -74,6 +74,7 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformLinux.c
   InstrProfilingPlatformOther.c
   InstrProfilingPlatformWindows.c
+  InstrProfilingPlatformGPU.c
   )
 
 if (NOT COMPILER_RT_PROFILE_BAREMETAL)
@@ -161,6 +162,8 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
   if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
     append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
                    "SHELL:-Xclang -mcode-object-version=none" EXTRA_FLAGS)
+  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
+    list(APPEND EXTRA_FLAGS --cuda-feature=+ptx63)
   endif()
 endif()
 

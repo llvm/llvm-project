@@ -257,7 +257,7 @@ gpu.module @test_kernel {
 
 // -----
 #l = #xegpu.layout<inst_data = [16, 16]>
-#r = #xegpu.layout<inst_data = [16]>
+#r = #xegpu.slice<#xegpu.layout<inst_data = [16, 16]>, dims = [0]>
 gpu.module @test_kernel  {
   gpu.func @reduce_dim_0(%a: memref<16x512xf32>, %b: memref<512xf32>)  kernel attributes {VectorComputeFunctionINTEL, spirv.entry_point_abi = #spirv.entry_point_abi<>} {
     %acc = arith.constant {layout_result_0 = #r} dense<0.0> : vector<64xf32>
@@ -277,7 +277,7 @@ gpu.module @test_kernel  {
 
 // -----
 #l = #xegpu.layout<inst_data = [16, 16]>
-#r = #xegpu.layout<inst_data = [16]>
+#r = #xegpu.slice<#xegpu.layout<inst_data = [16, 16]>, dims = [1]>
 gpu.module @test_kernel   {
   gpu.func @reduce_dim_1(%a: memref<512x32xf32>, %b: memref<512xf32>)  kernel attributes {VectorComputeFunctionINTEL, spirv.entry_point_abi = #spirv.entry_point_abi<>} {
     %c1 = arith.constant 1 : index
@@ -596,6 +596,24 @@ gpu.module @test_kernel {
     %c = xegpu.dpas %a1, %b {layout_a=#a, layout_b = #b, layout_cd = #c, layout_result_0 = #c}: vector<16x16xf16>, vector<16x16xf16> -> vector<16x16xf32>
     %c_tdesc = xegpu.create_nd_tdesc %C[%c0, %c0] : memref<16x16xf32> -> !xegpu.tensor_desc<16x16xf32, #c>
     xegpu.store_nd %c, %c_tdesc {layout = #c}: vector<16x16xf32>, !xegpu.tensor_desc<16x16xf32, #c>
+    gpu.return
+  }
+}
+
+// -----
+
+#a = #xegpu.layout<inst_data = [8, 16]>
+gpu.module @test_kernel {
+  //CHECK-LABEL: gpu.func @convert_layout_scalar
+  gpu.func @convert_layout_scalar(%arg0: memref<16x16xf16>, %arg1: memref<4xf16>) {
+    %acc = arith.constant 0.000000e+00 : f16
+    %c0 = arith.constant 0 : index
+    %a_tdesc = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #a>
+    %a = xegpu.load_nd %a_tdesc {layout = #a}: !xegpu.tensor_desc<16x16xf16, #a> -> vector<16x16xf16>
+    %a_reduce = vector.multi_reduction <add>, %a, %acc {layout_operand_0 = #a, layout_result_0 = #xegpu.slice<#a, dims = [0, 1]>} [0, 1] : vector<16x16xf16> to f16
+    // CHECK-NOT: xegpu.convert_layout
+    %13 = xegpu.convert_layout %a_reduce <{input_layout = #xegpu.slice<#a, dims = [0, 1]>, target_layout = #xegpu.slice<#a, dims = [0, 1]>}> : f16
+    memref.store %13, %arg1[%c0] : memref<4xf16>
     gpu.return
   }
 }

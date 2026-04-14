@@ -107,4 +107,4 @@ LIBC_INLINE constexpr float cospif(float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSHF_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSPIF_H

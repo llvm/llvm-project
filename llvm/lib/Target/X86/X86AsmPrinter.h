@@ -207,39 +207,20 @@ public:
 
 class X86AsmPrinterBeginPass : public PassInfoMixin<X86AsmPrinterBeginPass> {
 public:
-  X86AsmPrinterBeginPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
-      : TM(TM), CreateStreamer(CreateStreamer) {}
-
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-
-private:
-  TargetMachine &TM;
-  CreateMCStreamer CreateStreamer;
 };
 
 class X86AsmPrinterPass : public PassInfoMixin<X86AsmPrinterPass> {
 public:
-  X86AsmPrinterPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
-      : TM(TM), CreateStreamer(CreateStreamer) {}
-
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-
-private:
-  TargetMachine &TM;
-  CreateMCStreamer CreateStreamer;
+  // AsmPrinter needs to run regardless of optimization level.
+  static bool isRequired() { return true; }
 };
 
 class X86AsmPrinterEndPass : public PassInfoMixin<X86AsmPrinterEndPass> {
 public:
-  X86AsmPrinterEndPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
-      : TM(TM), CreateStreamer(CreateStreamer) {}
-
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-
-private:
-  TargetMachine &TM;
-  CreateMCStreamer CreateStreamer;
 };
 
 } // end namespace llvm

@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -finclude-default-header -O1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DXIL
-// RUN: %clang_cc1 -finclude-default-header -O1 -triple spirv-unknown-vulkan1.3-library -fnative-half-type -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV
+// RUN: %clang_cc1 -finclude-default-header -O1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -emit-llvm -fmatrix-memory-layout=column-major -o - %s | FileCheck %s --check-prefixes=CHECK,COLMAJOR,DXIL
+// RUN: %clang_cc1 -finclude-default-header -O1 -triple spirv-unknown-vulkan1.3-library -fnative-half-type -emit-llvm -fmatrix-memory-layout=column-major -o - %s | FileCheck %s --check-prefixes=CHECK,COLMAJOR,SPIRV
+// RUN: %clang_cc1 -finclude-default-header -O1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -emit-llvm -fmatrix-memory-layout=row-major -o - %s | FileCheck %s --check-prefixes=CHECK,ROWMAJOR,DXIL
+// RUN: %clang_cc1 -finclude-default-header -O1 -triple spirv-unknown-vulkan1.3-library -fnative-half-type -emit-llvm -fmatrix-memory-layout=row-major -o - %s | FileCheck %s --check-prefixes=CHECK,ROWMAJOR,SPIRV
 
 // -- Case 1: scalar * scalar -> scalar --
 
@@ -74,7 +76,9 @@ export double test_vec_vec_muld(double3 a, double3 b) { return mul(a, b); }
 // -- Case 6: vector * matrix -> vector --
 
 // CHECK-LABEL: test_vec_mat_mul
-// CHECK: %hlsl.mul = {{.*}} call {{.*}} <3 x float> @llvm.matrix.multiply.v3f32.v2f32.v6f32(<2 x float> %v, <6 x float> %m, i32 1, i32 2, i32 3)
+// ROWMAJOR: %[[TRANSPOSE:.*]] = {{.*}} call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %m, i32 3, i32 2)
+// ROWMAJOR: %hlsl.mul = {{.*}} call {{.*}} <3 x float> @llvm.matrix.multiply.v3f32.v2f32.v6f32(<2 x float> %v, <6 x float> %[[TRANSPOSE]], i32 1, i32 2, i32 3)
+// COLMAJOR: %hlsl.mul = {{.*}} call {{.*}} <3 x float> @llvm.matrix.multiply.v3f32.v2f32.v6f32(<2 x float> %v, <6 x float> %m, i32 1, i32 2, i32 3)
 // CHECK: ret <3 x float> %hlsl.mul
 export float3 test_vec_mat_mul(float2 v, float2x3 m) { return mul(v, m); }
 
@@ -90,22 +94,34 @@ export float2x3 test_mat_scalar_mul(float2x3 a, float b) { return mul(a, b); }
 // -- Case 8: matrix * vector -> vector --
 
 // CHECK-LABEL: test_mat_vec_mul
-// CHECK: %hlsl.mul = {{.*}} call {{.*}} <2 x float> @llvm.matrix.multiply.v2f32.v6f32.v3f32(<6 x float> %m, <3 x float> %v, i32 2, i32 3, i32 1)
+// ROWMAJOR: %[[TRANSPOSE:.*]] = {{.*}} call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %m, i32 3, i32 2)
+// ROWMAJOR: %hlsl.mul = {{.*}} call {{.*}} <2 x float> @llvm.matrix.multiply.v2f32.v6f32.v3f32(<6 x float> %[[TRANSPOSE]], <3 x float> %v, i32 2, i32 3, i32 1)
+// COLMAJOR: %hlsl.mul = {{.*}} call {{.*}} <2 x float> @llvm.matrix.multiply.v2f32.v6f32.v3f32(<6 x float> %m, <3 x float> %v, i32 2, i32 3, i32 1)
 // CHECK: ret <2 x float> %hlsl.mul
 export float2 test_mat_vec_mul(float2x3 m, float3 v) { return mul(m, v); }
 
 // -- Case 9: matrix * matrix -> matrix --
 
 // CHECK-LABEL: test_mat_mat_mul
-// CHECK: %hlsl.mul = {{.*}} call {{.*}} <8 x float> @llvm.matrix.multiply.v8f32.v6f32.v12f32(<6 x float> %a, <12 x float> %b, i32 2, i32 3, i32 4)
-// CHECK: ret <8 x float> %hlsl.mul
+// ROWMAJOR: %[[TRANSPOSE_A:.*]] = {{.*}} call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %a, i32 3, i32 2)
+// ROWMAJOR: %[[TRANSPOSE_B:.*]] = {{.*}} call {{.*}} <12 x float> @llvm.matrix.transpose.v12f32(<12 x float> %b, i32 4, i32 3)
+// ROWMAJOR: %hlsl.mul = {{.*}} call {{.*}} <8 x float> @llvm.matrix.multiply.v8f32.v6f32.v12f32(<6 x float> %[[TRANSPOSE_A]], <12 x float> %[[TRANSPOSE_B]], i32 2, i32 3, i32 4)
+// COLMAJOR: %hlsl.mul = {{.*}} call {{.*}} <8 x float> @llvm.matrix.multiply.v8f32.v6f32.v12f32(<6 x float> %a, <12 x float> %b, i32 2, i32 3, i32 4)
+// COLMAJOR: ret <8 x float> %hlsl.mul
+// ROWMAJOR: %[[TRANSPOSE_RES:.*]] = {{.*}} call {{.*}} <8 x float> @llvm.matrix.transpose.v8f32(<8 x float> %hlsl.mul, i32 2, i32 4)
+// ROWMAJOR: ret <8 x float> %[[TRANSPOSE_RES]]
 export float2x4 test_mat_mat_mul(float2x3 a, float3x4 b) { return mul(a, b); }
 
 // -- Integer matrix multiply --
 
 // CHECK-LABEL: test_mat_mat_muli
-// CHECK: %hlsl.mul = {{.*}} call <8 x i32> @llvm.matrix.multiply.v8i32.v6i32.v12i32(<6 x i32> %a, <12 x i32> %b, i32 2, i32 3, i32 4)
-// CHECK: ret <8 x i32> %hlsl.mul
+// ROWMAJOR: %[[TRANSPOSE_A:.*]] = {{.*}} call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> %a, i32 3, i32 2)
+// ROWMAJOR: %[[TRANSPOSE_B:.*]] = {{.*}} call <12 x i32> @llvm.matrix.transpose.v12i32(<12 x i32> %b, i32 4, i32 3)
+// ROWMAJOR: %hlsl.mul = {{.*}} call <8 x i32> @llvm.matrix.multiply.v8i32.v6i32.v12i32(<6 x i32> %[[TRANSPOSE_A]], <12 x i32> %[[TRANSPOSE_B]], i32 2, i32 3, i32 4)
+// COLMAJOR: %hlsl.mul = {{.*}} call <8 x i32> @llvm.matrix.multiply.v8i32.v6i32.v12i32(<6 x i32> %a, <12 x i32> %b, i32 2, i32 3, i32 4)
+// COLMAJOR: ret <8 x i32> %hlsl.mul
+// ROWMAJOR: %[[TRANSPOSE_RES:.*]] = {{.*}} call <8 x i32> @llvm.matrix.transpose.v8i32(<8 x i32> %hlsl.mul, i32 2, i32 4)
+// ROWMAJOR: ret <8 x i32> %[[TRANSPOSE_RES]]
 export int2x4 test_mat_mat_muli(int2x3 a, int3x4 b) { return mul(a, b); }
 
 // -- Half-type overloads (native half) --
@@ -150,16 +166,25 @@ export half test_vec_vec_mulh(half3 a, half3 b) { return mul(a, b); }
 export half2x3 test_mat_scalar_mulh(half2x3 a, half b) { return mul(a, b); }
 
 // CHECK-LABEL: test_vec_mat_mulh
-// CHECK: %hlsl.mul = {{.*}}call {{.*}} <3 x half> @llvm.matrix.multiply.v3f16.v2f16.v6f16(<2 x half> %v, <6 x half> %m, i32 1, i32 2, i32 3)
+// ROWMAJOR: %[[TRANSPOSE:.*]] = {{.*}} call {{.*}} <6 x half> @llvm.matrix.transpose.v6f16(<6 x half> %m, i32 3, i32 2)
+// ROWMAJOR: %hlsl.mul = {{.*}}call {{.*}} <3 x half> @llvm.matrix.multiply.v3f16.v2f16.v6f16(<2 x half> %v, <6 x half> %[[TRANSPOSE]], i32 1, i32 2, i32 3)
+// COLMAJOR: %hlsl.mul = {{.*}}call {{.*}} <3 x half> @llvm.matrix.multiply.v3f16.v2f16.v6f16(<2 x half> %v, <6 x half> %m, i32 1, i32 2, i32 3)
 // CHECK: ret <3 x half> %hlsl.mul
 export half3 test_vec_mat_mulh(half2 v, half2x3 m) { return mul(v, m); }
 
 // CHECK-LABEL: test_mat_vec_mulh
-// CHECK: %hlsl.mul = {{.*}}call {{.*}} <2 x half> @llvm.matrix.multiply.v2f16.v6f16.v3f16(<6 x half> %m, <3 x half> %v, i32 2, i32 3, i32 1)
+// ROWMAJOR: %[[TRANSPOSE:.*]] = {{.*}} call {{.*}} <6 x half> @llvm.matrix.transpose.v6f16(<6 x half> %m, i32 3, i32 2)
+// ROWMAJOR: %hlsl.mul = {{.*}}call {{.*}} <2 x half> @llvm.matrix.multiply.v2f16.v6f16.v3f16(<6 x half> %[[TRANSPOSE]], <3 x half> %v, i32 2, i32 3, i32 1)
+// COLMAJOR: %hlsl.mul = {{.*}}call {{.*}} <2 x half> @llvm.matrix.multiply.v2f16.v6f16.v3f16(<6 x half> %m, <3 x half> %v, i32 2, i32 3, i32 1)
 // CHECK: ret <2 x half> %hlsl.mul
 export half2 test_mat_vec_mulh(half2x3 m, half3 v) { return mul(m, v); }
 
 // CHECK-LABEL: test_mat_mat_mulh
-// CHECK: %hlsl.mul = {{.*}}call {{.*}} <8 x half> @llvm.matrix.multiply.v8f16.v6f16.v12f16(<6 x half> %a, <12 x half> %b, i32 2, i32 3, i32 4)
-// CHECK: ret <8 x half> %hlsl.mul
+// ROWMAJOR: %[[TRANSPOSE_A:.*]] = {{.*}} call {{.*}} <6 x half> @llvm.matrix.transpose.v6f16(<6 x half> %a, i32 3, i32 2)
+// ROWMAJOR: %[[TRANSPOSE_B:.*]] = {{.*}} call {{.*}} <12 x half> @llvm.matrix.transpose.v12f16(<12 x half> %b, i32 4, i32 3)
+// ROWMAJOR: %hlsl.mul = {{.*}}call {{.*}} <8 x half> @llvm.matrix.multiply.v8f16.v6f16.v12f16(<6 x half> %[[TRANSPOSE_A]], <12 x half> %[[TRANSPOSE_B]], i32 2, i32 3, i32 4)
+// COLMAJOR: %hlsl.mul = {{.*}}call {{.*}} <8 x half> @llvm.matrix.multiply.v8f16.v6f16.v12f16(<6 x half> %a, <12 x half> %b, i32 2, i32 3, i32 4)
+// COLMAJOR: ret <8 x half> %hlsl.mul
+// ROWMAJOR: %[[TRANSPOSE_RES:.*]] = {{.*}} call {{.*}} <8 x half> @llvm.matrix.transpose.v8f16(<8 x half> %hlsl.mul, i32 2, i32 4)
+// ROWMAJOR: ret <8 x half> %[[TRANSPOSE_RES]]
 export half2x4 test_mat_mat_mulh(half2x3 a, half3x4 b) { return mul(a, b); }

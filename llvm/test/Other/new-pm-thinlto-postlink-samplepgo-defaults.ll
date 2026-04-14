@@ -15,7 +15,7 @@
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-thinlto-samplepgo-defaults.prof' \
 ; RUN:     -passes='thinlto<Os>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Os,CHECK-O23SZ,%llvmcheckext
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23SZ,%llvmcheckext
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-thinlto-samplepgo-defaults.prof' \
 ; RUN:     -passes='thinlto<Oz>' -S %s 2>&1 \
@@ -91,9 +91,7 @@
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O23SZ-NEXT: Running pass: AggressiveInstCombinePass
-; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
-; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
-; CHECK-O3-NEXT: Running pass: LibCallsShrinkWrapPass
+; CHECK-O-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O23SZ-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
@@ -135,6 +133,7 @@
 ; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass
+; CHECK-O23SZ-NEXT: Running analysis: CycleAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: MoveAutoInitPass
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
@@ -178,9 +177,7 @@
 ; CHECK-O-NEXT: Running pass: LoopLoadEliminationPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
-; CHECK-O2-NEXT: Running pass: SLPVectorizerPass
-; CHECK-O3-NEXT: Running pass: SLPVectorizerPass
-; CHECK-Os-NEXT: Running pass: SLPVectorizerPass
+; CHECK-O23SZ-NEXT: Running pass: SLPVectorizerPass
 ; CHECK-O-NEXT: Running pass: VectorCombinePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: LoopUnrollPass
@@ -195,6 +192,8 @@
 ; CHECK-O-NEXT: Running pass: LoopSinkPass
 ; CHECK-O-NEXT: Running pass: InstSimplifyPass
 ; CHECK-O-NEXT: Running pass: DivRemPairsPass
+; CHECK-O-NEXT: Running pass: MergeICmpsPass
+; CHECK-O-NEXT: Running pass: ExpandMemCmpPass
 ; CHECK-O-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: AllocTokenPass

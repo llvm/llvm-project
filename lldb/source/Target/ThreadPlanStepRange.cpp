@@ -537,10 +537,8 @@ bool ThreadPlanStepRange::IsPlanStale() {
   FrameComparison frame_order = CompareCurrentFrameToStartFrame();
 
   if (frame_order == eFrameCompareOlder) {
-    if (log) {
-      LLDB_LOGF(log, "ThreadPlanStepRange::IsPlanStale returning true, we've "
-                     "stepped out.");
-    }
+    LLDB_LOGF(log, "ThreadPlanStepRange::IsPlanStale returning true, we've "
+                   "stepped out.");
     return true;
   } else if (frame_order == eFrameCompareEqual && InSymbol()) {
     // If we are not in a place we should step through, we've gotten stale. One
