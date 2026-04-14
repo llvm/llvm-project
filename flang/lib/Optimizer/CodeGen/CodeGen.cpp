@@ -236,9 +236,8 @@ struct AddrOfOpConversion : public fir::FIROpConversion<fir::AddrOfOp> {
       auto global = gpuMod.lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol());
       replaceWithAddrOfOrASCast(
           rewriter, addr->getLoc(),
-          global ? global.getAddrSpace()
-                 : getAddrSpaceForGlobal(gpuMod, addr.getSymbol(),
-                                         getGlobalAddressSpace(rewriter)),
+          getAddrSpaceForGlobal(gpuMod, addr.getSymbol(),
+                                getGlobalAddressSpace(rewriter)),
           getProgramAddressSpace(rewriter),
           global ? global.getSymName()
                  : addr.getSymbol().getRootReference().getValue(),
@@ -250,9 +249,8 @@ struct AddrOfOpConversion : public fir::FIROpConversion<fir::AddrOfOp> {
     auto global = mod.lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol());
     replaceWithAddrOfOrASCast(
         rewriter, addr->getLoc(),
-        global ? global.getAddrSpace()
-               : getAddrSpaceForGlobal(mod, addr.getSymbol(),
-                                       getGlobalAddressSpace(rewriter)),
+        getAddrSpaceForGlobal(mod, addr.getSymbol(),
+                              getGlobalAddressSpace(rewriter)),
         getProgramAddressSpace(rewriter),
         global ? global.getSymName()
                : addr.getSymbol().getRootReference().getValue(),

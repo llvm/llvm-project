@@ -349,7 +349,7 @@ func.func @sub16_(%arg0: !fir.ref<f32> {fir.bindc_name = "h16"}) attributes {fir
   return
 }
 fir.global linkonce @_QQclXc8657e47c19bb9e89730387c9d99c2da constant : !fir.char<1,38> {
-  %0 = fir.string_lit "/local/home/vclement/lorado/dummy.cuf\00"(38) : !fir.char<1,38>
+  %0 = fir.string_lit "/path/to/source/test/dummy_module.cuf\00"(38) : !fir.char<1,38>
   fir.has_value %0 : !fir.char<1,38>
 }
 fir.global @_QMdevice_dataEd16 {data_attr = #cuf.cuda<constant>} : f32 {
@@ -364,41 +364,41 @@ func.func private @_FortranACUFGetDeviceAddress(!fir.llvm_ptr<i8>, !fir.ref<i8>,
 // -----
 
 // Test that a host-side fir.address_of referencing a fir.global with CUF
-// constant data_attr produces an addrspacecast from ptr<4> to ptr.
-
-module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
-  fir.global @_QMmodEcval {data_attr = #cuf.cuda<constant>} : i32 {
-    %0 = fir.zero_bits i32
-    fir.has_value %0 : i32
-  }
-  func.func @_QQhost() {
-    %0 = fir.address_of(@_QMmodEcval) : !fir.ref<i32>
-    return
-  }
-}
-
-// CHECK: llvm.mlir.global external @_QMmodEcval() {addr_space = 4 : i32} : i32
-// CHECK-LABEL: llvm.func @_QQhost()
-// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @_QMmodEcval : !llvm.ptr<4>
-// CHECK: %{{.*}} = llvm.addrspacecast %[[ADDR]] : !llvm.ptr<4> to !llvm.ptr
-
-// -----
-
-// Test that a host-side fir.address_of referencing a fir.global with CUF
 // shared data_attr produces an addrspacecast from ptr<3> to ptr.
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
-  fir.global @_QMmodEsval {data_attr = #cuf.cuda<shared>} : i32 {
-    %0 = fir.zero_bits i32
-    fir.has_value %0 : i32
-  }
-  func.func @_QQhost_shared() {
-    %0 = fir.address_of(@_QMmodEsval) : !fir.ref<i32>
-    return
-  }
+fir.global @_QMmodEsval {data_attr = #cuf.cuda<shared>} : i32 {
+  %0 = fir.zero_bits i32
+  fir.has_value %0 : i32
+}
+func.func @_QQhost_shared() {
+  %0 = fir.address_of(@_QMmodEsval) : !fir.ref<i32>
+  return
 }
 
 // CHECK: llvm.mlir.global external @_QMmodEsval() {addr_space = 3 : i32} : i32
 // CHECK-LABEL: llvm.func @_QQhost_shared()
 // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @_QMmodEsval : !llvm.ptr<3>
 // CHECK: %{{.*}} = llvm.addrspacecast %[[ADDR]] : !llvm.ptr<3> to !llvm.ptr
+
+// -----
+
+// Test that fir.address_of inside gpu.module referencing a managed fir.global
+// produces an addressof with ptr<1> and an addrspacecast.
+
+module attributes {gpu.container_module} {
+  gpu.module @cuda_device_mod {
+    fir.global @_QMmodEmval {data_attr = #cuf.cuda<managed>} : i32 {
+      %0 = fir.zero_bits i32
+      fir.has_value %0 : i32
+    }
+    gpu.func @_QMkernelsPuse_managed() kernel {
+      %0 = fir.address_of(@_QMmodEmval) : !fir.ref<i32>
+      gpu.return
+    }
+  }
+}
+
+// CHECK: llvm.mlir.global external @_QMmodEmval() {addr_space = 1 : i32, nvvm.managed} : i32
+// CHECK-LABEL: gpu.func @_QMkernelsPuse_managed()
+// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @_QMmodEmval : !llvm.ptr<1>
+// CHECK: %{{.*}} = llvm.addrspacecast %[[ADDR]] : !llvm.ptr<1> to !llvm.ptr
