@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -965,6 +966,75 @@ inline BinaryOpc_match<LHS, RHS> m_Rotr(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::ROTR, L, R);
 }
 
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_FShL(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return m_TernaryOp(ISD::FSHL, Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_FShR(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return m_TernaryOp(ISD::FSHR, Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P, bool Left>
+struct FunnelShiftLike_match {
+  T0_P Op0;
+  T1_P Op1;
+  T2_P Op2;
+
+  FunnelShiftLike_match(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2)
+      : Op0(Op0), Op1(Op1), Op2(Op2) {}
+
+  static bool hasComplementaryConstantShifts(const APInt &ShlV,
+                                             const APInt &SrlV,
+                                             unsigned BitWidth) {
+    unsigned SumWidth = std::max(ShlV.getBitWidth(), SrlV.getBitWidth()) + 1;
+    unsigned BitWidthBits = llvm::bit_width(BitWidth);
+    if (BitWidthBits > SumWidth)
+      return false;
+
+    return ShlV.zext(SumWidth) + SrlV.zext(SumWidth) ==
+           APInt(SumWidth, BitWidth);
+  }
+
+  template <typename MatchContext>
+  bool matchOperands(const MatchContext &Ctx, SDValue X, SDValue Y, SDValue Z) {
+    return Op0.match(Ctx, X) && Op1.match(Ctx, Y) && Op2.match(Ctx, Z);
+  }
+
+  template <typename MatchContext>
+  bool matchShiftOr(const MatchContext &Ctx, SDValue N, unsigned BitWidth);
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (sd_context_match(N, Ctx,
+                         Left ? m_FShL(Op0, Op1, Op2) : m_FShR(Op0, Op1, Op2)))
+      return true;
+
+    SDValue X, Z;
+    if (sd_context_match(N, Ctx,
+                         Left ? m_Rotl(m_Value(X), m_Value(Z))
+                              : m_Rotr(m_Value(X), m_Value(Z))))
+      return matchOperands(Ctx, X, X, Z);
+
+    return matchShiftOr(Ctx, N, N.getValueType().getScalarSizeInBits());
+  }
+};
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline FunnelShiftLike_match<T0_P, T1_P, T2_P, true>
+m_FShLLike(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return FunnelShiftLike_match<T0_P, T1_P, T2_P, true>(Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline FunnelShiftLike_match<T0_P, T1_P, T2_P, false>
+m_FShRLike(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return FunnelShiftLike_match<T0_P, T1_P, T2_P, false>(Op0, Op1, Op2);
+}
+
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_Clmul(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::CLMUL, L, R);
@@ -1222,6 +1292,22 @@ inline Constant64_match<uint64_t> m_ConstInt(uint64_t &V) {
 /// to 64 bits.
 inline Constant64_match<int64_t> m_ConstInt(int64_t &V) {
   return Constant64_match<int64_t>(V);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P, bool Left>
+template <typename MatchContext>
+bool FunnelShiftLike_match<T0_P, T1_P, T2_P, Left>::matchShiftOr(
+    const MatchContext &Ctx, SDValue N, unsigned BitWidth) {
+  SDValue X, Y, ShlAmt, SrlAmt;
+  APInt ShlConst, SrlConst;
+  if (!sd_context_match(
+          N, Ctx,
+          m_Or(m_Shl(m_Value(X), m_Value(ShlAmt, m_ConstInt(ShlConst))),
+               m_Srl(m_Value(Y), m_Value(SrlAmt, m_ConstInt(SrlConst))))) ||
+      !hasComplementaryConstantShifts(ShlConst, SrlConst, BitWidth))
+    return false;
+
+  return matchOperands(Ctx, X, Y, Left ? ShlAmt : SrlAmt);
 }
 
 struct SpecificInt_match {

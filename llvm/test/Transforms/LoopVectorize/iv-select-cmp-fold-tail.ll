@@ -22,42 +22,42 @@ define i32 @find_last_trunc_iv(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP31:%.*]], %[[VECTOR_BODY1]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_BODY]] ], [ [[VEC_IND_NEXT8:%.*]], %[[VECTOR_BODY1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP23:%.*]] = GETELEMENTPTR INBOUNDS I32, PTR [[SRC]], I64 [[TMP22]]
-; CHECK-NEXT:    [[TMP26:%.*]] = CALL <4 X I32> @LLVM.MASKED.LOAD.V4I32.P0(PTR ALIGN 4 [[TMP23]], <4 X I1> [[TMP2]], <4 X I32> POISON)
-; CHECK-NEXT:    [[TMP27:%.*]] = ICMP EQ <4 X I32> [[TMP26]], ZEROINITIALIZER
-; CHECK-NEXT:    [[TMP28:%.*]] = SELECT <4 X I1> [[TMP2]], <4 X I1> [[TMP27]], <4 X I1> ZEROINITIALIZER
-; CHECK-NEXT:    [[TMP29:%.*]] = FREEZE <4 X I1> [[TMP28]]
-; CHECK-NEXT:    [[TMP30:%.*]] = CALL I1 @LLVM.VECTOR.REDUCE.OR.V4I1(<4 X I1> [[TMP29]])
-; CHECK-NEXT:    [[TMP31]] = SELECT I1 [[TMP30]], <4 X I1> [[TMP28]], <4 X I1> [[TMP1]]
-; CHECK-NEXT:    [[TMP32]] = SELECT I1 [[TMP30]], <4 X I32> [[VEC_IND1]], <4 X I32> [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = ADD I64 [[TMP22]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = ADD <4 X I64> [[VEC_IND]], SPLAT (I64 4)
-; CHECK-NEXT:    [[VEC_IND_NEXT8]] = ADD <4 X I32> [[VEC_IND1]], SPLAT (I32 4)
-; CHECK-NEXT:    [[TMP34:%.*]] = ICMP EQ I64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    BR I1 [[TMP34]], LABEL %[[MIDDLE_BLOCK:.*]], LABEL %[[VECTOR_BODY1]], !LLVM.LOOP [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP26:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP23]], <4 x i1> [[TMP2]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq <4 x i32> [[TMP26]], zeroinitializer
+; CHECK-NEXT:    [[TMP28:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP27]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP29:%.*]] = freeze <4 x i1> [[TMP28]]
+; CHECK-NEXT:    [[TMP30:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP29]])
+; CHECK-NEXT:    [[TMP31]] = select i1 [[TMP30]], <4 x i1> [[TMP28]], <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP32]] = select i1 [[TMP30]], <4 x i32> [[VEC_IND1]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP22]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT8]] = add <4 x i32> [[VEC_IND1]], splat (i32 4)
+; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = CALL I32 @LLVM.EXPERIMENTAL.VECTOR.EXTRACT.LAST.ACTIVE.V4I32(<4 X I32> [[TMP32]], <4 X I1> [[TMP31]], I32 0)
-; CHECK-NEXT:    BR LABEL %[[EXIT:.*]]
+; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP32]], <4 x i1> [[TMP31]], i32 0)
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    RET I32 [[RDX_NEXT_LCSSA]]
+; CHECK-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
 ;
-ENTRY:
-  BR LABEL %LOOP
+entry:
+  br label %loop
 
-LOOP:
-  %IV = PHI I64 [ 0, %ENTRY ], [ %IV.NEXT, %LOOP ]
-  %RDX = PHI I32 [ 0, %ENTRY ], [ %RDX.NEXT, %LOOP ]
-  %GEP.SRC = GETELEMENTPTR INBOUNDS I32, PTR %SRC, I64 %IV
-  %L = LOAD I32, PTR %GEP.SRC
-  %CMP103 = ICMP EQ I32 %L, 0
-  %0 = TRUNC I64 %IV TO I32
-  %RDX.NEXT = SELECT I1 %CMP103, I32 %0, I32 %RDX
-  %IV.NEXT = ADD I64 %IV, 1
-  %EC = ICMP EQ I64 %IV, %N
-  BR I1 %EC, LABEL %EXIT, LABEL %LOOP
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ 0, %entry ], [ %rdx.next, %loop ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep.src
+  %cmp103 = icmp eq i32 %l, 0
+  %0 = trunc i64 %iv to i32
+  %rdx.next = select i1 %cmp103, i32 %0, i32 %rdx
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, %n
+  br i1 %ec, label %exit, label %loop
 
-EXIT:
-  RET I32 %RDX.NEXT
+exit:
+  ret i32 %rdx.next
 }
 
 define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64 %rdx.start, i64 %n) {

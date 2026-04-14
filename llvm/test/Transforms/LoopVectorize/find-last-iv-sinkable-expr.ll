@@ -526,8 +526,7 @@ define i64 @findlast_non_canonical_iv_with_expr(ptr %a, i64 %n) {
 ; TF-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
 ; TF-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; TF:       [[PRED_LOAD_IF]]:
-; TF-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0
-; TF-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP6]]
+; TF-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; TF-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP7]], align 8
 ; TF-NEXT:    [[TMP9:%.*]] = insertelement <4 x i64> poison, i64 [[TMP8]], i32 0
 ; TF-NEXT:    br label %[[PRED_LOAD_CONTINUE]]

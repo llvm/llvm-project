@@ -117,27 +117,25 @@ TEST_F(SerializeTest, emitNamespaceInfo) {
   extractInfosFromCode("namespace A { namespace B { void f() {} } }", 5,
                        /*Public=*/false, Infos, this->Diags);
 
-  NamespaceInfo *A = InfoAsNamespace(Infos[0]);
+  NamespaceInfo *A = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedA(EmptySID, "A");
   CheckNamespaceInfo(&ExpectedA, A);
 
-  NamespaceInfo *B = InfoAsNamespace(Infos[2]);
+  NamespaceInfo *B = InfoAsNamespace(Infos[2].get());
   NamespaceInfo ExpectedB(EmptySID, /*Name=*/"B", /*Path=*/"A");
-  Reference NsB[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
-  ExpectedB.Namespace = llvm::ArrayRef(NsB);
+  ExpectedB.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
   CheckNamespaceInfo(&ExpectedB, B);
 
-  NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[4]);
+  NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[4].get());
   NamespaceInfo ExpectedBWithFunction(EmptySID);
   FunctionInfo F;
   F.Name = "f";
   F.ReturnType = TypeInfo("void");
   F.DefLoc = Location(0, 0, "test.cpp");
-  Reference NsF[] = {Reference(EmptySID, "B", InfoType::IT_namespace),
-                     Reference(EmptySID, "A", InfoType::IT_namespace)};
-  F.Namespace = llvm::ArrayRef(NsF);
+  F.Namespace.emplace_back(EmptySID, "B", InfoType::IT_namespace);
+  F.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.Children.Functions.push_back(F);
+  ExpectedBWithFunction.Children.Functions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
@@ -146,7 +144,7 @@ TEST_F(SerializeTest, emitAnonymousNamespaceInfo) {
   extractInfosFromCode("namespace { }", 2, /*Public=*/false, Infos,
                        this->Diags);
 
-  NamespaceInfo *A = InfoAsNamespace(Infos[0]);
+  NamespaceInfo *A = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedA(EmptySID);
   ExpectedA.Name = "@nonymous_namespace";
   CheckNamespaceInfo(&ExpectedA, A);
@@ -172,103 +170,95 @@ void F<int>::TemplateMethod();
 typedef struct {} G;)raw",
                        10, /*Public=*/false, Infos, this->Diags);
 
-  RecordInfo *E = InfoAsRecord(Infos[0]);
+  RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
-  Reference NsE[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedE.Namespace = llvm::ArrayRef(NsE);
+  ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedE.TagType = TagTypeKind::Class;
   ExpectedE.DefLoc = Location(0, 0, "test.cpp");
-  MemberTypeInfo MemE[] = {
-      MemberTypeInfo(TypeInfo("int"), "value", AccessSpecifier::AS_public)};
-  ExpectedE.Members = llvm::ArrayRef(MemE);
+  ExpectedE.Members.emplace_back(TypeInfo("int"), "value",
+                                 AccessSpecifier::AS_public);
   // TODO the data member should have the docstring on it:
   //ExpectedE.Members.back().Description.push_back(MakeOneLineCommentInfo(" Some docs"));
   CheckRecordInfo(&ExpectedE, E);
 
-  RecordInfo *RecordWithEConstructor = InfoAsRecord(Infos[2]);
+  RecordInfo *RecordWithEConstructor = InfoAsRecord(Infos[2].get());
   RecordInfo ExpectedRecordWithEConstructor(EmptySID);
   FunctionInfo EConstructor;
   EConstructor.Name = "E";
   EConstructor.Parent = Reference(EmptySID, "E", InfoType::IT_record);
   EConstructor.ReturnType = TypeInfo("void");
   EConstructor.DefLoc = Location(0, 0, "test.cpp");
-  Reference NsEC[] = {
-      Reference(EmptySID, "E", InfoType::IT_record),
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  EConstructor.Namespace = llvm::ArrayRef(NsEC);
+  EConstructor.Namespace.emplace_back(EmptySID, "E", InfoType::IT_record);
+  EConstructor.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                      InfoType::IT_namespace);
   EConstructor.Access = AccessSpecifier::AS_public;
   EConstructor.IsMethod = true;
-  ExpectedRecordWithEConstructor.Children.Functions.push_back(EConstructor);
+  ExpectedRecordWithEConstructor.Children.Functions.emplace_back(
+      std::move(EConstructor));
   CheckRecordInfo(&ExpectedRecordWithEConstructor, RecordWithEConstructor);
 
-  RecordInfo *RecordWithMethod = InfoAsRecord(Infos[3]);
+  RecordInfo *RecordWithMethod = InfoAsRecord(Infos[3].get());
   RecordInfo ExpectedRecordWithMethod(EmptySID);
   FunctionInfo Method;
   Method.Name = "ProtectedMethod";
   Method.Parent = Reference(EmptySID, "E", InfoType::IT_record);
   Method.ReturnType = TypeInfo("void");
-  Location LMethod(0, 0, "test.cpp");
-  Method.Loc.push_back(LMethod);
-  Reference NsMethod[] = {
-      Reference(EmptySID, "E", InfoType::IT_record),
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  Method.Namespace = llvm::ArrayRef(NsMethod);
+  Method.Loc.emplace_back(0, 0, "test.cpp");
+  Method.Namespace.emplace_back(EmptySID, "E", InfoType::IT_record);
+  Method.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                InfoType::IT_namespace);
   Method.Access = AccessSpecifier::AS_protected;
   Method.IsMethod = true;
-  ExpectedRecordWithMethod.Children.Functions.push_back(Method);
+  ExpectedRecordWithMethod.Children.Functions.emplace_back(std::move(Method));
   CheckRecordInfo(&ExpectedRecordWithMethod, RecordWithMethod);
 
-  RecordInfo *F = InfoAsRecord(Infos[4]);
+  RecordInfo *F = InfoAsRecord(Infos[4].get());
   RecordInfo ExpectedF(EmptySID, /*Name=*/"F", /*Path=*/"GlobalNamespace");
-  Reference NsF3[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedF.Namespace = llvm::ArrayRef(NsF3);
+  ExpectedF.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedF.TagType = TagTypeKind::Struct;
   ExpectedF.DefLoc = Location(0, 0, "test.cpp");
   CheckRecordInfo(&ExpectedF, F);
 
-  RecordInfo *RecordWithTemplateMethod = InfoAsRecord(Infos[6]);
+  RecordInfo *RecordWithTemplateMethod = InfoAsRecord(Infos[6].get());
   RecordInfo ExpectedRecordWithTemplateMethod(EmptySID);
   FunctionInfo TemplateMethod;
   TemplateMethod.Name = "TemplateMethod";
   TemplateMethod.Parent = Reference(EmptySID, "F", InfoType::IT_record);
   TemplateMethod.ReturnType = TypeInfo("void");
-  Location LTemp1(0, 0, "test.cpp");
-  TemplateMethod.Loc.push_back(LTemp1);
-  Reference NsT1[] = {
-      Reference(EmptySID, "F", InfoType::IT_record),
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  TemplateMethod.Namespace = llvm::ArrayRef(NsT1);
+  TemplateMethod.Loc.emplace_back(0, 0, "test.cpp");
+  TemplateMethod.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
+  TemplateMethod.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                        InfoType::IT_namespace);
   TemplateMethod.Access = AccessSpecifier::AS_public;
   TemplateMethod.IsMethod = true;
-  ExpectedRecordWithTemplateMethod.Children.Functions.push_back(TemplateMethod);
+  ExpectedRecordWithTemplateMethod.Children.Functions.emplace_back(
+      std::move(TemplateMethod));
   CheckRecordInfo(&ExpectedRecordWithTemplateMethod, RecordWithTemplateMethod);
 
-  RecordInfo *TemplatedRecord = InfoAsRecord(Infos[7]);
+  RecordInfo *TemplatedRecord = InfoAsRecord(Infos[7].get());
   RecordInfo ExpectedTemplatedRecord(EmptySID);
   FunctionInfo SpecializedTemplateMethod;
   SpecializedTemplateMethod.Name = "TemplateMethod";
   SpecializedTemplateMethod.Parent =
       Reference(EmptySID, "F", InfoType::IT_record);
   SpecializedTemplateMethod.ReturnType = TypeInfo("void");
-  Location LTemp2(0, 0, "test.cpp");
-  SpecializedTemplateMethod.Loc.push_back(LTemp2);
-  Reference NsT2[] = {
-      Reference(EmptySID, "F", InfoType::IT_record),
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  SpecializedTemplateMethod.Namespace = llvm::ArrayRef(NsT2);
+  SpecializedTemplateMethod.Loc.emplace_back(0, 0, "test.cpp");
+  SpecializedTemplateMethod.Namespace.emplace_back(EmptySID, "F",
+                                                   InfoType::IT_record);
+  SpecializedTemplateMethod.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                                   InfoType::IT_namespace);
   SpecializedTemplateMethod.Access = AccessSpecifier::AS_public;
   SpecializedTemplateMethod.IsMethod = true;
-  ExpectedTemplatedRecord.Children.Functions.push_back(
-      SpecializedTemplateMethod);
+  ExpectedTemplatedRecord.Children.Functions.emplace_back(
+      std::move(SpecializedTemplateMethod));
   CheckRecordInfo(&ExpectedTemplatedRecord, TemplatedRecord);
 
-  RecordInfo *G = InfoAsRecord(Infos[8]);
+  RecordInfo *G = InfoAsRecord(Infos[8].get());
   RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/"GlobalNamespace");
-  Reference NsG[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedG.Namespace = llvm::ArrayRef(NsG);
+  ExpectedG.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedG.TagType = TagTypeKind::Struct;
   ExpectedG.DefLoc = Location(0, 0, "test.cpp");
   ExpectedG.IsTypeDef = true;
@@ -281,25 +271,25 @@ TEST_F(SerializeTest, emitEnumInfo) {
   extractInfosFromCode("enum E { X, Y }; enum class G { A, B };", 2,
                        /*Public=*/false, Infos, this->Diags);
 
-  NamespaceInfo *NamespaceWithEnum = InfoAsNamespace(Infos[0]);
+  NamespaceInfo *NamespaceWithEnum = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedNamespaceWithEnum(EmptySID);
   EnumInfo E;
   E.Name = "E";
   E.DefLoc = Location(0, 0, "test.cpp");
-  EnumValueInfo EMem[] = {EnumValueInfo("X", "0"), EnumValueInfo("Y", "1")};
-  E.Members = llvm::ArrayRef(EMem);
-  ExpectedNamespaceWithEnum.Children.Enums.push_back(E);
+  E.Members.emplace_back("X", "0");
+  E.Members.emplace_back("Y", "1");
+  ExpectedNamespaceWithEnum.Children.Enums.emplace_back(std::move(E));
   CheckNamespaceInfo(&ExpectedNamespaceWithEnum, NamespaceWithEnum);
 
-  NamespaceInfo *NamespaceWithScopedEnum = InfoAsNamespace(Infos[1]);
+  NamespaceInfo *NamespaceWithScopedEnum = InfoAsNamespace(Infos[1].get());
   NamespaceInfo ExpectedNamespaceWithScopedEnum(EmptySID);
   EnumInfo G;
   G.Name = "G";
   G.Scoped = true;
   G.DefLoc = Location(0, 0, "test.cpp");
-  EnumValueInfo GMem[] = {EnumValueInfo("A", "0"), EnumValueInfo("B", "1")};
-  G.Members = llvm::ArrayRef(GMem);
-  ExpectedNamespaceWithScopedEnum.Children.Enums.push_back(G);
+  G.Members.emplace_back("A", "0");
+  G.Members.emplace_back("B", "1");
+  ExpectedNamespaceWithScopedEnum.Children.Enums.emplace_back(std::move(G));
   CheckNamespaceInfo(&ExpectedNamespaceWithScopedEnum, NamespaceWithScopedEnum);
 }
 
@@ -307,14 +297,12 @@ TEST_F(SerializeTest, emitUndefinedRecordInfo) {
   EmittedInfoList Infos;
   extractInfosFromCode("class E;", 2, /*Public=*/false, Infos, this->Diags);
 
-  RecordInfo *E = InfoAsRecord(Infos[0]);
+  RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
-  Reference NsE[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedE.Namespace = llvm::ArrayRef(NsE);
+  ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedE.TagType = TagTypeKind::Class;
-  Location LE(0, 0, "test.cpp");
-  ExpectedE.Loc.push_back(LE);
+  ExpectedE.Loc.emplace_back(0, 0, "test.cpp");
   CheckRecordInfo(&ExpectedE, E);
 }
 
@@ -323,16 +311,14 @@ TEST_F(SerializeTest, emitRecordMemberInfo) {
   extractInfosFromCode("struct E { int I; };", 2, /*Public=*/false, Infos,
                        this->Diags);
 
-  RecordInfo *E = InfoAsRecord(Infos[0]);
+  RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
-  Reference NsE[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedE.Namespace = llvm::ArrayRef(NsE);
+  ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedE.TagType = TagTypeKind::Struct;
   ExpectedE.DefLoc = Location(0, 0, "test.cpp");
-  MemberTypeInfo MemE[] = {
-      MemberTypeInfo(TypeInfo("int"), "I", AccessSpecifier::AS_public)};
-  ExpectedE.Members = llvm::ArrayRef(MemE);
+  ExpectedE.Members.emplace_back(TypeInfo("int"), "I",
+                                 AccessSpecifier::AS_public);
   CheckRecordInfo(&ExpectedE, E);
 }
 
@@ -341,25 +327,23 @@ TEST_F(SerializeTest, emitInternalRecordInfo) {
   extractInfosFromCode("class E { class G {}; };", 4, /*Public=*/false, Infos,
                        this->Diags);
 
-  RecordInfo *E = InfoAsRecord(Infos[0]);
+  RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
-  Reference NsE[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedE.Namespace = llvm::ArrayRef(NsE);
+  ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedE.DefLoc = Location(0, 0, "test.cpp");
   ExpectedE.TagType = TagTypeKind::Class;
   CheckRecordInfo(&ExpectedE, E);
 
-  RecordInfo *G = InfoAsRecord(Infos[2]);
+  RecordInfo *G = InfoAsRecord(Infos[2].get());
   llvm::SmallString<128> ExpectedGPath("GlobalNamespace/E");
   llvm::sys::path::native(ExpectedGPath);
   RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/ExpectedGPath);
   ExpectedG.DefLoc = Location(0, 0, "test.cpp");
   ExpectedG.TagType = TagTypeKind::Class;
-  Reference NsG[] = {
-      Reference(EmptySID, "E", InfoType::IT_record),
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedG.Namespace = llvm::ArrayRef(NsG);
+  ExpectedG.Namespace.emplace_back(EmptySID, "E", InfoType::IT_record);
+  ExpectedG.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   CheckRecordInfo(&ExpectedG, G);
 }
 
@@ -374,14 +358,14 @@ TEST_F(SerializeTest, emitPublicFunctionInternalInfo) {
   extractInfosFromCode("int F() { class G {}; return 0; };", 1, /*Public=*/true,
                        Infos, this->Diags);
 
-  NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[0]);
+  NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedBWithFunction(EmptySID);
   FunctionInfo F;
   F.Name = "F";
   F.ReturnType = TypeInfo("int");
   F.DefLoc = Location(0, 0, "test.cpp");
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.Children.Functions.push_back(F);
+  ExpectedBWithFunction.Children.Functions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
@@ -390,16 +374,15 @@ TEST_F(SerializeTest, emitInlinedFunctionInfo) {
   extractInfosFromCode("inline void F(int I) { };", 1, /*Public=*/true, Infos,
                        this->Diags);
 
-  NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[0]);
+  NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedBWithFunction(EmptySID);
   FunctionInfo F;
   F.Name = "F";
   F.ReturnType = TypeInfo("void");
   F.DefLoc = Location(0, 0, "test.cpp");
-  FieldTypeInfo Params[] = {FieldTypeInfo(TypeInfo("int"), "I")};
-  F.Params = llvm::ArrayRef(Params);
+  F.Params.emplace_back(TypeInfo("int"), "I");
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.Children.Functions.push_back(F);
+  ExpectedBWithFunction.Children.Functions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
@@ -414,169 +397,132 @@ class I {} ;
 class J : public I<int> {} ;)raw",
                        14, /*Public=*/false, Infos, this->Diags);
 
-  RecordInfo *F = InfoAsRecord(Infos[0]);
+  RecordInfo *F = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedF(EmptySID, /*Name=*/"F", /*Path=*/"GlobalNamespace");
-  Reference NsF[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedF.Namespace = llvm::ArrayRef(NsF);
+  ExpectedF.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace, "");
   ExpectedF.TagType = TagTypeKind::Class;
   ExpectedF.DefLoc = Location(0, 0, "test.cpp");
   CheckRecordInfo(&ExpectedF, F);
 
-  RecordInfo *G = InfoAsRecord(Infos[3]);
+  RecordInfo *G = InfoAsRecord(Infos[3].get());
   RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/"GlobalNamespace");
-  Reference NsG[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedG.Namespace = llvm::ArrayRef(NsG);
+  ExpectedG.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedG.TagType = TagTypeKind::Class;
   ExpectedG.DefLoc = Location(0, 0, "test.cpp");
-  MemberTypeInfo MemG[] = {
-      MemberTypeInfo(TypeInfo("int"), "I", AccessSpecifier::AS_protected)};
-  ExpectedG.Members = llvm::ArrayRef(MemG);
+  ExpectedG.Members.emplace_back(TypeInfo("int"), "I",
+                                 AccessSpecifier::AS_protected);
   CheckRecordInfo(&ExpectedG, G);
 
-  RecordInfo *E = InfoAsRecord(Infos[6]);
+  RecordInfo *E = InfoAsRecord(Infos[6].get());
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
-  Reference NsE[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedE.Namespace = llvm::ArrayRef(NsE);
-  Reference ParE[] = {Reference(EmptySID, /*Name=*/"F", InfoType::IT_record,
-                                /*QualName=*/"", /*Path=*/"GlobalNamespace")};
-  ExpectedE.Parents = llvm::ArrayRef(ParE);
-  Reference VParE[] = {Reference(EmptySID, /*Name=*/"G", InfoType::IT_record,
-                                 /*QualName=*/"G",
-                                 /*Path=*/"GlobalNamespace")};
-  ExpectedE.VirtualParents = llvm::ArrayRef(VParE);
-  BaseRecordInfo BaseF(EmptySID, /*Name=*/"F",
-                       /*Path=*/"GlobalNamespace", false,
-                       AccessSpecifier::AS_public, true);
+  ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
+  ExpectedE.Parents.emplace_back(EmptySID, /*Name=*/"F", InfoType::IT_record,
+                                 /*QualName=*/"", /*Path*=*/"GlobalNamespace");
+  ExpectedE.VirtualParents.emplace_back(EmptySID, /*Name=*/"G",
+                                        InfoType::IT_record, /*QualName=*/"G",
+                                        /*Path*=*/"GlobalNamespace");
+  ExpectedE.Bases.emplace_back(EmptySID, /*Name=*/"F",
+                               /*Path=*/"GlobalNamespace", false,
+                               AccessSpecifier::AS_public, true);
   FunctionInfo FunctionSet;
   FunctionSet.Name = "set";
   FunctionSet.ReturnType = TypeInfo("void");
-  Location LSet;
-  FunctionSet.Loc.push_back(LSet);
-  FieldTypeInfo ParamsSet[] = {FieldTypeInfo(TypeInfo("int"), "N")};
-  FunctionSet.Params = llvm::ArrayRef(ParamsSet);
-  Reference NsSet[] = {
-      Reference(EmptySID, "F", InfoType::IT_record),
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  FunctionSet.Namespace = llvm::ArrayRef(NsSet);
-  FunctionSet.Access =
-      AccessSpecifier::AS_none; // Wait, previous had AS_protected, but wait,
-                                // F.Access was AS_protected. FunctionSet.Access
-                                // should be AS_protected if it was so. In the
-                                // original it was AS_protected.
+  FunctionSet.Loc.emplace_back();
+  FunctionSet.Params.emplace_back(TypeInfo("int"), "N");
+  FunctionSet.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
+  FunctionSet.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                     InfoType::IT_namespace);
   FunctionSet.Access = AccessSpecifier::AS_protected;
   FunctionSet.IsMethod = true;
-  BaseF.Children.Functions.push_back(FunctionSet);
-
-  BaseRecordInfo BaseG(EmptySID, /*Name=*/"G",
-                       /*Path=*/"GlobalNamespace", true,
-                       AccessSpecifier::AS_private, true);
+  ExpectedE.Bases.back().Children.Functions.emplace_back(
+      std::move(FunctionSet));
+  ExpectedE.Bases.emplace_back(EmptySID, /*Name=*/"G",
+                               /*Path=*/"GlobalNamespace", true,
+                               AccessSpecifier::AS_private, true);
   FunctionInfo FunctionGet;
   FunctionGet.Name = "get";
   FunctionGet.ReturnType = TypeInfo("int");
-  Location LGet;
-  FunctionGet.DefLoc = LGet;
-  Reference NsGet[] = {
-      Reference(EmptySID, "G", InfoType::IT_record),
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  FunctionGet.Namespace = llvm::ArrayRef(NsGet);
+  FunctionGet.DefLoc = Location();
+  FunctionGet.Namespace.emplace_back(EmptySID, "G", InfoType::IT_record);
+  FunctionGet.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                     InfoType::IT_namespace);
   FunctionGet.Access = AccessSpecifier::AS_private;
   FunctionGet.IsMethod = true;
-  BaseG.Children.Functions.push_back(FunctionGet);
-  MemberTypeInfo MemG2[] = {
-      MemberTypeInfo(TypeInfo("int"), "I", AccessSpecifier::AS_private)};
-  BaseG.Members = llvm::ArrayRef(MemG2);
-
-  BaseRecordInfo BasesE[] = {std::move(BaseF), std::move(BaseG)};
-  ExpectedE.Bases = llvm::ArrayRef(BasesE);
+  ExpectedE.Bases.back().Children.Functions.emplace_back(
+      std::move(FunctionGet));
+  ExpectedE.Bases.back().Members.emplace_back(TypeInfo("int"), "I",
+                                              AccessSpecifier::AS_private);
   ExpectedE.DefLoc = Location(0, 0, "test.cpp");
   ExpectedE.TagType = TagTypeKind::Class;
   CheckRecordInfo(&ExpectedE, E);
 
-  RecordInfo *H = InfoAsRecord(Infos[8]);
+  RecordInfo *H = InfoAsRecord(Infos[8].get());
   RecordInfo ExpectedH(EmptySID, /*Name=*/"H", /*Path=*/"GlobalNamespace");
-  Reference NsH[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedH.Namespace = llvm::ArrayRef(NsH);
+  ExpectedH.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedH.TagType = TagTypeKind::Class;
   ExpectedH.DefLoc = Location(0, 0, "test.cpp");
-  Reference ParH[] = {Reference(EmptySID, /*Name=*/"E", InfoType::IT_record,
-                                /*QualName=*/"E", /*Path=*/"GlobalNamespace")};
-  ExpectedH.Parents = llvm::ArrayRef(ParH);
-  Reference VParH[] = {Reference(EmptySID, /*Name=*/"G", InfoType::IT_record,
-                                 /*QualName=*/"G",
-                                 /*Path=*/"GlobalNamespace")};
-  ExpectedH.VirtualParents = llvm::ArrayRef(VParH);
-
-  BaseRecordInfo BaseHE(EmptySID, /*Name=*/"E",
-                        /*Path=*/"GlobalNamespace", false,
-                        AccessSpecifier::AS_private, true);
-
-  BaseRecordInfo BaseHF(EmptySID, /*Name=*/"F",
-                        /*Path=*/"GlobalNamespace", false,
-                        AccessSpecifier::AS_private, false);
+  ExpectedH.Parents.emplace_back(EmptySID, /*Name=*/"E", InfoType::IT_record,
+                                 /*QualName=*/"E", /*Path=*/"GlobalNamespace");
+  ExpectedH.VirtualParents.emplace_back(EmptySID, /*Name=*/"G",
+                                        InfoType::IT_record, /*QualName=*/"G",
+                                        /*Path=*/"GlobalNamespace");
+  ExpectedH.Bases.emplace_back(EmptySID, /*Name=*/"E",
+                               /*Path=*/"GlobalNamespace", false,
+                               AccessSpecifier::AS_private, true);
+  ExpectedH.Bases.emplace_back(EmptySID, /*Name=*/"F",
+                               /*Path=*/"GlobalNamespace", false,
+                               AccessSpecifier::AS_private, false);
   FunctionInfo FunctionSetNew;
   FunctionSetNew.Name = "set";
   FunctionSetNew.ReturnType = TypeInfo("void");
-  Location LSetNew;
-  FunctionSetNew.Loc.push_back(LSetNew);
-  FieldTypeInfo ParamsSetNew[] = {FieldTypeInfo(TypeInfo("int"), "N")};
-  FunctionSetNew.Params = llvm::ArrayRef(ParamsSetNew);
-  Reference NsSetNew[] = {
-      Reference(EmptySID, "F", InfoType::IT_record),
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  FunctionSetNew.Namespace = llvm::ArrayRef(NsSetNew);
+  FunctionSetNew.Loc.emplace_back();
+  FunctionSetNew.Params.emplace_back(TypeInfo("int"), "N");
+  FunctionSetNew.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
+  FunctionSetNew.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                        InfoType::IT_namespace);
   FunctionSetNew.Access = AccessSpecifier::AS_private;
   FunctionSetNew.IsMethod = true;
-  BaseHF.Children.Functions.push_back(FunctionSetNew);
-  BaseRecordInfo BaseHG(EmptySID, /*Name=*/"G",
-                        /*Path=*/"GlobalNamespace", true,
-                        AccessSpecifier::AS_private, false);
+  ExpectedH.Bases.back().Children.Functions.emplace_back(
+      std::move(FunctionSetNew));
+  ExpectedH.Bases.emplace_back(EmptySID, /*Name=*/"G",
+                               /*Path=*/"GlobalNamespace", true,
+                               AccessSpecifier::AS_private, false);
   FunctionInfo FunctionGetNew;
   FunctionGetNew.Name = "get";
   FunctionGetNew.ReturnType = TypeInfo("int");
-  Location LGetNew;
-  FunctionGetNew.DefLoc = LGetNew;
-  Reference NsGetNew[] = {
-      Reference(EmptySID, "G", InfoType::IT_record),
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  FunctionGetNew.Namespace = llvm::ArrayRef(NsGetNew);
+  FunctionGetNew.DefLoc = Location();
+  FunctionGetNew.Namespace.emplace_back(EmptySID, "G", InfoType::IT_record);
+  FunctionGetNew.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                        InfoType::IT_namespace);
   FunctionGetNew.Access = AccessSpecifier::AS_private;
   FunctionGetNew.IsMethod = true;
-  BaseHG.Children.Functions.push_back(FunctionGetNew);
-  MemberTypeInfo MemHG[] = {
-      MemberTypeInfo(TypeInfo("int"), "I", AccessSpecifier::AS_private)};
-  BaseHG.Members = llvm::ArrayRef(MemHG);
-
-  BaseRecordInfo BasesH[] = {std::move(BaseHE), std::move(BaseHF),
-                             std::move(BaseHG)};
-  ExpectedH.Bases = llvm::ArrayRef(BasesH);
-
+  ExpectedH.Bases.back().Children.Functions.emplace_back(
+      std::move(FunctionGetNew));
+  ExpectedH.Bases.back().Members.emplace_back(TypeInfo("int"), "I",
+                                              AccessSpecifier::AS_private);
   CheckRecordInfo(&ExpectedH, H);
 
-  RecordInfo *I = InfoAsRecord(Infos[10]);
+  RecordInfo *I = InfoAsRecord(Infos[10].get());
   RecordInfo ExpectedI(EmptySID, /*Name=*/"I", /*Path=*/"GlobalNamespace");
-  Reference NsI[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedI.Namespace = llvm::ArrayRef(NsI);
+  ExpectedI.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedI.TagType = TagTypeKind::Class;
   ExpectedI.DefLoc = Location(0, 0, "test.cpp");
   CheckRecordInfo(&ExpectedI, I);
 
-  RecordInfo *J = InfoAsRecord(Infos[12]);
+  RecordInfo *J = InfoAsRecord(Infos[12].get());
   RecordInfo ExpectedJ(EmptySID, /*Name=*/"J", /*Path=*/"GlobalNamespace");
-  Reference NsJ[] = {
-      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
-  ExpectedJ.Namespace = llvm::ArrayRef(NsJ);
-  Reference ParJ[] = {
-      Reference(EmptySID, /*Name=*/"I<int>", InfoType::IT_record)};
-  ExpectedJ.Parents = llvm::ArrayRef(ParJ);
-  BaseRecordInfo BasesJ[] = {BaseRecordInfo(EmptySID, /*Name=*/"I<int>",
-                                            /*Path=*/"GlobalNamespace", false,
-                                            AccessSpecifier::AS_public, true)};
-  ExpectedJ.Bases = llvm::ArrayRef(BasesJ);
+  ExpectedJ.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
+  ExpectedJ.Parents.emplace_back(EmptySID, /*Name=*/"I<int>",
+                                 InfoType::IT_record);
+  ExpectedJ.Bases.emplace_back(EmptySID, /*Name=*/"I<int>",
+                               /*Path=*/"GlobalNamespace", false,
+                               AccessSpecifier::AS_public, true);
   ExpectedJ.DefLoc = Location(0, 0, "test.cpp");
   ExpectedJ.TagType = TagTypeKind::Class;
   CheckRecordInfo(&ExpectedJ, J);
@@ -592,33 +538,30 @@ static int staticModuleFunction(int x);
 export double exportedModuleFunction(double y);)raw",
                                2, /*Public=*/true, Infos, Args, this->Diags);
 
-  NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[0]);
+  NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedBWithFunction(EmptySID);
   FunctionInfo F;
   F.Name = "moduleFunction";
   F.ReturnType = TypeInfo("int");
-  Location LF1(0, 0, "test.cpp");
-  F.Loc.push_back(LF1);
-  FieldTypeInfo ParamsF[] = {FieldTypeInfo(TypeInfo("int"), "x"),
-                             FieldTypeInfo(TypeInfo("double"), "d")};
-  ParamsF[1].DefaultValue = "3.2 - 1.0";
-  F.Params = llvm::ArrayRef(ParamsF);
+  F.Loc.emplace_back(0, 0, "test.cpp");
+  F.Params.emplace_back(TypeInfo("int"), "x");
+  F.Params.emplace_back(TypeInfo("double"), "d");
+  F.Params.back().DefaultValue = "3.2 - 1.0";
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.Children.Functions.push_back(F);
+  ExpectedBWithFunction.Children.Functions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 
-  NamespaceInfo *BWithExportedFunction = InfoAsNamespace(Infos[1]);
+  NamespaceInfo *BWithExportedFunction = InfoAsNamespace(Infos[1].get());
   NamespaceInfo ExpectedBWithExportedFunction(EmptySID);
   FunctionInfo ExportedF;
   ExportedF.Name = "exportedModuleFunction";
   ExportedF.ReturnType =
       TypeInfo(Reference(EmptySID, "double", InfoType::IT_default));
-  Location LF2(0, 0, "test.cpp");
-  ExportedF.Loc.push_back(LF2);
-  FieldTypeInfo ParamsExportedF[] = {FieldTypeInfo(TypeInfo("double"), "y")};
-  ExportedF.Params = llvm::ArrayRef(ParamsExportedF);
+  ExportedF.Loc.emplace_back(0, 0, "test.cpp");
+  ExportedF.Params.emplace_back(TypeInfo("double"), "y");
   ExportedF.Access = AccessSpecifier::AS_none;
-  ExpectedBWithExportedFunction.Children.Functions.push_back(ExportedF);
+  ExpectedBWithExportedFunction.Children.Functions.emplace_back(
+      std::move(ExportedF));
   CheckNamespaceInfo(&ExpectedBWithExportedFunction, BWithExportedFunction);
 }
 
@@ -628,24 +571,24 @@ TEST_F(SerializeTest, emitChildRecords) {
   extractInfosFromCode("class A { class B {}; }; namespace { class C {}; } ", 8,
                        /*Public=*/false, Infos, this->Diags);
 
-  NamespaceInfo *ParentA = InfoAsNamespace(Infos[1]);
+  NamespaceInfo *ParentA = InfoAsNamespace(Infos[1].get());
   NamespaceInfo ExpectedParentA(EmptySID);
-  Reference RA(EmptySID, "A", InfoType::IT_record, "A", "GlobalNamespace");
-  ExpectedParentA.Children.Records.push_back(RA);
+  ExpectedParentA.Children.Records.emplace_back(
+      EmptySID, "A", InfoType::IT_record, "A", "GlobalNamespace");
   CheckNamespaceInfo(&ExpectedParentA, ParentA);
 
-  RecordInfo *ParentB = InfoAsRecord(Infos[3]);
+  RecordInfo *ParentB = InfoAsRecord(Infos[3].get());
   RecordInfo ExpectedParentB(EmptySID);
   llvm::SmallString<128> ExpectedParentBPath("GlobalNamespace/A");
   llvm::sys::path::native(ExpectedParentBPath);
-  Reference RB(EmptySID, "B", InfoType::IT_record, "A::B", ExpectedParentBPath);
-  ExpectedParentB.Children.Records.push_back(RB);
+  ExpectedParentB.Children.Records.emplace_back(
+      EmptySID, "B", InfoType::IT_record, "A::B", ExpectedParentBPath);
   CheckRecordInfo(&ExpectedParentB, ParentB);
 
-  NamespaceInfo *ParentC = InfoAsNamespace(Infos[7]);
+  NamespaceInfo *ParentC = InfoAsNamespace(Infos[7].get());
   NamespaceInfo ExpectedParentC(EmptySID);
-  Reference RC(EmptySID, "C", InfoType::IT_record, "C", "@nonymous_namespace");
-  ExpectedParentC.Children.Records.push_back(RC);
+  ExpectedParentC.Children.Records.emplace_back(
+      EmptySID, "C", InfoType::IT_record, "C", "@nonymous_namespace");
   CheckNamespaceInfo(&ExpectedParentC, ParentC);
 }
 
@@ -655,13 +598,13 @@ TEST_F(SerializeTest, emitChildNamespaces) {
   extractInfosFromCode("namespace A { namespace B { } }", 4, /*Public=*/false,
                        Infos, this->Diags);
 
-  NamespaceInfo *ParentA = InfoAsNamespace(Infos[1]);
+  NamespaceInfo *ParentA = InfoAsNamespace(Infos[1].get());
   NamespaceInfo ExpectedParentA(EmptySID);
   Reference RA(EmptySID, "A", InfoType::IT_namespace);
   ExpectedParentA.Children.Namespaces.push_back(RA);
   CheckNamespaceInfo(&ExpectedParentA, ParentA);
 
-  NamespaceInfo *ParentB = InfoAsNamespace(Infos[3]);
+  NamespaceInfo *ParentB = InfoAsNamespace(Infos[3].get());
   NamespaceInfo ExpectedParentB(EmptySID);
   Reference RB(EmptySID, "B", InfoType::IT_namespace, "A::B", "A");
   ExpectedParentB.Children.Namespaces.push_back(RB);
@@ -674,10 +617,10 @@ TEST_F(SerializeTest, emitTypedefs) {
                        /*Public=*/false, Infos, this->Diags);
 
   // First info will be the global namespace with the typedef in it.
-  NamespaceInfo *GlobalNS1 = InfoAsNamespace(Infos[0]);
+  NamespaceInfo *GlobalNS1 = InfoAsNamespace(Infos[0].get());
   ASSERT_EQ(1u, GlobalNS1->Children.Typedefs.size());
 
-  const TypedefInfo &FirstTD = *GlobalNS1->Children.Typedefs.begin();
+  const TypedefInfo &FirstTD = GlobalNS1->Children.Typedefs[0];
   EXPECT_EQ("MyInt", FirstTD.Name);
   EXPECT_FALSE(FirstTD.IsUsing);
   EXPECT_EQ("int", FirstTD.Underlying.Type.Name);
@@ -685,11 +628,11 @@ TEST_F(SerializeTest, emitTypedefs) {
   // The second will be another global namespace with the using in it (the
   // global namespace is duplicated because the items haven't been merged at the
   // serialization phase of processing).
-  NamespaceInfo *GlobalNS2 = InfoAsNamespace(Infos[1]);
+  NamespaceInfo *GlobalNS2 = InfoAsNamespace(Infos[1].get());
   ASSERT_EQ(1u, GlobalNS2->Children.Typedefs.size());
 
   // Second is the "using" typedef.
-  const TypedefInfo &SecondTD = *GlobalNS2->Children.Typedefs.begin();
+  const TypedefInfo &SecondTD = GlobalNS2->Children.Typedefs[0];
   EXPECT_EQ("MyDouble", SecondTD.Name);
   EXPECT_TRUE(SecondTD.IsUsing);
   EXPECT_EQ("double", SecondTD.Underlying.Type.Name);
@@ -704,10 +647,10 @@ TEST_F(SerializeTest, emitFunctionTemplate) {
                        /*Public=*/false, Infos, this->Diags);
 
   // First info will be the global namespace.
-  NamespaceInfo *GlobalNS1 = InfoAsNamespace(Infos[0]);
+  NamespaceInfo *GlobalNS1 = InfoAsNamespace(Infos[0].get());
   ASSERT_EQ(1u, GlobalNS1->Children.Functions.size());
 
-  const FunctionInfo &Func1 = *GlobalNS1->Children.Functions.begin();
+  const FunctionInfo &Func1 = GlobalNS1->Children.Functions[0];
   EXPECT_EQ("GetFoo", Func1.Name);
   ASSERT_TRUE(Func1.Template);
   EXPECT_FALSE(Func1.Template->Specialization); // Not a specialization.
@@ -719,11 +662,11 @@ TEST_F(SerializeTest, emitFunctionTemplate) {
   // The second will be another global namespace with the function in it (the
   // global namespace is duplicated because the items haven't been merged at the
   // serialization phase of processing).
-  NamespaceInfo *GlobalNS2 = InfoAsNamespace(Infos[1]);
+  NamespaceInfo *GlobalNS2 = InfoAsNamespace(Infos[1].get());
   ASSERT_EQ(1u, GlobalNS2->Children.Functions.size());
 
   // This one is a template specialization.
-  const FunctionInfo &Func2 = *GlobalNS2->Children.Functions.begin();
+  const FunctionInfo &Func2 = GlobalNS2->Children.Functions[0];
   EXPECT_EQ("GetFoo", Func2.Name);
   ASSERT_TRUE(Func2.Template);
   EXPECT_TRUE(Func2.Template->Params.empty()); // No template params.
@@ -751,7 +694,7 @@ TEST_F(SerializeTest, emitClassTemplate) {
       /*Public=*/false, Infos, this->Diags);
 
   // First record.
-  const RecordInfo *Rec1 = InfoAsRecord(Infos[0]);
+  const RecordInfo *Rec1 = InfoAsRecord(Infos[0].get());
   EXPECT_EQ("MyTemplate", Rec1->Name);
   ASSERT_TRUE(Rec1->Template);
   EXPECT_FALSE(Rec1->Template->Specialization); // Not a specialization.
@@ -761,7 +704,7 @@ TEST_F(SerializeTest, emitClassTemplate) {
   EXPECT_EQ("int I", Rec1->Template->Params[0].Contents);
 
   // Second record.
-  const RecordInfo *Rec2 = InfoAsRecord(Infos[2]);
+  const RecordInfo *Rec2 = InfoAsRecord(Infos[2].get());
   EXPECT_EQ("MyTemplate", Rec2->Name);
   ASSERT_TRUE(Rec2->Template);
   EXPECT_TRUE(Rec2->Template->Params.empty()); // No template params.
@@ -773,7 +716,7 @@ TEST_F(SerializeTest, emitClassTemplate) {
   EXPECT_EQ(Rec1->USR, Rec2->Template->Specialization->SpecializationOf);
 
   // Third record.
-  const RecordInfo *Rec3 = InfoAsRecord(Infos[4]);
+  const RecordInfo *Rec3 = InfoAsRecord(Infos[4].get());
   EXPECT_EQ("OtherTemplate", Rec3->Name);
   ASSERT_TRUE(Rec3->Template);
 
@@ -783,7 +726,7 @@ TEST_F(SerializeTest, emitClassTemplate) {
   EXPECT_EQ("int U = 1", Rec3->Template->Params[1].Contents);
 
   // Fourth record.
-  const RecordInfo *Rec4 = InfoAsRecord(Infos[6]);
+  const RecordInfo *Rec4 = InfoAsRecord(Infos[6].get());
   EXPECT_EQ("OtherTemplate", Rec3->Name);
   ASSERT_TRUE(Rec4->Template);
   ASSERT_TRUE(Rec4->Template->Specialization);
