@@ -56,17 +56,7 @@ public:
   Error disconnect() override;
 
 private:
-  class InProcessDylibManager : public DylibManager {
-  public:
-    InProcessDylibManager(char GlobalManglingPrefix);
-    Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
-    void
-    lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
-                       DylibManager::SymbolLookupCompleteFn Complete) override;
-
-  private:
-    char GlobalManglingPrefix;
-  };
+  class InProcessDylibManager;
 
   static shared::CWrapperFunctionBuffer
   jitDispatchViaWrapperFunctionManager(void *Ctx, const void *FnTag,

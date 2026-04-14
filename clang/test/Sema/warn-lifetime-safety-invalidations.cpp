@@ -512,3 +512,18 @@ void ref_capture_reassigned_to_safe() {
   lambda();  // should not warn
 }
 } // namespace lambda_capture_invalidation
+
+namespace method_call_uses_field_invalidation {
+
+struct S {
+  std::string_view v;
+  void bar();
+  void baz(){
+    std::vector<std::string> vec = {"42"};
+    v = vec[0];         // expected-warning {{object whose reference is captured is later invalidated}}
+    vec.push_back("1"); // expected-note {{invalidated here}}
+    bar();              // expected-note {{later used here}}
+    v = nullptr;
+  }
+};
+} // namespace method_call_uses_field_invalidation
