@@ -1345,6 +1345,23 @@ Instruction *InstCombinerImpl::foldAddLikeCommutative(Value *LHS, Value *RHS,
     }
   }
 
+  // (A + C) + (B & ~C) == A + (B | C)
+  if (match(LHS, m_c_Add(m_Value(A), m_APInt(C1))) &&
+      match(RHS, m_c_And(m_Value(B), m_SpecificInt(~*C1)))) {
+    // Replacing one add with {or, add}. Avoid growth if both sides are shared.
+    if (!LHS->hasOneUse() && !RHS->hasOneUse())
+      return nullptr;
+
+    bool NSWOut = NSW && match(LHS, m_NSWAdd(m_Value(), m_Value()));
+    bool NUWOut = NUW && match(LHS, m_NUWAdd(m_Value(), m_Value()));
+    Value *NewOr =
+        Builder.CreateOr(B, Constant::getIntegerValue(LHS->getType(), *C1));
+    Instruction *NewAdd = BinaryOperator::CreateAdd(A, NewOr);
+    NewAdd->setHasNoSignedWrap(NSWOut);
+    NewAdd->setHasNoUnsignedWrap(NUWOut);
+    return NewAdd;
+  }
+
   return nullptr;
 }
 
@@ -3015,6 +3032,13 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
   if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C)))) {
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
       Instruction *FDiv = BinaryOperator::CreateFDivFMF(X, NegC, &I);
+
+      // Intersect 'nsz' and 'ninf' because those special value exceptions may
+      // not apply to the fdiv. Everything else propagates from the fneg.
+      FastMathFlags FMF = I.getFastMathFlags();
+      FastMathFlags OpFMF = FNegOp->getFastMathFlags();
+      FDiv->setHasNoSignedZeros(FMF.noSignedZeros() && OpFMF.noSignedZeros());
+      FDiv->setHasNoInfs(FMF.noInfs() && OpFMF.noInfs());
       FDiv->copyMetadata(*FNegOp);
       return FDiv;
     }

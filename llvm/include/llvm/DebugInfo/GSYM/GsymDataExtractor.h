@@ -26,7 +26,7 @@ public:
   /// Construct from raw bytes.
   GsymDataExtractor(StringRef Data, bool IsLittleEndian,
                     uint8_t StringOffsetSize = 8)
-      : DataExtractor(Data, IsLittleEndian, 4), // AddressSize=4 default
+      : DataExtractor(Data, IsLittleEndian),
         StringOffsetSize(StringOffsetSize) {}
 
   /// Construct a sub-range extractor from a parent, copying its endianness
@@ -34,7 +34,7 @@ public:
   GsymDataExtractor(const GsymDataExtractor &Parent, uint64_t Offset,
                     uint64_t Length)
       : DataExtractor(Parent.getData().substr(Offset, Length),
-                      Parent.isLittleEndian(), Parent.getAddressSize()),
+                      Parent.isLittleEndian()),
         StringOffsetSize(Parent.getStringOffsetSize()) {}
 
   /// Get the string offset size in bytes.

@@ -5902,7 +5902,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_fno_zero_initialized_in_bss);
 
   bool OFastEnabled = isOptimizationLevelFast(Args);
-  if (OFastEnabled)
+  if (Args.hasArg(options::OPT_Ofast))
     D.Diag(diag::warn_drv_deprecated_arg_ofast);
   // If -Ofast is the optimization level, then -fstrict-aliasing should be
   // enabled.  This alias option is being used to simplify the hasFlag logic.
@@ -7598,6 +7598,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Unwind v2 (epilog) information for x64 Windows.
   Args.AddLastArg(CmdArgs, options::OPT_winx64_eh_unwindv2);
 
+  // Control Flow Guard mechanism for Windows.
+  Args.AddLastArg(CmdArgs, options::OPT_win_cfg_mechanism);
+
   // C++ "sane" operator new.
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_sane_operator_new,
                      options::OPT_fno_assume_sane_operator_new);
@@ -8737,6 +8740,12 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     CmdArgs.push_back("-cfguard");
   else if (HasCFGuardNoChecks)
     CmdArgs.push_back("-cfguard-no-checks");
+
+  // Control Flow Guard mechanism for Windows.
+  if (Args.hasArg(options::OPT__SLASH_d2guardcfgdispatch_))
+    CmdArgs.push_back("-fwin-cfg-mechanism=check");
+  else if (Args.hasArg(options::OPT__SLASH_d2guardcfgdispatch))
+    CmdArgs.push_back("-fwin-cfg-mechanism=dispatch");
 
   for (const auto &FuncOverride :
        Args.getAllArgValues(options::OPT__SLASH_funcoverride)) {
