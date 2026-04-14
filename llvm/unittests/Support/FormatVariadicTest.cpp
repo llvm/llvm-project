@@ -440,9 +440,12 @@ TEST(FormatAndFormatvTest, StringPadding) {
   // the format string and the padding needs to be one off.
   EXPECT_EQ("[abcd         ]",
             formatv("[{0}]", fmt_pad("abcd", 0, 10 - 1)).str());
-  // We can also use the fmt_align function instead of fmt_pad but it makes it a bit more complex
+  // We can also use the fmt_align function instead of fmt_pad but it makes it a
+  // bit more complex
   EXPECT_EQ("[abcd         ]",
-            formatv("[{0}]", fmt_align("abcd", AlignStyle::Left, 10 + strlen("abcd") - 1 )).str());
+            formatv("[{0}]", fmt_align("abcd", AlignStyle::Left,
+                                       10 + strlen("abcd") - 1))
+                .str());
 }
 
 TEST(FormatAndFormatvTest, Alignment) {
