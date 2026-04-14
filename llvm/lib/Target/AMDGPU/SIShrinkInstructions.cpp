@@ -856,7 +856,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
 // v_perm_b32 v2, v0, v1, 0x5040100
 // v_perm_b32 v3, v0, v1, 0x7060302
 // =>
-// v_swap_b16 v0.h, v1.l
+// v_swap_b16 v0.l, v1.h
 MachineInstr *
 SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
                                    PendingSwapMap &SwapCandidates) const {
