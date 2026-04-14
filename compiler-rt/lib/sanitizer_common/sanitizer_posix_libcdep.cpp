@@ -209,7 +209,7 @@ void UnsetAlternateSignalStack() {
   altstack.ss_flags = SS_DISABLE;
   altstack.ss_size = GetAltStackSize();  // Some sane value required on Darwin.
   CHECK_EQ(0, sigaltstack(&altstack, &oldstack));
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
   // If oldstack size is different from the one we allocated early on, the
   // stack is not allocated by us and we shouldn't free it here.
   // This is not a bulletproof solution because the stack could be allocated by

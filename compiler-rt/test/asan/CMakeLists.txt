@@ -14,8 +14,8 @@ if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
 endif()
 
 # Compile and run AMDGPU device address sanitizer tests only when
-# -DSANITIZER_AMDGPU=1 is enabled.
-if (SANITIZER_AMDGPU)
+# -DSANITIZER_AMDHSA=1 is enabled.
+if (SANITIZER_AMDHSA)
   set(SUPPORT_OFFLOAD_TESTS "true")
 else()
   set(SUPPORT_OFFLOAD_TESTS "false")

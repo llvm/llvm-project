@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
 #  include "sanitizer_symbolizer_amdgpu.h"
 
 #  include <dlfcn.h>  //For dlsym

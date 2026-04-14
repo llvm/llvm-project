@@ -896,7 +896,7 @@ DEFINE_REAL(int, vfork, )
 DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork, )
 #  endif
 
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
 void ENSURE_HSA_INITED();
 
 INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_allocate,
@@ -1170,7 +1170,7 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(vfork);
 #  endif
 
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
   InitializeAmdgpuInterceptors();
 #endif
 

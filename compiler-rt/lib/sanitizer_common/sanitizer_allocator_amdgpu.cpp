@@ -9,7 +9,7 @@
 // Part of the Sanitizer Allocator.
 //
 //===----------------------------------------------------------------------===//
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
 #  include <dlfcn.h>  // For dlsym
 #  include "sanitizer_allocator.h"
 #  include "sanitizer_atomic.h"
@@ -205,4 +205,4 @@ void AmdgpuMemFuncs::RegisterSystemEventHandlers() {
 
 uptr AmdgpuMemFuncs::GetPageSize() { return kPageSize_; }
 }  // namespace __sanitizer
-#endif  // SANITIZER_AMDGPU
+#endif  // SANITIZER_AMDHSA

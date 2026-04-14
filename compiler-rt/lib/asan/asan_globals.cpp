@@ -172,7 +172,7 @@ static u32 FindRegistrationSite(const Global *g) {
   return 0;
 }
 
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
 static bool IsValidGlobal(const Global *g) {
   return
     *(u8 *)MEM_TO_SHADOW((uptr)g) == kAsanGlobalRedzoneMagic &&
@@ -190,7 +190,7 @@ int GetGlobalsForAddress(uptr addr, Global *globals, u32 *reg_sites,
   Lock lock(&mu_for_globals);
   int res = 0;
   for (const auto &l : list_of_all_globals) {
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
     if (!IsValidGlobal(l.g))
       continue;
 #endif

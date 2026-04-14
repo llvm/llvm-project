@@ -627,7 +627,7 @@ void ReportNonselfLeak(u64 alloc_pc, u64 alloc_size, int device_id,
 
       InternalScopedString source_location;
       source_location.AppendF("    #0 0x%llx", e->alloc_pc);
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
       source_location.Append(" in ");
       __sanitizer::AMDGPUCodeObjectSymbolizer symbolizer;
       symbolizer.Init(e->fd, e->file_extent_start, e->file_extent_size);

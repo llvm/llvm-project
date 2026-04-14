@@ -10,7 +10,7 @@
 #ifndef SANITIZER_SYMBOLIZER_AMDGPU_H
 #define SANITIZER_SYMBOLIZER_AMDGPU_H
 
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
 #  include "sanitizer_common.h"
 #  include "sanitizer_symbolizer_internal.h"
 #  if __has_include("amd_comgr.h.in")

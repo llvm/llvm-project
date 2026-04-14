@@ -395,7 +395,7 @@ struct Allocator {
 
   void InitLinkerInitialized(const AllocatorOptions &options) {
     SetAllocatorMayReturnNull(options.may_return_null);
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
     allocator.InitLinkerInitialized(options.release_to_os_interval_ms, 0, true);
 #else
     allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
@@ -1469,7 +1469,7 @@ int __asan_update_allocation_context(void* addr) {
   return instance.UpdateAllocationStack((uptr)addr, &stack);
 }
 
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
 DECLARE_REAL(hsa_status_t, hsa_init);
 DECLARE_REAL(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
   const hsa_agent_t *agents, const uint32_t *flags, const void *ptr)
