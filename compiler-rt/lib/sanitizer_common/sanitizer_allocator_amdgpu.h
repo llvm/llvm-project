@@ -13,7 +13,7 @@
 #  error This file must be included inside sanitizer_allocator_device.h
 #endif
 
-#if SANITIZER_AMDHSA
+#if SANITIZER_AMDGPU
 class AmdgpuMemFuncs {
  public:
   static bool Init();
@@ -45,4 +45,4 @@ struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
   u32 flags;
   void *ptr;
 };
-#endif  // SANITIZER_AMDHSA
+#endif  // SANITIZER_AMDGPU

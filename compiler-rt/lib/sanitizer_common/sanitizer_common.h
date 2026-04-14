@@ -1093,7 +1093,7 @@ struct StackDepotStats {
 const s32 kReleaseToOSIntervalNever = -1;
 
 void CheckNoDeepBind(const char *filename, int flag);
-#if SANITIZER_AMDHSA
+#if SANITIZER_AMDGPU
 void PatchHsaRuntimeDlopenFlag(const char *filename, int &flag);
 #else
 inline void PatchHsaRuntimeDlopenFlag(const char *filename, int &flag) {}

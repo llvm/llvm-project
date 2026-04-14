@@ -2880,7 +2880,7 @@ void CheckNoDeepBind(const char *filename, int flag) {
 #  endif
 }
 
-#if SANITIZER_AMDHSA
+#if SANITIZER_AMDGPU
 void PatchHsaRuntimeDlopenFlag(const char *filename, int &flag) {
   if (filename && (internal_strstr(filename, "libamdhip64.so") ||
       internal_strstr(filename, "libhsa-runtime64.so") ||

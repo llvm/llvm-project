@@ -324,7 +324,7 @@ void AsanSoftRssLimitExceededCallback(bool exceeded);
 
 }  // namespace __asan
 
-#if SANITIZER_AMDHSA
+#if SANITIZER_AMDGPU
 #include <hsa.h>
 #include <hsa_ext_amd.h>
 

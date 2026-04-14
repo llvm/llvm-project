@@ -336,7 +336,7 @@ if config.target_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
 
 # Find ROCM runtime and compiler paths only
-# when built with -DSANITIZER_AMDHSA=1
+# when built with -DSANITIZER_AMDGPU=1
 def configure_rocm(config, test_rocm_path):
     if (not os.path.isdir(test_rocm_path)):
         print("no directory found")

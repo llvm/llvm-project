@@ -14,7 +14,7 @@
 #endif
 
 struct DeviceAllocationInfo;
-#if SANITIZER_AMDHSA
+#if SANITIZER_AMDGPU
 // Device memory allocation usually requires additional information, we can put
 // all the additional information into a data structure DeviceAllocationInfo.
 // This is only a parent structure since different vendors may require
@@ -348,4 +348,4 @@ class DeviceAllocatorT {
   } stats;
   mutable StaticSpinMutex mutex_;
 };
-#endif  // SANITIZER_AMDHSA
+#endif  // SANITIZER_AMDGPU
