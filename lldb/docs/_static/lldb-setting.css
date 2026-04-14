@@ -70,8 +70,8 @@ body[data-theme="dark"] .lldb-setting-type {
 }
 
 /* numbers */
-.lldb-setting-type-int,
-.lldb-setting-type-unsigned {
+.lldb-setting-type-sint64,
+.lldb-setting-type-uint64 {
   --dark-color: 80, 164, 198;
   --light-color: 1, 108, 140;
 }
