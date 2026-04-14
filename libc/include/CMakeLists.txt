@@ -180,6 +180,11 @@ add_header_macro(
     .llvm-libc-types.uint_ur_t
 )
 
+add_header(
+  syscall
+  HDR
+    syscall.h
+)
 
 add_header_macro(
   sysexits
@@ -260,6 +265,7 @@ add_header_macro(
   string.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.annex_k_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-types.errno_t
     .llvm-libc-types.rsize_t
@@ -933,8 +939,9 @@ function(get_all_install_header_targets out_var)
 endfunction(get_all_install_header_targets)
 
 get_all_install_header_targets(all_install_header_targets ${TARGET_PUBLIC_HEADERS})
+add_custom_target(generate-libc-headers DEPENDS ${all_install_header_targets})
 add_library(libc-headers INTERFACE)
-add_dependencies(libc-headers ${all_install_header_targets})
+add_dependencies(libc-headers generate-libc-headers)
 target_include_directories(libc-headers SYSTEM INTERFACE ${LIBC_INCLUDE_DIR})
 
 foreach(target IN LISTS all_install_header_targets)

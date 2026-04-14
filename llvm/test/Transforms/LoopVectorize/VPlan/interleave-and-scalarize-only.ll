@@ -62,7 +62,6 @@ exit:
   ret void
 }
 
-declare i32 @llvm.smin.i32(i32, i32)
 
 
 ; DBG-LABEL: 'test_scalarize_with_branch_cond'

@@ -232,8 +232,8 @@ for env_var in ("ASAN_OPTIONS", "DYLD_INSERT_LIBRARIES"):
     if env_var in config.environment:
         dotest_cmd += ["--inferior-env", env_var + "=" + config.environment[env_var]]
 
-if is_configured("test_arch"):
-    dotest_cmd += ["--arch", config.test_arch]
+if is_configured("test_triple"):
+    dotest_cmd += ["--triple", config.test_triple]
 
 if is_configured("lldb_build_directory"):
     dotest_cmd += ["--build-dir", config.lldb_build_directory]

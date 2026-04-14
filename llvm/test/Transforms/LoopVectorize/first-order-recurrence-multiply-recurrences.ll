@@ -27,7 +27,7 @@ define i32 @c(i32 %N) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv  = phi i32 [ %inc, %for.body ], [ 10, %entry ]
   %for.1 = phi i32 [ %for.1.next, %for.body ], [ 20, %entry ]
   %for.2 = phi i32 [ %for.2.next, %for.body ], [ 11, %entry ]
@@ -37,7 +37,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.cond1.for.end_crit_edge, label %for.body
 
-for.cond1.for.end_crit_edge:                      ; preds = %for.body
+for.cond1.for.end_crit_edge:
   %add.lcssa = phi i32 [ %for.1.next, %for.body ]
   %sext.lcssa = phi i32 [ %for.2.next, %for.body ]
   %res = add i32 %add.lcssa, %sext.lcssa
@@ -144,7 +144,6 @@ exit:
   ret void
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #1
 
 define void @test_pr54227(ptr noalias %a, ptr noalias %b) {
 ; CHECK-LABEL: @test_pr54227(

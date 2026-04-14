@@ -73,3 +73,23 @@ module @test_match_fail {
     llvm.return
   }
 }
+
+// -----
+
+module @test_non_private_addrspace {
+  // CHECK-LABEL: llvm.func @test_non_private_addrspace
+  // CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr<1>, %[[ARG1:.*]]: !llvm.ptr<1>, %[[ARG2:.*]]: !llvm.ptr<1>
+  llvm.func @test_non_private_addrspace(%arg0: !llvm.ptr<1>, %arg1: !llvm.ptr<1>, %arg2: !llvm.ptr<1>) {
+    // CHECK: %[[VAR0:.*]] = llvm.load %[[ARG0]] : !llvm.ptr<1> -> vector<8xi16>
+    %0 = llvm.load %arg0 : !llvm.ptr<1> -> vector<8xi16>
+    // CHECK: %[[VAR1:.*]] = llvm.shufflevector %[[VAR0]], %[[VAR0]] [0, 1, 2, 3] : vector<8xi16>
+    %1 = llvm.shufflevector %0, %0 [0, 1, 2, 3] : vector<8xi16>
+    // CHECK: %[[VAR2:.*]] = llvm.shufflevector %[[VAR0]], %[[VAR0]] [4, 5, 6, 7] : vector<8xi16>
+    %2 = llvm.shufflevector %0, %0 [4, 5, 6, 7] : vector<8xi16>
+    // CHECK: llvm.store %[[VAR1]], %[[ARG1]] : vector<4xi16>, !llvm.ptr<1>
+    llvm.store %1, %arg1 : vector<4xi16>, !llvm.ptr<1>
+    // CHECK: llvm.store %[[VAR2]], %[[ARG2]] : vector<4xi16>, !llvm.ptr<1>
+    llvm.store %2, %arg2 : vector<4xi16>, !llvm.ptr<1>
+    llvm.return
+  }
+}

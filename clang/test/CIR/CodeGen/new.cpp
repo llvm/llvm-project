@@ -742,7 +742,6 @@ void test_array_new_with_ctor_init() {
 // CIR-BEFORE-LPP:    cir.array.ctor %[[ARRAY_PTR]] : !cir.ptr<!cir.array<!rec_F x 3>> {
 // CIR-BEFORE-LPP:    ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_F>):
 // CIR-BEFORE-LPP:      cir.call @_ZN1FC1Ev(%[[ARG]]) : (!cir.ptr<!rec_F> {{.*}}) -> ()
-// CIR-BEFORE-LPP:      cir.yield
 // CIR-BEFORE-LPP:    }
 // CIR-BEFORE-LPP:    cir.store{{.*}} %[[BEGIN]], %[[P_ADDR]] : !cir.ptr<!rec_F>, !cir.ptr<!cir.ptr<!rec_F>>
 // CIR-BEFORE-LPP:    cir.return
@@ -868,7 +867,6 @@ void test_const_array_new_value_init() {
 // CIR-BEFORE-LPP:     cir.const #cir.zero : !rec_OuterZero
 // CIR-BEFORE-LPP:     cir.store{{.*}} %{{.*}}, %[[EL]] : !rec_OuterZero, !cir.ptr<!rec_OuterZero>
 // CIR-BEFORE-LPP:     cir.call @_ZN9OuterZeroC1Ev(%[[EL]])
-// CIR-BEFORE-LPP:     cir.yield
 // CIR-BEFORE-LPP:   }
 
 // CHECK: cir.func{{.*}} @_Z31test_const_array_new_value_initv
@@ -949,7 +947,6 @@ void test_var_array_new_value_init(int n) {
 // CIR-BEFORE-LPP-NEXT:    cir.const #cir.zero : !rec_OuterZero
 // CIR-BEFORE-LPP-NEXT:    cir.store{{.*}} %{{.*}}, %[[EL]] : !rec_OuterZero, !cir.ptr<!rec_OuterZero>
 // CIR-BEFORE-LPP-NEXT:    cir.call @_ZN9OuterZeroC1Ev(%[[EL]]) : (!cir.ptr<!rec_OuterZero> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
-// CIR-BEFORE-LPP-NEXT:    cir.yield
 // CIR-BEFORE-LPP-NEXT:  }
 
 // CHECK-LABEL: cir.func{{.*}} @_Z29test_var_array_new_value_initi
@@ -990,7 +987,6 @@ void test_multidim_array_new_with_ctor() {
 // CIR-BEFORE-LPP:   cir.array.ctor %[[FLAT]] : !cir.ptr<!cir.array<!rec_F x 6>> {
 // CIR-BEFORE-LPP:   ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_F>):
 // CIR-BEFORE-LPP:     cir.call @_ZN1FC1Ev(%[[ARG]])
-// CIR-BEFORE-LPP:     cir.yield
 // CIR-BEFORE-LPP:   }
 // CIR-BEFORE-LPP:   cir.store{{.*}} %[[PTR3]],
 
@@ -1059,7 +1055,6 @@ void test_multidim_var_array_new_with_ctor(int n) {
 // CIR-BEFORE-LPP:    cir.array.ctor %[[ELPTR]], %[[TOTAL]] : !cir.ptr<!rec_F>, !u64i {
 // CIR-BEFORE-LPP:    ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_F>):
 // CIR-BEFORE-LPP:      cir.call @_ZN1FC1Ev(%[[ARG]])
-// CIR-BEFORE-LPP:      cir.yield
 // CIR-BEFORE-LPP:    }
 
 // CHECK-LABEL: cir.func{{.*}} @_Z37test_multidim_var_array_new_with_ctori
@@ -1129,7 +1124,6 @@ void test_array_new_with_ctor_partial_init_list() {
 // CIR-BEFORE-LPP:    cir.array.ctor %[[TAIL_ARRAY]] : !cir.ptr<!cir.array<!rec_G x 6>> {
 // CIR-BEFORE-LPP:    ^bb0(%[[ELEM:.*]]: !cir.ptr<!rec_G>):
 // CIR-BEFORE-LPP:      cir.call @_ZN1GC1Ev(%[[ELEM]]) : (!cir.ptr<!rec_G> {{.*}}) -> ()
-// CIR-BEFORE-LPP:      cir.yield
 // CIR-BEFORE-LPP:    }
 // CIR-BEFORE-LPP:    cir.store{{.*}} %[[BEGIN]], %[[P_ADDR]]
 // CIR-BEFORE-LPP:    cir.return

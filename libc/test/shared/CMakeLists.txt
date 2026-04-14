@@ -61,6 +61,7 @@ add_fp_unittest(
     libc.src.__support.math.canonicalizef16
     libc.src.__support.math.canonicalizel
     libc.src.__support.math.cbrt
+    libc.src.__support.math.cbrtbf16
     libc.src.__support.math.cbrtf
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
@@ -68,6 +69,12 @@ add_fp_unittest(
     libc.src.__support.math.ceilf128
     libc.src.__support.math.ceilf16
     libc.src.__support.math.ceill
+    libc.src.__support.math.copysign
+    libc.src.__support.math.copysignbf16
+    libc.src.__support.math.copysignf
+    libc.src.__support.math.copysignf128
+    libc.src.__support.math.copysignf16
+    libc.src.__support.math.copysignl
     libc.src.__support.math.cos
     libc.src.__support.math.cosf
     libc.src.__support.math.cosf16
@@ -177,6 +184,7 @@ add_fp_unittest(
     libc.src.__support.math.log
     libc.src.__support.math.log10
     libc.src.__support.math.log10f16
+    libc.src.__support.math.log10p1f16
     libc.src.__support.math.log10f
     libc.src.__support.math.log1p
     libc.src.__support.math.log1pf
@@ -184,6 +192,7 @@ add_fp_unittest(
     libc.src.__support.math.logb
     libc.src.__support.math.log2f
     libc.src.__support.math.log2f16
+    libc.src.__support.math.log2p1f16
     libc.src.__support.math.logbf
     libc.src.__support.math.logbf128
     libc.src.__support.math.logbf16
@@ -274,6 +283,12 @@ add_fp_unittest(
     libc.src.__support.math.ceilf128
     libc.src.__support.math.ceilf16
     libc.src.__support.math.ceill
+    libc.src.__support.math.copysign
+    libc.src.__support.math.copysignbf16
+    libc.src.__support.math.copysignf
+    libc.src.__support.math.copysignf128
+    libc.src.__support.math.copysignf16
+    libc.src.__support.math.copysignl
     libc.src.__support.math.log
 )
 

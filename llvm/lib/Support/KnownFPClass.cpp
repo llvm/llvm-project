@@ -613,6 +613,117 @@ KnownFPClass KnownFPClass::cos(const KnownFPClass &KnownSrc) {
   return sin(KnownSrc);
 }
 
+KnownFPClass KnownFPClass::tan(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // tan never returns Inf (tan(+-Inf) = NaN; tan(finite) = finite).
+  Known.knownNot(fcInf);
+
+  // NaN propagates. tan(+-Inf) is NaN.
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
+    Known.knownNot(fcNan);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::sinh(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // sinh is sign-preserving: sinh(x) < 0 iff x < 0.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::cosh(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // cosh(x) >= 1 for all real x; cosh(+-Inf) = +Inf. Never negative.
+  Known.knownNot(fcNegative);
+
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::tanh(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // tanh is bounded to (-1, 1), never Inf.
+  Known.knownNot(fcInf);
+
+  // tanh is sign-preserving: tanh(x) < 0 iff x < 0.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // asin is bounded to [-pi/2, pi/2], never Inf.
+  Known.knownNot(fcInf);
+
+  // asin is sign-preserving.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
+  // NaN propagates. asin(x) is also NaN for |x| > 1, so we cannot rule
+  // out NaN without knowing the source is in [-1, 1].
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::acos(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // acos is bounded to [0, pi], never Inf or negative.
+  Known.knownNot(fcInf);
+  Known.knownNot(fcNegative);
+
+  // NaN propagates. acos(x) is also NaN for |x| > 1, so we cannot rule
+  // out NaN without knowing the source is in [-1, 1].
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // atan is bounded to (-pi/2, pi/2), never Inf. atan(+-Inf) = +-pi/2 (finite).
+  Known.knownNot(fcInf);
+
+  // atan is sign-preserving: atan(x) < 0 iff x < 0.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownLHS,
+                                 const KnownFPClass &KnownRHS) {
+  KnownFPClass Known;
+
+  // atan2 result is in (-pi, pi], never Inf.
+  Known.knownNot(fcInf);
+
+  // NaN if either operand is NaN.
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN())
+    Known.knownNot(fcNan);
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
                                  const fltSemantics &DstTy,
                                  const fltSemantics &SrcTy) {

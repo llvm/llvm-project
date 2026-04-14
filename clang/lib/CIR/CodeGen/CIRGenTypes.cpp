@@ -568,7 +568,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.sInt32Ty;
     } else {
       resultType = cir::IntType::get(&getMLIRContext(), bitIntTy->getNumBits(),
-                                     bitIntTy->isSigned());
+                                     bitIntTy->isSigned(),
+                                     /*isBitInt=*/true);
     }
     break;
   }
