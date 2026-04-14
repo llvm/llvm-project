@@ -276,3 +276,14 @@ constexpr int *constexpr_suppress_cast(bool b) {
   }
   return nullptr;
 }
+
+// Trailing declarator-position suppress on TU-scope variable initializer.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+int *trailing_tu_var [[profiles::suppress(test::type_cast)]] = reinterpret_cast<int*>(0);
+
+// Trailing declarator-position suppress on block-scope variable initializer.
+void test_trailing_suppress_block() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  int *p [[profiles::suppress(test::type_cast)]] = reinterpret_cast<int*>(0);
+  int *q = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}

@@ -2585,6 +2585,15 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
   SemaCUDA::CUDATargetContextRAII X(Actions.CUDA(),
                                     SemaCUDA::CTCK_InitGlobalVar, ThisDecl);
+
+  unsigned ProfileSuppressCount = 0;
+  if (Actions.getLangOpts().Profiles && ThisDecl) {
+    for (const auto *A : ThisDecl->specific_attrs<ProfilesSuppressAttr>()) {
+      Actions.pushProfileSuppression(A->getProfileName(), A->getRule());
+      ++ProfileSuppressCount;
+    }
+  }
+
   switch (TheInitKind) {
   // Parse declarator '=' initializer.
   case InitKind::Equal: {
@@ -2721,6 +2730,8 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     break;
   }
   }
+
+  Actions.popProfileSuppressions(ProfileSuppressCount);
 
   Actions.FinalizeDeclaration(ThisDecl);
   return OuterDecl ? OuterDecl : ThisDecl;
