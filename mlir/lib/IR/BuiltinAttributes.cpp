@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Compiler.h"
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 #include "mlir/IR/BuiltinAttributes.h"
 #include "AttributeDetail.h"
 #include "mlir/IR/AffineMap.h"
@@ -1698,3 +1700,4 @@ AffineMap mlir::makeStridedLinearLayoutMap(ArrayRef<int64_t> strides,
 
   return AffineMap::get(strides.size(), nSymbols, expr);
 }
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
