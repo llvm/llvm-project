@@ -42,7 +42,7 @@ if (LLDB_ENABLE_PYTHON AND SPHINX_FOUND)
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generated-settings.md"
       COMMAND 
         "${Python3_EXECUTABLE}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/_scripts/gen-property-docs-from-json.py"
+        "${LLDB_SOURCE_DIR}/scripts/gen-property-docs-from-json.py"
         -o
         "${CMAKE_CURRENT_BINARY_DIR}/generated-settings.md"
         --
