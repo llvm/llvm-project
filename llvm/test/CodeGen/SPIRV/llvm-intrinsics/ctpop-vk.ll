@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.6-vulkan-compute %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan-compute %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
 
 
 ; CHECK-DAG: [[i8_t:%.+]]  = OpTypeInt 8 0
@@ -115,7 +115,7 @@
 @g9 = addrspace(1) global <3 x i16> zeroinitializer, align 4
 
 
-define dso_local spir_kernel void @test(i8 %x8, i16 %x16, i32 %x32, i64 %x64, <2 x i32> %x2i32, <2 x i64> %x2i64, <3 x i64> %x3i64, <4 x i64> %x4i64, <3 x i16> %x3i16) local_unnamed_addr #1 {
+define hidden spir_func void @test(i8 %x8, i16 %x16, i32 %x32, i64 %x64, <2 x i32> %x2i32, <2 x i64> %x2i64, <3 x i64> %x3i64, <4 x i64> %x4i64, <3 x i16> %x3i16) local_unnamed_addr {
 entry:
   %0 = tail call i8 @llvm.ctpop.i8(i8 %x8)
   store i8 %0, ptr addrspace(1) @g1, align 4
@@ -138,4 +138,7 @@ entry:
   ret void
 }
 
+define void @main() #1 {
+  ret void
+}
 attributes #1 = { "hlsl.numthreads"="8,1,1" "hlsl.shader"="compute" }

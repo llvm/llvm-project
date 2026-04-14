@@ -59,9 +59,9 @@ struct ImageOperands {
 
 struct SplitParts {
   SPIRVTypeInst Type = nullptr;
-  Register     High;
-  Register     Low;
-  bool         IsScalar = false;
+  Register High;
+  Register Low;
+  bool IsScalar = false;
 };
 
 llvm::SPIRV::SelectionControl::SelectionControl
@@ -506,9 +506,10 @@ private:
   void decorateUsesAsNonUniform(Register &NonUniformReg) const;
   void errorIfInstrOutsideShader(MachineInstr &I) const;
 
-  std::optional<SplitParts>
-  splitEvenOddLanes(Register PopCountReg, unsigned ComponentCount,
-                    MachineInstr &I, SPIRVTypeInst I32Type) const;
+  std::optional<SplitParts> splitEvenOddLanes(Register PopCountReg,
+                                              unsigned ComponentCount,
+                                              MachineInstr &I,
+                                              SPIRVTypeInst I32Type) const;
 };
 
 bool sampledTypeIsSignedInteger(const llvm::Type *HandleType) {
@@ -1589,31 +1590,28 @@ bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
   return true;
 }
 
-std::optional<SplitParts>
-SPIRVInstructionSelector::splitEvenOddLanes(Register PopCountReg,
-                                            unsigned ComponentCount,
-                                            MachineInstr &I,
-                                            SPIRVTypeInst I32Type) const {
+std::optional<SplitParts> SPIRVInstructionSelector::splitEvenOddLanes(
+    Register PopCountReg, unsigned ComponentCount, MachineInstr &I,
+    SPIRVTypeInst I32Type) const {
   SplitParts Parts;
 
   if (ComponentCount == 1) {
-    // ---- Scalar path: extract element 1 (high word) and element 0 (low word) ----
+    // ---- Scalar path: extract element 1 (high word) and element 0 (low word)
+    // ----
     Parts.IsScalar = true;
-    Parts.Type     = I32Type;
-    Parts.High     = MRI->createVirtualRegister(GR.getRegClass(I32Type));
-    Parts.Low      = MRI->createVirtualRegister(GR.getRegClass(I32Type));
+    Parts.Type = I32Type;
+    Parts.High = MRI->createVirtualRegister(GR.getRegClass(I32Type));
+    Parts.Low = MRI->createVirtualRegister(GR.getRegClass(I32Type));
 
     bool ZeroAsNull = !STI.isShader();
     Register IdxZero = GR.getOrCreateConstInt(0, I, I32Type, TII, ZeroAsNull);
-    Register IdxOne  = GR.getOrCreateConstInt(1, I, I32Type, TII, ZeroAsNull);
+    Register IdxOne = GR.getOrCreateConstInt(1, I, I32Type, TII, ZeroAsNull);
 
-    if (!selectOpWithSrcs(Parts.High, I32Type, I,
-                          {PopCountReg, IdxOne},
+    if (!selectOpWithSrcs(Parts.High, I32Type, I, {PopCountReg, IdxOne},
                           SPIRV::OpVectorExtractDynamic))
       return std::nullopt;
 
-    if (!selectOpWithSrcs(Parts.Low, I32Type, I,
-                          {PopCountReg, IdxZero},
+    if (!selectOpWithSrcs(Parts.Low, I32Type, I, {PopCountReg, IdxZero},
                           SPIRV::OpVectorExtractDynamic))
       return std::nullopt;
 
@@ -1624,7 +1622,7 @@ SPIRVInstructionSelector::splitEvenOddLanes(Register PopCountReg,
     Parts.Type = GR.getOrCreateSPIRVVectorType(I32Type, ComponentCount,
                                                MIRBuilder, /*IsSigned=*/false);
     Parts.High = MRI->createVirtualRegister(GR.getRegClass(Parts.Type));
-    Parts.Low  = MRI->createVirtualRegister(GR.getRegClass(Parts.Type));
+    Parts.Low = MRI->createVirtualRegister(GR.getRegClass(Parts.Type));
 
     // High = odd-indexed elements (1, 3, 5, …) — the upper 32-bit halves.
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
@@ -1767,11 +1765,9 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
   MachineIRBuilder MIRBuilder(I);
 
   // ---- Types ----
-  SPIRVTypeInst I32Type =
-      GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
-  SPIRVTypeInst VecI32Type =
-      GR.getOrCreateSPIRVVectorType(I32Type, 2 * ComponentCount,
-                                    MIRBuilder, /*IsSigned=*/false);
+  SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
+  SPIRVTypeInst VecI32Type = GR.getOrCreateSPIRVVectorType(
+      I32Type, 2 * ComponentCount, MIRBuilder, /*IsSigned=*/false);
 
   // ---- Stage 1: 64-bit → 2x32-bit ----
   Register Vec32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
