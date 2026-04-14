@@ -46,17 +46,17 @@
 #ifndef LLVM_SUPPORT_JSON_H
 #define LLVM_SUPPORT_JSON_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <map>
+#include <unordered_map>
 
 namespace llvm {
 namespace json {
