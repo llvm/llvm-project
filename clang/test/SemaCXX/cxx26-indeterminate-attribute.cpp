@@ -37,6 +37,11 @@ void test_class_type() {
   [[indeterminate]] S s;  // OK - member x has indeterminate value
 }
 
+struct S2 {
+  [[indeterminate]] int x; // expected-warning {{'indeterminate' attribute only applies to local variables or function parameters}}
+  S2() {}
+};
+
 // constexpr context should error on reading indeterminate value
 constexpr int test_constexpr() {
   [[indeterminate]] int x;

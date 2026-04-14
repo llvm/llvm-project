@@ -497,7 +497,8 @@ public:
   bool isIndeterminate() const { return Kind == Indeterminate; }
   bool isErroneous() const { return Kind == Erroneous; }
   /// Whether the value is indeterminate or erroneous (i.e., not properly
-  /// initialized). Use isErroneous() when the distinction matters.
+  /// initialized). Use isIndeterminate()/isErroneous() when the distinction
+  /// matters.
   bool isUninit() const { return Kind == Indeterminate || Kind == Erroneous; }
   bool hasValue() const { return Kind != None && Kind != Indeterminate; }
 

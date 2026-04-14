@@ -28,11 +28,12 @@ void test_indeterminate_local_var() {
   used(x);
 }
 
-// Without [[indeterminate]], -ftrivial-auto-var-init should apply normally.
-// Default (no flag): no store.
+// Without [[indeterminate]], C++26 erroneous initialization applies:
+// the alloca is filled with a fixed pattern so reads have a well-defined
+// (if implementation-defined) value, rather than LLVM `undef`.
 // CXX26-LABEL:   @test_normal_local_var(
 // CXX26:         %y = alloca i32
-// CXX26-NOT:     store
+// CXX26:         store i32 -1431655766, ptr %y
 // CXX26:         call void @_Z4usedIiEvRT_(
 // ZERO-LABEL:    @test_normal_local_var(
 // ZERO:          %y = alloca i32
