@@ -772,7 +772,7 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
   if (elemental && (!withImpureFinalizer || !IsPureProcedure(*elemental))) {
     return elemental;
   }
-  // Check components (including ancestors)
+  // Check components (including ancestors via parent component recursion)
   std::set<const DerivedTypeSpec *> basis;
   if (inProgress) {
     if (inProgress->find(&derived) != inProgress->end()) {
@@ -783,10 +783,14 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
   }
   auto iterator{inProgress->insert(&derived).first};
   const Symbol *result{nullptr};
-  for (const Symbol &component : PotentialComponentIterator{derived}) {
-    result = IsFinalizable(component, inProgress, withImpureFinalizer);
-    if (result) {
-      break;
+  // Iterate only the type's own scope to avoid exponential traversal
+  // when combined with recursion through derived-type components.
+  if (const Scope *scope{derived.GetScope()}) {
+    for (const auto &[_, symbolRef] : *scope) {
+      result = IsFinalizable(*symbolRef, inProgress, withImpureFinalizer);
+      if (result) {
+        break;
+      }
     }
   }
   inProgress->erase(iterator);
