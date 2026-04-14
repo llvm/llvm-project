@@ -15,6 +15,22 @@ define zeroext i1 @ne_neg1_and_ne_zero(i32 %x) nounwind {
   ret i1 %and
 }
 
+define zeroext i1 @eq_zero_or_eq_neg1(i32 %x) nounwind {
+; CHECK-LABEL: eq_zero_or_eq_neg1:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    add r1, r0, #1
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    clz r1, r1
+; CHECK-NEXT:    lsr r0, r0, #5
+; CHECK-NEXT:    lsr r1, r1, #5
+; CHECK-NEXT:    orr r0, r0, r1
+; CHECK-NEXT:    bx lr
+  %cmp1 = icmp eq i32 %x, 0
+  %cmp2 = icmp eq i32 %x, -1
+  %or = or i1 %cmp1, %cmp2
+  ret i1 %or
+}
+
 ; PR32401 - https://bugs.llvm.org/show_bug.cgi?id=32401
 
 define zeroext i1 @and_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
