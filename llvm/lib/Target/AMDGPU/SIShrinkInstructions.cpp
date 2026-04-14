@@ -853,8 +853,8 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
 // Matches two v_perms that together swap 16-bit halves between two inputs. For
 // example:
 //
-// v_perm v2, v0, v1, 0x5040100
-// v_perm v3, v0, v1, 0x7060302
+// v_perm_b32 v2, v0, v1, 0x5040100
+// v_perm_b32 v3, v0, v1, 0x7060302
 // =>
 // v_swap_b16 v0.h, v1.l
 MachineInstr *
@@ -994,12 +994,12 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
   // Swap. S1Out = Src0.S0InSub; S0Out = Src1.S1InSub;
   Register S1Out = MRI->createVirtualRegister(Swap16RC);
   Register S0Out = MRI->createVirtualRegister(Swap16RC);
-  auto *SwapMI = BuildMI(MBB, I, DL, TII->get(AMDGPU::V_SWAP_B16))
-                     .addDef(S1Out)
-                     .addDef(S0Out)
-                     .addReg(Src0Reg, {}, S0InSub)
-                     .addReg(Src1Reg, {}, S1InSub)
-                     .getInstr();
+  MachineInstr *SwapMI = BuildMI(MBB, I, DL, TII->get(AMDGPU::V_SWAP_B16))
+                             .addDef(S1Out)
+                             .addDef(S0Out)
+                             .addReg(Src0Reg, {}, S0InSub)
+                             .addReg(Src1Reg, {}, S1InSub)
+                             .getInstr();
 
   auto otherSub16 = [](unsigned sub) {
     return sub == AMDGPU::lo16 ? AMDGPU::hi16 : AMDGPU::lo16;
