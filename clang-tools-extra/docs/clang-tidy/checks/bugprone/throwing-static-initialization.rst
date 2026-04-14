@@ -9,15 +9,15 @@ initializer for the object may throw an exception.
 Options
 -------
 
-.. option:: IgnoredTypes
+.. option:: AllowedTypes
 
-This option makes it possible to ignore specific types used at variable
-declarations. It may contain a semicolon-separated list of regular expressions.
-Declarations with a type that is matched by this list are excluded from
-producing warnings by the check. The entries of the list are matched as
-substrings of the type name.
-
-This option contains by default an empty string.
+  A semicolon-separated list of names of types that will be excluded from
+  this check (declarations with matching type will be excluded). Regular
+  expressions are accepted, e.g. ``[Rr]ef(erence)?$`` matches every type with
+  suffix ``Ref``, ``ref``, ``Reference`` and ``reference``. If a name in the
+  list contains the sequence `::`, it is matched against the qualified type
+  name (i.e. ``namespace::Type``), otherwise it is matched against only the
+  type name (i.e. ``Type``). Default is an empty string.
 
 References
 ----------

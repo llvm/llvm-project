@@ -19,13 +19,13 @@ namespace clang::tidy::bugprone {
 ThrowingStaticInitializationCheck::ThrowingStaticInitializationCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoredTypes(
-          utils::options::parseStringList(Options.get("IgnoredTypes", ""))) {}
+      AllowedTypes(
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
 
 void ThrowingStaticInitializationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IgnoredTypes",
-                utils::options::serializeStringList(IgnoredTypes));
+  Options.store(Opts, "AllowedTypes",
+                utils::options::serializeStringList(AllowedTypes));
 }
 
 void ThrowingStaticInitializationCheck::registerMatchers(MatchFinder *Finder) {
@@ -36,10 +36,10 @@ void ThrowingStaticInitializationCheck::registerMatchers(MatchFinder *Finder) {
           TK_AsIs,
           varDecl(
               anyOf(hasThreadStorageDuration(), hasStaticStorageDuration()),
-              unless(anyOf(isConstexpr(), hasType(cxxRecordDecl(isLambda())),
-                           hasAncestor(functionDecl()),
-                           hasType(tidy::matchers::matchesAnyListedTypeName(
-                               IgnoredTypes)))),
+              unless(anyOf(
+                  isConstexpr(), hasType(cxxRecordDecl(isLambda())),
+                  hasAncestor(functionDecl()),
+                  hasType(matchers::matchesAnyListedTypeName(AllowedTypes)))),
               anyOf(hasDescendant(cxxConstructExpr(hasDeclaration(
                         cxxConstructorDecl(unless(isNoThrow())).bind("func")))),
                     hasDescendant(cxxNewExpr(hasDeclaration(

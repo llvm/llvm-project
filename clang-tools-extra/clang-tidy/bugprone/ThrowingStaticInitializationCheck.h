@@ -29,7 +29,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const std::vector<StringRef> IgnoredTypes;
+  const std::vector<StringRef> AllowedTypes;
 };
 
 } // namespace clang::tidy::bugprone

@@ -273,7 +273,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-throwing-static-initialization
   <clang-tidy/checks/bugprone/throwing-static-initialization>` check by adding
-  the `IgnoredTypes` option. With this option it is possible to exclude
+  the `AllowedTypes` option. With this option it is possible to exclude
   static declarations with specific types from the check.
 
 - Improved :doc:`bugprone-unchecked-optional-access
