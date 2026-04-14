@@ -6945,6 +6945,7 @@ LoopVectorizationPlanner::computeBestVF() {
   }
 
   VPlan &BestPlan = *PlanForBestVF;
+
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
 
@@ -7762,8 +7763,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe>(&R))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
-      if (!VPI->getUnderlyingValue() ||
-          VPI->getOpcode() == VPInstruction::BranchOnCount)
+      if (!VPI->getUnderlyingValue())
         continue;
 
       // TODO: Gradually replace uses of underlying instruction by analyses on

@@ -1384,8 +1384,7 @@ private:
     if (!getUnderlyingValue())
       return true;
 
-    return Opcode == Instruction::PHI || Opcode == Instruction::GetElementPtr ||
-           Opcode == VPInstruction::BranchOnCount;
+    return Opcode == Instruction::PHI || Opcode == Instruction::GetElementPtr;
   }
 
 public:

@@ -29,6 +29,7 @@ define i32 @find_last_with_select(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp slt ir<%load.a>, ir<%load.b>
 ; CHECK-NEXT:      WIDEN ir<%sel> = select ir<%cmp>, ir<%rdx>, ir<%load.a>
 ; CHECK-NEXT:      CLONE ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      CLONE ir<%exitcond> = icmp eq ir<%iv.next>, ir<500>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -36,23 +37,23 @@ define i32 @find_last_with_select(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = compute-reduction-result (find-last) ir<%sel>
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extract-last-part vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-lane vp<[[VP8]]>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-part vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-lane vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (find-last) ir<%sel>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-part vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-lane vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<500>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %sel.lcssa = phi i32 [ %sel, %loop ] (extra operand: vp<[[VP6]]> from middle.block)
+; CHECK-NEXT:    IR   %sel.lcssa = phi i32 [ %sel, %loop ] (extra operand: vp<[[VP7]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP6]]>, middle.block ], [ ir<1>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP7]]>, middle.block ], [ ir<1>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
