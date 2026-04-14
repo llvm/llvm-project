@@ -19,7 +19,7 @@
 //
 // Note: The kernel defines segment registers (cs, gs, fs, ss) as four
 // separate 16-bit fields. In our flat 64-bit array representation, they
-// are packed into a single 64-bit slot at index __LIBC_REG_CSGSFS, occupying
+// are packed into a single 64-bit slot at index REG_CSGSFS, occupying
 // the exact same 8 bytes of memory.
 typedef long long int greg_t;
 typedef greg_t gregset_t[23];
