@@ -199,7 +199,9 @@ public:
   }
 
   /// Returns true if this instruction can be safely rematerialized at UseIdx
-  /// even if it has implicit physical register defs that are live.
+  /// despite having implicit defs. Targets can use this hook to check whether
+  /// any implicit defs would clobber live values at the rematerialization
+  /// point.
   virtual bool isImplicitDefRematerializableAt(const MachineInstr &MI,
                                                SlotIndex UseIdx,
                                                LiveIntervals &LIS) const {
