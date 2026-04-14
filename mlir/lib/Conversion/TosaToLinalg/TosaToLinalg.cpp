@@ -1172,9 +1172,11 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   Value input = op->getOperand(0);
 
   // Figure out the accType if needed
-  bool widenAccTy = std::is_same_v<OpTy, tosa::ReduceSumOp> &&
-                    isa<FloatType>(elementTy) &&
-                    cast<FloatType>(elementTy).isBF16();
+  const bool needsFp32AccTy =
+      isa<FloatType>(elementTy) && cast<FloatType>(elementTy).isBF16();
+  const bool widenAccTy = (std::is_same_v<OpTy, tosa::ReduceSumOp> ||
+                           std::is_same_v<OpTy, tosa::ReduceProductOp>) &&
+                          needsFp32AccTy;
   Type accTy = widenAccTy ? rewriter.getF32Type() : elementTy;
 
   SmallVector<int64_t> reduceShape;
