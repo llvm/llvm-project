@@ -538,7 +538,7 @@ define <4 x float> @maxnum_intrinsic_nnan_fmf_f432(<4 x float> %a, <4 x float> %
 
 ; Current (but legacy someday): a function-level attribute should also enable the fold.
 
-define float @maxnum_intrinsic_nnan_attr_f32(float %a, float %b) #0 {
+define float @maxnum_intrinsic_nnan_attr_f32(float %a, float %b) {
 ; SSE-LABEL: maxnum_intrinsic_nnan_attr_f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    maxss %xmm1, %xmm0
@@ -548,7 +548,7 @@ define float @maxnum_intrinsic_nnan_attr_f32(float %a, float %b) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %r = tail call float @llvm.maxnum.f32(float %a, float %b)
+  %r = tail call nnan float @llvm.maxnum.f32(float %a, float %b)
   ret float %r
 }
 
@@ -564,7 +564,7 @@ define <2 x double> @maxnum_intrinsic_nnan_attr_f64(<2 x double> %a, <2 x double
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %r = tail call <2 x double> @llvm.maxnum.v2f64(<2 x double> %a, <2 x double> %b)
+  %r = tail call nnan <2 x double> @llvm.maxnum.v2f64(<2 x double> %a, <2 x double> %b)
   ret <2 x double> %r
 }
 
@@ -627,47 +627,15 @@ define float @test_maxnum_neg_inf_nnan(float %x, float %y) nounwind {
 
 ; Test SNaN quieting
 define float @test_maxnum_snan(float %x) {
-; SSE2-LABEL: test_maxnum_snan:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    cmpunordss %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm3
-; SSE2-NEXT:    andps %xmm2, %xmm3
-; SSE2-NEXT:    maxss %xmm0, %xmm2
-; SSE2-NEXT:    andnps %xmm2, %xmm1
-; SSE2-NEXT:    orps %xmm3, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    retq
+; SSE-LABEL: test_maxnum_snan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE-NEXT:    retq
 ;
-; SSE4-LABEL: test_maxnum_snan:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSE4-NEXT:    maxss %xmm0, %xmm1
-; SSE4-NEXT:    cmpunordss %xmm0, %xmm0
-; SSE4-NEXT:    blendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE4-NEXT:    movaps %xmm1, %xmm0
-; SSE4-NEXT:    retq
-;
-; AVX1-LABEL: test_maxnum_snan:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; AVX1-NEXT:    vmaxss %xmm0, %xmm1, %xmm1
-; AVX1-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: test_maxnum_snan:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; AVX512-NEXT:    vmaxss %xmm0, %xmm2, %xmm1
-; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vmovaps %xmm1, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: test_maxnum_snan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    retq
   %r = call float @llvm.maxnum.f32(float 0x7ff4000000000000, float %x)
   ret float %r
 }
-
-attributes #0 = { "no-nans-fp-math"="true" }
-

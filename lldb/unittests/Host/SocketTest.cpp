@@ -45,20 +45,23 @@ TEST_F(SocketTest, DecodeHostAndPort) {
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("google.com:65536"),
       llvm::FailedWithMessage(
-          "invalid host:port specification: 'google.com:65536'"));
+          "invalid host:port specification: 'google.com:65536', both IPv4 "
+          "(e.g., localhost:8080) or IPv6 (e.g, [2001:db8::1]:8080) formats "
+          "are supported"));
 
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("google.com:-1138"),
       llvm::FailedWithMessage(
-          "invalid host:port specification: 'google.com:-1138'"));
+          "invalid host:port specification: 'google.com:-1138', both IPv4 "
+          "(e.g., localhost:8080) or IPv6 (e.g, [2001:db8::1]:8080) formats "
+          "are supported"));
 
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("google.com:65536"),
       llvm::FailedWithMessage(
-          "invalid host:port specification: 'google.com:65536'"));
-
-  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("12345"),
-                       llvm::HasValue(Socket::HostAndPort{"", 12345}));
+          "invalid host:port specification: 'google.com:65536', both IPv4 "
+          "(e.g., localhost:8080) or IPv6 (e.g, [2001:db8::1]:8080) formats "
+          "are supported"));
 
   EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("*:0"),
                        llvm::HasValue(Socket::HostAndPort{"*", 0}));
@@ -105,7 +108,7 @@ TEST_F(SocketTest, CreatePair) {
   };
   for (auto p : erroring_protocols) {
     ASSERT_THAT_EXPECTED(Socket::CreatePair(p),
-                         llvm::FailedWithMessage("Unsupported protocol"));
+                         llvm::FailedWithMessage("unsupported protocol"));
   }
 }
 
@@ -403,8 +406,8 @@ TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
 TEST_F(SocketTest, AbstractSocketFromBoundNativeSocket) {
   // Generate a name for the abstract socket.
   llvm::SmallString<100> name;
-  llvm::sys::fs::createUniquePath("AbstractSocketFromBoundNativeSocket", name,
-                                  true);
+  llvm::sys::fs::createUniquePath("AbstractSocketFromBoundNativeSocket-%%%%%%",
+                                  name, true);
   llvm::sys::path::append(name, "test");
 
   // Skip the test if the $TMPDIR is too long to hold a domain socket.

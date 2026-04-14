@@ -147,11 +147,10 @@ __gpu_is_first_in_lane(uint64_t __lane_mask) {
 // Copies the value from the first active thread to the rest.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
-  uint32_t __hi = (uint32_t)(__x >> 32ull);
-  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFFull);
-  return ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __hi) << 32ull) |
-         ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __lo) &
-          0xFFFFFFFFull);
+  uint32_t __hi = (uint32_t)(__x >> 32);
+  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
+  return ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __hi) << 32) |
+         ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __lo) & 0xFFFFFFFF);
 }
 
 // Gets the first floating point value from the active lanes.
@@ -174,11 +173,10 @@ __gpu_read_first_lane_f64(uint64_t __lane_mask, double __x) {
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x,
                       uint32_t __width) {
-  uint32_t __hi = (uint32_t)(__x >> 32ull);
+  uint32_t __hi = (uint32_t)(__x >> 32);
   uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
   uint32_t __mask = (uint32_t)__lane_mask;
-  return ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __hi, __width)
-          << 32ull) |
+  return ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __hi, __width) << 32) |
          ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __lo, __width));
 }
 
@@ -201,67 +199,94 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
                             __builtin_bit_cast(uint64_t, __x), __width));
 }
 
-// Gets the accumulator scan of the threads in the warp or wavefront.
-#define __DO_LANE_SCAN(__type, __bitmask_type, __suffix)                       \
-  _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_lane_scan_##__suffix(     \
-      uint64_t __lane_mask, uint32_t __x) {                                    \
-    uint64_t __first = __lane_mask >> __builtin_ctzll(__lane_mask);            \
-    bool __divergent = __gpu_read_first_lane_##__suffix(                       \
-        __lane_mask, __first & (__first + 1));                                 \
-    if (__divergent) {                                                         \
-      __type __accum = 0;                                                      \
-      for (uint64_t __mask = __lane_mask; __mask; __mask &= __mask - 1) {      \
-        __type __index = __builtin_ctzll(__mask);                              \
-        __type __tmp = __gpu_shuffle_idx_##__suffix(__lane_mask, __index, __x, \
-                                                    __gpu_num_lanes());        \
-        __x = __gpu_lane_id() == __index ? __accum + __tmp : __x;              \
-        __accum += __tmp;                                                      \
-      }                                                                        \
-    } else {                                                                   \
-      for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {     \
-        uint32_t __index = __gpu_lane_id() - __step;                           \
-        __bitmask_type bitmask = __gpu_lane_id() >= __step;                    \
-        __x += __builtin_bit_cast(                                             \
-            __type,                                                            \
-            -bitmask & __builtin_bit_cast(__bitmask_type,                      \
-                                          __gpu_shuffle_idx_##__suffix(        \
-                                              __lane_mask, __index, __x,       \
-                                              __gpu_num_lanes())));            \
-      }                                                                        \
+// Implements scan and reduction operations across a GPU warp or wavefront.
+//
+// Both scans work by iterating log2(N) steps. The bitmask tracks the currently
+// unprocessed lanes, above or below the current lane in the case of a suffix or
+// prefix scan. Each iteration we shuffle in the unprocessed neighbors and then
+// clear the bits that this operation handled.
+#define __DO_LANE_OPS(__type, __op, __identity, __prefix, __suffix)            \
+  _DEFAULT_FN_ATTRS static __inline__ __type                                   \
+  __gpu_suffix_scan_##__prefix##_##__suffix(uint64_t __lane_mask,              \
+                                            __type __x) {                      \
+    uint64_t __above = __lane_mask & -(UINT64_C(2) << __gpu_lane_id());        \
+    for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {       \
+      uint32_t __src = __builtin_ctzg(__above, (int)sizeof(__above) * 8);      \
+      __type __result = __gpu_shuffle_idx_##__suffix(__lane_mask, __src, __x,  \
+                                                     __gpu_num_lanes());       \
+      __x = __op(__x, __above ? __result : (__type)__identity);                \
+      for (uint32_t __i = 0; __i < __step; ++__i)                              \
+        __above &= __above - 1;                                                \
     }                                                                          \
     return __x;                                                                \
-  }
-__DO_LANE_SCAN(uint32_t, uint32_t, u32); // uint32_t __gpu_lane_scan_u32(m, x)
-__DO_LANE_SCAN(uint64_t, uint64_t, u64); // uint64_t __gpu_lane_scan_u64(m, x)
-__DO_LANE_SCAN(float, uint32_t, f32);    // float __gpu_lane_scan_f32(m, x)
-__DO_LANE_SCAN(double, uint64_t, f64);   // double __gpu_lane_scan_f64(m, x)
-#undef __DO_LANE_SCAN
-
-// Gets the sum of all lanes inside the warp or wavefront.
-#define __DO_LANE_SUM(__type, __suffix)                                        \
-  _DEFAULT_FN_ATTRS static __inline__ __type __gpu_lane_sum_##__suffix(        \
-      uint64_t __lane_mask, __type __x) {                                      \
-    uint64_t __first = __lane_mask >> __builtin_ctzll(__lane_mask);            \
-    bool __divergent = __gpu_read_first_lane_##__suffix(                       \
-        __lane_mask, __first & (__first + 1));                                 \
-    if (__divergent) {                                                         \
-      return __gpu_shuffle_idx_##__suffix(                                     \
-          __lane_mask, 63 - __builtin_clzll(__lane_mask),                      \
-          __gpu_lane_scan_##__suffix(__lane_mask, __x), __gpu_num_lanes());    \
-    } else {                                                                   \
-      for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {     \
-        uint32_t __index = __step + __gpu_lane_id();                           \
-        __x += __gpu_shuffle_idx_##__suffix(__lane_mask, __index, __x,         \
-                                            __gpu_num_lanes());                \
-      }                                                                        \
-      return __gpu_read_first_lane_##__suffix(__lane_mask, __x);               \
+  }                                                                            \
+                                                                               \
+  _DEFAULT_FN_ATTRS static __inline__ __type                                   \
+  __gpu_prefix_scan_##__prefix##_##__suffix(uint64_t __lane_mask,              \
+                                            __type __x) {                      \
+    uint64_t __below = __lane_mask & ((UINT64_C(1) << __gpu_lane_id()) - 1);   \
+    for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {       \
+      uint32_t __src = 63 - __builtin_clzg(__below, (int)sizeof(__below) * 8); \
+      __type __result = __gpu_shuffle_idx_##__suffix(__lane_mask, __src, __x,  \
+                                                     __gpu_num_lanes());       \
+      __x = __op(__x, __below ? __result : (__type)__identity);                \
+      for (uint32_t __i = 0; __i < __step; ++__i)                              \
+        __below ^=                                                             \
+            (UINT64_C(1) << (63 - __builtin_clzg(__below, 0))) & __below;      \
     }                                                                          \
+    return __x;                                                                \
+  }                                                                            \
+                                                                               \
+  _DEFAULT_FN_ATTRS static __inline__ __type                                   \
+  __gpu_lane_##__prefix##_##__suffix(uint64_t __lane_mask, __type __x) {       \
+    return __gpu_read_first_lane_##__suffix(                                   \
+        __lane_mask,                                                           \
+        __gpu_suffix_scan_##__prefix##_##__suffix(__lane_mask, __x));          \
   }
-__DO_LANE_SUM(uint32_t, u32); // uint32_t __gpu_lane_sum_u32(m, x)
-__DO_LANE_SUM(uint64_t, u64); // uint64_t __gpu_lane_sum_u64(m, x)
-__DO_LANE_SUM(float, f32);    // float __gpu_lane_sum_f32(m, x)
-__DO_LANE_SUM(double, f64);   // double __gpu_lane_sum_f64(m, x)
-#undef __DO_LANE_SUM
+
+#define __GPU_OP(__x, __y) ((__x) + (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, 0, add, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, 0, add, u64);
+__DO_LANE_OPS(float, __GPU_OP, 0, add, f32);
+__DO_LANE_OPS(double, __GPU_OP, 0, add, f64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) ((__x) & (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, UINT32_MAX, and, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, UINT64_MAX, and, u64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) ((__x) | (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, 0, or, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, 0, or, u64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) ((__x) ^ (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, 0, xor, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, 0, xor, u64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) ((__x) < (__y) ? (__x) : (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, UINT32_MAX, min, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, UINT64_MAX, min, u64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) ((__x) > (__y) ? (__x) : (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, 0, max, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, 0, max, u64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) __builtin_elementwise_minnum((__x), (__y))
+__DO_LANE_OPS(float, __GPU_OP, __builtin_inff(), minnum, f32);
+__DO_LANE_OPS(double, __GPU_OP, __builtin_inf(), minnum, f64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) __builtin_elementwise_maxnum((__x), (__y))
+__DO_LANE_OPS(float, __GPU_OP, -__builtin_inff(), maxnum, f32);
+__DO_LANE_OPS(double, __GPU_OP, -__builtin_inf(), maxnum, f64);
+#undef __GPU_OP
+
+#undef __DO_LANE_OPS
 
 // Returns a bitmask marking all lanes that have the same value of __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
@@ -272,14 +297,15 @@ __gpu_match_any_u32_impl(uint64_t __lane_mask, uint32_t __x) {
   for (uint64_t __active_mask = __lane_mask; __active_mask;
        __active_mask = __gpu_ballot(__lane_mask, !__done)) {
     if (!__done) {
-      uint32_t __first = __gpu_read_first_lane_u32(__active_mask, __x);
+      uint32_t __first = __gpu_shuffle_idx_u32(
+          __active_mask, __builtin_ctzg(__active_mask), __x, __gpu_num_lanes());
+      uint64_t __ballot = __gpu_ballot(__active_mask, __first == __x);
       if (__first == __x) {
-        __match_mask = __gpu_lane_mask();
+        __match_mask = __ballot;
         __done = 1;
       }
     }
   }
-  __gpu_sync_lane(__lane_mask);
   return __match_mask;
 }
 
@@ -292,33 +318,34 @@ __gpu_match_any_u64_impl(uint64_t __lane_mask, uint64_t __x) {
   for (uint64_t __active_mask = __lane_mask; __active_mask;
        __active_mask = __gpu_ballot(__lane_mask, !__done)) {
     if (!__done) {
-      uint64_t __first = __gpu_read_first_lane_u64(__active_mask, __x);
+      uint64_t __first = __gpu_shuffle_idx_u64(
+          __active_mask, __builtin_ctzg(__active_mask), __x, __gpu_num_lanes());
+      uint64_t __ballot = __gpu_ballot(__active_mask, __first == __x);
       if (__first == __x) {
-        __match_mask = __gpu_lane_mask();
+        __match_mask = __ballot;
         __done = 1;
       }
     }
   }
-  __gpu_sync_lane(__lane_mask);
   return __match_mask;
 }
 
 // Returns the current lane mask if every lane contains __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u32_impl(uint64_t __lane_mask, uint32_t __x) {
-  uint32_t __first = __gpu_read_first_lane_u32(__lane_mask, __x);
+  uint32_t __first = __gpu_shuffle_idx_u32(
+      __lane_mask, __builtin_ctzg(__lane_mask), __x, __gpu_num_lanes());
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
-  __gpu_sync_lane(__lane_mask);
-  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+  return __ballot == __lane_mask ? __lane_mask : UINT64_C(0);
 }
 
 // Returns the current lane mask if every lane contains __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u64_impl(uint64_t __lane_mask, uint64_t __x) {
-  uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+  uint64_t __first = __gpu_shuffle_idx_u64(
+      __lane_mask, __builtin_ctzg(__lane_mask), __x, __gpu_num_lanes());
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
-  __gpu_sync_lane(__lane_mask);
-  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+  return __ballot == __lane_mask ? __lane_mask : UINT64_C(0);
 }
 
 _Pragma("omp end declare variant");

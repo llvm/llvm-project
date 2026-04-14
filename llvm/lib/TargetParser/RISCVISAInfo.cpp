@@ -738,7 +738,6 @@ static Error getExtensionRequiresError(StringRef Ext, StringRef ReqExt) {
 Error RISCVISAInfo::checkDependency() {
   bool HasE = Exts.count("e") != 0;
   bool HasI = Exts.count("i") != 0;
-  bool HasC = Exts.count("c") != 0;
   bool HasF = Exts.count("f") != 0;
   bool HasD = Exts.count("d") != 0;
   bool HasZfinx = Exts.count("zfinx") != 0;
@@ -747,13 +746,16 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZcmp = Exts.count("zcmp") != 0;
   bool HasXqccmp = Exts.count("xqccmp") != 0;
 
-  static constexpr StringLiteral XqciExts[] = {
-      {"xqci"},    {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},
-      {"xqcicli"}, {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"},
-      {"xqciio"},  {"xqcilb"},  {"xqcili"},  {"xqcilia"}, {"xqcilo"},
-      {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}, {"xqcisync"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
-      {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
+      {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"},
+  };
+  static constexpr StringLiteral RV32Only[] = {
+      {"zcf"},     {"zclsd"},   {"zilsd"},    {"xwchc"},   {"xqci"},
+      {"xqcia"},   {"xqciac"},  {"xqcibi"},   {"xqcibm"},  {"xqcicli"},
+      {"xqcicm"},  {"xqcics"},  {"xqcicsr"},  {"xqciint"}, {"xqciio"},
+      {"xqcilb"},  {"xqcili"},  {"xqcilia"},  {"xqcilo"},  {"xqcilsm"},
+      {"xqcisim"}, {"xqcisls"}, {"xqcisync"},
+  };
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");
@@ -770,20 +772,17 @@ Error RISCVISAInfo::checkDependency() {
                              "'xsfvfbfexp16e' requires 'zvfbfmin' or "
                              "'zvfbfa' extension to also be specified");
 
-  if (HasD && (HasC || Exts.count("zcd")))
+  if (Exts.count("zcd"))
     for (auto Ext : ZcdOverlaps)
       if (Exts.count(Ext.str()))
-        return getError(
-            Twine("'") + Ext + "' extension is incompatible with '" +
-            (HasC ? "c" : "zcd") + "' extension when 'd' extension is enabled");
+        return getIncompatibleError(Ext, "zcd");
 
-  if (XLen != 32 && Exts.count("zcf"))
-    return getError("'zcf' is only supported for 'rv32'");
+  if (XLen != 32)
+    for (auto Ext : RV32Only)
+      if (Exts.count(Ext.str()))
+        return getError(Twine("'") + Ext + "' is only supported for 'rv32'");
 
   if (Exts.count("xwchc") != 0) {
-    if (XLen != 32)
-      return getError("'xwchc' is only supported for 'rv32'");
-
     if (HasD)
       return getIncompatibleError("d", "xwchc");
 
@@ -791,20 +790,8 @@ Error RISCVISAInfo::checkDependency() {
       return getIncompatibleError("xwchc", "zcb");
   }
 
-  if (Exts.count("zclsd") != 0) {
-    if (XLen != 32)
-      return getError("'zclsd' is only supported for 'rv32'");
-
-    if (Exts.count("zcf") != 0)
-      return getIncompatibleError("zclsd", "zcf");
-  }
-
-  if (XLen != 32 && Exts.count("zilsd") != 0)
-    return getError("'zilsd' is only supported for 'rv32'");
-
-  for (auto Ext : XqciExts)
-    if (Exts.count(Ext.str()) && (XLen != 32))
-      return getError("'" + Twine(Ext) + "'" + " is only supported for 'rv32'");
+  if (Exts.count("zclsd") != 0 && Exts.count("zcf") != 0)
+    return getIncompatibleError("zclsd", "zcf");
 
   if (HasZcmp && HasXqccmp)
     return getIncompatibleError("zcmp", "xqccmp");
@@ -935,8 +922,9 @@ void RISCVISAInfo::updateImplication() {
 }
 
 static constexpr StringLiteral CombineIntoExts[] = {
-    {"a"},     {"b"},     {"zk"},   {"zkn"},   {"zks"},   {"zvkn"},
-    {"zvknc"}, {"zvkng"}, {"zvks"}, {"zvksc"}, {"zvksg"},
+    {"a"},     {"b"},     {"zk"},       {"zkn"},  {"zks"},
+    {"zvkn"},  {"zvknc"}, {"zvkng"},    {"zvks"}, {"zvksc"},
+    {"zvksg"}, {"xqci"},  {"xsfmm32a"},
 };
 
 void RISCVISAInfo::updateCombination() {

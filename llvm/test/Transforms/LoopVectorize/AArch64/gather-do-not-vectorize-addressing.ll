@@ -4,7 +4,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple=aarch64--linux-gnu -mattr=+sve -force-vector-width=2 -force-vector-interleave=1 \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -scalable-vectorization=on -S -o - | FileCheck --check-prefix=SVE %s
 
-define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef readonly %offset, i32 noundef %size) local_unnamed_addr {
+define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef readonly %offset, i32 noundef %size) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[SIZE:%.*]], 0
@@ -20,9 +20,8 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[OFFSET]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 4
@@ -124,19 +123,19 @@ entry:
   %cmp6 = icmp sgt i32 %size, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %size to i64
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %add.lcssa = phi double [ %add, %for.body ]
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi double [ 0.000000e+00, %entry ], [ %add.lcssa, %for.cond.cleanup.loopexit ]
   ret double %res.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %res.07 = phi double [ 0.000000e+00, %for.body.preheader ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %offset, i64 %indvars.iv

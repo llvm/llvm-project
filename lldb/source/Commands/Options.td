@@ -778,6 +778,13 @@ let Command = "expression" in {
         Desc<"Persist expression result in a variable for subsequent use. "
              "Expression results will be labeled with $-prefixed variables, "
              "e.g. $0, $1, etc.">;
+  def ignore_context_qualifiers
+      : Option<"c++-ignore-context-qualifiers", "Q">,
+        Groups<[1, 2]>,
+        Desc<"When specified, evaluates the expression without taking into "
+             "account the type ${Q}ualifiers of the scope. In C++, this would "
+             "permit calling a non-const method when stopped in a const-method "
+             "(which would be disallowed by language rules).">;
 }
 
 let Command = "frame diag" in {
@@ -919,7 +926,7 @@ let Command = "memory read" in {
       : Option<"binary", "b">,
         Group<2>,
         Desc<"If true, memory will be saved as binary. If false, the memory is "
-             "saved save as an ASCII dump that uses the format, size, count "
+             "saved as an ASCII dump that uses the format, size, count "
              "and number per line settings.">;
   def memory_read_type : Option<"type", "t">,
                          Groups<[3, 4]>,
@@ -1912,6 +1919,15 @@ let Command = "thread backtrace" in {
                                     Group<1>,
                                     Desc<"Do not filter out frames according "
                                          "to installed frame recognizers">;
+  def thread_backtrace_provider
+      : Option<"provider", "p">,
+        Group<1>,
+        Arg<"FrameProviderIDRange">,
+        Desc<"Show backtrace from specific frame provider(s). "
+             "Use a single ID (e.g., '2') for one provider, "
+             "a range (e.g., '0-2', '0 to 2') for multiple, "
+             "or '*'/'all' to show every provider. "
+             "ID 0 is the base unwinder, 1+ are synthetic providers.">;
 }
 
 let Command = "thread step scope" in {
@@ -2260,6 +2276,12 @@ let Command = "type synth add" in {
   def type_synth_add_cascade : Option<"cascade", "C">,
                                Arg<"Boolean">,
                                Desc<"If true, cascade through typedef chains.">;
+  def type_synth_add_wants_deref
+      : Option<"requires-dereference", "D">,
+        Arg<"Boolean">,
+        Desc<"If true, when this synthetic provider matches a pointer or "
+             "reference type, it will receive the dereferenced value object "
+             "instead of the raw pointer or reference.">;
   def type_synth_add_skip_pointers
       : Option<"skip-pointers", "p">,
         Desc<"Don't use this format for pointers-to-type objects.">;

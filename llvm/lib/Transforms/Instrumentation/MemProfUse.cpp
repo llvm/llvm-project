@@ -45,6 +45,7 @@ namespace llvm {
 extern cl::opt<bool> PGOWarnMissing;
 extern cl::opt<bool> NoPGOWarnMismatch;
 extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
+extern cl::opt<bool> AnnotateStringLiteralSectionPrefix;
 } // namespace llvm
 
 // By default disable matching of allocation profiles onto operator new that
@@ -91,14 +92,6 @@ static cl::opt<unsigned> MinMatchedColdBytePercent(
 static cl::opt<bool> AnnotateStaticDataSectionPrefix(
     "memprof-annotate-static-data-prefix", cl::init(false), cl::Hidden,
     cl::desc("If true, annotate the static data section prefix"));
-
-// FIXME: This option is added for incremental rollout purposes.
-// After the option, string literal partitioning should be implied by
-// AnnotateStaticDataSectionPrefix above and this option should be cleaned up.
-static cl::opt<bool> AnnotateStringLiteralSectionPrefix(
-    "memprof-annotate-string-literal-section-prefix", cl::init(false),
-    cl::Hidden,
-    cl::desc("If true, annotate the string literal data section prefix"));
 
 // Matching statistics
 STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");
@@ -610,11 +603,15 @@ static void handleCallSite(Instruction &I, const Function *CalledFunction,
           append_range(CallStack, InlinedCallStack);
           MatchedCallSites.insert(std::move(CallStack));
         }
-        ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", &I)
-                 << ore::NV("CallSite", &I) << " in function "
-                 << ore::NV("Caller", I.getFunction())
-                 << " matched callsite with frame count "
-                 << ore::NV("Frames", InlinedCallStack.size()));
+        OptimizationRemark Remark(DEBUG_TYPE, "MemProfUse", &I);
+        Remark << ore::NV("CallSite", &I) << " in function "
+               << ore::NV("Caller", I.getFunction())
+               << " matched callsite with frame count "
+               << ore::NV("Frames", InlinedCallStack.size())
+               << " and stack ids";
+        for (uint64_t StackId : InlinedCallStack)
+          Remark << " " << ore::NV("StackId", StackId);
+        ORE.emit(Remark);
 
         // If this is a direct call, we're done.
         if (CalledFunction)

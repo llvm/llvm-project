@@ -10,13 +10,8 @@
 // RUN:   -config="{CheckOptions: {modernize-use-trailing-return-type.TransformLambdas: none, \
 // RUN:                            modernize-use-trailing-return-type.TransformFunctions: true}}" \
 // RUN:   -- -fno-delayed-template-parsing
-
-namespace std {
-    template <typename T>
-    class vector {};
-
-    class string {};
-} // namespace std
+#include <string>
+#include <vector>
 
 void test_lambda_positive() {
   auto l01 = [] {};

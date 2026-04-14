@@ -12,12 +12,12 @@
 
 // CHECK-LABEL: @test_svldr_zt(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr.zt(i32 0, ptr [[BASE:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr.zt.p0(i32 0, ptr [[BASE:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svldr_ztPKv(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr.zt(i32 0, ptr [[BASE:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr.zt.p0(i32 0, ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svldr_zt(const void *base) __arm_streaming_compatible __arm_out("zt0") {
@@ -28,12 +28,12 @@ void test_svldr_zt(const void *base) __arm_streaming_compatible __arm_out("zt0")
 
 // CHECK-LABEL: @test_svstr_zt(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str.zt(i32 0, ptr [[BASE:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str.zt.p0(i32 0, ptr [[BASE:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svstr_ztPv(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.str.zt(i32 0, ptr [[BASE:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.str.zt.p0(i32 0, ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstr_zt(void *base) __arm_streaming_compatible __arm_in("zt0") {

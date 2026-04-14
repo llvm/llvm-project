@@ -4,8 +4,8 @@
 define void @signed(ptr %x, ptr %y, i32 %n) {
 ; CHECK-LABEL: @signed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoint ptr [[X:%.*]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoint ptr [[Y:%.*]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -55,14 +55,14 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -77,8 +77,8 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @unsigned(ptr %x, ptr %y, i32 %n) {
 ; CHECK-LABEL: @unsigned(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoint ptr [[X:%.*]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoint ptr [[Y:%.*]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -128,14 +128,14 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -147,5 +147,3 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-declare i32 @llvm.fptosi.sat.i32.f32(float)
-declare i32 @llvm.fptoui.sat.i32.f32(float)

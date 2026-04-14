@@ -20,14 +20,11 @@ protected:
   bool hasFPImpl(const MachineFunction &MF) const override { return false; }
 };
 
-static TargetRegisterClass *const BogusRegisterClasses[] = {nullptr};
-
 class BogusRegisterInfo : public TargetRegisterInfo {
 public:
   BogusRegisterInfo()
-      : TargetRegisterInfo(nullptr, BogusRegisterClasses, BogusRegisterClasses,
-                           nullptr, nullptr, nullptr, LaneBitmask(~0u), nullptr,
-                           nullptr) {
+      : TargetRegisterInfo(nullptr, {}, nullptr, {}, nullptr, nullptr,
+                           LaneBitmask(~0u), nullptr, nullptr) {
     InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
                        nullptr, nullptr, nullptr, nullptr, 0, nullptr);
   }
@@ -118,7 +115,13 @@ public:
       : CodeGenTargetMachineImpl(
             Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
-        ST(*this) {}
+        ST(*this) {
+    // With an empty Triple, `initAsmInfo` cannot be called. Provide a
+    // default MCAsmInfo so that MCContext can be created.
+    auto MAI = std::make_unique<MCAsmInfo>();
+    MAI->setTargetOptions(Options.MCOptions);
+    AsmInfo = std::move(MAI);
+  }
 
   ~BogusTargetMachine() override = default;
 

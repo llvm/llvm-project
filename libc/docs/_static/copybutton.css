@@ -1,0 +1,39 @@
+/* Copy-to-clipboard button styles */
+div.highlight {
+  position: relative;
+}
+
+button.copybutton {
+  position: absolute;
+  top: 0.4em;
+  right: 0.4em;
+  padding: 0.3em 0.4em;
+  background: var(--color-background-secondary, #f0f0f0);
+  border: 1px solid var(--color-foreground-border, #ccc);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.15s;
+  line-height: 1;
+  color: var(--color-foreground-secondary, #555);
+}
+
+div.highlight:hover button.copybutton,
+button.copybutton:focus {
+  opacity: 1;
+}
+
+button.copybutton:hover {
+  background: var(--color-background-hover, #e0e0e0);
+}
+
+button.copybutton.copied {
+  color: var(--color-brand-primary, #2980b9);
+  opacity: 1;
+}
+
+button.copybutton svg {
+  display: block;
+  pointer-events: none;
+  fill: currentColor;
+}

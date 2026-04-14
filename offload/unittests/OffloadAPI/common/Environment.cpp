@@ -19,7 +19,7 @@ using namespace llvm;
 // test, while having sensible lifetime for the platform environment
 #ifndef DISABLE_WRAPPER
 struct OffloadInitWrapper {
-  OffloadInitWrapper() { olInit(); }
+  OffloadInitWrapper() { olInit(nullptr); }
   ~OffloadInitWrapper() { olShutDown(); }
 };
 static OffloadInitWrapper Wrapper{};
@@ -179,6 +179,8 @@ bool TestEnvironment::loadDeviceBinary(
     FileExtension = ".amdgpu.bin";
   } else if (Backend == OL_PLATFORM_BACKEND_CUDA) {
     FileExtension = ".nvptx64.bin";
+  } else if (Backend == OL_PLATFORM_BACKEND_LEVEL_ZERO) {
+    FileExtension = ".spirv64.bin";
   } else {
     errs() << "Unsupported platform type for a device binary test.\n";
     return false;

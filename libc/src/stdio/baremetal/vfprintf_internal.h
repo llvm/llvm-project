@@ -38,6 +38,7 @@ LIBC_INLINE int write_hook(cpp::string_view str_view, void *cookie) {
 
 } // namespace internal
 
+template <bool use_modular = false>
 LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
                                   const char *__restrict format,
                                   internal::ArgList &args) {
@@ -48,7 +49,12 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
                                  stream);
   printf_core::Writer writer(wb);
 
-  auto retval = printf_core::printf_main(&writer, format, args);
+  auto retval = [&] {
+    if constexpr (use_modular)
+      return printf_core::printf_main_modular(&writer, format, args);
+    else
+      return printf_core::printf_main(&writer, format, args);
+  }();
   if (!retval.has_value()) {
     libc_errno = printf_core::internal_error_to_errno(retval.error());
     return -1;

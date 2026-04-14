@@ -103,8 +103,7 @@ end module maxtype_mod
 !CHECK:    %[[LHS_MAXVAL:.*]] = fir.load %[[LHS_DESIGNATE_MAXVAL]] : !fir.ref<i32>
 !CHECK:    %[[RHS_DESIGNATE_MAXVAL:.*]] = hlfir.designate %[[RHS_DECL]]#0{"maxval"}   : (!fir.ref<[[MAXTYPE]]>) -> !fir.ref<i32>
 !CHECK:    %[[RHS_MAXVAL:.*]] = fir.load %[[RHS_DESIGNATE_MAXVAL]] : !fir.ref<i32>
-!CHECK:    %[[CMP:.*]] = arith.cmpi sgt, %[[LHS_MAXVAL]], %[[RHS_MAXVAL]] : i32
-!CHECK:    %[[MAX_VAL:.*]] = arith.select %[[CMP]], %[[LHS_MAXVAL]], %[[RHS_MAXVAL]] : i32
+!CHECK:    %[[MAX_VAL:.*]] = arith.maxsi %[[LHS_MAXVAL]], %[[RHS_MAXVAL]] : i32
 !CHECK:    %[[RESULT_DESIGNAGE_MAXVAL:.*]] = hlfir.designate %[[RESULT_DECL]]#0{"maxval"}   : (!fir.ref<[[MAXTYPE]]>) -> !fir.ref<i32>
 !CHECK:    hlfir.assign %[[MAX_VAL]] to %[[RESULT_DESIGNAGE_MAXVAL]] : i32, !fir.ref<i32>
 !CHECK:    %[[RESULT:.*]] = fir.load %[[RESULT_DECL]]#0 : !fir.ref<[[MAXTYPE]]>

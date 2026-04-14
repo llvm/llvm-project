@@ -339,6 +339,7 @@ public:
   }
 
   std::list<Message> &messages() { return messages_; }
+  const std::list<Message> &messages() const { return messages_; }
   bool empty() const { return messages_.empty(); }
   void clear() { messages_.clear(); }
 

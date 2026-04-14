@@ -381,21 +381,40 @@ struct UnrollMultiReductionPattern
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
-    auto resultType = reductionOp->getResult(0).getType();
-    if (resultType.isIntOrFloat()) {
-      return rewriter.notifyMatchFailure(reductionOp,
-                                         "Unrolling scalars is not supported");
-    }
     std::optional<SmallVector<int64_t>> targetShape =
         getTargetShape(options, reductionOp);
     if (!targetShape)
       return failure();
     SmallVector<int64_t> originalSize = *reductionOp.getShapeForUnroll();
+    Location loc = reductionOp.getLoc();
+    auto resultType = reductionOp->getResult(0).getType();
+
+    // Handle scalar result case: all dimensions are reduced.
+    // Each source tile is reduced to a scalar, and partial results are
+    // chained through the accumulator operand.
+    if (resultType.isIntOrFloat()) {
+      Value accumulator = reductionOp.getAcc();
+      for (SmallVector<int64_t> offsets :
+           StaticTileOffsetRange(originalSize, *targetShape)) {
+        SmallVector<int64_t> operandStrides(offsets.size(), 1);
+        Value slicedOperand =
+            rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+                loc, reductionOp.getSource(), offsets, *targetShape,
+                operandStrides);
+        Operation *newOp = cloneOpWithOperandsAndTypes(
+            rewriter, loc, reductionOp, {slicedOperand, accumulator},
+            resultType);
+        accumulator = newOp->getResult(0);
+      }
+      rewriter.replaceOp(reductionOp, accumulator);
+      return success();
+    }
+
+    // Vector result case.
     llvm::MapVector<
         SmallVector<int64_t>, Value,
         llvm::DenseMap<SmallVector<int64_t>, unsigned, OffsetMapInfo>>
         accCache;
-    Location loc = reductionOp.getLoc();
 
     // Stride of the ratios, this gives us the offsets of sliceCount in a basis
     // of multiples of the targetShape.
@@ -1196,14 +1215,14 @@ private:
 static bool isContiguous(ArrayRef<int64_t> extractShape,
                          ArrayRef<int64_t> shape) {
 
-  if (extractShape.size() > shape.size())
+  if (extractShape.empty() || shape.empty() ||
+      extractShape.size() > shape.size())
     return false;
 
-  while (!extractShape.empty() && extractShape.front() == 1) {
+  while (extractShape.size() > 1 && extractShape.front() == 1)
     extractShape = extractShape.drop_front();
-  }
 
-  while (!shape.empty() && shape.front() == 1) {
+  while (shape.size() > 1 && shape.front() == 1) {
     shape = shape.drop_front();
   }
 

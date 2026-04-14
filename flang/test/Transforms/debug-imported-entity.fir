@@ -27,5 +27,5 @@ module {
 // CHECK: #[[MOD:.+]] = #llvm.di_module<{{.*}}name = "foo"{{.*}}>
 // CHECK: #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct[[[REC_ID:[0-9]+]]]<>, isRecSelf = true{{.*}}>
 // CHECK: #[[IMP_ENTITY:.+]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[SP_REC]], entity = #[[MOD]]{{.*}}>
-// CHECK: #[[SP:.+]] = #llvm.di_subprogram<recId = distinct[[[REC_ID]]]<>{{.*}}retainedNodes = #[[IMP_ENTITY]]>
+// CHECK: #[[SP:.+]] = #llvm.di_subprogram<recId = distinct[[[REC_ID]]]<>{{.*}}retainedNodes = [#[[IMP_ENTITY]]]>
 // CHECK: #llvm.di_global_variable<scope = #[[SP]], name = "xyz"{{.*}}>

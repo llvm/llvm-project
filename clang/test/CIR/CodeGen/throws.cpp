@@ -32,7 +32,7 @@ int rethrow_from_block(int a, int b) {
 // CIR:  cir.scope {
 // CIR:    %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:    %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:    %[[IS_B_ZERO:.*]] = cir.cmp(eq, %[[TMP_B]], %[[CONST_0]]) : !s32i, !cir.bool
+// CIR:    %[[IS_B_ZERO:.*]] = cir.cmp eq %[[TMP_B]], %[[CONST_0]] : !s32i
 // CIR:    cir.if %[[IS_B_ZERO]] {
 // CIR:      cir.throw
 // CIR:      cir.unreachable
@@ -40,7 +40,7 @@ int rethrow_from_block(int a, int b) {
 // CIR:  }
 // CIR:  %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:  %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:  %[[DIV_A_B:.*]] = cir.binop(div, %[[TMP_A:.*]], %[[TMP_B:.*]]) : !s32i
+// CIR:  %[[DIV_A_B:.*]] = cir.div %[[TMP_A:.*]], %[[TMP_B:.*]] : !s32i
 // CIR:  cir.store %[[DIV_A_B]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:  %[[RESULT:.*]] = cir.load %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.return %[[RESULT]] : !s32i
@@ -112,9 +112,7 @@ void paren_expr() { (throw 0, 1 + 2); }
 // CIR:   cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!s32i>, @_ZTIi
 // CIR:   cir.unreachable
 // CIR: ^bb1:
-// CIR:   %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:   %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR:   %[[ADD:.*]] = cir.binop(add, %[[CONST_1]], %[[CONST_2]]) nsw : !s32i
+// CIR:   cir.return
 
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
 // LLVM: store i32 0, ptr %[[EXCEPTION_ADDR]], align 16
@@ -244,3 +242,49 @@ void throw_enum_class_expr() {
 // OGCG: store i32 0, ptr %[[EXCEPTION_ADDR]], align 16
 // OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIZ21throw_enum_class_exprvE4Test, ptr null)
 // OGCG: unreachable
+
+void throw_pointer_type() {
+  static int var = 42;
+  int *ptr = &var;
+  throw ptr;
+}
+
+// CIR: %[[PTR_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["ptr", init]
+// CIR: %[[VAR_ADDR:.*]] = cir.get_global @_ZZ18throw_pointer_typevE3var : !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[VAR_ADDR]], %[[PTR_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 8 -> !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[TMP_PTR:.*]] = cir.load{{.*}} %[[PTR_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[TMP_PTR]], %[[EXCEPTION_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, @_ZTIPi
+// CIR: cir.unreachable
+
+// LLVM: %[[PTR_ADDR:.*]] = alloca ptr,{{.*}} align 8
+// LLVM: store ptr @_ZZ18throw_pointer_typevE3var, ptr %[[PTR_ADDR]], align 8
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 8)
+// LLVM: %[[TMP_PTR:.*]] = load ptr, ptr %[[PTR_ADDR]], align 8
+// LLVM: store ptr %[[TMP_PTR]], ptr %[[EXCEPTION_ADDR]], align 16
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIPi, ptr null)
+
+// OGCG: %[[PTR_ADDR:.*]] = alloca ptr, align 8
+// OGCG: store ptr @_ZZ18throw_pointer_typevE3var, ptr %[[PTR_ADDR]], align 8
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 8)
+// OGCG: %[[TMP_PTR:.*]] = load ptr, ptr %[[PTR_ADDR]], align 8
+// OGCG: store ptr %[[TMP_PTR]], ptr %[[EXCEPTION_ADDR]], align 16
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIPi, ptr null)
+// Throwing a class type with a non-trivial destructor exercises
+// CIRGenItaniumCXXABI::emitThrow (destructor symbol for __cxa_throw).
+
+struct ThrowNonTrivialDtor {
+  ~ThrowNonTrivialDtor() {}
+};
+void throw_class_with_nontrivial_dtor() { throw ThrowNonTrivialDtor(); }
+
+// CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 1 -> !cir.ptr<!rec_ThrowNonTrivialDtor>
+// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!rec_ThrowNonTrivialDtor>, @_ZTI19ThrowNonTrivialDtor, @_ZN19ThrowNonTrivialDtorD1Ev
+// CIR: cir.unreachable
+
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 1)
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTI19ThrowNonTrivialDtor, ptr @_ZN19ThrowNonTrivialDtorD1Ev)
+
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 1)
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTI19ThrowNonTrivialDtor, ptr @_ZN19ThrowNonTrivialDtorD1Ev)

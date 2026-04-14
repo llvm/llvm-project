@@ -362,6 +362,34 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
   }
 
+  if (Subtarget.isR5900()) {
+    // R5900 FPU only supports 4 compare conditions: C.F, C.EQ, C.OLT, C.OLE
+    // (and their inversions via bc1t/bc1f). Expand all conditions that would
+    // require C.UN, C.UEQ, C.ULT, or C.ULE instructions (not available on
+    // R5900). The legalizer resolves these via operand swapping, condition
+    // inversion, and decomposition into supported conditions.
+    setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETOGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETULT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETULE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUEQ, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
+
+    // R5900 FPU does not support IEEE 754 special values (NaN, infinity). Use
+    // custom lowering to decide per-instruction: hardware when nnan+ninf flags
+    // guarantee no NaN or infinity, software libcall otherwise.
+    setOperationAction(ISD::FADD, MVT::f32, Custom);
+    setOperationAction(ISD::FSUB, MVT::f32, Custom);
+    setOperationAction(ISD::FMUL, MVT::f32, Custom);
+    setOperationAction(ISD::FDIV, MVT::f32, Custom);
+    setOperationAction(ISD::FSQRT, MVT::f32, Custom);
+  }
+
   computeRegisterProperties(Subtarget.getRegisterInfo());
 }
 
@@ -535,9 +563,39 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
+  case ISD::FADD:
+    return lowerR5900FPOp(Op, DAG, RTLIB::ADD_F32);
+  case ISD::FSUB:
+    return lowerR5900FPOp(Op, DAG, RTLIB::SUB_F32);
+  case ISD::FMUL:
+    return lowerR5900FPOp(Op, DAG, RTLIB::MUL_F32);
+  case ISD::FDIV:
+    return lowerR5900FPOp(Op, DAG, RTLIB::DIV_F32);
+  case ISD::FSQRT:
+    return lowerR5900FPOp(Op, DAG, RTLIB::SQRT_F32);
   }
 
   return MipsTargetLowering::LowerOperation(Op, DAG);
+}
+
+SDValue MipsSETargetLowering::lowerR5900FPOp(SDValue Op, SelectionDAG &DAG,
+                                             RTLIB::Libcall LC) const {
+  assert(Subtarget.isR5900());
+  SDNodeFlags Flags = Op->getFlags();
+
+  if (Flags.hasNoNaNs() && Flags.hasNoInfs()) {
+    // Use the hardware FPU instruction if the operation is guaranteed to have
+    // no NaN or infinity inputs/outputs (nnan+ninf flags).
+    return Op;
+  }
+
+  // Fall back to a software libcall for IEEE correctness.
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SmallVector<SDValue, 2> Ops(Op->op_begin(), Op->op_end());
+  TargetLowering::MakeLibCallOptions CallOptions;
+  auto [Result, Chain] = makeLibCall(DAG, LC, VT, Ops, CallOptions, DL);
+  return Result;
 }
 
 // Fold zero extensions into MipsISD::VEXTRACT_[SZ]EXT_ELT
@@ -3336,7 +3394,6 @@ MipsSETargetLowering::emitINSERT_FW(MachineInstr &MI,
                               : &Mips::MSA128WEvensRegClass);
 
   BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
-      .addImm(0)
       .addReg(Fs)
       .addImm(Mips::sub_lo);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSVE_W), Wd)
@@ -3370,7 +3427,6 @@ MipsSETargetLowering::emitINSERT_FD(MachineInstr &MI,
   Register Wt = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
   BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
-      .addImm(0)
       .addReg(Fs)
       .addImm(Mips::sub_64);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSVE_D), Wd)
@@ -3455,7 +3511,6 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   if (IsFP) {
     Register Wt = RegInfo.createVirtualRegister(VecRC);
     BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
-        .addImm(0)
         .addReg(SrcValReg)
         .addImm(EltSizeInBytes == 8 ? Mips::sub_64 : Mips::sub_lo);
     SrcValReg = Wt;
@@ -3611,7 +3666,6 @@ MipsSETargetLowering::emitST_F16_PSEUDO(MachineInstr &MI,
   if(!UsingMips32) {
     Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR64RegClass);
     BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Tmp)
-        .addImm(0)
         .addReg(Rs)
         .addImm(Mips::sub_32);
     Rs = Tmp;

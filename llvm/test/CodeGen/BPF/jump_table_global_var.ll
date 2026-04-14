@@ -64,13 +64,13 @@ llc -march=bpf -mcpu=v4 < test.ll \
 ; CHECK: 	r1 = *(u64 *)(r2 + 0)
 ; CHECK: 	gotox r1
 ; CHECK: .Ltmp0:                                 # Block address taken
-; CHECK: LBB0_1:                                 # %l1
+; CHECK: .LBB0_1:                                # %l1
 ; CHECK: 	w0 = 4
-; CHECK: 	goto LBB0_3
+; CHECK: 	goto .LBB0_3
 ; CHECK: .Ltmp1:                                 # Block address taken
-; CHECK: LBB0_2:                                 # %l2
+; CHECK: .LBB0_2:                                # %l2
 ; CHECK: 	w0 = 3
-; CHECK: LBB0_3:                                 # %.split
+; CHECK: .LBB0_3:                                # %.split
 ; CHECK: 	exit
 ; CHECK: .Lfunc_end0:
 ; CHECK: 	.size	foo, .Lfunc_end0-foo
@@ -78,6 +78,6 @@ llc -march=bpf -mcpu=v4 < test.ll \
 ; CHECK: 	.cfi_endproc
 ; CHECK: 	.section	.jumptables,"",@progbits
 ; CHECK: BPF.JT.0.0:
-; CHECK: 	.quad	LBB0_1-.text
-; CHECK: 	.quad	LBB0_2-.text
+; CHECK: 	.quad	.LBB0_1-.text
+; CHECK: 	.quad	.LBB0_2-.text
 ; CHECK: 	.size	BPF.JT.0.0, 16

@@ -15,12 +15,47 @@ import common as cm
 
 from difflib import unified_diff
 
+# When messages are attached together, the source locations to which they
+# refer are not necessarily monotonically increasing. For example
+#   error: foo.f90:10: There is a problem here         # line 10
+#   because: foo.f90:12: This thing is invalid         # line 12 (attached)
+#   error: foo.f90:11: There is another problem here   # line 11
+# There is no way to represent that in the source file via ERROR annotations,
+# so before running unified_diff "canonicalize" the list of messages into an
+# order that corresponds to the line numbers.
+#
+# This also eliminates the issue with multiple messages emitted for the same
+# line: they can now be "expected" in the test file in any order, e.g.
+#   !ERROR: Not enough arguments in a call to foo
+#   !ERROR: `foo` is a subroutine, not a function
+#   a = foo()
+# has the same effect as:
+#   !ERROR: `foo` is a subroutine, not a function
+#   !ERROR: Not enough arguments in a call to foo
+#   a = foo()
+
+
+def join_per_line_map(m):
+    """Take a map {"line_no:": [message1, message2, ...], ...} and convert
+    it into a newline-separated string that follows the line ordering.
+    """
+    # Sort messages for each line, and prepend the line number to each
+    # message. Use numeric values of line numbers as keys to allow them
+    # to be sorted numerically.
+    sorted_lines_map = {
+        int(k.rstrip(":")): [k + s for s in sorted(m[k])] for k in m.keys()
+    }
+
+    joined_lines_list = []
+    for line in sorted(sorted_lines_map.keys()):
+        joined_lines_list.append("\n".join(sorted_lines_map[line]))
+    return "\n".join(joined_lines_list)
+
+
 cm.check_args(sys.argv)
 srcdir = cm.set_source(sys.argv[1])
 with open(srcdir, "r", encoding="utf-8") as f:
     src = f.readlines()
-actual = ""
-expect = ""
 diffs = ""
 log = ""
 
@@ -48,14 +83,19 @@ with tempfile.TemporaryDirectory() as tmpdir:
             sys.exit(1)
 
 # Cleans up the output from the compilation process to be easier to process
+actual_per_line = dict()
 for line in log.split("\n"):
     m = re.search(r"[^:]*:(\d+:).*(?:error|warning|portability|because):(.*)", line)
     if m:
         if re.search(r"warning: .*fold.*host", line):
             continue  # ignore host-dependent folding warnings
-        actual += m.expand(r"\1\2\n")
+        line_colon = m.expand(r"\1")
+        actual_per_line[line_colon] = actual_per_line.get(line_colon, []) + [
+            m.expand(r"\2")
+        ]
 
 # Gets the expected errors and their line numbers
+expect_per_line = dict()
 errors = []
 for i, line in enumerate(src, 1):
     m = re.search(r"(?:^\s*!\s*(?:ERROR|WARNING|PORTABILITY|BECAUSE): )(.*)", line)
@@ -63,9 +103,11 @@ for i, line in enumerate(src, 1):
         errors.append(m.group(1))
         continue
     if errors:
-        for x in errors:
-            expect += f"{i}: {x}\n"
+        expect_per_line[f"{i}:"] = [f" {x}" for x in errors]
         errors = []
+
+actual = join_per_line_map(actual_per_line)
+expect = join_per_line_map(expect_per_line)
 
 # Compares the expected errors with the compiler errors
 for line in unified_diff(actual.split("\n"), expect.split("\n"), n=0):

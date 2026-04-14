@@ -29,6 +29,7 @@ class ASTContext;
 class FunctionType;
 class GlobalDecl;
 class QualType;
+class TargetInfo;
 class Type;
 } // namespace clang
 
@@ -132,10 +133,10 @@ public:
 
   cir::FuncType getFunctionType(clang::GlobalDecl gd);
 
-  /// Get the CIR function type for use in a vtable, given a CXXMethodDecl. If
-  /// the method has an incomplete return type, and/or incomplete argument
-  /// types, this will return the opaque type.
-  cir::FuncType getFunctionTypeForVTable(clang::GlobalDecl gd);
+  /// Determine if a C++ inheriting constructor should have parameters matching
+  /// those of its inherited constructor.
+  bool inheritingCtorHasParams(const InheritedConstructor &inherited,
+                               CXXCtorType type);
 
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue
@@ -197,7 +198,7 @@ public:
                                                     const FunctionType *fnType);
 
   const CIRGenFunctionInfo &
-  arrangeCIRFunctionInfo(CanQualType returnType,
+  arrangeCIRFunctionInfo(CanQualType returnType, bool isInstanceMethod,
                          llvm::ArrayRef<CanQualType> argTypes,
                          FunctionType::ExtInfo info, RequiredArgs required);
 
@@ -205,6 +206,8 @@ public:
   arrangeFreeFunctionType(CanQual<FunctionProtoType> fpt);
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt);
+
+  unsigned getTargetAddressSpace(QualType ty) const;
 };
 
 } // namespace clang::CIRGen

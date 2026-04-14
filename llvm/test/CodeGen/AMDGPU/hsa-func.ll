@@ -14,7 +14,7 @@
 ; ELF: Flags [ (0x6)
 ; ELF: SHF_ALLOC (0x2)
 ; ELF: SHF_EXECINSTR (0x4)
-; ELF: AddressAlignment: 4
+; ELF: AddressAlignment: 64
 ; ELF: }
 
 ; ELF: SHT_NOTE
@@ -38,7 +38,7 @@
 
 ; HSA-NOT: .amdgpu_hsa_kernel simple
 ; HSA: .globl simple
-; HSA: .p2align 2
+; HSA: .p2align 6
 ; HSA: {{^}}simple:
 ; HSA-NOT: amd_kernel_code_t
 ; HSA: flat_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[0:1]
@@ -60,7 +60,7 @@ entry:
 
 ; Ignore explicit alignment that is too low.
 ; HSA: .globl simple_align2
-; HSA: .p2align 2
+; HSA: .p2align 6
 define void @simple_align2(ptr addrspace(4) %ptr.out) align 2 {
 entry:
   %out = load ptr addrspace(1), ptr addrspace(4) %ptr.out

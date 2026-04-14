@@ -153,3 +153,36 @@ int foo(int xx, ...) {
 long long test_align(va_list args) {
   return va_arg(args, long long);
 }
+
+// Struct > 8 bytes with 8-byte alignment to test EmitVAArgFromMemory alignment.
+// This triggers the alignment masking code where -(int)Align must use getSigned.
+struct LargeAligned {
+  long long x;
+  int y;
+};
+
+// CHECK-LABEL: define dso_local i64 @test_large_aligned_vaarg(
+// CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_LARGEALIGNED:%.*]], align 8
+// CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[__OVERFLOW_AREA_POINTER_P:%.*]] = getelementptr inbounds nuw [[STRUCT___VA_LIST_TAG:%.*]], ptr [[TMP0]], i32 0, i32 2
+// CHECK-NEXT:    [[__OVERFLOW_AREA_POINTER:%.*]] = load ptr, ptr [[__OVERFLOW_AREA_POINTER_P]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[__OVERFLOW_AREA_POINTER]], i64 7
+// CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i32
+// The mask must be -8 (0xFFFFFFF8), not a large positive number.
+// CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], -8
+// CHECK-NEXT:    [[__OVERFLOW_AREA_POINTER_ALIGN:%.*]] = inttoptr i32 [[TMP3]] to ptr
+// CHECK-NEXT:    [[__OVERFLOW_AREA_POINTER_NEXT:%.*]] = getelementptr i8, ptr [[__OVERFLOW_AREA_POINTER_ALIGN]], i32 16
+// CHECK-NEXT:    store ptr [[__OVERFLOW_AREA_POINTER_NEXT]], ptr [[__OVERFLOW_AREA_POINTER_P]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[S]], ptr align 8 [[__OVERFLOW_AREA_POINTER_ALIGN]], i32 16, i1 false)
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_LARGEALIGNED]], ptr [[S]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[X]], align 8
+// CHECK-NEXT:    ret i64 [[TMP4]]
+//
+long long test_large_aligned_vaarg(va_list args) {
+  struct LargeAligned s = va_arg(args, struct LargeAligned);
+  return s.x;
+}

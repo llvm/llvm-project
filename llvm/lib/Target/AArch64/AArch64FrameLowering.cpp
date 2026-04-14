@@ -1197,8 +1197,7 @@ void AArch64FrameLowering::emitPacRetPlusLeafHardening(
     if (MBBI != MBB.end())
       DL = MBBI->getDebugLoc();
 
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_EPILOGUE))
-        .setMIFlag(MachineInstr::FrameDestroy);
+    TII->createPauthEpilogueInstr(MBB, DL);
   };
 
   // This should be in sync with PEIImpl::calculateSaveRestoreBlocks.
@@ -1730,6 +1729,12 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   Register LastReg = 0;
   bool HasCSHazardPadding = AFI->hasStackHazardSlotIndex() && !SplitPPRs;
 
+  auto AlignOffset = [StackFillDir](int Offset, int Align) {
+    if (StackFillDir < 0)
+      return alignDown(Offset, Align);
+    return alignTo(Offset, Align);
+  };
+
   // When iterating backwards, the loop condition relies on unsigned wraparound.
   for (unsigned i = FirstReg; i < Count; i += RegInc) {
     RegPairInfo RPI;
@@ -1844,11 +1849,15 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
         RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
       RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
 
-    // Realign the scalable offset if necessary.  This is relevant when
-    // spilling predicates on Windows.
-    if (RPI.isScalable() && ScalableByteOffset % Scale != 0) {
-      ScalableByteOffset = alignTo(ScalableByteOffset, Scale);
-    }
+    // Realign the scalable offset if necessary. This is relevant when spilling
+    // predicates on Windows.
+    if (RPI.isScalable() && ScalableByteOffset % Scale != 0)
+      ScalableByteOffset = AlignOffset(ScalableByteOffset, Scale);
+
+    // Realign the fixed offset if necessary. This is relevant when spilling Q
+    // registers after spilling an odd amount of X registers.
+    if (!RPI.isScalable() && ByteOffset % Scale != 0)
+      ByteOffset = AlignOffset(ByteOffset, Scale);
 
     int OffsetPre = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
     assert(OffsetPre % Scale == 0);
@@ -3357,6 +3366,21 @@ bool isMergeableStackTaggingInstruction(MachineInstr &MI, int64_t &Offset,
   return true;
 }
 
+static size_t countAvailableScavengerSlots(LivePhysRegs &LiveRegs,
+                                           MachineRegisterInfo &MRI,
+                                           RegScavenger *RS) {
+  auto FreeGPRs =
+      llvm::count_if(AArch64::GPR64RegClass, [&LiveRegs, &MRI](auto Reg) {
+        return LiveRegs.available(MRI, Reg);
+      });
+
+  size_t NumEmergencySlots = 0;
+  if (RS)
+    NumEmergencySlots = RS->getNumScavengingFrameIndices();
+
+  return FreeGPRs + NumEmergencySlots;
+}
+
 // Detect a run of memory tagging instructions for adjacent stack frame slots,
 // and replace them with a shorter instruction sequence:
 // * replace STG + STG with ST2G
@@ -3435,6 +3459,19 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   InsertI++;
   if (LiveRegs.contains(AArch64::NZCV))
     return InsertI;
+
+  // Emitting an MTE loop requires two physical registers (BaseReg and
+  // SizeReg).  If the function is under register pressure, the register
+  // scavenger will crash trying to allocate them. If we don't have at least
+  // two free slots (free registers + emergency slots), bail out and fall back
+  // to the unrolled sequence.
+  if (countAvailableScavengerSlots(LiveRegs, MBB->getParent()->getRegInfo(),
+                                   RS) < 2) {
+    LLVM_DEBUG(
+        dbgs() << "Failed to merge MTE stack tagging instructions into loop "
+               << "due to high register pressure.\n");
+    return InsertI;
+  }
 
   llvm::stable_sort(Instrs,
                     [](const TagStoreInstr &Left, const TagStoreInstr &Right) {

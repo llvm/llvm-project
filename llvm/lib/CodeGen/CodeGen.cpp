@@ -27,7 +27,6 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBranchFolderLegacyPass(Registry);
   initializeBranchRelaxationLegacyPass(Registry);
   initializeBreakFalseDepsPass(Registry);
-  initializeCallBrPreparePass(Registry);
   initializeCFGuardLongjmpPass(Registry);
   initializeCFIFixupPass(Registry);
   initializeCFIInstrInserterPass(Registry);
@@ -45,7 +44,6 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeEarlyMachineLICMPass(Registry);
   initializeEarlyTailDuplicateLegacyPass(Registry);
   initializeExpandIRInstsLegacyPassPass(Registry);
-  initializeExpandMemCmpLegacyPassPass(Registry);
   initializeExpandPostRALegacyPass(Registry);
   initializeExpandReductionsPass(Registry);
   initializeFEntryInserterLegacyPass(Registry);
@@ -56,11 +54,14 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeGCMachineCodeAnalysisPass(Registry);
   initializeGCModuleInfoPass(Registry);
   initializeGlobalMergePass(Registry);
+  initializeGlobalMergeFuncPassWrapperPass(Registry);
   initializeHardwareLoopsLegacyPass(Registry);
   initializeIfConverterPass(Registry);
   initializeImplicitNullChecksPass(Registry);
   initializeIndirectBrExpandLegacyPassPass(Registry);
+  initializeInsertCodePrefetchPass(Registry);
   initializeInitUndefLegacyPass(Registry);
+  initializeInlineAsmPreparePass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
   initializeJMCInstrumenterPass(Registry);
@@ -158,7 +159,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeTargetPassConfigPass(Registry);
   initializeTwoAddressInstructionLegacyPassPass(Registry);
   initializeTypePromotionLegacyPass(Registry);
-  initializeUnpackMachineBundlesPass(Registry);
+  initializeUnpackMachineBundlesLegacyPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeUnreachableMachineBlockElimLegacyPass(Registry);
   initializeVirtRegMapWrapperLegacyPass(Registry);

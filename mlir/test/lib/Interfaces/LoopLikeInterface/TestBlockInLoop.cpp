@@ -18,7 +18,7 @@ namespace {
 /// This is a test pass that tests Blocks's isInLoop method by checking if each
 /// block in a function is in a loop and outputing if it is
 struct IsInLoopPass
-    : public PassWrapper<IsInLoopPass, OperationPass<func::FuncOp>> {
+    : public PassWrapper<IsInLoopPass, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(IsInLoopPass)
 
   StringRef getArgument() const final { return "test-block-is-in-loop"; }
@@ -27,16 +27,18 @@ struct IsInLoopPass
   }
 
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
-    func.walk([](mlir::Block *block) {
-      llvm::outs() << "Block is ";
-      if (LoopLikeOpInterface::blockIsInLoop(block))
-        llvm::outs() << "in a loop\n";
-      else
-        llvm::outs() << "not in a loop\n";
-      block->print(llvm::outs());
-      llvm::outs() << "\n";
-    });
+    ModuleOp module = getOperation();
+    for (auto func : module.getOps<func::FuncOp>()) {
+      func.walk([](mlir::Block *block) {
+        llvm::outs() << "Block is ";
+        if (LoopLikeOpInterface::blockIsInLoop(block))
+          llvm::outs() << "in a loop\n";
+        else
+          llvm::outs() << "not in a loop\n";
+        block->print(llvm::outs());
+        llvm::outs() << "\n";
+      });
+    }
   }
 };
 

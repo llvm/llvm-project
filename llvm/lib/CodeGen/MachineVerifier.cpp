@@ -1336,7 +1336,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (SrcTy.getSizeInBits() != DstTy.getSizeInBits())
       report("bitcast sizes must match", MI);
 
-    if (SrcTy == DstTy)
+    bool SameType = SrcTy.getKind() == DstTy.getKind();
+    if (SameType && SrcTy.isPointerOrPointerVector())
+      SameType &= SrcTy.getAddressSpace() == DstTy.getAddressSpace();
+
+    SameType &= SrcTy.getScalarSizeInBits() == DstTy.getScalarSizeInBits();
+
+    if (SameType && SrcTy.isVector())
+      SameType &= SrcTy.getElementCount() == DstTy.getElementCount();
+
+    if (SameType)
       report("bitcast must change the type", MI);
 
     break;
@@ -2800,46 +2809,36 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
 
         break;
       }
-      if (SubIdx) {
-        const TargetRegisterClass *SRC =
-          TRI->getSubClassWithSubReg(RC, SubIdx);
-        if (!SRC) {
-          report("Invalid subregister index for virtual register", MO, MONum);
-          OS << "Register class " << TRI->getRegClassName(RC)
-             << " does not support subreg index "
-             << TRI->getSubRegIndexName(SubIdx) << '\n';
-          return;
-        }
-        if (RC != SRC) {
-          report("Invalid register class for subregister index", MO, MONum);
-          OS << "Register class " << TRI->getRegClassName(RC)
-             << " does not fully support subreg index "
-             << TRI->getSubRegIndexName(SubIdx) << '\n';
-          return;
-        }
+      // Validate that SubIdx can be applied to the virtual register.
+      if (!TRI->isSubRegValidForRegClass(RC, SubIdx)) {
+        report("Invalid subregister index for virtual register", MO, MONum);
+        OS << "Register class " << TRI->getRegClassName(RC)
+           << " does not support subreg index "
+           << TRI->getSubRegIndexName(SubIdx) << '\n';
+        return;
       }
-      if (MONum < MCID.getNumOperands()) {
-        if (const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum)) {
-          if (SubIdx) {
-            const TargetRegisterClass *SuperRC =
-                TRI->getLargestLegalSuperClass(RC, *MF);
-            if (!SuperRC) {
-              report("No largest legal super class exists.", MO, MONum);
-              return;
-            }
-            DRC = TRI->getMatchingSuperRegClass(SuperRC, DRC, SubIdx);
-            if (!DRC) {
-              report("No matching super-reg register class.", MO, MONum);
-              return;
-            }
-          }
-          if (!RC->hasSuperClassEq(DRC)) {
-            report("Illegal virtual register for instruction", MO, MONum);
-            OS << "Expected a " << TRI->getRegClassName(DRC)
-               << " register, but got a " << TRI->getRegClassName(RC)
-               << " register\n";
-          }
-        }
+      if (MONum >= MCID.getNumOperands())
+        break;
+      const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum);
+      if (!DRC)
+        break;
+
+      // If SubIdx is used, verify that RC with SubIdx can be used for an
+      // operand of class DRC. This is valid if for every register in RC, the
+      // register obtained by applying SubIdx to it is in DRC.
+      if (SubIdx && TRI->getMatchingSuperRegClass(RC, DRC, SubIdx) != RC) {
+        report("Illegal virtual register for instruction", MO, MONum);
+        OS << TRI->getRegClassName(RC) << "." << TRI->getSubRegIndexName(SubIdx)
+           << " cannot be used for " << TRI->getRegClassName(DRC)
+           << " operands.";
+      }
+
+      // If no SubIdx is used, verify that RC is a sub-class of DRC.
+      if (!SubIdx && !RC->hasSuperClassEq(DRC)) {
+        report("Illegal virtual register for instruction", MO, MONum);
+        OS << "Expected a " << TRI->getRegClassName(DRC)
+           << " register, but got a " << TRI->getRegClassName(RC)
+           << " register\n";
       }
     }
     break;
@@ -2861,34 +2860,32 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       LiveInterval &LI = LiveStks->getInterval(FI);
       SlotIndex Idx = LiveInts->getInstructionIndex(*MI);
 
-      bool stores = MI->mayStore();
-      bool loads = MI->mayLoad();
+      bool MayStore = MI->mayStore();
+      bool MayLoad = MI->mayLoad();
       // For a memory-to-memory move, we need to check if the frame
       // index is used for storing or loading, by inspecting the
       // memory operands.
-      if (stores && loads) {
-        for (auto *MMO : MI->memoperands()) {
-          const PseudoSourceValue *PSV = MMO->getPseudoValue();
-          if (PSV == nullptr) continue;
-          const FixedStackPseudoSourceValue *Value =
-            dyn_cast<FixedStackPseudoSourceValue>(PSV);
-          if (Value == nullptr) continue;
-          if (Value->getFrameIndex() != FI) continue;
+      if (MayStore && MayLoad) {
+        for (const MachineMemOperand *MMO : MI->memoperands()) {
+          const auto *Value = dyn_cast_if_present<FixedStackPseudoSourceValue>(
+              MMO->getPseudoValue());
+          if (!Value || Value->getFrameIndex() != FI)
+            continue;
 
           if (MMO->isStore())
-            loads = false;
+            MayLoad = false;
           else
-            stores = false;
+            MayStore = false;
           break;
         }
-        if (loads == stores)
+        if (MayLoad == MayStore)
           report("Missing fixed stack memoperand.", MI);
       }
-      if (loads && !LI.liveAt(Idx.getRegSlot(true))) {
+      if (MayLoad && !LI.liveAt(Idx.getRegSlot(true))) {
         report("Instruction loads from dead spill slot", MO, MONum);
         OS << "Live stack: " << LI << '\n';
       }
-      if (stores && !LI.liveAt(Idx.getRegSlot())) {
+      if (MayStore && !LI.liveAt(Idx.getRegSlot())) {
         report("Instruction stores to dead spill slot", MO, MONum);
         OS << "Live stack: " << LI << '\n';
       }
@@ -3152,9 +3149,12 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       addRegWithSubRegs(regsDefined, Reg);
 
     // Verify SSA form.
-    if (MRI->isSSA() && Reg.isVirtual() &&
-        std::next(MRI->def_begin(Reg)) != MRI->def_end())
-      report("Multiple virtual register defs in SSA form", MO, MONum);
+    if (MRI->isSSA() && Reg.isVirtual()) {
+      if (!MRI->hasOneDef(Reg))
+        report("Multiple virtual register defs in SSA form", MO, MONum);
+      if (MO->getSubReg())
+        report("Subreg def in SSA form", MO, MONum);
+    }
 
     // Check LiveInts for a live segment, but only for virtual registers.
     if (LiveInts && !LiveInts->isNotInMIMap(*MI)) {

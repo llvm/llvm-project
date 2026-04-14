@@ -103,9 +103,13 @@ void DivergenceLoweringHelper::getCandidatesForLowering(
     SmallVectorImpl<MachineInstr *> &Vreg1Phis) const {
   LLT S1 = LLT::scalar(1);
 
-  // Add divergent i1 phis to the list
+  // Add divergent i1 G_PHIs to the list. Only consider G_PHI instructions,
+  // not PHI instructions that may have been created by earlier lowering stages
+  // (e.g., lowerTemporalDivergenceI1).
   for (MachineBasicBlock &MBB : *MF) {
     for (MachineInstr &MI : MBB.phis()) {
+      if (MI.getOpcode() != TargetOpcode::G_PHI)
+        continue;
       Register Dst = MI.getOperand(0).getReg();
       if (MRI->getType(Dst) == S1 && MUI->isDivergent(Dst))
         Vreg1Phis.push_back(&MI);
@@ -173,9 +177,9 @@ void DivergenceLoweringHelper::buildMergeLaneMasks(
   Register CurMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
 
   B.setInsertPt(MBB, I);
-  B.buildInstr(AndN2Op, {PrevMaskedReg}, {PrevRegCopy, ExecReg});
-  B.buildInstr(AndOp, {CurMaskedReg}, {ExecReg, CurRegCopy});
-  B.buildInstr(OrOp, {DstReg}, {PrevMaskedReg, CurMaskedReg});
+  B.buildInstr(LMC->AndN2Opc, {PrevMaskedReg}, {PrevRegCopy, LMC->ExecReg});
+  B.buildInstr(LMC->AndOpc, {CurMaskedReg}, {LMC->ExecReg, CurRegCopy});
+  B.buildInstr(LMC->OrOpc, {DstReg}, {PrevMaskedReg, CurMaskedReg});
 }
 
 // GlobalISel has to constrain S1 incoming taken as-is with lane mask register
@@ -218,7 +222,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergence() {
 
     Register VgprReg = MRI->createGenericVirtualRegister(MRI->getType(Reg));
     B.buildInstr(AMDGPU::COPY, {VgprReg}, {Reg})
-        .addUse(ExecReg, RegState::Implicit);
+        .addUse(LMC->ExecReg, RegState::Implicit);
 
     replaceUsesOfRegInInstWith(Reg, UseInst, VgprReg);
     TDCache[Reg] = VgprReg;

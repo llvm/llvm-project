@@ -191,7 +191,7 @@ arguments.
    * - ``%range_size``
      - 3
      - ``i32``
-     - Range size of the binding.
+     - Range size of the binding, where ``0`` denotes an unbounded range.
    * - ``%index``
      - 4
      - ``i32``

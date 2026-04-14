@@ -226,7 +226,7 @@ namespace testNullReceiver {
 // CHECK: call void @objc_msgSend({{.*}}, i64 %[[COERCE_VAL_PI]])
 // CHECK: br
 
-// CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN6StrongD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %[[AGG_TMP]])
+// CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN6StrongD1Ev(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[AGG_TMP]])
 // CHECK: br
 
 void test0(C *c) {
@@ -240,7 +240,7 @@ void test0(C *c) {
 // CHECK: call void @objc_msgSend({{.*}}, ptr noundef dead_on_return %[[AGG_TMP]])
 // CHECK: br
 
-// CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN10StrongWeakD1Ev(ptr noundef nonnull align 8 dereferenceable(16) %[[AGG_TMP]])
+// CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN10StrongWeakD1Ev(ptr noundef nonnull align 8 dead_on_return(16) dereferenceable(16) %[[AGG_TMP]])
 // CHECK: br
 
 void test1(C *c) {
@@ -252,7 +252,7 @@ void test1(C *c) {
 // CHECK-LABEL: define{{.*}} void @_ZN16testNullReceiver5test2EP1C(
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_NONTRIVIAL]], align 8
 // CHECK: call void @objc_msgSend({{.*}}, ptr noundef %[[AGG_TMP]])
-// CHECK-NEXT: call noundef ptr @_ZN10NonTrivialD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %[[AGG_TMP]])
+// CHECK-NEXT: call noundef ptr @_ZN10NonTrivialD1Ev(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[AGG_TMP]])
 
 void test2(C *c) {
   [c passNonTrivial:NonTrivial()];

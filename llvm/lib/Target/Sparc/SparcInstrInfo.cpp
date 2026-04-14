@@ -47,15 +47,31 @@ SparcInstrInfo::SparcInstrInfo(const SparcSubtarget &ST)
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
 Register SparcInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
-                                             int &FrameIndex) const {
-  if (MI.getOpcode() == SP::LDri || MI.getOpcode() == SP::LDXri ||
-      MI.getOpcode() == SP::LDFri || MI.getOpcode() == SP::LDDFri ||
-      MI.getOpcode() == SP::LDQFri) {
-    if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
-        MI.getOperand(2).getImm() == 0) {
-      FrameIndex = MI.getOperand(1).getIndex();
-      return MI.getOperand(0).getReg();
-    }
+                                             int &FrameIndex,
+                                             TypeSize &MemBytes) const {
+  switch (MI.getOpcode()) {
+  default:
+    return 0;
+  case SP::LDri:
+    MemBytes = TypeSize::getFixed(4);
+    break;
+  case SP::LDXri:
+    MemBytes = TypeSize::getFixed(8);
+    break;
+  case SP::LDFri:
+    MemBytes = TypeSize::getFixed(4);
+    break;
+  case SP::LDDFri:
+    MemBytes = TypeSize::getFixed(8);
+    break;
+  case SP::LDQFri:
+    MemBytes = TypeSize::getFixed(16);
+    break;
+  }
+  if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
+      MI.getOperand(2).getImm() == 0) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
   }
   return 0;
 }
@@ -66,15 +82,31 @@ Register SparcInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
 Register SparcInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
-                                            int &FrameIndex) const {
-  if (MI.getOpcode() == SP::STri || MI.getOpcode() == SP::STXri ||
-      MI.getOpcode() == SP::STFri || MI.getOpcode() == SP::STDFri ||
-      MI.getOpcode() == SP::STQFri) {
-    if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
-        MI.getOperand(1).getImm() == 0) {
-      FrameIndex = MI.getOperand(0).getIndex();
-      return MI.getOperand(2).getReg();
-    }
+                                            int &FrameIndex,
+                                            TypeSize &MemBytes) const {
+  switch (MI.getOpcode()) {
+  default:
+    return 0;
+  case SP::STri:
+    MemBytes = TypeSize::getFixed(4);
+    break;
+  case SP::STXri:
+    MemBytes = TypeSize::getFixed(8);
+    break;
+  case SP::STFri:
+    MemBytes = TypeSize::getFixed(4);
+    break;
+  case SP::STDFri:
+    MemBytes = TypeSize::getFixed(8);
+    break;
+  case SP::STQFri:
+    MemBytes = TypeSize::getFixed(16);
+    break;
+  }
+  if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
+      MI.getOperand(1).getImm() == 0) {
+    FrameIndex = MI.getOperand(0).getIndex();
+    return MI.getOperand(2).getReg();
   }
   return 0;
 }
@@ -631,6 +663,22 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+  }
+
+  if (MI.getOpcode() == SP::GETPCX) {
+    const TargetMachine &TM = MI.getParent()->getParent()->getTarget();
+    if (TM.isPositionIndependent())
+      return 16;
+    switch (TM.getCodeModel()) {
+    default:
+      llvm_unreachable("Unsupported absolute code model");
+    case CodeModel::Small:
+      return 8;
+    case CodeModel::Medium:
+      return 16;
+    case CodeModel::Large:
+      return 24;
+    }
   }
 
   // If the instruction has a delay slot, be conservative and also include

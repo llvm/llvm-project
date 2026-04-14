@@ -136,7 +136,9 @@ TEST_F(VPInstructionTest, setOperand) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   EXPECT_EQ(1u, VPV1->getNumUsers());
   EXPECT_EQ(I1, *VPV1->user_begin());
   EXPECT_EQ(1u, VPV2->getNumUsers());
@@ -179,7 +181,9 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
 
   // Replace all uses of VPV1 with VPV3.
   VPValue *VPV3 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
@@ -210,7 +214,9 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   EXPECT_EQ(0u, VPV2->getNumUsers());
   EXPECT_EQ(0u, VPV3->getNumUsers());
 
-  VPInstruction *I2 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
+  VPInstruction *I2 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   EXPECT_EQ(3u, VPV1->getNumUsers());
   VPV1->replaceAllUsesWith(VPV3);
   EXPECT_EQ(3u, VPV3->getNumUsers());
@@ -223,7 +229,9 @@ TEST_F(VPInstructionTest, releaseOperandsAtDeletion) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
 
   EXPECT_EQ(1u, VPV1->getNumUsers());
   EXPECT_EQ(I1, *VPV1->user_begin());
@@ -388,10 +396,26 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Successors of R1.
     SmallVector<const VPBlockBase *> FromIterator(
-        VPAllSuccessorsIterator<VPBlockBase *>(R1),
-        VPAllSuccessorsIterator<VPBlockBase *>::end(R1));
+        VPHierarchicalChildrenIterator<VPBlockBase *>(R1),
+        VPHierarchicalChildrenIterator<VPBlockBase *>::end(R1));
     EXPECT_EQ(1u, FromIterator.size());
     EXPECT_EQ(R1BB1, FromIterator[0]);
+
+    // Predecessors of R1.
+    FromIterator.clear();
+    copy(VPHierarchicalChildrenIterator<VPBlockBase *, false>(R1),
+         VPHierarchicalChildrenIterator<VPBlockBase *, false>::end(R1),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(1u, FromIterator.size());
+    EXPECT_EQ(R1BB4, FromIterator[0]);
+
+    // Predecessors of R1BB1.
+    FromIterator.clear();
+    copy(VPHierarchicalChildrenIterator<VPBlockBase *, false>(R1BB1),
+         VPHierarchicalChildrenIterator<VPBlockBase *, false>::end(R1BB1),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(1u, FromIterator.size());
+    EXPECT_EQ(VPBB0, FromIterator[0]);
 
     // Depth-first.
     VPBlockDeepTraversalWrapper<VPBlockBase *> Start(R1);
@@ -406,6 +430,21 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(R2BB1, FromIterator[5]);
     EXPECT_EQ(R2BB2, FromIterator[6]);
     EXPECT_EQ(R1BB3, FromIterator[7]);
+
+    // Depth-first on the inverse graph (traverse predecessors).
+    FromIterator.clear();
+    copy(depth_first<Inverse<VPBlockBase *>>(R2),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(9u, FromIterator.size());
+    EXPECT_EQ(R2, FromIterator[0]);
+    EXPECT_EQ(R2BB2, FromIterator[1]);
+    EXPECT_EQ(R2BB1, FromIterator[2]);
+    EXPECT_EQ(R1, FromIterator[3]);
+    EXPECT_EQ(R1BB4, FromIterator[4]);
+    EXPECT_EQ(R1BB2, FromIterator[5]);
+    EXPECT_EQ(R1BB1, FromIterator[6]);
+    EXPECT_EQ(VPBB0, FromIterator[7]);
+    EXPECT_EQ(R1BB3, FromIterator[8]);
 
     // const VPBasicBlocks only.
     FromIterator.clear();
@@ -507,7 +546,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Post-order.
     FromIterator.clear();
-    FromIterator.append(po_begin(Start), po_end(Start));
+    copy(post_order(Start), std::back_inserter(FromIterator));
     EXPECT_EQ(10u, FromIterator.size());
     EXPECT_EQ(VPBB2, FromIterator[0]);
     EXPECT_EQ(R1BB3, FromIterator[1]);
@@ -558,7 +597,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Post-order.
     FromIterator.clear();
-    FromIterator.append(po_begin(Start), po_end(Start));
+    copy(post_order(Start), std::back_inserter(FromIterator));
     EXPECT_EQ(5u, FromIterator.size());
     EXPECT_EQ(R2BB2, FromIterator[0]);
     EXPECT_EQ(R2BB1, FromIterator[1]);
@@ -639,8 +678,9 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Post-order, const VPRegionBlocks only.
     VPBlockDeepTraversalWrapper<const VPBlockBase *> StartConst(VPBB1);
-    SmallVector<const VPRegionBlock *> FromIteratorVPRegion(
-        VPBlockUtils::blocksOnly<const VPRegionBlock>(post_order(StartConst)));
+    SmallVector<const VPRegionBlock *> FromIteratorVPRegion;
+    copy(VPBlockUtils::blocksOnly<const VPRegionBlock>(post_order(StartConst)),
+         std::back_inserter(FromIteratorVPRegion));
     EXPECT_EQ(3u, FromIteratorVPRegion.size());
     EXPECT_EQ(R3, FromIteratorVPRegion[0]);
     EXPECT_EQ(R2, FromIteratorVPRegion[1]);
@@ -725,8 +765,12 @@ TEST_F(VPBasicBlockTest, print) {
   VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPBasicBlock *VPBB0 = Plan.getEntry();
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
-  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1, Val});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Val, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 =
+      new VPInstruction(Instruction::Sub, {I1, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
   VPInstruction *I3 = new VPInstruction(Instruction::Store, {I1, I2});
 
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
@@ -735,7 +779,8 @@ TEST_F(VPBasicBlockTest, print) {
   VPBB1->appendRecipe(I3);
   VPBB1->setName("bb1");
 
-  VPInstruction *I4 = new VPInstruction(Instruction::Mul, {I2, I1});
+  VPInstruction *I4 = new VPInstruction(
+      Instruction::Mul, {I2, I1}, VPIRFlags::getDefaultFlags(Instruction::Mul));
   VPInstruction *I5 = new VPInstruction(Instruction::Freeze, {I4});
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
   VPBB2->appendRecipe(I4);
@@ -836,7 +881,9 @@ TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
   VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPBasicBlock *VPBB0 = Plan.getEntry();
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Val, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
   VPBB1->appendRecipe(I1);
   VPBB1->setName("bb1");
@@ -922,8 +969,12 @@ TEST_F(VPBasicBlockTest, cloneAndPrint) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
-  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1, Val});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Val, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 =
+      new VPInstruction(Instruction::Sub, {I1, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
   VPInstruction *I3 = new VPInstruction(Instruction::Store, {I1, I2});
 
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
@@ -994,7 +1045,8 @@ TEST_F(VPRecipeTest, CastVPInstructionToVPUser) {
   VPlan &Plan = getPlan();
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPInstruction Recipe(Instruction::Add, {Op1, Op2});
+  VPInstruction Recipe(Instruction::Add, {Op1, Op2},
+                       VPIRFlags::getDefaultFlags(Instruction::Add));
 
   checkVPRecipeCastImpl<VPInstruction, VPUser, VPIRMetadata>(&Recipe);
 }
@@ -1067,7 +1119,8 @@ TEST_F(VPRecipeTest, CastVPWidenCastRecipeToVPUser) {
   IntegerType *Int64 = IntegerType::get(C, 64);
   auto *Cast = CastInst::CreateZExtOrBitCast(PoisonValue::get(Int32), Int64);
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, Cast);
+  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, Cast,
+                           VPIRFlags::getDefaultFlags(Instruction::ZExt));
 
   checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser, VPIRMetadata>(&Recipe);
   delete Cast;
@@ -1095,7 +1148,7 @@ TEST_F(VPRecipeTest, CastVPBlendRecipeToVPUser) {
   Args.push_back(I1);
   Args.push_back(I2);
   Args.push_back(M2);
-  VPBlendRecipe Recipe(Phi, Args, {});
+  VPBlendRecipe Recipe(Phi, Args, {}, {});
 
   checkVPRecipeCastImpl<VPBlendRecipe, VPUser>(&Recipe);
 
@@ -1381,7 +1434,18 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    VPInstruction VPInst(Instruction::Add, {Op1, Op2});
+    VPInstruction VPInst(Instruction::Add, {Op1, Op2},
+                         VPIRFlags::getDefaultFlags(Instruction::Add));
+    VPRecipeBase &Recipe = VPInst;
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
+  }
+  {
+    VPValue *Op1 = Plan.getConstantInt(Int32, 1);
+    VPInstruction VPInst(Instruction::FNeg, {Op1},
+                         VPIRFlags::getDefaultFlags(Instruction::FNeg));
     VPRecipeBase &Recipe = VPInst;
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
@@ -1392,6 +1456,13 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPPredInstPHIRecipe Recipe(Op1, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
+  }
+  {
+    VPIRValue *StartV = Plan.getZero(Int32);
+    VPCanonicalIVPHIRecipe Recipe(StartV, {});
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
@@ -1474,8 +1545,11 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
   VPValue *ExtVPV2 = Plan.getOrAddLiveIn(AI);
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2});
-  VPInstruction *I2 = new VPInstruction(Instruction::Mul, {I1, I1});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 = new VPInstruction(
+      Instruction::Mul, {I1, I1}, VPIRFlags::getDefaultFlags(Instruction::Mul));
   VPBB1->appendRecipe(I1);
   VPBB1->appendRecipe(I2);
 
@@ -1534,8 +1608,11 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
   VPValue *ExtVPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *ExtVPV2 = getPlan().getOrAddLiveIn(AI);
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2});
-  VPInstruction *I2 = new VPInstruction(Instruction::Mul, {I1, I1});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 = new VPInstruction(
+      Instruction::Mul, {I1, I1}, VPIRFlags::getDefaultFlags(Instruction::Mul));
 
   // Check printing I1.
   {
@@ -1642,8 +1719,9 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   VPDoubleValueDef DoubleValueDef({&Op0, &Op1});
 
   // Create a new users of the defined values.
-  VPInstruction I1(Instruction::Add, {DoubleValueDef.getVPValue(0),
-                                      DoubleValueDef.getVPValue(1)});
+  VPInstruction I1(Instruction::Add,
+                   {DoubleValueDef.getVPValue(0), DoubleValueDef.getVPValue(1)},
+                   VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction I2(Instruction::Freeze, {DoubleValueDef.getVPValue(0)});
   VPInstruction I3(Instruction::Freeze, {DoubleValueDef.getVPValue(1)});
 
@@ -1679,11 +1757,48 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
 TEST_F(VPRecipeTest, CastToVPSingleDefRecipe) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *Start = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));
-  VPEVLBasedIVPHIRecipe R(Start, {});
+  VPCurrentIterationPHIRecipe R(Start, {});
   VPRecipeBase *B = &R;
   EXPECT_TRUE(isa<VPSingleDefRecipe>(B));
   // TODO: check other VPSingleDefRecipes.
 }
+
+TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
+  VPlan &Plan = getPlan();
+
+  // Initially, VF is not materialized.
+  EXPECT_FALSE(Plan.getVF().isMaterialized());
+
+  // Create a recipe that uses VF.
+  VPValue *VF = &Plan.getVF();
+  VPInstruction *I = new VPInstruction(VPInstruction::StepVector, {});
+  VPBasicBlock &VPBB = *Plan.createVPBasicBlock("");
+  VPBB.appendRecipe(I);
+  I->addOperand(VF);
+
+  // Replace VF with a constant.
+  VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
+
+  // Now VF should be materialized.
+  EXPECT_TRUE(Plan.getVF().isMaterialized());
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
+  VPlan &Plan = getPlan();
+
+  // Materialize VF by replacing all uses.
+  VPValue *VF = &Plan.getVF();
+  VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
+  EXPECT_TRUE(Plan.getVF().isMaterialized());
+
+  // Adding a new user to a materialized value should crash.
+  VPInstruction *I = new VPInstruction(VPInstruction::StepVector, {});
+  VPBasicBlock &VPBB = *Plan.createVPBasicBlock("");
+  VPBB.appendRecipe(I);
+  EXPECT_DEATH(I->addOperand(VF), "accessing materialized symbolic value");
+}
+#endif
 
 } // namespace
 } // namespace llvm

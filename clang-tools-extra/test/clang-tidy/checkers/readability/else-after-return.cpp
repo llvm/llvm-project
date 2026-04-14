@@ -1,11 +1,5 @@
-// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -fexceptions -std=c++17
-
-namespace std {
-struct string {
-  string(const char *);
-  ~string();
-};
-} // namespace std
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-else-after-return %t -- -- -fexceptions
+#include <string>
 
 struct my_exception {
   my_exception(const std::string &s);
@@ -311,4 +305,220 @@ void testPPConditionals() {
     return;
   }
 #endif
+}
+
+void testSwitchCases(int i, bool b, bool b2) {
+  // Case statement without braces.
+  switch (i) {
+  case 0:
+    if (b) {
+      return;
+    } else { // comment-18
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}}    } // comment-18
+      f(1);
+    }
+  }
+
+  // Fallthrough.
+  switch (i) {
+  case 0:
+  case 1:
+  case 2:
+    if (b)
+      return;
+    else // comment-19
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}} // comment-19
+      return;
+  }
+
+  switch (i) {
+  case 1:
+  case 2:
+    if (b)
+      f(0);
+    else if (b2)
+      return;
+    else // comment-20
+      // CHECK-FIXES-NOT: {{^}}  // comment-20
+      f(1);
+  }
+
+  switch (i) {
+  case 0:
+    if (b) {
+      if (b2)
+        return;
+      else // comment-21
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+        // CHECK-FIXES: {{^}}    // comment-21
+        f(0);
+    } else {
+      if (b && b2)
+        return;
+      else // comment-22
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+        // CHECK-FIXES: {{^}}    // comment-22
+        f(0);
+    }
+  }
+
+  // Nested switch.
+  switch (i) {
+  case 0:
+  case 1:
+    switch (3) {
+    case 0:
+      if (b) {
+        return;
+      } else { // comment-23
+        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: do not use 'else' after 'return'
+        // CHECK-FIXES: {{^}}      } // comment-23
+        f(0);
+      }
+      break;
+    default:
+      break;
+    }
+    break;
+  default:
+    break;
+  }
+
+  switch (i) {
+  case 1:
+    if (b)
+      return;
+    else // comment-24
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+      // CHECK-FIXES-NOT: {{^}}   // comment-24
+      int _ = 20;
+    break;
+  case 2:
+    break;
+  }
+
+  switch (i) {
+  case 1:
+  case 2:
+  [[clang::annotate("TestWithAttributedStmt")]]
+  case 3:
+    if (b) {
+      return;
+    } else { // comment-25
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}}      } // comment-25
+        f(0);
+    }
+  }
+}
+
+void testLabels(bool b) {
+  goto LABEL;
+  goto LABEL2;
+
+LABEL:
+  if (b)
+    return;
+  else // comment-26
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use 'else' after 'return'
+    // CHECK-FIXES: {{^}} // comment-26
+    return;
+
+  switch ((int)b) {
+  case 1:
+  case 2:
+  LABEL2:
+    if (0)
+      return;
+    else  // comment-27
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}} // comment-27
+      f(0);
+  }
+
+  if (true) {
+    goto skip_over_return;
+    return;
+skip_over_return:
+    f(0);
+  } else {
+    f(0);
+  }
+
+  if (true) {
+    goto skip_over_return2;
+    return;
+skip_over_return2:
+    // No statement after label. Valid since C++23/C23.
+  } else {
+    f(0);
+  }
+
+  if (true) {
+    goto skip_over_return3;
+    return;
+skip_over_return3:
+    return;
+  } else { // comment-28
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+    // CHECK-FIXES: {{^}}  } // comment-28
+    f(0);
+  }
+}
+
+void testExcessiveBracing() {
+  if (false) {
+    {{{ return; }}}
+  } else { // comment-29
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+  // CHECK-FIXES: {{^}}  } // comment-29
+    return;
+  }
+}
+
+[[noreturn]] void noReturn();
+
+struct NoReturnMember {
+  [[noreturn]] void noReturn();
+};
+
+void testNoReturn() {
+  if (true) {
+    noReturn();
+  } else { // comment-30
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after calling a function that doesn't return
+    // CHECK-FIXES: {{^}}  } // comment-30
+    f(0);
+  }
+
+  if (true) {
+    NoReturnMember f;
+    f.noReturn();
+  } else { // comment-31
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after calling a function that doesn't return
+    // CHECK-FIXES: {{^}}  } // comment-31
+    f(0);
+  }
+}
+
+void testFixitsPreserveComments() {
+  if (true) {
+    return;
+  } else {// aaaa
+    // bbbb
+  }// cccc
+  // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: do not use 'else' after 'return'
+  // CHECK-FIXES:      } // aaaa
+  // CHECK-FIXES-NEXT: // bbbb
+  // CHECK-FIXES-NEXT: // cccc
+
+  if (true)
+    return;
+  else// dddd
+    ;// eeee
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: do not use 'else' after 'return'
+  // CHECK-FIXES:      // dddd
+  // CHECK-FIXES-NEXT: ;// eeee
 }

@@ -1,0 +1,53 @@
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -filetype=obj %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -filetype=obj %S/Inputs/archive1.s -o %t.a1.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -filetype=obj %S/Inputs/archive2.s -o %t.a2.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -filetype=obj %S/Inputs/archive3.s -o %t.a3.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/hello.s -o %t.hello.o
+# RUN: rm -f %t.a
+# RUN: llvm-ar rcs %t.a %t.a1.o %t.a2.o %t.a3.o %t.hello.o
+# RUN: rm -f %t.imports
+# RUN: not wasm-ld %t.a %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-UNDEFINED %s
+
+# CHECK-UNDEFINED: undefined symbol: missing_func
+
+# RUN: echo 'missing_func' > %t.imports
+# RUN: wasm-ld -r %t.a %t.o -o %t.wasm
+
+# RUN: llvm-nm -a %t.wasm | FileCheck %s
+
+.functype foo () -> (i32)
+.functype missing_func () -> ()
+
+.globl _start
+_start:
+  .functype _start () -> ()
+  call foo
+  drop
+  call missing_func
+  end_function
+
+# Verify that mutually dependant object files in an archive is handled
+# correctly.  Since we're using llvm-nm, we must link with --relocatable.
+#
+# TODO(ncw): Update LLD so that the symbol table is written out for
+#   non-relocatable output (with an option to strip it)
+
+# CHECK:      00000016 T _start
+# CHECK-NEXT: 0000000a T archive2_symbol
+# CHECK-NEXT: 00000001 T bar
+# CHECK-NEXT: 0000000d T foo
+# CHECK-NEXT:          U missing_func
+
+# Verify that symbols from unused objects don't appear in the symbol table
+# CHECK-NOT: hello
+
+# Specifying the same archive twice is allowed.
+# RUN: wasm-ld %t.a %t.a %t.o -o %t.wasm
+
+# Verfiy errors include library name
+# RUN: not wasm-ld -u archive2_symbol -u archive3_symbol %t.a %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-DUP %s
+# And that this also works with --whole-archive
+# RUN: not wasm-ld -u archive2_symbol -u archive3_symbol --whole-archive %t.a %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-DUP %s
+# CHECK-DUP: error: duplicate symbol: bar
+# CHECK-DUP: >>> defined in {{.*}}.a({{.*}}.a2.o)
+# CHECK-DUP: >>> defined in {{.*}}.a({{.*}}.a3.o)
