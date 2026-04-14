@@ -785,6 +785,30 @@ namespace APValues {
   constexpr const A &w = get<A{1, &g, &A::n, "hello"}>;
 }
 
+namespace InitFromAPValues {
+  template <auto a> struct S {
+    static constexpr auto &ref = a;
+  };
+
+  union U1 { int x, y; };
+  static_assert(S<U1{1}>::ref.x == 1);
+  static_assert(S<U1{1}>::ref.y == 1); // both-error {{static assertion expression is not an integral constant expression}} \
+                                       // both-note {{read of member 'y' of union with active member 'x' is not allowed in a constant expression}}
+
+  union U2 {
+    bool x;
+    constexpr U2() {}
+  };
+  static_assert(S<U2{}>::ref.x); // both-error {{static assertion expression is not an integral constant expression}} \
+                                 // both-note {{read of member 'x' of union with no active member is not allowed in a constant expression}}
+
+  union U3 {
+    struct S { int x; };
+    S s;
+  };
+  static_assert(S<U3{2}>::ref.s.x == 2);
+}
+
 namespace self_referencing {
   struct S {
     S* ptr = nullptr;
@@ -1279,4 +1303,31 @@ namespace PointerCmp {
   constexpr A a{1,2, 3};
   static_assert((void*)(&a.i + 1) != (void*)(&a.i[1])); // expected-error {{static assertion failed}}
   static_assert((void*)(&a.i[2] + 1) == (void*)(&a.i[3]));
+}
+
+namespace ExpandOnOPTEPointers {
+
+  template <class _BidirectionalIterator>
+  constexpr void inplace_merge(_BidirectionalIterator __first,
+                               _BidirectionalIterator __middle) {
+
+    if (__first != __middle)
+      ++__first;
+  }
+  template <class> struct bidirectional_iterator {
+    int *it_;
+    constexpr void operator++() { ++it_; }
+
+    friend constexpr bool operator!=(bidirectional_iterator x,
+                                     bidirectional_iterator y) {
+      return x.it_ != y.it_;
+    }
+  };
+  constexpr bool test() {
+    int *ia = new int[0];
+    inplace_merge(bidirectional_iterator<int *>(ia), bidirectional_iterator<int *>(ia + 0));
+    delete[] ia;
+    return true;
+  }
+  static_assert(test());
 }

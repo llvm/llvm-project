@@ -101,7 +101,7 @@ inline constexpr __consume_result __consume_result_error{__replacement_character
   return __unicode::__is_code_point(__value) && !__unicode::__is_surrogate(__value);
 }
 
-template <contiguous_iterator _Iterator>
+template <class _Iterator>
   requires same_as<iter_value_t<_Iterator>, char>
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_continuation(_Iterator __char, int __count) {
   do {

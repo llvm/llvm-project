@@ -39,7 +39,6 @@ static void test_stream() {
   port.send_n(send_ptr, send_size);
   port.recv_n(&recv_ptr, &recv_size,
               [](uint64_t size) { return malloc(size); });
-  port.close();
   ASSERT_TRUE(inline_memcmp(recv_ptr, str, recv_size) == 0 && "Data mismatch");
   ASSERT_TRUE(recv_size == send_size && "Data size mismatch");
 
@@ -83,7 +82,6 @@ static void test_divergent() {
   port.send_n(buffer, offset);
   inline_memset(buffer, 0, offset);
   port.recv_n(&recv_ptr, &recv_size, [&](uint64_t) { return buffer; });
-  port.close();
 
   ASSERT_TRUE(inline_memcmp(recv_ptr, &data[offset], recv_size) == 0 &&
               "Data mismatch");

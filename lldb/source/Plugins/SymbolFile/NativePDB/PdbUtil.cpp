@@ -252,6 +252,7 @@ PDB_SymType lldb_private::npdb::CVSymToPDBSym(SymbolKind kind) {
   case S_LOCAL:
   case S_BPREL32:
   case S_REGREL32:
+  case S_REGREL32_INDIR:
   case S_MANCONSTANT:
   case S_CONSTANT:
   case S_LDATA32:
@@ -611,6 +612,14 @@ VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
     return result;
   }
 
+  if (sym.kind() == S_REGREL32_INDIR) {
+    RegRelativeIndirSym reg(SymbolRecordKind::RegRelativeIndirSym);
+    cantFail(SymbolDeserializer::deserializeAs<RegRelativeIndirSym>(sym, reg));
+    result.type = reg.Type;
+    result.name = reg.Name;
+    return result;
+  }
+
   if (sym.kind() == S_REGISTER) {
     RegisterSym reg(SymbolRecordKind::RegisterSym);
     cantFail(SymbolDeserializer::deserializeAs<RegisterSym>(sym, reg));
@@ -748,6 +757,17 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
     return result;
   }
 
+  if (sym.kind() == S_REGREL32_INDIR) {
+    RegRelativeIndirSym reg(SymbolRecordKind::RegRelativeIndirSym);
+    cantFail(SymbolDeserializer::deserializeAs<RegRelativeIndirSym>(sym, reg));
+    result.location = DWARFExpressionList(
+        module,
+        MakeRegRelIndirLocationExpression(reg.Register, reg.Offset,
+                                          reg.OffsetInUdt, module),
+        nullptr);
+    return result;
+  }
+
   if (sym.kind() == S_REGISTER) {
     RegisterSym reg(SymbolRecordKind::RegisterSym);
     cantFail(SymbolDeserializer::deserializeAs<RegisterSym>(sym, reg));
@@ -862,6 +882,37 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
         } else {
           expr = MakeRegRelLocationExpression(reg_id, loc.Hdr.BasePointerOffset,
                                               module);
+        }
+        // FIXME: If it's UDT, we need to know the size of the value in byte.
+        if (!loc.hasSpilledUDTMember())
+          AddDwarfRange(location_map, expr, raw_ranges);
+        break;
+      }
+      case S_DEFRANGE_REGISTER_REL_INDIR: {
+        DefRangeRegisterRelIndirSym loc(
+            SymbolRecordKind::DefRangeRegisterRelIndirSym);
+        if (llvm::Error error =
+                SymbolDeserializer::deserializeAs<DefRangeRegisterRelIndirSym>(
+                    loc_specifier_cvs, loc)) {
+          llvm::consumeError(std::move(error));
+          return result;
+        }
+        Variable::RangeList raw_ranges =
+            MakeRangeList(index, loc.Range, loc.Gaps);
+        RegisterId reg_id = (RegisterId)(uint16_t)loc.Hdr.Register;
+        DWARFExpression expr;
+        if (reg_id == RegisterId::VFRAME) {
+          llvm::StringRef program;
+          if (GetFrameDataProgram(index, raw_ranges, program))
+            expr = MakeVFrameRelIndirLocationExpression(
+                program, loc.Hdr.BasePointerOffset, loc.Hdr.OffsetInUdt,
+                module);
+          else {
+            // invalid variable
+          }
+        } else {
+          expr = MakeRegRelIndirLocationExpression(
+              reg_id, loc.Hdr.BasePointerOffset, loc.Hdr.OffsetInUdt, module);
         }
         // FIXME: If it's UDT, we need to know the size of the value in byte.
         if (!loc.hasSpilledUDTMember())

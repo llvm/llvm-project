@@ -146,6 +146,12 @@ namespace tosa {
 
 bool isa_tosa_shape_type(mlir::Type t);
 
+/// Represents a dimension in the shape of a tensor that can be inferred
+/// based on the other provided dimensions. For example, in a reshape
+/// operation, -1 can be used to indicate a size that is the remainder
+/// of the other dimensions.
+constexpr int64_t kInferableDimSize = -1;
+
 } // namespace tosa
 
 } // namespace mlir

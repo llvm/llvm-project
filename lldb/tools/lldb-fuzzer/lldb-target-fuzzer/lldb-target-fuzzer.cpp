@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "utils/SBDebuggerContextManager.h"
 #include "utils/TempFile.h"
 
 #include "lldb/API/SBDebugger.h"
@@ -21,6 +22,9 @@ extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
 }
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
+  static thread_local SBDebuggerContextManager ctx_manager =
+      SBDebuggerContextManager();
+
   std::unique_ptr<TempFile> file = TempFile::Create(data, size);
   if (!file)
     return 1;

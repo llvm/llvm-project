@@ -588,17 +588,25 @@ inline static Value genInvariantValue(CodegenEnv &env, ExprId exp) {
 static Value relinkBranch(CodegenEnv &env, RewriterBase &rewriter, Block *block,
                           Value e) {
   if (auto arg = dyn_cast<BlockArgument>(e)) {
-    // Direct arguments of the original linalg op must be converted
-    // into dense tensor loads. Note that we should not encounter
-    // anything else. This needs to be verified by semi-ring ops.
+    // Direct arguments of the original linalg op must be converted into
+    // tensor element loads. This handles both dense tensor loads (using
+    // current loop coordinates) and sparse tensor loads (using the current
+    // value position tracked by the loop emitter).
     linalg::GenericOp op = env.op();
     if (arg.getOwner()->getParentOp() == op) {
       const TensorId tid = env.makeTensorId(arg.getArgNumber());
       OpOperand *t = &op->getOpOperand(tid);
-      assert(!getSparseTensorType(t->get()).hasEncoding()); // dense!
       SmallVector<Value> args;
       Value ptr = genSubscript(env, rewriter, t, args);
-      return memref::LoadOp::create(rewriter, op.getLoc(), ptr, args);
+      Location loc = op.getLoc();
+      if (llvm::isa<TensorType>(ptr.getType())) {
+        // kSparseIterator strategy: extract value at the iterator position.
+        assert(env.options().sparseEmitStrategy ==
+               SparseEmitStrategy::kSparseIterator);
+        return ExtractValOp::create(rewriter, loc, ptr,
+                                    llvm::getSingleElement(args));
+      }
+      return memref::LoadOp::create(rewriter, loc, ptr, args);
     }
   } else if (Operation *def = e.getDefiningOp()) {
     // Handle index computation.

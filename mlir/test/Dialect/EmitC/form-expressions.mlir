@@ -20,6 +20,25 @@ func.func @single_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> 
   return %c : i1
 }
 
+// CHECK-LABEL:   func.func @expression_recurring_args(
+// CHECK-SAME:      %[[ARG0:.*]]: i32,
+// CHECK-SAME:      %[[ARG1:.*]]: i32) -> i1 {
+// CHECK:           %[[EXPRESSION_0:.*]] = emitc.expression %[[ARG1]], %[[ARG0]] : (i32, i32) -> i1 {
+// CHECK:             %[[VAL_0:.*]] = mul %[[ARG0]], %[[ARG1]] : (i32, i32) -> i32
+// CHECK:             %[[VAL_1:.*]] = sub %[[VAL_0]], %[[ARG0]] : (i32, i32) -> i32
+// CHECK:             %[[VAL_2:.*]] = cmp lt, %[[VAL_1]], %[[ARG1]] : (i32, i32) -> i1
+// CHECK:             yield %[[VAL_2]] : i1
+// CHECK:           }
+// CHECK:           return %[[EXPRESSION_0]] : i1
+// CHECK:         }
+
+func.func @expression_recurring_args(%arg0: i32, %arg1: i32) -> i1 {
+  %a = emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+  %b = emitc.sub %a, %arg0 : (i32, i32) -> i32
+  %c = emitc.cmp lt, %b, %arg1 :(i32, i32) -> i1
+  return %c : i1
+}
+
 // CHECK-LABEL: func.func @multiple_expressions(
 // CHECK-SAME:      %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32, %[[VAL_3:.*]]: i32) -> (i32, i32) {
 // CHECK:         %[[VAL_4:.*]] = emitc.expression %[[VAL_2]], %[[VAL_0]], %[[VAL_1]] : (i32, i32, i32) -> i32 {
@@ -207,4 +226,32 @@ func.func @expression_with_constant(%arg0: i32) -> i32 {
   %c42 = "emitc.constant"(){value = 42 : i32} : () -> i32
   %a = emitc.mul %arg0, %c42 : (i32, i32) -> i32
   return %a : i32
+}
+
+// Regression test for https://github.com/llvm/llvm-project/issues/179844:
+// An identity cast (same in/out type) inside an expression is folded away
+// by CastOpInterface::foldTrait, leaving the expression body yielding a block
+// argument. FoldTrivialExpressionOp must canonicalize such expressions before
+// FoldExpressionOp tries to fold them.
+//
+// CHECK-LABEL: func.func @identity_cast_folded(
+// CHECK-SAME:                                  %[[ARG0:.*]]: i32) -> i32 {
+// CHECK:         %[[EXPR:.*]] = emitc.expression %[[ARG0]] : (i32) -> i32 {
+// CHECK:           %[[RES:.*]] = bitwise_and %[[ARG0]], %[[ARG0]] : (i32, i32) -> i32
+// CHECK:           yield %[[RES]] : i32
+// CHECK:         }
+// CHECK:         return %[[EXPR]] : i32
+// CHECK:       }
+
+func.func @identity_cast_folded(%arg0: i32) -> i32 {
+  // emitc.cast i32->i32 is an identity cast; CastOpInterface folds it away.
+  // After folding, FoldTrivialExpressionOp must canonicalize the expression
+  // that wraps this cast (which just yields its block arg) before
+  // FoldExpressionOp tries to fold it into the bitwise_and expression.
+  %0 = emitc.cast %arg0 : i32 to i32
+  // The bitwise_and uses both the cast result and the original arg, giving
+  // two uses of the cast expression's result (one from this op, one from the
+  // identity comparison below that keeps the cast live during canonicalization).
+  %1 = emitc.bitwise_and %0, %arg0 : (i32, i32) -> i32
+  return %1 : i32
 }

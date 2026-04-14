@@ -177,6 +177,7 @@ clang_target_link_libraries(clangDaemon
   clangToolingInclusions
   clangToolingInclusionsStdlib
   clangToolingSyntax
+  clangUnifiedSymbolResolution
   )
 
 target_link_libraries(clangDaemon
@@ -200,6 +201,7 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 endif()
 add_subdirectory(tool)
 add_subdirectory(indexer)
+add_subdirectory(remap)
 
 if (LLVM_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)

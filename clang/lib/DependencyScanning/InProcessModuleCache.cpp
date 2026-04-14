@@ -11,42 +11,65 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/Chrono.h"
-
-#include <mutex>
+#include "llvm/Support/Error.h"
+#include "llvm/Support/IOSandbox.h"
 
 using namespace clang;
 using namespace dependencies;
 
 namespace {
 class ReaderWriterLock : public llvm::AdvisoryLock {
-  // TODO: Consider using std::atomic::{wait,notify_all} when we move to C++20.
-  std::unique_lock<std::shared_mutex> OwningLock;
+  ModuleCacheEntry &Entry;
+  std::optional<unsigned> OwnedGeneration;
 
 public:
-  ReaderWriterLock(std::shared_mutex &Mutex)
-      : OwningLock(Mutex, std::defer_lock) {}
+  ReaderWriterLock(ModuleCacheEntry &Entry) : Entry(Entry) {}
 
-  Expected<bool> tryLock() override { return OwningLock.try_lock(); }
+  Expected<bool> tryLock() override {
+    std::lock_guard<std::mutex> Lock(Entry.Mutex);
+    if (Entry.Locked)
+      return false;
+    Entry.Locked = true;
+    OwnedGeneration = Entry.Generation;
+    return true;
+  }
 
   llvm::WaitForUnlockResult
   waitForUnlockFor(std::chrono::seconds MaxSeconds) override {
-    assert(!OwningLock);
-    // We do not respect the timeout here. It's very generous for implicit
-    // modules, so we'd typically only reach it if the owner crashed (but so did
-    // we, since we run in the same process), or encountered deadlock.
-    (void)MaxSeconds;
-    std::shared_lock<std::shared_mutex> Lock(*OwningLock.mutex());
-    return llvm::WaitForUnlockResult::Success;
+    assert(!OwnedGeneration);
+    std::unique_lock<std::mutex> Lock(Entry.Mutex);
+    unsigned CurrentGeneration = Entry.Generation;
+    bool Success = Entry.CondVar.wait_for(Lock, MaxSeconds, [&] {
+      // We check not only Locked, but also Generation to break the wait in case
+      // of unsafeUnlock() and successful tryLock().
+      return !Entry.Locked || Entry.Generation != CurrentGeneration;
+    });
+    return Success ? llvm::WaitForUnlockResult::Success
+                   : llvm::WaitForUnlockResult::Timeout;
   }
 
-  std::error_code unsafeMaybeUnlock() override {
-    // Unlocking the mutex here would trigger UB and we don't expect this to be
-    // actually called when compiling scanning modules due to the no-timeout
-    // guarantee above.
+  std::error_code unsafeUnlock() override {
+    {
+      std::lock_guard<std::mutex> Lock(Entry.Mutex);
+      Entry.Generation += 1;
+      Entry.Locked = false;
+    }
+    Entry.CondVar.notify_all();
     return {};
   }
 
-  ~ReaderWriterLock() override = default;
+  ~ReaderWriterLock() override {
+    if (OwnedGeneration) {
+      {
+        std::lock_guard<std::mutex> Lock(Entry.Mutex);
+        // Avoid stomping over the state managed by someone else after
+        // unsafeUnlock() and successful tryLock().
+        if (*OwnedGeneration == Entry.Generation)
+          Entry.Locked = false;
+      }
+      Entry.CondVar.notify_all();
+    }
+  }
 };
 
 class InProcessModuleCache : public ModuleCache {
@@ -61,17 +84,15 @@ class InProcessModuleCache : public ModuleCache {
 public:
   InProcessModuleCache(ModuleCacheEntries &Entries) : Entries(Entries) {}
 
-  void prepareForGetLock(StringRef Filename) override {}
-
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
-    auto &CompilationMutex = [&]() -> std::shared_mutex & {
+    auto &Entry = [&]() -> ModuleCacheEntry & {
       std::lock_guard<std::mutex> Lock(Entries.Mutex);
       auto &Entry = Entries.Map[Filename];
       if (!Entry)
         Entry = std::make_unique<ModuleCacheEntry>();
-      return Entry->CompilationMutex;
+      return *Entry;
     }();
-    return std::make_unique<ReaderWriterLock>(CompilationMutex);
+    return std::make_unique<ReaderWriterLock>(Entry);
   }
 
   std::time_t getModuleTimestamp(StringRef Filename) override {
@@ -109,6 +130,25 @@ public:
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
+  }
+
+  std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    // FIXME: This could use an in-memory cache to avoid IO, and only write to
+    // disk at the end of the scan.
+    return writeImpl(Path, Buffer);
+  }
+
+  Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    // FIXME: This only needs to go to disk once per build, not in every
+    // compilation. Introduce in-memory cache.
+    return readImpl(FileName, Size, ModTime);
   }
 };
 } // namespace

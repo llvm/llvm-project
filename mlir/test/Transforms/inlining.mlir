@@ -375,3 +375,48 @@ func.func @inline_with_complex_ops() -> complex<f32> {
   %r = call @double_square_complex(%c) : (complex<f32>) -> (complex<f32>)
   return %r : complex<f32>
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/108376:
+// Inlining a function whose test.return arity doesn't match the call result
+// count (e.g., mixing llvm.func returning void with test.return returning
+// values) should not crash with an assertion failure.
+
+// CHECK-LABEL: llvm.func @inline_test_return_arity_mismatch
+llvm.func @inline_test_return_arity_mismatch(%arg0: f16, %arg1: f16) attributes {llvm.emit_c_interface} {
+  // CHECK: test.op_with_bitcast_type
+  // CHECK: test.op_with_bitcast_type
+  // CHECK: llvm.return
+  // CHECK-NOT: llvm.call
+  llvm.call @inline_test_return_arity_mismatch_callee(%arg0, %arg1) : (f16, f16) -> ()
+  llvm.return
+}
+llvm.func @inline_test_return_arity_mismatch_callee(%arg0: f16, %arg1: f16) {
+  %0 = "test.op_with_bitcast_type"(%arg0) : (f16) -> tensor<4xf32>
+  %1 = "test.op_with_bitcast_type"(%arg1) : (f16) -> tensor<2xi32>
+  "test.return"(%0, %1) : (tensor<4xf32>, tensor<2xi32>) -> ()
+}
+
+// Check that a functional_region_op with a multi-block region is inlined
+// correctly.  Previously the test dialect's handleTerminator(op, Block*)
+// was missing, causing an llvm_unreachable when the non-entry block's
+// test.return terminator was processed.
+// CHECK-LABEL: func @inline_functional_region_multiblock(
+func.func @inline_functional_region_multiblock(%arg0: i32) -> i32 {
+  // CHECK-NOT: call_indirect
+  // CHECK:     arith.addi
+  // CHECK:     arith.addi
+  // CHECK:     cf.br
+  // CHECK:     arith.addi
+  %fn = "test.functional_region_op"() ({
+  ^bb0(%a : i32):
+    %b = arith.addi %a, %a : i32
+    cf.br ^bb1(%b: i32)
+  ^bb1(%c: i32):
+    %d = arith.addi %c, %c : i32
+    "test.return"(%d) : (i32) -> ()
+  }) : () -> ((i32) -> i32)
+  %0 = call_indirect %fn(%arg0) : (i32) -> i32
+  return %0 : i32
+}

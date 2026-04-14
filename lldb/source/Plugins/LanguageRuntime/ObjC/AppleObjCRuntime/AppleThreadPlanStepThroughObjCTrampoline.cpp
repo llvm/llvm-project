@@ -240,8 +240,7 @@ bool AppleThreadPlanStepThroughObjCTrampoline::WillStop() { return true; }
 
 AppleThreadPlanStepThroughDirectDispatch ::
     AppleThreadPlanStepThroughDirectDispatch(
-        Thread &thread, AppleObjCTrampolineHandler &handler,
-        llvm::StringRef dispatch_func_name)
+        Thread &thread, AppleObjCTrampolineHandler &handler)
     : ThreadPlanStepOut(thread, nullptr, true /* first instruction */, false,
                         eVoteNoOpinion, eVoteNoOpinion,
                         0 /* Step out of zeroth frame */,
@@ -250,9 +249,7 @@ AppleThreadPlanStepThroughDirectDispatch ::
                         ,
                         true /* Run to branch for inline step out */,
                         false /* Don't gather the return value */),
-      m_trampoline_handler(handler),
-      m_dispatch_func_name(std::string(dispatch_func_name)),
-      m_at_msg_send(false) {
+      m_trampoline_handler(handler), m_at_msg_send(false) {
   // Set breakpoints on the dispatch functions:
   auto bkpt_callback = [&] (lldb::addr_t addr, 
                             const AppleObjCTrampolineHandler
@@ -290,8 +287,7 @@ void AppleThreadPlanStepThroughDirectDispatch::GetDescription(
     s->PutCString("Step through ObjC direct dispatch function.");
     break;
   default:
-    s->Printf("Step through ObjC direct dispatch '%s'  using breakpoints: ",
-              m_dispatch_func_name.c_str());
+    s->Printf("Step through ObjC direct dispatch using breakpoints: ");
     bool first = true;
     for (auto bkpt_sp : m_msgSend_bkpts) {
         if (!first) {

@@ -668,7 +668,8 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
   if (getAsUnsignedInteger(name, /*Radix=*/16, file_address))
     return 0; // Failed to extract the user ID as an integer
 
-  Symbol *symbol = FindSymbolAtFileAddress(static_cast<addr_t>(file_address));
+  const Symbol *symbol =
+      FindSymbolAtFileAddress(static_cast<addr_t>(file_address));
   if (symbol == nullptr)
     return 0;
   const uint32_t symbol_idx = GetIndexForSymbol(symbol);
@@ -759,7 +760,7 @@ uint32_t Symtab::AppendSymbolIndexesMatchingRegExAndType(
     if (symbol_type == eSymbolTypeAny ||
         m_symbols[i].GetType() == symbol_type) {
       const char *name =
-          m_symbols[i].GetMangled().GetName(name_preference).AsCString();
+          m_symbols[i].GetMangled().GetName(name_preference).AsCString(nullptr);
       if (name) {
         if (regexp.Execute(name))
           indexes.push_back(i);
@@ -785,7 +786,7 @@ uint32_t Symtab::AppendSymbolIndexesMatchingRegExAndType(
         continue;
 
       const char *name =
-          m_symbols[i].GetMangled().GetName(name_preference).AsCString();
+          m_symbols[i].GetMangled().GetName(name_preference).AsCString(nullptr);
       if (name) {
         if (regexp.Execute(name))
           indexes.push_back(i);

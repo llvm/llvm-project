@@ -32,6 +32,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Recycler.h"
+#include "llvm/Support/UniqueBBID.h"
 #include "llvm/Target/TargetOptions.h"
 #include <bitset>
 #include <cassert>
@@ -239,6 +240,14 @@ public:
     return *this;
   }
 
+  /// Reset all properties and re-establish baseline invariants.
+  MachineFunctionProperties &resetToInitial() {
+    reset();
+    setIsSSA();
+    setTracksLiveness();
+    return *this;
+  }
+
   MachineFunctionProperties &set(const MachineFunctionProperties &MFP) {
     Properties |= MFP.Properties;
     return *this;
@@ -322,9 +331,12 @@ class LLVM_ABI MachineFunction {
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
   std::vector<MachineBasicBlock*> MBBNumbering;
 
-  // MBBNumbering epoch, incremented after renumbering to detect use of old
-  // block numbers.
-  unsigned MBBNumberingEpoch = 0;
+  // Analysis number epoch, currently never changed as we don't renumber the
+  // block numbers used for analyses.
+  unsigned AnalysisNumberingEpoch = 0;
+
+  // Next MBB analysis number.
+  unsigned NextAnalysisNumber = 0;
 
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
@@ -413,6 +425,10 @@ class LLVM_ABI MachineFunction {
 
   /// Section Type for basic blocks, only relevant with basic block sections.
   BasicBlockSection BBSectionsType = BasicBlockSection::None;
+
+  /// Prefetch targets in this function. This includes targets that are mapped
+  /// to a basic block and dangling targets.
+  DenseMap<UniqueBBID, SmallVector<unsigned>> PrefetchTargets;
 
   /// List of C++ TypeInfo used.
   std::vector<const GlobalValue *> TypeInfos;
@@ -518,11 +534,17 @@ public:
     /// Callee type ids.
     SmallVector<ConstantInt *, 4> CalleeTypeIds;
 
+    /// 'call_target' metadata for the DISubprogram. It is the declaration
+    /// or definition of the target function and might be indirect.
+    MDNode *CallTarget = nullptr;
+
     CallSiteInfo() = default;
 
     /// Extracts the numeric type id from the CallBase's callee_type Metadata,
     /// and sets CalleeTypeIds. This is used as type id for the indirect call in
     /// the call graph section.
+    /// Extracts the MDNode from the CallBase's call_target Metadata to be used
+    /// during the construction of the debug info call site entries.
     LLVM_ABI CallSiteInfo(const CallBase &CB);
   };
 
@@ -750,6 +772,16 @@ public:
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
+  void
+  setPrefetchTargets(const DenseMap<UniqueBBID, SmallVector<unsigned>> &V) {
+    PrefetchTargets = V;
+  }
+
+  const DenseMap<UniqueBBID, SmallVector<unsigned>> &
+  getPrefetchTargets() const {
+    return PrefetchTargets;
+  }
+
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this
   /// function.
   void assignBeginEndSections();
@@ -817,6 +849,10 @@ public:
     if (Alignment < A)
       Alignment = A;
   }
+
+  /// Returns the preferred alignment which comes from the function attributes
+  /// (optsize, minsize, prefalign) and TargetLowering.
+  Align getPreferredAlignment() const;
 
   /// exposesReturnsTwice - Returns true if the function calls setjmp or
   /// any other similar functions with attribute "returns twice" without
@@ -904,10 +940,14 @@ public:
   /// getNumBlockIDs - Return the number of MBB ID's allocated.
   unsigned getNumBlockIDs() const { return (unsigned)MBBNumbering.size(); }
 
-  /// Return the numbering "epoch" of block numbers, incremented after each
-  /// numbering. Intended for asserting that no renumbering was performed when
-  /// used by, e.g., preserved analyses.
-  unsigned getBlockNumberEpoch() const { return MBBNumberingEpoch; }
+  /// Return the numbering "epoch" of analysis block numbers.
+  unsigned getAnalysisBlockNumberEpoch() const {
+    return AnalysisNumberingEpoch;
+  }
+
+  unsigned assignAnalysisNumber() { return NextAnalysisNumber++; }
+
+  unsigned getMaxAnalysisBlockNumber() const { return NextAnalysisNumber; }
 
   /// RenumberBlocks - This discards all of the MachineBasicBlock numbers and
   /// recomputes them.  This guarantees that the MBB numbers are sequential,
@@ -1510,10 +1550,10 @@ template <> struct GraphTraits<MachineFunction*> :
   static unsigned       size       (MachineFunction *F) { return F->size(); }
 
   static unsigned getMaxNumber(MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 template <> struct GraphTraits<const MachineFunction*> :
@@ -1536,10 +1576,10 @@ template <> struct GraphTraits<const MachineFunction*> :
   }
 
   static unsigned getMaxNumber(const MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(const MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 
@@ -1555,10 +1595,10 @@ template <> struct GraphTraits<Inverse<MachineFunction*>> :
   }
 
   static unsigned getMaxNumber(MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 template <> struct GraphTraits<Inverse<const MachineFunction*>> :
@@ -1568,10 +1608,10 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   }
 
   static unsigned getMaxNumber(const MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(const MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 

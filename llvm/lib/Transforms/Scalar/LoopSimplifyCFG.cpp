@@ -50,9 +50,7 @@ STATISTIC(NumLoopExitsDeleted,
 /// return nullptr.
 static BasicBlock *getOnlyLiveSuccessor(BasicBlock *BB) {
   Instruction *TI = BB->getTerminator();
-  if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-    if (BI->isUnconditional())
-      return nullptr;
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
     if (BI->getSuccessor(0) == BI->getSuccessor(1))
       return BI->getSuccessor(0);
     ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition());

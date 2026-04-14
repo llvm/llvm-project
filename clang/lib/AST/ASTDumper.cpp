@@ -25,7 +25,7 @@ using namespace clang::comments;
 void ASTDumper::dumpInvalidDeclContext(const DeclContext *DC) {
   NodeDumper.AddChild([=] {
     if (!DC) {
-      ColorScope Color(OS, ShowColors, NullColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
       OS << "<<<NULL>>>";
       return;
     }
@@ -36,13 +36,13 @@ void ASTDumper::dumpInvalidDeclContext(const DeclContext *DC) {
     // the information provided below is intended to provide some hints about
     // what might have gone awry.
     {
-      ColorScope Color(OS, ShowColors, DeclKindNameColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
       OS << "DeclContext";
     }
     NodeDumper.dumpPointer(DC);
     OS << " <";
     {
-      ColorScope Color(OS, ShowColors, DeclNameColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::DeclName);
       OS << "unrecognized Decl kind " << (unsigned)DC->getDeclKind();
     }
     OS << ">";
@@ -72,7 +72,7 @@ void ASTDumper::dumpLookups(const DeclContext *DC, bool DumpDecls) {
       NodeDumper.AddChild([=] {
         OS << "DeclarationName ";
         {
-          ColorScope Color(OS, ShowColors, DeclNameColor);
+          ColorScope Color(OS, ShowColors, ASTDumpColor::DeclName);
           OS << '\'' << Name << '\'';
         }
 
@@ -101,7 +101,7 @@ void ASTDumper::dumpLookups(const DeclContext *DC, bool DumpDecls) {
 
     if (HasUndeserializedLookups) {
       NodeDumper.AddChild([=] {
-        ColorScope Color(OS, ShowColors, UndeserializedColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::Undeserialized);
         OS << "<undeserialized lookups>";
       });
     }

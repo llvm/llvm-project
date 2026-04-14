@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_ERROR_MESSAGES_H
-#define LLDB_UTILITY_ERROR_MESSAGES_H
+#ifndef LLDB_UTILITY_ERRORMESSAGES_H
+#define LLDB_UTILITY_ERRORMESSAGES_H
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"

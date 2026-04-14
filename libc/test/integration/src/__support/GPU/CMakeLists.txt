@@ -29,13 +29,13 @@ add_integration_test(
 )
 
 add_libc_test(
-  fixedstack_test
+  fixedbuffer_test
   SUITE
     libc-support-gpu-tests
   SRCS
-    fixedstack_test.cpp
+    fixedbuffer_test.cpp
   DEPENDS
-    libc.src.__support.GPU.fixedstack
+    libc.src.__support.GPU.fixedbuffer
   LOADER_ARGS
     --threads 32
     --blocks 16

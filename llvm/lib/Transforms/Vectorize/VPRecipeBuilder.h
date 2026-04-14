@@ -19,43 +19,16 @@ namespace llvm {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
-class TargetTransformInfo;
 struct HistogramInfo;
 struct VFRange;
-
-/// A chain of instructions that form a partial reduction.
-/// Designed to match either:
-///   reduction_bin_op (extend (A), accumulator), or
-///   reduction_bin_op (bin_op (extend (A), (extend (B))), accumulator).
-struct PartialReductionChain {
-  PartialReductionChain(Instruction *Reduction, Instruction *ExtendA,
-                        Instruction *ExtendB, Instruction *ExtendUser)
-      : Reduction(Reduction), ExtendA(ExtendA), ExtendB(ExtendB),
-        ExtendUser(ExtendUser) {}
-  /// The top-level binary operation that forms the reduction to a scalar
-  /// after the loop body.
-  Instruction *Reduction;
-  /// The extension of each of the inner binary operation's operands.
-  Instruction *ExtendA;
-  Instruction *ExtendB;
-
-  /// The user of the extends that is then reduced.
-  Instruction *ExtendUser;
-};
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
   /// The VPlan new recipes are added to.
   VPlan &Plan;
 
-  /// The loop that we evaluate.
-  Loop *OrigLoop;
-
   /// Target Library Info.
   const TargetLibraryInfo *TLI;
-
-  // Target Transform Info.
-  const TargetTransformInfo *TTI;
 
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
@@ -65,11 +38,6 @@ class VPRecipeBuilder {
 
   VPBuilder &Builder;
 
-  /// The mask of each VPBB, generated earlier and used for predicating recipes
-  /// in VPBB.
-  /// TODO: remove by applying predication when generating the masks.
-  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache;
-
   // VPlan construction support: Hold a mapping from ingredients to
   // their recipe.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
@@ -78,9 +46,6 @@ class VPRecipeBuilder {
   /// to add the incoming value from the backedge after all recipes have been
   /// created.
   SmallVector<VPHeaderPHIRecipe *, 4> PhisToFix;
-
-  /// A mapping of partial reduction exit instructions to their scaling factor.
-  DenseMap<const Instruction *, unsigned> ScaledReductionMap;
 
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
@@ -114,59 +79,22 @@ class VPRecipeBuilder {
   VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
                                          VPInstruction *VPI);
 
-  /// Examines reduction operations to see if the target can use a cheaper
-  /// operation with a wider per-iteration input VF and narrower PHI VF.
-  /// Each element within Chains is a pair with a struct containing reduction
-  /// information and the scaling factor between the number of elements in
-  /// the input and output.
-  /// Recursively calls itself to identify chained scaled reductions.
-  /// Returns true if this invocation added an entry to Chains, otherwise false.
-  /// i.e. returns false in the case that a subcall adds an entry to Chains,
-  /// but the top-level call does not.
-  bool getScaledReductions(
-      Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
-      SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains);
-
 public:
-  VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
-                  const TargetTransformInfo *TTI,
+  VPRecipeBuilder(VPlan &Plan, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
-                  LoopVectorizationCostModel &CM, VPBuilder &Builder,
-                  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache)
-      : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
-        CM(CM), Builder(Builder), BlockMaskCache(BlockMaskCache) {}
-
-  std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
-    auto It = ScaledReductionMap.find(ExitInst);
-    return It == ScaledReductionMap.end() ? std::nullopt
-                                          : std::make_optional(It->second);
-  }
-
-  /// Find all possible partial reductions in the loop and track all of those
-  /// that are valid so recipes can be formed later.
-  void collectScaledReductions(VFRange &Range);
+                  LoopVectorizationCostModel &CM, VPBuilder &Builder)
+      : Plan(Plan), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder) {}
 
   /// Create and return a widened recipe for a non-phi recipe \p R if one can be
   /// created within the given VF \p Range.
   VPRecipeBase *tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                                              VFRange &Range);
 
-  /// Create and return a partial reduction recipe for a reduction instruction
-  /// along with binary operation and reduction phi operands.
-  VPRecipeBase *tryToCreatePartialReduction(VPInstruction *Reduction,
-                                            unsigned ScaleFactor);
-
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
     assert(!Ingredient2Recipe.contains(I) &&
            "Cannot reset recipe for instruction.");
     Ingredient2Recipe[I] = R;
-  }
-
-  /// Returns the *entry* mask for block \p VPBB or null if the mask is
-  /// all-true.
-  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
-    return BlockMaskCache.lookup(VPBB);
   }
 
   /// Return the recipe created for given ingredient.
@@ -189,15 +117,6 @@ public:
         return R->getVPSingleValue();
     }
     return Plan.getOrAddLiveIn(V);
-  }
-
-  void updateBlockMaskCache(DenseMap<VPValue *, VPValue *> &Old2New) {
-    for (auto &[_, V] : BlockMaskCache) {
-      if (auto *New = Old2New.lookup(V)) {
-        V->replaceAllUsesWith(New);
-        V = New;
-      }
-    }
   }
 };
 } // end namespace llvm

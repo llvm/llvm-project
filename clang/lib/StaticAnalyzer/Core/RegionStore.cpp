@@ -2566,6 +2566,15 @@ RegionStoreManager::setImplicitDefaultValue(LimitedRegionBindingsConstRef B,
   if (B.hasExhaustedBindingLimit())
     return B;
 
+  // Preserve an existing aggregate default binding. This handles partially
+  // initialized union-containing aggregates where bindAggregate() may already
+  // have installed a more precise default value at offset 0. Still allow
+  // implicit defaults for scalars and pointers so regular zero-initialization
+  // continues to work, e.g. for `new int[10]{}`.
+  if (T->isAggregateType() && B.getDefaultBinding(R).has_value()) {
+    return B;
+  }
+
   SVal V;
 
   if (Loc::isLocType(T))
@@ -2659,11 +2668,8 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     return bindAggregate(B, R, Init);
   }
 
-  if (isa<nonloc::SymbolVal>(Init))
+  if (isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init))
     return bindAggregate(B, R, Init);
-
-  if (Init.isUnknown())
-    return bindAggregate(B, R, UnknownVal());
 
   // Remaining case: explicit compound values.
   const nonloc::CompoundVal& CV = Init.castAs<nonloc::CompoundVal>();

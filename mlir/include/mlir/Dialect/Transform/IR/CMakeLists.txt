@@ -11,7 +11,7 @@ set(LLVM_TARGET_DEFINITIONS TransformTypes.td)
 mlir_tablegen(TransformTypes.h.inc -gen-typedef-decls)
 mlir_tablegen(TransformTypes.cpp.inc -gen-typedef-defs)
 add_mlir_dialect_tablegen_target(MLIRTransformTypesIncGen)
-add_mlir_doc(TransformTypes TransformTypes Dialects/ -gen-typedef-doc)
+add_mlir_doc(TransformTypes TransformTypes Dialects/ -gen-typedef-doc -dialect=transform)
 
 set(LLVM_TARGET_DEFINITIONS TransformAttrs.td)
 mlir_tablegen(TransformDialectEnums.h.inc -gen-enum-decls)

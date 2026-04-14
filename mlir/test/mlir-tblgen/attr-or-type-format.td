@@ -64,7 +64,7 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 // ATTR: }
 
 // ATTR: void TestAAttr::print(::mlir::AsmPrinter &odsPrinter) const {
-// ATTR:   odsPrinter << ' ' << "hello";
+// ATTR:   odsPrinter << "hello";
 // ATTR:   odsPrinter << ' ' << "=";
 // ATTR:   odsPrinter << ' ';
 // ATTR:   odsPrinter.printStrippedAttrOrType(getValue());
@@ -273,7 +273,7 @@ def EnumAttrB : EnumAttr<Test_Dialect, TestEnumB, "EnumAttrB"> {
 // TYPE:  }
 
 // TYPE: void TestCType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   odsPrinter << ' ' << "foo";
+// TYPE:   odsPrinter << "foo";
 // TYPE:   odsPrinter << ",";
 // TYPE:   odsPrinter << ' ' << ":";
 // TYPE:   odsPrinter << ' ' << "bob";
@@ -462,7 +462,6 @@ def TypeC : TestType<"TestE"> {
 
 // TYPE: void TestFType::print(::mlir::AsmPrinter &odsPrinter) const {
 // TYPE if (getA()) {
-// TYPE   odsPrinter << ' ';
 // TYPE   odsPrinter.printStrippedAttrOrType(getA());
 def TypeD : TestType<"TestF"> {
   let parameters = (ins OptionalParameter<"int">:$a);
@@ -546,7 +545,7 @@ def TypeG : TestType<"TestI"> {
 // TYPE:       odsPrinter.printStrippedAttrOrType(getB());
 // TYPE:     odsPrinter << ")";
 // TYPE:   } else {
-// TYPE:     odsPrinter << ' ' << "x";
+// TYPE:     odsPrinter << "x";
 // TYPE:   }
 // TYPE:   odsPrinter.printStrippedAttrOrType(getA());
 
@@ -631,7 +630,7 @@ def TypeL : TestType<"TestN"> {
 
 // TYPE-LABEL: void TestOType::print
 // TYPE: if (!(!(getA() == int())))
-// TYPE: odsPrinter << ' ' << "?"
+// TYPE: odsPrinter << "?"
 // TYPE: else
 // TYPE: odsPrinter.printStrippedAttrOrType(getA())
 
@@ -827,6 +826,74 @@ def AttrT : TestAttr<"TestT"> {
   let mnemonic = "attr_t";
   let assemblyFormat = "`{` struct($v0, custom<NestedCustom>($v1), $v2) `}`";
 }
+
+/// Test that an `ArrayRefParameter` in a non-last position inside a `struct`
+/// directive is wrapped in `[...]` brackets to avoid ambiguity with the
+/// struct-level comma separator (issue #156623).
+def AttrWithArrayRefInStruct : TestAttr<"AttrWithArrayRefInStruct"> {
+  let parameters = (ins
+    ArrayRefParameter<"int64_t">:$elements,
+    "int64_t":$count
+  );
+  let mnemonic = "arr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// ATTR: if (!_seen_elements && _paramKey == "elements") {
+// ATTR:   // Parse literal '['
+// ATTR:   if (odsParser.parseLSquare()) return {};
+// ATTR:   _result_elements = ::mlir::FieldParser<::llvm::SmallVector<int64_t>>::parse(odsParser);
+// ATTR:   // Parse literal ']'
+// ATTR:   if (odsParser.parseRSquare()) return {};
+// ATTR: } else if (!_seen_count && _paramKey == "count") {
+// ATTR: odsPrinter << "elements = ";
+// ATTR: odsPrinter << "[";
+// ATTR: odsPrinter.printStrippedAttrOrType(getElements());
+// ATTR: odsPrinter << "]";
+// ATTR: odsPrinter << "count = ";
+
+/// Test that an `ArrayRefParameter` in the LAST struct position is NOT wrapped
+/// in brackets (no ambiguity with a following comma).
+def AttrWithArrayRefInStructLast : TestAttr<"AttrWithArrayRefInStructLast"> {
+  let parameters = (ins
+    "int64_t":$count,
+    ArrayRefParameter<"int64_t">:$elements
+  );
+  let mnemonic = "arr_struct_last";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// ATTR: if (!_seen_count && _paramKey == "count") {
+// ATTR-NOT: parseLSquare
+// ATTR: if (!_seen_elements && _paramKey == "elements") {
+// ATTR-NOT: parseLSquare
+// ATTR: odsPrinter << "count = ";
+// ATTR-NOT: odsPrinter << "[";
+// ATTR: odsPrinter << "elements = ";
+// ATTR-NOT: odsPrinter << "[";
+
+/// Test that an `OptionalArrayRefParameter` in a non-last struct position is
+/// wrapped in `[...]` brackets (same rule as the non-optional variant).
+def AttrWithOptArrayRefInStruct : TestAttr<"AttrWithOptArrayRefInStruct"> {
+  let parameters = (ins
+    OptionalArrayRefParameter<"int64_t">:$elements,
+    "int64_t":$count
+  );
+  let mnemonic = "opt_arr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// ATTR: if (!_seen_elements && _paramKey == "elements") {
+// ATTR:   // Parse literal '['
+// ATTR:   if (odsParser.parseLSquare()) return {};
+// ATTR:   _result_elements = ::mlir::FieldParser<::llvm::SmallVector<int64_t>>::parse(odsParser);
+// ATTR:   // Parse literal ']'
+// ATTR:   if (odsParser.parseRSquare()) return {};
+// ATTR: } else if (!_seen_count && _paramKey == "count") {
+// ATTR: odsPrinter << "elements = ";
+// ATTR: odsPrinter << "[";
+// ATTR: odsPrinter << "]";
+// ATTR: odsPrinter << "count = ";
 
 // DEFAULT_TYPE_PARSER: TestDialect::parseType(::mlir::DialectAsmParser &parser)
 // DEFAULT_TYPE_PARSER: auto parseResult = parseOptionalDynamicType(mnemonic, parser, genType);

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding %s -emit-llvm -o - | FileCheck %s
+// RUN: %if clang-target-64-bits %{ %clang_cc1 -ffreestanding %s -emit-llvm -o - | FileCheck %s --check-prefix=INT128 %}
 
 #include<stdint.h>
 
@@ -95,7 +96,7 @@ long long rotr64(long long x, unsigned long long y) {
 // CHECK:  call i8 @llvm.fshl.i8(i8 %{{.*}}, i8 %{{.*}}, i8 0)
 void test_builtin_stdc_rotate_left(uint8_t u8, uint16_t u16,
                                    uint32_t u32, uint64_t u64,
-                                   uint64_t u64_2, unsigned __int128 u128,
+                                   uint64_t u64_2, unsigned _BitInt(128) u128,
                                    unsigned _BitInt(9) u9, unsigned _BitInt(37) u37,
                                    unsigned _BitInt(10) u10, unsigned _BitInt(16) u16_bit,
                                    unsigned _BitInt(24) u24, unsigned _BitInt(48) u48) {
@@ -105,7 +106,7 @@ void test_builtin_stdc_rotate_left(uint8_t u8, uint16_t u16,
   volatile uint32_t result_u32;
   volatile uint64_t result_u64;
   volatile uint64_t result_u64_2;
-  volatile unsigned __int128 result_u128;
+  volatile unsigned _BitInt(128) result_u128;
   volatile unsigned _BitInt(9) result_u9;
   volatile unsigned _BitInt(37) result_u37;
   volatile unsigned _BitInt(10) result_u10;
@@ -187,7 +188,7 @@ void test_builtin_stdc_rotate_left(uint8_t u8, uint16_t u16,
 // CHECK:  call i16 @llvm.fshl.i16(i16 %{{.*}}, i16 %{{.*}}, i16 1)
 void test_builtin_stdc_rotate_right(uint8_t u8, uint16_t u16,
                                     uint32_t u32, uint64_t u64,
-                                    uint64_t u64_2, unsigned __int128 u128,
+                                    uint64_t u64_2, unsigned _BitInt(128) u128,
                                     unsigned _BitInt(9) u9, unsigned _BitInt(12) u12,
                                     unsigned _BitInt(20) u20, unsigned _BitInt(32) u32_bit) {
 
@@ -196,7 +197,7 @@ void test_builtin_stdc_rotate_right(uint8_t u8, uint16_t u16,
   volatile uint32_t result_u32;
   volatile uint64_t result_u64;
   volatile uint64_t result_u64_2;
-  volatile unsigned __int128 result_u128;
+  volatile unsigned _BitInt(128) result_u128;
   volatile unsigned _BitInt(9) result_u9;
   volatile unsigned _BitInt(12) result_u12;
   volatile unsigned _BitInt(20) result_u20;
@@ -302,3 +303,13 @@ void test_wider_shift_amount(uint8_t u8, uint16_t u16, uint32_t u32, unsigned _B
   result_u9 = __builtin_stdc_rotate_left((unsigned _BitInt(9))0x1FF, (int64_t)-2147483647);
 }
 
+#ifdef __SIZEOF_INT128__
+// INT128-LABEL: test_int128_rotate
+// INT128:  call i128 @llvm.fshl.i128(i128 %{{.*}}, i128 %{{.*}}, i128 32)
+// INT128:  call i128 @llvm.fshr.i128(i128 %{{.*}}, i128 %{{.*}}, i128 32)
+void test_int128_rotate(unsigned __int128 u128) {
+  volatile unsigned __int128 result_u128;
+  result_u128 = __builtin_stdc_rotate_left(u128, 32);
+  result_u128 = __builtin_stdc_rotate_right(u128, 32);
+}
+#endif

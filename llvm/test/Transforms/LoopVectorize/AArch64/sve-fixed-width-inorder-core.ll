@@ -7,9 +7,9 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-LABEL: define void @sve_add(
 ; CHECK-CA510-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA510-NEXT:  [[ENTRY:.*:]]
-; CHECK-CA510-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-CA510-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-CA510-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-CA510-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-CA510-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-CA510-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-CA510-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA510-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA510:       [[FOR_BODY_PREHEADER]]:
@@ -71,9 +71,9 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-LABEL: define void @sve_add(
 ; CHECK-CA520-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA520-NEXT:  [[ENTRY:.*:]]
-; CHECK-CA520-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-CA520-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-CA520-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-CA520-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-CA520-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-CA520-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-CA520-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA520-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA520:       [[FOR_BODY_PREHEADER]]:
@@ -135,9 +135,9 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-LABEL: define void @sve_add(
 ; CHECK-CA320-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA320-NEXT:  [[ENTRY:.*:]]
-; CHECK-CA320-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-CA320-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-CA320-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-CA320-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-CA320-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-CA320-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-CA320-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA320-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA320:       [[FOR_BODY_PREHEADER]]:
@@ -199,7 +199,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 entry:
   %cmp9.not = icmp eq i64 %n, 0
   br i1 %cmp9.not, label %for.cond.cleanup, label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds nuw float, ptr %a, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -211,7 +211,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 ;.

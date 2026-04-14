@@ -20,8 +20,14 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+static cl::opt<bool> DisableRelocSched(
+    "loongarch-disable-reloc-sched",
+    cl::desc("Disable scheduling of instructions with target flags"),
+    cl::init(false), cl::Hidden);
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "LoongArchGenInstrInfo.inc"
@@ -257,6 +263,23 @@ unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (NumBytes == 0)
       NumBytes = 4;
     break;
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const Function &F = MF->getFunction();
+    if (F.hasFnAttribute("patchable-function-entry")) {
+      unsigned Num;
+      if (F.getFnAttribute("patchable-function-entry")
+              .getValueAsString()
+              .getAsInteger(10, Num))
+        return 0;
+      return Num * 4;
+    }
+    [[fallthrough]];
+  }
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    // Size of xray sled (branch + 11 nops).
+    return 12 * 4;
   }
   return NumBytes;
 }
@@ -382,6 +405,12 @@ bool LoongArchInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
 bool LoongArchInstrInfo::isSafeToMove(const MachineInstr &MI,
                                       const MachineBasicBlock *MBB,
                                       const MachineFunction &MF) const {
+  if (DisableRelocSched) {
+    for (const MachineOperand &MO : MI.operands())
+      if (MO.getTargetFlags())
+        return false;
+  }
+
   auto MII = MI.getIterator();
   auto MIE = MBB->end();
 

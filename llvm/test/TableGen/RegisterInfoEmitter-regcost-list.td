@@ -22,13 +22,13 @@ def DRegs : RegisterClass<"MyTarget", [i32], 32, (sequence "D%u", 0, 1)>;
 
 def MyTarget : Target;
 
-// CHECK:  static const uint8_t CostPerUseTable[] = {
+// CHECK:  static const uint8_t MyTargetCostPerUseTable[] = {
 // CHECK-NEXT:  0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 2, 3, };
 
-// CHECK:  static const bool InAllocatableClassTable[] = {
+// CHECK:  static const bool MyTargetInAllocatableClassTable[] = {
 // CHECK-NEXT:  false, true, true, true, true, true, true, };
 
 // CHECK:  static const TargetRegisterInfoDesc MyTargetRegInfoDesc = { // Extra Descriptors
-// CHECK-NEXT:  CostPerUseTable, 2, InAllocatableClassTable};
+// CHECK-NEXT:  MyTargetCostPerUseTable, 2, MyTargetInAllocatableClassTable};
 
-// CHECK:  TargetRegisterInfo(&MyTargetRegInfoDesc, RegisterClasses, RegisterClasses+2,
+// CHECK:  TargetRegisterInfo(&MyTargetRegInfoDesc, MyTargetRegisterClasses,

@@ -13,7 +13,7 @@
 using namespace lldb_private;
 using namespace lldb;
 
-// http://svnweb.freebsd.org/base/head/sys/powerpc/include/reg.h
+// https://cgit.freebsd.org/src/tree/sys/powerpc/include/reg.h
 typedef struct _GPR64 {
   uint64_t r0;
   uint64_t r1;

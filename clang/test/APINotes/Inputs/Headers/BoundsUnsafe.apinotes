@@ -1,0 +1,39 @@
+Name: BoundsUnsafe
+Functions:
+  - Name: asdf_counted
+    Parameters:
+      - Position: 0
+        BoundsSafety:
+          Kind: counted_by
+          BoundedBy: len
+  - Name: asdf_sized
+    Parameters:
+      - Position: 0
+        BoundsSafety:
+          Kind: sized_by
+          BoundedBy: size
+  - Name: asdf_counted_n
+    Parameters:
+      - Position: 0
+        BoundsSafety:
+          Kind: counted_by_or_null
+          BoundedBy: len
+  - Name: asdf_sized_n
+    Parameters:
+      - Position: 0
+        BoundsSafety:
+          Kind: sized_by_or_null
+          BoundedBy: size
+  - Name: asdf_ended
+    Parameters:
+      - Position: 0
+        BoundsSafety:
+          Kind: ended_by
+          BoundedBy: end
+  - Name: asdf_counted_indirect
+    Parameters:
+      - Position: 0
+        BoundsSafety:
+          Kind: counted_by
+          BoundedBy: len
+          Level: 1

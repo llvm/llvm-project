@@ -17,7 +17,6 @@
 #include "lldb/Utility/ProcessInfo.h"
 
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
@@ -31,17 +30,16 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
 #include "ProcessElfCore.h"
-#include "RegisterContextLinuxCore_x86_64.h"
+#include "RegisterContextLinuxCore_x86.h"
 #include "RegisterContextPOSIXCore_arm.h"
 #include "RegisterContextPOSIXCore_arm64.h"
 #include "RegisterContextPOSIXCore_loongarch64.h"
-#include "RegisterContextPOSIXCore_mips64.h"
 #include "RegisterContextPOSIXCore_powerpc.h"
 #include "RegisterContextPOSIXCore_ppc64le.h"
 #include "RegisterContextPOSIXCore_riscv32.h"
 #include "RegisterContextPOSIXCore_riscv64.h"
 #include "RegisterContextPOSIXCore_s390x.h"
-#include "RegisterContextPOSIXCore_x86_64.h"
+#include "RegisterContextPOSIXCore_x86.h"
 #include "ThreadElfCore.h"
 
 #include <memory>
@@ -98,9 +96,6 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       case llvm::Triple::ppc64:
       case llvm::Triple::ppc64le:
         reg_interface = new RegisterContextFreeBSD_powerpc64(arch);
-        break;
-      case llvm::Triple::mips64:
-        reg_interface = new RegisterContextFreeBSD_mips64(arch);
         break;
       case llvm::Triple::x86:
         reg_interface = new RegisterContextFreeBSD_i386(arch);
@@ -205,16 +200,6 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       m_thread_reg_ctx_sp = RegisterContextCorePOSIX_riscv64::Create(
           *this, arch, m_gpregset_data, m_notes);
       break;
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips:
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_mips64>(
-          *this, reg_interface, m_gpregset_data, m_notes);
-      break;
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_mips64>(
-          *this, reg_interface, m_gpregset_data, m_notes);
-      break;
     case llvm::Triple::ppc:
     case llvm::Triple::ppc64:
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_powerpc>(
@@ -231,10 +216,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       if (is_linux) {
-        m_thread_reg_ctx_sp = std::make_shared<RegisterContextLinuxCore_x86_64>(
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextLinuxCore_x86>(
               *this, reg_interface, m_gpregset_data, m_notes);
       } else {
-        m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86_64>(
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86>(
               *this, reg_interface, m_gpregset_data, m_notes);
       }
       break;
@@ -276,6 +261,15 @@ bool ThreadElfCore::CalculateStopInfo() {
     }
   }
 
+  // The above code references the siginfo_t bytes from the NT_SIGINFO note.
+  // This is not the only way to get a signo in an ELF core, and so
+  // ThreadELFCore has a m_signo variable for these cases, which is populated
+  // with a non-zero value when there is no NT_SIGINFO note. However if this is
+  // 0, it's the default value and we have no valid signal and should not report
+  // a stop info.
+  if (m_signo == 0 && m_siginfo_bytes.empty())
+    return false;
+
   SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
   return true;
 }
@@ -286,19 +280,7 @@ ELFLinuxPrStatus::ELFLinuxPrStatus() {
 }
 
 size_t ELFLinuxPrStatus::GetSize(const lldb_private::ArchSpec &arch) {
-  constexpr size_t mips_linux_pr_status_size_o32 = 96;
-  constexpr size_t mips_linux_pr_status_size_n32 = 72;
   constexpr size_t num_ptr_size_members = 10;
-  if (arch.IsMIPS()) {
-    std::string abi = arch.GetTargetABI();
-    assert(!abi.empty() && "ABI is not set");
-    if (abi == "n64")
-      return sizeof(ELFLinuxPrStatus);
-    else if (abi == "o32")
-      return mips_linux_pr_status_size_o32;
-    // N32 ABI
-    return mips_linux_pr_status_size_n32;
-  }
   switch (arch.GetCore()) {
   case lldb_private::ArchSpec::eCore_x86_32_i386:
   case lldb_private::ArchSpec::eCore_x86_32_i486:
@@ -386,14 +368,6 @@ ELFLinuxPrPsInfo::ELFLinuxPrPsInfo() {
 }
 
 size_t ELFLinuxPrPsInfo::GetSize(const lldb_private::ArchSpec &arch) {
-  constexpr size_t mips_linux_pr_psinfo_size_o32_n32 = 128;
-  if (arch.IsMIPS()) {
-    uint8_t address_byte_size = arch.GetAddressByteSize();
-    if (address_byte_size == 8)
-      return sizeof(ELFLinuxPrPsInfo);
-    return mips_linux_pr_psinfo_size_o32_n32;
-  }
-
   switch (arch.GetCore()) {
   case lldb_private::ArchSpec::eCore_s390x_generic:
   case lldb_private::ArchSpec::eCore_x86_64_x86_64:
@@ -430,15 +404,9 @@ Status ELFLinuxPrPsInfo::Parse(const DataExtractor &data,
 
   pr_flag = data.GetAddress(&offset);
 
-  if (arch.IsMIPS()) {
-    // The pr_uid and pr_gid is always 32 bit irrespective of platforms
-    pr_uid = data.GetU32(&offset);
-    pr_gid = data.GetU32(&offset);
-  } else {
-    // 16 bit on 32 bit platforms, 32 bit on 64 bit platforms
-    pr_uid = data.GetMaxU64(&offset, data.GetAddressByteSize() >> 1);
-    pr_gid = data.GetMaxU64(&offset, data.GetAddressByteSize() >> 1);
-  }
+  // 16 bit on 32 bit platforms, 32 bit on 64 bit platforms
+  pr_uid = data.GetMaxU64(&offset, data.GetAddressByteSize() >> 1);
+  pr_gid = data.GetMaxU64(&offset, data.GetAddressByteSize() >> 1);
 
   pr_pid = data.GetU32(&offset);
   pr_ppid = data.GetU32(&offset);

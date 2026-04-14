@@ -900,7 +900,7 @@ mergeTilingResults(RewriterBase &rewriter, TilingInterface op,
 /// and sizes at which the tiled value is inserted into the
 /// new region iter_args that correspond to the newly added init operands.
 template <typename LoopType>
-FailureOr<LoopLikeOpInterface>
+static FailureOr<LoopLikeOpInterface>
 yieldTiledValuesAndReplaceLoop(LoopType loopOp, RewriterBase &rewriter,
                                ValueRange newInitOperands,
                                YieldTiledValuesFn yieldTiledValuesFn) {
@@ -1018,7 +1018,7 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForallOp>(
 /// Implementation of `yieldTiledValuesAndReplaceLoop` for
 /// `LoopLikeOpInterface`, that just dispatches to the implementation for each
 /// supported loop type.
-FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop(
+static FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop(
     LoopLikeOpInterface loopLikeOp, RewriterBase &rewriter,
     ValueRange newInitOperands, YieldTiledValuesFn yieldTiledValuesFn) {
   return TypeSwitch<Operation *, FailureOr<LoopLikeOpInterface>>(
@@ -1196,7 +1196,7 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
                                ivs, numThreads, givenTileSizes, reductionDims);
     if (failed(tilingResult)) {
       rewriter.eraseOp(clonedOp);
-      return op.emitOpError("faild to tile operation");
+      return op.emitOpError("failed to tile operation");
     }
 
     // 5d. Delete the cloned operation.
@@ -1509,6 +1509,14 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
     auto tilableOp = cast<TilingInterface>(originalOwner);
     // b. get iterDomain Offset and Sizes based on sliceOp tile
     SmallVector<OpFoldResult> iterDomainOffset, iterDomainSizes;
+    // Set insertion point before any operations that might create new SSA
+    // values used in offset/size computations. This ensures all values created
+    // by getIterationDomainTileFromResultTile and getResultTilePosition
+    // dominate the extract_slice operations created later.
+    if (auto tiledDestStyleOp =
+            dyn_cast<DestinationStyleOpInterface>(tiledOwner)) {
+      rewriter.setInsertionPoint(tiledDestStyleOp);
+    }
     // skip tensor.pack/unpack/pad, which expects single opResult
     if (tilableOp->getNumResults() > 1 &&
         failed(tilableOp.getIterationDomainTileFromResultTile(
@@ -1550,7 +1558,6 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
     // necessary
     if (auto tiledDestStyleOp =
             dyn_cast<DestinationStyleOpInterface>(tiledOwner)) {
-      rewriter.setInsertionPoint(tiledDestStyleOp);
       for (const auto &&[index, newRegionArg] :
            llvm::enumerate(newRegionIterArgs)) {
         auto destSlice = tensor::ExtractSliceOp::create(

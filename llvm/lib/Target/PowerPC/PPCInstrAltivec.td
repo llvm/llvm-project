@@ -343,7 +343,8 @@ class VXBX_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
 class VXCR_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
   : VXForm_CR<xo, (outs vrrc:$VD), (ins vrrc:$VA, u1imm:$ST, u4imm:$SIX),
               !strconcat(opc, " $VD, $VA, $ST, $SIX"), IIC_VecFP,
-              [(set Ty:$VD, (IntID Ty:$VA, timm:$ST, timm:$SIX))]>;
+              [(set Ty:$VD, (IntID Ty:$VA, u1imm_timm:$ST,
+                                           u4imm_timm:$SIX))]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Definitions.
@@ -533,19 +534,19 @@ def VANDC : VXForm_1<1092, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),
 def VCFSX  : VXForm_1<842, (outs vrrc:$VD), (ins u5imm:$VA, vrrc:$VB),
                       "vcfsx $VD, $VB, $VA", IIC_VecFP,
                       [(set v4f32:$VD,
-                             (int_ppc_altivec_vcfsx v4i32:$VB, timm:$VA))]>;
+                             (int_ppc_altivec_vcfsx v4i32:$VB, u5imm_timm:$VA))]>;
 def VCFUX  : VXForm_1<778, (outs vrrc:$VD), (ins u5imm:$VA, vrrc:$VB),
                       "vcfux $VD, $VB, $VA", IIC_VecFP,
                       [(set v4f32:$VD,
-                             (int_ppc_altivec_vcfux v4i32:$VB, timm:$VA))]>;
+                             (int_ppc_altivec_vcfux v4i32:$VB, u5imm_timm:$VA))]>;
 def VCTSXS : VXForm_1<970, (outs vrrc:$VD), (ins u5imm:$VA, vrrc:$VB),
                       "vctsxs $VD, $VB, $VA", IIC_VecFP,
                       [(set v4i32:$VD,
-                             (int_ppc_altivec_vctsxs v4f32:$VB, timm:$VA))]>;
+                             (int_ppc_altivec_vctsxs v4f32:$VB, u5imm_timm:$VA))]>;
 def VCTUXS : VXForm_1<906, (outs vrrc:$VD), (ins u5imm:$VA, vrrc:$VB),
                       "vctuxs $VD, $VB, $VA", IIC_VecFP,
                       [(set v4i32:$VD,
-                             (int_ppc_altivec_vctuxs v4f32:$VB, timm:$VA))]>;
+                             (int_ppc_altivec_vctuxs v4f32:$VB, u5imm_timm:$VA))]>;
 
 // Defines with the UIM field set to 0 for floating-point
 // to integer (fp_to_sint/fp_to_uint) conversions and integer
@@ -704,7 +705,8 @@ def VXOR : VXForm_1<1220, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),
 
 def VRLB   : VX1_Int_Ty<   4, "vrlb", int_ppc_altivec_vrlb, v16i8>;
 def VRLH   : VX1_Int_Ty<  68, "vrlh", int_ppc_altivec_vrlh, v8i16>;
-def VRLW   : VX1_Int_Ty< 132, "vrlw", int_ppc_altivec_vrlw, v4i32>;
+def VRLW   : VXForm_1<132, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),
+                      "vrlw $VD, $VA, $VB", IIC_VecFP, []>;
 
 def VSL    : VX1_Int_Ty< 452, "vsl" , int_ppc_altivec_vsl,  v4i32 >;
 def VSLO   : VX1_Int_Ty<1036, "vslo", int_ppc_altivec_vslo, v4i32>;
@@ -889,9 +891,12 @@ def : Pat<(v16i8 (rotl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VRLB v16i8:$vA, v16i8:$vB))>;
 def : Pat<(v8i16 (rotl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VRLH v8i16:$vA, v8i16:$vB))>;
-let Predicates = [IsNotISAFuture] in
+let Predicates = [IsNotISAFuture] in {
 def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VRLW v4i32:$vA, v4i32:$vB))>;
+def : Pat<(v4i32 (int_ppc_altivec_vrlw v4i32:$vA, v4i32:$vB)),
+          (v4i32 (VRLW v4i32:$vA, v4i32:$vB))>;
+}
 
 // Multiply
 def : Pat<(mul v8i16:$vA, v8i16:$vB), (VMLADDUHM $vA, $vB, (v8i16(V_SET0H)))>;
@@ -1397,9 +1402,9 @@ def VUPKLSW : VX2_Int_Ty2<1742, "vupklsw", int_ppc_altivec_vupklsw,
 def BCDADD_rec : VX_VT5_VA5_VB5_PS1_XO9_o<1,  "bcdadd." , []>;
 def BCDSUB_rec : VX_VT5_VA5_VB5_PS1_XO9_o<65, "bcdsub." , []>;
 
-def : Pat<(v16i8 (int_ppc_bcdadd v16i8:$vA, v16i8:$vB, timm:$PS)),
+def : Pat<(v16i8 (int_ppc_bcdadd v16i8:$vA, v16i8:$vB, u1imm_timm:$PS)),
           (BCDADD_rec $vA, $vB, $PS)>;
-def : Pat<(v16i8 (int_ppc_bcdsub v16i8:$vA, v16i8:$vB, timm:$PS)),
+def : Pat<(v16i8 (int_ppc_bcdsub v16i8:$vA, v16i8:$vB, u1imm_timm:$PS)),
           (BCDSUB_rec $vA, $vB, $PS)>;
 
 // Shuffle patterns for unary and swapped (LE) vector pack modulo.
@@ -1635,13 +1640,13 @@ class VX_VT5_EO5_VB5_XO9_o<bits<5> eo, bits<9> xo, string opc,
 
 // Decimal Convert From/to National/Zoned/Signed-QWord
 def BCDCFN_rec  : VX_VT5_EO5_VB5_PS1_XO9_o<7, 385, "bcdcfn." ,
-                  [(set v16i8:$VD, (int_ppc_national2packed v16i8:$VB, timm:$PS))]>;
+                  [(set v16i8:$VD, (int_ppc_national2packed v16i8:$VB, u1imm_timm:$PS))]>;
 def BCDCFZ_rec  : VX_VT5_EO5_VB5_PS1_XO9_o<6, 385, "bcdcfz." , 
-                  [(set v16i8:$VD, (int_ppc_zoned2packed v16i8:$VB, timm:$PS))]>;
+                  [(set v16i8:$VD, (int_ppc_zoned2packed v16i8:$VB, u1imm_timm:$PS))]>;
 def BCDCTN_rec  : VX_VT5_EO5_VB5_XO9_o    <5, 385, "bcdctn." , 
                   [(set v16i8:$VD, (int_ppc_packed2national v16i8:$VB))]>;
 def BCDCTZ_rec  : VX_VT5_EO5_VB5_PS1_XO9_o<4, 385, "bcdctz." , 
-                  [(set v16i8:$VD, (int_ppc_packed2zoned v16i8:$VB, timm:$PS))]>;
+                  [(set v16i8:$VD, (int_ppc_packed2zoned v16i8:$VB, u1imm_timm:$PS))]>;
 def BCDCFSQ_rec : VX_VT5_EO5_VB5_PS1_XO9_o<2, 385, "bcdcfsq.", []>;
 def BCDCTSQ_rec : VX_VT5_EO5_VB5_XO9_o    <0, 385, "bcdctsq.", []>;
 

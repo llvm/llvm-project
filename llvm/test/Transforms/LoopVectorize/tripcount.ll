@@ -34,7 +34,7 @@ define i32 @foo_low_trip_count1(i32 %bound) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -45,7 +45,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, %bound
   br i1 %exitcond, label %for.end, label %for.body, !prof !1
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -73,7 +73,7 @@ define i32 @foo_low_trip_count2(i32 %bound) !prof !0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -84,7 +84,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, %bound
   br i1 %exitcond, label %for.end, label %for.body, !prof !1
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -147,7 +147,7 @@ entry:
 for.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -158,7 +158,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, %bound
   br i1 %exitcond, label %for.end, label %for.body, !prof !3
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -186,7 +186,7 @@ define i32 @foo_low_trip_count_icmp_sgt(i32 %bound) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -197,7 +197,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp sgt i32 %i.08, %bound
   br i1 %exitcond, label %for.end, label %for.body, !prof !1
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -223,7 +223,7 @@ define i32 @const_low_trip_count() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -234,7 +234,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp slt i32 %i.08, 2
   br i1 %exitcond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -276,7 +276,7 @@ define i32 @const_large_trip_count() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -287,7 +287,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp slt i32 %i.08, 1000
   br i1 %exitcond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -313,7 +313,7 @@ define i32 @const_small_trip_count_step() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -324,13 +324,14 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp slt i32 %i.08, 10
   br i1 %exitcond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
-define i32 @const_trip_over_profile() {
+define i32 @const_trip_over_profile() !prof !0 {
 ; constant trip count takes precedence over profile data
-; CHECK-LABEL: define i32 @const_trip_over_profile() {
+; CHECK-LABEL: define i32 @const_trip_over_profile(
+; CHECK-SAME: ) !prof [[PROF1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -344,7 +345,7 @@ define i32 @const_trip_over_profile() {
 ; CHECK-NEXT:    store <4 x i8> [[TMP2]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF15:![0-9]+]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -358,7 +359,7 @@ define i32 @const_trip_over_profile() {
 ; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[I_08]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_END:.*]], !prof [[PROF0]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_END:.*]], !prof [[PROF17:![0-9]+]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -366,7 +367,7 @@ define i32 @const_trip_over_profile() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -377,7 +378,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp slt i32 %i.08, 1000
   br i1 %exitcond, label %for.body, label %for.end, !prof !1
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -401,6 +402,8 @@ for.end:                                          ; preds = %for.body
 ; CHECK: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 1}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META6]], [[META7]]}
 ; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META7]], [[META6]]}
-; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META6]], [[META7]]}
-; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META7]], [[META6]]}
+; CHECK: [[PROF15]] = !{!"branch_weights", i32 1, i32 249}
+; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META6]], [[META7]], [[META8]]}
+; CHECK: [[PROF17]] = !{!"branch_weights", i32 0, i32 1}
+; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META7]], [[META6]], [[META12]]}
 ;.
