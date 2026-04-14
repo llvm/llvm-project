@@ -537,4 +537,13 @@ std::function<void()> return_lambda_capturing_param(int &x) { // expected-warnin
   return [&]() { (void)x; }; // expected-note {{param returned here}}
 }
 
+void uaf_via_inferred_lifetimebound() {
+  std::function<void()> f = []() {};
+  {
+    int local;
+    f = return_lambda_capturing_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)f; // expected-note {{later used here}}
+}
+
 } // namespace callable_wrappers
