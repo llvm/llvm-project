@@ -1014,10 +1014,10 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
 static std::variant<LValue, RValue>
 emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
                      bool forLValue, AggValueSlot slot) {
-  using ovmd = CIRGenFunction::OpaqueValueMappingData;
-  SmallVector<ovmd, 4> opaques;
+  using OVMD = CIRGenFunction::OpaqueValueMappingData;
+  SmallVector<OVMD> opaques;
   llvm::scope_exit opaque_cleanup{
-      [&]() { llvm::for_each(opaques, [&](ovmd &o) { o.unbind(cgf); }); }};
+      [&]() { llvm::for_each(opaques, [&](OVMD &o) { o.unbind(cgf); }); }};
 
   // Find the result expression, if any.
   const Expr *resultExpr = e->getResultExpr();
@@ -1041,13 +1041,13 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
 
       // If this is the result expression, we may need to evaluate
       // directly into the slot.
-      ovmd opaqueData;
+      OVMD opaqueData;
       if (ov == resultExpr && ov->isPRValue() && !forLValue &&
           CIRGenFunction::hasAggregateEvaluationKind(ov->getType())) {
         cgf.cgm.errorNYI(e->getSourceRange(),
                          "emitPseudoObjectExpr for RValue & aggregate kind");
       } else {
-        opaqueData = ovmd::bind(cgf, ov, ov->getSourceExpr());
+        opaqueData = OVMD::bind(cgf, ov, ov->getSourceExpr());
 
         // If this is the result, also evaluate the result now.
         if (ov == resultExpr) {
