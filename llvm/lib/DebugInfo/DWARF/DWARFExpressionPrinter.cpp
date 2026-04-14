@@ -23,6 +23,56 @@ namespace llvm {
 typedef DWARFExpression::Operation Op;
 typedef Op::Description Desc;
 
+/// Some backends (e.g. NVPTX) encode virtual register names as the DWARF
+/// register number: the ASCII bytes of the name are concatenated into a
+/// uint64_t (see NVPTXRegisterInfo::encodeRegisterForDwarf). When the object
+/// file is not the target backend, MCRegisterInfo cannot map these numbers, so
+/// recover the string for dumping.
+static bool decodeVirtualRegisterName(uint64_t DwarfRegNum,
+                                      SmallString<32> &Out) {
+  if (DwarfRegNum == 0)
+    return false;
+
+  SmallString<32> Tmp;
+  for (uint64_t V = DwarfRegNum; V; V >>= 8)
+    Tmp.push_back(static_cast<char>(V & 0xFF));
+
+  // Encoding builds the uint64_t as (result << 8) | byte per character (MSB of
+  // the value is the first character). Unpacking with >>= 8 yields bytes LSB
+  // first, so reverse to restore the original register name (e.g. %rd2).
+  std::reverse(Tmp.begin(), Tmp.end());
+
+  if (Tmp.empty() || Tmp.size() < 2)
+    return false;
+
+  if (!llvm::isAlnum(Tmp[0]) && Tmp[0] != '%')
+    return false;
+
+  for (size_t I = 1; I < Tmp.size(); ++I)
+    if (!llvm::isAlnum(Tmp[I]))
+      return false;
+
+  Out = Tmp;
+  return true;
+}
+
+/// \p DecodedScratch must stay alive as long as the returned \p StringRef is
+/// used (it points into \p DecodedScratch when the virtual-register decode
+/// path is taken).
+static StringRef resolveRegName(
+    uint64_t DwarfRegNum, bool IsEH,
+    const std::function<StringRef(uint64_t, bool)> &GetNameForDWARFReg,
+    SmallString<32> &DecodedScratch) {
+  if (GetNameForDWARFReg) {
+    StringRef R = GetNameForDWARFReg(DwarfRegNum, IsEH);
+    if (!R.empty())
+      return R;
+  }
+  if (decodeVirtualRegisterName(DwarfRegNum, DecodedScratch))
+    return DecodedScratch;
+  return {};
+}
+
 static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
                                    DIDumpOptions DumpOpts,
                                    ArrayRef<uint64_t> Operands,
@@ -242,8 +292,10 @@ static bool printCompactDWARFExpr(
     case dwarf::DW_OP_regx: {
       // DW_OP_regx: A register, with the register num given as an operand.
       // Printed as the plain register name.
-      uint64_t DwarfRegNum = Op.getRawOperand(0);
-      auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
+      const uint64_t DwarfRegNum = Op.getRawOperand(0);
+      SmallString<32> DecodedScratch;
+      StringRef RegName = resolveRegName(DwarfRegNum, false, GetNameForDWARFReg,
+                                         DecodedScratch);
       if (RegName.empty())
         return false;
       raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
@@ -251,9 +303,11 @@ static bool printCompactDWARFExpr(
       break;
     }
     case dwarf::DW_OP_bregx: {
-      int DwarfRegNum = Op.getRawOperand(0);
-      int64_t Offset = Op.getRawOperand(1);
-      auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
+      const int64_t DwarfRegNum = Op.getRawOperand(0);
+      const int64_t Offset = Op.getRawOperand(1);
+      SmallString<32> DecodedScratch;
+      StringRef RegName = resolveRegName(DwarfRegNum, false, GetNameForDWARFReg,
+                                         DecodedScratch);
       if (RegName.empty())
         return false;
       raw_svector_ostream S(Stack.emplace_back().String);
@@ -343,9 +397,6 @@ bool printDwarfExpressionCompact(
 bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
                            DIDumpOptions DumpOpts, uint8_t Opcode,
                            ArrayRef<uint64_t> Operands) {
-  if (!DumpOpts.GetNameForDWARFReg)
-    return false;
-
   uint64_t DwarfRegNum;
   unsigned OpNum = 0;
 
@@ -353,22 +404,28 @@ bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
   if (Opcode == DW_OP_LLVM_user)
     SubOpcode = Operands[OpNum++];
 
-  if (Opcode == DW_OP_bregx || Opcode == DW_OP_regx ||
+  const bool RegNumFromOperand =
+      Opcode == DW_OP_bregx || Opcode == DW_OP_regx ||
       Opcode == DW_OP_regval_type || SubOpcode == DW_OP_LLVM_aspace_bregx ||
-      SubOpcode == DW_OP_LLVM_call_frame_entry_reg)
+      SubOpcode == DW_OP_LLVM_call_frame_entry_reg;
+
+  if (RegNumFromOperand)
     DwarfRegNum = Operands[OpNum++];
   else if (Opcode >= DW_OP_breg0 && Opcode < DW_OP_bregx)
     DwarfRegNum = Opcode - DW_OP_breg0;
   else
     DwarfRegNum = Opcode - DW_OP_reg0;
 
-  auto RegName = DumpOpts.GetNameForDWARFReg(DwarfRegNum, DumpOpts.IsEH);
+  SmallString<32> DecodedScratch;
+  StringRef RegName = resolveRegName(
+      DwarfRegNum, DumpOpts.IsEH, DumpOpts.GetNameForDWARFReg, DecodedScratch);
+
   if (!RegName.empty()) {
     if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
         Opcode == DW_OP_bregx || SubOpcode == DW_OP_LLVM_aspace_bregx)
       OS << ' ' << RegName << formatv("{0:+d}", int64_t(Operands[OpNum]));
     else
-      OS << ' ' << RegName.data();
+      OS << ' ' << RegName;
 
     if (Opcode == DW_OP_regval_type)
       prettyPrintBaseTypeRef(U, OS, DumpOpts, Operands, 1);
