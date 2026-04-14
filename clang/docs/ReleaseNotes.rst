@@ -133,7 +133,7 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Implemented `P2843R3 <https://wg21.link/P2843R3>`_ Preprocessing is never undefined.
+- Mark `P2843R3 <https://wg21.link/P2843R3>`_ Preprocessing is never undefined as implemented.
   The constructs it makes ill-formed were already diagnosed by Clang under
   ``-pedantic``; no behavior change, just conformance.
 
