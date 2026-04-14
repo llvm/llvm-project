@@ -211,6 +211,77 @@ func.func @store_nd_vc_5(%dst: memref<24x32xf32>, %data: vector<8x1xf32>) {
 }
 
 // -----
+func.func @prefetch_vc_2(%src: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<write_back>}}
+  xegpu.prefetch %src[%0] <{l1_hint = #xegpu.cache_hint<write_back>}> : memref<?xf32>, vector<4xindex>
+  return
+}
+
+// -----
+func.func @load_gather_vc_2(%src: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = arith.constant dense<1>: vector<4xi1>
+  // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<write_back>}}
+  %2 = xegpu.load %src[%0], %1 <{l1_hint = #xegpu.cache_hint<write_back>}>
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @load_gather_vc_3(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<8xi1>
+  // expected-error@+1 {{Mask should match value except the chunk size dim}}
+  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}>
+      : memref<?xf32>, vector<4xindex>, vector<8xi1> -> vector<4x2xf32>
+  return
+}
+
+// -----
+func.func @load_gather_simt_1(%src: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = arith.constant dense<1>: vector<4xi1>
+  // expected-error@+1 {{value elements must match chunk size}}
+  %2 = xegpu.load %src[%0], %1 <{chunk_size = 2}>
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<6xf32>
+  return
+}
+
+// -----
+func.func @store_scatter_vc_2(%dst: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = arith.constant dense<1>: vector<4xi1>
+  %2 = arith.constant dense<2.9>: vector<4xf32>
+  // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<streaming>}}
+  xegpu.store %2, %dst[%0], %1 <{l1_hint = #xegpu.cache_hint<streaming>}>
+      : vector<4xf32>, memref<?xf32>, vector<4xindex>, vector<4xi1>
+  return
+}
+
+// -----
+func.func @store_scatter_vc_3(%dst: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = arith.constant dense<1>: vector<8xi1>
+  %2 = arith.constant dense<2.9>: vector<4x2xf32>
+  // expected-error@+1 {{Mask should match value except the chunk size dim}}
+  xegpu.store %2, %dst[%0], %1 <{chunk_size = 2}>
+      : vector<4x2xf32>, memref<?xf32>, vector<4xindex>, vector<8xi1>
+  return
+}
+
+// -----
+func.func @store_scatter_simt_1(%dst: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = arith.constant dense<1>: vector<4xi1>
+  %2 = arith.constant dense<2.9>: vector<6xf32>
+  // expected-error@+1 {{value elements must match chunk size}}
+  xegpu.store %2, %dst[%0], %1 <{chunk_size = 2}>
+      : vector<6xf32>, memref<?xf32>, vector<4xindex>, vector<4xi1>
+  return
+}
+
+// -----
 func.func @prefetch_offset_wi_1(%src: memref<4x4xf32>) {
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   // expected-error@+1 {{op operand #0 must be TensorDesc describing regions of interested data}}
