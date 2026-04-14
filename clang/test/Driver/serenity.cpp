@@ -1,6 +1,6 @@
 // UNSUPPORTED: system-windows
 
-/// Check default header and linker paths for each supported triple
+/// Check default header and linker paths for each supported triple.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -ccc-install-dir %S/Inputs/serenity/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   2>&1 | FileCheck %s --check-prefix=PATHS
@@ -19,14 +19,14 @@
 // PATHS-SAME: "-internal-isystem" "[[SYSROOT]]/usr/include"
 // PATHS:      "-L[[SYSROOT]]/usr/lib"
 
-/// Check include paths with -nostdinc
+/// Check include paths with -nostdinc.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -ccc-install-dir %S/Inputs/serenity/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   -fsyntax-only -nostdinc 2>&1 | FileCheck %s --check-prefix=PATH_NOSTDINC
 // PATH_NOSTDINC: "-nostdsysteminc" "-nobuiltininc"
 // PATH_NOSTDINC-NOT: /include
 
-/// Check include paths with -nobuiltininc
+/// Check include paths with -nobuiltininc.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -ccc-install-dir %S/Inputs/serenity/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   -fsyntax-only -nobuiltininc 2>&1 | FileCheck %s --check-prefix=PATH_NOBUILTIN
@@ -37,7 +37,7 @@
 // PATH_NOBUILTIN-NOT: "-internal-isystem" "[[RESOURCE]]/include"
 // PATH_NOBUILTIN-SAME: "-internal-isystem" "[[SYSROOT]]/usr/include"
 
-/// Check include paths with -nostdlibinc
+/// Check include paths with -nostdlibinc.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -ccc-install-dir %S/Inputs/serenity/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   -fsyntax-only -nostdlibinc 2>&1 | FileCheck %s --check-prefix=PATH_NOSTDLIBINC
@@ -48,7 +48,7 @@
 // PATH_NOSTDLIBINC-SAME: "-internal-isystem" "[[RESOURCE]]/include"
 // PATH_NOSTDLIBINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include"
 
-/// Check that PIC and PIE are enabled by default
+/// Check that PIC and PIE are enabled by default.
 // RUN: %clang -c %s --target=x86_64-unkown-serenity -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 // RUN: %clang -c %s --target=aarch64-unkown-serenity -### 2>&1 \
@@ -60,7 +60,7 @@
 // CHECK-PIE2-SAME: "-pic-level" "2"
 // CHECK-PIE2-SAME: "-pic-is-pie"
 
-/// Check default linker args for each supported triple
+/// Check default linker args for each supported triple.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir 2>&1 | FileCheck %s --check-prefix=SERENITY_X86_64,DEFAULT_LINKER
 // SERENITY_X86_64: "-cc1" "-triple" "[[TRIPLE:x86_64-unknown-serenity]]"
 
@@ -80,13 +80,13 @@
 // DEFAULT_LINKER-SAME: "[[RESOURCE]]/lib/[[TRIPLE]]/libclang_rt.builtins.a"
 // DEFAULT_LINKER-SAME: "-lc" "[[RESOURCE]]/lib/[[TRIPLE]]/clang_rt.crtend.o"
 
-/// Check if the sysroot is passed to the linker
+/// Check if the sysroot is passed to the linker.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=TestSysroot \
 // RUN:   -static-pie 2>&1 | FileCheck %s --check-prefix=LINKER_SYSROOT
 // LINKER_SYSROOT: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
 // LINKER_SYSROOT-SAME: "--sysroot=TestSysroot"
 
-/// -static-pie suppresses -dynamic-linker
+/// -static-pie suppresses -dynamic-linker.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot= -resource-dir= \
 // RUN:   -static-pie 2>&1 | FileCheck %s --check-prefix=STATIC_PIE
 // STATIC_PIE: "-static" "-pie"
@@ -97,7 +97,7 @@
 // STATIC_PIE-SAME: "crt0.o" "crtbeginS.o"
 // STATIC_PIE-SAME: "-lc" "crtendS.o"
 
-/// -shared forces use of shared crt files
+/// -shared forces use of shared crt files.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot= -resource-dir= \
 // RUN:   -shared 2>&1 | FileCheck %s --check-prefix=SHARED
 // SHARED: "-shared"
@@ -107,7 +107,7 @@
 // SHARED-SAME: "crtbeginS.o"
 // SHARED-SAME: "-lc" "crtendS.o"
 
-/// -static forces use of static crt files
+/// -static forces use of static crt files.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot= -resource-dir= \
 // RUN:   -static 2>&1 | FileCheck %s --check-prefix=STATIC
 // STATIC: "-static"
@@ -116,7 +116,7 @@
 // STATIC-SAME: "crt0.o" "crtbeginS.o"
 // STATIC-SAME: "-lc" "crtendS.o"
 
-/// -rdynamic passes -export-dynamic
+/// -rdynamic passes -export-dynamic.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot= -resource-dir= \
 // RUN:   -rdynamic 2>&1 | FileCheck %s --check-prefix=RDYNAMIC,RDYNAMIC_SHARED
 // RDYNAMIC: "-export-dynamic" "-pie"
@@ -132,7 +132,7 @@
 // RDYNAMIC_SHARED-SAME: "crt0.o" "crtbeginS.o"
 // RDYNAMIC_SHARED-SAME: "-lc" "crtendS.o"
 
-/// -nostdlib suppresses default -l and crt*.o
+/// -nostdlib suppresses default -l and crt*.o.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -ccc-install-dir %S/Inputs/serenity_tree/usr/local/bin -resource-dir= \
 // RUN:   -nostdlib --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=NOSTDLIB
@@ -144,7 +144,7 @@
 // NOSTDLIB-NOT:  libclang_rt.builtins
 // NOSTDLIB-NOT:  crt{{[^./]+}}.o
 
-// -nostartfiles suppresses crt*.o, but not default -l
+/// -nostartfiles suppresses crt*.o, but not default -l.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -ccc-install-dir %S/Inputs/serenity_tree/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   -nostartfiles --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=NOSTARTFILES
@@ -171,7 +171,7 @@
 // RELOCATABLE-NOT:  crt{{[^./]+}}.o
 // RELOCATABLE-NOT:  libclang_rt.builtins
 
-/// -nolibc suppresses -lc but not other default -l
+/// -nolibc suppresses -lc but not other default -l.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -ccc-install-dir %S/Inputs/serenity_tree/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   -nolibc --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=NOLIBC
@@ -184,14 +184,14 @@
 // NOLIBC:      "[[RESOURCE:[^"]+]]/lib/x86_64-unknown-serenity/libclang_rt.builtins.a"
 // NOLIBC:      "crtendS.o"
 
-/// -fsanitize=undefined redirects to Serenity-custom UBSAN runtime
+/// -fsanitize=undefined redirects to Serenity-custom UBSAN runtime.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -ccc-install-dir %S/Inputs/serenity_tree/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   -fsanitize=undefined --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=UBSAN
 // UBSAN-NOT: "libclang_rt.ubsan"
 // UBSAN:     "-lubsan"
 
-/// C++ stdlib behavior
+/// Check C++ stdlib behavior.
 // RUN: %clangxx -### %s --target=x86_64-unknown-serenity --sysroot="" -resource-dir= \
 // RUN:   2>&1 | FileCheck %s --check-prefix=DEFAULT_LIBCXX
 // DEFAULT_LIBCXX: "-dynamic-linker" "/usr/lib/Loader.so" "--eh-frame-hdr"
@@ -234,7 +234,7 @@
 // NO_LIBCXX-NOT: "-lc++"
 // NO_LIBCXX-SAME: "-lc" "crtendS.o"
 
-/// Check that unwind tables are enabled
+/// Check that unwind tables are enabled.
 // RUN: %clang --target=x86_64-unknown-serenity -### -S %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=UNWIND-TABLES %s
 // RUN: %clang --target=aarch64-unknown-serenity -### -S %s 2>&1 | \
@@ -243,8 +243,7 @@
 // RUN:   FileCheck -check-prefix=UNWIND-TABLES %s
 // UNWIND-TABLES: "-funwind-tables=2"
 
-/// Check that parameters are forwarded to the linker
-
+/// Check that parameters are forwarded to the linker.
 // RUN: %clang --target=x86_64-unknown-serenity -### %s -L/foo -u bar -T script.ld -s -t -r 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=LINK
 // LINK: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
@@ -260,7 +259,7 @@
 // COMPRESS: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
 // COMPRESS: "--compress-debug-sections=zlib"
 
-/// Check LTO
+/// Check LTO.
 // RUN: %clang --target=x86_64-unknown-serenity -flto %s -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=LTO_FULL
 // LTO_FULL: "-plugin-opt=
