@@ -1068,9 +1068,22 @@ cc_library(
     ],
 )
 
+# These flags are needed for python extensions to work.
+PYTHON_BINDINGS_COPTS = [
+    "-fexceptions",
+    "-frtti",
+]
+
+PYTHON_BINDINGS_FEATURES = [
+    # Cannot use header_modules (parse_headers feature fails).
+    "-use_header_modules",
+]
+
 cc_library(
     name = "MLIRBindingsPythonHeadersAndDeps",
     hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     includes = ["include"],
     deps = [
         ":CAPIDebug",
@@ -1097,6 +1110,8 @@ cc_library(
 cc_library(
     name = "MLIRBindingsPythonNanobindHeadersAndDeps",
     hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     includes = ["include"],
     deps = [
         ":CAPIDebug",
@@ -1106,17 +1121,6 @@ cc_library(
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
-
-# These flags are needed for python extensions to work.
-PYTHON_BINDINGS_COPTS = [
-    "-fexceptions",
-    "-frtti",
-]
-
-PYTHON_BINDINGS_FEATURES = [
-    # Cannot use header_modules (parse_headers feature fails).
-    "-use_header_modules",
-]
 
 filegroup(
     name = "MLIRBindingsPythonSourceFiles",
@@ -9217,6 +9221,7 @@ cc_library(
         ":LLVMDialect",
         ":OpenMPCommon",
         ":OpenMPDialect",
+        ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
         ":TransformUtils",

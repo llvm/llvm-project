@@ -1234,3 +1234,29 @@ class ScriptedFrameProviderTestCase(TestBase):
             expected_thread_ids,
             "All threads should broadcast eBroadcastBitStackChanged on clear",
         )
+
+    def test_incremental_fetch_synthetic_frame_identity(self):
+        """Test that incrementally fetched PC-less synthetic frames each get a
+        unique StackID so they resolve to the correct frame."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        error = lldb.SBError()
+        target.RegisterScriptedFrameProvider(
+            "test_frame_providers.PythonSourceFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertSuccess(error)
+
+        # Fetch frames one at a time to trigger separate FetchFramesUpTo calls.
+        frame0 = thread.GetFrameAtIndex(0)
+        frame1 = thread.GetFrameAtIndex(1)
+
+        self.assertEqual(frame0.GetFunctionName(), "compute_fibonacci")
+        self.assertEqual(frame1.GetFunctionName(), "process_data")

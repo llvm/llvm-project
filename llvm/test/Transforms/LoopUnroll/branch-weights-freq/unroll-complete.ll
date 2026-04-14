@@ -106,16 +106,14 @@
 ;     impossibly high.
 ;     ORIG2310: - do.body: float = 3.0,
 ;     UR2310:   - do.body: float = 1.0,
-;     FIXME: Should be 1.0:
-;     UR2310:   - do.body.1: float = 0.66667
+;     UR2310:   - do.body.1: float = 1.0,
 ;
 ;     The sole probability is maximized to try to reach the original frequency.
 ;     UR2310: call void @f
 ;     UR2310: br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
 ;     UR2310: call void @f
 ;     UR2310: br label %do.end
-;     FIXME: Should be (0, non-zero):
-;     UR2310: !0 = !{!"branch_weights", i32 1, i32 2}
+;     UR2310: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
 ;
 ;   Now use a constant iteration count so that the sole non-final unrolled
 ;   iteration's latch unconditionally continues.
@@ -148,15 +146,13 @@
 ;     The sum of the new do.body* is the old do.body.
 ;     ORIG2210: - do.body: float = 2.0,
 ;     UR2210:   - do.body: float = 1.0,
-;     FIXME: Should be 1.0:
-;     UR2210:   - do.body.1: float = 0.5,
+;     UR2210:   - do.body.1: float = 1.0,
 ;
 ;     UR2210: call void @f
 ;     UR2210: br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
 ;     UR2210: call void @f
 ;     UR2210: br label %do.end
-;     FIXME: Should be (0, non-zero):
-;     UR2210: !0 = !{!"branch_weights", i32 1, i32 1}
+;     UR2210: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
 ;
 ;   Now use a constant iteration count so that the sole non-final unrolled
 ;   iteration's latch unconditionally continues.
@@ -235,10 +231,8 @@
 ;     impossibly high.
 ;     ORIG3410: - do.body: float = 4.0,
 ;     UR3410:   - do.body: float = 1.0,
-;     FIXME: Should be 1.0:
-;     UR3410:   - do.body.1: float = 0.75,
-;     FIXME: Should be 1.0:
-;     UR3410:   - do.body.2: float = 0.5625,
+;     UR3410:   - do.body.1: float = 1.0,
+;     UR3410:   - do.body.2: float = 1.0,
 ;
 ;     The probabilities are maximized to try to reach the original frequency.
 ;     UR3410: call void @f
@@ -247,8 +241,7 @@
 ;     UR3410: br i1 %{{.*}}, label %do.end, label %do.body.2, !prof !0
 ;     UR3410: call void @f
 ;     UR3410: br label %do.end
-;     FIXME: Should be (0, non-zero):
-;     UR3410: !0 = !{!"branch_weights", i32 1, i32 3}
+;     UR3410: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
 ;
 ;   Now use a constant iteration count so that all non-final unrolled
 ;   iterations' latches unconditionally continue.
@@ -284,8 +277,7 @@
 ;     old do.body, which is impossibly high.
 ;     ORIG343x: - do.body: float = 4.0,
 ;     UR343x:   - do.body: float = 1.0,
-;     FIXME: Should be 1.0:
-;     UR343x:   - do.body.1: float = 0.75,
+;     UR343x:   - do.body.1: float = 1.0,
 ;
 ;     The sole probability is maximized to try to reach the original frequency.
 ;     UR343x:     call void @f
@@ -294,8 +286,7 @@
 ;     UR343x-NOT: br
 ;     UR343x:     call void @f
 ;     UR343x:     ret void
-;     FIXME: Should be (0, non-zero):
-;     UR343x:     !0 = !{!"branch_weights", i32 1, i32 3}
+;     UR343x:     !0 = !{!"branch_weights", i32 0, i32 -2147483648}
 ;
 ; Original loop body frequency is 3 (loop weight 2).
 ;
@@ -310,10 +301,8 @@
 ;     The sum of the new do.body* is the old do.body.
 ;     ORIG3310: - do.body: float = 3.0,
 ;     UR3310:   - do.body: float = 1.0,
-;     FIXME: Should be 1.0:
-;     UR3310:   - do.body.1: float = 0.66667,
-;     FIXME: Should be 1.0:
-;     UR3310:   - do.body.2: float = 0.44444,
+;     UR3310:   - do.body.1: float = 1.0,
+;     UR3310:   - do.body.2: float = 1.0,
 ;
 ;     UR3310: call void @f
 ;     UR3310: br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
@@ -321,8 +310,7 @@
 ;     UR3310: br i1 %{{.*}}, label %do.end, label %do.body.2, !prof !0
 ;     UR3310: call void @f
 ;     UR3310: br label %do.end
-;     FIXME: Should be (very small, very large):
-;     UR3310: !0 = !{!"branch_weights", i32 1, i32 2}
+;     UR3310: !0 = !{!"branch_weights", i32 1, i32 2147483647}
 ;
 ;   Now use a constant iteration count so that all non-final unrolled
 ;   iterations' latches unconditionally continue.
@@ -357,8 +345,7 @@
 ;     multiply it by 2, and add the new do.body to get the old do.body.
 ;     ORIG333x: - do.body: float = 3.0,
 ;     UR333x:   - do.body: float = 1.0,
-;     FIXME: Should be 1.0:
-;     UR333x:   - do.body.1: float = 0.66667,
+;     UR333x:   - do.body.1: float = 1.0,
 ;
 ;     UR333x:     call void @f
 ;     UR333x: br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
@@ -366,8 +353,7 @@
 ;     UR333x-NOT: br
 ;     UR333x:     call void @f
 ;     UR333x:     br label %do.end
-;     FIXME: Should be (very small, very large):
-;     UR333x:     !0 = !{!"branch_weights", i32 1, i32 2}
+;     UR333x:     !0 = !{!"branch_weights", i32 1, i32 2147483647}
 ;
 ; Original loop body frequency is 2 (loop weight 1).  This is our first case
 ; where new frequencies and probabilities are not all approximately 1 or 0.
@@ -383,9 +369,8 @@
 ;     The sum of the new do.body* is the old do.body.
 ;     ORIG3210: - do.body: float = 2.0,
 ;     UR3210:   - do.body: float = 1.0,
-;     FIXME: Should sum to 1.0:
-;     UR3210:   - do.body.1: float = 0.5,
-;     UR3210:   - do.body.2: float = 0.25,
+;     UR3210:   - do.body.1: float = 0.61803,
+;     UR3210:   - do.body.2: float = 0.38197,
 ;
 ;     UR3210: call void @f
 ;     UR3210: br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
@@ -393,7 +378,7 @@
 ;     UR3210: br i1 %{{.*}}, label %do.end, label %do.body.2, !prof !0
 ;     UR3210: call void @f
 ;     UR3210: br label %do.end
-;     UR3210: !0 = !{!"branch_weights", i32 1, i32 1}
+;     UR3210: !0 = !{!"branch_weights", i32 820265763, i32 1327217885}
 ;
 ;   Now use a constant iteration count so that all non-final unrolled
 ;   iterations' latches unconditionally continue.
@@ -436,7 +421,7 @@
 ;     UR323x-NOT: br
 ;     UR323x:     call void @f
 ;     UR323x:     br label %do.end
-;     UR323x:     !0 = !{!"branch_weights", i32 1, i32 1}
+;     UR323x:     !0 = !{!"branch_weights", i32 1073741824, i32 1073741824}
 ;
 ; Original loop body frequency is 1 (loop weight 0).
 ;
@@ -504,7 +489,7 @@
 ;     UR313x-NOT: br
 ;     UR313x:     call void @f
 ;     UR313x:     br label %do.end
-;     UR313x:     !0 = !{!"branch_weights", i32 1, i32 0}
+;     UR313x:     !0 = !{!"branch_weights", i32 -2147483648, i32 0}
 
 declare void @f(i32)
 

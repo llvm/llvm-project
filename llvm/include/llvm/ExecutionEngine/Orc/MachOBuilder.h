@@ -88,6 +88,11 @@ struct MachOBuilderLoadCommand<MachO::LC_UUID>
       : MachOBuilderLoadCommandImplBase<MachO::LC_UUID>() {
     memcpy(uuid, UUID, sizeof(uuid));
   }
+
+  MachOBuilderLoadCommand(const std::array<uint8_t, 16> &UUID)
+      : MachOBuilderLoadCommandImplBase<MachO::LC_UUID>() {
+    memcpy(uuid, UUID.data(), sizeof(uuid));
+  }
 };
 
 template <MachO::LoadCommandType LCType>

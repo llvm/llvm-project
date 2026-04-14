@@ -79,7 +79,7 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     /// unsigned integer types whose bit width is 8, 16, 32, or 64).
     /// _BitInt types are never fundamental even if their width matches.
     bool isFundamental() const {
-      return !isBitInt() && isFundamentalIntType(*this);
+      return isFundamentalIntType(*this);
     }
     bool isSignedFundamental() const {
       return isFundamentalSIntType(*this);
@@ -204,7 +204,7 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex", [
     the complex number. `elementType` must be either a CIR integer type or a CIR
     floating-point type.
 
-    ```mlir
+    ```
     !cir.complex<!s32i>
     !cir.complex<!cir.float>
     ```
@@ -255,7 +255,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 
     Examples:
 
-    ```mlir
+    ```
     !cir.ptr<!cir.int<u, 8>>
     !cir.ptr<!cir.float>
     !cir.ptr<!cir.record<struct "MyStruct">>
@@ -451,7 +451,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     Syntax:
 
-    ```mlir
+    ```
     vector-type ::= !cir.vector<size x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
     element-type ::= float-type | integer-type | pointer-type
@@ -462,7 +462,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     Examples:
 
-    ```mlir
+    ```
     !cir.vector<4 x !cir.int<u, 8>>
     !cir.vector<2 x !cir.float>
     ```
@@ -470,7 +470,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     Scalable vectors are indicated by enclosing size in square brackets.
 
     Example:
-    ```mlir
+    ```
     !cir.vector<[4] x !cir.int<u, 8>>
     ```
   }];
@@ -513,7 +513,7 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 
     Example:
 
-    ```mlir
+    ```
     !cir.func<()>
     !cir.func<() -> bool>
     !cir.func<(!s8i, !s8i)>
@@ -653,7 +653,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
 
     A few examples:
 
-    ```mlir
+    ```
         !rec_complete = !cir.record<struct "complete" {!u8i}>
         !rec_incomplete = !cir.record<struct "incomplete" incomplete>
         !anonymous_struct = !cir.record<struct {!u8i}>
@@ -670,7 +670,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     In the example below, the `Node` record has a member that is a pointer to a
     `Node` record:
 
-    ```mlir
+    ```
         !s = !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
     ```
   }];
