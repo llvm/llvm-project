@@ -806,7 +806,8 @@ struct Allocator {
       uptr memcpy_size = Min(new_size, m->UsedSize());
       // If realloc() races with free(), we may start copying freed memory.
       // However, we will report racy double-free later anyway.
-      // Avoid intercepted CRT memcpy/memmove (see sanitizer_allocator_combined.h).
+      // Avoid intercepted CRT memcpy/memmove (see
+      // sanitizer_allocator_combined.h)
       internal_memcpy(new_ptr, old_ptr, memcpy_size);
       Deallocate(old_ptr, 0, 0, stack, FROM_MALLOC);
     }
