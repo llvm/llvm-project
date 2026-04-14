@@ -32,10 +32,10 @@ struct AssignmentSearchToken {
   const CFGBlock *Block;
   const OriginID OID;
 
-  bool operator==(const AssignmentSearchToken& Other) const {
+  bool operator==(const AssignmentSearchToken &Other) const {
     return Block == Other.Block && OID == Other.OID;
   }
-  bool operator<(const AssignmentSearchToken& Other) const {
+  bool operator<(const AssignmentSearchToken &Other) const {
     if (Block == Other.Block)
       return OID < Other.OID;
     return Block < Other.Block;
@@ -141,13 +141,12 @@ const Expr *getRHSExpr(const AssignmentQueryContext &Context,
   return SExpr;
 }
 
-AliasAssignmentSearchResult
-getAliasListCore(const AssignmentQueryContext &Context,
-                 llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
-                 const CFGBlock *Block, const LoanID EndLoanID,
-                 OriginID *TargetOID,
-                 const OriginDestExpr LastDestExpr = nullptr,
-                 const std::optional<OriginID> LastIssueOriginID = std::nullopt) {
+AliasAssignmentSearchResult getAliasListCore(
+    const AssignmentQueryContext &Context,
+    llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
+    const CFGBlock *Block, const LoanID EndLoanID, OriginID *TargetOID,
+    const OriginDestExpr LastDestExpr = nullptr,
+    const std::optional<OriginID> LastIssueOriginID = std::nullopt) {
   OriginDestExpr CurrDestExpr = LastDestExpr;
   std::optional<OriginID> IssueOriginID = LastIssueOriginID;
   std::optional<OriginID> CurrOrigin = std::nullopt;
@@ -213,26 +212,28 @@ getAliasListCore(const AssignmentQueryContext &Context,
 void getAliasListInMultiBlock(
     const AssignmentQueryContext &Context,
     llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
-    const CFGBlock *StartBlock, const LoanID EndLoanID, const OriginID StartOID) {
+    const CFGBlock *StartBlock, const LoanID EndLoanID,
+    const OriginID StartOID) {
   std::queue<AssignmentSearchContext> PendingBlocks;
   std::optional<AssignmentPair> FinalAssignment = std::nullopt;
   llvm::SmallSet<AssignmentSearchToken, 32> VistedBlocks;
   llvm::DenseMap<AssignmentPair, AssignmentPair> VistedAssignmentExprs;
 
-  const auto AliasStmtFilter = [&VistedAssignmentExprs,
-                                &AssignmentList](const AssignmentPair EndAssignment) {
+  const auto AliasStmtFilter = [&VistedAssignmentExprs, &AssignmentList](
+                                   const AssignmentPair EndAssignment) {
     AssignmentPair CurrAssignment = EndAssignment;
     while (true) {
       AssignmentList.push_back(CurrAssignment);
       const auto NextAssignment = VistedAssignmentExprs.find(CurrAssignment);
       if (NextAssignment == VistedAssignmentExprs.end())
-          break;
+        break;
       CurrAssignment = NextAssignment->second;
     }
   };
 
   AssignmentSearchToken StartToken = {StartBlock, StartOID};
-  AssignmentSearchContext StartContext = {StartToken, nullptr, std::nullopt, std::nullopt};
+  AssignmentSearchContext StartContext = {StartToken, nullptr, std::nullopt,
+                                          std::nullopt};
   PendingBlocks.push(StartContext);
 
   while (!PendingBlocks.empty()) {
@@ -243,9 +244,9 @@ void getAliasListInMultiBlock(
     llvm::SmallVector<AssignmentPair> BlockAliasList;
     OriginID CurrOID = CurrContext.CurrToken.OID;
 
-    const AliasAssignmentSearchResult Result =
-        getAliasListCore(Context, BlockAliasList, CurrContext.CurrToken.Block, EndLoanID,
-                         &CurrOID, CurrContext.LastDestDeclOrExpr, CurrContext.LastOriginID);
+    const AliasAssignmentSearchResult Result = getAliasListCore(
+        Context, BlockAliasList, CurrContext.CurrToken.Block, EndLoanID,
+        &CurrOID, CurrContext.LastDestDeclOrExpr, CurrContext.LastOriginID);
 
     if (!BlockAliasList.empty()) {
       for (size_t i = 0; i < BlockAliasList.size() - 1; ++i)
@@ -253,7 +254,8 @@ void getAliasListInMultiBlock(
             {BlockAliasList[i + 1], BlockAliasList[i]});
 
       if (CurrContext.LastEndAssignment)
-        VistedAssignmentExprs.insert({BlockAliasList[0], CurrContext.LastEndAssignment.value()});
+        VistedAssignmentExprs.insert(
+            {BlockAliasList[0], CurrContext.LastEndAssignment.value()});
 
       EndAssignment = BlockAliasList.back();
       FinalAssignment = BlockAliasList.back();
@@ -272,7 +274,9 @@ void getAliasListInMultiBlock(
     for (const CFGBlock *NextBlock : CurrContext.CurrToken.Block->preds()) {
       AssignmentSearchToken NextToken = {NextBlock, CurrOID};
       if (NextBlock && VistedBlocks.insert(NextToken).second) {
-        AssignmentSearchContext NextContext = {NextToken, Result.LastDestDeclOrExpr, EndAssignment, Result.IssueOriginID};
+        AssignmentSearchContext NextContext = {
+            NextToken, Result.LastDestDeclOrExpr, EndAssignment,
+            Result.IssueOriginID};
         PendingBlocks.push(NextContext);
       }
     }
