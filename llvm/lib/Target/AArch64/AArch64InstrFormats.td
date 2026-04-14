@@ -2159,20 +2159,20 @@ class BaseSystemLXtI<bit L, dag oops, dag iops, string asm>
 }
 
 class SystemLXtI<bit L, string asm>
-  : BaseSystemLXtI<L, (outs),
-       (ins GPR64:$Rt, imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
-            imm0_7:$op2), asm>;
-
-// Codegen-only GCS SYSL operations need a tied def/use on Rt because they
-// preserve the old destination value when GCS is disabled at runtime.
-class GCSTiedSystemLXtI<bit L, string asm>
   : BaseSystemLXtI<L, (outs GPR64:$Rt),
+       (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2), asm>;
+
+// Codegen-only GCS SYSL operations preserve the incoming Rt value when GCS is
+// disabled at runtime, so keep a tied def/use pseudo until asm emission.
+class GCSTiedSystemLXtPseudo
+  : Pseudo<(outs GPR64:$Rt),
        (ins GPR64:$_Rt, imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
-            imm0_7:$op2), asm> {
+            imm0_7:$op2), [], "$Rt = $_Rt">,
+    Sched<[WriteSys]> {
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 1;
-  let Constraints = "$Rt = $_Rt";
+  let Size = 4;
 }
 
 def RangePrefetchOperand : AsmOperandClass {

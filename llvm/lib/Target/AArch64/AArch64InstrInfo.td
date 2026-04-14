@@ -2490,9 +2490,10 @@ def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
 // Generic system instructions
 def SYSxt  : SystemXtI<"sys">;
 def SYSLxt : SystemLXtI<1, "sysl">;
-def SYSLxt_GCS : GCSTiedSystemLXtI<1, "sysl"> {
-  let isCodeGenOnly = 1;
-}
+def SYSLxt_GCS : GCSTiedSystemLXtPseudo,
+                 PseudoInstExpansion<(SYSLxt GPR64:$Rt, imm0_7:$op1,
+                                            sys_cr_op:$Cn, sys_cr_op:$Cm,
+                                            imm0_7:$op2)>;
 
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
                 (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
@@ -2516,11 +2517,11 @@ def : InstAlias<"gcspushm $Rt",
 def : InstAlias<"gcsss1 $Rt",
                 (SYSxt 3, 7, 7, 2, GPR64:$Rt)>, Requires<[HasGCS]>;
 def : InstAlias<"gcspopm",
-                (SYSLxt_GCS XZR, 3, 7, 7, 1)>, Requires<[HasGCS]>;
+                (SYSLxt XZR, 3, 7, 7, 1)>, Requires<[HasGCS]>;
 def : InstAlias<"gcspopm $Rt",
-                (SYSLxt_GCS GPR64:$Rt, 3, 7, 7, 1)>, Requires<[HasGCS]>;
+                (SYSLxt GPR64:$Rt, 3, 7, 7, 1)>, Requires<[HasGCS]>;
 def : InstAlias<"gcsss2 $Rt",
-                (SYSLxt_GCS GPR64:$Rt, 3, 7, 7, 3)>, Requires<[HasGCS]>;
+                (SYSLxt GPR64:$Rt, 3, 7, 7, 3)>, Requires<[HasGCS]>;
 let Predicates = [HasGCS] in
 def : Pat<(int_aarch64_gcspopm GPR64:$Rt),
           (SYSLxt_GCS GPR64:$Rt, 3, 7, 7, 1)>;
