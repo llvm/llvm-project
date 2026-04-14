@@ -18,6 +18,14 @@
 # FDATA: 1 main #.BB3_br# 1 main #.BB2# 0 50
 # CHECK: BOLT-INFO: tail duplication modified 1 ({{.*}}%) functions; duplicated 1 blocks (20 bytes) responsible for 50 dynamic executions ({{.*}}% of all block executions)
 # CHECK: BB Layout   : .LBB00, .Ltmp0, .Ltmp1, .Ltmp2, .Ltmp3, .Ltmp4, .Ltmp5, .Ltail-dup0, .Ltmp6
+# CHECK-LABEL: .Ltail-dup0 (5 instructions, align : 1)
+# CHECK-NEXT:   Exec Count : {{.*}}
+# CHECK-NEXT:   Predecessors: .Ltmp5
+# CHECK-NEXT:   add x0, x0, #0x1
+# CHECK-NEXT:   add x0, x0, #0x1
+# CHECK-NEXT:   add x0, x0, #0x1
+# CHECK-NEXT:   add x0, x0, #0x1
+# CHECK-NEXT:   ret
 
 ## A test where the tail is not duplicated due to the cache score.
 # FDATA2: 1 main #.BB0_br# 1 main #.BB4# 0 100

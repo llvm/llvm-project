@@ -14,6 +14,11 @@
 # FDATA: 1 main 4 1 main #.BB2# 0 10
 # CHECK: BOLT-INFO: tail duplication modified 1 ({{.*}}%) functions; duplicated 1 blocks (4 bytes) responsible for {{.*}} dynamic executions ({{.*}}% of all block executions)
 # CHECK: BB Layout   : .LBB00, .Ltail-dup0, .Ltmp0, .Ltmp1
+# CHECK-LABEL: .LBB00 (1 instructions, align : 1)
+# CHECK-NEXT:   Entry Point
+# CHECK-NEXT:   Exec Count : {{.*}}
+# CHECK-NEXT:   eor w0, w0, w0
+# CHECK-NEXT:   Successors: .Ltail-dup0
 
 ## Check that the predecessor of Ltail-dup0 is .LBB00, not itself.
 # CHECK-NOLOOP-LABEL: .Ltail-dup0 (1 instructions, align : 1)
