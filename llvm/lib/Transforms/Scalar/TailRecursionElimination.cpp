@@ -82,7 +82,6 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cmath>
-#include <variant>
 using namespace llvm;
 
 #define DEBUG_TYPE "tailcallelim"
@@ -454,17 +453,24 @@ static Constant *getReturnValue(Function &F) {
   return BaseCaseVal;
 }
 
+namespace {
+struct AccumulatorRecursionInfo {
+  bool CanTransform = false;
+  Constant *BaseCaseConst = nullptr;
+};
+} // namespace
+
 // This function checks whether the instruction I can be used
 // to perform accumulator recursion elimination for the
 // call instruction CI.
 // In the presence of pseudo-associative operations, it returns
-// the base case constant value to both indicate success and
+// the base case constant value in BaseCaseConst to both indicate success and
 // provide the value needed to initialize the accumulator.
-static std::variant<bool, Constant *>
-canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
+static AccumulatorRecursionInfo canTransformAccumulatorRecursion(Instruction *I,
+                                                                 CallInst *CI) {
   auto IsPseudoAssociative = isPseudoAssociative(I);
   if ((!I->isAssociative() || !I->isCommutative()) && !IsPseudoAssociative)
-    return false;
+    return {};
 
   assert(I->getNumOperands() >= 2 &&
          "Associative/commutative operations should have at least 2 args!");
@@ -474,33 +480,30 @@ canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
     // For pseudo-associative operations, we require that the recursive call
     // is always on the first operand.
     if (I->getOperand(0) != CI)
-      return false;
+      return {};
 
     BaseCaseConst = getReturnValue(*CI->getCalledFunction());
     if (!BaseCaseConst)
-      return false;
+      return {};
   } else {
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       // Accumulators must have an identity.
       if (!ConstantExpr::getIntrinsicIdentity(II->getIntrinsicID(),
                                               I->getType()))
-        return false;
+        return {};
     }
 
     // Exactly one operand should be the result of the call instruction.
     if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
         (I->getOperand(0) != CI && I->getOperand(1) != CI))
-      return false;
+      return {};
   }
 
   // The only user of this instruction we allow is a single return instruction.
   if (!I->hasOneUse() || !isa<ReturnInst>(I->user_back()))
-    return false;
+    return {};
 
-  if (BaseCaseConst)
-    return BaseCaseConst;
-
-  return true;
+  return {true, BaseCaseConst};
 }
 
 namespace {
@@ -787,11 +790,10 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // operation that could be transformed using accumulator recursion
     // elimination. Check to see if this is the case, and if so, remember which
     // instruction accumulates for later.
-    std::variant<bool, Constant *> AccRecResult =
+    AccumulatorRecursionInfo AccRecInfo =
         canTransformAccumulatorRecursion(&*BBI, CI);
 
-    if (AccPN || (std::holds_alternative<bool>(AccRecResult) &&
-                  !std::get<bool>(AccRecResult)))
+    if (AccPN || !AccRecInfo.CanTransform)
       return false; // We cannot eliminate the tail recursion!
 
     // Yes, this is accumulator recursion.  Remember which instruction
@@ -799,8 +801,8 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     AccRecInstr = &*BBI;
 
     // Keep track of the base case return value if any.
-    if (std::holds_alternative<Constant *>(AccRecResult))
-      BaseCaseValue = std::get<Constant *>(AccRecResult);
+    if (AccRecInfo.BaseCaseConst)
+      BaseCaseValue = AccRecInfo.BaseCaseConst;
   }
 
   BasicBlock *BB = Ret->getParent();
