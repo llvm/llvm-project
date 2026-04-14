@@ -62,6 +62,21 @@ struct ReturnThisPointer {
 };
 
 
+namespace std {
+template<class> class function;
+template<class R, class... Args>
+class function<R(Args...)> {
+public:
+  template<class F> function(F) {}
+  function(const function&) {}
+  function(function&&) {}
+  template<class F> function& operator=(F) { return *this; }
+  function& operator=(const function&) { return *this; }
+  function& operator=(function&&) { return *this; }
+  ~function();
+};
+} // namespace std
+
 #endif // TEST_HEADER_H
 
 //--- test_source.cpp
@@ -529,3 +544,11 @@ CaptureRefToBaseView test_ref_to_base_view() {
   return x; // expected-note {{returned here}}
 }
 } // namespace capturing_constructor
+
+namespace callable_wrappers {
+
+std::function<void()> return_lambda_capturing_param(int &x) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return [&]() { (void)x; }; // expected-note {{param returned here}}
+}
+
+} // namespace callable_wrappers

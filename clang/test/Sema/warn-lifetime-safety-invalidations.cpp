@@ -527,3 +527,15 @@ struct S {
   }
 };
 } // namespace method_call_uses_field_invalidation
+
+namespace callable_wrappers {
+
+void function_captured_ref_invalidated() {
+  std::vector<int> v;
+  v.push_back(1);
+  std::function<void()> f = [&r = v[0]]() { (void)r; }; // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(2); // expected-note {{invalidated here}}
+  (void)f; // expected-note {{later used here}}
+}
+
+} // namespace callable_wrappers

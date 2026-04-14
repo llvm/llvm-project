@@ -2693,10 +2693,22 @@ std::function<void()> reassign_lambda_to_functor() {
   return f;
 }
 
+std::function<void()> capture_lifetimebound_param(int &x [[clang::lifetimebound]]) {
+  return [&]() { (void)x; };
+}
+
+void uaf_via_lifetimebound() {
+  std::function<void()> f = []() {};
+  {
+    int local;
+    f = capture_lifetimebound_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)f; // expected-note {{later used here}}
+}
+
 } // namespace callable_wrappers
 
 namespace GH126600 {
-// https://github.com/llvm/llvm-project/issues/126600
 struct [[gsl::Pointer]] function_ref {
   template <typename Callable>
   function_ref(Callable &&callable [[clang::lifetimebound]]) : ref(callable) {}
