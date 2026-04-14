@@ -576,6 +576,30 @@ opt<bool> ExperimentalModulesSupport{
 /// C:\clangd-test\a.cpp on Windows and /clangd-test/a.cpp on Unix.
 class TestScheme : public URIScheme {
 public:
+  llvm::Expected<URI>
+  uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
+    llvm::StringRef Body = AbsolutePath;
+    if (!Body.consume_front(getTestDir()))
+      return error("Path {0} doesn't start with root {1}", AbsolutePath,
+                   getTestDir());
+
+    return URI("test", /*Authority=*/"",
+               llvm::sys::path::convert_to_slash(Body));
+  }
+
+  static llvm::StringRef getTestDir() {
+#ifdef _WIN32
+    static const std::string TestDir = []() {
+      llvm::SmallString<32> Path("C:/clangd-test");
+      llvm::sys::path::native(Path);
+      return std::string(Path.str());
+    }();
+    return TestDir;
+#else
+    return "/clangd-test";
+#endif
+  }
+
   llvm::Expected<std::string>
   getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
                   llvm::StringRef /*HintPath*/) const override {
@@ -589,30 +613,10 @@ public:
     Body = Body.ltrim('/');
     llvm::SmallString<16> Path(Body);
     path::native(Path);
-    path::make_absolute(TestScheme::TestDir, Path);
+    path::make_absolute(getTestDir(), Path);
     return std::string(Path);
   }
-
-  llvm::Expected<URI>
-  uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
-    llvm::StringRef Body = AbsolutePath;
-    if (!Body.consume_front(TestScheme::TestDir))
-      return error("Path {0} doesn't start with root {1}", AbsolutePath,
-                   TestDir);
-
-    return URI("test", /*Authority=*/"",
-               llvm::sys::path::convert_to_slash(Body));
-  }
-
-private:
-  const static char TestDir[];
 };
-
-#ifdef _WIN32
-const char TestScheme::TestDir[] = "C:\\clangd-test";
-#else
-const char TestScheme::TestDir[] = "/clangd-test";
-#endif
 
 std::unique_ptr<SymbolIndex>
 loadExternalIndex(const Config::ExternalIndexSpec &External,

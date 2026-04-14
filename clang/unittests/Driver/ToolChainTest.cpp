@@ -29,14 +29,19 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
 #include <memory>
-
-#include "SimpleDiagnosticConsumer.h"
 
 using namespace clang;
 using namespace clang::driver;
 
 namespace {
+
+#ifdef _WIN32
+#define TEST_ROOT "C:\\"
+#else
+#define TEST_ROOT "/"
+#endif
 
 TEST(ToolChainTest, VFSGCCInstallation) {
   DiagnosticOptions DiagOpts;
@@ -818,16 +823,7 @@ TEST(ToolChainTest, ConfigInexistentInclude) {
   DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer.get(), false);
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
-#ifdef _WIN32
-  const char *TestRoot = "C:\\";
-#define USERCONFIG "C:\\home\\user\\test.cfg"
-#define UNEXISTENT "C:\\home\\user\\file.rsp"
-#else
-  const char *TestRoot = "/";
-#define USERCONFIG "/home/user/test.cfg"
-#define UNEXISTENT "/home/user/file.rsp"
-#endif
-  FS->setCurrentWorkingDirectory(TestRoot);
+  FS->setCurrentWorkingDirectory(TEST_ROOT);
   FS->addFile("/home/user/test.cfg", 0,
               llvm::MemoryBuffer::getMemBuffer("@file.rsp"));
 
@@ -840,14 +836,15 @@ TEST(ToolChainTest, ConfigInexistentInclude) {
     ASSERT_TRUE(C);
     ASSERT_TRUE(C->containsError());
     EXPECT_EQ(1U, DiagConsumer->Errors.size());
-    EXPECT_STRCASEEQ("cannot read configuration file '" USERCONFIG
-                     "': cannot not open file '" UNEXISTENT
+    // Normalize path separators to '/' to ensure robust comparison on Windows,
+    // as the actual separator depends on LLVM_WINDOWS_PREFER_FORWARD_SLASH.
+    std::string Error = DiagConsumer->Errors[0].c_str();
+    std::replace(Error.begin(), Error.end(), '\\', '/');
+    EXPECT_STRCASEEQ("cannot read configuration file 'C:/home/user/test.cfg"
+                     "': cannot not open file 'C:/home/user/file.rsp"
                      "': no such file or directory",
-                     DiagConsumer->Errors[0].c_str());
+                     Error.c_str());
   }
-
-#undef USERCONFIG
-#undef UNEXISTENT
 }
 
 TEST(ToolChainTest, ConfigRecursiveInclude) {
@@ -858,16 +855,7 @@ TEST(ToolChainTest, ConfigRecursiveInclude) {
   DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer.get(), false);
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
-#ifdef _WIN32
-  const char *TestRoot = "C:\\";
-#define USERCONFIG "C:\\home\\user\\test.cfg"
-#define INCLUDED1 "C:\\home\\user\\file1.cfg"
-#else
-  const char *TestRoot = "/";
-#define USERCONFIG "/home/user/test.cfg"
-#define INCLUDED1 "/home/user/file1.cfg"
-#endif
-  FS->setCurrentWorkingDirectory(TestRoot);
+  FS->setCurrentWorkingDirectory(TEST_ROOT);
   FS->addFile("/home/user/test.cfg", 0,
               llvm::MemoryBuffer::getMemBuffer("@file1.cfg"));
   FS->addFile("/home/user/file1.cfg", 0,
@@ -886,13 +874,14 @@ TEST(ToolChainTest, ConfigRecursiveInclude) {
     ASSERT_TRUE(C);
     ASSERT_TRUE(C->containsError());
     EXPECT_EQ(1U, DiagConsumer->Errors.size());
-    EXPECT_STREQ("cannot read configuration file '" USERCONFIG
-                 "': recursive expansion of: '" INCLUDED1 "'",
-                 DiagConsumer->Errors[0].c_str());
+    // Normalize path separators to '/' to ensure robust comparison on Windows,
+    // as the actual separator depends on LLVM_WINDOWS_PREFER_FORWARD_SLASH.
+    std::string Error = DiagConsumer->Errors[0].c_str();
+    std::replace(Error.begin(), Error.end(), '\\', '/');
+    EXPECT_STREQ("cannot read configuration file 'C:/home/user/test.cfg"
+                 "': recursive expansion of: 'C:/home/user/file1.cfg'",
+                 Error.c_str());
   }
-
-#undef USERCONFIG
-#undef INCLUDED1
 }
 
 TEST(ToolChainTest, NestedConfigFile) {
@@ -902,12 +891,7 @@ TEST(ToolChainTest, NestedConfigFile) {
   DiagnosticsEngine Diags(DiagID, DiagOpts, new TestDiagnosticConsumer);
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
-#ifdef _WIN32
-  const char *TestRoot = "C:\\";
-#else
-  const char *TestRoot = "/";
-#endif
-  FS->setCurrentWorkingDirectory(TestRoot);
+  FS->setCurrentWorkingDirectory(TEST_ROOT);
 
   FS->addFile("/opt/sdk/root.cfg", 0,
               llvm::MemoryBuffer::getMemBuffer("--config=platform.cfg\n"));

@@ -1,9 +1,12 @@
 // REQUIRES: system-windows
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir\real
-// RUN: cmd /c mklink /j %t.dir\junc %t.dir\real
+// When LLVM_WINDOWS_PREFER_FORWARD_SLASH is on, %t.dir contains forward slashes.
+// mklink /j does not support forward slashes.
+// Use python to replace forward slashes with backslashes and call mklink.
+// RUN: %python -c "import subprocess; p1 = r'%t.dir/junc'.replace('/', '\\\\'); p2 = r'%t.dir/real'.replace('/', '\\\\'); subprocess.run(['cmd', '/c', 'mklink', '/j', p1, p2], check=True)"
 // RUN: echo "wrong code" > %t.dir\real\foo.cpp
 // RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-absolute-paths %t.dir\junc\foo.cpp 2>&1 | FileCheck %s
 
-// CHECK-NOT: .dir\real\foo.cpp
-// CHECK: .dir\junc\foo.cpp
+// CHECK-NOT: .dir{{[/\\]}}real{{[/\\]}}foo.cpp
+// CHECK: .dir{{[/\\]}}junc{{[/\\]}}foo.cpp
