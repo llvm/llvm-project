@@ -9,65 +9,56 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @fixed_sve_vls() #0 {
 ; VL256-LABEL: 'fixed_sve_vls'
-; VL256-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr align 8 undef, <256 x i1> undef, <256 x i8> undef)
-; VL256-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr align 8 undef, <256 x i1> undef, <256 x i16> undef)
-; VL256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 8 undef, <16 x i1> undef, <16 x i32> undef)
-; VL256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr align 8 undef, <16 x i1> undef, <16 x i64> undef)
-; VL256-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr align 8 undef, <512 x i1> undef, <512 x half> undef)
-; VL256-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr align 8 undef, <256 x i1> undef, <256 x float> undef)
-; VL256-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr align 8 undef, <128 x i1> undef, <128 x double> undef)
+; VL256-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr poison, <256 x i1> poison, <256 x i8> poison)
+; VL256-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr poison, <256 x i1> poison, <256 x i16> poison)
+; VL256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr poison, <16 x i1> poison, <16 x i32> poison)
+; VL256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr poison, <16 x i1> poison, <16 x i64> poison)
+; VL256-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr poison, <512 x i1> poison, <512 x half> poison)
+; VL256-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr poison, <256 x i1> poison, <256 x float> poison)
+; VL256-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr poison, <128 x i1> poison, <128 x double> poison)
 ; VL256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; VL512-LABEL: 'fixed_sve_vls'
-; VL512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr align 8 undef, <256 x i1> undef, <256 x i8> undef)
-; VL512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr align 8 undef, <256 x i1> undef, <256 x i16> undef)
-; VL512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 8 undef, <16 x i1> undef, <16 x i32> undef)
-; VL512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr align 8 undef, <16 x i1> undef, <16 x i64> undef)
-; VL512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr align 8 undef, <512 x i1> undef, <512 x half> undef)
-; VL512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr align 8 undef, <256 x i1> undef, <256 x float> undef)
-; VL512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr align 8 undef, <128 x i1> undef, <128 x double> undef)
+; VL512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr poison, <256 x i1> poison, <256 x i8> poison)
+; VL512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr poison, <256 x i1> poison, <256 x i16> poison)
+; VL512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr poison, <16 x i1> poison, <16 x i32> poison)
+; VL512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr poison, <16 x i1> poison, <16 x i64> poison)
+; VL512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr poison, <512 x i1> poison, <512 x half> poison)
+; VL512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr poison, <256 x i1> poison, <256 x float> poison)
+; VL512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr poison, <128 x i1> poison, <128 x double> poison)
 ; VL512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; VL1024-LABEL: 'fixed_sve_vls'
-; VL1024-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr align 8 undef, <256 x i1> undef, <256 x i8> undef)
-; VL1024-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr align 8 undef, <256 x i1> undef, <256 x i16> undef)
-; VL1024-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 8 undef, <16 x i1> undef, <16 x i32> undef)
-; VL1024-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr align 8 undef, <16 x i1> undef, <16 x i64> undef)
-; VL1024-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr align 8 undef, <512 x i1> undef, <512 x half> undef)
-; VL1024-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr align 8 undef, <256 x i1> undef, <256 x float> undef)
-; VL1024-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr align 8 undef, <128 x i1> undef, <128 x double> undef)
+; VL1024-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr poison, <256 x i1> poison, <256 x i8> poison)
+; VL1024-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr poison, <256 x i1> poison, <256 x i16> poison)
+; VL1024-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr poison, <16 x i1> poison, <16 x i32> poison)
+; VL1024-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr poison, <16 x i1> poison, <16 x i64> poison)
+; VL1024-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr poison, <512 x i1> poison, <512 x half> poison)
+; VL1024-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr poison, <256 x i1> poison, <256 x float> poison)
+; VL1024-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr poison, <128 x i1> poison, <128 x double> poison)
 ; VL1024-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; VL2048-LABEL: 'fixed_sve_vls'
-; VL2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr align 8 undef, <256 x i1> undef, <256 x i8> undef)
-; VL2048-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr align 8 undef, <256 x i1> undef, <256 x i16> undef)
-; VL2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 8 undef, <16 x i1> undef, <16 x i32> undef)
-; VL2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr align 8 undef, <16 x i1> undef, <16 x i64> undef)
-; VL2048-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr align 8 undef, <512 x i1> undef, <512 x half> undef)
-; VL2048-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr align 8 undef, <256 x i1> undef, <256 x float> undef)
-; VL2048-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr align 8 undef, <128 x i1> undef, <128 x double> undef)
+; VL2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr poison, <256 x i1> poison, <256 x i8> poison)
+; VL2048-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr poison, <256 x i1> poison, <256 x i16> poison)
+; VL2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr poison, <16 x i1> poison, <16 x i32> poison)
+; VL2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr poison, <16 x i1> poison, <16 x i64> poison)
+; VL2048-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr poison, <512 x i1> poison, <512 x half> poison)
+; VL2048-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr poison, <256 x i1> poison, <256 x float> poison)
+; VL2048-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr poison, <128 x i1> poison, <128 x double> poison)
 ; VL2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 entry:
-  %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr undef, i32 8, <256 x i1> undef, <256 x i8> undef)
-  %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr undef, i32 8, <256 x i1> undef, <256 x i16> undef)
-  %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr undef, i32 8, <16 x i1> undef, <16 x i32> undef)
-  %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr undef, i32 8, <16 x i1> undef, <16 x i64> undef)
+  %v256i8 = call <256 x i8> @llvm.masked.load.v256i8.p0(ptr poison, <256 x i1> poison, <256 x i8> poison)
+  %v256i16 = call <256 x i16> @llvm.masked.load.v256i16.p0(ptr poison, <256 x i1> poison, <256 x i16> poison)
+  %v16i32 = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr poison, <16 x i1> poison, <16 x i32> poison)
+  %v16i64 = call <16 x i64> @llvm.masked.load.v16i64.p0(ptr poison, <16 x i1> poison, <16 x i64> poison)
 
-  %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr undef, i32 8, <512 x i1> undef, <512 x half> undef)
-  %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr undef, i32 8, <256 x i1> undef, <256 x float> undef)
-  %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr undef, i32 8, <128 x i1> undef, <128 x double> undef)
+  %v512f16 = call <512 x half> @llvm.masked.load.v512f16.p0(ptr poison, <512 x i1> poison, <512 x half> poison)
+  %v256f32 = call <256 x float> @llvm.masked.load.v256f32.p0(ptr poison, <256 x i1> poison, <256 x float> poison)
+  %v128f64 = call <128 x double> @llvm.masked.load.v128f64.p0(ptr poison, <128 x i1> poison, <128 x double> poison)
 
   ret void
 }
-
-declare <256 x i8> @llvm.masked.load.v256i8.p0(ptr, i32, <256 x i1>, <256 x i8>)
-declare <256 x i16> @llvm.masked.load.v256i16.p0(ptr, i32, <256 x i1>, <256 x i16>)
-declare <16 x i32> @llvm.masked.load.v16i32.p0(ptr, i32, <16 x i1>, <16 x i32>)
-declare <16 x i64> @llvm.masked.load.v16i64.p0(ptr, i32, <16 x i1>, <16 x i64>)
-
-declare <512 x half> @llvm.masked.load.v512f16.p0(ptr, i32, <512 x i1>, <512 x half>)
-declare <256 x float> @llvm.masked.load.v256f32.p0(ptr, i32, <256 x i1>, <256 x float>)
-declare <128 x double> @llvm.masked.load.v128f64.p0(ptr, i32, <128 x i1>, <128 x double>)
 
 attributes #0 = { "target-features"="+sve" }
