@@ -667,9 +667,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
       builder.restoreInsertionPoint(scopeBody);
       CIRGenFunction::LexicalScope lexScope{*this, scopeLoc,
                                             builder.getInsertionBlock()};
-      enterFullExprCleanupScope(rv);
+      FullExprCleanupScope fullExprScope(*this, rv);
       handleReturnVal();
-      exitFullExprCleanupScope();
     }
   }
 

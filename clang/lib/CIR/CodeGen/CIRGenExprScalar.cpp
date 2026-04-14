@@ -1596,12 +1596,11 @@ mlir::Value ScalarExprEmitter::emitCompoundAssign(
 }
 
 mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
-  CIRGenFunction::RunCleanupsScope cleanups(cgf);
-
-  cgf.enterFullExprCleanupScope(e->getSubExpr());
+  CIRGenFunction::FullExprCleanupScope scope(cgf, e->getSubExpr());
   mlir::Value v = Visit(e->getSubExpr());
-  cgf.exitFullExprCleanupScope({&v});
-  cleanups.forceCleanup({&v});
+  // Defend against dominance problems caused by jumps out of expression
+  // evaluation through the shared cleanup block.
+  scope.exit({&v});
   return v;
 }
 

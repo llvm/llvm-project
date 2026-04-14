@@ -112,24 +112,7 @@ public:
 
   llvm::SmallVector<PendingCleanupEntry> lifetimeExtendedCleanupStack;
 
-  /// Deferred cleanup entries from conditional branches within
-  /// full-expressions. Each fullExprCleanupScopes entry records its base
-  /// index into this stack; exitFullExprCleanupScope processes entries from
-  /// that index to the end, then truncates.
   llvm::SmallVector<PendingCleanupEntry> deferredConditionalCleanupStack;
-
-  /// Stack of full-expression cleanup scopes. Each entry is pushed by
-  /// enterFullExprCleanupScope and popped by exitFullExprCleanupScope. The
-  /// back entry is the current scope. The scope op is non-null only when the
-  /// expression contains a ternary conditional (detected by
-  /// ConditionalEvaluationFinder); otherwise it is nullptr and no
-  /// CleanupScopeOp is created.
-  struct FullExprCleanupScope {
-    cir::CleanupScopeOp scope;
-    size_t deferredCleanupStackSize;
-    EHScopeStack::stable_iterator ehStackDepth;
-  };
-  llvm::SmallVector<FullExprCleanupScope, 4> fullExprCleanupScopes;
 
   GlobalDecl curSEHParent;
 
@@ -1034,24 +1017,6 @@ public:
   /// true at the current insertion point (inside the conditional branch).
   Address createCleanupActiveFlag();
 
-  /// Enter a full-expression cleanup scope. If \p subExpr contains a
-  /// conditional (ternary ?:), eagerly creates a CleanupScopeOp that wraps
-  /// the entire expression; otherwise pushes a null-scope entry. Pushes an
-  /// entry onto fullExprCleanupScopes either way.
-  void enterFullExprCleanupScope(const Expr *subExpr);
-
-  /// Finalize the current full-expression cleanup scope. Emits any deferred
-  /// conditional cleanups into the scope's cleanup region, pops EH cleanups
-  /// that were pushed inside the scope, then pops the entry from
-  /// fullExprCleanupScopes.
-  ///
-  /// If \p valuesToReload is non-empty and a CleanupScopeOp was created, the
-  /// pointed-to values are spilled to temporary allocas while the builder is
-  /// still inside the body region, then reloaded after the scope is closed.
-  /// This handles the SSA dominance problem: values defined inside the body
-  /// cannot be referenced after the region is sealed.
-  void exitFullExprCleanupScope(ArrayRef<mlir::Value *> valuesToReload = {});
-
   /// Promote a single pending cleanup entry onto the EH scope stack. If the
   /// entry has a valid activeFlag, the cleanup is configured as conditional.
   /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
@@ -1065,13 +1030,9 @@ public:
     if (!isInConditionalBranch())
       return ehStack.pushCleanup<T>(kind, a...);
 
-    // Defer the cleanup until exitFullExprCleanupScope. We can't push to
-    // the EH stack now because the ternary's inner LexicalScope would pop
-    // it prematurely. The scope must have been eagerly created by
-    // enterFullExprCleanupScope (which detected the conditional in the AST).
-    assert(!fullExprCleanupScopes.empty() &&
-           fullExprCleanupScopes.back().scope &&
-           "conditional cleanup pushed but no full-expression scope created");
+    // Defer the cleanup until the FullExprCleanupScope exits. We can't push
+    // to the EH stack now because the ternary's inner LexicalScope would pop
+    // it prematurely.
     Address activeFlag = createCleanupActiveFlag();
     deferredConditionalCleanupStack.push_back(
         PendingCleanupEntry{kind, a..., activeFlag});
@@ -1141,6 +1102,28 @@ public:
 
   // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
   EHScopeStack::stable_iterator currentCleanupStackDepth = ehStack.stable_end();
+
+  class FullExprCleanupScope {
+    CIRGenFunction &cgf;
+    RunCleanupsScope cleanups;
+    cir::CleanupScopeOp scope;
+    size_t deferredCleanupStackSize;
+    bool exited = false;
+
+  public:
+    FullExprCleanupScope(CIRGenFunction &cgf, const Expr *subExpr);
+
+    void exit(ArrayRef<mlir::Value *> valuesToReload = {});
+
+    ~FullExprCleanupScope() {
+      if (!exited)
+        exit();
+    }
+
+  private:
+    FullExprCleanupScope(const FullExprCleanupScope &) = delete;
+    void operator=(const FullExprCleanupScope &) = delete;
+  };
 
 public:
   /// Represents a scope, including function bodies, compound statements, and
