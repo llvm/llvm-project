@@ -111,7 +111,7 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -126,7 +126,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -242,7 +242,7 @@ define i64 @not_dotp_i8_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = phi ptr [ %a, %entry ], [ %gep.a.next, %for.body ]
@@ -259,7 +259,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i64 %add
 }
 
@@ -381,7 +381,7 @@ define i64 @not_dotp_i16_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = phi ptr [ %a, %entry ], [ %gep.a.next, %for.body ]
@@ -398,7 +398,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i64 %add
 }
 
@@ -739,7 +739,7 @@ define i32 @not_dotp_different_types(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -754,7 +754,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -849,7 +849,7 @@ define i32 @not_dotp_not_loop_carried(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %mul, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -864,7 +864,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -971,7 +971,7 @@ define i32 @not_dotp_not_phi(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -986,7 +986,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -1233,7 +1233,7 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                    ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum3 = phi i32 [ 0, %entry ], [ %add.a3, %for.body ]
   %accum2 = phi i32 [ 0, %entry ], [ %add.a2, %for.body ]
@@ -1278,7 +1278,7 @@ for.body:                                    ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %num_in
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                        ; preds = %for.body
+exit:
   %result0 = add nsw i32 %add.a0, %add.a1
   %result1 = add nsw i32 %add.a2, %add.a3
   %result = add nsw i32 %result0, %result1
@@ -1388,7 +1388,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds i8, ptr %a, i64 %iv
@@ -1403,7 +1403,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %N
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !7
 
-exit:                        ; preds = %for.body
+exit:
   ret i32 %add
 }
 
@@ -1524,7 +1524,7 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -1539,7 +1539,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   %result = add i32 %add, %ext.b
   ret i32 %result
 }
@@ -1661,7 +1661,7 @@ define i64 @dotp_cost_disagreement(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
   %sum = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %i.iv
@@ -1676,7 +1676,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %i.iv.next, 41
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret i64 %add
 }
 
@@ -1818,14 +1818,14 @@ entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %for.preheader, label %exit
 
-for.preheader:                   ; preds = %entry
+for.preheader:
   %load.a = load i8, ptr inttoptr (i64 0 to ptr), align 1
   %load.a1 = load i8, ptr inttoptr (i64 1 to ptr), align 1
   %a.ext = sext i8 %load.a to i32
   %a.ext1 = sext i8 %load.a1 to i32
   br label %for.body
 
-for.body:                             ; preds = %for.preheader, %for.body
+for.body:
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %for.preheader ]
   %ptr = phi ptr [ %scevgep, %for.body ], [ %matrix, %for.preheader ]
   %accum = phi i32 [ %add.1, %for.body ], [ 0, %for.preheader ]
@@ -1844,12 +1844,12 @@ for.body:                             ; preds = %for.preheader, %for.body
   %exitcond.not = icmp eq i32 %iv.next, %n
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                       ; preds = %for.body
+for.exit:
   %add.1.lcssa = phi i32 [ %add.1, %for.body ]
   %add.float = sitofp i32 %add.1.lcssa to float
   br label %exit
 
-exit:                                ; preds = %for.exit, %entry
+exit:
   %result = phi float [ 0.000000e+00, %entry ], [ %add.float, %for.exit ]
   store float %result, ptr %matrix, align 4
   ret void
@@ -1963,11 +1963,11 @@ entry:
   %cmp = icmp eq i64 %n, 0
   br i1 %cmp, label %exit, label %for.ph
 
-for.ph:                                   ; preds = %entry
+for.ph:
   %ext.b = zext i16 %b to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %iv = phi i64 [ 0, %for.ph ], [ %iv.next, %for.body ]
   %accum = phi i64 [ 0, %for.ph ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds nuw i16, ptr %a, i64 %iv
@@ -1979,7 +1979,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %cmp.1 = icmp eq i64 %iv.next, %n
   br i1 %cmp.1, label %exit, label %for.body
 
-exit:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+exit:
   %result = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %result
 }
@@ -2092,11 +2092,11 @@ entry:
   %cmp = icmp eq i64 %n, 0
   br i1 %cmp, label %exit, label %for.ph
 
-for.ph:                                   ; preds = %entry
+for.ph:
   %ext.b = zext i16 %b to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %iv = phi i64 [ 0, %for.ph ], [ %iv.next, %for.body ]
   %accum = phi i64 [ 0, %for.ph ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds nuw i16, ptr %a, i64 %iv
@@ -2108,7 +2108,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %cmp.1 = icmp eq i64 %iv.next, %n
   br i1 %cmp.1, label %exit, label %for.body
 
-exit:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+exit:
   %result = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %result
 }
@@ -2252,7 +2252,7 @@ entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %for.body, label %exit
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
   %accum = phi i64 [ %add, %for.body ], [ %cost, %entry ]
   %a.ptr = phi ptr [ %a.gep, %for.body ], [ %a, %entry ]
@@ -2269,7 +2269,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %cmp.2 = icmp eq i32 %iv.next, %n
   br i1 %cmp.2, label %exit, label %for.body
 
-exit:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+exit:
   %cost.result = phi i64 [ %cost, %entry ], [ %add, %for.body ]
   %result = trunc i64 %cost.result to i32
   ret i32 %result
@@ -2581,7 +2581,7 @@ entry:
   %cmp100 = icmp sgt i32 %n, 0
   br i1 %cmp100, label %for.body.lr.ph, label %for.cond.cleanup
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %arrayidx13 = getelementptr inbounds nuw i8, ptr %sum, i64 4
   %gep.b.12 = getelementptr inbounds nuw i8, ptr %sum, i64 8
   %arrayidx31 = getelementptr inbounds nuw i8, ptr %sum, i64 12
@@ -2600,7 +2600,7 @@ for.body.lr.ph:                                   ; preds = %entry
   %wide.trip.count = zext nneg i32 %n to i64
   br label %for.body
 
-for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
+for.cond.for.cond.cleanup_crit_edge:
   %add.lcssa = phi i32 [ %add.1, %for.body ]
   %add.2.lcssa = phi i32 [ %add.2, %for.body ]
   %add.3.lcssa = phi i32 [ %add.3, %for.body ]
@@ -2619,10 +2619,10 @@ for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
   store i32 %add.8.lcssa, ptr %arrayidx67, align 4
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.for.cond.cleanup_crit_edge, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %0 = phi i32 [ %arrayidx67.promoted, %for.body.lr.ph ], [ %add.8, %for.body ]
   %1 = phi i32 [ %arrayidx58.promoted, %for.body.lr.ph ], [ %add.7, %for.body ]

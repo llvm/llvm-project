@@ -9,6 +9,9 @@ GNU ld can handle several definitions of the same weak symbol, and
 unless there is a strong definition of it, it just picks the first
 weak definition encountered.
 
+(LLD extends this, to prefer an actual concrete definition of it,
+over a definition in the form of absolute null.)
+
 For each of the weak definitions, GNU tools produce a regular symbol
 named .weak.<weaksymbol>.<othersymbol>, where the other symbol name is
 another symbol defined close by.

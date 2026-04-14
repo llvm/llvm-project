@@ -1498,9 +1498,11 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   }
 
   // These are never l-values; just use the aggregate emission code.
+  case CK_ToUnion:
+    return emitAggExprToLValue(e);
+
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
-  case CK_ToUnion:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
   case CK_ConstructorConversion:
@@ -1514,6 +1516,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
 
     return {};
   }
+
   case CK_AddressSpaceConversion: {
     LValue lv = emitLValue(e->getSubExpr());
     QualType destTy = getContext().getPointerType(e->getType());
@@ -1895,10 +1898,9 @@ LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {
 LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
   RValue rv = emitCallExpr(e);
 
-  if (!rv.isScalar()) {
-    cgm.errorNYI(e->getSourceRange(), "emitCallExprLValue: non-scalar return");
-    return {};
-  }
+  if (!rv.isScalar())
+    return makeAddrLValue(rv.getAggregateAddress(), e->getType(),
+                          AlignmentSource::Decl);
 
   assert(e->getCallReturnType(getContext())->isReferenceType() &&
          "Can't have a scalar return unless the return type is a "

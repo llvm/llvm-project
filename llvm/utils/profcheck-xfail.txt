@@ -26,6 +26,7 @@ Transforms/Coroutines/coro-noop.ll
 Transforms/Coroutines/coro-only-destroy-when-complete.ll
 Transforms/Coroutines/coro-spill-suspend.ll
 Transforms/Coroutines/coro-split-00.ll
+Transforms/Coroutines/coro-split-addrspace.ll
 Transforms/Coroutines/coro-split-alloc.ll
 Transforms/Coroutines/coro-split-dbg-labels.ll
 Transforms/Coroutines/coro-split-final-suspend.ll
@@ -172,3 +173,4 @@ Transforms/TailCallElim/inf-recursion.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
+tools/opt/mtune.ll
