@@ -29606,6 +29606,11 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
   bool NonZeroSrc = DAG.isKnownNeverZero(N0);
 
+  // Default to expansion if CTPOP is legal.
+  if (VT.isVector() &&
+      DAG.getTargetLoweringInfo().isOperationLegal(ISD::CTPOP, VT))
+    return SDValue();
+
   // GFNI - isolate LSB and perform GF2P8AFFINEQB lookup.
   if (Subtarget.hasGFNI() && VT.isVector() &&
       VT.getVectorElementType() == MVT::i8) {
@@ -29922,8 +29927,8 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   bool IsXNeverNaN = DAG.isKnownNeverNaN(X);
   bool IsYNeverNaN = DAG.isKnownNeverNaN(Y);
   bool IgnoreSignedZero = Op->getFlags().hasNoSignedZeros() ||
-                          DAG.isKnownNeverZeroFloat(X) ||
-                          DAG.isKnownNeverZeroFloat(Y);
+                          DAG.isKnownNeverLogicalZero(X) ||
+                          DAG.isKnownNeverLogicalZero(Y);
   bool ShouldHandleZeros = true;
   SDValue NewX = X;
   SDValue NewY = Y;
@@ -48393,8 +48398,8 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
   case ISD::SETOLE:
     // Converting this to a min would handle comparisons between positive
     // and negative zero incorrectly.
-    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
-        !DAG.isKnownNeverZeroFloat(RHS))
+    if (!N->getFlags().hasNoSignedZeros() &&
+        !DAG.isKnownNeverLogicalZero(LHS) && !DAG.isKnownNeverLogicalZero(RHS))
       break;
     Opcode = X86ISD::FMIN;
     break;
@@ -48410,8 +48415,8 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
   case ISD::SETOGE:
     // Converting this to a max would handle comparisons between positive
     // and negative zero incorrectly.
-    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
-        !DAG.isKnownNeverZeroFloat(RHS))
+    if (!N->getFlags().hasNoSignedZeros() &&
+        !DAG.isKnownNeverLogicalZero(LHS) && !DAG.isKnownNeverLogicalZero(RHS))
       break;
     Opcode = X86ISD::FMAX;
     break;
@@ -61982,19 +61987,29 @@ static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasF16C() || Subtarget.useSoftFloat())
-    return SDValue();
 
   bool IsStrict = N->isStrictFPOpcode();
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(IsStrict ? 1 : 0);
+  SDLoc dl(N);
+
+  if (!IsStrict && VT == MVT::f16 &&
+      (Src.getOpcode() == ISD::FNEG || Src.getOpcode() == ISD::FABS)) {
+    SDValue Inner = Src.getOperand(0);
+    if (Inner.getOpcode() == ISD::FP_EXTEND &&
+        Inner.getOperand(0).getValueType() == MVT::f16) {
+      return DAG.getNode(Src.getOpcode(), dl, MVT::f16, Inner.getOperand(0));
+    }
+  }
+
+  if (!Subtarget.hasF16C() || Subtarget.useSoftFloat())
+    return SDValue();
+
   EVT SrcVT = Src.getValueType();
 
   if (!VT.isVector() || VT.getVectorElementType() != MVT::f16 ||
       SrcVT.getVectorElementType() != MVT::f32)
     return SDValue();
-
-  SDLoc dl(N);
 
   SDValue Cvt, Chain;
   unsigned NumElts = VT.getVectorNumElements();

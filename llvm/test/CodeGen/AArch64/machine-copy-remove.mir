@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-copyelim %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -passes=aarch64-copyelim %s -o - | FileCheck %s
 ---
 # Check that bb.0 COPY is seen through to allow the bb.1 COPY of XZR to be removed.
 # CHECK-LABEL: name: test1
