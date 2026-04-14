@@ -1933,8 +1933,18 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     }
     case SgprB32_M0:
     case SgprB32_ReadFirstLane:
-    case SgprB64_ReadFirstLane:
+    case SgprB64_ReadFirstLane: {
+      assert(Ty == getBTyFromID(MethodIDs[i], Ty));
+      if (RB == SgprRB)
+        break;
+      assert(RB == VgprRB);
+      Register NewSGPR = MRI.createVirtualRegister({SgprRB, Ty});
+      buildReadFirstLane(B, NewSGPR, Op.getReg(), RBI);
+      Op.setReg(NewSGPR);
+      break;
+    }
     case SgprV4S32_ReadFirstLane: {
+      assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB == SgprRB)
         break;
       assert(RB == VgprRB);
