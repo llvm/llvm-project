@@ -419,8 +419,7 @@ bool NativeSession::moduleIndexForSectOffset(uint32_t Sect, uint32_t Offset,
 #ifndef NDEBUG
 void NativeSession::checkSymbolRange(uint64_t Start, uint64_t Stop) const {
   auto Iter = AddrToModuleIndex.find(Start);
-  assert(Iter.valid() &&
-         !IMap::KeyTraits::startLess(Start, Iter.start()) &&
+  assert(Iter.valid() && !IMap::KeyTraits::startLess(Start, Iter.start()) &&
          !IMap::KeyTraits::stopLess(Iter.stop(), Stop - 1) &&
          "Symbol range is not within a single contiguous module range");
 }
