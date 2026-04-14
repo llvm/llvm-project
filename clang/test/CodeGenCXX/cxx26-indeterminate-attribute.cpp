@@ -61,17 +61,40 @@ void test_indeterminate_multiple_vars() {
   used(a);
 }
 
-// Mixed: normal var gets zero-init, [[indeterminate]] var does not,
-// erroneous var (no attribute) gets zero-init.
+// Mixed: normal var is zero-initialized by its empty-brace init,
+// [[indeterminate]] var gets no fill, erroneous var (no attribute) gets
+// the C++26 erroneous-init fill (pattern by default, zero under
+// -ftrivial-auto-var-init=zero).
+// CXX26-LABEL:   @test_mixed_vars(
+// CXX26:         %normal = alloca i32
+// CXX26:         %indeterminate_var = alloca i32
+// CXX26:         %erroneous = alloca i32
+// CXX26:         store i32 0, ptr %normal
+// CXX26-NOT:     store {{.*}} ptr %indeterminate_var
+// CXX26:         store i32 -1431655766, ptr %erroneous
+// CXX26:         call void @_Z4usedIiEvRT_(ptr {{.*}} %normal)
+// CXX26:         call void @_Z4usedIiEvRT_(ptr {{.*}} %indeterminate_var)
+// CXX26:         call void @_Z4usedIiEvRT_(ptr {{.*}} %erroneous)
 // ZERO-LABEL:    @test_mixed_vars(
 // ZERO:          %normal = alloca i32
 // ZERO:          %indeterminate_var = alloca i32
 // ZERO:          %erroneous = alloca i32
 // ZERO:          store i32 0, ptr %normal
+// ZERO-NOT:      store {{.*}} ptr %indeterminate_var
 // ZERO:          store i32 0, ptr %erroneous
 // ZERO:          call void @_Z4usedIiEvRT_(ptr {{.*}} %normal)
 // ZERO:          call void @_Z4usedIiEvRT_(ptr {{.*}} %indeterminate_var)
 // ZERO:          call void @_Z4usedIiEvRT_(ptr {{.*}} %erroneous)
+// PATTERN-LABEL: @test_mixed_vars(
+// PATTERN:       %normal = alloca i32
+// PATTERN:       %indeterminate_var = alloca i32
+// PATTERN:       %erroneous = alloca i32
+// PATTERN:       store i32 0, ptr %normal
+// PATTERN-NOT:   store {{.*}} ptr %indeterminate_var
+// PATTERN:       store i32 -1431655766, ptr %erroneous
+// PATTERN:       call void @_Z4usedIiEvRT_(ptr {{.*}} %normal)
+// PATTERN:       call void @_Z4usedIiEvRT_(ptr {{.*}} %indeterminate_var)
+// PATTERN:       call void @_Z4usedIiEvRT_(ptr {{.*}} %erroneous)
 void test_mixed_vars() {
   int normal = {};               // Explicitly zero-initialized
   [[indeterminate]] int indeterminate_var;
