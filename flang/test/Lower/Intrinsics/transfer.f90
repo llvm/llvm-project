@@ -95,3 +95,15 @@ subroutine trans_test(store, word)
     integer(4) :: src
     store = transfer(src, store)
   end subroutine
+
+  ! Array mold without SIZE: result is rank-1 array, must use runtime.
+  subroutine trans_test_array_mold(src, result)
+    ! CHECK-LABEL: func @_QPtrans_test_array_mold(
+    ! CHECK:         fir.call @_FortranATransfer(
+    ! CHECK:         return
+    ! CHECK:       }
+    real :: src
+    integer, allocatable :: result(:)
+    integer :: mold(4)
+    result = transfer(src, mold)
+  end subroutine
