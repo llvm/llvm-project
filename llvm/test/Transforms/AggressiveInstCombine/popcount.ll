@@ -309,27 +309,27 @@ define  i64 @popcnt1_64(i64 noundef %uWord) {
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
-  %and = and i64 %uWord, u0x5555555555555555 ; 0x5555555555555555
+  %and = and i64 %uWord, u0x5555555555555555
   %shr = lshr i64 %uWord, 1
   %and1 = and i64 %shr, 6148914691236517205
   %add = add i64 %and1, %and
-  %and2 = and i64 %add, 3689348814741910323 ; 0x3333333333333333
+  %and2 = and i64 %add, u0x3333333333333333
   %shr3 = lshr i64 %add, 2
   %and4 = and i64 %shr3, 3689348814741910323
   %add5 = add i64 %and4, %and2
-  %and6 = and i64 %add5, 1085102592571150095 ; 0F0F0F0F0F0F0F0F
+  %and6 = and i64 %add5, u0x0F0F0F0F0F0F0F0F
   %shr7 = lshr i64 %add5, 4
   %and8 = and i64 %shr7, 1085102592571150095
   %add9 = add i64 %and8, %and6
-  %and10 = and i64 %add9, 71777214294589695 ; 00FF00FF00FF00FF
+  %and10 = and i64 %add9, u0x00FF00FF00FF00FF
   %shr11 = lshr i64 %add9, 8
   %and12 = and i64 %shr11, 71777214294589695
   %add13 = add i64 %and12, %and10
-  %and14 = and i64 %add13, 281470681808895 ; 0000FFFF0000FFFF
+  %and14 = and i64 %add13, u0x0000FFFF0000FFFF
   %shr15 = lshr i64 %add13, 16
   %and16 = and i64 %shr15, 281470681808895
   %add17 = add i64 %and16, %and14
-  %and18 = and i64 %add17, 4294967295 ; 00000000FFFFFFFF
+  %and18 = and i64 %add17, u0x00000000FFFFFFFF
   %shr19 = lshr i64 %add17, 32
   %add20 = add i64 %and18, %shr19
   ret i64 %add20
@@ -341,19 +341,19 @@ define i16 @popcnt1_16(i16 noundef %uWord) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[UWORD:%.*]])
 ; CHECK-NEXT:    ret i16 [[TMP1]]
 ;
-  %and = and i16 %uWord, 21845 ; 0x5555
+  %and = and i16 %uWord, u0x5555
   %shr = lshr i16 %uWord, 1
   %and1 = and i16 %shr, 21845
   %add = add i16 %and1, %and
-  %and2 = and i16 %add, 13107 ; 0x3333
+  %and2 = and i16 %add, u0x3333
   %shr3 = lshr i16 %add, 2
   %and4 = and i16 %shr3, 13107
   %add5 = add i16 %and4, %and2
-  %and6 = and i16 %add5, 3855 ; 0x0F0F
+  %and6 = and i16 %add5, u0x0F0F
   %shr7 = lshr i16 %add5, 4
   %and8 = and i16 %shr7, 3855
   %add9 = add i16 %and8, %and6
-  %and10 = and i16 %add9, 255 ; 0x00FF
+  %and10 = and i16 %add9, u0x00FF
   %shr11 = lshr i16 %add9, 8
   %add13 = add i16 %shr11, %and10
   ret i16 %add13
@@ -365,19 +365,19 @@ define i16 @popcnt1_16_variant2(i16 noundef %uWord) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[UWORD:%.*]])
 ; CHECK-NEXT:    ret i16 [[TMP1]]
 ;
-  %and = and i16 %uWord, 21845 ; 0x5555
+  %and = and i16 %uWord, u0x5555
   %shr = lshr i16 %uWord, 1
   %and1 = and i16 %shr, 21845
   %add = add i16 %and1, %and
-  %and2 = and i16 %add, 13107 ; 0x3333
+  %and2 = and i16 %add, u0x3333
   %shr3 = lshr i16 %add, 2
   %and4 = and i16 %shr3, 13107
   %add5 = add i16 %and4, %and2
-  %and6 = and i16 %add5, 3855 ; 0x0F0F
+  %and6 = and i16 %add5, u0x0F0F
   %shr7 = lshr i16 %add5, 4
   %and8 = and i16 %shr7, 3855
   %add9 = add i16 %and8, %and6
-  %and10 = and i16 %add9, 255 ; 0x00FF
+  %and10 = and i16 %add9, u0x00FF
   %shr11 = lshr i16 %add9, 8
   %and12 = and i16 %shr11, 255
   %add13 = add i16 %and10, %and12
@@ -442,27 +442,27 @@ define i64 @popcnt1_64_variant2(i64 noundef %uWord) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[UWORD:%.*]])
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
-  %and = and i64 %uWord, 6148914691236517205 ; 0x5555555555555555
+  %and = and i64 %uWord, u0x5555555555555555
   %shr = lshr i64 %uWord, 1
-  %and1 = and i64 %shr, 6148914691236517205
+  %and1 = and i64 %shr, u0x5555555555555555
   %add = add i64 %and1, %and
-  %and2 = and i64 %add, 3689348814741910323 ; 0x3333333333333333
+  %and2 = and i64 %add, u0x3333333333333333
   %shr3 = lshr i64 %add, 2
   %and4 = and i64 %shr3, 3689348814741910323
   %add5 = add i64 %and4, %and2
-  %and6 = and i64 %add5, 1085102592571150095 ; 0x0F0F0F0F0F0F0F0F
+  %and6 = and i64 %add5, u0x0F0F0F0F0F0F0F0F
   %shr7 = lshr i64 %add5, 4
   %and8 = and i64 %shr7, 1085102592571150095
   %add9 = add i64 %and8, %and6
-  %and10 = and i64 %add9, 71777214294589695 ; 0x00FF00FF00FF00FF
+  %and10 = and i64 %add9, u0x00FF00FF00FF00FF
   %shr11 = lshr i64 %add9, 8
   %and12 = and i64 %shr11, 71777214294589695
   %add13 = add i64 %and12, %and10
-  %and14 = and i64 %add13, 281470681808895 ; 0x0000FFFF0000FFFF
+  %and14 = and i64 %add13, u0x0000FFFF0000FFFF
   %shr15 = lshr i64 %add13, 16
   %and16 = and i64 %shr15, 281470681808895
   %add17 = add i64 %and16, %and14
-  %and18 = and i64 %add17, 4294967295 ; 0x00000000FFFFFFFF
+  %and18 = and i64 %add17, u0x00000000FFFFFFFF
   %shr19 = lshr i64 %add17, 32
   %and20 = and i64 %shr19, 4294967295
   %add21 = add i64 %and18, %and20
@@ -520,15 +520,15 @@ define i8 @popcnt1_8_negative(i8 noundef %uWord) {
 ; CHECK-NEXT:    [[ADD9:%.*]] = add i8 [[AND8]], [[AND6]]
 ; CHECK-NEXT:    ret i8 [[ADD9]]
 ;
-  %and = and i8 %uWord, 85 ; 0x55
+  %and = and i8 %uWord, u0x55
   %shr = lshr i8 %uWord, 1
   %and1 = and i8 %shr, 85
   %add = add i8 %and1, %and
-  %and2 = and i8 %add, 51 ; 0x33
+  %and2 = and i8 %add, u0x33
   %shr3 = lshr i8 %add, 2
   %and4 = and i8 %shr3, 51
   %add5 = add i8 %and4, %and2
-  %and6 = and i8 %add5, 15 ; 0x0F
+  %and6 = and i8 %add5, u0x0F
   %shr7 = lshr i8 %add5, 4
   %and8 = and i8 %shr7, 15
   %add9 = add i8 %and8, %and6
@@ -550,48 +550,48 @@ define i128 @popcnt1_128_negative(i128 noundef %uWord) {
 ; CHECK-NEXT:    [[SHR7:%.*]] = lshr i128 [[ADD5]], 4
 ; CHECK-NEXT:    [[AND8:%.*]] = and i128 [[SHR7]], 20016609818878733144904388672456953615
 ; CHECK-NEXT:    [[ADD9:%.*]] = add i128 [[AND8]], [[AND6]]
-; CHECK-NEXT:    [[AND10:%.*]] = and i128 [[ADD9]], 1334440654591915542993625911497130241
+; CHECK-NEXT:    [[AND10:%.*]] = and i128 [[ADD9]], 1324055902416102970674609367438786815
 ; CHECK-NEXT:    [[SHR11:%.*]] = lshr i128 [[ADD9]], 8
-; CHECK-NEXT:    [[AND12:%.*]] = and i128 [[SHR11]], 1334440654591915542993625911497130241
+; CHECK-NEXT:    [[AND12:%.*]] = and i128 [[SHR11]], 1324055902416102970674609367438786815
 ; CHECK-NEXT:    [[ADD13:%.*]] = add i128 [[AND12]], [[AND10]]
-; CHECK-NEXT:    [[AND14:%.*]] = and i128 [[ADD13]], 5192296858534827628530496329220095
+; CHECK-NEXT:    [[AND14:%.*]] = and i128 [[ADD13]], 5192217631581220737344928932233215
 ; CHECK-NEXT:    [[SHR15:%.*]] = lshr i128 [[ADD13]], 16
-; CHECK-NEXT:    [[AND16:%.*]] = and i128 [[SHR15]], 5192296858534827628530496329220095
+; CHECK-NEXT:    [[AND16:%.*]] = and i128 [[SHR15]], 5192217631581220737344928932233215
 ; CHECK-NEXT:    [[ADD17:%.*]] = add i128 [[AND16]], [[AND14]]
-; CHECK-NEXT:    [[AND18:%.*]] = and i128 [[ADD17]], 79228162514264337593543950335
+; CHECK-NEXT:    [[AND18:%.*]] = and i128 [[ADD17]], 79228162495817593524129366015
 ; CHECK-NEXT:    [[SHR19:%.*]] = lshr i128 [[ADD17]], 32
-; CHECK-NEXT:    [[AND20:%.*]] = and i128 [[SHR19]], 79228162514264337593543950335
+; CHECK-NEXT:    [[AND20:%.*]] = and i128 [[SHR19]], 79228162495817593524129366015
 ; CHECK-NEXT:    [[ADD21:%.*]] = add i128 [[AND18]], [[AND20]]
-; CHECK-NEXT:    [[AND22:%.*]] = and i128 [[ADD21]], -1
+; CHECK-NEXT:    [[AND22:%.*]] = and i128 [[ADD21]], 18446744073709551615
 ; CHECK-NEXT:    [[SHR23:%.*]] = lshr i128 [[ADD21]], 64
 ; CHECK-NEXT:    [[ADD24:%.*]] = add i128 [[AND22]], [[SHR23]]
 ; CHECK-NEXT:    ret i128 [[ADD24]]
 ;
-  %and = and i128 %uWord, 113427455640312821154458202477256070485 ; 0x55555555555555555555555555555555
+  %and = and i128 %uWord, u0x55555555555555555555555555555555
   %shr = lshr i128 %uWord, 1
-  %and1 = and i128 %shr, 113427455640312821154458202477256070485
+  %and1 = and i128 %shr, u0x55555555555555555555555555555555
   %add = add i128 %and1, %and
-  %and2 = and i128 %add, 68056473384187692692674921486353642291 ; 0x33333333333333333333333333333333
+  %and2 = and i128 %add, u0x33333333333333333333333333333333
   %shr3 = lshr i128 %add, 2
-  %and4 = and i128 %shr3, 68056473384187692692674921486353642291
+  %and4 = and i128 %shr3, u0x33333333333333333333333333333333
   %add5 = add i128 %and4, %and2
-  %and6 = and i128 %add5, 20016609818878733144904388672456953615 ; 0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F
+  %and6 = and i128 %add5, u0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F
   %shr7 = lshr i128 %add5, 4
-  %and8 = and i128 %shr7, 20016609818878733144904388672456953615
+  %and8 = and i128 %shr7, u0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F
   %add9 = add i128 %and8, %and6
-  %and10 = and i128 %add9, 1334440654591915542993625911497130241 ; 0x00FF00FF00FF00FF00FF00FF00FF00FF
+  %and10 = and i128 %add9, u0x00FF00FF00FF00FF00FF00FF00FF00FF
   %shr11 = lshr i128 %add9, 8
-  %and12 = and i128 %shr11, 1334440654591915542993625911497130241
+  %and12 = and i128 %shr11, u0x00FF00FF00FF00FF00FF00FF00FF00FF
   %add13 = add i128 %and12, %and10
-  %and14 = and i128 %add13, 5192296858534827628530496329220095 ; 0x0000FFFF0000FFFF0000FFFF0000FFFF
+  %and14 = and i128 %add13, u0x0000FFFF0000FFFF0000FFFF0000FFFF
   %shr15 = lshr i128 %add13, 16
-  %and16 = and i128 %shr15, 5192296858534827628530496329220095
+  %and16 = and i128 %shr15, u0x0000FFFF0000FFFF0000FFFF0000FFFF
   %add17 = add i128 %and16, %and14
-  %and18 = and i128 %add17, 79228162514264337593543950335 ; 0x00000000FFFFFFFF00000000FFFFFFFF
+  %and18 = and i128 %add17, u0x00000000FFFFFFFF00000000FFFFFFFF
   %shr19 = lshr i128 %add17, 32
-  %and20 = and i128 %shr19, 79228162514264337593543950335
+  %and20 = and i128 %shr19, u0x00000000FFFFFFFF00000000FFFFFFFF
   %add21 = add i128 %and18, %and20
-  %and22 = and i128 %add21, 340282366920938463463374607431768211455 ; 0x0000000000000000FFFFFFFFFFFFFFFF
+  %and22 = and i128 %add21, u0x0000000000000000FFFFFFFFFFFFFFFF
   %shr23 = lshr i128 %add21, 64
   %add24 = add i128 %and22, %shr23
   ret i128 %add24
@@ -707,9 +707,9 @@ define i32 @popcnt1_32_wrong_mask(i32 noundef %uWord) {
 ; CHECK-NEXT:    [[ADD16:%.*]] = add i32 [[AND14]], [[SHR15]]
 ; CHECK-NEXT:    ret i32 [[ADD16]]
 ;
-  %and = and i32 %uWord, 1145324612 ; 0x44444444 instead of 0x55555555
+  %and = and i32 %uWord, u0x44444444
   %shr = lshr i32 %uWord, 1
-  %and1 = and i32 %shr, 1145324612
+  %and1 = and i32 %shr, u0x44444444
   %add = add i32 %and1, %and
   %and2 = and i32 %add, 858993459
   %shr3 = lshr i32 %add, 2
@@ -859,9 +859,9 @@ define i64 @popcnt1_64_wrong_mask(i64 noundef %uWord) {
 ; CHECK-NEXT:    [[ADD20:%.*]] = add i64 [[AND18]], [[SHR19]]
 ; CHECK-NEXT:    ret i64 [[ADD20]]
 ;
-  %and = and i64 %uWord, 4919131752989213764 ; 0x4444444444444444 instead of 0x5555555555555555
+  %and = and i64 %uWord, u0x4444444444444444
   %shr = lshr i64 %uWord, 1
-  %and1 = and i64 %shr, 4919131752989213764
+  %and1 = and i64 %shr, u0x4444444444444444
   %add = add i64 %and1, %and
   %and2 = and i64 %add, 3689348814741910323
   %shr3 = lshr i64 %add, 2
@@ -975,7 +975,7 @@ define i16 @popcnt1_16_wrong_mask(i16 noundef %uWord) {
 ; CHECK-NEXT:    [[ADD13:%.*]] = add i16 [[SHR11]], [[AND10]]
 ; CHECK-NEXT:    ret i16 [[ADD13]]
 ;
-  %and = and i16 %uWord, 17476 ; 0x4444 instead of 0x5555
+  %and = and i16 %uWord, u0x4444
   %shr = lshr i16 %uWord, 1
   %and1 = and i16 %shr, 17476
   %add = add i16 %and1, %and
@@ -1017,23 +1017,23 @@ define i24 @popcnt1_negative_i24(i24 noundef %uWord) {
 ; CHECK-NEXT:    [[ADD16:%.*]] = add i24 [[SHR15]], [[AND14]]
 ; CHECK-NEXT:    ret i24 [[ADD16]]
 ;
-  %and = and i24 %uWord, 5592405 ; 0x555555
+  %and = and i24 %uWord, u0x555555
   %shr = lshr i24 %uWord, 1
-  %and1 = and i24 %shr, 5592405
+  %and1 = and i24 %shr, u0x555555
   %add = add i24 %and1, %and
-  %and2 = and i24 %add, 3355443 ; 0x333333
+  %and2 = and i24 %add, u0x333333
   %shr3 = lshr i24 %add, 2
-  %and4 = and i24 %shr3, 3355443
+  %and4 = and i24 %shr3, u0x333333
   %add5 = add i24 %and4, %and2
-  %and6 = and i24 %add5, 986895 ; 0x0F0F0F
+  %and6 = and i24 %add5, u0x0F0F0F
   %shr7 = lshr i24 %add5, 4
-  %and8 = and i24 %shr7, 986895
+  %and8 = and i24 %shr7, u0x0F0F0F
   %add9 = add i24 %and8, %and6
-  %and10 = and i24 %add9, 65535 ; 0x00FFFF
+  %and10 = and i24 %add9, u0x00FFFF
   %shr11 = lshr i24 %add9, 8
-  %and12 = and i24 %shr11, 65535
+  %and12 = and i24 %shr11, u0x00FFFF
   %add13 = add i24 %and12, %and10
-  %and14 = and i24 %add13, 255 ; 0x0000FF
+  %and14 = and i24 %add13, u0x0000FF
   %shr15 = lshr i24 %add13, 16
   %add16 = add i24 %shr15, %and14
   ret i24 %add16
@@ -1050,44 +1050,44 @@ define i40 @popcnt1_negative_i40(i40 noundef %uWord) {
 ; CHECK-NEXT:    [[SHR3:%.*]] = lshr i40 [[ADD]], 2
 ; CHECK-NEXT:    [[AND4:%.*]] = and i40 [[SHR3]], 219902325555
 ; CHECK-NEXT:    [[ADD5:%.*]] = add i40 [[AND4]], [[AND2]]
-; CHECK-NEXT:    [[AND6:%.*]] = and i40 [[ADD5]], 67818775935
+; CHECK-NEXT:    [[AND6:%.*]] = and i40 [[ADD5]], 64677154575
 ; CHECK-NEXT:    [[SHR7:%.*]] = lshr i40 [[ADD5]], 4
-; CHECK-NEXT:    [[AND8:%.*]] = and i40 [[SHR7]], 67818775935
+; CHECK-NEXT:    [[AND8:%.*]] = and i40 [[SHR7]], 64677154575
 ; CHECK-NEXT:    [[ADD9:%.*]] = add i40 [[AND8]], [[AND6]]
-; CHECK-NEXT:    [[AND10:%.*]] = and i40 [[ADD9]], 280371153695
+; CHECK-NEXT:    [[AND10:%.*]] = and i40 [[ADD9]], 33318534175
 ; CHECK-NEXT:    [[SHR11:%.*]] = lshr i40 [[ADD9]], 8
-; CHECK-NEXT:    [[AND12:%.*]] = and i40 [[SHR11]], 280371153695
+; CHECK-NEXT:    [[AND12:%.*]] = and i40 [[SHR11]], 33318534175
 ; CHECK-NEXT:    [[ADD13:%.*]] = add i40 [[AND12]], [[AND10]]
-; CHECK-NEXT:    [[AND14:%.*]] = and i40 [[ADD13]], -1
+; CHECK-NEXT:    [[AND14:%.*]] = and i40 [[ADD13]], 17163092991
 ; CHECK-NEXT:    [[SHR15:%.*]] = lshr i40 [[ADD13]], 16
-; CHECK-NEXT:    [[AND16:%.*]] = and i40 [[SHR15]], -1
+; CHECK-NEXT:    [[AND16:%.*]] = and i40 [[SHR15]], 17163092991
 ; CHECK-NEXT:    [[ADD17:%.*]] = add i40 [[AND16]], [[AND14]]
-; CHECK-NEXT:    [[AND18:%.*]] = and i40 [[ADD17]], 4294967295
+; CHECK-NEXT:    [[AND18:%.*]] = and i40 [[ADD17]], -1
 ; CHECK-NEXT:    [[SHR19:%.*]] = lshr i40 [[ADD17]], 32
 ; CHECK-NEXT:    [[ADD20:%.*]] = add i40 [[SHR19]], [[AND18]]
 ; CHECK-NEXT:    ret i40 [[ADD20]]
 ;
-  %and = and i40 %uWord, 366503875925 ; 0x5555555555
+  %and = and i40 %uWord, u0x5555555555
   %shr = lshr i40 %uWord, 1
-  %and1 = and i40 %shr, 366503875925
+  %and1 = and i40 %shr, u0x5555555555
   %add = add i40 %and1, %and
-  %and2 = and i40 %add, 219902325555 ; 0x3333333333
+  %and2 = and i40 %add, u0x3333333333
   %shr3 = lshr i40 %add, 2
-  %and4 = and i40 %shr3, 219902325555
+  %and4 = and i40 %shr3, u0x3333333333
   %add5 = add i40 %and4, %and2
-  %and6 = and i40 %add5, 67818775935 ; 0x0F0F0F0F0F
+  %and6 = and i40 %add5, u0x0F0F0F0F0F
   %shr7 = lshr i40 %add5, 4
-  %and8 = and i40 %shr7, 67818775935
+  %and8 = and i40 %shr7, u0x0F0F0F0F0F
   %add9 = add i40 %and8, %and6
-  %and10 = and i40 %add9, 280371153695 ; 0x00FF00FF00FF (splat for 40-bit)
+  %and10 = and i40 %add9, u0x7C1F07C1F
   %shr11 = lshr i40 %add9, 8
-  %and12 = and i40 %shr11, 280371153695
+  %and12 = and i40 %shr11, u0x7C1F07C1F
   %add13 = add i40 %and12, %and10
-  %and14 = and i40 %add13, 1099511627775 ; 0x0000FFFF0000FFFF (splat for 40-bit)
+  %and14 = and i40 %add13, u0x03FF0003FF
   %shr15 = lshr i40 %add13, 16
-  %and16 = and i40 %shr15, 1099511627775
+  %and16 = and i40 %shr15, u0x03FF0003FF
   %add17 = add i40 %and16, %and14
-  %and18 = and i40 %add17, 4294967295 ; 0x00000000FFFFFFFF
+  %and18 = and i40 %add17, u0xFFFFFFFFFF
   %shr19 = lshr i40 %add17, 32
   %add20 = add i40 %shr19, %and18
   ret i40 %add20
@@ -1104,44 +1104,44 @@ define i48 @popcnt1_negative_i48(i48 noundef %uWord) {
 ; CHECK-NEXT:    [[SHR3:%.*]] = lshr i48 [[ADD]], 2
 ; CHECK-NEXT:    [[AND4:%.*]] = and i48 [[SHR3]], 56294995342131
 ; CHECK-NEXT:    [[ADD5:%.*]] = add i48 [[AND4]], [[AND2]]
-; CHECK-NEXT:    [[AND6:%.*]] = and i48 [[ADD5]], 17361641481615
+; CHECK-NEXT:    [[AND6:%.*]] = and i48 [[ADD5]], 16557351571215
 ; CHECK-NEXT:    [[SHR7:%.*]] = lshr i48 [[ADD5]], 4
-; CHECK-NEXT:    [[AND8:%.*]] = and i48 [[SHR7]], 17361641481615
+; CHECK-NEXT:    [[AND8:%.*]] = and i48 [[SHR7]], 16557351571215
 ; CHECK-NEXT:    [[ADD9:%.*]] = add i48 [[AND8]], [[AND6]]
-; CHECK-NEXT:    [[AND10:%.*]] = and i48 [[ADD9]], 71777214294895
+; CHECK-NEXT:    [[AND10:%.*]] = and i48 [[ADD9]], 4330384257087
 ; CHECK-NEXT:    [[SHR11:%.*]] = lshr i48 [[ADD9]], 8
-; CHECK-NEXT:    [[AND12:%.*]] = and i48 [[SHR11]], 71777214294895
+; CHECK-NEXT:    [[AND12:%.*]] = and i48 [[SHR11]], 4330384257087
 ; CHECK-NEXT:    [[ADD13:%.*]] = add i48 [[AND12]], [[AND10]]
-; CHECK-NEXT:    [[AND14:%.*]] = and i48 [[ADD13]], -4294967041
+; CHECK-NEXT:    [[AND14:%.*]] = and i48 [[ADD13]], 68702703615
 ; CHECK-NEXT:    [[SHR15:%.*]] = lshr i48 [[ADD13]], 16
-; CHECK-NEXT:    [[AND16:%.*]] = and i48 [[SHR15]], -4294967041
+; CHECK-NEXT:    [[AND16:%.*]] = and i48 [[SHR15]], 68702703615
 ; CHECK-NEXT:    [[ADD17:%.*]] = add i48 [[AND16]], [[AND14]]
-; CHECK-NEXT:    [[AND18:%.*]] = and i48 [[ADD17]], 4294967295
+; CHECK-NEXT:    [[AND18:%.*]] = and i48 [[ADD17]], -1
 ; CHECK-NEXT:    [[SHR19:%.*]] = lshr i48 [[ADD17]], 32
 ; CHECK-NEXT:    [[ADD20:%.*]] = add i48 [[SHR19]], [[AND18]]
 ; CHECK-NEXT:    ret i48 [[ADD20]]
 ;
-  %and = and i48 %uWord, 93824992236885 ; 0x555555555555
+  %and = and i48 %uWord, u0x555555555555
   %shr = lshr i48 %uWord, 1
-  %and1 = and i48 %shr, 93824992236885
+  %and1 = and i48 %shr, u0x555555555555
   %add = add i48 %and1, %and
-  %and2 = and i48 %add, 56294995342131 ; 0x333333333333
+  %and2 = and i48 %add, u0x333333333333
   %shr3 = lshr i48 %add, 2
-  %and4 = and i48 %shr3, 56294995342131
+  %and4 = and i48 %shr3, u0x333333333333
   %add5 = add i48 %and4, %and2
-  %and6 = and i48 %add5, 17361641481615 ; 0x0F0F0F0F0F0F
+  %and6 = and i48 %add5, u0x0F0F0F0F0F0F
   %shr7 = lshr i48 %add5, 4
-  %and8 = and i48 %shr7, 17361641481615
+  %and8 = and i48 %shr7, u0x0F0F0F0F0F0F
   %add9 = add i48 %and8, %and6
-  %and10 = and i48 %add9, 71777214294895 ; 0x00FF00FF00FF
+  %and10 = and i48 %add9, u0x03F03F03F03F
   %shr11 = lshr i48 %add9, 8
-  %and12 = and i48 %shr11, 71777214294895
+  %and12 = and i48 %shr11, u0x03F03F03F03F
   %add13 = add i48 %and12, %and10
-  %and14 = and i48 %add13, 281470681743615 ; 0x0000FFFF0000FFFF
+  %and14 = and i48 %add13, u0x000FFF000FFF
   %shr15 = lshr i48 %add13, 16
-  %and16 = and i48 %shr15, 281470681743615
+  %and16 = and i48 %shr15, u0x000FFF000FFF
   %add17 = add i48 %and16, %and14
-  %and18 = and i48 %add17, 4294967295 ; 0x00000000FFFFFFFF
+  %and18 = and i48 %add17, u0xFFFFFFFFFFFF
   %shr19 = lshr i48 %add17, 32
   %add20 = add i48 %shr19, %and18
   ret i48 %add20
@@ -1158,44 +1158,44 @@ define i56 @popcnt1_negative_i56(i56 noundef %uWord) {
 ; CHECK-NEXT:    [[SHR3:%.*]] = lshr i56 [[ADD]], 2
 ; CHECK-NEXT:    [[AND4:%.*]] = and i56 [[SHR3]], 14411518807585587
 ; CHECK-NEXT:    [[ADD5:%.*]] = add i56 [[AND4]], [[AND2]]
-; CHECK-NEXT:    [[AND6:%.*]] = and i56 [[ADD5]], 4444132406286415
+; CHECK-NEXT:    [[AND6:%.*]] = and i56 [[ADD5]], 4238682002231055
 ; CHECK-NEXT:    [[SHR7:%.*]] = lshr i56 [[ADD5]], 4
-; CHECK-NEXT:    [[AND8:%.*]] = and i56 [[SHR7]], 4444132406286415
+; CHECK-NEXT:    [[AND8:%.*]] = and i56 [[SHR7]], 4238682002231055
 ; CHECK-NEXT:    [[ADD9:%.*]] = add i56 [[AND8]], [[AND6]]
-; CHECK-NEXT:    [[AND10:%.*]] = and i56 [[ADD9]], 18374686479671535
+; CHECK-NEXT:    [[AND10:%.*]] = and i56 [[ADD9]], 35747867511423103
 ; CHECK-NEXT:    [[SHR11:%.*]] = lshr i56 [[ADD9]], 8
-; CHECK-NEXT:    [[AND12:%.*]] = and i56 [[SHR11]], 18374686479671535
+; CHECK-NEXT:    [[AND12:%.*]] = and i56 [[SHR11]], 35747867511423103
 ; CHECK-NEXT:    [[ADD13:%.*]] = add i56 [[AND12]], [[AND10]]
-; CHECK-NEXT:    [[AND14:%.*]] = and i56 [[ADD13]], -4278190081
+; CHECK-NEXT:    [[AND14:%.*]] = and i56 [[ADD13]], 4397778092031
 ; CHECK-NEXT:    [[SHR15:%.*]] = lshr i56 [[ADD13]], 16
-; CHECK-NEXT:    [[AND16:%.*]] = and i56 [[SHR15]], -4278190081
+; CHECK-NEXT:    [[AND16:%.*]] = and i56 [[SHR15]], 4397778092031
 ; CHECK-NEXT:    [[ADD17:%.*]] = add i56 [[AND16]], [[AND14]]
-; CHECK-NEXT:    [[AND18:%.*]] = and i56 [[ADD17]], 4294967295
+; CHECK-NEXT:    [[AND18:%.*]] = and i56 [[ADD17]], -1
 ; CHECK-NEXT:    [[SHR19:%.*]] = lshr i56 [[ADD17]], 32
 ; CHECK-NEXT:    [[ADD20:%.*]] = add i56 [[SHR19]], [[AND18]]
 ; CHECK-NEXT:    ret i56 [[ADD20]]
 ;
-  %and = and i56 %uWord, 24019198012642645 ; 0x55555555555555
+  %and = and i56 %uWord, u0x55555555555555
   %shr = lshr i56 %uWord, 1
-  %and1 = and i56 %shr, 24019198012642645
+  %and1 = and i56 %shr, u0x55555555555555
   %add = add i56 %and1, %and
-  %and2 = and i56 %add, 14411518807585587 ; 0x33333333333333
+  %and2 = and i56 %add, u0x33333333333333
   %shr3 = lshr i56 %add, 2
-  %and4 = and i56 %shr3, 14411518807585587
+  %and4 = and i56 %shr3, u0x33333333333333
   %add5 = add i56 %and4, %and2
-  %and6 = and i56 %add5, 4444132406286415 ; 0x0F0F0F0F0F0F0F
+  %and6 = and i56 %add5, u0x0F0F0F0F0F0F0F
   %shr7 = lshr i56 %add5, 4
-  %and8 = and i56 %shr7, 4444132406286415
+  %and8 = and i56 %shr7, u0x0F0F0F0F0F0F0F
   %add9 = add i56 %and8, %and6
-  %and10 = and i56 %add9, 18374686479671535 ; 0x00FF00FF00FF00FF
+  %and10 = and i56 %add9, u0x007F007F007F007F
   %shr11 = lshr i56 %add9, 8
-  %and12 = and i56 %shr11, 18374686479671535
+  %and12 = and i56 %shr11, u0x007F007F007F007F
   %add13 = add i56 %and12, %and10
-  %and14 = and i56 %add13, 72057589759737855 ; 0x0000FFFF0000FFFF0000FFFF
+  %and14 = and i56 %add13, u0x0003FFF0003FFF
   %shr15 = lshr i56 %add13, 16
-  %and16 = and i56 %shr15, 72057589759737855
+  %and16 = and i56 %shr15, u0x0003FFF0003FFF
   %add17 = add i56 %and16, %and14
-  %and18 = and i56 %add17, 4294967295 ; 0x00000000FFFFFFFF
+  %and18 = and i56 %add17, u0xFFFFFFFFFFFFFF
   %shr19 = lshr i56 %add17, 32
   %add20 = add i56 %shr19, %and18
   ret i56 %add20
