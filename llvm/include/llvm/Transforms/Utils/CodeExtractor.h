@@ -163,7 +163,7 @@ public:
                 AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                 bool AllowAlloca = false, BasicBlock *AllocationBlock = nullptr,
                 std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
-                bool VoidReturnWithSingleOutput = false);
+                bool VoidReturnWithSingleOutput = true);
 
   /// Perform the extraction, returning the new function.
   ///

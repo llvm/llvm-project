@@ -69,8 +69,7 @@ TEST(CodeExtractor, ExitStub) {
                                            getBlockByName(Func, "body1"),
                                            getBlockByName(Func, "body2") };
 
-  CodeExtractor CE(Candidates, nullptr, false, nullptr, nullptr, nullptr, false,
-                   false, nullptr, "", false, true);
+  CodeExtractor CE(Candidates);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -118,8 +117,7 @@ TEST(CodeExtractor, InputOutputMonitoring) {
                                           getBlockByName(Func, "body1"),
                                           getBlockByName(Func, "body2")};
 
-  CodeExtractor CE(Candidates, nullptr, false, nullptr, nullptr, nullptr, false,
-                   false, nullptr, "", false, true);
+  CodeExtractor CE(Candidates);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -243,8 +241,7 @@ TEST(CodeExtractor, ExitBlockOrderingPhis) {
                                            getBlockByName(Func, "test1"),
                                            getBlockByName(Func, "test") };
 
-  CodeExtractor CE(Candidates, nullptr, false, nullptr, nullptr, nullptr, false,
-                   false, nullptr, "", false, true);
+  CodeExtractor CE(Candidates);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -301,8 +298,7 @@ TEST(CodeExtractor, ExitBlockOrdering) {
                                            getBlockByName(Func, "test1"),
                                            getBlockByName(Func, "test") };
 
-  CodeExtractor CE(Candidates, nullptr, false, nullptr, nullptr, nullptr, false,
-                   false, nullptr, "", false, true);
+  CodeExtractor CE(Candidates);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -361,8 +357,7 @@ TEST(CodeExtractor, ExitPHIOnePredFromRegion) {
     getBlockByName(Func, "extracted2")
   };
 
-  CodeExtractor CE(ExtractedBlocks, nullptr, false, nullptr, nullptr, nullptr,
-                   false, false, nullptr, "", false, true);
+  CodeExtractor CE(ExtractedBlocks);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -437,8 +432,7 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
     getBlockByName(Func, "lpad2")
   };
 
-  CodeExtractor CE(ExtractedBlocks, nullptr, false, nullptr, nullptr, nullptr,
-                   false, false, nullptr, "", false, true);
+  CodeExtractor CE(ExtractedBlocks);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -473,8 +467,7 @@ TEST(CodeExtractor, StoreOutputInvokeResultInExitStub) {
   SmallVector<BasicBlock *, 1> Blocks{ getBlockByName(Func, "entry"),
                                        getBlockByName(Func, "lpad") };
 
-  CodeExtractor CE(Blocks, nullptr, false, nullptr, nullptr, nullptr, false,
-                   false, nullptr, "", false, true);
+  CodeExtractor CE(Blocks);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -526,8 +519,7 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
   Function *Func = M->getFunction("test");
   SmallVector<BasicBlock *, 1> Blocks{ getBlockByName(Func, "if.else") };
   AssumptionCache AC(*Func);
-  CodeExtractor CE(Blocks, nullptr, false, nullptr, nullptr, &AC, false, false,
-                   nullptr, "", false, true);
+  CodeExtractor CE(Blocks, nullptr, false, nullptr, nullptr, &AC);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -571,8 +563,7 @@ TEST(CodeExtractor, RemoveBitcastUsesFromOuterLifetimeMarkers) {
   Function *Func = M->getFunction("foo");
   SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
 
-  CodeExtractor CE(Blocks, nullptr, false, nullptr, nullptr, nullptr, false,
-                   false, nullptr, "", false, true);
+  CodeExtractor CE(Blocks);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -627,8 +618,7 @@ TEST(CodeExtractor, PartialAggregateArgs) {
 
   // Create the CodeExtractor with arguments aggregation enabled.
   CodeExtractor CE(Blocks, /* DominatorTree */ nullptr,
-                   /* AggregateArgs */ true, nullptr, nullptr, nullptr, false,
-                   false, nullptr, "", false, true);
+                   /* AggregateArgs */ true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -676,7 +666,7 @@ TEST(CodeExtractor, AllocaBlock) {
 
   BasicBlock *AllocaBlock = getBlockByName(Func, "allocas");
   CodeExtractor CE(Candidates, nullptr, true, nullptr, nullptr, nullptr, false,
-                   false, AllocaBlock, "", false, true);
+                   false, AllocaBlock);
   CE.excludeArgFromAggregate(Func->getArg(0));
   CE.excludeArgFromAggregate(getInstByName(Func, "w"));
   EXPECT_TRUE(CE.isEligible());
@@ -730,8 +720,7 @@ TEST(CodeExtractor, PartialAggregateArgs2) {
 
   // Create the CodeExtractor with arguments aggregation enabled.
   CodeExtractor CE(Blocks, /* DominatorTree */ nullptr,
-                   /* AggregateArgs */ true, nullptr, nullptr, nullptr, false,
-                   false, nullptr, "", false, true);
+                   /* AggregateArgs */ true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -788,8 +777,7 @@ TEST(CodeExtractor, OpenMPAggregateArgs) {
                    /* AllowAlloca */ true,
                    /* AllocaBlock*/ &Func->getEntryBlock(),
                    /* Suffix */ ".outlined",
-                   /* ArgsInZeroAddressSpace */ true,
-                   /* VoidReturnWithSingleOutput */ true);
+                   /* ArgsInZeroAddressSpace */ true);
 
   EXPECT_TRUE(CE.isEligible());
 
@@ -855,9 +843,7 @@ TEST(CodeExtractor, ArgsDebugInfo) {
   SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
 
   auto TestExtracted = [&](bool AggregateArgs) {
-    CodeExtractor CE(Blocks, /* DominatorTree */ nullptr, AggregateArgs,
-                     nullptr, nullptr, nullptr, false, false, nullptr, "",
-                     false, true);
+    CodeExtractor CE(Blocks, /* DominatorTree */ nullptr, AggregateArgs);
     EXPECT_TRUE(CE.isEligible());
     CodeExtractorAnalysisCache CEAC(*Func);
     SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
