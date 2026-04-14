@@ -237,8 +237,26 @@ namespace __sanitizer {
 // This does not need to be called if InitializeCommonInterceptors() is called.
 void InitializeMemintrinsicInterceptors() {
   INIT_MEMSET;
+#if SANITIZER_WINDOWS64
+  // On Windows x64, memcpy and memmove used to be the same function in the
+  // CRT (vcruntime140.dll), but newer versions of the runtime may provide
+  // them as separate functions.  Detect at runtime before INIT_MEMMOVE
+  // patches the entry point.
+  // Use volatile to prevent the compiler from assuming distinct declarations
+  // imply distinct addresses and folding the comparison to true.
+  volatile uptr memcpy_addr = (uptr)memcpy;
+  volatile uptr memmove_addr = (uptr)memmove;
+  bool memcpy_is_separate = (memcpy_addr != memmove_addr);
+  INIT_MEMMOVE;
+  if (memcpy_is_separate)
+    COMMON_INTERCEPT_FUNCTION(memcpy);
+  else
+    ASSIGN_REAL(memcpy, memmove);
+  CHECK(REAL(memcpy));
+#else
   INIT_MEMMOVE;
   INIT_MEMCPY;
+#endif
   INIT_AEABI_MEM;
   INIT___BZERO;
   INIT_BZERO;
