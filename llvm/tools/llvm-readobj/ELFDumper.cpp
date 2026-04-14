@@ -5274,7 +5274,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
 template <class ELFT>
 bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
   ArrayRef<uint8_t> Contents = cantFail(Obj.getSectionContents(*CGSection));
-  DataExtractor Data(Contents, Obj.isLE(), ObjF.getBytesInAddress());
+  DataExtractor Data(Contents, Obj.isLE());
   DataExtractor::Cursor C(0);
   uint64_t UnknownCount = 0;
   while (C && C.tell() < CGSection->sh_size) {
