@@ -222,3 +222,19 @@ template <template <typename> class Template, typename Argument>
 using Bind = Instantiate<Internal<Template>::template Bind, Argument>;
 #endif
 } // namespace cwg1794
+
+namespace cwg1780 { // cwg1780: 22
+#if __cplusplus >= 201103L
+
+auto l = []() -> int { return 5; };
+using L = decltype(l);
+class A {
+#if __cplusplus >= 201703L
+    friend constexpr auto L::operator()() const -> int; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+#else
+    friend auto L::operator()() const -> int; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+#endif
+};
+
+#endif
+} // namespace cwg1780
