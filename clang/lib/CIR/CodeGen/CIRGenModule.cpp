@@ -32,10 +32,12 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "CIRGenFunctionInfo.h"
 #include "TargetInfo.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -161,6 +163,17 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     theModule->setLoc(mlir::FileLineColLoc::get(&mlirContext, path,
                                                 /*line=*/0,
                                                 /*column=*/0));
+  }
+
+  // Set CUDA GPU binary handle.
+  if (langOpts.CUDA) {
+    llvm::StringRef cudaBinaryName = codeGenOpts.CudaGpuBinaryFileName;
+    if (!cudaBinaryName.empty()) {
+      theModule->setAttr(cir::CIRDialect::getCUDABinaryHandleAttrName(),
+                         cir::CUDABinaryHandleAttr::get(
+                             &mlirContext, mlir::StringAttr::get(
+                                               &mlirContext, cudaBinaryName)));
+    }
   }
 }
 
@@ -1016,7 +1029,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       if (const SectionAttr *sa = d->getAttr<SectionAttr>())
         gv.setSectionAttr(builder.getStringAttr(sa->getName()));
     }
-    gv.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(d));
+    gv.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(d).getValue());
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
@@ -1441,30 +1454,29 @@ void CIRGenModule::addReplacement(StringRef name, mlir::Operation *op) {
   replacements[name] = op;
 }
 
-void CIRGenModule::replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF) {
+#ifndef NDEBUG
+static bool verifyPointerTypeArgs(mlir::ModuleOp modOp, cir::FuncOp oldF,
+                                  cir::FuncOp newF) {
   std::optional<mlir::SymbolTable::UseRange> optionalUseRange =
-      oldF.getSymbolUses(theModule);
+      oldF.getSymbolUses(modOp);
   if (!optionalUseRange)
-    return;
+    return true;
 
   for (const mlir::SymbolTable::SymbolUse &u : *optionalUseRange) {
-    // CallTryOp only shows up after FlattenCFG.
     auto call = mlir::dyn_cast<cir::CallOp>(u.getUser());
     if (!call)
       continue;
 
-    for (const auto [argOp, fnArgType] :
+    for (auto [argOp, fnArgType] :
          llvm::zip(call.getArgs(), newF.getFunctionType().getInputs())) {
-      if (argOp.getType() == fnArgType)
-        continue;
-
-      // The purpose of this entire function is to insert bitcasts in the case
-      // where these types don't match, but I haven't seen a case where that
-      // happens.
-      errorNYI(call.getLoc(), "replace call with mismatched types");
+      if (argOp.getType() != fnArgType)
+        return false;
     }
   }
+
+  return true;
 }
+#endif // NDEBUG
 
 void CIRGenModule::applyReplacements() {
   for (auto &i : replacements) {
@@ -1482,9 +1494,8 @@ void CIRGenModule::applyReplacements() {
       continue;
     }
 
-    // LLVM has opaque pointer but CIR not. So we may have to handle these
-    // different pointer types when performing replacement.
-    replacePointerTypeArgs(oldF, newF);
+    assert(verifyPointerTypeArgs(theModule, oldF, newF) &&
+           "call argument types do not match replacement function");
 
     // Replace old with new, but keep the old order.
     if (oldF.replaceAllSymbolUses(newF.getSymNameAttr(), theModule).failed())
@@ -1735,9 +1746,13 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
       // Replace type
       getGlobalOp.getAddr().setType(
           cir::PointerType::get(newFn.getFunctionType()));
+    } else if (mlir::isa<cir::GlobalOp>(use.getUser())) {
+      // Function addresses in global initializers use GlobalViewAttrs typed to
+      // the initializer context (e.g. struct field type), not the FuncOp type,
+      // so no update is required when the no-proto FuncOp is replaced.
     } else {
-      errorNYI(use.getUser()->getLoc(),
-               "replaceUsesOfNonProtoTypeWithRealFunction: unexpected use");
+      llvm_unreachable(
+          "replaceUsesOfNonProtoTypeWithRealFunction: unexpected use type");
     }
   }
 }
@@ -1970,16 +1985,18 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
       emitGlobal(fd);
     break;
   }
+  case Decl::Export:
+    emitDeclContext(cast<ExportDecl>(decl));
+    break;
 
   case Decl::Var:
   case Decl::Decomposition:
   case Decl::VarTemplateSpecialization: {
-    auto *vd = cast<VarDecl>(decl);
-    if (isa<DecompositionDecl>(decl)) {
-      errorNYI(decl->getSourceRange(), "global variable decompositions");
-      break;
-    }
-    emitGlobal(vd);
+    emitGlobal(cast<VarDecl>(decl));
+    if (auto *decomp = dyn_cast<DecompositionDecl>(decl))
+      for (auto *binding : decomp->flat_bindings())
+        if (auto *holdingVar = binding->getHoldingVar())
+          emitGlobal(holdingVar);
     break;
   }
   case Decl::OpenACCRoutine:
@@ -2605,7 +2622,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // recompute it here. This is a minimal fix for now.
   if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
     const Decl *decl = globalDecl.getDecl();
-    func.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(decl));
+    func.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(decl).getValue());
   }
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
@@ -3095,6 +3112,11 @@ void CIRGenModule::release() {
 
   theModule->setAttr(cir::CIRDialect::getModuleLevelAsmAttrName(),
                      builder.getArrayAttr(globalScopeAsm));
+
+  if (!recordLayoutEntries.empty())
+    theModule->setAttr(
+        cir::CIRDialect::getRecordLayoutsAttrName(),
+        mlir::DictionaryAttr::get(&getMLIRContext(), recordLayoutEntries));
 
   if (getTriple().isAMDGPU() ||
       (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD))

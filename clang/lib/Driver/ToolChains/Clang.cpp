@@ -914,10 +914,24 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     if (ArgM->getOption().matches(options::OPT_M) ||
         ArgM->getOption().matches(options::OPT_MD))
       CmdArgs.push_back("-sys-header-deps");
-    if ((isa<PrecompileJobAction>(JA) &&
-         !Args.hasArg(options::OPT_fno_module_file_deps)) ||
-        Args.hasArg(options::OPT_fmodule_file_deps))
-      CmdArgs.push_back("-module-file-deps");
+
+    // Determine module file deps mode.
+    StringRef ModuleFileDepsVal;
+    if (Arg *A = Args.getLastArg(options::OPT_fmodule_file_deps_EQ,
+                                 options::OPT_fmodule_file_deps,
+                                 options::OPT_fno_module_file_deps)) {
+      if (A->getOption().matches(options::OPT_fmodule_file_deps_EQ))
+        ModuleFileDepsVal = A->getValue();
+      else if (A->getOption().matches(options::OPT_fmodule_file_deps))
+        ModuleFileDepsVal = "all";
+      else
+        ModuleFileDepsVal = "none";
+    } else if (isa<PrecompileJobAction>(JA)) {
+      ModuleFileDepsVal = "all";
+    }
+    if (!ModuleFileDepsVal.empty() && ModuleFileDepsVal != "none")
+      CmdArgs.push_back(
+          Args.MakeArgString("-module-file-deps=" + ModuleFileDepsVal));
   }
 
   if (Args.hasArg(options::OPT_MG)) {
@@ -2409,14 +2423,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   Args.addOptInFlag(CmdArgs, options::OPT_mrelax_all,
                     options::OPT_mno_relax_all);
 
-  // Only default to -mincremental-linker-compatible if we think we are
-  // targeting the MSVC linker.
-  bool DefaultIncrementalLinkerCompatible =
-      C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment();
-  if (Args.hasFlag(options::OPT_mincremental_linker_compatible,
-                   options::OPT_mno_incremental_linker_compatible,
-                   DefaultIncrementalLinkerCompatible))
-    CmdArgs.push_back("-mincremental-linker-compatible");
+  Args.AddLastArg(CmdArgs, options::OPT_mincremental_linker_compatible,
+                  options::OPT_mno_incremental_linker_compatible);
 
   Args.AddLastArg(CmdArgs, options::OPT_femit_dwarf_unwind_EQ);
 
@@ -5012,7 +5020,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add the "effective" target triple.
   CmdArgs.push_back("-triple");
-  CmdArgs.push_back(Args.MakeArgString(TripleStr));
+  CmdArgs.push_back(Args.MakeArgStringRef(TripleStr));
 
   if (const Arg *MJ = Args.getLastArg(options::OPT_MJ)) {
     DumpCompilationDatabase(C, MJ->getValue(), TripleStr, Output, Input, Args);
@@ -5025,34 +5033,23 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (IsCuda || IsHIP) {
+    CmdArgs.push_back("-aux-triple");
+
     // We have to pass the triple of the host if compiling for a CUDA/HIP device
     // and vice-versa.
-    StringRef TripleStr;
-    if (JA.isDeviceOffloading(Action::OFK_Cuda) ||
-        JA.isDeviceOffloading(Action::OFK_HIP))
-      TripleStr =
+    if (IsCudaDevice || IsHIPDevice) {
+      StringRef AuxTripleStr =
           C.getSingleOffloadToolChain<Action::OFK_Host>()->getTriple().str();
-    else {
+      CmdArgs.push_back(Args.MakeArgStringRef(AuxTripleStr));
+    } else {
       // Host-side compilation.
-      TripleStr =
+      StringRef AuxTripleStr =
           (IsCuda ? C.getOffloadToolChains(Action::OFK_Cuda).first->second
                   : C.getOffloadToolChains(Action::OFK_HIP).first->second)
               ->getTriple()
               .str();
-      if (IsCuda) {
-        // We need to figure out which CUDA version we're compiling for, as that
-        // determines how we load and launch GPU kernels.
-        auto *CTC = static_cast<const toolchains::CudaToolChain *>(
-            C.getSingleOffloadToolChain<Action::OFK_Cuda>());
-        assert(CTC && "Expected valid CUDA Toolchain.");
-        if (CTC && CTC->CudaInstallation.version() != CudaVersion::UNKNOWN)
-          CmdArgs.push_back(Args.MakeArgString(
-              Twine("-target-sdk-version=") +
-              CudaVersionToString(CTC->CudaInstallation.version())));
-      }
+      CmdArgs.push_back(Args.MakeArgStringRef(AuxTripleStr));
     }
-    CmdArgs.push_back("-aux-triple");
-    CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
     if (JA.isDeviceOffloading(Action::OFK_HIP) &&
         (getToolChain().getTriple().isAMDGPU() ||
@@ -5065,9 +5062,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             Args.getLastArgValue(options::OPT_mprintf_kind_EQ)));
         // Force compiler error on invalid conversion specifiers
         CmdArgs.push_back(
-            Args.MakeArgString("-Werror=format-invalid-specifier"));
+            Args.MakeArgStringRef("-Werror=format-invalid-specifier"));
       }
     }
+  }
+
+  if (IsCuda && !IsCudaDevice) {
+    // We need to figure out which CUDA version we're compiling for, as that
+    // determines how we load and launch GPU kernels.
+    auto *CTC = static_cast<const toolchains::CudaToolChain *>(
+        C.getSingleOffloadToolChain<Action::OFK_Cuda>());
+    assert(CTC && "Expected valid CUDA Toolchain.");
+    if (CTC && CTC->CudaInstallation.version() != CudaVersion::UNKNOWN)
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine("-target-sdk-version=") +
+          CudaVersionToString(CTC->CudaInstallation.version())));
   }
 
   // Optimization level for CodeGen.
@@ -5280,7 +5289,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
               : "ifs-v1";
       CmdArgs.push_back("-emit-interface-stubs");
       CmdArgs.push_back(
-          Args.MakeArgString(Twine("-interface-stub-version=") + ArgStr.str()));
+          Args.MakeArgString(Twine("-interface-stub-version=") + ArgStr));
     } else if (JA.getType() == types::TY_PP_Asm) {
       CmdArgs.push_back("-S");
     } else if (JA.getType() == types::TY_AST) {
@@ -5566,7 +5575,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   assert(FunctionAlignment <= 31 && "function alignment will be truncated!");
   if (FunctionAlignment) {
     CmdArgs.push_back("-function-alignment");
-    CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
+    CmdArgs.push_back(Args.MakeArgString(Twine(FunctionAlignment)));
   }
 
   if (const Arg *A =
@@ -5893,7 +5902,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_fno_zero_initialized_in_bss);
 
   bool OFastEnabled = isOptimizationLevelFast(Args);
-  if (OFastEnabled)
+  if (Args.hasArg(options::OPT_Ofast))
     D.Diag(diag::warn_drv_deprecated_arg_ofast);
   // If -Ofast is the optimization level, then -fstrict-aliasing should be
   // enabled.  This alias option is being used to simplify the hasFlag logic.
@@ -6234,11 +6243,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-sys-header-deps");
     CmdArgs.push_back(Args.MakeArgString(
         "-header-include-format=" +
-        std::string(headerIncludeFormatKindToString(D.CCPrintHeadersFormat))));
-    CmdArgs.push_back(
-        Args.MakeArgString("-header-include-filtering=" +
-                           std::string(headerIncludeFilteringKindToString(
-                               D.CCPrintHeadersFiltering))));
+        Twine(headerIncludeFormatKindToString(D.CCPrintHeadersFormat))));
+    CmdArgs.push_back(Args.MakeArgString(
+        "-header-include-filtering=" +
+        Twine(headerIncludeFilteringKindToString(D.CCPrintHeadersFiltering))));
   }
   Args.AddLastArg(CmdArgs, options::OPT_P);
   Args.AddLastArg(CmdArgs, options::OPT_print_ivar_layout);
@@ -7635,9 +7643,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Honor -fpack-struct= and -fpack-struct, if given. Note that
   // -fno-pack-struct doesn't apply to -fpack-struct=.
   if (Arg *A = Args.getLastArg(options::OPT_fpack_struct_EQ)) {
-    std::string PackStructStr = "-fpack-struct=";
-    PackStructStr += A->getValue();
-    CmdArgs.push_back(Args.MakeArgString(PackStructStr));
+    CmdArgs.push_back(
+        Args.MakeArgString("-fpack-struct=" + Twine(A->getValue())));
   } else if (Args.hasFlag(options::OPT_fpack_struct,
                           options::OPT_fno_pack_struct, false)) {
     CmdArgs.push_back("-fpack-struct=1");
@@ -9384,8 +9391,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // compilation job.
   const llvm::DenseSet<unsigned> CompilerOptions{
       OPT_v,
-      OPT_cuda_path_EQ,
-      OPT_rocm_path_EQ,
       OPT_hip_path_EQ,
       OPT_O_Group,
       OPT_g_Group,
@@ -9542,9 +9547,16 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // also `ld.lld`.
   if (Args.hasArg(options::OPT_v) && JA.getType() != types::TY_HIP_FATBIN)
     CmdArgs.push_back("--wrapper-verbose");
-  if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ)) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine("--cuda-path=") + A->getValue()));
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--device-compiler=--cuda-path=") + A->getValue()));
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_rocm_path_EQ)) {
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--device-compiler=--rocm-path=") + A->getValue()));
+  }
 
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);

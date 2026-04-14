@@ -25,7 +25,7 @@
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
 // RUN:   -analyzer-config ctu-dir=%t \
 // RUN:   -analyzer-config ctu-import-cpp-threshold=1 \
-// RUN:   -Rctu \
+// RUN:   -Rctu-remarks \
 // RUN:   -verify %s
 
 // foo is loaded successfully (first load, within threshold).

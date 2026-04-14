@@ -2162,11 +2162,9 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
       Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
       BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DstLo)
-          .addImm(SignExtend64<32>(Imm))
-          .addReg(Dst, RegState::Implicit | RegState::Define);
+          .addImm(SignExtend64<32>(Imm));
       BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DstHi)
-          .addImm(SignExtend64<32>(Imm >> 32))
-          .addReg(Dst, RegState::Implicit | RegState::Define);
+          .addImm(SignExtend64<32>(Imm >> 32));
       MI.eraseFromParent();
       break;
     }
@@ -2211,11 +2209,9 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
             .addImm(0); // clamp
       } else {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstLo)
-          .addImm(Lo.getSExtValue())
-          .addReg(Dst, RegState::Implicit | RegState::Define);
+            .addImm(Lo.getSExtValue());
         BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstHi)
-          .addImm(Hi.getSExtValue())
-          .addReg(Dst, RegState::Implicit | RegState::Define);
+            .addImm(Hi.getSExtValue());
       }
     } else {
       assert(SrcOp.isReg());
@@ -2233,11 +2229,9 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addImm(0); // clamp
       } else {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstLo)
-          .addReg(RI.getSubReg(SrcOp.getReg(), AMDGPU::sub0))
-          .addReg(Dst, RegState::Implicit | RegState::Define);
+            .addReg(RI.getSubReg(SrcOp.getReg(), AMDGPU::sub0));
         BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstHi)
-          .addReg(RI.getSubReg(SrcOp.getReg(), AMDGPU::sub1))
-          .addReg(Dst, RegState::Implicit | RegState::Define);
+            .addReg(RI.getSubReg(SrcOp.getReg(), AMDGPU::sub1));
       }
     }
     MI.eraseFromParent();
@@ -2269,11 +2263,9 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     APInt Lo(32, Imm.getLoBits(32).getZExtValue());
     APInt Hi(32, Imm.getHiBits(32).getZExtValue());
     BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DstLo)
-      .addImm(Lo.getSExtValue())
-      .addReg(Dst, RegState::Implicit | RegState::Define);
+        .addImm(Lo.getSExtValue());
     BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DstHi)
-      .addImm(Hi.getSExtValue())
-      .addReg(Dst, RegState::Implicit | RegState::Define);
+        .addImm(Hi.getSExtValue());
     MI.eraseFromParent();
     break;
   }
@@ -10664,8 +10656,8 @@ bool llvm::SIInstrInfo::isWave32() const { return ST.isWave32(); }
 
 MachineInstr *SIInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
-    VirtRegMap *VRM) const {
+    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
+    LiveIntervals *LIS, VirtRegMap *VRM) const {
   // This is a bit of a hack (copied from AArch64). Consider this instruction:
   //
   //   %0:sreg_32 = COPY $m0

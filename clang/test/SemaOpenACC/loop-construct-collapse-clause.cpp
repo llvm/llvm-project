@@ -594,3 +594,21 @@ void no_dupes_since_last_device_type() {
 #pragma acc loop collapse(NotConstexpr) device_type(radeon, nvidia) collapse(NotConstexpr) device_type(host) collapse(NotConstexpr)
   for(unsigned j = 0; j < 5; ++j);
 }
+
+namespace gh191833 {
+  // Instantiating a collapse referring to an invalid struct caused us to try
+  // get the begin-loc of the `T{}` statement when we shouldn't.
+struct S {
+  typename T; // expected-error{{expected a qualified name after 'typename'}}
+};
+
+template<typename T>
+void foo() {
+#pragma acc loop collapse(T{})
+  for (int i = 0; i < 5; ++i);
+}
+
+void bar() {
+  foo<S>();
+}
+}

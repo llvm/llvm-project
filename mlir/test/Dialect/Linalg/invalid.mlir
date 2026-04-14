@@ -2194,3 +2194,15 @@ func.func @reduce_unequal_input_output_count(
   %ext = tensor.extract %reduced[] : tensor<i32>
   return %ext : i32
 }
+
+// -----
+
+func.func @reduce_no_inputs() {
+  // expected-error @+1 {{'linalg.reduce' op expected at least one input}}
+  linalg.reduce
+      dimensions = []
+      () {
+        linalg.yield
+      }
+  func.return
+}

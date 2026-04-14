@@ -381,6 +381,17 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   return nullptr;
 }
 
+/// Infers the layout attribute for mask and offset operand for Chunked load
+/// and store, given the anchor layout attribute for the value being load/store.
+xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
+    xegpu::DistributeLayoutAttr payloadLayout, int chunkSize) {
+  auto rank = payloadLayout.getRank();
+  if (chunkSize > 1)
+    return payloadLayout.dropDims(
+        llvm::to_vector(llvm::seq<int64_t>(rank - 1, rank)));
+  return payloadLayout;
+}
+
 /// Sets up layout for reduction operations by creating a SliceAttr for the
 /// result.
 ///
@@ -471,11 +482,16 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       auto srcSgData = computeShapeRatio(srcShape, sgLayoutFromConsumer);
       if (srcSgData)
         for (int dim = 0; dim < srcRank; dim++) {
-          srcLayout = srcLayout.setDimData(dim, srcSgData.value()[dim], -1, -1);
+          if (llvm::is_contained(reductionDims, dim))
+            srcLayout =
+                srcLayout.setDimData(dim, srcSgData.value()[dim], -1, -1);
         }
     } else {
       SmallVector<int64_t> consumerSgLayout =
           consumerLayout ? consumerLayout.getEffectiveSgLayoutAsInt()
+                         : SmallVector<int64_t>();
+      SmallVector<int64_t> consumerSgData =
+          consumerLayout ? consumerLayout.getEffectiveSgDataAsInt()
                          : SmallVector<int64_t>();
       SmallVector<int64_t> consumerOrder =
           consumerLayout ? consumerLayout.getEffectiveOrderAsInt()
@@ -492,9 +508,7 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
         if (!llvm::is_contained(reductionDims, i) &&
             consumerIdx < static_cast<int>(consumerSgLayout.size())) {
           sgLayout[i] = consumerSgLayout[consumerIdx];
-          assert((srcShape[i] % sgLayout[i] == 0) &&
-                 "source shape not divisible by consumer sg_layout");
-          sgData[i] = srcShape[i] / sgLayout[i];
+          sgData[i] = consumerSgData[consumerIdx];
           remainingSgCount /= sgLayout[i];
           order[i] = consumerOrder[consumerIdx];
           consumerIdx++;

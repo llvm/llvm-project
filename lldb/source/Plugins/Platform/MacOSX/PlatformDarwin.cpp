@@ -50,6 +50,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 #if defined(__APPLE__)
+#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include <TargetConditionals.h>
 #endif
 
@@ -206,6 +207,7 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
          "available.");
 
   llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
+  const FileSpec original_module_spec = module_spec;
   while (module_spec.GetFilename()) {
     ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
         target.GetDebugger()
@@ -235,8 +237,9 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
                                          orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
-      file_specs.try_emplace(std::move(script_fspec),
-                             target.GetLoadScriptFromSymbolFile());
+      LoadScriptFromSymFile load_style =
+          Platform::GetScriptLoadStyleForModule(original_module_spec, target);
+      file_specs.try_emplace(std::move(script_fspec), load_style);
       break;
     }
 
@@ -293,6 +296,40 @@ PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
         feedback_stream, module_spec, *target, symfile_spec);
 
   return empty;
+}
+
+bool PlatformDarwin::IsSymbolFileTrusted(Module &module) {
+#if defined(__APPLE__)
+  SymbolFile *symfile = module.GetSymbolFile();
+  if (!symfile)
+    return false;
+
+  ObjectFile *objfile = symfile->GetObjectFile();
+  if (!objfile)
+    return false;
+
+  std::string symfile_path = objfile->GetFileSpec().GetPath();
+  llvm::StringRef path_ref(symfile_path);
+
+  // Find the .dSYM bundle root from the symfile path, which is typically
+  // .dSYM/Contents/Resources/DWARF/<name>.
+  auto pos = path_ref.find(".dSYM/");
+  if (pos == llvm::StringRef::npos)
+    return false;
+
+  FileSpec bundle_spec(path_ref.substr(0, pos + 5));
+
+  if (HostInfoMacOSX::IsBundleCodeSignTrusted(bundle_spec)) {
+    LLDB_LOG(GetLog(LLDBLog::Modules),
+             "dSYM bundle '{0}' has valid trusted code signature",
+             bundle_spec.GetPath());
+    return true;
+  }
+
+  return false;
+#else
+  return false;
+#endif
 }
 
 Status PlatformDarwin::ResolveSymbolFile(Target &target,
@@ -1072,11 +1109,11 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
 
   ModuleSP exe_module_sp = target->GetExecutableModule();
   if (!exe_module_sp)
-    return llvm::createStringError("Failed to get module from target");
+    return llvm::createStringError("failed to get module from target");
 
   SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
   if (!sym_file)
-    return llvm::createStringError("Failed to get symbol file from executable");
+    return llvm::createStringError("failed to get symbol file from executable");
 
   if (sym_file->GetNumCompileUnits() == 0)
     return llvm::createStringError(

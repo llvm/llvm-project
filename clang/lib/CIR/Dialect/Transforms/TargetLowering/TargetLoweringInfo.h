@@ -36,6 +36,8 @@ public:
 // Target-specific factory functions.
 std::unique_ptr<TargetLoweringInfo> createAMDGPUTargetLoweringInfo();
 
+std::unique_ptr<TargetLoweringInfo> createNVPTXTargetLoweringInfo();
+
 } // namespace cir
 
 #endif

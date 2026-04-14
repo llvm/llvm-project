@@ -193,7 +193,7 @@ Use
 ---
 
 Any occurrence of the moved variable that is not a reinitialization (see below)
-is considered to be a use.
+or an explicit call to the variable destructor is considered to be a use.
 
 An exception to this are objects of type ``std::unique_ptr``,
 ``std::shared_ptr``, ``std::weak_ptr``, ``std::optional``, and ``std::any``,

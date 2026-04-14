@@ -13,6 +13,7 @@
 
 #include <ctime>
 #include <memory>
+#include <sys/types.h>
 #include <system_error>
 
 namespace llvm {
@@ -28,10 +29,6 @@ class InMemoryModuleCache;
 /// operations the compiler might want to perform on the cache.
 class ModuleCache {
 public:
-  /// May perform any work that only needs to be performed once for multiple
-  /// calls \c getLock() with the same module filename.
-  virtual void prepareForGetLock(StringRef ModuleFilename) = 0;
-
   /// Returns lock for the given module file. The lock is initially unlocked.
   virtual std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) = 0;

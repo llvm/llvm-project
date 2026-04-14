@@ -16,6 +16,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Attributes.h"
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/TypeSize.h"
@@ -63,16 +64,6 @@ cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
   return cir::FuncType::get(argTypes,
                             (resultType ? resultType : builder.getVoidTy()),
                             info.isVariadic());
-}
-
-cir::FuncType CIRGenTypes::getFunctionTypeForVTable(GlobalDecl gd) {
-  const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
-  const FunctionProtoType *fpt = md->getType()->getAs<FunctionProtoType>();
-
-  if (!isFuncTypeConvertible(fpt))
-    cgm.errorNYI("getFunctionTypeForVTable: non-convertible function type");
-
-  return getFunctionType(gd);
 }
 
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
@@ -431,8 +422,9 @@ void CIRGenModule::constructAttributeList(
       GlobalDecl kernel(calleeInfo.getCalleeDecl());
       llvm::StringRef kernelName = getMangledName(
           kernel.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
-      auto attr =
-          cir::CUDAKernelNameAttr::get(&getMLIRContext(), kernelName.str());
+      auto attr = cir::CUDAKernelNameAttr::get(
+          &getMLIRContext(),
+          mlir::StringAttr::get(&getMLIRContext(), kernelName));
       attrs.set(attr.getMnemonic(), attr);
     }
 

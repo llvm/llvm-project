@@ -925,6 +925,30 @@ void IslNodeBuilder::createBlock(__isl_take isl_ast_node *Block) {
   isl_ast_node_list_free(List);
 }
 
+void IslNodeBuilder::generateBeginScopTrace() {
+  if (!TraceStmts)
+    return;
+
+  // Sequence of strings to print.
+  SmallVector<llvm::Value *, 8> Values;
+  Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "Scop: "));
+
+  auto Params = S.getParamSpace();
+  for (int i : rangeIslSize(0, Params.dim(isl::dim::param))) {
+    if (i != 0)
+      Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, " "));
+
+    isl::id PId = Params.get_dim_id(isl::dim::param, i);
+    Values.push_back(
+        RuntimeDebugBuilder::getPrintableString(Builder, PId.get_name()));
+    Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "="));
+    Values.push_back(IDToValue.lookup(PId.get()));
+  }
+
+  Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "\n"));
+  RuntimeDebugBuilder::createCPUPrinter(Builder, ArrayRef<Value *>(Values));
+}
+
 void IslNodeBuilder::create(__isl_take isl_ast_node *Node) {
   switch (isl_ast_node_get_type(Node)) {
   case isl_ast_node_error:

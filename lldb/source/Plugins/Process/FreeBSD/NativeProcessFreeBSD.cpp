@@ -92,13 +92,13 @@ NativeProcessFreeBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::createStringError("Could not sync with inferior process");
+    return llvm::createStringError("could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::createStringError("Cannot get process architecture");
+    return llvm::createStringError("cannot get process architecture");
   }
 
   // Set the architecture to the exe architecture.
@@ -129,7 +129,7 @@ NativeProcessFreeBSD::Manager::Attach(
   // Retrieve the architecture for the running process.
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::createStringError("Cannot get process architecture");
+    return llvm::createStringError("cannot get process architecture");
   }
 
   std::unique_ptr<NativeProcessFreeBSD> process_up(new NativeProcessFreeBSD(
@@ -1072,7 +1072,7 @@ NativeProcessFreeBSD::SaveCore(llvm::StringRef path_hint) {
       openFile(path, pc.pc_fd, CD_CreateNew, FA_Write, OF_None)) {
     if (std::error_code errc =
             createTemporaryFile("lldb", "core", pc.pc_fd, path))
-      return llvm::createStringError(errc, "Unable to create a temporary file");
+      return llvm::createStringError(errc, "unable to create a temporary file");
   }
   error = PtraceWrapper(PT_COREDUMP, GetID(), &pc, sizeof(pc));
 

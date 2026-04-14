@@ -244,6 +244,8 @@ struct MissingFeatures {
   static bool ctorConstLvalueToRvalueConversion() { return false; }
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
+  static bool hipModuleCtor() { return false; }
+  static bool globalRegistration() { return false; }
   static bool dataLayoutTypeIsSized() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutTypeStoreSize() { return false; }
@@ -288,7 +290,6 @@ struct MissingFeatures {
   static bool instrumentation() { return false; }
   static bool intrinsicElementTypeSupport() { return false; }
   static bool intrinsics() { return false; }
-  static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
   static bool lambdaCaptures() { return false; }
   static bool loopInfoStack() { return false; }
