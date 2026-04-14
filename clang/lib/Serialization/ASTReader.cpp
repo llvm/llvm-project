@@ -2932,8 +2932,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     if (StoredContentHash == 0)
       return OriginalChange;
 
-    auto MemBuffOrError =
-        FileMgr.getBufferForFile(*File);
+    auto MemBuffOrError = FileMgr.getBufferForFile(*File);
     if (!MemBuffOrError) {
       if (!Complain)
         return OriginalChange;
