@@ -102,7 +102,6 @@ entry:
 define double @nearbyint_01() #0 {
 ; CHECK-LABEL: @nearbyint_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.nearbyint.f64(double 1.050000e+01) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
@@ -245,7 +244,6 @@ entry:
 define float @fadd_01() #0 {
 ; CHECK-LABEL: @fadd_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fadd.f32(float 1.000000e+01, float 2.000000e+01) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 3.000000e+01
 ;
 entry:
@@ -258,7 +256,6 @@ entry:
 define double @fadd_02() #0 {
 ; CHECK-LABEL: @fadd_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.fadd.f64(double 1.000000e+00, double 0x3FF0000000000001) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 2.000000e+00
 ;
 entry:
@@ -269,7 +266,6 @@ entry:
 define double @fadd_03() #0 {
 ; CHECK-LABEL: @fadd_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.fadd.f64(double 1.000000e+00, double 0x3FF0000000000001) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 0x4000000000000001
 ;
 entry:
@@ -328,7 +324,6 @@ entry:
 define double @fadd_08() #0 {
 ; CHECK-LABEL: @fadd_08(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.fadd.f64(double 0x7FEFFFFFFFFFFFFF, double 0x7FEFFFFFFFFFFFFF) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 0x7FF0000000000000
 ;
 entry:
@@ -350,7 +345,6 @@ entry:
 define half @fadd_10() #0 {
 ; CHECK-LABEL: @fadd_10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call half @llvm.fadd.f16(half 0xH3C00, half 0xH4000) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret half 0xH4200
 ;
 entry:
@@ -361,7 +355,6 @@ entry:
 define bfloat @fadd_11() #0 {
 ; CHECK-LABEL: @fadd_11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call bfloat @llvm.fadd.bf16(bfloat 0xR3F80, bfloat 0xR4000) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret bfloat 0xR4040
 ;
 entry:
@@ -372,7 +365,6 @@ entry:
 define double @fsub_01() #0 {
 ; CHECK-LABEL: @fsub_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.fsub.f64(double 1.000000e+00, double 2.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double -1.000000e+00
 ;
 entry:
@@ -383,7 +375,6 @@ entry:
 define double @fmul_01() #0 {
 ; CHECK-LABEL: @fmul_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.fmul.f64(double 1.000000e+00, double 2.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 2.000000e+00
 ;
 entry:
@@ -394,7 +385,6 @@ entry:
 define double @fdiv_01() #0 {
 ; CHECK-LABEL: @fdiv_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.fdiv.f64(double 1.000000e+00, double 2.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 5.000000e-01
 ;
 entry:

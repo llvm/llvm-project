@@ -775,10 +775,17 @@ MemoryEffects CallBase::getFloatingPointMemoryEffects() const {
       if (const Function *F = BB->getParent())
         if (F->hasFnAttribute(Attribute::StrictFP))
           if (IntrinsicInst::isFloatingPointOperation(IntrID)) {
-            // If this operation explicitly ignores FP exceptions, it has no
-            // exception-related side effects even in a strictfp function.
-            if (getExceptionBehavior() == fp::ebIgnore)
-              return MemoryEffects::none();
+            if (getExceptionBehavior() == fp::ebIgnore) {
+              // Exceptions are ignored. If the rounding mode is also explicit
+              // (non-dynamic), there is no FP environment access at all.
+              if (getRoundingMode() != RoundingMode::Dynamic)
+                return MemoryEffects::none();
+              // Dynamic rounding mode: the operation reads the current rounding
+              // mode from the FP environment (e.g. MXCSR). Use
+              // inaccessibleMemOnly (not just Ref) so that EarlyCSE conservatively
+              // treats these as writes and prevents CSE across arbitrary function
+              // calls that might change the rounding mode.
+            }
             return MemoryEffects::inaccessibleMemOnly();
           }
   return MemoryEffects::none();

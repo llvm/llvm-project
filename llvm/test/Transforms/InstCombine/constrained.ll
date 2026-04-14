@@ -31,7 +31,6 @@ entry:
 define float @f_unused_ignore() #0 {
 ; CHECK-LABEL: @f_unused_ignore(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fdiv.f32(float 1.000000e+00, float 3.000000e+00) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
 entry:
@@ -93,7 +92,6 @@ entry:
 define float @f_eval_ignore() #0 {
 ; CHECK-LABEL: @f_eval_ignore(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fdiv.f32(float 1.000000e+00, float 3.000000e+00) [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0x3FD5555540000000
 ;
 entry:

@@ -3,7 +3,6 @@
 
 define float @fdiv_constant_fold() #0 {
 ; CHECK-LABEL: @fdiv_constant_fold(
-; CHECK-NEXT:    [[F1:%.*]] = call float @llvm.fdiv.f32(float 3.000000e+00, float 2.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 1.500000e+00
 ;
   %f = call float @llvm.experimental.constrained.fdiv.f32(float 3.0, float 2.0, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
@@ -33,7 +32,6 @@ define float @fdiv_constant_fold_strict2() #0 {
 
 define float @frem_constant_fold() #0 {
 ; CHECK-LABEL: @frem_constant_fold(
-; CHECK-NEXT:    [[F1:%.*]] = call float @llvm.frem.f32(float 3.000000e+00, float 2.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %f = call float @llvm.experimental.constrained.frem.f32(float 3.0, float 2.0, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0

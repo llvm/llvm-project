@@ -623,11 +623,12 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
     EXPECT_EQ(RoundingMode::TowardZero, I->getRoundingMode());
     EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
     MemoryEffects ME = I->getMemoryEffects();
-    EXPECT_TRUE(ME.doesAccessInaccessibleMem());
+    // fp.except=ignore + explicit non-dynamic rounding mode: no FP env access.
+    EXPECT_TRUE(ME.doesNotAccessMemory());
   }
 
   // Check call with both FP bundles.
-  // nearbyint(%x) [ "fp.control" (metadata !"rtz"),
+  // nearbyint(%x) [ "fp.control" (metadata !"rte"),
   //                 "fp.except" (metadata !"ignore") ]
   {
     SmallVector<OperandBundleDef, 1> Bundles;
@@ -641,7 +642,8 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
     EXPECT_EQ(RoundingMode::NearestTiesToEven, I->getRoundingMode());
     EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
     MemoryEffects ME = I->getMemoryEffects();
-    EXPECT_TRUE(ME.doesAccessInaccessibleMem());
+    // fp.except=ignore + explicit non-dynamic rounding mode: no FP env access.
+    EXPECT_TRUE(ME.doesNotAccessMemory());
   }
 
   // Integer intrinsics never receive FP operand bundles and have no FP

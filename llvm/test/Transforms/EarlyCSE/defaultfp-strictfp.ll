@@ -137,10 +137,10 @@ define double @multiple_frem_split(double %a, double %b) #0 {
 
 define i32 @multiple_fptoui(double %a) #0 {
 ; CHECK-LABEL: @multiple_fptoui(
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A]]) [ "fp.except"(metadata !"ignore") ]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP2]], i32 [[TMP2]]) #[[ATTR0]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP1]], i32 [[TMP1]]) #[[ATTR0]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %a, metadata !"fpexcept.ignore") #0
   %2 = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %a, metadata !"fpexcept.ignore") #0
@@ -150,11 +150,11 @@ define i32 @multiple_fptoui(double %a) #0 {
 
 define i32 @multiple_fptoui_split(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fptoui_split(
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    call void @arbitraryfunc() #[[ATTR0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A]]) [ "fp.except"(metadata !"ignore") ]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP2]], i32 [[TMP2]]) #[[ATTR0]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP1]], i32 [[TMP1]]) #[[ATTR0]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %a, metadata !"fpexcept.ignore") #0
   call void @arbitraryfunc() #0
@@ -191,10 +191,10 @@ define double @multiple_uitofp_split(i32 %a) #0 {
 
 define i32 @multiple_fptosi(double %a) #0 {
 ; CHECK-LABEL: @multiple_fptosi(
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A]]) [ "fp.except"(metadata !"ignore") ]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP2]], i32 [[TMP2]]) #[[ATTR0]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP1]], i32 [[TMP1]]) #[[ATTR0]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %a, metadata !"fpexcept.ignore") #0
   %2 = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %a, metadata !"fpexcept.ignore") #0
@@ -204,11 +204,11 @@ define i32 @multiple_fptosi(double %a) #0 {
 
 define i32 @multiple_fptosi_split(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fptosi_split(
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    call void @arbitraryfunc() #[[ATTR0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A]]) [ "fp.except"(metadata !"ignore") ]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP2]], i32 [[TMP2]]) #[[ATTR0]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP1]], i32 [[TMP1]]) #[[ATTR0]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %a, metadata !"fpexcept.ignore") #0
   call void @arbitraryfunc() #0
@@ -245,12 +245,12 @@ define double @multiple_sitofp_split(i32 %a) #0 {
 
 define i1 @multiple_fcmp(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fcmp(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.fcmp.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.fcmp.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @bar.i32(i32 [[TMP2]], i32 [[TMP4]]) #[[ATTR0]]
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @bar.i32(i32 [[TMP4]], i32 [[TMP6]]) #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
   %2 = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -264,11 +264,11 @@ define i1 @multiple_fcmp_split(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fcmp_split(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.fcmp.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    call void @arbitraryfunc() #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @bar.i32(i32 [[TMP2]], i32 [[TMP4]]) #[[ATTR0]]
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @bar.i32(i32 [[TMP3]], i32 [[TMP4]]) #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
   call void @arbitraryfunc() #0

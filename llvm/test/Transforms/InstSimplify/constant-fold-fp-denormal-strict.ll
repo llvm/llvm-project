@@ -7,7 +7,6 @@
 define float @test_float_fadd_ieee_strict() #0 {
 ; CHECK-LABEL: define float @test_float_fadd_ieee_strict(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fadd.f32(float 0xB810000000000000, float 0x3800000000000000) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0xB800000000000000
 ;
   %result = call float @llvm.experimental.constrained.fadd.f32(float 0xB810000000000000, float 0x3800000000000000, metadata !"round.towardzero", metadata !"fpexcept.ignore")
@@ -17,7 +16,6 @@ define float @test_float_fadd_ieee_strict() #0 {
 define float @test_float_fadd_strict_ieee() #0 {
 ; CHECK-LABEL: define float @test_float_fadd_strict_ieee(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fadd.f32(float 0xB810000000000000, float 0x3800000000000000) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0xB800000000000000
 ;
   %result = call float @llvm.experimental.constrained.fadd.f32(float 0xB810000000000000, float 0x3800000000000000, metadata !"round.towardzero", metadata !"fpexcept.ignore") [ "fp.control" (metadata !"denorm.in=ieee", metadata !"denorm.out=ieee") ]
@@ -27,7 +25,6 @@ define float @test_float_fadd_strict_ieee() #0 {
 define float @test_float_fadd_strict_inzero() #0 {
 ; CHECK-LABEL: define float @test_float_fadd_strict_inzero(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fadd.f32(float 0xB810000000000000, float 0x3800000000000000) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0xB800000000000000
 ;
   %result = call float @llvm.experimental.constrained.fadd.f32(float 0xB810000000000000, float 0x3800000000000000, metadata !"round.towardzero", metadata !"fpexcept.ignore") [ "fp.control" (metadata !"denorm.in=zero", metadata !"denorm.out=ieee") ]
@@ -37,7 +34,6 @@ define float @test_float_fadd_strict_inzero() #0 {
 define float @test_float_fadd_strict_inpzero() #0 {
 ; CHECK-LABEL: define float @test_float_fadd_strict_inpzero(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fadd.f32(float 0xB810000000000000, float 0x3800000000000000) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0xB800000000000000
 ;
   %result = call float @llvm.experimental.constrained.fadd.f32(float 0xB810000000000000, float 0x3800000000000000, metadata !"round.towardzero", metadata !"fpexcept.ignore") [ "fp.control" (metadata !"denorm.in=pzero", metadata !"denorm.out=ieee") ]
@@ -47,7 +43,6 @@ define float @test_float_fadd_strict_inpzero() #0 {
 define float @test_float_fadd_strict_indyn() #0 {
 ; CHECK-LABEL: define float @test_float_fadd_strict_indyn(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.fadd.f32(float 0xB810000000000000, float 0x3800000000000000) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0xB800000000000000
 ;
   %result = call float @llvm.experimental.constrained.fadd.f32(float 0xB810000000000000, float 0x3800000000000000, metadata !"round.towardzero", metadata !"fpexcept.ignore") [ "fp.control" (metadata !"denorm.in=dyn", metadata !"denorm.out=ieee") ]
@@ -57,7 +52,6 @@ define float @test_float_fadd_strict_indyn() #0 {
 define float @test_float_fadd_strict_ieee_outzero() #0 {
 ; CHECK-LABEL: define float @test_float_fadd_strict_ieee_outzero(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fadd.f32(float 0xB810000000000000, float 0x3800000000000000) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0xB800000000000000
 ;
   %result = call float @llvm.experimental.constrained.fadd.f32(float 0xB810000000000000, float 0x3800000000000000, metadata !"round.towardzero", metadata !"fpexcept.ignore") [ "fp.control" (metadata !"denorm.in=ieee", metadata !"denorm.out=zero") ]
@@ -67,7 +61,6 @@ define float @test_float_fadd_strict_ieee_outzero() #0 {
 define float @test_float_fadd_strict_ieee_outpzero() #0 {
 ; CHECK-LABEL: define float @test_float_fadd_strict_ieee_outpzero(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fadd.f32(float 0xB810000000000000, float 0x3800000000000000) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0xB800000000000000
 ;
   %result = call float @llvm.experimental.constrained.fadd.f32(float 0xB810000000000000, float 0x3800000000000000, metadata !"round.towardzero", metadata !"fpexcept.ignore") [ "fp.control" (metadata !"denorm.in=ieee", metadata !"denorm.out=pzero") ]
@@ -77,7 +70,6 @@ define float @test_float_fadd_strict_ieee_outpzero() #0 {
 define float @test_float_fadd_strict_ieee_outdyn() #0 {
 ; CHECK-LABEL: define float @test_float_fadd_strict_ieee_outdyn(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.fadd.f32(float 0xB810000000000000, float 0x3800000000000000) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0xB800000000000000
 ;
   %result = call float @llvm.experimental.constrained.fadd.f32(float 0xB810000000000000, float 0x3800000000000000, metadata !"round.towardzero", metadata !"fpexcept.ignore") [ "fp.control" (metadata !"denorm.in=ieee", metadata !"denorm.out=dyn") ]
@@ -87,7 +79,6 @@ define float @test_float_fadd_strict_ieee_outdyn() #0 {
 define float @test_float_fadd_strict_zero_outdef() #0 {
 ; CHECK-LABEL: define float @test_float_fadd_strict_zero_outdef(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fadd.f32(float 0xB810000000000000, float 0x3800000000000000) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0xB800000000000000
 ;
   %result = call float @llvm.experimental.constrained.fadd.f32(float 0xB810000000000000, float 0x3800000000000000, metadata !"round.towardzero", metadata !"fpexcept.ignore") [ "fp.control" (metadata !"denorm.in=ieee") ]

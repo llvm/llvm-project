@@ -476,13 +476,10 @@ define void @constant_fold_ldexp_f32_val_strictfp(i32 %y) #0 {
 ; CHECK-LABEL: @constant_fold_ldexp_f32_val_strictfp(
 ; CHECK-NEXT:    [[SNAN_MAY_TRAP1:%.*]] = call float @llvm.ldexp.f32.i32(float 0x7FF0000020000000, i32 3) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    store volatile float 0x7FF8000020000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[SNAN_MAY_NOT_TRAP2:%.*]] = call float @llvm.ldexp.f32.i32(float 0x7FF0000020000000, i32 3) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    store volatile float 0x7FF8000020000000, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[UNKNOWN_ROUNDING3:%.*]] = call float @llvm.ldexp.f32.i32(float 2.500000e+00, i32 42) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    store volatile float 0x42A4000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[NORMAL4:%.*]] = call float @llvm.ldexp.f32.i32(float 2.500000e+00, i32 42) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    store volatile float 0x42A4000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[NORMAL_DOWN5:%.*]] = call float @llvm.ldexp.f32.i32(float 2.500000e+00, i32 42) [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    store volatile float 0x42A4000000000000, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
