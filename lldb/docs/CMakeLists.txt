@@ -49,7 +49,7 @@ if (LLDB_ENABLE_PYTHON AND SPHINX_FOUND)
         ${LLDB_ALL_DOC_JSON_FILES}
       DEPENDS
         ${LLDB_ALL_DOC_JSON_FILES}
-        "${CMAKE_CURRENT_SOURCE_DIR}/_scripts/gen-property-docs-from-json.py"
+        "${LLDB_SOURCE_DIR}/scripts/gen-property-docs-from-json.py"
     )
     add_custom_target(LLDBDocsSettingsMd DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/generated-settings.md")
 
