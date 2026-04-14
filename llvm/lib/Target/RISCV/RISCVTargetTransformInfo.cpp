@@ -2669,28 +2669,33 @@ RISCVTTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
                             nullptr);
 }
 
-InstructionCost RISCVTTIImpl::getArithmeticInstrCostImpl(
+InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
-                                             Op2Info, Args, CxtI);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
 
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
-    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
-                                             Op2Info, Args, CxtI);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
 
   // Skip if scalar size of Ty is bigger than ELEN.
   if (isa<VectorType>(Ty) && Ty->getScalarSizeInBits() > ST->getELen())
-    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
-                                             Op2Info, Args, CxtI);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
+
+  InstructionCost ConvertedCost;
+  if (getConvertedArithmeticInstructionCost(ISDOpcode, Ty, CostKind, Op1Info,
+                                            Op2Info, Args, CxtI, ConvertedCost))
+    return ConvertedCost;
 
   // TODO: Handle scalar type.
   if (!LT.second.isVector()) {
@@ -2707,8 +2712,8 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCostImpl(
       if (const auto *Entry = CostTableLookup(DivTbl, ISDOpcode, LT.second))
         return Entry->Cost * LT.first;
 
-    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
-                                             Op2Info, Args, CxtI);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
   }
 
   // f16 with zvfhmin and bf16 will be promoted to f32.
@@ -2799,8 +2804,8 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCostImpl(
     // Assuming all other instructions have the same cost until a need arises to
     // differentiate them.
     return CastCost + ConstantMatCost +
-           BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
-                                             Op2Info, Args, CxtI);
+           BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
   }
 
   InstructionCost InstrCost = getRISCVInstructionCost(Op, LT.second, CostKind);

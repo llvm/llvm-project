@@ -250,7 +250,7 @@ unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
   return 2;
 }
 
-InstructionCost X86TTIImpl::getArithmeticInstrCostImpl(
+InstructionCost X86TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
@@ -275,6 +275,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCostImpl(
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
+
+  InstructionCost ConvertedCost;
+  if (getConvertedArithmeticInstructionCost(ISD, Ty, CostKind, Op1Info, Op2Info,
+                                            Args, CxtI, ConvertedCost))
+    return ConvertedCost;
 
   if (ISD == ISD::MUL && Args.size() == 2 && LT.second.isVector() &&
       (LT.second.getScalarType() == MVT::i32 ||
@@ -364,6 +369,17 @@ InstructionCost X86TTIImpl::getArithmeticInstrCostImpl(
     }
 
     return Cost;
+  }
+
+  // Vector unsigned division/remainder will be simplified to shifts/masks.
+  if ((ISD == ISD::UDIV || ISD == ISD::UREM) && Op2Info.isConstant() &&
+      Op2Info.isPowerOf2()) {
+    if (ISD == ISD::UDIV)
+      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
+                                    Op1Info.getNoProps(), Op2Info.getNoProps());
+    // UREM
+    return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
+                                  Op1Info.getNoProps(), Op2Info.getNoProps());
   }
 
   static const CostKindTblEntry GFNIUniformConstCostTable[] = {
@@ -1507,8 +1523,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCostImpl(
   }
 
   // Fallback to the default implementation.
-  return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info, Args, CxtI);
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                       Args, CxtI);
 }
 
 InstructionCost

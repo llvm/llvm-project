@@ -587,7 +587,7 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info, Args, CxtI);
   if (CxtI && Ty && !Ty->isVectorTy() && isFoldableRMW(CxtI, Ty))
     return TTI::TCC_Free;
@@ -762,8 +762,8 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
   }
 
   // Fallback to the default implementation.
-  return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info, Args, CxtI);
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                       Args, CxtI);
 }
 
 InstructionCost

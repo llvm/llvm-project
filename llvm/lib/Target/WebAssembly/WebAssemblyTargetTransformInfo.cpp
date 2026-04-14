@@ -79,7 +79,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
   }
 
   InstructionCost Cost =
-      BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCostImpl(
+      BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
           Opcode, Ty, CostKind, Op1Info, Op2Info);
 
   if (auto *VTy = dyn_cast<VectorType>(Ty)) {

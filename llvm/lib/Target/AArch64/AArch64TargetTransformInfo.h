@@ -253,7 +253,7 @@ public:
   InstructionCost getSpliceCost(VectorType *Tp, int Index,
                                 TTI::TargetCostKind CostKind) const;
 
-  InstructionCost getArithmeticInstrCostImpl(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},

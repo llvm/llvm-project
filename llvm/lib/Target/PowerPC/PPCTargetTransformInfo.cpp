@@ -605,12 +605,12 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
-                                             Op2Info, Args, CxtI);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                         Op2Info, Args, CxtI);
 
   // Fallback to the default implementation.
-  InstructionCost Cost =
-      BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info, Op2Info);
+  InstructionCost Cost = BaseT::getArithmeticInstrCost(
+      Opcode, Ty, CostKind, Op1Info, Op2Info);
   return Cost * CostFactor;
 }
 
