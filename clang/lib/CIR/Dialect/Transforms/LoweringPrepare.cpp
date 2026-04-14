@@ -8,10 +8,12 @@
 
 #include "PassDetail.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/IRMapping.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
@@ -20,11 +22,14 @@
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 #include <memory>
 
@@ -107,6 +112,16 @@ struct LoweringPreparePass
       mlir::Type type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
       cir::VisibilityKind visibility = cir::VisibilityKind::Default);
+
+  /// ------------
+  /// CUDA registration related
+  /// ------------
+
+  llvm::StringMap<FuncOp> cudaKernelMap;
+
+  /// Build the CUDA module constructor that registers the fat binary
+  /// with the CUDA runtime.
+  void buildCUDAModuleCtor();
 
   /// Handle static local variable initialization with guard variables.
   void handleStaticLocal(cir::GlobalOp globalOp, cir::GetGlobalOp getGlobalOp);
@@ -1712,9 +1727,161 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
     else if (auto globalDtor = fnOp.getGlobalDtorPriority())
       globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
+
+    if (mlir::Attribute attr =
+            fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic())) {
+      auto kernelNameAttr = dyn_cast<CUDAKernelNameAttr>(attr);
+      llvm::StringRef kernelName = kernelNameAttr.getKernelName();
+      cudaKernelMap[kernelName] = fnOp;
+    }
   } else if (auto threeWayCmp = dyn_cast<cir::CmpThreeWayOp>(op)) {
     lowerThreeWayCmpOp(threeWayCmp);
   }
+}
+
+static llvm::StringRef getCUDAPrefix(clang::ASTContext *astCtx) {
+  if (astCtx->getLangOpts().HIP)
+    return "hip";
+  return "cuda";
+}
+
+static std::string addUnderscoredPrefix(llvm::StringRef prefix,
+                                        llvm::StringRef name) {
+  return ("__" + prefix + name).str();
+}
+
+/// Creates a global constructor function for the module:
+///
+/// For CUDA:
+/// \code
+/// void __cuda_module_ctor() {
+///     Handle = __cudaRegisterFatBinary(GpuBinaryBlob);
+///     __cuda_register_globals(Handle);
+/// }
+/// \endcode
+///
+/// For HIP:
+/// \code
+/// void __hip_module_ctor() {
+///     if (__hip_gpubin_handle == 0) {
+///         __hip_gpubin_handle  = __hipRegisterFatBinary(GpuBinaryBlob);
+///         __hip_register_globals(__hip_gpubin_handle);
+///     }
+/// }
+/// \endcode
+void LoweringPreparePass::buildCUDAModuleCtor() {
+  bool isHIP = astCtx->getLangOpts().HIP;
+
+  if (isHIP)
+    assert(!cir::MissingFeatures::hipModuleCtor());
+  if (astCtx->getLangOpts().GPURelocatableDeviceCode)
+    llvm_unreachable("GPU RDC NYI");
+
+  // For CUDA without -fgpu-rdc, it's safe to stop generating ctor
+  // if there's nothing to register.
+  if (cudaKernelMap.empty())
+    return;
+
+  // There's no device-side binary, so no need to proceed for CUDA.
+  // HIP has to create an external symbol in this case, which is NYI.
+  mlir::Attribute cudaBinaryHandleAttr =
+      mlirModule->getAttr(CIRDialect::getCUDABinaryHandleAttrName());
+  if (!cudaBinaryHandleAttr) {
+    if (isHIP)
+      assert(!cir::MissingFeatures::hipModuleCtor());
+    return;
+  }
+
+  llvm::StringRef cudaGPUBinaryName =
+      mlir::cast<CUDABinaryHandleAttr>(cudaBinaryHandleAttr)
+          .getName()
+          .getValue();
+
+  llvm::vfs::FileSystem &vfs =
+      astCtx->getSourceManager().getFileManager().getVirtualFileSystem();
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> gpuBinaryOrErr =
+      vfs.getBufferForFile(cudaGPUBinaryName);
+  if (std::error_code ec = gpuBinaryOrErr.getError()) {
+    mlirModule->emitError("cannot open GPU binary file: " + cudaGPUBinaryName +
+                          ": " + ec.message());
+    return;
+  }
+  std::unique_ptr<llvm::MemoryBuffer> gpuBinary =
+      std::move(gpuBinaryOrErr.get());
+
+  // Set up common types and builder.
+  llvm::StringRef cudaPrefix = getCUDAPrefix(astCtx);
+  mlir::Location loc = mlirModule->getLoc();
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  PointerType voidPtrTy = builder.getVoidPtrTy();
+  PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
+  IntType intTy = builder.getSIntNTy(32);
+  IntType charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
+                                     /*isSigned=*/false);
+
+  // --- Create fatbin globals ---
+
+  // The section names are different for MAC OS X.
+  llvm::StringRef fatbinConstName =
+      astCtx->getLangOpts().HIP ? ".hip_fatbin" : ".nv_fatbin";
+
+  llvm::StringRef fatbinSectionName =
+      astCtx->getLangOpts().HIP ? ".hipFatBinSegment" : ".nvFatBinSegment";
+
+  // Create the fatbin string constant with GPU binary contents.
+  auto fatbinType =
+      ArrayType::get(&getContext(), charTy, gpuBinary->getBuffer().size());
+  std::string fatbinStrName = addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
+  GlobalOp fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
+                                        /*isConstant=*/true, {},
+                                        GlobalLinkageKind::PrivateLinkage);
+  fatbinStr.setAlignment(8);
+  fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
+      fatbinType, builder.getStringAttr(gpuBinary->getBuffer())));
+  fatbinStr.setSection(fatbinConstName);
+  fatbinStr.setPrivate();
+
+  // Create the fatbin wrapper struct:
+  //    struct { int magic; int version; void *fatbin; void *unused; };
+  auto fatbinWrapperType = RecordType::get(
+      &getContext(), {intTy, intTy, voidPtrTy, voidPtrTy},
+      /*packed=*/false, /*padded=*/false, RecordType::RecordKind::Struct);
+  std::string fatbinWrapperName =
+      addUnderscoredPrefix(cudaPrefix, "_fatbin_wrapper");
+  GlobalOp fatbinWrapper = GlobalOp::create(
+      builder, loc, fatbinWrapperName, fatbinWrapperType,
+      /*isConstant=*/true, {}, GlobalLinkageKind::PrivateLinkage);
+  fatbinWrapper.setSection(fatbinSectionName);
+
+  constexpr unsigned cudaFatMagic = 0x466243b1;
+  constexpr unsigned hipFatMagic = 0x48495046;
+  unsigned fatMagic = isHIP ? hipFatMagic : cudaFatMagic;
+
+  auto magicInit = IntAttr::get(intTy, fatMagic);
+  auto versionInit = IntAttr::get(intTy, 1);
+  auto fatbinStrSymbol =
+      mlir::FlatSymbolRefAttr::get(fatbinStr.getSymNameAttr());
+  auto fatbinInit = GlobalViewAttr::get(voidPtrTy, fatbinStrSymbol);
+  mlir::TypedAttr unusedInit = builder.getConstNullPtrAttr(voidPtrTy);
+  fatbinWrapper.setInitialValueAttr(cir::ConstRecordAttr::get(
+      fatbinWrapperType,
+      mlir::ArrayAttr::get(&getContext(),
+                           {magicInit, versionInit, fatbinInit, unusedInit})));
+
+  // Create the GPU binary handle global variable.
+  std::string gpubinHandleName =
+      addUnderscoredPrefix(cudaPrefix, "_gpubin_handle");
+
+  GlobalOp gpuBinHandle = GlobalOp::create(
+      builder, loc, gpubinHandleName, voidPtrPtrTy,
+      /*isConstant=*/false, {}, cir::GlobalLinkageKind::InternalLinkage);
+  gpuBinHandle.setInitialValueAttr(builder.getConstNullPtrAttr(voidPtrPtrTy));
+  gpuBinHandle.setPrivate();
+
+  // TODO: ctor/dtor/register_globals
+  assert(!cir::MissingFeatures::globalRegistration());
 }
 
 void LoweringPreparePass::runOnOperation() {
@@ -1737,6 +1904,9 @@ void LoweringPreparePass::runOnOperation() {
     runOnOp(o);
 
   buildCXXGlobalInitFunc();
+  if (astCtx->getLangOpts().CUDA && !astCtx->getLangOpts().CUDAIsDevice)
+    buildCUDAModuleCtor();
+
   buildGlobalCtorDtorList();
 }
 
