@@ -1985,9 +1985,6 @@ class LLDBTestCaseFactory(type):
         if original_testcase.NO_DEBUG_INFO_TESTCASE and not has_variant_tests:
             return original_testcase
 
-        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
-            original_testcase.SHARED_BUILD_TESTCASE = False
-
         # Default implementation for skip/xfail reason based on the debug category,
         # where "None" means to run the test as usual.
         def no_reason(*args, **kwargs):
@@ -2066,6 +2063,10 @@ class LLDBTestCaseFactory(type):
 
             else:
                 newattrs[attrname] = attrvalue
+
+        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+            newattrs["SHARED_BUILD_TESTCASE"] = False
+
         return super(LLDBTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
 
 
