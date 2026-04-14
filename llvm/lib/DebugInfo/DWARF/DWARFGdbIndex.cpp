@@ -45,7 +45,7 @@ void DWARFGdbIndex::dumpTUList(raw_ostream &OS) const {
 
 void DWARFGdbIndex::dumpAddressArea(raw_ostream &OS) const {
   OS << formatv("\n  Address area offset = {0:x}, has {1} entries:",
-                AddressAreaOffset, (uint64_t)AddressArea.size())
+                AddressAreaOffset, AddressArea.size())
      << '\n';
   for (const AddressEntry &Addr : AddressArea)
     OS << formatv("    Low/High address = [{0:x}, {1:x}) (Size: {2:x}), CU "
@@ -56,7 +56,7 @@ void DWARFGdbIndex::dumpAddressArea(raw_ostream &OS) const {
 
 void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
   OS << formatv("\n  Symbol table offset = {0:x}, size = {1}, filled slots:",
-                SymbolTableOffset, (uint64_t)SymbolTable.size())
+                SymbolTableOffset, SymbolTable.size())
      << '\n';
 
   const auto FindCuVectorId = [&](uint32_t VecOffset) {
@@ -92,7 +92,7 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
 
 void DWARFGdbIndex::dumpConstantPool(raw_ostream &OS) const {
   OS << formatv("\n  Constant pool offset = {0:x}, has {1} CU vectors:",
-                ConstantPoolOffset, (uint64_t)ConstantPoolVectors.size());
+                ConstantPoolOffset, ConstantPoolVectors.size());
   uint32_t I = 0;
   for (const auto &V : ConstantPoolVectors) {
     OS << formatv("\n    {0}({1:x}): ", I++, V.first);
