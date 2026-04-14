@@ -168,6 +168,7 @@ BTFTypeInt::BTFTypeInt(uint32_t Encoding, uint32_t SizeInBits,
     break;
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_unsigned_char:
+  case dwarf::DW_ATE_UTF:
     BTFEncoding = 0;
     break;
   default:
@@ -605,6 +606,7 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
   case dwarf::DW_ATE_signed_char:
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_unsigned_char:
+  case dwarf::DW_ATE_UTF:
     // Create a BTF type instance for this DIBasicType and put it into
     // DIToIdMap for cross-type reference check.
     TypeEntry = std::make_unique<BTFTypeInt>(
