@@ -104,7 +104,9 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
 
 static cl::opt<bool> UseStallInPending(
     "amdgpu-use-stall-in-pending", cl::Hidden,
-    cl::desc("Use stall based criteria when trying candidate from pending queue"), cl::init(false));
+    cl::desc(
+        "Use stall based criteria when trying candidate from pending queue"),
+    cl::init(false));
 
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
