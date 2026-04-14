@@ -175,6 +175,7 @@ int SANITIZER_CDECL __asan_get_report_access_type(void);
 size_t SANITIZER_CDECL __asan_get_report_access_size(void);
 
 typedef enum {
+  __asan_address_info_none = 0,
   // Source address (e.g. memcpy source, or the address being read from).
   __asan_address_info_src = 1,
   // Destination address (e.g. memcpy dest, or the address being written to).

@@ -279,16 +279,16 @@ struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
   const char *function;
 
   ErrorStringFunctionMemoryRangesOverlap() = default;  // (*)
-  ErrorStringFunctionMemoryRangesOverlap(u32 tid, BufferedStackTrace *stack_,
-                                         uptr addr1, uptr length1_, uptr addr2,
-                                         uptr length2_, const char *function_)
+  ErrorStringFunctionMemoryRangesOverlap(u32 tid, BufferedStackTrace *stack,
+                                         uptr addr1, uptr length1, uptr addr2,
+                                         uptr length2, const char *function)
       : ErrorBase(tid),
-        stack(stack_),
-        length1(length1_),
-        length2(length2_),
+        stack(stack),
+        length1(length1),
+        length2(length2),
         addr1_description(addr1, length1, /*shouldLockThreadRegistry=*/false),
         addr2_description(addr2, length2, /*shouldLockThreadRegistry=*/false),
-        function(function_) {
+        function(function) {
     char bug_type[100];
     internal_snprintf(bug_type, sizeof(bug_type), "%s-param-overlap", function);
     scariness.Clear();

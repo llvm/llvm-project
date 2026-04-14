@@ -50,6 +50,12 @@ __asan_on_error() {
   // CHECK: addr: {{0x0*}}[[ADDR]]
   fprintf(stderr, "description: %s\n", description);
   // CHECK: description: double-free
+
+  void *addr_dealloc = NULL;
+  size_t size_dealloc = 0;
+  int is_dealloc = __asan_get_report_address_info(__asan_address_info_dealloc, &addr_dealloc, &size_dealloc);
+  fprintf(stderr, "is_dealloc: %d, addr_dealloc: " PTR_FMT ", size_dealloc: %ld\n", is_dealloc, addr_dealloc, size_dealloc);
+  // CHECK: is_dealloc: 1, addr_dealloc: 0x[[ADDR]], size_dealloc: 0
 }
 
 // CHECK: AddressSanitizer: attempting double-free on {{0x0*}}[[ADDR]] in thread T0
