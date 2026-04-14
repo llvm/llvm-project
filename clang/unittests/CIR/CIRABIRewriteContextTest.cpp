@@ -403,4 +403,178 @@ TEST_F(CIRABIRewriteTest, CallSiteIgnoreArg) {
   fixture.module->erase();
 }
 
+// ---- Indirect (sret / byval) tests ----
+
+TEST_F(CIRABIRewriteTest, IndirectReturnSRet) {
+  auto i32Ty = cir::IntType::get(&context, 32, true);
+  auto recTy = cir::RecordType::get(&context, builder.getStringAttr("Big"),
+                                    cir::RecordType::RecordKind::Struct);
+  recTy.complete({i32Ty, i32Ty, i32Ty, i32Ty}, false, false);
+
+  auto [module, funcOp] = createFunc("f", {i32Ty}, recTy);
+
+  FunctionClassification fc;
+  fc.returnInfo = ArgClassification::getIndirect(llvm::Align(4));
+  fc.argInfos.push_back(ArgClassification::getDirect());
+
+  cir::CIRABIRewriteContext rewriteCtx(module);
+  OpBuilder rewriter(funcOp);
+  ASSERT_TRUE(
+      succeeded(rewriteCtx.rewriteFunctionDefinition(funcOp, fc, rewriter)));
+
+  auto fnTy = cast<cir::FuncType>(funcOp.getFunctionType());
+  auto voidTy = cir::VoidType::get(&context);
+  EXPECT_EQ(fnTy.getReturnType(), voidTy);
+  // sret ptr prepended + original i32 arg
+  EXPECT_EQ(fnTy.getInputs().size(), 2u);
+  auto firstArgTy = dyn_cast<cir::PointerType>(fnTy.getInputs()[0]);
+  ASSERT_TRUE(firstArgTy != nullptr);
+  EXPECT_EQ(firstArgTy.getPointee(), recTy);
+
+  // Verify sret attribute on first arg.
+  auto argAttrs = funcOp->getAttrOfType<ArrayAttr>("arg_attrs");
+  ASSERT_TRUE(argAttrs != nullptr);
+  auto sretDict = cast<DictionaryAttr>(argAttrs[0]);
+  EXPECT_TRUE(sretDict.get("llvm.sret") != nullptr);
+  EXPECT_TRUE(sretDict.get("llvm.writable") != nullptr);
+  EXPECT_TRUE(sretDict.get("llvm.dead_on_unwind") != nullptr);
+
+  module->erase();
+}
+
+TEST_F(CIRABIRewriteTest, IndirectArgByVal) {
+  auto i32Ty = cir::IntType::get(&context, 32, true);
+  auto recTy = cir::RecordType::get(&context, builder.getStringAttr("Big"),
+                                    cir::RecordType::RecordKind::Struct);
+  recTy.complete({i32Ty, i32Ty, i32Ty, i32Ty}, false, false);
+
+  auto voidTy = cir::VoidType::get(&context);
+  auto [module, funcOp] = createFunc("f", {recTy}, voidTy);
+
+  FunctionClassification fc;
+  fc.returnInfo = ArgClassification::getDirect();
+  fc.argInfos.push_back(
+      ArgClassification::getIndirect(llvm::Align(8), /*byVal=*/true));
+
+  cir::CIRABIRewriteContext rewriteCtx(module);
+  OpBuilder rewriter(funcOp);
+  ASSERT_TRUE(
+      succeeded(rewriteCtx.rewriteFunctionDefinition(funcOp, fc, rewriter)));
+
+  auto fnTy = cast<cir::FuncType>(funcOp.getFunctionType());
+  EXPECT_EQ(fnTy.getInputs().size(), 1u);
+  auto argTy = dyn_cast<cir::PointerType>(fnTy.getInputs()[0]);
+  ASSERT_TRUE(argTy != nullptr);
+  EXPECT_EQ(argTy.getPointee(), recTy);
+
+  // Verify byval attribute.
+  auto argAttrs = funcOp->getAttrOfType<ArrayAttr>("arg_attrs");
+  ASSERT_TRUE(argAttrs != nullptr);
+  auto byvalDict = cast<DictionaryAttr>(argAttrs[0]);
+  EXPECT_TRUE(byvalDict.get("llvm.byval") != nullptr);
+  EXPECT_TRUE(byvalDict.get("llvm.align") != nullptr);
+  EXPECT_TRUE(byvalDict.get("llvm.noundef") != nullptr);
+
+  module->erase();
+}
+
+TEST_F(CIRABIRewriteTest, IndirectArgNoByVal) {
+  auto i32Ty = cir::IntType::get(&context, 32, true);
+  auto recTy = cir::RecordType::get(&context, builder.getStringAttr("NTC"),
+                                    cir::RecordType::RecordKind::Struct);
+  recTy.complete({i32Ty}, false, false);
+
+  auto voidTy = cir::VoidType::get(&context);
+  auto [module, funcOp] = createFunc("f", {recTy}, voidTy);
+
+  FunctionClassification fc;
+  fc.returnInfo = ArgClassification::getDirect();
+  fc.argInfos.push_back(
+      ArgClassification::getIndirect(llvm::Align(8), /*byVal=*/false));
+
+  cir::CIRABIRewriteContext rewriteCtx(module);
+  OpBuilder rewriter(funcOp);
+  ASSERT_TRUE(
+      succeeded(rewriteCtx.rewriteFunctionDefinition(funcOp, fc, rewriter)));
+
+  auto fnTy = cast<cir::FuncType>(funcOp.getFunctionType());
+  auto argTy = dyn_cast<cir::PointerType>(fnTy.getInputs()[0]);
+  ASSERT_TRUE(argTy != nullptr);
+
+  // Verify noundef but no byval.
+  auto argAttrs = funcOp->getAttrOfType<ArrayAttr>("arg_attrs");
+  ASSERT_TRUE(argAttrs != nullptr);
+  auto dict = cast<DictionaryAttr>(argAttrs[0]);
+  EXPECT_TRUE(dict.get("llvm.noundef") != nullptr);
+  EXPECT_TRUE(dict.get("llvm.byval") == nullptr);
+
+  module->erase();
+}
+
+// ---- Call-site sret test ----
+
+TEST_F(CIRABIRewriteTest, CallSiteSRet) {
+  auto i32Ty = cir::IntType::get(&context, 32, true);
+  auto recTy = cir::RecordType::get(&context, builder.getStringAttr("Big"),
+                                    cir::RecordType::RecordKind::Struct);
+  recTy.complete({i32Ty, i32Ty, i32Ty, i32Ty}, false, false);
+
+  auto fixture = createCallPair("callee", {i32Ty}, recTy);
+
+  FunctionClassification fc;
+  fc.returnInfo = ArgClassification::getIndirect(llvm::Align(4));
+  fc.argInfos.push_back(ArgClassification::getDirect());
+
+  cir::CIRABIRewriteContext rewriteCtx(fixture.module);
+  OpBuilder rewriter(fixture.callOp);
+  ASSERT_TRUE(
+      succeeded(rewriteCtx.rewriteCallSite(fixture.callOp, fc, rewriter)));
+
+  // The original call was replaced.  Find the new void call.
+  Block &callerEntry = fixture.caller->getRegion(0).front();
+  cir::CallOp newCall;
+  for (Operation &op : callerEntry)
+    if (auto c = dyn_cast<cir::CallOp>(op))
+      newCall = c;
+  ASSERT_TRUE(newCall != nullptr);
+  EXPECT_EQ(newCall.getNumResults(), 0u);
+  // First arg should be a pointer (the sret alloca).
+  EXPECT_TRUE(isa<cir::PointerType>(newCall.getArgOperands()[0].getType()));
+
+  fixture.module->erase();
+}
+
+// ---- Call-site indirect (byval) arg test ----
+
+TEST_F(CIRABIRewriteTest, CallSiteByValArg) {
+  auto i32Ty = cir::IntType::get(&context, 32, true);
+  auto recTy = cir::RecordType::get(&context, builder.getStringAttr("Big"),
+                                    cir::RecordType::RecordKind::Struct);
+  recTy.complete({i32Ty, i32Ty, i32Ty, i32Ty}, false, false);
+
+  auto voidTy = cir::VoidType::get(&context);
+  auto fixture = createCallPair("callee", {recTy}, voidTy);
+
+  FunctionClassification fc;
+  fc.returnInfo = ArgClassification::getDirect();
+  fc.argInfos.push_back(
+      ArgClassification::getIndirect(llvm::Align(8), /*byVal=*/true));
+
+  cir::CIRABIRewriteContext rewriteCtx(fixture.module);
+  OpBuilder rewriter(fixture.callOp);
+  ASSERT_TRUE(
+      succeeded(rewriteCtx.rewriteCallSite(fixture.callOp, fc, rewriter)));
+
+  // Find the new call.  Its arg should be a pointer (the byval alloca).
+  Block &callerEntry = fixture.caller->getRegion(0).front();
+  cir::CallOp newCall;
+  for (Operation &op : callerEntry)
+    if (auto c = dyn_cast<cir::CallOp>(op))
+      newCall = c;
+  ASSERT_TRUE(newCall != nullptr);
+  EXPECT_TRUE(isa<cir::PointerType>(newCall.getArgOperands()[0].getType()));
+
+  fixture.module->erase();
+}
+
 } // namespace

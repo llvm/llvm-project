@@ -28,9 +28,12 @@ namespace cir {
 /// load, store, cast, etc.).
 class CIRABIRewriteContext : public mlir::abi::ABIRewriteContext {
   mlir::ModuleOp module;
+  bool passByValueIsNoAlias = false;
 
 public:
-  explicit CIRABIRewriteContext(mlir::ModuleOp module) : module(module) {}
+  explicit CIRABIRewriteContext(mlir::ModuleOp module,
+                                bool passByValueIsNoAlias = false)
+      : module(module), passByValueIsNoAlias(passByValueIsNoAlias) {}
 
   mlir::LogicalResult
   rewriteFunctionDefinition(mlir::FunctionOpInterface funcOp,
