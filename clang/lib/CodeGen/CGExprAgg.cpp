@@ -1337,7 +1337,7 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     return;
   }
 
-  LValue LHS = CGF.EmitLValue(E->getLHS());
+  LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
 
   // If we have an atomic type, evaluate into the destination and then
   // do an atomic copy.
