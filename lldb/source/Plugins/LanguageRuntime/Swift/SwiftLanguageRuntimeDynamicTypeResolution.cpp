@@ -3851,6 +3851,7 @@ SwiftLanguageRuntime::ResolveTypeAlias(CompilerType alias) {
         if (!type_ref_or_err) {
           LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), type_ref_or_err.takeError(),
                           "{0}");
+          continue;
         }
         auto &type_ref = *type_ref_or_err;
         substitutions.insert({{0, idx++}, &type_ref});
