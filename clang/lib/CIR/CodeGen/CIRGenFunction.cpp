@@ -990,13 +990,19 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
     cgm.getCXXABI().buildThisParam(*this, args);
   }
 
+  bool passedParams = true;
   if (const auto *cd = dyn_cast<CXXConstructorDecl>(fd))
-    if (cd->getInheritedConstructor())
-      cgm.errorNYI(fd->getSourceRange(),
-                   "buildFunctionArgList: inherited constructor");
+    if (auto inherited = cd->getInheritedConstructor())
+      passedParams =
+          getTypes().inheritingCtorHasParams(inherited, gd.getCtorType());
 
-  for (auto *param : fd->parameters())
-    args.push_back(param);
+  if (passedParams) {
+    for (auto *param : fd->parameters()) {
+      args.push_back(param);
+      if (param->hasAttr<PassObjectSizeAttr>())
+        cgm.errorNYI(param->getSourceRange(), "pass-object-size attribute");
+    }
+  }
 
   if (md && (isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md)))
     cgm.getCXXABI().addImplicitStructorParams(*this, retTy, args);
@@ -1231,11 +1237,31 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
 
   // If it's a VLA, we have to load the stored size.  Note that
   // this is the size of the VLA in bytes, not its size in elements.
+  mlir::Value numVLAElements = nullptr;
   if (isa<VariableArrayType>(arrayType)) {
-    assert(!cir::MissingFeatures::vlas());
-    cgm.errorNYI(*currSrcLoc, "VLAs");
-    return builder.getConstInt(*currSrcLoc, sizeTy, 0);
+    numVLAElements = getVLASize(cast<VariableArrayType>(arrayType)).numElts;
+
+    // Walk into all VLAs.  This doesn't require changes to addr,
+    // which has type T* where T is the first non-VLA element type.
+    do {
+      QualType elementType = arrayType->getElementType();
+      arrayType = getContext().getAsArrayType(elementType);
+
+      // If we only have VLA components, 'addr' requires no adjustment.
+      if (!arrayType) {
+        baseType = elementType;
+        return numVLAElements;
+      }
+    } while (isa<VariableArrayType>(arrayType));
+
+    // We get out here only if we find a constant array type
+    // inside the VLA.
   }
+
+  // Classic codegen emits an all-zero inbounds GEP to convert addr from
+  // [M x [N x T]]* to T*. CIR doesn't need this because callers handle
+  // the array-to-element pointer conversion themselves (via array_to_ptrdecay
+  // casts, ptr_bitcast, or manual array type peeling).
 
   uint64_t countFromCLAs = 1;
   QualType eltType;
@@ -1263,7 +1289,17 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   }
 
   baseType = eltType;
-  return builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
+
+  mlir::Value numElements =
+      builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
+
+  // If we had any VLA dimensions, factor them in.
+  if (numVLAElements)
+    numElements =
+        builder.createMul(numVLAElements.getLoc(), numVLAElements, numElements,
+                          cir::OverflowBehavior::NoUnsignedWrap);
+
+  return numElements;
 }
 
 void CIRGenFunction::instantiateIndirectGotoBlock() {

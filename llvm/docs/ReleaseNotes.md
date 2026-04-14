@@ -242,6 +242,7 @@ Changes to the LLVM tools
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
   prefixes, making it an alias of the existing `-check-prefixes` option.
 * Add `-mtune` option to `llc`.
+* Add `-mtune` option to `opt`.
 
 Changes to LLDB
 ---------------

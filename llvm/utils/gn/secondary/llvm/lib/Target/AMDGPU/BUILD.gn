@@ -210,6 +210,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUUniformIntrinsicCombine.cpp",
     "AMDGPUUnifyDivergentExitNodes.cpp",
     "AMDGPUWaitSGPRHazards.cpp",
+    "AMDGPUWaitcntUtils.cpp",
     "GCNCreateVOPD.cpp",
     "GCNDPPCombine.cpp",
     "GCNHazardRecognizer.cpp",

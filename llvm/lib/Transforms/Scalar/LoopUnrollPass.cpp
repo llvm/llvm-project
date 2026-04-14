@@ -1231,10 +1231,11 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   if (MaxTripCount && UP.Count > MaxTripCount)
     UP.Count = MaxTripCount;
 
-  LLVM_DEBUG(dbgs().indent(2)
-             << "Runtime unrolling with count: " << UP.Count << "\n");
   if (UP.Count < 2)
     UP.Count = 0;
+  else
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Runtime unrolling with count: " << UP.Count << "\n");
   return;
 }
 
@@ -1410,7 +1411,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     ValueToValueMapTy VMap;
     peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, DT, &AC, PreserveLCSSA,
              VMap);
-    simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, nullptr);
+    simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, L->getBlocks(),
+                            nullptr);
     // If the loop was peeled, we already "used up" the profile information
     // we had, so we don't want to unroll or peel again.
     if (PP.PeelProfiledIterations)

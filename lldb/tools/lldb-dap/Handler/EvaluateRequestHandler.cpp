@@ -93,7 +93,8 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
 
     bool required_command_failed = false;
     body.result = RunLLDBCommands(
-        dap.debugger, llvm::StringRef(), {expression}, required_command_failed,
+        dap.debugger, dap.GetAPIMutex(), llvm::StringRef(), {expression},
+        required_command_failed,
         /*parse_command_directives=*/false, /*echo_commands=*/false);
     return body;
   }
