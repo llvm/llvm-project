@@ -1470,7 +1470,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   using namespace Intrinsic;
 
-  addRulesForIOpcs({returnaddress}, StandardB).Uni(B64, {{SgprB64}, {}});
+  addRulesForIOpcs({returnaddress}).Any({{UniP0}, {{SgprP0}, {}}});
 
   addRulesForIOpcs({amdgcn_s_getpc}).Any({{UniS64, _}, {{Sgpr64}, {None}}});
 
