@@ -1568,7 +1568,15 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
           for (unsigned i = 0; i < COp->getNumElements(); ++i)
             Args.push_back(COp->getElementAsConstant(i));
         else
-          llvm::append_range(Args, AggrConst->operands());
+          for (Value *Op : AggrConst->operands()) {
+            // Simplify addrspacecast(null) to null in the target address space
+            // so that null pointers get the correct pointer type when lowered.
+            if (auto *CE = dyn_cast<ConstantExpr>(Op);
+                CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
+                isa<ConstantPointerNull>(CE->getOperand(0)))
+              Op = ConstantPointerNull::get(cast<PointerType>(CE->getType()));
+            Args.push_back(Op);
+          }
         if (!BPrepared) {
           IsPhi ? B.SetInsertPointPastAllocas(I->getParent()->getParent())
                 : B.SetInsertPoint(I);
