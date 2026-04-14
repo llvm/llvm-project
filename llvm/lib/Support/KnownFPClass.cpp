@@ -886,8 +886,10 @@ KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
   //   * powi(finite, exp), |exp| > 1
   //   * powi(subnormal, -1)
   // TODO:
-  //   This simple all or nothing approach. We can do better
-  //   and cover sign/parity and exp > 1 vs exp < -1 separately.
+  //   1. This simple all or nothing approach. We can do better
+  //      and cover sign/parity and exp > 1 vs exp < -1 separately.
+  //   2. powi(0/nan, exp), exp > 0 can be refinable
+  //      to fcNan | fcZero | fcPosNormal.
   {
     APInt MinExp = ExponentKnownBits.getSignedMinValue();
     APInt MaxExp = ExponentKnownBits.getSignedMaxValue();
