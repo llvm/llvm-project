@@ -778,9 +778,12 @@ static void getDeclareTargetInfo(
     if (clauses.empty()) {
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
           eval.getOwningProcedure();
-      if (owningProc && (!owningProc->isMainProgram() ||
-                         owningProc->getMainProgramSymbol())) {
-        // Case: declare target, implicit capture of function
+      // Main programs are never device routines. Skip them so that a bare
+      // '!$omp declare target' inside an interface body that lives in a named
+      // main program does not incorrectly mark _QQmain as a device function.
+      if (owningProc && !owningProc->isMainProgram()) {
+        // Case: declare target, implicit capture of enclosing
+        // function/subroutine.
         symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
                                      owningProc->getSubprogramSymbol());
       }
