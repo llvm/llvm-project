@@ -592,8 +592,6 @@ define i32 @fcmp_ord_same(double %a) nounwind {
 ; CHECKIFD-LABEL: fcmp_ord_same:
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    feq.d a0, fa0, fa0
-; CHECKIFD-NEXT:    feq.d a1, fa0, fa0
-; CHECKIFD-NEXT:    and a0, a0, a1
 ; CHECKIFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ord_same:
@@ -628,8 +626,6 @@ define i32 @fcmp_uno_same(double %a) nounwind {
 ; CHECKIFD-LABEL: fcmp_uno_same:
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    feq.d a0, fa0, fa0
-; CHECKIFD-NEXT:    feq.d a1, fa0, fa0
-; CHECKIFD-NEXT:    and a0, a0, a1
 ; CHECKIFD-NEXT:    xori a0, a0, 1
 ; CHECKIFD-NEXT:    ret
 ;
