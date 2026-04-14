@@ -1,3 +1,6 @@
+## Tests TailDuplication for moderate (--tail-duplication=moderate) and aggressive (--tail-duplication=aggressive) modes.
+## The test uses a hot edge to a tail block and checks that a duplicated tail block is created and has the correct predecessor.
+
 # REQUIRES: system-linux
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o

@@ -1,3 +1,6 @@
+## Tests TailDuplication cache mode (--tail-duplication=cache) with two profiles:
+## one that triggers duplication and one that does not.
+
 # REQUIRES: system-linux
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
