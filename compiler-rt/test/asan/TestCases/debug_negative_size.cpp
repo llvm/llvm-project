@@ -52,10 +52,11 @@ extern "C" void __asan_on_error() {
   size_t size_dest = 0;
   int is_dest = __asan_get_report_address_info(__asan_address_info_dest,
                                                &addr_dest, &size_dest);
-  // Do not format the size_dest because it is a very large number (-1 as size_t) and might be printed differently
-  // depending on the platform's size_t. We just check it's populated.
-  fprintf(stderr, "is_dest: %d, addr_dest: " PTR_FMT "\n", is_dest, addr_dest);
-  // CHECK: is_dest: 1, addr_dest: 0x{{[0-9a-f]+}}
+  // We check size_dest + 1 because size_dest is -1 (as size_t), which varies
+  // depending on the platform's size_t. Adding 1 should result in 0.
+  fprintf(stderr, "is_dest: %d, addr_dest: " PTR_FMT ", size_dest+1: %zu\n",
+          is_dest, addr_dest, size_dest + 1);
+  // CHECK: is_dest: 1, addr_dest: 0x{{[0-9a-f]+}}, size_dest+1: 0
 }
 
 // CHECK: AddressSanitizer: negative-size-param

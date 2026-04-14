@@ -159,6 +159,7 @@ extern "C" {
   uptr __asan_get_report_access_size();
 
   typedef enum {
+    __asan_address_info_none = 0,
     __asan_address_info_src = 1,
     __asan_address_info_dest = 2,
     __asan_address_info_dealloc = 3,
