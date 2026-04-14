@@ -10,23 +10,23 @@
 
 // <format>
 
-// template<class charT> struct dynamic-format-string {  // exposition-only
+// template<class charT> struct runtime-format-string {  // exposition-only
 // private:
 //   basic_string_view<charT> str;  // exposition-only
 //
 // public:
-//   dynamic-format-string(basic_string_view<charT> s) noexcept : str(s) {}
+//   runtime-format-string(basic_string_view<charT> s) noexcept : str(s) {}
 //
-//   dynamic-format-string(const dynamic-format-string&) = delete;
-//   dynamic-format-string& operator=(const dynamic-format-string&) = delete;
+//   runtime-format-string(const runtime-format-string&) = delete;
+//   runtime-format-string& operator=(const runtime-format-string&) = delete;
 // };
 //
-// dynamic-format-string<char> dynamic_format(string_view fmt) noexcept;
-// dynamic-format-string<wchar_t> dynamic_format(wstring_view fmt) noexcept;
+// runtime-format-string<char> runtime_format(string_view fmt) noexcept;
+// runtime-format-string<wchar_t> runtime_format(wstring_view fmt) noexcept;
 //
 // Additional testing is done in
-// - libcxx/test/std/utilities/format/format.functions/format.dynamic_format.pass.cpp
-// - libcxx/test/std/utilities/format/format.functions/format.locale.dynamic_format.pass.cpp
+// - libcxx/test/std/utilities/format/format.functions/format.runtime_format.pass.cpp
+// - libcxx/test/std/utilities/format/format.functions/format.locale.runtime_format.pass.cpp
 
 #include <format>
 
@@ -50,19 +50,19 @@ static void test_properties() {
 }
 
 int main(int, char**) {
-  static_assert(noexcept(std::dynamic_format(std::string_view{})));
-  auto format_string = std::dynamic_format(std::string_view{});
+  static_assert(noexcept(std::runtime_format(std::string_view{})));
+  auto format_string = std::runtime_format(std::string_view{});
 
   using FormatString = decltype(format_string);
-  LIBCPP_ASSERT((std::same_as<FormatString, std::__dynamic_format_string<char>>));
+  LIBCPP_ASSERT((std::same_as<FormatString, std::__runtime_format_string<char>>));
   test_properties<FormatString, char>();
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  static_assert(noexcept(std::dynamic_format(std::wstring_view{})));
-  auto wformat_string = std::dynamic_format(std::wstring_view{});
+  static_assert(noexcept(std::runtime_format(std::wstring_view{})));
+  auto wformat_string = std::runtime_format(std::wstring_view{});
 
   using WFormatString = decltype(wformat_string);
-  LIBCPP_ASSERT((std::same_as<WFormatString, std::__dynamic_format_string<wchar_t>>));
+  LIBCPP_ASSERT((std::same_as<WFormatString, std::__runtime_format_string<wchar_t>>));
   test_properties<WFormatString, wchar_t>();
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 
