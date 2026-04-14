@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skip(bugnumber="rdar://174780894")
 class PyObjectSynthProviderTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
