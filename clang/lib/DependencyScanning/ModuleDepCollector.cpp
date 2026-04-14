@@ -584,12 +584,16 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
     return;
 
   const Module *TopLevelModule = Imported->getTopLevelModule();
+  const ModuleFileKey *MFKey = TopLevelModule->getASTFileKey();
+  if (!MFKey)
+    return;
+  serialization::ModuleFile *MF =
+      MDC.ScanInstance.getASTReader()->getModuleManager().lookup(*MFKey);
 
-  if (MDC.isPrebuiltModule(TopLevelModule))
-    MDC.DirectPrebuiltModularDeps.insert(
-        {TopLevelModule, PrebuiltModuleDep{TopLevelModule}});
+  if (MDC.isPrebuiltModule(MF))
+    MDC.DirectPrebuiltModularDeps.insert({MF, PrebuiltModuleDep{MF}});
   else {
-    MDC.DirectModularDeps.insert(TopLevelModule);
+    MDC.DirectModularDeps.insert(MF);
     MDC.DirectImports.insert(Imported);
   }
 }
@@ -629,14 +633,19 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   }
 
   for (const Module *M :
-       MDC.ScanInstance.getPreprocessor().getAffectingClangModules())
-    if (!MDC.isPrebuiltModule(M))
-      MDC.DirectModularDeps.insert(M);
+       MDC.ScanInstance.getPreprocessor().getAffectingClangModules()) {
+    serialization::ModuleFile *MF =
+        MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
+            *M->getASTFileKey());
+    if (!MDC.isPrebuiltModule(MF))
+      MDC.DirectModularDeps.insert(MF);
+  }
 
-  MDC.addVisibleModules();
+  if (MDC.Service.getOpts().ReportVisibleModules)
+    MDC.addVisibleModules();
 
-  for (const Module *M : MDC.DirectModularDeps)
-    handleTopLevelModule(M);
+  for (serialization::ModuleFile *MF : MDC.DirectModularDeps)
+    handleTopLevelModule(MF);
 
   MDC.Consumer.handleContextHash(
       MDC.ScanInstance.getInvocation().computeContextHash());
@@ -649,8 +658,8 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   for (auto &&I : MDC.ModularDeps)
     MDC.Consumer.handleModuleDependency(*I.second);
 
-  for (const Module *M : MDC.DirectModularDeps) {
-    auto It = MDC.ModularDeps.find(M);
+  for (serialization::ModuleFile *MF : MDC.DirectModularDeps) {
+    auto It = MDC.ModularDeps.find(MF);
     // Only report direct dependencies that were successfully handled.
     if (It != MDC.ModularDeps.end())
       MDC.Consumer.handleDirectModuleDependency(It->second->ID);
@@ -677,24 +686,22 @@ static StringRef makeAbsoluteAndCanonicalize(CompilerInstance &CI,
 }
 
 std::optional<ModuleID>
-ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
-  assert(M == M->getTopLevelModule() && "Expected top level module!");
-
-  // A top-level module might not be actually imported as a module when
-  // -fmodule-name is used to compile a translation unit that imports this
-  // module. In that case it can be skipped. The appropriate header
-  // dependencies will still be reported as expected.
-  if (!M->getASTFileKey())
-    return {};
-
+ModuleDepCollectorPP::handleTopLevelModule(serialization::ModuleFile *MF) {
   // If this module has been handled already, just return its ID.
-  if (auto ModI = MDC.ModularDeps.find(M); ModI != MDC.ModularDeps.end())
+  if (auto ModI = MDC.ModularDeps.find(MF); ModI != MDC.ModularDeps.end())
     return ModI->second->ID;
+
+  Module *M = MDC.ScanInstance.getPreprocessor()
+                  .getHeaderSearchInfo()
+                  .getModuleMap()
+                  .findModule(MF->ModuleName);
+  assert(M && M == M->getTopLevelModule() &&
+         "ModuleFile without top-level Module");
 
   auto OwnedMD = std::make_unique<ModuleDeps>();
   ModuleDeps &MD = *OwnedMD;
 
-  MD.ID.ModuleName = M->getFullModuleName();
+  MD.ID.ModuleName = MF->ModuleName;
   MD.IsSystem = M->IsSystem;
 
   // Start off with the assumption that this module is shareable when there
@@ -716,10 +723,6 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
     MD.ClangModuleMapFile = std::string(Path);
   }
 
-  serialization::ModuleFile *MF =
-      MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
-          *M->getASTFileKey());
-
   llvm::SmallString<256> Storage;
   MD.FileDepsBaseDir =
       makeAbsoluteAndCanonicalize(MDC.ScanInstance, MF->BaseDirectory, Storage);
@@ -736,10 +739,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         MDC.addFileDep(MD, IFI.UnresolvedImportedFilename);
       });
 
-  llvm::DenseSet<const Module *> SeenDeps;
-  addAllSubmodulePrebuiltDeps(M, MD, SeenDeps);
-  addAllSubmoduleDeps(M, MD, SeenDeps);
-  addAllAffectingClangModules(M, MD, SeenDeps);
+  addAllModuleDeps(*MF, MD);
 
   SmallString<0> PathBuf;
   PathBuf.reserve(256);
@@ -810,102 +810,30 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   MD.BuildInfo = std::move(CI);
 
-  MDC.ModularDeps.insert({M, std::move(OwnedMD)});
+  MDC.ModularDeps.insert({MF, std::move(OwnedMD)});
 
   return MD.ID;
 }
 
-static void forEachSubmoduleSorted(const Module *M,
-                                   llvm::function_ref<void(const Module *)> F) {
-  // Submodule order depends on order of header includes for inferred submodules
-  // we don't care about the exact order, so sort so that it's consistent across
-  // TUs to improve sharing.
-  SmallVector<const Module *> Submodules(M->submodules());
-  llvm::stable_sort(Submodules, [](const Module *A, const Module *B) {
-    return A->Name < B->Name;
-  });
-  for (const Module *SubM : Submodules)
-    F(SubM);
-}
-
-void ModuleDepCollectorPP::addAllSubmodulePrebuiltDeps(
-    const Module *M, ModuleDeps &MD,
-    llvm::DenseSet<const Module *> &SeenSubmodules) {
-  addModulePrebuiltDeps(M, MD, SeenSubmodules);
-
-  forEachSubmoduleSorted(M, [&](const Module *SubM) {
-    addAllSubmodulePrebuiltDeps(SubM, MD, SeenSubmodules);
-  });
-}
-
-void ModuleDepCollectorPP::addModulePrebuiltDeps(
-    const Module *M, ModuleDeps &MD,
-    llvm::DenseSet<const Module *> &SeenSubmodules) {
-  for (const Module *Import : M->Imports)
-    if (Import->getTopLevelModule() != M->getTopLevelModule())
-      if (MDC.isPrebuiltModule(Import->getTopLevelModule()))
-        if (SeenSubmodules.insert(Import->getTopLevelModule()).second) {
-          MD.PrebuiltModuleDeps.emplace_back(Import->getTopLevelModule());
-          if (MD.IsInStableDirectories) {
-            auto PrebuiltModulePropIt = MDC.PrebuiltModulesASTMap.find(
-                MD.PrebuiltModuleDeps.back().PCMFile);
-            MD.IsInStableDirectories =
-                (PrebuiltModulePropIt != MDC.PrebuiltModulesASTMap.end()) &&
-                PrebuiltModulePropIt->second.isInStableDir();
-          }
-        }
-}
-
-void ModuleDepCollectorPP::addAllSubmoduleDeps(
-    const Module *M, ModuleDeps &MD,
-    llvm::DenseSet<const Module *> &AddedModules) {
-  addModuleDep(M, MD, AddedModules);
-
-  forEachSubmoduleSorted(M, [&](const Module *SubM) {
-    addAllSubmoduleDeps(SubM, MD, AddedModules);
-  });
-}
-
-void ModuleDepCollectorPP::addOneModuleDep(const Module *M, const ModuleID ID,
-                                           ModuleDeps &MD) {
-  MD.ClangModuleDeps.push_back(std::move(ID));
-  if (MD.IsInStableDirectories)
-    MD.IsInStableDirectories = MDC.ModularDeps[M]->IsInStableDirectories;
-}
-
-void ModuleDepCollectorPP::addModuleDep(
-    const Module *M, ModuleDeps &MD,
-    llvm::DenseSet<const Module *> &AddedModules) {
-  for (const Module *Import : M->Imports) {
-    if (Import->getTopLevelModule() != M->getTopLevelModule() &&
-        !MDC.isPrebuiltModule(Import)) {
-      if (auto ImportID = handleTopLevelModule(Import->getTopLevelModule()))
-        if (AddedModules.insert(Import->getTopLevelModule()).second)
-          addOneModuleDep(Import->getTopLevelModule(), *ImportID, MD);
-    }
-  }
-}
-
-void ModuleDepCollectorPP::addAllAffectingClangModules(
-    const Module *M, ModuleDeps &MD,
-    llvm::DenseSet<const Module *> &AddedModules) {
-  addAffectingClangModule(M, MD, AddedModules);
-
-  for (const Module *SubM : M->submodules())
-    addAllAffectingClangModules(SubM, MD, AddedModules);
-}
-
-void ModuleDepCollectorPP::addAffectingClangModule(
-    const Module *M, ModuleDeps &MD,
-    llvm::DenseSet<const Module *> &AddedModules) {
-  for (const Module *Affecting : M->AffectingClangModules) {
-    assert(Affecting == Affecting->getTopLevelModule() &&
-           "Not quite import not top-level module");
-    if (Affecting != M->getTopLevelModule() &&
-        !MDC.isPrebuiltModule(Affecting)) {
-      if (auto ImportID = handleTopLevelModule(Affecting))
-        if (AddedModules.insert(Affecting).second)
-          addOneModuleDep(Affecting, *ImportID, MD);
+void ModuleDepCollectorPP::addAllModuleDeps(serialization::ModuleFile &MF,
+                                            ModuleDeps &MD) {
+  llvm::DenseSet<const Module *> Seen;
+  for (serialization::ModuleFile *Import : MF.Imports) {
+    if (MDC.isPrebuiltModule(Import)) {
+      MD.PrebuiltModuleDeps.emplace_back(Import);
+      if (MD.IsInStableDirectories) {
+        auto It = MDC.PrebuiltModulesASTMap.find(
+            MD.PrebuiltModuleDeps.back().PCMFile);
+        MD.IsInStableDirectories =
+            It != MDC.PrebuiltModulesASTMap.end() && It->second.isInStableDir();
+      }
+    } else {
+      if (auto ID = handleTopLevelModule(Import)) {
+        MD.ClangModuleDeps.push_back(std::move(*ID));
+        if (MD.IsInStableDirectories)
+          MD.IsInStableDirectories =
+              MDC.ModularDeps[Import]->IsInStableDirectories;
+      }
     }
   }
 }
@@ -932,15 +860,14 @@ void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
 
 void ModuleDepCollector::attachToASTReader(ASTReader &R) {}
 
-bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
-  std::string Name(M->getTopLevelModuleName());
+bool ModuleDepCollector::isPrebuiltModule(const serialization::ModuleFile *MF) {
   const auto &PrebuiltModuleFiles =
       ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles;
-  auto PrebuiltModuleFileIt = PrebuiltModuleFiles.find(Name);
+  auto PrebuiltModuleFileIt = PrebuiltModuleFiles.find(MF->ModuleName);
   if (PrebuiltModuleFileIt == PrebuiltModuleFiles.end())
     return false;
   assert("Prebuilt module came from the expected AST file" &&
-         PrebuiltModuleFileIt->second == M->getASTFileName()->str());
+         PrebuiltModuleFileIt->second == MF->FileName.str());
   return true;
 }
 
