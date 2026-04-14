@@ -3347,6 +3347,74 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
   return ChangedFMF ? &SI : nullptr;
 }
 
+// Fold a select of an ordered fcmp using fabs of a NaN-scrubbed value:
+//   %ord = fcmp ord T %x, 0.0
+//   %s   = select i1 %ord, T %x, T %y
+//   %a   = call T @llvm.fabs.T(T %s)
+//   %c   = fcmp <ordered-pred> T %a, %k
+//   %r   = select i1 %c, T %s, T %y
+//     =>
+//   %a2  = call T @llvm.fabs.T(T %x)
+//   %c2  = fcmp <ordered-pred> T %a2, %k
+//   %r2  = select i1 %c2, T %x, T %y
+static Instruction *
+foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
+                                             InstCombinerImpl &IC) {
+  auto *OuterCmp = dyn_cast<FCmpInst>(SI.getCondition());
+  if (!OuterCmp || !OuterCmp->hasOneUse() ||
+      !FCmpInst::isOrdered(OuterCmp->getPredicate()))
+    return nullptr;
+
+  // The NaN path now evaluates fabs(X) instead of fabs(Y), so preserving nnan
+  // on the fcmp could introduce poison when X is NaN.
+  if (OuterCmp->hasNoNaNs())
+    return nullptr;
+
+  Value *Y = SI.getFalseValue();
+  Value *X = nullptr;
+
+  auto *InnerSel = dyn_cast<SelectInst>(SI.getTrueValue());
+  if (!InnerSel)
+    return nullptr;
+
+  // Match: select (fcmp ord X, 0.0), X, Y
+  auto *InnerCmp = dyn_cast<FCmpInst>(InnerSel->getCondition());
+  if (!InnerCmp || !InnerCmp->hasOneUse() ||
+      InnerCmp->getPredicate() != FCmpInst::FCMP_ORD ||
+      InnerSel->getFalseValue() != Y)
+    return nullptr;
+
+  X = InnerSel->getTrueValue();
+  if (InnerCmp->getOperand(0) != X ||
+      !match(InnerCmp->getOperand(1), m_AnyZeroFP()))
+    return nullptr;
+
+  bool Swapped = false;
+  Value *OtherOp = nullptr;
+  auto *FAbs = dyn_cast<IntrinsicInst>(OuterCmp->getOperand(0));
+
+  if (FAbs && FAbs->hasOneUse() && FAbs->getIntrinsicID() == Intrinsic::fabs &&
+      FAbs->getArgOperand(0) == InnerSel) {
+    OtherOp = OuterCmp->getOperand(1);
+  } else if ((FAbs = dyn_cast<IntrinsicInst>(OuterCmp->getOperand(1))) &&
+             FAbs->hasOneUse() && FAbs->getIntrinsicID() == Intrinsic::fabs &&
+             FAbs->getArgOperand(0) == InnerSel) {
+    Swapped = true;
+    OtherOp = OuterCmp->getOperand(0);
+  } else {
+    return nullptr;
+  }
+
+  Value *NewAbs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+  Value *NewCmp = Swapped
+                      ? IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(),
+                                                 OtherOp, NewAbs, OuterCmp)
+                      : IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(),
+                                                 NewAbs, OtherOp, OuterCmp);
+  Value *NewSel = IC.Builder.CreateSelectFMF(NewCmp, X, Y, &SI);
+  return IC.replaceInstUsesWith(SI, NewSel);
+}
+
 // Match the following IR pattern:
 //   %x.lowbits = and i8 %x, %lowbitmask
 //   %x.lowbits.are.zero = icmp eq i8 %x.lowbits, 0
@@ -4598,6 +4666,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // Fold selecting to fabs.
   if (Instruction *Fabs = foldSelectWithFCmpToFabs(SI, *this))
     return Fabs;
+
+  if (Instruction *I = foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SI, *this))
+    return I;
 
   // See if we are selecting two values based on a comparison of the two values.
   if (CmpInst *CI = dyn_cast<CmpInst>(CondVal))
