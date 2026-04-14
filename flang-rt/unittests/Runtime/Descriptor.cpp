@@ -280,3 +280,31 @@ TEST(Descriptor, Dump) {
   fclose(tmpf);
 }
 #endif // defined(__linux__) && !defined(__ANDROID__)
+
+// Verify that Descriptor::BytesFor returns the correct storage size
+// for Real and Complex types, especially for kind=10 where the x87
+// 80-bit extended precision value is stored in a 16-byte container.
+TEST(Descriptor, BytesForRealAndComplex) {
+  using TC = TypeCategory;
+  // Real kinds: storage size should account for container padding
+  EXPECT_EQ(Descriptor::BytesFor(TC::Real, 2), 2u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Real, 3), 2u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Real, 4), 4u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Real, 8), 8u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Real, 10),
+      16u); // x87: 80-bit in 128-bit container
+  EXPECT_EQ(Descriptor::BytesFor(TC::Real, 16), 16u);
+  // Complex kinds: should be twice the Real storage size
+  EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 2), 4u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 3), 4u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 4), 8u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 8), 16u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 10), 32u); // x87: 2 * 16 bytes
+  EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 16), 32u);
+  // Integer and Logical kinds: storage size equals the kind value
+  EXPECT_EQ(Descriptor::BytesFor(TC::Integer, 1), 1u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Integer, 4), 4u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Integer, 8), 8u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Logical, 1), 1u);
+  EXPECT_EQ(Descriptor::BytesFor(TC::Logical, 4), 4u);
+}
