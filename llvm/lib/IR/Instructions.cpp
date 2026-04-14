@@ -782,9 +782,9 @@ MemoryEffects CallBase::getFloatingPointMemoryEffects() const {
                 return MemoryEffects::none();
               // Dynamic rounding mode: the operation reads the current rounding
               // mode from the FP environment (e.g. MXCSR). Use
-              // inaccessibleMemOnly (not just Ref) so that EarlyCSE conservatively
-              // treats these as writes and prevents CSE across arbitrary function
-              // calls that might change the rounding mode.
+              // inaccessibleMemOnly (not just Ref) so that EarlyCSE
+              // conservatively treats these as writes and prevents CSE across
+              // arbitrary function calls that might change the rounding mode.
             }
             return MemoryEffects::inaccessibleMemOnly();
           }
