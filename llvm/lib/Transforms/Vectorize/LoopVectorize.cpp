@@ -2764,7 +2764,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   if (Legal->blockNeedsPredication(I->getParent()))
     return true;
 
-  // If we're not folding the tail by masking, tail-folding is unnecessary.
+  // If we're not folding the tail by masking, predication is unnecessary.
   if (!foldTailByMasking())
     return false;
 
@@ -8837,9 +8837,9 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   //   RtC < ScalarC * TC * (1 / X)  ==>  RtC * X / ScalarC < TC
   uint64_t MinTC2 = divideCeil(RtC.getValue() * 10, ScalarC);
 
-  // Now pick the larger minimum. If it is not a multiple of VF and a scalar
-  // epilogue is allowed, choose the next closest multiple of VF. This should
-  // partly compensate for ignoring the epilogue cost.
+  // Now pick the larger minimum. If it is not a multiple of VF and an epilogue
+  // is allowed, choose the next closest multiple of VF. This should partly
+  // compensate for ignoring the epilogue cost.
   uint64_t MinTC = std::max(MinTC1, MinTC2);
   if (SEL == CM_EpilogueAllowed)
     MinTC = alignTo(MinTC, IntVF);
