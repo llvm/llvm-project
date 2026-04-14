@@ -930,7 +930,8 @@ bool Lexer::isAtEndOfMacroExpansion(SourceLocation loc,
     // During error recovery, a zero-length synthetic token might be inserted
     // past the end of the FileID, e.g. inserting ")" when a macro-arg
     // containing a comma should be guarded by parentheses. In this case,
-    // afterLoc reaches the `NextLocalOffset` boundary, any operations on afterLoc will be invalid!
+    // afterLoc reaches the `NextLocalOffset` boundary, any operations on
+    // afterLoc will be invalid!
     const SrcMgr::SLocEntry &Entry = SM.getSLocEntry(FID);
     assert(Entry.isExpansion() && "Should be in an expansion");
     expansionLoc = Entry.getExpansion().getExpansionLocEnd();
