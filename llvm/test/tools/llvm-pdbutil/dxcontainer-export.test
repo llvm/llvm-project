@@ -1,0 +1,112 @@
+## Check exporting DXContainer with the designated option.
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil export --dxcontainer --out=%t.cso %t.pdb
+# RUN: obj2yaml %t.cso > %t.yaml
+# RUN: FileCheck -input-file=%t.yaml %s --check-prefix=CHECK-YAML
+
+## Check missing option errors.
+# RUN: not llvm-pdbutil export --out=%t.cso %t.pdb 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-NOOPTS
+# CHECK-NOOPTS: either --stream or --dxcontainer must be specified!
+
+## Check DXContainer missing error.
+# RUN: not llvm-pdbutil export --dxcontainer --out=%t.cso %p/Inputs/ClassLayoutTest.pdb 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-NODXC
+# CHECK-NODXC: DirectX Container is not present
+
+# CHECK-YAML: --- !dxcontainer
+# CHECK-YAML: Header:
+# CHECK-YAML:   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+# CHECK-YAML:                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+# CHECK-YAML:   Version:
+# CHECK-YAML:     Major:           1
+# CHECK-YAML:     Minor:           0
+# CHECK-YAML:   PartCount:       3
+# CHECK-YAML: Parts:
+# CHECK-YAML:   - Name:            ILDN
+# CHECK-YAML:     Size:            16
+# CHECK-YAML:     DebugName:
+# CHECK-YAML:       Flags:           0
+# CHECK-YAML:       NameLength:      10
+# CHECK-YAML:       DebugName:       simple.pdb
+# CHECK-YAML:   - Name:            HASH
+# CHECK-YAML:     Size:            20
+# CHECK-YAML:     Hash:
+# CHECK-YAML:       IncludesSource:  false
+# CHECK-YAML:       Digest:          [ 0xAB, 0x20, 0xC9, 0x15, 0x53, 0xF9, 0x22, 0x7F,
+# CHECK-YAML:                          0x40, 0x45, 0x45, 0x4D, 0x27, 0x5D, 0x98, 0xD6 ]
+# CHECK-YAML:   - Name:            ILDB
+# CHECK-YAML:     Size:            28
+# CHECK-YAML:     Program:
+# CHECK-YAML:       MajorVersion:    6
+# CHECK-YAML:       MinorVersion:    5
+# CHECK-YAML:       ShaderKind:      6
+# CHECK-YAML:       Size:            8
+# CHECK-YAML:       DXILMajorVersion: 1
+# CHECK-YAML:       DXILMinorVersion: 5
+# CHECK-YAML:       DXILSize:        4
+# CHECK-YAML:       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE ]
+# CHECK-YAML: ...
+
+---
+MSF:
+  SuperBlock:
+    BlockSize:       512
+    FreeBlockMap:    2
+    NumBlocks:       7
+    NumDirectoryBytes: 36
+    Unknown1:        0
+    BlockMapAddr:    3
+  NumDirectoryBlocks: 1
+  DirectoryBlocks: [ 6 ]
+  NumStreams:      6
+StreamMap:
+  - Stream:          [  ]
+  - Stream:          [ 5 ]
+  - Stream:          [  ]
+  - Stream:          [  ]
+  - Stream:          [  ]
+  - Stream:          [ 4 ]
+PdbStream:
+  Age:             1
+  Guid:            '{15C920AB-F953-7F22-4045-454D275D98D6}'
+  Signature:       0
+  Version:         VC70
+PublicsStream:
+  Records:         []
+DXContainerStream:
+  DXContainer: !dxcontainer
+    Header:
+      Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                         0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+      Version:
+        Major:           1
+        Minor:           0
+      PartCount:       3
+    Parts:
+      - Name:            ILDN
+        Size:            16
+        DebugName:
+          Flags:           0
+          NameLength:      10
+          DebugName:       simple.pdb
+      - Name:            HASH
+        Size:            20
+        Hash:
+          IncludesSource:  false
+          Digest:          [ 0xAB, 0x20, 0xC9, 0x15, 0x53, 0xF9, 0x22,
+                             0x7F, 0x40, 0x45, 0x45, 0x4D, 0x27, 0x5D,
+                             0x98, 0xD6 ]
+      - Name:            ILDB
+        Size:            28
+        Program:
+          MajorVersion:    6
+          MinorVersion:    5
+          ShaderKind:      6
+          Size:            8
+          DXILMajorVersion: 1
+          DXILMinorVersion: 5
+          DXILSize:        4
+          DXIL:            [ 0x42, 0x43, 0xC0, 0xDE ]
+...
+

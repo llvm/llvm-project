@@ -217,6 +217,7 @@ namespace exportstream {
 extern llvm::cl::opt<std::string> OutputFile;
 extern llvm::cl::opt<std::string> Stream;
 extern llvm::cl::opt<bool> ForceName;
+extern llvm::cl::opt<bool> DXContainer;
 } // namespace exportstream
 }
 
