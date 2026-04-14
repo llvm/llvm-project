@@ -488,10 +488,13 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  [[maybe_unused]] int Rc = target_activate_rr(
-      *DeviceOrErr, MemorySize, VAddr, IsRecord, SaveOutput, OutputDirPath);
-  assert(Rc == OFFLOAD_SUCCESS &&
-         "__tgt_activate_record_replay unexpected failure!");
+  int Rc = target_activate_rr(*DeviceOrErr, MemorySize, VAddr, IsRecord,
+                              SaveOutput, OutputDirPath);
+  if (Rc != OFFLOAD_SUCCESS) {
+    ODBG(ODT_Interface) << "Record replay failed to activate in device "
+                        << DeviceId;
+    return OMP_TGT_FAIL;
+  }
   return OMP_TGT_SUCCESS;
 }
 
@@ -538,11 +541,14 @@ EXTERN int __tgt_target_kernel_replay(
       target_replay(Loc, *DeviceOrErr, HostPtr, DeviceMemory, DeviceMemorySize,
                     Globals, NumGlobals, TgtArgs, TgtOffsets, NumArgs, NumTeams,
                     ThreadLimit, SharedMemorySize, LoopTripCount, AsyncInfo);
+
   if (Rc == OFFLOAD_SUCCESS)
     Rc = AsyncInfo.synchronize();
-  handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
-  assert(Rc == OFFLOAD_SUCCESS &&
-         "__tgt_target_kernel_replay unexpected failure!");
+
+  if (Rc != OFFLOAD_SUCCESS) {
+    ODBG(ODT_Interface) << "Kernel replay failed in device " << DeviceId;
+    return OMP_TGT_FAIL;
+  }
   return OMP_TGT_SUCCESS;
 }
 

@@ -182,7 +182,6 @@ int main(int argc, char **argv) {
 
   int Rc = __tgt_activate_record_replay(DeviceId, VAllocSize, VAllocAddr, false,
                                         VerifyOpt, DirectoryOpt.c_str());
-
   if (Rc != OMP_TGT_SUCCESS)
     reportFatalUsageError("Error activating record replay");
 
@@ -201,12 +200,14 @@ int main(int argc, char **argv) {
               const_cast<char *>(DeviceMemoryMB.get()->getBuffer().data()),
               DeviceMemoryMB.get()->getBufferSize());
 
-  __tgt_target_kernel_replay(
+  Rc = __tgt_target_kernel_replay(
       /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
       (char *)RecordedData, DeviceMemoryMB.get()->getBufferSize(),
       NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
       SharedMemorySize, LoopTripCount.value());
+  if (Rc != OMP_TGT_SUCCESS)
+    reportFatalUsageError("Error replaying kernel");
 
   int ErrorDetected = 0;
   if (VerifyOpt) {
