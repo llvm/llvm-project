@@ -1244,7 +1244,7 @@ protected:
     if (!DryRun) {
       Whitespaces->replaceWhitespace(
           *Child->First, /*Newlines=*/0, /*Spaces=*/1,
-          /*StartOfTokenColumn=*/State.Column, /*IsAligned=*/false,
+          /*StartOfTokenColumn=*/State.Column, /*AlignedTo=*/nullptr,
           State.Line->InPPDirective);
     }
     Penalty +=
@@ -1771,7 +1771,7 @@ void UnwrappedLineFormatter::formatFirstToken(
   }
 
   Whitespaces->replaceWhitespace(RootToken, RootToken.Newlines, Indent, Indent,
-                                 /*IsAligned=*/false,
+                                 /*AlignedTo=*/nullptr,
                                  Line.InPPDirective &&
                                      !RootToken.HasUnescapedNewline);
 }

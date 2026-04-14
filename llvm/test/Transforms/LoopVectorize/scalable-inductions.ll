@@ -64,7 +64,7 @@ define void @add_ind64_unrolled(ptr noalias nocapture %a, ptr noalias nocapture 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %b, i64 %i.08
   %0 = load i64, ptr %arrayidx, align 8
@@ -75,7 +75,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 
@@ -138,7 +138,7 @@ define void @add_ind64_unrolled_nxv1i64(ptr noalias nocapture %a, ptr noalias no
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %b, i64 %i.08
   %0 = load i64, ptr %arrayidx, align 8
@@ -149,7 +149,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !9
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 
@@ -215,7 +215,7 @@ define void @add_unique_ind32(ptr noalias nocapture %a, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %i.08
@@ -225,7 +225,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !6
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 
@@ -292,7 +292,7 @@ define void @add_unique_indf32(ptr noalias nocapture %a, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi float [ %add, %for.body ], [ 0.000000e+00, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %i.08
@@ -302,7 +302,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !6
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 

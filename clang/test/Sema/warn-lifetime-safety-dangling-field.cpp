@@ -184,3 +184,15 @@ struct IndirectEscape2 {
     p = s.data();
   }
 };
+
+namespace DanglingPointerFieldInBaseClass {
+struct BaseWithPointer {
+  std::string_view view; // expected-note {{this field dangles}}
+};
+
+struct DerivedWithCtor : BaseWithPointer {
+  DerivedWithCtor(std::string s) {
+    view = s; // expected-warning {{address of stack memory escapes to a field}}
+  }
+};
+} // namespace DanglingPointerFieldInBaseClass

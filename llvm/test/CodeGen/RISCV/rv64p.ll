@@ -1017,6 +1017,99 @@ entry:
   ret i32 %4
 }
 
+; Test multiply patterns with one extended operand
+define i64 @mul_w00_sexti32_sext_inreg(i32 signext %a, i64 %b) nounwind {
+; CHECK-LABEL: mul_w00_sexti32_sext_inreg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_sext = sext i32 %a to i64
+  %b_trunc = trunc i64 %b to i32
+  %b_sext = sext i32 %b_trunc to i64
+  %mul = mul i64 %a_sext, %b_sext
+  ret i64 %mul
+}
+
+define i64 @mul_w00_sexti32_sext_inreg_commute(i32 signext %a, i64 %b) nounwind {
+; CHECK-LABEL: mul_w00_sexti32_sext_inreg_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_sext = sext i32 %a to i64
+  %b_trunc = trunc i64 %b to i32
+  %b_sext = sext i32 %b_trunc to i64
+  %mul = mul i64 %b_sext, %a_sext
+  ret i64 %mul
+}
+
+define i64 @mulu_w00_zexti32_and(i32 zeroext %a, i64 %b) nounwind {
+; CHECK-LABEL: mulu_w00_zexti32_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_zext = zext i32 %a to i64
+  %b_and = and i64 %b, 4294967295
+  %mul = mul i64 %a_zext, %b_and
+  ret i64 %mul
+}
+
+define i64 @mulu_w00_zexti32_and_commute(i32 zeroext %a, i64 %b) nounwind {
+; CHECK-LABEL: mulu_w00_zexti32_and_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_zext = zext i32 %a to i64
+  %b_and = and i64 %b, 4294967295
+  %mul = mul i64 %b_and, %a_zext
+  ret i64 %mul
+}
+
+define i64 @mulsu_w00_sexti32_and(i32 signext %a, i64 %b) nounwind {
+; CHECK-LABEL: mulsu_w00_sexti32_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_sext = sext i32 %a to i64
+  %b_and = and i64 %b, 4294967295
+  %mul = mul i64 %a_sext, %b_and
+  ret i64 %mul
+}
+
+define i64 @mulsu_w00_sexti32_and_commute(i32 signext %a, i64 %b) nounwind {
+; CHECK-LABEL: mulsu_w00_sexti32_and_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_sext = sext i32 %a to i64
+  %b_and = and i64 %b, 4294967295
+  %mul = mul i64 %b_and, %a_sext
+  ret i64 %mul
+}
+
+define i64 @mulsu_w00_sext_inreg_zexti32(i64 %a, i32 zeroext %b) nounwind {
+; CHECK-LABEL: mulsu_w00_sext_inreg_zexti32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_trunc = trunc i64 %a to i32
+  %a_sext = sext i32 %a_trunc to i64
+  %b_zext = zext i32 %b to i64
+  %mul = mul i64 %a_sext, %b_zext
+  ret i64 %mul
+}
+
+define i64 @mulsu_w00_sext_inreg_zexti32_commute(i64 %a, i32 zeroext %b) nounwind {
+; CHECK-LABEL: mulsu_w00_sext_inreg_zexti32_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_trunc = trunc i64 %a to i32
+  %a_sext = sext i32 %a_trunc to i64
+  %b_zext = zext i32 %b to i64
+  %mul = mul i64 %b_zext, %a_sext
+  ret i64 %mul
+}
+
 ; Test that we select pack.
 define i64 @mm_usati_32_knownbits_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: mm_usati_32_knownbits_i64:
@@ -1030,6 +1123,236 @@ entry:
   %2 = shl i64 %y, 32
   %3 = or i64 %1, %2
   ret i64 %3
+}
+
+; Test USATI select patterns
+define i3 @usati_i3_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i3_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 3
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 7
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i3
+  %trunc = trunc i64 %x to i3
+  %sel = select i1 %cmp1, i3 %cmp2.ext, i3 %trunc
+  ret i3 %sel
+}
+
+define i5 @usati_i5_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i5_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 5
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 31
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i5
+  %trunc = trunc i64 %x to i5
+  %sel = select i1 %cmp1, i5 %cmp2.ext, i5 %trunc
+  ret i5 %sel
+}
+
+define i7 @usati_i7_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i7_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 7
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 127
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i7
+  %trunc = trunc i64 %x to i7
+  %sel = select i1 %cmp1, i7 %cmp2.ext, i7 %trunc
+  ret i7 %sel
+}
+
+define i8 @usati_i8_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i8_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 8
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 255
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i8
+  %trunc = trunc i64 %x to i8
+  %sel = select i1 %cmp1, i8 %cmp2.ext, i8 %trunc
+  ret i8 %sel
+}
+
+define i10 @usati_i10_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i10_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 10
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 1023
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i10
+  %trunc = trunc i64 %x to i10
+  %sel = select i1 %cmp1, i10 %cmp2.ext, i10 %trunc
+  ret i10 %sel
+}
+
+define i16 @usati_i16_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i16_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 16
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 65535
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i16
+  %trunc = trunc i64 %x to i16
+  %sel = select i1 %cmp1, i16 %cmp2.ext, i16 %trunc
+  ret i16 %sel
+}
+
+define i20 @usati_i20_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i20_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 20
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 1048575
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i20
+  %trunc = trunc i64 %x to i20
+  %sel = select i1 %cmp1, i20 %cmp2.ext, i20 %trunc
+  ret i20 %sel
+}
+
+define i32 @usati_i32_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i32_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 32
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 4294967295
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i32
+  %trunc = trunc i64 %x to i32
+  %sel = select i1 %cmp1, i32 %cmp2.ext, i32 %trunc
+  ret i32 %sel
+}
+
+define i40 @usati_i40_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i40_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 40
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 1099511627775
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i40
+  %trunc = trunc i64 %x to i40
+  %sel = select i1 %cmp1, i40 %cmp2.ext, i40 %trunc
+  ret i40 %sel
+}
+
+define i48 @usati_i48_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i48_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 48
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 281474976710655
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i48
+  %trunc = trunc i64 %x to i48
+  %sel = select i1 %cmp1, i48 %cmp2.ext, i48 %trunc
+  ret i48 %sel
+}
+
+define i56 @usati_i56_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i56_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 56
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 72057594037927935
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i56
+  %trunc = trunc i64 %x to i56
+  %sel = select i1 %cmp1, i56 %cmp2.ext, i56 %trunc
+  ret i56 %sel
+}
+
+define i63 @usati_i63_from_i64(i64 %x) {
+; CHECK-LABEL: usati_i63_from_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 63
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i64 %x, 9223372036854775807
+  %cmp2 = icmp sgt i64 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i63
+  %trunc = trunc i64 %x to i63
+  %sel = select i1 %cmp1, i63 %cmp2.ext, i63 %trunc
+  ret i63 %sel
+}
+
+; Test USATI with non-XLen source types (now supported by looking through truncates)
+define i8 @usati_i8_from_i16(i16 %x) {
+; CHECK-LABEL: usati_i8_from_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sext.h a0, a0
+; CHECK-NEXT:    usati a0, a0, 8
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i16 %x, 255
+  %cmp2 = icmp sgt i16 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i8
+  %trunc = trunc i16 %x to i8
+  %sel = select i1 %cmp1, i8 %cmp2.ext, i8 %trunc
+  ret i8 %sel
+}
+
+define i8 @usati_i8_from_i32(i32 %x) {
+; CHECK-LABEL: usati_i8_from_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    usati a0, a0, 8
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i32 %x, 255
+  %cmp2 = icmp sgt i32 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i8
+  %trunc = trunc i32 %x to i8
+  %sel = select i1 %cmp1, i8 %cmp2.ext, i8 %trunc
+  ret i8 %sel
+}
+
+define i16 @usati_i16_from_i32(i32 %x) {
+; CHECK-LABEL: usati_i16_from_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    usati a0, a0, 16
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i32 %x, 65535
+  %cmp2 = icmp sgt i32 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i16
+  %trunc = trunc i32 %x to i16
+  %sel = select i1 %cmp1, i16 %cmp2.ext, i16 %trunc
+  ret i16 %sel
+}
+
+define i16 @usati_i16_from_i48(i48 %x) {
+; CHECK-LABEL: usati_i16_from_i48:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    usati a0, a0, 16
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i48 %x, 65535
+  %cmp2 = icmp sgt i48 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i16
+  %trunc = trunc i48 %x to i16
+  %sel = select i1 %cmp1, i16 %cmp2.ext, i16 %trunc
+  ret i16 %sel
+}
+
+define i32 @usati_i32_from_i48(i48 %x) {
+; CHECK-LABEL: usati_i32_from_i48:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    usati a0, a0, 32
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ugt i48 %x, 4294967295
+  %cmp2 = icmp sgt i48 %x, -1
+  %cmp2.ext = sext i1 %cmp2 to i32
+  %trunc = trunc i48 %x to i32
+  %sel = select i1 %cmp1, i32 %cmp2.ext, i32 %trunc
+  ret i32 %sel
 }
 
 define i64 @macc_w00(i64 %rd, i32 %a, i32 %b) nounwind {
@@ -1132,9 +1455,7 @@ define i64 @maccsu_w00_swap_operands_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 define i64 @macc_w00_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out) nounwind {
 ; CHECK-LABEL: macc_w00_multiple_uses:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a0, a0
-; CHECK-NEXT:    sext.w a1, a1
-; CHECK-NEXT:    mul a1, a0, a1
+; CHECK-NEXT:    mul.w00 a1, a0, a1
 ; CHECK-NEXT:    add a0, a2, a1
 ; CHECK-NEXT:    sd a1, 0(a3)
 ; CHECK-NEXT:    ret
