@@ -279,8 +279,11 @@ def GPRMemAtomic : RegisterOperand<GPR> {
   let PrintMethod = "printAtomicMemOp";
 }
 
-// A parameterized register class alternative to i32imm/i64imm from Target.td.
+// A parameterized register class alternative to i16imm/i32imm/i64imm from Target.td.
 def grlenimm : Operand<GRLenVT>;
+def imm16 : Operand<GRLenVT> {
+  let ParserMatchClass = ImmAsmOperand<"", 16, "">;
+}
 def imm32 : Operand<GRLenVT> {
   let ParserMatchClass = ImmAsmOperand<"", 32, "">;
 }
