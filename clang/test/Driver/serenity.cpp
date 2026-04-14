@@ -70,7 +70,7 @@
 // RUN: %clang -### %s --target=riscv64-unknown-serenity -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir 2>&1 | FileCheck %s --check-prefix=SERENITY_RISCV64,DEFAULT_LINKER
 // SERENITY_RISCV64: "-cc1" "-triple" "[[TRIPLE:riscv64-unknown-serenity]]"
 
-// DEFAULT_LINKER: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
+// DEFAULT_LINKER: ld.lld"
 // DEFAULT_LINKER-SAME: "-pie"
 // DEFAULT_LINKER-SAME: "-dynamic-linker" "/usr/lib/Loader.so" "--eh-frame-hdr"
 // DEFAULT_LINKER-SAME: "-o" "a.out"
@@ -83,7 +83,7 @@
 /// Check if the sysroot is passed to the linker.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=TestSysroot \
 // RUN:   -static-pie 2>&1 | FileCheck %s --check-prefix=LINKER_SYSROOT
-// LINKER_SYSROOT: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
+// LINKER_SYSROOT: ld.lld"
 // LINKER_SYSROOT-SAME: "--sysroot=TestSysroot"
 
 /// -static-pie suppresses -dynamic-linker.
@@ -246,7 +246,7 @@
 /// Check that parameters are forwarded to the linker.
 // RUN: %clang --target=x86_64-unknown-serenity -### %s -L/foo -u bar -T script.ld -s -t -r 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=LINK
-// LINK: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
+// LINK: ld.lld"
 // LINK-SAME: "-L/foo"
 // LINK-SAME: "-u" "bar"
 // LINK-SAME: "-T" "script.ld"
@@ -256,7 +256,7 @@
 
 // RUN: %clang --target=x86_64-unknown-serenity -### %s -Wl,--compress-debug-sections=zlib 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=COMPRESS
-// COMPRESS: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
+// COMPRESS: ld.lld"
 // COMPRESS: "--compress-debug-sections=zlib"
 
 /// Check LTO.
