@@ -490,12 +490,13 @@ public:
       LaneBitmask LB = getSubRegIndexLaneMask(SubB);
       return (LA & LB).any();
     }
-    assert(RegA.isPhysical() && RegB.isPhysical() &&
-           "mixed virtual and physical registers");
-    MCRegister MCRegA = SubA ? getSubReg(RegA, SubA) : RegA.asMCReg();
-    MCRegister MCRegB = SubB ? getSubReg(RegB, SubB) : RegB.asMCReg();
-    assert(MCRegB.isValid() && MCRegA.isValid() && "invalid subregister");
-    return MCRegisterInfo::regsOverlap(MCRegA, MCRegB);
+    if (RegA.isPhysical() && RegB.isPhysical()) {
+      MCRegister MCRegA = SubA ? getSubReg(RegA, SubA) : RegA.asMCReg();
+      MCRegister MCRegB = SubB ? getSubReg(RegB, SubB) : RegB.asMCReg();
+      assert(MCRegB.isValid() && MCRegA.isValid() && "invalid subregister");
+      return MCRegisterInfo::regsOverlap(MCRegA, MCRegB);
+    }
+    llvm_unreachable("mixed virtual and physical registers");
   }
 
   /// Returns true if Reg contains RegUnit.
