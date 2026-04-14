@@ -145,13 +145,8 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
   if (isa<xegpu::StoreNdOp>(op))
     return getTileShape(op->getOpOperand(1));
 
-  // Handle LoadGatherOp and StoreScatterOp (with and without offset)
-  if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(op)) {
-    if (loadGatherOp.getOffsets())
-      return getTileShape(loadGatherOp->getOpResult(0));
-    else
-      return getTileShape(loadGatherOp->getOpOperand(0));
-  }
+  if (isa<xegpu::LoadGatherOp>(op))
+    return getTileShape(op->getOpResult(0));
 
   if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
     auto inputInstData =
@@ -165,10 +160,8 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
       return targetInstData;
   }
 
-  if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
-    return getTileShape(storeScatterOp.getOffsets()
-                            ? storeScatterOp->getOpOperand(0)
-                            : storeScatterOp->getOpOperand(1));
+  if (isa<xegpu::StoreScatterOp>(op))
+    return getTileShape(op->getOpOperand(0));
 
   if (isa<xegpu::DpasOp>(op)) {
     std::optional<SmallVector<int64_t>> aTile =

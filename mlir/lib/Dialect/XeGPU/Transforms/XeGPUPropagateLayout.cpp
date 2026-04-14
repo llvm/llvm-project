@@ -1054,10 +1054,9 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   // Propagate the new layout to the tensor descriptor operand.
   if (isa<xegpu::TensorDescType>(load.getSourceType()))
     propagateIfChanged(operands[0], operands[0]->meet(loadLayoutInfo));
-  // Propagate the new layout to the mask and optional offset operand.
+  // Propagate the new layout to the offset and mask operands.
   propagateIfChanged(operands[1], operands[1]->meet(maskLayoutInfo));
-  if (load.getOffsets())
-    propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
+  propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
 }
 
 /// Set the layout for the value, tensor descriptor, offset and mask operands in
@@ -1110,10 +1109,9 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   // Propagate the destination (if tdesc) operand layout
   if (isa<xegpu::TensorDescType>(storeScatter.getDestType()))
     propagateIfChanged(operands[1], operands[1]->meet(srcLayoutInfo));
-  // Propagate the new layout to the mask and optional offset operand.
+  // Propagate the new layout to the offset and mask operands.
   propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
-  if (storeScatter.getOffsets())
-    propagateIfChanged(operands[3], operands[3]->meet(maskLayoutInfo));
+  propagateIfChanged(operands[3], operands[3]->meet(maskLayoutInfo));
 }
 
 void LayoutInfoPropagation::visitLoadMatrixOp(
