@@ -794,6 +794,12 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
 
   // Visit array dimensions.
   DINodeArray Elements = CTy->getElements();
+  if (Elements.size() == 0) {
+    // Rust and other languages may emit array types with no dimensions.
+    // Treat as a zero-length array so the type is still registered.
+    auto TypeEntry = std::make_unique<BTFTypeArray>(ElemTypeId, 0);
+    ElemTypeId = addType(std::move(TypeEntry), CTy);
+  }
   for (int I = Elements.size() - 1; I >= 0; --I) {
     if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
