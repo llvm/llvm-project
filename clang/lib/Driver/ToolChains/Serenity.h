@@ -63,7 +63,6 @@ public:
 
   bool isPICDefault() const override { return true; }
   bool isPIEDefault(const llvm::opt::ArgList &) const override { return true; }
-  bool isPICDefaultForced() const override { return false; }
 
   SanitizerMask getSupportedSanitizers() const override;
 
