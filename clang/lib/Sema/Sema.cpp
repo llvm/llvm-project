@@ -3028,9 +3028,13 @@ bool Sema::processProfilesEnforceAttr(
     if (!addProfileEnforcement(Name, Desig, AL.getLoc()))
       continue;
 
+    if (Mod && !llvm::any_of(Mod->EnforcedProfileDesignators,
+                             [&](const Module::EnforcedProfile &EP) {
+                               return EP.ProfileName == Name;
+                             }))
+      Mod->EnforcedProfileDesignators.push_back({Name.str(), Desig.str()});
+
     if (IsNew) {
-      if (Mod)
-        Mod->EnforcedProfileDesignators.push_back({Name.str(), Desig.str()});
       if (NewNames)
         NewNames->push_back(Name);
       if (NewDesignators)

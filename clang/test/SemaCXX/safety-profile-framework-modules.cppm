@@ -8,6 +8,8 @@
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_mismatch.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_repeated.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/impl_propagation.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/mod_gmf_enforce.cppm -o %t/mod_gmf_enforce.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_gmf_ok.cpp -fmodule-file=GmfMod=%t/mod_gmf_enforce.pcm -verify
 
 // ===================================================================
 // Module with enforced profiles
@@ -56,3 +58,19 @@ module TestMod;
 void impl_func() {
   int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }
+
+// ===================================================================
+// Module with GMF enforce preceding module-declaration enforce:
+// require must still find the profile on the module.
+// ===================================================================
+//--- mod_gmf_enforce.cppm
+// expected-no-diagnostics
+module;
+[[profiles::enforce(test::type_cast)]];
+export module GmfMod [[profiles::enforce(test::type_cast)]];
+
+export void gmf_func();
+
+//--- require_gmf_ok.cpp
+// expected-no-diagnostics
+import GmfMod [[profiles::require(test::type_cast)]];
