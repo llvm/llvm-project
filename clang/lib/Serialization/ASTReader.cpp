@@ -2873,9 +2873,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     Overridden = false;
   }
 
-  auto File = FileMgr.getOptionalFileRef(*Filename, /*OpenFile=*/false,
-                                         /*CacheFailure=*/true,
-                                         /*IsText=*/false);
+  auto File = FileMgr.getOptionalFileRef(*Filename, /*OpenFile=*/false);
 
   // For an overridden file, create a virtual file with the stored
   // size/timestamp.
@@ -2935,11 +2933,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       return OriginalChange;
 
     auto MemBuffOrError =
-        FileMgr.getBufferForFile(*File,
-                                 /*IsVolatile=*/false,
-                                 /*RequiresNullTerminator=*/false,
-                                 /*MaybeLimit=*/std::nullopt,
-                                 /*IsText=*/false);
+        FileMgr.getBufferForFile(*File);
     if (!MemBuffOrError) {
       if (!Complain)
         return OriginalChange;
