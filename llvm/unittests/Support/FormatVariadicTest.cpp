@@ -446,7 +446,7 @@ TEST(FormatAndFormatvTest, StringPadding) {
 
 TEST(FormatAndFormatvTest, Alignment) {
   EXPECT_EQ("250            ", printToString(format("%-15" PRIu32, 0xfa)));
-  EXPECT_EQ("250            ", formatv("{0, -15}", 0xfa).str());
+  EXPECT_EQ("250            ", formatv("{0,-15}", 0xfa).str());
   EXPECT_EQ("250            ",
             formatv("{0}", fmt_align(0xfa, AlignStyle::Left, 15)).str());
 
