@@ -15,6 +15,8 @@
 
 #include "Targets.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
@@ -341,17 +343,22 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv &&
            "Invalid architecture for Logical SPIR-V.");
-    assert(Triple.getOS() == llvm::Triple::Vulkan &&
-           Triple.getVulkanVersion() != llvm::VersionTuple(0) &&
-           "Logical SPIR-V requires a valid Vulkan environment.");
-    assert(Triple.getEnvironment() >= llvm::Triple::Pixel &&
-           Triple.getEnvironment() <= llvm::Triple::Amplification &&
-           "Logical SPIR-V environment must be a valid shader stage.");
     PointerWidth = PointerAlign = 64;
 
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
     resetDataLayout();
+  }
+
+  // SPIR-V targeting requires a fully specified Vulkan environment.
+  // Validate here before CreateTargetInfo() to emit a proper diagnostic
+  bool validateTarget(DiagnosticsEngine &Diags) const override {
+    if (getTriple().getOS() != llvm::Triple::Vulkan ||
+        getTriple().getVulkanVersion() == llvm::VersionTuple(0)) {
+      Diags.Report(diag::err_fe_spirv_requires_vulkan) << getTriple().str();
+      return false;
+    }
+    return true;
   }
 
   void getTargetDefines(const LangOptions &Opts,
