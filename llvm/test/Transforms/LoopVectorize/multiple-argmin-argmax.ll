@@ -16,9 +16,9 @@ define i64 @argmin_argmax(ptr %data, i32 %start_val) {
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
@@ -41,8 +41,6 @@ define i64 @argmin_argmax(ptr %data, i32 %start_val) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP9]], <2 x i64> [[TMP2]], <2 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[TMP10]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT:%.*]] = add i64 1, [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[TMP8]], [[START_VAL]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 0, i64 [[DERIVED_IV_RESULT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.smax.v2i32(<2 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT8]], <2 x i32> poison, <2 x i32> zeroinitializer
@@ -50,17 +48,15 @@ define i64 @argmin_argmax(ptr %data, i32 %start_val) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP15]], <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[TMP16]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT10:%.*]] = add i64 1, [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP14]], [[START_VAL]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i64 0, i64 [[DERIVED_IV_RESULT10]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 99, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MINVAL:%.*]] = phi i32 [ [[TMP8]], %[[SCALAR_PH]] ], [ [[NEW_MINVAL:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MINPOS:%.*]] = phi i64 [ [[TMP13]], %[[SCALAR_PH]] ], [ [[NEW_MINPOS:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MINPOS:%.*]] = phi i64 [ [[DERIVED_IV_RESULT]], %[[SCALAR_PH]] ], [ [[NEW_MINPOS:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MAXVAL:%.*]] = phi i32 [ [[TMP14]], %[[SCALAR_PH]] ], [ [[NEW_MAXVAL:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAXPOS:%.*]] = phi i64 [ [[TMP19]], %[[SCALAR_PH]] ], [ [[NEW_MAXPOS:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAXPOS:%.*]] = phi i64 [ [[DERIVED_IV_RESULT10]], %[[SCALAR_PH]] ], [ [[NEW_MAXPOS:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP_MIN:%.*]] = icmp slt i32 [[VAL]], [[MINVAL]]
@@ -120,9 +116,9 @@ define i64 @argmin_argmin(ptr %data, i32 %start_val1, i32 %start_val2) {
 ; CHECK-NEXT:    [[VEC_IND3:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND4:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
@@ -145,8 +141,6 @@ define i64 @argmin_argmin(ptr %data, i32 %start_val1, i32 %start_val2) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP9]], <2 x i64> [[TMP2]], <2 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[TMP10]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT:%.*]] = add i64 1, [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[TMP8]], [[START_VAL1]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 0, i64 [[DERIVED_IV_RESULT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.smin.v2i32(<2 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <2 x i32> poison, i32 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT10]], <2 x i32> poison, <2 x i32> zeroinitializer
@@ -154,17 +148,15 @@ define i64 @argmin_argmin(ptr %data, i32 %start_val1, i32 %start_val2) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP15]], <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[TMP16]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT12:%.*]] = add i64 1, [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP14]], [[START_VAL2]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i64 0, i64 [[DERIVED_IV_RESULT12]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 99, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MINVAL1:%.*]] = phi i32 [ [[TMP8]], %[[SCALAR_PH]] ], [ [[NEW_MINVAL1:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MINPOS1:%.*]] = phi i64 [ [[TMP13]], %[[SCALAR_PH]] ], [ [[NEW_MINPOS1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MINPOS1:%.*]] = phi i64 [ [[DERIVED_IV_RESULT]], %[[SCALAR_PH]] ], [ [[NEW_MINPOS1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MINVAL2:%.*]] = phi i32 [ [[TMP14]], %[[SCALAR_PH]] ], [ [[NEW_MINVAL2:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MINPOS2:%.*]] = phi i64 [ [[TMP19]], %[[SCALAR_PH]] ], [ [[NEW_MINPOS2:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MINPOS2:%.*]] = phi i64 [ [[DERIVED_IV_RESULT12]], %[[SCALAR_PH]] ], [ [[NEW_MINPOS2:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP_MIN1:%.*]] = icmp slt i32 [[VAL]], [[MINVAL1]]
@@ -224,9 +216,9 @@ define i64 @argmax_argmax(ptr %data, i32 %start_val1, i32 %start_val2) {
 ; CHECK-NEXT:    [[VEC_IND3:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND4:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
@@ -249,8 +241,6 @@ define i64 @argmax_argmax(ptr %data, i32 %start_val1, i32 %start_val2) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP9]], <2 x i64> [[TMP2]], <2 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[TMP10]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT:%.*]] = add i64 1, [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[TMP8]], [[START_VAL1]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 0, i64 [[DERIVED_IV_RESULT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.smax.v2i32(<2 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <2 x i32> poison, i32 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT10]], <2 x i32> poison, <2 x i32> zeroinitializer
@@ -258,17 +248,15 @@ define i64 @argmax_argmax(ptr %data, i32 %start_val1, i32 %start_val2) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP15]], <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[TMP16]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT12:%.*]] = add i64 1, [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP14]], [[START_VAL2]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i64 0, i64 [[DERIVED_IV_RESULT12]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 99, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MAXVAL1:%.*]] = phi i32 [ [[TMP8]], %[[SCALAR_PH]] ], [ [[NEW_MAXVAL1:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAXPOS1:%.*]] = phi i64 [ [[TMP13]], %[[SCALAR_PH]] ], [ [[NEW_MAXPOS1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAXPOS1:%.*]] = phi i64 [ [[DERIVED_IV_RESULT]], %[[SCALAR_PH]] ], [ [[NEW_MAXPOS1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MAXVAL2:%.*]] = phi i32 [ [[TMP14]], %[[SCALAR_PH]] ], [ [[NEW_MAXVAL2:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAXPOS2:%.*]] = phi i64 [ [[TMP19]], %[[SCALAR_PH]] ], [ [[NEW_MAXPOS2:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAXPOS2:%.*]] = phi i64 [ [[DERIVED_IV_RESULT12]], %[[SCALAR_PH]] ], [ [[NEW_MAXPOS2:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP_MAX1:%.*]] = icmp sgt i32 [[VAL]], [[MAXVAL1]]
@@ -329,9 +317,9 @@ define i64 @argmin_signed_argmax_unsigned(ptr %data, i32 %start_val1, i32 %start
 ; CHECK-NEXT:    [[VEC_IND3:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND4:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
@@ -354,8 +342,6 @@ define i64 @argmin_signed_argmax_unsigned(ptr %data, i32 %start_val1, i32 %start
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP9]], <2 x i64> [[TMP2]], <2 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[TMP10]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT:%.*]] = add i64 1, [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[TMP8]], [[START_VAL1]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 0, i64 [[DERIVED_IV_RESULT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.umax.v2i32(<2 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <2 x i32> poison, i32 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT10]], <2 x i32> poison, <2 x i32> zeroinitializer
@@ -363,17 +349,15 @@ define i64 @argmin_signed_argmax_unsigned(ptr %data, i32 %start_val1, i32 %start
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP15]], <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[TMP16]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT12:%.*]] = add i64 1, [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP14]], [[START_VAL2]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i64 0, i64 [[DERIVED_IV_RESULT12]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 99, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MINVAL:%.*]] = phi i32 [ [[TMP8]], %[[SCALAR_PH]] ], [ [[NEW_MINVAL:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MINPOS:%.*]] = phi i64 [ [[TMP13]], %[[SCALAR_PH]] ], [ [[NEW_MINPOS:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MINPOS:%.*]] = phi i64 [ [[DERIVED_IV_RESULT]], %[[SCALAR_PH]] ], [ [[NEW_MINPOS:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MAXVAL:%.*]] = phi i32 [ [[TMP14]], %[[SCALAR_PH]] ], [ [[NEW_MAXVAL:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAXPOS:%.*]] = phi i64 [ [[TMP19]], %[[SCALAR_PH]] ], [ [[NEW_MAXPOS:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAXPOS:%.*]] = phi i64 [ [[DERIVED_IV_RESULT12]], %[[SCALAR_PH]] ], [ [[NEW_MAXPOS:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP_MIN:%.*]] = icmp slt i32 [[VAL]], [[MINVAL]]
@@ -431,9 +415,9 @@ define i64 @argmin_argmax_unsigned(ptr %data, i32 %start_val) {
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
@@ -456,8 +440,6 @@ define i64 @argmin_argmax_unsigned(ptr %data, i32 %start_val) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP9]], <2 x i64> [[TMP2]], <2 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[TMP10]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT:%.*]] = add i64 1, [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[TMP8]], [[START_VAL]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 0, i64 [[DERIVED_IV_RESULT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.umax.v2i32(<2 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT8]], <2 x i32> poison, <2 x i32> zeroinitializer
@@ -465,17 +447,15 @@ define i64 @argmin_argmax_unsigned(ptr %data, i32 %start_val) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP15]], <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[TMP16]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT10:%.*]] = add i64 1, [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP14]], [[START_VAL]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i64 0, i64 [[DERIVED_IV_RESULT10]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 99, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MINVAL:%.*]] = phi i32 [ [[TMP8]], %[[SCALAR_PH]] ], [ [[NEW_MINVAL:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MINPOS:%.*]] = phi i64 [ [[TMP13]], %[[SCALAR_PH]] ], [ [[NEW_MINPOS:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MINPOS:%.*]] = phi i64 [ [[DERIVED_IV_RESULT]], %[[SCALAR_PH]] ], [ [[NEW_MINPOS:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MAXVAL:%.*]] = phi i32 [ [[TMP14]], %[[SCALAR_PH]] ], [ [[NEW_MAXVAL:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAXPOS:%.*]] = phi i64 [ [[TMP19]], %[[SCALAR_PH]] ], [ [[NEW_MAXPOS:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAXPOS:%.*]] = phi i64 [ [[DERIVED_IV_RESULT10]], %[[SCALAR_PH]] ], [ [[NEW_MAXPOS:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP_MIN:%.*]] = icmp ult i32 [[VAL]], [[MINVAL]]

@@ -1701,7 +1701,16 @@ static bool handleFirstArgMinOrMax(
     FindIVSelectR->setOperand(FindIVSelectR->getOperand(1) == WideIV ? 1 : 2,
                               WidenCanIV);
   }
-  FindLastIVPhiR->setOperand(0, Plan.getOrAddLiveIn(PoisonValue::get(Ty)));
+  // Initialize FindLastIVPhiR with 0 (the canonical identity element for
+  // UMax/SMax reductions) to avoid undefined behavior when the loop condition
+  // is never true (strict predicate never satisfied). When the condition is
+  // never true, FindLastIVPhiR stays at 0 for all lanes, the partial min/max
+  // equals the final min/max (both remain at the start value), so
+  // FinalMinOrMaxCmp is true for all lanes, FinalIVSelect selects 0, and
+  // RawCanIV = 0. FinalCanIV then correctly returns the start value of the
+  // original IV (via DerivedIV for non-canonical IVs, or 0 directly).
+  VPValue *Zero = Plan.getConstantInt(Ty, 0);
+  FindLastIVPhiR->setOperand(0, Zero);
 
   // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
   // result:
@@ -1713,9 +1722,6 @@ static bool handleFirstArgMinOrMax(
   //     min/max value.
   //  4. Find the first canonical index of overall min/max and scale it back to
   //     the original IV using VPDerivedIVRecipe.
-  //  5. If the overall min/max equals the starting min/max, the condition in
-  //     the loop was always false, due to being strict; return the start value
-  //     of FindLastIVPhiR in that case.
   //
   // For example, we transforms two independent reduction result computations
   // for
@@ -1779,14 +1785,11 @@ static bool handleFirstArgMinOrMax(
     FinalCanIV = DerivedIVRecipe;
   }
 
-  // If the final min/max value matches its start value, the condition in the
-  // loop was always false, i.e. no induction value has been selected. If that's
-  // the case, set the result of the IV reduction to its start value.
-  VPValue *AlwaysFalse = Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxResult,
-                                            MinOrMaxPhiR->getStartValue());
-  VPValue *FinalIV = Builder.createSelect(
-      AlwaysFalse, FindIVSelect->getOperand(2), FinalCanIV);
-  FindIVSelect->replaceAllUsesWith(FinalIV);
+  // Replace the previous FindIV result with the new canonical IV result.
+  // No guard needed: when the condition is never true, FindLastIVPhiR is
+  // initialized with 0, so RawCanIV = 0 and FinalCanIV correctly returns the
+  // start value of the original IV.
+  FindIVSelect->replaceAllUsesWith(FinalCanIV);
 
   // Erase the old FindIV result pattern which is now dead.
   FindIVSelect->eraseFromParent();
