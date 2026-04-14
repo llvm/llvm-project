@@ -210,7 +210,8 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   EXPECT_EQ(Error.getMessage(), "floating point constant invalid for type");
 
   EXPECT_FALSE(parseConstantValue("x86_fp80 0x3FBCC2794DBD00E1", Error, M));
-  EXPECT_EQ(Error.getMessage(), "floating point constant does not have type 'x86_fp80'");
+  EXPECT_EQ(Error.getMessage(),
+            "floating point constant does not have type 'x86_fp80'");
 }
 
 TEST(AsmParserTest, TypeAndConstantValueWithSlotMappingParsing) {

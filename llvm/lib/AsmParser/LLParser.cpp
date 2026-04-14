@@ -4149,13 +4149,13 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.Kind = ValID::t_APSInt;
     break;
   case lltok::APFloat: {
-    assert(ExpectedTy && "Need type to parse float values");
     ID.APFloatVal = Lex.getAPFloatVal();
     ID.Kind = ValID::t_APFloat;
     break;
   }
   case lltok::FloatLiteral: {
-    assert(ExpectedTy && "Need type to parse float values");
+    if (!ExpectedTy)
+      return error(ID.Loc, "unexpected floating-point literal");
     if (!ExpectedTy->isFloatingPointTy())
       return error(ID.Loc, "floating-point constant invalid for type");
     ID.APFloatVal = APFloat(ExpectedTy->getFltSemantics());
@@ -4173,7 +4173,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     break;
   }
   case lltok::FloatHexLiteral: {
-    assert(ExpectedTy && "Need type to parse float values");
+    if (!ExpectedTy)
+      return error(ID.Loc, "unexpected floating-point literal");
     const auto &Semantics = ExpectedTy->getFltSemantics();
     const APInt &Bits = Lex.getAPSIntVal();
     if (APFloat::getSizeInBits(Semantics) != Bits.getBitWidth())
