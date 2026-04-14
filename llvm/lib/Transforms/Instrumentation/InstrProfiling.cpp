@@ -1685,6 +1685,10 @@ InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
 
 GlobalVariable *
 InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
+  if (!isa<GlobalVariable>(Inc->getNameValue()))
+    reportFatalUsageError("instrprof intrinsic has an invalid name operand; "
+                          "expected a global variable");
+
   GlobalVariable *NamePtr = Inc->getName();
   auto &PD = ProfileDataMap[NamePtr];
   if (PD.RegionCounters)
