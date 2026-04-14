@@ -4,13 +4,11 @@
 define range(i64 0, 8) i64 @extract_bits1(i64 noundef %a) local_unnamed_addr {
 ; CHECK-LABEL: @extract_bits1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], <i64 2, i64 5>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 1, i64 6>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[A:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[SHR]], 1
+; CHECK-NEXT:    [[SHR1:%.*]] = lshr i64 [[A]], 5
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[SHR1]], 6
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[AND]], [[AND2]]
 ; CHECK-NEXT:    ret i64 [[OR]]
 ;
 entry:

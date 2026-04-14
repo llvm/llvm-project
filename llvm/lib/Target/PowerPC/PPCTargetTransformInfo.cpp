@@ -710,6 +710,17 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(
   }
   if (Val->getScalarType()->isIntegerTy()) {
     unsigned EltSize = Val->getScalarSizeInBits();
+    // On 32-bit targets, moving wider values in and out of vector registers
+    // is more expensive because we need to move 2 registers and we do so
+    // through the stack. There are 2 scalar stores + vector load + permute
+    // to combine with existing element for insert. The extract is a bit
+    // simpler as the combine isn't needed - vector store + 2 scalar loads.
+    if (EltSize > 32 && !ST->isPPC64()) {
+      if (ISD == ISD::EXTRACT_VECTOR_ELT)
+        CostFactor *= 3;
+      else if (ISD == ISD::INSERT_VECTOR_ELT)
+        CostFactor *= 4;
+    }
     // Computing on 1 bit values requires extra mask or compare operations.
     unsigned MaskCostForOneBitSize = (VecMaskCost && EltSize == 1) ? 1 : 0;
     // Computing on non const index requires extra mask or compare operations.
