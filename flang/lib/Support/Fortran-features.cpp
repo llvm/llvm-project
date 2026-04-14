@@ -48,7 +48,7 @@ static constexpr std::pair<std::string_view, std::string_view>
 static void ReplaceAtWordBoundary(
     std::string &s, std::string_view from, std::string_view to) {
   for (size_t pos = s.find(from); pos != std::string::npos;
-       pos = s.find(from, pos + to.size())) {
+      pos = s.find(from, pos + to.size())) {
     size_t end = pos + from.size();
     if (end == s.size() || s[end] == '-') {
       s.replace(pos, from.size(), to);
@@ -103,7 +103,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
     for (auto [deprecatedForm, canonicalForm] : compoundNameFixups) {
       // Reverse direction: canonical -> deprecated.
       for (auto pos{deprecated.find(canonicalForm)}; pos != std::string::npos;
-           pos = deprecated.find(canonicalForm, pos + deprecatedForm.size())) {
+          pos = deprecated.find(canonicalForm, pos + deprecatedForm.size())) {
         deprecated.replace(pos, canonicalForm.size(), deprecatedForm);
         replaced = true;
       }
