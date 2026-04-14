@@ -232,7 +232,8 @@ std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
 std::optional<std::string_view> LanguageFeatureControl::CheckDeprecatedSpelling(
     std::string_view input) const {
   // Strip "no-" prefix for lookup, same as FindWarning does.
-  // TODO: Consider using std::string_view when moving to C++
+  // TODO: Consider using std::string_view instead of llvm::StringRef
+  // when moving to C++20:
   if (llvm::StringRef{input}.starts_with("no-")) {
     input = input.substr(3);
   }

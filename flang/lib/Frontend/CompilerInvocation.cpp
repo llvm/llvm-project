@@ -1037,7 +1037,8 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // this has to change when other -W<opt>'s are supported.
   if (args.hasArg(clang::options::OPT_W_Joined)) {
     const auto &wArgs = args.getAllArgValues(clang::options::OPT_W_Joined);
-    // TODO: Consider using std::string_view when moving to C++
+    // TODO: Consider using std::string_view instead of llvm::StringRef
+    // when moving to C++20:
     for (const llvm::StringRef wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
