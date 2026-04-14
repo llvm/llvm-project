@@ -61,7 +61,8 @@ ModuleFile *ModuleManager::lookup(ModuleFileKey Key) const {
 std::unique_ptr<llvm::MemoryBuffer>
 ModuleManager::lookupBuffer(StringRef Name) {
   auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
-                                          /*CacheFailure=*/false);
+                                          /*CacheFailure=*/false,
+                                          /*IsText=*/false);
   if (!Entry)
     return nullptr;
   return std::move(InMemoryBuffers[*Entry]);
@@ -183,7 +184,8 @@ AddModuleResult ModuleManager::addModule(
       // should store this directly in the in-memory module cache.
       OptionalFileEntryRef Entry =
           FileMgr.getOptionalFileRef(FileName, /*OpenFile=*/true,
-                                     /*CacheFailure=*/false);
+                                     /*CacheFailure=*/false,
+                                     /*IsText=*/false);
       if (!Entry) {
         Result.K = AddModuleResult::Missing;
         return Result;
@@ -212,7 +214,8 @@ AddModuleResult ModuleManager::addModule(
           FileName == StringRef("-")
               ? FileMgr.getSTDIN()
               : FileMgr.getFileRef(FileName, /*OpenFile=*/true,
-                                   /*CacheFailure=*/false);
+                                   /*CacheFailure=*/false,
+                                   /*IsText=*/false);
       if (!Entry)
         return Entry.takeError();
 
@@ -223,7 +226,9 @@ AddModuleResult ModuleManager::addModule(
       // this allows the file to still be mmapped.
       return llvm::errorOrToExpected(
           FileMgr.getBufferForFile(*Entry, /*IsVolatile=*/false,
-                                   /*RequiresNullTerminator=*/false));
+                                   /*RequiresNullTerminator=*/false,
+                                   /*MaybeLimit=*/std::nullopt,
+                                   /*IsText=*/false));
     }();
 
     if (!Buf) {

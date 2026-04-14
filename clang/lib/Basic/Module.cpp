@@ -45,7 +45,8 @@ ModuleFileName::makeKey(FileManager &FileMgr) const {
       return ModuleFileKey(*ModuleCache, ImplicitModuleSuffix);
   } else {
     if (auto ModuleFile = FileMgr.getOptionalFileRef(Path, /*OpenFile=*/true,
-                                                     /*CacheFailure=*/false))
+                                                     /*CacheFailure=*/false,
+                                                     /*IsText=*/false))
       return ModuleFileKey(*ModuleFile);
   }
 
