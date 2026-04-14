@@ -5132,11 +5132,12 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     // On LSX platforms, rounding from v2f64 to v4f32 (after legalization from
     // v2f32) is scalarized. Add a customized v2f32 widening to convert it into
     // a target-specific LoongArchISD::VFCVT to optimize it.
-    if (VT == MVT::v2f32) {
-      SDValue Src = N->getOperand(0);
-      SDValue Undef = DAG.getUNDEF(Src.getValueType());
+    SDValue Op0 = N->getOperand(0);
+    EVT OpVT = Op0.getValueType();
+    if (OpVT == MVT::v2f64) {
+      SDValue Undef = DAG.getUNDEF(OpVT);
       SDValue Dst =
-          DAG.getNode(LoongArchISD::VFCVT, DL, MVT::v4f32, Undef, Src);
+          DAG.getNode(LoongArchISD::VFCVT, DL, MVT::v4f32, Undef, Op0);
       Results.push_back(Dst);
     }
     break;
