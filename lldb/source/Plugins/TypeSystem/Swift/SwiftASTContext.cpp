@@ -1864,12 +1864,12 @@ static void applyOverrideOptions(std::vector<std::string> &args,
   llvm::StringSet<> savedStrings;
   auto *log = GetLog(LLDBLog::Types);
   CallbackStream log_stream{[log](const char *Ptr, size_t Size) {
-    if (!log)
+    if (!log || !Ptr || Size == 0)
       return;
-    if (Ptr[Size] == '\n')
-      // Skip the newline because LLDB logging writes a newline.
-      Size--;
-    log->PutString({Ptr, Size});
+    llvm::StringRef string(Ptr, Size);
+    // Skip the newline because LLDB logging writes a newline.
+    string = string.rtrim('\n');
+    log->PutString(string);
   }};
 
   clang::driver::applyOverrideOptions(raw_args, overrideOpts.data(),
