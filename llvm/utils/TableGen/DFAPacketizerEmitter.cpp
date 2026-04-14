@@ -101,13 +101,7 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
   LLVM_DEBUG(dbgs() << "collectAllFuncUnits");
   LLVM_DEBUG(dbgs() << " (" << ProcModels.size() << " itineraries)\n");
 
-  struct RecordNameLess {
-    bool operator()(const Record *LHS, const Record *RHS) const {
-      return LHS->getName() < RHS->getName();
-    }
-  };
-
-  std::set<const Record *, RecordNameLess> ProcItinList;
+  std::set<const Record *, LessRecord> ProcItinList;
   for (const CodeGenProcModel *Model : ProcModels)
     ProcItinList.insert(Model->ItinsDef);
 
