@@ -914,27 +914,102 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
 
     const SmallVector<ShapedType, 3> types = {innerInputType, innerOutputType,
                                               outerOutputType};
-    if (llvm::any_of(types, [](const ShapedType type) {
-          return !type.getElementType().isInteger();
-        }))
-      return rewriter.notifyMatchFailure(castOp,
-                                         "only integer types are supported");
 
-    // Check inner cast is non-narrowing
-    const unsigned innerInputBitWidth = innerInputType.getElementTypeBitWidth();
-    if (innerInputBitWidth > innerOutputType.getElementTypeBitWidth())
+    if (llvm::any_of(types, [](const ShapedType type) {
+          const auto elemTy = type.getElementType();
+          // Support a specific set of floating point types since we need to be
+          // careful in not introducing unsupported type combinations
+          return !(elemTy.isInteger() ||
+                   llvm::isa<Float8E4M3FNType, Float8E5M2Type, BFloat16Type,
+                             Float16Type, Float32Type>(elemTy));
+        }))
+      return rewriter.notifyMatchFailure(
+          castOp, "only integer and f32, f16, bf16, f8E4M3FN, f8E5M2 types are "
+                  "supported");
+
+    if (llvm::isa<Float8E5M2Type>(innerInputType.getElementType()) &&
+        llvm::isa<Float8E4M3FNType>(outerOutputType.getElementType())) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing f8E5M2 -> f8E4M3FN casts which are not "
+                  "legal in TOSA");
+    }
+
+    if (llvm::isa<Float8E4M3FNType>(innerInputType.getElementType()) &&
+        llvm::isa<Float8E5M2Type>(outerOutputType.getElementType())) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing f8E4M3FN -> f8E5M2 casts which are not "
+                  "legal in TOSA");
+    }
+
+    // Check that the cast we're considering for removal is non-narrowing
+    if (isNarrowingCast(innerInputType, innerOutputType))
       return rewriter.notifyMatchFailure(castOp,
                                          "inner cast operation is narrowing");
-
-    // Check outer cast is non-narrowing from the inner cast input
-    if (innerInputBitWidth > outerOutputType.getElementTypeBitWidth())
-      return rewriter.notifyMatchFailure(castOp,
-                                         "outer cast operation is narrowing");
 
     rewriter.replaceOpWithNewOp<tosa::CastOp>(castOp, outerOutputType,
                                               innerCastInput);
 
     return success();
+  }
+
+  bool supportsNaN(const llvm::fltSemantics &semantics) const {
+    return semantics.nonFiniteBehavior !=
+           llvm::fltNonfiniteBehavior::FiniteOnly;
+  }
+
+  bool supportsInf(const llvm::fltSemantics &semantics) const {
+    return semantics.nonFiniteBehavior == llvm::fltNonfiniteBehavior::IEEE754;
+  }
+
+  bool isNarrowingCast(const ShapedType inType,
+                       const ShapedType outType) const {
+
+    if (inType.getElementType().isInteger() &&
+        outType.getElementType().isInteger()) {
+
+      const auto inTypeSignedness =
+          cast<IntegerType>(inType.getElementType()).getSignedness();
+      const auto outTypeSignedness =
+          cast<IntegerType>(outType.getElementType()).getSignedness();
+
+      return (inTypeSignedness != outTypeSignedness ||
+              inType.getElementTypeBitWidth() >
+                  outType.getElementTypeBitWidth());
+    }
+
+    if (inType.getElementType().isFloat() &&
+        outType.getElementType().isFloat()) {
+
+      FloatType inElemTy = cast<FloatType>(inType.getElementType());
+      FloatType outElemTy = cast<FloatType>(outType.getElementType());
+      llvm::fltSemantics inTypeSemantics = inElemTy.getFloatSemantics();
+      llvm::fltSemantics outTypeSemantics = outElemTy.getFloatSemantics();
+
+      // If the list of supported types needs to be updated in the future, the
+      // check down below will need to be revised, for example to account for
+      // unsigned floating point types, or types that use negative zero as the
+      // representation for NaN.
+      [[maybe_unused]] const auto isSupported = [](Type elemType) {
+        return llvm::isa<Float8E4M3FNType, Float8E5M2Type, BFloat16Type,
+                         Float16Type, Float32Type>(elemType);
+      };
+
+      assert(isSupported(inElemTy) &&
+             "unsupported input element type in isNarrowingCast");
+      assert(isSupported(outElemTy) &&
+             "unsupported output element type in isNarrowingCast");
+
+      return (
+          inTypeSemantics.maxExponent > outTypeSemantics.maxExponent ||
+          inTypeSemantics.minExponent < outTypeSemantics.minExponent ||
+          inTypeSemantics.precision > outTypeSemantics.precision ||
+          (supportsNaN(inTypeSemantics) && !supportsNaN(outTypeSemantics)) ||
+          (supportsInf(inTypeSemantics) && !supportsInf(outTypeSemantics)));
+    }
+
+    // While some cases of int -> float casts can be non-narrowing, consider
+    // them narrowing for the purposes of this optimization
+    return true;
   }
 };
 
