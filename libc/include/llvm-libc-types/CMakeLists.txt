@@ -126,6 +126,31 @@ add_header(union_sigval HDR union_sigval.h)
 add_header(siginfo_t HDR siginfo_t.h DEPENDS .union_sigval .pid_t .uid_t .clock_t)
 add_header(sig_atomic_t HDR sig_atomic_t.h)
 add_header(sigset_t HDR sigset_t.h DEPENDS libc.include.llvm-libc-macros.signal_macros)
+set(mcontext_deps)
+set(ucontext_deps .sigset_t .stack_t)
+
+if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+  file(COPY x86_64 DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+  add_header(
+    mcontext_t_arch
+    HDR
+      x86_64/mcontext_t.h
+  )
+  add_header(
+    ucontext_t_arch
+    HDR
+      x86_64/ucontext_t.h
+    DEPENDS
+      .mcontext_t_arch
+      .sigset_t
+      .stack_t
+  )
+  list(APPEND mcontext_deps .mcontext_t_arch)
+  list(APPEND ucontext_deps .ucontext_t_arch)
+endif()
+
+add_header(mcontext_t HDR mcontext_t.h DEPENDS ${mcontext_deps})
+add_header(ucontext_t HDR ucontext_t.h DEPENDS .mcontext_t ${ucontext_deps})
 add_header(__jmp_buf HDR __jmp_buf.h DEPENDS .sigset_t)
 add_header(jmp_buf HDR jmp_buf.h DEPENDS .__jmp_buf)
 add_header(sigjmp_buf HDR sigjmp_buf.h DEPENDS .__jmp_buf)
