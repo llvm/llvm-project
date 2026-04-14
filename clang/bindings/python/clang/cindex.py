@@ -1842,9 +1842,7 @@ class Cursor(Structure):
         """Returns True if the cursor refers to a C++ member function with an
         explicit object parameter (C++23).
         """
-        return bool(
-            conf.lib.clang_CXXMethod_isExplicitObjectMemberFunction(self)
-        )
+        return bool(conf.lib.clang_CXXMethod_isExplicitObjectMemberFunction(self))
 
     @cursor_null_guard
     def is_mutable_field(self) -> bool:
