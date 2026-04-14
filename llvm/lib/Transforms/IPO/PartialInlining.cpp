@@ -1101,10 +1101,10 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
     InstructionCost CurrentOutlinedRegionCost =
         ComputeRegionCost(RegionInfo.Region);
 
-    CodeExtractor CE(RegionInfo.Region, &DT, /*AggregateArgs*/ false,
-                     ClonedFuncBFI.get(), &BPI,
-                     LookupAC(*RegionInfo.EntryBlock->getParent()),
-                     /* AllowVarargs */ false, false, nullptr, "", false, false);
+    CodeExtractor CE(
+        RegionInfo.Region, &DT, /*AggregateArgs*/ false, ClonedFuncBFI.get(),
+        &BPI, LookupAC(*RegionInfo.EntryBlock->getParent()),
+        /* AllowVarargs */ false, false, nullptr, "", false, false);
 
     CE.findInputsOutputs(Inputs, Outputs, Sinks);
 
