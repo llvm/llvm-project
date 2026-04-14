@@ -13,8 +13,8 @@ svint8_t has_sme2p3_zt(svuint8_t indices) __arm_streaming __arm_in("zt0") {
   return svluti6_zt_s8(0, indices);
 }
 
-__attribute__((target("sme2p3")))
-svfloat16_t has_sme2p3_implied_sme2p2(svbool_t pg, svfloat16_t op)
+__attribute__((target("sme2p3,bf16")))
+svbfloat16x4_t has_sme2p3_lane(svbfloat16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return svcompact_f16(pg, op);
+  return svluti6_lane_bf16_x4(table, indices, 0);
 }
