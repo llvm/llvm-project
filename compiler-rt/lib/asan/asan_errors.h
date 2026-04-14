@@ -279,9 +279,9 @@ struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
   const char *function;
 
   ErrorStringFunctionMemoryRangesOverlap() = default;  // (*)
-  ErrorStringFunctionMemoryRangesOverlap(u32 tid, BufferedStackTrace *stack,
+  ErrorStringFunctionMemoryRangesOverlap(u32 tid, BufferedStackTrace* stack,
                                          uptr addr1, uptr length1, uptr addr2,
-                                         uptr length2, const char *function)
+                                         uptr length2, const char* function)
       : ErrorBase(tid),
         stack(stack),
         length1(length1),
