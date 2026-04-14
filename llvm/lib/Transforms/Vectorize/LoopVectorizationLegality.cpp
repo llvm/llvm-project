@@ -18,6 +18,8 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -1228,6 +1230,132 @@ bool LoopVectorizationLegality::canVectorizeIndirectUnsafeDependences() {
   return findHistogram(LI, SI, TheLoop, LAI->getPSE(), Histograms);
 }
 
+/// Check if an invariant-address load/store conflict can be resolved by
+/// hoisting the load and promoting to a scalar induction variable.
+///
+/// The load and store must access the same invariant address with a
+/// loop-invariant step between them (e.g., load counter, add step,
+/// store counter). Only SCEVConstant and SCEVUnknown steps are supported,
+/// matching the VPlan transform capabilities.
+static bool isInvariantLoadHoistable(LoadInst *L, StoreInst *S, const Loop *Lp,
+                                     MemorySSA *MSSA, AAResults *AA,
+                                     ScalarEvolution &SE,
+                                     const SCEV **StepOut) {
+  assert(L && S);
+  assert(Lp->isLoopInvariant(L->getPointerOperand()));
+
+  if (!MSSA)
+    return false;
+
+  if (L->isVolatile() || S->isVolatile())
+    return false;
+
+  if (L->getType() != S->getValueOperand()->getType())
+    return false;
+
+  // The load and store must access the same address.
+  MemoryLocation LoadLoc = MemoryLocation::get(L);
+  if (AA->alias(LoadLoc, MemoryLocation::get(S)) != AliasResult::MustAlias)
+    return false;
+
+  // Use MemorySSA to verify no other clobber of the load's address exists in
+  // the loop besides the corresponding store.
+  MemoryAccess *LoadMA = MSSA->getMemoryAccess(L);
+  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(LoadMA);
+  while (auto *MD = dyn_cast<MemoryUseOrDef>(Clobber)) {
+    Instruction *DefInst = MD->getMemoryInst();
+    if (!DefInst)
+      return false;
+    // Skip the expected store — it's the one we're trying to promote.
+    if (DefInst == S) {
+      Clobber = MD->getDefiningAccess();
+      continue;
+    }
+    // Any other must-alias clobber means the pattern is invalid.
+    if (AA->alias(MemoryLocation::get(DefInst), LoadLoc) ==
+        AliasResult::MustAlias)
+      return false;
+    Clobber = MD->getDefiningAccess();
+  }
+
+  // Similarly check that no other must-alias clobber exists for the store.
+  MemoryAccess *StoreMA = MSSA->getMemoryAccess(S);
+  MemoryAccess *StoreClobber =
+      MSSA->getWalker()->getClobberingMemoryAccess(StoreMA);
+  while (!isa<MemoryPhi>(StoreClobber)) {
+    auto *MD = dyn_cast<MemoryUseOrDef>(StoreClobber);
+    if (!MD || !MD->getMemoryInst())
+      return false;
+    Instruction *DefInst = MD->getMemoryInst();
+    // Skip the load — it's part of our pattern (loads are MemoryUses, but
+    // check defensively).
+    if (DefInst == L) {
+      StoreClobber = MD->getDefiningAccess();
+      continue;
+    }
+    if (AA->alias(MemoryLocation::get(DefInst), LoadLoc) ==
+        AliasResult::MustAlias)
+      return false;
+    StoreClobber = MD->getDefiningAccess();
+  }
+
+  // Compute the step: StoreSCEV - LoadSCEV must be loop-invariant.
+  if (!SE.isSCEVable(S->getValueOperand()->getType()))
+    return false;
+
+  const SCEV *LoadSCEV = SE.getUnknown(L);
+  const SCEV *StoreSCEV = SE.getSCEV(S->getValueOperand());
+  const SCEV *Step = SE.getMinusSCEV(StoreSCEV, LoadSCEV);
+
+  if (isa<SCEVCouldNotCompute>(Step) || !SE.isLoopInvariant(Step, Lp))
+    return false;
+
+  // Only accept step expressions that the VPlan transform can materialize
+  // as live-in values: constants or simple SSA values.
+  if (!isa<SCEVConstant>(Step) && !isa<SCEVUnknown>(Step))
+    return false;
+
+  // Collect intermediate instructions between load and store that have no
+  // external users (they will be dead after promotion).
+  SmallPtrSet<Instruction *, 4> Slice;
+  SmallVector<Instruction *, 4> Worklist;
+
+  auto EnqueueOperand = [&](Value *V) {
+    auto *Inst = dyn_cast<Instruction>(V);
+    if (!Inst || isa<Constant>(V) || isa<Argument>(V))
+      return;
+    if (!Lp->contains(Inst))
+      return;
+    if (Slice.insert(Inst).second)
+      Worklist.push_back(Inst);
+  };
+
+  EnqueueOperand(S->getValueOperand());
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+    for (Value *Op : I->operands())
+      EnqueueOperand(Op);
+  }
+
+  // Verify no instruction in the slice has users outside the slice + store.
+  for (Instruction *I : Slice) {
+    for (Use &U : I->uses()) {
+      auto *UserInst = dyn_cast<Instruction>(U.getUser());
+      if (!UserInst)
+        return false;
+      if (isa<DbgInfoIntrinsic>(UserInst))
+        continue;
+      if (!Slice.count(UserInst) && UserInst != S)
+        return false;
+    }
+  }
+
+  if (StepOut)
+    *StepOut = Step;
+
+  return true;
+}
+
 bool LoopVectorizationLegality::canVectorizeMemory() {
   LAI = &LAIs.getInfo(*TheLoop);
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
@@ -1252,12 +1380,48 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   }
 
   if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
-    reportVectorizationFailure("We don't allow storing to uniform addresses",
-                               "write to a loop invariant address could not "
-                               "be vectorized",
-                               "CantVectorizeStoreToLoopInvariantAddress", ORE,
-                               TheLoop);
-    return false;
+    // Try to identify memory induction variables: load/step/store patterns to
+    // invariant addresses that can be promoted to scalar IVs.
+    // MSSA is obtained via getCachedResult in the pass, so it may be null
+    // if no prior pass computed it.
+    bool AllHoistable = true;
+    ScalarEvolution *SE = PSE.getSE();
+    for (StoreInst *SI : LAI->getStoresToInvariantAddresses()) {
+      Value *Ptr = SI->getPointerOperand();
+      if (!TheLoop->isLoopInvariant(Ptr))
+        continue;
+      MemoryLocation StoreLoc = MemoryLocation::get(SI);
+      // Find loads from the same invariant address in the loop.
+      for (BasicBlock *BB : TheLoop->blocks()) {
+        for (Instruction &I : *BB) {
+          auto *LI = dyn_cast<LoadInst>(&I);
+          if (!LI || !TheLoop->isLoopInvariant(LI->getPointerOperand()))
+            continue;
+          // Use alias analysis instead of pointer identity to handle
+          // bitcasts and GEPs that alias the same address.
+          if (AA->alias(MemoryLocation::get(LI), StoreLoc) !=
+              AliasResult::MustAlias)
+            continue;
+          const SCEV *Step = nullptr;
+          if (isInvariantLoadHoistable(LI, SI, TheLoop, MSSA, AA, *SE, &Step)) {
+            MemoryInductions.push_back({LI, SI, Step});
+          } else {
+            AllHoistable = false;
+          }
+        }
+      }
+    }
+    if (!AllHoistable || MemoryInductions.empty()) {
+      MemoryInductions.clear();
+      reportVectorizationFailure("We don't allow storing to uniform addresses",
+                                 "write to a loop invariant address could not "
+                                 "be vectorized",
+                                 "CantVectorizeStoreToLoopInvariantAddress",
+                                 ORE, TheLoop);
+      return false;
+    }
+    // All load/store conflicts to invariant addresses are hoistable memory IVs.
+    // Allow vectorization; the VPlan transform will promote them.
   }
 
   // We can vectorize stores to invariant address when final reduction value is
