@@ -8766,16 +8766,14 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
 }
 
 /// Fold: fabs(uitofp(a) - uitofp(b)) pred C --> a == b
-/// where 'pred' is olt, ole, ult, or ule, and C is a positive, Non-NaN float
+/// where 'pred' is olt, ult, ogt, ugt, oge or uge and C is a positive, Non-NaN float
 /// when the uitofp casts are exact and C is in the valid range.
 ///
 /// Since exact uitofp means distinct integers map to distinct floats, the only
 /// values fabs(uitofp(a) - uitofp(b)) can take are {0.0, 1.0, 2.0, ...}.
 /// There are no values in the open interval (0, 1), so:
 ///   fabs(...) <  C  where 0 < C <= 1.0  -->  a == b  (strict lt: C=1.0 ok)
-///   fabs(...) <= C  where 0 < C <  1.0  -->  a == b  (le: C must be < 1.0,
-///                                             since le 1.0 is true when
-///                                             diff=1)
+//    fabs(..) >= C where C >= 1.0 -> a != b 
 ///
 /// The same logic applies to sitofp.
 static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
@@ -8789,8 +8787,9 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
 
   FCmpInst::Predicate Pred = I.getPredicate();
   bool IsStrictLt = Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT;
-  bool IsLe = Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE;
-  if (!IsStrictLt && !IsLe)
+  bool IsStrictGt = Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT;
+  bool IsGe       = Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE;
+  if (!IsStrictLt && !IsStrictGt && !IsGe)
     return nullptr;
 
   if (C->isNaN() || C->isZero() || C->isNegative())
@@ -8801,11 +8800,11 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
 
   // For strict-lt (olt/ult): C must be in (0, 1.0] -- C == 1.0 is fine since
   //   the next possible value after 0.0 is 1.0, and < 1.0 excludes it.
-  // For le (ole/ule): C must be in (0, 1.0) -- C == 1.0 is NOT valid since
-  //   fabs(...) == 1.0 when a and b differ by 1, and <= 1.0 would be true.
   if (IsStrictLt && Cmp == APFloat::cmpGreaterThan)
     return nullptr;
-  if (IsLe && Cmp != APFloat::cmpLessThan)
+  if (IsGe && Cmp == APFloat::cmpGreaterThan)
+    return nullptr;
+  if (IsStrictGt && Cmp != APFloat::cmpLessThan)
     return nullptr;
 
   // Match: fsub(uitofp(A), uitofp(B)) where both casts are uitofp or sitofp
@@ -8833,8 +8832,9 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
   if ((unsigned)MantissaWidth < IntWidth)
     return nullptr;
 
-  // fabs(uitofp(a) - uitofp(b)) < C (0 < C <= 1) --> a == b
-  return new ICmpInst(ICmpInst::ICMP_EQ, A, B);
+  ICmpInst::Predicate ResultPred =
+    (IsStrictLt) ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+  return new ICmpInst(ResultPred, A, B);
 }
 
 static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
