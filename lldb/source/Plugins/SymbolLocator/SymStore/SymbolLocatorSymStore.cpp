@@ -67,6 +67,12 @@ public:
       return s->GetCurrentValue();
     return SymbolLocatorSymStore::GetSystemDefaultCachePath();
   }
+  
+  uint64_t GetTimeout() const {
+    const uint32_t idx = ePropertyTimeout;
+    return GetPropertyAtIndexAs<uint64_t>(
+        idx, g_symbollocatorsymstore_properties[idx].default_uint_value);
+  }
 };
 
 } // namespace
@@ -253,9 +259,8 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
   }
 
   llvm::HTTPClient client;
-  // TODO: Since PDBs can be huge, we should distinguish between resolve,
-  // connect, send and receive.
-  client.setTimeout(std::chrono::seconds(60));
+  client.setTimeout(
+      std::chrono::seconds(GetGlobalPluginProperties().GetTimeout()));
 
   llvm::StreamedHTTPResponseHandler Handler(
       [dest = tmp_file.str().str()]()

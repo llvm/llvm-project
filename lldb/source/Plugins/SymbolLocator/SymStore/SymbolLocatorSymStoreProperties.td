@@ -2,10 +2,12 @@ include "../../../../include/lldb/Core/PropertiesBase.td"
 
 let Definition = "symbollocatorsymstore", Path = "plugin.symbol-locator.symstore" in {
   def SymStoreURLs : Property<"urls", "Array">,
-                     ElementType<"String">,
-                     Desc<"List of local symstore directories to query after "
-                          "_NT_SYMBOL_PATH">;
+    ElementType<"String">,
+    Desc<"List of local symstore directories to query after _NT_SYMBOL_PATH">;
   def CachePath : Property<"cache", "String">,
     DefaultStringValue<"">,
     Desc<"Default cache directory for downloaded symbol files. Used when no cache is specified in _NT_SYMBOL_PATH.">;
+  def Timeout : Property<"timeout", "UInt64">,
+    DefaultUnsignedValue<60>,
+    Desc<"Timeout in seconds for send/receive in HTTP connections to symbol servers.">;
 }
