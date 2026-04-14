@@ -64,7 +64,7 @@ define void @loop_invariant_store(ptr %p, i64 %a, i8 %b) {
 entry:
   br label %loop.header
 
-loop.header:                                      ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %iv.next = add i32 %iv, 1
   %cmp.slt = icmp slt i32 %iv, 2
@@ -73,11 +73,11 @@ loop.header:                                      ; preds = %loop.latch, %entry
   %trunc.i32 = trunc i64 %ashr to i32
   br i1 %cmp.slt, label %cond.false, label %loop.latch
 
-cond.false:                                       ; preds = %loop.header
+cond.false:
   %zext = zext i8 %b to i32
   br label %loop.latch
 
-loop.latch:                                       ; preds = %cond.false, %loop.header
+loop.latch:
   %cond = phi i32 [ %trunc.i32, %loop.header ], [ %zext, %cond.false ]
   %shl.i32 = shl i32 %cond, 8
   %trunc = trunc i32 %shl.i32 to i8
@@ -85,7 +85,7 @@ loop.latch:                                       ; preds = %cond.false, %loop.h
   %exitcond = icmp slt i32 %iv, 8
   br i1 %exitcond, label %loop.header, label %exit
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 
@@ -161,7 +161,7 @@ define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 entry:
   br label %loop.header
 
-loop.header:                                      ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %iv.next = add i8 %iv, 1
   %cmp.slt = icmp slt i8 %iv, 2
@@ -170,11 +170,11 @@ loop.header:                                      ; preds = %loop.latch, %entry
   %trunc.i32 = trunc i64 %ashr to i32
   br i1 %cmp.slt, label %cond.false, label %loop.latch
 
-cond.false:                                       ; preds = %loop.header
+cond.false:
   %zext = zext i8 %b to i32
   br label %loop.latch
 
-loop.latch:                                       ; preds = %cond.false, %loop.header
+loop.latch:
   %cond = phi i32 [ %trunc.i32, %loop.header ], [ %zext, %cond.false ]
   %shl.i32 = shl i32 %cond, 8
   %trunc = trunc i32 %shl.i32 to i8
@@ -184,7 +184,7 @@ loop.latch:                                       ; preds = %cond.false, %loop.h
   %ec = icmp eq i8 %iv, 8
   br i1 %ec, label %exit, label %loop.header
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 
@@ -211,21 +211,21 @@ entry:
   %a.conv = sitofp i32 %a to float
   br label %loop.header
 
-loop.header:                                      ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %iv.next = add i32 %iv, 1
   %cmp.slt = icmp slt i32 %iv, 2
   br i1 %cmp.slt, label %cond.false, label %loop.latch
 
-cond.false:                                       ; preds = %loop.header
+cond.false:
   br label %loop.latch
 
-loop.latch:                                       ; preds = %cond.false, %loop.header
+loop.latch:
   store float %a.conv, ptr %p
   %exitcond = icmp slt i32 %iv, 8
   br i1 %exitcond, label %loop.header, label %exit
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 

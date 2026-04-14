@@ -252,7 +252,7 @@ llvm::Error PseudoConsole::DrainInitSequences() {
         std::error_code(GetLastError(), std::system_category()),
         "Failed to get the 'COMSPEC' environment variable");
 
-  std::wstring cmdline_str = std::wstring(comspec) + L" /c 'echo foo && exit'";
+  std::wstring cmdline_str = std::wstring(comspec) + L" /c cls";
   std::vector<wchar_t> cmdline(cmdline_str.begin(), cmdline_str.end());
   cmdline.push_back(L'\0');
 

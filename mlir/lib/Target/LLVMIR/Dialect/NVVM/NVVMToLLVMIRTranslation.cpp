@@ -705,11 +705,28 @@ public:
     return failure();
   }
 
-  /// Attaches module-level metadata for functions marked as kernels.
+  /// Attaches module-level metadata for functions marked as kernels
+  /// and managed annotations for global variables.
   LogicalResult
   amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
                  NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
+    if (auto globalOp = dyn_cast<LLVM::GlobalOp>(op)) {
+      if (attribute.getName() == NVVM::NVVMDialect::getManagedAttrName()) {
+        auto *gv = cast<llvm::GlobalVariable>(
+            moduleTranslation.lookupGlobal(globalOp));
+        llvm::Module *m = gv->getParent();
+        llvm::LLVMContext &ctx = m->getContext();
+        llvm::NamedMDNode *md = m->getOrInsertNamedMetadata("nvvm.annotations");
+        md->addOperand(llvm::MDNode::get(
+            ctx, {llvm::ConstantAsMetadata::get(gv),
+                  llvm::MDString::get(ctx, "managed"),
+                  llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                      llvm::Type::getInt32Ty(ctx), 1))}));
+      }
+      return success();
+    }
+
     auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
     if (!func)
       return failure();

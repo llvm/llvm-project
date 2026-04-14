@@ -529,7 +529,7 @@ void LVElement::printFileIndex(raw_ostream &OS, bool Full) const {
 
       OS << "  {Source} ";
       if (getInvalidFilename())
-        OS << format("[0x%08x]\n", Index);
+        OS << formatv("[{0:x8}]\n", Index);
       else
         OS << formattedName(getPathname()) << "\n";
     }

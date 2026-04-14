@@ -1,9 +1,11 @@
 // Test clang-ssaf-format --list output without any loaded plugins.
 
 // RUN: clang-ssaf-format --list \
-// RUN:   | FileCheck %s
+// RUN:   | FileCheck %s --match-full-lines
 
 // CHECK: Registered serialization formats:
 // CHECK-EMPTY:
-// CHECK-NEXT:   1. json - JSON serialization format
-// CHECK-NEXT:      Analyses: (none)
+// CHECK-DAG: [[NthFormat:[0-9]+]]. json - JSON serialization format
+// CHECK-DAG:     Analyses:
+// CHECK-DAG:         [[NthFormat]].{{[0-9]+}}. CallGraph - JSON Format info for CallGraph summary
+// CHECK-DAG:         [[NthFormat]].{{[0-9]+}}. UnsafeBufferUsage - JSON Format info for UnsafeBufferUsageEntitySummary

@@ -245,11 +245,22 @@ static bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
   return false;
 }
 
+static bool isLogicalOperatorResult(const ImplicitCastExpr *Cast) {
+  const Expr *SubExpr = Cast->getSubExpr()->IgnoreParenImpCasts();
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(SubExpr))
+    return BinOp->isLogicalOp();
+  if (const auto *UnOp = dyn_cast<UnaryOperator>(SubExpr))
+    return UnOp->getOpcode() == UO_LNot;
+  return false;
+}
+
 ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AllowIntegerConditions(Options.get("AllowIntegerConditions", false)),
       AllowPointerConditions(Options.get("AllowPointerConditions", false)),
+      AllowLogicalOperatorConversion(
+          Options.get("AllowLogicalOperatorConversion", false)),
       UseUpperCaseLiteralSuffix(
           Options.get("UseUpperCaseLiteralSuffix", false)) {}
 
@@ -257,6 +268,8 @@ void ImplicitBoolConversionCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowIntegerConditions", AllowIntegerConditions);
   Options.store(Opts, "AllowPointerConditions", AllowPointerConditions);
+  Options.store(Opts, "AllowLogicalOperatorConversion",
+                AllowLogicalOperatorConversion);
   Options.store(Opts, "UseUpperCaseLiteralSuffix", UseUpperCaseLiteralSuffix);
 }
 
@@ -379,6 +392,12 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
 
   if (AllowIntegerConditions && Cast->getCastKind() == CK_IntegralToBoolean &&
       isCastAllowedInCondition(Cast, Context)) {
+    return;
+  }
+
+  if (AllowLogicalOperatorConversion &&
+      Cast->getCastKind() == CK_IntegralToBoolean &&
+      isLogicalOperatorResult(Cast)) {
     return;
   }
 

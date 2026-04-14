@@ -288,3 +288,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
 
   return ret;
 }
+
+void BitcodeCompiler::setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs) {
+  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
+}

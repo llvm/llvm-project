@@ -4904,6 +4904,17 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
+  // If we need to split the memory operation, we will also need to split the
+  // mask. This will likely lead to overestimating the cost in some cases if
+  // multiple memory operations use the same mask, but we often don't have
+  // enough context to figure that out here.
+  //
+  // If the elements being loaded are bytes then the mask will already be split,
+  // since the number of bits in a P register matches the number of bytes in a
+  // Z register.
+  if (LT.first > 1 && LT.second.getScalarSizeInBits() > 8)
+    return LT.first * 2;
+
   return LT.first;
 }
 
@@ -6029,14 +6040,20 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       // the extends in the IR are still counted. This can be fixed
       // after https://github.com/llvm/llvm-project/pull/147302 has landed.
       return Cost;
-    // f16 -> f32 is natively supported for fdot
-    if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1()) &&
-        AccumLT.second.getScalarType() == MVT::f32 &&
-        InputLT.second.getScalarType() == MVT::f16 &&
-        AccumLT.second.getVectorMinNumElements() == 4 &&
-        InputLT.second.getVectorMinNumElements() == 8)
+    // i8 -> i16 is natively supported with SVE2p3
+    if (AccumLT.second.getScalarType() == MVT::i16 &&
+        InputLT.second.getScalarType() == MVT::i8 &&
+        (ST->hasSVE2p3() || ST->hasSME2p3()))
       return Cost;
   }
+
+  // f16 -> f32 is natively supported for fdot using either
+  // SVE or NEON instruction.
+  if (Opcode == Instruction::FAdd && !IsSub &&
+      IsSupported(ST->hasSME2() || ST->hasSVE2p1(), ST->hasF16F32DOT()) &&
+      AccumLT.second.getScalarType() == MVT::f32 &&
+      InputLT.second.getScalarType() == MVT::f16)
+    return Cost;
 
   // For a ratio of 2, we can use *mlal top/bottom instructions.
   if (Ratio == 2 && !IsSub) {
@@ -6056,34 +6073,14 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       return Cost * 2;
   }
 
-  // Returns cost of expanding the partial reduction in ISel.
-  auto GetExpandCost = [&]() -> InstructionCost {
-    Type *ExtVectorType =
-        VectorType::get(AccumVectorType->getElementType(), VF);
-    auto ExtendCostA = getCastInstrCost(
-        TTI::getOpcodeForPartialReductionExtendKind(OpAExtend), ExtVectorType,
-        InputVectorType, TTI::CastContextHint::None, CostKind);
-    auto RedOpCost =
-        Ratio * getArithmeticInstrCost(Opcode, AccumVectorType, CostKind);
-    if (!BinOp)
-      return ExtendCostA + RedOpCost;
+  InstructionCost ExpandCost = BaseT::getPartialReductionCost(
+      Opcode, InputTypeA, InputTypeB, AccumType, VF, OpAExtend, OpBExtend,
+      BinOp, CostKind, FMF);
 
-    auto ExtendCostB = getCastInstrCost(
-        TTI::getOpcodeForPartialReductionExtendKind(OpBExtend), ExtVectorType,
-        InputVectorType, TTI::CastContextHint::None, CostKind);
-    return ExtendCostA + ExtendCostB + RedOpCost +
-           getArithmeticInstrCost(*BinOp, ExtVectorType, CostKind);
-  };
-
-  if (IsSub) {
-    // Slightly lower the cost of a sub reduction so that it can be considered
-    // as candidate for 'cdot' operations. This is a somewhat arbitrary number,
-    // because we don't yet model these operations directly.
-    return (8 * GetExpandCost()) / 10;
-  }
-
-  // By default, assume the operation is expanded.
-  return GetExpandCost();
+  // Slightly lower the cost of a sub reduction so that it can be considered
+  // as candidate for 'cdot' operations. This is a somewhat arbitrary number,
+  // because we don't yet model these operations directly.
+  return ExpandCost.isValid() && IsSub ? ((8 * ExpandCost) / 10) : ExpandCost;
 }
 
 InstructionCost

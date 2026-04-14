@@ -3,6 +3,7 @@
 include "mlir/IR/OpBase.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Bindings/Python/PythonBindings.td"
 
 // CHECK: @_ods_cext.register_dialect
 // CHECK: class _Dialect(_ods_ir.Dialect):
@@ -14,6 +15,15 @@ def Test_Dialect : Dialect {
 
 class TestOp<string mnemonic, list<Trait> traits = []> :
     Op<Test_Dialect, mnemonic, traits>;
+
+def TestCustomAttr
+    : DialectAttr<Test_Dialect,
+                  CPred<"::llvm::isa<::test::CustomAttr>($_self)">,
+                  "custom attribute"> {
+  let storageType = "::test::CustomAttr";
+}
+
+def : PythonAttrType<"TestCustomAttr", "test.CustomType">;
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK-LABEL: class AttrSizedOperandsOp(_ods_ir.OpView):
@@ -217,6 +227,12 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
 // CHECK:   return AttributedOpWithOperands(_gen_arg_0=_gen_arg_0, _gen_arg_2=_gen_arg_2, in_=in_, is_=is_, loc=loc, ip=ip)
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK-LABEL: class CustomAttrOp(_ods_ir.OpView):
+def CustomAttrOp : TestOp<"custom_attr"> {
+  // CHECK: def __init__(self, custom: _Union[test.CustomType, _ods_ir.Attribute], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
+  let arguments = (ins TestCustomAttr:$custom);
+}
+
 // CHECK-LABEL: class DefaultValuedAttrsOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.default_valued_attrs"
 def DefaultValuedAttrsOp : TestOp<"default_valued_attrs"> {

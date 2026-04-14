@@ -858,16 +858,15 @@ define { i64, i64 } @avgr_8_u16(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, 
 ; AVX2-NEXT:  entry:
 ; AVX2-NEXT:    [[TMP0:%.*]] = trunc i64 [[A_COERCE0:%.*]] to i32
 ; AVX2-NEXT:    [[A_SROA_3_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[A_COERCE0]], 32
-; AVX2-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[A_COERCE0]], i64 0
-; AVX2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[B_COERCE1:%.*]], i64 1
-; AVX2-NEXT:    [[TMP19:%.*]] = lshr <2 x i64> [[TMP18]], <i64 48, i64 32>
+; AVX2-NEXT:    [[A_SROA_4_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[A_COERCE0]], 48
 ; AVX2-NEXT:    [[TMP1:%.*]] = trunc i64 [[A_COERCE1:%.*]] to i32
 ; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[B_COERCE0:%.*]], i64 0
 ; AVX2-NEXT:    [[TMP20:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[A_COERCE1]], i64 1
 ; AVX2-NEXT:    [[TMP21:%.*]] = lshr <2 x i64> [[TMP20]], <i64 48, i64 32>
-; AVX2-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP18]], i64 [[B_COERCE0]], i64 0
+; AVX2-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP20]], i64 [[B_COERCE1:%.*]], i64 1
 ; AVX2-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP3]] to <2 x i32>
 ; AVX2-NEXT:    [[B_SROA_3_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[B_COERCE0]], 32
+; AVX2-NEXT:    [[B_SROA_8_8_EXTRACT_SHIFT:%.*]] = lshr i64 [[B_COERCE1]], 32
 ; AVX2-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP20]], i64 [[A_COERCE0]], i64 0
 ; AVX2-NEXT:    [[TMP7:%.*]] = and <2 x i64> [[TMP6]], splat (i64 65535)
 ; AVX2-NEXT:    [[TMP8:%.*]] = and <2 x i64> [[TMP3]], splat (i64 65535)
@@ -885,10 +884,11 @@ define { i64, i64 } @avgr_8_u16(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, 
 ; AVX2-NEXT:    [[TMP16:%.*]] = add nuw nsw <2 x i32> [[TMP11]], splat (i32 1)
 ; AVX2-NEXT:    [[TMP17:%.*]] = add nuw nsw <2 x i32> [[TMP16]], [[TMP12]]
 ; AVX2-NEXT:    [[TMP34:%.*]] = and <2 x i64> [[TMP21]], <i64 -1, i64 65535>
-; AVX2-NEXT:    [[TMP35:%.*]] = add nuw nsw <2 x i64> [[TMP19]], <i64 1, i64 poison>
-; AVX2-NEXT:    [[TMP36:%.*]] = and <2 x i64> [[TMP19]], <i64 poison, i64 65535>
-; AVX2-NEXT:    [[TMP25:%.*]] = shufflevector <2 x i64> [[TMP35]], <2 x i64> [[TMP36]], <2 x i32> <i32 0, i32 3>
+; AVX2-NEXT:    [[CONV2_6:%.*]] = and i64 [[B_SROA_8_8_EXTRACT_SHIFT]], 65535
+; AVX2-NEXT:    [[ADD_3:%.*]] = add nuw nsw i64 [[A_SROA_4_0_EXTRACT_SHIFT]], 1
 ; AVX2-NEXT:    [[TMP37:%.*]] = add nuw nsw <2 x i64> [[TMP34]], <i64 0, i64 1>
+; AVX2-NEXT:    [[TMP35:%.*]] = insertelement <2 x i64> poison, i64 [[ADD_3]], i64 0
+; AVX2-NEXT:    [[TMP25:%.*]] = insertelement <2 x i64> [[TMP35]], i64 [[CONV2_6]], i64 1
 ; AVX2-NEXT:    [[TMP38:%.*]] = add nuw nsw <2 x i64> [[TMP25]], [[TMP37]]
 ; AVX2-NEXT:    [[ADD_7:%.*]] = add nuw nsw i64 [[A_SROA_9_8_EXTRACT_SHIFT]], 1
 ; AVX2-NEXT:    [[ADD_2:%.*]] = add nuw nsw i64 [[CONV_2]], 1
