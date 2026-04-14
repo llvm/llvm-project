@@ -64,7 +64,7 @@ class VAListChecker : public Checker<check::PreCall, check::PreStmt<VAArgExpr>,
     int ParamIndex;
   };
   static const SmallVector<VAListAccepter, 15> VAListAccepters;
-  static const CallDescription VaStart, VaEnd, VaCopy;
+  static const CallDescription VaStart, VaStartC23, VaEnd, VaCopy;
 
 public:
   void checkPreStmt(const VAArgExpr *VAA, CheckerContext &C) const;
@@ -136,13 +136,14 @@ const SmallVector<VAListChecker::VAListAccepter, 15>
 const CallDescription VAListChecker::VaStart(CDM::CLibrary,
                                              {"__builtin_va_start"}, /*Args=*/2,
                                              /*Params=*/1),
+    VAListChecker::VaStartC23(CDM::CLibrary, {"__builtin_c23_va_start"}),
     VAListChecker::VaCopy(CDM::CLibrary, {"__builtin_va_copy"}, 2),
     VAListChecker::VaEnd(CDM::CLibrary, {"__builtin_va_end"}, 1);
 } // end anonymous namespace
 
 void VAListChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
-  if (VaStart.matches(Call))
+  if (VaStart.matches(Call) || VaStartC23.matches(Call))
     checkVAListStartCall(Call, C);
   else if (VaCopy.matches(Call))
     checkVAListCopyCall(Call, C);
