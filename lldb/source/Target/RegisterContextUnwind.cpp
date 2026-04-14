@@ -37,7 +37,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
-
+#include "llvm/Support/FormatAdapters.h"
 #include <cassert>
 #include <memory>
 
@@ -59,6 +59,16 @@ static bool CallFrameAddressIsValid(ABISP abi_sp, lldb::addr_t cfa) {
     return abi_sp->CallFrameAddressIsValid(cfa);
   return cfa != 0 && cfa != 1;
 }
+
+#define UNWIND_LOG_IMPL(LOG_FN, log, ...)                                      \
+  LOG_FN(log, "{0}th{1}/fr{2} {3}",                                            \
+         llvm::indent(std::min(m_frame_number, 100U)), m_thread.GetIndexID(),  \
+         m_frame_number, llvm::formatv(__VA_ARGS__))
+
+#define UNWIND_LOG(log, ...) UNWIND_LOG_IMPL(LLDB_LOG, log, __VA_ARGS__)
+
+#define UNWIND_LOG_VERBOSE(log, ...)                                           \
+  UNWIND_LOG_IMPL(LLDB_LOG_VERBOSE, log, __VA_ARGS__)
 
 RegisterContextUnwind::RegisterContextUnwind(Thread &thread,
                                              const SharedPtr &next_frame,
@@ -127,7 +137,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
 
   if (reg_ctx_sp.get() == nullptr) {
     m_frame_type = eNotAValidFrame;
-    UnwindLogMsg("frame does not have a register context");
+    UNWIND_LOG(log, "frame does not have a register context");
     return;
   }
 
@@ -135,7 +145,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
 
   if (current_pc == LLDB_INVALID_ADDRESS) {
     m_frame_type = eNotAValidFrame;
-    UnwindLogMsg("frame does not have a pc");
+    UNWIND_LOG(log, "frame does not have a pc");
     return;
   }
 
@@ -153,7 +163,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
       LanguageRuntime::GetRuntimeUnwindPlan(m_thread, this,
                                             m_behaves_like_zeroth_frame);
   if (lang_runtime_plan_sp.get()) {
-    UnwindLogMsg("This is an async frame");
+    UNWIND_LOG(log, "This is an async frame");
   }
 
   // Initialize m_current_pc, an Address object, based on current_pc, an
@@ -165,7 +175,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
   // hope we can unwind past this frame.
   ModuleSP pc_module_sp(m_current_pc.GetModule());
   if (!m_current_pc.IsValid() || !pc_module_sp) {
-    UnwindLogMsg("using architectural default unwind method");
+    UNWIND_LOG(log, "using architectural default unwind method");
   }
 
   m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx);
@@ -224,14 +234,14 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     row_register_kind = lang_runtime_plan_sp->GetRegisterKind();
     if (!ReadFrameAddress(row_register_kind, active_row->GetCFAValue(),
                           m_cfa)) {
-      UnwindLogMsg("Cannot set cfa");
+      UNWIND_LOG(log, "Cannot set cfa");
     } else {
       m_full_unwind_plan_sp = lang_runtime_plan_sp;
       if (log) {
         StreamString active_row_strm;
         active_row->Dump(active_row_strm, lang_runtime_plan_sp.get(), &m_thread,
                          m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-        UnwindLogMsg("async active row: %s", active_row_strm.GetData());
+        UNWIND_LOG(log, "async active row: {0}", active_row_strm.GetString());
       }
       UnwindLogMsg("m_cfa = 0x%" PRIx64 " m_afa = 0x%" PRIx64, m_cfa, m_afa);
       UnwindLogMsg(
@@ -254,12 +264,12 @@ void RegisterContextUnwind::InitializeZerothFrame() {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-      UnwindLogMsg("%s", active_row_strm.GetData());
+      UNWIND_LOG(log, "{0}", active_row_strm.GetString());
     }
   }
 
   if (!active_row) {
-    UnwindLogMsg("could not find an unwindplan row for this frame's pc");
+    UNWIND_LOG(log, "could not find an unwindplan row for this frame's pc");
     m_frame_type = eNotAValidFrame;
     return;
   }
@@ -287,7 +297,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
         cfa_status = true;
     }
     if (!cfa_status) {
-      UnwindLogMsg("could not read CFA value for first frame.");
+      UNWIND_LOG(log, "could not read CFA value for first frame.");
       m_frame_type = eNotAValidFrame;
       return;
     }
@@ -295,8 +305,8 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     ReadFrameAddress(row_register_kind, active_row->GetAFAValue(), m_afa);
 
   if (m_cfa == LLDB_INVALID_ADDRESS && m_afa == LLDB_INVALID_ADDRESS) {
-    UnwindLogMsg(
-        "could not read CFA or AFA values for first frame, not valid.");
+    UNWIND_LOG(log,
+               "could not read CFA or AFA values for first frame, not valid.");
     m_frame_type = eNotAValidFrame;
     return;
   }
@@ -319,20 +329,20 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   Log *log = GetLog(LLDBLog::Unwind);
   if (IsFrameZero()) {
     m_frame_type = eNotAValidFrame;
-    UnwindLogMsg("non-zeroth frame tests positive for IsFrameZero -- that "
-                 "shouldn't happen.");
+    UNWIND_LOG(log, "non-zeroth frame tests positive for IsFrameZero -- that "
+                    "shouldn't happen.");
     return;
   }
 
   if (!GetNextFrame().get() || !GetNextFrame()->IsValid()) {
     m_frame_type = eNotAValidFrame;
-    UnwindLogMsg("Could not get next frame, marking this frame as invalid.");
+    UNWIND_LOG(log, "Could not get next frame, marking this frame as invalid.");
     return;
   }
   if (!m_thread.GetRegisterContext()) {
     m_frame_type = eNotAValidFrame;
-    UnwindLogMsg("Could not get register context for this thread, marking this "
-                 "frame as invalid.");
+    UNWIND_LOG(log, "Could not get register context for this thread, marking "
+                    "this frame as invalid.");
     return;
   }
 
@@ -350,12 +360,12 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       LanguageRuntime::GetRuntimeUnwindPlan(m_thread, this,
                                             m_behaves_like_zeroth_frame);
   if (lang_runtime_plan_sp.get()) {
-    UnwindLogMsg("This is an async frame");
+    UNWIND_LOG(log, "This is an async frame");
   }
 
   addr_t pc;
   if (!ReadGPRValue(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC, pc)) {
-    UnwindLogMsg("could not get pc value");
+    UNWIND_LOG(log, "could not get pc value");
     m_frame_type = eNotAValidFrame;
     return;
   }
@@ -385,7 +395,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   if (pc == 0 || pc == 0x1) {
     if (!above_trap_handler) {
       m_frame_type = eNotAValidFrame;
-      UnwindLogMsg("this frame has a pc of 0x0");
+      UNWIND_LOG(log, "this frame has a pc of 0x0");
       return;
     }
   }
@@ -402,7 +412,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   ModuleSP pc_module_sp(m_current_pc.GetModule());
   if ((!m_current_pc.IsValid() || !pc_module_sp) &&
       above_trap_handler == false) {
-    UnwindLogMsg("using architectural default unwind method");
+    UNWIND_LOG(log, "using architectural default unwind method");
 
     // Test the pc value to see if we know it's in an unmapped/non-executable
     // region of memory.
@@ -425,8 +435,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
         // anywhere other than the second frame, a non-executable pc means
         // we're off in the weeds -- stop now.
         m_frame_type = eNotAValidFrame;
-        UnwindLogMsg("pc is in a non-executable section of memory and this "
-                     "isn't the 2nd frame in the stack walk.");
+        UNWIND_LOG(log, "pc is in a non-executable section of memory and this "
+                        "isn't the 2nd frame in the stack walk.");
         return;
       }
     }
@@ -445,7 +455,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       if (const UnwindPlan::Row *row =
               m_full_unwind_plan_sp->GetRowForFunctionOffset(0)) {
         if (!ReadFrameAddress(row_register_kind, row->GetCFAValue(), m_cfa)) {
-          UnwindLogMsg("failed to get cfa value");
+          UNWIND_LOG(log, "failed to get cfa value");
           if (m_frame_type != eSkipFrame) // don't override eSkipFrame
           {
             m_frame_type = eNotAValidFrame;
@@ -457,7 +467,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
 
         // A couple of sanity checks..
         if (!CallFrameAddressIsValid(abi_sp, m_cfa)) {
-          UnwindLogMsg("could not find a valid cfa address");
+          UNWIND_LOG(log, "could not find a valid cfa address");
           m_frame_type = eNotAValidFrame;
           return;
         }
@@ -467,12 +477,12 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
         if (process->GetLoadAddressPermissions(m_cfa, permissions) &&
             (permissions & ePermissionsReadable) == 0) {
           m_frame_type = eNotAValidFrame;
-          UnwindLogMsg(
-              "the CFA points to a region of memory that is not readable");
+          UNWIND_LOG(
+              log, "the CFA points to a region of memory that is not readable");
           return;
         }
       } else {
-        UnwindLogMsg("could not find a row for function offset zero");
+        UNWIND_LOG(log, "could not find a row for function offset zero");
         m_frame_type = eNotAValidFrame;
         return;
       }
@@ -480,8 +490,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       if (CheckIfLoopingStack()) {
         TryFallbackUnwindPlan();
         if (CheckIfLoopingStack()) {
-          UnwindLogMsg("same CFA address as next frame, assuming the unwind is "
-                       "looping - stopping");
+          UNWIND_LOG(log, "same CFA address as next frame, assuming the unwind "
+                          "is looping - stopping");
           m_frame_type = eNotAValidFrame;
           return;
         }
@@ -495,8 +505,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       return;
     }
     m_frame_type = eNotAValidFrame;
-    UnwindLogMsg("could not find any symbol for this pc, or a default unwind "
-                 "plan, to continue unwind.");
+    UNWIND_LOG(log, "could not find any symbol for this pc, or a default "
+                    "unwind plan, to continue unwind.");
     return;
   }
 
@@ -560,8 +570,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     m_sym_ctx.Clear(false);
     m_sym_ctx_valid = temporary_pc.ResolveFunctionScope(m_sym_ctx);
 
-    UnwindLogMsg("Symbol is now %s",
-                 GetSymbolOrFunctionName(m_sym_ctx).AsCString(""));
+    UNWIND_LOG(log, "Symbol is now {0}", GetSymbolOrFunctionName(m_sym_ctx));
   }
 
   // If we were able to find a symbol/function, set addr_range_ptr to the
@@ -608,14 +617,14 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     row_register_kind = lang_runtime_plan_sp->GetRegisterKind();
     if (!ReadFrameAddress(row_register_kind, active_row->GetCFAValue(),
                           m_cfa)) {
-      UnwindLogMsg("Cannot set cfa");
+      UNWIND_LOG(log, "Cannot set cfa");
     } else {
       m_full_unwind_plan_sp = lang_runtime_plan_sp;
       if (log) {
         StreamString active_row_strm;
         active_row->Dump(active_row_strm, lang_runtime_plan_sp.get(), &m_thread,
                          m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-        UnwindLogMsg("async active row: %s", active_row_strm.GetData());
+        UNWIND_LOG(log, "async active row: {0}", active_row_strm.GetString());
       }
       UnwindLogMsg("m_cfa = 0x%" PRIx64 " m_afa = 0x%" PRIx64, m_cfa, m_afa);
       UnwindLogMsg(
@@ -645,9 +654,9 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_fast_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-      UnwindLogMsg("Using fast unwind plan '%s'",
-                   m_fast_unwind_plan_sp->GetSourceName().AsCString(""));
-      UnwindLogMsg("active row: %s", active_row_strm.GetData());
+      UNWIND_LOG(log, "Using fast unwind plan '{0}'",
+                 m_fast_unwind_plan_sp->GetSourceName());
+      UNWIND_LOG(log, "active row: {0}", active_row_strm.GetString());
     }
   } else {
     m_full_unwind_plan_sp = GetFullUnwindPlanForFrame();
@@ -661,21 +670,21 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
         active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
                          &m_thread,
                          m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-        UnwindLogMsg("Using full unwind plan '%s'",
-                     m_full_unwind_plan_sp->GetSourceName().AsCString(""));
-        UnwindLogMsg("active row: %s", active_row_strm.GetData());
+        UNWIND_LOG(log, "Using full unwind plan '{0}'",
+                   m_full_unwind_plan_sp->GetSourceName());
+        UNWIND_LOG(log, "active row: {0}", active_row_strm.GetString());
       }
     }
   }
 
   if (!active_row) {
     m_frame_type = eNotAValidFrame;
-    UnwindLogMsg("could not find unwind row for this pc");
+    UNWIND_LOG(log, "could not find unwind row for this pc");
     return;
   }
 
   if (!ReadFrameAddress(row_register_kind, active_row->GetCFAValue(), m_cfa)) {
-    UnwindLogMsg("failed to get cfa");
+    UNWIND_LOG(log, "failed to get cfa");
     m_frame_type = eNotAValidFrame;
     return;
   }
@@ -687,8 +696,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   if (CheckIfLoopingStack()) {
     TryFallbackUnwindPlan();
     if (CheckIfLoopingStack()) {
-      UnwindLogMsg("same CFA address as next frame, assuming the unwind is "
-                   "looping - stopping");
+      UNWIND_LOG(log, "same CFA address as next frame, assuming the unwind is "
+                      "looping - stopping");
       m_frame_type = eNotAValidFrame;
       return;
     }
@@ -798,6 +807,7 @@ RegisterContextUnwind::GetFastUnwindPlanForFrame() {
 
 std::shared_ptr<const UnwindPlan>
 RegisterContextUnwind::GetFullUnwindPlanForFrame() {
+  Log *log = GetLog(LLDBLog::Unwind);
   std::shared_ptr<const UnwindPlan> arch_default_unwind_plan_sp;
   ExecutionContext exe_ctx(m_thread.shared_from_this());
   Process *process = exe_ctx.GetProcessPtr();
@@ -805,8 +815,8 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   if (abi) {
     arch_default_unwind_plan_sp = abi->CreateDefaultUnwindPlan();
   } else {
-    UnwindLogMsg(
-        "unable to get architectural default UnwindPlan from ABI plugin");
+    UNWIND_LOG(
+        log, "unable to get architectural default UnwindPlan from ABI plugin");
   }
 
   if (IsFrameZero() || GetNextFrame()->m_frame_type == eTrapHandlerFrame ||
@@ -944,9 +954,10 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
       unwind_plan_sp =
           func_unwinders_sp->GetObjectFileUnwindPlan(process->GetTarget());
     if (unwind_plan_sp && unwind_plan_sp->PlanValidAtAddress(m_current_pc)) {
-      UnwindLogMsgVerbose("frame uses %s for full UnwindPlan because the "
-                          "DynamicLoader suggested we prefer it",
-                          unwind_plan_sp->GetSourceName().GetCString());
+      UNWIND_LOG_VERBOSE(log,
+                         "frame uses {0} for full UnwindPlan because the "
+                         "DynamicLoader suggested we prefer it",
+                         unwind_plan_sp->GetSourceName());
       return unwind_plan_sp;
     }
   }
@@ -981,10 +992,11 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
           m_fallback_unwind_plan_sp = arch_default_unwind_plan_sp;
         }
       }
-      UnwindLogMsgVerbose("frame uses %s for full UnwindPlan because this "
-                          "is the non-call site unwind plan and this is a "
-                          "zeroth frame",
-                          unwind_plan_sp->GetSourceName().GetCString());
+      UNWIND_LOG_VERBOSE(
+          log,
+          "frame uses {0} for full UnwindPlan because this is the non-call "
+          "site unwind plan and this is a zeroth frame",
+          unwind_plan_sp->GetSourceName());
       return unwind_plan_sp;
     }
 
@@ -996,9 +1008,10 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
           func_unwinders_sp->GetUnwindPlanArchitectureDefaultAtFunctionEntry(
               m_thread);
       if (unwind_plan_sp) {
-        UnwindLogMsgVerbose("frame uses %s for full UnwindPlan because we are at "
-                            "the first instruction of a function",
-                            unwind_plan_sp->GetSourceName().GetCString());
+        UNWIND_LOG_VERBOSE(log,
+                           "frame uses {0} for full UnwindPlan because we are "
+                           "at the first instruction of a function",
+                           unwind_plan_sp->GetSourceName());
         return unwind_plan_sp;
       }
     }
@@ -1012,9 +1025,10 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
         process->GetTarget(), m_thread);
   }
   if (IsUnwindPlanValidForCurrentPC(unwind_plan_sp)) {
-    UnwindLogMsgVerbose("frame uses %s for full UnwindPlan because this "
-                        "is the call-site unwind plan",
-                        unwind_plan_sp->GetSourceName().GetCString());
+    UNWIND_LOG_VERBOSE(log,
+                       "frame uses {0} for full UnwindPlan because this is the "
+                       "call-site unwind plan",
+                       unwind_plan_sp->GetSourceName());
     return unwind_plan_sp;
   }
 
@@ -1051,22 +1065,23 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   }
 
   if (IsUnwindPlanValidForCurrentPC(unwind_plan_sp)) {
-    UnwindLogMsgVerbose("frame uses %s for full UnwindPlan because we "
-                        "failed to find a call-site unwind plan that would work",
-                        unwind_plan_sp->GetSourceName().GetCString());
+    UNWIND_LOG_VERBOSE(log,
+                       "frame uses {0} for full UnwindPlan because we failed "
+                       "to find a call-site unwind plan that would work",
+                       unwind_plan_sp->GetSourceName());
     return unwind_plan_sp;
   }
 
   // If nothing else, use the architectural default UnwindPlan and hope that
   // does the job.
   if (arch_default_unwind_plan_sp)
-    UnwindLogMsgVerbose(
-        "frame uses %s for full UnwindPlan because we are falling back "
-        "to the arch default plan",
-        arch_default_unwind_plan_sp->GetSourceName().GetCString());
+    UNWIND_LOG_VERBOSE(log,
+                       "frame uses {0} for full UnwindPlan because we are "
+                       "falling back to the arch default plan",
+                       arch_default_unwind_plan_sp->GetSourceName());
   else
-    UnwindLogMsg(
-        "Unable to find any UnwindPlan for full unwind of this frame.");
+    UNWIND_LOG(log,
+               "Unable to find any UnwindPlan for full unwind of this frame.");
 
   return arch_default_unwind_plan_sp;
 }
@@ -1144,10 +1159,11 @@ bool RegisterContextUnwind::ReadRegisterValueFromRegisterLocation(
       success = GetNextFrame()->ReadRegister(other_reg_info, value);
     }
     if (success) {
+      Log *log = GetLog(LLDBLog::Unwind);
       UnwindLogMsg("read (%d)'s location", regnum);
       value = value.GetAsUInt64(~0ull, &success) +
               regloc.location.reg_plus_offset.offset;
-      UnwindLogMsg("success %s", success ? "yes" : "no");
+      UNWIND_LOG(log, "success {0}", success ? "yes" : "no");
     }
   } break;
   case UnwindLLDB::ConcreteRegisterLocation::eRegisterValueInferred:
@@ -1357,9 +1373,9 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
       ExecutionContext exe_ctx(m_thread.shared_from_this());
       active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-      UnwindLogMsg("Using full unwind plan '%s'",
-                   m_full_unwind_plan_sp->GetSourceName().AsCString(""));
-      UnwindLogMsg("active row: %s", active_row_strm.GetData());
+      UNWIND_LOG(log, "Using full unwind plan '{0}'",
+                 m_full_unwind_plan_sp->GetSourceName());
+      UNWIND_LOG(log, "active row: {0}", active_row_strm.GetString());
     }
 
     if (regnum.GetAsKind(kind) == LLDB_INVALID_REGNUM) {
@@ -1744,10 +1760,10 @@ UnwindPlanSP RegisterContextUnwind::TryAdoptArchitectureUnwindPlan() {
     m_full_unwind_plan_sp = arch_override_plan_sp;
     PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
     m_registers.clear();
-    if (GetLog(LLDBLog::Unwind)) {
-      UnwindLogMsg(
-          "Replacing Full Unwindplan with Architecture UnwindPlan, '%s'",
-          m_full_unwind_plan_sp->GetSourceName().AsCString(""));
+    if (Log *log = GetLog(LLDBLog::Unwind)) {
+      UNWIND_LOG(
+          log, "Replacing Full Unwindplan with Architecture UnwindPlan, '{0}'",
+          m_full_unwind_plan_sp->GetSourceName());
       const UnwindPlan::Row *active_row =
           m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
       if (active_row) {
@@ -1755,7 +1771,7 @@ UnwindPlanSP RegisterContextUnwind::TryAdoptArchitectureUnwindPlan() {
         active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
                          &m_thread,
                          m_start_pc.GetLoadAddress(&process_sp->GetTarget()));
-        UnwindLogMsg("%s", active_row_strm.GetData());
+        UNWIND_LOG(log, "{0}", active_row_strm.GetString());
       }
     }
   }
@@ -1851,6 +1867,7 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
       m_fallback_unwind_plan_sp->GetRowForFunctionOffset(
           m_current_offset_backed_up_one);
 
+  Log *log = GetLog(LLDBLog::Unwind);
   if (active_row &&
       active_row->GetCFAValue().GetValueType() !=
           UnwindPlan::Row::FAValue::unspecified) {
@@ -1860,7 +1877,7 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
     if (!ReadFrameAddress(m_fallback_unwind_plan_sp->GetRegisterKind(),
                           active_row->GetCFAValue(), new_cfa) ||
         !CallFrameAddressIsValid(abi_sp, new_cfa)) {
-      UnwindLogMsg("failed to get cfa with fallback unwindplan");
+      UNWIND_LOG(log, "failed to get cfa with fallback unwindplan");
       m_fallback_unwind_plan_sp.reset();
       m_full_unwind_plan_sp = original_full_unwind_plan_sp;
       return false;
@@ -1888,8 +1905,8 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
     }
 
     if (new_caller_pc_value == LLDB_INVALID_ADDRESS) {
-      UnwindLogMsg("failed to get a pc value for the caller frame with the "
-                   "fallback unwind plan");
+      UNWIND_LOG(log, "failed to get a pc value for the caller frame with the "
+                      "fallback unwind plan");
       m_fallback_unwind_plan_sp.reset();
       m_full_unwind_plan_sp = original_full_unwind_plan_sp;
       m_cfa = old_cfa;
@@ -1900,17 +1917,18 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
     if (old_caller_pc_value == new_caller_pc_value &&
         m_cfa == old_cfa &&
         m_afa == old_afa) {
-      UnwindLogMsg("fallback unwind plan got the same values for this frame "
-                   "CFA and caller frame pc, not using");
+      UNWIND_LOG(log, "fallback unwind plan got the same values for this frame "
+                      "CFA and caller frame pc, not using");
       m_fallback_unwind_plan_sp.reset();
       m_full_unwind_plan_sp = original_full_unwind_plan_sp;
       return false;
     }
 
-    UnwindLogMsg("trying to unwind from this function with the UnwindPlan '%s' "
-                 "because UnwindPlan '%s' failed.",
-                 m_fallback_unwind_plan_sp->GetSourceName().GetCString(),
-                 original_full_unwind_plan_sp->GetSourceName().GetCString());
+    UNWIND_LOG(log,
+               "trying to unwind from this function with the UnwindPlan '{0}' "
+               "because UnwindPlan '{1}' failed.",
+               m_fallback_unwind_plan_sp->GetSourceName(),
+               original_full_unwind_plan_sp->GetSourceName());
 
     // We've copied the fallback unwind plan into the full - now clear the
     // fallback.
@@ -1946,7 +1964,8 @@ bool RegisterContextUnwind::ForceSwitchToFallbackUnwindPlan() {
     if (!ReadFrameAddress(m_fallback_unwind_plan_sp->GetRegisterKind(),
                           active_row->GetCFAValue(), new_cfa) ||
         !CallFrameAddressIsValid(abi_sp, new_cfa)) {
-      UnwindLogMsg("failed to get cfa with fallback unwindplan");
+      UNWIND_LOG(GetLog(LLDBLog::Unwind),
+                 "failed to get cfa with fallback unwindplan");
       m_fallback_unwind_plan_sp.reset();
       return false;
     }
@@ -1963,8 +1982,9 @@ bool RegisterContextUnwind::ForceSwitchToFallbackUnwindPlan() {
 
     PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
 
-    UnwindLogMsg("switched unconditionally to the fallback unwindplan %s",
-                 m_full_unwind_plan_sp->GetSourceName().GetCString());
+    UNWIND_LOG(GetLog(LLDBLog::Unwind),
+               "switched unconditionally to the fallback unwindplan {0}",
+               m_full_unwind_plan_sp->GetSourceName());
     return true;
   }
   return false;
@@ -1984,7 +2004,9 @@ void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
   }
 
   m_frame_type = eTrapHandlerFrame;
-  UnwindLogMsg("This frame is marked as a trap handler via its UnwindPlan");
+
+  Log *log = GetLog(LLDBLog::Unwind);
+  UNWIND_LOG(log, "This frame is marked as a trap handler via its UnwindPlan");
 
   if (m_current_offset_backed_up_one != m_current_offset) {
     // We backed up the pc by 1 to compute the symbol context, but
@@ -1997,15 +2019,15 @@ void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
     // stack -- on these systems, when the handler returns, control will
     // be transferred to the return trampoline, so that's the best
     // symbol we can present in the callstack.
-    UnwindLogMsg("Resetting current offset and re-doing symbol lookup; "
-                 "old symbol was %s",
-                 GetSymbolOrFunctionName(m_sym_ctx).AsCString(""));
+    UNWIND_LOG(log,
+               "Resetting current offset and re-doing symbol lookup; old "
+               "symbol was {0}",
+               GetSymbolOrFunctionName(m_sym_ctx));
     m_current_offset_backed_up_one = m_current_offset;
 
     m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx);
 
-    UnwindLogMsg("Symbol is now %s",
-                 GetSymbolOrFunctionName(m_sym_ctx).AsCString(""));
+    UNWIND_LOG(log, "Symbol is now {0}", GetSymbolOrFunctionName(m_sym_ctx));
 
     ExecutionContext exe_ctx(m_thread.shared_from_this());
     Process *process = exe_ctx.GetProcessPtr();
@@ -2028,9 +2050,10 @@ bool RegisterContextUnwind::ReadFrameAddress(
   addr_t cfa_reg_contents;
   ABISP abi_sp = m_thread.GetProcess()->GetABI();
 
+  Log *log = GetLog(LLDBLog::Unwind);
   switch (fa.GetValueType()) {
   case UnwindPlan::Row::FAValue::isRegisterDereferenced: {
-    UnwindLogMsg("CFA value via dereferencing reg");
+    UNWIND_LOG(log, "CFA value via dereferencing reg");
     RegisterNumber regnum_to_deref(m_thread, row_register_kind,
                                    fa.GetRegisterNumber());
     addr_t reg_to_deref_contents;
@@ -2062,7 +2085,7 @@ bool RegisterContextUnwind::ReadFrameAddress(
     break;
   }
   case UnwindPlan::Row::FAValue::isRegisterPlusOffset: {
-    UnwindLogMsg("CFA value via register plus offset");
+    UNWIND_LOG(log, "CFA value via register plus offset");
     RegisterNumber cfa_reg(m_thread, row_register_kind,
                            fa.GetRegisterNumber());
     if (ReadGPRValue(cfa_reg, cfa_reg_contents)) {
@@ -2086,7 +2109,7 @@ bool RegisterContextUnwind::ReadFrameAddress(
     break;
   }
   case UnwindPlan::Row::FAValue::isDWARFExpression: {
-    UnwindLogMsg("CFA value via DWARF expression");
+    UNWIND_LOG(log, "CFA value via DWARF expression");
     ExecutionContext exe_ctx(m_thread.shared_from_this());
     Process *process = exe_ctx.GetProcessPtr();
     DataExtractor dwarfdata(fa.GetDWARFExpressionBytes(),
@@ -2105,12 +2128,12 @@ bool RegisterContextUnwind::ReadFrameAddress(
                    address);
       return true;
     }
-    UnwindLogMsg("Failed to set CFA value via DWARF expression: %s",
-                 llvm::toString(result.takeError()).c_str());
+    UNWIND_LOG(log, "Failed to set CFA value via DWARF expression: {0}",
+               fmt_consume(result.takeError()));
     break;
   }
   case UnwindPlan::Row::FAValue::isRaSearch: {
-    UnwindLogMsg("CFA value via heuristic search");
+    UNWIND_LOG(log, "CFA value via heuristic search");
     Process &process = *m_thread.GetProcess();
     lldb::addr_t return_address_hint = GetReturnAddressHint(fa.GetOffset());
     if (return_address_hint == LLDB_INVALID_ADDRESS)
@@ -2136,7 +2159,7 @@ bool RegisterContextUnwind::ReadFrameAddress(
         return true;
       }
     }
-    UnwindLogMsg("No suitable CFA found");
+    UNWIND_LOG(log, "No suitable CFA found");
     break;
   }
   case UnwindPlan::Row::FAValue::isConstant: {
@@ -2169,8 +2192,9 @@ lldb::addr_t RegisterContextUnwind::GetReturnAddressHint(int32_t plan_offset) {
                 *next->m_sym_ctx.symbol))
       hint += *expected_size;
     else {
-      UnwindLogMsgVerbose("Could not retrieve parameter size: %s",
-                          llvm::toString(expected_size.takeError()).c_str());
+      UNWIND_LOG_VERBOSE(GetLog(LLDBLog::Unwind),
+                         "Could not retrieve parameter size: {0}",
+                         fmt_consume(expected_size.takeError()));
       return LLDB_INVALID_ADDRESS;
     }
   }
