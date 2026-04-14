@@ -475,9 +475,7 @@ static bool checkThreadSafetyAttrSubject(Sema &S, Decl *D, const ParsedAttr &AL,
   return checkThreadSafetyValueDeclIsFunPtr(S, VD, AL);
 }
 
-/// Recheck instantiated thread-safety attributes that could not be validated
-/// on the dependent pattern declaration.
-bool Sema::checkDependentThreadSafetyAttrs(Decl *D, const Attr *A) {
+bool Sema::checkInstantiatedThreadSafetyAttrs(Decl *D, const Attr *A) {
   if (!isa<AssertCapabilityAttr, AcquireCapabilityAttr,
            TryAcquireCapabilityAttr, ReleaseCapabilityAttr,
            RequiresCapabilityAttr, LocksExcludedAttr>(A))
@@ -671,7 +669,7 @@ static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleLocksExcludedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!checkThreadSafetyAttrSubject(S, D, AL, true))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
 
   if (!AL.checkAtLeastNumArgs(S, 1))
@@ -6726,7 +6724,7 @@ static void handleAssertCapabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleAcquireCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
-  if (!checkThreadSafetyAttrSubject(S, D, AL, true))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
 
   SmallVector<Expr*, 1> Args;
@@ -6752,7 +6750,7 @@ static void handleTryAcquireCapabilityAttr(Sema &S, Decl *D,
 
 static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
-  if (!checkThreadSafetyAttrSubject(S, D, AL, true))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
 
   // Check that all arguments are lockable objects.
@@ -6765,7 +6763,7 @@ static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
 
 static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
                                          const ParsedAttr &AL) {
-  if (!checkThreadSafetyAttrSubject(S, D, AL, true))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
 
   if (!AL.checkAtLeastNumArgs(S, 1))

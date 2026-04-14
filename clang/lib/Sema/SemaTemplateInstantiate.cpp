@@ -3699,7 +3699,7 @@ bool Sema::InstantiateClassImpl(
 
     Attr *NewAttr =
       instantiateTemplateAttribute(I->TmplAttr, Context, *this, TemplateArgs);
-    if (NewAttr && checkDependentThreadSafetyAttrs(I->NewDecl, NewAttr))
+    if (NewAttr && checkInstantiatedThreadSafetyAttrs(I->NewDecl, NewAttr))
       I->NewDecl->addAttr(NewAttr);
     LocalInstantiationScope::deleteScopes(I->Scope,
                                           Instantiator.getStartingScope());
