@@ -104,9 +104,10 @@ static SmallVector<Value, 2> collectAliases(Value ivRef) {
   return aliases;
 }
 
-/// Collect a perfectly nested chain of fir.do_loop ops starting from `outer`.
-/// A loop is considered perfectly nested if between each nesting level only
-/// IV-related operations (stores, converts) and the inner loop exist.
+/// Collect a singly-nested chain of fir.do_loop ops starting from `outer`.
+/// Each loop body must contain exactly one inner fir.do_loop; other operations
+/// are permitted.  Safety checks (no calls, single IV store, IV doesn't escape)
+/// are enforced later by analyzeNest().
 static SmallVector<fir::DoLoopOp> collectNest(fir::DoLoopOp outer) {
   SmallVector<fir::DoLoopOp> nest;
   fir::DoLoopOp cur = outer;
@@ -259,11 +260,21 @@ static bool noCallsInNest(fir::DoLoopOp outermost) {
 
 static bool ivDoesNotEscape(ArrayRef<Value> ivAliases) {
   for (auto alias : ivAliases)
-    for (auto *user : alias.getUsers())
-      if (!isa<fir::StoreOp, fir::LoadOp, fir::DeclareOp>(user)) {
+    for (auto *user : alias.getUsers()) {
+      if (auto store = dyn_cast<fir::StoreOp>(user)) {
+        if (store.getMemref() != alias) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "  [escape] IV used as stored value: " << *user
+                     << "\n");
+          return false;
+        }
+        continue;
+      }
+      if (!isa<fir::LoadOp, fir::DeclareOp>(user)) {
         LLVM_DEBUG(llvm::dbgs() << "  [escape] IV escapes: " << *user << "\n");
         return false;
       }
+    }
   return true;
 }
 
@@ -359,25 +370,20 @@ static Value rematerializeOutside(Value val, fir::DoLoopOp outermost,
       return it->second;
     return val;
   }
-  if (auto *defOp = val.getDefiningOp()) {
-    if (!outermost->isAncestor(defOp))
-      return val;
-  }
-
   auto *defOp = val.getDefiningOp();
-  if (!defOp)
+  if (!defOp || !outermost->isAncestor(defOp))
     return val;
 
   // fir.convert: rematerialize the input, then re-emit the convert.
   if (auto conv = dyn_cast<fir::ConvertOp>(*defOp)) {
-    auto newInput = rematerializeOutside(conv.getValue(), outermost, builder,
+    Value newInput = rematerializeOutside(conv.getValue(), outermost, builder,
                                          loc, ivFinalMap);
     return fir::ConvertOp::create(builder, loc, conv.getType(), newInput);
   }
 
   // fir.load: the address must already be outside (alloca/declare/etc).
   if (auto load = dyn_cast<fir::LoadOp>(*defOp)) {
-    auto addr = rematerializeOutside(load.getMemref(), outermost, builder, loc,
+    Value addr = rematerializeOutside(load.getMemref(), outermost, builder, loc,
                                      ivFinalMap);
     return fir::LoadOp::create(builder, loc, addr);
   }
@@ -402,7 +408,6 @@ static Value rematerializeOutside(Value val, fir::DoLoopOp outermost,
     return cloned->getResult(0);
   }
 
-  // For anything else, assume it's already available.
   return val;
 }
 
@@ -426,8 +431,8 @@ static Value rematerializeOutside(Value val, fir::DoLoopOp outermost,
 /// the Fortran final value (which is one step past the last iteration).
 /// Example: for `do i=1,100; do j=1,i`, j's final value must be computed
 /// with i=100 (last iteration), not i=101 (Fortran final).
-static void emitFinalIVStore(OpBuilder &builder, Location loc, LoopIVInfo &info,
-                             fir::DoLoopOp outermost,
+static void emitFinalIVStore(OpBuilder &builder, Location loc,
+                             LoopIVInfo &info, fir::DoLoopOp outermost,
                              DenseMap<Value, Value> &ivFinalMap) {
   // Rematerialize bounds outside the outermost loop if needed.
   // For inner loops with IV-dependent bounds (e.g. do j=1,i), the outer IV
@@ -577,7 +582,7 @@ static fir::DoLoopOp transformOneLoop(fir::DoLoopOp loop,
 class SimplifyDoLoop : public fir::impl::SimplifyDoLoopBase<SimplifyDoLoop> {
 public:
   void runOnOperation() override {
-    auto func = getOperation();
+    mlir::func::FuncOp func = getOperation();
 
     // Collect all outermost fir.do_loop ops.
     SmallVector<fir::DoLoopOp> outerLoops;
@@ -586,8 +591,8 @@ public:
         outerLoops.push_back(loop);
     });
 
-    for (auto outerLoop : outerLoops) {
-      auto nestLoops = collectNest(outerLoop);
+    for (fir::DoLoopOp outerLoop : outerLoops) {
+      SmallVector<fir::DoLoopOp> nestLoops = collectNest(outerLoop);
       LLVM_DEBUG(llvm::dbgs()
                  << "SimplifyDoLoop: nest depth " << nestLoops.size() << " at "
                  << outerLoop.getLoc() << "\n");
@@ -599,7 +604,7 @@ public:
 
       // ======== Analysis Phase ========
       SmallVector<LoopIVInfo> infos;
-      for (auto loop : nestLoops)
+      for (fir::DoLoopOp loop : nestLoops)
         infos.push_back({loop, {}, {}, {}, {}, {}, {}});
 
       if (!analyzeNest(infos)) {

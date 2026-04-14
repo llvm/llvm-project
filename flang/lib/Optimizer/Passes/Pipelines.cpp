@@ -210,14 +210,11 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
     pm.addPass(mlir::createCanonicalizerPass(config));
     pm.addPass(mlir::createCSEPass());
 
-    addNestedPassToAllTopLevelOperations<PassConstructor>(
-        pm, fir::createSimplifyDoLoopPass);
-
-    pm.addPass(mlir::createCanonicalizerPass(config));
-    pm.addPass(mlir::createCSEPass());
-
     pm.addPass(mlir::createLoopInvariantCodeMotionPass());
     pm.addPass(fir::createLoopInvariantCodeMotion());
+
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, fir::createSimplifyDoLoopPass);
 
     pm.addPass(mlir::createCanonicalizerPass(config));
     pm.addPass(mlir::createCSEPass());
