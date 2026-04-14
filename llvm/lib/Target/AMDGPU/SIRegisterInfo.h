@@ -274,6 +274,10 @@ public:
     return RC->TSFlags & SIRCFlags::HasSGPR;
   }
 
+  /// Returns true if MI is a 3-operand VALU instruction that may cause
+  /// bank conflicts if operands are from the same bank.
+  bool is3OperandVALU(const MachineInstr &MI) const;
+
   /// \returns true if this class contains any vector registers.
   static bool hasVectorRegisters(const TargetRegisterClass *RC) {
     return hasVGPRs(RC) || hasAGPRs(RC);
