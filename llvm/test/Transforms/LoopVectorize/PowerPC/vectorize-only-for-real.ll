@@ -2,7 +2,6 @@
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux"
 
-; Function Attrs: nounwind
 define zeroext i32 @test() #0 {
 ; CHECK-LABEL: @test
 ; CHECK-NOT: x i32>
@@ -10,12 +9,12 @@ define zeroext i32 @test() #0 {
 entry:
   %a = alloca [1600 x i32], align 4
   %c = alloca [1600 x i32], align 4
-  call void @llvm.lifetime.start(ptr %a) #3
+  call void @llvm.lifetime.start(ptr %a)
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.body
-  call void @llvm.lifetime.start(ptr %c) #3
-  %call = call signext i32 @bar(ptr %a, ptr %c) #3
+  call void @llvm.lifetime.start(ptr %c)
+  %call = call signext i32 @bar(ptr %a, ptr %c)
   br label %for.body6
 
 for.body:                                         ; preds = %for.body, %entry
@@ -28,8 +27,8 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond27, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup5:                                ; preds = %for.body6
-  call void @llvm.lifetime.end(ptr nonnull %c) #3
-  call void @llvm.lifetime.end(ptr %a) #3
+  call void @llvm.lifetime.end(ptr nonnull %c)
+  call void @llvm.lifetime.end(ptr %a)
   ret i32 %add
 
 for.body6:                                        ; preds = %for.body6, %for.cond.cleanup
@@ -43,16 +42,12 @@ for.body6:                                        ; preds = %for.body6, %for.con
   br i1 %exitcond, label %for.cond.cleanup5, label %for.body6
 }
 
-; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start(ptr nocapture) #1
-
-; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end(ptr nocapture) #1
 
 declare signext i32 @bar(ptr, ptr) #2
 
-attributes #0 = { nounwind "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" }
-attributes #1 = { argmemonly nounwind }
+attributes #0 = { "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" }
+attributes #1 = { argmemonly }
 attributes #2 = { "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" }
-attributes #3 = { nounwind }
 
