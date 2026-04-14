@@ -7621,9 +7621,11 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
           MI.getOperand(0).getReg() == SrcReg)
         return NewMI;
 
-      const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-      Register NewSrc = MRI.isSSA() ? MRI.createVirtualRegister(&RC)
-                                    : MI.getOperand(0).getReg();
+      Register NewSrc = MI.getOperand(0).getReg();
+      if (MRI.isSSA()) {
+        const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
+        NewSrc = MRI.createVirtualRegister(&RC);
+      }
 
       CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
                        get(TargetOpcode::COPY))
