@@ -3370,6 +3370,14 @@ func.func @omp_declare_simd_linear_modifiers_mismatch(%iv : i32, %step : i32) {
 
 // -----
 
+func.func @omp_declare_simd_arg_types_mismatch(%a : i32) {
+  // expected-error @below {{'omp.declare_simd' op 'arg_types' length (2) must match the number of function arguments (1)}}
+  omp.declare_simd {arg_types = [i32, i32]}
+  return
+}
+
+// -----
+
 func.func @iterator_bad_result_type(%lb : index, %ub : index, %st : index) {
   // expected-error@+1 {{result #0 must be OpenMP iterator-produced list handle, but got 'index'}}
   %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {

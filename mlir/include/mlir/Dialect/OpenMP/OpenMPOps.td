@@ -2353,6 +2353,12 @@ def DeclareSimdOp
     a function body. It attaches clauses of declare simd to the enclosing
     function.
 
+    The optional `arg_types` attribute records the original language-level
+    types of the enclosing function's arguments. This is used during
+    translation to recover pointee-type information lost in opaque
+    `!llvm.ptr`, enabling correct lane-size (LS) computation for the
+    AArch64 AAVFABI.
+
     Example:
     ```mlir
     func.func @add(%a: memref<16xi32>) {
@@ -2361,6 +2367,8 @@ def DeclareSimdOp
     }
     ```
   }] # clausesDescription;
+
+  let arguments = !con(clausesArgs, (ins OptionalAttr<ArrayAttr>:$arg_types));
 
   let builders = [OpBuilder<(
       ins CArg<"const DeclareSimdOperands &">:$clauses)>];

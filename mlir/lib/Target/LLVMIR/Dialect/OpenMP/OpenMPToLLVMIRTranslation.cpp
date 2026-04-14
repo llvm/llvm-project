@@ -7698,6 +7698,391 @@ convertTargetFreeMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+static void populateLinearParam(
+    llvm::DenseMap<Value, unsigned> &argIndexMap, omp::DeclareSimdOp ds,
+    llvm::SmallVectorImpl<llvm::OpenMPIRBuilder::DeclareSimdAttrTy> &attrs) {
+  OperandRange linearVars = ds.getLinearVars();
+  OperandRange linearStepVars = ds.getLinearStepVars();
+  std::optional<ArrayAttr> linearModifiers = ds.getLinearModifiers();
+
+  const llvm::APSInt defaultStep(llvm::APInt(/*numBits=*/32, /*val=*/1),
+                                 /*isUnsigned=*/true);
+
+  auto resolveStepArgIndex = [&](Value stepValue) -> std::optional<unsigned> {
+    // Var-stride can be expressed as `llvm.load %argN`.
+    if (auto load = stepValue.getDefiningOp<LLVM::LoadOp>())
+      stepValue = load.getAddr();
+
+    if (auto it = argIndexMap.find(stepValue); it != argIndexMap.end())
+      return it->second;
+
+    return std::nullopt;
+  };
+
+  for (size_t i = 0; i < linearVars.size(); ++i) {
+    llvm::OpenMPIRBuilder::DeclareSimdAttrTy &paramAttr =
+        attrs[argIndexMap[linearVars[i]]];
+
+    if (auto linearModAttr = dyn_cast_if_present<omp::LinearModifierAttr>(
+            (*linearModifiers)[i])) {
+      switch (linearModAttr.getValue()) {
+      case omp::LinearModifier::ref:
+        paramAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef;
+        break;
+      case omp::LinearModifier::uval:
+        paramAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearUVal;
+        break;
+      case omp::LinearModifier::val:
+        // val on a non-reference (non-pointer SSA type) is semantically
+        // identical to plain linear. Only pointer-typed vars get LinearVal.
+        if (isa<LLVM::LLVMPointerType>(linearVars[i].getType()))
+          paramAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearVal;
+        else
+          paramAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear;
+        break;
+      }
+    } else {
+      paramAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear;
+    }
+
+    paramAttr.HasVarStride = false;
+    paramAttr.StrideOrArg = defaultStep;
+
+    if (i >= linearStepVars.size())
+      continue;
+
+    Value stepValue = linearStepVars[i];
+
+    if (std::optional<unsigned> stepArgIdx = resolveStepArgIndex(stepValue)) {
+      paramAttr.HasVarStride = true;
+      paramAttr.StrideOrArg =
+          llvm::APSInt(llvm::APInt(/*numBits=*/32, *stepArgIdx),
+                       /*isUnsigned=*/true);
+      continue;
+    }
+
+    if (auto cst = stepValue.getDefiningOp<LLVM::ConstantOp>()) {
+      IntegerAttr intAttr = cast<IntegerAttr>(cst.getValue());
+      paramAttr.HasVarStride = false;
+      paramAttr.StrideOrArg =
+          llvm::APSInt(intAttr.getValue(), /*isUnsigned=*/false);
+      continue;
+    }
+
+    llvm_unreachable("unhandled linear step form");
+  }
+}
+
+static llvm::OpenMPIRBuilder::DeclareSimdBranch
+getDeclareSimdBranch(omp::DeclareSimdOp &op) {
+  if (op.getInbranch())
+    return llvm::OpenMPIRBuilder::DeclareSimdBranch::Inbranch;
+  if (op.getNotinbranch())
+    return llvm::OpenMPIRBuilder::DeclareSimdBranch::Notinbranch;
+  return llvm::OpenMPIRBuilder::DeclareSimdBranch::Undefined;
+}
+
+static unsigned
+evaluateCDTSize(const llvm::Function *fn,
+                ArrayRef<llvm::OpenMPIRBuilder::DeclareSimdAttrTy> paramAttrs) {
+  // Every vector variant of a SIMD-enabled function has a vector length (VLEN).
+  // If OpenMP clause "simdlen" is used, the VLEN is the value of the argument
+  // of that clause. The VLEN value must be power of 2.
+  // In other case the notion of the function`s "characteristic data type" (CDT)
+  // is used to compute the vector length.
+  // CDT is defined in the following order:
+  //   a) For non-void function, the CDT is the return type.
+  //   b) If the function has any non-uniform, non-linear parameters, then the
+  //   CDT is the type of the first such parameter.
+  //   c) If the CDT determined by a) or b) above is struct, union, or class
+  //   type which is pass-by-value (except for the type that maps to the
+  //   built-in complex data type), the characteristic data type is int.
+  //   d) If none of the above three cases is applicable, the CDT is int.
+  // The VLEN is then determined based on the CDT and the size of vector
+  // register of that ISA for which current vector version is generated. The
+  // VLEN is computed using the formula below:
+  //   VLEN  = sizeof(vector_register) / sizeof(CDT),
+  // where vector register size specified in section 3.2.1 Registers and the
+  // Stack Frame of original AMD64 ABI document.
+  const llvm::DataLayout &dl = fn->getParent()->getDataLayout();
+  llvm::Type *cdtTy = nullptr;
+
+  // For a non-void function, the return type is the characteristic data type.
+  llvm::Type *retTy = fn->getReturnType();
+  if (retTy && !retTy->isVoidTy())
+    cdtTy = retTy;
+
+  // Otherwise, use the first parameter that is still vectorized. Parameters
+  // without an explicit declare simd attribute are treated as vector
+  // parameters because Vector is the default kind.
+  if (!cdtTy) {
+    unsigned numParams = fn->getFunctionType()->getNumParams();
+    for (unsigned i = 0; i < numParams; ++i) {
+      bool isVectorParam = i >= paramAttrs.size() ||
+                           paramAttrs[i].Kind ==
+                               llvm::OpenMPIRBuilder::DeclareSimdKindTy::Vector;
+      if (!isVectorParam)
+        continue;
+      cdtTy = fn->getFunctionType()->getParamType(i);
+      break;
+    }
+  }
+
+  // Aggregates and the lack of a suitable scalar/vector parameter both fall
+  // back to `int`, matching the current lowering rule used here.
+  llvm::Type *intTy = llvm::Type::getInt32Ty(fn->getContext());
+  if (!cdtTy || cdtTy->isStructTy() || cdtTy->isArrayTy())
+    cdtTy = intTy;
+
+  return dl.getTypeSizeInBits(cdtTy);
+}
+
+// Check the values provided via `simdlen` by the user.
+static bool validateAArch64SimdLen(Operation &op, llvm::Function *fn,
+                                   unsigned userVLEN, unsigned wds, char isa) {
+  // 1. A `simdlen(1)` doesn't produce vector signatures.
+  if (userVLEN == 1) {
+    op.emitWarning("simdlen(1) has no effect on AArch64 declare simd");
+    return false;
+  }
+
+  // 2. Section 3.3.1, item 1: user input must be a power of 2 for Advanced
+  // SIMD.
+  if (isa == 'n' && userVLEN && !llvm::isPowerOf2_32(userVLEN)) {
+    op.emitWarning("AArch64 Advanced SIMD declare simd requires simdlen to be "
+                   "a power of 2");
+    return false;
+  }
+
+  // 3. Section 3.4.1: SVE fixed length must obey the architectural limits.
+  if (isa == 's' && userVLEN != 0 &&
+      ((userVLEN * wds > 2048) || (userVLEN * wds % 128 != 0))) {
+    op.emitWarning() << "AArch64 SVE fixed-length declare simd simdlen must "
+                        "fit architectural "
+                        "lane limits for element width "
+                     << wds;
+    return false;
+  }
+
+  return true;
+}
+
+/// Maps To Vector (MTV), as defined in 4.1.1 of the AAVFABI (2021Q1).
+static bool getAArch64MTV(Type ty,
+                          llvm::OpenMPIRBuilder::DeclareSimdKindTy kind) {
+  if (!ty)
+    return false;
+
+  if (kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::Uniform)
+    return false;
+
+  if (kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearUVal ||
+      kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef)
+    return false;
+
+  if (kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear ||
+      kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearVal)
+    return false;
+
+  return true;
+}
+
+/// Pass By Value (PBV), as defined in 3.1.2 of the AAVFABI.
+static bool getAArch64PBV(Type ty, const DataLayout &dl) {
+  unsigned size = dl.getTypeSizeInBits(ty);
+
+  // Only scalars and pointer-like types within 16 bytes set PBV to true.
+  if (size != 8 && size != 16 && size != 32 && size != 64 && size != 128)
+    return false;
+
+  if (isa<FloatType, IntegerType, IndexType>(ty))
+    return true;
+
+  if (isa<LLVM::LLVMPointerType, omp::PointerLikeType>(ty))
+    return true;
+
+  // TODO: Add support for complex types (section 3.1.2, item 2).
+  return false;
+}
+
+// Computes the lane size (LS) of a return type or of an input parameter,
+// as defined by `LS(P)` in 3.2.1 of the AAVFABI.
+//
+// `paramTy` is the SSA type of the parameter (e.g. !llvm.ptr, i32, f64).
+// `paramElemTy` optionally provides the original language-level pointee type
+// from `arg_types` for opaque `!llvm.ptr` parameters whose pointee type has
+// been erased.
+static unsigned getAArch64LS(Type paramTy,
+                             llvm::OpenMPIRBuilder::DeclareSimdKindTy kind,
+                             const DataLayout &dl, Type paramElemTy = nullptr) {
+  if (!getAArch64MTV(paramTy, kind)) {
+    if (auto ptrLikeTy = dyn_cast<omp::PointerLikeType>(paramTy)) {
+      Type elemTy = ptrLikeTy.getElementType();
+      if (elemTy && getAArch64PBV(elemTy, dl))
+        return dl.getTypeSizeInBits(elemTy);
+    }
+    // For opaque !llvm.ptr, use the original type from arg_types
+    // if available, since the pointee type is lost at LLVM IR level.
+    if (isa<LLVM::LLVMPointerType>(paramTy) && paramElemTy &&
+        getAArch64PBV(paramElemTy, dl))
+      return dl.getTypeSizeInBits(paramElemTy);
+  }
+
+  if (getAArch64PBV(paramTy, dl))
+    return dl.getTypeSizeInBits(paramTy);
+
+  return dl.getTypeSizeInBits(
+      LLVM::LLVMPointerType::get(paramTy.getContext(), /*addressSpace=*/0));
+}
+
+// Get Narrowest Data Size (NDS) and Widest Data Size (WDS) from the
+// signature of the scalar function, as defined in 3.2.2 of the AAVFABI.
+//
+// argElemTypes maps function argument index to the original language-level
+// type from `arg_types`, if available.  This is used to recover pointee-type
+// information lost in opaque `!llvm.ptr`.
+static std::tuple<unsigned, unsigned, bool>
+getNDSWDS(FunctionOpInterface funcOp,
+          ArrayRef<llvm::OpenMPIRBuilder::DeclareSimdAttrTy> paramAttrs,
+          const DataLayout &dl, ArrayRef<Type> argElemTypes = {}) {
+  bool outputBecomesInput = false;
+
+  llvm::SmallVector<unsigned, 8> sizes;
+  if (funcOp.getNumResults() != 0) {
+    Type retTy = funcOp.getResultTypes().front();
+    sizes.push_back(getAArch64LS(
+        retTy, llvm::OpenMPIRBuilder::DeclareSimdKindTy::Vector, dl));
+    if (!getAArch64PBV(retTy, dl) &&
+        getAArch64MTV(retTy,
+                      llvm::OpenMPIRBuilder::DeclareSimdKindTy::Vector)) {
+      outputBecomesInput = true;
+    }
+  }
+
+  for (auto [index, argTy] : llvm::enumerate(funcOp.getArgumentTypes())) {
+    Type elemTy = (index < argElemTypes.size()) ? argElemTypes[index] : nullptr;
+    sizes.push_back(getAArch64LS(argTy, paramAttrs[index].Kind, dl, elemTy));
+  }
+
+  assert(!sizes.empty() && "Unable to determine NDS and WDS.");
+  // The LS of a function parameter / return value can only be a power
+  // of 2, starting from 8 bits, up to 128.
+  assert(llvm::all_of(sizes,
+                      [](unsigned size) {
+                        return size == 8 || size == 16 || size == 32 ||
+                               size == 64 || size == 128;
+                      }) &&
+         "Invalid size");
+
+  return std::make_tuple(*llvm::min_element(sizes), *llvm::max_element(sizes),
+                         outputBecomesInput);
+}
+
+static LogicalResult
+convertDeclareSimdOp(Operation &opInst, llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  auto declareSimdOp = cast<omp::DeclareSimdOp>(opInst);
+
+  auto funcOp = opInst.getParentOfType<FunctionOpInterface>();
+  assert(funcOp && "declare_simd must be defined inside a function");
+  llvm::Function *fn = moduleTranslation.lookupFunction(funcOp.getName());
+  assert(fn && "Failed to find corresponding LLVM function for function op");
+
+  llvm::SmallVector<llvm::OpenMPIRBuilder::DeclareSimdAttrTy, 8> paramAttrs(
+      funcOp.getNumArguments());
+
+  llvm::DenseMap<mlir::Value, unsigned> argIndexMap;
+  for (auto [idx, arg] : llvm::enumerate(funcOp.getArguments()))
+    argIndexMap.try_emplace(arg, idx);
+
+  // Populate params for uniform clause.
+  for (Value u : declareSimdOp.getUniformVars()) {
+    paramAttrs[argIndexMap[u]].Kind =
+        llvm::OpenMPIRBuilder::DeclareSimdKindTy::Uniform;
+  }
+
+  // Populate params for aligned clause.
+  OperandRange operands = declareSimdOp.getAlignedVars();
+  std::optional<ArrayAttr> alignmentValues = declareSimdOp.getAlignments();
+  for (size_t i = 0; i < operands.size(); ++i) {
+    auto intAttr = cast<IntegerAttr>((*alignmentValues)[i]);
+    paramAttrs[argIndexMap[operands[i]]].Alignment =
+        llvm::APSInt(intAttr.getValue(), /*isUnsigned=*/true);
+  }
+
+  populateLinearParam(argIndexMap, declareSimdOp, paramAttrs);
+
+  llvm::APSInt vLenVal(llvm::APInt(/*numBits=*/64, /*val=*/0),
+                       /*isUnsigned=*/false);
+  if (std::optional<int64_t> simdlen = declareSimdOp.getSimdlen()) {
+    vLenVal = llvm::APSInt(llvm::APInt(/*numBits=*/64, *simdlen),
+                           /*isUnsigned=*/false);
+  }
+
+  const llvm::Triple &targetTriple = fn->getParent()->getTargetTriple();
+  llvm::OpenMPIRBuilder::DeclareSimdBranch branch =
+      getDeclareSimdBranch(declareSimdOp);
+  if (targetTriple.isX86()) {
+    unsigned numElts = evaluateCDTSize(fn, paramAttrs);
+    assert(numElts && "Non-zero simdlen/cdtsize expected");
+    ompBuilder->emitX86DeclareSimdFunction(fn, numElts, vLenVal, paramAttrs,
+                                           branch);
+  } else if (targetTriple.getArch() == llvm::Triple::aarch64) {
+    DataLayout dl(opInst.getParentOfType<ModuleOp>());
+
+    // Build a per-argument element type array from arg_types.
+    // This recovers pointee-type information for opaque !llvm.ptr params.
+    llvm::SmallVector<Type> argElemTypes(funcOp.getNumArguments());
+    if (std::optional<ArrayAttr> argTypeAttrs = declareSimdOp.getArgTypes()) {
+      for (auto [i, attr] : llvm::enumerate(*argTypeAttrs)) {
+        if (auto tyAttr = dyn_cast_if_present<TypeAttr>(attr))
+          argElemTypes[i] = tyAttr.getValue();
+      }
+    }
+
+    auto [nds, wds, outputBecomesInput] =
+        getNDSWDS(funcOp, paramAttrs, dl, argElemTypes);
+    unsigned vLen = vLenVal.getZExtValue();
+
+    auto hasTargetFeature = [&](llvm::StringRef feature) {
+      llvm::Attribute attr = fn->getFnAttribute("target-features");
+      if (!attr.isStringAttribute())
+        return false;
+
+      llvm::SmallVector<llvm::StringRef, 16> targetFeatures;
+      attr.getValueAsString().split(targetFeatures, ',', /*MaxSplit=*/-1,
+                                    /*KeepEmpty=*/false);
+
+      bool isEnabled = false;
+      for (llvm::StringRef targetFeature : targetFeatures) {
+        if (targetFeature.consume_front("+")) {
+          if (targetFeature == feature)
+            isEnabled = true;
+        } else if (targetFeature.consume_front("-")) {
+          if (targetFeature == feature)
+            isEnabled = false;
+        }
+      }
+      return isEnabled;
+    };
+
+    if (hasTargetFeature("sve")) {
+      if (validateAArch64SimdLen(opInst, fn, vLen, wds, 's')) {
+        ompBuilder->emitAArch64DeclareSimdFunction(
+            fn, vLen, paramAttrs, branch, 's', nds, outputBecomesInput);
+      }
+    } else if (hasTargetFeature("neon")) {
+      if (validateAArch64SimdLen(opInst, fn, vLen, wds, 'n')) {
+        ompBuilder->emitAArch64DeclareSimdFunction(
+            fn, vLen, paramAttrs, branch, 'n', nds, outputBecomesInput);
+      }
+    }
+  }
+
+  return success();
+}
+
 /// Given an OpenMP MLIR operation, create the corresponding LLVM IR (including
 /// OpenMP runtime calls).
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
@@ -7907,6 +8292,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::TargetFreeMemOp) {
             return convertTargetFreeMemOp(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::DeclareSimdOp op) {
+            return convertDeclareSimdOp(*op, builder, moduleTranslation);
           })
           .Default([&](Operation *inst) {
             return inst->emitError()
