@@ -381,3 +381,24 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK-LABEL: llvm.func @_QQhost()
 // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @_QMmodEcval : !llvm.ptr<4>
 // CHECK: %{{.*}} = llvm.addrspacecast %[[ADDR]] : !llvm.ptr<4> to !llvm.ptr
+
+// -----
+
+// Test that a host-side fir.address_of referencing a fir.global with CUF
+// shared data_attr produces an addrspacecast from ptr<3> to ptr.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  fir.global @_QMmodEsval {data_attr = #cuf.cuda<shared>} : i32 {
+    %0 = fir.zero_bits i32
+    fir.has_value %0 : i32
+  }
+  func.func @_QQhost_shared() {
+    %0 = fir.address_of(@_QMmodEsval) : !fir.ref<i32>
+    return
+  }
+}
+
+// CHECK: llvm.mlir.global external @_QMmodEsval() {addr_space = 3 : i32} : i32
+// CHECK-LABEL: llvm.func @_QQhost_shared()
+// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @_QMmodEsval : !llvm.ptr<3>
+// CHECK: %{{.*}} = llvm.addrspacecast %[[ADDR]] : !llvm.ptr<3> to !llvm.ptr
