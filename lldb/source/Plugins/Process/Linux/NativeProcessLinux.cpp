@@ -287,7 +287,7 @@ NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::createStringError("Could not sync with inferior process");
+    return llvm::createStringError("could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
@@ -504,7 +504,7 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
 
   size_t tid_count = tids_to_attach.size();
   if (tid_count == 0)
-    return llvm::createStringError("No such process");
+    return llvm::createStringError("no such process");
 
   std::vector<::pid_t> tids;
   tids.reserve(tid_count);
@@ -1834,9 +1834,9 @@ Status NativeProcessLinux::GetLoadedModuleFileSpec(const char *module_path,
       return Status();
     }
   }
-  return Status::FromErrorStringWithFormat(
-      "Module file (%s) not found in /proc/%" PRIu64 "/maps file!",
-      module_file_spec.GetFilename().AsCString(), GetID());
+  return Status::FromErrorStringWithFormatv(
+      "Module file ({0}) not found in /proc/{1}/maps file!",
+      module_file_spec.GetFilename(), GetID());
 }
 
 Status NativeProcessLinux::GetFileLoadAddress(const llvm::StringRef &file_name,

@@ -29606,6 +29606,11 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
   bool NonZeroSrc = DAG.isKnownNeverZero(N0);
 
+  // Default to expansion if CTPOP is legal.
+  if (VT.isVector() &&
+      DAG.getTargetLoweringInfo().isOperationLegal(ISD::CTPOP, VT))
+    return SDValue();
+
   // GFNI - isolate LSB and perform GF2P8AFFINEQB lookup.
   if (Subtarget.hasGFNI() && VT.isVector() &&
       VT.getVectorElementType() == MVT::i8) {
@@ -29922,8 +29927,8 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   bool IsXNeverNaN = DAG.isKnownNeverNaN(X);
   bool IsYNeverNaN = DAG.isKnownNeverNaN(Y);
   bool IgnoreSignedZero = Op->getFlags().hasNoSignedZeros() ||
-                          DAG.isKnownNeverZeroFloat(X) ||
-                          DAG.isKnownNeverZeroFloat(Y);
+                          DAG.isKnownNeverLogicalZero(X) ||
+                          DAG.isKnownNeverLogicalZero(Y);
   bool ShouldHandleZeros = true;
   SDValue NewX = X;
   SDValue NewY = Y;
@@ -48393,8 +48398,8 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
   case ISD::SETOLE:
     // Converting this to a min would handle comparisons between positive
     // and negative zero incorrectly.
-    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
-        !DAG.isKnownNeverZeroFloat(RHS))
+    if (!N->getFlags().hasNoSignedZeros() &&
+        !DAG.isKnownNeverLogicalZero(LHS) && !DAG.isKnownNeverLogicalZero(RHS))
       break;
     Opcode = X86ISD::FMIN;
     break;
@@ -48410,8 +48415,8 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
   case ISD::SETOGE:
     // Converting this to a max would handle comparisons between positive
     // and negative zero incorrectly.
-    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
-        !DAG.isKnownNeverZeroFloat(RHS))
+    if (!N->getFlags().hasNoSignedZeros() &&
+        !DAG.isKnownNeverLogicalZero(LHS) && !DAG.isKnownNeverLogicalZero(RHS))
       break;
     Opcode = X86ISD::FMAX;
     break;
@@ -53171,6 +53176,35 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+static SDValue combineOrWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
+                                          SelectionDAG &DAG, EVT VT) {
+  using namespace SDPatternMatch;
+  assert(N->getOpcode() == ISD::OR && "Expected OR node");
+
+  if (!N->getFlags().hasDisjoint() &&
+      !DAG.haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1)))
+    return SDValue();
+
+  SDValue X, Y, SplatOp;
+  APInt Imm, SplatVal;
+
+  // Fold: (GF2P8AFFINEQB(X, Y, Imm) or_disjoint SplatVal)
+  //     -> GF2P8AFFINEQB(X, Y, Imm ^ SplatVal)
+  // When OR is disjoint (no common bits), the splat constant can be folded
+  //  directly into the GF2P8AFFINEQB immediate via XOR.
+
+  if (sd_match(N, m_Or(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X),
+                                            m_Value(Y), m_ConstInt(Imm))),
+                       m_Value(SplatOp))) &&
+      X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false)) {
+    uint64_t NewImm = (Imm.getZExtValue() ^ SplatVal.getZExtValue()) & 0xFF;
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, Y,
+                       DAG.getTargetConstant(NewImm, DL, MVT::i8));
+  }
+
+  return SDValue();
+}
+
 static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
                                      SDValue N0, SDValue N1,
                                      SelectionDAG &DAG) {
@@ -53262,6 +53296,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue FPLogic = convertIntLogicToFPLogic(N->getOpcode(), dl, VT, N0, N1,
                                                  DAG, DCI, Subtarget))
     return FPLogic;
+
+  if (SDValue R = combineOrWithGF2P8AFFINEQB(N, dl, DAG, VT))
+    return R;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
@@ -58877,11 +58914,12 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
     return SDValue();
 
   SDValue Op0, Op1, Accum;
-  if (!sd_match(N, m_Add(m_AllOf(m_Opc(ISD::BUILD_VECTOR), m_Value(Op0)),
-                         m_AllOf(m_Opc(ISD::BUILD_VECTOR), m_Value(Op1)))) &&
-      !sd_match(N, m_Add(m_AllOf(m_Opc(ISD::BUILD_VECTOR), m_Value(Op0)),
-                         m_Add(m_Value(Accum), m_AllOf(m_Opc(ISD::BUILD_VECTOR),
-                                                       m_Value(Op1))))))
+  if (!sd_match(N, m_Add(m_Value(Op0, m_SpecificOpc(ISD::BUILD_VECTOR)),
+                         m_Value(Op1, m_SpecificOpc(ISD::BUILD_VECTOR)))) &&
+      !sd_match(N,
+                m_Add(m_Value(Op0, m_SpecificOpc(ISD::BUILD_VECTOR)),
+                      m_Add(m_Value(Accum),
+                            m_Value(Op1, m_SpecificOpc(ISD::BUILD_VECTOR))))))
     return SDValue();
 
   // Check if one of Op0,Op1 is of the form:
@@ -61981,19 +62019,29 @@ static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasF16C() || Subtarget.useSoftFloat())
-    return SDValue();
 
   bool IsStrict = N->isStrictFPOpcode();
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(IsStrict ? 1 : 0);
+  SDLoc dl(N);
+
+  if (!IsStrict && VT == MVT::f16 &&
+      (Src.getOpcode() == ISD::FNEG || Src.getOpcode() == ISD::FABS)) {
+    SDValue Inner = Src.getOperand(0);
+    if (Inner.getOpcode() == ISD::FP_EXTEND &&
+        Inner.getOperand(0).getValueType() == MVT::f16) {
+      return DAG.getNode(Src.getOpcode(), dl, MVT::f16, Inner.getOperand(0));
+    }
+  }
+
+  if (!Subtarget.hasF16C() || Subtarget.useSoftFloat())
+    return SDValue();
+
   EVT SrcVT = Src.getValueType();
 
   if (!VT.isVector() || VT.getVectorElementType() != MVT::f16 ||
       SrcVT.getVectorElementType() != MVT::f32)
     return SDValue();
-
-  SDLoc dl(N);
 
   SDValue Cvt, Chain;
   unsigned NumElts = VT.getVectorNumElements();

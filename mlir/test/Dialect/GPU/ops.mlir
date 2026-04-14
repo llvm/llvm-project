@@ -186,6 +186,7 @@ module attributes {gpu.container_module} {
       gpu.barrier memfence [#gpu.address_space<global>]
       gpu.barrier memfence [#gpu.address_space<global>, #gpu.address_space<workgroup>]
       gpu.barrier memfence [#gpu.address_space<private>]
+      gpu.barrier memfence [#gpu.address_space<constant>]
       gpu.barrier memfence []
 
       "some_op"(%bIdX, %tIdX) : (index, index) -> ()

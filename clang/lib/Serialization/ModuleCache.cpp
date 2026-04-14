@@ -10,6 +10,7 @@
 
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
@@ -60,38 +61,48 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
   // Walk the entire module cache, looking for unused module files and module
   // indices.
   std::error_code EC;
+  auto TryPruneFile = [&](StringRef FilePath) {
+    // We only care about module and global module index files.
+    StringRef Filename = llvm::sys::path::filename(FilePath);
+    StringRef Extension = llvm::sys::path::extension(FilePath);
+    if (Extension != ".pcm" && Extension != ".timestamp" &&
+        Filename != "modules.idx")
+      return;
+
+    // Don't prune the pruning timestamp file.
+    if (Filename == "modules.timestamp")
+      return;
+
+    // Look at this file. If we can't stat it, there's nothing interesting
+    // there.
+    if (llvm::sys::fs::status(FilePath, StatBuf))
+      return;
+
+    // If the file has been used recently enough, leave it there.
+    time_t FileAccessTime = llvm::sys::toTimeT(StatBuf.getLastAccessedTime());
+    if (CurrentTime - FileAccessTime <= PruneAfter)
+      return;
+
+    // Remove the file.
+    llvm::sys::fs::remove(FilePath);
+
+    // Remove the timestamp file created by implicit module builds.
+    std::string TimestampFilename = FilePath.str() + ".timestamp";
+    llvm::sys::fs::remove(TimestampFilename);
+  };
+
   for (llvm::sys::fs::directory_iterator Dir(Path, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
-    // If we don't have a directory, there's nothing to look into.
-    if (!llvm::sys::fs::is_directory(Dir->path()))
+    // If we don't have a directory, try to prune it as a file in the root.
+    if (!llvm::sys::fs::is_directory(Dir->path())) {
+      TryPruneFile(Dir->path());
       continue;
+    }
 
     // Walk all the files within this directory.
     for (llvm::sys::fs::directory_iterator File(Dir->path(), EC), FileEnd;
-         File != FileEnd && !EC; File.increment(EC)) {
-      // We only care about module and global module index files.
-      StringRef Extension = llvm::sys::path::extension(File->path());
-      if (Extension != ".pcm" && Extension != ".timestamp" &&
-          llvm::sys::path::filename(File->path()) != "modules.idx")
-        continue;
-
-      // Look at this file. If we can't stat it, there's nothing interesting
-      // there.
-      if (llvm::sys::fs::status(File->path(), StatBuf))
-        continue;
-
-      // If the file has been used recently enough, leave it there.
-      time_t FileAccessTime = llvm::sys::toTimeT(StatBuf.getLastAccessedTime());
-      if (CurrentTime - FileAccessTime <= PruneAfter)
-        continue;
-
-      // Remove the file.
-      llvm::sys::fs::remove(File->path());
-
-      // Remove the timestamp file.
-      std::string TimpestampFilename = File->path() + ".timestamp";
-      llvm::sys::fs::remove(TimpestampFilename);
-    }
+         File != FileEnd && !EC; File.increment(EC))
+      TryPruneFile(File->path());
 
     // If we removed all the files in the directory, remove the directory
     // itself.
@@ -141,6 +152,7 @@ clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
       llvm::sys::fs::openNativeFileForRead(FileName);
   if (!FD)
     return FD.takeError();
+  llvm::scope_exit CloseFD([&FD]() { llvm::sys::fs::closeFile(*FD); });
   llvm::sys::fs::file_status Status;
   if (std::error_code EC = llvm::sys::fs::status(*FD, Status))
     return llvm::errorCodeToError(EC);
@@ -159,16 +171,6 @@ class CrossProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
 
 public:
-  void prepareForGetLock(StringRef ModuleFilename) override {
-    // This is a compiler-internal input/output, let's bypass the sandbox.
-    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-
-    // FIXME: Do this in LockFileManager and only if the directory doesn't
-    // exist.
-    StringRef Dir = llvm::sys::path::parent_path(ModuleFilename);
-    llvm::sys::fs::create_directories(Dir);
-  }
-
   std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) override {
     return std::make_unique<llvm::LockFileManager>(ModuleFilename);

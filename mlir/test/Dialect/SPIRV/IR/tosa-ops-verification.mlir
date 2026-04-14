@@ -2005,23 +2005,23 @@ spirv.ARM.Graph @rescale_scale32_false_requires_i16_multiplier(%arg0: !spirv.arm
   spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
 }
 
-spirv.ARM.Graph @rescale_per_channel_true_requires_multiplier_length_rank_minus_one(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+spirv.ARM.Graph @rescale_per_channel_true_requires_multiplier_length_last_dimension(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
   %1 = spirv.Constant dense<[1]> : !spirv.arm.tensor<1xi16>
   %2 = spirv.Constant dense<[0, 0]> : !spirv.arm.tensor<2xi8>
   %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
   %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
-  // expected-error @+1 {{op failed to verify that multiplier must have length rank(input) - 1 when per_channel is true, otherwise length 1}}
+  // expected-error @+1 {{op failed to verify that multiplier must have length input_shape[rank(input) - 1] when per_channel is true, otherwise length 1}}
   %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = true, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<2xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
   spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
 }
 
-spirv.ARM.Graph @rescale_per_channel_true_requires_shift_length_rank_minus_one(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
-  %1 = spirv.Constant dense<[1, 1]> : !spirv.arm.tensor<2xi16>
+spirv.ARM.Graph @rescale_per_channel_true_requires_shift_length_last_dimension(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<[1, 1, 1, 1]> : !spirv.arm.tensor<4xi16>
   %2 = spirv.Constant dense<[0]> : !spirv.arm.tensor<1xi8>
   %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
   %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
-  // expected-error @+1 {{op failed to verify that shift must have length rank(input) - 1 when per_channel is true, otherwise length 1}}
-  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = true, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<2xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
+  // expected-error @+1 {{op failed to verify that shift must have length input_shape[rank(input) - 1] when per_channel is true, otherwise length 1}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = true, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<4xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
   spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
 }
 
@@ -2030,7 +2030,7 @@ spirv.ARM.Graph @rescale_per_channel_false_requires_multiplier_length_one(%arg0:
   %2 = spirv.Constant dense<[0]> : !spirv.arm.tensor<1xi8>
   %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
   %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
-  // expected-error @+1 {{op failed to verify that multiplier must have length rank(input) - 1 when per_channel is true, otherwise length 1}}
+  // expected-error @+1 {{op failed to verify that multiplier must have length input_shape[rank(input) - 1] when per_channel is true, otherwise length 1}}
   %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<2xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
   spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
 }
@@ -2040,7 +2040,7 @@ spirv.ARM.Graph @rescale_per_channel_false_requires_shift_length_one(%arg0: !spi
   %2 = spirv.Constant dense<[0, 0]> : !spirv.arm.tensor<2xi8>
   %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
   %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
-  // expected-error @+1 {{op failed to verify that shift must have length rank(input) - 1 when per_channel is true, otherwise length 1}}
+  // expected-error @+1 {{op failed to verify that shift must have length input_shape[rank(input) - 1] when per_channel is true, otherwise length 1}}
   %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<2xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
   spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
 }

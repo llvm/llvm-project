@@ -508,3 +508,93 @@ static_assert(!__callable<__mdispatch<int>>);
 }
 
 }
+
+namespace GH190169 {
+
+namespace _1 {
+
+template <typename Type, typename... Choices>
+concept OneOf = (... || __is_same(Type, Choices));
+
+template <typename F, typename... Ts>
+using check = decltype((F{}(Ts{}), ...));
+
+using X = check<decltype([](auto val) {
+  [](OneOf<int, char> auto) {}(val);
+}), char>;
+
+}
+
+namespace _2 {
+
+template <typename T, typename U>
+concept Same = __is_same(T, U);
+
+template <typename Type, typename... Choices>
+concept OneOf = (... || Same<Type, Choices>);
+
+template <class... Ts>
+struct visitor : Ts... { using Ts::operator()...; };
+
+struct A {};
+struct B {};
+struct C {};
+
+template <typename F, typename T, typename = decltype(F{}(T{}))>
+struct check {};
+
+template <typename F, typename... Ts>
+struct check_all : check<F, Ts>... {};
+
+using F = decltype([](auto val) {
+  visitor{[](const A&) {},
+          [](const OneOf<B, C> auto&) {}}(val);
+});
+
+check_all<F, A, B, C> x;
+
+}
+
+}
+
+namespace GH188505 {
+
+template <class _Tp, class _Up>
+concept same_as = __is_same(_Tp, _Up) && __is_same(_Up, _Tp);
+
+template <typename T, typename... Ts>
+concept AnyOf = (same_as<T, Ts> || ...);
+
+struct Constant
+{
+    template <typename T>
+    using alias = const T;
+};
+
+struct Mutable
+{
+    template <typename T>
+    using alias = __remove_cv(T);
+};
+
+template <template <typename> typename M, typename T>
+concept MutabilityAliasFor = requires {
+    requires AnyOf<M<T>, const T, __remove_cv(T)>;
+    requires same_as<M<M<T>>, M<T>>;
+};
+
+template <template <typename> typename M, typename... Ts>
+concept MutabilityAliasForAllOf = (MutabilityAliasFor<M, Ts> && ...);
+
+template <template <typename T> typename M>
+concept MutabilityAlias = MutabilityAliasForAllOf<M, int, char, double>;
+
+static_assert(AnyOf<char, const char, char>);
+
+static_assert(MutabilityAliasFor<Constant::alias, int>);
+static_assert(MutabilityAliasForAllOf<Constant::alias, char, int>);
+
+static_assert(MutabilityAlias<Constant::alias>);
+static_assert(MutabilityAlias<Mutable::alias>);
+
+}

@@ -491,8 +491,8 @@ public:
 
     // - Declare all functions that have definitions so that definition
     //   signatures prevail over call site signatures.
-    // - Define module variables and OpenMP/OpenACC declarative constructs so
-    //   they are available before lowering any function that may use them.
+    // - Module variables are lowered once all the function declarations are
+    // available.
     bool hasMainProgram = false;
     llvm::SmallVector<const Fortran::semantics::Symbol *>
         globalOmpRequiresSymbols;
@@ -507,7 +507,6 @@ public:
                   globalOmpRequiresSymbols.push_back(f.getScope().symbol());
                 },
                 [&](Fortran::lower::pft::ModuleLikeUnit &m) {
-                  lowerModuleDeclScope(m);
                   for (Fortran::lower::pft::ContainedUnit &unit :
                        m.containedUnitList)
                     if (auto *f =
@@ -526,6 +525,15 @@ public:
                 [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
             },
             u);
+      }
+    });
+
+    // Lower module declaration scopes now that all function
+    // declarations are available with their final signatures.
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
+        if (auto *m = std::get_if<Fortran::lower::pft::ModuleLikeUnit>(&u))
+          lowerModuleDeclScope(*m);
       }
     });
 
@@ -7447,6 +7455,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
+  fir::setRelocationModel(*module, cgOpts.getRelocationModel());
+  fir::setIsPIE(*module, cgOpts.IsPIE);
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
 }

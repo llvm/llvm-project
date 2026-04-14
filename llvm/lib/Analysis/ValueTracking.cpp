@@ -4973,9 +4973,17 @@ static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
 }
 
 /// \return true if this is a floating point value that is known to have a
-/// magnitude smaller than 1. i.e., fabs(X) <= 1.0
-static bool isAbsoluteValueLessEqualOne(const Value *V) {
-  // TODO: Handle frexp and x - floor(x)?
+/// magnitude smaller than 1. i.e., fabs(X) <= 1.0 or is nan.
+static bool isAbsoluteValueULEOne(const Value *V) {
+  // TODO: Handle frexp
+  // TODO: Other rounding intrinsics?
+
+  // fabs(x - floor(x)) <= 1
+  const Value *SubFloorX;
+  if (match(V, m_FSub(m_Value(SubFloorX),
+                      m_Intrinsic<Intrinsic::floor>(m_Deferred(SubFloorX)))))
+    return true;
+
   return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value())) ||
          match(V, m_Intrinsic<Intrinsic::amdgcn_fract>(m_Value()));
 }
@@ -5249,14 +5257,76 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       break;
     }
-    case Intrinsic::sin:
-    case Intrinsic::cos: {
-      // Return NaN on infinite inputs.
+    case Intrinsic::sin: {
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
-      Known = IID == Intrinsic::sin ? KnownFPClass::sin(KnownSrc)
-                                    : KnownFPClass::cos(KnownSrc);
+      Known = KnownFPClass::sin(KnownSrc);
+      break;
+    }
+    case Intrinsic::cos: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::cos(KnownSrc);
+      break;
+    }
+    case Intrinsic::tan: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::tan(KnownSrc);
+      break;
+    }
+    case Intrinsic::sinh: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::sinh(KnownSrc);
+      break;
+    }
+    case Intrinsic::cosh: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::cosh(KnownSrc);
+      break;
+    }
+    case Intrinsic::tanh: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::tanh(KnownSrc);
+      break;
+    }
+    case Intrinsic::asin: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::asin(KnownSrc);
+      break;
+    }
+    case Intrinsic::acos: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::acos(KnownSrc);
+      break;
+    }
+    case Intrinsic::atan: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::atan(KnownSrc);
+      break;
+    }
+    case Intrinsic::atan2: {
+      KnownFPClass KnownLHS, KnownRHS;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownLHS, Q, Depth + 1);
+      computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedClasses,
+                          KnownRHS, Q, Depth + 1);
+      Known = KnownFPClass::atan2(KnownLHS, KnownRHS);
       break;
     }
     case Intrinsic::maxnum:
@@ -5645,9 +5715,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     /// Propgate no-infs if the other source is known smaller than one, such
     /// that this cannot introduce overflow.
-    if (KnownLHS.isKnownNever(fcInf) && isAbsoluteValueLessEqualOne(RHS))
+    if (KnownLHS.isKnownNever(fcInf) && isAbsoluteValueULEOne(RHS))
       Known.knownNot(fcInf);
-    else if (KnownRHS.isKnownNever(fcInf) && isAbsoluteValueLessEqualOne(LHS))
+    else if (KnownRHS.isKnownNever(fcInf) && isAbsoluteValueULEOne(LHS))
       Known.knownNot(fcInf);
 
     break;
@@ -8405,12 +8475,18 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
     if (match(FalseVal, m_OrdOrUnordFMin(m_Specific(CmpLHS), m_APFloat(FC2))) &&
         *FC1 < *FC2)
       return {SPF_FMAXNUM, SPNB_RETURNS_ANY, false};
+    if (match(FalseVal, m_FMinNum(m_Specific(CmpLHS), m_APFloat(FC2))) &&
+        *FC1 < *FC2)
+      return {SPF_FMAXNUM, SPNB_RETURNS_ANY, false};
     break;
   case CmpInst::FCMP_OGT:
   case CmpInst::FCMP_OGE:
   case CmpInst::FCMP_UGT:
   case CmpInst::FCMP_UGE:
     if (match(FalseVal, m_OrdOrUnordFMax(m_Specific(CmpLHS), m_APFloat(FC2))) &&
+        *FC1 > *FC2)
+      return {SPF_FMINNUM, SPNB_RETURNS_ANY, false};
+    if (match(FalseVal, m_FMaxNum(m_Specific(CmpLHS), m_APFloat(FC2))) &&
         *FC1 > *FC2)
       return {SPF_FMINNUM, SPNB_RETURNS_ANY, false};
     break;
@@ -10375,9 +10451,37 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     if (auto *Range = IIQ.getMetadata(I, LLVMContext::MD_range))
       CR = CR.intersectWith(getConstantRangeFromMetadata(*Range));
 
-    if (const auto *CB = dyn_cast<CallBase>(V))
+    Value *FrexpSrc;
+    if (const auto *CB = dyn_cast<CallBase>(V)) {
       if (std::optional<ConstantRange> Range = CB->getRange())
         CR = CR.intersectWith(*Range);
+    } else if (match(I, m_ExtractValue<1>(m_Intrinsic<Intrinsic::frexp>(
+                            m_Value(FrexpSrc))))) {
+      const fltSemantics &FltSem =
+          FrexpSrc->getType()->getScalarType()->getFltSemantics();
+      // It should be possible to implement this for any type, but this logic
+      // only computes the range assuming standard subnormal handling.
+      if (APFloat::isIEEELikeFP(FltSem)) {
+        const DataLayout &DL = I->getFunction()->getDataLayout();
+        SimplifyQuery SQ(DL, nullptr, DT, AC, CtxI, UseInstrInfo);
+
+        KnownFPClass KnownSrc =
+            computeKnownFPClass(FrexpSrc, fcSubnormal, SQ, Depth + 1);
+
+        // Exponent result is (src == 0) ? 0 : ilogb(src) + 1, and unspecified
+        // for inf/nan.
+        int MinExp = APFloat::semanticsMinExponent(FltSem) + 1;
+
+        // Offset to find the true minimum exponent value for a denormal.
+        if (!KnownSrc.isKnownNeverSubnormal())
+          MinExp -= (APFloat::semanticsPrecision(FltSem) - 1);
+
+        int MaxExp = APFloat::semanticsMaxExponent(FltSem) + 1;
+        CR = ConstantRange::getNonEmpty(
+            APInt(BitWidth, MinExp, /*isSigned=*/true),
+            APInt(BitWidth, MaxExp + 1, /*isSigned=*/true));
+      }
+    }
   }
 
   if (CtxI && AC) {

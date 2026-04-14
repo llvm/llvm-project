@@ -951,12 +951,14 @@ static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(HeaderVPBB))) {
     // Skip blocks outside the loop (exit blocks and their successors).
-    if (VPBB == MiddleVPBB)
+    if (VPBB == MiddleVPBB || isa<VPIRBasicBlock>(VPBB))
       continue;
     for (VPRecipeBase &R : *VPBB) {
       auto *VPI = dyn_cast<VPInstructionWithType>(&R);
-      if (!VPI || VPI->getOpcode() != Instruction::Load)
+      if (!VPI || VPI->getOpcode() != Instruction::Load) {
+        assert(!R.mayReadFromMemory() && "unexpected recipe reading memory");
         continue;
+      }
 
       // Get the pointer SCEV for dereferenceability checking.
       VPValue *Ptr = VPI->getOperand(0);
