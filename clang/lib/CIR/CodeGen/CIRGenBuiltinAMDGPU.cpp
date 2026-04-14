@@ -21,86 +21,75 @@ using namespace clang::CIRGen;
 using namespace cir;
 
 static mlir::Value emitBinaryExpMaybeConstrainedFPBuiltin(
-    CIRGenFunction &CGF, const CallExpr *E, llvm::StringRef IntrinsicName,
-    llvm::StringRef ConstrainedIntrinsicName) {
-  mlir::Value Src0 = CGF.emitScalarExpr(E->getArg(0));
-  mlir::Value Src1 = CGF.emitScalarExpr(E->getArg(1));
+    CIRGenFunction &cgf, const CallExpr *e, llvm::StringRef intrinsicName,
+    llvm::StringRef constrainedIntrinsicName) {
+  mlir::Value src0 = cgf.emitScalarExpr(e->getArg(0));
+  mlir::Value src1 = cgf.emitScalarExpr(e->getArg(1));
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
 
-  auto &Builder = CGF.getBuilder();
+  CIRGenBuilderTy &builder = cgf.getBuilder();
 
-  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, E);
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, e);
 
-  if (Builder.getIsFPConstrained()) {
-    return cir::LLVMIntrinsicCallOp::create(
-               Builder, CGF.getLoc(E->getExprLoc()),
-               Builder.getStringAttr(ConstrainedIntrinsicName), Src0.getType(),
-               {Src0, Src1})
-        .getResult();
+  if (builder.getIsFPConstrained()) {
+    return builder.emitIntrinsicCallOp(loc, constrainedIntrinsicName,
+                                       src0.getType(),
+                                       mlir::ValueRange{src0, src1});
   }
 
-  return cir::LLVMIntrinsicCallOp::create(Builder, CGF.getLoc(E->getExprLoc()),
-                                          Builder.getStringAttr(IntrinsicName),
-                                          Src0.getType(), {Src0, Src1})
-      .getResult();
+  return builder.emitIntrinsicCallOp(loc, intrinsicName, src0.getType(),
+                                     mlir::ValueRange{src0, src1});
 }
 
-static mlir::Value emitLogbBuiltin(CIRGenFunction &CGF, const CallExpr *E,
-                                   bool IsFloat) {
-  auto &Builder = CGF.getBuilder();
-  mlir::Location Loc = CGF.getLoc(E->getExprLoc());
+static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
+                                   const llvm::fltSemantics &fSem) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
 
-  mlir::Value Src0 = CGF.emitScalarExpr(E->getArg(0));
-  mlir::Type SrcTy = Src0.getType();
-  mlir::Type Int32Ty = Builder.getSInt32Ty();
+  mlir::Value src0 = cgf.emitScalarExpr(e->getArg(0));
+  mlir::Type srcTy = src0.getType();
+  mlir::Type int32Ty = builder.getSInt32Ty();
 
-  cir::RecordType FrExpResTy =
-      Builder.getAnonRecordTy({SrcTy, Int32Ty}, false, false);
+  cir::RecordType frExpResTy =
+      builder.getAnonRecordTy({srcTy, int32Ty}, false, false);
 
-  mlir::Value FrExpResult =
-      cir::LLVMIntrinsicCallOp::create(
-          Builder, Loc, Builder.getStringAttr("llvm.frexp"), FrExpResTy, {Src0})
-          .getResult();
+  mlir::Value frExpResult = builder.emitIntrinsicCallOp(
+      loc, "frexp", frExpResTy, mlir::ValueRange{src0});
 
-  mlir::Value Exp =
-      cir::ExtractMemberOp::create(Builder, Loc, Int32Ty, FrExpResult, 1);
+  mlir::Value exp =
+      cir::ExtractMemberOp::create(builder, loc, int32Ty, frExpResult, 1);
 
-  mlir::Value NegativeOne =
-      Builder.getConstant(Loc, cir::IntAttr::get(Int32Ty, -1));
-  mlir::Value ExpMinus1 = Builder.createAdd(Loc, Exp, NegativeOne);
+  mlir::Value negativeOne =
+      builder.getConstant(loc, cir::IntAttr::get(int32Ty, -1));
+  mlir::Value expMinus1 = builder.createAdd(loc, exp, negativeOne);
 
-  mlir::Value SIToFP = cir::CastOp::create(
-      Builder, Loc, SrcTy, cir::CastKind::int_to_float, ExpMinus1);
+  mlir::Value siToFp = cir::CastOp::create(
+      builder, loc, srcTy, cir::CastKind::int_to_float, expMinus1);
 
-  mlir::Value Fabs = cir::FAbsOp::create(Builder, Loc, SrcTy, Src0);
+  mlir::Value fabs = cir::FAbsOp::create(builder, loc, srcTy, src0);
 
-  llvm::APFloat InfVal =
-      IsFloat ? llvm::APFloat::getInf(llvm::APFloat::IEEEsingle())
-              : llvm::APFloat::getInf(llvm::APFloat::IEEEdouble());
-  mlir::Value Inf = Builder.getConstant(Loc, cir::FPAttr::get(SrcTy, InfVal));
+  llvm::APFloat infVal = llvm::APFloat::getInf(fSem);
+  mlir::Value inf = builder.getConstant(loc, cir::FPAttr::get(srcTy, infVal));
 
-  mlir::Value FabsNegInf =
-      Builder.createCompare(Loc, cir::CmpOpKind::ne, Fabs, Inf);
+  mlir::Value fabsNegInf =
+      builder.createCompare(loc, cir::CmpOpKind::ne, fabs, inf);
 
-  mlir::Value Sel = Builder.createSelect(Loc, FabsNegInf, SIToFP, Fabs);
+  mlir::Value sel = builder.createSelect(loc, fabsNegInf, siToFp, fabs);
 
-  llvm::APFloat ZeroValue =
-      IsFloat ? llvm::APFloat::getZero(llvm::APFloat::IEEEsingle())
-              : llvm::APFloat::getZero(llvm::APFloat::IEEEdouble());
-  mlir::Value Zero =
-      Builder.getConstant(Loc, cir::FPAttr::get(SrcTy, ZeroValue));
+  llvm::APFloat zeroValue = llvm::APFloat::getZero(fSem);
+  mlir::Value zero =
+      builder.getConstant(loc, cir::FPAttr::get(srcTy, zeroValue));
 
-  mlir::Value SrcEqZero =
-      Builder.createCompare(Loc, cir::CmpOpKind::eq, Src0, Zero);
+  mlir::Value srcEqZero =
+      builder.createCompare(loc, cir::CmpOpKind::eq, src0, zero);
 
-  llvm::APFloat NegInfVal =
-      IsFloat ? llvm::APFloat::getInf(llvm::APFloat::IEEEsingle(), true)
-              : llvm::APFloat::getInf(llvm::APFloat::IEEEdouble(), true);
-  mlir::Value NegInf =
-      Builder.getConstant(Loc, cir::FPAttr::get(SrcTy, NegInfVal));
+  llvm::APFloat negInfVal = llvm::APFloat::getInf(fSem, true);
+  mlir::Value negInf =
+      builder.getConstant(loc, cir::FPAttr::get(srcTy, negInfVal));
 
-  mlir::Value Result = Builder.createSelect(Loc, SrcEqZero, NegInf, Sel);
+  mlir::Value res = builder.createSelect(loc, srcEqZero, negInf, sel);
 
-  return Result;
+  return res;
 }
 
 std::optional<mlir::Value>
@@ -922,14 +911,16 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case Builtin::BIlogbf:
   case Builtin::BI__builtin_logbf:
-    return emitLogbBuiltin(*this, expr, true);
+    return emitLogbBuiltin(*this, expr, llvm::APFloat::IEEEsingle());
+  case Builtin::BIlogb:
+  case Builtin::BI__builtin_logb:
+    return emitLogbBuiltin(*this, expr, llvm::APFloat::IEEEdouble());
   case Builtin::BIscalbnf:
   case Builtin::BI__builtin_scalbnf:
-    return emitLogbBuiltin(*this, expr, false);
   case Builtin::BIscalbn:
   case Builtin::BI__builtin_scalbn: {
     return emitBinaryExpMaybeConstrainedFPBuiltin(
-        *this, expr, "llvm.ldexp", "llvm.experimental.constrained.ldexp");
+        *this, expr, "ldexp", "experimental.constrained.ldexp");
   }
   default:
     return std::nullopt;
