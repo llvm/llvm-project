@@ -480,15 +480,16 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 ///                   execution on persistent storage.
 EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                         void *VAddr, bool IsRecord,
-                                        bool SaveOutput) {
+                                        bool SaveOutput,
+                                        const char *OutputDirPath) {
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  [[maybe_unused]] int Rc =
-      target_activate_rr(*DeviceOrErr, MemorySize, VAddr, IsRecord, SaveOutput);
+  [[maybe_unused]] int Rc = target_activate_rr(
+      *DeviceOrErr, MemorySize, VAddr, IsRecord, SaveOutput, OutputDirPath);
   assert(Rc == OFFLOAD_SUCCESS &&
          "__tgt_activate_record_replay unexpected failure!");
   return OMP_TGT_SUCCESS;

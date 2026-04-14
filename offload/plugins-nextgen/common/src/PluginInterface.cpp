@@ -1463,15 +1463,13 @@ int32_t GenericPluginTy::is_data_exchangable(int32_t SrcDeviceId,
   return isDataExchangable(SrcDeviceId, DstDeviceId);
 }
 
-int32_t GenericPluginTy::initialize_record_replay(int32_t DeviceId,
-                                                  int64_t MemorySize,
-                                                  void *VAddr, bool IsRecord,
-                                                  bool IsNative,
-                                                  bool SaveOutput) {
+int32_t GenericPluginTy::initialize_record_replay(
+    int32_t DeviceId, int64_t MemorySize, void *VAddr, bool IsRecord,
+    bool IsNative, bool SaveOutput, const char *OutputDirPath) {
   GenericDeviceTy &Device = getDevice(DeviceId);
 
   if (auto Err = Device.initRecordReplay(MemorySize, VAddr, IsRecord, IsNative,
-                                         SaveOutput)) {
+                                         SaveOutput, OutputDirPath)) {
     REPORT() << "Failure to initialize RR with " << MemorySize
              << " bytes on device " << DeviceId << ": "
              << toString(std::move(Err));

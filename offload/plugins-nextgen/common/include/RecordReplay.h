@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <mutex>
 #include <unordered_set>
 
@@ -62,6 +63,9 @@ protected:
 
   /// Status of the record or replay.
   StatusTy Status;
+
+  /// The path where to store all recorded files.
+  std::filesystem::path OutputDirectory;
 
   /// Whether the record replay should save a memory snapshot after a kernel
   /// execution.
@@ -128,8 +132,14 @@ protected:
   std::mutex InstancesLock;
 
 public:
-  RecordReplayTy(StatusTy Status, bool SaveOutput, GenericDeviceTy &Device)
-      : Status(Status), SaveOutput(SaveOutput), Device(Device) {}
+  RecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr, bool SaveOutput,
+                 GenericDeviceTy &Device)
+      : Status(Status), SaveOutput(SaveOutput), Device(Device) {
+    if (OutputDirectoryStr == "")
+      OutputDirectory = std::filesystem::current_path();
+    else
+      OutputDirectory = OutputDirectoryStr.data();
+  }
 
   virtual ~RecordReplayTy() = default;
 
@@ -194,9 +204,9 @@ private:
 
 /// The native kernel record replay support.
 struct NativeRecordReplayTy : public RecordReplayTy {
-  NativeRecordReplayTy(StatusTy Status, bool SaveOutput,
-                       GenericDeviceTy &Device)
-      : RecordReplayTy(Status, SaveOutput, Device) {}
+  NativeRecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr,
+                       bool SaveOutput, GenericDeviceTy &Device)
+      : RecordReplayTy(Status, OutputDirectoryStr, SaveOutput, Device) {}
 
 private:
   Error recordPrologueImpl(const GenericKernelTy &Kernel,
@@ -210,14 +220,17 @@ private:
                        const KernelArgsTy &KernelArgs,
                        const KernelLaunchParamsTy &LaunchParams) override;
 
+  /// Get a string with the filename.
+  std::string getFilename(StringRef KernelName, StringRef Suffix);
+
   /// Record a memory snapshot to a file.
-  Error recordSnapshot(StringRef Filename);
+  Error recordSnapshot(const std::string &Filename);
 
   /// Record the globals to a file.
-  Error recordGlobals(StringRef Filename);
+  Error recordGlobals(const std::string &Filename);
 
   /// Record the device image to a file.
-  Error recordImage(const GenericKernelTy &Kernel, StringRef Filename);
+  Error recordImage(const GenericKernelTy &Kernel, const std::string &Filename);
 };
 
 } // namespace plugin

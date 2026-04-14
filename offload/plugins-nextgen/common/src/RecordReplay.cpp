@@ -21,7 +21,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
-#include <filesystem>
 #include <functional>
 
 using namespace llvm;
@@ -124,23 +123,22 @@ Error RecordReplayTy::recordEpilogue(const GenericKernelTy &Kernel,
 Error NativeRecordReplayTy::recordPrologueImpl(
     const GenericKernelTy &Kernel, const InstanceTy &Instance,
     const KernelArgsTy &KernelArgs, const KernelLaunchParamsTy &LaunchParams) {
-  SmallString<128> SnapshotFilename = {Kernel.getName(), ".memory"};
+  std::string SnapshotFilename = getFilename(Kernel.getName(), "record_input");
   if (auto Err = recordSnapshot(SnapshotFilename))
     return Err;
 
-  SmallString<128> GlobalsFilename = {Kernel.getName(), ".globals"};
+  std::string GlobalsFilename = getFilename(Kernel.getName(), "globals");
   if (auto Err = recordGlobals(GlobalsFilename))
     return Err;
 
-  SmallString<128> ImageFilename = {Kernel.getName(), ".image"};
+  std::string ImageFilename = getFilename(Kernel.getName(), "image");
   return recordImage(Kernel, ImageFilename);
 }
 
 Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
                                                const InstanceTy &Instance) {
-  SmallString<128> SnapshotFilename = {
-      Kernel.getName(),
-      (isRecording() ? ".original.output" : ".replay.output")};
+  std::string SnapshotFilename = getFilename(
+      Kernel.getName(), isRecording() ? "record_output" : "replay_output");
   return recordSnapshot(SnapshotFilename);
 }
 
@@ -168,9 +166,9 @@ Error NativeRecordReplayTy::recordDescImpl(
     JsonArgOffsets.push_back(0);
   JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 
-  SmallString<128> JsonFilename = {Kernel.getName(), ".json"};
+  std::string JsonFilename = getFilename(Kernel.getName(), "json");
   std::error_code EC;
-  raw_fd_ostream JsonOS(JsonFilename.str(), EC);
+  raw_fd_ostream JsonOS(JsonFilename, EC);
   if (EC)
     return Plugin::error(ErrorCode::UNKNOWN, "saving kernel json file");
   JsonOS << json::Value(std::move(JsonKernelInfo));
@@ -178,7 +176,14 @@ Error NativeRecordReplayTy::recordDescImpl(
   return Plugin::success();
 }
 
-Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
+std::string NativeRecordReplayTy::getFilename(StringRef KernelName,
+                                              StringRef Suffix) {
+  std::filesystem::path Filename = OutputDirectory / KernelName.data();
+  Filename.replace_extension(Suffix.data());
+  return Filename.string();
+}
+
+Error NativeRecordReplayTy::recordSnapshot(const std::string &Filename) {
   // Another thread may be allocating memory. The size can only increase.
   AllocationLock.lock();
   uint64_t RecordSize = CurrentSize;
@@ -195,6 +200,7 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
     return Err;
 
   StringRef DeviceMemory(DeviceMemoryMB.get()->getBufferStart(), RecordSize);
+
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
@@ -205,7 +211,7 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
 }
 
 Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
-                                        StringRef Filename) {
+                                        const std::string &Filename) {
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
@@ -215,7 +221,7 @@ Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
   return Plugin::success();
 }
 
-Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
+Error NativeRecordReplayTy::recordGlobals(const std::string &Filename) {
   uint64_t TotalSize = 0;
   uint32_t NumGlobals = 0;
 

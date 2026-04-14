@@ -94,12 +94,14 @@ llvm::Error DeviceTy::init() {
     Int64Envar OMPX_RecordMemSize("LIBOMPTARGET_RECORD_MEMSIZE",
                                   8 * 1024 * 1024 * 1024ULL);
     Int32Envar OMPX_RecordDevice("LIBOMPTARGET_RECORD_DEVICE", 0);
+    StringEnvar OMPX_RecordOutputDir("LIBOMPTARGET_RECORD_OUTPUT_DIR", "");
     if (OMPX_RecordDevice != RTLDeviceID)
       return llvm::Error::success();
 
     Ret = RTL->initialize_record_replay(
         RTLDeviceID, OMPX_RecordMemSize, nullptr,
-        /*IsRecord=*/true, /*IsNative=*/true, OMPX_ReplaySaveOutput);
+        /*IsRecord=*/true, /*IsNative=*/true, OMPX_ReplaySaveOutput,
+        OMPX_RecordOutputDir.get().c_str());
     if (Ret != OFFLOAD_SUCCESS)
       return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
                                        "failed to initialize RR in device %d\n",

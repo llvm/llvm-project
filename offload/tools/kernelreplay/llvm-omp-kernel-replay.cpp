@@ -22,6 +22,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
 
 using namespace llvm;
 
@@ -53,6 +54,11 @@ static cl::opt<uint32_t> NumThreadsOpt("num-threads",
 
 static cl::opt<int32_t> DeviceIdOpt("device-id", cl::desc("Set the device id."),
                                     cl::init(-1), cl::cat(ReplayOptions));
+
+static cl::opt<std::string>
+    DirectoryOpt("directory",
+                 cl::desc("The directory where the files are stored."),
+                 cl::init("."), cl::cat(ReplayOptions));
 
 int main(int argc, char **argv) {
   cl::HideUnrelatedOptions(ReplayOptions);
@@ -100,12 +106,16 @@ int main(int argc, char **argv) {
   uint64_t VAllocSize =
       JsonKernelInfo->getAsObject()->getInteger("VAllocSize").value();
 
+  // The file path without extension.
+  auto Filepath = std::filesystem::path(DirectoryOpt.getValue()) / KernelName;
+
+  Filepath.replace_extension("globals");
   ErrorOr<std::unique_ptr<MemoryBuffer>> GlobalsMB =
-      MemoryBuffer::getFile(KernelName + ".globals", /*isText=*/false,
+      MemoryBuffer::getFile(Filepath.string(), /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
 
   if (!GlobalsMB)
-    reportFatalUsageError("Error reading the globals.");
+    reportFatalUsageError("Error reading the globals file");
 
   // On AMD for currently unknown reasons we cannot copy memory mapped data to
   // device. This is a work-around.
@@ -142,11 +152,12 @@ int main(int argc, char **argv) {
     Global.Address = static_cast<char *>(OffloadEntries[0].Address) + I + 1;
   }
 
+  Filepath.replace_extension("image");
   ErrorOr<std::unique_ptr<MemoryBuffer>> ImageMB =
-      MemoryBuffer::getFile(KernelName + ".image", /*isText=*/false,
+      MemoryBuffer::getFile(Filepath.string(), /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
   if (!ImageMB)
-    reportFatalUsageError("Error reading the kernel image.");
+    reportFatalUsageError("Error reading the kernel image file");
 
   __tgt_device_image DeviceImage;
   DeviceImage.ImageStart = const_cast<char *>(ImageMB.get()->getBufferStart());
@@ -170,18 +181,18 @@ int main(int argc, char **argv) {
   __tgt_register_lib(&Desc);
 
   int Rc = __tgt_activate_record_replay(DeviceId, VAllocSize, VAllocAddr, false,
-                                        VerifyOpt);
+                                        VerifyOpt, DirectoryOpt.c_str());
 
-  if (Rc != OMP_TGT_SUCCESS) {
-    report_fatal_error("Cannot activate record replay\n");
-  }
+  if (Rc != OMP_TGT_SUCCESS)
+    reportFatalUsageError("Error activating record replay");
 
+  Filepath.replace_extension("record_input");
   ErrorOr<std::unique_ptr<MemoryBuffer>> DeviceMemoryMB =
-      MemoryBuffer::getFile(KernelName + ".memory", /*isText=*/false,
+      MemoryBuffer::getFile(Filepath.string(), /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
 
   if (!DeviceMemoryMB)
-    reportFatalUsageError("Error reading the kernel input device memory.");
+    reportFatalUsageError("Error reading the kernel record input file");
 
   // On AMD for currently unknown reasons we cannot copy memory mapped data to
   // device. This is a work-around.
@@ -197,17 +208,21 @@ int main(int argc, char **argv) {
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
       SharedMemorySize, LoopTripCount.value());
 
+  int ErrorDetected = 0;
   if (VerifyOpt) {
+    Filepath.replace_extension("record_output");
     ErrorOr<std::unique_ptr<MemoryBuffer>> OriginalOutputMB =
-        MemoryBuffer::getFile(KernelName + ".original.output",
+        MemoryBuffer::getFile(Filepath.string(),
                               /*isText=*/false,
                               /*RequiresNullTerminator=*/false);
     if (!OriginalOutputMB)
       reportFatalUsageError(
-          "Error reading the kernel original output file, make sure "
-          "LIBOMPTARGET_SAVE_OUTPUT is set when recording");
+          "Error reading the kernel record output file. Make sure "
+          "LIBOMPTARGET_RECORD_OUTPUT is set when recording");
+
+    Filepath.replace_extension("replay_output");
     ErrorOr<std::unique_ptr<MemoryBuffer>> ReplayOutputMB =
-        MemoryBuffer::getFile(KernelName + ".replay.output",
+        MemoryBuffer::getFile(Filepath.string(),
                               /*isText=*/false,
                               /*RequiresNullTerminator=*/false);
     if (!ReplayOutputMB)
@@ -215,14 +230,16 @@ int main(int argc, char **argv) {
 
     StringRef OriginalOutput = OriginalOutputMB.get()->getBuffer();
     StringRef ReplayOutput = ReplayOutputMB.get()->getBuffer();
-    if (OriginalOutput == ReplayOutput)
+    if (OriginalOutput == ReplayOutput) {
       outs() << "[llvm-omp-kernel-replay] Replay device memory verified!\n";
-    else
+    } else {
+      ErrorDetected = 1;
       outs() << "[llvm-omp-kernel-replay] Replay device memory failed to "
                 "verify!\n";
+    }
   }
 
   delete[] RecordedData;
 
-  return 0;
+  return ErrorDetected;
 }

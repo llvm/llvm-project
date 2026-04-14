@@ -1222,7 +1222,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
 
   Error initRecordReplay(int64_t Size, void *VAddr, bool IsRecord,
-                         bool IsNative, bool SaveOutput) {
+                         bool IsNative, bool SaveOutput,
+                         const char *OutputDirPath) {
     if (RecordReplay)
       return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
                            "RR already initialized");
@@ -1235,7 +1236,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                           ? RecordReplayTy::StatusTy::Recording
                                           : RecordReplayTy::StatusTy::Replaying;
 
-    RecordReplay = new NativeRecordReplayTy(Status, SaveOutput, *this);
+    RecordReplay = new NativeRecordReplayTy(
+        Status, OutputDirPath ? OutputDirPath : "", SaveOutput, *this);
     return RecordReplay->init(Size, VAddr);
   }
 
@@ -1554,7 +1556,7 @@ public:
   /// Initializes the record and replay mechanism inside the plugin.
   int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                    void *VAddr, bool IsRecord, bool IsNative,
-                                   bool SaveOutput);
+                                   bool SaveOutput, const char *OutputDirPath);
 
   /// Loads the associated binary into the plugin and returns a handle to it.
   int32_t load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
