@@ -40,6 +40,8 @@ STATISTIC(NumScalableInstructionsConvertedToFixed,
           "fixed vectors");
 STATISTIC(NumFunctionsWithScalableConvertedToFixed,
           "Number of functions with scalable vector converted to fixed width");
+STATISTIC(NumViableSeeds,
+          "Number of scalable stores that are viable to start chains");
 
 /// For a given Instruction \p I, find the vector length needed required by
 /// the vector instruction
@@ -154,6 +156,7 @@ ScalableToFixedVectorsPass::run(Function &F, FunctionAnalysisManager &FAM) {
         if (MinVL != MaxVL) {
           DemandedVLs[&I] = MinVL;
           Worklist.insert(&I);
+          ++NumViableSeeds;
         }
       }
     }
