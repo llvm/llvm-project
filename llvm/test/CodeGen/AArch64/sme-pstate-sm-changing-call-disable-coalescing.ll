@@ -842,8 +842,8 @@ define void @dont_coalesce_arg_v8i1(<8 x i1> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    and z1.b, z1.b, #0x1
-; CHECK-NEXT:    cmpne p0.b, p0/z, z1.b, #0
-; CHECK-NEXT:    str p0, [x8, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    cmpne p1.b, p0/z, z1.b, #0
+; CHECK-NEXT:    str p1, [x8, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    bl use_v8i1

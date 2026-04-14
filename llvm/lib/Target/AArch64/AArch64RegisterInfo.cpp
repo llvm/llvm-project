@@ -1115,6 +1115,55 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   }
 }
 
+static bool HandleMatchCmpPredicateHint(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &Hints, const VirtRegMap *VRM,
+    const MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
+    const AArch64Subtarget &ST, const LiveRegMatrix *Matrix) {
+  const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
+  if (!ST.useDistinctPredicateDstReg() ||
+      !AArch64::PPRRegClass.hasSubClassEq(RegRC) || !MRI.hasOneDef(VirtReg) ||
+      Order.size() < 2)
+    return false;
+
+  const MachineInstr *DefInst = MRI.getOneDef(VirtReg)->getParent();
+  if ((TII.get(DefInst->getOpcode()).TSFlags &
+       AArch64::DestructiveInstTypeMask) != AArch64::DestructivePredicate)
+    return false;
+
+  Register Op1Reg = DefInst->getOperand(1).getReg();
+  if (Op1Reg.isVirtual())
+    Op1Reg = VRM->getPhys(Op1Reg);
+
+  // If no register is allocated for the general-predicate, it's not yet
+  // possible to choose a distinct register.
+  if (!Op1Reg.isValid())
+    return false;
+
+  // Move Op1Reg as the least preferred register.
+  //
+  // This might result in callee-save spills when the function takes/returns
+  // arguments in SVE registers (i.e. needs to preserve p4-p15) and can't reuse
+  // p0-p3. That's why we limit it to non-callee saved registers or to
+  // callee-saved registers that have already been allocated for other uses in
+  // the function.
+  DenseSet<unsigned> CSRs;
+  for (unsigned I = 0;; ++I) {
+    Register R = MRI.getCalleeSavedRegs()[I];
+    if (!R.isValid())
+      break;
+    if (AArch64::PPRRegClass.contains(R))
+      CSRs.insert(R);
+  }
+
+  Hints.append(Order.begin(), Order.end());
+  llvm::stable_sort(Hints, [&](Register A, Register B) {
+    return B == Op1Reg &&
+           (!CSRs.contains(A) || !MRI.def_empty(A) || Matrix->isPhysRegUsed(A));
+  });
+  return true;
+}
+
 // We add regalloc hints for different cases:
 // * Choosing a better destination operand for predicated SVE instructions
 //   where the inactive lanes are undef, by choosing a register that is not
@@ -1144,14 +1193,14 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  bool ConsiderOnlyHints =
+      TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
+
   // For predicated SVE instructions where the inactive lanes are undef,
   // pick a destination register that is not unique to avoid introducing
   // a movprfx.
   const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
   if (AArch64::ZPRRegClass.hasSubClassEq(RegRC)) {
-    bool ConsiderOnlyHints = TargetRegisterInfo::getRegAllocationHints(
-        VirtReg, Order, Hints, MF, VRM);
-
     for (const MachineOperand &DefOp : MRI.def_operands(VirtReg)) {
       const MachineInstr &Def = *DefOp.getParent();
       if (DefOp.isImplicit() ||
@@ -1203,6 +1252,10 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     if (Hints.size())
       return ConsiderOnlyHints;
   }
+
+  if (HandleMatchCmpPredicateHint(VirtReg, Order, Hints, VRM, MRI, *TII, ST,
+                                  Matrix))
+    return ConsiderOnlyHints;
 
   if (!ST.hasSME() || !ST.isStreaming())
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,

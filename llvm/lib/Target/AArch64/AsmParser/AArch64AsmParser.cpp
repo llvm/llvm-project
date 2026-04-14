@@ -5631,6 +5631,12 @@ static inline bool isMatchingOrAlias(MCRegister ZReg, MCRegister Reg) {
          (ZReg == ((Reg - AArch64::Z0) + AArch64::Z0));
 }
 
+static bool isMovPrfxable(unsigned TSFlags) {
+  unsigned Flags = TSFlags & AArch64::DestructiveInstTypeMask;
+  return Flags != AArch64::NotDestructive &&
+         Flags != AArch64::DestructivePredicate;
+}
+
 // FIXME: This entire function is a giant hack to provide us with decent
 // operand range validation/diagnostics until TableGen/MC can be extended
 // to support autogeneration of this kind of validation.
@@ -5654,8 +5660,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
       (Inst.getOpcode() != AArch64::HLT)) {
 
     // Prefixed instructions must have a destructive operand.
-    if ((MCID.TSFlags & AArch64::DestructiveInstTypeMask) ==
-        AArch64::NotDestructive)
+    if (!isMovPrfxable(MCID.TSFlags))
       return Error(IDLoc, "instruction is unpredictable when following a"
                    " movprfx, suggest replacing movprfx with mov");
 
