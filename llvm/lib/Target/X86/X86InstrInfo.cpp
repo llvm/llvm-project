@@ -7485,8 +7485,8 @@ static void printFailMsgforFold(const MachineInstr &MI, unsigned Idx) {
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
-    unsigned Size, Align Alignment, bool AllowCommute,
-    LiveIntervals *LIS) const {
+    unsigned Size, Align Alignment, bool AllowCommute, MachineInstr *&CopyMI,
+    VirtRegMap *VRM) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
   unsigned Opc = MI.getOpcode();
 
@@ -7543,6 +7543,26 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // Utilize the mapping NonNDD if NDD memory variant is not preferred.
   bool NoNDDM = NonNDOpc && !Subtarget.hasNDDM();
 
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  if (NoNDDM && !IsTwoAddr && !MRI.isSSA()) {
+    // Bail out if dst has subreg. It happens during register-coalescer from
+    // 704B  %19:gr32 = SUB32rr_ND killed %0:gr32, killed %7:gr32, ...
+    // 752B  undef %23.sub_32bit:gr64 = COPY killed %19:gr32
+    // 768B  %25:gr32 = LEA64_32r killed %23:gr64, 1, killed %21:gr64_nosp, ...
+    // to
+    // 704B  undef %23.sub_32bit:gr64_with_sub_8bit = SUB32rr_ND %0:gr32, ...
+    // 768B  %25:gr32 = LEA64_32r %23:gr64_with_sub_8bit, 1, %21:gr64_nosp, ...
+    // Machine verifier fails if we try to tie %23 to the source.
+    if (MI.getOperand(0).getSubReg())
+      return nullptr;
+
+    // Bail out if dst has been assigned a physical register. Otherwise, we
+    // cannot update LiveRegMatrix properly.
+    if (VRM && VRM->getPhys(MI.getOperand(0).getReg()) &&
+        MI.getOperand(0).getReg() != MI.getOperand(1).getReg())
+      return nullptr;
+  }
+
   const X86FoldTableEntry *I =
       IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
                 : lookupFoldTable(NoNDDM ? NonNDOpc : Opc, OpNum);
@@ -7595,25 +7615,20 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
     if (NoNDDM && !IsTwoAddr) {
       Register SrcReg = MI.getOperand(1).getReg();
-      if (MI.killsRegister(SrcReg, /*TRI=*/nullptr))
+      unsigned SrcSub = MI.getOperand(1).getSubReg();
+      if (MI.killsRegister(SrcReg, /*TRI=*/nullptr) ||
+          MI.getOperand(0).getReg() == SrcReg)
         return NewMI;
 
       const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-      Register NewSrc = MF.getRegInfo().createVirtualRegister(&RC);
-      MachineInstr *Copy = BuildMI(*NewMI->getParent(), *NewMI,
-                                   MI.getDebugLoc(), get(TargetOpcode::COPY))
-                               .addReg(NewSrc, RegState::Define)
-                               .addReg(SrcReg);
-      NewMI->getOperand(1).setReg(NewSrc);
+      Register NewSrc = MRI.isSSA() ? MRI.createVirtualRegister(&RC)
+                                    : MI.getOperand(0).getReg();
 
-      if (LIS) {
-        SlotIndex CopyIdx = LIS->InsertMachineInstrInMaps(*Copy);
-        SlotIndex Idx = LIS->getInstructionIndex(MI);
-        LiveInterval &LI = LIS->getInterval(SrcReg);
-        LiveRange::Segment *S = LI.getSegmentContaining(Idx);
-        if (S->end.getBaseIndex() == Idx)
-          S->end = CopyIdx.getRegSlot();
-      }
+      CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
+                       get(TargetOpcode::COPY))
+                   .addDef(NewSrc)
+                   .addReg(SrcReg, {}, SrcSub);
+      NewMI->getOperand(1).setReg(NewSrc);
     }
     return NewMI;
   }
@@ -7628,7 +7643,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     }
     // Attempt to fold with the commuted version of the instruction.
     NewMI = foldMemoryOperandImpl(MF, MI, CommuteOpIdx2, MOs, InsertPt, Size,
-                                  Alignment, /*AllowCommute=*/false, LIS);
+                                  Alignment, /*AllowCommute=*/false, CopyMI);
     if (NewMI)
       return NewMI;
     // Folding failed again - undo the commute before returning.
@@ -7641,8 +7656,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
-    VirtRegMap *VRM) const {
+    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
+    LiveIntervals *LIS, VirtRegMap *VRM) const {
   // Check switch flag
   if (NoFusing)
     return nullptr;
@@ -7675,9 +7690,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         std::min(Alignment, Subtarget.getFrameLowering()->getStackAlign());
 
   auto Impl = [&]() {
-    return foldMemoryOperandImpl(MF, MI, Ops[0],
-                                 MachineOperand::CreateFI(FrameIndex), InsertPt,
-                                 Size, Alignment, /*AllowCommute=*/true, LIS);
+    return foldMemoryOperandImpl(
+        MF, MI, Ops[0], MachineOperand::CreateFI(FrameIndex), InsertPt, Size,
+        Alignment, /*AllowCommute=*/true, CopyMI, VRM);
   };
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     unsigned NewOpc = 0;
@@ -8157,7 +8172,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    LiveIntervals *LIS) const {
+    MachineInstr *&CopyMI, LiveIntervals *LIS) const {
 
   // If LoadMI is a masked load, check MI having the same mask.
   const MCInstrDesc &MCID = get(LoadMI.getOpcode());
@@ -8209,7 +8224,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (isLoadFromStackSlot(LoadMI, FrameIndex)) {
     if (isNonFoldablePartialRegisterLoad(LoadMI, MI, MF))
       return nullptr;
-    return foldMemoryOperandImpl(MF, MI, Ops, InsertPt, FrameIndex, LIS);
+    return foldMemoryOperandImpl(MF, MI, Ops, InsertPt, FrameIndex, CopyMI,
+                                 LIS);
   }
 
   // Check switch flag
@@ -8455,7 +8471,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   }
   return foldMemoryOperandImpl(MF, MI, Ops[0], MOs, InsertPt,
                                /*Size=*/0, Alignment, /*AllowCommute=*/true,
-                               LIS);
+                               CopyMI);
 }
 
 MachineInstr *
@@ -10821,6 +10837,27 @@ void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
   M.BaseType = X86AddressMode::FrameIndexBase;
   M.Base.FrameIndex = FI;
   M.getFullAddress(Ops);
+}
+
+MachineInstr *
+X86InstrInfo::insertCodePrefetchInstr(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator InsertBefore,
+                                      const GlobalValue *GV) const {
+  MachineFunction &MF = *MBB.getParent();
+  MachineInstr *PrefetchInstr = MF.CreateMachineInstr(
+      get(X86::PREFETCHIT1),
+      InsertBefore == MBB.instr_end() ? MBB.findPrevDebugLoc(InsertBefore)
+                                      : InsertBefore->getDebugLoc(),
+      true);
+  MachineInstrBuilder MIB(MF, PrefetchInstr);
+  MIB.addMemOperand(MF.getMachineMemOperand(MachinePointerInfo(GV),
+                                            MachineMemOperand::MOLoad, /*s=*/8,
+                                            /*base_alignment=*/llvm::Align(1)));
+  MIB.addReg(X86::RIP).addImm(1).addReg(X86::NoRegister);
+  MIB.addGlobalAddress(GV);
+  MIB.addReg(X86::NoRegister);
+  MBB.insert(InsertBefore, PrefetchInstr);
+  return PrefetchInstr;
 }
 
 #define GET_INSTRINFO_HELPERS

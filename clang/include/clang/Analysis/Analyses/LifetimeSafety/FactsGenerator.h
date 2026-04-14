@@ -36,6 +36,7 @@ public:
   void VisitDeclStmt(const DeclStmt *DS);
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
   void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
@@ -134,6 +135,7 @@ private:
   // corresponding to the left-hand side is updated to be a "write", thereby
   // exempting it from the check.
   llvm::DenseMap<const Expr *, UseFact *> UseFacts;
+  const CFGBlock *CurrentBlock;
 };
 
 } // namespace clang::lifetimes::internal
