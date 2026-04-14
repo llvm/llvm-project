@@ -1,0 +1,76 @@
+; RUN: opt -passes=sroa -S %s | FileCheck %s
+; NOTE: Do not autogenerate. This test intentionally uses targeted CHECK
+; patterns for clarity.
+
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+; When SROA splits { ptr, i64, i64, i64 } into [0,8), [8,16), [16,32),
+; the [16,32) partition type from getTypePartition is { i64, i64 }.
+; The current whole-use heuristic intentionally does NOT canonicalize this
+; sub-partition to <2 x i64>, because the [16,32) slice is only touched by
+; splittable memcpy traffic and has no non-splittable whole-partition use.
+; Keeping it scalar avoids creating a vectorized temporary that later passes
+; may not be able to promote away.
+
+; CHECK-LABEL: define void @test_subpartition_type(
+; CHECK: %a.sroa.6 = alloca { i64, i64 }, align 8
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a.sroa.6, ptr align 8 %a.sroa.6.0.src.sroa_idx, i64 16, i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a.sroa.6.0.dst.sroa_idx, ptr align 8 %a.sroa.6, i64 16, i1 false)
+define void @test_subpartition_type(ptr %src, ptr %dst) {
+entry:
+  %a = alloca { ptr, i64, i64, i64 }, align 8
+  call void @llvm.lifetime.start.p0(i64 32, ptr %a)
+
+  ; Copy all 32 bytes from src into %a (splittable)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %src, i64 32, i1 false)
+
+  ; Load ptr at [0,8) -- forces partition boundary at 8
+  %p = load ptr, ptr %a, align 8
+
+  ; Load i64 at [8,16) -- forces partition boundary at 16
+  %gep.a.8 = getelementptr inbounds i8, ptr %a, i64 8
+  %v1 = load i64, ptr %gep.a.8, align 8
+
+  ; Only splittable memcpy uses touch [16,32), so SROA creates a single
+  ; [16,32) partition. getTypePartition returns { i64, i64 } for this, but
+  ; the whole-use heuristic keeps it in scalar/memcpy form.
+
+  ; Copy all 32 bytes from %a to dst (splittable)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %a, i64 32, i1 false)
+
+  call void @llvm.lifetime.end.p0(i64 32, ptr %a)
+  ret void
+}
+
+; Element-wise { double, double } access through a phi.
+; The phi between two allocas prevents SROA slice analysis
+; ("A pointer to this alloca escaped"), so the allocas survive.
+
+; CHECK-LABEL: define void @test_elementwise_phi(
+; CHECK-NOT: <2 x double>
+define void @test_elementwise_phi(ptr %src0, ptr %src1, i1 %cond, ptr %dst) {
+entry:
+  %a = alloca { double, double }, align 8
+  %b = alloca { double, double }, align 8
+  %a.1 = getelementptr inbounds i8, ptr %a, i64 8
+  %b.1 = getelementptr inbounds i8, ptr %b, i64 8
+  %v0 = load double, ptr %src0, align 8
+  %v1 = load double, ptr %src1, align 8
+  store double %v0, ptr %a, align 8
+  store double %v1, ptr %a.1, align 8
+  store double 0.0, ptr %b, align 8
+  store double 0.0, ptr %b.1, align 8
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  br label %merge
+
+if.else:
+  br label %merge
+
+merge:
+  %sel = phi ptr [ %a, %if.then ], [ %b, %if.else ]
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %sel, i64 16, i1 false)
+  ret void
+}
