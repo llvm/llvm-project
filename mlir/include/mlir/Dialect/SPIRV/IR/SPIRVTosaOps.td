@@ -564,7 +564,9 @@ def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [NoMemoryEffect,
 
   let description = [{
     Performs two dimensional matrix multiplications.
+
     A, B are the inputs with respective zero point values in A_zp, B_zp.
+
     The behaviour is undefined if the accumulated result overflows or underflows.
 
     References:
