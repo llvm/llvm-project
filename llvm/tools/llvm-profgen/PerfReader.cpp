@@ -351,25 +351,22 @@ PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
   std::unique_ptr<PerfReaderBase> PerfReader;
 
   if (Input.Format == InputFormat::UnsymbolizedProfile) {
-    PerfReader.reset(
-        new UnsymbolizedProfileReader(Binary, Input.InputFile));
+    PerfReader.reset(new UnsymbolizedProfileReader(Binary, Input.InputFile));
     return PerfReader;
   }
 
   // For perf data input, we need to convert them into perf script first.
   // If this is a kernel perf file, there is no need for retrieving PIDs.
   if (Input.Format == InputFormat::PerfData)
-    Input = PerfScriptReader::convertPerfDataToTrace(
-        Binary, Binary->isKernel(), Input, PIDFilter);
+    Input = PerfScriptReader::convertPerfDataToTrace(Binary, Binary->isKernel(),
+                                                     Input, PIDFilter);
 
   assert((Input.Format == InputFormat::PerfScript) &&
          "Should be a perfscript!");
 
-  Input.Content =
-      PerfScriptReader::checkPerfScriptType(Input.InputFile);
+  Input.Content = PerfScriptReader::checkPerfScriptType(Input.InputFile);
   if (Input.Content == PerfContent::LBRStack) {
-    PerfReader.reset(
-        new HybridPerfReader(Binary, Input.InputFile, PIDFilter));
+    PerfReader.reset(new HybridPerfReader(Binary, Input.InputFile, PIDFilter));
   } else if (Input.Content == PerfContent::LBR) {
     PerfReader.reset(new LBRPerfReader(Binary, Input.InputFile, PIDFilter));
   } else {

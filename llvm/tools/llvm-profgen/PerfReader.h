@@ -620,9 +620,9 @@ public:
                                         MMapEvent &MMap);
 
   // Generate perf script from perf data
-  static InputFile convertPerfDataToTrace(ProfiledBinary *Binary,
-                                              bool SkipPID, InputFile &File,
-                                              std::optional<int32_t> PIDFilter);
+  static InputFile convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
+                                          InputFile &File,
+                                          std::optional<int32_t> PIDFilter);
   // Extract perf script type by peaking at the input
   static PerfContent checkPerfScriptType(StringRef FileName);
 
