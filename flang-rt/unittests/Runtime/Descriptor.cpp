@@ -291,15 +291,22 @@ TEST(Descriptor, BytesForRealAndComplex) {
   EXPECT_EQ(Descriptor::BytesFor(TC::Real, 3), 2u);
   EXPECT_EQ(Descriptor::BytesFor(TC::Real, 4), 4u);
   EXPECT_EQ(Descriptor::BytesFor(TC::Real, 8), 8u);
-  EXPECT_EQ(Descriptor::BytesFor(TC::Real, 10),
-      16u); // x87: 80-bit in 128-bit container
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || \
+    defined(_M_IX86)
+  // x87: 80-bit in 128-bit container
+  EXPECT_EQ(Descriptor::BytesFor(TC::Real, 10), 16u);
+#endif
   EXPECT_EQ(Descriptor::BytesFor(TC::Real, 16), 16u);
   // Complex kinds: should be twice the Real storage size
   EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 2), 4u);
   EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 3), 4u);
   EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 4), 8u);
   EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 8), 16u);
-  EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 10), 32u); // x87: 2 * 16 bytes
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || \
+    defined(_M_IX86)
+  // x87: 2 * 16 bytes
+  EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 10), 32u);
+#endif
   EXPECT_EQ(Descriptor::BytesFor(TC::Complex, 16), 32u);
   // Integer and Logical kinds: storage size equals the kind value
   EXPECT_EQ(Descriptor::BytesFor(TC::Integer, 1), 1u);
