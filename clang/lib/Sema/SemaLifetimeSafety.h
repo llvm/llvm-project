@@ -110,7 +110,7 @@ public:
           << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
 
-    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+    for (const AssignmentPair &AliasStmt : AliasList)
       reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
 
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
@@ -129,7 +129,7 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
 
-    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+    for (const AssignmentPair &AliasStmt : AliasList)
       reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
 
     S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
@@ -149,7 +149,7 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
 
-    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+    for (const AssignmentPair &AliasStmt : AliasList)
       reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
 
     S.Diag(DanglingField->getLocation(),
@@ -170,7 +170,7 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
 
-    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+    for (const AssignmentPair &AliasStmt : AliasList)
       reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
 
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
@@ -226,7 +226,7 @@ public:
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
-    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+    for (const AssignmentPair &AliasStmt : AliasList)
       reportAssignment(S, ParmToAnnotate, AliasStmt.first, AliasStmt.second);
 
     if (const auto *EscapeExpr = Target.dyn_cast<const Expr *>())
@@ -270,7 +270,7 @@ public:
         << FixItHint::CreateInsertion(InsertionPoint,
                                       " [[clang::lifetimebound]]");
 
-    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+    for (const AssignmentPair &AliasStmt : AliasList)
       reportAssignment(S, MD, AliasStmt.first, AliasStmt.second);
 
     S.Diag(EscapeExpr->getBeginLoc(),

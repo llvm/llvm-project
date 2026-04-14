@@ -41,8 +41,8 @@ namespace clang::lifetimes::internal {
 
 struct AliasAssignmentSearchResult {
   const bool SearchComplete;
-  const OriginDestExpr LastDestDecl;
-  const std::optional<OriginID> LastOrigin;
+  const OriginDestExpr LastDestDeclOrExpr;
+  const std::optional<OriginID> IssueOriginID;
 };
 
 struct AssignmentQueryContext {

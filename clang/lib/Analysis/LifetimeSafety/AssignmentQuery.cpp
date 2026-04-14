@@ -18,7 +18,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include <cstddef>
 #include <queue>
 
@@ -27,6 +27,27 @@ namespace {
 using namespace clang;
 using namespace clang::lifetimes;
 using namespace clang::lifetimes::internal;
+
+struct AssignmentSearchToken {
+  const CFGBlock *Block;
+  const OriginID OID;
+
+  bool operator==(const AssignmentSearchToken& Other) const {
+    return Block == Other.Block && OID == Other.OID;
+  }
+  bool operator<(const AssignmentSearchToken& Other) const {
+    if (Block == Other.Block)
+      return OID < Other.OID;
+    return Block < Other.Block;
+  }
+};
+
+struct AssignmentSearchContext {
+  const AssignmentSearchToken CurrToken;
+  const OriginDestExpr LastDestDeclOrExpr;
+  const std::optional<AssignmentPair> LastEndAssignment;
+  const std::optional<OriginID> LastOriginID;
+};
 
 /// Locate the rightmost sub expression of the RHS, given that the LHS is
 /// already known. To ensure printability, we invoke `Explorc->isValid()`.
@@ -126,9 +147,9 @@ getAliasListCore(const AssignmentQueryContext &Context,
                  const CFGBlock *Block, const LoanID EndLoanID,
                  OriginID *TargetOID,
                  const OriginDestExpr LastDestExpr = nullptr,
-                 const std::optional<OriginID> LastOriginID = std::nullopt) {
+                 const std::optional<OriginID> LastIssueOriginID = std::nullopt) {
   OriginDestExpr CurrDestExpr = LastDestExpr;
-  std::optional<OriginID> IssueOriginID = LastOriginID;
+  std::optional<OriginID> IssueOriginID = LastIssueOriginID;
   std::optional<OriginID> CurrOrigin = std::nullopt;
   llvm::ArrayRef<const Fact *> Facts = Context.FactMgr.getFacts(Block);
   bool NeedSearchOriginDestWithoutLoan = false;
@@ -172,7 +193,7 @@ getAliasListCore(const AssignmentQueryContext &Context,
   for (const Fact *F : llvm::reverse(Facts)) {
     if (const auto *OFF = F->getAs<OriginFlowFact>()) {
       if (IssueOriginID && OFF->getDestOriginID() == IssueOriginID.value())
-        return {true, CurrDestExpr, IssueOriginID};
+        return {true, CurrDestExpr, std::nullopt};
       TryInsertAssignmentList(OFF);
     } else if (const auto *IF = F->getAs<IssueFact>()) {
       if (IF->getLoanID() == EndLoanID)
@@ -192,51 +213,52 @@ getAliasListCore(const AssignmentQueryContext &Context,
 void getAliasListInMultiBlock(
     const AssignmentQueryContext &Context,
     llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
-    const CFGBlock *StartBlock, const LoanID EndLoanID, OriginID *StartOID) {
-  OriginDestExpr LastDestDeclOrExpr = nullptr;
-  std::queue<const CFGBlock *> PendingBlocks;
-  std::optional<OriginID> LastOriginID = std::nullopt;
-  std::optional<AssignmentPair> StartStmt = std::nullopt;
-  std::optional<AssignmentPair> EndStmt = std::nullopt;
-  llvm::SmallPtrSet<const CFGBlock *, 32> VistedBlocks;
+    const CFGBlock *StartBlock, const LoanID EndLoanID, const OriginID StartOID) {
+  std::queue<AssignmentSearchContext> PendingBlocks;
+  std::optional<AssignmentPair> FinalAssignment = std::nullopt;
+  llvm::SmallSet<AssignmentSearchToken, 32> VistedBlocks;
   llvm::DenseMap<AssignmentPair, AssignmentPair> VistedAssignmentExprs;
 
   const auto AliasStmtFilter = [&VistedAssignmentExprs,
-                                &AssignmentList](const AssignmentPair StartStmt,
-                                                 const AssignmentPair EndStmt) {
-    for (AssignmentPair Stmt = StartStmt; Stmt != EndStmt;
-         Stmt = VistedAssignmentExprs.at(Stmt))
-      AssignmentList.push_back(Stmt);
-    AssignmentList.push_back(EndStmt);
+                                &AssignmentList](const AssignmentPair EndAssignment) {
+    AssignmentPair CurrAssignment = EndAssignment;
+    while (true) {
+      AssignmentList.push_back(CurrAssignment);
+      const auto NextAssignment = VistedAssignmentExprs.find(CurrAssignment);
+      if (NextAssignment == VistedAssignmentExprs.end())
+          break;
+      CurrAssignment = NextAssignment->second;
+    }
   };
 
-  PendingBlocks.push(StartBlock);
+  AssignmentSearchToken StartToken = {StartBlock, StartOID};
+  AssignmentSearchContext StartContext = {StartToken, nullptr, std::nullopt, std::nullopt};
+  PendingBlocks.push(StartContext);
 
   while (!PendingBlocks.empty()) {
-    const CFGBlock *CurrBlock = PendingBlocks.front();
+    const AssignmentSearchContext CurrContext = PendingBlocks.front();
     PendingBlocks.pop();
+
+    std::optional<AssignmentPair> EndAssignment = std::nullopt;
     llvm::SmallVector<AssignmentPair> BlockAliasList;
+    OriginID CurrOID = CurrContext.CurrToken.OID;
 
     const AliasAssignmentSearchResult Result =
-        getAliasListCore(Context, BlockAliasList, CurrBlock, EndLoanID,
-                         StartOID, LastDestDeclOrExpr, LastOriginID);
-    if (Result.LastDestDecl)
-      LastDestDeclOrExpr = Result.LastDestDecl;
-    if (Result.LastOrigin)
-      LastOriginID = Result.LastOrigin;
+        getAliasListCore(Context, BlockAliasList, CurrContext.CurrToken.Block, EndLoanID,
+                         &CurrOID, CurrContext.LastDestDeclOrExpr, CurrContext.LastOriginID);
 
     if (!BlockAliasList.empty()) {
-      if (VistedAssignmentExprs.empty())
-        StartStmt = BlockAliasList[0];
-
       for (size_t i = 0; i < BlockAliasList.size() - 1; ++i)
         VistedAssignmentExprs.insert(
-            {BlockAliasList[i], BlockAliasList[i + 1]});
+            {BlockAliasList[i + 1], BlockAliasList[i]});
 
-      if (EndStmt)
-        VistedAssignmentExprs.insert({EndStmt.value(), BlockAliasList[0]});
+      if (CurrContext.LastEndAssignment)
+        VistedAssignmentExprs.insert({BlockAliasList[0], CurrContext.LastEndAssignment.value()});
 
-      EndStmt = BlockAliasList[BlockAliasList.size() - 1];
+      EndAssignment = BlockAliasList.back();
+      FinalAssignment = BlockAliasList.back();
+    } else {
+      EndAssignment = CurrContext.LastEndAssignment;
     }
 
     // TODO: The number of CFGBlocks is limited to 32 to minmize performance
@@ -247,13 +269,17 @@ void getAliasListInMultiBlock(
     if (Result.SearchComplete || VistedBlocks.size() >= 32)
       break;
 
-    for (const CFGBlock *NextBlock : CurrBlock->preds())
-      if (NextBlock && VistedBlocks.insert(NextBlock).second)
-        PendingBlocks.push(NextBlock);
+    for (const CFGBlock *NextBlock : CurrContext.CurrToken.Block->preds()) {
+      AssignmentSearchToken NextToken = {NextBlock, CurrOID};
+      if (NextBlock && VistedBlocks.insert(NextToken).second) {
+        AssignmentSearchContext NextContext = {NextToken, Result.LastDestDeclOrExpr, EndAssignment, Result.IssueOriginID};
+        PendingBlocks.push(NextContext);
+      }
+    }
   }
 
-  if (StartStmt && EndStmt)
-    AliasStmtFilter(StartStmt.value(), EndStmt.value());
+  if (FinalAssignment)
+    AliasStmtFilter(FinalAssignment.value());
 }
 
 void formatRHSValueDeclForSema(const ValueDecl *TargetValue,
@@ -384,9 +410,10 @@ void getAliasList(const AssignmentQueryContext &Context,
   for (OriginID TargetOID : TargetOIDList) {
     if (StartBlock == EndBlock) {
       getAliasListCore(Context, AssignmentList, StartBlock, End, &TargetOID);
+      std::reverse(AssignmentList.begin(), AssignmentList.end());
     } else {
       getAliasListInMultiBlock(Context, AssignmentList, StartBlock, End,
-                               &TargetOID);
+                               TargetOID);
     }
   }
 }

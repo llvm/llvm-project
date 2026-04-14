@@ -464,7 +464,7 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
                 // expected-note {{variable 'p' aliases the storage of 'x'}}
 
     if (condition)
-      q = p;
+      q = p;    // expected-note {{variable 'q' aliases the storage of 'x'}}
     (void)*p;
     (void)*q;   // expected-note {{later used here}}
   }             // expected-note {{destroyed here}}
@@ -764,7 +764,9 @@ int** test_ternary_double_ptr(bool cond) {
                  // expected-note {{variable 'pb' aliases the storage of 'b'}}
   int** result = cond ? &pa : &pb;  // expected-warning 2 {{address of stack memory is returned later}} \
                                     // expected-note {{variable 'result' aliases the storage of 'pa'}} \
-                                    // expected-note {{variable 'result' aliases the storage of 'pb'}}
+                                    // expected-note {{variable 'result' aliases the storage of 'pb'}} \
+                                    // expected-note {{variable 'result' aliases the storage of 'a'}} \
+                                    // expected-note {{variable 'result' aliases the storage of 'b'}}
   return result; // expected-note 4 {{returned here}}
 }
 //===----------------------------------------------------------------------===//
@@ -1447,6 +1449,8 @@ void range_based_for_use_after_scope() {
   {
     MyObjStorage s;
     for (const MyObj &o : s) { // expected-warning {{object whose reference is captured does not live long enough}} \
+                               // expected-note {{function call result aliases the storage of 's'}} \
+                               // expected-note {{variable '__begin2' aliases the storage of 's'}} \
                                // expected-note {{variable 'o' aliases the storage of 's'}}
       v = o;                   // expected-note {{variable 'v' aliases the storage of 's'}}
     }
@@ -1458,7 +1462,8 @@ View range_based_for_use_after_return() {
   MyObjStorage s;
   for (const MyObj &o : s) { // expected-warning {{address of stack memory is returned later}} \
                              // expected-note {{function call result aliases the storage of 's'}} \
-                             // expected-note {{variable '__begin1' aliases the storage of 's'}}
+                             // expected-note {{variable '__begin1' aliases the storage of 's'}} \
+                             // expected-note {{variable 'o' aliases the storage of 's'}}
     return o;  // expected-note {{returned here}}
   }
   return *s.begin();  // expected-warning {{address of stack memory is returned later}}
@@ -1865,8 +1870,10 @@ MyObj Global;
 
 const MyObj& ContainerMyObjReturnRef(Container<MyObj> c) {
   for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{expression aliases the storage of 'c'}} \
                               // expected-note {{function call result aliases the storage of 'c'}} \
-                              // expected-note {{variable '__begin1' aliases the storage of 'c'}}
+                              // expected-note {{variable '__begin1' aliases the storage of 'c'}} \
+                              // expected-note {{variable 'x' aliases the storage of 'c'}}
     return x;                 // expected-note {{returned here}}
   }
   return Global;
@@ -1874,13 +1881,17 @@ const MyObj& ContainerMyObjReturnRef(Container<MyObj> c) {
 
 View ContainerMyObjReturnView(Container<MyObj> c) {
   for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{expression aliases the storage of 'c'}} \
                               // expected-note {{function call result aliases the storage of 'c'}} \
-                              // expected-note {{variable '__begin1' aliases the storage of 'c'}}
+                              // expected-note {{variable '__begin1' aliases the storage of 'c'}} \
+                              // expected-note {{variable 'x' aliases the storage of 'c'}}
     return x;                 // expected-note {{returned here}}
   }
   for (View x : c) {  // expected-warning {{address of stack memory is returned later}} \
+                      // expected-note {{expression aliases the storage of 'c'}} \
                       // expected-note {{function call result aliases the storage of 'c'}} \
-                      // expected-note {{variable '__begin1' aliases the storage of 'c'}}
+                      // expected-note {{variable '__begin1' aliases the storage of 'c'}} \
+                      // expected-note {{variable 'x' aliases the storage of 'c'}}
     return x;         // expected-note {{returned here}}
   }
   return Global;
