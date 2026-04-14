@@ -39,7 +39,7 @@ class VPRecipeBuilder;
 struct VFRange;
 
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
-LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
+LLVM_ABI_FOR_TEST extern cl::opt<WideActiveLaneMask> EnableWideActiveLaneMask;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
@@ -246,7 +246,8 @@ struct VPlanTransforms {
   /// resulting plan to \p BestVF and \p BestUF.
   static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                  unsigned BestUF,
-                                 PredicatedScalarEvolution &PSE);
+                                 PredicatedScalarEvolution &PSE,
+                                 const TargetTransformInfo &TTI);
 
   /// Try to simplify VPInstruction::ExplicitVectorLength recipes when the AVL
   /// is known to be <= VF, replacing them with the AVL directly.

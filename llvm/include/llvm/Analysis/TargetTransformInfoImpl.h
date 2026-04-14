@@ -1163,6 +1163,8 @@ public:
     return getMaxInterleaveFactor(Iters) > 1;
   }
 
+  virtual bool preferWideActiveLaneMasks() const { return false; }
+
   virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
 
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const {

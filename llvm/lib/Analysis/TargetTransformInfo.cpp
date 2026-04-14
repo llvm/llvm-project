@@ -1481,6 +1481,10 @@ bool TargetTransformInfo::preferEpilogueVectorization(
   return TTIImpl->preferEpilogueVectorization(Iters);
 }
 
+bool TargetTransformInfo::preferWideActiveLaneMasks() const {
+  return TTIImpl->preferWideActiveLaneMasks();
+}
+
 bool TargetTransformInfo::shouldConsiderVectorizationRegPressure() const {
   return TTIImpl->shouldConsiderVectorizationRegPressure();
 }

@@ -477,6 +477,11 @@ public:
 
   bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override;
 
+  bool preferWideActiveLaneMasks() const override {
+    return ST->isSVEorStreamingSVEAvailable() &&
+           (ST->hasSVE2p1() || ST->hasSME2());
+  }
+
   bool supportsScalableVectors() const override {
     return ST->isSVEorStreamingSVEAvailable();
   }
