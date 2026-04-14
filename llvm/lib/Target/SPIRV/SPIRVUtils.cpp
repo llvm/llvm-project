@@ -863,13 +863,15 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
 
 // Assign SPIR-V type to the register. If the register has no valid assigned
 // class, set register LLT type and class according to the SPIR-V type.
-void setRegClassType(Register Reg, SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
-                     MachineRegisterInfo *MRI, const MachineFunction &MF,
-                     bool Force) {
+void setRegClassType(Register Reg, SPIRVTypeInst SpvType,
+                     SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
+                     const MachineFunction &MF, bool Force) {
   GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
   if (!MRI->getRegClassOrNull(Reg) || Force) {
     MRI->setRegClass(Reg, GR->getRegClass(SpvType));
-    MRI->setType(Reg, GR->getRegType(SpvType));
+    LLT RegType = GR->getRegType(SpvType);
+    if (Force || !MRI->getType(Reg).isValid())
+      MRI->setType(Reg, RegType);
   }
 }
 
@@ -887,7 +889,7 @@ void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
 
 // Create a virtual register and assign SPIR-V type to the register. Set
 // register LLT type and class according to the SPIR-V type.
-Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineRegisterInfo *MRI,
                                const MachineFunction &MF) {
   Register Reg = MRI->createVirtualRegister(GR->getRegClass(SpvType));
@@ -898,7 +900,7 @@ Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
 
 // Create a virtual register and assign SPIR-V type to the register. Set
 // register LLT type and class according to the SPIR-V type.
-Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder) {
   return createVirtualRegister(SpvType, GR, MIRBuilder.getMRI(),
                                MIRBuilder.getMF());
@@ -1197,17 +1199,47 @@ Type *reconstitutePeeledArrayType(Type *Ty) {
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
-  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+  if (GV.hasLocalLinkage())
     return std::nullopt;
 
-  if (GV.isDeclarationForLinker())
+  if (GV.isDeclarationForLinker()) {
+    // Interface variables must not get Import linkage.
+    if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
+      auto SC = addressSpaceToStorageClass(GVar->getAddressSpace(), ST);
+      if (SC == SPIRV::StorageClass::Input ||
+          SC == SPIRV::StorageClass::Output ||
+          SC == SPIRV::StorageClass::PushConstant)
+        return std::nullopt;
+    }
     return SPIRV::LinkageType::Import;
+  }
+
+  if (GV.hasHiddenVisibility())
+    return std::nullopt;
 
   if (GV.hasLinkOnceODRLinkage() &&
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
     return SPIRV::LinkageType::LinkOnceODR;
 
   return SPIRV::LinkageType::Export;
+}
+
+Function *getOrCreateBackendServiceFunction(Module &M) {
+  std::string ServiceFunName = SPIRV_BACKEND_SERVICE_FUN_NAME;
+  if (!getVacantFunctionName(M, ServiceFunName))
+    report_fatal_error(
+        "cannot allocate a name for the internal service function");
+  if (Function *SF = M.getFunction(ServiceFunName)) {
+    if (SF->getInstructionCount() > 0)
+      report_fatal_error(
+          "Unexpected combination of global variables and function pointers");
+    return SF;
+  }
+  Function *SF = Function::Create(
+      FunctionType::get(Type::getVoidTy(M.getContext()), {}, false),
+      GlobalValue::PrivateLinkage, ServiceFunName, M);
+  SF->addFnAttr(SPIRV_BACKEND_SERVICE_FUN_NAME, "");
+  return SF;
 }
 
 } // namespace llvm

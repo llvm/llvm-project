@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_local_id.h>
-#include <clc/workitem/clc_get_local_linear_id.h>
-#include <clc/workitem/clc_get_local_size.h>
+#include "clc/workitem/clc_get_local_id.h"
+#include "clc/workitem/clc_get_local_linear_id.h"
+#include "clc/workitem/clc_get_local_size.h"
 
-_CLC_OVERLOAD _CLC_DEF size_t __clc_get_local_linear_id() {
-  return __clc_get_local_id(2) * __clc_get_local_size(1) *
+_CLC_OVERLOAD _CLC_DEF _CLC_CONST size_t __clc_get_local_linear_id() {
+  return (__clc_get_local_id(2) * __clc_get_local_size(1) +
+          __clc_get_local_id(1)) *
              __clc_get_local_size(0) +
-         __clc_get_local_id(1) * __clc_get_local_size(0) +
          __clc_get_local_id(0);
 }

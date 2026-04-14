@@ -4,10 +4,6 @@
 Building libs for GPUs
 ======================
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Building the GPU C library
 ==========================
 
@@ -26,30 +22,37 @@ describe how to build the GPU support specifically.
 Once you have finished building, refer to :ref:`libc_gpu_usage` to get started
 with the newly built C library.
 
-Standard runtimes build
------------------------
+Bootstrap Build
+---------------
 
-The simplest way to build the GPU libc is to use the existing LLVM runtimes
-support. This will automatically handle bootstrapping an up-to-date ``clang``
-compiler and using it to build the C library. The following CMake invocation
-will instruct it to build the ``libc`` runtime targeting both AMD and NVIDIA
-GPUs. The ``LIBC_GPU_BUILD`` option can also be enabled to add the relevant
-arguments automatically.
+The recommended way to build the GPU libc is using a **Bootstrap Build** (see :ref:`build_concepts` for an overview of build modes). This approach first builds the compiler (``clang``) and tools using the host compiler, and then automatically uses that newly-built compiler to build the C library for the GPU targets in a single CMake invocation. This is ideal for building for multiple GPU vendors at once.
+
+Set the environment variables for the build:
 
 .. code-block:: sh
 
-  $> cd llvm-project  # The llvm-project checkout
-  $> mkdir build
-  $> cd build
-  $> cmake ../llvm -G Ninja                                                 \
-     -DLLVM_ENABLE_PROJECTS="clang;lld"                                     \
-     -DLLVM_ENABLE_RUNTIMES="openmp;offload"                                \
-     -DCMAKE_BUILD_TYPE=<Debug|Release>   \ # Select build type
-     -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where the libraries will live
-     -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc               \
-     -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES=libc                 \
+  export BUILD_DIR=build
+  export INSTALL_PREFIX=install
+  export BUILD_TYPE=Release
+
+Configure the project:
+
+.. code-block:: sh
+
+  cmake -G Ninja -S llvm -B $BUILD_DIR \
+     -DLLVM_ENABLE_PROJECTS="clang;lld" \
+     -DLLVM_ENABLE_RUNTIMES="openmp;offload" \
+     -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+     -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX \
+     -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc \
+     -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES=libc \
      -DLLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa;nvptx64-nvidia-cuda"
-  $> ninja install
+
+Build and install the libraries:
+
+.. code-block:: sh
+
+  ninja -C $BUILD_DIR install
 
 We need ``clang`` to build the GPU C library and ``lld`` to link AMDGPU
 executables, so we enable them in ``LLVM_ENABLE_PROJECTS``. We add ``openmp`` to
@@ -61,53 +64,64 @@ Note that if ``libc`` were included in ``LLVM_ENABLE_RUNTIMES`` it would build
 targeting the default host environment as well. Alternatively, you can point
 your build towards the ``libc/cmake/caches/gpu.cmake`` cache file with ``-C``.
 
-Runtimes cross build
---------------------
+Two-stage Cross-compiler Build
+------------------------------
 
-For users wanting more direct control over the build process, the build steps
-can be done manually instead. This build closely follows the instructions in the
-:ref:`main documentation<full_cross_build>` but is specialized for the GPU
-build. We follow the same steps to first build the libc tools and a suitable
-compiler. These tools must all be up-to-date with the libc source.
+Alternatively, you can use a manual **Two-stage Cross-compiler Build** (see :ref:`build_concepts`). This separates the build into two distinct CMake invocations: first to build the host compiler and tools (Stage 1), and then to build the target library using those tools (Stage 2). This provides more direct control over the configuration and is useful if you only need to build for a single target or want to avoid the complexity of the combined bootstrap build.
+
+First, build the host compiler. Set up the variables for the host build:
 
 .. code-block:: sh
 
-  $> cd llvm-project  # The llvm-project checkout
-  $> mkdir build-libc-tools # A different build directory for the build tools
-  $> cd build-libc-tools
-  $> HOST_C_COMPILER=<C compiler for the host> # For example "clang"
-  $> HOST_CXX_COMPILER=<C++ compiler for the host> # For example "clang++"
-  $> cmake ../llvm                            \
-     -G Ninja                                 \
-     -DLLVM_ENABLE_PROJECTS="clang"           \
-     -DCMAKE_C_COMPILER=$HOST_C_COMPILER      \
-     -DCMAKE_CXX_COMPILER=$HOST_CXX_COMPILER  \
-     -DLLVM_LIBC_FULL_BUILD=ON                \
-     -DCMAKE_BUILD_TYPE=Release # Release suggested to make "clang" fast
-  $> ninja # Build the 'clang' compiler
+  export HOST_BUILD_DIR=build-libc-tools
+  export HOST_C_COMPILER=clang
+  export HOST_CXX_COMPILER=clang++
 
-Once this has finished the build directory should contain the ``clang``
-compiler executable. We will use the ``clang`` compiler to build the GPU code.
-We use these tools to bootstrap the build out of the runtimes directory
-targeting a GPU architecture.
+Configure the host build:
 
 .. code-block:: sh
 
-  $> cd llvm-project  # The llvm-project checkout
-  $> mkdir build # A different build directory for the build tools
-  $> cd build
-  $> TARGET_TRIPLE=<amdgcn-amd-amdhsa or nvptx64-nvidia-cuda>
-  $> TARGET_C_COMPILER=</path/to/clang>
-  $> TARGET_CXX_COMPILER=</path/to/clang++>
-  $> cmake ../runtimes \ # Point to the runtimes build
-     -G Ninja                                    \
-     -DLLVM_ENABLE_RUNTIMES=libc                 \
-     -DCMAKE_C_COMPILER=$TARGET_C_COMPILER       \
+  cmake -G Ninja -S llvm -B $HOST_BUILD_DIR \
+     -DLLVM_ENABLE_PROJECTS="clang" \
+     -DCMAKE_C_COMPILER=$HOST_C_COMPILER \
+     -DCMAKE_CXX_COMPILER=$HOST_CXX_COMPILER \
+     -DLLVM_LIBC_FULL_BUILD=ON \
+     -DCMAKE_BUILD_TYPE=Release
+
+Build the host tools:
+
+.. code-block:: sh
+
+  ninja -C $HOST_BUILD_DIR
+
+Once this has finished, use the newly built compiler to build the C library for the GPU. Select your target architecture (``amdgcn-amd-amdhsa`` or ``nvptx64-nvidia-cuda``).
+
+Set up the variables for the target build:
+
+.. code-block:: sh
+
+  export TARGET_TRIPLE=amdgcn-amd-amdhsa # or nvptx64-nvidia-cuda
+  export TARGET_BUILD_DIR=build
+  export TARGET_C_COMPILER=build-libc-tools/bin/clang
+  export TARGET_CXX_COMPILER=build-libc-tools/bin/clang++
+
+Configure the target build:
+
+.. code-block:: sh
+
+  cmake -G Ninja -S runtimes -B $TARGET_BUILD_DIR \
+     -DLLVM_ENABLE_RUNTIMES=libc \
+     -DCMAKE_C_COMPILER=$TARGET_C_COMPILER \
      -DCMAKE_CXX_COMPILER=$TARGET_CXX_COMPILER   \
      -DLLVM_LIBC_FULL_BUILD=ON                   \
      -DLLVM_DEFAULT_TARGET_TRIPLE=$TARGET_TRIPLE \
      -DCMAKE_BUILD_TYPE=Release
-  $> ninja install
+
+Build and install the target library:
+
+.. code-block:: sh
+
+  ninja -C $TARGET_BUILD_DIR install
 
 The above steps will result in a build targeting one of the supported GPU
 architectures. Building for multiple targets requires separate CMake
@@ -199,6 +213,7 @@ standard runtime build.
   commonly run out of resources if this is not constrained so it is recommended
   to keep it low. The default value is a single thread.
 
-**LIBC_GPU_LOADER_EXECUTABLE**:STRING
-  Overrides the default loader used for running GPU tests. If this is not
-  provided the standard one will be built.
+**CMAKE_CROSSCOMPILING_EMULATOR**:STRING
+  Overrides the default loader used for running GPU tests. This is set
+  automatically to ``llvm-gpu-loader`` for GPU runtime targets when building
+  via the runtimes build.

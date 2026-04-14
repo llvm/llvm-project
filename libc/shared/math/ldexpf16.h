@@ -17,13 +17,11 @@
 #include "src/__support/math/ldexpf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace shared {
 
 using math::ldexpf16;
 
 } // namespace shared
-
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TYPES_HAS_FLOAT16

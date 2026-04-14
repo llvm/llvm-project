@@ -47,12 +47,14 @@ sys.path.append(str(Path("_ext").resolve()))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    "sphinx.ext.todo",
-    "sphinx.ext.mathjax",
-    "sphinx.ext.intersphinx",
-    "lldb_setting",
+    "sphinx.ext.todo",  # Support for todo items.
+    "sphinx.ext.mathjax",  # Render math via JavaScript.
+    "sphinx.ext.intersphinx",  # Link to other projects’ documentation.
+    "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings.
+    "lldb_setting",  # Support the lldbsetting directive (see _ext/lldb_setting.py)
 ]
 if "LLDB_BUILD_DIR" in os.environ:
+    # Include a file from $LLDB_BUILD_DIR (see _ext/build_include.py)
     extensions.append("build_include")
 
 # When building man pages, we do not use the markdown pages,

@@ -156,7 +156,8 @@ defm LoadStoreF128 : MVCLoadStore<load, f128, MVCImm, 15>;
 // Load instructions
 //===----------------------------------------------------------------------===//
 
-let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
+let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1,
+    isReMaterializable = 1  in {
   let isCodeGenOnly = 1 in
     // Reload f16 from 4-byte spill slot.
     defm LE16 : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP16, 4>;

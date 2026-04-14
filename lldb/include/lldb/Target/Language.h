@@ -180,8 +180,6 @@ public:
 
   virtual bool IsSourceFile(llvm::StringRef file_path) const = 0;
 
-  virtual const Highlighter *GetHighlighter() const { return nullptr; }
-
   virtual lldb::TypeCategoryImplSP GetFormatters();
 
   virtual HardcodedFormatters::HardcodedFormatFinder GetHardcodedFormats();

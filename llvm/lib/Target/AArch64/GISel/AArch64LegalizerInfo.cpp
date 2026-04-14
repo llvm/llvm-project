@@ -330,6 +330,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                   {v2s64, v2s64}})
       .clampScalar(0, s32, s128)
       .widenScalarToNextPow2(0)
+      .widenScalarOrEltToNextPow2OrMinSize(0, 8)
       .minScalarEltSameAsIf(always, 1, 0)
       .maxScalarEltSameAsIf(always, 1, 0)
       .clampNumElements(0, v8s8, v16s8)
@@ -350,6 +351,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v4s32, v4s32}})
       .widenScalarToNextPow2(1, /*Min=*/32)
       .clampScalar(1, s32, s64)
+      .widenScalarOrEltToNextPow2OrMinSize(1, /*Min=*/8)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
@@ -810,7 +812,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .alwaysLegal();
 
   getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
-      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}});
+      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}})
+      .clampNumElements(0, v2s32, v2s32);
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({s32, s64})
@@ -1060,6 +1063,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(0, s64, 2)
       .lower();
 
   getActionDefinitionsBuilder(G_VASTART).legalFor({p0});
@@ -1261,6 +1265,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             return Query.Types[0].isFixedVector() &&
                    Query.Types[1].isFixedVector() &&
+                   Query.Types[0].getScalarSizeInBits() >= 8 &&
+                   isPowerOf2_64(Query.Types[0].getScalarSizeInBits()) &&
                    Query.Types[0].getSizeInBits() <= 128 &&
                    Query.Types[1].getSizeInBits() <= 64;
           },
@@ -2021,6 +2027,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_U);
   case Intrinsic::aarch64_neon_uqxtn:
     return LowerUnaryOp(TargetOpcode::G_TRUNC_USAT_U);
+  case Intrinsic::aarch64_neon_fcvtzu:
+    return LowerUnaryOp(TargetOpcode::G_FPTOUI_SAT);
+  case Intrinsic::aarch64_neon_fcvtzs:
+    return LowerUnaryOp(TargetOpcode::G_FPTOSI_SAT);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse

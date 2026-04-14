@@ -68,6 +68,29 @@ static constexpr OptionEnumValueElement g_auto_download_enum_values[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_shared_cache_use_enum_values[] = {
+    {
+        lldb::eSymbolSharedCacheUseHostLLDBMemory,
+        "host-lldb-memory",
+        "Get binaries from the host lldb in-memory shared cache.",
+    },
+    {
+        lldb::eSymbolSharedCacheUseHostSharedCache,
+        "host-shared-cache",
+        "Get binaries from the host shared cache.",
+    },
+    {
+        lldb::eSymbolSharedCacheUseHostAndInferiorSharedCache,
+        "host-and-inferior-shared-cache",
+        "Get binaries from the host and inferior's shared caches.",
+    },
+    {
+        lldb::eSymbolSharedCacheUseInferiorSharedCacheOnly,
+        "inferior-shared-cache-only",
+        "Get binaries from inferior's shared cache only.",
+    },
+};
+
 class ModuleListProperties : public Properties {
   mutable llvm::sys::RWMutex m_symlink_paths_mutex;
   PathMappingList m_symlink_paths;
@@ -81,8 +104,7 @@ public:
   bool SetClangModulesCachePath(const FileSpec &path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
-  bool GetSharedCacheBinaryLoading() const;
-  bool SetSharedCacheBinaryLoading(bool new_value);
+  lldb::SymbolSharedCacheUse GetSharedCacheBinaryLoading() const;
   bool GetEnableLLDBIndexCache() const;
   bool SetEnableLLDBIndexCache(bool new_value);
   uint64_t GetLLDBIndexCacheMaxByteSize();
@@ -466,7 +488,6 @@ public:
   bool IsEmpty() const { return !GetSize(); }
 
   bool LoadScriptingResourcesInTarget(Target *target, std::list<Status> &errors,
-                                      Stream &feedback_stream,
                                       bool continue_on_error = true);
 
   static ModuleListProperties &GetGlobalModuleListProperties();
@@ -537,6 +558,11 @@ protected:
 
   /// An orphaned module that lives only in the ModuleList has a count of 1.
   static constexpr long kUseCountModuleListOrphaned = 1;
+
+private:
+  static bool LoadScriptingResourceInTargetForModule(Module &module,
+                                                     Target &target,
+                                                     Status &error);
 
 public:
   typedef LockingAdaptedIterable<std::recursive_mutex, collection>

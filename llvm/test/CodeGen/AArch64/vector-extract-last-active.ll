@@ -152,9 +152,9 @@ define i64 @extract_last_i64(<2 x i64> %data, <2 x i64> %mask, i64 %passthru) {
 ; NEON-FIXED-NEXT:    sub sp, sp, #16
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    cmtst v1.2d, v1.2d, v1.2d
-; NEON-FIXED-NEXT:    adrp x8, .LCPI3_0
+; NEON-FIXED-NEXT:    mov x8, #4294967296 // =0x100000000
 ; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI3_0]
+; NEON-FIXED-NEXT:    fmov d3, x8
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    xtn v2.2s, v1.2d
 ; NEON-FIXED-NEXT:    umaxv s1, v1.4s
@@ -348,9 +348,9 @@ define double @extract_last_double(<2 x double> %data, <2 x i64> %mask, double %
 ; NEON-FIXED-NEXT:    sub sp, sp, #16
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    cmtst v1.2d, v1.2d, v1.2d
-; NEON-FIXED-NEXT:    adrp x8, .LCPI7_0
+; NEON-FIXED-NEXT:    mov x8, #4294967296 // =0x100000000
 ; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d4, [x8, :lo12:.LCPI7_0]
+; NEON-FIXED-NEXT:    fmov d4, x8
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    xtn v3.2s, v1.2d
 ; NEON-FIXED-NEXT:    umaxv s1, v1.4s
@@ -498,22 +498,23 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 ; NEON-FIXED-NEXT:    sub sp, sp, #16
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    movi v1.2d, #0000000000000000
-; NEON-FIXED-NEXT:    adrp x9, .LCPI18_0
+; NEON-FIXED-NEXT:    adrp x8, .LCPI18_0
 ; NEON-FIXED-NEXT:    mov x11, sp
-; NEON-FIXED-NEXT:    ldr d2, [x9, :lo12:.LCPI18_0]
+; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI18_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    mov v1.h[0], w0
 ; NEON-FIXED-NEXT:    mov v1.h[1], w1
-; NEON-FIXED-NEXT:    fmov x8, d1
 ; NEON-FIXED-NEXT:    mov v1.h[2], w2
-; NEON-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
-; NEON-FIXED-NEXT:    fmov x9, d1
-; NEON-FIXED-NEXT:    umaxv h2, v2.4h
-; NEON-FIXED-NEXT:    lsr x9, x9, #32
+; NEON-FIXED-NEXT:    shl v2.4h, v1.4h, #15
+; NEON-FIXED-NEXT:    fmov x8, d1
+; NEON-FIXED-NEXT:    cmlt v2.4h, v2.4h, #0
+; NEON-FIXED-NEXT:    lsr x9, x8, #32
 ; NEON-FIXED-NEXT:    orr w9, w8, w9
+; NEON-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
 ; NEON-FIXED-NEXT:    orr w8, w9, w8, lsr #16
-; NEON-FIXED-NEXT:    fmov w10, s2
 ; NEON-FIXED-NEXT:    tst w8, #0x1
+; NEON-FIXED-NEXT:    umaxv h2, v2.4h
+; NEON-FIXED-NEXT:    fmov w10, s2
 ; NEON-FIXED-NEXT:    bfi x11, x10, #2, #2
 ; NEON-FIXED-NEXT:    ldr w9, [x11]
 ; NEON-FIXED-NEXT:    csinv w0, w9, wzr, ne
@@ -525,21 +526,22 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 ; SVE-FIXED-NEXT:    sub sp, sp, #16
 ; SVE-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; SVE-FIXED-NEXT:    movi v1.2d, #0000000000000000
-; SVE-FIXED-NEXT:    index z2.h, #0, #1
+; SVE-FIXED-NEXT:    index z3.h, #0, #1
 ; SVE-FIXED-NEXT:    mov x11, sp
 ; SVE-FIXED-NEXT:    str q0, [sp]
 ; SVE-FIXED-NEXT:    mov v1.h[0], w0
 ; SVE-FIXED-NEXT:    mov v1.h[1], w1
-; SVE-FIXED-NEXT:    fmov x8, d1
 ; SVE-FIXED-NEXT:    mov v1.h[2], w2
-; SVE-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
-; SVE-FIXED-NEXT:    fmov x9, d1
-; SVE-FIXED-NEXT:    umaxv h2, v2.4h
-; SVE-FIXED-NEXT:    lsr x9, x9, #32
+; SVE-FIXED-NEXT:    shl v2.4h, v1.4h, #15
+; SVE-FIXED-NEXT:    fmov x8, d1
+; SVE-FIXED-NEXT:    cmlt v2.4h, v2.4h, #0
+; SVE-FIXED-NEXT:    lsr x9, x8, #32
 ; SVE-FIXED-NEXT:    orr w9, w8, w9
+; SVE-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
 ; SVE-FIXED-NEXT:    orr w8, w9, w8, lsr #16
-; SVE-FIXED-NEXT:    fmov w10, s2
 ; SVE-FIXED-NEXT:    tst w8, #0x1
+; SVE-FIXED-NEXT:    umaxv h2, v2.4h
+; SVE-FIXED-NEXT:    fmov w10, s2
 ; SVE-FIXED-NEXT:    bfi x11, x10, #2, #2
 ; SVE-FIXED-NEXT:    ldr w9, [x11]
 ; SVE-FIXED-NEXT:    csinv w0, w9, wzr, ne
@@ -577,6 +579,61 @@ define i8 @extract_last_active_split(<vscale x 32 x i8> %data, <vscale x 32 x i1
 ; CHECK-NEXT:    ret
   %res = call i8 @llvm.experimental.vector.extract.last.active.nxv32i8(<vscale x 32 x i8> %data, <vscale x 32 x i1> %mask, i8 %passthru)
   ret i8 %res
+}
+
+define half @extract_last_active_unpacked_fp_nxv4f16(<vscale x 4 x half> %0, <vscale x 4 x i1> %mask, half %passthru) #0 {
+; CHECK-LABEL: extract_last_active_unpacked_fp_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $s1
+; CHECK-NEXT:    clastb s1, p0, s1, z0.s
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
+  %res = call half @llvm.experimental.vector.extract.last.active.nxv4f16(<vscale x 4 x half> %0, <vscale x 4 x i1> %mask, half %passthru)
+  ret half %res
+}
+
+define half @extract_last_active_unpacked_fp_nxv2f16(<vscale x 2 x half> %0, <vscale x 2 x i1> %mask, half %passthru) #0 {
+; CHECK-LABEL: extract_last_active_unpacked_fp_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-NEXT:    clastb d1, p0, d1, z0.d
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
+  %res = call half @llvm.experimental.vector.extract.last.active.nxv2f16(<vscale x 2 x half> %0, <vscale x 2 x i1> %mask, half %passthru)
+  ret half %res
+}
+
+define bfloat @extract_last_active_unpacked_fp_nxv4bf16(<vscale x 4 x bfloat> %0, <vscale x 4 x i1> %mask, bfloat %passthru) #0 {
+; CHECK-LABEL: extract_last_active_unpacked_fp_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $s1
+; CHECK-NEXT:    clastb s1, p0, s1, z0.s
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
+  %res = call bfloat @llvm.experimental.vector.extract.last.active.nxv4bf16(<vscale x 4 x bfloat> %0, <vscale x 4 x i1> %mask, bfloat %passthru)
+  ret bfloat %res
+}
+
+define bfloat @extract_last_active_unpacked_fp_nxv2bf16(<vscale x 2 x bfloat> %0, <vscale x 2 x i1> %mask, bfloat %passthru) #0 {
+; CHECK-LABEL: extract_last_active_unpacked_fp_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-NEXT:    clastb d1, p0, d1, z0.d
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
+  %res = call bfloat @llvm.experimental.vector.extract.last.active.nxv2bf16(<vscale x 2 x bfloat> %0, <vscale x 2 x i1> %mask, bfloat %passthru)
+  ret bfloat %res
+}
+
+define float @extract_last_active_unpacked_fp_nxv2f32(<vscale x 2 x float> %0, <vscale x 2 x i1> %mask, float %passthru) #0 {
+; CHECK-LABEL: extract_last_active_unpacked_fp_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $d1
+; CHECK-NEXT:    clastb d1, p0, d1, z0.d
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
+  %res = call float @llvm.experimental.vector.extract.last.active.nxv2f32(<vscale x 2 x float> %0, <vscale x 2 x i1> %mask, float %passthru)
+  ret float %res
 }
 
 attributes #0 = { nounwind "target-features"="+sve" vscale_range(1, 16) }

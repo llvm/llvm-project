@@ -58,7 +58,6 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 using namespace lldb;
@@ -706,8 +705,9 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     if (!namespace_map)
       return;
 
-    LLDB_LOGV(log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
-              namespace_map.get(), namespace_map->size());
+    LLDB_LOG_VERBOSE(
+        log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
+        namespace_map.get(), namespace_map->size());
 
     for (ClangASTImporter::NamespaceMapItem &n : *namespace_map) {
       LLDB_LOG(log, "  CEDM::FEVD Searching namespace {0} in module {1}",
@@ -1472,7 +1472,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
     if (data_symbol) {
       std::string warning("got name from symbols: ");
-      warning.append(name.AsCString());
+      warning.append(name.GetStringRef());
       const unsigned diag_id =
           m_ast_context->getDiagnostics().getCustomDiagID(
               clang::DiagnosticsEngine::Level::Warning, "%0");
@@ -1825,7 +1825,8 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
     Type *function_type = function->GetType();
 
     const auto lang = function->GetCompileUnit()->GetLanguage();
-    const auto name = function->GetMangled().GetMangledName().AsCString();
+    const llvm::StringRef name =
+        function->GetMangled().GetMangledName().GetStringRef();
     const bool extern_c =
         (Language::LanguageIsC(lang) && !Mangled::IsMangledName(name)) ||
         (Language::LanguageIsObjC(lang) &&
@@ -2011,8 +2012,8 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
 
     CXXMethodDecl *method_decl = m_clang_ast_context->AddMethodToCXXRecordType(
         copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", /*asm_label=*/{},
-        method_type, lldb::eAccessPublic, is_virtual, is_static, is_inline,
-        is_explicit, is_attr_used, is_artificial);
+        method_type, is_virtual, is_static, is_inline, is_explicit,
+        is_attr_used, is_artificial);
 
     LLDB_LOG(log,
              "  CEDM::AddThisType Added function $__lldb_expr "

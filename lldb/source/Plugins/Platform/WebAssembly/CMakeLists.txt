@@ -13,6 +13,7 @@ lldb_tablegen(PlatformWasmProperties.json -dump-json
 add_lldb_library(lldbPluginPlatformWasm PLUGIN
   PlatformWasm.cpp
   PlatformWasmRemoteGDBServer.cpp
+  PlatformWebInspectorWasm.cpp
 
   LINK_LIBS
     lldbCore

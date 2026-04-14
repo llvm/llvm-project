@@ -1098,6 +1098,11 @@
 # CHECK-LE: msgsync                            # encoding: [0xec,0x06,0x00,0x7c]
             msgsync
 
+# Message Send (Processor Control)
+# CHECK-BE: msgsndp 3                          # encoding: [0x7c,0x00,0x19,0x1c]
+# CHECK-LE: msgsndp 3                          # encoding: [0x1c,0x19,0x00,0x7c]
+            msgsndp 3
+
 # SLB Invalidate Entry Global
 # CHECK-BE: slbieg 6, 21                       # encoding: [0x7c,0xc0,0xab,0xa4]
 # CHECK-LE: slbieg 6, 21                       # encoding: [0xa4,0xab,0xc0,0x7c]

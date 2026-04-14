@@ -8,6 +8,7 @@
 
 #include "UseAfterMoveCheck.h"
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -65,7 +66,7 @@ private:
                                            const Expr *MovingCall,
                                            const ValueDecl *MovedVariable);
   void getUsesAndReinits(const CFGBlock *Block, const ValueDecl *MovedVariable,
-                         llvm::SmallVectorImpl<const DeclRefExpr *> *Uses,
+                         SmallVectorImpl<const DeclRefExpr *> *Uses,
                          llvm::SmallPtrSetImpl<const Stmt *> *Reinits);
   void getDeclRefs(const CFGBlock *Block, const Decl *MovedVariable,
                    llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs);
@@ -80,6 +81,21 @@ private:
   std::unique_ptr<StmtToBlockMap> BlockMap;
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
 };
+
+AST_MATCHER_P(Expr, hasParentIgnoringParenImpCasts,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  const Expr *E = &Node;
+  do {
+    const DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
+    if (Parents.size() != 1)
+      return false;
+    E = Parents[0].get<Expr>();
+    if (!E)
+      return false;
+  } while (isa<ImplicitCastExpr, ParenExpr>(E));
+
+  return InnerMatcher.matches(*E, Finder, Builder);
+}
 
 } // namespace
 
@@ -133,9 +149,9 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                                            StandardResettableOwnerTypeMatcher)),
                                    callee(cxxMethodDecl(hasName("reset")))),
                  // Methods that have the [[clang::reinitializes]] attribute.
-                 cxxMemberCallExpr(on(DeclRefMatcher),
-                                   callee(cxxMethodDecl(
-                                       hasAttr(clang::attr::Reinitializes)))),
+                 cxxMemberCallExpr(
+                     on(DeclRefMatcher),
+                     callee(cxxMethodDecl(hasAttr(attr::Reinitializes)))),
                  // Functions that are specified in ReinitializationFunctions
                  // option.
                  callExpr(
@@ -243,7 +259,7 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
     Visited.insert(Block);
 
   // Get all uses and reinits in the block.
-  llvm::SmallVector<const DeclRefExpr *, 1> Uses;
+  SmallVector<const DeclRefExpr *, 1> Uses;
   llvm::SmallPtrSet<const Stmt *, 1> Reinits;
   getUsesAndReinits(Block, MovedVariable, &Uses, &Reinits);
 
@@ -251,7 +267,7 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
   // reinit.
   // If `Reinit` is identical to `MovingCall`, we're looking at a move-to-self
   // (e.g. `a = std::move(a)`). Count these as reinitializations.
-  llvm::SmallVector<const Stmt *, 1> ReinitsToDelete;
+  SmallVector<const Stmt *, 1> ReinitsToDelete;
   for (const Stmt *Reinit : Reinits)
     if (MovingCall && Reinit != MovingCall &&
         Sequence->potentiallyAfter(MovingCall, Reinit))
@@ -303,7 +319,7 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
 
 void UseAfterMoveFinder::getUsesAndReinits(
     const CFGBlock *Block, const ValueDecl *MovedVariable,
-    llvm::SmallVectorImpl<const DeclRefExpr *> *Uses,
+    SmallVectorImpl<const DeclRefExpr *> *Uses,
     llvm::SmallPtrSetImpl<const Stmt *> *Reinits) {
   llvm::SmallPtrSet<const DeclRefExpr *, 1> DeclRefs;
   llvm::SmallPtrSet<const DeclRefExpr *, 1> ReinitDeclRefs;
@@ -323,7 +339,31 @@ void UseAfterMoveFinder::getUsesAndReinits(
   });
 }
 
-static bool isStandardSmartPointer(const ValueDecl *VD) {
+static std::optional<StringRef> getStringLiteral(const Expr *E) {
+  assert(E);
+  if (const auto *SL = dyn_cast<StringLiteral>(E->IgnoreParenImpCasts()))
+    return SL->getString();
+  return std::nullopt;
+}
+
+// User defined types can use [[clang::annotate]] to mark smart-pointer-like
+// types with a specified move from state that matches the standard smart
+// pointer's moved-from state (nullptr).
+static bool isNullAfterMoveAnnotate(const AnnotateAttr *Attr) {
+  if (Attr->getAnnotation() != "clang-tidy")
+    return false;
+
+  if (Attr->args_size() != 2)
+    return false;
+
+  std::optional<StringRef> Plugin = getStringLiteral(Attr->args_begin()[0]);
+  std::optional<StringRef> Annotation = getStringLiteral(Attr->args_begin()[1]);
+
+  return Plugin && Annotation && *Plugin == "bugprone-use-after-move" &&
+         *Annotation == "null_after_move";
+}
+
+static bool isSpecifiedAfterMove(const ValueDecl *VD) {
   const Type *TheType = VD->getType().getNonReferenceType().getTypePtrOrNull();
   if (!TheType)
     return false;
@@ -332,6 +372,15 @@ static bool isStandardSmartPointer(const ValueDecl *VD) {
   if (!RecordDecl)
     return false;
 
+  // Use the definition for the declaration, as it is the expected place to add
+  // the annotations.
+  if (const CXXRecordDecl *DefinitionDecl = RecordDecl->getDefinition()) {
+    for (const auto *Attr : DefinitionDecl->specific_attrs<AnnotateAttr>())
+      if (isNullAfterMoveAnnotate(Attr))
+        return true;
+  }
+
+  // Standard smart pointers have a well-specified moved-from state (nullptr).
   const IdentifierInfo *ID = RecordDecl->getIdentifier();
   if (!ID)
     return false;
@@ -358,17 +407,21 @@ void UseAfterMoveFinder::getDeclRefs(
         const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
         const auto *Operator = Match.getNodeAs<CXXOperatorCallExpr>("operator");
         if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block) {
-          // Ignore uses of a standard smart pointer that don't dereference the
-          // pointer.
-          if (Operator || !isStandardSmartPointer(DeclRef->getDecl()))
+          // Ignore uses of a standard smart pointer or classes annotated as
+          // "null_after_move" (smart-pointer-like behavior) that don't
+          // dereference the pointer.
+          if (Operator || !isSpecifiedAfterMove(DeclRef->getDecl()))
             DeclRefs->insert(DeclRef);
         }
       }
     };
 
-    auto DeclRefMatcher = declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
-                                      unless(inDecltypeOrTemplateArg()))
-                              .bind("declref");
+    auto DeclRefMatcher =
+        declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
+                    unless(inDecltypeOrTemplateArg()),
+                    unless(hasParentIgnoringParenImpCasts(
+                        memberExpr(hasDeclaration(cxxDestructorDecl())))))
+            .bind("declref");
 
     AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
                       *Context));
@@ -550,7 +603,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Collect all code blocks that could use the arg after move.
-  llvm::SmallVector<Stmt *> CodeBlocks{};
+  SmallVector<Stmt *> CodeBlocks{};
   if (ContainingCtor) {
     CodeBlocks.push_back(ContainingCtor->getBody());
     if (ContainingCtorInit) {

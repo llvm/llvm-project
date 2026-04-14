@@ -25,6 +25,10 @@ def Arith_Dialect : Dialect {
     propagate poison values, i.e., if any of its inputs are poison, then the
     output is poison. Unless otherwise stated, operations applied to `vector`
     and `tensor` values propagates poison elementwise.
+
+    Manipulating value with type `i0` isn't supported in this dialect at the
+    moment and is considered invalid. This can change in the future if some
+    motivating use-cases are presented.
   }];
 
   let hasConstantMaterializer = 1;

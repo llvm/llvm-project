@@ -13,7 +13,7 @@
 ! crashes during OpenMP target device codegen when used in conjunction with
 ! target code in the same function.
 
-! CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(ptr %{{.*}}, ptr %[[ARG1:.*]], ptr %[[ARG2:.*]]) #{{[0-9]+}} {
+! CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(ptr %[[ARG1:.*]], ptr %[[ARG2:.*]], ptr %{{.*}}) #{{[0-9]+}} {
 ! CHECK:  %[[ALLOCA_X:.*]] = alloca ptr, align 8, addrspace(5)
 ! CHECK:  %[[ASCAST_X:.*]] = addrspacecast ptr addrspace(5) %[[ALLOCA_X]] to ptr
 ! CHECK:  store ptr %[[ARG1]], ptr %[[ASCAST_X]], align 8

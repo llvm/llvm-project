@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <concepts>
 #include <functional>
 #include <memory>
@@ -32,6 +33,7 @@
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 // SFINAE tests.
 

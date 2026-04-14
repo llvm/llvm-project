@@ -60,7 +60,6 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
     lldbTarget
     lldbUtility
     lldbValueObject
-    lldbPluginClangCommon
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang
 )

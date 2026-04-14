@@ -30,8 +30,7 @@ define void @test(ptr noundef align 8 dereferenceable_or_null(16) %arr) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[ARR]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[TMP7]], i64 -3
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[TMP6]], i64 -3
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i1> [[TMP4]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr align 8 [[TMP8]], <4 x i1> [[REVERSE]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -46,19 +45,19 @@ define void @test(ptr noundef align 8 dereferenceable_or_null(16) %arr) #0 {
 bb5:
   br label %loop.header
 
-loop.header:                                             ; preds = %loop.latch, %bb8
+loop.header:
   %iv = phi i64 [ 99, %bb5 ], [ %iv.next, %loop.latch ]
   %and = and i64 %iv, 1
   %icmp17 = icmp eq i64 %and, 0
   br i1 %icmp17, label %bb18, label %loop.latch, !prof !21
 
-bb18:                                             ; preds = %loop.header
+bb18:
   %or = or disjoint i64 %iv, 1
   %getelementptr19 = getelementptr inbounds i64, ptr %arr, i64 %or
   store i64 1, ptr %getelementptr19, align 8
   br label %loop.latch
 
-loop.latch:                                             ; preds = %bb18, %loop.header
+loop.latch:
   %iv.next = add nsw i64 %iv, -1
   %icmp22 = icmp eq i64 %iv.next, 90
   br i1 %icmp22, label %bb6, label %loop.header, !prof !22

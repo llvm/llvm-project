@@ -251,23 +251,35 @@ public:
     if (isa<llvm::Constant>(IndexOp))
       return false;
 
-    SmallVector<Value *> WorkList;
-    WorkList.push_back(IndexOp);
+    SmallVector<Value *, 16> Worklist;
+    SmallPtrSet<Value *, 16> Visited;
+    Worklist.push_back(IndexOp);
 
-    while (!WorkList.empty()) {
-      Value *V = WorkList.pop_back_val();
-      if (auto *CI = dyn_cast<CallInst>(V)) {
-        if (CI->getCalledFunction()->getIntrinsicID() ==
-            Intrinsic::dx_resource_nonuniformindex)
+    while (!Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+
+      if (isa<llvm::Constant>(V))
+        continue;
+
+      if (!Visited.insert(V).second)
+        continue;
+
+      if (auto *CI = dyn_cast<CallInst>(V))
+        if (CI->getIntrinsicID() == Intrinsic::dx_resource_nonuniformindex)
           return true;
+
+      // If it's a PHI node, check ALL incoming values —
+      // taint from ANY predecessor counts
+      if (auto *Phi = dyn_cast<PHINode>(V)) {
+        for (Value *Incoming : Phi->incoming_values())
+          Worklist.push_back(Incoming);
+        continue;
       }
-      if (auto *U = llvm::dyn_cast<llvm::User>(V)) {
-        for (llvm::Value *Op : U->operands()) {
-          if (isa<llvm::Constant>(Op))
-            continue;
-          WorkList.push_back(Op);
-        }
-      }
+
+      if (auto *Inst = dyn_cast<Instruction>(V))
+        if (Inst->getNumOperands() > 0 && !Inst->isTerminator())
+          for (Value *Op : Inst->operands())
+            Worklist.push_back(Op);
     }
     return false;
   }
@@ -354,9 +366,8 @@ public:
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
       // size, so we need to be careful about the difference for "unbounded".
-      uint32_t Unbounded = std::numeric_limits<uint32_t>::max();
-      uint32_t UpperBound = Binding.Size == Unbounded
-                                ? Unbounded
+      uint32_t UpperBound = Binding.Size == 0
+                                ? std::numeric_limits<uint32_t>::max()
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
                                                Binding.Space, RC);

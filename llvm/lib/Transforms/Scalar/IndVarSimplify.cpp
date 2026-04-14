@@ -83,11 +83,11 @@ using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "indvars"
 
-STATISTIC(NumWidened, "Number of indvars widened");
-STATISTIC(NumReplaced, "Number of exit values replaced");
-STATISTIC(NumLFTR, "Number of loop exit tests replaced");
-STATISTIC(NumElimExt, "Number of IV sign/zero extends eliminated");
-STATISTIC(NumElimIV, "Number of congruent IVs eliminated");
+STATISTIC(NumWidened     , "Number of indvars widened");
+STATISTIC(NumReplaced    , "Number of exit values replaced");
+STATISTIC(NumLFTR        , "Number of loop exit tests replaced");
+STATISTIC(NumElimExt     , "Number of IV sign/zero extends eliminated");
+STATISTIC(NumElimIV      , "Number of congruent IVs eliminated");
 
 static cl::opt<ReplaceExitVal> ReplaceExitValue(
     "replexitval", cl::Hidden, cl::init(OnlyCheapRepl),
@@ -106,25 +106,25 @@ static cl::opt<ReplaceExitVal> ReplaceExitValue(
                    "always replace exit value whenever possible")));
 
 static cl::opt<bool> UsePostIncrementRanges(
-    "indvars-post-increment-ranges", cl::Hidden,
-    cl::desc("Use post increment control-dependent ranges in IndVarSimplify"),
-    cl::init(true));
+  "indvars-post-increment-ranges", cl::Hidden,
+  cl::desc("Use post increment control-dependent ranges in IndVarSimplify"),
+  cl::init(true));
 
 static cl::opt<bool>
-    DisableLFTR("disable-lftr", cl::Hidden, cl::init(false),
-                cl::desc("Disable Linear Function Test Replace optimization"));
+DisableLFTR("disable-lftr", cl::Hidden, cl::init(false),
+            cl::desc("Disable Linear Function Test Replace optimization"));
 
 static cl::opt<bool>
-    LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(true),
-                    cl::desc("Predicate conditions in read only loops"));
+LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(true),
+                cl::desc("Predicate conditions in read only loops"));
 
 static cl::opt<bool> LoopPredicationTraps(
     "indvars-predicate-loop-traps", cl::Hidden, cl::init(true),
     cl::desc("Predicate conditions that trap in loops with only local writes"));
 
 static cl::opt<bool>
-    AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
-                    cl::desc("Allow widening of indvars to eliminate s/zext"));
+AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
+                cl::desc("Allow widening of indvars to eliminate s/zext"));
 
 namespace {
 
@@ -159,8 +159,8 @@ class IndVarSimplify {
   bool rewriteFirstIterationLoopExitValues(Loop *L);
 
   bool linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
-                                 const SCEV *ExitCount, PHINode *IndVar,
-                                 SCEVExpander &Rewriter);
+                                 const SCEV *ExitCount,
+                                 PHINode *IndVar, SCEVExpander &Rewriter);
 
   bool sinkUnusedInvariants(Loop *L);
 
@@ -305,11 +305,10 @@ maybeFloatingPointRecurrence(Loop *L, PHINode *PN) {
   // of the loop.  If not, the new IV can overflow and no one will notice.
   // The branch block must be in the loop and one of the successors must be out
   // of the loop.
-  auto *BI = dyn_cast<BranchInst>(Compare->user_back());
+  auto *BI = dyn_cast<CondBrInst>(Compare->user_back());
   if (!BI)
     return std::nullopt;
 
-  assert(BI->isConditional() && "Can't use fcmp if not conditional");
   if (!L->contains(BI->getParent()) ||
       (L->contains(BI->getSuccessor(0)) && L->contains(BI->getSuccessor(1))))
     return std::nullopt;
@@ -432,7 +431,7 @@ static void canonicalizeToIntegerIV(Loop *L, PHINode *PN,
 
   IntegerType *Int32Ty = Type::getInt32Ty(PN->getContext());
   auto *Incr = cast<BinaryOperator>(PN->getIncomingValue(BackEdge));
-  auto *BI = cast<BranchInst>(FPIV.Compare->user_back());
+  auto *BI = cast<CondBrInst>(FPIV.Compare->user_back());
 
   LLVM_DEBUG(dbgs() << "INDVARS: Rewriting floating-point IV to integer IV:\n"
                     << "   Init: " << IIV.InitValue << "\n"
@@ -564,14 +563,15 @@ bool IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
         // traces which lead to this exit being taken on the 2nd iteration
         // aren't.)  Note that this is about whether the exit branch is
         // executed, not about whether it is taken.
-        if (!L->getLoopLatch() || !DT->dominates(IncomingBB, L->getLoopLatch()))
+        if (!L->getLoopLatch() ||
+            !DT->dominates(IncomingBB, L->getLoopLatch()))
           continue;
 
         // Get condition that leads to the exit path.
         auto *TermInst = IncomingBB->getTerminator();
 
         Value *Cond = nullptr;
-        if (auto *BI = dyn_cast<BranchInst>(TermInst)) {
+        if (auto *BI = dyn_cast<CondBrInst>(TermInst)) {
           // Must be a conditional branch, otherwise the block
           // should not be in the loop.
           Cond = BI->getCondition();
@@ -616,7 +616,8 @@ bool IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
 /// Update information about the induction variable that is extended by this
 /// sign or zero extend operation. This is used to determine the final width of
 /// the IV before actually widening it.
-static void visitIVCast(CastInst *Cast, WideIVInfo &WI, ScalarEvolution *SE,
+static void visitIVCast(CastInst *Cast, WideIVInfo &WI,
+                        ScalarEvolution *SE,
                         const TargetTransformInfo *TTI) {
   bool IsSigned = Cast->getOpcode() == Instruction::SExt;
   if (!IsSigned && Cast->getOpcode() != Instruction::ZExt)
@@ -641,9 +642,10 @@ static void visitIVCast(CastInst *Cast, WideIVInfo &WI, ScalarEvolution *SE,
   // because at least an ADD is required to increment the induction variable. We
   // could compute more comprehensively the cost of all instructions on the
   // induction variable when necessary.
-  if (TTI && TTI->getArithmeticInstrCost(Instruction::Add, Ty) >
-                 TTI->getArithmeticInstrCost(Instruction::Add,
-                                             Cast->getOperand(0)->getType())) {
+  if (TTI &&
+      TTI->getArithmeticInstrCost(Instruction::Add, Ty) >
+          TTI->getArithmeticInstrCost(Instruction::Add,
+                                      Cast->getOperand(0)->getType())) {
     return;
   }
 
@@ -682,7 +684,7 @@ public:
   IndVarSimplifyVisitor(PHINode *IV, ScalarEvolution *SCEV,
                         const TargetTransformInfo *TTI,
                         const DominatorTree *DTree)
-      : SE(SCEV), TTI(TTI), IVPhi(IV) {
+    : SE(SCEV), TTI(TTI), IVPhi(IV) {
     DT = DTree;
     WI.NarrowIV = IVPhi;
   }
@@ -698,7 +700,8 @@ public:
 /// candidates for simplification.
 ///
 /// Sign/Zero extend elimination is interleaved with IV simplification.
-bool IndVarSimplify::simplifyAndExtend(Loop *L, SCEVExpander &Rewriter,
+bool IndVarSimplify::simplifyAndExtend(Loop *L,
+                                       SCEVExpander &Rewriter,
                                        LoopInfo *LI) {
   SmallVector<WideIVInfo, 8> WideIVs;
 
@@ -735,7 +738,7 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L, SCEVExpander &Rewriter,
       if (Visitor.WI.WidestNativeType) {
         WideIVs.push_back(Visitor.WI);
       }
-    } while (!LoopPhis.empty());
+    } while(!LoopPhis.empty());
 
     // Continue if we disallowed widening.
     if (!WidenIndVars)
@@ -744,8 +747,8 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L, SCEVExpander &Rewriter,
     for (; !WideIVs.empty(); WideIVs.pop_back()) {
       unsigned ElimExt;
       unsigned Widened;
-      if (PHINode *WidePhi = createWideIV(WideIVs.back(), LI, SE, Rewriter, DT,
-                                          DeadInsts, ElimExt, Widened,
+      if (PHINode *WidePhi = createWideIV(WideIVs.back(), LI, SE, Rewriter,
+                                          DT, DeadInsts, ElimExt, Widened,
                                           HasGuards, UsePostIncrementRanges)) {
         NumElimExt += ElimExt;
         NumWidened += Widened;
@@ -803,7 +806,7 @@ static PHINode *getLoopPhiForCounter(Value *IncV, Loop *L) {
 /// Whether the current loop exit test is based on this value.  Currently this
 /// is limited to a direct use in the loop condition.
 static bool isLoopExitTestBasedOn(Value *V, BasicBlock *ExitingBB) {
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   ICmpInst *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
   // TODO: Allow non-icmp loop test.
   if (!ICmp)
@@ -822,7 +825,7 @@ static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
   // test.  This is critical for when SCEV's cached ExitCount is less precise
   // than the current IR (such as after we've proven a particular exit is
   // actually dead and thus the BE count never reaches our ExitCount.)
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   if (L->isLoopInvariant(BI->getCondition()))
     return false;
 
@@ -865,7 +868,7 @@ static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
 /// Recursive helper for hasConcreteDef(). Unfortunately, this currently boils
 /// down to checking that all operands are constant and listing instructions
 /// that may hide undef.
-static bool hasConcreteDefImpl(Value *V, SmallPtrSetImpl<Value *> &Visited,
+static bool hasConcreteDefImpl(Value *V, SmallPtrSetImpl<Value*> &Visited,
                                unsigned Depth) {
   if (isa<Constant>(V))
     return !isa<UndefValue>(V);
@@ -880,14 +883,14 @@ static bool hasConcreteDefImpl(Value *V, SmallPtrSetImpl<Value *> &Visited,
     return false;
 
   // Load and return values may be undef.
-  if (I->mayReadFromMemory() || isa<CallInst>(I) || isa<InvokeInst>(I))
+  if(I->mayReadFromMemory() || isa<CallInst>(I) || isa<InvokeInst>(I))
     return false;
 
   // Optimistically handle other instructions.
   for (Value *Op : I->operands()) {
     if (!Visited.insert(Op).second)
       continue;
-    if (!hasConcreteDefImpl(Op, Visited, Depth + 1))
+    if (!hasConcreteDefImpl(Op, Visited, Depth+1))
       return false;
   }
   return true;
@@ -899,7 +902,7 @@ static bool hasConcreteDefImpl(Value *V, SmallPtrSetImpl<Value *> &Visited,
 /// TODO: If we decide that this is a good approach to checking for undef, we
 /// may factor it into a common location.
 static bool hasConcreteDef(Value *V) {
-  SmallPtrSet<Value *, 8> Visited;
+  SmallPtrSet<Value*, 8> Visited;
   Visited.insert(V);
   return hasConcreteDefImpl(V, Visited, 0);
 }
@@ -907,7 +910,8 @@ static bool hasConcreteDef(Value *V) {
 /// Return true if the given phi is a "counter" in L.  A counter is an
 /// add recurance (of integer or pointer type) with an arbitrary start, and a
 /// step of 1.  Note that L must have exactly one latch.
-static bool isLoopCounter(PHINode *Phi, Loop *L, ScalarEvolution *SE) {
+static bool isLoopCounter(PHINode* Phi, Loop *L,
+                          ScalarEvolution *SE) {
   assert(Phi->getParent() == L->getHeader());
   assert(L->getLoopLatch());
 
@@ -932,11 +936,11 @@ static bool isLoopCounter(PHINode *Phi, Loop *L, ScalarEvolution *SE) {
 /// valid count without scaling the address stride, so it remains a pointer
 /// expression as far as SCEV is concerned.
 static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
-                                const SCEV *BECount, ScalarEvolution *SE,
-                                DominatorTree *DT) {
+                                const SCEV *BECount,
+                                ScalarEvolution *SE, DominatorTree *DT) {
   uint64_t BCWidth = SE->getTypeSizeInBits(BECount->getType());
 
-  Value *Cond = cast<BranchInst>(ExitingBB->getTerminator())->getCondition();
+  Value *Cond = cast<CondBrInst>(ExitingBB->getTerminator())->getCondition();
 
   // Loop over all of the PHI nodes, looking for a simple counter.
   PHINode *BestPhi = nullptr;
@@ -1026,7 +1030,7 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
   // exit count add(zext(add)) expression.
   if (IndVar->getType()->isIntegerTy() &&
       SE->getTypeSizeInBits(AR->getType()) >
-          SE->getTypeSizeInBits(ExitCount->getType())) {
+      SE->getTypeSizeInBits(ExitCount->getType())) {
     const SCEV *IVInit = AR->getStart();
     if (!isa<SCEVConstant>(IVInit) || !isa<SCEVConstant>(ExitCount)) {
       const SCEV *TruncExpr = SE->getTruncateExpr(AR, ExitCount->getType());
@@ -1052,14 +1056,14 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
 /// able to rewrite the exit tests of any loop where the SCEV analysis can
 /// determine a loop-invariant trip count of the loop, which is actually a much
 /// broader range than just linear tests.
-bool IndVarSimplify::linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
-                                               const SCEV *ExitCount,
-                                               PHINode *IndVar,
-                                               SCEVExpander &Rewriter) {
+bool IndVarSimplify::
+linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
+                          const SCEV *ExitCount,
+                          PHINode *IndVar, SCEVExpander &Rewriter) {
   assert(L->getLoopLatch() && "Loop no longer in simplified form?");
   assert(isLoopCounter(IndVar, L, SE));
-  Instruction *const IncVar =
-      cast<Instruction>(IndVar->getIncomingValueForBlock(L->getLoopLatch()));
+  Instruction * const IncVar =
+    cast<Instruction>(IndVar->getIncomingValueForBlock(L->getLoopLatch()));
 
   // Initialize CmpIndVar to the preincremented IV.
   Value *CmpIndVar = IndVar;
@@ -1113,7 +1117,7 @@ bool IndVarSimplify::linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
   }
 
   // Insert a new icmp_ne or icmp_eq instruction before the branch.
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   ICmpInst::Predicate P;
   if (L->contains(BI->getSuccessor(0)))
     P = ICmpInst::ICMP_NE;
@@ -1147,19 +1151,19 @@ bool IndVarSimplify::linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
     const SCEV *IV = SE->getSCEV(CmpIndVar);
     const SCEV *TruncatedIV = SE->getTruncateExpr(IV, ExitCnt->getType());
     const SCEV *ZExtTrunc =
-        SE->getZeroExtendExpr(TruncatedIV, CmpIndVar->getType());
+      SE->getZeroExtendExpr(TruncatedIV, CmpIndVar->getType());
 
     if (ZExtTrunc == IV) {
       Extended = true;
-      ExitCnt =
-          Builder.CreateZExt(ExitCnt, IndVar->getType(), "wide.trip.count");
+      ExitCnt = Builder.CreateZExt(ExitCnt, IndVar->getType(),
+                                   "wide.trip.count");
     } else {
       const SCEV *SExtTrunc =
-          SE->getSignExtendExpr(TruncatedIV, CmpIndVar->getType());
+        SE->getSignExtendExpr(TruncatedIV, CmpIndVar->getType());
       if (SExtTrunc == IV) {
         Extended = true;
-        ExitCnt =
-            Builder.CreateSExt(ExitCnt, IndVar->getType(), "wide.trip.count");
+        ExitCnt = Builder.CreateSExt(ExitCnt, IndVar->getType(),
+                                     "wide.trip.count");
       }
     }
 
@@ -1167,8 +1171,8 @@ bool IndVarSimplify::linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
       bool Discard;
       L->makeLoopInvariant(ExitCnt, Discard);
     } else
-      CmpIndVar =
-          Builder.CreateTrunc(CmpIndVar, ExitCnt->getType(), "lftr.wideiv");
+      CmpIndVar = Builder.CreateTrunc(CmpIndVar, ExitCnt->getType(),
+                                      "lftr.wideiv");
   }
   LLVM_DEBUG(dbgs() << "INDVARS: Rewriting loop exit condition to:\n"
                     << "      LHS:" << *CmpIndVar << '\n'
@@ -1201,12 +1205,10 @@ bool IndVarSimplify::linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
 /// exit block to reduce register pressure in the loop.
 bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   BasicBlock *ExitBlock = L->getExitBlock();
-  if (!ExitBlock)
-    return false;
+  if (!ExitBlock) return false;
 
   BasicBlock *Preheader = L->getLoopPreheader();
-  if (!Preheader)
-    return false;
+  if (!Preheader) return false;
 
   bool MadeAnyChanges = false;
   for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
@@ -1250,7 +1252,8 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
       Instruction *User = cast<Instruction>(U.getUser());
       BasicBlock *UseBB = User->getParent();
       if (PHINode *P = dyn_cast<PHINode>(User)) {
-        unsigned i = PHINode::getIncomingValueNumForOperand(U.getOperandNo());
+        unsigned i =
+          PHINode::getIncomingValueNumForOperand(U.getOperandNo());
         UseBB = P->getIncomingBlock(i);
       }
       if (UseBB == Preheader || L->contains(UseBB)) {
@@ -1272,7 +1275,7 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   return MadeAnyChanges;
 }
 
-static void replaceExitCond(BranchInst *BI, Value *NewCond,
+static void replaceExitCond(CondBrInst *BI, Value *NewCond,
                             SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   auto *OldCond = BI->getCondition();
   LLVM_DEBUG(dbgs() << "Replacing condition of loop-exiting branch " << *BI
@@ -1284,7 +1287,7 @@ static void replaceExitCond(BranchInst *BI, Value *NewCond,
 
 static Constant *createFoldedExitCond(const Loop *L, BasicBlock *ExitingBB,
                                       bool IsTaken) {
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
   auto *OldCond = BI->getCondition();
   return ConstantInt::get(OldCond->getType(),
@@ -1293,7 +1296,7 @@ static Constant *createFoldedExitCond(const Loop *L, BasicBlock *ExitingBB,
 
 static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
                      SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   auto *NewCond = createFoldedExitCond(L, ExitingBB, IsTaken);
   replaceExitCond(BI, NewCond, DeadInsts);
 }
@@ -1350,7 +1353,7 @@ createInvariantCond(const Loop *L, BasicBlock *ExitingBB,
   if (ExitIfTrue)
     InvariantPred = ICmpInst::getInversePredicate(InvariantPred);
   IRBuilder<> Builder(Preheader->getTerminator());
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   return Builder.CreateICmp(InvariantPred, LHSV, RHSV,
                             BI->getCondition()->getName());
 }
@@ -1364,7 +1367,7 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
   Value *RHS = ICmp->getOperand(1);
 
   // 'LHS pred RHS' should now mean that we stay in loop.
-  auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  auto *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   if (Inverted)
     Pred = ICmpInst::getInverseCmpPredicate(Pred);
 
@@ -1391,9 +1394,9 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
     // wrap". getLoopInvariantExitCondDuringFirstIterations knows how to deal
     // with umin in a smart way, but umin(a, b) - 1 will likely not simplify.
     // So we manually construct umin(a - 1, b - 1).
-    SmallVector<const SCEV *, 4> Elements;
+    SmallVector<SCEVUse, 4> Elements;
     if (auto *UMin = dyn_cast<SCEVUMinExpr>(MaxIter)) {
-      for (const SCEV *Op : UMin->operands())
+      for (SCEVUse Op : UMin->operands())
         Elements.push_back(SE->getMinusSCEV(Op, SE->getOne(Op->getType())));
       MaxIter = SE->getUMinFromMismatchedTypes(Elements);
     } else
@@ -1414,7 +1417,7 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
 }
 
 static bool optimizeLoopExitWithUnknownExitCount(
-    const Loop *L, BranchInst *BI, BasicBlock *ExitingBB, const SCEV *MaxIter,
+    const Loop *L, CondBrInst *BI, BasicBlock *ExitingBB, const SCEV *MaxIter,
     bool SkipLastIter, ScalarEvolution *SE, SCEVExpander &Rewriter,
     SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   assert(
@@ -1527,14 +1530,13 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
   // rely on them which results in SCEV caching sub-optimal answers.  The
   // concern about caching sub-optimal results is why we only query SCEVs of
   // the loop invariant RHS here.
-  SmallVector<BasicBlock *, 16> ExitingBlocks;
+  SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
   bool Changed = false;
   for (auto *ExitingBB : ExitingBlocks) {
-    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       continue;
-    assert(BI->isConditional() && "exit branch must be conditional");
 
     auto *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
     if (!ICmp || !ICmp->hasOneUse())
@@ -1576,10 +1578,9 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
   // Now that we've canonicalized the condition to match the extend,
   // see if we can rotate the extend out of the loop.
   for (auto *ExitingBB : ExitingBlocks) {
-    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       continue;
-    assert(BI->isConditional() && "exit branch must be conditional");
 
     auto *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
     if (!ICmp || !ICmp->hasOneUse() || !ICmp->isUnsigned())
@@ -1654,7 +1655,7 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
 }
 
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
-  SmallVector<BasicBlock *, 16> ExitingBlocks;
+  SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
   // Remove all exits which aren't both rewriteable and execute on every
@@ -1667,7 +1668,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       return true;
 
     // Can't rewrite non-branch yet.
-    BranchInst *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    CondBrInst *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       return true;
 
@@ -1699,20 +1700,20 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // all exits must dominate the latch, so there is a total dominance order
   // between them.
   llvm::sort(ExitingBlocks, [&](BasicBlock *A, BasicBlock *B) {
-    // std::sort sorts in ascending order, so we want the inverse of
-    // the normal dominance relation.
-    if (A == B)
-      return false;
-    if (DT->properlyDominates(A, B))
-      return true;
-    else {
-      assert(DT->properlyDominates(B, A) && "expected total dominance order!");
-      return false;
-    }
+               // std::sort sorts in ascending order, so we want the inverse of
+               // the normal dominance relation.
+               if (A == B) return false;
+               if (DT->properlyDominates(A, B))
+                 return true;
+               else {
+                 assert(DT->properlyDominates(B, A) &&
+                        "expected total dominance order!");
+                 return false;
+               }
   });
 #ifdef ASSERT
   for (unsigned i = 1; i < ExitingBlocks.size(); i++) {
-    assert(DT->dominates(ExitingBlocks[i - 1], ExitingBlocks[i]));
+    assert(DT->dominates(ExitingBlocks[i-1], ExitingBlocks[i]));
   }
 #endif
 
@@ -1739,7 +1740,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (isa<SCEVCouldNotCompute>(ExactExitCount)) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
-      auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+      auto *BI = cast<CondBrInst>(ExitingBB->getTerminator());
       auto OptimizeCond = [&](bool SkipLastIter) {
         return optimizeLoopExitWithUnknownExitCount(L, BI, ExitingBB,
                                                     MaxBECount, SkipLastIter,
@@ -1842,7 +1843,7 @@ static bool crashingBBWithoutEffect(const BasicBlock &BB) {
 }
 
 bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
-  SmallVector<BasicBlock *, 16> ExitingBlocks;
+  SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
   // Finally, see if we can rewrite our exit conditions into a loop invariant
@@ -1875,7 +1876,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       return true;
 
     // Can't rewrite non-branch yet.
-    BranchInst *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    CondBrInst *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       return true;
 
@@ -1887,7 +1888,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // within the loop which contains them.  This assumes trivially lcssa phis
     // have already been removed; TODO: generalize
     BasicBlock *ExitBlock =
-        BI->getSuccessor(L->contains(BI->getSuccessor(0)) ? 1 : 0);
+    BI->getSuccessor(L->contains(BI->getSuccessor(0)) ? 1 : 0);
     if (!ExitBlock->phis().empty())
       return true;
 
@@ -2002,7 +2003,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
 
-    auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    auto *BI = cast<CondBrInst>(ExitingBB->getTerminator());
     if (HasThreadLocalSideEffects) {
       const BasicBlock *Unreachable = nullptr;
       for (const BasicBlock *Succ : BI->successors()) {
@@ -2018,7 +2019,8 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     }
     Value *NewCond;
     if (ExitCount == ExactBTC) {
-      NewCond = L->contains(BI->getSuccessor(0)) ? B.getFalse() : B.getTrue();
+      NewCond = L->contains(BI->getSuccessor(0)) ?
+        B.getFalse() : B.getTrue();
     } else {
       Value *ECV = Rewriter.expandCodeFor(ExitCount);
       if (!ExactBTCV)
@@ -2029,8 +2031,8 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
         ECV = B.CreateZExt(ECV, WiderTy);
         RHS = B.CreateZExt(RHS, WiderTy);
       }
-      auto Pred = L->contains(BI->getSuccessor(0)) ? ICmpInst::ICMP_NE
-                                                   : ICmpInst::ICMP_EQ;
+      auto Pred = L->contains(BI->getSuccessor(0)) ?
+        ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
       NewCond = B.CreateICmp(Pred, ECV, RHS);
     }
     Value *OldCond = BI->getCondition();
@@ -2105,7 +2107,7 @@ bool IndVarSimplify::run(Loop *L) {
   Changed |= canonicalizeExitCondition(L);
 
   // Try to eliminate loop exits based on analyzeable exit counts
-  if (optimizeLoopExits(L, Rewriter)) {
+  if (optimizeLoopExits(L, Rewriter))  {
     Changed = true;
     // Given we've changed exit counts, notify SCEV
     // Some nested loops may share same folded exit basic block,
@@ -2126,11 +2128,11 @@ bool IndVarSimplify::run(Loop *L) {
   if (!DisableLFTR) {
     BasicBlock *PreHeader = L->getLoopPreheader();
 
-    SmallVector<BasicBlock *, 16> ExitingBlocks;
+    SmallVector<BasicBlock*, 16> ExitingBlocks;
     L->getExitingBlocks(ExitingBlocks);
     for (BasicBlock *ExitingBB : ExitingBlocks) {
       // Can't rewrite non-branch yet.
-      if (!isa<BranchInst>(ExitingBB->getTerminator()))
+      if (!isa<CondBrInst>(ExitingBB->getTerminator()))
         continue;
 
       // If our exitting block exits multiple loops, we can only rewrite the
@@ -2166,8 +2168,9 @@ bool IndVarSimplify::run(Loop *L) {
       if (!Rewriter.isSafeToExpand(ExitCount))
         continue;
 
-      Changed |=
-          linearFunctionTestReplace(L, ExitingBB, ExitCount, IndVar, Rewriter);
+      Changed |= linearFunctionTestReplace(L, ExitingBB,
+                                           ExitCount, IndVar,
+                                           Rewriter);
     }
   }
   // Clear the rewriter cache, because values that are in the rewriter's cache

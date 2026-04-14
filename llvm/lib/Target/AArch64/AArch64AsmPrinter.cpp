@@ -2671,8 +2671,9 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
         MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
   OutStreamer->popSection();
 
-  return MCSymbolRefExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
-                                 OutStreamer->getContext());
+  return MCSpecifierExpr::create(
+      MCSymbolRefExpr::create(IRelativeSym, OutStreamer->getContext()),
+      AArch64::S_FUNCINIT, OutStreamer->getContext());
 }
 
 const MCExpr *
@@ -2696,8 +2697,10 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
     else if (Offset.slt(0))
       Sym = MCBinaryExpr::createSub(
           Sym, MCConstantExpr::create((-Offset).getSExtValue(), Ctx), Ctx);
-  } else {
+  } else if (isa<ConstantPointerNull>(BaseGV)) {
     Sym = MCConstantExpr::create(Offset.getSExtValue(), Ctx);
+  } else {
+    reportFatalUsageError("unsupported constant expression in ptrauth pointer");
   }
 
   const MCExpr *DSExpr = nullptr;

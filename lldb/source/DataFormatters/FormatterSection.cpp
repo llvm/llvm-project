@@ -19,6 +19,20 @@
 using namespace lldb;
 
 namespace lldb_private {
+
+static bool skipPadding(llvm::DataExtractor &section,
+                        llvm::DataExtractor::Cursor &cursor) {
+  while (!section.eof(cursor)) {
+    if (section.getU8(cursor) == 0)
+      continue;
+
+    cursor.seek(cursor.tell() - 1);
+    return true;
+  }
+
+  return false; // reached EOF
+}
+
 static void ForEachFormatterInModule(
     Module &module, SectionType section_type,
     std::function<void(llvm::DataExtractor, llvm::StringRef)> fn) {
@@ -52,28 +66,23 @@ static void ForEachFormatterInModule(
   auto section_size = section_sp->GetSectionData(lldb_extractor);
   llvm::DataExtractor section = lldb_extractor.GetAsLLVM();
   bool le = section.isLittleEndian();
-  uint8_t addr_size = section.getAddressSize();
   llvm::DataExtractor::Cursor cursor(0);
   while (cursor && cursor.tell() < section_size) {
-    while (cursor && cursor.tell() < section_size) {
-      // Skip over 0 padding.
-      if (section.getU8(cursor) == 0)
-        continue;
-      cursor.seek(cursor.tell() - 1);
+    if (!skipPadding(section, cursor))
       break;
-    }
+
     uint64_t version = section.getULEB128(cursor);
     uint64_t record_size = section.getULEB128(cursor);
     if (version == 1) {
-      llvm::DataExtractor record(section.getData().drop_front(cursor.tell()),
-                                 le, addr_size);
+      llvm::DataExtractor record(
+          section.getData().drop_front(cursor.tell()).take_front(record_size),
+          le);
       llvm::DataExtractor::Cursor cursor(0);
       uint64_t type_size = record.getULEB128(cursor);
       llvm::StringRef type_name = record.getBytes(cursor, type_size);
       llvm::Error error = cursor.takeError();
       if (!error)
-        fn(llvm::DataExtractor(record.getData().drop_front(cursor.tell()), le,
-                               addr_size),
+        fn(llvm::DataExtractor(record.getData().drop_front(cursor.tell()), le),
            type_name);
       else
         LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),

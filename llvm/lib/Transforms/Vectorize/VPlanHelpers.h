@@ -46,10 +46,6 @@ class Value;
 /// vectors it is an expression determined at runtime.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 
-/// Return a value for Step multiplied by VF.
-Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
-                       int64_t Step);
-
 /// Compute the transformed value of Index at offset StartValue using step
 /// StepValue.
 /// For integer induction, returns StartValue + Index * StepValue.
@@ -346,6 +342,9 @@ struct VPCostContext {
   PredicatedScalarEvolution &PSE;
   const Loop *L;
 
+  /// Number of predicated stores in the VPlan, computed on demand.
+  std::optional<unsigned> NumPredStores;
+
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind,
@@ -363,15 +362,10 @@ struct VPCostContext {
 
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
-  unsigned getPredBlockCostDivisor(BasicBlock *BB) const;
+  uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
-
-  /// Return true if \p I is considered uniform-after-vectorization in the
-  /// legacy cost model for \p VF. Only used to check for additional VPlan
-  /// simplifications.
-  bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
 
   /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
   /// and \p Operands with \p VF. This is a convenience wrapper for the
@@ -385,9 +379,8 @@ struct VPCostContext {
       bool AlwaysIncludeReplicatingR = false);
 
   /// Returns true if an artificially high cost for emulated masked memrefs
-  /// should be used. Forwards to
-  /// LoopVectorizationCostModel::useEmulatedMaskMemRefHack.
-  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
+  /// should be used.
+  bool useEmulatedMaskMemRefHack(const VPReplicateRecipe *R, ElementCount VF);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

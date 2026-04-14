@@ -125,10 +125,9 @@ bool isaConvolutionOpInterface(LinalgOp linalgOp,
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
 
-/// Checks whether `genericOp` is semantically equivalent to a
-///  `linalg.broadcast`. Returns broadcast dimensions if true.
-std::optional<SmallVector<int64_t>>
-isaBroadcastOpInterface(GenericOp genericOp);
+/// Checks whether `linalgOp` is semantically equivalent to a broadcast
+/// operation. Returns broadcast dimensions if true.
+std::optional<SmallVector<int64_t>> isaBroadcastOpInterface(LinalgOp linalgOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a
 ///  `linalg.transpose`. Returns permuted dimensions if true.
@@ -136,11 +135,16 @@ std::optional<SmallVector<int64_t>>
 isaTransposeOpInterface(GenericOp genericOp);
 
 /// Checks whether a given `genericOp` is semantically equivalent to a single
-/// linalgelementwise unary op. e.g. linalg.exp.
+/// linalg elementwise unary op, e.g. `linalg.exp` or
+/// `linalg.elementwise kind=#linalg.elementwise_kind<exp>`.
+/// If `allowNonIdentityMaps` is true, operations with custom indexing maps are
+/// included in the check. Note that these operations can only be represented by
+/// the category op.
 /// A linalg.generic body could be a series of unary elementwise ops e.g.
 /// `exp(neg(x))`, such as formed by linalg op fusion. Here we restrict it to
 /// detecting cases where body is is a single computation op.
-bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
+bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp,
+                                       bool allowNonIdentityMaps = false);
 
 /// Checks whether `genericOp` is semantically equivalent to a single linalg
 /// elementwise binary op e.g. linalg.sub.

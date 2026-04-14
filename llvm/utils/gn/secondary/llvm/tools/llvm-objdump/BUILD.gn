@@ -55,6 +55,7 @@ driver_executable("llvm-objdump") {
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/Support/HTTP",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",

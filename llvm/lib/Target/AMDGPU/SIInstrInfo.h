@@ -332,9 +332,10 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig) const override;
+  void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   // Splits a V_MOV_B64_DPP_PSEUDO opcode into a pair of v_mov_b32_dpp
   // instructions. Returns a pair of generated instructions.
@@ -491,7 +492,8 @@ public:
   }
 
   bool isVMEM(uint32_t Opcode) const {
-    return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode);
+    return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode) ||
+           isFLAT(Opcode);
   }
 
   static bool isSOP1(const MachineInstr &MI) {
@@ -827,8 +829,8 @@ public:
     unsigned Opc = MI.getOpcode();
     // Exclude instructions that read FROM LDS (not write to it)
     return isLDSDMA(MI) && Opc != AMDGPU::BUFFER_STORE_LDS_DWORD &&
-           Opc != AMDGPU::TENSOR_STORE_FROM_LDS &&
-           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_D2;
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d2 &&
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d4;
   }
 
   static bool isSBarrierSCCWrite(unsigned Opcode) {
@@ -1197,6 +1199,7 @@ public:
     case AMDGPU::S_WAIT_EXPCNT:
     case AMDGPU::S_WAIT_DSCNT:
     case AMDGPU::S_WAIT_KMCNT:
+    case AMDGPU::S_WAIT_XCNT:
     case AMDGPU::S_WAIT_IDLE:
       return true;
     default:
@@ -1360,6 +1363,7 @@ public:
                          StringRef &ErrInfo) const override;
 
   unsigned getVALUOp(const MachineInstr &MI) const;
+  unsigned getVALUOp(unsigned Opc) const;
 
   void insertScratchExecCopy(MachineFunction &MF, MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,
@@ -1552,13 +1556,28 @@ public:
     return get(pseudoToMCOpcode(Opcode));
   }
 
-  Register isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
-  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isStackAccess(const MachineInstr &MI, int &FrameIndex,
+                         TypeSize &MemBytes) const;
+  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
+                             TypeSize &MemBytes) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
-                               int &FrameIndex) const override;
+                               int &FrameIndex) const override {
+    TypeSize MemBytes = TypeSize::getZero();
+    return isLoadFromStackSlot(MI, FrameIndex, MemBytes);
+  }
+
+  Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
+                               TypeSize &MemBytes) const override;
+
   Register isStoreToStackSlot(const MachineInstr &MI,
-                              int &FrameIndex) const override;
+                              int &FrameIndex) const override {
+    TypeSize MemBytes = TypeSize::getZero();
+    return isStoreToStackSlot(MI, FrameIndex, MemBytes);
+  }
+
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+                              TypeSize &MemBytes) const override;
 
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
@@ -1582,7 +1601,8 @@ public:
                                  const ScheduleDAG *DAG) const override;
 
   ScheduleHazardRecognizer *
-  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const override;
+  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF,
+                                     MachineLoopInfo *MLI) const override;
 
   ScheduleHazardRecognizer *
   CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
@@ -1662,7 +1682,7 @@ public:
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                       ArrayRef<unsigned> Ops,
                                       MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex,
+                                      int FrameIndex, MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
@@ -1672,11 +1692,9 @@ public:
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
-  InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const final;
+  ValueUniformity getValueUniformity(const MachineInstr &MI) const final;
 
-  InstructionUniformity
-  getGenericInstructionUniformity(const MachineInstr &MI) const;
+  ValueUniformity getGenericValueUniformity(const MachineInstr &MI) const;
 
   const MIRFormatter *getMIRFormatter() const override;
 
@@ -1737,86 +1755,86 @@ bool execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
 namespace AMDGPU {
 
   LLVM_READONLY
-  int64_t getVOPe64(uint32_t Opcode);
+  int32_t getVOPe64(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getVOPe32(uint32_t Opcode);
+  int32_t getVOPe32(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getSDWAOp(uint32_t Opcode);
+  int32_t getSDWAOp(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getDPPOp32(uint32_t Opcode);
+  int32_t getDPPOp32(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getDPPOp64(uint32_t Opcode);
+  int32_t getDPPOp64(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getBasicFromSDWAOp(uint32_t Opcode);
+  int32_t getBasicFromSDWAOp(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getCommuteRev(uint32_t Opcode);
+  int32_t getCommuteRev(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getCommuteOrig(uint32_t Opcode);
+  int32_t getCommuteOrig(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getAddr64Inst(uint32_t Opcode);
+  int32_t getAddr64Inst(uint32_t Opcode);
 
   /// Check if \p Opcode is an Addr64 opcode.
   ///
   /// \returns \p Opcode if it is an Addr64 opcode, otherwise -1.
   LLVM_READONLY
-  int64_t getIfAddr64Inst(uint32_t Opcode);
+  int32_t getIfAddr64Inst(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getSOPKOp(uint32_t Opcode);
+  int32_t getSOPKOp(uint32_t Opcode);
 
   /// \returns SADDR form of a FLAT Global instruction given an \p Opcode
   /// of a VADDR form.
   LLVM_READONLY
-  int64_t getGlobalSaddrOp(uint32_t Opcode);
+  int32_t getGlobalSaddrOp(uint32_t Opcode);
 
   /// \returns VADDR form of a FLAT Global instruction given an \p Opcode
   /// of a SADDR form.
   LLVM_READONLY
-  int64_t getGlobalVaddrOp(uint32_t Opcode);
+  int32_t getGlobalVaddrOp(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getVCMPXNoSDstOp(uint32_t Opcode);
+  int32_t getVCMPXNoSDstOp(uint32_t Opcode);
 
   /// \returns ST form with only immediate offset of a FLAT Scratch instruction
   /// given an \p Opcode of an SS (SADDR) form.
   LLVM_READONLY
-  int64_t getFlatScratchInstSTfromSS(uint32_t Opcode);
+  int32_t getFlatScratchInstSTfromSS(uint32_t Opcode);
 
   /// \returns SV (VADDR) form of a FLAT Scratch instruction given an \p Opcode
   /// of an SVS (SADDR + VADDR) form.
   LLVM_READONLY
-  int64_t getFlatScratchInstSVfromSVS(uint32_t Opcode);
+  int32_t getFlatScratchInstSVfromSVS(uint32_t Opcode);
 
   /// \returns SS (SADDR) form of a FLAT Scratch instruction given an \p Opcode
   /// of an SV (VADDR) form.
   LLVM_READONLY
-  int64_t getFlatScratchInstSSfromSV(uint32_t Opcode);
+  int32_t getFlatScratchInstSSfromSV(uint32_t Opcode);
 
   /// \returns SV (VADDR) form of a FLAT Scratch instruction given an \p Opcode
   /// of an SS (SADDR) form.
   LLVM_READONLY
-  int64_t getFlatScratchInstSVfromSS(uint32_t Opcode);
+  int32_t getFlatScratchInstSVfromSS(uint32_t Opcode);
 
   /// \returns earlyclobber version of a MAC MFMA is exists.
   LLVM_READONLY
-  int64_t getMFMAEarlyClobberOp(uint32_t Opcode);
+  int32_t getMFMAEarlyClobberOp(uint32_t Opcode);
 
   /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
   /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.
   LLVM_READONLY
-  int64_t getMFMASrcCVDstAGPROp(uint32_t Opcode);
+  int32_t getMFMASrcCVDstAGPROp(uint32_t Opcode);
 
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY
-  int64_t getVCMPXOpFromVCMP(uint32_t Opcode);
+  int32_t getVCMPXOpFromVCMP(uint32_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);
@@ -1826,7 +1844,7 @@ namespace AMDGPU {
 } // end namespace AMDGPU
 
 namespace AMDGPU {
-enum AsmComments {
+enum AsmComments : MachineInstr::AsmPrinterFlagTy {
   // For sgpr to vgpr spill instructions
   SGPR_SPILL = MachineInstr::TAsmComments
 };

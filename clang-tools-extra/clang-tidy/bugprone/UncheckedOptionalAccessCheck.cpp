@@ -30,11 +30,11 @@ void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
   auto HasOptionalCallDescendant = hasDescendant(callExpr(callee(cxxMethodDecl(
       ofClass(UncheckedOptionalAccessModel::optionalClassDecl())))));
   Finder->addMatcher(
-      decl(anyOf(functionDecl(unless(isExpansionInSystemHeader()),
-                              // FIXME: Remove the filter below when lambdas are
-                              // well supported by the check.
-                              unless(hasDeclContext(cxxRecordDecl(isLambda()))),
-                              hasBody(HasOptionalCallDescendant)),
+      decl(anyOf(functionDecl(
+                     // FIXME: Remove the filter below when lambdas are
+                     // well supported by the check.
+                     unless(hasDeclContext(cxxRecordDecl(isLambda()))),
+                     hasBody(HasOptionalCallDescendant)),
                  cxxConstructorDecl(hasAnyConstructorInitializer(
                      withInitializer(HasOptionalCallDescendant)))))
           .bind(FuncID),
@@ -53,9 +53,9 @@ void UncheckedOptionalAccessCheck::check(
   UncheckedOptionalAccessDiagnoser Diagnoser(ModelOptions);
   // FIXME: Allow user to set the (defaulted) SAT iterations max for
   // `diagnoseFunction` with config options.
-  if (llvm::Expected<llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>
-          Diags = dataflow::diagnoseFunction<UncheckedOptionalAccessModel,
-                                             UncheckedOptionalAccessDiagnostic>(
+  if (llvm::Expected<SmallVector<UncheckedOptionalAccessDiagnostic>> Diags =
+          dataflow::diagnoseFunction<UncheckedOptionalAccessModel,
+                                     UncheckedOptionalAccessDiagnostic>(
               *FuncDecl, *Result.Context, Diagnoser))
     for (const UncheckedOptionalAccessDiagnostic &Diag : *Diags) {
       diag(Diag.Range.getBegin(), "unchecked access to optional value")

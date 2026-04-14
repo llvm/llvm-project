@@ -13,8 +13,7 @@ define void @test(i64 %v) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp ult i64 0, 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = freeze <8 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP6]])
-; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i1 [[TMP18]], i1 false
-; CHECK-NEXT:    [[TMP8:%.*]] = freeze i1 [[TMP20]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP18]], i1 [[TMP19]], i1 false
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP8]], i1 false, i1 false
 ; CHECK-NEXT:    br i1 [[OP_RDX1]], label %[[BB_I107_PREHEADER:.*]], label %[[BB_I27_I_PREHEADER:.*]]
 ; CHECK:       [[BB_I107_PREHEADER]]:

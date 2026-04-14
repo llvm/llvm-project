@@ -207,8 +207,9 @@ def syms : Flag<["--"], "syms">,
   HelpText<"Display the symbol table">;
 def : Flag<["-"], "t">, Alias<syms>, HelpText<"Alias for --syms">;
 
-def symbolize_operands : Flag<["--"], "symbolize-operands">,
-  HelpText<"Symbolize instruction operands when disassembling">;
+defm symbolize_operands : B<"symbolize-operands",
+  "Symbolize instruction operands when disassembling (default for BPF)",
+  "Do not symbolize instruction operands when disassembling">;
 
 def pretty_pgo_analysis_map : Flag<["--"], "pretty-pgo-analysis-map">,
                               HelpText<"Display PGO analysis values with "

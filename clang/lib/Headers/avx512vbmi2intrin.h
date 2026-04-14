@@ -25,33 +25,29 @@
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
 #endif
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_mask_compress_epi16(__m512i __S, __mmask32 __U, __m512i __D)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_mask_compress_epi16(__m512i __S, __mmask32 __U, __m512i __D) {
   return (__m512i) __builtin_ia32_compresshi512_mask ((__v32hi) __D,
               (__v32hi) __S,
               __U);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_maskz_compress_epi16(__mmask32 __U, __m512i __D)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_maskz_compress_epi16(__mmask32 __U, __m512i __D) {
   return (__m512i) __builtin_ia32_compresshi512_mask ((__v32hi) __D,
               (__v32hi) _mm512_setzero_si512(),
               __U);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_mask_compress_epi8(__m512i __S, __mmask64 __U, __m512i __D)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_mask_compress_epi8(__m512i __S, __mmask64 __U, __m512i __D) {
   return (__m512i) __builtin_ia32_compressqi512_mask ((__v64qi) __D,
               (__v64qi) __S,
               __U);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_maskz_compress_epi8(__mmask64 __U, __m512i __D)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_maskz_compress_epi8(__mmask64 __U, __m512i __D) {
   return (__m512i) __builtin_ia32_compressqi512_mask ((__v64qi) __D,
               (__v64qi) _mm512_setzero_si512(),
               __U);
@@ -71,7 +67,7 @@ _mm512_mask_compressstoreu_epi8(void *__P, __mmask64 __U, __m512i __D)
               __U);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm512_mask_expand_epi16(__m512i __S, __mmask32 __U, __m512i __D)
 {
   return (__m512i) __builtin_ia32_expandhi512_mask ((__v32hi) __D,
@@ -79,7 +75,7 @@ _mm512_mask_expand_epi16(__m512i __S, __mmask32 __U, __m512i __D)
               __U);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm512_maskz_expand_epi16(__mmask32 __U, __m512i __D)
 {
   return (__m512i) __builtin_ia32_expandhi512_mask ((__v32hi) __D,
@@ -87,7 +83,7 @@ _mm512_maskz_expand_epi16(__mmask32 __U, __m512i __D)
               __U);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm512_mask_expand_epi8(__m512i __S, __mmask64 __U, __m512i __D)
 {
   return (__m512i) __builtin_ia32_expandqi512_mask ((__v64qi) __D,
@@ -95,7 +91,7 @@ _mm512_mask_expand_epi8(__m512i __S, __mmask64 __U, __m512i __D)
               __U);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm512_maskz_expand_epi8(__mmask64 __U, __m512i __D)
 {
   return (__m512i) __builtin_ia32_expandqi512_mask ((__v64qi) __D,

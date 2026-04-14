@@ -29,7 +29,12 @@ bool CallGraphUpdater::finalize() {
   // no call graph was provided.
   for (Function *DeadFn : DeadFunctions) {
     DeadFn->removeDeadConstantUsers();
-    DeadFn->replaceAllUsesWith(PoisonValue::get(DeadFn->getType()));
+    // If the function is used by metadata, we don't want it to be replaced with
+    // poison in the metadata, so we replace it with nullptr in the metadata
+    // before RAUW'ing the non-metadata uses below.
+    if (DeadFn->isUsedByMetadata())
+      ValueAsMetadata::handleDeletion(DeadFn);
+    DeadFn->replaceNonMetadataUsesWith(PoisonValue::get(DeadFn->getType()));
 
     if (LCG && !ReplacedFunctions.count(DeadFn)) {
       // Taken mostly from the inliner:

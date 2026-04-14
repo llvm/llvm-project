@@ -239,7 +239,8 @@ uint32_t SymbolFilePDB::CalculateAbilities() {
 
   if (!m_session_up) {
     // Lazily load and match the PDB file, but only do this once.
-    std::string exePath = m_objfile_sp->GetFileSpec().GetPath();
+    std::string exePath =
+        m_objfile_sp->GetModule()->GetObjectFile()->GetFileSpec().GetPath();
     auto error = loadDataForEXE(PDB_ReaderType::DIA, llvm::StringRef(exePath),
                                 m_session_up);
     if (error) {
@@ -1760,7 +1761,7 @@ SymbolFilePDB::FindNamespace(lldb_private::ConstString name,
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to find namespace {1}: {0}", name.AsCString());
+                   "Unable to find namespace {1}: {0}", name);
     return CompilerDeclContext();
   }
   auto ts = *type_system_or_err;

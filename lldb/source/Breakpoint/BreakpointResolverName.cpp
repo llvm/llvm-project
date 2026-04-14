@@ -37,9 +37,8 @@ BreakpointResolverName::BreakpointResolverName(
     if (!m_regex.IsValid()) {
       Log *log = GetLog(LLDBLog::Breakpoints);
 
-      if (log)
-        log->Warning("function name regexp: \"%s\" did not compile.",
-                     name_cstr);
+      LLDB_LOGF(log, "warning: function name regexp: \"%s\" did not compile.",
+                name_cstr);
     }
   } else {
     AddNameLookup(ConstString(name_cstr), name_type_mask);
@@ -287,8 +286,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
     }
     break;
   case Breakpoint::Glob:
-    if (log)
-      log->Warning("glob is not supported yet.");
+    LLDB_LOG(log, "warning: glob is not supported yet.");
     break;
   }
 
@@ -339,7 +337,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       if (m_skip_prologue && break_addr.IsValid()) {
         const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
         if (prologue_byte_size)
-          break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
+          break_addr.Slide(prologue_byte_size);
       }
     } else if (sc.symbol) {
       if (sc.symbol->GetType() == eSymbolTypeReExported) {
@@ -356,7 +354,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       if (m_skip_prologue && break_addr.IsValid()) {
         const uint32_t prologue_byte_size = sc.symbol->GetPrologueByteSize();
         if (prologue_byte_size)
-          break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
+          break_addr.Slide(prologue_byte_size);
         else {
           const Architecture *arch =
               breakpoint.GetTarget().GetArchitecturePlugin();

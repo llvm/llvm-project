@@ -11,6 +11,7 @@
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
 #include "AssignmentInIfConditionCheck.h"
+#include "AssignmentInSelectionStatementCheck.h"
 #include "BadSignalToKillThreadCheck.h"
 #include "BitwisePointerCastCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
@@ -76,6 +77,7 @@
 #include "SizeofExpressionCheck.h"
 #include "SpuriouslyWakeUpFunctionsCheck.h"
 #include "StandaloneEmptyCheck.h"
+#include "StdExceptionBaseclassCheck.h"
 #include "StdNamespaceModificationCheck.h"
 #include "StringConstructorCheck.h"
 #include "StringIntegerAssignmentCheck.h"
@@ -106,6 +108,7 @@
 #include "UnintendedCharOstreamOutputCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
 #include "UnsafeFunctionsCheck.h"
+#include "UnsafeToAllowExceptionsCheck.h"
 #include "UnusedLocalNonTrivialVariableCheck.h"
 #include "UnusedRaiiCheck.h"
 #include "UnusedReturnValueCheck.h"
@@ -125,6 +128,8 @@ public:
         "bugprone-assert-side-effect");
     CheckFactories.registerCheck<AssignmentInIfConditionCheck>(
         "bugprone-assignment-in-if-condition");
+    CheckFactories.registerCheck<AssignmentInSelectionStatementCheck>(
+        "bugprone-assignment-in-selection-statement");
     CheckFactories.registerCheck<BadSignalToKillThreadCheck>(
         "bugprone-bad-signal-to-kill-thread");
     CheckFactories.registerCheck<BitwisePointerCastCheck>(
@@ -180,6 +185,8 @@ public:
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
         "bugprone-return-const-ref-from-parameter");
+    CheckFactories.registerCheck<StdExceptionBaseclassCheck>(
+        "bugprone-std-exception-baseclass");
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(
         "bugprone-switch-missing-default-case");
     CheckFactories.registerCheck<IncDecInConditionsCheck>(
@@ -308,6 +315,8 @@ public:
         "bugprone-crtp-constructor-accessibility");
     CheckFactories.registerCheck<UnsafeFunctionsCheck>(
         "bugprone-unsafe-functions");
+    CheckFactories.registerCheck<UnsafeToAllowExceptionsCheck>(
+        "bugprone-unsafe-to-allow-exceptions");
     CheckFactories.registerCheck<UnusedLocalNonTrivialVariableCheck>(
         "bugprone-unused-local-non-trivial-variable");
     CheckFactories.registerCheck<UnusedRaiiCheck>("bugprone-unused-raii");

@@ -222,9 +222,10 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
     if (control.empty() || !pc)
       return pc.takeError();
 
-    LLDB_LOGV(GetLog(LLDBLog::DataFormatters),
-              "[eval {0}] opcode={1}, control={2}, data={3}", toString(sig),
-              toString(opcode), control.size(), toString(data));
+    LLDB_LOG_VERBOSE(GetLog(LLDBLog::DataFormatters),
+                     "[eval {0}] opcode={1}, control={2}, data={3}",
+                     toString(sig), toString(opcode), control.size(),
+                     toString(data));
 
     // Various shorthands to improve the readability of error handling.
 #define TYPE_CHECK(...)                                                        \
@@ -509,6 +510,18 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         auto type = data.Pop<CompilerType>();
         // FIXME: There is more code in SBType::GetTemplateArgumentType().
         data.Push(type.GetTypeTemplateArgument(index, true));
+        break;
+      }
+      case sel_get_synthetic_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetSyntheticValue());
+        break;
+      }
+      case sel_get_non_synthetic_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetNonSyntheticValue());
         break;
       }
       case sel_get_value: {

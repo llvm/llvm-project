@@ -17,9 +17,9 @@ target triple = "x86_64-pc_linux"
 ;  }
 ;}
 
-define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo1(
-; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -52,7 +52,7 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1:       [[SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo1(
-; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX2-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -131,7 +131,7 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo1(
-; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -212,14 +212,14 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx3 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
   %1 = load i32, ptr %arrayidx3, align 4
   %add = add nsw i32 %1, %0
@@ -227,20 +227,20 @@ if.then:                                          ; preds = %for.body
   store i32 %add, ptr %arrayidx7, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
 ; The same as @foo1 but all the pointers are address space 1 pointers.
 
-define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) nocapture readonly %B, ptr addrspace(1) nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) nocapture readonly %B, ptr addrspace(1) nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo1_addrspace1(
-; AVX1-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
@@ -273,7 +273,7 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX1:       [[SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo1_addrspace1(
-; AVX2-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
@@ -352,7 +352,7 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo1_addrspace1(
-; AVX512-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
@@ -433,14 +433,14 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %trigger, i64 %indvars.iv
   %0 = load i32, ptr addrspace(1) %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx3 = getelementptr inbounds i32, ptr addrspace(1) %B, i64 %indvars.iv
   %1 = load i32, ptr addrspace(1) %arrayidx3, align 4
   %add = add nsw i32 %1, %0
@@ -448,12 +448,12 @@ if.then:                                          ; preds = %for.body
   store i32 %add, ptr addrspace(1) %arrayidx7, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -468,9 +468,9 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo2(
-; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -504,7 +504,7 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1:       [[SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo2(
-; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -588,7 +588,7 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo2(
-; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -674,14 +674,14 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx3 = getelementptr inbounds float, ptr %B, i64 %indvars.iv
   %1 = load float, ptr %arrayidx3, align 4
   %conv = sitofp i32 %0 to float
@@ -690,12 +690,12 @@ if.then:                                          ; preds = %for.body
   store float %add, ptr %arrayidx7, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -710,9 +710,9 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo3(
-; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX1:       [[VECTOR_MEMCHECK]]:
@@ -775,7 +775,7 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1:       [[SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo3(
-; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ENTRY:.*:]]
 ; AVX2-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX2:       [[VECTOR_MEMCHECK]]:
@@ -838,7 +838,7 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2:       [[SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo3(
-; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
@@ -926,14 +926,14 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx3 = getelementptr inbounds double, ptr %B, i64 %indvars.iv
   %1 = load double, ptr %arrayidx3, align 8
   %conv = sitofp i32 %0 to double
@@ -942,12 +942,12 @@ if.then:                                          ; preds = %for.body
   store double %add, ptr %arrayidx7, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -962,9 +962,9 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX-LABEL: define void @foo4(
-; AVX-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; AVX-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX-NEXT:  [[ENTRY:.*]]:
 ; AVX-NEXT:    br label %[[FOR_BODY:.*]]
 ; AVX:       [[FOR_BODY]]:
@@ -990,7 +990,7 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: define void @foo4(
-; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ENTRY:.*:]]
 ; AVX512-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
@@ -1031,14 +1031,14 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %1 = shl nuw nsw i64 %indvars.iv, 1
   %arrayidx3 = getelementptr inbounds double, ptr %B, i64 %1
   %2 = load double, ptr %arrayidx3, align 8
@@ -1048,12 +1048,12 @@ if.then:                                          ; preds = %for.body
   store double %add, ptr %arrayidx7, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 16
   %cmp = icmp ult i64 %indvars.iv.next, 10000
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -1070,9 +1070,9 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo6(
-; AVX1-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*]]:
 ; AVX1-NEXT:    br label %[[FOR_BODY:.*]]
 ; AVX1:       [[FOR_BODY]]:
@@ -1096,7 +1096,7 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX1-NEXT:    ret void
 ;
 ; AVX2-LABEL: define void @foo6(
-; AVX2-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ENTRY:.*:]]
 ; AVX2-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX2:       [[VECTOR_MEMCHECK]]:
@@ -1117,18 +1117,14 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; AVX2-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 4095, [[INDEX]]
 ; AVX2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[OFFSET_IDX]]
-; AVX2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 0
-; AVX2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 -3
-; AVX2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -4
-; AVX2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 -3
-; AVX2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -8
-; AVX2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 -3
-; AVX2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -12
-; AVX2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 -3
-; AVX2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !alias.scope [[META22:![0-9]+]]
-; AVX2-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META22]]
-; AVX2-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4, !alias.scope [[META22]]
-; AVX2-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i32>, ptr [[TMP8]], align 4, !alias.scope [[META22]]
+; AVX2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -3
+; AVX2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -7
+; AVX2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -11
+; AVX2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -15
+; AVX2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4, !alias.scope [[META22:![0-9]+]]
+; AVX2-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !alias.scope [[META22]]
+; AVX2-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4, !alias.scope [[META22]]
+; AVX2-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META22]]
 ; AVX2-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; AVX2-NEXT:    [[REVERSE7:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD6]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; AVX2-NEXT:    [[REVERSE9:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD8]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -1138,22 +1134,18 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX2-NEXT:    [[TMP12:%.*]] = icmp sgt <4 x i32> [[REVERSE9]], zeroinitializer
 ; AVX2-NEXT:    [[TMP13:%.*]] = icmp sgt <4 x i32> [[REVERSE11]], zeroinitializer
 ; AVX2-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[IN]], i64 [[OFFSET_IDX]]
-; AVX2-NEXT:    [[TMP22:%.*]] = getelementptr double, ptr [[TMP14]], i64 0
-; AVX2-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[TMP22]], i64 -3
-; AVX2-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[TMP14]], i64 -4
-; AVX2-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP16]], i64 -3
-; AVX2-NEXT:    [[TMP18:%.*]] = getelementptr double, ptr [[TMP14]], i64 -8
-; AVX2-NEXT:    [[TMP19:%.*]] = getelementptr double, ptr [[TMP18]], i64 -3
-; AVX2-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[TMP14]], i64 -12
-; AVX2-NEXT:    [[TMP21:%.*]] = getelementptr double, ptr [[TMP20]], i64 -3
+; AVX2-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[TMP14]], i64 -3
+; AVX2-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[TMP14]], i64 -7
+; AVX2-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP14]], i64 -11
+; AVX2-NEXT:    [[TMP18:%.*]] = getelementptr double, ptr [[TMP14]], i64 -15
 ; AVX2-NEXT:    [[REVERSE12:%.*]] = shufflevector <4 x i1> [[TMP10]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; AVX2-NEXT:    [[WIDE_MASKED_LOAD21:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP15]], <4 x i1> [[REVERSE12]], <4 x double> poison), !alias.scope [[META25:![0-9]+]]
 ; AVX2-NEXT:    [[REVERSE13:%.*]] = shufflevector <4 x i1> [[TMP11]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; AVX2-NEXT:    [[WIDE_MASKED_LOAD14:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP17]], <4 x i1> [[REVERSE13]], <4 x double> poison), !alias.scope [[META25]]
+; AVX2-NEXT:    [[WIDE_MASKED_LOAD14:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP16]], <4 x i1> [[REVERSE13]], <4 x double> poison), !alias.scope [[META25]]
 ; AVX2-NEXT:    [[REVERSE15:%.*]] = shufflevector <4 x i1> [[TMP12]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; AVX2-NEXT:    [[WIDE_MASKED_LOAD16:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP19]], <4 x i1> [[REVERSE15]], <4 x double> poison), !alias.scope [[META25]]
+; AVX2-NEXT:    [[WIDE_MASKED_LOAD16:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP17]], <4 x i1> [[REVERSE15]], <4 x double> poison), !alias.scope [[META25]]
 ; AVX2-NEXT:    [[REVERSE17:%.*]] = shufflevector <4 x i1> [[TMP13]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; AVX2-NEXT:    [[WIDE_MASKED_LOAD18:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP21]], <4 x i1> [[REVERSE17]], <4 x double> poison), !alias.scope [[META25]]
+; AVX2-NEXT:    [[WIDE_MASKED_LOAD18:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP18]], <4 x i1> [[REVERSE17]], <4 x double> poison), !alias.scope [[META25]]
 ; AVX2-NEXT:    [[REVERSE22:%.*]] = shufflevector <4 x double> [[WIDE_MASKED_LOAD21]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; AVX2-NEXT:    [[REVERSE16:%.*]] = shufflevector <4 x double> [[WIDE_MASKED_LOAD14]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; AVX2-NEXT:    [[REVERSE19:%.*]] = shufflevector <4 x double> [[WIDE_MASKED_LOAD16]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -1163,22 +1155,18 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX2-NEXT:    [[TMP25:%.*]] = fadd <4 x double> [[REVERSE19]], splat (double 5.000000e-01)
 ; AVX2-NEXT:    [[TMP26:%.*]] = fadd <4 x double> [[REVERSE23]], splat (double 5.000000e-01)
 ; AVX2-NEXT:    [[TMP27:%.*]] = getelementptr double, ptr [[OUT]], i64 [[OFFSET_IDX]]
-; AVX2-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[TMP27]], i64 0
-; AVX2-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[TMP35]], i64 -3
-; AVX2-NEXT:    [[TMP29:%.*]] = getelementptr double, ptr [[TMP27]], i64 -4
-; AVX2-NEXT:    [[TMP30:%.*]] = getelementptr double, ptr [[TMP29]], i64 -3
-; AVX2-NEXT:    [[TMP31:%.*]] = getelementptr double, ptr [[TMP27]], i64 -8
-; AVX2-NEXT:    [[TMP32:%.*]] = getelementptr double, ptr [[TMP31]], i64 -3
-; AVX2-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[TMP27]], i64 -12
-; AVX2-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[TMP33]], i64 -3
+; AVX2-NEXT:    [[TMP19:%.*]] = getelementptr double, ptr [[TMP27]], i64 -3
+; AVX2-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[TMP27]], i64 -7
+; AVX2-NEXT:    [[TMP21:%.*]] = getelementptr double, ptr [[TMP27]], i64 -11
+; AVX2-NEXT:    [[TMP22:%.*]] = getelementptr double, ptr [[TMP27]], i64 -15
 ; AVX2-NEXT:    [[REVERSE24:%.*]] = shufflevector <4 x double> [[TMP23]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; AVX2-NEXT:    [[REVERSE27:%.*]] = shufflevector <4 x double> [[TMP24]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; AVX2-NEXT:    [[REVERSE25:%.*]] = shufflevector <4 x double> [[TMP25]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; AVX2-NEXT:    [[REVERSE26:%.*]] = shufflevector <4 x double> [[TMP26]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; AVX2-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[REVERSE24]], ptr align 8 [[TMP28]], <4 x i1> [[REVERSE12]]), !alias.scope [[META27:![0-9]+]], !noalias [[META29:![0-9]+]]
-; AVX2-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[REVERSE27]], ptr align 8 [[TMP30]], <4 x i1> [[REVERSE13]]), !alias.scope [[META27]], !noalias [[META29]]
-; AVX2-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[REVERSE25]], ptr align 8 [[TMP32]], <4 x i1> [[REVERSE15]]), !alias.scope [[META27]], !noalias [[META29]]
-; AVX2-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[REVERSE26]], ptr align 8 [[TMP34]], <4 x i1> [[REVERSE17]]), !alias.scope [[META27]], !noalias [[META29]]
+; AVX2-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[REVERSE24]], ptr align 8 [[TMP19]], <4 x i1> [[REVERSE12]]), !alias.scope [[META27:![0-9]+]], !noalias [[META29:![0-9]+]]
+; AVX2-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[REVERSE27]], ptr align 8 [[TMP20]], <4 x i1> [[REVERSE13]]), !alias.scope [[META27]], !noalias [[META29]]
+; AVX2-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[REVERSE25]], ptr align 8 [[TMP21]], <4 x i1> [[REVERSE15]]), !alias.scope [[META27]], !noalias [[META29]]
+; AVX2-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[REVERSE26]], ptr align 8 [[TMP22]], <4 x i1> [[REVERSE17]]), !alias.scope [[META27]], !noalias [[META29]]
 ; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; AVX2-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
 ; AVX2-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
@@ -1187,7 +1175,7 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX2:       [[SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo6(
-; AVX512-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ENTRY:.*:]]
 ; AVX512-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
@@ -1208,18 +1196,14 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX512-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 4095, [[INDEX]]
 ; AVX512-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[OFFSET_IDX]]
-; AVX512-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 0
-; AVX512-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 -7
-; AVX512-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -8
-; AVX512-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 -7
-; AVX512-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -16
-; AVX512-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 -7
-; AVX512-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -24
-; AVX512-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 -7
-; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4, !alias.scope [[META34:![0-9]+]]
-; AVX512-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META34]]
-; AVX512-NEXT:    [[WIDE_LOAD7:%.*]] = load <8 x i32>, ptr [[TMP6]], align 4, !alias.scope [[META34]]
-; AVX512-NEXT:    [[WIDE_LOAD8:%.*]] = load <8 x i32>, ptr [[TMP8]], align 4, !alias.scope [[META34]]
+; AVX512-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -7
+; AVX512-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -15
+; AVX512-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -23
+; AVX512-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -31
+; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4, !alias.scope [[META34:![0-9]+]]
+; AVX512-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4, !alias.scope [[META34]]
+; AVX512-NEXT:    [[WIDE_LOAD7:%.*]] = load <8 x i32>, ptr [[TMP3]], align 4, !alias.scope [[META34]]
+; AVX512-NEXT:    [[WIDE_LOAD8:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META34]]
 ; AVX512-NEXT:    [[REVERSE:%.*]] = shufflevector <8 x i32> [[WIDE_LOAD]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; AVX512-NEXT:    [[REVERSE7:%.*]] = shufflevector <8 x i32> [[WIDE_LOAD6]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; AVX512-NEXT:    [[REVERSE9:%.*]] = shufflevector <8 x i32> [[WIDE_LOAD7]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -1229,22 +1213,18 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX512-NEXT:    [[TMP12:%.*]] = icmp sgt <8 x i32> [[REVERSE9]], zeroinitializer
 ; AVX512-NEXT:    [[TMP13:%.*]] = icmp sgt <8 x i32> [[REVERSE11]], zeroinitializer
 ; AVX512-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[IN]], i64 [[OFFSET_IDX]]
-; AVX512-NEXT:    [[TMP22:%.*]] = getelementptr double, ptr [[TMP14]], i64 0
-; AVX512-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[TMP22]], i64 -7
-; AVX512-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[TMP14]], i64 -8
-; AVX512-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP16]], i64 -7
-; AVX512-NEXT:    [[TMP18:%.*]] = getelementptr double, ptr [[TMP14]], i64 -16
-; AVX512-NEXT:    [[TMP19:%.*]] = getelementptr double, ptr [[TMP18]], i64 -7
-; AVX512-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[TMP14]], i64 -24
-; AVX512-NEXT:    [[TMP21:%.*]] = getelementptr double, ptr [[TMP20]], i64 -7
+; AVX512-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[TMP14]], i64 -7
+; AVX512-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[TMP14]], i64 -15
+; AVX512-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP14]], i64 -23
+; AVX512-NEXT:    [[TMP18:%.*]] = getelementptr double, ptr [[TMP14]], i64 -31
 ; AVX512-NEXT:    [[REVERSE12:%.*]] = shufflevector <8 x i1> [[TMP10]], <8 x i1> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; AVX512-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 [[TMP15]], <8 x i1> [[REVERSE12]], <8 x double> poison), !alias.scope [[META37:![0-9]+]]
 ; AVX512-NEXT:    [[REVERSE13:%.*]] = shufflevector <8 x i1> [[TMP11]], <8 x i1> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; AVX512-NEXT:    [[WIDE_MASKED_LOAD14:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 [[TMP17]], <8 x i1> [[REVERSE13]], <8 x double> poison), !alias.scope [[META37]]
+; AVX512-NEXT:    [[WIDE_MASKED_LOAD14:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 [[TMP16]], <8 x i1> [[REVERSE13]], <8 x double> poison), !alias.scope [[META37]]
 ; AVX512-NEXT:    [[REVERSE15:%.*]] = shufflevector <8 x i1> [[TMP12]], <8 x i1> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; AVX512-NEXT:    [[WIDE_MASKED_LOAD16:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 [[TMP19]], <8 x i1> [[REVERSE15]], <8 x double> poison), !alias.scope [[META37]]
+; AVX512-NEXT:    [[WIDE_MASKED_LOAD16:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 [[TMP17]], <8 x i1> [[REVERSE15]], <8 x double> poison), !alias.scope [[META37]]
 ; AVX512-NEXT:    [[REVERSE17:%.*]] = shufflevector <8 x i1> [[TMP13]], <8 x i1> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; AVX512-NEXT:    [[WIDE_MASKED_LOAD18:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 [[TMP21]], <8 x i1> [[REVERSE17]], <8 x double> poison), !alias.scope [[META37]]
+; AVX512-NEXT:    [[WIDE_MASKED_LOAD18:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 [[TMP18]], <8 x i1> [[REVERSE17]], <8 x double> poison), !alias.scope [[META37]]
 ; AVX512-NEXT:    [[REVERSE16:%.*]] = shufflevector <8 x double> [[WIDE_MASKED_LOAD]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; AVX512-NEXT:    [[REVERSE19:%.*]] = shufflevector <8 x double> [[WIDE_MASKED_LOAD14]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; AVX512-NEXT:    [[REVERSE23:%.*]] = shufflevector <8 x double> [[WIDE_MASKED_LOAD16]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -1254,22 +1234,18 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX512-NEXT:    [[TMP26:%.*]] = fadd <8 x double> [[REVERSE23]], splat (double 5.000000e-01)
 ; AVX512-NEXT:    [[TMP23:%.*]] = fadd <8 x double> [[REVERSE22]], splat (double 5.000000e-01)
 ; AVX512-NEXT:    [[TMP27:%.*]] = getelementptr double, ptr [[OUT]], i64 [[OFFSET_IDX]]
-; AVX512-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[TMP27]], i64 0
-; AVX512-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[TMP35]], i64 -7
-; AVX512-NEXT:    [[TMP29:%.*]] = getelementptr double, ptr [[TMP27]], i64 -8
-; AVX512-NEXT:    [[TMP30:%.*]] = getelementptr double, ptr [[TMP29]], i64 -7
-; AVX512-NEXT:    [[TMP31:%.*]] = getelementptr double, ptr [[TMP27]], i64 -16
-; AVX512-NEXT:    [[TMP32:%.*]] = getelementptr double, ptr [[TMP31]], i64 -7
-; AVX512-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[TMP27]], i64 -24
-; AVX512-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[TMP33]], i64 -7
+; AVX512-NEXT:    [[TMP19:%.*]] = getelementptr double, ptr [[TMP27]], i64 -7
+; AVX512-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[TMP27]], i64 -15
+; AVX512-NEXT:    [[TMP21:%.*]] = getelementptr double, ptr [[TMP27]], i64 -23
+; AVX512-NEXT:    [[TMP22:%.*]] = getelementptr double, ptr [[TMP27]], i64 -31
 ; AVX512-NEXT:    [[REVERSE26:%.*]] = shufflevector <8 x double> [[TMP24]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; AVX512-NEXT:    [[REVERSE27:%.*]] = shufflevector <8 x double> [[TMP25]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; AVX512-NEXT:    [[REVERSE25:%.*]] = shufflevector <8 x double> [[TMP26]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; AVX512-NEXT:    [[REVERSE24:%.*]] = shufflevector <8 x double> [[TMP23]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[REVERSE26]], ptr align 8 [[TMP28]], <8 x i1> [[REVERSE12]]), !alias.scope [[META39:![0-9]+]], !noalias [[META41:![0-9]+]]
-; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[REVERSE27]], ptr align 8 [[TMP30]], <8 x i1> [[REVERSE13]]), !alias.scope [[META39]], !noalias [[META41]]
-; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[REVERSE25]], ptr align 8 [[TMP32]], <8 x i1> [[REVERSE15]]), !alias.scope [[META39]], !noalias [[META41]]
-; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[REVERSE24]], ptr align 8 [[TMP34]], <8 x i1> [[REVERSE17]]), !alias.scope [[META39]], !noalias [[META41]]
+; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[REVERSE26]], ptr align 8 [[TMP19]], <8 x i1> [[REVERSE12]]), !alias.scope [[META39:![0-9]+]], !noalias [[META41:![0-9]+]]
+; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[REVERSE27]], ptr align 8 [[TMP20]], <8 x i1> [[REVERSE13]]), !alias.scope [[META39]], !noalias [[META41]]
+; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[REVERSE25]], ptr align 8 [[TMP21]], <8 x i1> [[REVERSE15]]), !alias.scope [[META39]], !noalias [[META41]]
+; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[REVERSE24]], ptr align 8 [[TMP22]], <8 x i1> [[REVERSE17]]), !alias.scope [[META39]], !noalias [[META41]]
 ; AVX512-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; AVX512-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
 ; AVX512-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
@@ -1280,14 +1256,14 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 4095, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx3 = getelementptr inbounds double, ptr %in, i64 %indvars.iv
   %1 = load double, ptr %arrayidx3, align 8
   %add = fadd double %1, 5.000000e-01
@@ -1295,12 +1271,12 @@ if.then:                                          ; preds = %for.body
   store double %add, ptr %arrayidx5, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nsw i64 %indvars.iv, -1
   %cmp = icmp eq i64 %indvars.iv, 0
   br i1 %cmp, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -1312,9 +1288,9 @@ for.end:                                          ; preds = %for.inc
 ;      out[i] = (double) 0.5;
 ; }
 
-define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) local_unnamed_addr #0 {
+define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) {
 ; AVX1-LABEL: define void @foo7(
-; AVX1-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX1-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1406,7 +1382,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo7(
-; AVX2-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ENTRY:.*:]]
 ; AVX2-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX2-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1498,7 +1474,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo7(
-; AVX512-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ENTRY:.*:]]
 ; AVX512-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX512-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1593,11 +1569,11 @@ entry:
   %cmp5 = icmp eq i32 %size, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %size to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i8, ptr %trigger, i64 %indvars.iv
   %0 = load i8, ptr %arrayidx, align 1
@@ -1605,23 +1581,23 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %tobool = icmp eq i8 %1, 0
   br i1 %tobool, label %for.inc, label %land.lhs.true
 
-land.lhs.true:                                    ; preds = %for.body
+land.lhs.true:
   %arrayidx2 = getelementptr inbounds ptr, ptr %in, i64 %indvars.iv
   %2 = load ptr, ptr %arrayidx2, align 8
   %cmp3 = icmp eq ptr %2, null
   br i1 %cmp3, label %for.inc, label %if.then
 
-if.then:                                          ; preds = %land.lhs.true
+if.then:
   %arrayidx5 = getelementptr inbounds double, ptr %out, i64 %indvars.iv
   store double 5.000000e-01, ptr %arrayidx5, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %land.lhs.true, %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   ret void
 }
 
@@ -1633,9 +1609,9 @@ for.end:                                          ; preds = %for.inc, %entry
 ;      out[i] = (double) 0.5;
 ;}
 
-define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) local_unnamed_addr #0 {
+define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) {
 ; AVX1-LABEL: define void @foo8(
-; AVX1-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX1-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1727,7 +1703,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo8(
-; AVX2-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ENTRY:.*:]]
 ; AVX2-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX2-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1819,7 +1795,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo8(
-; AVX512-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ENTRY:.*:]]
 ; AVX512-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX512-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1914,11 +1890,11 @@ entry:
   %cmp5 = icmp eq i32 %size, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %size to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i8, ptr %trigger, i64 %indvars.iv
   %0 = load i8, ptr %arrayidx, align 1
@@ -1926,24 +1902,23 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %tobool = icmp eq i8 %1, 0
   br i1 %tobool, label %for.inc, label %land.lhs.true
 
-land.lhs.true:                                    ; preds = %for.body
+land.lhs.true:
   %arrayidx2 = getelementptr inbounds ptr, ptr %in, i64 %indvars.iv
   %2 = load ptr, ptr %arrayidx2, align 8
   %cmp3 = icmp eq ptr %2, null
   br i1 %cmp3, label %for.inc, label %if.then
 
-if.then:                                          ; preds = %land.lhs.true
+if.then:
   %arrayidx5 = getelementptr inbounds double, ptr %out, i64 %indvars.iv
   store double 5.000000e-01, ptr %arrayidx5, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %land.lhs.true, %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   ret void
 }
 
-attributes #0 = { norecurse nounwind }

@@ -295,13 +295,13 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    // __atomic_fetch_add accepts function pointers, guard against them.
+    // __atomic_fetch_sub accepts function pointers, guard against them.
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
     return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    // __atomic_fetch_add accepts function pointers, guard against them.
+    // __atomic_fetch_sub accepts function pointers, guard against them.
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
     return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
   }

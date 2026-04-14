@@ -40,6 +40,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <cassert>
 #include <cstdint>
@@ -1292,6 +1293,12 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
+  /// Lower a memccpy operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue>
+  getMemccpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
+             SDValue C, SDValue Size, const CallInst *CI);
+
   /// Lower a memcmp operation into a target library call and return the
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
@@ -2077,9 +2084,14 @@ public:
   /// function mirrors \c llvm::salvageDebugInfo.
   LLVM_ABI void salvageDebugInfo(SDNode &N);
 
+  /// Dump the textual format of this DAG. Nodes are not sorted.
+  /// Note that we overload it instead of using default value so that it is
+  /// convenient to be called from debuggers.
+  LLVM_ABI void dump() const;
+
   /// Dump the textual format of this DAG. Print nodes in sorted orders if \p
   /// Sorted is true.
-  LLVM_ABI void dump(bool Sorted = false) const;
+  LLVM_ABI void dump(bool Sorted) const;
 
   /// In most cases this function returns the ABI alignment for a given type,
   /// except for illegal vector types where the alignment exceeds that of the
@@ -2171,6 +2183,30 @@ public:
   LLVM_ABI KnownBits computeKnownBits(SDValue Op, const APInt &DemandedElts,
                                       unsigned Depth = 0) const;
 
+  /// Determine the possible constant range of an integer or vector of integers.
+  LLVM_ABI ConstantRange computeConstantRange(SDValue Op, bool ForSigned,
+                                              unsigned Depth = 0) const;
+
+  /// Determine the possible constant range of an integer or vector of integers.
+  /// The DemandedElts argument allows us to only collect the known ranges that
+  /// are shared by the requested vector elements.
+  LLVM_ABI ConstantRange computeConstantRange(SDValue Op,
+                                              const APInt &DemandedElts,
+                                              bool ForSigned,
+                                              unsigned Depth = 0) const;
+
+  /// Combine constant ranges from computeConstantRange() and
+  /// computeKnownBits().
+  LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
+      SDValue Op, bool ForSigned, unsigned Depth = 0) const;
+
+  /// Combine constant ranges from computeConstantRange() and
+  /// computeKnownBits(). The DemandedElts argument allows us to only collect
+  /// the known ranges that are shared by the requested vector elements.
+  LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
+      SDValue Op, const APInt &DemandedElts, bool ForSigned,
+      unsigned Depth = 0) const;
+
   /// Used to represent the possible overflow behavior of an operation.
   /// Never: the operation cannot overflow.
   /// Always: the operation will always overflow.
@@ -2243,8 +2279,19 @@ public:
 
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
-  /// is set.
-  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth = 0) const;
+  /// is set. If 'OrZero' is set, then return true if the given value is either
+  /// a power of two or zero.
+  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, bool OrZero = false,
+                                       unsigned Depth = 0) const;
+
+  /// Test if the given value is known to have exactly one bit set. This differs
+  /// from computeKnownBits in that it doesn't necessarily determine which bit
+  /// is set. The DemandedElts argument allows us to only collect the minimum
+  /// sign bits of the requested vector elements. If 'OrZero' is set, then
+  /// return true if the given value is either a power of two or zero.
+  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, const APInt &DemandedElts,
+                                       bool OrZero = false,
+                                       unsigned Depth = 0) const;
 
   /// Test if the given _fp_ value is known to be an integer power-of-2, either
   /// positive or negative.
@@ -2352,6 +2399,24 @@ public:
   ///     X|Cst == X+Cst iff X&Cst = 0.
   LLVM_ABI bool isBaseWithConstantOffset(SDValue Op) const;
 
+  /// Determine floating-point class information about \p Op. For vectors, the
+  /// known FP classes are those shared by every demanded vector element.
+  /// \p InterestedClasses is a hint for which FP classes we care about;
+  /// the implementation may bail out early if it can determine that
+  /// none of the interested classes are possible.
+  LLVM_ABI KnownFPClass computeKnownFPClass(SDValue Op,
+                                            FPClassTest InterestedClasses,
+                                            unsigned Depth = 0) const;
+
+  /// Determine floating-point class information about \p Op. The
+  /// DemandedElts argument allows us to only collect the known FP classes
+  /// that are shared by the requested vector elements.
+  /// \p InterestedClasses is a hint for which FP classes we care about.
+  LLVM_ABI KnownFPClass computeKnownFPClass(SDValue Op,
+                                            const APInt &DemandedElts,
+                                            FPClassTest InterestedClasses,
+                                            unsigned Depth = 0) const;
+
   /// Test whether the given SDValue (or all elements of it, if it is a
   /// vector) is known to never be NaN in \p DemandedElts. If \p SNaN is true,
   /// returns if \p Op is known to never be a signaling NaN (it may still be a
@@ -2377,12 +2442,24 @@ public:
     return isKnownNeverNaN(Op, true, Depth);
   }
 
-  /// Test whether the given floating point SDValue is known to never be
-  /// positive or negative zero.
-  LLVM_ABI bool isKnownNeverZeroFloat(SDValue Op) const;
+  /// Test whether the given floating point SDValue (or all elements of it, if
+  /// it is a vector) is known to never be interpretable as zero in \p
+  /// DemandedElts.
+  LLVM_ABI bool isKnownNeverLogicalZero(SDValue Op, const APInt &DemandedElts,
+                                        unsigned Depth = 0) const;
+
+  /// Test whether the given floating point SDValue (or all elements of it, if
+  /// it is a vector) is known to never be interpretable as zero.
+  LLVM_ABI bool isKnownNeverLogicalZero(SDValue Op, unsigned Depth = 0) const;
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
   LLVM_ABI bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
+
+  /// Test whether the given SDValue is known to contain non-zero value(s).
+  /// The DemandedElts argument limits the check to the requested vector
+  /// elements.
+  LLVM_ABI bool isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
+                                 unsigned Depth = 0) const;
 
   /// Test whether the given float value is known to be positive. +0.0, +inf and
   /// +nan are considered positive, -0.0, -inf and -nan are not.

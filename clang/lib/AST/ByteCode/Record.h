@@ -13,13 +13,13 @@
 #ifndef LLVM_CLANG_AST_INTERP_RECORD_H
 #define LLVM_CLANG_AST_INTERP_RECORD_H
 
-#include "Descriptor.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 
 namespace clang {
 namespace interp {
 class Program;
+struct Descriptor;
 
 /// Structure/Class descriptor.
 class Record final {
@@ -27,18 +27,30 @@ public:
   /// Describes a record field.
   struct Field {
     const FieldDecl *Decl;
-    unsigned Offset;
     const Descriptor *Desc;
+    unsigned Offset;
+
     bool isBitField() const { return Decl->isBitField(); }
     bool isUnnamedBitField() const { return Decl->isUnnamedBitField(); }
+    unsigned bitWidth() const {
+      assert(isBitField());
+      return Decl->getBitWidthValue();
+    }
+
+    Field(const FieldDecl *D, const Descriptor *Desc, unsigned Offset)
+        : Decl(D), Desc(Desc), Offset(Offset) {}
   };
 
   /// Describes a base class.
   struct Base {
     const RecordDecl *Decl;
-    unsigned Offset;
     const Descriptor *Desc;
     const Record *R;
+    unsigned Offset;
+
+    Base(const RecordDecl *D, const Descriptor *Desc, const Record *R,
+         unsigned Offset)
+        : Decl(D), Desc(Desc), R(R), Offset(Offset) {}
   };
 
   /// Mapping from identifiers to field descriptors.
@@ -46,7 +58,7 @@ public:
   /// Mapping from identifiers to base classes.
   using BaseList = llvm::SmallVector<Base, 8>;
   /// List of virtual base classes.
-  using VirtualBaseList = llvm::SmallVector<Base, 2>;
+  using VirtualBaseList = llvm::SmallVector<Base, 0>;
 
 public:
   /// Returns the underlying declaration.
@@ -67,6 +79,8 @@ public:
       return CXXDecl->getDestructor();
     return nullptr;
   }
+  /// If this record (or any of its bases) contains a field of type PT_Ptr.
+  bool hasPtrField() const { return HasPtrField; }
 
   /// Returns true for anonymous unions and records
   /// with no destructor or for those with a trivial destructor.
@@ -80,7 +94,9 @@ public:
   unsigned getNumFields() const { return Fields.size(); }
   const Field *getField(unsigned I) const { return &Fields[I]; }
   /// Returns a field.
-  const Field *getField(const FieldDecl *FD) const;
+  const Field *getField(const FieldDecl *FD) const {
+    return &Fields[FD->getFieldIndex()];
+  }
 
   using const_base_iter = BaseList::const_iterator;
   llvm::iterator_range<const_base_iter> bases() const {
@@ -115,7 +131,7 @@ private:
   /// Constructor used by Program to create record descriptors.
   Record(const RecordDecl *, BaseList &&Bases, FieldList &&Fields,
          VirtualBaseList &&VirtualBases, unsigned VirtualSize,
-         unsigned BaseSize);
+         unsigned BaseSize, bool HasPtrField = true);
 
 private:
   friend class Program;
@@ -131,8 +147,6 @@ private:
 
   /// Mapping from declarations to bases.
   llvm::DenseMap<const RecordDecl *, const Base *> BaseMap;
-  /// Mapping from field identifiers to descriptors.
-  llvm::DenseMap<const FieldDecl *, const Field *> FieldMap;
   /// Mapping from declarations to virtual bases.
   llvm::DenseMap<const RecordDecl *, Base *> VirtualBaseMap;
   /// Size of the structure.
@@ -143,6 +157,8 @@ private:
   bool IsUnion;
   /// If this is an anonymous union.
   bool IsAnonymousUnion;
+  /// If any of the fields are pointers (or references).
+  bool HasPtrField = false;
 };
 
 } // namespace interp
