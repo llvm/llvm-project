@@ -95,3 +95,105 @@ def testInferLocations():
         _cext.globals.set_loc_tracebacks_frame_limit(0)
         # CHECK: loc(unknown)
         bar1()
+
+
+# CHECK-LABEL: TEST: testNamelocWrap
+@run
+def testNamelocWrap():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        with loc_tracebacks(current_loc="nameloc_wrap"):
+            # Build nested NameLoc: TaskA(ResourceB(unknown))
+            inner = Location.name("ResourceB", childLoc=Location.unknown())
+            outer = Location.name("TaskA", childLoc=inner)
+            with outer:
+                op = Operation.create("custom.op1")
+                # fmt: off
+                # CHECK: loc("TaskA"("ResourceB"(callsite(
+                # fmt: on
+                print(op.location)
+
+
+# CHECK-LABEL: TEST: testOnExplicitDefault
+@run
+def testOnExplicitDefault():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        with loc_tracebacks():
+            explicit = Location.file("explicit.py", 1, 1)
+            op = Operation.create("custom.op1", loc=explicit)
+            # CHECK: loc("explicit.py":1:1)
+            print(op.location)
+
+
+# CHECK-LABEL: TEST: testOnExplicitUseTraceback
+@run
+def testOnExplicitUseTraceback():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        with loc_tracebacks(on_explicit="use_traceback"):
+            explicit = Location.file("explicit.py", 1, 1)
+            op = Operation.create("custom.op1", loc=explicit)
+            # fmt: off
+            # CHECK: loc(callsite(
+            # fmt: on
+            print(op.location)
+
+
+# CHECK-LABEL: TEST: testDslProfilingUseCase
+@run
+def testDslProfilingUseCase():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        with loc_tracebacks(
+            current_loc="nameloc_wrap", on_explicit="use_traceback"
+        ):
+            task_loc = Location.name("Task", childLoc=Location.unknown())
+            with task_loc:
+                op1 = Operation.create(
+                    "custom.op1", loc=Location.file("x.py", 1, 1)
+                )
+                # fmt: off
+                # CHECK: loc("Task"(callsite(
+                # fmt: on
+                print(op1.location)
+
+                op2 = Operation.create("custom.op2")
+                # fmt: off
+                # CHECK: loc("Task"(callsite(
+                # fmt: on
+                print(op2.location)
+
+
+# CHECK-LABEL: TEST: testOnExplicitFallbackWhenTracebacksDisabled
+@run
+def testOnExplicitFallbackWhenTracebacksDisabled():
+    """When on_explicit != use_explicit but tracebacks are disabled,
+    the explicit loc should be returned (not Location.current)."""
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        # Set on_explicit to use_traceback WITHOUT enabling tracebacks.
+        _cext.globals.set_traceback_action_on_explicit_loc(1)  # UseTraceback
+        try:
+            explicit = Location.file("keep_me.py", 42, 1)
+            op = Operation.create("custom.op1", loc=explicit)
+            # CHECK: loc("keep_me.py":42:1)
+            print(op.location)
+        finally:
+            _cext.globals.set_traceback_action_on_explicit_loc(0)  # UseExplicit
+
+
+# CHECK-LABEL: TEST: testUseExplicitWithNamelocWrap
+@run
+def testUseExplicitWithNamelocWrap():
+    """on_explicit=use_explicit + current_loc=nameloc_wrap should wrap
+    the explicit loc with the NameLoc chain (flags are orthogonal)."""
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        with loc_tracebacks(on_explicit="use_explicit", current_loc="nameloc_wrap"):
+            task_loc = Location.name("Task", childLoc=Location.unknown())
+            with task_loc:
+                explicit = Location.file("framework.py", 10, 1)
+                op = Operation.create("custom.op1", loc=explicit)
+                # CHECK: loc("Task"("framework.py":10:1))
+                print(op.location)

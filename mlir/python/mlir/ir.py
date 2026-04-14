@@ -70,8 +70,18 @@ def get_ops_of_type(
     return ops
 
 
+# Enum values matching C++ OnExplicitAction / CurrentLocAction.
+_ON_EXPLICIT_MAP = {"use_explicit": 0, "use_traceback": 1}
+_CURRENT_LOC_MAP = {"fallback": 0, "nameloc_wrap": 1}
+
+
 @contextmanager
-def loc_tracebacks(*, max_depth: int | None = None) -> Generator[None, None, None]:
+def loc_tracebacks(
+    *,
+    max_depth: int | None = None,
+    on_explicit: str = "use_explicit",
+    current_loc: str = "fallback",
+) -> Generator[None, None, None]:
     """Enables automatic traceback-based locations for MLIR operations.
 
     Operations created within this context will have their location
@@ -80,12 +90,37 @@ def loc_tracebacks(*, max_depth: int | None = None) -> Generator[None, None, Non
     Args:
       max_depth: Maximum number of frames to include in the location.
         If None, the default limit is used.
+      on_explicit: Policy when an explicit loc= is passed to an op constructor.
+        "use_explicit" (default) — use loc= as base, skip traceback.
+        "use_traceback" — discard loc=, generate traceback instead.
+      current_loc: Policy for composing Location.current with the result.
+        "fallback" (default) — use Location.current only as fallback.
+        "nameloc_wrap" — extract NameLoc names from Location.current,
+          wrap the computed location with them.
     """
+    if on_explicit not in _ON_EXPLICIT_MAP:
+        raise ValueError(
+            f"on_explicit must be one of {list(_ON_EXPLICIT_MAP)}, "
+            f"got {on_explicit!r}"
+        )
+    if current_loc not in _CURRENT_LOC_MAP:
+        raise ValueError(
+            f"current_loc must be one of {list(_CURRENT_LOC_MAP)}, "
+            f"got {current_loc!r}"
+        )
     old_enabled = _globals.loc_tracebacks_enabled()
     old_limit = _globals.loc_tracebacks_frame_limit()
+    old_on_explicit = _globals.traceback_action_on_explicit_loc()
+    old_current_loc = _globals.traceback_action_on_current_loc()
     max_depth = old_limit if max_depth is None else max_depth
     try:
         _globals.set_loc_tracebacks_frame_limit(max_depth)
+        _globals.set_traceback_action_on_explicit_loc(
+            _ON_EXPLICIT_MAP[on_explicit]
+        )
+        _globals.set_traceback_action_on_current_loc(
+            _CURRENT_LOC_MAP[current_loc]
+        )
         if not old_enabled:
             _globals.set_loc_tracebacks_enabled(True)
         yield
@@ -93,6 +128,8 @@ def loc_tracebacks(*, max_depth: int | None = None) -> Generator[None, None, Non
         if not old_enabled:
             _globals.set_loc_tracebacks_enabled(False)
         _globals.set_loc_tracebacks_frame_limit(old_limit)
+        _globals.set_traceback_action_on_explicit_loc(old_on_explicit)
+        _globals.set_traceback_action_on_current_loc(old_current_loc)
 
 
 # Convenience decorator for registering user-friendly Attribute builders.

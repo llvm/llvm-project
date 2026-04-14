@@ -285,6 +285,30 @@ void PyGlobals::TracebackLoc::setLocTracebackFramesLimit(size_t value) {
   locTracebackFramesLimit_ = std::min(value, kMaxFrames);
 }
 
+PyGlobals::TracebackLoc::OnExplicitAction
+PyGlobals::TracebackLoc::tracebackActionOnExplicitLoc() {
+  nanobind::ft_lock_guard lock(mutex);
+  return onExplicitAction_;
+}
+
+void PyGlobals::TracebackLoc::setTracebackActionOnExplicitLoc(
+    OnExplicitAction action) {
+  nanobind::ft_lock_guard lock(mutex);
+  onExplicitAction_ = action;
+}
+
+PyGlobals::TracebackLoc::CurrentLocAction
+PyGlobals::TracebackLoc::tracebackActionOnCurrentLoc() {
+  nanobind::ft_lock_guard lock(mutex);
+  return currentLocAction_;
+}
+
+void PyGlobals::TracebackLoc::setTracebackActionOnCurrentLoc(
+    CurrentLocAction action) {
+  nanobind::ft_lock_guard lock(mutex);
+  currentLocAction_ = action;
+}
+
 void PyGlobals::TracebackLoc::registerTracebackFileInclusion(
     const std::string &file) {
   nanobind::ft_lock_guard lock(mutex);

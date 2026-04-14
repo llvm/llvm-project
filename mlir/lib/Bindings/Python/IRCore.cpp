@@ -2734,17 +2734,68 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
 #endif
 }
 
+/// Apply currentLocAction: wrap or fuse Location.current onto baseLoc.
+static MlirLocation applyCurrentLocAction(
+    MlirContext ctx, MlirLocation baseLoc,
+    PyGlobals::TracebackLoc::CurrentLocAction action) {
+  using Action = PyGlobals::TracebackLoc::CurrentLocAction;
+  if (action == Action::Fallback)
+    return baseLoc;
+
+  auto *currentLoc = PyThreadContextEntry::getDefaultLocation();
+  if (!currentLoc)
+    return baseLoc;
+
+  // NamelocWrap: walk the NameLoc chain on Location.current, collect scope
+  // names, wrap baseLoc innermost-first so result is Outer(Inner(baseLoc)).
+  // If Location.current is not a NameLoc, scopeNames is empty and baseLoc
+  // is returned unchanged (nameloc_wrap is a no-op for non-NameLoc contexts).
+  thread_local std::vector<MlirStringRef> scopeNames;
+  scopeNames.clear();
+  MlirLocation walk = currentLoc->get();
+  while (mlirLocationIsAName(walk)) {
+    scopeNames.push_back(mlirIdentifierStr(mlirLocationNameGetName(walk)));
+    walk = mlirLocationNameGetChildLoc(walk);
+  }
+  for (auto it = scopeNames.rbegin(); it != scopeNames.rend(); ++it)
+    baseLoc = mlirLocationNameGet(ctx, *it, baseLoc);
+  return baseLoc;
+}
+
 PyLocation
 maybeGetTracebackLocation(const std::optional<PyLocation> &location) {
-  if (location.has_value())
-    return location.value();
-  if (!PyGlobals::get().getTracebackLoc().locTracebacksEnabled())
-    return DefaultingPyLocation::resolve();
+  auto &tbl = PyGlobals::get().getTracebackLoc();
 
+  // Tracebacks not enabled — return explicit loc or fall back to Location.current.
+  if (!tbl.locTracebacksEnabled())
+    return location.has_value() ? location.value()
+                                : DefaultingPyLocation::resolve();
+
+  // From here: tracebacks are enabled.
+  using OnExplicit = PyGlobals::TracebackLoc::OnExplicitAction;
   PyMlirContext &ctx = DefaultingPyMlirContext::resolve();
-  MlirLocation mlirLoc = tracebackToLocation(ctx.get());
+  MlirLocation baseLoc;
+
+  // Step 1: on_explicit — resolve explicit loc= vs traceback.
+  if (location.has_value()) {
+    switch (tbl.tracebackActionOnExplicitLoc()) {
+    case OnExplicit::UseExplicit:
+      baseLoc = location->get();
+      break;
+    case OnExplicit::UseTraceback:
+      baseLoc = tracebackToLocation(ctx.get());
+      break;
+    }
+  } else {
+    baseLoc = tracebackToLocation(ctx.get());
+  }
+
+  // Step 2: current_loc — compose with Location.current.
+  baseLoc = applyCurrentLocAction(ctx.get(), baseLoc,
+                                  tbl.tracebackActionOnCurrentLoc());
+
   PyMlirContextRef ref = PyMlirContext::forContext(ctx.get());
-  return {ref, mlirLoc};
+  return {ref, baseLoc};
 }
 } // namespace
 
@@ -2869,6 +2920,28 @@ void populateRoot(nb::module_ &m) {
       .def("register_traceback_file_exclusion",
            [](PyGlobals &self, const std::string &filename) {
              self.getTracebackLoc().registerTracebackFileExclusion(filename);
+           })
+      .def("traceback_action_on_explicit_loc",
+           [](PyGlobals &self) {
+             return static_cast<int>(
+                 self.getTracebackLoc().tracebackActionOnExplicitLoc());
+           })
+      .def("set_traceback_action_on_explicit_loc",
+           [](PyGlobals &self, int action) {
+             self.getTracebackLoc().setTracebackActionOnExplicitLoc(
+                 static_cast<PyGlobals::TracebackLoc::OnExplicitAction>(
+                     action));
+           })
+      .def("traceback_action_on_current_loc",
+           [](PyGlobals &self) {
+             return static_cast<int>(
+                 self.getTracebackLoc().tracebackActionOnCurrentLoc());
+           })
+      .def("set_traceback_action_on_current_loc",
+           [](PyGlobals &self, int action) {
+             self.getTracebackLoc().setTracebackActionOnCurrentLoc(
+                 static_cast<PyGlobals::TracebackLoc::CurrentLocAction>(
+                     action));
            });
 
   // Aside from making the globals accessible to python, having python manage
