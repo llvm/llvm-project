@@ -68,7 +68,6 @@ namespace Fortran::runtime {
 #define GFC_RAND_M 2147483647
 static unsigned rand_seed = 1;
 static Lock rand_seed_lock;
-static Lock timef_lock;
 
 // Common implementation that could be used for either SECNDS() or DSECNDS(),
 // which are defined for float or double.
@@ -416,20 +415,19 @@ double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line) {
 // GNU extension function TIME()
 std::int64_t RTNAME(time)() { return time(nullptr); }
 
-/*
- * Extension function TIMEF().
- * By default, it returns number of seconds that have
- * elapsed since the first time TIMEF was called.
- * For the first call, it returns 0.
- *
- * FLANG_TIMEF_IN_MILLISECONDS=1 sets the resolution to
- * milliseconds
- */
+// Extension function TIMEF().
+// By default, it returns number of seconds that have
+// elapsed since the first time TIMEF was called.
+// For the first call, it returns 0.
+// FLANG_TIMEF_IN_MILLISECONDS=1 sets the resolution to
+// milliseconds
 double RTNAME(Timef)() {
 #ifndef _WIN32
   // posix-compliant
   static clock_t start = (clock_t)-1;
   static long ticks_per_sec = 0;
+  static Lock timef_lock;
+
   struct tms b;
   clock_t current;
   double duration;
@@ -441,7 +439,7 @@ double RTNAME(Timef)() {
         return 0.0;
     }
 
-    if (times(&b) == (clock_t)-1) {
+    if (times(&b) == static_cast<clock_t>(-1)) {
       return 0.0;
     }
 
@@ -452,9 +450,10 @@ double RTNAME(Timef)() {
       return 0.0;
     }
     if (Fortran::runtime::executionEnvironment.timefInMillisec)
-      duration = ((double)(current - start) * 1000) / (double)ticks_per_sec;
+      duration =
+          (static_cast<double>(current - start) * 1000.0) / ticks_per_sec;
     else
-      duration = (double)(current - start) / (double)ticks_per_sec;
+      duration = static_cast<double>(current - start) / ticks_per_sec;
 
     return duration;
   }

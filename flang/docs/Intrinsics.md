@@ -1241,7 +1241,7 @@ The first time it is called, TIMEF returns 0.
 
 By default, the behaviour matches that of ifort and classic-flang compilers. To match 
 behaviour of compilers like XLF and nvfortran, use `export FLANG_TIMEF_IN_MILLISECONDS=1` to 
-ensure TIMEF returns number of milliseconds elapsed since the first time TIMEF() was called
+ensure TIMEF returns number of milliseconds elapsed since the first time TIMEF() was called.
 
 #### Usage and Info
 
