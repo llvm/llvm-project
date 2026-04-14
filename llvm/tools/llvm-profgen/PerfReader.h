@@ -58,7 +58,7 @@ public:
 };
 
 // The type of input format.
-enum PerfFormat {
+enum InputFormat {
   UnknownFormat = 0,
   PerfData = 1,            // Raw linux perf.data.
   PerfScript = 2,          // Perf script create by `perf script` command.
@@ -73,9 +73,9 @@ enum PerfContent {
   LBRStack = 2, // Hybrid sample including call stack and LBR stack.
 };
 
-struct PerfInputFile {
+struct InputFile {
   std::string InputFile;
-  PerfFormat Format = PerfFormat::UnknownFormat;
+  InputFormat Format = InputFormat::UnknownFormat;
   PerfContent Content = PerfContent::UnknownContent;
 };
 
@@ -573,7 +573,7 @@ public:
   };
   virtual ~PerfReaderBase() = default;
   static std::unique_ptr<PerfReaderBase>
-  create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
+  create(ProfiledBinary *Binary, InputFile &Input,
          std::optional<int32_t> PIDFilter);
 
   // Entry of the reader to parse multiple perf traces
@@ -620,8 +620,8 @@ public:
                                         MMapEvent &MMap);
 
   // Generate perf script from perf data
-  static PerfInputFile convertPerfDataToTrace(ProfiledBinary *Binary,
-                                              bool SkipPID, PerfInputFile &File,
+  static InputFile convertPerfDataToTrace(ProfiledBinary *Binary,
+                                              bool SkipPID, InputFile &File,
                                               std::optional<int32_t> PIDFilter);
   // Extract perf script type by peaking at the input
   static PerfContent checkPerfScriptType(StringRef FileName);
@@ -748,12 +748,18 @@ private:
   std::unordered_set<std::string> ContextStrSet;
 };
 
-class ETMReader : public PerfReaderBase {
+class ETMReader {
 public:
   ETMReader(ProfiledBinary *Binary, StringRef TraceFile)
-      : PerfReaderBase(Binary, TraceFile) {}
-  void parsePerfTraces() override;
+      : Binary(Binary), TraceFile(TraceFile) {}
+  void parseETMTraces();
   void recordProcessedRange(uint64_t Start, uint64_t End, uint64_t Count);
+  const ContextSampleCounterMap &getTraceCounters() const { return Counters; }
+
+private:
+  ProfiledBinary *Binary = nullptr;
+  StringRef TraceFile;
+  ContextSampleCounterMap Counters;
 };
 
 } // end namespace sampleprof

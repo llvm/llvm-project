@@ -134,6 +134,10 @@ public:
           "OpenCSD: Unsupported processor architecture. Only "
           "microcontroller-class (Cortex-M) is currently supported.");
     }
+
+    // The CoreSight Trace ID (CSID) is a hardware-assigned 7-bit identifier
+    // used to route trace data. 0x10 is the most common default value for the
+    // ETM.
     uint8_t CSID = 0x10;
     Config.reg_traceidr = CSID;
     uint32_t Flags =

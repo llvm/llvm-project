@@ -346,37 +346,32 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
 }
 
 std::unique_ptr<PerfReaderBase>
-PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
+PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
                        std::optional<int32_t> PIDFilter) {
   std::unique_ptr<PerfReaderBase> PerfReader;
 
-  if (PerfInput.Format == PerfFormat::UnsymbolizedProfile) {
+  if (Input.Format == InputFormat::UnsymbolizedProfile) {
     PerfReader.reset(
-        new UnsymbolizedProfileReader(Binary, PerfInput.InputFile));
-    return PerfReader;
-  }
-
-  if (PerfInput.Format == PerfFormat::ETMFormat) {
-    PerfReader.reset(new ETMReader(Binary, PerfInput.InputFile));
+        new UnsymbolizedProfileReader(Binary, Input.InputFile));
     return PerfReader;
   }
 
   // For perf data input, we need to convert them into perf script first.
   // If this is a kernel perf file, there is no need for retrieving PIDs.
-  if (PerfInput.Format == PerfFormat::PerfData)
-    PerfInput = PerfScriptReader::convertPerfDataToTrace(
-        Binary, Binary->isKernel(), PerfInput, PIDFilter);
+  if (Input.Format == InputFormat::PerfData)
+    Input = PerfScriptReader::convertPerfDataToTrace(
+        Binary, Binary->isKernel(), Input, PIDFilter);
 
-  assert((PerfInput.Format == PerfFormat::PerfScript) &&
+  assert((Input.Format == InputFormat::PerfScript) &&
          "Should be a perfscript!");
 
-  PerfInput.Content =
-      PerfScriptReader::checkPerfScriptType(PerfInput.InputFile);
-  if (PerfInput.Content == PerfContent::LBRStack) {
+  Input.Content =
+      PerfScriptReader::checkPerfScriptType(Input.InputFile);
+  if (Input.Content == PerfContent::LBRStack) {
     PerfReader.reset(
-        new HybridPerfReader(Binary, PerfInput.InputFile, PIDFilter));
-  } else if (PerfInput.Content == PerfContent::LBR) {
-    PerfReader.reset(new LBRPerfReader(Binary, PerfInput.InputFile, PIDFilter));
+        new HybridPerfReader(Binary, Input.InputFile, PIDFilter));
+  } else if (Input.Content == PerfContent::LBR) {
+    PerfReader.reset(new LBRPerfReader(Binary, Input.InputFile, PIDFilter));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -455,9 +450,9 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
   return Error::success();
 }
 
-PerfInputFile
+InputFile
 PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
-                                         PerfInputFile &File,
+                                         InputFile &File,
                                          std::optional<int32_t> PIDFilter) {
   StringRef PerfData = File.InputFile;
   // Run perf script to retrieve PIDs matching binary we're interested in.
@@ -521,7 +516,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   }
   sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
 
-  return {std::string(PerfTraceFile), PerfFormat::PerfScript,
+  return {std::string(PerfTraceFile), InputFormat::PerfScript,
           PerfContent::UnknownContent};
 }
 
@@ -1378,10 +1373,9 @@ SmallVector<CleanupInstaller, 2> PerfScriptReader::TempFileCleanups;
 
 void ETMReader::recordProcessedRange(uint64_t Start, uint64_t End,
                                      uint64_t Count) {
-  if (!SampleCounters.empty()) {
-    auto &Counter = SampleCounters.begin()->second;
-    Counter.recordRangeCount(Start, End, Count);
-  }
+  assert(!Counters.empty() && "Counters should not be empty!");
+  auto &Counter = Counters.begin()->second;
+  Counter.recordRangeCount(Start, End, Count);
 }
 
 class ETMCallback : public ETMDecoder::Callback {
@@ -1394,8 +1388,8 @@ public:
   }
 };
 
-void ETMReader::parsePerfTraces() {
-  auto BufferOrErr = MemoryBuffer::getFile(PerfTraceFile);
+void ETMReader::parseETMTraces() {
+  auto BufferOrErr = MemoryBuffer::getFile(TraceFile);
   if (std::error_code EC = BufferOrErr.getError())
     exitWithError("Could not open ETM trace file: " + EC.message());
 
@@ -1407,7 +1401,7 @@ void ETMReader::parsePerfTraces() {
   // Initialize the SampleCounters map with a single empty context key
   // to aggregate all instruction hits into a global bucket.
   auto Key = std::make_shared<StringBasedCtxKey>();
-  SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+  Counters.emplace(Hashable<ContextKey>(Key), SampleCounter());
 
   // The protocol utilizes a 0x80 byte as an initial synchronization header.
   // Perform a manual search for this sync point to discard any leading

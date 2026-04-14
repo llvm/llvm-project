@@ -136,20 +136,20 @@ static void validateCommandLine() {
   }
 }
 
-static PerfInputFile getPerfInputFile() {
-  PerfInputFile File;
+static InputFile getInputFile() {
+  InputFile File;
   if (PerfDataFilename.getNumOccurrences()) {
     File.InputFile = PerfDataFilename;
-    File.Format = PerfFormat::PerfData;
+    File.Format = InputFormat::PerfData;
   } else if (PerfScriptFilename.getNumOccurrences()) {
     File.InputFile = PerfScriptFilename;
-    File.Format = PerfFormat::PerfScript;
+    File.Format = InputFormat::PerfScript;
   } else if (UnsymbolizedProfFilename.getNumOccurrences()) {
     File.InputFile = UnsymbolizedProfFilename;
-    File.Format = PerfFormat::UnsymbolizedProfile;
+    File.Format = InputFormat::UnsymbolizedProfile;
   } else if (ETMPath.getNumOccurrences()) {
     File.InputFile = ETMPath;
-    File.Format = PerfFormat::ETMFormat;
+    File.Format = InputFormat::ETMFormat;
   }
   return File;
 }
@@ -193,9 +193,24 @@ int main(int argc, const char *argv[]) {
     std::optional<uint32_t> PIDFilter;
     if (ProcessId.getNumOccurrences())
       PIDFilter = ProcessId;
-    PerfInputFile PerfFile = getPerfInputFile();
+    InputFile File = getInputFile();
+    if (File.Format == InputFormat::ETMFormat) {
+      ETMReader Reader(Binary.get(), File.InputFile);
+      Reader.parseETMTraces();
+
+      if (SkipSymbolization)
+        return EXIT_SUCCESS;
+
+      std::unique_ptr<ProfileGeneratorBase> Generator =
+          ProfileGeneratorBase::create(Binary.get(), &Reader.getTraceCounters(),
+                                       false);
+      Generator->generateProfile();
+      Generator->write();
+      return EXIT_SUCCESS;
+    }
+
     std::unique_ptr<PerfReaderBase> Reader =
-        PerfReaderBase::create(Binary.get(), PerfFile, PIDFilter);
+        PerfReaderBase::create(Binary.get(), File, PIDFilter);
     // Parse perf events and samples
     Reader->parsePerfTraces();
 
