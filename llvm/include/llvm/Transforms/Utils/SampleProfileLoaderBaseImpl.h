@@ -99,8 +99,10 @@ public:
                         ->getZExtValue();
         auto Hash = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))
                         ->getZExtValue();
-        auto Attributes = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2))
-                              ->getZExtValue();
+        // The attributes field was added later; older IR may not have it.
+        uint64_t Attributes = 0;
+        if (auto *AttrCI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2)))
+          Attributes = AttrCI->getZExtValue();
         GUIDToProbeDescMap.try_emplace(
             GUID, PseudoProbeDescriptor(GUID, Hash, Attributes));
       }

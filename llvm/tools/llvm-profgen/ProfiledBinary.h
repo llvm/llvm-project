@@ -668,6 +668,9 @@ public:
   const MCPseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) {
     return ProbeDecoder.getFuncDescForGUID(GUID);
   }
+  const GUIDProbeFunctionMap &getGUID2FuncDescMap() const {
+    return ProbeDecoder.getGUID2FuncDescMap();
+  }
 
   const MCPseudoProbeFuncDesc *
   getInlinerDescForProbe(const MCDecodedPseudoProbe *Probe) {
