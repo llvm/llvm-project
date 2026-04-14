@@ -1076,6 +1076,15 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::cttz: {
+    auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
+    if (LT.second == MVT::v8i8 || LT.second == MVT::v16i8)
+      return LT.first * 2;
+    if (LT.second == MVT::v4i16 || LT.second == MVT::v8i16 ||
+        LT.second == MVT::v2i32 || LT.second == MVT::v4i32)
+      return LT.first * 3;
+    break;
+  }
   case Intrinsic::experimental_cttz_elts: {
     EVT ArgVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
     if (!getTLI()->shouldExpandCttzElements(ArgVT)) {
