@@ -141,7 +141,7 @@
 // NOSTDLIB:      "-L
 // NOSTDLIB-SAME: {{^}}[[SYSROOT]]/usr/lib"
 // NOSTDLIB-NOT:  "-l
-// NOSTDLIB-NOT:  libclang_rt.builtins-x86_64.a
+// NOSTDLIB-NOT:  libclang_rt.builtins
 // NOSTDLIB-NOT:  crt{{[^./]+}}.o
 
 // -nostartfiles suppresses crt*.o, but not default -l
@@ -169,7 +169,7 @@
 // RELOCATABLE-SAME: {{^}}[[SYSROOT]]/usr/lib"
 // RELOCATABLE-NOT:  "-l
 // RELOCATABLE-NOT:  crt{{[^./]+}}.o
-// RELOCATABLE-NOT:  libclang_rt.builtins-x86_64.a
+// RELOCATABLE-NOT:  libclang_rt.builtins
 
 /// -nolibc suppresses -lc but not other default -l
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
@@ -188,8 +188,7 @@
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -ccc-install-dir %S/Inputs/serenity_tree/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   -fsanitize=undefined --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=UBSAN
-// UBSAN-NOT: "libclang_rt.ubsan{{[^./]+}}.a"
-// UBSAN-NOT: "libclang_rt.ubsan{{[^./]+}}.so"
+// UBSAN-NOT: "libclang_rt.ubsan"
 // UBSAN:     "-lubsan"
 
 /// C++ stdlib behavior
