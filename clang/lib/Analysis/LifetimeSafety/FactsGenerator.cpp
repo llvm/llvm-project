@@ -586,6 +586,41 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
       Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
 }
 
+void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
+  NE->dumpColor();
+
+  OriginList *NList = getOriginsList(*NE)->peelOuterOrigin();
+  const auto FlowOrigins = [&](const auto &T) {
+    if (OriginList *ArgList = getOriginsList(*T); ArgList && NList)
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          NList->getOuterOriginID(), ArgList->getOuterOriginID(),
+          /*Kill=*/true));
+  };
+
+  if (auto *CE = NE->getConstructExpr()) {
+    VisitCXXConstructExpr(CE);
+    FlowOrigins(CE);
+    return;
+  }
+
+  if (auto *E = NE->getInitializer()) {
+    if (!NE->isArray()) {
+      FlowOrigins(E);
+      return;
+    }
+    if (const auto *ILE = dyn_cast<InitListExpr>(E); ILE) {
+      // FIXME: Right now this still overwrites the other origins. Probably will
+      // be fixed once OriginTree is in.
+      // We traverse the Init list in reverse order to prefer origins from the
+      // beginning.
+      for (unsigned i = ILE->getNumInits(); i > 0; i--) {
+        FlowOrigins(ILE->getInit(i - 1));
+      }
+      return;
+    }
+  }
+}
+
 bool FactsGenerator::escapesViaReturn(OriginID OID) const {
   return llvm::any_of(EscapesInCurrentBlock, [OID](const Fact *F) {
     if (const auto *EF = F->getAs<ReturnEscapeFact>())
