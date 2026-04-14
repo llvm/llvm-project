@@ -2,7 +2,7 @@ if(NOT CMAKE_CLC_COMPILER)
   set(is_clang FALSE)
   if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(is_clang TRUE)
-  elseif(NOT CMAKE_C_COMPILER_ID AND CMAKE_C_COMPILER_WORKS)
+  elseif(NOT CMAKE_C_COMPILER_ID)
     # When ID is empty but compiler works, verify it's actually clang.
     execute_process(
       COMMAND "${CMAKE_C_COMPILER}" --version
