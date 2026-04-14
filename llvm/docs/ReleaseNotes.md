@@ -68,6 +68,9 @@ Makes programs 10x faster by doing Special New Thing.
   null pointers. Such constants may print as `splat (ptr null)` instead of
   `zeroinitializer`.
 
+* The function attribute "signaling-nans" was added to control the support of
+  signaling NaNs.
+
 * LLVM IR floating-point literals have greatly changed:
 
   * The old hexadecimal bitwise representation is deprecated and will be removed

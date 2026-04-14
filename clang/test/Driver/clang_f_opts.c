@@ -395,7 +395,6 @@
 // CHECK-WARNING-DAG: optimization flag '-fprofile-correction' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fprofile-values' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fschedule-insns' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fsignaling-nans' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fstrength-reduce' is not supported
 // CHECK-WARNING-DAG: optimization flag '-ftracer' is not supported
 // CHECK-WARNING-DAG: optimization flag '-funroll-all-loops' is not supported
@@ -651,3 +650,21 @@
 // RUN: %clang -### --target=x86_64-pc-windows-msvc -fno-strict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
 // CHECK-STRICT-ALIASING-NOT: -relaxed-aliasing
 // CHECK-NO-STRICT-ALIASING: -relaxed-aliasing
+
+// RUN: %clang -### -S --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK-UNKNOWN-SIGNALING-NANS %s
+// CHECK-UNKNOWN-SIGNALING-NANS: "-cc1"
+// CHECK-UNKNOWN-SIGNALING-NANS-NOT: "-fsignaling-nans"
+// CHECK-UNKNOWN-SIGNALING-NANS-NOT: "-fno-signaling-nans"
+
+// RUN: %clang -### -S --target=x86_64-unknown-linux -fsignaling-nans %s 2>&1 | FileCheck -check-prefix=CHECK-SIGNALING-NANS %s
+// CHECK-SIGNALING-NANS: "-cc1"
+// CHECK-SIGNALING-NANS: "-fsignaling-nans"
+// CHECK-SIGNALING-NANS-NOT: "-fno-signaling-nans"
+
+// RUN: %clang -### -S --target=x86_64-unknown-linux -fno-signaling-nans %s 2>&1 | FileCheck -check-prefix=CHECK-NO-SIGNALING-NANS %s
+// CHECK-NO-SIGNALING-NANS: "-cc1"
+// CHECK-NO-SIGNALING-NANS: "-fno-signaling-nans"
+// CHECK-NO-SIGNALING-NANS-NOT: "-fsignaling-nans"
+
+// RUN: %clang -### -S --target=x86_64-unknown-linux -fsignaling-nans -fno-signaling-nans %s 2>&1 | FileCheck -check-prefix=CHECK-NO-SIGNALING-NANS %s
+// RUN: %clang -### -S --target=x86_64-unknown-linux -fno-signaling-nans -fsignaling-nans %s 2>&1 | FileCheck -check-prefix=CHECK-SIGNALING-NANS %s

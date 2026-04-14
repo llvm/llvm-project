@@ -11,6 +11,15 @@
 
 define float @fsub_x_p0_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fsub_x_p0_defaultenv(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A1:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[A]]
+;
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret float %ret
+}
+
+define float @fsub_x_p0_defaultenv_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_x_p0_defaultenv_nosignaling(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -22,6 +31,14 @@ define float @fsub_x_p0_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_x_p0_ebmaytrap(
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
+;
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  ret float %ret
+}
+
+define float @fsub_x_p0_ebmaytrap_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_x_p0_ebmaytrap_nosignaling(
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %ret
@@ -45,6 +62,15 @@ define float @fsub_x_p0_ebstrict(float %a) #0 {
   ret float %ret
 }
 
+define float @fsub_x_p0_ebstrict_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_x_p0_ebstrict_nosignaling(
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[A]]
+;
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret float %ret
+}
+
 ; The instruction is expected to remain, but the result isn't used.
 define float @fsub_nnan_x_p0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_nnan_x_p0_ebstrict(
@@ -60,6 +86,15 @@ define float @fsub_ninf_x_p0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_ninf_x_p0_ebstrict(
 ; CHECK-NEXT:    [[RET:%.*]] = call ninf float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
+;
+  %ret = call ninf float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret float %ret
+}
+
+define float @fsub_ninf_x_p0_ebstrict_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_ninf_x_p0_ebstrict_nosignaling(
+; CHECK-NEXT:    [[RET:%.*]] = call ninf float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[A]]
 ;
   %ret = call ninf float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %ret
@@ -89,6 +124,15 @@ define float @fsub_x_p0_dynamic(float %a) #0 {
 ; With nsz we don't have to worry about -0.0 so the transform is valid.
 define float @fsub_nsz_x_p0_neginf(float %a) #0 {
 ; CHECK-LABEL: @fsub_nsz_x_p0_neginf(
+; CHECK-NEXT:    [[A:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float [[A1:%.*]], float 0.000000e+00, metadata !"round.downward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[A]]
+;
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.downward", metadata !"fpexcept.ignore")
+  ret float %ret
+}
+
+define float @fsub_nsz_x_p0_neginf_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_nsz_x_p0_neginf_nosignaling(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.downward", metadata !"fpexcept.ignore")
@@ -98,6 +142,15 @@ define float @fsub_nsz_x_p0_neginf(float %a) #0 {
 ; With nsz we don't have to worry about -0.0 so the transform is valid.
 define float @fsub_nsz_x_p0_dynamic(float %a) #0 {
 ; CHECK-LABEL: @fsub_nsz_x_p0_dynamic(
+; CHECK-NEXT:    [[A:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float [[A1:%.*]], float 0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[A]]
+;
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %ret
+}
+
+define float @fsub_nsz_x_p0_dynamic_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_nsz_x_p0_dynamic_nosignaling(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.dynamic", metadata !"fpexcept.ignore")
@@ -111,6 +164,15 @@ define float @fsub_nsz_x_p0_dynamic(float %a) #0 {
 
 define float @fold_fsub_nsz_x_n0_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_nsz_x_n0_defaultenv(
+; CHECK-NEXT:    [[A:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float [[A1:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[A]]
+;
+  %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret float %sub
+}
+
+define float @fold_fsub_nsz_x_n0_defaultenv_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fold_fsub_nsz_x_n0_defaultenv_nosignaling(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -122,6 +184,14 @@ define float @fold_fsub_nsz_x_n0_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_nsz_x_n0_ebmaytrap(
 ; CHECK-NEXT:    [[SUB:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  ret float %sub
+}
+
+define float @fold_fsub_nsz_x_n0_ebmaytrap_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fold_fsub_nsz_x_n0_ebmaytrap_nosignaling(
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret float %sub
@@ -145,6 +215,15 @@ define float @fold_fsub_nsz_x_n0_ebstrict(float %a) #0 {
   ret float %sub
 }
 
+define float @fold_fsub_nsz_x_n0_ebstrict_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fold_fsub_nsz_x_n0_ebstrict_nosignaling(
+; CHECK-NEXT:    [[SUB:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[A]]
+;
+  %sub = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret float %sub
+}
+
 ; The instruction is expected to remain, but the result isn't used.
 define float @fold_fsub_nsz_nnan_x_n0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_nsz_nnan_x_n0_ebstrict(
@@ -162,7 +241,18 @@ define float @fold_fsub_nsz_nnan_x_n0_ebstrict(float %a) #0 {
 
 define float @fold_fsub_fabs_x_n0_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_fabs_x_n0_defaultenv(
-; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[ABSA1:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[ABSA1]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[ABSA]]
+;
+  %absa = call float @llvm.fabs.f32(float %a) #0
+  %sub = call float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret float %sub
+}
+
+define float @fold_fsub_fabs_x_n0_defaultenv_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fold_fsub_fabs_x_n0_defaultenv_nosignaling(
+; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[ABSA]]
 ;
   %absa = call float @llvm.fabs.f32(float %a) #0
@@ -176,6 +266,16 @@ define float @fold_fsub_fabs_x_n0_ebmaytrap(float %a) #0 {
 ; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[ABSA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[SUB]]
+;
+  %absa = call float @llvm.fabs.f32(float %a) #0
+  %sub = call float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  ret float %sub
+}
+
+define float @fold_fsub_fabs_x_n0_ebmaytrap_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fold_fsub_fabs_x_n0_ebmaytrap_nosignaling(
+; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    ret float [[ABSA]]
 ;
   %absa = call float @llvm.fabs.f32(float %a) #0
   %sub = call float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
@@ -204,6 +304,17 @@ define float @fold_fsub_fabs_x_n0_ebstrict(float %a) #0 {
   ret float %sub
 }
 
+define float @fold_fsub_fabs_x_n0_ebstrict_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fold_fsub_fabs_x_n0_ebstrict_nosignaling(
+; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[ABSA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[ABSA]]
+;
+  %absa = call float @llvm.fabs.f32(float %a) #0
+  %sub = call float @llvm.experimental.constrained.fsub.f32(float %absa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret float %sub
+}
+
 ; The instruction is expected to remain, but the result isn't used.
 define float @fold_fsub_fabs_nnan_x_n0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_fabs_nnan_x_n0_ebstrict(
@@ -219,6 +330,17 @@ define float @fold_fsub_fabs_nnan_x_n0_ebstrict(float %a) #0 {
 define float @fold_fsub_sitofp_x_n0_defaultenv(i32 %a) #0 {
 ; CHECK-LABEL: @fold_fsub_sitofp_x_n0_defaultenv(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[FPA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %sub = call float @llvm.experimental.constrained.fsub.f32(float %fpa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret float %sub
+}
+
+define float @fold_fsub_sitofp_x_n0_defaultenv_nosignaling(i32 %a) #1 {
+; CHECK-LABEL: @fold_fsub_sitofp_x_n0_defaultenv_nosignaling(
+; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[FPA]]
 ;
   %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -232,6 +354,17 @@ define float @fold_fsub_sitofp_x_n0_defaultenv(i32 %a) #0 {
 
 define float @fsub_fneg_n0_fnX_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_n0_fnX_defaultenv(
+; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A1:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[A]]
+;
+  %nega = fneg float %a
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret float %ret
+}
+
+define float @fsub_fneg_n0_fnX_defaultenv_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_fneg_n0_fnX_defaultenv_nosignaling(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %nega = fneg float %a
@@ -245,6 +378,15 @@ define float @fsub_fneg_n0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
+;
+  %nega = fneg float %a
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  ret float %ret
+}
+
+define float @fsub_fneg_n0_fnX_ebmaytrap_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_fneg_n0_fnX_ebmaytrap_nosignaling(
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %nega = fneg float %a
   %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
@@ -266,6 +408,17 @@ define float @fsub_fneg_n0_fnX_ebstrict(float %a) #0 {
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
+;
+  %nega = fneg float %a
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret float %ret
+}
+
+define float @fsub_fneg_n0_fnX_ebstrict_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_fneg_n0_fnX_ebstrict_nosignaling(
+; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[A]]
 ;
   %nega = fneg float %a
   %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -354,6 +507,17 @@ define float @fsub_fsub_nnan_n0_fnX_ebstrict(float %a) #0 {
 
 define float @fsub_fneg_nsz_p0_fnX_defaultenv(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_nsz_p0_fnX_defaultenv(
+; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A1:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[A]]
+;
+  %nega = fneg float %a
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret float %ret
+}
+
+define float @fsub_fneg_nsz_p0_fnX_defaultenv_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_fneg_nsz_p0_fnX_defaultenv_nosignaling(
 ; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %nega = fneg float %a
@@ -367,6 +531,15 @@ define float @fsub_fneg_nsz_p0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap")
 ; CHECK-NEXT:    ret float [[RET]]
+;
+  %nega = fneg float %a
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  ret float %ret
+}
+
+define float @fsub_fneg_nsz_p0_fnX_ebmaytrap_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_fneg_nsz_p0_fnX_ebmaytrap_nosignaling(
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %nega = fneg float %a
   %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
@@ -388,6 +561,17 @@ define float @fsub_fneg_nsz_p0_fnX_ebstrict(float %a) #0 {
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[RET]]
+;
+  %nega = fneg float %a
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret float %ret
+}
+
+define float @fsub_fneg_nsz_p0_fnX_ebstrict_nosignaling(float %a) #1 {
+; CHECK-LABEL: @fsub_fneg_nsz_p0_fnX_ebstrict_nosignaling(
+; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[A]]
 ;
   %nega = fneg float %a
   %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -722,4 +906,5 @@ declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, me
 
 declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
 
-attributes #0 = { strictfp }
+attributes #0 = { strictfp "signaling-nans" }
+attributes #1 = { strictfp }

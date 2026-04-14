@@ -94,6 +94,10 @@ static Constant *getFalse(Type *Ty) { return ConstantInt::getFalse(Ty); }
 /// with every element true.
 static Constant *getTrue(Type *Ty) { return ConstantInt::getTrue(Ty); }
 
+inline bool canIgnoreSNaN(const SimplifyQuery &Q, FastMathFlags FMF) {
+  return !Q.hasSignalingNaNs() || FMF.noNaNs();
+}
+
 /// isSameCompare - Is V equivalent to the comparison "LHS Pred RHS"?
 static bool isSameCompare(Value *V, CmpPredicate Pred, Value *LHS, Value *RHS) {
   CmpInst *Cmp = dyn_cast<CmpInst>(V);
@@ -5975,14 +5979,14 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // not simplify to Op0:
   // fadd SNaN, -0.0 --> QNaN
   // fadd +0.0, -0.0 --> -0.0 (but only with round toward negative)
-  if (canIgnoreSNaN(ExBehavior, FMF) &&
+  if (canIgnoreSNaN(Q, FMF) &&
       (!canRoundingModeBe(Rounding, RoundingMode::TowardNegative) ||
        FMF.noSignedZeros()))
     if (match(Op1, m_NegZeroFP()))
       return Op0;
 
   // fadd X, 0 ==> X, when we know X is not -0
-  if (canIgnoreSNaN(ExBehavior, FMF))
+  if (canIgnoreSNaN(Q, FMF))
     if (match(Op1, m_PosZeroFP()) &&
         (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q)))
       return Op0;
@@ -6037,14 +6041,14 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     return C;
 
   // fsub X, +0 ==> X
-  if (canIgnoreSNaN(ExBehavior, FMF) &&
+  if (canIgnoreSNaN(Q, FMF) &&
       (!canRoundingModeBe(Rounding, RoundingMode::TowardNegative) ||
        FMF.noSignedZeros()))
     if (match(Op1, m_PosZeroFP()))
       return Op0;
 
   // fsub X, -0 ==> X, when we know X is not -0
-  if (canIgnoreSNaN(ExBehavior, FMF))
+  if (canIgnoreSNaN(Q, FMF))
     if (match(Op1, m_NegZeroFP()) &&
         (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q)))
       return Op0;
@@ -6052,13 +6056,13 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub -0.0, (fsub -0.0, X) ==> X
   // fsub -0.0, (fneg X) ==> X
   Value *X;
-  if (canIgnoreSNaN(ExBehavior, FMF))
+  if (canIgnoreSNaN(Q, FMF))
     if (match(Op0, m_NegZeroFP()) && match(Op1, m_FNeg(m_Value(X))))
       return X;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
   // fsub 0.0, (fneg X) ==> X if signed zeros are ignored.
-  if (canIgnoreSNaN(ExBehavior, FMF))
+  if (canIgnoreSNaN(Q, FMF))
     if (FMF.noSignedZeros() && match(Op0, m_AnyZeroFP()) &&
         (match(Op1, m_FSub(m_AnyZeroFP(), m_Value(X))) ||
          match(Op1, m_FNeg(m_Value(X)))))

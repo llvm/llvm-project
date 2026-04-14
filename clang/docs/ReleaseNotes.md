@@ -409,6 +409,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   reproducable builds. These macros can be redefined from the command line if
   necessary. `/d1nodatetime-` can be used to turn this feature off if
   necessary to override the common build settings.
+- New option `-f[no-]signaling-nans` added to control the support of
+  signaling NaNs.
 
 ### Deprecated Compiler Flags
 

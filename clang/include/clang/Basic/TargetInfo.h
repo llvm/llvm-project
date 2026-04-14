@@ -249,6 +249,7 @@ protected:
   bool HasLongDouble;
   bool HasFPReturn;
   bool HasStrictFP;
+  bool HasSignalingNaNs;
 
   unsigned char MaxAtomicPromoteWidth, MaxAtomicInlineWidth;
   std::string DataLayoutString;
@@ -741,6 +742,9 @@ public:
 
   /// Determine whether constrained floating point is supported on this target.
   virtual bool hasStrictFP() const { return HasStrictFP; }
+
+  /// Determine whether signaling NaNs are supported on this target.
+  virtual bool hasSignalingNaNs() const { return HasSignalingNaNs; }
 
   /// Return the alignment that is the largest alignment ever used for any
   /// scalar/SIMD data type on the target machine you are compiling for

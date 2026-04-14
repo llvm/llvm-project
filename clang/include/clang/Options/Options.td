@@ -3047,6 +3047,15 @@ def ffp_contract : Joined<["-"], "ffp-contract=">, Group<f_Group>,
   " Default is 'fast' for CUDA, 'fast-honor-pragmas' for HIP, and 'on' otherwise.">,
   HelpText<"Form fused FP ops (e.g. FMAs)">,
   Values<"fast,on,off,fast-honor-pragmas">;
+def fsignaling_nans : Flag<["-"], "fsignaling-nans">,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoFlag<CodeGenOpts<"SignalingNans">>,
+  HelpText<"Assume signaling NaNs behave according to IEEE rules and can"
+           "raise floating-point exceptions">;
+def fno_signaling_nans : Flag<["-"], "fno-signaling-nans">,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoFlag<CodeGenOpts<"NoSignalingNans">>,
+  HelpText<"Assume signaling NaNs are treated identically to quiet NaNs">;
 
 defm strict_float_cast_overflow : BoolFOption<"strict-float-cast-overflow",
   CodeGenOpts<"StrictFloatCastOverflow">, DefaultTrue,
@@ -7526,7 +7535,6 @@ defm ripa : BooleanFFlag<"ripa">, Group<clang_ignored_f_Group>;
 defm schedule_insns : BooleanFFlag<"schedule-insns">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm schedule_insns2 : BooleanFFlag<"schedule-insns2">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm see : BooleanFFlag<"see">, Group<clang_ignored_f_Group>;
-defm signaling_nans : BooleanFFlag<"signaling-nans">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm single_precision_constant : BooleanFFlag<"single-precision-constant">,
     Group<clang_ignored_gcc_optimization_f_Group>;
 defm spec_constr_count : BooleanFFlag<"spec-constr-count">, Group<clang_ignored_f_Group>;
