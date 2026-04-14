@@ -167,11 +167,10 @@ private:
   /// LLDBMemoryReader prefers to read reflection metadata from the
   /// binary on disk, which is faster than reading it out of process
   /// memory, especially when debugging remotely.  To achieve this LLDB
-  /// registers virtual addresses starting at (0x0 &
-  /// LLDB_VIRTUAL_ADDRESS_BIT) with ReflectionContext.  Sorted by
-  /// virtual address, m_lldb_virtual_address_map stores each
-  /// lldb::Module and the first virtual address after the end of that
-  /// module's virtual address space.
+  /// registers file addresses in LLDBAddressSpace (address space 1)
+  /// with ReflectionContext. Sorted by virtual address, m_range_module_map
+  /// stores each lldb::Module and the first virtual address after the end of
+  /// that module's virtual address space.
   std::vector<std::pair<uint64_t, lldb::ModuleSP>> m_range_module_map;
 
   /// The set of modules where we should read memory from the symbol file's
