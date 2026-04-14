@@ -94,12 +94,11 @@ static bool hasNonConstOverload(const CXXMethodDecl &Node) {
   if (LookupResult.isSingleResult())
     return false;
 
-  return llvm::any_of(
-      LookupResult, [Method](const Decl *D) {
-        const auto *Overload = dyn_cast<CXXMethodDecl>(D);
-        return Overload && Overload != Method && !Overload->isConst() &&
-               hasSameParameterTypes(*Method, *Overload);
-      });
+  return llvm::any_of(LookupResult, [Method](const Decl *D) {
+    const auto *Overload = dyn_cast<CXXMethodDecl>(D);
+    return Overload && Overload != Method && !Overload->isConst() &&
+           hasSameParameterTypes(*Method, *Overload);
+  });
 }
 
 void ConvertMemberFunctionsToStaticCheck::registerMatchers(
