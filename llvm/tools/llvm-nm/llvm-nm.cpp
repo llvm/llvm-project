@@ -1833,9 +1833,9 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
         auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
         bool IsMappingSymbol =
             ELFObj &&
-            llvm::is_contained({ELF::EM_ARM, ELF::EM_AARCH64, ELF::EM_CSKY,
-                                ELF::EM_RISCV},
-                               ELFObj->getEMachine()) &&
+            llvm::is_contained(
+                {ELF::EM_ARM, ELF::EM_AARCH64, ELF::EM_CSKY, ELF::EM_RISCV},
+                ELFObj->getEMachine()) &&
             ELFSymbolRef(Sym).getELFType() == ELF::STT_NOTYPE;
         if (!IsMappingSymbol)
           continue;
