@@ -688,8 +688,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
     ```
 
     Example 2 (lane level):
-    A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
-    It combines "create scattered TensorTdesc" and "prefetch with scattered TensorTdesc".
+    A variant accepts memref or integer (raw pointer) as base and offsets directly.
     The source operand could be a raw pointer (ui64, ui32, i64, i32).
     ```mlir
       %a = memref.alloc() : memref<1024xf32>
