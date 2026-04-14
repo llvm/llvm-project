@@ -378,8 +378,12 @@ PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 llvm::TypeSize
 RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                               mlir::DataLayoutEntryListRef params) const {
-  if (isUnion())
-    return dataLayout.getTypeSize(getLargestMember(dataLayout));
+  if (isUnion()) {
+    mlir::Type largest = getLargestMember(dataLayout);
+    if (!largest)
+      return llvm::TypeSize::getFixed(0);
+    return dataLayout.getTypeSizeInBits(largest);
+  }
 
   auto recordSize = static_cast<uint64_t>(computeStructSize(dataLayout));
   return llvm::TypeSize::getFixed(recordSize * 8);
