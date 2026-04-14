@@ -2105,6 +2105,25 @@ void SubstituteParameterMappings::buildParameterMapping(
       SemaRef.MarkUsedTemplateParameters(Args->arguments(),
                                          /*Depth=*/0, OccurringIndices);
   }
+
+  // If a parameter is only referenced in a default template argument,
+  // we need to add it to the mapping explicitly.
+  {
+    llvm::SmallVector<TemplateArgument> DefaultArgs;
+    for (unsigned I = TemplateParams->getMinRequiredArguments();
+         I < TemplateParams->size(); I++) {
+      const NamedDecl *Param = TemplateParams->getParam(I);
+      if (Param->isParameterPack())
+        break;
+      const TemplateArgument *Arg =
+          SemaRef.getASTContext().getDefaultTemplateArgumentOrNone(Param);
+      assert(Arg && "expected a default argument");
+      DefaultArgs.emplace_back(std::move(*Arg));
+    }
+    SemaRef.MarkUsedTemplateParameters(DefaultArgs, /*Depth=*/0,
+                                       OccurringIndices);
+  }
+
   unsigned Size = OccurringIndices.count();
   // When the constraint is independent of any template parameters,
   // we build an empty mapping so that we can distinguish these cases
