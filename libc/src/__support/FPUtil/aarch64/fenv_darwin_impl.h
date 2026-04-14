@@ -29,13 +29,28 @@ namespace fputil {
 
 struct FEnv {
   struct FPState {
-    uint64_t StatusWord;
-    uint64_t ControlWord;
+    uint32_t ControlWord;
+    uint32_t StatusWord;
   };
 
   static_assert(
       sizeof(fenv_t) == sizeof(FPState),
       "Internal floating point state does not match the public fenv_t type.");
+
+#ifndef FE_FLUSHTOZERO
+#ifdef FE_DENORM
+  static constexpr uint32_t FE_FLUSHTOZERO = FE_DENORM;
+#else
+  static constexpr uint32_t FE_FLUSHTOZERO = 0;
+#endif
+#endif
+
+  static constexpr uint32_t __fpcr_trap_invalid = 0x100;
+  static constexpr uint32_t __fpcr_trap_overflow = 0x200;
+  static constexpr uint32_t __fpcr_trap_underflow = 0x400;
+  static constexpr uint32_t __fpcr_trap_divbyzero = 0x800;
+  static constexpr uint32_t __fpcr_trap_inexact = 0x1000;
+  static constexpr uint32_t __fpcr_flush_to_zero = 0x1000000;
 
   static constexpr uint32_t TONEAREST = 0x0;
   static constexpr uint32_t UPWARD = 0x1;
