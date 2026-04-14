@@ -373,6 +373,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<LinuxTargetInfo<PPC32TargetInfo>>(Triple, Opts);
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<PPC32TargetInfo>>(Triple, Opts);
+    case llvm::Triple::MorphOS:
+      return std::make_unique<MorphOSTargetInfo<PPC32TargetInfo>>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return std::make_unique<NetBSDTargetInfo<PPC32TargetInfo>>(Triple, Opts);
     case llvm::Triple::OpenBSD:

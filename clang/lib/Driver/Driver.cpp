@@ -37,6 +37,7 @@
 #include "ToolChains/Managarm.h"
 #include "ToolChains/MinGW.h"
 #include "ToolChains/MipsLinux.h"
+#include "ToolChains/MorphOS.h"
 #include "ToolChains/NetBSD.h"
 #include "ToolChains/OHOS.h"
 #include "ToolChains/OpenBSD.h"
@@ -7175,6 +7176,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::ChipStar:
       TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target, Args);
+      break;
+    case llvm::Triple::MorphOS:
+      TC = std::make_unique<toolchains::MorphOS>(*this, Target, Args);
       break;
     default:
       // Of these targets, Hexagon is the only one that might have
