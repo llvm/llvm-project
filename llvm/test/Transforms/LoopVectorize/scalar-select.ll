@@ -15,7 +15,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @example1(i1 %cond) {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 %indvars.iv
   %3 = load i32, ptr %2, align 4
@@ -30,7 +30,7 @@ define void @example1(i1 %cond) {
   %exitcond = icmp eq i32 %lftr.wideiv, 256
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 

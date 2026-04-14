@@ -31,7 +31,7 @@ for.body:
   %phitmp14 = icmp slt i32 %sext, 268435456
   br i1 %phitmp14, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   store i8 %mul, ptr @b, align 1
   ret void
 }
