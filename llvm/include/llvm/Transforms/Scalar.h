@@ -48,6 +48,13 @@ LLVM_ABI FunctionPass *createSROAPass(bool PreserveCFG = true);
 
 //===----------------------------------------------------------------------===//
 //
+// LSROA - Replace aggregates or pieces of aggregates with scalar SSA values
+// when used when logical allocation/GEP instructions.
+//
+LLVM_ABI FunctionPass *createLSROAPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LICM - This pass is a loop invariant code motion and memory promotion pass.
 //
 LLVM_ABI Pass *createLICMPass();

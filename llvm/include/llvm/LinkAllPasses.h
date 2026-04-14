@@ -119,6 +119,7 @@ struct ForcePassLinking {
     (void)llvm::createRegionViewerPass();
     (void)llvm::createSafeStackPass();
     (void)llvm::createSROAPass();
+    (void)llvm::createLSROAPass();
     (void)llvm::createSingleLoopExtractorPass();
     (void)llvm::createTailCallEliminationPass();
     (void)llvm::createConstantHoistingPass();
