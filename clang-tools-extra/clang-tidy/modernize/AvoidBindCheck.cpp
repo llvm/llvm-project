@@ -391,7 +391,7 @@ static std::vector<const FunctionDecl *>
 findCandidateCallOperators(const CXXRecordDecl *RecordDecl, size_t NumArgs) {
   std::vector<const FunctionDecl *> Candidates;
 
-  for (const clang::CXXMethodDecl *Method : RecordDecl->methods()) {
+  for (const CXXMethodDecl *Method : RecordDecl->methods()) {
     const OverloadedOperatorKind OOK = Method->getOverloadedOperator();
 
     if (OOK != OverloadedOperatorKind::OO_Call)
@@ -404,7 +404,7 @@ findCandidateCallOperators(const CXXRecordDecl *RecordDecl, size_t NumArgs) {
   }
 
   // Find templated operator(), if any.
-  for (const clang::Decl *D : RecordDecl->decls()) {
+  for (const Decl *D : RecordDecl->decls()) {
     const auto *FTD = dyn_cast<FunctionTemplateDecl>(D);
     if (!FTD)
       continue;

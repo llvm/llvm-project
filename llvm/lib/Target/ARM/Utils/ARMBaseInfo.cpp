@@ -70,5 +70,5 @@ const MClassSysReg *lookupMClassSysRegBy8bitSYSmValue(unsigned SYSm) {
 namespace ARMBankedReg {
 #define GET_BankedRegsList_IMPL
 #include "ARMGenSystemRegister.inc"
-} // end namespce ARMSysReg
+} // end namespace ARMSysReg
 } // end namespace llvm

@@ -13,6 +13,9 @@ filegroup(
 make_variant(
     name = "pfm",
     copts = ["-w"],
+    env = {
+        "CONFIG_PFMLIB_SHARED": "n",
+    },
     lib_name = "libpfm",
     lib_source = ":sources",
     target_compatible_with = select({

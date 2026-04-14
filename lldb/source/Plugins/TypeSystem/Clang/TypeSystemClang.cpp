@@ -13,6 +13,7 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -2401,6 +2402,16 @@ CompilerType TypeSystemClang::GetPointerSizedIntType(bool is_signed) {
       getASTContext().getTypeSize(getASTContext().VoidPtrTy), is_signed);
 }
 
+CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  if (is_signed)
+    return GetType(getASTContext().getPointerDiffType());
+  return GetType(getASTContext().getUnsignedPointerDiffType());
+}
+
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
   if (decl_ctx) {
     DumpDeclContextHiearchy(decl_ctx->getParent());
@@ -2595,7 +2606,7 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::RecordType *
-GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
+GetCompleteRecordType(const clang::ASTContext *ast, clang::QualType qual_type) {
   assert(qual_type->isRecordType());
 
   const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
@@ -2636,7 +2647,7 @@ GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
+static const clang::EnumType *GetCompleteEnumType(const clang::ASTContext *ast,
                                                   clang::QualType qual_type) {
   assert(qual_type->isEnumeralType());
   assert(ast);
@@ -2669,7 +2680,7 @@ static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::ObjCObjectType *
-GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
+GetCompleteObjCObjectType(const clang::ASTContext *ast, QualType qual_type) {
   assert(qual_type->isObjCObjectType());
   assert(ast);
 
@@ -2700,7 +2711,7 @@ GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
   return objc_class_type;
 }
 
-static bool GetCompleteQualType(clang::ASTContext *ast,
+static bool GetCompleteQualType(const clang::ASTContext *ast,
                                 clang::QualType qual_type) {
   qual_type = RemoveWrappingTypes(qual_type);
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -3157,6 +3168,15 @@ bool TypeSystemClang::IsMemberFunctionPointerType(
   };
 
   return IsTypeImpl(type, isMemberFunctionPointerType);
+}
+
+bool TypeSystemClang::IsMemberDataPointerType(
+    lldb::opaque_compiler_type_t type) {
+  auto isMemberDataPointerType = [](clang::QualType qual_type) {
+    return qual_type->isMemberDataPointerType();
+  };
+
+  return IsTypeImpl(type, isMemberDataPointerType);
 }
 
 bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
@@ -3622,6 +3642,13 @@ bool TypeSystemClang::IsVoidType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return false;
   return GetCanonicalQualType(type)->isVoidType();
+}
+
+bool TypeSystemClang::HasPointerAuthQualifier(
+    lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return false;
+  return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
@@ -6328,8 +6355,8 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       if (omit_empty_base_classes) {
         CompilerType base_class_clang_type = GetType(
             getASTContext().getObjCInterfaceType(superclass_interface_decl));
-        if (llvm::expectedToStdOptional(base_class_clang_type.GetNumChildren(
-                                            omit_empty_base_classes, exe_ctx))
+        if (llvm::expectedToOptional(base_class_clang_type.GetNumChildren(
+                                         omit_empty_base_classes, exe_ctx))
                 .value_or(0) > 0) {
           if (idx == 0) {
             clang::QualType ivar_qual_type(getASTContext().getObjCInterfaceType(
@@ -6994,8 +7021,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       break;
     }
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 CompilerType
@@ -7241,98 +7267,16 @@ CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
 
 bool TypeSystemClang::IsPromotableIntegerType(
     lldb::opaque_compiler_type_t type) {
-  // Unscoped enums are always considered as promotable, even if their
-  // underlying type does not need to be promoted (e.g. "int").
-  bool is_signed = false;
-  bool isUnscopedEnumerationType =
-      IsEnumerationType(type, is_signed) && !IsScopedEnumerationType(type);
-  if (isUnscopedEnumerationType)
-    return true;
-
-  switch (GetBasicTypeEnumeration(type)) {
-  case lldb::eBasicTypeBool:
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-  case lldb::eBasicTypeChar16:
-  case lldb::eBasicTypeChar32:
-    return true;
-
-  default:
-    return false;
-  }
-
-  llvm_unreachable("All cases handled above.");
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  return getASTContext().isPromotableIntegerType(qual_type);
 }
 
-llvm::Expected<CompilerType>
-TypeSystemClang::DoIntegralPromotion(CompilerType from,
-                                     ExecutionContextScope *exe_scope) {
-  if (!from.IsInteger() && !from.IsUnscopedEnumerationType())
-    return from;
-
-  if (!from.IsPromotableIntegerType())
-    return from;
-
-  if (from.IsUnscopedEnumerationType()) {
-    EnumDecl *enum_decl = GetAsEnumDecl(from);
-    CompilerType promotion_type = GetType(enum_decl->getPromotionType());
-    return DoIntegralPromotion(promotion_type, exe_scope);
-  }
-
-  lldb::BasicType builtin_type =
-      from.GetCanonicalType().GetBasicTypeEnumeration();
-  uint64_t from_size = 0;
-  if (builtin_type == lldb::eBasicTypeWChar ||
-      builtin_type == lldb::eBasicTypeSignedWChar ||
-      builtin_type == lldb::eBasicTypeUnsignedWChar ||
-      builtin_type == lldb::eBasicTypeChar16 ||
-      builtin_type == lldb::eBasicTypeChar32) {
-    // Find the type that can hold the entire range of values for our type.
-    bool is_signed = from.IsSigned();
-    llvm::Expected<uint64_t> from_size = from.GetByteSize(exe_scope);
-    if (!from_size)
-      return from_size.takeError();
-    CompilerType promote_types[] = {
-        GetBasicTypeFromAST(lldb::eBasicTypeInt),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt),
-        GetBasicTypeFromAST(lldb::eBasicTypeLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeLongLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLongLong),
-    };
-    for (CompilerType &type : promote_types) {
-      llvm::Expected<uint64_t> byte_size = type.GetByteSize(exe_scope);
-      if (!byte_size)
-        return byte_size.takeError();
-      if (*from_size < *byte_size ||
-          (*from_size == *byte_size && is_signed == type.IsSigned())) {
-        return type;
-      }
-    }
-    llvm_unreachable("char type should fit into long long");
-  }
-
-  // Here we can promote only to "int" or "unsigned int".
-  CompilerType int_type = GetBasicTypeFromAST(lldb::eBasicTypeInt);
-  llvm::Expected<uint64_t> int_byte_size = int_type.GetByteSize(exe_scope);
-  if (!int_byte_size)
-    return int_byte_size.takeError();
-
-  // Signed integer types can be safely promoted to "int".
-  if (from.IsSigned()) {
-    return int_type;
-  }
-  // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
-  // their entire value range.
-  return (from_size == *int_byte_size)
-             ? GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt)
-             : int_type;
+CompilerType
+TypeSystemClang::GetPromotedIntegerType(lldb::opaque_compiler_type_t type) {
+  if (!IsPromotableIntegerType(type))
+    return CompilerType();
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  return GetType(getASTContext().getPromotedIntegerType(qual_type));
 }
 
 clang::EnumDecl *TypeSystemClang::GetAsEnumDecl(const CompilerType &type) {
@@ -8576,7 +8520,7 @@ void TypeSystemClang::DumpFromSymbolFile(Stream &s,
       if (symbol_name != type->GetName().GetStringRef())
         continue;
 
-    s << type->GetName().AsCString() << "\n";
+    s << type->GetName() << "\n";
 
     CompilerType full_type = type->GetFullCompilerType();
     if (clang::TagDecl *tag_decl = GetAsTagDecl(full_type)) {

@@ -10,11 +10,11 @@ subroutine ivdep_test1
      !CHECK: store i32 {{.*}}, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT:.*]]
      !CHECK: %[[VAL_8:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT]]
      !CHECK: %[[VAL_9:.*]] = sext i32 %[[VAL_8]] to i64
-     !CHECK: %[[VAL_10:.*]] = sub nsw i64 %[[VAL_9]], 1
-     !CHECK: %[[VAL_11:.*]] = mul nsw i64 %[[VAL_10]], 1
-     !CHECK: %[[VAL_12:.*]] = mul nsw i64 %[[VAL_11]], 1
-     !CHECK: %[[VAL_13:.*]] = add nsw i64 %[[VAL_12]], 0
-     !CHECK: %[[VAL_14:.*]] = getelementptr i32, ptr {{.*}}, i64 %[[VAL_13]]
+     !CHECK: %[[VAL_10:.*]] = sub nuw nsw i64 %[[VAL_9]], 1
+     !CHECK: %[[VAL_11:.*]] = mul nuw nsw i64 %[[VAL_10]], 1
+     !CHECK: %[[VAL_12:.*]] = mul nuw nsw i64 %[[VAL_11]], 1
+     !CHECK: %[[VAL_13:.*]] = add nuw nsw i64 %[[VAL_12]], 0
+     !CHECK: %[[VAL_14:.*]] = getelementptr nusw nuw i32, ptr {{.*}}, i64 %[[VAL_13]]
      !CHECK: store i32 %[[VAL_8]], ptr %[[VAL_14]], align 4, !llvm.access.group [[DISTRINCT]]
      !CHECK: %[[VAL_15:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT]]
      !CHECK: %[[VAL_16:.*]] = add nsw i32 %[[VAL_15]], 1
@@ -35,24 +35,24 @@ subroutine ivdep_test2
      !CHECK: store i32 {{.*}}, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT1:.*]] 
      !CHECK: %[[VAL_10:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT1]]
      !CHECK: %[[VAL_11:.*]] = sext i32 %[[VAL_10]] to i64
-     !CHECK: %[[VAL_12:.*]] = sub nsw i64 %[[VAL_11]], 1
-     !CHECK: %[[VAL_13:.*]] = mul nsw i64 %[[VAL_12]], 1
-     !CHECK: %[[VAL_14:.*]] = mul nsw i64 %[[VAL_13]], 1
-     !CHECK: %[[VAL_15:.*]] = add nsw i64 %[[VAL_14]], 0
-     !CHECK: %[[VAL_16:.*]] = getelementptr i32, ptr {{.*}}, i64 %[[VAL_15]]
+     !CHECK: %[[VAL_12:.*]] = sub nuw nsw i64 %[[VAL_11]], 1
+     !CHECK: %[[VAL_13:.*]] = mul nuw nsw i64 %[[VAL_12]], 1
+     !CHECK: %[[VAL_14:.*]] = mul nuw nsw i64 %[[VAL_13]], 1
+     !CHECK: %[[VAL_15:.*]] = add nuw nsw i64 %[[VAL_14]], 0
+     !CHECK: %[[VAL_16:.*]] = getelementptr nusw nuw i32, ptr {{.*}}, i64 %[[VAL_15]]
      !CHECK: %[[VAL_17:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT1]] 
-     !CHECK: %[[VAL_18:.*]] = sub nsw i64 %[[VAL_11]], 1
-     !CHECK: %[[VAL_19:.*]] = mul nsw i64 %[[VAL_18]], 1
-     !CHECK: %[[VAL_20:.*]] = mul nsw i64 %[[VAL_19]], 1
-     !CHECK: %[[VAL_21:.*]] = add nsw i64 %[[VAL_20]], 0
-     !CHECK: %[[VAL_22:.*]] = getelementptr i32, ptr {{.*}}, i64 %[[VAL_21]]
+     !CHECK: %[[VAL_18:.*]] = sub nuw nsw i64 %[[VAL_11]], 1
+     !CHECK: %[[VAL_19:.*]] = mul nuw nsw i64 %[[VAL_18]], 1
+     !CHECK: %[[VAL_20:.*]] = mul nuw nsw i64 %[[VAL_19]], 1
+     !CHECK: %[[VAL_21:.*]] = add nuw nsw i64 %[[VAL_20]], 0
+     !CHECK: %[[VAL_22:.*]] = getelementptr nusw nuw i32, ptr {{.*}}, i64 %[[VAL_21]]
      !CHECK: %[[VAL_23:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT1]] 
      !CHECK: %[[VAL_24:.*]] = add i32 %[[VAL_17]], %[[VAL_23]]
-     !CHECK: %[[VAL_25:.*]] = sub nsw i64 %[[VAL_11]], 1
-     !CHECK: %[[VAL_26:.*]] = mul nsw i64 %[[VAL_25]], 1
-     !CHECK: %[[VAL_27:.*]] = mul nsw i64 %[[VAL_26]], 1
-     !CHECK: %[[VAL_28:.*]] = add nsw i64 %[[VAL_27]], 0
-     !CHECK: %[[VAL_29:.*]] = getelementptr i32, ptr {{.*}}, i64 %[[VAL_28]]
+     !CHECK: %[[VAL_25:.*]] = sub nuw nsw i64 %[[VAL_11]], 1
+     !CHECK: %[[VAL_26:.*]] = mul nuw nsw i64 %[[VAL_25]], 1
+     !CHECK: %[[VAL_27:.*]] = mul nuw nsw i64 %[[VAL_26]], 1
+     !CHECK: %[[VAL_28:.*]] = add nuw nsw i64 %[[VAL_27]], 0
+     !CHECK: %[[VAL_29:.*]] = getelementptr nusw nuw i32, ptr {{.*}}, i64 %[[VAL_28]]
      !CHECK: store i32 %[[VAL_24]], ptr %[[VAL_29]], align 4, !llvm.access.group [[DISTRINCT1]]
      !CHECK: %[[VAL_30:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT1]] 
      !CHECK: %[[VAL_31:.*]] = add nsw i32 %[[VAL_30]], 1
@@ -73,24 +73,24 @@ subroutine ivdep_test3
      !CHECK: store i32 {{.*}}, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT2:.*]] 
      !CHECK: %[[VAL_10:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT2]]
      !CHECK: %[[VAL_11:.*]] = sext i32 %[[VAL_10]] to i64
-     !CHECK: %[[VAL_12:.*]] = sub nsw i64 %[[VAL_11]], 1
-     !CHECK: %[[VAL_13:.*]] = mul nsw i64 %[[VAL_12]], 1
-     !CHECK: %[[VAL_14:.*]] = mul nsw i64 %[[VAL_13]], 1
-     !CHECK: %[[VAL_15:.*]] = add nsw i64 %[[VAL_14]], 0
-     !CHECK: %[[VAL_16:.*]] = getelementptr i32, ptr {{.*}}, i64 %[[VAL_15]]
+     !CHECK: %[[VAL_12:.*]] = sub nuw nsw i64 %[[VAL_11]], 1
+     !CHECK: %[[VAL_13:.*]] = mul nuw nsw i64 %[[VAL_12]], 1
+     !CHECK: %[[VAL_14:.*]] = mul nuw nsw i64 %[[VAL_13]], 1
+     !CHECK: %[[VAL_15:.*]] = add nuw nsw i64 %[[VAL_14]], 0
+     !CHECK: %[[VAL_16:.*]] = getelementptr nusw nuw i32, ptr {{.*}}, i64 %[[VAL_15]]
      !CHECK: %[[VAL_17:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT2]] 
-     !CHECK: %[[VAL_18:.*]] = sub nsw i64 %[[VAL_11]], 1
-     !CHECK: %[[VAL_19:.*]] = mul nsw i64 %[[VAL_18]], 1
-     !CHECK: %[[VAL_20:.*]] = mul nsw i64 %[[VAL_19]], 1
-     !CHECK: %[[VAL_21:.*]] = add nsw i64 %[[VAL_20]], 0
-     !CHECK: %[[VAL_22:.*]] = getelementptr i32, ptr {{.*}}, i64 %[[VAL_21]]
+     !CHECK: %[[VAL_18:.*]] = sub nuw nsw i64 %[[VAL_11]], 1
+     !CHECK: %[[VAL_19:.*]] = mul nuw nsw i64 %[[VAL_18]], 1
+     !CHECK: %[[VAL_20:.*]] = mul nuw nsw i64 %[[VAL_19]], 1
+     !CHECK: %[[VAL_21:.*]] = add nuw nsw i64 %[[VAL_20]], 0
+     !CHECK: %[[VAL_22:.*]] = getelementptr nusw nuw i32, ptr {{.*}}, i64 %[[VAL_21]]
      !CHECK: %[[VAL_23:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT2]] 
      !CHECK: %[[VAL_24:.*]] = add i32 %[[VAL_17]], %[[VAL_23]]
-     !CHECK: %[[VAL_25:.*]] = sub nsw i64 %[[VAL_11]], 1
-     !CHECK: %[[VAL_26:.*]] = mul nsw i64 %[[VAL_25]], 1
-     !CHECK: %[[VAL_27:.*]] = mul nsw i64 %[[VAL_26]], 1
-     !CHECK: %[[VAL_28:.*]] = add nsw i64 %[[VAL_27]], 0
-     !CHECK: %[[VAL_29:.*]] = getelementptr i32, ptr {{.*}}, i64 %[[VAL_28]]
+     !CHECK: %[[VAL_25:.*]] = sub nuw nsw i64 %[[VAL_11]], 1
+     !CHECK: %[[VAL_26:.*]] = mul nuw nsw i64 %[[VAL_25]], 1
+     !CHECK: %[[VAL_27:.*]] = mul nuw nsw i64 %[[VAL_26]], 1
+     !CHECK: %[[VAL_28:.*]] = add nuw nsw i64 %[[VAL_27]], 0
+     !CHECK: %[[VAL_29:.*]] = getelementptr nusw nuw i32, ptr {{.*}}, i64 %[[VAL_28]]
      !CHECK: store i32 %[[VAL_24]], ptr %[[VAL_29]], align 4, !llvm.access.group [[DISTRINCT2]]
      !CHECK: call void @_QFivdep_test3Pfoo(), !llvm.access.group [[DISTRINCT2]]
      !CHECK: %[[VAL_30:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT2]] 

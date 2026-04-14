@@ -23,7 +23,7 @@ cir.func @throw_with_no_return_2(%arg0: !s32i, %arg1: !s32i) -> !s32i {
   cir.scope {
     %7 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
     %8 = cir.const #cir.int<0> : !s32i
-    %9 = cir.cmp(eq, %7, %8) : !s32i, !cir.bool
+    %9 = cir.cmp eq %7, %8 : !s32i
     cir.if %9 {
       cir.throw
       cir.unreachable
@@ -46,7 +46,7 @@ cir.func @throw_with_no_return_2(%arg0: !s32i, %arg1: !s32i) -> !s32i {
 // CHECK:  cir.scope {
 // CHECK:    %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CHECK:    %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK:    %[[IS_B_ZERO:.*]] = cir.cmp(eq, %[[TMP_B]], %[[CONST_0]]) : !s32i, !cir.bool
+// CHECK:    %[[IS_B_ZERO:.*]] = cir.cmp eq %[[TMP_B]], %[[CONST_0]] : !s32i
 // CHECK:    cir.if %[[IS_B_ZERO]] {
 // CHECK:      cir.throw
 // CHECK:      cir.unreachable

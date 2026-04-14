@@ -62,6 +62,8 @@ static SourceLocation GetFactLoc(CausingFactType F) {
       return ReturnEsc->getReturnExpr()->getExprLoc();
     if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
       return FieldEsc->getFieldDecl()->getLocation();
+    if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
+      return GlobalEsc->getGlobal()->getLocation();
   }
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }
@@ -162,6 +164,16 @@ public:
     if (!OF.getKillDest())
       return In;
     return Lattice(Factory.remove(In.LiveOrigins, OF.getDestOriginID()));
+  }
+
+  Lattice transfer(Lattice In, const KillOriginFact &F) {
+    return Lattice(Factory.remove(In.LiveOrigins, F.getKilledOrigin()));
+  }
+
+  Lattice transfer(Lattice In, const ExpireFact &F) {
+    if (auto OID = F.getOriginID())
+      return Lattice(Factory.remove(In.LiveOrigins, *OID));
+    return In;
   }
 
   LivenessMap getLiveOriginsAt(ProgramPoint P) const {

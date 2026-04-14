@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_OPENACC_OPENACC_H_
 #define MLIR_DIALECT_OPENACC_OPENACC_H_
 
+#include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -52,6 +53,8 @@
       mlir::acc::UpdateDeviceOp, mlir::acc::UseDeviceOp,                       \
       mlir::acc::ReductionOp, mlir::acc::DeclareDeviceResidentOp,              \
       mlir::acc::DeclareLinkOp, mlir::acc::CacheOp
+#define ACC_DATA_ENTRY_AND_INIT_OPS                                            \
+  ACC_DATA_ENTRY_OPS, mlir::acc::ReductionInitOp
 #define ACC_DATA_EXIT_OPS                                                      \
   mlir::acc::CopyoutOp, mlir::acc::DeleteOp, mlir::acc::DetachOp,              \
       mlir::acc::UpdateHostOp
@@ -189,13 +192,13 @@ static constexpr StringLiteral getSpecializedRoutineAttrName() {
 /// Used to check whether the current operation is marked with
 /// `acc routine`. The operation passed in should be a function.
 inline bool isAccRoutine(mlir::Operation *op) {
-  return op->hasAttr(mlir::acc::getRoutineInfoAttrName());
+  return op && op->hasAttr(mlir::acc::getRoutineInfoAttrName());
 }
 
 /// Used to check whether this is a specialized accelerator version of
 /// `acc routine` function.
 inline bool isSpecializedAccRoutine(mlir::Operation *op) {
-  return op->hasAttr(mlir::acc::getSpecializedRoutineAttrName());
+  return op && op->hasAttr(mlir::acc::getSpecializedRoutineAttrName());
 }
 
 static constexpr StringLiteral getFromDefaultClauseAttrName() {
@@ -212,17 +215,20 @@ static constexpr StringLiteral getCombinedConstructsAttrName() {
 
 struct RuntimeCounters
     : public mlir::SideEffects::Resource::Base<RuntimeCounters> {
-  mlir::StringRef getName() final { return "AccRuntimeCounters"; }
+  mlir::StringRef getName() const final { return "AccRuntimeCounters"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct ConstructResource
     : public mlir::SideEffects::Resource::Base<ConstructResource> {
-  mlir::StringRef getName() final { return "AccConstructResource"; }
+  mlir::StringRef getName() const final { return "AccConstructResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct CurrentDeviceIdResource
     : public mlir::SideEffects::Resource::Base<CurrentDeviceIdResource> {
-  mlir::StringRef getName() final { return "AccCurrentDeviceIdResource"; }
+  mlir::StringRef getName() const final { return "AccCurrentDeviceIdResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 } // namespace acc

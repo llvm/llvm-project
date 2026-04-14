@@ -4,9 +4,7 @@
 // RUN:               modernize-use-std-print.PrintfLikeFunctions: 'unqualified_printf;::myprintf; mynamespace::myprintf2; any_format_type_printf; fmt::printf', \
 // RUN:               modernize-use-std-print.FprintfLikeFunctions: '::myfprintf; mynamespace::myfprintf2; any_format_type_fprintf; fmt::fprintf' \
 // RUN:             } \
-// RUN:            }" \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN:            }"
 #include <cstdio>
 #include <string>
 

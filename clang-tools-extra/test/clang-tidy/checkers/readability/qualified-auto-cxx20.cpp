@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-qualified-auto %t -- -- -std=c++20 -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s readability-qualified-auto %t -- -- -std=c++20
 #include <vector>
 
 std::vector<int> *getVec();

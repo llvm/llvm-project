@@ -39,6 +39,8 @@ jobs:
 
       - name: Checkout LLVM
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
 
       - name: Create Release
         env:
@@ -84,6 +86,7 @@ jobs:
       - name: Checkout LLVM
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          persist-credentials: false
           ref: "llvmorg-${{ needs.validate-tag.outputs.release-version }}"
 
       - name: Install dependencies
@@ -112,7 +115,7 @@ jobs:
           sed -i 's/ + "dev"//g' lit/__init__.py
           python3 -m build
 
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: lit-${{ inputs.release-version }}-release-binary
           path: |
@@ -180,6 +183,7 @@ jobs:
       - name: Checkout LLVM
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          persist-credentials: false
           sparse-checkout: llvm/utils/release/github-upload-release.py
           sparse-checkout-cone-mode: false
 

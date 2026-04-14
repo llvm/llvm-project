@@ -245,7 +245,9 @@ void ScriptInterpreterLua::Initialize() {
                                 lldb::eScriptLanguageLua, CreateInstance);
 }
 
-void ScriptInterpreterLua::Terminate() {}
+void ScriptInterpreterLua::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::Error ScriptInterpreterLua::EnterSession(user_id_t debugger_id) {
   if (m_session_is_active)

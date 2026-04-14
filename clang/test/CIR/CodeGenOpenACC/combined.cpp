@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 extern "C" void acc_combined(int N, int cond) {
-  // CHECK: cir.func{{.*}} @acc_combined(%[[ARG_N:.*]]: !s32i {{.*}}, %[[ARG_COND:.*]]: !s32i {{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_combined(%[[ARG_N:.*]]: !s32i {{.*}}, %[[ARG_COND:.*]]: !s32i {{.*}}) {{.*}}{
   // CHECK-NEXT: %[[ALLOCA_N:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["N", init]
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
   // CHECK-NEXT: cir.store %[[ARG_N]], %[[ALLOCA_N]] : !s32i, !cir.ptr<!s32i>
@@ -228,7 +228,7 @@ extern "C" void acc_combined(int N, int cond) {
   for(unsigned I = 0; I < N; ++I);
   // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[EQ_RES:.*]] = cir.cmp(eq, %[[N_LOAD]], %[[ONE_LITERAL]]) : !s32i, !cir.bool
+  // CHECK-NEXT: %[[EQ_RES:.*]] = cir.cmp eq %[[N_LOAD]], %[[ONE_LITERAL]] : !s32i
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[EQ_RES]] : !cir.bool to i1
   // CHECK-NEXT: acc.kernels combined(loop) if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.loop combined(kernels) {
@@ -241,11 +241,11 @@ extern "C" void acc_combined(int N, int cond) {
   for(unsigned I = 0; I < N; ++I);
   // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[EQ_RES_IF:.*]] = cir.cmp(eq, %[[N_LOAD]], %[[ONE_LITERAL]]) : !s32i, !cir.bool
+  // CHECK-NEXT: %[[EQ_RES_IF:.*]] = cir.cmp eq %[[N_LOAD]], %[[ONE_LITERAL]] : !s32i
   // CHECK-NEXT: %[[CONV_CAST_IF:.*]] = builtin.unrealized_conversion_cast %[[EQ_RES_IF]] : !cir.bool to i1
   // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[EQ_RES_SELF:.*]] = cir.cmp(eq, %[[N_LOAD]], %[[TWO_LITERAL]]) : !s32i, !cir.bool
+  // CHECK-NEXT: %[[EQ_RES_SELF:.*]] = cir.cmp eq %[[N_LOAD]], %[[TWO_LITERAL]] : !s32i
   // CHECK-NEXT: %[[CONV_CAST_SELF:.*]] = builtin.unrealized_conversion_cast %[[EQ_RES_SELF]] : !cir.bool to i1
   // CHECK-NEXT: acc.parallel combined(loop) self(%[[CONV_CAST_SELF]]) if(%[[CONV_CAST_IF]]) {
   // CHECK-NEXT: acc.loop combined(parallel) {
@@ -1012,7 +1012,7 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK-NEXT: } loc
 }
 extern "C" void acc_combined_data_clauses(int *arg1, int *arg2) {
-  // CHECK: cir.func{{.*}} @acc_combined_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_combined_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {{.*}}{
   // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg1", init]
   // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg2", init]
   // CHECK-NEXT: cir.store %[[ARG1_PARAM]], %[[ARG1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>

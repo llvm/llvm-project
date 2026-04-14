@@ -31,27 +31,27 @@ parseQuery(const ClangTidyOptions::CustomCheckValue &V,
            ClangTidyContext *Context) {
   SmallVector<ast_matchers::dynamic::DynTypedMatcher> Matchers{};
   clang::query::QuerySession QS({});
-  llvm::StringRef QueryStringRef{V.Query};
+  StringRef QueryStringRef{V.Query};
   while (!QueryStringRef.empty()) {
     const query::QueryRef Q = query::QueryParser::parse(QueryStringRef, QS);
     switch (Q->Kind) {
     case query::QK_Match: {
-      const auto &MatchQuery = llvm::cast<query::MatchQuery>(*Q);
+      const auto &MatchQuery = cast<query::MatchQuery>(*Q);
       Matchers.push_back(MatchQuery.Matcher);
       break;
     }
     case query::QK_Let: {
-      const auto &LetQuery = llvm::cast<query::LetQuery>(*Q);
+      const auto &LetQuery = cast<query::LetQuery>(*Q);
       LetQuery.run(llvm::errs(), QS);
       break;
     }
     case query::QK_NoOp: {
-      const auto &NoOpQuery = llvm::cast<query::NoOpQuery>(*Q);
+      const auto &NoOpQuery = cast<query::NoOpQuery>(*Q);
       NoOpQuery.run(llvm::errs(), QS);
       break;
     }
     case query::QK_Invalid: {
-      const auto &InvalidQuery = llvm::cast<query::InvalidQuery>(*Q);
+      const auto &InvalidQuery = cast<query::InvalidQuery>(*Q);
       emitConfigurationDiag(Context, InvalidQuery.ErrStr, V.Name);
       return {};
     }
@@ -99,7 +99,7 @@ parseQuery(const ClangTidyOptions::CustomCheckValue &V,
   return Matchers;
 }
 
-QueryCheck::QueryCheck(llvm::StringRef Name,
+QueryCheck::QueryCheck(StringRef Name,
                        const ClangTidyOptions::CustomCheckValue &V,
                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {
@@ -107,11 +107,11 @@ QueryCheck::QueryCheck(llvm::StringRef Name,
     auto DiagnosticIdIt =
         Diags
             .try_emplace(D.Level.value_or(DiagnosticIDs::Warning),
-                         llvm::StringMap<llvm::SmallVector<std::string>>{})
+                         llvm::StringMap<SmallVector<std::string>>{})
             .first;
     auto DiagMessageIt =
         DiagnosticIdIt->getSecond()
-            .try_emplace(D.BindName, llvm::SmallVector<std::string>{})
+            .try_emplace(D.BindName, SmallVector<std::string>{})
             .first;
     DiagMessageIt->second.emplace_back(D.Message);
   }

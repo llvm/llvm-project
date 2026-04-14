@@ -27,7 +27,7 @@
 // CHECK-NEXT:         "source": "mlir"
 // CHECK-NEXT:       }
 // CHECK-NEXT:     ],
-// CHECK-NEXT:     "uri": "test:///foo.mlir",
+// CHECK-NEXT:     "uri": "test:///{{([a-zA-Z]:/)?}}foo.mlir",
 // CHECK-NEXT:     "version": 1
 // CHECK-NEXT:   }
 // -----
@@ -57,7 +57,7 @@
 // CHECK-NEXT:         "source": "mlir"
 // CHECK-NEXT:       }
 // CHECK-NEXT:     ],
-// CHECK-NEXT:     "uri": "test:///foo.mlir",
+// CHECK-NEXT:     "uri": "test:///{{([a-zA-Z]:/)?}}foo.mlir",
 // CHECK-NEXT:     "version": 1
 // CHECK-NEXT:   }
 // -----

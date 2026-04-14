@@ -108,7 +108,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
     const IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration,
-    bool Disambiguation) {
+    bool Disambiguation, bool IsAddressOfOperand, bool IsInDeclarationContext) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
@@ -237,7 +237,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // completion token follows the '::'.
         Actions.CodeCompletion().CodeCompleteQualifiedId(
             getCurScope(), SS, EnteringContext, InUsingDeclaration,
-            ObjectType.get(), SavedType.get(SS.getBeginLoc()));
+            IsAddressOfOperand, IsInDeclarationContext, ObjectType.get(),
+            SavedType.get(SS.getBeginLoc()));
         // Include code completion token into the range of the scope otherwise
         // when we try to annotate the scope tokens the dangling code completion
         // token will cause assertion in

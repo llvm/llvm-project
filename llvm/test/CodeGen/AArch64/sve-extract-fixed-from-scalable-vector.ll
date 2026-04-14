@@ -331,17 +331,13 @@ define <2 x half> @extract_v2f16_nxv4f16_6(<vscale x 4 x half> %arg) {
   ret <2 x half> %ext
 }
 
-declare <4 x float> @llvm.vector.extract.v4f32.nxv16f32(<vscale x 16 x float>, i64)
-declare <2 x float> @llvm.vector.extract.v2f32.nxv16f32(<vscale x 16 x float>, i64)
-declare <4 x half> @llvm.vector.extract.v4f16.nxv2f16(<vscale x 2 x half>, i64);
-declare <2 x half> @llvm.vector.extract.v2f16.nxv4f16(<vscale x 4 x half>, i64);
-declare <2 x i64> @llvm.vector.extract.v2i64.nxv8i64(<vscale x 8 x i64>, i64)
-declare <4 x i64> @llvm.vector.extract.v4i64.nxv8i64(<vscale x 8 x i64>, i64)
-declare <4 x i32> @llvm.vector.extract.v4i32.nxv16i32(<vscale x 16 x i32>, i64)
-declare <2 x i32> @llvm.vector.extract.v2i32.nxv16i32(<vscale x 16 x i32>, i64)
-declare <8 x i16> @llvm.vector.extract.v8i16.nxv32i16(<vscale x 32 x i16>, i64)
-declare <4 x i16> @llvm.vector.extract.v4i16.nxv32i16(<vscale x 32 x i16>, i64)
-declare <2 x i16> @llvm.vector.extract.v2i16.nxv32i16(<vscale x 32 x i16>, i64)
-declare <4 x i1> @llvm.vector.extract.v4i1.nxv32i1(<vscale x 32 x i1>, i64)
-declare <4 x i1> @llvm.vector.extract.v4i1.v32i1(<32 x i1>, i64)
-declare <4 x i3> @llvm.vector.extract.v4i3.nxv32i3(<vscale x 32 x i3>, i64)
+define <2 x i32> @extract_nxv2i32_from_nxv4i32_then_extract_v2i32(<vscale x 4 x i32> %arg) {
+; CHECK-LABEL: extract_nxv2i32_from_nxv4i32_then_extract_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+  %ext1 = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv4i32(<vscale x 4 x i32> %arg, i64 2)
+  %ext2 = call <2 x i32> @llvm.vector.extract.v2i32.nxv2i32(<vscale x 2 x i32> %ext1, i64 0)
+  ret <2 x i32> %ext2
+}

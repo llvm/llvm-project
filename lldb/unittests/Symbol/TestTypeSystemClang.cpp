@@ -40,7 +40,6 @@ public:
   }
 
 protected:
-  
   TypeSystemClang *m_ast = nullptr;
   std::unique_ptr<clang_utils::TypeSystemClangHolder> m_holder;
 
@@ -348,6 +347,8 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
                    .IsValid());
   EXPECT_FALSE(ast.GetPointerSizedIntType(/*is_signed=*/false));
   EXPECT_FALSE(ast.GetIntTypeFromBitSize(8, /*is_signed=*/false));
+  EXPECT_FALSE(ast.GetPointerDiffType(/*is_signed=*/true));
+  EXPECT_FALSE(ast.GetPointerDiffType(/*is_signed=*/false));
 
   CompilerType record_type =
       ast.CreateRecordType(nullptr, OptionalClangModuleID(), "Record",
@@ -358,6 +359,21 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
                                      /*bitfield_bit_size=*/8),
             nullptr);
   TypeSystemClang::CompleteTagDeclarationDefinition(record_type);
+}
+
+TEST_F(TestTypeSystemClang, TestGetPointerDiffType) {
+  CompilerType ptrdiff_t = m_ast->GetPointerDiffType(/*is_signed=*/true);
+  EXPECT_EQ(ptrdiff_t.GetDisplayTypeName(), "__ptrdiff_t");
+  EXPECT_TRUE(ptrdiff_t.IsSigned());
+  EXPECT_EQ(
+      llvm::expectedToOptional(ptrdiff_t.GetByteSize(nullptr)).value_or(0),
+      m_ast->GetPointerByteSize());
+
+  CompilerType uptrdiff_t = m_ast->GetPointerDiffType(/*is_signed=*/false);
+  EXPECT_FALSE(uptrdiff_t.IsSigned());
+  EXPECT_EQ(
+      llvm::expectedToOptional(uptrdiff_t.GetByteSize(nullptr)).value_or(0),
+      m_ast->GetPointerByteSize());
 }
 
 TEST_F(TestTypeSystemClang, TestGetBuiltinTypeByName_BitInt) {
@@ -730,8 +746,9 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   CompilerType auto_type(
       m_ast->weak_from_this(),
       m_ast->getASTContext()
-          .getAutoType(ClangUtil::GetCanonicalQualType(typedef_type),
-                       clang::AutoTypeKeyword::Auto, false)
+          .getAutoType(clang::DeducedKind::Deduced,
+                       ClangUtil::GetCanonicalQualType(typedef_type),
+                       clang::AutoTypeKeyword::Auto)
           .getAsOpaquePtr());
 
   CompilerType int_type(m_ast->weak_from_this(),
@@ -741,7 +758,7 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   CompilerType double_type(m_ast->weak_from_this(),
                            m_ast->getASTContext().DoubleTy.getAsOpaquePtr());
   for (CompilerType t : {type, typedef_type, auto_type}) {
-    SCOPED_TRACE(t.GetTypeName().AsCString());
+    SCOPED_TRACE(t.GetTypeName().GetString());
 
     const bool expand_pack = false;
     EXPECT_EQ(
@@ -1501,3 +1518,32 @@ TEST_P(TestTypeSystemClangAsmLabel, DeclGetMangledName) {
 
 INSTANTIATE_TEST_SUITE_P(AsmLabelTests, TestTypeSystemClangAsmLabel,
                          testing::ValuesIn(g_asm_label_test_cases));
+
+TEST_F(TestTypeSystemClang, TestIsMemberDataPointerType) {
+  // Create struct S { int x; void foo(); };
+  CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
+  CompilerType record_type = clang_utils::createRecord(*m_ast, "S");
+
+  // int S::* — member data pointer
+  CompilerType member_data_ptr =
+      TypeSystemClang::CreateMemberPointerType(record_type, int_type);
+  EXPECT_TRUE(member_data_ptr.IsMemberDataPointerType());
+  EXPECT_FALSE(member_data_ptr.IsMemberFunctionPointerType());
+
+  // void (S::*)() — member function pointer
+  CompilerType void_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
+  CompilerType func_type = m_ast->CreateFunctionType(void_type, {}, false, 0U);
+  CompilerType member_func_ptr =
+      TypeSystemClang::CreateMemberPointerType(record_type, func_type);
+  EXPECT_FALSE(member_func_ptr.IsMemberDataPointerType());
+  EXPECT_TRUE(member_func_ptr.IsMemberFunctionPointerType());
+
+  // int* — regular pointer, neither member data nor member function
+  CompilerType regular_ptr = int_type.GetPointerType();
+  EXPECT_FALSE(regular_ptr.IsMemberDataPointerType());
+  EXPECT_FALSE(regular_ptr.IsMemberFunctionPointerType());
+
+  // int — not a pointer at all
+  EXPECT_FALSE(int_type.IsMemberDataPointerType());
+  EXPECT_FALSE(int_type.IsMemberFunctionPointerType());
+}

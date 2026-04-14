@@ -22,9 +22,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;      }
 ; }
 
-define void @_Z4testPfS_m(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, i64 %size) local_unnamed_addr {
+define void @_Z4testPfS_m(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, i64 %size) {
 ; CHECK-LABEL: define void @_Z4testPfS_m(
-; CHECK-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], i64 [[SIZE:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], i64 [[SIZE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i64 [[SIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
@@ -43,7 +43,7 @@ define void @_Z4testPfS_m(ptr noalias nocapture %out, ptr noalias nocapture read
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[DOTIDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[OUT]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i8], ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[STRIDED_VEC]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -62,7 +62,7 @@ define void @_Z4testPfS_m(ptr noalias nocapture %out, ptr noalias nocapture read
 ; CHECK-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl i64 [[OUT_OFFSET_08]], 3
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ARRAYIDX_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[OUT]], i64 [[OUT_OFFSET_08]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [4 x i8], ptr [[OUT]], i64 [[OUT_OFFSET_08]]
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw i64 [[OUT_OFFSET_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[SIZE]]

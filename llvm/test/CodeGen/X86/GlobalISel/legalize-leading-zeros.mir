@@ -22,9 +22,8 @@ body:             |
     ; X64-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; X64-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
     ; X64-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 29
-    ; X64-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CTLZ]], [[C1]]
-    ; X64-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[SUB]], [[C]]
-    ; X64-NEXT: RET 0, implicit [[AND1]](s64)
+    ; X64-NEXT: [[SUB:%[0-9]+]]:_(s64) = nuw G_SUB [[CTLZ]], [[C1]]
+    ; X64-NEXT: RET 0, implicit [[SUB]](s64)
     ;
     ; X86-LABEL: name: test_ctlz35
     ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
@@ -77,7 +76,7 @@ body:             |
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[DEF]](s8)
     ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s16) = G_CTLZ [[ZEXT]](s16)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s16) = G_SUB [[CTLZ]], [[C]]
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s16) = nuw G_SUB [[CTLZ]], [[C]]
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SUB]](s16)
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY [[TRUNC]](s8)
     ; CHECK-NEXT: RET 0, implicit [[COPY]](s8)

@@ -1,6 +1,8 @@
 // RUN: %check_clang_tidy %s bugprone-infinite-loop %t \
 // RUN:                   -- -- -fexceptions -fblocks -fno-delayed-template-parsing
 
+#include <tuple>
+
 void simple_infinite_loop1() {
   int i = 0;
   int j = 0;
@@ -793,16 +795,6 @@ void issue_138842_reduced() {
     }
 }
 
-namespace std {
-template <typename T, typename U>
-struct pair {
-  T first;
-  U second;
-
-  pair(T a, U b) : first(a), second(b) {}
-};
-}
-
 template <typename T, typename U>
 void structured_binding_in_template_byval(T a, U b) {
   auto [c, d] = std::pair<T, U>(a,b);
@@ -866,31 +858,6 @@ void array_structured_binding() {
     y++; // no warning
   }
 }
-
-namespace std {
-    using size_t = int;
-    template <class> struct tuple_size;
-    template <std::size_t, class> struct tuple_element;
-    template <class...> class tuple;
-
-namespace {
-    template <class T, T v>
-    struct size_helper { static const T value = v; };
-} // namespace
-
-template <class... T>
-struct tuple_size<tuple<T...>> : size_helper<std::size_t, sizeof...(T)> {};
-
-template <std::size_t I, class... T>
-struct tuple_element<I, tuple<T...>> {
-    using type =  __type_pack_element<I, T...>;
-};
-
-template <class...> class tuple {};
-
-template <std::size_t I, class... T>
-typename tuple_element<I, tuple<T...>>::type get(tuple<T...>);
-} // namespace std
 
 std::tuple<int*, int> &get_chunk();
 

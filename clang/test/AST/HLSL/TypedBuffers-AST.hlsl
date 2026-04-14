@@ -46,7 +46,7 @@ RESOURCE<float> Buffer;
 
 #endif
 
-// CHECK: ClassTemplateDecl {{.*}} implicit [[RESOURCE]]
+// CHECK: ClassTemplateDecl {{.*}} implicit referenced [[RESOURCE]]
 // CHECK-NEXT: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 element_type
 // CHECK-NEXT: ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}}  '__is_typed_resource_element_compatible'
 // CHECK-NEXT: ImplicitConceptSpecializationDecl
@@ -179,7 +179,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-UAV-NEXT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
+// CHECK-UAV: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
 // CHECK-UAV-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-UAV-NEXT: CompoundStmt
 // CHECK-UAV-NEXT: ReturnStmt
@@ -197,7 +197,7 @@ RESOURCE<float> Buffer;
 
 // Load method
 
-// CHECK-NEXT: CXXMethodDecl {{.*}} Load 'element_type (unsigned int)'
+// CHECK: CXXMethodDecl {{.*}} Load 'element_type (unsigned int)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
@@ -235,7 +235,7 @@ RESOURCE<float> Buffer;
 
 // GetDimensions method
 
-// CHECK-NEXT: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int)'
+// CHECK: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int)'
 // CHECK-NEXT: ParmVarDecl {{.*}} dim 'unsigned int &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt

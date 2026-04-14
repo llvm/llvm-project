@@ -4,9 +4,10 @@
 # process actually loads the DLL.
 
 # RUN: %clang_host -g0 -O0 -shared %S/Inputs/shlib.c -o %t.shlib.dll \
-# RUN:             %if windows-msvc %{-Wl,-implib:%t.shlib.lib%} \
+# RUN:             %if windows-msvc %{-Wl,-implib:%t.shlib.lib -Wl,-debug:none%} \
 # RUN:             %else %{-Wl,--out-implib=%t.shlib.lib%}
-# RUN: %clang_host -g0 -O0 %S/Inputs/main.c %t.shlib.lib -o %t.main.exe
+# RUN: %clang_host -g0 -O0 %S/Inputs/main.c %t.shlib.lib -o %t.main.exe \
+# RUN:             %if windows-msvc %{-Wl,-debug:none%}
 # RUN: %lldb -b -o "#before" -o "target modules list" -o "b main" -o run \
 # RUN:       -o "#after" -o "target modules list" %t.main.exe | FileCheck %s
 

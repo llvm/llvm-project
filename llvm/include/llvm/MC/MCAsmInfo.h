@@ -154,10 +154,10 @@ protected:
   // Do we need to create a local symbol for .size?
   bool NeedsLocalForSize = false;
 
-  /// This prefix is used for globals like constant pool entries that are
-  /// completely private to the .s file and should not have names in the .o
-  /// file.  Defaults to "L"
-  StringRef PrivateGlobalPrefix = "L";
+  /// For internal use by compiler and assembler, not meant to be visible
+  /// externally. They are usually not emitted to the symbol table in the
+  /// object file.
+  StringRef InternalSymbolPrefix = "L";
 
   /// This prefix is used for labels for basic blocks. Defaults to "L"
   StringRef PrivateLabelPrefix = "L";
@@ -433,6 +433,8 @@ protected:
   llvm::StringMap<uint32_t> NameToAtSpecifier;
   void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
+  const MCTargetOptions *TargetOptions = nullptr;
+
 public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
@@ -440,6 +442,9 @@ public:
   // Explicitly non-copyable.
   MCAsmInfo(MCAsmInfo const &) = delete;
   MCAsmInfo &operator=(MCAsmInfo const &) = delete;
+
+  const MCTargetOptions *getTargetOptions() const { return TargetOptions; }
+  void setTargetOptions(const MCTargetOptions &TO) { TargetOptions = &TO; }
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
@@ -544,7 +549,7 @@ public:
   bool usesSetToEquateSymbol() const { return UsesSetToEquateSymbol; }
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
-  StringRef getPrivateGlobalPrefix() const { return PrivateGlobalPrefix; }
+  StringRef getInternalSymbolPrefix() const { return InternalSymbolPrefix; }
   StringRef getPrivateLabelPrefix() const { return PrivateLabelPrefix; }
 
   bool hasLinkerPrivateGlobalPrefix() const {
@@ -554,12 +559,17 @@ public:
   StringRef getLinkerPrivateGlobalPrefix() const {
     if (hasLinkerPrivateGlobalPrefix())
       return LinkerPrivateGlobalPrefix;
-    return getPrivateGlobalPrefix();
+    return getInternalSymbolPrefix();
   }
 
   const char *getInlineAsmStart() const { return InlineAsmStart; }
   const char *getInlineAsmEnd() const { return InlineAsmEnd; }
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
+  // Return the assembler dialect that output printing should use. Used by
+  // createMCInstPrinter.
+  unsigned getOutputAssemblerDialect() const {
+    return TargetOptions->OutputAsmVariant.value_or(AssemblerDialect);
+  }
   bool doesAllowAtInName() const { return AllowAtInName; }
   void setAllowAtInName(bool V) { AllowAtInName = V; }
   bool doesAllowQuestionAtStartOfIdentifier() const {

@@ -92,4 +92,35 @@ TEST(BLAKE3Test, SmallerHashSize) {
   EXPECT_EQ(hashStr1, toHex(hash4));
 }
 
+TEST(BLAKE3Test, InitKeyed) {
+  const char *InputStr = "abc";
+  ArrayRef<uint8_t> Input(reinterpret_cast<const uint8_t *>(InputStr),
+                          strlen(InputStr));
+  BLAKE3 Hash1;
+  uint8_t key1[32] = {0};
+  key1[0] = 'a';
+  key1[1] = 'b';
+  key1[2] = 'c';
+  key1[3] = 'd';
+  Hash1.init_keyed(key1);
+  Hash1.update(Input);
+  auto hash1 = Hash1.final<16>();
+  auto hashStr1 = toHex(hash1);
+
+  BLAKE3 Hash2;
+  uint8_t key2[32] = {0};
+  key2[0] = 'x';
+  key2[1] = 'y';
+  key2[2] = 'z';
+  key2[3] = 't';
+  Hash2.init_keyed(key2);
+  Hash2.update(Input);
+  auto hash2 = Hash2.final<16>();
+  auto hashStr2 = toHex(hash2);
+
+  ASSERT_NE(hashStr1, hashStr2);
+  EXPECT_EQ(hashStr1, "667DB3821E1AAABA03ADFE1F4F803DF7");
+  EXPECT_EQ(hashStr2, "B683D7EB0B441AC11FCAC1199B911053");
+}
+
 } // namespace

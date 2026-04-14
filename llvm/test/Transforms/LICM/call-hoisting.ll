@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=licm %s | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<target-ir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
-declare i32 @load(ptr %p) argmemonly readonly nounwind
+declare i32 @load(ptr %p) memory(argmem: read) nounwind willreturn
 
 define void @test_load(ptr noalias %loc, ptr noalias %sink) {
 ; CHECK-LABEL: define void @test_load(
@@ -246,34 +246,35 @@ exit:
 }
 
 ; when there's a conflicting read, store call should not be hoisted
-define void @neg_conflicting_read(ptr noalias %loc, ptr noalias %otherloc) {
-; CHECK-LABEL: define void @neg_conflicting_read(
+define i32 @neg_conflicting_read(ptr noalias %loc, ptr noalias %otherloc) {
+; CHECK-LABEL: define i32 @neg_conflicting_read(
 ; CHECK-SAME: ptr noalias [[LOC:%.*]], ptr noalias [[OTHERLOC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @load(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @load(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[VAL_LCSSA:%.*]] = phi i32 [ [[VAL]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[VAL_LCSSA]]
 ;
 entry:
   call void @store(i32 0, ptr %loc)
   br label %loop
 loop:
   %iv = phi i32 [0, %entry], [%iv.next, %loop]
-  call void @load(i32 0, ptr %loc)
+  %val = call i32 @load(i32 0, ptr %loc)
   call void @store(i32 0, ptr %loc)
   %iv.next = add i32 %iv, 1
   %cmp = icmp slt i32 %iv, 200
   br i1 %cmp, label %loop, label %exit
 exit:
-  ret void
+  ret i32 %val
 }
 
 define void @neg_lv_value(ptr %loc) {
@@ -501,20 +502,20 @@ exit:
 
 ; when the call is not argmemonly and is not the only memory access we
 ; do not hoist
-define void @neg_not_argmemonly(ptr %loc, ptr %loc2) {
-; CHECK-LABEL: define void @neg_not_argmemonly(
+define i32 @neg_not_argmemonly(ptr %loc, ptr %loc2) {
+; CHECK-LABEL: define i32 @neg_not_argmemonly(
 ; CHECK-SAME: ptr [[LOC:%.*]], ptr [[LOC2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @not_argmemonly(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @not_argmemonly(i32 0, ptr [[LOC]])
-; CHECK-NEXT:    call void @load(i32 0, ptr [[LOC2]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[VAL_LE:%.*]] = call i32 @load(i32 0, ptr [[LOC2]])
+; CHECK-NEXT:    ret i32 [[VAL_LE]]
 ;
 entry:
   br label %loop
@@ -522,13 +523,13 @@ entry:
 loop:
   %iv = phi i32 [0, %entry], [%iv.next, %loop]
   call void @not_argmemonly(i32 0, ptr %loc)
-  call void @load(i32 0, ptr %loc2)
+  %val = call i32 @load(i32 0, ptr %loc2)
   %iv.next = add i32 %iv, 1
   %cmp = icmp slt i32 %iv, 200
   br i1 %cmp, label %loop, label %exit
 
 exit:
-  ret void
+  ret i32 %val
 }
 
 ; when the call is not argmemonly and is only memory access we hoist it

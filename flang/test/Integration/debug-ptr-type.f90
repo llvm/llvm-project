@@ -37,7 +37,7 @@ subroutine ff(n, m)
 end subroutine ff
 
 
-! CHECK-DAG: ![[INT_TY:[0-9]+]] = !DIBasicType(name: "integer"{{.*}})
+! CHECK-DAG: ![[INT_TY:[0-9]+]] = !DIBasicType(name: "integer(kind=4)"{{.*}})
 ! CHECK-DAG: ![[ELEMS1:[0-9]+]] = !{!{{[0-9]+}}}
 ! CHECK-DAG: !DILocalVariable(name: "par"{{.*}}type: ![[ARR_TY1:[0-9]+]])
 ! CHECK-DAG: ![[ARR_TY1]] = !DICompositeType(tag: DW_TAG_array_type{{.*}}elements: ![[ELEMS2:[0-9]+]], dataLocation: !DIExpression(DW_OP_push_object_address, DW_OP_deref), associated: !DIExpression(DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne))

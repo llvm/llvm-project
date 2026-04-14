@@ -66,6 +66,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mutable-globals", HasMutableGlobals)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("reference-types", HasReferenceTypes)
+      .Case("relaxed-atomics", HasRelaxedAtomics)
       .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
       .Case("sign-ext", HasSignExt)
       .Case("simd128", SIMDLevel >= SIMD128)
@@ -110,6 +111,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_nontrapping_fptoint__");
   if (HasReferenceTypes)
     Builder.defineMacro("__wasm_reference_types__");
+  if (HasRelaxedAtomics)
+    Builder.defineMacro("__wasm_relaxed_atomics__");
   if (SIMDLevel >= RelaxedSIMD)
     Builder.defineMacro("__wasm_relaxed_simd__");
   if (HasSignExt)
@@ -200,6 +203,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["fp16"] = true;
     Features["gc"] = true;
     Features["multimemory"] = true;
+    Features["relaxed-atomics"] = true;
     Features["tail-call"] = true;
     Features["wide-arithmetic"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
@@ -330,6 +334,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-reference-types") {
       HasReferenceTypes = false;
+      continue;
+    }
+    if (Feature == "+relaxed-atomics") {
+      HasRelaxedAtomics = true;
+      continue;
+    }
+    if (Feature == "-relaxed-atomics") {
+      HasRelaxedAtomics = false;
       continue;
     }
     if (Feature == "+relaxed-simd") {

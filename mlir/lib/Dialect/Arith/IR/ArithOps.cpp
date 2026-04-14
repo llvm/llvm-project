@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -42,8 +42,8 @@ static IntegerAttr
 applyToIntegerAttrs(PatternRewriter &builder, Value res, Attribute lhs,
                     Attribute rhs,
                     function_ref<APInt(const APInt &, const APInt &)> binFn) {
-  APInt lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
-  APInt rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
+  const APInt &lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
+  const APInt &rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
   APInt value = binFn(lhsVal, rhsVal);
   return IntegerAttr::get(res.getType(), value);
 }
@@ -460,7 +460,7 @@ arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
           adaptor.getOperands(),
           [](APInt a, const APInt &b) { return std::move(a) + b; })) {
     // If any operand is poison, propagate poison to both results.
-    if (isa<ub::PoisonAttr>(sumAttr)) {
+    if (matchPattern(sumAttr, ub::m_Poison())) {
       results.push_back(sumAttr);
       results.push_back(sumAttr);
       return success();
@@ -931,6 +931,10 @@ OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
   return div0 ? Attribute() : result;
 }
 
+Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
+  return getDivUISpeculatability(getRhs());
+}
+
 //===----------------------------------------------------------------------===//
 // RemSIOp
 //===----------------------------------------------------------------------===//
@@ -952,6 +956,15 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
                                                });
 
   return div0 ? Attribute() : result;
+}
+
+Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
+  // X % 0 => UB
+  // X % -1 is well-defined (always 0), unlike X / -1 which can overflow.
+  if (matchPattern(getRhs(), m_IntRangeWithoutZeroS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1451,6 +1464,17 @@ static bool checkWidthChangeCast(TypeRange inputs, TypeRange outputs) {
 static FailureOr<APFloat> convertFloatValue(
     APFloat sourceValue, const llvm::fltSemantics &targetSemantics,
     llvm::RoundingMode roundingMode = llvm::RoundingMode::NearestTiesToEven) {
+  // Reject special values that are not representable in the target type before
+  // calling APFloat::convert, which would llvm_unreachable on them.
+  using fltNonfiniteBehavior = llvm::fltNonfiniteBehavior;
+  if (sourceValue.isInfinity() &&
+      (targetSemantics.nonFiniteBehavior == fltNonfiniteBehavior::NanOnly ||
+       targetSemantics.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly))
+    return failure();
+  if (sourceValue.isNaN() &&
+      targetSemantics.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
+    return failure();
+
   bool losesInfo = false;
   auto status = sourceValue.convert(targetSemantics, roundingMode, &losesInfo);
   if (losesInfo || status != APFloat::opOK)
@@ -1689,6 +1713,55 @@ LogicalResult arith::TruncFOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ConvertFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ConvertFOp::fold(FoldAdaptor adaptor) {
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
+  return constFoldCastOp<FloatAttr, FloatAttr>(
+      adaptor.getOperands(), getType(),
+      [this, &targetSemantics](const APFloat &a, bool &castStatus) {
+        RoundingMode roundingMode =
+            getRoundingmode().value_or(RoundingMode::to_nearest_even);
+        llvm::RoundingMode llvmRoundingMode =
+            convertArithRoundingModeToLLVMIR(roundingMode);
+        FailureOr<APFloat> result =
+            convertFloatValue(a, targetSemantics, llvmRoundingMode);
+        if (failed(result)) {
+          castStatus = false;
+          return a;
+        }
+        return *result;
+      });
+}
+
+bool arith::ConvertFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (!areValidCastInputsAndOutputs(inputs, outputs))
+    return false;
+  auto srcType = getTypeIfLike<FloatType>(inputs.front());
+  auto dstType = getTypeIfLike<FloatType>(outputs.front());
+  if (!srcType || !dstType)
+    return false;
+  return srcType != dstType &&
+         srcType.getIntOrFloatBitWidth() == dstType.getIntOrFloatBitWidth();
+}
+
+LogicalResult arith::ConvertFOp::verify() {
+  auto srcType = cast<FloatType>(getElementTypeOrSelf(getIn().getType()));
+  auto dstType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  if (srcType == dstType)
+    return emitError("result element type ")
+           << dstType << " must be different from operand element type "
+           << srcType;
+  if (srcType.getWidth() != dstType.getWidth())
+    return emitError("result element type ")
+           << dstType << " must have the same bitwidth as operand element type "
+           << srcType;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ScalingTruncFOp
 //===----------------------------------------------------------------------===//
 
@@ -1756,6 +1829,11 @@ OpFoldResult arith::UIToFPOp::fold(FoldAdaptor adaptor) {
       });
 }
 
+void arith::UIToFPOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
+  patterns.add<UIToFPOfExtUI>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // SIToFPOp
 //===----------------------------------------------------------------------===//
@@ -1776,6 +1854,11 @@ OpFoldResult arith::SIToFPOp::fold(FoldAdaptor adaptor) {
                              APFloat::rmNearestTiesToEven);
         return apf;
       });
+}
+
+void arith::SIToFPOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
+  patterns.add<SIToFPOfExtSI, SIToFPOfExtUI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1826,6 +1909,15 @@ OpFoldResult arith::FPToSIOp::fold(FoldAdaptor adaptor) {
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
+/// Return the bit-width of \p t for the purpose of index_cast width checks.
+/// For vector types use the element type; index maps to its internal storage
+/// width (64 on all current targets).
+static unsigned getIndexCastWidth(Type t) {
+  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(t)))
+    return intTy.getWidth();
+  return IndexType::kInternalStorageBitWidth;
+}
+
 static bool areIndexCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (!areValidCastInputsAndOutputs(inputs, outputs))
     return false;
@@ -1850,16 +1942,29 @@ OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
   if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
     resultBitwidth = intTy.getWidth();
 
-  return constFoldCastOp<IntegerAttr, IntegerAttr>(
-      adaptor.getOperands(), getType(),
-      [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
-        return a.sextOrTrunc(resultBitwidth);
-      });
+  if (auto foldResult = constFoldCastOp<IntegerAttr, IntegerAttr>(
+          adaptor.getOperands(), getType(),
+          [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
+            return a.sextOrTrunc(resultBitwidth);
+          }))
+    return foldResult;
+
+  // index_cast(index_cast(x : A) : B) : A -> x, but only when B is at least
+  // as wide as A. If B is narrower, the inner cast truncates and the outer
+  // cast sign-extends, so the round-trip is lossy.
+  if (auto inner = getOperand().getDefiningOp<arith::IndexCastOp>()) {
+    Value x = inner.getOperand();
+    if (x.getType() == getType()) {
+      if (getIndexCastWidth(inner.getType()) >= getIndexCastWidth(x.getType()))
+        return x;
+    }
+  }
+  return {};
 }
 
 void arith::IndexCastOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<IndexCastOfIndexCast, IndexCastOfExtSI>(context);
+  patterns.add<IndexCastOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1877,16 +1982,29 @@ OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
   if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
     resultBitwidth = intTy.getWidth();
 
-  return constFoldCastOp<IntegerAttr, IntegerAttr>(
-      adaptor.getOperands(), getType(),
-      [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
-        return a.zextOrTrunc(resultBitwidth);
-      });
+  if (auto foldResult = constFoldCastOp<IntegerAttr, IntegerAttr>(
+          adaptor.getOperands(), getType(),
+          [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
+            return a.zextOrTrunc(resultBitwidth);
+          }))
+    return foldResult;
+
+  // index_castui(index_castui(x : A) : B) : A -> x, but only when B is at
+  // least as wide as A. If B is narrower, the inner cast truncates and the
+  // outer cast zero-extends, so the round-trip is lossy.
+  if (auto inner = getOperand().getDefiningOp<arith::IndexCastUIOp>()) {
+    Value x = inner.getOperand();
+    if (x.getType() == getType()) {
+      if (getIndexCastWidth(inner.getType()) >= getIndexCastWidth(x.getType()))
+        return x;
+    }
+  }
+  return {};
 }
 
 void arith::IndexCastUIOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<IndexCastUIOfIndexCastUI, IndexCastUIOfExtUI>(context);
+  patterns.add<IndexCastUIOfExtUI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1919,7 +2037,7 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
     return {};
 
   /// Bitcast poison.
-  if (llvm::isa<ub::PoisonAttr>(operand))
+  if (matchPattern(operand, ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
 
   /// Bitcast integer or float to integer or float.
@@ -2503,10 +2621,10 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
     return falseVal;
 
   // If either operand is fully poisoned, return the other.
-  if (isa_and_nonnull<ub::PoisonAttr>(adaptor.getTrueValue()))
+  if (matchPattern(adaptor.getTrueValue(), ub::m_Poison()))
     return falseVal;
 
-  if (isa_and_nonnull<ub::PoisonAttr>(adaptor.getFalseValue()))
+  if (matchPattern(adaptor.getFalseValue(), ub::m_Poison()))
     return trueVal;
 
   // select %x, true, false => %x
@@ -2789,9 +2907,10 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
 Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
                                     OpBuilder &builder, Location loc,
                                     bool useOnlyFiniteValue) {
-  auto attr =
-      getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue);
-  return arith::ConstantOp::create(builder, loc, attr);
+  if (auto attr =
+getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue))
+    return arith::ConstantOp::create(builder, loc, attr);
+  return {};
 }
 
 /// Return the value obtained by applying the reduction operation kind

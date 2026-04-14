@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-unchecked-optional-access %t -- -- -I %S/Inputs/unchecked-optional-access -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s bugprone-unchecked-optional-access %t -- -- -I %S/Inputs/unchecked-optional-access
 
 #include "absl/types/optional.h"
 #include "folly/types/Optional.h"

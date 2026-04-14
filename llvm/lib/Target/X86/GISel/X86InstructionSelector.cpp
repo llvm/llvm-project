@@ -823,8 +823,9 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
     NewOpc = X86::MOV32ri;
     break;
   case 64:
-    // TODO: in case isUInt<32>(Val), X86::MOV32ri can be used
-    if (isInt<32>(Val))
+    if (isUInt<32>(Val))
+      NewOpc = X86::MOV32ri64;
+    else if (isInt<32>(Val))
       NewOpc = X86::MOV64ri32;
     else
       NewOpc = X86::MOV64ri;
@@ -1436,9 +1437,15 @@ bool X86InstructionSelector::emitInsertSubreg(Register DstReg, Register SrcReg,
     return false;
   }
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY))
-      .addReg(DstReg, RegState::DefineNoRead, SubIdx)
-      .addReg(SrcReg);
+  Register ImpDefReg = MRI.createVirtualRegister(DstRC);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::IMPLICIT_DEF),
+          ImpDefReg);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::INSERT_SUBREG),
+          DstReg)
+      .addReg(ImpDefReg)
+      .addReg(SrcReg)
+      .addImm(SubIdx);
 
   return true;
 }

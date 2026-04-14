@@ -732,7 +732,7 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
     // machines.
     SmallVector<char, 64> outDataVec(rawData.size());
     MutableArrayRef<char> convRawData(outDataVec);
-    DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
+    DenseTypedElementsAttr::convertEndianOfArrayRefForBEmachine(
         rawData, convRawData, type);
     return DenseElementsAttr::getFromRawBuffer(type, convRawData);
   }

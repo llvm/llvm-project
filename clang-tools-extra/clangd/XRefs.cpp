@@ -49,10 +49,10 @@
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexingOptions.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/HeuristicResolver.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -2058,7 +2058,10 @@ static QualType typeForNode(const ASTContext &Ctx, const HeuristicResolver *H,
       }
       // Look inside templates.
       QualType VisitTemplateDecl(const TemplateDecl *D) {
-        return Visit(D->getTemplatedDecl());
+        if (const auto *TD = D->getTemplatedDecl())
+          return Visit(TD);
+        // ConceptDecl doesn't have any associated templates nor types.
+        return QualType();
       }
     } V(Ctx);
     return V.Visit(D);

@@ -2166,6 +2166,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPFuseDirective = 311,
 
+  /** OpenMP split directive.
+   */
+  CXCursor_OMPSplitDirective = 312,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -2394,7 +2398,7 @@ CINDEX_LINKAGE unsigned clang_isDeclaration(enum CXCursorKind);
  * A declaration is invalid if it could not be parsed successfully.
  *
  * \returns non-zero if the cursor represents a declaration and it is
- * invalid, otherwise NULL.
+ * invalid, otherwise zero.
  */
 CINDEX_LINKAGE unsigned clang_isInvalidDeclaration(CXCursor);
 
@@ -4651,6 +4655,8 @@ CINDEX_LINKAGE CXModule clang_getModuleForFile(CXTranslationUnit, CXFile);
  * \param Module a module object.
  *
  * \returns the module file where the provided module object came from.
+ *
+ * @deprecated: module files are longer guaranteed to be loaded from a CXFile
  */
 CINDEX_LINKAGE CXFile clang_Module_getASTFile(CXModule Module);
 

@@ -1,6 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-unused-return-value %t -- \
-// RUN:   --config="{CheckOptions: {bugprone-unused-return-value.AllowCastToVoid: true}}" -- -fexceptions -isystem %clang_tidy_headers
+// RUN:   --config="{CheckOptions: {bugprone-unused-return-value.AllowCastToVoid: true}}" -- -fexceptions
 #include <vector>
+#include <memory>
 
 namespace std {
 
@@ -25,19 +26,6 @@ ForwardIt remove_if(ForwardIt, ForwardIt, UnaryPredicate);
 
 template <typename ForwardIt>
 ForwardIt unique(ForwardIt, ForwardIt);
-
-template <typename T>
-struct default_delete;
-
-template <typename T, typename Deleter = std::default_delete<T>>
-struct unique_ptr {
-  unique_ptr();
-  unique_ptr(unique_ptr const&);
-  unique_ptr(unique_ptr &&);
-  unique_ptr& operator=(unique_ptr const&);
-  unique_ptr& operator=(unique_ptr &&);
-  T *release() noexcept;
-};
 
 template <typename T>
 struct char_traits;

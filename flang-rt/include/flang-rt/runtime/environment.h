@@ -40,11 +40,7 @@ struct ExecutionEnvironment {
   typedef void (*ConfigEnvCallbackPtr)(
       int, const char *[], const char *[], const EnvironmentDefaultList *);
 
-#if !defined(_OPENMP)
-  // FIXME: https://github.com/llvm/llvm-project/issues/84942
-  constexpr
-#endif
-      ExecutionEnvironment(){};
+  constexpr ExecutionEnvironment() {};
   void Configure(int argc, const char *argv[], const char *envp[],
       const EnvironmentDefaultList *envDefaults);
 
@@ -82,6 +78,7 @@ struct ExecutionEnvironment {
   // CUDA related variables
   std::size_t cudaStackLimit{0}; // ACC_OFFLOAD_STACK_SIZE
   bool cudaDeviceIsManaged{false}; // NV_CUDAFOR_DEVICE_IS_MANAGED
+  bool cudaCheckError{false}; // NV_CUDAFOR_CHECK_ERROR
 };
 
 RT_OFFLOAD_VAR_GROUP_BEGIN

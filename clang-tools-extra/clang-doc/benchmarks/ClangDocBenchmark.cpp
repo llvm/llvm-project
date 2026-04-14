@@ -60,7 +60,8 @@ static void BM_EmitInfoFunction(benchmark::State &State) {
   Location Loc;
 
   for (auto _ : State) {
-    auto Result = serialize::emitInfo(Func, FC, Loc, /*PublicOnly=*/false);
+    serialize::Serializer Serializer;
+    auto Result = Serializer.emitInfo(Func, FC, Loc, /*PublicOnly=*/false);
     benchmark::DoNotOptimize(Result);
   }
 }
@@ -80,7 +81,7 @@ static void BM_Mapper_Scale(benchmark::State &State) {
     tooling::InMemoryToolResults Results;
     tooling::ExecutionContext ECtx(&Results);
     ClangDocContext CDCtx(&ECtx, "test-project", false, "", "", "", "", "", {},
-                          Diags, false);
+                          Diags, OutputFormatTy::json, false);
     auto ActionFactory = doc::newMapperActionFactory(CDCtx);
     std::unique_ptr<FrontendAction> Action = ActionFactory->create();
     tooling::runToolOnCode(std::move(Action), Code, "test.cpp");
@@ -91,7 +92,7 @@ BENCHMARK(BM_Mapper_Scale)->Range(10, 10000);
 // --- Reducer Benchmarks ---
 
 static void BM_SerializeFunctionInfo(benchmark::State &State) {
-  auto I = std::make_unique<FunctionInfo>();
+  auto I = allocatePtr<FunctionInfo>();
   I->Name = "f";
   I->DefLoc = Location(0, 0, "test.cpp");
   I->ReturnType = TypeInfo("void");
@@ -101,7 +102,7 @@ static void BM_SerializeFunctionInfo(benchmark::State &State) {
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(DiagID, DiagOpts, new IgnoringDiagConsumer());
 
-  std::unique_ptr<Info> InfoPtr = std::move(I);
+  OwnedPtr<Info> InfoPtr = std::move(I);
 
   for (auto _ : State) {
     auto Result = serialize::serialize(InfoPtr, Diags);
@@ -116,10 +117,10 @@ static void BM_MergeInfos_Scale(benchmark::State &State) {
 
   for (auto _ : State) {
     State.PauseTiming();
-    std::vector<std::unique_ptr<Info>> Input;
+    OwningPtrArray<Info> Input;
     Input.reserve(State.range(0));
     for (int i = 0; i < State.range(0); ++i) {
-      auto I = std::make_unique<FunctionInfo>();
+      auto I = allocatePtr<FunctionInfo>();
       I->Name = "f";
       I->USR = USR;
       I->DefLoc = Location(10, i, "test.cpp");
@@ -149,7 +150,7 @@ static void BM_BitcodeReader_Scale(benchmark::State &State) {
   ClangDocBitcodeWriter Writer(Stream, Diags);
   for (int i = 0; i < NumRecords; ++i) {
     RecordInfo RI;
-    RI.Name = "Record" + std::to_string(i);
+    RI.Name = internString("Record" + std::to_string(i));
     RI.USR = {(uint8_t)(i & 0xFF)};
     Writer.emitBlock(RI);
   }
@@ -179,9 +180,8 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
     llvm::consumeError(G.takeError());
     return;
   }
-
   int NumRecords = State.range(0);
-  auto NI = std::make_unique<NamespaceInfo>();
+  auto NI = allocatePtr<NamespaceInfo>();
   NI->Name = "GlobalNamespace";
   for (int i = 0; i < NumRecords; ++i) {
     NI->Children.Records.emplace_back(SymbolID{(uint8_t)(i & 0xFF)},
@@ -193,14 +193,14 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(DiagID, DiagOpts, new IgnoringDiagConsumer());
   ClangDocContext CDCtx(nullptr, "test-project", false, "", "", "", "", "", {},
-                        Diags, false);
+                        Diags, OutputFormatTy::json, false);
 
   std::string Output;
   llvm::raw_string_ostream OS(Output);
 
   for (auto _ : State) {
     Output.clear();
-    auto Err = (*G)->generateDocForInfo(NI.get(), OS, CDCtx);
+    auto Err = (*G)->generateDocForInfo(getPtr(NI), OS, CDCtx);
     if (Err) {
       State.SkipWithError("generateDocForInfo failed");
       llvm::consumeError(std::move(Err));
@@ -217,10 +217,10 @@ static void BM_Index_Insertion(benchmark::State &State) {
     Index Idx;
     for (int i = 0; i < State.range(0); ++i) {
       RecordInfo I;
-      I.Name = "Record" + std::to_string(i);
+      I.Name = internString("Record" + std::to_string(i));
       // Vary USR to ensure unique entries
       I.USR = {(uint8_t)(i & 0xFF), (uint8_t)((i >> 8) & 0xFF)};
-      I.Path = "path/to/record";
+      I.Path = internString("path/to/record");
       Generator::addInfoToIndex(Idx, &I);
     }
     benchmark::DoNotOptimize(Idx);

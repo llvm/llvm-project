@@ -48,7 +48,7 @@ struct AllocaInfo {
 // Returns whether Ends covered all possible exits. If they did not,
 // the caller should remove Ends to ensure that work done at the other
 // exits does not happen outside of the lifetime.
-bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
+void forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
                           const LoopInfo &LI, const AllocaInfo &AInfo,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback);
