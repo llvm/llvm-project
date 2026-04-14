@@ -52,8 +52,7 @@ std::string LVOperation::getOperandsDWARFInfo() {
     //-----------------------------------------------------------------------
     if (dwarf::DW_OP_reg0 <= Code && Code <= dwarf::DW_OP_reg31) {
       std::string RegisterName(getReader().getRegisterName(Code, Operands));
-      Stream << formatv("reg{0}{1}", Code - dwarf::DW_OP_reg0,
-                        RegisterName);
+      Stream << formatv("reg{0}{1}", Code - dwarf::DW_OP_reg0, RegisterName);
       return;
     }
 
@@ -106,8 +105,8 @@ std::string LVOperation::getOperandsDWARFInfo() {
   }
   case dwarf::DW_OP_regval_type: {
     std::string RegisterName(getReader().getRegisterName(Opcode, Operands));
-    Stream << formatv("regval_type {0}{1}+{2}", Operands[0],
-                      RegisterName, unsigned(Operands[1]));
+    Stream << formatv("regval_type {0}{1}+{2}", Operands[0], RegisterName,
+                      unsigned(Operands[1]));
     break;
   }
 
