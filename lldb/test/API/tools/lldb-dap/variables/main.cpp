@@ -15,6 +15,7 @@ int test_return_variable();
 int test_anonymous_types();
 int test_anonymous_fields();
 void test_unnamed_bitfields();
+void test_scoped_enums();
 
 int main(int argc, char const *argv[]) {
   static float s_local = 2.25;
@@ -38,6 +39,7 @@ int main(int argc, char const *argv[]) {
   test_anonymous_types();
   test_anonymous_fields();
   test_unnamed_bitfields();
+  test_scoped_enums();
   return test_indexedVariables(); // breakpoint 3
 }
 
@@ -87,4 +89,10 @@ void test_unnamed_bitfields() {
   };
   example e = {0xA, 0xB};
   printf("lo: %u, hi: %u\n", e.lo, e.hi); // breakpoint 8
+}
+
+void test_scoped_enums() {
+  enum class Test { FOO, BAR };
+  Test t = Test::FOO;
+  printf("enum: %i", static_cast<int>(t)); // breakpoint 9
 }

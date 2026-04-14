@@ -24,7 +24,6 @@ class TestDAP_variables_children(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         local_vars = self.dap_server.get_local_variables()
-        print(local_vars)
         indexed = next(filter(lambda x: x["name"] == "indexed", local_vars))
         not_indexed = next(filter(lambda x: x["name"] == "not_indexed", local_vars))
         self.assertIn("indexedVariables", indexed)

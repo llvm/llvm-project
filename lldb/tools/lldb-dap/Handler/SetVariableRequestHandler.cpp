@@ -64,7 +64,14 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   lldb::SBFrame frame = variable.GetFrame();
   std::string expression = llvm::StringRef(args.value).trim().str();
   lldb::SBValue result = EvaluateExpression(dap.target, frame, expression);
-  const char *value = result.IsValid() ? result.GetValue() : expression.c_str();
+  const char *value = [&]() {
+    if (!result.IsValid())
+      return expression.c_str();
+    lldb::SBType type = result.GetType();
+    if (type.IsScopedEnumerationType())
+      return result.Cast(type.GetEnumerationIntegerType()).GetValue();
+    return result.GetValue();
+  }();
 
   lldb::SBError error;
   const bool success = variable.SetValueFromCString(value, error);
