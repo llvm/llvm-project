@@ -52,6 +52,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
@@ -282,6 +283,11 @@ static cl::opt<bool> ClInlineFastPathChecks("hwasan-inline-fast-path-checks",
 static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
                                       cl::desc("Use page aliasing in HWASan"),
                                       cl::Hidden, cl::init(false));
+
+static cl::opt<uint64_t>
+    ClTagBits("hwasan-tag-bits",
+              cl::desc("Restrict tag to at most N bits. Needs to be > 4."),
+              cl::Hidden, cl::init(0));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -677,6 +683,12 @@ void HWAddressSanitizer::initializeModule() {
   DetectUseAfterScope = shouldDetectUseAfterScope(TargetTriple);
   PointerTagShift = IsX86_64 ? 57 : 56;
   TagMaskByte = IsX86_64 ? 0x3F : 0xFF;
+  if (ClTagBits) {
+    if (TagMaskByte < 4)
+      reportFatalUsageError(
+          "need more than 4 bits of tag to have non-short-granule tags");
+    TagMaskByte &= (1 << ClTagBits) - 1;
+  }
 
   Mapping.init(TargetTriple, InstrumentWithCalls, CompileKernel);
 

@@ -690,6 +690,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
+  // TODO: Remove these get/setTemporaryLayout calls after we deprecate the old
+  // XeGPUSubgroupDistribute pass.
   auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
   auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
   // Reduction result should have the same layout as the accumulator.
@@ -879,7 +881,7 @@ template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
 
-bool xegpu::requirePacked(const xegpu::LayoutAttr layout) {
+bool xegpu::requirePacked(const xegpu::DistributeLayoutAttr layout) {
   if (!layout)
     return false;
   auto laneData = layout.getEffectiveLaneDataAsInt();
@@ -888,7 +890,7 @@ bool xegpu::requirePacked(const xegpu::LayoutAttr layout) {
   return laneData[0] != 1;
 }
 
-bool xegpu::requireTranspose(const xegpu::LayoutAttr layout,
+bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.

@@ -6029,14 +6029,20 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       // the extends in the IR are still counted. This can be fixed
       // after https://github.com/llvm/llvm-project/pull/147302 has landed.
       return Cost;
-    // f16 -> f32 is natively supported for fdot
-    if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1()) &&
-        AccumLT.second.getScalarType() == MVT::f32 &&
-        InputLT.second.getScalarType() == MVT::f16 &&
-        AccumLT.second.getVectorMinNumElements() == 4 &&
-        InputLT.second.getVectorMinNumElements() == 8)
+    // i8 -> i16 is natively supported with SVE2p3
+    if (AccumLT.second.getScalarType() == MVT::i16 &&
+        InputLT.second.getScalarType() == MVT::i8 &&
+        (ST->hasSVE2p3() || ST->hasSME2p3()))
       return Cost;
   }
+
+  // f16 -> f32 is natively supported for fdot using either
+  // SVE or NEON instruction.
+  if (Opcode == Instruction::FAdd && !IsSub &&
+      IsSupported(ST->hasSME2() || ST->hasSVE2p1(), ST->hasF16F32DOT()) &&
+      AccumLT.second.getScalarType() == MVT::f32 &&
+      InputLT.second.getScalarType() == MVT::f16)
+    return Cost;
 
   // For a ratio of 2, we can use *mlal top/bottom instructions.
   if (Ratio == 2 && !IsSub) {
