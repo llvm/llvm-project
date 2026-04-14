@@ -5892,30 +5892,28 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
   return false;
 }
 
-bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
-  Say(std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source,
-      "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
-  return false;
-}
-
 void DeclarationVisitor::Post(const parser::EnumDef &) {
   enumerationState_ = EnumeratorState{};
 }
 
 // F2023 R766 EnumerationTypeDef — scope is pushed in Post(EnumerationTypeStmt)
 // and popped in Post(EndEnumerationTypeStmt).
-bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &) {
-  return true;
+bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
+  BeginAttrs();
+  // TODO: Remove this and set true when ENUMERATION TYPEs are implemented.
+  Say(std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source,
+      "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
+  return false;
 }
 
 // F2023 R767 EnumerationTypeStmt — create the enumeration type symbol
 // in the enclosing scope and push a DerivedType scope for it.
 void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   const auto &name{std::get<parser::Name>(x.t)};
-  const auto &optAccessSpec{std::get<std::optional<parser::AccessSpec>>(x.t)};
-  Attrs attrs;
-  if (optAccessSpec) {
-    attrs.set(AccessSpecToAttr(*optAccessSpec));
+  Attrs attrs{EndAttrs()};
+  if (const auto &optAccessSpec{
+          std::get<std::optional<parser::AccessSpec>>(x.t)};
+      optAccessSpec) {
     if (!NonDerivedTypeScope().IsModule()) { // F2023 C7114
       Say(currStmtSource().value(),
           "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
