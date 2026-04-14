@@ -4175,8 +4175,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     // OK. Reading an erroneous value is erroneous behavior also not allowed in
     // constant expressions.
     if ((O->isAbsent() && !(handler.AccessKind == AK_Construct && I == N)) ||
-        ((O->isIndeterminate() || O->isErroneous()) &&
-         !isValidIndeterminateAccess(handler.AccessKind))) {
+        (O->isUninit() && !isValidIndeterminateAccess(handler.AccessKind))) {
       // Object has ended lifetime.
       // If I is non-zero, some subobject (member or array element) of a
       // complete object has ended its lifetime, so this is valid for
@@ -4185,8 +4184,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         return false;
       if (!Info.checkingPotentialConstantExpression())
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
-            << handler.AccessKind << (O->isIndeterminate() || O->isErroneous())
-            << E->getSourceRange();
+            << handler.AccessKind << O->isUninit() << E->getSourceRange();
       return handler.failed();
     }
 

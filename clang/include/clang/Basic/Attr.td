@@ -360,10 +360,6 @@ class CXX11<string namespace, string name, int version = 1>
     : Spelling<name, "CXX11", version> {
   string Namespace = namespace;
 }
-class CXX26<string namespace, string name, int version = 1>
-    : Spelling<name, "CXX26", version> {
-  string Namespace = namespace;
-}
 class C23<string namespace, string name, int version = 1>
     : Spelling<name, "C23", version> {
   string Namespace = namespace;
@@ -446,7 +442,6 @@ def SYCLHost : LangOpt<"SYCLIsHost">;
 def SYCLDevice : LangOpt<"SYCLIsDevice">;
 def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
-def CPlusPlus26 : LangOpt<"CPlusPlus26">;
 def OpenCL : LangOpt<"OpenCL">;
 def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
@@ -4900,9 +4895,8 @@ def Uninitialized : InheritableAttr {
 def Indeterminate : InheritableAttr {
   let Spellings = [CXX11<"", "indeterminate", 202403>];
   let Subjects = SubjectList<[AutomaticStorageVar]>;
-  let LangOpts = [CPlusPlus26];
+  let LangOpts = [CPlusPlus];
   let Documentation = [IndeterminateDocs];
-  let SimpleHandler = 1;
 }
 
 def LoaderUninitialized : Attr {

@@ -131,7 +131,7 @@ public:
     Indeterminate,
 
     /// [defns.erroneous]:
-    /// Erroneous behavior is always the consequence of incorrectprogram code.
+    /// Erroneous behavior is always the consequence of incorrect program code.
     /// Implementations are allowed, but not required, to diagnose it
     /// ([intro.compliance.general]). Evaluation of a constant expression
     /// ([expr.const]) never exhibits behavior specified as erroneous in [intro]
@@ -496,6 +496,9 @@ public:
   bool isAbsent() const { return Kind == None; }
   bool isIndeterminate() const { return Kind == Indeterminate; }
   bool isErroneous() const { return Kind == Erroneous; }
+  /// Whether the value is indeterminate or erroneous (i.e., not properly
+  /// initialized). Use isErroneous() when the distinction matters.
+  bool isUninit() const { return Kind == Indeterminate || Kind == Erroneous; }
   bool hasValue() const { return Kind != None && Kind != Indeterminate; }
 
   bool isInt() const { return Kind == Int; }

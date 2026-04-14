@@ -977,39 +977,26 @@ static void CreateIfFixit(Sema &S, const Stmt *If, const Stmt *Then,
 /// uninitialized use of a variable.
 static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
                           bool IsCapturedByBlock) {
+  // [[indeterminate]] explicitly opts into indeterminate values, so
+  // suppress uninitialized warnings for such variables.
+  if (VD->hasAttr<IndeterminateAttr>())
+    return;
+
   bool Diagnosed = false;
 
-  // [basic.indet]/p1.1:
-  //  - If the object has dynamic storage duration, or is the object associated
-  //    with a variable or function parameter whose first declaration is marked
-  //    with the [[indeterminate]] attribute ([dcl.attr.indet]), the bytes have
-  //    indeterminate values;
-  //
-  //  - otherwise, the bytes have erroneous values, where each value is
-  //  determined
-  //    by the implementation independently of the state of the program.
-  //
-  // If variable has automatic storage duration and does
-  // not have [[indeterminate]], reading it is erroneous behavior (not
-  // undefined). However, we still warn about it.
-  bool IsErroneousBehavior = S.getLangOpts().CPlusPlus26 &&
-                             VD->hasLocalStorage() &&
-                             !VD->hasAttr<IndeterminateAttr>();
   switch (Use.getKind()) {
   case UninitUse::Always:
-    if (IsErroneousBehavior &&
-        !S.Diags.isIgnored(diag::warn_erroneous_behavior_uninitialized_read,
-                           Use.getUser()->getBeginLoc())) {
-      S.Diag(Use.getUser()->getBeginLoc(),
-             diag::warn_erroneous_behavior_uninitialized_read)
-          << VD->getDeclName() << Use.getUser()->getSourceRange();
-      S.Diag(VD->getLocation(), diag::note_variable_erroneous_init)
-          << VD->getDeclName();
-      return;
+    // In C++26, reading an uninitialized local variable without
+    // [[indeterminate]] is erroneous behavior ([basic.indet]).
+    if (S.getLangOpts().CPlusPlus26 && VD->hasLocalStorage()) {
+      S.Diag(Use.getUser()->getBeginLoc(), diag::err_uninit_var)
+          << VD->getDeclName() << IsCapturedByBlock
+          << Use.getUser()->getSourceRange();
+    } else {
+      S.Diag(Use.getUser()->getBeginLoc(), diag::warn_uninit_var)
+          << VD->getDeclName() << IsCapturedByBlock
+          << Use.getUser()->getSourceRange();
     }
-    S.Diag(Use.getUser()->getBeginLoc(), diag::warn_uninit_var)
-        << VD->getDeclName() << IsCapturedByBlock
-        << Use.getUser()->getSourceRange();
     return;
 
   case UninitUse::AfterDecl:
@@ -3152,13 +3139,12 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     Analyzer.run(AC);
   }
 
-  if (!Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
+  if (S.getLangOpts().CPlusPlus26 ||
+      !Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_sometimes_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_uninit_const_reference, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_uninit_const_pointer, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_erroneous_behavior_uninitialized_read,
-                       D->getBeginLoc())) {
+      !Diags.isIgnored(diag::warn_uninit_const_pointer, D->getBeginLoc())) {
     if (CFG *cfg = AC.getCFG()) {
       UninitValsDiagReporter reporter(S);
       UninitVariablesAnalysisStats stats;

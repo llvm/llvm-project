@@ -1107,7 +1107,6 @@ def Uninitialized  : DiagGroup<"uninitialized", [UninitializedSometimes,
                                                  UninitializedStaticSelfInit,
                                                  UninitializedConstReference,
                                                  UninitializedConstPointer]>;
-def ErroneousBehavior : DiagGroup<"erroneous-behavior">;
 def IgnoredPragmaIntrinsic : DiagGroup<"ignored-pragma-intrinsic">;
 // #pragma optimize is often used to avoid to work around MSVC codegen bugs or
 // to disable inlining. It's not completely clear what alternative to suggest
@@ -1488,10 +1487,12 @@ def CXX14Attrs : DiagGroup<"c++14-attribute-extensions">;
 def CXX17Attrs : DiagGroup<"c++17-attribute-extensions">;
 def CXX20Attrs : DiagGroup<"c++20-attribute-extensions">;
 def CXX23Attrs : DiagGroup<"c++23-attribute-extensions">;
+def CXX26Attrs : DiagGroup<"c++26-attribute-extensions">;
 def FutureAttrs : DiagGroup<"future-attribute-extensions", [CXX14Attrs,
                                                             CXX17Attrs,
                                                             CXX20Attrs,
-                                                            CXX23Attrs]>;
+                                                            CXX23Attrs,
+                                                            CXX26Attrs]>;
 
 def CXX23AttrsOnLambda : DiagGroup<"c++23-lambda-attributes">;
 
@@ -1518,7 +1519,7 @@ def CXX23 : DiagGroup<"c++23-extensions", [CXX23AttrsOnLambda]>;
 
 // A warning group for warnings about using C++26 features as extensions in
 // earlier C++ versions.
-def CXX26 : DiagGroup<"c++26-extensions">;
+def CXX26 : DiagGroup<"c++26-extensions", [CXX26Attrs]>;
 
 def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;

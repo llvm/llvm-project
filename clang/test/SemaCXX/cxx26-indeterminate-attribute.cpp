@@ -1,26 +1,23 @@
 // RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=cxx23 %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -pedantic -verify=cxx23 %s
 
 // Test for C++26 [[indeterminate]] attribute (P2795R5)
 
-// In C++23, the attribute is unknown and ignored
+// In C++23, the attribute is accepted as an extension with a warning.
 void test_cxx23() {
-  [[indeterminate]] int x;  // cxx23-warning {{'indeterminate' attribute ignored}}
+  [[indeterminate]] int x;  // cxx23-warning {{use of the 'indeterminate' attribute is a C++26 extension}}
 }
 
 #if __cplusplus >= 202400L
 
-// local variable with automatic storage duration
 void test_local_var() {
   [[indeterminate]] int x;       // OK
   [[indeterminate]] int arr[10]; // OK
   [[indeterminate]] int a, b, c; // OK - multiple declarators
 }
 
-// function parameter
 void test_param([[indeterminate]] int x);  // OK
 
-// static storage duration
 // expected-warning@+1 {{'indeterminate' attribute only applies to local variables or function parameters}}
 [[indeterminate]] int global_var;
 
@@ -31,7 +28,6 @@ void test_static() {
   [[indeterminate]] thread_local int y;
 }
 
-// attribute on class-type local variable
 struct S {
   int x;
   S() {}
@@ -62,5 +58,59 @@ void first_decl_test([[indeterminate]] int x);              // expected-error {{
 
 void first_decl_ok([[indeterminate]] int x);                // first declaration with attribute - OK
 void first_decl_ok([[indeterminate]] int x) {}              // redeclaration with attribute - OK
+
+struct NoCtorInit {
+  int a;
+  int b;
+};
+
+void test_struct_no_ctor() {
+  [[indeterminate]] NoCtorInit n;  // OK - members have indeterminate values
+}
+
+struct PartialInit {
+  int x;
+  int y;
+  constexpr PartialInit() : x(0) {} // y not initialized
+};
+
+void test_partial_init() {
+  [[indeterminate]] PartialInit p;  // OK - y is indeterminate
+}
+
+template<typename T>
+void test_template() {
+  [[indeterminate]] T x;  // OK
+}
+void instantiate_templates() {
+  test_template<int>();
+  test_template<float>();
+  test_template<S>();
+}
+
+template<typename... Ts>
+void test_pack() {
+  [[indeterminate]] int arr[sizeof...(Ts)];  // OK
+}
+void instantiate_pack() {
+  test_pack<int, float, double>();
+}
+
+template<typename T>
+void test_template_param([[indeterminate]] T x) {} // OK
+
+void instantiate_template_param() {
+  int a;
+  test_template_param(a);
+  test_template_param(3.14);
+}
+
+template<typename T, typename... Rest>
+void test_variadic_param([[indeterminate]] T first) {
+  [[indeterminate]] T local;  // OK
+}
+void instantiate_variadic() {
+  test_variadic_param<int, float, double>(0);
+}
 
 #endif // __cplusplus >= 202400L

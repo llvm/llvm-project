@@ -2539,6 +2539,8 @@ def warn_uninit_self_reference_in_reference_init : Warning<
 def warn_uninit_var : Warning<
   "variable %0 is uninitialized when %select{used here|captured by block}1">,
   InGroup<Uninitialized>, DefaultIgnore;
+def err_uninit_var : Error<
+  "variable %0 is uninitialized when %select{used here|captured by block}1">;
 def warn_sometimes_uninit_var : Warning<
   "variable %0 is %select{used|captured}1 uninitialized whenever "
   "%select{'%3' condition is %select{true|false}4|"
@@ -2586,12 +2588,6 @@ def warn_uninit_const_pointer : Warning<
   "variable %0 is uninitialized when passed as a const pointer argument here">,
   InGroup<UninitializedConstPointer>, DefaultIgnore;
 
-def warn_erroneous_behavior_uninitialized_read : Warning<
-  "reading from variable %0 with erroneous value is erroneous behavior">,
-  InGroup<ErroneousBehavior>, DefaultIgnore;
-def note_variable_erroneous_init : Note<
-  "variable %0 was default-initialized here; "
-  "consider using '[[indeterminate]]' attribute to opt out">;
 def err_indeterminate_attr_not_on_first_decl : Error<
   "'[[indeterminate]]' attribute on parameter %0 must appear on the "
   "first declaration of the function">;
@@ -10005,6 +10001,8 @@ def ext_cxx20_attr : Extension<
   "use of the %0 attribute is a C++20 extension">, InGroup<CXX20Attrs>;
 def ext_cxx23_attr : Extension<
   "use of the %0 attribute is a C++23 extension">, InGroup<CXX23Attrs>;
+def ext_cxx26_attr : Extension<
+  "use of the %0 attribute is a C++26 extension">, InGroup<CXX26Attrs>;
 
 def warn_unused_comparison : Warning<
   "%select{equality|inequality|relational|three-way}0 comparison result unused">,

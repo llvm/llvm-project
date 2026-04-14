@@ -350,13 +350,14 @@ TEST_P(ASTMatchersTest, CallExpr_CXX) {
   EXPECT_TRUE(notMatches(
       "class Y { public: void x(); }; void z(Y y[]) { y->x(); }", MethodOnY));
   EXPECT_TRUE(notMatches(
-      "class Y { public: void x(); }; void z() { Y *y; y->x(); }", MethodOnY));
+      "class Y { public: void x(); }; void z() { Y *y = 0; y->x(); }",
+      MethodOnY));
 
   StatementMatcher MethodOnYPointer =
       cxxMemberCallExpr(on(hasType(pointsTo(recordDecl(hasName("Y"))))));
 
   EXPECT_TRUE(
-      matches("class Y { public: void x(); }; void z() { Y *y; y->x(); }",
+      matches("class Y { public: void x(); }; void z() { Y *y = 0; y->x(); }",
               MethodOnYPointer));
   EXPECT_TRUE(
       matches("class Y { public: void x(); }; void z(Y *&y) { y->x(); }",
@@ -381,7 +382,7 @@ TEST_P(ASTMatchersTest, LambdaExpr) {
 
 TEST_P(ASTMatchersTest, CXXForRangeStmt) {
   EXPECT_TRUE(
-      notMatches("void f() { for (int i; i<5; ++i); }", cxxForRangeStmt()));
+      notMatches("void f() { for (int i = 0; i<5; ++i); }", cxxForRangeStmt()));
 }
 
 TEST_P(ASTMatchersTest, CXXForRangeStmt_CXX11) {
@@ -518,8 +519,9 @@ TEST_P(ASTMatchersTest, ThisPointerType) {
       "class Y { public: void x(); }; void z(Y *&y) { y->x(); }", MethodOnY));
   EXPECT_TRUE(matches(
       "class Y { public: void x(); }; void z(Y y[]) { y->x(); }", MethodOnY));
-  EXPECT_TRUE(matches(
-      "class Y { public: void x(); }; void z() { Y *y; y->x(); }", MethodOnY));
+  EXPECT_TRUE(
+      matches("class Y { public: void x(); }; void z() { Y *y = 0; y->x(); }",
+              MethodOnY));
 
   EXPECT_TRUE(matches("class Y {"
                       "  public: virtual void x();"
@@ -527,7 +529,7 @@ TEST_P(ASTMatchersTest, ThisPointerType) {
                       "class X : public Y {"
                       "  public: virtual void x();"
                       "};"
-                      "void z() { X *x; x->Y::x(); }",
+                      "void z() { X *x = 0; x->Y::x(); }",
                       MethodOnY));
 }
 
@@ -589,11 +591,11 @@ TEST_P(ASTMatchersTest, CXXMemberCallExpr) {
                       "class X : public Y { void z() { X y; y.x(); } };",
                       CallOnVariableY));
   EXPECT_TRUE(matches("class Y { public: void x(); };"
-                      "class X : public Y { void z() { X *y; y->x(); } };",
+                      "class X : public Y { void z() { X *y = 0; y->x(); } };",
                       CallOnVariableY));
   EXPECT_TRUE(notMatches(
       "class Y { public: void x(); };"
-      "class X : public Y { void z() { unsigned long y; ((X*)y)->x(); } };",
+      "class X : public Y { void z() { unsigned long y = 0; ((X*)y)->x(); } };",
       CallOnVariableY));
 }
 
@@ -822,8 +824,8 @@ TEST_P(ASTMatchersTest, Matcher_ThisExpr) {
   }
   EXPECT_TRUE(
       matches("struct X { int a; int f () { return a; } };", cxxThisExpr()));
-  EXPECT_TRUE(
-      notMatches("struct X { int f () { int a; return a; } };", cxxThisExpr()));
+  EXPECT_TRUE(notMatches("struct X { int f () { int a = 0; return a; } };",
+                         cxxThisExpr()));
 }
 
 TEST_P(ASTMatchersTest, Matcher_BindTemporaryExpression) {
@@ -942,10 +944,10 @@ TEST_P(ASTMatchersTest, Matcher_DefaultArgument) {
     return;
   }
   StatementMatcher Arg = cxxDefaultArgExpr();
-  EXPECT_TRUE(matches("void x(int, int = 0) { int y; x(y); }", Arg));
+  EXPECT_TRUE(matches("void x(int, int = 0) { int y = 0; x(y); }", Arg));
   EXPECT_TRUE(
-      matches("class X { void x(int, int = 0) { int y; x(y); } };", Arg));
-  EXPECT_TRUE(notMatches("void x(int, int = 0) { int y; x(y, 0); }", Arg));
+      matches("class X { void x(int, int = 0) { int y = 0; x(y); } };", Arg));
+  EXPECT_TRUE(notMatches("void x(int, int = 0) { int y = 0; x(y, 0); }", Arg));
 }
 
 TEST_P(ASTMatchersTest, StringLiteral) {
@@ -1117,7 +1119,7 @@ TEST_P(ASTMatchersTest, GenericSelectionExpr) {
 }
 
 TEST_P(ASTMatchersTest, AtomicExpr) {
-  EXPECT_TRUE(matches("void foo() { int *ptr; __atomic_load_n(ptr, 1); }",
+  EXPECT_TRUE(matches("void foo() { int *ptr = 0; __atomic_load_n(ptr, 1); }",
                       atomicExpr()));
 }
 
@@ -2421,8 +2423,9 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
-  EXPECT_TRUE(matches("int main() { int cc; auto f = [cc](){ return cc; }; }",
-                      lambdaExpr(hasAnyCapture(lambdaCapture()))));
+  EXPECT_TRUE(
+      matches("int main() { int cc = 0; auto f = [cc](){ return cc; }; }",
+              lambdaExpr(hasAnyCapture(lambdaCapture()))));
 }
 
 TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfVarDecl) {
@@ -2431,14 +2434,14 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfVarDecl) {
   }
   auto matcher = lambdaExpr(
       hasAnyCapture(lambdaCapture(capturesVar(varDecl(hasName("cc"))))));
-  EXPECT_TRUE(matches("int main() { int cc; auto f = [cc](){ return cc; }; }",
-                      matcher));
-  EXPECT_TRUE(matches("int main() { int cc; auto f = [&cc](){ return cc; }; }",
-                      matcher));
-  EXPECT_TRUE(
-      matches("int main() { int cc; auto f = [=](){ return cc; }; }", matcher));
-  EXPECT_TRUE(
-      matches("int main() { int cc; auto f = [&](){ return cc; }; }", matcher));
+  EXPECT_TRUE(matches(
+      "int main() { int cc = 0; auto f = [cc](){ return cc; }; }", matcher));
+  EXPECT_TRUE(matches(
+      "int main() { int cc = 0; auto f = [&cc](){ return cc; }; }", matcher));
+  EXPECT_TRUE(matches(
+      "int main() { int cc = 0; auto f = [=](){ return cc; }; }", matcher));
+  EXPECT_TRUE(matches(
+      "int main() { int cc = 0; auto f = [&](){ return cc; }; }", matcher));
   EXPECT_TRUE(matches(
       "void f(int a) { int cc[a]; auto f = [&](){ return cc;}; }", matcher));
 }

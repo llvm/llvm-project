@@ -3457,17 +3457,15 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
   // function is declared without the indeterminate attribute on the same
   // parameter in its first declaration in another translation unit, the program
   // is ill-formed, no diagnostic required.
-  if (S.getLangOpts().CPlusPlus26) {
-    const IndeterminateAttr *IA = newDecl->getAttr<IndeterminateAttr>();
-    if (IA && !oldDecl->hasAttr<IndeterminateAttr>()) {
-      S.Diag(IA->getLocation(), diag::err_indeterminate_attr_not_on_first_decl)
-          << newDecl;
-      const FunctionDecl *FirstFD =
-          cast<FunctionDecl>(oldDecl->getDeclContext())->getFirstDecl();
-      const ParmVarDecl *FirstVD =
-          FirstFD->getParamDecl(oldDecl->getFunctionScopeIndex());
-      S.Diag(FirstVD->getLocation(), diag::note_previous_declaration);
-    }
+  if (const auto *IA = newDecl->getAttr<IndeterminateAttr>();
+      IA && !oldDecl->hasAttr<IndeterminateAttr>()) {
+    S.Diag(IA->getLocation(), diag::err_indeterminate_attr_not_on_first_decl)
+        << newDecl;
+    const FunctionDecl *FirstFD =
+        cast<FunctionDecl>(oldDecl->getDeclContext())->getFirstDecl();
+    const ParmVarDecl *FirstVD =
+        FirstFD->getParamDecl(oldDecl->getFunctionScopeIndex());
+    S.Diag(FirstVD->getLocation(), diag::note_previous_declaration);
   }
 
   propagateAttributes(

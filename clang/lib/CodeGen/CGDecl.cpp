@@ -1996,10 +1996,9 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
   };
 
-  // C++26 [[indeterminate]] attribute opts out of an erroneous
-  // initialization, restoring indeterminate (undefined) behavior.
-
   // Note: constexpr already initializes everything correctly.
+  // C++26 [[indeterminate]] attribute opts out of erroneous initialization,
+  // restoring indeterminate (undefined) behavior.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
       ((D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
         D.hasAttr<IndeterminateAttr>() ||
