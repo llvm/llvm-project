@@ -10154,10 +10154,7 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
 
     // Split the mask
     auto [LoVT, HiVT] = DAG.GetSplitDestVTs(MaskVT);
-    std::pair<SDValue, SDValue> SplitMask =
-        DAG.SplitVector(N->getOperand(0), DL);
-    SDValue MaskLo = SplitMask.first;
-    SDValue MaskHi = SplitMask.second;
+    auto [MaskLo, MaskHi] = DAG.SplitVector(N->getOperand(0), DL);
 
     // Create split VECTOR_FIND_LAST_ACTIVE operations
     SDValue LoResult =
