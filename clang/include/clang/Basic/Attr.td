@@ -3479,9 +3479,6 @@ def ProfilesSuppress : DeclOrStmtAttr {
   ];
   let LangOpts = [Profiles];
   let HasCustomParsing = 1;
-  let Subjects = SubjectList<[
-    Stmt, Var, Field, Function, Record, Namespace, Empty
-  ], ErrorDiag, "variables, functions, structs, and namespaces">;
   let Documentation = [ProfilesSuppressDocs];
 }
 

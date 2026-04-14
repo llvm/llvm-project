@@ -91,3 +91,10 @@ void test_block_scope() {
 void test_enforced_profile_errors() {
   int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }
+
+// ===================================================================
+// Suppress on additional declaration kinds
+// ===================================================================
+enum [[profiles::suppress(test::type_cast)]] SuppressedEnum { SE_A, SE_B };
+
+using SuppressedAlias [[profiles::suppress(test::type_cast)]] = int;
