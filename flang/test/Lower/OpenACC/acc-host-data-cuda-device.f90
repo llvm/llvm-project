@@ -15,8 +15,31 @@ subroutine __host_sub(a)
     !dir$ ignore_tkr(c) a
 end
 end interface
+type t
+    integer, pointer :: p1
+    integer, pointer :: p2
+  end type
+interface foo
+subroutine foo_device(p)
+  integer, pointer, device :: p
+end subroutine
+subroutine foo_host(p)
+  integer, pointer :: p
+end subroutine
+end interface
 
 contains
+
+  subroutine test(obj)
+    type(t) :: obj
+    !$acc host_data use_device(obj%p1)
+    call foo(obj%p1)
+    call foo(obj%p2)
+    !$acc end host_data
+  end subroutine
+! CHECK-LABEL: func.func @_QMmPtest
+! CHECK: fir.call @_QPfoo_device
+! CHECK: fir.call @_QPfoo_host
 
   subroutine vectoraddarray(a, b, n)
     implicit none
