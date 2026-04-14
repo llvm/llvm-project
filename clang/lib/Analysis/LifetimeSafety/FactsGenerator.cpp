@@ -739,7 +739,7 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
     return;
 
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  assert(MD && "Expected MD to be a non-null pointer");
+  assert(MD && "Function must be a CXXMethodDecl for member calls");
 
   const auto *ClassDecl = MD->getParent()->getDefinition();
   if (!ClassDecl)
