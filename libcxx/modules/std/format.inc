@@ -29,7 +29,7 @@ export namespace std {
   using std::wformat_string;
 #endif
 #if _LIBCPP_STD_VER >= 26
-  using std::dynamic_format;
+  using std::runtime_format;
 #endif // _LIBCPP_STD_VER >= 26
 
   // [format.functions], formatting functions

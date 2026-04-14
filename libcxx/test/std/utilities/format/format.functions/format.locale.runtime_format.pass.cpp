@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // XFAIL: availability-fp_to_chars-missing
@@ -15,31 +16,32 @@
 
 // Tests the behavior of
 //
-// dynamic-format-string<char> dynamic_format(string_view fmt) noexcept;
-// dynamic-format-string<wchar_t> dynamic_format(wstring_view fmt) noexcept;
+// runtime-format-string<char> runtime_format(string_view fmt) noexcept;
+// runtime-format-string<wchar_t> runtime_format(wstring_view fmt) noexcept;
 //
 // and
 //
 // template<class charT, class... Args>
 //   struct basic_format_string {
 //   ...
-//   basic_format_string(dynamic-format-string<charT> s) noexcept : str(s.str) {}
+//   basic_format_string(runtime-format-string<charT> s) noexcept : str(s.str) {}
 //   ...
 // }
 //
 // This is done by testing it in the top-level functions:
 //
 // template<class... Args>
-//   string format(format_string<Args...> fmt, Args&&... args);
+//   string format(const locale& loc, format_string<Args...> fmt, Args&&... args);
 // template<class... Args>
-//   wstring format(wformat_string<Args...> fmt, Args&&... args);
+//   wstring format(const locale& loc, wformat_string<Args...> fmt, Args&&... args);
 //
-// The basics of dynamic_format and basic_format_string's constructor are tested in
-// - libcxx/test/std/utilities/format/format.syn/dynamic_format_string.pass.cpp
-// - libcxx/test/std/utilities/format/format.fmt.string/ctor.dynamic-format-string.pass.cpp
+// The basics of runtime_format and basic_format_string's constructor are tested in
+// - libcxx/test/std/utilities/format/format.syn/runtime_format_string.pass.cpp
+// - libcxx/test/std/utilities/format/format.fmt.string/ctor.runtime-format-string.pass.cpp
 
 #include <format>
 #include <cassert>
+#include <locale>
 #include <vector>
 
 #include "test_macros.h"
@@ -50,7 +52,7 @@
 
 auto test = []<class CharT, class... Args>(
                 std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt, Args&&... args) constexpr {
-  std::basic_string<CharT> out = std::format(std::dynamic_format(fmt), std::forward<Args>(args)...);
+  std::basic_string<CharT> out = std::format(std::locale(), std::runtime_format(fmt), std::forward<Args>(args)...);
   TEST_REQUIRE(out == expected,
                TEST_WRITE_CONCATENATED(
                    "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
@@ -69,7 +71,7 @@ auto test_exception =
                 TEST_WRITE_CONCATENATED(
                     "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
           },
-          TEST_IGNORE_NODISCARD std::format(std::dynamic_format(fmt), std::forward<Args>(args)...));
+          TEST_IGNORE_NODISCARD std::format(std::locale(), std::runtime_format(fmt), std::forward<Args>(args)...));
     };
 
 int main(int, char**) {
