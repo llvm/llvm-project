@@ -14,7 +14,7 @@
 // RUN:   2>&1 | FileCheck %s --check-prefix=PATHS
 
 // PATHS:      "-resource-dir" "[[RESOURCE:[^"]+]]"
-// PATHS-SAME: "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/include/c++/v1"
+// PATHS-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
 // PATHS-SAME: "-internal-isystem" "[[RESOURCE]]/include"
 // PATHS-SAME: "-internal-isystem" "[[SYSROOT]]/usr/include"
 // PATHS:      "-L[[SYSROOT]]/usr/lib"
@@ -33,7 +33,6 @@
 // PATH_NOBUILTIN: "-nobuiltininc"
 // PATH_NOBUILTIN-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // PATH_NOBUILTIN-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// PATH_NOBUILTIN-SAME: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 // PATH_NOBUILTIN-NOT: "-internal-isystem" "[[RESOURCE]]/include"
 // PATH_NOBUILTIN-SAME: "-internal-isystem" "[[SYSROOT]]/usr/include"
 
@@ -136,7 +135,7 @@
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -resource-dir= -nostdlib --rtlib=compiler-rt \
 // RUN:   2>&1 | FileCheck %s --check-prefix=NOSTDLIB
-// NOSTDLIB:      "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/include/c++/v1"
+// NOSTDLIB:      "-isysroot" "[[SYSROOT:[^"]+]]"
 // NOSTDLIB-NOT:  crt{{[^./]+}}.o
 // NOSTDLIB:      "-L
 // NOSTDLIB-SAME: {{^}}[[SYSROOT]]/usr/lib"
@@ -148,7 +147,7 @@
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -resource-dir=%S/Inputs/resource_dir -nostartfiles --rtlib=compiler-rt \
 // RUN:   2>&1 | FileCheck %s --check-prefix=NOSTARTFILES
-// NOSTARTFILES:      "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/include/c++/v1"
+// NOSTARTFILES:      "-isysroot" "[[SYSROOT:[^"]+]]"
 // NOSTARTFILES-SAME: {{^}}
 // NOSTARTFILES-NOT:  crt{{[^./]+}}.o
 // NOSTARTFILES:      "-L
@@ -162,8 +161,8 @@
 // RUN:   -resource-dir=%S/Inputs/resource_dir -r --rtlib=compiler-rt \
 // RUN:   2>&1 | FileCheck %s --check-prefix=RELOCATABLE
 // RELOCATABLE-NOT:  "-dynamic-linker"
+// RELOCATABLE:      "-isysroot" "[[SYSROOT:[^"]+]]"
 // RELOCATABLE:      "-internal-isystem"
-// RELOCATABLE-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/include/c++/v1"
 // RELOCATABLE-NOT:  crt{{[^./]+}}.o
 // RELOCATABLE:      "-L
 // RELOCATABLE-SAME: {{^}}[[SYSROOT]]/usr/lib"
@@ -175,9 +174,9 @@
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
 // RUN:   -resource-dir=%S/Inputs/resource_dir -nolibc --rtlib=compiler-rt \
 // RUN:   2>&1 | FileCheck %s --check-prefix=NOLIBC
+// NOLIBC:      "-isysroot" "[[SYSROOT:[^"]+]]"
 // NOLIBC:      "-internal-isystem"
-// NOLIBC-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/include/c++/v1"
-// NOLIBC:      "[[SYSROOT:[^"]+]]/usr/lib/crt0.o" "crtbeginS.o"
+// NOLIBC:      "[[SYSROOT]]/usr/lib/crt0.o" "crtbeginS.o"
 // NOLIBC:      "-L
 // NOLIBC-SAME: {{^}}[[SYSROOT]]/usr/lib"
 // NOLIBC-NOT:  "-lc"
