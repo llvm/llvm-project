@@ -421,18 +421,18 @@ public:
     if (!TRI.isSubRegisterEq(Dst, Reg))
       return nullptr;
 
-    for (const MachineInstr &MI :
-         make_range(static_cast<const MachineInstr *>(DefCopy)->getIterator(),
-                    Current.getIterator()))
-      for (const MachineOperand &MO : MI.operands())
-        if (MO.isRegMask())
-          if (MO.clobbersPhysReg(Dst)) {
-            LLVM_DEBUG(dbgs() << "MCP: Removed tracking of "
-                              << printReg(Dst, &TRI) << "\n");
-            return nullptr;
-          }
-
     return DefCopy;
+  }
+
+  void clobberNonPreservedRegs(const BitVector &PreservedRegUnits,
+                              const TargetRegisterInfo &TRI,
+                              const TargetInstrInfo &TII, bool UseCopyInstr) {
+    SmallVector<MCRegUnit, 8> UnitsToClobber;
+    for (auto &[Unit, _] : Copies)
+      if (!PreservedRegUnits.test(static_cast<unsigned>(Unit)))
+        UnitsToClobber.push_back(Unit);
+    for (MCRegUnit Unit : UnitsToClobber)
+      clobberRegUnit(Unit, TRI, TII, UseCopyInstr);
   }
 
   // Find last COPY that uses Reg.
@@ -1284,7 +1284,7 @@ void MachineCopyPropagation::backwardCopyPropagateBlock(
 // instruction, we check registers in the operands of this instruction. If this
 // Reg is defined by a COPY, we untrack this Reg via
 // CopyTracker::clobberRegister(Reg, ...).
-void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
+void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
   // ChainLeader maps MI inside a spill-reload chain to its innermost reload COPY.
   // Thus we can track if a MI belongs to an existing spill-reload chain.
   DenseMap<MachineInstr *, MachineInstr *> ChainLeader;
@@ -1323,9 +1323,9 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
           if (CopySourceInvalid.count(Reload))
             return;
 
-        auto CheckCopyConstraint = [this](Register Dst, Register Src) {
+        auto CheckCopyConstraint = [this](Register Def, Register Src) {
           for (const TargetRegisterClass *RC : TRI->regclasses()) {
-            if (RC->contains(Dst) && RC->contains(Src))
+            if (RC->contains(Def) && RC->contains(Src))
               return true;
           }
           return false;
@@ -1367,22 +1367,26 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
         }
       };
 
-  auto IsFoldableCopy = [this](const MachineInstr &MaybeCopy) {
+  auto GetFoldableCopy =
+      [this](const MachineInstr &MaybeCopy) -> std::optional<DestSourcePair> {
     if (MaybeCopy.getNumImplicitOperands() > 0)
-      return false;
+      return std::nullopt;
     std::optional<DestSourcePair> CopyOperands =
         isCopyInstr(MaybeCopy, *TII, UseCopyInstr);
     if (!CopyOperands)
       return false;
-    auto [Dst, Src] = getDstSrcMCRegs(*CopyOperands);
-    return Src && Dst && !TRI->regsOverlap(Src, Dst) &&
+    Register Src = CopyOperands->Source->getReg();
+    Register Def = CopyOperands->Destination->getReg();
+    return Src && Def && !TRI->regsOverlap(Src, Def) &&
            CopyOperands->Source->isRenamable() &&
            CopyOperands->Destination->isRenamable();
   };
 
-  auto IsSpillReloadPair = [&, this](const MachineInstr &Spill,
-                                     const MachineInstr &Reload) {
-    if (!IsFoldableCopy(Spill) || !IsFoldableCopy(Reload))
+  auto IsSpillReloadPair = [&](const MachineInstr &Spill,
+                               const MachineInstr &Reload) {
+    std::optional<DestSourcePair> FoldableSpillCopy = GetFoldableCopy(Spill);
+    std::optional<DestSourcePair> FoldableReloadCopy = GetFoldableCopy(Reload);
+    if (!FoldableReloadCopy || !FoldableSpillCopy)
       return false;
     std::optional<DestSourcePair> SpillCopy =
         isCopyInstr(Spill, *TII, UseCopyInstr);
@@ -1390,13 +1394,16 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
         isCopyInstr(Reload, *TII, UseCopyInstr);
     if (!SpillCopy || !ReloadCopy)
       return false;
-    return getSrcMCReg(*SpillCopy) == getDstMCReg(*ReloadCopy) &&
-           getDstMCReg(*SpillCopy) == getSrcMCReg(*ReloadCopy);
+    return SpillCopy->Source->getReg() == ReloadCopy->Destination->getReg() &&
+           SpillCopy->Destination->getReg() == ReloadCopy->Source->getReg();
   };
 
-  auto IsChainedCopy = [&, this](const MachineInstr &Prev,
-                                 const MachineInstr &Current) {
-    if (!IsFoldableCopy(Prev) || !IsFoldableCopy(Current))
+  auto IsChainedCopy = [&](const MachineInstr &Prev,
+                           const MachineInstr &Current) {
+    std::optional<DestSourcePair> FoldablePrevCopy = GetFoldableCopy(Prev);
+    std::optional<DestSourcePair> FoldableCurrentCopy =
+        GetFoldableCopy(Current);
+    if (!FoldablePrevCopy || !FoldableCurrentCopy)
       return false;
     std::optional<DestSourcePair> PrevCopy =
         isCopyInstr(Prev, *TII, UseCopyInstr);
@@ -1404,7 +1411,7 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
         isCopyInstr(Current, *TII, UseCopyInstr);
     if (!PrevCopy || !CurrentCopy)
       return false;
-    return getSrcMCReg(*PrevCopy) == getDstMCReg(*CurrentCopy);
+    return PrevCopy->Source->getReg() == CurrentCopy->Destination->getReg();
   };
 
   for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
@@ -1415,6 +1422,10 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
     SmallSet<Register, 8> RegsToClobber;
     if (!CopyOperands) {
       for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isRegMask()) {
+          BitVector &PreservedRegUnits = Tracker.getPreservedRegUnits(MO, *TRI);
+          Tracker.clobberNonPreservedRegs(PreservedRegUnits, *TRI, *TII, UseCopyInstr);
+        }
         if (!MO.isReg())
           continue;
         Register Reg = MO.getReg();
