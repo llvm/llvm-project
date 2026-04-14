@@ -565,6 +565,11 @@ public:
   const char *getInlineAsmStart() const { return InlineAsmStart; }
   const char *getInlineAsmEnd() const { return InlineAsmEnd; }
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
+  // Return the assembler dialect that output printing should use. Used by
+  // createMCInstPrinter.
+  unsigned getOutputAssemblerDialect() const {
+    return TargetOptions->OutputAsmVariant.value_or(AssemblerDialect);
+  }
   bool doesAllowAtInName() const { return AllowAtInName; }
   void setAllowAtInName(bool V) { AllowAtInName = V; }
   bool doesAllowQuestionAtStartOfIdentifier() const {

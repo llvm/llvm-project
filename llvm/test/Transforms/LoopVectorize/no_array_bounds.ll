@@ -67,7 +67,6 @@ for.end15:
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
-!llvm.ident = !{!9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0", isOptimized: true, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "no_array_bounds.cpp", directory: ".")
@@ -77,7 +76,6 @@ for.end15:
 !6 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 2}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
-!9 = !{!"clang version 3.5.0"}
 !10 = !DILocation(line: 4, column: 8, scope: !11)
 !11 = distinct !DILexicalBlock(line: 4, column: 3, file: !1, scope: !4)
 !12 = !{!12, !13}
