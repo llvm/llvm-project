@@ -1561,9 +1561,21 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
       Address v = lv.getAddress();
       if (v.isValid()) {
         mlir::Type ty = convertTypeForMem(e->getType());
-        if (v.getElementType() != ty)
-          cgm.errorNYI(e->getSourceRange(),
-                       "emitCastLValue: NoOp needs bitcast");
+        if (v.getElementType() != ty) {
+          // We have only inspected/reproduced this with complete to incomplete
+          // array types, so we do an NYI for other cases, so we can make sure
+          // we're doing a conversion we want to be making.
+          auto fromTy = dyn_cast<cir::ArrayType>(v.getElementType());
+          auto toTy = dyn_cast<cir::ArrayType>(ty);
+          if (!fromTy || !toTy ||
+              fromTy.getElementType() != toTy.getElementType() ||
+              toTy.getSize() != 0)
+            cgm.errorNYI(e->getSourceRange(),
+                         "emitCastLValue NoOp not array-shrink case");
+
+          lv = makeAddrLValue(v.withElementType(builder, ty), e->getType(),
+                              lv.getBaseInfo());
+        }
       }
     }
     return lv;
