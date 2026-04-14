@@ -54,7 +54,7 @@ extern "C" void __asan_on_error() {
   // CHECK: report
 
   void *addr_first = NULL;
-  size_t size_first = 0;
+  size_t size_first = 0xbad;
   int is_first = __asan_get_report_address_info(__asan_address_info_first,
                                                 &addr_first, &size_first);
   fprintf(stderr, "is_first: %d, addr_first: " PTR_FMT ", size_first: %zu\n",
@@ -62,7 +62,7 @@ extern "C" void __asan_on_error() {
   // CHECK: is_first: 1, addr_first: 0x[[ADDR1]], size_first: 0
 
   void *addr_second = NULL;
-  size_t size_second = 0;
+  size_t size_second = 0xbad;
   int is_second = __asan_get_report_address_info(__asan_address_info_second,
                                                  &addr_second, &size_second);
   fprintf(stderr, "is_second: %d, addr_second: " PTR_FMT ", size_second: %zu\n",

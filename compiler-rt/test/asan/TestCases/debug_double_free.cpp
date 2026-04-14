@@ -52,7 +52,7 @@ __asan_on_error() {
   // CHECK: description: double-free
 
   void *addr_dealloc = NULL;
-  size_t size_dealloc = 0;
+  size_t size_dealloc = 0xbad;
   int is_dealloc = __asan_get_report_address_info(__asan_address_info_dealloc,
                                                   &addr_dealloc, &size_dealloc);
   fprintf(stderr,
