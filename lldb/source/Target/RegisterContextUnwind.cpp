@@ -2248,9 +2248,8 @@ bool RegisterContextUnwind::ReadGPRValue(lldb::RegisterKind register_kind,
   const RegisterInfo *reg_info = GetRegisterInfoAtIndex(lldb_regnum);
   assert(reg_info);
   if (!reg_info) {
-    Log *log = GetLog(LLDBLog::Unwind);
     UNWIND_LOG(
-        log,
+        GetLog(LLDBLog::Unwind),
         "Could not find RegisterInfo definition for lldb register number {0}",
         lldb_regnum);
     return false;
