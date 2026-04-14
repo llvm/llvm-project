@@ -535,8 +535,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
 
 static bool getBasePtrAndOffset(const MachineInstr &MI,
                                 const MachineMemOperand &MMO,
-                                const Value *&Base,
-                                int64_t &Offset) {
+                                const Value *&Base, int64_t &Offset) {
   Offset = MMO.getOffset();
   Base = nullptr;
 
@@ -544,8 +543,9 @@ static bool getBasePtrAndOffset(const MachineInstr &MI,
   if (!V)
     return false;
 
-  Base = GetPointerBaseWithConstantOffset(V, Offset, MI.getMF()->getDataLayout(),
-                                          /*AllowNonInbounds=*/true);
+  Base =
+      GetPointerBaseWithConstantOffset(V, Offset, MI.getMF()->getDataLayout(),
+                                       /*AllowNonInbounds=*/true);
   if (!Base)
     return false;
 
@@ -557,8 +557,7 @@ static bool memOperandsHaveSameBasePtr(const MachineInstr &MI1,
                                        const MachineMemOperand &MMO1,
                                        const MachineInstr &MI2,
                                        const MachineMemOperand &MMO2,
-                                       int64_t *Offset1,
-                                       int64_t *Offset2) {
+                                       int64_t *Offset1, int64_t *Offset2) {
   if (MMO1.getAddrSpace() != MMO2.getAddrSpace())
     return false;
 
