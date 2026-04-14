@@ -457,8 +457,7 @@ LVScope *LVNamespaceDeduction::get(StringRef ScopedName, bool CheckScope) {
       return Iter == IdentifiedNamespaces.end();
     });
 
-  LLVM_DEBUG(
-      { dbgs() << formatv("ScopedName: '{0}'\n", ScopedName); });
+  LLVM_DEBUG({ dbgs() << formatv("ScopedName: '{0}'\n", ScopedName); });
 
   return get(Components);
 }
