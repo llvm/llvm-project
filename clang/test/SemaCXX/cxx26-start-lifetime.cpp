@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %s
+// FIXME: Enable for bytecode interpreter once union array member activation
+// is supported: %clang_cc1 -std=c++26 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 
 // P3726R2: __builtin_start_lifetime and constituent values tests
 
@@ -43,6 +45,24 @@ consteval void check_user_dtor() {
   AggWithUserDtor awd;
   __builtin_start_lifetime(&awd); // expected-error {{pointer to a complete implicit-lifetime aggregate type}}
 }
+
+// ===== Error checking tests =====
+
+consteval bool check_null_pointer() {
+  Agg *p = nullptr;
+  __builtin_start_lifetime(p); // expected-note {{cannot be called with a null pointer}}
+  return true;
+}
+static_assert(check_null_pointer()); // expected-error {{constant expression}} \
+                                     // expected-note {{in call to}}
+
+consteval bool check_one_past_the_end() {
+  Agg a[2];
+  __builtin_start_lifetime(&a[2]); // expected-note {{cannot be called with a one-past-the-end pointer}}
+  return true;
+}
+static_assert(check_one_past_the_end()); // expected-error {{constant expression}} \
+                                         // expected-note {{in call to}}
 
 // ===== Constexpr evaluation tests =====
 

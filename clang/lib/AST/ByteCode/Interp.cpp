@@ -1917,7 +1917,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   return Call(S, OpPC, F, VarArgSize);
 }
 
-static void startLifetimeRecurse(const Pointer &Ptr) {
+void startLifetimeRecurse(const Pointer &Ptr) {
   if (const Record *R = Ptr.getRecord()) {
     Ptr.startLifetime();
     for (const Record::Field &Fi : R->fields())
