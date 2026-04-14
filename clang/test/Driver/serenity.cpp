@@ -191,6 +191,12 @@
 // UBSAN-NOT: "libclang_rt.ubsan"
 // UBSAN:     "-lubsan"
 
+/// Support for KASAN.
+// RUN: %clang -target x86_64-unknown-serenity -fsanitize=kernel-address -### %s \
+// RUN:   2>&1 | FileCheck %s --check-prefix=KASAN
+// KASAN:      "-fsanitize=kernel-address"
+// KASAN-SAME: "-fsanitize-recover=kernel-address"
+
 /// Check C++ stdlib behavior.
 // RUN: %clangxx -### %s --target=x86_64-unknown-serenity --sysroot="" -resource-dir= \
 // RUN:   2>&1 | FileCheck %s --check-prefix=DEFAULT_LIBCXX
