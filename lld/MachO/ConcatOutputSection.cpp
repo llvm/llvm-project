@@ -367,7 +367,7 @@ void TextOutputSection::finalize() {
         // interior branches against the symbol body rather than the stub, so
         // __stubs reachability says nothing about whether the call can be
         // emitted directly.
-        // See arm64-thunk-branch-addend-interposable.s test.
+        // See INTERP check lines in arm64-thunk-branch-addend.s.
         continue;
       }
       // For non-zero addends, branch directly to the symbol body rather than
@@ -378,7 +378,7 @@ void TextOutputSection::finalize() {
       // only diverge when `funcSym` is a Defined that is *also* in stubs (e.g.
       // an interposable extern), but `finalize()` has to agree with the writer
       // in that case or reachability analysis drifts.
-      // See arm64-thunk-branch-addend-interposable.s test.
+      // See INTERP check lines in arm64-thunk-branch-addend.s.
       uint64_t funcVA = r.addend != 0 ? funcSym->getVA() + r.addend
                                       : funcSym->resolveBranchVA();
       ++thunkInfo.callSitesUsed;
