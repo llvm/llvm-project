@@ -407,12 +407,10 @@ TEST(FormatAndFormatvTest, EquivalentHexFormatting) {
   EXPECT_EQ("0x00000000ff",
             printToString(format("0x%*.*" PRIx64, HexDigits, HexDigits, N)));
 
-  // Now, do the same with formatv()
+  // Now, do the same with formatv().
   EXPECT_EQ("0x00000000ff",
             formatv("0x{0:x-}", fmt_align(N, AlignStyle::Right, HexDigits, '0'))
                 .str());
-
-  // More examples
 
   EXPECT_EQ("0x0000000abc",
             printToString(format("0x%0*" PRIx64, 10, 0xABCULL)));
