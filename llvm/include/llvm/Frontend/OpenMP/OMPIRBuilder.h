@@ -1623,7 +1623,7 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocIP,
       ArrayRef<InsertPointTy> DeallocIPs, BodyGenCallbackTy BodyGenCB,
       bool Tied = true, Value *Final = nullptr, Value *IfCondition = nullptr,
-      const DependenciesInfo Dependencies = {}, AffinityData Affinities = {},
+      const DependenciesInfo Dependencies = {}, const AffinityData Affinities = {},
       bool Mergeable = false, Value *EventHandle = nullptr,
       Value *Priority = nullptr);
 
