@@ -84,12 +84,34 @@ WebAssemblyInstructionSelector::WebAssemblyInstructionSelector(
 }
 
 bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
-  if (!I.isPreISelOpcode()) {
+  MachineBasicBlock &MBB = *I.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  if (!I.isPreISelOpcode())
     return true;
-  }
 
   if (selectImpl(I, *CoverageInfo))
     return true;
+
+  using namespace TargetOpcode;
+
+  switch (I.getOpcode()) {
+  case G_IMPLICIT_DEF: {
+    const Register DefReg = I.getOperand(0).getReg();
+
+    const TargetRegisterClass *DefRC =
+        TRI.getConstrainedRegClassForOperand(I.getOperand(0), MRI);
+
+    if (!DefRC)
+      return false;
+
+    I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
+    return RBI.constrainGenericRegister(DefReg, *DefRC, MRI) != nullptr;
+  }
+  default:
+    break;
+  }
 
   return false;
 }

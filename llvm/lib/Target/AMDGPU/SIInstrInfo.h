@@ -1685,7 +1685,7 @@ public:
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                       ArrayRef<unsigned> Ops,
                                       MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex,
+                                      int FrameIndex, MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 

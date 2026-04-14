@@ -844,8 +844,8 @@ public:
     auto *emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
     GlobalVariable *N = new GlobalVariable(
         M, emptyCharArray, false, GlobalValue::ExternalLinkage, nullptr,
-        Twine("llvm.amdgcn." + func->getName() + ".dynlds"), nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
-        false);
+        Twine("llvm.amdgcn." + func->getName() + ".dynlds"), nullptr,
+        GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS, false);
     N->setAlignment(MaxDynamicAlignment);
 
     assert(AMDGPU::isDynamicLDS(*N));

@@ -439,6 +439,9 @@ private:
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
     if (isHostDevice)
       return;
+    if (context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaUnified))
+      return;
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
           "Host array '%s' cannot be present in device context"_err_en_US,

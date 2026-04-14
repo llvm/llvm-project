@@ -1644,7 +1644,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   converter.addConversion(
       [&](xegpu::TensorDescType type,
           SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-        xegpu::LayoutAttr layout = type.getLayoutAttr();
+        xegpu::DistributeLayoutAttr layout = type.getLayoutAttr();
         // Only convert WG-level tensor descs. SG-level or layout-less types
         // are already legal and should pass through unchanged.
         if (!layout || !layout.isForWorkgroup())

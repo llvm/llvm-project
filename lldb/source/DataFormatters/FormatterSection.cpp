@@ -66,7 +66,6 @@ static void ForEachFormatterInModule(
   auto section_size = section_sp->GetSectionData(lldb_extractor);
   llvm::DataExtractor section = lldb_extractor.GetAsLLVM();
   bool le = section.isLittleEndian();
-  uint8_t addr_size = section.getAddressSize();
   llvm::DataExtractor::Cursor cursor(0);
   while (cursor && cursor.tell() < section_size) {
     if (!skipPadding(section, cursor))
@@ -77,14 +76,13 @@ static void ForEachFormatterInModule(
     if (version == 1) {
       llvm::DataExtractor record(
           section.getData().drop_front(cursor.tell()).take_front(record_size),
-          le, addr_size);
+          le);
       llvm::DataExtractor::Cursor cursor(0);
       uint64_t type_size = record.getULEB128(cursor);
       llvm::StringRef type_name = record.getBytes(cursor, type_size);
       llvm::Error error = cursor.takeError();
       if (!error)
-        fn(llvm::DataExtractor(record.getData().drop_front(cursor.tell()), le,
-                               addr_size),
+        fn(llvm::DataExtractor(record.getData().drop_front(cursor.tell()), le),
            type_name);
       else
         LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),

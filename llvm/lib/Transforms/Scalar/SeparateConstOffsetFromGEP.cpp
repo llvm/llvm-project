@@ -388,8 +388,10 @@ private:
   /// LowerGEP is true, it finds in indices of both sequential and structure
   /// types, otherwise it only finds in sequential indices. The output
   /// NeedsExtraction indicates whether we successfully find a non-zero constant
-  /// offset.
-  APInt accumulateByteOffset(GetElementPtrInst *GEP, bool &NeedsExtraction);
+  /// offset, and SignedOverflow indicates if there was signed overflow in
+  /// offset calculation.
+  APInt accumulateByteOffset(GetElementPtrInst *GEP, bool &NeedsExtraction,
+                             bool &SignedOverflow);
 
   /// Canonicalize array indices to pointer-size integers. This helps to
   /// simplify the logic of splitting a GEP. For example, if a + b is a
@@ -930,8 +932,10 @@ bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
 }
 
 APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
-                                                       bool &NeedsExtraction) {
+                                                       bool &NeedsExtraction,
+                                                       bool &SignedOverflow) {
   NeedsExtraction = false;
+  SignedOverflow = false;
   unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
   APInt AccumulativeByteOffset(IdxWidth, 0);
   gep_type_iterator GTI = gep_type_begin(*GEP);
@@ -950,10 +954,15 @@ APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
         // A GEP may have multiple indices.  We accumulate the extracted
         // constant offset to a byte offset, and later offset the remainder of
         // the original GEP with this byte offset.
-        AccumulativeByteOffset +=
-            ConstantOffset * APInt(IdxWidth,
-                                   GTI.getSequentialElementStride(*DL),
-                                   /*IsSigned=*/true, /*ImplicitTrunc=*/true);
+        bool Overflow;
+        auto ByteOffset = ConstantOffset.smul_ov(
+            APInt(IdxWidth, GTI.getSequentialElementStride(*DL),
+                  /*IsSigned=*/true, /*ImplicitTrunc=*/true),
+            Overflow);
+        SignedOverflow |= Overflow;
+        AccumulativeByteOffset =
+            AccumulativeByteOffset.sadd_ov(ByteOffset, Overflow);
+        SignedOverflow |= Overflow;
       }
     } else if (LowerGEP) {
       StructType *StTy = GTI.getStructType();
@@ -1038,8 +1047,9 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   if (!PtrGEP)
     return false;
 
-  bool NestedNeedsExtraction;
-  APInt NestedByteOffset = accumulateByteOffset(PtrGEP, NestedNeedsExtraction);
+  bool NestedNeedsExtraction, OffsetOverflow;
+  APInt NestedByteOffset =
+      accumulateByteOffset(PtrGEP, NestedNeedsExtraction, OffsetOverflow);
   if (!NestedNeedsExtraction)
     return false;
 
@@ -1099,9 +1109,13 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   bool Changed = canonicalizeArrayIndicesToIndexSize(GEP);
 
-  bool NeedsExtraction;
-  APInt NonBaseByteOffset = accumulateByteOffset(GEP, NeedsExtraction);
-  APInt AccumulativeByteOffset = BaseByteOffset + NonBaseByteOffset;
+  bool NeedsExtraction, OffsetOverflow;
+  APInt NonBaseByteOffset =
+      accumulateByteOffset(GEP, NeedsExtraction, OffsetOverflow);
+  bool AddOverflow;
+  APInt AccumulativeByteOffset =
+      BaseByteOffset.sadd_ov(NonBaseByteOffset, AddOverflow);
+  OffsetOverflow |= AddOverflow;
 
   TargetTransformInfo &TTI = GetTTI(*GEP->getFunction());
 
@@ -1142,7 +1156,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   }
 
   // Track information for preserving GEP flags.
-  bool AllOffsetsNonNegative = AccumulativeByteOffset.isNonNegative();
+  bool AllOffsetsNonNegative =
+      AccumulativeByteOffset.isNonNegative() && !OffsetOverflow;
   bool AllNUWPreserved = GEP->hasNoUnsignedWrap();
   bool NewGEPInBounds = GEP->isInBounds();
   bool NewGEPNUSW = GEP->hasNoUnsignedSignedWrap();

@@ -451,11 +451,6 @@ exit:
   ret void
 }
 
-declare void @llvm.assume(i1)
-declare void @llvm.lifetime.start.p0(i64, ptr)
-declare void @llvm.lifetime.end.p0(i64, ptr)
-declare void @llvm.sideeffect()
-declare void @llvm.pseudoprobe(i64, i64, i32, i64)
 
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.mustprogress"}

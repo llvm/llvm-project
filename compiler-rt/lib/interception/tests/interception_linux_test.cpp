@@ -93,6 +93,17 @@ TEST(Interception, Basic) {
   EXPECT_EQ(0, isdigit_called);
 }
 
+TEST(Interception, DsoHelpers) {
+  EXPECT_TRUE(DynamicLoaderAvailable());
+
+  void* self = OpenLibrary(nullptr);
+  EXPECT_NE(nullptr, self);
+  EXPECT_NE(nullptr, LookupSymbol(self, "malloc"));
+  EXPECT_NE(nullptr, LookupSymbolDefault("malloc"));
+  EXPECT_NE(nullptr, LookupSymbolNext("malloc"));
+  EXPECT_EQ(nullptr, LookupSymbol(self, "symbol_that_does_not_exist__"));
+}
+
 TEST(Interception, ForeignOverrideDirect) {
   // Actual interceptor is overridden.
   EXPECT_FALSE(INTERCEPT_FUNCTION(isalpha));

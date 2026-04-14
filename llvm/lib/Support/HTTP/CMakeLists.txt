@@ -16,6 +16,7 @@ endif()
 add_llvm_component_library(LLVMSupportHTTP
   HTTPClient.cpp
   HTTPServer.cpp
+  StreamedHTTPResponseHandler.cpp
 
   LINK_LIBS
   ${imported_libs}

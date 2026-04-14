@@ -7,8 +7,6 @@
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
 ; RUN:llc -O3 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
-;
-; REQUIRES:asserts
 
 ; SPIRV-O0:Target Library Information
 ; SPIRV-O0-NEXT:Runtime Library Function Analysis

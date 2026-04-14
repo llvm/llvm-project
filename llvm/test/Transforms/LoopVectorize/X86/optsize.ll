@@ -64,7 +64,7 @@ define i32 @foo_optsize() #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -75,7 +75,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, 202
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -136,7 +136,7 @@ define i32 @foo_minsize() #1 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -147,7 +147,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, 202
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -209,7 +209,7 @@ define void @scev4stride1(ptr noalias nocapture %a, ptr noalias nocapture readon
 for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %mul = mul nsw i32 %i.07, %k
   %arrayidx = getelementptr inbounds i32, ptr %b, i32 %mul
@@ -220,7 +220,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, 256
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   ret void
 }
 
