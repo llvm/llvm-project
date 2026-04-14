@@ -20,11 +20,11 @@ bb:
   ret void
 }
 
-; Ignore inline asm in size calculation
+; Account for inline asm in size calculation
 
 ; GCN-LABEL: .amdhsa_kernel inline_asm
-; GCN: .amdhsa_inst_pref_size 1
-; GCN: codeLenInByte = {{[0-9]$}}
+; GCN: .amdhsa_inst_pref_size 9
+; GCN: codeLenInByte = 1028
 define amdgpu_kernel void @inline_asm() {
 bb:
   call void asm sideeffect ".fill 256, 4, 0", ""()

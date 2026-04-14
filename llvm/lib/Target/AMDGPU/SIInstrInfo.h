@@ -1582,6 +1582,17 @@ public:
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  unsigned getInlineAsmLength(const char *Str, const MCAsmInfo &MAI,
+                              const TargetSubtargetInfo *STI) const override;
+
+  /// Compute the size of inline assembly with an option for lower-bound
+  /// estimation. When \p IsLowerBound is true, uses the minimum instruction
+  /// size (4 bytes for AMDGPU) per instruction line, giving a conservative
+  /// lower-bound estimate suitable for instruction prefetch sizing.
+  unsigned getInlineAsmLength(const char *Str, const MCAsmInfo &MAI,
+                              const TargetSubtargetInfo *STI,
+                              bool IsLowerBound) const;
+
   bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
 
   std::pair<unsigned, unsigned>

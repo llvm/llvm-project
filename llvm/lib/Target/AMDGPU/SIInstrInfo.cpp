@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
@@ -9909,6 +9910,135 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
     return DescSize;
   }
+}
+
+unsigned SIInstrInfo::getInlineAsmLength(const char *Str, const MCAsmInfo &MAI,
+                                         const TargetSubtargetInfo *STI) const {
+  return getInlineAsmLength(Str, MAI, STI, /*IsLowerBound=*/false);
+}
+
+unsigned SIInstrInfo::getInlineAsmLength(const char *Str, const MCAsmInfo &MAI,
+                                         const TargetSubtargetInfo *STI,
+                                         bool IsLowerBound) const {
+  if (!IsLowerBound)
+    return TargetInstrInfo::getInlineAsmLength(Str, MAI, STI);
+
+  // For a lower-bound estimate, count each non-comment, non-directive
+  // instruction line as MinInstAlignment bytes (4 for AMDGPU), and parse
+  // data-emitting directives for their exact sizes.
+  //
+  // TODO: For more accurate inline asm size estimation, consider assembling
+  // the asm string through the MC layer (MCAsmParser -> MCCodeEmitter) to get
+  // exact encoded sizes. This would automatically handle new instructions via
+  // TableGen and correctly size instructions with literal operands. See
+  // mlir::ROCDL::assembleIsa() for an AMDGPU-specific example of this
+  // approach. The main challenges are: (1) operand placeholders ($0, $1) need
+  // substitution with dummy registers before parsing, and (2) MC pipeline
+  // creation overhead per inline asm block (mitigable via caching).
+  const unsigned MinInstSize = MAI.getMinInstAlignment();
+  unsigned Length = 0;
+  bool AtInsnStart = true;
+
+  for (; *Str; ++Str) {
+    if (*Str == '\n' || strncmp(Str, MAI.getSeparatorString(),
+                                strlen(MAI.getSeparatorString())) == 0) {
+      AtInsnStart = true;
+      continue;
+    }
+
+    if (strncmp(Str, MAI.getCommentString().data(),
+                MAI.getCommentString().size()) == 0) {
+      // Comment — skip rest of line.
+      AtInsnStart = false;
+      continue;
+    }
+
+    if (AtInsnStart && !isSpace(static_cast<unsigned char>(*Str))) {
+      AtInsnStart = false;
+
+      // Handle .space directive.
+      if (strncmp(Str, ".space", 6) == 0) {
+        char *End;
+        int SpaceSize = strtol(Str + 6, &End, 10);
+        SpaceSize = SpaceSize < 0 ? 0 : SpaceSize;
+        while (*End != '\n' && *End != '\0' &&
+               isSpace(static_cast<unsigned char>(*End)))
+          ++End;
+        if (*End == '\0' || *End == '\n' ||
+            strncmp(End, MAI.getCommentString().data(),
+                    MAI.getCommentString().size()) == 0)
+          Length += SpaceSize;
+        else
+          Length += MinInstSize;
+        continue;
+      }
+
+      // Handle .fill directive: .fill count [, size [, value]]
+      if (strncmp(Str, ".fill", 5) == 0 &&
+          isSpace(static_cast<unsigned char>(Str[5]))) {
+        char *End;
+        long Count = strtol(Str + 5, &End, 10);
+        Count = Count < 0 ? 0 : Count;
+        long Size = 1; // default size for .fill
+        while (*End != '\0' && isSpace(static_cast<unsigned char>(*End)))
+          ++End;
+        if (*End == ',') {
+          ++End;
+          Size = strtol(End, &End, 10);
+          Size = Size < 0 ? 0 : Size;
+        }
+        Length += Count * Size;
+        continue;
+      }
+
+      // Handle data directives.
+      if (strncmp(Str, ".byte", 5) == 0) {
+        Length += 1;
+        continue;
+      }
+      if (strncmp(Str, ".short", 6) == 0 || strncmp(Str, ".hword", 6) == 0) {
+        Length += 2;
+        continue;
+      }
+      if (strncmp(Str, ".long", 5) == 0 || strncmp(Str, ".word", 5) == 0) {
+        Length += 4;
+        continue;
+      }
+      if (strncmp(Str, ".quad", 5) == 0) {
+        Length += 8;
+        continue;
+      }
+      if (strncmp(Str, ".zero", 5) == 0) {
+        char *End;
+        int ZeroSize = strtol(Str + 5, &End, 10);
+        ZeroSize = ZeroSize < 0 ? 0 : ZeroSize;
+        Length += ZeroSize;
+        continue;
+      }
+
+      // Skip known non-emitting directives.
+      if (*Str == '.') {
+        // Labels, .set, .globl, .local, .type, .size, .section, .align,
+        // .file, .loc, etc. — these don't emit code bytes.
+        continue;
+      }
+
+      // Skip labels (e.g. "my_label:").
+      {
+        const char *P = Str;
+        while (*P && *P != '\n' && *P != ':' &&
+               !isSpace(static_cast<unsigned char>(*P)))
+          ++P;
+        if (*P == ':')
+          continue;
+      }
+
+      // Default: assume it's an instruction — count minimum size.
+      Length += MinInstSize;
+    }
+  }
+
+  return Length;
 }
 
 bool SIInstrInfo::mayAccessFlatAddressSpace(const MachineInstr &MI) const {

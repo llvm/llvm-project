@@ -18,7 +18,9 @@
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -208,6 +210,7 @@ uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF,
   if (!IsLowerBound && CodeSizeInBytes.has_value())
     return *CodeSizeInBytes;
 
+  const MCAsmInfo *MAI = MF.getTarget().getMCAsmInfo();
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = STM.getInstrInfo();
 
@@ -227,10 +230,11 @@ uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF,
       if (MI.isMetaInstruction())
         continue;
 
-      // We cannot properly estimate inline asm size. It can be as small as zero
-      // if that is just a comment.
-      if (IsLowerBound && MI.isInlineAsm())
+      if (MI.isInlineAsm()) {
+        const char *AsmStr = MI.getOperand(0).getSymbolName();
+        CodeSize += TII->getInlineAsmLength(AsmStr, *MAI, &STM, IsLowerBound);
         continue;
+      }
 
       CodeSize += TII->getInstSizeInBytes(MI);
     }
