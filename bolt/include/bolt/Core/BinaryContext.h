@@ -726,6 +726,9 @@ public:
   /// FunctionFragment::getFragmentNum() == FragmentNum::warm()
   bool HasWarmSection{false};
 
+  /// Indicates if the binary has large code model sections (.ltext).
+  bool HasLargeCodeModel{false};
+
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that
   /// will have HasFixedLoadAddress set to false.
@@ -1069,13 +1072,16 @@ public:
 
   /// Return code section with a given name.
   MCSection *getCodeSection(StringRef SectionName) const {
-    if (isELF())
-      return Ctx->getELFSection(SectionName, ELF::SHT_PROGBITS,
-                                ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
-    else
+    if (isELF()) {
+      unsigned Flags = ELF::SHF_EXECINSTR | ELF::SHF_ALLOC;
+      if (isLargeCodeSection(SectionName))
+        Flags |= ELF::SHF_X86_64_LARGE;
+      return Ctx->getELFSection(SectionName, ELF::SHT_PROGBITS, Flags);
+    } else {
       return Ctx->getMachOSection("__TEXT", SectionName,
                                   MachO::S_ATTR_PURE_INSTRUCTIONS,
                                   SectionKind::getText());
+    }
   }
 
   /// Return data section with a given name.
@@ -1098,6 +1104,17 @@ public:
 
   const char *getInjectedColdCodeSectionName() const {
     return ".text.injected.cold";
+  }
+
+  /// \name Large code model section names
+  /// @{
+  const char *getLargeMainCodeSectionName() const { return ".ltext"; }
+  const char *getLargeColdCodeSectionName() const { return ".ltext.cold"; }
+  /// @}
+
+  /// Return true if \p SectionName is a large code model section.
+  static bool isLargeCodeSection(StringRef SectionName) {
+    return SectionName == ".ltext" || SectionName.starts_with(".ltext.");
   }
 
   ErrorOr<BinarySection &> getGdbIndexSection() const {

@@ -2241,6 +2241,21 @@ Error RewriteInstance::readSpecialSections() {
                   "Use -update-debug-sections to keep it.\n";
   }
 
+  // Detect large code model sections (.ltext).
+  if (BC->getUniqueSectionByName(BC->getLargeMainCodeSectionName())) {
+    BC->HasLargeCodeModel = true;
+    BC->outs()
+        << "BOLT-INFO: large code model detected (.ltext section found)\n";
+
+    // Update LSDA encoding for large code model — use 8-byte pointers so that
+    // exception handling works for functions at addresses above 2GB.
+    if (BC->isX86()) {
+      BC->LSDAEncoding = BC->HasFixedLoadAddress
+                             ? dwarf::DW_EH_PE_absptr
+                             : (dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata8);
+    }
+  }
+
   HasTextRelocations = (bool)BC->getUniqueSectionByName(
       ".rela" + std::string(BC->getMainCodeSectionName()));
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
@@ -3973,6 +3988,15 @@ void RewriteInstance::emitAndLink() {
     BC->renameSection(*TextSection,
                       getOrgSecPrefix() + BC->getMainCodeSectionName());
 
+  // Rename .ltext to .bolt.org.ltext for large code model support.
+  if (BC->HasRelocations && BC->HasLargeCodeModel) {
+    ErrorOr<BinarySection &> LTextSection =
+        BC->getUniqueSectionByName(BC->getLargeMainCodeSectionName());
+    if (LTextSection)
+      BC->renameSection(*LTextSection,
+                        getOrgSecPrefix() + BC->getLargeMainCodeSectionName());
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // Assign addresses to new sections.
   //////////////////////////////////////////////////////////////////////////////
@@ -4118,6 +4142,17 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
                                        : (A->getName() < B->getName());
     }
 
+    // Same ordering for .ltext.cold sections.
+    if (A->getName().starts_with(BC->getLargeColdCodeSectionName()) &&
+        B->getName().starts_with(BC->getLargeColdCodeSectionName())) {
+      if (A->getName().size() != B->getName().size())
+        return (opts::HotFunctionsAtEnd)
+                   ? (A->getName().size() > B->getName().size())
+                   : (A->getName().size() < B->getName().size());
+      return (opts::HotFunctionsAtEnd) ? (A->getName() > B->getName())
+                                       : (A->getName() < B->getName());
+    }
+
     // Place hot text movers before anything else.
     if (opts::HotText) {
       if (A->getName() == BC->getHotTextMoverSectionName())
@@ -4126,18 +4161,29 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
         return false;
     }
 
+    // Place .ltext before .text (matching typical linker layout where .ltext
+    // precedes .text in the output binary).
+    const bool AIsLarge = BinaryContext::isLargeCodeSection(A->getName());
+    const bool BIsLarge = BinaryContext::isLargeCodeSection(B->getName());
+    if (AIsLarge != BIsLarge)
+      return AIsLarge;
+
     // Depending on opts::HotFunctionsAtEnd, place main and warm sections in
     // order.
     if (opts::HotFunctionsAtEnd) {
-      if (B->getName() == BC->getMainCodeSectionName())
+      if (B->getName() == BC->getMainCodeSectionName() ||
+          B->getName() == BC->getLargeMainCodeSectionName())
         return true;
-      if (A->getName() == BC->getMainCodeSectionName())
+      if (A->getName() == BC->getMainCodeSectionName() ||
+          A->getName() == BC->getLargeMainCodeSectionName())
         return false;
       return (B->getName() == BC->getWarmCodeSectionName());
     } else {
-      if (A->getName() == BC->getMainCodeSectionName())
+      if (A->getName() == BC->getMainCodeSectionName() ||
+          A->getName() == BC->getLargeMainCodeSectionName())
         return true;
-      if (B->getName() == BC->getMainCodeSectionName())
+      if (B->getName() == BC->getMainCodeSectionName() ||
+          B->getName() == BC->getLargeMainCodeSectionName())
         return false;
       return (A->getName() == BC->getWarmCodeSectionName());
     }

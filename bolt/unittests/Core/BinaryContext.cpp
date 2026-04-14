@@ -238,6 +238,18 @@ TEST_P(BinaryContextTester, BaseAddress2) {
   ASSERT_FALSE(BaseAddress.has_value());
 }
 
+TEST(BinaryContextTest, IsLargeCodeSection) {
+  EXPECT_TRUE(BinaryContext::isLargeCodeSection(".ltext"));
+  EXPECT_TRUE(BinaryContext::isLargeCodeSection(".ltext.hot"));
+  EXPECT_TRUE(BinaryContext::isLargeCodeSection(".ltext.cold"));
+  EXPECT_TRUE(BinaryContext::isLargeCodeSection(".ltext.unlikely"));
+  EXPECT_FALSE(BinaryContext::isLargeCodeSection(".text"));
+  EXPECT_FALSE(BinaryContext::isLargeCodeSection(".text.cold"));
+  EXPECT_FALSE(BinaryContext::isLargeCodeSection(".ltextfoo"));
+  EXPECT_FALSE(BinaryContext::isLargeCodeSection("ltext"));
+  EXPECT_FALSE(BinaryContext::isLargeCodeSection(""));
+}
+
 TEST_P(BinaryContextTester, BaseAddressSegmentsSmallerThanAlignment) {
   // Check that the correct segment is used to compute the base address
   // when multiple segments are close together in the ELF file (closer

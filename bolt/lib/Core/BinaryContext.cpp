@@ -259,7 +259,9 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(*Ctx, IsPIC));
   Ctx->setObjectFileInfo(MOFI.get());
-  // We do not support X86 Large code model. Change this in the future.
+  // Use large code model encoding for AArch64 (always) and X86 when the
+  // binary has large code model sections (.ltext). The LSDAEncoding will be
+  // updated after sections are read if HasLargeCodeModel is set.
   bool Large = false;
   if (TheTriple.getArch() == llvm::Triple::aarch64)
     Large = true;

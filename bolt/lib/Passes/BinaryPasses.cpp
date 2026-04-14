@@ -1326,13 +1326,23 @@ Error AssignSections::runOnFunctions(BinaryContext &BC) {
       continue;
     }
 
+    // Assign functions from .ltext to .ltext output section to preserve
+    // SHF_X86_64_LARGE flag for large code model support.
+    const bool IsLargeCode =
+        Function.getOriginSectionName() &&
+        BinaryContext::isLargeCodeSection(*Function.getOriginSectionName());
+    const char *MainSection = IsLargeCode ? BC.getLargeMainCodeSectionName()
+                                          : BC.getMainCodeSectionName();
+    const char *ColdSection = IsLargeCode ? BC.getLargeColdCodeSectionName()
+                                          : BC.getColdCodeSectionName();
+
     if (!UseColdSection || Function.hasValidIndex())
-      Function.setCodeSectionName(BC.getMainCodeSectionName());
+      Function.setCodeSectionName(MainSection);
     else
-      Function.setCodeSectionName(BC.getColdCodeSectionName());
+      Function.setCodeSectionName(ColdSection);
 
     if (Function.isSplit())
-      Function.setColdCodeSectionName(BC.getColdCodeSectionName());
+      Function.setColdCodeSectionName(ColdSection);
   }
   return Error::success();
 }
