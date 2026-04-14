@@ -910,7 +910,7 @@ def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for", [], [0]> {
 // Moreover, llvm.intrin.stackrestore cannot be moved
 // above the load the the store.
 //
-// The 'Free' affect on 'AutomaticAllocationScopeResource'
+// The 'Free' effect on 'AutomaticAllocationScopeResource'
 // for both stacksave and stackrestore should guarantee that.
 def LLVM_StackSaveOp
     : LLVM_OneResultIntrOp<
