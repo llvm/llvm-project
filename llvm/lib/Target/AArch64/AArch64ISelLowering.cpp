@@ -20941,6 +20941,22 @@ static SDValue performSVEAndCombine(SDNode *N,
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
 
+  // and(splat(1), sext(setcc_merge_zero)) -> zext(setcc_merge_zero)
+  SDLoc DL(N);
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  if (Op0.getOpcode() == ISD::SPLAT_VECTOR ||
+      Op1.getOpcode() == ISD::SPLAT_VECTOR) {
+    SDValue NonSplatOp = (Op0.getOpcode() == ISD::SPLAT_VECTOR ? Op1 : Op0);
+    SDValue SplatOp = (Op0.getOpcode() == ISD::SPLAT_VECTOR ? Op0 : Op1);
+    if (NonSplatOp.getOpcode() == ISD::SIGN_EXTEND) {
+      SDValue Compare = NonSplatOp.getOperand(0);
+      if (Compare.getOpcode() == AArch64ISD::SETCC_MERGE_ZERO) {
+        return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), Compare);
+      }
+    }
+  }
+
   // Zero/any extend of an unsigned unpack
   if (Opc == AArch64ISD::UUNPKHI || Opc == AArch64ISD::UUNPKLO) {
     SDValue UnpkOp = Src->getOperand(0);
@@ -20949,7 +20965,6 @@ static SDValue performSVEAndCombine(SDNode *N,
     if (Dup.getOpcode() != ISD::SPLAT_VECTOR)
       return SDValue();
 
-    SDLoc DL(N);
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(Dup->getOperand(0));
     if (!C)
       return SDValue();
@@ -24091,6 +24106,37 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_bsl2n:
   case Intrinsic::aarch64_sve_nbsl:
     return combineSVEBitSel(IID, N, DAG);
+  case Intrinsic::aarch64_sve_udot:
+  case Intrinsic::aarch64_sve_sdot: {
+    // sdot(acc, extend(icmp_ult(A, B)), extend(icmp_ult(A, B)))
+    //  -> sdot(acc, umin(usubsat(B, A)), umin(usubsat(B, A)))
+
+    // sdot(acc, extend(icmp_ugt(A, B)), extend(icmp_ugt(A, B)))
+    //  -> sdot(acc, umin(usubsat(A, B)), umin(usubsat(A, B)))
+    SDValue Extend1 = N->getOperand(2);
+    SDValue Extend2 = N->getOperand(3);
+    if (Extend1 == Extend2 && (Extend1.getOpcode() == ISD::SIGN_EXTEND ||
+                               Extend1.getOpcode() == ISD::ZERO_EXTEND)) {
+      SDValue Compare = Extend1.getOperand(0);
+      if (Compare.getOpcode() != AArch64ISD::SETCC_MERGE_ZERO)
+        break;
+      ISD::CondCode CC = cast<CondCodeSDNode>(Compare.getOperand(3))->get();
+      if (CC != ISD::SETULT && CC != ISD::SETUGT)
+        break;
+      SDLoc DL(N);
+      EVT ResVT = Extend1.getValueType();
+      SDValue A = Compare.getOperand(CC == ISD::SETULT ? 1 : 2);
+      SDValue B = Compare.getOperand(CC == ISD::SETULT ? 2 : 1);
+      SDValue Sub = DAG.getNode(ISD::USUBSAT, DL, ResVT, B, A);
+      SDValue One = DAG.getConstant(1, DL, MVT::i32);
+      SDValue SplatOne = DAG.getSplatVector(ResVT, DL, One);
+      SDValue Min = DAG.getNode(ISD::UMIN, DL, ResVT, Sub, SplatOne);
+      unsigned Opcode = (IID == Intrinsic::aarch64_sve_udot ? AArch64ISD::UDOT
+                                                            : AArch64ISD::SDOT);
+      return DAG.getNode(Opcode, DL, N->getValueType(0), N->getOperand(1), Min,
+                         Min);
+    }
+  }
   }
   return SDValue();
 }
@@ -24422,6 +24468,55 @@ static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG,
                                     const AArch64Subtarget *Subtarget) {
+  // sext(icmp slt(a, b)) -> sclamp(sqsub(a, b), -1, 0)
+  // sext(icmp sgt(a, b)) -> sclamp(sqsub(b, a), -1, 0)
+  if (N->getOpcode() == ISD::SIGN_EXTEND) {
+    SDValue Compare = N->getOperand(0);
+    if (Compare.getOpcode() == AArch64ISD::SETCC_MERGE_ZERO) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(Compare.getOperand(3))->get();
+      if (Compare.hasOneUse() && Subtarget->hasSVE2p1() &&
+          (CC == ISD::SETLT || CC == ISD::SETGT)) {
+        SDLoc DL(N);
+        SDValue A = Compare.getOperand(CC == ISD::SETLT ? 1 : 2);
+        SDValue B = Compare.getOperand(CC == ISD::SETLT ? 2 : 1);
+        SDValue Sub = DAG.getNode(ISD::SSUBSAT, DL, N->getValueType(0), A, B);
+        SDValue MinusOne = DAG.getSplatVector(
+            N->getValueType(0), DL, DAG.getSignedConstant(-1, DL, MVT::i32));
+        SDValue Zero = DAG.getSplatVector(N->getValueType(0), DL,
+                                          DAG.getConstant(0, DL, MVT::i32));
+        SDValue Sclamp = DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+            DAG.getConstant(Intrinsic::aarch64_sve_sclamp, DL, MVT::i64), Sub,
+            MinusOne, Zero);
+        return Sclamp;
+      }
+    }
+  }
+  // zext(icmp slt(a, b)) -> sclamp(sqsub(b,a), 0, 1)
+  // zext(icmp sgt(a, b)) -> sclamp(sqsub(a,b), 0, 1)
+  if (N->getOpcode() == ISD::ZERO_EXTEND) {
+    SDValue Compare = N->getOperand(0);
+    if (Compare.getOpcode() == AArch64ISD::SETCC_MERGE_ZERO) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(Compare.getOperand(3))->get();
+      if (Compare.hasOneUse() && Subtarget->hasSVE2p1() &&
+          (CC == ISD::SETLT || CC == ISD::SETGT)) {
+        SDLoc DL(N);
+        SDValue A = Compare.getOperand(CC == ISD::SETLT ? 1 : 2);
+        SDValue B = Compare.getOperand(CC == ISD::SETLT ? 2 : 1);
+        SDValue Sub = DAG.getNode(ISD::SSUBSAT, DL, N->getValueType(0), B, A);
+        SDValue One = DAG.getSplatVector(N->getValueType(0), DL,
+                                         DAG.getConstant(1, DL, MVT::i32));
+        SDValue Zero = DAG.getSplatVector(N->getValueType(0), DL,
+                                          DAG.getConstant(0, DL, MVT::i32));
+        SDValue Sclamp = DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+            DAG.getConstant(Intrinsic::aarch64_sve_sclamp, DL, MVT::i64), Sub,
+            Zero, One);
+        return Sclamp;
+      }
+    }
+  }
+
   // If we see something like (zext (sabd (extract_high ...), (DUP ...))) then
   // we can convert that DUP into another extract_high (of a bigger DUP), which
   // helps the backend to decide that an sabdl2 would be useful, saving a real

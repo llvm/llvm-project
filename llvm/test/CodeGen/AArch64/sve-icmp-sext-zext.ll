@@ -4,10 +4,9 @@
 define <vscale x 4 x i32> @test1(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -20,10 +19,9 @@ define <vscale x 4 x i32> @test1(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 4 x i32> @test2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -36,10 +34,9 @@ define <vscale x 4 x i32> @test2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 4 x i32> @test3(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -59,10 +56,9 @@ define <vscale x 4 x i32> @test4(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ult <32 x i8> %a, %b
@@ -82,11 +78,9 @@ define <vscale x 4 x i32> @test5(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ult <32 x i8> %a, %b
@@ -106,11 +100,9 @@ define <vscale x 4 x i32> @test6(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ult <32 x i8> %a, %b
@@ -123,10 +115,9 @@ define <vscale x 4 x i32> @test6(<32 x i8> %a, <32 x i8> %b)  {
 define <vscale x 4 x i32> @test7(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z1.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -139,10 +130,9 @@ define <vscale x 4 x i32> @test7(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 4 x i32> @test8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z1.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -155,10 +145,9 @@ define <vscale x 4 x i32> @test8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 4 x i32> @test9(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z1.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -178,10 +167,9 @@ define <vscale x 4 x i32> @test10(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z2.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z2.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ugt <32 x i8> %a, %b
@@ -201,11 +189,9 @@ define <vscale x 4 x i32> @test11(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z2.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z2.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ugt <32 x i8> %a, %b
@@ -225,11 +211,9 @@ define <vscale x 4 x i32> @test12(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z2.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z2.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    sdot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ugt <32 x i8> %a, %b
@@ -242,9 +226,10 @@ define <vscale x 4 x i32> @test12(<32 x i8> %a, <32 x i8> %b)  {
 define <vscale x 16 x i8> @test13(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1)  {
 ; CHECK-LABEL: test13:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p0.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sqsub z0.b, z0.b, z1.b
+; CHECK-NEXT:    mov z1.b, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    sclamp z0.b, z1.b, z2.b
 ; CHECK-NEXT:    ret
 entry:
   %2 = icmp slt <vscale x 16 x i8> %0, %1
@@ -255,16 +240,17 @@ entry:
 define <vscale x 16 x i8> @test14(<32 x i8> %0, <32 x i8> %1)  {
 ; CHECK-LABEL: test14:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    splice z2.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
-; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmpgt p0.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sqsub z0.b, z0.b, z2.b
+; CHECK-NEXT:    mov z2.b, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    sclamp z0.b, z2.b, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %2 = icmp slt <32 x i8> %0, %1
@@ -278,10 +264,10 @@ define <vscale x 16 x i8> @test15(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1) 
 ; CHECK-LABEL: test15:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    cmpgt p1.b, p0/z, z1.b, z0.b
 ; CHECK-NEXT:    mov z1.b, #1 // =0x1
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    add z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    add z0.b, p1/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %2 = icmp slt <vscale x 16 x i8> %0, %1
@@ -294,9 +280,10 @@ entry:
 define <vscale x 16 x i8> @test16(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1)  {
 ; CHECK-LABEL: test16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p0.b, p0/z, z0.b, z1.b
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sqsub z0.b, z1.b, z0.b
+; CHECK-NEXT:    mov z1.b, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    sclamp z0.b, z1.b, z2.b
 ; CHECK-NEXT:    ret
 entry:
   %2 = icmp sgt <vscale x 16 x i8> %0, %1
@@ -307,16 +294,17 @@ entry:
 define <vscale x 16 x i8> @test17(<32 x i8> %0, <32 x i8> %1)  {
 ; CHECK-LABEL: test17:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    splice z2.b, p0, { z2.b, z3.b }
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmpgt p0.b, p0/z, z0.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
+; CHECK-NEXT:    mov z2.b, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    sqsub z0.b, z1.b, z0.b
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sclamp z0.b, z2.b, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %2 = icmp sgt <32 x i8> %0, %1
@@ -328,10 +316,9 @@ entry:
 define <vscale x 4 x i32> @test18(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test18:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -344,10 +331,9 @@ define <vscale x 4 x i32> @test18(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 4 x i32> @test19(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test19:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -361,10 +347,9 @@ define <vscale x 4 x i32> @test19(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 4 x i32> @test20(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test20:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -384,10 +369,9 @@ define <vscale x 4 x i32> @test21(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ult <32 x i8> %a, %b
@@ -407,11 +391,9 @@ define <vscale x 4 x i32> @test22(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ult <32 x i8> %a, %b
@@ -431,11 +413,9 @@ define <vscale x 4 x i32> @test23(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    uqsub z1.b, z1.b, z0.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ult <32 x i8> %a, %b
@@ -448,10 +428,9 @@ define <vscale x 4 x i32> @test23(<32 x i8> %a, <32 x i8> %b)  {
 define <vscale x 4 x i32> @test24(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test24:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z1.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -464,10 +443,9 @@ define <vscale x 4 x i32> @test24(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 4 x i32> @test25(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test25:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z1.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -480,10 +458,9 @@ define <vscale x 4 x i32> @test25(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 4 x i32> @test26(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: test26:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z1.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
 {
@@ -503,10 +480,9 @@ define <vscale x 4 x i32> @test27(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z2.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z2.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ugt <32 x i8> %a, %b
@@ -526,11 +502,9 @@ define <vscale x 4 x i32> @test28(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z2.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z2.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ugt <32 x i8> %a, %b
@@ -550,11 +524,9 @@ define <vscale x 4 x i32> @test29(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z2.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmphi p0.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    uqsub z1.b, z0.b, z2.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    umin z1.b, z1.b, #1
 ; CHECK-NEXT:    udot z0.s, z1.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = icmp ugt <32 x i8> %a, %b
