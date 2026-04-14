@@ -2182,12 +2182,12 @@ def LWAT_COND_PSEUDO : PPCCustomInserterPseudo <
     "#LWAT_COND_PSEUDO",
     [(set i32:$dst, (int_ppc_amo_lwat_cond ptr_rc_nor0:$ptr, u5imm_timm:$fc))]>;
 
-let Defs = [R3, R4, R5], Uses = [R4, R5] in
+let Defs = [R8, R9, R10], Uses = [R9, R10] in
 def LWAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
     (outs gprc:$dst),
     (ins ptr_rc_nor0:$ptr),
     "#LWAT_CSNE_PSEUDO",
-    [(set i32:$dst, (int_ppc_amo_lwat_csne ptr_rc_nor0:$ptr, R4, R5))]>;
+    [(set i32:$dst, (int_ppc_amo_lwat_csne ptr_rc_nor0:$ptr, R9, R10))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
 def STBCX : XForm_1_memOp<31, 694, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),

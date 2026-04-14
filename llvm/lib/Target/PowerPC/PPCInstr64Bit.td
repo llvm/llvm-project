@@ -354,12 +354,12 @@ def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
     [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr,
                                             u5imm_timm:$fc))]>;
 
-let Defs = [X3, X4, X5], Uses = [X4, X5] in
+let Defs = [X8, X9, X10], Uses = [X9, X10] in
 def LDAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
     (outs g8rc:$dst),
     (ins ptr_rc_nor0:$ptr),
     "#LDAT_CSNE_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat_csne ptr_rc_nor0:$ptr, X4, X5))]>;
+    [(set i64:$dst, (int_ppc_amo_ldat_csne ptr_rc_nor0:$ptr, X9, X10))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
 def STDCX : XForm_1_memOp<31, 214, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),

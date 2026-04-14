@@ -115,34 +115,30 @@ entry:
 define void @test_lwat_csne(ptr noundef %ptr, i32 noundef %value1, i32 noundef %value2, ptr nocapture %resp) nounwind {
 ; CHECK-LABEL: test_lwat_csne:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr r9, r3
-; CHECK-NEXT:    mr r7, r3
-; CHECK-NEXT:    # kill: def $r4 killed $r4 killed $x4
-; CHECK-NEXT:    # kill: def $r5 killed $r5 killed $x5
-; CHECK-NEXT:    lwat r3, r9, 16
-; CHECK-NEXT:    li r4, 44
-; CHECK-NEXT:    li r5, 55
-; CHECK-NEXT:    mr r8, r3
-; CHECK-NEXT:    stw r8, 0(r6)
-; CHECK-NEXT:    lwat r3, r7, 16
-; CHECK-NEXT:    mr r7, r3
-; CHECK-NEXT:    stw r7, 0(r6)
+; CHECK-NEXT:    mr r9, r4
+; CHECK-NEXT:    mr r10, r5
+; CHECK-NEXT:    lwat r8, r3, 16
+; CHECK-NEXT:    li r9, 44
+; CHECK-NEXT:    li r10, 55
+; CHECK-NEXT:    mr r4, r8
+; CHECK-NEXT:    stw r4, 0(r6)
+; CHECK-NEXT:    lwat r8, r3, 16
+; CHECK-NEXT:    mr r3, r8
+; CHECK-NEXT:    stw r3, 0(r6)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_lwat_csne:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mr r9, r3
-; CHECK-BE-NEXT:    mr r7, r3
-; CHECK-BE-NEXT:    # kill: def $r4 killed $r4 killed $x4
-; CHECK-BE-NEXT:    # kill: def $r5 killed $r5 killed $x5
-; CHECK-BE-NEXT:    lwat r3, r9, 16
-; CHECK-BE-NEXT:    li r4, 44
-; CHECK-BE-NEXT:    li r5, 55
-; CHECK-BE-NEXT:    mr r8, r3
-; CHECK-BE-NEXT:    stw r8, 0(r6)
-; CHECK-BE-NEXT:    lwat r3, r7, 16
-; CHECK-BE-NEXT:    mr r7, r3
-; CHECK-BE-NEXT:    stw r7, 0(r6)
+; CHECK-BE-NEXT:    mr r9, r4
+; CHECK-BE-NEXT:    mr r10, r5
+; CHECK-BE-NEXT:    lwat r8, r3, 16
+; CHECK-BE-NEXT:    li r9, 44
+; CHECK-BE-NEXT:    li r10, 55
+; CHECK-BE-NEXT:    mr r4, r8
+; CHECK-BE-NEXT:    stw r4, 0(r6)
+; CHECK-BE-NEXT:    lwat r8, r3, 16
+; CHECK-BE-NEXT:    mr r3, r8
+; CHECK-BE-NEXT:    stw r3, 0(r6)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = call i32 @llvm.ppc.amo.lwat.csne(ptr %ptr, i32 %value1, i32 %value2)
@@ -155,36 +151,96 @@ entry:
 define void @test_ldat_csne(ptr noundef %ptr, i64 noundef %value1, i64 noundef %value2, ptr nocapture %resp) nounwind {
 ; CHECK-LABEL: test_ldat_csne:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr r9, r3
-; CHECK-NEXT:    mr r7, r3
-; CHECK-NEXT:    ldat r3, r9, 16
-; CHECK-NEXT:    li r4, 44
-; CHECK-NEXT:    li r5, 55
-; CHECK-NEXT:    mr r8, r3
-; CHECK-NEXT:    std r8, 0(r6)
-; CHECK-NEXT:    ldat r3, r7, 16
-; CHECK-NEXT:    mr r7, r3
-; CHECK-NEXT:    std r7, 0(r6)
+; CHECK-NEXT:    mr r9, r4
+; CHECK-NEXT:    mr r10, r5
+; CHECK-NEXT:    ldat r8, r3, 16
+; CHECK-NEXT:    li r9, 44
+; CHECK-NEXT:    li r10, 55
+; CHECK-NEXT:    mr r4, r8
+; CHECK-NEXT:    std r4, 0(r6)
+; CHECK-NEXT:    ldat r8, r3, 16
+; CHECK-NEXT:    mr r3, r8
+; CHECK-NEXT:    std r3, 0(r6)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_ldat_csne:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mr r9, r3
-; CHECK-BE-NEXT:    mr r7, r3
-; CHECK-BE-NEXT:    ldat r3, r9, 16
-; CHECK-BE-NEXT:    li r4, 44
-; CHECK-BE-NEXT:    li r5, 55
-; CHECK-BE-NEXT:    mr r8, r3
-; CHECK-BE-NEXT:    std r8, 0(r6)
-; CHECK-BE-NEXT:    ldat r3, r7, 16
-; CHECK-BE-NEXT:    mr r7, r3
-; CHECK-BE-NEXT:    std r7, 0(r6)
+; CHECK-BE-NEXT:    mr r9, r4
+; CHECK-BE-NEXT:    mr r10, r5
+; CHECK-BE-NEXT:    ldat r8, r3, 16
+; CHECK-BE-NEXT:    li r9, 44
+; CHECK-BE-NEXT:    li r10, 55
+; CHECK-BE-NEXT:    mr r4, r8
+; CHECK-BE-NEXT:    std r4, 0(r6)
+; CHECK-BE-NEXT:    ldat r8, r3, 16
+; CHECK-BE-NEXT:    mr r3, r8
+; CHECK-BE-NEXT:    std r3, 0(r6)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = call i64 @llvm.ppc.amo.ldat.csne(ptr %ptr, i64 %value1, i64 %value2)
   store i64 %0, ptr %resp, align 8
   %1 = tail call i64 @llvm.ppc.amo.ldat.csne(ptr %ptr, i64 44, i64 55)
   store i64 %1, ptr %resp, align 8
+  ret void
+}
+
+define void @test_lwat_csne_ptr_conflict(ptr %input_ptr) nounwind {
+; CHECK-LABEL: test_lwat_csne_ptr_conflict:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    mr r8, r3
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    mr r3, r8
+; CHECK-NEXT:    li r9, 11
+; CHECK-NEXT:    li r10, 22
+; CHECK-NEXT:    lwat r8, r3, 16
+; CHECK-NEXT:    mr r3, r8
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_lwat_csne_ptr_conflict:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    #APP
+; CHECK-BE-NEXT:    mr r8, r3
+; CHECK-BE-NEXT:    #NO_APP
+; CHECK-BE-NEXT:    mr r3, r8
+; CHECK-BE-NEXT:    li r9, 11
+; CHECK-BE-NEXT:    li r10, 22
+; CHECK-BE-NEXT:    lwat r8, r3, 16
+; CHECK-BE-NEXT:    mr r3, r8
+; CHECK-BE-NEXT:    blr
+entry:
+  %ptr = call ptr asm "mr $0, $1", "={r8},{r3}"(ptr %input_ptr)
+  %result = call i32 @llvm.ppc.amo.lwat.csne(ptr %ptr, i32 11, i32 22)
+  ret void
+}
+
+define void @test_ldat_csne_ptr_conflict(ptr %input_ptr) nounwind {
+; CHECK-LABEL: test_ldat_csne_ptr_conflict:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    mr r8, r3
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    mr r3, r8
+; CHECK-NEXT:    li r9, 11
+; CHECK-NEXT:    li r10, 22
+; CHECK-NEXT:    ldat r8, r3, 16
+; CHECK-NEXT:    mr r3, r8
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_ldat_csne_ptr_conflict:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    #APP
+; CHECK-BE-NEXT:    mr r8, r3
+; CHECK-BE-NEXT:    #NO_APP
+; CHECK-BE-NEXT:    mr r3, r8
+; CHECK-BE-NEXT:    li r9, 11
+; CHECK-BE-NEXT:    li r10, 22
+; CHECK-BE-NEXT:    ldat r8, r3, 16
+; CHECK-BE-NEXT:    mr r3, r8
+; CHECK-BE-NEXT:    blr
+entry:
+  %ptr = call ptr asm "mr $0, $1", "={r8},{r3}"(ptr %input_ptr)
+  %result = call i64 @llvm.ppc.amo.ldat.csne(ptr %ptr, i64 11, i64 22)
   ret void
 }
 

@@ -5897,7 +5897,7 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
 }
 
 // Expands LWAT_CSNE_PSEUDO/LDAT_CSNE_PSEUDO post register allocation.
-// lwat/ldat FC=16 requires 3 consecutive registers. X3/X4/X5 are
+// lwat/ldat FC=16 requires 3 consecutive registers. X8/X9/X10 are
 // hardcoded post-RA to satisfy this constraint without a dedicated
 // register class.
 bool PPCInstrInfo::expandAMOCSNEPseudo(MachineInstr &MI) const {
@@ -5909,27 +5909,27 @@ bool PPCInstrInfo::expandAMOCSNEPseudo(MachineInstr &MI) const {
   Register PtrReg = MI.getOperand(1).getReg();
 
   Register ScratchReg = PtrReg;
-  if (PtrReg == PPC::X3 || PtrReg == PPC::X4 || PtrReg == PPC::X5) {
-    RegScavenger RS;
-    RS.enterBasicBlockEnd(MBB);
-    RS.backward(std::next(MI.getIterator()));
-    ScratchReg = RS.scavengeRegisterBackwards(
-        PPC::G8RCRegClass, MI.getIterator(), false, 0, false);
-    BuildMI(MBB, MI, DL, get(PPC::OR8), ScratchReg)
-        .addReg(PtrReg)
-        .addReg(PtrReg);
+  if (PtrReg == PPC::X8 || PtrReg == PPC::X9 || PtrReg == PPC::X10) {
+    // If ptr is in X8/X9/X10, use $dst as scratch to move ptr away from
+    // X8/X9/X10 since lwat FC=16 always writes its result to X8. After lwat
+    // copy X8 into $dst.
+    Register DstReg64 = IsLDAT ? DstReg
+                               : Register(getRegisterInfo().getMatchingSuperReg(
+                                     DstReg, PPC::sub_32, &PPC::G8RCRegClass));
+    BuildMI(MBB, MI, DL, get(PPC::OR8), DstReg64).addReg(PtrReg).addReg(PtrReg);
+    ScratchReg = DstReg64;
   }
 
-  BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::LDAT_CSNE : PPC::LWAT_CSNE), PPC::X3)
+  BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::LDAT_CSNE : PPC::LWAT_CSNE), PPC::X8)
       .addReg(ScratchReg)
       .addImm(16)
-      .addReg(PPC::X4, RegState::Implicit)
-      .addReg(PPC::X5, RegState::Implicit);
+      .addReg(PPC::X9, RegState::Implicit)
+      .addReg(PPC::X10, RegState::Implicit);
 
-  if (DstReg != (IsLDAT ? PPC::X3 : PPC::R3)) {
+  if (DstReg != (IsLDAT ? PPC::X8 : PPC::R8)) {
     BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::OR8 : PPC::OR), DstReg)
-        .addReg(IsLDAT ? PPC::X3 : PPC::R3)
-        .addReg(IsLDAT ? PPC::X3 : PPC::R3);
+        .addReg(IsLDAT ? PPC::X8 : PPC::R8)
+        .addReg(IsLDAT ? PPC::X8 : PPC::R8);
   }
   MI.eraseFromParent();
   return true;
