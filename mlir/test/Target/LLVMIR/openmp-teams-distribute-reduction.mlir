@@ -92,4 +92,9 @@ llvm.func @teams_reduction_multiple_distribute_() attributes {fir.internal_name 
 // CHECK-LABEL: define void @teams_reduction_multiple_distribute_(
 // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_teams
 // CHECK: call i32 @__kmpc_reduce
+// CHECK-SAME: @[[REDFUNC:[A-Za-z_.][A-Za-z0-9_.]*]]
 // CHECK: call void @__kmpc_end_reduce
+
+// Reduction function.
+// CHECK: define internal void @[[REDFUNC]]
+// CHECK: add i32

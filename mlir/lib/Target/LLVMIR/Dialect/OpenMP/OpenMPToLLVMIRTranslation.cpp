@@ -1990,7 +1990,7 @@ getDistributeCapturingTeamsReduction(omp::TeamsOp teamsOp) {
     if (distOp)
       return WalkResult::interrupt();
     distOp = op;
-    return WalkResult::advance();
+    return WalkResult::skip();
   });
   if (walk.wasInterrupted() || !distOp)
     return {};
