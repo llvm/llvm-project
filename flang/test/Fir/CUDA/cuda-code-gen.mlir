@@ -328,3 +328,35 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
 }
 
 // CHECK: llvm.mlir.global external @_QMtestEmanx() {addr_space = 1 : i32, nvvm.managed} : !llvm.array<100 x i32>
+
+// -----
+
+func.func @sub16_(%arg0: !fir.ref<f32> {fir.bindc_name = "h16"}) attributes {fir.internal_name = "_QPsub16", llvm.reciprocal_estimates = "none", llvm.target_cpu = "x86-64", llvm.target_features = #llvm.target_features<["+cmov", "+mmx", "+sse", "+sse2", "+cx8", "+x87", "+fxsr"]>} {
+  %c8_i32 = arith.constant 8 : i32
+  %c4_i64 = arith.constant 4 : i64
+  %c0_i32 = arith.constant 0 : i32
+  %0 = fir.address_of(@_QMdevice_dataEd16) : !fir.ref<f32>
+  %1 = fir.convert %0 : (!fir.ref<f32>) -> !fir.llvm_ptr<i8>
+  %2 = fir.address_of(@_QQclXc8657e47c19bb9e89730387c9d99c2da) : !fir.ref<!fir.char<1,38>>
+  %c38 = arith.constant 38 : index
+  %c2_i32 = arith.constant 2 : i32
+  %3 = fir.convert %2 : (!fir.ref<!fir.char<1,38>>) -> !fir.ref<i8>
+  %4 = fir.call @_FortranACUFGetDeviceAddress(%1, %3, %c2_i32) : (!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+  %5 = fir.convert %4 : (!fir.llvm_ptr<i8>) -> !fir.ref<f32>
+  %6 = fir.convert %arg0 : (!fir.ref<f32>) -> memref<f32>
+  %8 = fir.address_of(@_QQclXc8657e47c19bb9e89730387c9d99c2da) : !fir.ref<!fir.char<1,38>>
+  %9 = fir.convert %5 : (!fir.ref<f32>) -> !fir.llvm_ptr<i8>
+  return
+}
+fir.global linkonce @_QQclXc8657e47c19bb9e89730387c9d99c2da constant : !fir.char<1,38> {
+  %0 = fir.string_lit "/local/home/vclement/lorado/dummy.cuf\00"(38) : !fir.char<1,38>
+  fir.has_value %0 : !fir.char<1,38>
+}
+fir.global @_QMdevice_dataEd16 {data_attr = #cuf.cuda<constant>} : f32 {
+  %0 = fir.zero_bits f32
+  fir.has_value %0 : f32
+}
+func.func private @_FortranACUFGetDeviceAddress(!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8> attributes {fir.runtime}
+
+// CHECK-LABEL: llvm.func @sub16_
+// CHECK: llvm.mlir.addressof @_QMdevice_dataEd16 : !llvm.ptr<4>
