@@ -375,7 +375,7 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // CHECK: %struct.ident_t = type
 // CHECK: @[[$loc:.*]] = private unnamed_addr constant {{.*}} c";unknown;unknown;{{[0-9]+}};{{[0-9]+}};;\00"
-// CHECK: @[[$loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$loc]] {{.*}}
+// CHECK: @{{.*}} = private unnamed_addr constant %struct.ident_t {{.*}} @[[$loc]] {{.*}}
 
 // CHECK-LABEL: @wsloop_simple
 llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
@@ -388,7 +388,7 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
         // The form of the emitted IR is controlled by OpenMPIRBuilder and
         // tested there. Just check that the right functions are called.
         // CHECK: call i32 @__kmpc_global_thread_num
-        // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$loc_struct]],
+        // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$loc_struct:[0-9]+]],
         %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
         %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
         llvm.store %3, %4 : f32, !llvm.ptr
