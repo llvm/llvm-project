@@ -6830,8 +6830,10 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     return Cost;
 
   // Pre-compute costs for instructions that are forced-scalar or profitable to
-  // scalarize. Their costs will be computed separately in the legacy cost
-  // model.
+  // scalarize. For most such instructions, their scalarization costs are
+  // accounted for here using the legacy cost model. However, some opcodes
+  // are excluded from these precomputed scalarization costs and are instead
+  // modeled later by the VPlan cost model (see UseVPlanCostModel below).
   for (Instruction *ForcedScalar : CM.ForcedScalars[VF]) {
     if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
       continue;
@@ -6843,8 +6845,21 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     });
     Cost += ForcedCost;
   }
+
+  auto UseVPlanCostModel = [](Instruction *I) -> bool {
+    switch (I->getOpcode()) {
+    case Instruction::SDiv:
+    case Instruction::UDiv:
+    case Instruction::SRem:
+    case Instruction::URem:
+      return true;
+    default:
+      return false;
+    }
+  };
   for (const auto &[Scalarized, ScalarCost] : CM.InstsToScalarize[VF]) {
-    if (CostCtx.skipCostComputation(Scalarized, VF.isVector()))
+    if (UseVPlanCostModel(Scalarized) ||
+        CostCtx.skipCostComputation(Scalarized, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(Scalarized);
     LLVM_DEBUG({
