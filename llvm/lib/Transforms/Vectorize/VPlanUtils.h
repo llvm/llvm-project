@@ -80,9 +80,9 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// \p GEPs.
 LLVM_ABI_FOR_TEST
 std::optional<VPValue *>
-getRecipesForUncountableExit(VPlan &Plan,
-                             SmallVectorImpl<VPRecipeBase *> &Recipes,
-                             SmallVectorImpl<VPRecipeBase *> &GEPs);
+getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
+                             SmallVectorImpl<VPInstruction *> &GEPs,
+                             VPBasicBlock *LatchVPBB);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
@@ -269,8 +269,7 @@ public:
 
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
-  template <typename BlockTy, typename T>
-  static auto blocksOnly(const T &Range) {
+  template <typename BlockTy, typename T> static auto blocksOnly(T &&Range) {
     // Create BaseTy with correct const-ness based on BlockTy.
     using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
                                       const VPBlockBase, VPBlockBase>;

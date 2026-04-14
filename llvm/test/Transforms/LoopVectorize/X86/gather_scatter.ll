@@ -20,7 +20,6 @@ target triple = "x86_64-pc_linux"
 ;  }
 ;}
 
-; Function Attrs: nounwind uwtable
 define void @foo1(ptr noalias %in, ptr noalias %out, ptr noalias %trigger, ptr noalias %index) {
 ; AVX512-LABEL: @foo1(
 ; AVX512-NEXT:  entry:
@@ -327,7 +326,6 @@ for.inc:
 for.end:
   ret void
 }
-declare void @llvm.masked.scatter.v16f32.v16p0(<16 x float>, <16 x ptr>, i32, <16 x i1>)
 
 ; The same as @foo2 but scatter/gather argument is a vecotr of ptrs with addresspace 1
 

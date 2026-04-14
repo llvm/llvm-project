@@ -1,0 +1,16 @@
+# These inputs were derived from a Rust reproducer (see llvm#189169)
+# using cargo llvm-cov --lib --branch.
+#
+# The generated coverage data was converted into .proftext and
+# .covmapping files and checked in for this regression test.
+
+REQUIRES: zlib
+RUN: llvm-profdata merge %S/Inputs/main-view-fileid-regression.proftext -o %t.profdata
+RUN: llvm-cov report %S/Inputs/main-view-fileid-regression.covmapping \
+RUN:   -instr-profile=%t.profdata \
+RUN:   2>/dev/null | FileCheck %s
+
+CHECK: Filename
+CHECK: lib.rs
+CHECK: TOTAL
+CHECK: 100.00%

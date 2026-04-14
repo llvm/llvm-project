@@ -86,26 +86,6 @@ void genOpenACCRoutineConstruct(
     AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
     const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
 
-/// Get a acc.private.recipe op for the given type or create it if it does not
-/// exist yet.
-mlir::acc::PrivateRecipeOp
-createOrGetPrivateRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
-                         mlir::Type,
-                         llvm::SmallVector<mlir::Value> &dataOperationBounds);
-
-/// Get a acc.reduction.recipe op for the given type or create it if it does not
-/// exist yet.
-mlir::acc::ReductionRecipeOp
-createOrGetReductionRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
-                           mlir::Type, mlir::acc::ReductionOperator,
-                           llvm::SmallVector<mlir::Value> &dataOperationBounds);
-
-/// Get a acc.firstprivate.recipe op for the given type or create it if it does
-/// not exist yet.
-mlir::acc::FirstprivateRecipeOp createOrGetFirstprivateRecipe(
-    fir::FirOpBuilder &, llvm::StringRef, mlir::Location, mlir::Type,
-    llvm::SmallVector<mlir::Value> &dataOperationBounds);
-
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
 void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,

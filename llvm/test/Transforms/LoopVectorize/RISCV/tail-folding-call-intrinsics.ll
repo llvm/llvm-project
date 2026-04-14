@@ -1253,15 +1253,6 @@ exit:
 }
 
 
-declare i32 @llvm.smax.i32(i32, i32)
-declare i32 @llvm.smin.i32(i32, i32)
-declare i32 @llvm.umax.i32(i32, i32)
-declare i32 @llvm.umin.i32(i32, i32)
-declare i32 @llvm.ctlz.i32(i32, i1 immarg)
-declare i32 @llvm.cttz.i32(i32, i1 immarg)
-declare i64 @llvm.lrint.i64.f64(double)
-declare i64 @llvm.llrint.i64.f64(double)
-declare i32 @llvm.abs.i32(i32, i1 immarg)
 ;.
 ; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

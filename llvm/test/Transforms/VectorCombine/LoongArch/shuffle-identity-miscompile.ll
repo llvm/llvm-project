@@ -5,9 +5,11 @@ define i32 @shuffle_different_lanes(<2 x i64> %0) local_unnamed_addr {
 ; CHECK-LABEL: define i32 @shuffle_different_lanes(
 ; CHECK-SAME: <2 x i64> [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[TMP0]] to <2 x i16>
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i64> [[TMP0]] to <2 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i16> zeroinitializer to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[TMP4]] to <2 x i16>
+; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = sub <2 x i16> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i16> [[SHUFFLE_I]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:

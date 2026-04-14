@@ -407,26 +407,11 @@ static_assert(CEV2P1.getElementCount() != ElementCount::getFixed(1));
 static_assert(CEV2S32.getElementCount() == ElementCount::getFixed(2));
 static_assert(CEV2S32.getSizeInBits() == TypeSize::getFixed(64));
 static_assert(CEV2P1.getSizeInBits() == TypeSize::getFixed(128));
-static_assert(CEV2P1.getScalarType() == LLT::pointer(1, 64));
-static_assert(CES32.getScalarType() == CES32);
-static_assert(CEV2S32.getScalarType() == CES32);
-static_assert(CEV2S32.changeElementType(CEP0) == LLT::fixed_vector(2, CEP0));
-static_assert(CEV2S32.changeElementSize(16) == LLT::fixed_vector(2, 16));
-static_assert(CEV2S32.changeElementCount(ElementCount::getFixed(4)) ==
-              LLT::fixed_vector(4, 32));
 static_assert(CES32.isByteSized());
 static_assert(!LLT::scalar(7).isByteSized());
 static_assert(CES32.getScalarSizeInBits() == 32);
 static_assert(CEP0.getAddressSpace() == 0);
 static_assert(LLT::pointer(1, 64).getAddressSpace() == 1);
-static_assert(CEV2S32.multiplyElements(2) == LLT::fixed_vector(4, 32));
-static_assert(CEV2S32.divide(2) == LLT::scalar(32));
-static_assert(LLT::scalarOrVector(ElementCount::getFixed(1), LLT::scalar(32)) ==
-              LLT::scalar(32));
-static_assert(LLT::scalarOrVector(ElementCount::getFixed(2), LLT::scalar(32)) ==
-              LLT::fixed_vector(2, 32));
-static_assert(LLT::scalarOrVector(ElementCount::getFixed(2), CEP0) ==
-              LLT::fixed_vector(2, CEP0));
 
 TEST(LowLevelTypeTest, ConstExpr) {
   EXPECT_EQ(LLT(), CELLT);
@@ -434,6 +419,21 @@ TEST(LowLevelTypeTest, ConstExpr) {
   EXPECT_EQ(LLT::fixed_vector(2, 32), CEV2S32);
   EXPECT_EQ(LLT::pointer(0, 32), CEP0);
   EXPECT_EQ(LLT::scalable_vector(2, 32), CESV2S32);
+  EXPECT_EQ(CEV2P1.getScalarType(), LLT::pointer(1, 64));
+  EXPECT_EQ(CES32.getScalarType(), CES32);
+  EXPECT_EQ(CEV2S32.getScalarType(), CES32);
+  EXPECT_EQ(CEV2S32.changeElementType(CEP0), LLT::fixed_vector(2, CEP0));
+  EXPECT_EQ(CEV2S32.changeElementSize(16), LLT::fixed_vector(2, 16));
+  EXPECT_EQ(CEV2S32.changeElementCount(ElementCount::getFixed(4)),
+            LLT::fixed_vector(4, 32));
+  EXPECT_EQ(CEV2S32.multiplyElements(2), LLT::fixed_vector(4, 32));
+  EXPECT_EQ(CEV2S32.divide(2), LLT::scalar(32));
+  EXPECT_EQ(LLT::scalarOrVector(ElementCount::getFixed(1), LLT::scalar(32)),
+            LLT::scalar(32));
+  EXPECT_EQ(LLT::scalarOrVector(ElementCount::getFixed(2), LLT::scalar(32)),
+            LLT::fixed_vector(2, 32));
+  EXPECT_EQ(LLT::scalarOrVector(ElementCount::getFixed(2), CEP0),
+            LLT::fixed_vector(2, CEP0));
 }
 
 TEST(LowLevelTypeTest, IsFixedVector) {

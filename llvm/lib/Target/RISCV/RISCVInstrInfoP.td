@@ -18,25 +18,14 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def simm10 : RISCVSImmOp<10>, ImmLeaf<XLenVT, "return isInt<10>(Imm);">;
-
-def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
-  let RenderMethod = "addSImm8UnsignedOperands";
+def SImm8PLI_BAsmOperand : SImmAsmOperand<8, "PLI_B"> {
+  let RenderMethod = "addSExtImmOperands<8>";
 }
-
-// (rdlo, rdhi) PPAIRE_DB (rs1plo, rs1phi, rs2plo, rs2phi)
-def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
-                                              SDTCisSameAs<0, 1>,
-                                              SDTCisSameAs<0, 2>,
-                                              SDTCisSameAs<0, 3>,
-                                              SDTCisSameAs<0, 4>,
-                                              SDTCisSameAs<0, 5>]>;
-def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
 
 // A 8-bit signed immediate allowing range [-128, 255]
 // but represented as [-128, 127].
-def simm8_unsigned : RISCVOp {
-  let ParserMatchClass = SImm8UnsignedAsmOperand;
+def simm8_pli_b : RISCVOp {
+  let ParserMatchClass = SImm8PLI_BAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<8>";
   let OperandType = "OPERAND_SIMM8";
@@ -48,14 +37,14 @@ def simm8_unsigned : RISCVOp {
   }];
 }
 
-def SImm10UnsignedAsmOperand : SImmAsmOperand<10, "Unsigned"> {
-  let RenderMethod = "addSImm10UnsignedOperands";
+def SImm10PLUIAsmOperand : SImmAsmOperand<10, "PLUI"> {
+  let RenderMethod = "addSExtImmOperands<10>";
 }
 
 // A 10-bit signed immediate allowing range [-512, 1023]
 // but represented as [-512, 511].
-def simm10_unsigned : RISCVOp {
-  let ParserMatchClass = SImm10UnsignedAsmOperand;
+def simm10_plui : RISCVOp {
+  let ParserMatchClass = SImm10PLUIAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<10>";
   let OperandType = "OPERAND_SIMM10";
@@ -68,11 +57,11 @@ def simm10_unsigned : RISCVOp {
 }
 
 def SImm10PLI_HAsmOperand : SImmAsmOperand<10, "PLI_H"> {
-  let RenderMethod = "addSImm10UnsignedOperands";
+  let RenderMethod = "addSExtImmOperands<10>";
 }
 
 def SImm10PLI_WAsmOperand : SImmAsmOperand<10, "PLI_W"> {
-  let RenderMethod = "addSImm10UnsignedOperands";
+  let RenderMethod = "addSExtImmOperands<10>";
 }
 
 // A 10-bit signed immediate to be splatted to 16 bit elements allowing range
@@ -161,7 +150,7 @@ class PLI_i<bits<7> funct7, string opcodestr, DAGOperand imm>
 
 // Base for plui.h/w.
 class PLUI_i<bits<7> funct7, string opcodestr>
-    : RVPLoadImm_i<funct7, (ins simm10_unsigned:$imm10), opcodestr,
+    : RVPLoadImm_i<funct7, (ins simm10_plui:$imm10), opcodestr,
                    "$rd, $imm10"> {
   bits<10> imm10;
 
@@ -587,7 +576,7 @@ def PLI_H : PLI_i<0b1011000, "pli.h", simm10_pli_h>;
 let Predicates = [HasStdExtP, IsRV64] in
 def PLI_W : PLI_i<0b1011001, "pli.w", simm10_pli_w>;
 let Predicates = [HasStdExtP] in {
-  def PLI_B : RVPLoadImm_i<0b1011010, (ins simm8_unsigned:$imm8), "pli.b",
+  def PLI_B : RVPLoadImm_i<0b1011010, (ins simm8_pli_b:$imm8), "pli.b",
                            "$rd, $imm8"> {
     bits<8> imm8;
 
@@ -1298,7 +1287,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{15}    = imm10{9};
   }
 
-  def PLI_DB : RVPPairLoadImm_i<0b0011010, (ins simm8_unsigned:$imm8), "pli.db",
+  def PLI_DB : RVPPairLoadImm_i<0b0011010, (ins simm8_pli_b:$imm8), "pli.db",
                                 "$rd, $imm8"> {
     bits<8> imm8;
 
@@ -1307,7 +1296,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{15}    = 0b0;
   }
 
-  def PLUI_DH : RVPPairLoadImm_i<0b0111000, (ins simm10_unsigned:$imm10),
+  def PLUI_DH : RVPPairLoadImm_i<0b0111000, (ins simm10_plui:$imm10),
                                  "plui.dh", "$rd, $imm10"> {
     bits<10> imm10;
 
@@ -1674,6 +1663,172 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PMAXU_DB     : RVPPairBinaryExchanged_rr<0b1111, 0b10, "pmaxu.db", Commutable=1>;
 } // Predicates = [HasStdExtP, IsRV32]
 
+//===----------------------------------------------------------------------===//
+// Assembler Pseudo Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtP] in {
+  def : InstAlias<"pmv.bs $rd, $rs", (PADD_BS GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pmv.hs $rd, $rs", (PADD_HS GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pneg.b $rd, $rs", (PSUB_B GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pneg.h $rd, $rs", (PSUB_H GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pabs.b $rd, $rs", (PABD_B GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pabs.h $rd, $rs", (PABD_H GPR:$rd, GPR:$rs, X0)>;
+  // No pabd.w instruction
+
+  def : InstAlias<"pzext.h.b $rd, $rs", (PPAIRE_B GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmseqz.b $rd, $rs", (PMSEQ_B GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pmseqz.h $rd, $rs", (PMSEQ_H GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsnez.b $rd, $rs", (PMSLTU_B GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pmsnez.h $rd, $rs", (PMSLTU_H GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pmsltz.b $rd, $rs", (PMSLT_B GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pmsltz.h $rd, $rs", (PMSLT_H GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsgtz.b $rd, $rs", (PMSLT_B GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pmsgtz.h $rd, $rs", (PMSLT_H GPR:$rd, X0, GPR:$rs)>;
+
+  // The canonical pmslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"pmsgt.b $rd, $rs, $rt",  (PMSLT_B GPR:$rd, GPR:$rt, GPR:$rs),  0>;
+  def : InstAlias<"pmsgt.h $rd, $rs, $rt",  (PMSLT_H GPR:$rd, GPR:$rt, GPR:$rs),  0>;
+  def : InstAlias<"pmsgtu.b $rd, $rs, $rt", (PMSLTU_B GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+  def : InstAlias<"pmsgtu.h $rd, $rs, $rt", (PMSLTU_H GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+}
+let Predicates = [HasStdExtP, IsRV32] in {
+  def : InstAlias<"mseqz $rd, $rs", (MSEQ GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"msnez $rd, $rs", (MSLTU GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"msltz $rd, $rs", (MSLT GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"msgtz $rd, $rs", (MSLT GPR:$rd, X0, GPR:$rs)>;
+
+  // The canonical mslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"msgt $rd, $rs, $rt",  (MSLT GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+  def : InstAlias<"msgtu $rd, $rs, $rt", (MSLTU GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+}
+let Predicates = [HasStdExtP, IsRV64] in {
+  def : InstAlias<"pmv.ws $rd, $rs", (PADD_WS GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pneg.w $rd, $rs", (PSUB_W GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pzext.w.h $rd, $rs", (PPAIRE_H GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmseqz.w $rd, $rs", (PMSEQ_W GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsnez.w $rd, $rs", (PMSLTU_W GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pmsltz.w $rd, $rs", (PMSLT_W GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsgtz.w $rd, $rs", (PMSLT_W GPR:$rd, X0, GPR:$rs)>;
+
+  // The canonical pmslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"pmsgt.w $rd, $rs, $rt", (PMSLT_W GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+  def : InstAlias<"pmsgtu.w $rd, $rs, $rt", (PMSLTU_W GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+
+  // No pwcvt.b/h for RV64.
+  def : InstAlias<"pwcvtu.b $rd, $rs", (ZIP8P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvtu.h $rd, $rs", (ZIP16P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvth.b $rd, $rs", (ZIP8P GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pwcvth.h $rd, $rs", (ZIP16P GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pncvt.b $rd, $rs", (UNZIP8P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pncvt.h $rd, $rs", (UNZIP16P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pncvth.b $rd, $rs", (UNZIP8HP GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pncvth.h $rd, $rs", (UNZIP16HP GPR:$rd, GPR:$rs, X0)>;
+}
+
+let Predicates = [HasStdExtP, IsRV32] in {
+  def : InstAlias<"pmv.dbs $rd, $rs",
+                  (PADD_DBS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+  def : InstAlias<"pmv.dhs $rd, $rs",
+                  (PADD_DHS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+  def : InstAlias<"pmv.dws $rd, $rs",
+                  (PADD_DWS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+
+  def : InstAlias<"pneg.db $rd, $rs",
+                  (PSUB_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pneg.dh $rd, $rs",
+                  (PSUB_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pneg.dw $rd, $rs",
+                  (PSUB_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"negd $rd, $rs",
+                  (SUBD GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+
+  def : InstAlias<"pabs.db $rd, $rs",
+                  (PABD_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pabs.dh $rd, $rs",
+                  (PABD_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  // No pabd.dw instruction
+
+  def : InstAlias<"pzext.dh.b $rd, $rs",
+                  (PPAIRE_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pzext.dw.h $rd, $rs",
+                  (PPAIRE_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+
+  def : InstAlias<"pmseqz.db $rd, $rs",
+                  (PMSEQ_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmseqz.dh $rd, $rs",
+                  (PMSEQ_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmseqz.dw $rd, $rs",
+                  (PMSEQ_DW GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+
+  def : InstAlias<"pmsnez.db $rd, $rs",
+                  (PMSLTU_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsnez.dh $rd, $rs",
+                  (PMSLTU_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsnez.dw $rd, $rs",
+                  (PMSLTU_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+
+  def : InstAlias<"pmsltz.db $rd, $rs",
+                  (PMSLT_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmsltz.dh $rd, $rs",
+                  (PMSLT_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmsltz.dw $rd, $rs",
+                  (PMSLT_DW GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+
+  def : InstAlias<"pmsgtz.db $rd, $rs",
+                  (PMSLT_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsgtz.dh $rd, $rs",
+                  (PMSLT_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsgtz.dw $rd, $rs",
+                  (PMSLT_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+
+  // The canonical pmslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"pmsgt.db $rd, $rs, $rt",
+                  (PMSLT_DB GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgt.dh $rd, $rs, $rt",
+                  (PMSLT_DH GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgt.dw $rd, $rs, $rt",
+                  (PMSLT_DW GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgtu.db $rd, $rs, $rt",
+                  (PMSLTU_DB GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgtu.dh $rd, $rs, $rt",
+                  (PMSLTU_DH GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgtu.dw $rd, $rs, $rt",
+                  (PMSLTU_DW GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+
+  def : InstAlias<"pwcvt.b $rd, $rs", (PWADD_B GPRPairRV32:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvt.h $rd, $rs", (PWADD_H GPRPairRV32:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pwcvtu.b $rd, $rs", (WZIP8P GPRPairRV32:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvtu.h $rd, $rs", (WZIP16P GPRPairRV32:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvth.b $rd, $rs", (WZIP8P GPRPairRV32:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pwcvth.h $rd, $rs", (WZIP16P GPRPairRV32:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pncvt.b $rd, $rs", (PNSRLI_B GPR:$rd, GPRPairRV32:$rs, 0)>;
+  def : InstAlias<"pncvt.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPairRV32:$rs, 0)>;
+  def : InstAlias<"pncvth.b $rd, $rs", (PNSRLI_B GPR:$rd, GPRPairRV32:$rs, 8)>;
+  def : InstAlias<"pncvth.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPairRV32:$rs, 16)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Codegen patterns
@@ -1742,13 +1897,17 @@ def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
-def STD_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
+def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
                                                 SDTCisVT<2, XLenVT>]>;
-def riscv_pshl : RVSDNode<"PSHL", STD_RISCVPackedShift>;
-def riscv_psrl : RVSDNode<"PSRL", STD_RISCVPackedShift>;
-def riscv_psra : RVSDNode<"PSRA", STD_RISCVPackedShift>;
-def riscv_psslai : RVSDNode<"PSSLAI", STD_RISCVPackedShift>;
+def riscv_pshl : RVSDNode<"PSHL", SDT_RISCVPackedShift>;
+def riscv_psrl : RVSDNode<"PSRL", SDT_RISCVPackedShift>;
+def riscv_psra : RVSDNode<"PSRA", SDT_RISCVPackedShift>;
+def riscv_psslai : RVSDNode<"PSSLAI", SDT_RISCVPackedShift>;
+
+// The immediate for these is the number of trailing ones in the max value.
+def riscv_sati : RVSDNode<"SATI", SDTIntBinOp>;
+def riscv_usati : RVSDNode<"USATI", SDTIntBinOp>;
 
 // Bitwise merge: res = (~op0 & op1) | (op0 & op2)
 def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
@@ -1756,6 +1915,21 @@ def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
                                           SDTCisSameAs<0, 2>,
                                           SDTCisSameAs<0, 3>]>;
 def riscv_merge : RVSDNode<"MERGE", SDT_RISCVMERGE>;
+
+// (rdlo, rdhi) PPAIRE_DB (rs1plo, rs1phi, rs2plo, rs2phi)
+def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
+                                              SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCisSameAs<0, 3>,
+                                              SDTCisSameAs<0, 4>,
+                                              SDTCisSameAs<0, 5>]>;
+def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
+
+// Add one to the immediate. Used by RISCVISD::SATI.
+def IncImm : SDNodeXForm<imm, [{
+    return CurDAG->getTargetConstant(N->getZExtValue() + 1, SDLoc(N),
+                                     N->getValueType(0));
+}]>;
 
 let Predicates = [HasStdExtP] in {
 
@@ -1788,10 +1962,12 @@ let Predicates = [HasStdExtP] in {
   // Basic 8-bit arithmetic patterns
   def : PatGprGpr<add, PADD_B, XLenVecI8VT>;
   def : PatGprGpr<sub, PSUB_B, XLenVecI8VT>;
+  def : PatGprSplatGpr<add, PADD_BS, XLenVecI8VT>;
 
   // Basic 16-bit arithmetic patterns
   def : PatGprGpr<add, PADD_H, XLenVecI16VT>;
   def : PatGprGpr<sub, PSUB_H, XLenVecI16VT>;
+  def : PatGprSplatGpr<add, PADD_HS, XLenVecI16VT>;
 
   // 8-bit bitwise operation patterns
   def : PatGprGpr<and, AND, XLenVecI8VT>;
@@ -1924,12 +2100,49 @@ let Predicates = [HasStdExtP] in {
 let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGpr<bitreverse, REV_RV32>;
 
+  def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
+            (SATI_RV32 GPR:$rs1, (IncImm timm:$imm))>;
+  def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
+            (USATI_RV32 GPR:$rs1, timm:$imm)>;
+
   def : PatGprGpr<saddsat, SADD>;
   def : PatGprGpr<ssubsat, SSUB>;
   def : PatGprGpr<uaddsat, SADDU>;
   def : PatGprGpr<usubsat, SSUBU>;
   def : PatGprGpr<sshlsat, SSHA>;
+  def : PatGprGpr<ushlsat, SSHL>;
   def : PatGprUimmLog2XLen<sshlsat, SSLAI>;
+  // No SSLLI
+
+  // 32-bit averaging patterns
+  def : PatGprGpr<avgfloors, AADD, i32>;
+  def : PatGprGpr<avgflooru, AADDU, i32>;
+
+  // Halfword multiply patterns where one operand is a sext.h or zext.h and
+  // the other is a sext.h or zext.h or is known to be sign/zero-extended. We
+  // prefer plain mul when both operands are known to be sign/zero-extended.
+  def : Pat<(i32 (mul sexti16:$rs1, (sext_inreg GPR:$rs2, i16))),
+            (MUL_H00 sexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul zexti16:$rs1, (and GPR:$rs2, 0xffff))),
+            (MULU_H00 zexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul sexti16:$rs1, (and GPR:$rs2, 0xffff))),
+            (MULSU_H00 sexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul (sext_inreg GPR:$rs1, i16), zexti16:$rs2)),
+            (MULSU_H00 GPR:$rs1, zexti16:$rs2)>;
+
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1, sexti16:$rs2))),
+            (MACC_H00 GPR:$rd, sexti16:$rs1, sexti16:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse zexti16:$rs1, zexti16:$rs2))),
+            (MACCU_H00 GPR:$rd, zexti16:$rs1, zexti16:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1, zexti16:$rs2))),
+            (MACCSU_H00 GPR:$rd, sexti16:$rs1, zexti16:$rs2)>;
+
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhs> GPR:$rs1, GPR:$rs2))),
+            (MHACC GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhu> GPR:$rs1, GPR:$rs2))),
+            (MHACCU GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<riscv_mulhsu> GPR:$rs1, GPR:$rs2))),
+            (MHACCSU GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Narrowing shift patterns (NSRL/NSRA)
   // Immediate shift amount patterns
@@ -1976,6 +2189,30 @@ let Predicates = [HasStdExtP, IsRV64] in {
 
   def : PatGpr<bitreverse, REV_RV64>;
 
+  def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
+            (SATI_RV64 GPR:$rs1, (IncImm timm:$imm))>;
+  def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
+            (USATI_RV64 GPR:$rs1, timm:$imm)>;
+
+  // Word multiply patterns where one operand is a sext.w or zext.w and
+  // the other is a sext.w or zext.w or is known to be sign/zero-extended. We
+  // prefer plain mul when both operands are known to be sign/zero-extended.
+  def : Pat<(i64 (mul sexti32:$rs1, (sext_inreg GPR:$rs2, i32))),
+            (MUL_W00 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul zexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
+            (MULU_W00 zexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul sexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
+            (MULSU_W00 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul (sext_inreg GPR:$rs1, i32), zexti32:$rs2)),
+            (MULSU_W00 GPR:$rs1, zexti32:$rs2)>;
+
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, sexti32:$rs2))),
+            (MACC_W00 GPR:$rd, sexti32:$rs1, sexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse zexti32:$rs1, zexti32:$rs2))),
+            (MACCU_W00 GPR:$rd, zexti32:$rs1, zexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, zexti32:$rs2))),
+            (MACCSU_W00 GPR:$rd, sexti32:$rs1, zexti32:$rs2)>;
+
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value, and bits [63:32] being
   // ignored. We can use ppaire.h with ppaire.b for bits [31:16]. If bits [15:0]
@@ -1990,6 +2227,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
   // Basic 32-bit arithmetic patterns
   def : PatGprGpr<add, PADD_W, v2i32>;
   def : PatGprGpr<sub, PSUB_W, v2i32>;
+  def : PatGprSplatGpr<add, PADD_WS, v2i32>;
 
   // 32-bit bitwise operation patterns
   def : PatGprGpr<and, AND, v2i32>;

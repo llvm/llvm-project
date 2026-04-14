@@ -506,8 +506,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
            << Opts.CPU << FS.empty() << FS;
   }
 
-  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), STI.get(), &SrcMgr,
-                &MCOptions);
+  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), STI.get(), &SrcMgr);
 
   bool PIC = false;
   if (Opts.RelocationModel == "static") {

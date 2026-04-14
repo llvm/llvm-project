@@ -1490,7 +1490,7 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
   // information using -fopenmp-targets= option.
   constexpr llvm::StringLiteral Targets("--offload-targets=");
 
-  SmallVector<std::string> Triples;
+  SmallVector<StringRef> Triples;
   auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
   std::transform(TCRange.first, TCRange.second, std::back_inserter(Triples),
                  [](auto TC) { return TC.second->getTripleString(); });

@@ -15,6 +15,9 @@
 
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Support/PatternMatchHelpers.h"
+
+using namespace llvm::PatternMatchHelpers;
 
 namespace llvm {
 namespace SCEVPatternMatch {
@@ -23,9 +26,9 @@ template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
 }
 
-template <typename Pattern> bool match(const SCEVUse U, const Pattern &P) {
-  const SCEV *S = U.getPointer();
-  return const_cast<Pattern &>(P).match(S);
+template <typename SCEVPtrT, typename Pattern>
+bool match(const SCEVUseT<SCEVPtrT> U, const Pattern &P) {
+  return P.match(U.getPointer());
 }
 
 template <typename Predicate> struct cst_pred_ty : public Predicate {
@@ -62,17 +65,9 @@ inline cst_pred_ty<is_all_ones> m_scev_AllOnes() {
   return cst_pred_ty<is_all_ones>();
 }
 
-template <typename Class> struct class_match {
-  template <typename ITy> bool match(ITy *V) const { return isa<Class>(V); }
-};
-
-inline class_match<const SCEV> m_SCEV() { return class_match<const SCEV>(); }
-inline class_match<const SCEVConstant> m_SCEVConstant() {
-  return class_match<const SCEVConstant>();
-}
-inline class_match<const SCEVVScale> m_SCEVVScale() {
-  return class_match<const SCEVVScale>();
-}
+inline auto m_SCEV() { return m_Isa<const SCEV>(); }
+inline auto m_SCEVConstant() { return m_Isa<const SCEVConstant>(); }
+inline auto m_SCEVVScale() { return m_Isa<const SCEVVScale>(); }
 
 template <typename Class> struct bind_ty {
   Class *&VR;
@@ -88,10 +83,10 @@ template <typename Class> struct bind_ty {
   }
 };
 
-template <> struct bind_ty<SCEVUse> {
-  SCEVUse &VR;
+template <typename SCEVPtrT> struct bind_ty<SCEVUseT<SCEVPtrT>> {
+  SCEVUseT<SCEVPtrT> &VR;
 
-  bind_ty(SCEVUse &V) : VR(V) {}
+  bind_ty(SCEVUseT<SCEVPtrT> &V) : VR(V) {}
 
   template <typename ITy> bool match(ITy *V) const {
     VR = V;
@@ -101,7 +96,11 @@ template <> struct bind_ty<SCEVUse> {
 
 /// Match a SCEV, capturing it if we match.
 inline bind_ty<const SCEV> m_SCEV(const SCEV *&V) { return V; }
-inline bind_ty<SCEVUse> m_SCEV(SCEVUse &V) { return V; }
+
+template <typename SCEVPtrT>
+inline bind_ty<SCEVUseT<SCEVPtrT>> m_SCEV(SCEVUseT<SCEVPtrT> &V) {
+  return V;
+}
 inline bind_ty<const SCEVConstant> m_SCEVConstant(const SCEVConstant *&V) {
   return V;
 }
@@ -364,7 +363,7 @@ inline SCEVURem_match<Op0_t, Op1_t> m_scev_URem(Op0_t LHS, Op1_t RHS,
   return SCEVURem_match<Op0_t, Op1_t>(LHS, RHS, SE);
 }
 
-inline class_match<const Loop> m_Loop() { return class_match<const Loop>(); }
+inline auto m_Loop() { return m_Isa<const Loop>(); }
 
 /// Match an affine SCEVAddRecExpr.
 template <typename Op0_t, typename Op1_t, typename Loop_t>
@@ -394,10 +393,10 @@ inline specificloop_ty m_SpecificLoop(const Loop *L) { return L; }
 inline bind_ty<const Loop> m_Loop(const Loop *&L) { return L; }
 
 template <typename Op0_t, typename Op1_t>
-inline SCEVAffineAddRec_match<Op0_t, Op1_t, class_match<const Loop>>
+inline SCEVAffineAddRec_match<Op0_t, Op1_t, match_isa<const Loop>>
 m_scev_AffineAddRec(const Op0_t &Op0, const Op1_t &Op1) {
-  return SCEVAffineAddRec_match<Op0_t, Op1_t, class_match<const Loop>>(
-      Op0, Op1, m_Loop());
+  return SCEVAffineAddRec_match<Op0_t, Op1_t, match_isa<const Loop>>(Op0, Op1,
+                                                                     m_Loop());
 }
 
 template <typename Op0_t, typename Op1_t, typename Loop_t>
