@@ -80,6 +80,8 @@ function(llvm_update_compile_flags name)
 endfunction()
 
 function(llvm_update_pch name)
+  cmake_parse_arguments(ARG "DISABLE_PCH_REUSE" "" "" ${ARGN})
+
   if(LLVM_REQUIRES_RTTI OR LLVM_REQUIRES_EH)
     # Non-default RTTI/EH results in incompatible flags, precluding PCH reuse.
     set(ARG_DISABLE_PCH_REUSE ON)
@@ -106,41 +108,6 @@ function(llvm_update_pch name)
     # Disable for Objective-C as well to avoid errors due to mixed languages.
     set(ARG_DISABLE_PCH_REUSE ON)
   endif()
-
-  # Certain compile definitions change macro expansion in ways that conflict
-  # with a reused PCH (e.g. visibility macros, MSVC STL config, test-only
-  # code guards). Collect both target-level and directory-level definitions
-  # and disable PCH reuse when any of these are present but absent from the
-  # PCH source. Definitions may appear as "FOO" or "FOO=value".
-  set(_pch_conflict_defs
-    LLVM_BUILD_STATIC CLANG_BUILD_STATIC
-    _ENABLE_EXTENDED_ALIGNED_STORAGE
-    MLIR_INCLUDE_TESTS FLANG_INCLUDE_TESTS)
-  get_target_property(target_defs ${name} COMPILE_DEFINITIONS)
-  get_directory_property(dir_defs COMPILE_DEFINITIONS)
-  set(all_defs)
-  if(target_defs)
-    list(APPEND all_defs ${target_defs})
-  endif()
-  if(dir_defs)
-    list(APPEND all_defs ${dir_defs})
-  endif()
-  foreach(def ${_pch_conflict_defs})
-    if(def IN_LIST all_defs)
-      set(ARG_DISABLE_PCH_REUSE ON)
-      break()
-    endif()
-    # Also match "DEF=value" forms (e.g. FLANG_INCLUDE_TESTS=1).
-    foreach(actual_def ${all_defs})
-      if(actual_def MATCHES "^${def}=")
-        set(ARG_DISABLE_PCH_REUSE ON)
-        break()
-      endif()
-    endforeach()
-    if(ARG_DISABLE_PCH_REUSE)
-      break()
-    endif()
-  endforeach()
 
   # Find PCH with highest priority from dependencies. We reuse the first PCH
   # with the highest priority. If the target has its own set of PCH, we give it
@@ -675,7 +642,11 @@ function(llvm_add_library name)
     if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
       target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
     endif()
-    llvm_update_pch(${obj_name})
+    set(_pch_opts)
+    if(ARG_DISABLE_PCH_REUSE)
+      list(APPEND _pch_opts DISABLE_PCH_REUSE)
+    endif()
+    llvm_update_pch(${obj_name} ${_pch_opts})
     if(CMAKE_GENERATOR STREQUAL "Xcode")
       set(DUMMY_FILE ${CMAKE_CURRENT_BINARY_DIR}/Dummy.c)
       file(WRITE ${DUMMY_FILE} "// This file intentionally empty\n")
@@ -809,7 +780,11 @@ function(llvm_add_library name)
     if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
       target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
     endif()
-    llvm_update_pch(${name})
+    set(_pch_opts)
+    if(ARG_DISABLE_PCH_REUSE)
+      list(APPEND _pch_opts DISABLE_PCH_REUSE)
+    endif()
+    llvm_update_pch(${name} ${_pch_opts})
   else()
     get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
     if(NOT ${lib_disable_pch})
@@ -1236,7 +1211,11 @@ macro(add_llvm_executable name)
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT LLVM_ENABLE_OBJLIB)
     llvm_update_compile_flags(${name})
-    llvm_update_pch(${name})
+    if(ARG_DISABLE_PCH_REUSE)
+      llvm_update_pch(${name} DISABLE_PCH_REUSE)
+    else()
+      llvm_update_pch(${name})
+    endif()
   elseif(NOT ARG_DISABLE_PCH_REUSE)
     get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
     if(NOT ${lib_disable_pch})
@@ -1986,7 +1965,9 @@ function(add_benchmark benchmark_name)
     set(EXCLUDE_FROM_ALL ON)
   endif()
 
-  add_llvm_executable(${benchmark_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
+  # DISABLE_PCH_REUSE: the benchmark library propagates BENCHMARK_STATIC_DEFINE
+  # as an INTERFACE definition, which conflicts with the PCH.
+  add_llvm_executable(${benchmark_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH DISABLE_PCH_REUSE ${ARGN})
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${benchmark_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   get_subproject_title(subproject_title)

@@ -599,6 +599,7 @@ if( MSVC )
     _CRT_NONSTDC_NO_WARNINGS
     _SCL_SECURE_NO_DEPRECATE
     _SCL_SECURE_NO_WARNINGS
+    _ENABLE_EXTENDED_ALIGNED_STORAGE
     )
 
   # Tell MSVC to use the Unicode version of the Win32 APIs instead of ANSI.
@@ -606,6 +607,15 @@ if( MSVC )
     UNICODE
     _UNICODE
   )
+
+  # In static builds (no shared LLVM/Clang dylib), visibility macros like
+  # LLVM_ABI / CLANG_ABI must resolve to noops.  Define the corresponding
+  # guards globally so every target — including the LLVMSupport PCH — sees
+  # them, avoiding clang-cl PCH mismatch warnings (-Wclang-cl-pch).
+  if(NOT LLVM_LINK_LLVM_DYLIB AND NOT BUILD_SHARED_LIBS)
+    add_compile_definitions(LLVM_BUILD_STATIC)
+    add_compile_definitions(CLANG_BUILD_STATIC)
+  endif()
 
   if (LLVM_WINSYSROOT)
     if (NOT CLANG_CL)

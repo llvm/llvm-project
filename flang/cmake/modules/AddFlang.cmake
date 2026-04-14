@@ -63,13 +63,7 @@ function(add_flang_library name)
     # Let llvm_add_library decide, taking BUILD_SHARED_LIBS into account.
     set(LIBTYPE)
   endif()
-  # Clang libraries propagate CLANG_BUILD_STATIC as a PUBLIC definition on
-  # Windows static builds, which conflicts with the PCH from LLVM libraries.
-  set(_flang_pch_reuse)
-  if(ARG_CLANG_LIBS AND (WIN32 AND NOT MINGW) AND NOT CLANG_LINK_CLANG_DYLIB)
-    set(_flang_pch_reuse DISABLE_PCH_REUSE)
-  endif()
-  llvm_add_library(${name} ${LIBTYPE} ${_flang_pch_reuse} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
+  llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
   clang_target_link_libraries(${name} PRIVATE ${ARG_CLANG_LIBS})
   if (ARG_MLIR_LIBS)

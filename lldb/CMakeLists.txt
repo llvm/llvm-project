@@ -47,7 +47,6 @@ if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
 endif()
 
 if (WIN32)
-  add_definitions(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
   if (NOT MSVC)
     # _BSD_SOURCE is required for MinGW's getopt.h to define optreset
     add_definitions(-D_BSD_SOURCE)

@@ -489,10 +489,6 @@ include(GetClangResourceDir)
 
 get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 
-if (FLANG_INCLUDE_TESTS)
-  add_compile_definitions(FLANG_INCLUDE_TESTS=1)
-endif()
-
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(cmake/modules)

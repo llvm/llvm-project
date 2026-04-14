@@ -106,14 +106,7 @@ macro(add_clang_library name)
     endif()
     set_property(GLOBAL APPEND PROPERTY CLANG_STATIC_LIBS ${name})
   endif()
-  # CLANG_BUILD_STATIC is added after llvm_add_library, but it changes the
-  # expansion of CLANG_ABI visibility macros, causing a PCH mismatch with
-  # libraries that were built without it. Disable PCH reuse in that case.
-  set(clang_pch_reuse)
-  if((WIN32 AND NOT MINGW) AND NOT CLANG_LINK_CLANG_DYLIB)
-    set(clang_pch_reuse DISABLE_PCH_REUSE)
-  endif()
-  llvm_add_library(${name} ${LIBTYPE} ${clang_pch_reuse} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
+  llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
   if((WIN32 AND NOT MINGW) AND NOT CLANG_LINK_CLANG_DYLIB)
     # Make sure all consumers also turn off visibility macros so they're not

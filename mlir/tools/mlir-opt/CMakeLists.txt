@@ -93,6 +93,10 @@ add_mlir_tool(mlir-opt
   )
 mlir_target_link_libraries(mlir-opt PRIVATE ${LIBS})
 target_link_libraries(mlir-opt PRIVATE ${test_libs})
+if(MLIR_INCLUDE_TESTS)
+  target_compile_definitions(MLIRMlirOptMain PRIVATE MLIR_INCLUDE_TESTS)
+  target_compile_definitions(mlir-opt PRIVATE MLIR_INCLUDE_TESTS)
+endif()
 llvm_update_compile_flags(mlir-opt)
 
 mlir_check_all_link_libraries(mlir-opt)

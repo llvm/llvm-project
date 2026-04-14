@@ -133,7 +133,14 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     remove_definitions("-D_XOPEN_SOURCE=700")
 endif()
 
+set(_libclang_pch_opts)
+if(ENABLE_SHARED)
+  # DEFINE_SYMBOL _CINDEX_LIB_ is set on the shared target after creation,
+  # which conflicts with the PCH that was built without it.
+  set(_libclang_pch_opts DISABLE_PCH_REUSE)
+endif()
 add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCHAIN
+  ${_libclang_pch_opts}
   OUTPUT_NAME ${output_name}
   ${SOURCES}
 
