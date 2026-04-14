@@ -2390,7 +2390,7 @@ void StmtProfiler::VisitMaterializeTemporaryExpr(
 }
 
 void StmtProfiler::VisitCXXFoldExpr(const CXXFoldExpr *S) {
-  // For CXXFoldExpr, not profile the call expression as it may
+  // For CXXFoldExpr, do not profile the callee as it may
   // be affected by the context. e.g.,
   //
   // "a.h"
