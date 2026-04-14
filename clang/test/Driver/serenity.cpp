@@ -2,15 +2,15 @@
 
 /// Check default header and linker paths for each supported triple.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
 // RUN:   2>&1 | FileCheck %s --check-prefix=PATHS
 
 // RUN: %clang -### %s --target=aarch64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
 // RUN:   2>&1 | FileCheck %s --check-prefix=PATHS
 
 // RUN: %clang -### %s --target=riscv64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
 // RUN:   2>&1 | FileCheck %s --check-prefix=PATHS
 
 // PATHS:      "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -21,14 +21,14 @@
 
 /// Check include paths with -nostdinc.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
 // RUN:   -fsyntax-only -nostdinc 2>&1 | FileCheck %s --check-prefix=PATH_NOSTDINC
 // PATH_NOSTDINC: "-nostdsysteminc" "-nobuiltininc"
 // PATH_NOSTDINC-NOT: /include
 
 /// Check include paths with -nobuiltininc.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
 // RUN:   -fsyntax-only -nobuiltininc 2>&1 | FileCheck %s --check-prefix=PATH_NOBUILTIN
 // PATH_NOBUILTIN: "-nobuiltininc"
 // PATH_NOBUILTIN-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -39,7 +39,7 @@
 
 /// Check include paths with -nostdlibinc.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
 // RUN:   -fsyntax-only -nostdlibinc 2>&1 | FileCheck %s --check-prefix=PATH_NOSTDLIBINC
 // PATH_NOSTDLIBINC: "-nostdsysteminc"
 // PATH_NOSTDLIBINC-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -134,8 +134,8 @@
 
 /// -nostdlib suppresses default -l and crt*.o.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity_tree/usr/local/bin -resource-dir= \
-// RUN:   -nostdlib --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=NOSTDLIB
+// RUN:   -resource-dir= -nostdlib --rtlib=compiler-rt \
+// RUN:   2>&1 | FileCheck %s --check-prefix=NOSTDLIB
 // NOSTDLIB:      "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/include/c++/v1"
 // NOSTDLIB-NOT:  crt{{[^./]+}}.o
 // NOSTDLIB:      "-L
@@ -146,8 +146,8 @@
 
 /// -nostartfiles suppresses crt*.o, but not default -l.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity_tree/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
-// RUN:   -nostartfiles --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=NOSTARTFILES
+// RUN:   -resource-dir=%S/Inputs/resource_dir -nostartfiles --rtlib=compiler-rt \
+// RUN:   2>&1 | FileCheck %s --check-prefix=NOSTARTFILES
 // NOSTARTFILES:      "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/include/c++/v1"
 // NOSTARTFILES-SAME: {{^}}
 // NOSTARTFILES-NOT:  crt{{[^./]+}}.o
@@ -159,8 +159,8 @@
 
 /// -r suppresses -dynamic-linker, default -l, and crt*.o like -nostdlib.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity_tree/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
-// RUN:   -r --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=RELOCATABLE
+// RUN:   -resource-dir=%S/Inputs/resource_dir -r --rtlib=compiler-rt \
+// RUN:   2>&1 | FileCheck %s --check-prefix=RELOCATABLE
 // RELOCATABLE-NOT:  "-dynamic-linker"
 // RELOCATABLE:      "-internal-isystem"
 // RELOCATABLE-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/include/c++/v1"
@@ -173,8 +173,8 @@
 
 /// -nolibc suppresses -lc but not other default -l.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity_tree/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
-// RUN:   -nolibc --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=NOLIBC
+// RUN:   -resource-dir=%S/Inputs/resource_dir -nolibc --rtlib=compiler-rt \
+// RUN:   2>&1 | FileCheck %s --check-prefix=NOLIBC
 // NOLIBC:      "-internal-isystem"
 // NOLIBC-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/include/c++/v1"
 // NOLIBC:      "[[SYSROOT:[^"]+]]/usr/lib/crt0.o" "crtbeginS.o"
@@ -186,8 +186,8 @@
 
 /// -fsanitize=undefined redirects to Serenity-custom UBSAN runtime.
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
-// RUN:   -ccc-install-dir %S/Inputs/serenity_tree/usr/local/bin -resource-dir=%S/Inputs/resource_dir \
-// RUN:   -fsanitize=undefined --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=UBSAN
+// RUN:   -resource-dir=%S/Inputs/resource_dir -fsanitize=undefined --rtlib=compiler-rt \
+// RUN:   2>&1 | FileCheck %s --check-prefix=UBSAN
 // UBSAN-NOT: "libclang_rt.ubsan"
 // UBSAN:     "-lubsan"
 
