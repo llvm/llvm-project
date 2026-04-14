@@ -180,8 +180,7 @@ static void TestFunctionInfoDecodeError(llvm::endianness ByteOrder,
                                         StringRef Bytes,
                                         const uint64_t BaseAddr,
                                         std::string ExpectedErrorMsg) {
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -267,8 +266,7 @@ static void TestFunctionInfoEncodeDecode(llvm::endianness ByteOrder,
   // Verify we got the encoded offset back from the encode function.
   ASSERT_EQ(ExpectedOffset.get(), 0ULL);
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<FunctionInfo> Decoded =
       FunctionInfo::decode(Data, FI.Range.start());
   // Make sure decoding succeeded.
@@ -343,8 +341,7 @@ static void TestInlineInfoEncodeDecode(llvm::endianness ByteOrder,
   llvm::Error Err = Inline.encode(FW, BaseAddr);
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
@@ -355,8 +352,7 @@ static void TestInlineInfoEncodeDecode(llvm::endianness ByteOrder,
 static void TestInlineInfoDecodeError(llvm::endianness ByteOrder,
                                       StringRef Bytes, const uint64_t BaseAddr,
                                       std::string ExpectedErrorMsg) {
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -600,8 +596,7 @@ static void TestFileWriterHelper(llvm::endianness ByteOrder) {
   FW.fixup32(U32, FixupOffset);
 
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   uint64_t Offset = 0;
   EXPECT_EQ(Data.getU8(&Offset), U8);
   EXPECT_EQ(Data.getU16(&Offset), U16);
@@ -638,7 +633,7 @@ static void TestWriteUnsignedHelper(llvm::endianness ByteOrder) {
   FW.writeUnsigned(0x0102030405060708, 8);
 
   std::string Bytes(OutStrm.str());
-  DataExtractor Data(Bytes, IsLittleEndian, 8);
+  DataExtractor Data(Bytes, IsLittleEndian);
   uint64_t Offset = 0;
 
   EXPECT_EQ(0x01U, Data.getUnsigned(&Offset, 1));
@@ -673,8 +668,7 @@ TEST(GSYMTest, TestAddressRangeEncodeDecode) {
   encodeRange(Range1, FW, BaseAddr);
   encodeRange(Range2, FW, BaseAddr);
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
 
   AddressRange DecodedRange1, DecodedRange2;
   uint64_t Offset = 0;
@@ -693,8 +687,7 @@ static void TestAddressRangeEncodeDecodeHelper(const AddressRanges &Ranges,
   encodeRanges(Ranges, FW, BaseAddr);
 
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
 
   AddressRanges DecodedRanges;
   uint64_t Offset = 0;
@@ -732,8 +725,7 @@ static void TestLineTableHelper(llvm::endianness ByteOrder,
   llvm::Error Err = LT.encode(FW, BaseAddr);
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<LineTable> Decoded = LineTable::decode(Data, BaseAddr);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
@@ -802,8 +794,7 @@ TEST(GSYMTest, TestLineTable) {
 static void TestLineTableDecodeError(llvm::endianness ByteOrder,
                                      StringRef Bytes, const uint64_t BaseAddr,
                                      std::string ExpectedErrorMsg) {
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<LineTable> Decoded = LineTable::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -890,8 +881,7 @@ static void TestHeaderEncodeError(const Header &H,
 static void TestHeaderDecodeError(StringRef Bytes,
                                   std::string ExpectedErrorMsg) {
   const llvm::endianness ByteOrder = llvm::endianness::little;
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<Header> Decoded = Header::decode(Data);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -957,14 +947,13 @@ TEST(GSYMTest, TestHeaderDecodeErrors) {
 
 static void TestHeaderEncodeDecode(const Header &H,
                                    llvm::endianness ByteOrder) {
-  uint8_t AddressSize = 4;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
   llvm::Error Err = H.encode(FW);
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little);
   llvm::Expected<Header> Decoded = Header::decode(Data);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);

@@ -85,7 +85,7 @@ GsymReader::parse() {
   bool DataIsLittleEndian = HostByteOrder != llvm::endianness::little;
   // Read a correctly byte swapped header if we need to.
   if (Swap) {
-    DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
+    DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian);
     if (auto ExpectedHdr = Header::decode(Data))
       Swap->Hdr = ExpectedHdr.get();
     else
@@ -133,7 +133,7 @@ GsymReader::parse() {
   // optimized for lookups. Here we decode the important tables into local
   // storage and then set the ArrayRef objects to point to these swapped
   // copies of the read only data so lookups can be as efficient as possible.
-  DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
+  DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian);
 
   // Read the address offsets.
   uint64_t Offset = alignTo(sizeof(Header), Hdr->AddrOffSize);
@@ -314,7 +314,7 @@ GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
     return createStringError(std::errc::invalid_argument,
                              "failed to extract address[%" PRIu64 "]", AddrIdx);
   FuncStartAddr = *OptFuncStartAddr;
-  return DataExtractor(Bytes, Endian == llvm::endianness::little, 4);
+  return DataExtractor(Bytes, Endian == llvm::endianness::little);
 }
 
 llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
