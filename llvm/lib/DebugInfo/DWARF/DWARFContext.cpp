@@ -1186,7 +1186,7 @@ void DWARFContext::dump(
         DumpOpts.WarningHandler(std::move(Err));
         return;
       }
-      OS << formatv("{0:x+8}: \"", StrOffset);
+      OS << formatv("{0:x8}: \"", StrOffset);
       OS.write_escaped(CStr);
       OS << "\"\n";
       StrOffset = Offset;
