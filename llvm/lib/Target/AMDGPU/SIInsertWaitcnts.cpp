@@ -1303,8 +1303,8 @@ void WaitcntBrackets::recordAsyncMark(MachineInstr &Inst) {
   // loop, which should be sufficient.
   CounterValueArray MergedScore = AsyncScore;
   if (!AsyncMarks.empty()) {
-    const auto &PrevMark = AsyncMarks.back();
-    for (auto T : inst_counter_types(Context->MaxCounter))
+    const CounterValueArray &PrevMark = AsyncMarks.back();
+    for (AMDGPU::InstCounterType T : inst_counter_types(Context->MaxCounter))
       MergedScore[T] = std::max(AsyncScore[T], PrevMark[T]);
   }
   AsyncMarks.push_back(MergedScore);
