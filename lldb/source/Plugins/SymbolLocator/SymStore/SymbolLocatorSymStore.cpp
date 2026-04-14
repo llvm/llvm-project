@@ -479,4 +479,3 @@ std::string SymbolLocatorSymStore::GetDefaultCachePath() {
   llvm::sys::path::append(cache_dir, "lldb", "symstore");
   return cache_dir.str().str();
 }
-
