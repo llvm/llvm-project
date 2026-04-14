@@ -73,7 +73,7 @@ bool checkIntegrityScopesTree(LVScope *Root) {
       if (Index)
         dbgs() << formatv("{0,8}: ", Index);
       else
-        dbgs() << formatv("{0,8:s}: ", ' ');
+        dbgs() << formatv("{0,8}: ", ' ');
     };
     auto PrintElement = [&](LVElement *Element, unsigned Index = 0) {
       PrintIndex(Index);
