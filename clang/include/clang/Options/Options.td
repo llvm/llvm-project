@@ -4879,6 +4879,13 @@ def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>,
 def fwrapv_pointer : Flag<["-"], "fwrapv-pointer">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Treat pointer overflow as two's complement">;
+def fstable_pointer_subtraction :
+  Flag<["-"], "fstable-pointer-subtraction">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Allow stable subtraction of pointers not aligned to object boundaries"
+  >,
+  MarshallingInfoFlag<LangOpts<"StablePointerSubtraction">>;
 def fno_wrapv_pointer : Flag<["-"], "fno-wrapv-pointer">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, FlangOption]>;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>,
