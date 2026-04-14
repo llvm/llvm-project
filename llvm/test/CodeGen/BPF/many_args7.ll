@@ -1,6 +1,11 @@
-; RUN: not llc -mtriple=bpf -mcpu=v3 < %s 2> %t1
-; RUN: FileCheck %s < %t1
-; CHECK: error: <unknown>:0:0: in function foo i64 (i32, i32, i32): {{(0x[0-9a-fA-F]+|t[0-9]+)}}: i64 = GlobalAddress<ptr @bar> 0 aggregate argument is split between registers and stack
+; RUN: llc -mtriple=bpf -mcpu=v1 < %s | FileCheck --check-prefix=CHECK-OFF-8 %s
+; RUN: llc -mtriple=bpf -mcpu=v2 < %s | FileCheck --check-prefix=CHECK-OFF-8 %s
+; RUN: llc -mtriple=bpf -mcpu=v3 < %s | FileCheck --check-prefix=CHECK-OFF-8 %s
+; RUN: llc -mtriple=bpf -mcpu=v4 < %s | FileCheck --check-prefix=CHECK-OFF-8 %s
+; RUN: llc -mtriple=bpf -mcpu=v1 < %s | FileCheck --check-prefix=CHECK-OFF-16 %s
+; RUN: llc -mtriple=bpf -mcpu=v2 < %s | FileCheck --check-prefix=CHECK-OFF-16 %s
+; RUN: llc -mtriple=bpf -mcpu=v3 < %s | FileCheck --check-prefix=CHECK-OFF-16 %s
+; RUN: llc -mtriple=bpf -mcpu=v4 < %s | FileCheck --check-prefix=CHECK-OFF-16 %s
 
 ; Source code:
 ;   struct t { long a; long b; };
@@ -19,5 +24,10 @@ define dso_local i64 @foo(i32 noundef %0, i32 noundef %1, i32 noundef %2) local_
   %8 = tail call i64 @bar(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 noundef %1, [2 x i64] %7)
   ret i64 %8
 }
+
+; The struct a5 is split: first half in r5, second half on stack.
+; CHECK-LABEL:       foo:
+; CHECK-OFF-8:       *(u64 *)(r11 - 8) = r[[#]]
+; CHECK-OFF-16-NOT:  *(u64 *)(r11 - 16) = r[[#]]
 
 declare dso_local i64 @bar(i32 noundef, i32 noundef, i32 noundef, i32 noundef, [2 x i64]) local_unnamed_addr

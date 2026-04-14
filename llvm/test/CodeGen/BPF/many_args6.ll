@@ -1,6 +1,11 @@
-; RUN: not llc -mtriple=bpf -mcpu=v3 < %s 2> %t1
-; RUN: FileCheck %s < %t1
-; CHECK: error: <unknown>:0:0: in function foo i64 (i32, i32, i32, i32, [2 x i64]): aggregate argument is split between registers and stack
+; RUN: llc -mtriple=bpf -mcpu=v1 < %s | FileCheck --check-prefix=CHECK-OFF-8 %s
+; RUN: llc -mtriple=bpf -mcpu=v2 < %s | FileCheck --check-prefix=CHECK-OFF-8 %s
+; RUN: llc -mtriple=bpf -mcpu=v3 < %s | FileCheck --check-prefix=CHECK-OFF-8 %s
+; RUN: llc -mtriple=bpf -mcpu=v4 < %s | FileCheck --check-prefix=CHECK-OFF-8 %s
+; RUN: llc -mtriple=bpf -mcpu=v1 < %s | FileCheck --check-prefix=CHECK-OFF-16 %s
+; RUN: llc -mtriple=bpf -mcpu=v2 < %s | FileCheck --check-prefix=CHECK-OFF-16 %s
+; RUN: llc -mtriple=bpf -mcpu=v3 < %s | FileCheck --check-prefix=CHECK-OFF-16 %s
+; RUN: llc -mtriple=bpf -mcpu=v4 < %s | FileCheck --check-prefix=CHECK-OFF-16 %s
 
 ; Source code:
 ;   struct t { long a; long b; };
@@ -20,3 +25,8 @@ define dso_local i64 @foo(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 no
   %13 = add nsw i64 %12, %7
   ret i64 %13
 }
+
+; The struct a5 is split: first half in r5, second half on stack.
+; CHECK-LABEL:       foo:
+; CHECK-OFF-8:       r[[#]] = *(u64 *)(r11 + 8)
+; CHECK-OFF-16-NOT:  r[[#]] = *(u64 *)(r11 + 16)

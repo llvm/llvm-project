@@ -380,22 +380,6 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 // Calling Convention Implementation
 #include "BPFGenCallingConv.inc"
 
-// Check if any aggregate argument is split between registers and stack.
-template <typename GetOrigIdxFn>
-static bool hasSplitArg(const SmallVectorImpl<CCValAssign> &ArgLocs,
-                        GetOrigIdxFn GetOrigIdx) {
-  for (size_t I = 0; I < ArgLocs.size(); ++I) {
-    if (!ArgLocs[I].isMemLoc())
-      continue;
-    unsigned OrigIdx = GetOrigIdx(I);
-    // First argument always gets a register so 'I' must be greater than 0.
-    unsigned J = I - 1;
-    if (GetOrigIdx(J) == OrigIdx && ArgLocs[J].isRegLoc())
-      return true;
-  }
-  return false;
-}
-
 // Apply AssertSext/AssertZext and truncate based on VA's LocInfo.
 static SDValue convertLocValType(SelectionDAG &DAG, const SDLoc &DL,
                                  const CCValAssign &VA, EVT RegVT,
@@ -431,10 +415,6 @@ SDValue BPFTargetLowering::LowerFormalArguments(
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, getHasAlu32() ? CC_BPF32 : CC_BPF64);
 
-  if (hasSplitArg(ArgLocs, [&](size_t I) { return Ins[I].getOrigArgIndex(); }))
-    fail(DL, DAG, "aggregate argument is split between registers and stack");
-
-  int IncomingExtDepth = 0;
   for (size_t I = 0; I < ArgLocs.size(); ++I) {
     auto &VA = ArgLocs[I];
     EVT RegVT = VA.getLocVT();
@@ -467,8 +447,7 @@ SDValue BPFTargetLowering::LowerFormalArguments(
       // For example, two stack arguments,
       //   arg1:  Off = 8
       //   arg2:  off = 16
-      IncomingExtDepth = VA.getLocMemOffset() + 8;
-      int Off = IncomingExtDepth;
+      int Off = VA.getLocMemOffset() + 8;
       if (Off > INT16_MAX) {
         fail(DL, DAG, "extra parameter stack depth exceeded limit");
         break;
@@ -539,10 +518,6 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   unsigned NumBytes = CCInfo.getStackSize();
 
-  if (hasSplitArg(ArgLocs, [&](size_t I) { return Outs[I].OrigArgIndex; }))
-    fail(CLI.DL, DAG, "aggregate argument is split between registers and stack",
-         Callee);
-
   for (auto &Arg : Outs) {
     ISD::ArgFlagsTy Flags = Arg.Flags;
     if (!Flags.isByVal())
@@ -554,7 +529,7 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   auto PtrVT = getPointerTy(MF.getDataLayout());
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
 
-  SmallVector<std::pair<unsigned, SDValue>, 16> RegsToPass;
+  SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
 
   // Walk arg assignments
   size_t OutValsSize = OutVals.size();
