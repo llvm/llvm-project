@@ -237,6 +237,12 @@ C2y Feature Support
   reversal of a byte array) and ``stdc_memreverse8u{8,16,32,64}`` (byte-swap
   of an exact-width unsigned integer value, usable in constant expressions).
 
+- Clang now diagnoses the use of the same identifier with both internal and
+  external linkage within a translation unit, as made ill-formed by
+  `N3410 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf>`_.
+  This is also diagnosed in older C language modes as the behavior was
+  undefined prior to C2y. (#GH54215)
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
