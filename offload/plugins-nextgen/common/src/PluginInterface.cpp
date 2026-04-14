@@ -1008,7 +1008,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
   // Free is a noop when recording or replaying.
   if (RecordReplay && RecordReplay->isRecordingOrReplaying())
-    return Plugin::success();
+    return RecordReplay->deallocate(TgtPtr);
 
   // Keep track of the deallocation stack if we track allocation traces.
   if (OMPX_TrackAllocationTraces) {

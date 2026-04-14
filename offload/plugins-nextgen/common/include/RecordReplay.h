@@ -184,7 +184,8 @@ public:
   }
 
   /// Allocates device memory from the record replay space.
-  void *allocate(uint64_t Size);
+  Expected<void *> allocate(uint64_t Size);
+  Error deallocate(void *Ptr);
 
 private:
   /// Register an instance and return a reference and whether it was registered
