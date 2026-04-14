@@ -681,15 +681,15 @@ define i24 @popcnt2_negative_i24(i24 noundef %0) {
 ; CHECK-NEXT:    ret i24 [[TMP16]]
 ;
   %2 = lshr i24 %0, 1
-  %3 = and i24 %2, u0x555555  ; 0x555555
+  %3 = and i24 %2, u0x555555
   %4 = sub i24 %0, %3
-  %5 = and i24 %4, 3355443  ; 0x333333
+  %5 = and i24 %4, u0x333333
   %6 = lshr i24 %4, 2
   %7 = and i24 %6, 3355443
   %8 = add nuw nsw i24 %7, %5
   %9 = lshr i24 %8, 4
   %10 = add nuw nsw i24 %9, %8
-  %11 = and i24 %10, 986895  ; 0x0F0F0F
+  %11 = and i24 %10, u0x0F0F0F
   %12 = lshr i24 %11, 8
   %13 = add nuw nsw i24 %12, %11
   %14 = lshr i24 %13, 16
@@ -710,7 +710,7 @@ define i40 @popcnt2_negative_i40(i40 noundef %0) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i40 [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr i40 [[TMP8]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i40 [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = and i40 [[TMP10]], 67818775935
+; CHECK-NEXT:    [[TMP11:%.*]] = and i40 [[TMP10]], 64677154575
 ; CHECK-NEXT:    [[TMP12:%.*]] = lshr i40 [[TMP11]], 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i40 [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = lshr i40 [[TMP13]], 16
@@ -721,15 +721,15 @@ define i40 @popcnt2_negative_i40(i40 noundef %0) {
 ; CHECK-NEXT:    ret i40 [[TMP18]]
 ;
   %2 = lshr i40 %0, 1
-  %3 = and i40 %2, 366503875925  ; 0x5555555555
+  %3 = and i40 %2, u0x5555555555
   %4 = sub i40 %0, %3
-  %5 = and i40 %4, 219902325555  ; 0x3333333333
+  %5 = and i40 %4, u0x3333333333
   %6 = lshr i40 %4, 2
   %7 = and i40 %6, 219902325555
   %8 = add nuw nsw i40 %7, %5
   %9 = lshr i40 %8, 4
   %10 = add nuw nsw i40 %9, %8
-  %11 = and i40 %10, 67818775935  ; 0x0F0F0F0F0F
+  %11 = and i40 %10, u0x0F0F0F0F0F
   %12 = lshr i40 %11, 8
   %13 = add nuw nsw i40 %12, %11
   %14 = lshr i40 %13, 16
@@ -752,7 +752,7 @@ define i48 @popcnt2_negative_i48(i48 noundef %0) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i48 [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr i48 [[TMP8]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i48 [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = and i48 [[TMP10]], 17361641481615
+; CHECK-NEXT:    [[TMP11:%.*]] = and i48 [[TMP10]], 16557351571215
 ; CHECK-NEXT:    [[TMP12:%.*]] = lshr i48 [[TMP11]], 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i48 [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = lshr i48 [[TMP13]], 16
@@ -763,15 +763,15 @@ define i48 @popcnt2_negative_i48(i48 noundef %0) {
 ; CHECK-NEXT:    ret i48 [[TMP18]]
 ;
   %2 = lshr i48 %0, 1
-  %3 = and i48 %2, 93824992236885  ; 0x555555555555
+  %3 = and i48 %2, u0x555555555555
   %4 = sub i48 %0, %3
-  %5 = and i48 %4, 56294995342131  ; 0x333333333333
+  %5 = and i48 %4, u0x333333333333
   %6 = lshr i48 %4, 2
-  %7 = and i48 %6, 56294995342131
+  %7 = and i48 %6, u0x333333333333
   %8 = add nuw nsw i48 %7, %5
   %9 = lshr i48 %8, 4
   %10 = add nuw nsw i48 %9, %8
-  %11 = and i48 %10, 17361641481615  ; 0x0F0F0F0F0F0F
+  %11 = and i48 %10, u0x0F0F0F0F0F0F
   %12 = lshr i48 %11, 8
   %13 = add nuw nsw i48 %12, %11
   %14 = lshr i48 %13, 16
@@ -794,7 +794,7 @@ define i56 @popcnt2_negative_i56(i56 noundef %0) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i56 [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr i56 [[TMP8]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i56 [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = and i56 [[TMP10]], 4444132406286415
+; CHECK-NEXT:    [[TMP11:%.*]] = and i56 [[TMP10]], 4238682002231055
 ; CHECK-NEXT:    [[TMP12:%.*]] = lshr i56 [[TMP11]], 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i56 [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = lshr i56 [[TMP13]], 16
@@ -805,15 +805,15 @@ define i56 @popcnt2_negative_i56(i56 noundef %0) {
 ; CHECK-NEXT:    ret i56 [[TMP18]]
 ;
   %2 = lshr i56 %0, 1
-  %3 = and i56 %2, 24019198012642645  ; 0x55555555555555
+  %3 = and i56 %2, u0x55555555555555
   %4 = sub i56 %0, %3
-  %5 = and i56 %4, 14411518807585587  ; 0x33333333333333
+  %5 = and i56 %4, u0x33333333333333
   %6 = lshr i56 %4, 2
-  %7 = and i56 %6, 14411518807585587
+  %7 = and i56 %6, u0x33333333333333
   %8 = add nuw nsw i56 %7, %5
   %9 = lshr i56 %8, 4
   %10 = add nuw nsw i56 %9, %8
-  %11 = and i56 %10, 4444132406286415  ; 0x0F0F0F0F0F0F0F
+  %11 = and i56 %10, u0x0F0F0F0F0F0F0F
   %12 = lshr i56 %11, 8
   %13 = add nuw nsw i56 %12, %11
   %14 = lshr i56 %13, 16
