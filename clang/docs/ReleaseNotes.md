@@ -107,6 +107,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   }
 ```
 
+- Clang now diagnoses the use of the same identifier with both internal and
+  external linkage within a translation unit, as made ill-formed by
+  [N3410](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf).
+  This is also diagnosed in older C language modes as the behavior was
+  undefined prior to C2y. (#GH54215)
+
 #### C23 Feature Support
 
 ### Objective-C Language Changes
