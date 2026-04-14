@@ -268,6 +268,10 @@ if config.clang_staticanalyzer:
 if config.clang_enable_cir:
     config.available_features.add("cir-support")
 
+# SPIRV-Tools validator availability (e.g. built with -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+if lit.util.which("spirv-val", config.llvm_tools_dir):
+    config.available_features.add("spirv-val")
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(

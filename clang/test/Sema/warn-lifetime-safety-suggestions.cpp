@@ -513,4 +513,19 @@ CaptureRefToRef test_ref_to_ref() {
   CaptureRefToRef x(obj); // expected-warning {{address of stack memory is returned later}}
   return x; // expected-note {{returned here}}
 }
+
+struct BaseWithView {
+  View v; // expected-note {{escapes to this field}}
+};
+struct CaptureRefToBaseView : BaseWithView {
+  CaptureRefToBaseView(const MyObj& obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+    v = obj;
+  }
+};
+
+CaptureRefToBaseView test_ref_to_base_view() {
+  MyObj obj;
+  CaptureRefToBaseView x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
 } // namespace capturing_constructor
