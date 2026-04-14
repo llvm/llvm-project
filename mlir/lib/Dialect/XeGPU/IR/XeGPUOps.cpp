@@ -504,6 +504,14 @@ LogicalResult PrefetchNdOp::verify() {
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
+  if (getAnchorLayout()) {
+    auto layout = getAnchorLayout();
+    auto tdescShape = getShapeOf(tdescTy);
+    if (!layout.isDistributable(tdescShape))
+      return emitOpError(
+          "TensorDesc shape is not distributable with the layout");
+  }
+
   return success();
 }
 
@@ -628,6 +636,13 @@ LogicalResult LoadNdOp::verify() {
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
+  if (getAnchorLayout()) {
+    auto layout = getAnchorLayout();
+    if (!layout.isDistributable(tdescShape))
+      return emitOpError(
+          "TensorDesc shape is not distributable with the layout");
+  }
+
   return success();
 }
 
@@ -720,6 +735,13 @@ LogicalResult StoreNdOp::verify() {
   if (offsetSize != 0 && offsetSize != tDescRank)
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
+
+  if (getAnchorLayout()) {
+    auto layout = getAnchorLayout();
+    if (!layout.isDistributable(tdescShape))
+      return emitOpError(
+          "TensorDesc shape is not distributable with the layout");
+  }
 
   return success();
 }
@@ -822,6 +844,18 @@ LogicalResult PrefetchOp::verify() {
 
   if (getOffsetAlignByteAttr() && !srcTy.isInteger())
     return emitOpError("offset_align_byte only allowed with integer source.");
+
+  if (getAnchorLayout()) {
+    auto layout = getAnchorLayout();
+    // get the offset operand and its shape
+    auto offsets = getOffsets();
+    auto offsetsTy = offsets.getType();
+    if (!llvm::isa<VectorType>(offsetsTy))
+      return emitOpError("Offsets should be a vector.");
+    auto offsetShape = getShapeOf(offsetsTy);
+    if (!layout.isDistributable(offsetShape))
+      return emitOpError("offset shape is not distributable with the layout");
+  }
 
   return success();
 }
@@ -1103,12 +1137,12 @@ LogicalResult ConvertLayoutOp::verify() {
 
   Type srcType = getSource().getType();
   if (llvm::isa<VectorType>(srcType)) {
-    auto shape = llvm::cast<VectorType>(srcType).getShape();
-    if (!XeGPUDialect::isEvenlyDistributable(shape, srcLayout))
+    SmallVector<int64_t> shape(llvm::cast<VectorType>(srcType).getShape());
+    if (!srcLayout.isDistributable(shape))
       return emitOpError(
           "invalid input layout, data cannot be evenly distributed.");
 
-    if (!XeGPUDialect::isEvenlyDistributable(shape, resLayout))
+    if (!resLayout.isDistributable(shape))
       return emitOpError(
           "invalid target layout, data cannot be evenly distributed.");
   }
