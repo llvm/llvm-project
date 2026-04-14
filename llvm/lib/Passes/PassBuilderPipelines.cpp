@@ -807,8 +807,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
-  FPM.addPass(ScalableToFixedVectorsPass());
-
   return FPM;
 }
 
@@ -1424,6 +1422,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
 
   // Optimize parallel scalar instruction chains into SIMD instructions.
   if (PTO.SLPVectorization) {
+    FPM.addPass(ScalableToFixedVectorsPass());
     FPM.addPass(SLPVectorizerPass());
     if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
       FPM.addPass(EarlyCSEPass());
@@ -2293,8 +2292,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                       .convertSwitchToArithmetic(true)
                                       .hoistCommonInsts(true)
                                       .speculateUnpredictables(true)));
-
-  LateFPM.addPass(ScalableToFixedVectorsPass());
 
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(LateFPM)));
 
