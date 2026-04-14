@@ -352,22 +352,20 @@ void TextOutputSection::finalize() {
       // Calculate our call referent address
       auto *funcSym = cast<Symbol *>(r.referent);
       ThunkInfo &thunkInfo = thunkMap[ThunkKey{funcSym, r.addend}];
-      // The referent is not reachable, so we need to use a thunk ...
+      // The referent is not reachable, so we need to use a thunk... unless we
+      // are close enough to the end that branch target sections (__stubs,
+      // __objc_stubs) are now within range of a simple forward branch -- BUT
+      // only for zero-addend branches. The writer's resolveSymbolOffsetVA()
+      // resolves non-zero-addend branches against the symbol body rather than
+      // the stub, so __stubs reachability says nothing about whether such a
+      // call can be emitted directly. Hence the `r.addend == 0` guard below.
+      // See INTERP check lines in arm64-thunk-branch-addend.s.
       if (r.addend == 0 &&
           (funcSym->isInStubs() ||
            (in.objcStubs && in.objcStubs->isNeeded() &&
             ObjCStubsSection::isObjCStubSymbol(funcSym))) &&
           callVA >= branchTargetThresholdVA) {
         assert(callVA != TargetInfo::outOfRangeVA);
-        // ... Oh, wait! We are close enough to the end that branch target
-        // sections (__stubs, __objc_stubs) are now within range of a simple
-        // forward branch.
-        //
-        // For non-zero addends, the writer's resolveSymbolOffsetVA() resolves
-        // interior branches against the symbol body rather than the stub, so
-        // __stubs reachability says nothing about whether the call can be
-        // emitted directly.
-        // See INTERP check lines in arm64-thunk-branch-addend.s.
         continue;
       }
       // For non-zero addends, branch directly to the symbol body rather than
