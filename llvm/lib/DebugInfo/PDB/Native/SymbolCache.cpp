@@ -399,14 +399,7 @@ std::unique_ptr<PDBSymbol> SymbolCache::findFunctionSymbolByVA(uint64_t VA) {
       continue;
     }
 #ifndef NDEBUG
-    const auto &AddrToModuleIndex = Session.getAddrToModuleIndex();
-    auto ModIter = AddrToModuleIndex.find(SymStart);
-    using ModKeyTraits =
-        std::remove_reference_t<decltype(AddrToModuleIndex)>::KeyTraits;
-    assert(ModIter.valid() &&
-           !ModKeyTraits::startLess(SymStart, ModIter.start()) &&
-           !ModKeyTraits::stopLess(ModIter.stop(), SymStop - 1) &&
-           "Symbol spans modules");
+    Session.checkSymbolRange(SymStart, SymStop);
 #endif
     // Only care about range that is in this module.
     uint16_t SymModi;

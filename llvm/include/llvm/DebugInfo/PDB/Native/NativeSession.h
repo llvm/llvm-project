@@ -121,7 +121,7 @@ public:
   Expected<ModuleDebugStreamRef> getModuleDebugStream(uint32_t Index) const;
 
 #ifndef NDEBUG
-  const auto &getAddrToModuleIndex() const { return AddrToModuleIndex; }
+  void checkSymbolRange(uint64_t Start, uint64_t Stop) const;
 #endif
 
 private:
