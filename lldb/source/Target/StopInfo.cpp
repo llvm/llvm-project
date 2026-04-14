@@ -1476,7 +1476,19 @@ public:
 
   ~StopInfoFork() override = default;
 
-  bool ShouldStop(Event *event_ptr) override { return false; }
+  bool ShouldStop(Event *event_ptr) override {
+    // During expression evaluation, return true so that the fork event
+    // reaches RunThreadPlan as a real stop (not auto-restarted by
+    // DoOnRemoval). RunThreadPlan decides whether to stop or continue
+    // based on the stop-on-fork option.
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (thread_sp) {
+      ProcessSP process_sp = thread_sp->GetProcess();
+      if (process_sp && process_sp->GetModIDRef().IsRunningExpression())
+        return true;
+    }
+    return false;
+  }
 
   StopReason GetStopReason() const override { return eStopReasonFork; }
 
@@ -1501,16 +1513,6 @@ protected:
       thread_sp->GetProcess()->DidFork(m_child_pid, m_child_tid);
   }
 
-  bool ShouldStopSynchronous(Event *event_ptr) override {
-    if (!m_performed_action) {
-      m_performed_action = true;
-      ThreadSP thread_sp(m_thread_wp.lock());
-      if (thread_sp)
-        thread_sp->GetProcess()->DidFork(m_child_pid, m_child_tid);
-    }
-    return false;
-  }
-
   bool m_performed_action = false;
 
 private:
@@ -1528,7 +1530,15 @@ public:
 
   ~StopInfoVFork() override = default;
 
-  bool ShouldStop(Event *event_ptr) override { return false; }
+  bool ShouldStop(Event *event_ptr) override {
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (thread_sp) {
+      ProcessSP process_sp = thread_sp->GetProcess();
+      if (process_sp && process_sp->GetModIDRef().IsRunningExpression())
+        return true;
+    }
+    return false;
+  }
 
   StopReason GetStopReason() const override { return eStopReasonVFork; }
 
@@ -1551,15 +1561,6 @@ protected:
     if (thread_sp)
       thread_sp->GetProcess()->DidVFork(m_child_pid, m_child_tid);
   }
-  bool ShouldStopSynchronous(Event *event_ptr) override {
-    if (!m_performed_action) {
-      m_performed_action = true;
-      ThreadSP thread_sp(m_thread_wp.lock());
-      if (thread_sp)
-        thread_sp->GetProcess()->DidVFork(m_child_pid, m_child_tid);
-    }
-    return false;
-  }
 
   bool m_performed_action = false;
 
@@ -1576,7 +1577,15 @@ public:
 
   ~StopInfoVForkDone() override = default;
 
-  bool ShouldStop(Event *event_ptr) override { return false; }
+  bool ShouldStop(Event *event_ptr) override {
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (thread_sp) {
+      ProcessSP process_sp = thread_sp->GetProcess();
+      if (process_sp && process_sp->GetModIDRef().IsRunningExpression())
+        return true;
+    }
+    return false;
+  }
 
   StopReason GetStopReason() const override { return eStopReasonVForkDone; }
 
@@ -1591,15 +1600,6 @@ protected:
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp)
       thread_sp->GetProcess()->DidVForkDone();
-  }
-  bool ShouldStopSynchronous(Event *event_ptr) override {
-    if (!m_performed_action) {
-      m_performed_action = true;
-      ThreadSP thread_sp(m_thread_wp.lock());
-      if (thread_sp)
-        thread_sp->GetProcess()->DidVForkDone();
-    }
-    return false;
   }
 
   bool m_performed_action = false;
