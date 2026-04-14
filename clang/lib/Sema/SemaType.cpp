@@ -4401,7 +4401,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   }
 
   // Determine whether we should infer _Nonnull on pointer types.
-  std::optional<NullabilityKind> inferNullability;
+  NullabilityKindOrNone inferNullability = std::nullopt;
   bool inferNullabilityCS = false;
   bool inferNullabilityInnerOnly = false;
   bool inferNullabilityInnerOnlyComplete = false;
