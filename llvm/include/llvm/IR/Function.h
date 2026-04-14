@@ -87,7 +87,7 @@ private:
 
   mutable Argument *Arguments = nullptr;  ///< The formal arguments
   uint32_t NumArgs;
-  MaybeAlign PreferredAlign;
+  MaybeAlign PreferredAlign{};
   std::unique_ptr<ValueSymbolTable>
       SymTab;                             ///< Symbol table of args/instructions
   AttributeList AttributeSets;            ///< Parameter attributes
