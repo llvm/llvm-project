@@ -1336,6 +1336,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     emitTrap(loc, /*createNewBlock=*/true);
     return RValue::getIgnored();
   case Builtin::BI__builtin_verbose_trap:
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    emitTrap(loc, /*createNewBlock=*/true);
+    return RValue::getIgnored();
   case Builtin::BI__debugbreak:
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_unreachable:
