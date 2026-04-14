@@ -8919,7 +8919,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
 
   // fcmp ord/uno (fptrunc X), (fptrunc Y) -> fcmp ord/uno X, Y
   if ((Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) &&
-      match(Op0, m_Trunc(m_Value(X))) && match(Op0, m_Trunc(m_Value(Y))) &&
+      match(Op0, m_Trunc(m_Value(X))) && match(Op1, m_Trunc(m_Value(Y))) &&
       X->getType() == Y->getType())
     return new FCmpInst(Pred, X, Y, "", &I);
 
