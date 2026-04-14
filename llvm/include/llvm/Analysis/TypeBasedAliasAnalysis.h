@@ -57,6 +57,7 @@ public:
   LLVM_ABI MemoryEffects getMemoryEffects(const CallBase *Call,
                                           AAQueryInfo &AAQI);
   LLVM_ABI MemoryEffects getMemoryEffects(const Function *F);
+  using AAResultBase::getModRefInfo;
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);

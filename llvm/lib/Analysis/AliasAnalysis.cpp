@@ -505,11 +505,24 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
 ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // All we know about a fence instruction is what we get from the ModRef
-  // mask: if Loc is a constant memory location, the fence definitely could
-  // not modify it.
-  if (Loc.Ptr)
-    return getModRefInfoMask(Loc);
+  if (Loc.Ptr) {
+    ModRefInfo Result = ModRefInfo::ModRef;
+
+    for (const auto &AA : AAs) {
+      Result &= AA->getModRefInfo(S, Loc, AAQI);
+
+      if (isNoModRef(Result))
+        return ModRefInfo::NoModRef;
+    }
+
+    // Apply the ModRef mask. This ensures that if Loc is a constant memory
+    // location, we take into account the fact that the fence definitely could
+    // not modify the memory location.
+    if (!isNoModRef(Result))
+      Result &= getModRefInfoMask(Loc);
+
+    return Result;
+  }
   return ModRefInfo::ModRef;
 }
 
