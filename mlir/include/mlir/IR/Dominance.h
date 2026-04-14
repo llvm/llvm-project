@@ -104,6 +104,13 @@ public:
     return *getDominanceInfo(region, /*needsDomTree=*/true).getPointer();
   }
 
+  void removeDomTree(Region *region) {
+    if (dominanceInfos.contains(region)) {
+      delete dominanceInfos[region].getPointer();
+      dominanceInfos.erase(region);
+    }
+  };
+
 protected:
   using super = DominanceInfoBase<IsPostDom>;
 
