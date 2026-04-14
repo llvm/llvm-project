@@ -140,16 +140,18 @@ entry:
 ;; 16 bit variable f (!62): value vgf (lower bits)
 ;; 16 bit variable g (!63): value vgf (upper bits)
 ;;
-;; 16 bit variable h (!64): deref dead_64_128
-; COMMON-NEXT: %[[dead_64_128:.*]] = alloca %struct.two
-; COMMON-NEXT: #dbg_declare(ptr %[[dead_64_128]], ![[h:[0-9]+]], !DIExpression(),
-; COMMON-NEXT: %[[ve:.*]] = load i32, ptr @gf
+;; 16 bit variable h (!64): inner aggregate slice kept on stack; #dbg_declare on that alloca.
+; COMMON-NEXT: %[[h_alloca:.*]] = alloca %struct.two, align 8
+; COMMON-NEXT: #dbg_declare(ptr %[[h_alloca]], ![[h:[0-9]+]], !DIExpression(), !{{[0-9]+}})
+; COMMON-NEXT: %[[ve:.*]] = load i32, ptr @gf, align 4{{.*}}
 ;; FIXME: mem2reg bug - offset is incorrect - see comment above.
-; COMMON-NEXT: #dbg_value(i32 %[[ve]], ![[e:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 2),
-; COMMON-NEXT: %[[vfg:.*]] = load i32, ptr getelementptr inbounds (i8, ptr @gf, i64 4)
-; COMMON-NEXT: #dbg_value(i32 %[[vfg]], ![[f:[0-9]+]], !DIExpression(),
+; COMMON-NEXT: #dbg_value(i32 %[[ve]], ![[e:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 2), !{{[0-9]+}})
+; COMMON-NEXT: %[[vfg:.*]] = load i32, ptr getelementptr inbounds (i8, ptr @gf, i64 4), align 4{{.*}}
+; COMMON-NEXT: #dbg_value(i32 %[[vfg]], ![[f:[0-9]+]], !DIExpression(), !{{[0-9]+}})
 ;; FIXME: mem2reg bug - offset is incorrect - see comment above.
-; COMMON-NEXT: #dbg_value(i32 %[[vfg]], ![[g:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 2),
+; COMMON-NEXT: #dbg_value(i32 %[[vfg]], ![[g:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 2), !{{[0-9]+}})
+; COMMON-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[h_alloca]], ptr align 4 getelementptr inbounds (i8, ptr @gf, i64 8), i64 8, i1 false){{.*}}
+; COMMON-NEXT: ret i32 %[[vfg]]{{.*}}
 define dso_local noundef i32 @_Z4fun3v() #0 !dbg !55 {
 entry:
   %0 = alloca %struct.four, align 4
