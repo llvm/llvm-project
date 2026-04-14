@@ -1738,7 +1738,6 @@ def packetlog_get_dylib_info(log):
         fetched_all_binary_addresses = False
         expect_dylib_info_response = False
         for line in logfile:
-
             # We've seen a jGetLoadedDynamicLibrariesInfos
             # We may have a response with *only* addresses, or
             # it may include detailed information.  If it is
