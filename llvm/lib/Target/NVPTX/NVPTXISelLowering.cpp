@@ -1698,7 +1698,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         DAG.getMachineFunction().getFunction(),
         "call to unknown intrinsic '" + CalleeF->getName() +
             "' is not supported by this version of the NVPTX backend; may "
-            "produce invalid PTX.",
+            "result in invalid PTX.",
         dl.getDebugLoc()));
   }
 
