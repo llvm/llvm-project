@@ -117,8 +117,8 @@ void DWARFDebugPubTable::dump(raw_ostream &OS) const {
         StringRef EntryLinkage =
             GDBIndexEntryLinkageString(E.Descriptor.Linkage);
         StringRef EntryKind = dwarf::GDBIndexEntryKindString(E.Descriptor.Kind);
-        OS << formatv("{0, -8}", EntryLinkage.data()) << ' '
-           << formatv("{0, -8}", EntryKind.data()) << ' ';
+        OS << formatv("{0,-8}", EntryLinkage.data()) << ' '
+           << formatv("{0,-8}", EntryKind.data()) << ' ';
       }
       OS << '\"' << E.Name << "\"\n";
     }
