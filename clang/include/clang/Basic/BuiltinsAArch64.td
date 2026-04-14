@@ -475,4 +475,9 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def __swpal16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short)">;
 	def __swpal32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int)">;
 	def __swpal64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int)">;
+
+	def __ldapr8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char const volatile *)">;
+	def __ldapr16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short const volatile *)">;
+	def __ldapr32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int const volatile *)">;
+	def __ldapr64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int const volatile *)">;
 }

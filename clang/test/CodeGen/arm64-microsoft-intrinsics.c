@@ -1297,6 +1297,43 @@ unsigned long long int test__swpal64(unsigned long long int volatile* t,
 // CHECK-MSCOMPAT:       ret i64 %[[RET]]
 // CHECK-LINUX: error: call to undeclared function '__swpal64'
 
+unsigned char check__ldapr8(unsigned char volatile *p) {
+  return __ldapr8(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__ldapr8(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[LOAD:[0-9]+]] = load ptr, ptr %p.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMP:[0-9]+]] = call i32 @llvm.aarch64.ldapr8(ptr %[[LOAD]])
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = trunc i32 %[[TMP]] to i8
+// CHECK-MSCOMPAT:       ret i8 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__ldapr8'
+
+unsigned short check__ldapr16(unsigned short volatile *p) {
+  return __ldapr16(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i16 @check__ldapr16(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[LOAD:[0-9]+]] = load ptr, ptr %p.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMP:[0-9]+]] = call i32 @llvm.aarch64.ldapr16(ptr %[[LOAD]])
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = trunc i32 %[[TMP]] to i16
+// CHECK-MSCOMPAT:       ret i16 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__ldapr16'
+
+unsigned int check__ldapr32(unsigned int volatile *p) {
+  return __ldapr32(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i32 @check__ldapr32(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[LOAD:[0-9]+]] = load ptr, ptr %p.addr, align 8
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = call i32 @llvm.aarch64.ldapr32(ptr %[[LOAD]])
+// CHECK-MSCOMPAT:       ret i32 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__ldapr32'
+
+unsigned long long int check__ldapr64(unsigned long long int volatile *p) {
+  return __ldapr64(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i64 @check__ldapr64(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[LOAD:[0-9]+]] = load ptr, ptr %p.addr, align 8
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = call i64 @llvm.aarch64.ldapr64(ptr %[[LOAD]])
+// CHECK-MSCOMPAT:       ret i64 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__ldapr64'
 
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
 // CHECK-MSCOMPAT: ![[MD3]] = !{!"sp"}
