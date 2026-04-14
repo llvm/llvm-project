@@ -2136,10 +2136,12 @@ public:
           DIM ? !DIM->getLivenessAnalysis().getLiveIn(Inst).test(getFlagsReg())
               : false;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
-      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0)
-        return IsReversible;
-      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63)
-        return IsReversible;
+      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0 &&
+          !IsReversible)
+        return false;
+      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63 &&
+          !IsReversible)
+        return false;
     }
     return MCPlusBuilder::isReversibleBranch(Inst);
   }
