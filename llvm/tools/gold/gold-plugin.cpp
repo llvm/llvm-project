@@ -1084,7 +1084,7 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
         getThinLTOObjectFileName(F.name, OldSuffix, NewSuffix);
     auto ObjFilename = ObjectToIndexFileState.insert({Identifier, false});
     // get_symbols must be called for every claimed file; skipping it causes
-    // gold to crash when processing the file handle during linking.
+    // the LTO plugin to crash when processing the file handle during linking.
     const void *View = getSymbolsAndView(F);
     // The same archive may be specified multiple times on the command line to
     // handle circular dependencies between archives. Skip duplicate modules
