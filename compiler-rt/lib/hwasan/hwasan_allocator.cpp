@@ -148,6 +148,8 @@ uptr GetAliasRegionStart() {
 #endif
 }
 
+unsigned HwasanTagBits() { return hwasan_tag_bits; }
+
 void HwasanAllocatorInit() {
   atomic_store_relaxed(&hwasan_allocator_tagging_enabled,
                        !flags()->disable_allocator_tagging);

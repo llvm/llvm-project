@@ -130,6 +130,7 @@ void InitializeInterceptors();
 void HwasanAllocatorInit();
 void HwasanAllocatorLock();
 void HwasanAllocatorUnlock();
+unsigned HwasanTagBits();
 
 void *hwasan_malloc(uptr size, StackTrace *stack);
 void *hwasan_calloc(uptr nmemb, uptr size, StackTrace *stack);
