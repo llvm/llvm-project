@@ -474,6 +474,7 @@ struct CaptureRefToView {
 CaptureRefToView test_ref_to_view() {
   MyObj obj;
   CaptureRefToView x(obj); // expected-warning {{address of stack memory is returned later}}
+                           // expected-note@-1 {{variable 'x' aliases the storage of 'obj'}}
   return x; // expected-note {{returned here}}
 }
 
@@ -485,6 +486,7 @@ struct CaptureRefToPtr {
 CaptureRefToPtr test_ref_to_ptr() {
   MyObj obj;
   CaptureRefToPtr x(obj); // expected-warning {{address of stack memory is returned later}}
+                          // expected-note@-1 {{variable 'x' aliases the storage of 'obj'}}
   return x; // expected-note {{returned here}}
 }
 
@@ -496,7 +498,8 @@ struct CaptureViewToView {
 CaptureViewToView test_view_to_view() {
   MyObj obj;
   View v(obj); // expected-warning {{address of stack memory is returned later}}
-  CaptureViewToView x(v);
+               // expected-note@-1 {{variable 'v' aliases the storage of 'obj'}}
+  CaptureViewToView x(v); // expected-note {{variable 'x' aliases the storage of 'obj'}}
   return x; // expected-note {{returned here}}
 }
 
@@ -508,6 +511,7 @@ struct CapturePtrToPtr {
 CapturePtrToPtr test_ptr_to_ptr() {
   MyObj obj;
   CapturePtrToPtr x(&obj); // expected-warning {{address of stack memory is returned later}}
+                           // expected-note@-1 {{variable 'x' aliases the storage of 'obj'}}
   return x; // expected-note {{returned here}}
 }
 
@@ -519,6 +523,7 @@ struct CaptureRefToRef {
 CaptureRefToRef test_ref_to_ref() {
   MyObj obj;
   CaptureRefToRef x(obj); // expected-warning {{address of stack memory is returned later}}
+                          // expected-note@-1 {{variable 'x' aliases the storage of 'obj'}}
   return x; // expected-note {{returned here}}
 }
 
@@ -534,6 +539,7 @@ struct CaptureRefToBaseView : BaseWithView {
 CaptureRefToBaseView test_ref_to_base_view() {
   MyObj obj;
   CaptureRefToBaseView x(obj); // expected-warning {{address of stack memory is returned later}}
+                               // expected-note@-1 {{variable 'x' aliases the storage of 'obj'}}
   return x; // expected-note {{returned here}}
 }
 } // namespace capturing_constructor

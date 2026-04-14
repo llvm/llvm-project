@@ -100,7 +100,7 @@ public:
   // Suggests lifetime bound annotations for function paramters.
   virtual void suggestLifetimeboundToParmVar(
       SuggestionScope Scope, const ParmVarDecl *ParmToAnnotate,
-      EscapingTarget Target) {}
+      llvm::ArrayRef<AssignmentPair> AliasList, EscapingTarget Target) {}
 
   // Reports misuse of [[clang::noescape]] when parameter escapes through return
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,

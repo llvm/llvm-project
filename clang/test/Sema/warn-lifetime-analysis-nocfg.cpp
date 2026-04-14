@@ -995,9 +995,11 @@ struct [[gsl::Pointer]] Pointer {
   Pointer(const Bar & bar [[clang::lifetimebound]]);
 };
 Pointer test3(Bar bar) {
-  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}} \
+                              // cfg-note {{variable 'p' aliases the storage of the temporary}}
   use(p);                     // cfg-note {{later used here}}
-  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}} \
+                              // cfg-note {{variable 'p' aliases the storage of the temporary}}
   use(p);                     // cfg-note {{later used here}}
   return bar;                 // expected-warning {{address of stack}} cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
 }

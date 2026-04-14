@@ -16,6 +16,7 @@
 #define LLVM_CLANG_LIB_SEMA_SEMALIFETIMESAFETY_H
 
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/Sema.h"
@@ -206,6 +207,7 @@ public:
 
   void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
+                                     llvm::ArrayRef<AssignmentPair> AliasList,
                                      EscapingTarget Target) override {
     unsigned DiagID =
         (Scope == SuggestionScope::CrossTU)
@@ -223,6 +225,9 @@ public:
     S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
+
+    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+      reportAssignment(S, ParmToAnnotate, AliasStmt.first, AliasStmt.second);
 
     if (const auto *EscapeExpr = Target.dyn_cast<const Expr *>())
       S.Diag(EscapeExpr->getBeginLoc(),

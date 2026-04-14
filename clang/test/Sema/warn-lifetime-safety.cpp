@@ -2877,7 +2877,8 @@ void local_pointer() {
   Pointer<int> p;
   {
     int v;
-    p = Pointer(v); // expected-warning {{object whose reference is captured does not live long enough}}
+    p = Pointer(v); // expected-warning {{object whose reference is captured does not live long enough}} \
+                    // expected-note {{variable 'p' aliases the storage of 'v'}}
   }                 // expected-note {{destroyed here}}
   use(*p);          // expected-note {{later used here}}
 }
@@ -2888,9 +2889,10 @@ void nested_local_pointer() {
   Pointer<Bar> p;
   {
     Bar v;
-    p = Pointer(v);     // expected-warning {{object whose reference is captured does not live long enough}}
-    pp = Pointer(p);
-    ppp = Pointer(pp);
+    p = Pointer(v);     // expected-warning {{object whose reference is captured does not live long enough}} \
+                        // expected-note {{variable 'p' aliases the storage of 'v'}}
+    pp = Pointer(p);    // expected-note {{variable 'pp' aliases the storage of 'v'}}
+    ppp = Pointer(pp);  // expected-note {{variable 'ppp' aliases the storage of 'v'}}
   }                     // expected-note {{destroyed here}}
   use(***ppp);          // expected-note {{later used here}}
 }
