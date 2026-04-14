@@ -600,12 +600,10 @@ void CIRGenModule::constructFunctionReturnAttributes(
     retAttrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                  mlir::UnitAttr::get(&getMLIRContext()));
 
-  if (retTy->hasFloatingRepresentation()) {
-    unsigned mask = getNoFPClassTestMask(getLangOpts());
-    if (mask)
+  if (retTy->hasFloatingRepresentation())
+    if (unsigned mask = getNoFPClassTestMask(getLangOpts()))
       retAttrs.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
                    builder.getI64IntegerAttr(mask));
-  }
 
   if (!isThunk) {
     // TODO(cir): following comment taken from classic codegen, so if anything
@@ -715,12 +713,10 @@ void CIRGenModule::constructFunctionArgumentAttributes(
                 getNaturalPointeeTypeAlignment(argType).getQuantity()));
     }
 
-    if (argType->hasFloatingRepresentation()) {
-      unsigned mask = getNoFPClassTestMask(getLangOpts());
-      if (mask)
+    if (argType->hasFloatingRepresentation())
+      if (unsigned mask = getNoFPClassTestMask(getLangOpts()))
         argAttrList.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
                         builder.getI64IntegerAttr(mask));
-    }
   }
 }
 
