@@ -57,6 +57,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1743,8 +1744,9 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
                     computeConstantRange(RetVal, /*ForSigned=*/false)))
               return false;
 
-            Attribute NoFP = Attrs.getRetAttr(Attribute::NoFPClass);
-            if (NoFP.hasAttribute(Attribute::NoFPClass))
+            FPClassTest AttrFPClass = Attrs.getRetNoFPClass();
+            KnownFPClass ComputedFPClass = computeKnownFPClass(RetVal, DL);
+            if (!ComputedFPClass.isKnownNever(AttrFPClass))
               return false;
           }
           return true;
