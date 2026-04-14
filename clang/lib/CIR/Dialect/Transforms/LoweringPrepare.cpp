@@ -885,14 +885,14 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
       buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                            cir::GlobalLinkageKind::InternalLinkage);
 
-  mlir::Builder b(builder.getContext());
   SmallVector<mlir::NamedAttribute> paramAttrs;
-  paramAttrs.push_back(b.getNamedAttr("llvm.noundef", b.getUnitAttr()));
+  paramAttrs.push_back(
+      builder.getNamedAttr("llvm.noundef", builder.getUnitAttr()));
   SmallVector<mlir::Attribute> argAttrDicts;
   argAttrDicts.push_back(
       mlir::DictionaryAttr::get(builder.getContext(), paramAttrs));
-  dtorFunc->setAttr("arg_attrs",
-                    mlir::ArrayAttr::get(builder.getContext(), argAttrDicts));
+  dtorFunc.setArgAttrsAttr(
+      mlir::ArrayAttr::get(builder.getContext(), argAttrDicts));
 
   mlir::Block *entryBB = dtorFunc.addEntryBlock();
 
