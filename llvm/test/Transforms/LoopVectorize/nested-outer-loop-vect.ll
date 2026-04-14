@@ -8,8 +8,8 @@ define void @nested_outer_loop_vect(i32 %n, i64 %outer_tc) {
 ; CHECK-LABEL: define void @nested_outer_loop_vect(
 ; CHECK-SAME: i32 [[N:%.*]], i64 [[OUTER_TC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    br label %[[LOOP0_HEADER:.*]]
+; CHECK:       [[LOOP0_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[LOOP0_LATCH:.*]] ]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -23,48 +23,27 @@ define void @nested_outer_loop_vect(i32 %n, i64 %outer_tc) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[VEC_IND]] to <4 x i32>
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP1]], <4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    br label %[[FOR_BODY31:.*]]
-; CHECK:       [[FOR_BODY31]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[FOR_BODY31]] ]
+; CHECK-NEXT:    br label %[[LOOP2_HEADER1:.*]]
+; CHECK:       [[LOOP2_HEADER1]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[LOOP2_HEADER1]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [8 x [8 x i32]], ptr @arr, i64 0, <4 x i64> [[TMP3]], <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP2]], <4 x ptr> align 4 [[TMP4]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw <4 x i64> [[TMP3]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP5]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[VECTOR_LATCH]], label %[[FOR_BODY31]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[VECTOR_LATCH]], label %[[LOOP2_HEADER1]]
 ; CHECK:       [[VECTOR_LATCH]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[VECTORIZABLE_EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[VECTORIZABLE_EXIT]]:
-; CHECK-NEXT:    br i1 true, label %[[LOOP0_LATCH]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    br label %[[LOOP1_HEADER:.*]]
-; CHECK:       [[LOOP1_HEADER]]:
-; CHECK-NEXT:    [[LOOP1_IV:%.*]] = phi i64 [ 8, %[[EXIT]] ], [ [[LOOP1_IV_NEXT:%.*]], %[[LOOP1_LATCH:.*]] ]
-; CHECK-NEXT:    [[GEP_ARR2:%.*]] = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, i64 [[LOOP1_IV]]
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[LOOP1_IV]] to i32
-; CHECK-NEXT:    store i32 [[TMP9]], ptr [[GEP_ARR2]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[LOOP1_IV]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP10]], [[N]]
-; CHECK-NEXT:    br label %[[LOOP2_HEADER:.*]]
-; CHECK:       [[LOOP2_HEADER]]:
-; CHECK-NEXT:    [[LOOP2_IV:%.*]] = phi i64 [ 0, %[[LOOP1_HEADER]] ], [ [[LOOP2_IV_NEXT:%.*]], %[[LOOP2_HEADER]] ]
-; CHECK-NEXT:    [[GEP_ARR:%.*]] = getelementptr inbounds [8 x [8 x i32]], ptr @arr, i64 0, i64 [[LOOP2_IV]], i64 [[LOOP1_IV]]
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_ARR]], align 4
-; CHECK-NEXT:    [[LOOP2_IV_NEXT]] = add nuw nsw i64 [[LOOP2_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_LOOP2:%.*]] = icmp eq i64 [[LOOP2_IV_NEXT]], 8
-; CHECK-NEXT:    br i1 [[EXITCOND_LOOP2]], label %[[LOOP1_LATCH]], label %[[LOOP2_HEADER]]
-; CHECK:       [[LOOP1_LATCH]]:
-; CHECK-NEXT:    [[LOOP1_IV_NEXT]] = add nuw nsw i64 [[LOOP1_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_LOOP1:%.*]] = icmp eq i64 [[LOOP1_IV_NEXT]], 8
-; CHECK-NEXT:    br i1 [[EXITCOND_LOOP1]], label %[[LOOP0_LATCH]], label %[[LOOP1_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[LOOP0_LATCH]]
 ; CHECK:       [[LOOP0_LATCH]]:
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], [[OUTER_TC]]
-; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT1:.*]], label %[[OUTER_HEADER]]
-; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT:.*]], label %[[LOOP0_HEADER]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
