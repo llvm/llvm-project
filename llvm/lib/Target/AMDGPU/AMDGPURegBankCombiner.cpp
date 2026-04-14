@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUCombinerHelper.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
@@ -89,6 +90,10 @@ public:
 
   void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
 
+  bool matchFmulSelectToFldexpVgpr(
+      MachineInstr &MI, MachineInstr &Sel,
+      std::function<void(MachineIRBuilder &)> &MatchInfo) const;
+
   bool combineD16Load(MachineInstr &MI) const;
   bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
                     MachineInstr *SmallLoad, Register ToOverwriteD16) const;
@@ -148,6 +153,18 @@ Register AMDGPURegBankCombinerImpl::getAsVgpr(Register Reg) const {
   Register VgprReg = B.buildCopy(MRI.getType(Reg), Reg).getReg(0);
   MRI.setRegBank(VgprReg, RBI.getRegBank(AMDGPU::VGPRRegBankID));
   return VgprReg;
+}
+
+bool AMDGPURegBankCombinerImpl::matchFmulSelectToFldexpVgpr(
+    MachineInstr &MI, MachineInstr &Sel,
+    std::function<void(MachineIRBuilder &)> &MatchInfo) const {
+  // Only combine for VGPR (divergent) operands. SGPR operands benefit from
+  // keeping fmul which has an SALU form (S_FMUL), while fldexp does not.
+  Register Dst = MI.getOperand(0).getReg();
+  if (!isVgprRegBank(Dst))
+    return false;
+
+  return matchFmulWithSelectToFldexpImpl(MI, Sel, MatchInfo, MRI, TII);
 }
 
 AMDGPURegBankCombinerImpl::MinMaxMedOpc

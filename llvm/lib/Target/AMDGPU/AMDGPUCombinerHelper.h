@@ -47,6 +47,13 @@ public:
   bool matchConstantIs32BitMask(Register Reg) const;
 };
 
+// Shared helper used by both
+// PostLegalizerCombiner and RegBankCombiner 
+bool matchFmulWithSelectToFldexpImpl(
+    MachineInstr &MI, MachineInstr &Sel,
+    std::function<void(MachineIRBuilder &)> &MatchInfo,
+    const MachineRegisterInfo &MRI, const SIInstrInfo &TII);
+
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUCOMBINERHELPER_H
