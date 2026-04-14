@@ -474,8 +474,7 @@ void PreprocessingRecord::InclusionDirective(
   InclusionDirective::InclusionKind Kind = InclusionDirective::Include;
 
   IdentifierInfo *II = IncludeTok.getIdentifierInfo();
-  if (!II)
-    llvm_unreachable("Invalid include directive token");
+  assert(II && "Invalid include directive token");
 
   switch (II->getPPKeywordID()) {
   case tok::pp_include:
