@@ -1329,13 +1329,11 @@ static bool generateRelationalInst(const SPIRV::IncomingCall *Call,
     SPIRVTypeInst ArgType = GR->getSPIRVTypeForVReg(Arguments[0]);
     unsigned NumElts = ArgType->getOperand(2).getImm();
     SPIRVTypeInst BoolVecTy = GR->getOrCreateSPIRVVectorType(
-        GR->getOrCreateSPIRVBoolType(MIRBuilder, true), NumElts, MIRBuilder,
-        true);
-    const auto &TII =
-        *cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget()).getInstrInfo();
-    Register ZeroReg = GR->getOrCreateConstVector(
-        uint64_t(0), *MIRBuilder.getMRI()->getVRegDef(Arguments[0]), ArgType,
-        TII);
+        GR->getOrCreateSPIRVBoolType(MIRBuilder, /*EmitIR=*/true), NumElts,
+        MIRBuilder, /*EmitIR=*/true);
+    Register ZeroReg =
+        GR->getOrCreateConsIntVector(uint64_t(0), MIRBuilder, ArgType,
+                                     /*EmitIR=*/true);
     Register BoolVecReg = createVirtualRegister(BoolVecTy, GR, MIRBuilder);
     MIRBuilder.buildInstr(SPIRV::OpINotEqual)
         .addDef(BoolVecReg)
