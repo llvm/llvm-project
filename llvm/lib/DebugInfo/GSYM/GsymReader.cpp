@@ -314,7 +314,8 @@ std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   case 2: return addressForIndex<uint16_t>(Index);
   case 4: return addressForIndex<uint32_t>(Index);
   case 8: return addressForIndex<uint64_t>(Index);
-  default: llvm_unreachable("unsupported address offset size");
+  default:
+    llvm_unreachable("unsupported address offset size");
   }
   return std::nullopt;
 }
