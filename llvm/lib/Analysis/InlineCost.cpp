@@ -1120,6 +1120,11 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
             getStringFnAttrAsInt(CandidateCall, "function-inline-threshold"))
       Threshold = *AttrThreshold;
 
+    if (std::optional<int> AttrThresholdBonus = getStringFnAttrAsInt(
+            CandidateCall,
+            InlineConstants::FunctionInlineThresholdBonusAttributeName))
+      Threshold += *AttrThresholdBonus;
+
     if (auto Result = costBenefitAnalysis()) {
       DecidedByCostBenefit = true;
       if (*Result)

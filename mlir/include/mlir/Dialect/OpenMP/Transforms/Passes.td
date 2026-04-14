@@ -52,4 +52,15 @@ def StackToSharedPass : Pass<"omp-stack-to-shared", "mlir::LLVM::LLVMFuncOp"> {
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
+def OpenMPSIMDInlineBoostPass : Pass<"omp-simd-inline-boost", "ModuleOp"> {
+  let summary = "Boost inline threshold for calls inside OpenMP SIMD loops";
+  let description = [{
+    Marks function calls inside omp.simd regions with a discardable attribute
+    (omp.simd_inline_boost) so that the FIR-to-LLVM conversion can set
+    "function-inline-threshold-bonus" on the resulting llvm.call. This enables
+    aggressive inlining of scalar function calls inside SIMD loops, allowing
+    LoopVectorize to vectorize the inlined loop body.
+  }];
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
 #endif // MLIR_DIALECT_OPENMP_TRANSFORMS_PASSES

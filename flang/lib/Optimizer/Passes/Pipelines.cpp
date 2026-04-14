@@ -370,6 +370,7 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+  pm.addPass(mlir::omp::createOpenMPSIMDInlineBoostPass());
 
   // Delete unreachable target operations before FunctionFilteringPass
   // extracts them.

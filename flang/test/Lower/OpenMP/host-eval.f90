@@ -160,7 +160,7 @@ subroutine distribute_parallel_do_simd()
   ! DEVICE-NOT: omp.parallel
   ! DEVICE-NOT: omp.distribute
   ! DEVICE-NOT: omp.wsloop
-  ! DEVICE-NOT: omp.simd
+  ! DEVICE-NOT: {{^ *}}omp.simd{{[ {]}}
   !$omp distribute parallel do simd num_threads(1)
   do i=1,10
     call foo()
@@ -269,7 +269,7 @@ subroutine distribute_simd()
   ! HOST-NEXT: omp.simd
 
   ! DEVICE-NOT: omp.distribute
-  ! DEVICE-NOT: omp.simd
+  ! DEVICE-NOT: {{^ *}}omp.simd{{[ {]}}
   !$omp distribute simd
   do i=1,10
     call foo()
