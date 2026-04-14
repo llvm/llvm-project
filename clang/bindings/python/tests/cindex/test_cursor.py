@@ -1021,24 +1021,25 @@ int d_noninline;
         self.assertEqual(n_param.spelling, "N")
 
     def test_is_template_parameter_pack(self):
-        # Type parameter pack
-        source = "template<typename T, typename... Ts> void foo();"
+        source = """
+            template<typename T, typename... Ts> void foo();
+            template<int... Ns> void bar();
+            template<template<typename> class... Ts> void baz();
+        """
         tu = get_tu(source, lang="cpp")
+
+        # Type parameter pack
         foo = get_cursor(tu, "foo")
         self.assertIsNotNone(foo)
         self.assertFalse(foo.get_template_parameter(0).is_template_parameter_pack())
         self.assertTrue(foo.get_template_parameter(1).is_template_parameter_pack())
 
         # Non-type parameter pack
-        source = "template<int... Ns> void bar();"
-        tu = get_tu(source, lang="cpp")
         bar = get_cursor(tu, "bar")
         self.assertIsNotNone(bar)
         self.assertTrue(bar.get_template_parameter(0).is_template_parameter_pack())
 
         # Template template parameter pack
-        source = "template<template<typename> class... Ts> void baz();"
-        tu = get_tu(source, lang="cpp")
         baz = get_cursor(tu, "baz")
         self.assertIsNotNone(baz)
         self.assertTrue(baz.get_template_parameter(0).is_template_parameter_pack())
@@ -1053,18 +1054,18 @@ int d_noninline;
 
         x = get_cursor(tu, "x")
         self.assertIsNotNone(x)
-        x_type = x.type.get_declaration()
-        self.assertEqual(x_type.get_num_template_arguments(), 3)
-        self.assertEqual(x_type.get_template_argument_type(0).kind, TypeKind.INT)
-        self.assertEqual(x_type.get_template_argument_type(1).kind, TypeKind.FLOAT)
-        self.assertEqual(x_type.get_template_argument_type(2).kind, TypeKind.DOUBLE)
-        self.assertEqual(x_type.get_template_argument_type(3).kind, TypeKind.INVALID)
+        x_decl = x.type.get_declaration()
+        self.assertEqual(x_decl.get_num_template_arguments(), 3)
+        self.assertEqual(x_decl.get_template_argument_type(0).kind, TypeKind.INT)
+        self.assertEqual(x_decl.get_template_argument_type(1).kind, TypeKind.FLOAT)
+        self.assertEqual(x_decl.get_template_argument_type(2).kind, TypeKind.DOUBLE)
+        self.assertEqual(x_decl.get_template_argument_type(3).kind, TypeKind.INVALID)
 
         # Empty pack: only T=int, pack contributes 0.
         y = get_cursor(tu, "y")
         self.assertIsNotNone(y)
-        y_type = y.type.get_declaration()
-        self.assertEqual(y_type.get_num_template_arguments(), 1)
+        y_decl = y.type.get_declaration()
+        self.assertEqual(y_decl.get_num_template_arguments(), 1)
 
     def test_get_num_template_arguments_method(self):
         source = """
