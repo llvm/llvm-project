@@ -75,8 +75,8 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 //
 // Data:
 //
-// * DenseMap<Symbol *, ThunkInfo> thunkMap: Maps the function symbol
-//   to its thunk bookkeeper.
+// * DenseMap<ThunkKey, ThunkInfo> thunkMap: Maps each (referent, addend)
+//   pair seen on a branch relocation to its thunk bookkeeper.
 //
 // * struct ThunkInfo (bookkeeper): Call instructions have limited range, and
 //   distant call sites might be unable to reach the same thunk, so multiple
