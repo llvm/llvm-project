@@ -2428,8 +2428,10 @@ inline bool Memcpy(InterpState &S, CodePtr OpPC) {
   const Pointer &Src = S.Stk.pop<Pointer>();
   Pointer &Dest = S.Stk.peek<Pointer>();
 
-  if (!CheckLoad(S, OpPC, Src))
-    return false;
+  if (!Src.getRecord() || !Src.getRecord()->isAnonymousUnion()) {
+    if (!CheckLoad(S, OpPC, Src))
+      return false;
+  }
 
   return DoMemcpy(S, OpPC, Src, Dest);
 }
