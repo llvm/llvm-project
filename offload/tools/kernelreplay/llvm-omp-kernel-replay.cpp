@@ -55,11 +55,6 @@ static cl::opt<uint32_t> NumThreadsOpt("num-threads",
 static cl::opt<int32_t> DeviceIdOpt("device-id", cl::desc("Set the device id."),
                                     cl::init(-1), cl::cat(ReplayOptions));
 
-static cl::opt<std::string>
-    DirectoryOpt("directory",
-                 cl::desc("The directory where the files are stored."),
-                 cl::init("."), cl::cat(ReplayOptions));
-
 int main(int argc, char **argv) {
   cl::HideUnrelatedOptions(ReplayOptions);
   cl::ParseCommandLineOptions(argc, argv, "llvm-omp-kernel-replay\n");
@@ -106,8 +101,8 @@ int main(int argc, char **argv) {
   uint64_t VAllocSize =
       JsonKernelInfo->getAsObject()->getInteger("VAllocSize").value();
 
-  // The file path without extension.
-  auto Filepath = std::filesystem::path(DirectoryOpt.getValue()) / KernelName;
+  auto Filepath = std::filesystem::path(InputFilename.getValue());
+  auto Directory = Filepath.parent_path();
 
   Filepath.replace_extension("globals");
   ErrorOr<std::unique_ptr<MemoryBuffer>> GlobalsMB =
@@ -138,6 +133,10 @@ int main(int argc, char **argv) {
 
   for (uint32_t I = 0; I < NumGlobals; ++I) {
     auto &Global = OffloadEntries[I + 1];
+
+    // Use a unique identifier.
+    Global.Address = static_cast<char *>(OffloadEntries[0].Address) + I + 1;
+
     uint32_t NameSize = *((uint32_t *)(BufferPtr));
     BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
     uint64_t Size = *((uint64_t *)(BufferPtr));
@@ -147,9 +146,6 @@ int main(int argc, char **argv) {
     BufferPtr = utils::advancePtr(BufferPtr, NameSize);
     Global.AuxAddr = BufferPtr;
     BufferPtr = utils::advancePtr(BufferPtr, Size);
-
-    // Use unique identifier.
-    Global.Address = static_cast<char *>(OffloadEntries[0].Address) + I + 1;
   }
 
   Filepath.replace_extension("image");
@@ -180,8 +176,9 @@ int main(int argc, char **argv) {
 
   __tgt_register_lib(&Desc);
 
-  int Rc = __tgt_activate_record_replay(DeviceId, VAllocSize, VAllocAddr, false,
-                                        VerifyOpt, DirectoryOpt.c_str());
+  int Rc = __tgt_activate_record_replay(
+      DeviceId, VAllocSize, VAllocAddr, /*IsRecord=*/false, VerifyOpt,
+      /*EmitReport=*/false, Directory.c_str());
   if (Rc != OMP_TGT_SUCCESS)
     reportFatalUsageError("Error activating record replay");
 

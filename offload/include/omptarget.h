@@ -441,7 +441,7 @@ int __tgt_print_device_info(int64_t DeviceId);
 
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                  void *VAddr, bool IsRecord, bool SaveOutput,
-                                 const char *OutputDirPath);
+                                 bool EmitReport, const char *OutputDirPath);
 
 // Registers a callback for the RPC server. Expects this function type.
 // unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC

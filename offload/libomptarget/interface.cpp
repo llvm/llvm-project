@@ -478,9 +478,13 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 ///                 'record' or 'replay' mode.
 /// /param SaveOutput Store the device memory after kernel
 ///                   execution on persistent storage.
+/// /param EmitReport Emit a summary report after the recording.
+/// /param OutputDirPath The output directory where the record replay files
+/// should be stored. An empty string or nullptr indicates the current working
+/// directory should be used.
 EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                         void *VAddr, bool IsRecord,
-                                        bool SaveOutput,
+                                        bool SaveOutput, bool EmitReport,
                                         const char *OutputDirPath) {
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
@@ -489,7 +493,7 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   int Rc = target_activate_rr(*DeviceOrErr, MemorySize, VAddr, IsRecord,
-                              SaveOutput, OutputDirPath);
+                              SaveOutput, EmitReport, OutputDirPath);
   if (Rc != OFFLOAD_SUCCESS) {
     ODBG(ODT_Interface) << "Record replay failed to activate in device "
                         << DeviceId;

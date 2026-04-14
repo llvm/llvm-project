@@ -67,9 +67,11 @@ protected:
   /// The path where to store all recorded files.
   std::filesystem::path OutputDirectory;
 
-  /// Whether the record replay should save a memory snapshot after a kernel
-  /// execution.
+  /// Whether a memory snapshot should be recorded a kernel execution.
   bool SaveOutput;
+
+  /// Whether a report should be emitted afther the recording.
+  bool EmitReport;
 
   /// Reference to the corresponding device.
   GenericDeviceTy &Device;
@@ -89,6 +91,9 @@ protected:
 
   // An instance of a kernel record replay.
   struct InstanceTy {
+    /// Reference to the kernel.
+    const GenericKernelTy &Kernel;
+
     /// The launch configuration parameters.
     uint32_t NumTeams = 0;
     uint32_t NumThreads = 0;
@@ -101,15 +106,8 @@ protected:
     /// The number of occurrences during the execution.
     mutable size_t Occurrences = 0;
 
-    InstanceTy(StringRef KernelName, uint32_t NumTeams, uint32_t NumThreads,
-               uint32_t SharedMemorySize)
-        : NumTeams(NumTeams), NumThreads(NumThreads),
-          SharedMemorySize(SharedMemorySize) {
-      KernelHash = stable_hash_name(KernelName);
-      LaunchConfigHash =
-          stable_hash_combine((stable_hash)NumTeams, (stable_hash)NumThreads,
-                              (stable_hash)SharedMemorySize);
-    }
+    InstanceTy(const GenericKernelTy &Kernel, uint32_t NumTeams,
+               uint32_t NumThreads, uint32_t SharedMemorySize);
 
     bool operator==(const InstanceTy &Other) const {
       return (KernelHash == Other.KernelHash &&
@@ -133,8 +131,9 @@ protected:
 
 public:
   RecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr, bool SaveOutput,
-                 GenericDeviceTy &Device)
-      : Status(Status), SaveOutput(SaveOutput), Device(Device) {
+                 bool EmitReport, GenericDeviceTy &Device)
+      : Status(Status), SaveOutput(SaveOutput), EmitReport(EmitReport),
+        Device(Device) {
     if (OutputDirectoryStr == "")
       OutputDirectory = std::filesystem::current_path();
     else
@@ -146,6 +145,9 @@ public:
   /// Initialize kernel record replay for the corresponding device.
   Error init(uint64_t MemSize, void *VAddr);
   Error deinit();
+
+  /// Emit the information of each registered instance.
+  Error emitInstanceReport();
 
   bool isRecording() const { return Status == StatusTy::Recording; }
   bool isReplaying() const { return Status == StatusTy::Replaying; }
@@ -175,6 +177,12 @@ public:
   /// when recording or replaying.
   Error recordEpilogue(const GenericKernelTy &Kernel, HandleTy Handle);
 
+  /// Get a string with the filename.
+  std::string getFilename(const InstanceTy &Instance, StringRef Suffix,
+                          bool IncludeDirectory = true) {
+    return getFilenameImpl(Instance, Suffix, IncludeDirectory);
+  }
+
   /// Allocates device memory from the record replay space.
   void *allocate(uint64_t Size);
 
@@ -182,8 +190,8 @@ private:
   /// Register an instance and return a reference and whether it was registered
   /// as a new instance.
   std::pair<const InstanceTy &, bool>
-  registerInstance(StringRef KernelName, uint32_t NumTeams, uint32_t NumThreads,
-                   uint32_t SharedMemorySize);
+  registerInstance(const GenericKernelTy &Kernel, uint32_t NumTeams,
+                   uint32_t NumThreads, uint32_t SharedMemorySize);
 
   /// Record the prologue data.
   virtual Error
@@ -200,13 +208,20 @@ private:
                                const InstanceTy &Instance,
                                const KernelArgsTy &KernelArgs,
                                const KernelLaunchParamsTy &LaunchParams) = 0;
+
+  /// Get a string with the filename.
+  virtual std::string getFilenameImpl(const InstanceTy &Instance,
+                                      StringRef Suffix,
+                                      bool IncludeDirectory) = 0;
 };
 
 /// The native kernel record replay support.
 struct NativeRecordReplayTy : public RecordReplayTy {
   NativeRecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr,
-                       bool SaveOutput, GenericDeviceTy &Device)
-      : RecordReplayTy(Status, OutputDirectoryStr, SaveOutput, Device) {}
+                       bool SaveOutput, bool EmitReport,
+                       GenericDeviceTy &Device)
+      : RecordReplayTy(Status, OutputDirectoryStr, SaveOutput, EmitReport,
+                       Device) {}
 
 private:
   Error recordPrologueImpl(const GenericKernelTy &Kernel,
@@ -221,7 +236,8 @@ private:
                        const KernelLaunchParamsTy &LaunchParams) override;
 
   /// Get a string with the filename.
-  std::string getFilename(StringRef KernelName, StringRef Suffix);
+  std::string getFilenameImpl(const InstanceTy &Instance, StringRef Suffix,
+                              bool IncludeDirectory) override;
 
   /// Record a memory snapshot to a file.
   Error recordSnapshot(const std::string &Filename);
