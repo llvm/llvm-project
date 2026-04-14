@@ -6,6 +6,14 @@ lldb_tablegen(ProcessFreeBSDKernelCorePropertiesEnum.inc -gen-lldb-property-enum
   SOURCE ProcessFreeBSDKernelCoreProperties.td
   TARGET LLDBPluginProcessFreeBSDKernelCorePropertiesEnumGen)
 
+lldb_tablegen(ProcessFreeBSDKernelCoreProperties.json -dump-json
+  SOURCE ProcessFreeBSDKernelCoreProperties.td
+  TARGET LLDBPluginProcessFreeBSDKernelCorePropertiesJsonGen)
+
+if (NOT CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+  return()
+endif()
+
 add_lldb_library(lldbPluginProcessFreeBSDKernelCore PLUGIN
   ProcessFreeBSDKernelCore.cpp
   RegisterContextFreeBSDKernelCore_arm.cpp
