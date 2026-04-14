@@ -228,7 +228,7 @@ void DWARFUnitIndex::dump(raw_ostream &OS) const {
          << left_justify(Name,
                          Kind == DWARFSectionKind::DW_SECT_INFO ? 40 : 24);
     else
-      OS << formatv(" Unknown: {0, -15}", RawSectionIds[i]);
+      OS << formatv(" Unknown: {0,-15}", RawSectionIds[i]);
   }
   OS << "\n----- ------------------";
   for (unsigned i = 0; i != Header.NumColumns; ++i) {
