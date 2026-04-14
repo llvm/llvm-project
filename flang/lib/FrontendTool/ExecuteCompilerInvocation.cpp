@@ -18,7 +18,7 @@
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
-#include "flang/Optimizer/Support/InitFIR.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
@@ -208,11 +208,8 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
 
   // Honor -mmlir. This should happen AFTER plugins have been loaded!
   if (!flang->getFrontendOpts().mlirArgs.empty()) {
-    // Register MLIR and FIR passes so that --mlir-print-ir-before=<pass> works.
-    // This must happen BEFORE registerPassManagerCLOptions() because that
-    // function creates the PassNameCLParser which snapshots the pass registry
-    // during initialization.
-    fir::support::registerFlangPipelinePasses();
+    fir::registerFlangPipelinePasses(); // Must be called before
+                                        // mlir::registerPassManagerCLOptions()
     mlir::registerMLIRContextCLOptions();
     mlir::registerPassManagerCLOptions();
     mlir::registerAsmPrinterCLOptions();

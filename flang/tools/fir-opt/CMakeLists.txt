@@ -28,6 +28,7 @@ target_link_libraries(fir-opt PRIVATE
   FlangOpenMPTransforms
   FIRAnalysis
   MIFDialect
+  flangPasses
   ${test_libs}
 )
 
@@ -49,9 +50,4 @@ mlir_target_link_libraries(fir-opt PRIVATE
   MLIRSupport
   MLIRVectorToLLVM
   MLIROptLib
-  MLIRComplexToStandard
-  MLIRLLVMIRTransforms
-  MLIRMathToFuncs
-  MLIRMathToLLVM
-  MLIRReconcileUnrealizedCasts
 )

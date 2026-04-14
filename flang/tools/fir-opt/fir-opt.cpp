@@ -16,6 +16,7 @@
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 
@@ -37,7 +38,7 @@ void registerTestOpenACC();
 
 int main(int argc, char **argv) {
   fir::support::registerMLIRPassesForFortranTools();
-  fir::support::registerFlangPipelinePasses();
+  fir::registerFlangPipelinePasses();
   fir::acc::registerFIROpenACCPasses();
 #ifdef FLANG_INCLUDE_TESTS
   fir::test::registerTestFIRAliasAnalysisPass();
