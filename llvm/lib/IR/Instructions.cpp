@@ -775,6 +775,10 @@ MemoryEffects CallBase::getFloatingPointMemoryEffects() const {
       if (const Function *F = BB->getParent())
         if (F->hasFnAttribute(Attribute::StrictFP))
           if (IntrinsicInst::isFloatingPointOperation(IntrID)) {
+            // If this operation explicitly ignores FP exceptions, it has no
+            // exception-related side effects even in a strictfp function.
+            if (getExceptionBehavior() == fp::ebIgnore)
+              return MemoryEffects::none();
             return MemoryEffects::inaccessibleMemOnly();
           }
   return MemoryEffects::none();

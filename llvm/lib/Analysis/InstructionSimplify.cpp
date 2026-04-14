@@ -7218,6 +7218,36 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::aarch64_sve_umaxv:
   case Intrinsic::aarch64_sve_uminv:
     return simplifySVEIntReduction(IID, ReturnType, Op0, Op1);
+  case Intrinsic::fadd:
+    if (Call)
+      return simplifyFAddInst(Op0, Op1, Call->getFastMathFlags(), Q,
+                              Call->getExceptionBehavior(),
+                              Call->getRoundingMode());
+    return simplifyFAddInst(Op0, Op1, FastMathFlags(), Q);
+  case Intrinsic::fsub:
+    if (Call)
+      return simplifyFSubInst(Op0, Op1, Call->getFastMathFlags(), Q,
+                              Call->getExceptionBehavior(),
+                              Call->getRoundingMode());
+    return simplifyFSubInst(Op0, Op1, FastMathFlags(), Q);
+  case Intrinsic::fmul:
+    if (Call)
+      return simplifyFMulInst(Op0, Op1, Call->getFastMathFlags(), Q,
+                              Call->getExceptionBehavior(),
+                              Call->getRoundingMode());
+    return simplifyFMulInst(Op0, Op1, FastMathFlags(), Q);
+  case Intrinsic::fdiv:
+    if (Call)
+      return simplifyFDivInst(Op0, Op1, Call->getFastMathFlags(), Q,
+                              Call->getExceptionBehavior(),
+                              Call->getRoundingMode());
+    return simplifyFDivInst(Op0, Op1, FastMathFlags(), Q);
+  case Intrinsic::frem:
+    if (Call)
+      return simplifyFRemInst(Op0, Op1, Call->getFastMathFlags(), Q,
+                              Call->getExceptionBehavior(),
+                              Call->getRoundingMode());
+    return simplifyFRemInst(Op0, Op1, FastMathFlags(), Q);
   default:
     break;
   }
@@ -7380,26 +7410,6 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
 
     return nullptr;
   }
-  case Intrinsic::fadd:
-    return simplifyFAddInst(Args[0], Args[1], Call->getFastMathFlags(), Q,
-                            Call->getExceptionBehavior(),
-                            Call->getRoundingMode());
-  case Intrinsic::fsub:
-    return simplifyFSubInst(Args[0], Args[1], Call->getFastMathFlags(), Q,
-                            Call->getExceptionBehavior(),
-                            Call->getRoundingMode());
-  case Intrinsic::fmul:
-    return simplifyFMulInst(Args[0], Args[1], Call->getFastMathFlags(), Q,
-                            Call->getExceptionBehavior(),
-                            Call->getRoundingMode());
-  case Intrinsic::fdiv:
-    return simplifyFDivInst(Args[0], Args[1], Call->getFastMathFlags(), Q,
-                            Call->getExceptionBehavior(),
-                            Call->getRoundingMode());
-  case Intrinsic::frem:
-    return simplifyFRemInst(Args[0], Args[1], Call->getFastMathFlags(), Q,
-                            Call->getExceptionBehavior(),
-                            Call->getRoundingMode());
   case Intrinsic::ldexp:
     return simplifyLdexp(Args[0], Args[1], Q, true);
   case Intrinsic::experimental_gc_relocate: {
