@@ -94,8 +94,8 @@ static bool hasNonConstOverload(const CXXMethodDecl &Node) {
   if (LookupResult.isSingleResult())
     return false;
 
-  return std::any_of(
-      LookupResult.begin(), LookupResult.end(), [Method](const Decl *D) {
+  return llvm::any_of(
+      LookupResult, [Method](const Decl *D) {
         const auto *Overload = dyn_cast<CXXMethodDecl>(D);
         return Overload && Overload != Method && !Overload->isConst() &&
                hasSameParameterTypes(*Method, *Overload);
