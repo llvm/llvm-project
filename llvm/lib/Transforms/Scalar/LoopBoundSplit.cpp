@@ -424,7 +424,6 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
       cast<CondBrInst>(VMap[SplitCandidateCond.BI]);
   ClonedSplitCandidateBI->setCondition(ConstantInt::getFalse(Context));
 
-
   // Update phi node in exit block of post-loop.
   Builder.SetInsertPoint(PostLoopPreHeader, PostLoopPreHeader->begin());
   for (PHINode &PN : PostLoop->getExitBlock()->phis()) {
