@@ -1154,6 +1154,15 @@ void le_fun_params1(MutexLock& scope LOCKS_EXCLUDED(mu1));
 void le_fun_params2(int lvar LOCKS_EXCLUDED(mu1)); // \
   // expected-warning{{'locks_excluded' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
 
+template <typename T>
+void le_fun_params3(T& lvar LOCKS_EXCLUDED(mu1)) {} // \
+  // expected-warning{{'locks_excluded' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
+void call_le_fun_params3(int i) {
+  MutexLock scope(&mu1);
+  le_fun_params3(i); // expected-note {{while substituting deduced template arguments into function template 'le_fun_params3' [with T = int]}}
+  le_fun_params3(scope);
+}
+
 class LeFoo {
  private:
   int test_field LOCKS_EXCLUDED(mu1); // \

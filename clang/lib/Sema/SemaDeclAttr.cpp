@@ -450,8 +450,10 @@ static bool checkThreadSafetyValueDeclIsFunPtr(Sema &S, const ValueDecl *VD,
 
 static bool checkFunParamsAreScopedLockable(Sema &S,
                                             const ParmVarDecl *ParamDecl,
-                                            const ParsedAttr &AL) {
+                                            const AttributeCommonInfo &AL) {
   QualType ParamType = ParamDecl->getType();
+  if (ParamType->isDependentType())
+    return true;
   if (const auto *RefType = ParamType->getAs<ReferenceType>();
       RefType &&
       checkRecordTypeForScopedCapability(S, RefType->getPointeeType()))
@@ -482,7 +484,15 @@ bool Sema::checkInstantiatedThreadSafetyAttrs(Decl *D, const Attr *A) {
     return true;
 
   const auto *VD = dyn_cast<ValueDecl>(D);
-  if (!VD || isa<FunctionDecl, ParmVarDecl>(VD))
+  if (!VD)
+    return true;
+
+  // Parameters of template functions need to be re-checked during
+  // instantiation because their types might have been dependent.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD))
+    return checkFunParamsAreScopedLockable(*this, PVD, *A);
+
+  if (isa<FunctionDecl>(VD))
     return true;
 
   return checkThreadSafetyValueDeclIsFunPtr(*this, VD, *A);
