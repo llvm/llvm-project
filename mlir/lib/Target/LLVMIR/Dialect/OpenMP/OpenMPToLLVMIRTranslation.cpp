@@ -17,6 +17,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
@@ -333,11 +334,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
   };
-  auto checkDependIteratorModifier = [&todo](auto op, LogicalResult &result) {
-    if (!op.getDependIterated().empty() ||
-        (op.getDependIteratedKinds() && !op.getDependIteratedKinds()->empty()))
-      result = todo("depend with iterator modifier");
-  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -360,7 +356,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("privatization");
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (isa<omp::TeamsOp>(op) || isa<omp::TaskloopOp>(op))
+    if (isa<omp::TeamsOp>(op) || isa<omp::TaskloopContextOp>(op))
       if (!op.getReductionVars().empty() || op.getReductionByref() ||
           op.getReductionSyms())
         result = todo("reduction");
@@ -410,7 +406,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
-        checkDependIteratorModifier(op, result);
         checkInReduction(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
@@ -421,7 +416,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkDepend(op, result);
         checkNowait(op, result);
       })
-      .Case([&](omp::TaskloopOp op) {
+      .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
         checkReduction(op, result);
@@ -445,7 +440,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
         checkBare(op, result);
-        checkDependIteratorModifier(op, result);
         checkInReduction(op, result);
         checkThreadLimit(op, result);
       })
@@ -2097,33 +2091,35 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
-static void
-buildDependData(std::optional<ArrayAttr> dependKinds, OperandRange dependVars,
-                LLVM::ModuleTranslation &moduleTranslation,
-                SmallVectorImpl<llvm::OpenMPIRBuilder::DependData> &dds) {
+static llvm::omp::RTLDependenceKindTy
+convertDependKind(mlir::omp::ClauseTaskDepend kind) {
+  switch (kind) {
+  case mlir::omp::ClauseTaskDepend::taskdependin:
+    return llvm::omp::RTLDependenceKindTy::DepIn;
+  // The OpenMP runtime requires that the codegen for 'depend' clause for
+  // 'out' dependency kind must be the same as codegen for 'depend' clause
+  // with 'inout' dependency.
+  case mlir::omp::ClauseTaskDepend::taskdependout:
+  case mlir::omp::ClauseTaskDepend::taskdependinout:
+    return llvm::omp::RTLDependenceKindTy::DepInOut;
+  case mlir::omp::ClauseTaskDepend::taskdependmutexinoutset:
+    return llvm::omp::RTLDependenceKindTy::DepMutexInOutSet;
+  case mlir::omp::ClauseTaskDepend::taskdependinoutset:
+    return llvm::omp::RTLDependenceKindTy::DepInOutSet;
+  }
+  llvm_unreachable("unhandled depend kind");
+}
+
+static void buildDependDataLocator(
+    std::optional<ArrayAttr> dependKinds, OperandRange dependVars,
+    LLVM::ModuleTranslation &moduleTranslation,
+    SmallVectorImpl<llvm::OpenMPIRBuilder::DependData> &dds) {
   if (dependVars.empty())
     return;
   for (auto dep : llvm::zip(dependVars, dependKinds->getValue())) {
-    llvm::omp::RTLDependenceKindTy type;
-    switch (
-        cast<mlir::omp::ClauseTaskDependAttr>(std::get<1>(dep)).getValue()) {
-    case mlir::omp::ClauseTaskDepend::taskdependin:
-      type = llvm::omp::RTLDependenceKindTy::DepIn;
-      break;
-    // The OpenMP runtime requires that the codegen for 'depend' clause for
-    // 'out' dependency kind must be the same as codegen for 'depend' clause
-    // with 'inout' dependency.
-    case mlir::omp::ClauseTaskDepend::taskdependout:
-    case mlir::omp::ClauseTaskDepend::taskdependinout:
-      type = llvm::omp::RTLDependenceKindTy::DepInOut;
-      break;
-    case mlir::omp::ClauseTaskDepend::taskdependmutexinoutset:
-      type = llvm::omp::RTLDependenceKindTy::DepMutexInOutSet;
-      break;
-    case mlir::omp::ClauseTaskDepend::taskdependinoutset:
-      type = llvm::omp::RTLDependenceKindTy::DepInOutSet;
-      break;
-    };
+    auto kind =
+        cast<mlir::omp::ClauseTaskDependAttr>(std::get<1>(dep)).getValue();
+    llvm::omp::RTLDependenceKindTy type = convertDependKind(kind);
     llvm::Value *depVal = moduleTranslation.lookupValue(std::get<0>(dep));
     llvm::OpenMPIRBuilder::DependData dd(type, depVal->getType(), depVal);
     dds.emplace_back(dd);
@@ -2616,6 +2612,92 @@ buildAffinityData(mlir::omp::TaskOp &taskOp, llvm::IRBuilderBase &builder,
   return mlir::success();
 }
 
+// Allocates a single kmp_dep_info array sized to hold both locator
+// (non-iterated) and iterated entries, fills the locator entries first, then
+// runs an iterator loop for each iterator modifier object.
+static mlir::LogicalResult
+buildDependData(OperandRange dependVars, std::optional<ArrayAttr> dependKinds,
+                OperandRange dependIterated,
+                std::optional<ArrayAttr> dependIteratedKinds,
+                llvm::IRBuilderBase &builder,
+                mlir::LLVM::ModuleTranslation &moduleTranslation,
+                llvm::OpenMPIRBuilder::DependenciesInfo &taskDeps) {
+  if (dependIterated.empty()) {
+    buildDependDataLocator(dependKinds, dependVars, moduleTranslation,
+                           taskDeps.Deps);
+    return mlir::success();
+  }
+
+  llvm::OpenMPIRBuilder &ompBuilder = *moduleTranslation.getOpenMPBuilder();
+  llvm::Type *dependInfoTy = ompBuilder.DependInfo;
+  unsigned numLocator = dependVars.size();
+
+  // Compute total count: locator deps + sum of iterator trip counts.
+  llvm::Value *totalCount =
+      llvm::ConstantInt::get(builder.getInt64Ty(), numLocator);
+
+  llvm::SmallVector<IteratorInfo, 2> iterInfos;
+  for (auto iter : dependIterated) {
+    auto itersOp = iter.getDefiningOp<mlir::omp::IteratorOp>();
+    assert(itersOp && "depend_iterated value must be defined by omp.iterator");
+    iterInfos.emplace_back(itersOp, moduleTranslation, builder);
+    totalCount =
+        builder.CreateAdd(totalCount, iterInfos.back().getTotalTrips());
+  }
+
+  // Heap-allocate the kmp_depend_info array so we don't risk
+  // dynamic-sized alloca outside the entry block (e.g. inside loops).
+  llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(dependInfoTy);
+  llvm::Value *depArray =
+      builder.CreateMalloc(ompBuilder.SizeTy, dependInfoTy, allocSize,
+                           totalCount, /*MallocF=*/nullptr, ".dep.arr.addr");
+
+  // Fill non-iterated entries at indices [0, numLocator).
+  if (numLocator > 0) {
+    SmallVector<llvm::OpenMPIRBuilder::DependData> dds;
+    buildDependDataLocator(dependKinds, dependVars, moduleTranslation, dds);
+    for (auto [i, dd] : llvm::enumerate(dds)) {
+      llvm::Value *idx = llvm::ConstantInt::get(builder.getInt64Ty(), i);
+      llvm::Value *entry =
+          builder.CreateInBoundsGEP(dependInfoTy, depArray, idx);
+      ompBuilder.emitTaskDependency(builder, entry, dd);
+    }
+  }
+
+  // Fill iterated entries starting at index numLocator.
+  llvm::Value *offset =
+      llvm::ConstantInt::get(builder.getInt64Ty(), numLocator);
+  for (auto [i, iterInfo] : llvm::enumerate(iterInfos)) {
+    auto kindAttr = cast<mlir::omp::ClauseTaskDependAttr>(
+        dependIteratedKinds->getValue()[i]);
+    llvm::omp::RTLDependenceKindTy rtlKind =
+        convertDependKind(kindAttr.getValue());
+
+    auto itersOp = dependIterated[i].getDefiningOp<mlir::omp::IteratorOp>();
+    if (failed(fillIteratorLoop(
+            itersOp, builder, moduleTranslation, iterInfo, "dep_iterator",
+            [&](llvm::Value *linearIV, mlir::omp::YieldOp yield) {
+              llvm::Value *addr =
+                  moduleTranslation.lookupValue(yield.getResults()[0]);
+              llvm::Value *idx = builder.CreateAdd(offset, linearIV);
+              llvm::Value *entry =
+                  builder.CreateInBoundsGEP(dependInfoTy, depArray, idx);
+              ompBuilder.emitTaskDependency(
+                  builder, entry,
+                  llvm::OpenMPIRBuilder::DependData{rtlKind, addr->getType(),
+                                                    addr});
+            })))
+      return mlir::failure();
+
+    // Advance offset by the trip count of this iterator.
+    offset = builder.CreateAdd(offset, iterInfo.getTotalTrips());
+  }
+
+  taskDeps.DepArray = depArray;
+  taskDeps.NumDeps = builder.CreateTrunc(totalCount, builder.getInt32Ty());
+  return mlir::success();
+}
+
 /// Converts an OpenMP task construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
@@ -2828,16 +2910,19 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, taskOp,
                            llvm::omp::Directive::OMPD_taskgroup);
 
-  SmallVector<llvm::OpenMPIRBuilder::DependData> dds;
-  buildDependData(taskOp.getDependKinds(), taskOp.getDependVars(),
-                  moduleTranslation, dds);
+  llvm::OpenMPIRBuilder::DependenciesInfo dependencies;
+  if (failed(buildDependData(taskOp.getDependVars(), taskOp.getDependKinds(),
+                             taskOp.getDependIterated(),
+                             taskOp.getDependIteratedKinds(), builder,
+                             moduleTranslation, dependencies)))
+    return failure();
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTask(
           ompLoc, allocaIP, bodyCB, !taskOp.getUntied(),
           moduleTranslation.lookupValue(taskOp.getFinal()),
-          moduleTranslation.lookupValue(taskOp.getIfExpr()), dds, ad,
+          moduleTranslation.lookupValue(taskOp.getIfExpr()), dependencies, ad,
           taskOp.getMergeable(),
           moduleTranslation.lookupValue(taskOp.getEventHandle()),
           moduleTranslation.lookupValue(taskOp.getPriority()));
@@ -2849,22 +2934,215 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   popCancelFinalizationCB(cancelTerminators, ompBuilder, afterIP.get());
 
   builder.restoreIP(*afterIP);
+
+  if (dependencies.DepArray)
+    builder.CreateFree(dependencies.DepArray);
+
   return success();
+}
+
+/// The correct entry point is convertOmpTaskloopContextOp. This gets called
+/// whilst lowering the body of the taskloop context (i.e. the task function).
+static LogicalResult
+convertOmpTaskloopWrapperOp(omp::TaskloopWrapperOp loopWrapperOp,
+                            llvm::IRBuilderBase &builder,
+                            LLVM::ModuleTranslation &moduleTranslation) {
+  mlir::Operation &opInst = *loopWrapperOp.getOperation();
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  // Recurse into the loop body.
+  auto continuationBlockOrError = convertOmpOpRegions(
+      loopWrapperOp.getRegion(), "omp.taskloop.wrapper.region", builder,
+      moduleTranslation);
+
+  if (failed(handleError(continuationBlockOrError, opInst)))
+    return failure();
+
+  builder.SetInsertPoint(continuationBlockOrError.get());
+  return success();
+}
+
+/// Look up the given value in the mapping, and if it's not there, translate its
+/// defining operation at the current builder insertion point. Only pure,
+/// regionless operations are supported because the same operation will later be
+/// translated again when the taskloop body itself is lowered.
+static llvm::Expected<llvm::Value *>
+lookupOrTranslatePureValue(Value value,
+                           LLVM::ModuleTranslation &moduleTranslation,
+                           llvm::IRBuilderBase &builder) {
+  if (llvm::Value *mapped = moduleTranslation.lookupValue(value))
+    return mapped;
+
+  Operation *defOp = value.getDefiningOp();
+  if (!defOp)
+    return llvm::make_error<llvm::StringError>(
+        "value is a block argument and is not mapped",
+        llvm::inconvertibleErrorCode());
+  if (defOp->getNumRegions() != 0 || !isPure(defOp))
+    return llvm::make_error<llvm::StringError>(
+        "unsupported op defining taskloop loop bound",
+        llvm::inconvertibleErrorCode());
+
+  SmallVector<Value> mappingsToRemove;
+  mappingsToRemove.reserve(defOp->getNumOperands() + defOp->getNumResults());
+  for (Value operand : defOp->getOperands()) {
+    if (moduleTranslation.lookupValue(operand))
+      continue;
+
+    llvm::Expected<llvm::Value *> operandOrError =
+        lookupOrTranslatePureValue(operand, moduleTranslation, builder);
+    if (!operandOrError)
+      return operandOrError.takeError();
+    moduleTranslation.mapValue(operand, *operandOrError);
+    mappingsToRemove.push_back(operand);
+  }
+
+  if (failed(moduleTranslation.convertOperation(*defOp, builder)))
+    return llvm::make_error<llvm::StringError>(
+        "failed to convert op defining taskloop loop bound",
+        llvm::inconvertibleErrorCode());
+
+  llvm::Value *result = moduleTranslation.lookupValue(value);
+  assert(result && "expected conversion of loop bound op to produce a value");
+
+  for (Value resultValue : defOp->getResults()) {
+    if (moduleTranslation.lookupValue(resultValue))
+      mappingsToRemove.push_back(resultValue);
+  }
+  for (Value mappedValue : mappingsToRemove)
+    moduleTranslation.forgetMapping(mappedValue);
+
+  return result;
+}
+
+static llvm::Error
+computeTaskloopBounds(omp::LoopNestOp loopOp, llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation,
+                      llvm::Value *&lbVal, llvm::Value *&ubVal,
+                      llvm::Value *&stepVal) {
+  Operation::operand_range lowerBounds = loopOp.getLoopLowerBounds();
+  Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
+  Operation::operand_range steps = loopOp.getLoopSteps();
+
+  llvm::Expected<llvm::Value *> firstLbOrErr =
+      lookupOrTranslatePureValue(lowerBounds[0], moduleTranslation, builder);
+  if (!firstLbOrErr)
+    return firstLbOrErr.takeError();
+
+  llvm::Type *boundType = (*firstLbOrErr)->getType();
+  ubVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
+  if (loopOp.getCollapseNumLoops() > 1) {
+    // In cases where Collapse is used with Taskloop, the upper bound of the
+    // iteration space needs to be recalculated to cater for the collapsed loop.
+    // The Collapsed Loop UpperBound is the product of all collapsed
+    // loop's tripcount.
+    // The LowerBound for collapsed loops is always 1. When the loops are
+    // collapsed, it will reset the bounds and introduce processing to ensure
+    // the index's are presented as expected. As this happens after creating
+    // Taskloop, these bounds need predicting. Example:
+    // !$omp taskloop collapse(2)
+    //   do i = 1, 10
+    //     do j = 1, 5
+    //       ..
+    //     end do
+    //   end do
+    // This loop above has a total of 50 iterations, so the lb will be 1, and
+    // the ub will be 50. collapseLoops in OMPIRBuilder then handles ensuring
+    // that i and j are properly presented when used in the loop.
+    for (uint64_t i = 0; i < loopOp.getCollapseNumLoops(); i++) {
+      llvm::Expected<llvm::Value *> lbOrErr =
+          i == 0 ? std::move(firstLbOrErr)
+                 : lookupOrTranslatePureValue(lowerBounds[i], moduleTranslation,
+                                              builder);
+      if (!lbOrErr)
+        return lbOrErr.takeError();
+      llvm::Expected<llvm::Value *> ubOrErr = lookupOrTranslatePureValue(
+          upperBounds[i], moduleTranslation, builder);
+      if (!ubOrErr)
+        return ubOrErr.takeError();
+      llvm::Expected<llvm::Value *> stepOrErr =
+          lookupOrTranslatePureValue(steps[i], moduleTranslation, builder);
+      if (!stepOrErr)
+        return stepOrErr.takeError();
+
+      llvm::Value *loopLb = *lbOrErr;
+      llvm::Value *loopUb = *ubOrErr;
+      llvm::Value *loopStep = *stepOrErr;
+      // In some cases, such as where the ub is less than the lb so the loop
+      // steps down, the calculation for the loopTripCount is swapped. To ensure
+      // the correct value is found, calculate both UB - LB and LB - UB then
+      // select which value to use depending on how the loop has been
+      // configured.
+      llvm::Value *loopLbMinusOne = builder.CreateSub(
+          loopLb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
+      llvm::Value *loopUbMinusOne = builder.CreateSub(
+          loopUb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
+      llvm::Value *boundsCmp = builder.CreateICmpSLT(loopLb, loopUb);
+      llvm::Value *ubMinusLb = builder.CreateSub(loopUb, loopLbMinusOne);
+      llvm::Value *lbMinusUb = builder.CreateSub(loopLb, loopUbMinusOne);
+      llvm::Value *loopTripCount =
+          builder.CreateSelect(boundsCmp, ubMinusLb, lbMinusUb);
+      loopTripCount = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCount, builder.getFalse());
+      // For loops that have a step value not equal to 1, we need to adjust the
+      // trip count to ensure the correct number of iterations for the loop is
+      // captured.
+      llvm::Value *loopTripCountDivStep =
+          builder.CreateSDiv(loopTripCount, loopStep);
+      loopTripCountDivStep = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCountDivStep, builder.getFalse());
+      llvm::Value *loopTripCountRem =
+          builder.CreateSRem(loopTripCount, loopStep);
+      loopTripCountRem = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCountRem, builder.getFalse());
+      llvm::Value *needsRoundUp = builder.CreateICmpNE(
+          loopTripCountRem,
+          builder.getIntN(loopTripCountRem->getType()->getIntegerBitWidth(),
+                          0));
+      loopTripCount =
+          builder.CreateAdd(loopTripCountDivStep,
+                            builder.CreateZExtOrTrunc(
+                                needsRoundUp, loopTripCountDivStep->getType()));
+      ubVal = builder.CreateMul(ubVal, loopTripCount);
+    }
+    lbVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
+    stepVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
+  } else {
+    llvm::Expected<llvm::Value *> ubOrErr =
+        lookupOrTranslatePureValue(upperBounds[0], moduleTranslation, builder);
+    if (!ubOrErr)
+      return ubOrErr.takeError();
+    llvm::Expected<llvm::Value *> stepOrErr =
+        lookupOrTranslatePureValue(steps[0], moduleTranslation, builder);
+    if (!stepOrErr)
+      return stepOrErr.takeError();
+    lbVal = *firstLbOrErr;
+    ubVal = *ubOrErr;
+    stepVal = *stepOrErr;
+  }
+
+  assert(lbVal != nullptr && "Expected value for lbVal");
+  assert(ubVal != nullptr && "Expected value for ubVal");
+  assert(stepVal != nullptr && "Expected value for stepVal");
+  return llvm::Error::success();
 }
 
 // Converts an OpenMP taskloop construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
-convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
-                     LLVM::ModuleTranslation &moduleTranslation) {
+convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
+                            llvm::IRBuilderBase &builder,
+                            LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  auto taskloopOp = cast<omp::TaskloopOp>(opInst);
+  mlir::Operation &opInst = *contextOp.getOperation();
+  omp::TaskloopWrapperOp loopWrapperOp = contextOp.getLoopOp();
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
   // It stores the pointer of allocated firstprivate copies,
   // which can be used later for freeing the allocated space.
   SmallVector<llvm::Value *> llvmFirstPrivateVars;
-  PrivateVarsInfo privateVarsInfo(taskloopOp);
+  PrivateVarsInfo privateVarsInfo(contextOp);
   TaskContextStructManager taskStructMgr{builder, moduleTranslation,
                                          privateVarsInfo.privatizers};
 
@@ -2873,7 +3151,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
 
   assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end());
   llvm::BasicBlock *taskloopStartBlock = llvm::BasicBlock::Create(
-      builder.getContext(), "omp.taskloop.start",
+      builder.getContext(), "omp.taskloop.wrapper.start",
       /*Parent=*/builder.GetInsertBlock()->getParent());
   llvm::Instruction *branchToTaskloopStartBlock =
       builder.CreateBr(taskloopStartBlock);
@@ -2910,7 +3188,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
         initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
                        blockArg, llvmPrivateVarAlloc, initBlock);
     if (!privateVarOrErr)
-      return handleError(privateVarOrErr, *taskloopOp.getOperation());
+      return handleError(privateVarOrErr, *contextOp.getOperation());
 
     llvmFirstPrivateVars[i] = privateVarOrErr.get();
 
@@ -2931,13 +3209,21 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   // firstprivate copy region
   setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
   if (failed(copyFirstPrivateVars(
-          taskloopOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
+          contextOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
           taskStructMgr.getLLVMPrivateVarGEPs(), privateVarsInfo.privatizers,
-          taskloopOp.getPrivateNeedsBarrier())))
+          contextOp.getPrivateNeedsBarrier())))
     return llvm::failure();
 
   // Set up inserttion point for call to createTaskloop()
   builder.SetInsertPoint(taskloopStartBlock);
+
+  auto loopOp = cast<omp::LoopNestOp>(loopWrapperOp.getWrappedLoop());
+  llvm::Value *lbVal = nullptr;
+  llvm::Value *ubVal = nullptr;
+  llvm::Value *stepVal = nullptr;
+  if (llvm::Error err = computeTaskloopBounds(
+          loopOp, builder, moduleTranslation, lbVal, ubVal, stepVal))
+    return handleError(std::move(err), opInst);
 
   auto bodyCB = [&](InsertPointTy allocaIP,
                     InsertPointTy codegenIP) -> llvm::Error {
@@ -3004,9 +3290,11 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
       moduleTranslation.mapValue(blockArg, llvmPrivateVar);
     }
 
-    auto continuationBlockOrError =
-        convertOmpOpRegions(taskloopOp.getRegion(), "omp.taskloop.region",
-                            builder, moduleTranslation);
+    // Lower the contents of the taskloop context region: this is the body of
+    // the generated task, not the loop.
+    auto continuationBlockOrError = convertOmpOpRegions(
+        contextOp.getRegion(), "omp.taskloop.context.region", builder,
+        moduleTranslation);
 
     if (failed(handleError(continuationBlockOrError, opInst)))
       return llvm::make_error<PreviouslyReportedError>();
@@ -3019,7 +3307,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     // into the outlined function. When the task is duplicated, that structure
     // is duplicated too.
     if (failed(cleanupPrivateVars(builder, moduleTranslation,
-                                  taskloopOp.getLoc(), privateVarsInfo.llvmVars,
+                                  contextOp.getLoc(), privateVarsInfo.llvmVars,
                                   privateVarsInfo.privatizers)))
       return llvm::make_error<PreviouslyReportedError>();
     // Similarly, the task context structure freed inside the task is the
@@ -3094,105 +3382,26 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
       // through a stack allocated structure.
     }
 
-    if (failed(copyFirstPrivateVars(
-            &opInst, builder, moduleTranslation, srcGEPs, destGEPs,
-            privateVarsInfo.privatizers, taskloopOp.getPrivateNeedsBarrier())))
+    if (failed(copyFirstPrivateVars(contextOp.getOperation(), builder,
+                                    moduleTranslation, srcGEPs, destGEPs,
+                                    privateVarsInfo.privatizers,
+                                    contextOp.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
     return builder.saveIP();
   };
-
-  auto loopOp = cast<omp::LoopNestOp>(taskloopOp.getWrappedLoop());
 
   auto loopInfo = [&]() -> llvm::Expected<llvm::CanonicalLoopInfo *> {
     llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
     return loopInfo;
   };
 
-  Operation::operand_range lowerBounds = loopOp.getLoopLowerBounds();
-  Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
-  Operation::operand_range steps = loopOp.getLoopSteps();
-  llvm::Type *boundType =
-      moduleTranslation.lookupValue(lowerBounds[0])->getType();
-  llvm::Value *lbVal = nullptr;
-  llvm::Value *ubVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
-  llvm::Value *stepVal = nullptr;
-  if (loopOp.getCollapseNumLoops() > 1) {
-    // In cases where Collapse is used with Taskloop, the upper bound of the
-    // iteration space needs to be recalculated to cater for the collapsed loop.
-    // The Collapsed Loop UpperBound is the product of all collapsed
-    // loop's tripcount.
-    // The LowerBound for collapsed loops is always 1. When the loops are
-    // collapsed, it will reset the bounds and introduce processing to ensure
-    // the index's are presented as expected. As this happens after creating
-    // Taskloop, these bounds need predicting. Example:
-    // !$omp taskloop collapse(2)
-    //   do i = 1, 10
-    //     do j = 1, 5
-    //       ..
-    //     end do
-    //   end do
-    // This loop above has a total of 50 iterations, so the lb will be 1, and
-    // the ub will be 50. collapseLoops in OMPIRBuilder then handles ensuring
-    // that i and j are properly presented when used in the loop.
-    for (uint64_t i = 0; i < loopOp.getCollapseNumLoops(); i++) {
-      llvm::Value *loopLb = moduleTranslation.lookupValue(lowerBounds[i]);
-      llvm::Value *loopUb = moduleTranslation.lookupValue(upperBounds[i]);
-      llvm::Value *loopStep = moduleTranslation.lookupValue(steps[i]);
-      // In some cases, such as where the ub is less than the lb so the loop
-      // steps down, the calculation for the loopTripCount is swapped. To ensure
-      // the correct value is found, calculate both UB - LB and LB - UB then
-      // select which value to use depending on how the loop has been
-      // configured.
-      llvm::Value *loopLbMinusOne = builder.CreateSub(
-          loopLb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
-      llvm::Value *loopUbMinusOne = builder.CreateSub(
-          loopUb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
-      llvm::Value *boundsCmp = builder.CreateICmpSLT(loopLb, loopUb);
-      llvm::Value *ubMinusLb = builder.CreateSub(loopUb, loopLbMinusOne);
-      llvm::Value *lbMinusUb = builder.CreateSub(loopLb, loopUbMinusOne);
-      llvm::Value *loopTripCount =
-          builder.CreateSelect(boundsCmp, ubMinusLb, lbMinusUb);
-      loopTripCount = builder.CreateBinaryIntrinsic(
-          llvm::Intrinsic::abs, loopTripCount, builder.getFalse());
-      // For loops that have a step value not equal to 1, we need to adjust the
-      // trip count to ensure the correct number of iterations for the loop is
-      // captured.
-      llvm::Value *loopTripCountDivStep =
-          builder.CreateSDiv(loopTripCount, loopStep);
-      loopTripCountDivStep = builder.CreateBinaryIntrinsic(
-          llvm::Intrinsic::abs, loopTripCountDivStep, builder.getFalse());
-      llvm::Value *loopTripCountRem =
-          builder.CreateSRem(loopTripCount, loopStep);
-      loopTripCountRem = builder.CreateBinaryIntrinsic(
-          llvm::Intrinsic::abs, loopTripCountRem, builder.getFalse());
-      llvm::Value *needsRoundUp = builder.CreateICmpNE(
-          loopTripCountRem,
-          builder.getIntN(loopTripCountRem->getType()->getIntegerBitWidth(),
-                          0));
-      loopTripCount =
-          builder.CreateAdd(loopTripCountDivStep,
-                            builder.CreateZExtOrTrunc(
-                                needsRoundUp, loopTripCountDivStep->getType()));
-      ubVal = builder.CreateMul(ubVal, loopTripCount);
-    }
-    lbVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
-    stepVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
-  } else {
-    lbVal = moduleTranslation.lookupValue(lowerBounds[0]);
-    ubVal = moduleTranslation.lookupValue(upperBounds[0]);
-    stepVal = moduleTranslation.lookupValue(steps[0]);
-  }
-  assert(lbVal != nullptr && "Expected value for lbVal");
-  assert(ubVal != nullptr && "Expected value for ubVal");
-  assert(stepVal != nullptr && "Expected value for stepVal");
-
   llvm::Value *ifCond = nullptr;
   llvm::Value *grainsize = nullptr;
   int sched = 0; // default
-  mlir::Value grainsizeVal = taskloopOp.getGrainsize();
-  mlir::Value numTasksVal = taskloopOp.getNumTasks();
-  if (Value ifVar = taskloopOp.getIfExpr())
+  mlir::Value grainsizeVal = contextOp.getGrainsize();
+  mlir::Value numTasksVal = contextOp.getNumTasks();
+  if (Value ifVar = contextOp.getIfExpr())
     ifCond = moduleTranslation.lookupValue(ifVar);
   if (grainsizeVal) {
     grainsize = moduleTranslation.lookupValue(grainsizeVal);
@@ -3213,17 +3422,17 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   // task's cleanup block which should be branched to. It doesn't depend upon
   // nogroup because even in that case the taskloop might still be inside an
   // explicit taskgroup.
-  pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, taskloopOp,
+  pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, contextOp,
                            llvm::omp::Directive::OMPD_taskgroup);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
           ompLoc, allocaIP, bodyCB, loopInfo, lbVal, ubVal, stepVal,
-          taskloopOp.getUntied(), ifCond, grainsize, taskloopOp.getNogroup(),
-          sched, moduleTranslation.lookupValue(taskloopOp.getFinal()),
-          taskloopOp.getMergeable(),
-          moduleTranslation.lookupValue(taskloopOp.getPriority()),
+          contextOp.getUntied(), ifCond, grainsize, contextOp.getNogroup(),
+          sched, moduleTranslation.lookupValue(contextOp.getFinal()),
+          contextOp.getMergeable(),
+          moduleTranslation.lookupValue(contextOp.getPriority()),
           loopOp.getCollapseNumLoops(), taskDupOrNull,
           taskStructMgr.getStructPtr());
 
@@ -7112,12 +7321,16 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       kernelInput.push_back(mapData.OriginalValue[i]);
   }
 
-  SmallVector<llvm::OpenMPIRBuilder::DependData> dds;
-  buildDependData(targetOp.getDependKinds(), targetOp.getDependVars(),
-                  moduleTranslation, dds);
-
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
+
+  llvm::OpenMPIRBuilder::DependenciesInfo dds;
+  if (failed(buildDependData(
+          targetOp.getDependVars(), targetOp.getDependKinds(),
+          targetOp.getDependIterated(), targetOp.getDependIteratedKinds(),
+          builder, moduleTranslation, dds)))
+    return failure();
+
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
   llvm::OpenMPIRBuilder::TargetDataInfo info(
@@ -7147,6 +7360,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   builder.restoreIP(*afterIP);
+
+  if (dds.DepArray)
+    builder.CreateFree(dds.DepArray);
 
   // Remap access operations to declare target reference pointers for the
   // device, essentially generating extra loadop's as necessary
@@ -7505,6 +7721,18 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       isa_and_present<omp::LoopWrapperInterface>(op) &&
       !dyn_cast_if_present<omp::LoopWrapperInterface>(op->getParentOp());
 
+  // The TASKLOOP construct is implemented with an outer taskloop.context
+  // operation which is not a loop wrapper, containing an inner taskloop
+  // operation which is a loop wrapper. The stack frame should be pushed when
+  // translating the outer taskloop.context and popped when translating the
+  // inner taskloop which is a loop wrapper. We need access to the loop
+  // information in the outer taskloop context so we need to create it and pop
+  // it around the taskloop context not the inner loop wrapper.
+  if (isa<omp::TaskloopContextOp>(op))
+    isOutermostLoopWrapper = true;
+  else if (isa<omp::TaskloopWrapperOp>(op))
+    isOutermostLoopWrapper = false;
+
   if (isOutermostLoopWrapper)
     moduleTranslation.stackPush<OpenMPLoopInfoStackFrame>();
 
@@ -7601,8 +7829,11 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           .Case([&](omp::TaskOp op) {
             return convertOmpTaskOp(op, builder, moduleTranslation);
           })
-          .Case([&](omp::TaskloopOp op) {
-            return convertOmpTaskloopOp(*op, builder, moduleTranslation);
+          .Case([&](omp::TaskloopWrapperOp op) {
+            return convertOmpTaskloopWrapperOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TaskloopContextOp op) {
+            return convertOmpTaskloopContextOp(op, builder, moduleTranslation);
           })
           .Case([&](omp::TaskgroupOp op) {
             return convertOmpTaskgroupOp(op, builder, moduleTranslation);

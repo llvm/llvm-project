@@ -1960,8 +1960,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         int ConstantVal = ConstantOffset->getSExtValue();
         Simm12 = isInt<12>(ConstantVal);
         if (Simm12)
-          Offset = CurDAG->getTargetConstant(ConstantVal, SDLoc(Offset),
-                                             Offset.getValueType());
+          Offset = CurDAG->getSignedTargetConstant(ConstantVal, SDLoc(Offset),
+                                                   Offset.getValueType());
       }
 
       unsigned Opcode = 0;
@@ -2952,6 +2952,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     unsigned EltSize = VT.getVectorElementType().getSizeInBits();
     APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
+
+    // Use LI for all ones since it can be compressed to c.li.
+    if (Val.isAllOnes()) {
+      SDNode *NewNode = CurDAG->getMachineNode(
+          RISCV::ADDI, DL, VT, CurDAG->getRegister(RISCV::X0, VT),
+          CurDAG->getAllOnesConstant(DL, XLenVT, /*IsTarget=*/true));
+      ReplaceNode(Node, NewNode);
+      return;
+    }
 
     // Find the smallest splat.
     if (Val.getBitWidth() > 16 && Val.isSplat(16))

@@ -283,7 +283,7 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 entry:
   br label %loop
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.dst.iv = getelementptr i128, ptr %dst, i64 %iv
   %iv.next = add i64 %iv, 1
@@ -671,7 +671,7 @@ define i32 @test_ptr_iv_load_used_by_other_load(ptr %start, ptr %end) {
 entry:
   br label %loop
 
-loop:                                 ; preds = %loop, %entry
+loop:
   %iv = phi ptr [ %iv.next, %loop ], [ null, %entry ]
   %red = phi i32 [ %red.next, %loop ], [ 0, %entry ]
   %0 = load ptr, ptr %iv, align 8

@@ -1,0 +1,142 @@
+macros:
+  SCM_RIGHTS:
+    in-latest-posix: ''
+  CMSG_DATA:
+    in-latest-posix: ''
+  CMSG_NXTHDR:
+    in-latest-posix: ''
+  CMSG_FIRSTHDR:
+    in-latest-posix: ''
+  CMSG_SPACE:
+    in-latest-posix: ''
+  CMSG_LEN:
+    in-latest-posix: ''
+  SOCK_DGRAM:
+    in-latest-posix: ''
+  SOCK_RAW:
+    in-latest-posix: ''
+  SOCK_SEQPACKET:
+    in-latest-posix: ''
+  SOCK_STREAM:
+    in-latest-posix: ''
+  SOCK_NONBLOCK:
+    in-latest-posix: ''
+  SOCK_CLOEXEC:
+    in-latest-posix: ''
+  SOCK_CLOFORK:
+    in-latest-posix: ''
+  SOL_SOCKET:
+    in-latest-posix: ''
+  SO_ACCEPTCONN:
+    in-latest-posix: ''
+  SO_BROADCAST:
+    in-latest-posix: ''
+  SO_DEBUG:
+    in-latest-posix: ''
+  SO_DOMAIN:
+    in-latest-posix: ''
+  SO_DONTROUTE:
+    in-latest-posix: ''
+  SO_ERROR:
+    in-latest-posix: ''
+  SO_KEEPALIVE:
+    in-latest-posix: ''
+  SO_LINGER:
+    in-latest-posix: ''
+  SO_OOBINLINE:
+    in-latest-posix: ''
+  SO_PROTOCOL:
+    in-latest-posix: ''
+  SO_RCVBUF:
+    in-latest-posix: ''
+  SO_RCVLOWAT:
+    in-latest-posix: ''
+  SO_RCVTIMEO:
+    in-latest-posix: ''
+  SO_REUSEADDR:
+    in-latest-posix: ''
+  SO_SNDBUF:
+    in-latest-posix: ''
+  SO_SNDLOWAT:
+    in-latest-posix: ''
+  SO_SNDTIMEO:
+    in-latest-posix: ''
+  SO_TYPE:
+    in-latest-posix: ''
+  SOMAXCONN:
+    in-latest-posix: ''
+  MSG_CMSG_CLOEXEC:
+    in-latest-posix: ''
+  MSG_CMSG_CLOFORK:
+    in-latest-posix: ''
+  MSG_CTRUNC:
+    in-latest-posix: ''
+  MSG_DONTROUTE:
+    in-latest-posix: ''
+  MSG_EOR:
+    in-latest-posix: ''
+  MSG_OOB:
+    in-latest-posix: ''
+  MSG_NOSIGNAL:
+    in-latest-posix: ''
+  MSG_PEEK:
+    in-latest-posix: ''
+  MSG_TRUNC:
+    in-latest-posix: ''
+  MSG_WAITALL:
+    in-latest-posix: ''
+  AF_INET:
+    in-latest-posix: ''
+  AF_INET6:
+    in-latest-posix: ''
+  AF_UNIX:
+    in-latest-posix: ''
+  AF_UNSPEC:
+    in-latest-posix: ''
+  SHUT_RD:
+    in-latest-posix: ''
+  SHUT_RDWR:
+    in-latest-posix: ''
+  SHUT_WR:
+    in-latest-posix: ''
+  SCM_RIGHTS:
+    in-latest-posix: ''
+functions:
+  accept:
+    in-latest-posix: ''
+  accept4:
+    in-latest-posix: ''
+  bind:
+    in-latest-posix: ''
+  connect:
+    in-latest-posix: ''
+  getpeername:
+    in-latest-posix: ''
+  getsockname:
+    in-latest-posix: ''
+  getsockopt:
+    in-latest-posix: ''
+  listen:
+    in-latest-posix: ''
+  recv:
+    in-latest-posix: ''
+  recvfrom:
+    in-latest-posix: ''
+  recvmsg:
+    in-latest-posix: ''
+  send:
+    in-latest-posix: ''
+  sendmsg:
+    in-latest-posix: ''
+  sendto:
+    in-latest-posix: ''
+  setsockopt:
+    in-latest-posix: ''
+  shutdown:
+    in-latest-posix: ''
+  sockatmark:
+    in-latest-posix: ''
+  socket:
+    in-latest-posix: ''
+  socketpair:
+    in-latest-posix: ''

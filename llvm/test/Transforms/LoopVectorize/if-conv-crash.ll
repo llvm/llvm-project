@@ -6,34 +6,34 @@ define fastcc void @DD_dump() {
 entry:
   br i1 true, label %lor.lhs.false, label %if.end25
 
-lor.lhs.false:                                    ; preds = %entry
+lor.lhs.false:
   br i1 false, label %if.end21, label %if.else
 
-if.else:                                          ; preds = %lor.lhs.false
+if.else:
   br i1 false, label %num_q.exit, label %while.body.i.preheader
 
-while.body.i.preheader:                           ; preds = %if.else
+while.body.i.preheader:
   br label %while.body.i
 
-while.body.i:                                     ; preds = %if.end.i, %while.body.i.preheader
+while.body.i:
   switch i8 0, label %if.end.i [
     i8 39, label %if.then.i
     i8 92, label %if.then.i
   ]
 
-if.then.i:                                        ; preds = %while.body.i, %while.body.i
+if.then.i:
   br label %if.end.i
 
-if.end.i:                                         ; preds = %if.then.i, %while.body.i
+if.end.i:
   br i1 false, label %num_q.exit, label %while.body.i
 
-num_q.exit:                                       ; preds = %if.end.i, %if.else
+num_q.exit:
   unreachable
 
-if.end21:                                         ; preds = %lor.lhs.false
+if.end21:
   unreachable
 
-if.end25:                                         ; preds = %entry
+if.end25:
   ret void
 }
 

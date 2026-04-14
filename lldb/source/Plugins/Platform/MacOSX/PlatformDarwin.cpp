@@ -207,6 +207,7 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
          "available.");
 
   llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
+  const FileSpec original_module_spec = module_spec;
   while (module_spec.GetFilename()) {
     ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
         target.GetDebugger()
@@ -236,8 +237,9 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
                                          orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
-      file_specs.try_emplace(std::move(script_fspec),
-                             target.GetLoadScriptFromSymbolFile());
+      LoadScriptFromSymFile load_style =
+          Platform::GetScriptLoadStyleForModule(original_module_spec, target);
+      file_specs.try_emplace(std::move(script_fspec), load_style);
       break;
     }
 

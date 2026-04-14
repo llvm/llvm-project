@@ -69,6 +69,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -584,8 +585,13 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   MemRefType memRefTy = dyn_cast<MemRefType>(convertedVal.getType());
 
   bool isRebox = firMemref.getDefiningOp<fir::ReboxOp>() != nullptr;
+  bool isDescriptor = mlir::isa<fir::BaseBoxType>(firMemref.getType()) ||
+                      firMemref.getDefiningOp<fir::BoxAddrOp>() != nullptr;
 
-  if (memRefTy.hasStaticShape() && !isRebox)
+  // Static shape does not imply contiguous layout for descriptor-backed
+  // entities (e.g. boxed array sections with non-unit stride). Keep the
+  // reinterpret-cast path so descriptor strides are preserved.
+  if (memRefTy.hasStaticShape() && !isRebox && !isDescriptor)
     return std::pair{*converted, indices};
 
   unsigned rank = arrayCoorOp.getIndices().size();
@@ -1081,6 +1087,29 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
     replaceFIRMemrefs(firMemref, converted, rewriter);
 }
 
+// Lower operand and result type of FIR logical operation to get rid
+// of bitcast after loads from memref and before store to memref
+// storing arrays of logicals as integers.
+template <typename Op>
+static void rewriteLogicalOperation(Op op, PatternRewriter &rewriter,
+                                    FIRToMemRefTypeConverter &typeConverter) {
+  mlir::Type oldType = op.getResult().getType();
+  mlir::Type convertedTy = typeConverter.convertType(oldType);
+  if (convertedTy == oldType)
+    return;
+  rewriter.setInsertionPoint(op);
+  mlir::Location loc = op.getLoc();
+  // Inserted bitcast from/to logical will be folded with the one created
+  // around load/store.
+  mlir::Value lhs =
+      createTypeConversion(rewriter, loc, convertedTy, op.getLhs());
+  mlir::Value rhs =
+      createTypeConversion(rewriter, loc, convertedTy, op.getRhs());
+  auto newOp = Op::create(rewriter, loc, convertedTy, lhs, rhs);
+  mlir::Value result = createTypeConversion(rewriter, loc, oldType, newOp);
+  rewriter.replaceOp(op, result);
+}
+
 void FIRToMemRef::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "Enter FIRToMemRef()\n");
 
@@ -1099,10 +1128,18 @@ void FIRToMemRef::runOnOperation() {
   });
 
   op.walk([&](Operation *op) {
-    if (fir::LoadOp loadOp = dyn_cast<fir::LoadOp>(op))
-      rewriteLoadOp(loadOp, rewriter, typeConverter);
-    else if (fir::StoreOp storeOp = dyn_cast<fir::StoreOp>(op))
-      rewriteStoreOp(storeOp, rewriter, typeConverter);
+    llvm::TypeSwitch<Operation *>(op)
+        .Case<fir::LoadOp>([&](auto loadOp) {
+          rewriteLoadOp(loadOp, rewriter, typeConverter);
+        })
+        .Case<fir::StoreOp>([&](auto storeOp) {
+          rewriteStoreOp(storeOp, rewriter, typeConverter);
+        })
+        .Case<fir::LogicalAndOp, fir::LogicalOrOp, fir::EqvOp, fir::NeqvOp>(
+            [&](auto logicalOp) {
+              rewriteLogicalOperation(logicalOp, rewriter, typeConverter);
+            })
+        .Default([](Operation *) {});
   });
 
   for (auto eraseOp : eraseOps)
