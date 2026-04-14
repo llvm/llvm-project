@@ -26,7 +26,7 @@ namespace polly {
 /// The intent of IsSuffix is to avoid the file being overwritten when
 /// processing multiple modules and/or with multiple dump passes in the
 /// pipeline.
-struct DumpModulePass final : llvm::PassInfoMixin<DumpModulePass> {
+struct DumpModulePass final : llvm::MandatoryPassInfoMixin<DumpModulePass> {
   std::string Filename;
   bool IsSuffix;
 

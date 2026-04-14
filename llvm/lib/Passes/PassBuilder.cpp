@@ -403,7 +403,8 @@ namespace {
 
 // Passes for testing crashes.
 // DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerCrashModulePass : public PassInfoMixin<TriggerCrashModulePass> {
+class TriggerCrashModulePass
+    : public OptionalPassInfoMixin<TriggerCrashModulePass> {
 public:
   PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
     abort();
@@ -413,7 +414,7 @@ public:
 };
 
 class TriggerCrashFunctionPass
-    : public PassInfoMixin<TriggerCrashFunctionPass> {
+    : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
 public:
   PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
     abort();
@@ -425,7 +426,7 @@ public:
 // A pass for testing message reporting of -verify-each failures.
 // DO NOT USE THIS EXCEPT FOR TESTING!
 class TriggerVerifierErrorPass
-    : public PassInfoMixin<TriggerVerifierErrorPass> {
+    : public OptionalPassInfoMixin<TriggerVerifierErrorPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     // Intentionally break the Module by creating an alias without setting the
@@ -459,7 +460,7 @@ public:
 // A pass requires all MachineFunctionProperties.
 // DO NOT USE THIS EXCEPT FOR TESTING!
 class RequireAllMachineFunctionPropertiesPass
-    : public PassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
+    : public OptionalPassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
     MFPropsModifier _(*this, MF);

@@ -15,7 +15,7 @@ namespace llvm {
 
 class Function;
 
-class StripGCRelocates : public PassInfoMixin<StripGCRelocates> {
+class StripGCRelocates : public OptionalPassInfoMixin<StripGCRelocates> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

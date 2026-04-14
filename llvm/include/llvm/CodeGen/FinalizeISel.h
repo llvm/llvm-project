@@ -13,10 +13,9 @@
 
 namespace llvm {
 
-class FinalizeISelPass : public PassInfoMixin<FinalizeISelPass> {
+class FinalizeISelPass : public MandatoryPassInfoMixin<FinalizeISelPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class MachineSinkingPass : public PassInfoMixin<MachineSinkingPass> {
+class MachineSinkingPass : public OptionalPassInfoMixin<MachineSinkingPass> {
   bool EnableSinkAndFold;
 
 public:

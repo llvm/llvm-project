@@ -19,7 +19,7 @@ namespace llvm {
 
 class Function;
 
-class InstCountPass : public PassInfoMixin<InstCountPass> {
+class InstCountPass : public OptionalPassInfoMixin<InstCountPass> {
   bool IsPreOptimization;
 
 public:

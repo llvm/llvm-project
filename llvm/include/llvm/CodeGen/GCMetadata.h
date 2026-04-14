@@ -226,7 +226,7 @@ public:
 /// and custom intrinsic lowering.
 ///
 /// This pass requires `CollectorMetadataAnalysis`.
-class GCLoweringPass : public PassInfoMixin<GCLoweringPass> {
+class GCLoweringPass : public OptionalPassInfoMixin<GCLoweringPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

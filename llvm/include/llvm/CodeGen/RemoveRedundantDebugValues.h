@@ -14,7 +14,7 @@
 namespace llvm {
 
 class RemoveRedundantDebugValuesPass
-    : public PassInfoMixin<RemoveRedundantDebugValuesPass> {
+    : public OptionalPassInfoMixin<RemoveRedundantDebugValuesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

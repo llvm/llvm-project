@@ -106,7 +106,8 @@ LLVM_ABI llvm::FunctionPass *createDebugifyFunctionPass(
     llvm::StringRef NameOfWrappedPass = "",
     DebugInfoPerPass *DebugInfoBeforePass = nullptr);
 
-class NewPMDebugifyPass : public llvm::PassInfoMixin<NewPMDebugifyPass> {
+class NewPMDebugifyPass
+    : public llvm::OptionalPassInfoMixin<NewPMDebugifyPass> {
   llvm::StringRef NameOfWrappedPass;
   DebugInfoPerPass *DebugInfoBeforePass = nullptr;
   enum DebugifyMode Mode = DebugifyMode::NoDebugify;
@@ -166,7 +167,7 @@ LLVM_ABI llvm::FunctionPass *createCheckDebugifyFunctionPass(
     llvm::StringRef OrigDIVerifyBugsReportFilePath = "");
 
 class NewPMCheckDebugifyPass
-    : public llvm::PassInfoMixin<NewPMCheckDebugifyPass> {
+    : public llvm::OptionalPassInfoMixin<NewPMCheckDebugifyPass> {
   llvm::StringRef NameOfWrappedPass;
   llvm::StringRef OrigDIVerifyBugsReportFilePath;
   DebugifyStatsMap *StatsMap;

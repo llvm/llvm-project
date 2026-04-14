@@ -83,7 +83,7 @@ public:
 
 /// Printer pass for RootSignatureAnalysis results.
 class RootSignatureAnalysisPrinter
-    : public PassInfoMixin<RootSignatureAnalysisPrinter> {
+    : public OptionalPassInfoMixin<RootSignatureAnalysisPrinter> {
   raw_ostream &OS;
 
 public:

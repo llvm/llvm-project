@@ -22,7 +22,8 @@
 namespace llvm {
 
 class Function;
-struct BreakCriticalEdgesPass : public PassInfoMixin<BreakCriticalEdgesPass> {
+struct BreakCriticalEdgesPass
+    : public OptionalPassInfoMixin<BreakCriticalEdgesPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm

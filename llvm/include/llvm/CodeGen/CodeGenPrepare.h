@@ -21,7 +21,7 @@ namespace llvm {
 class Function;
 class TargetMachine;
 
-class CodeGenPreparePass : public PassInfoMixin<CodeGenPreparePass> {
+class CodeGenPreparePass : public OptionalPassInfoMixin<CodeGenPreparePass> {
 private:
   const TargetMachine *TM;
 

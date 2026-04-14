@@ -14,7 +14,7 @@
 namespace llvm {
 
 class RegUsageInfoPropagationPass
-    : public PassInfoMixin<RegUsageInfoPropagationPass> {
+    : public OptionalPassInfoMixin<RegUsageInfoPropagationPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

@@ -23,7 +23,7 @@ class Function;
 
 enum class SROAOptions : bool { ModifyCFG, PreserveCFG };
 
-class SROAPass : public PassInfoMixin<SROAPass> {
+class SROAPass : public OptionalPassInfoMixin<SROAPass> {
   const SROAOptions PreserveCFG;
 
 public:

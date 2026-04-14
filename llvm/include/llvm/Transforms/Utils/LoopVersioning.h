@@ -152,7 +152,7 @@ private:
 /// Expose LoopVersioning as a pass.  Currently this is only used for
 /// unit-testing.  It adds all memchecks necessary to remove all may-aliasing
 /// array accesses from the loop.
-class LoopVersioningPass : public PassInfoMixin<LoopVersioningPass> {
+class LoopVersioningPass : public OptionalPassInfoMixin<LoopVersioningPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

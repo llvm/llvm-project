@@ -14,11 +14,10 @@
 namespace llvm {
 
 class MachineSanitizerBinaryMetadataPass
-    : public PassInfoMixin<MachineSanitizerBinaryMetadataPass> {
+    : public MandatoryPassInfoMixin<MachineSanitizerBinaryMetadataPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

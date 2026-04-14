@@ -46,7 +46,8 @@ struct DisableLIRP {
 };
 
 /// Performs Loop Idiom Recognize Pass.
-class LoopIdiomRecognizePass : public PassInfoMixin<LoopIdiomRecognizePass> {
+class LoopIdiomRecognizePass
+    : public OptionalPassInfoMixin<LoopIdiomRecognizePass> {
 public:
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);

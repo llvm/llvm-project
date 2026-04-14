@@ -20,7 +20,8 @@ namespace llvm {
 class Module;
 
 /// Simple pass that canonicalizes aliases.
-class CanonicalizeAliasesPass : public PassInfoMixin<CanonicalizeAliasesPass> {
+class CanonicalizeAliasesPass
+    : public OptionalPassInfoMixin<CanonicalizeAliasesPass> {
 public:
   CanonicalizeAliasesPass() = default;
 

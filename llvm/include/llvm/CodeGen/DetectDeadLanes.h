@@ -116,11 +116,10 @@ private:
   BitVector DefinedByCopy;
 };
 
-class DetectDeadLanesPass : public PassInfoMixin<DetectDeadLanesPass> {
+class DetectDeadLanesPass : public MandatoryPassInfoMixin<DetectDeadLanesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

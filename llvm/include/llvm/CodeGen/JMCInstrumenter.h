@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class JMCInstrumenterPass : public PassInfoMixin<JMCInstrumenterPass> {
+class JMCInstrumenterPass : public OptionalPassInfoMixin<JMCInstrumenterPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

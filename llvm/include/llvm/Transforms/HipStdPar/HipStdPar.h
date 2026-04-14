@@ -26,26 +26,21 @@ namespace llvm {
 class Module;
 
 class HipStdParAcceleratorCodeSelectionPass
-  : public PassInfoMixin<HipStdParAcceleratorCodeSelectionPass> {
+    : public MandatoryPassInfoMixin<HipStdParAcceleratorCodeSelectionPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-
-  static bool isRequired() { return true; }
 };
 
 class HipStdParAllocationInterpositionPass
-  : public PassInfoMixin<HipStdParAllocationInterpositionPass> {
+    : public MandatoryPassInfoMixin<HipStdParAllocationInterpositionPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-
-  static bool isRequired() { return true; }
 };
 
-class HipStdParMathFixupPass : public PassInfoMixin<HipStdParMathFixupPass> {
+class HipStdParMathFixupPass
+    : public MandatoryPassInfoMixin<HipStdParMathFixupPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

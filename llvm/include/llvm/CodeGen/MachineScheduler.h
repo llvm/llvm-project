@@ -1455,7 +1455,8 @@ ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
   return DAG;
 }
 
-class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
+class MachineSchedulerPass
+    : public OptionalPassInfoMixin<MachineSchedulerPass> {
   // FIXME: Remove this member once RegisterClassInfo is queryable as an
   // analysis.
   std::unique_ptr<impl_detail::MachineSchedulerImpl> Impl;
@@ -1470,7 +1471,7 @@ public:
 };
 
 class PostMachineSchedulerPass
-    : public PassInfoMixin<PostMachineSchedulerPass> {
+    : public OptionalPassInfoMixin<PostMachineSchedulerPass> {
   // FIXME: Remove this member once RegisterClassInfo is queryable as an
   // analysis.
   std::unique_ptr<impl_detail::PostMachineSchedulerImpl> Impl;

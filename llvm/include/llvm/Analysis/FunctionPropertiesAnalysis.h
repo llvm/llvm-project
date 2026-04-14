@@ -173,20 +173,18 @@ public:
 
 /// Printer pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesPrinterPass
-    : public PassInfoMixin<FunctionPropertiesPrinterPass> {
+    : public MandatoryPassInfoMixin<FunctionPropertiesPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit FunctionPropertiesPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesStatisticsPass
-    : public PassInfoMixin<FunctionPropertiesStatisticsPass> {
+    : public OptionalPassInfoMixin<FunctionPropertiesStatisticsPass> {
   bool IsPreOptimization;
 
 public:

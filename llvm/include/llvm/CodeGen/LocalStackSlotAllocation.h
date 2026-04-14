@@ -14,10 +14,9 @@
 namespace llvm {
 
 class LocalStackSlotAllocationPass
-    : public PassInfoMixin<LocalStackSlotAllocationPass> {
+    : public MandatoryPassInfoMixin<LocalStackSlotAllocationPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

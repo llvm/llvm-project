@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class WinEHPreparePass : public PassInfoMixin<WinEHPreparePass> {
+class WinEHPreparePass : public OptionalPassInfoMixin<WinEHPreparePass> {
   bool DemoteCatchSwitchPHIOnly;
 
 public:

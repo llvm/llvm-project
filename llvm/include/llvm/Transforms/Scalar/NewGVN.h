@@ -20,7 +20,7 @@ namespace llvm {
 
 class Function;
 
-class NewGVNPass : public PassInfoMixin<NewGVNPass> {
+class NewGVNPass : public OptionalPassInfoMixin<NewGVNPass> {
 public:
   /// Run the pass over the function.
   PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);

@@ -974,21 +974,19 @@ public:
 };
 
 /// Printer pass for the \c RegionInfo.
-class RegionInfoPrinterPass : public PassInfoMixin<RegionInfoPrinterPass> {
+class RegionInfoPrinterPass
+    : public MandatoryPassInfoMixin<RegionInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit RegionInfoPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c RegionInfo.
-struct RegionInfoVerifierPass : PassInfoMixin<RegionInfoVerifierPass> {
+struct RegionInfoVerifierPass : MandatoryPassInfoMixin<RegionInfoVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 template <>
