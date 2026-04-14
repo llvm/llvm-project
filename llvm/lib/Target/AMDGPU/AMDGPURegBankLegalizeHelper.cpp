@@ -995,35 +995,36 @@ bool RegBankLegalizeHelper::lowerInsVecEltToSel(MachineInstr &MI) {
   LLT VecTy = MRI.getType(Src);
   LLT ScalarTy = VecTy.getScalarType();
   unsigned NumElts = VecTy.getNumElements();
-  bool IsSGPR = (MRI.getRegBank(Src) == SgprRB);
+  const RegisterBank *SrcRB = MRI.getRegBank(Src);
+  bool IsSGPR = (SrcRB == SgprRB);
   SmallVector<Register, 16> Selects;
-
-  MachineRegisterInfo::VRegAttrs SrcRB_EltTy = {MRI.getRegBank(Src), ScalarTy};
-  MachineRegisterInfo::VRegAttrs CmpTy = IsSGPR ? SgprRB_S32 : VccRB_S1;
-  MachineRegisterInfo::VRegAttrs SgprRB_IdxTy = {SgprRB, MRI.getType(Idx)};
 
   if (!IsSGPR && ScalarTy.getSizeInBits() == 64) {
     // VGPR B64: split to 32-bit lo/hi since there is no v_cndmask_b64.
     auto Unmerge = B.buildUnmerge(VgprRB_S32, Src);
     auto EltUnmerge = B.buildUnmerge(VgprRB_S32, Elt);
+    Register EltLo = EltUnmerge.getReg(0);
+    Register EltHi = EltUnmerge.getReg(1);
     for (unsigned I = 0; I < NumElts; ++I) {
-      auto IdxConst = B.buildConstant(SgprRB_IdxTy, I);
+      auto IdxConst = B.buildConstant(VgprRB_S32, I);
       auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, VccRB_S1, Idx, IdxConst);
-      Selects.push_back(B.buildSelect(VgprRB_S32, Cmp, EltUnmerge.getReg(0),
-                                      Unmerge.getReg(2 * I))
-                            .getReg(0));
-      Selects.push_back(B.buildSelect(VgprRB_S32, Cmp, EltUnmerge.getReg(1),
-                                      Unmerge.getReg(2 * I + 1))
-                            .getReg(0));
+      Selects.push_back(
+          B.buildSelect(VgprRB_S32, Cmp, EltLo, Unmerge.getReg(2 * I))
+              .getReg(0));
+      Selects.push_back(
+          B.buildSelect(VgprRB_S32, Cmp, EltHi, Unmerge.getReg(2 * I + 1))
+              .getReg(0));
     }
     LLT Vec32Ty = LLT::fixed_vector(2 * NumElts, 32);
     auto Vec32 = B.buildBuildVector({VgprRB, Vec32Ty}, Selects);
     B.buildBitcast(Dst, Vec32);
   } else if (ScalarTy.getSizeInBits() == 32 || ScalarTy.getSizeInBits() == 64) {
     // B32 (any bank) and SGPR B64: element-wise select at native width.
+    MachineRegisterInfo::VRegAttrs SrcRB_EltTy = {SrcRB, ScalarTy};
+    MachineRegisterInfo::VRegAttrs CmpTy = IsSGPR ? SgprRB_S32 : VccRB_S1;
     auto Unmerge = B.buildUnmerge(SrcRB_EltTy, Src);
     for (unsigned I = 0; I < NumElts; ++I) {
-      auto IdxConst = B.buildConstant(SgprRB_IdxTy, I);
+      auto IdxConst = B.buildConstant(SgprRB_S32, I);
       auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, CmpTy, Idx, IdxConst);
       Selects.push_back(
           B.buildSelect(SrcRB_EltTy, Cmp, Elt, Unmerge.getReg(I)).getReg(0));
