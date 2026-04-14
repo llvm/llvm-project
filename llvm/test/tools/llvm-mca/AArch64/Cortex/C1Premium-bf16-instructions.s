@@ -13,7 +13,7 @@
 # CHECK-NEXT:  1      3     0.50                        bfcvt	h0, s0
 # CHECK-NEXT:  1      3     0.50                        bfcvtn	v0.4h, v0.4s
 # CHECK-NEXT:  1      3     0.50                        bfcvtn2	v0.8h, v0.4s
-# CHECK-NEXT:  1      2     0.50                        bfdot	v0.2s, v24.4h, v14.2h[2]
+# CHECK-NEXT:  1      4     0.50                        bfdot	v0.2s, v24.4h, v14.2h[2]
 # CHECK-NEXT:  1      4     0.50                        bfdot	v0.2s, v0.4h, v0.4h
 # CHECK-NEXT:  1      4     0.50                        bfdot	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  1      5     0.50                        bfmlalb	v0.4s, v0.8h, v0.8h
