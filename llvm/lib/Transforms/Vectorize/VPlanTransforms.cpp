@@ -6036,8 +6036,11 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
   if (match(BinOp,
             m_Intrinsic<Intrinsic::abs>(m_Sub(m_ZExtOrSExt(m_VPValue(X)),
                                               m_ZExtOrSExt(m_VPValue(Y)))))) {
-    auto *Ext = cast<VPWidenCastRecipe>(
-        BinOp->getOperand(0)->getDefiningRecipe()->getOperand(0));
+    auto *Sub = BinOp->getOperand(0)->getDefiningRecipe();
+    auto *Ext = cast<VPWidenCastRecipe>(Sub->getOperand(0));
+    assert(Ext->getOpcode() ==
+               cast<VPWidenCastRecipe>(Sub->getOperand(1))->getOpcode() &&
+           "Expected both the LHS and RHS extends to be the same");
     bool IsSigned = Ext->getOpcode() == Instruction::SExt;
     VPBuilder Builder(BinOp);
     Type *SrcTy = TypeInfo.inferScalarType(X);
@@ -6242,8 +6245,8 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op,
   assert(is_contained(UpdateR->operands(), Op) &&
          "Op should be operand of UpdateR");
 
-  // Try matching an absolute difference operand of the form:
-  // `abs(sub(ext(A), ext(B)))`. We can rewrite these to
+  // Try matching an absolute difference operand of the form
+  // `abs(sub(ext(A), ext(B)))`. This will be later transformed into
   // `ext(absolute-difference(A, B))`. This allows us to perform the absolute
   // difference on a wider type and get the extend for "free" from the partial
   // reduction.
