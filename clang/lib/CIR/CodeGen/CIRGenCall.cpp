@@ -1126,6 +1126,18 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       if (argType != v.getType() && mlir::isa<cir::IntType>(v.getType()))
         cgm.errorNYI(loc, "emitCall: widening integer call argument");
 
+      // If we have a pointer argument and there's an address space mismatch,
+      // insert an address_space cast to match the expected function signature.
+      if (argType != v.getType()) {
+        auto argPtrTy = mlir::dyn_cast<cir::PointerType>(argType);
+        auto vPtrTy = mlir::dyn_cast<cir::PointerType>(v.getType());
+        if (argPtrTy && vPtrTy &&
+            argPtrTy.getPointee() == vPtrTy.getPointee() &&
+            argPtrTy.getAddrSpace() != vPtrTy.getAddrSpace()) {
+          v = performAddrSpaceCast(v, argPtrTy);
+        }
+      }
+
       // If the argument doesn't match, perform a bitcast to coerce it. This
       // can happen due to trivial type mismatches.
       // TODO(cir): When getFunctionType is added, assert that this isn't
