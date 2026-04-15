@@ -288,6 +288,29 @@ void test_trailing_suppress_block() {
   int *q = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }
 
+// Suppress on class template definition: member functions should be suppressed
+// during instantiation via DeclContext walk.
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] SuppressedClassTemplate {
+  void f() {
+    T *p = reinterpret_cast<T*>(0);
+  }
+};
+SuppressedClassTemplate<int> suppressed_class_tmpl_inst;
+
+// Without suppress on class template: member violation fires during instantiation.
+template <typename T>
+struct UnsuppressedClassTemplate {
+  void f() {
+    T *p = reinterpret_cast<T*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  }
+};
+void instantiate_unsuppressed_class_tmpl() {
+  UnsuppressedClassTemplate<int> x;
+  x.f(); // expected-note {{in instantiation of member function 'UnsuppressedClassTemplate<int>::f' requested here}}
+}
+
 // Suppress on variable template: suppression must carry through instantiation.
 template <typename T>
 // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}

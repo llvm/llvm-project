@@ -10,6 +10,8 @@
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/impl_propagation.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/mod_gmf_enforce.cppm -o %t/mod_gmf_enforce.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_gmf_ok.cpp -fmodule-file=GmfMod=%t/mod_gmf_enforce.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/mod_gmf_only_enforce.cppm -o %t/mod_gmf_only_enforce.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_gmf_only_fail.cpp -fmodule-file=GmfOnlyMod=%t/mod_gmf_only_enforce.pcm -verify
 
 // ===================================================================
 // Module with enforced profiles
@@ -74,3 +76,19 @@ export void gmf_func();
 //--- require_gmf_ok.cpp
 // expected-no-diagnostics
 import GmfMod [[profiles::require(test::type_cast)]];
+
+// ===================================================================
+// GMF-only enforce (no enforce on module-declaration): the profile is
+// enforced in the TU but NOT exported via the module. A require on
+// import must fail per P3589R2 [decl.attr.require]p2.
+// ===================================================================
+//--- mod_gmf_only_enforce.cppm
+// expected-no-diagnostics
+module;
+[[profiles::enforce(test::type_cast)]];
+export module GmfOnlyMod;
+
+export void gmf_only_func();
+
+//--- require_gmf_only_fail.cpp
+import GmfOnlyMod [[profiles::require(test::type_cast)]]; // expected-error {{required profile 'test::type_cast' is not enforced by imported module}}
