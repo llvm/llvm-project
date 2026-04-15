@@ -35,12 +35,11 @@ void fn1(groupshared Shared Sh) {
   Sh.Arr[1] = D;
 }
 
-
 // CHECK-LABEL: define internal void @_Z4mainDv3_j(<3 x i32> noundef %TID)
 [numthreads(4, 1, 1)]
 void main(uint3 TID : SV_GroupThreadID) {
 // CHECK: [[SAddr:%.*]] = alloca %struct.Shared, align 1
-// CHECK: call void @_Z3fn1RU3AS36Shared(ptr addrspace(3) noundef align 1 dereferenceable(16) [[SharedData]]) #3
+// CHECK: call void @_Z3fn1RU3AS36Shared(ptr addrspace(3) noundef align 1 dereferenceable(16) [[SharedData]])
   fn1(SharedData);
 
 // CHECK-NEXT: [[A:%.*]] = getelementptr inbounds nuw %struct.Shared, ptr [[SAddr]], i32 0, i32 0
@@ -54,11 +53,6 @@ void main(uint3 TID : SV_GroupThreadID) {
 // CHECK-NEXT: store double [[Arr2]], ptr [[Arr]], align 1
   Shared S = SharedData;
 
-// CHECK-NEXT: [[ASD:%.*]] = load i32, ptr addrspace(3) [[SharedData]], align 1
-// CHECK-NEXT: store i32 [[ASD]], ptr addrspace(3) [[SharedData2]], align 1
-// CHECK-NEXT: [[FSD:%.*]] = load float, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) [[SharedData]], i32 4), align 1
-// CHECK-NEXT: store float [[FSD]], ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) [[SharedData2]], i32 4), align 1
-// CHECK-NEXT: [[ArrSD:%.*]] = load double, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) [[SharedData]], i32 8), align 1
-// CHECK-NEXT: store double [[ArrSD]], ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) [[SharedData2]], i32 8), align 1
+// CHECK-NEXT: call void @llvm.memcpy.p3.p3.i32(ptr addrspace(3) align 1 @SharedData2, ptr addrspace(3) align 1 @SharedData, i32 16, i1 false)
   SharedData2 = SharedData;
 }

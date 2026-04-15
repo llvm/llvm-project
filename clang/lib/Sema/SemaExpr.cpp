@@ -10329,7 +10329,7 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
     }
 
     if (ConvertRHS)
-      RHS = ImpCastExprToType(E, Ty, Kind);
+      RHS = ImpCastExprToType(E, Ty, Kind, E->getValueKind());
   }
 
   return result;
@@ -15533,18 +15533,6 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
   switch (Opc) {
   case BO_Assign:
-    // If this is HLSL and the LHS is a record try to perform aggregate
-    // initialization.
-    if (getLangOpts().HLSL && LHSExpr->getType()->isRecordType()) {
-      ResultTy = LHSExpr->getType();
-      ExprResult Init =
-          HLSL().tryAggregateInitialization(*this, ResultTy, RHSExpr);
-      if (Init.isInvalid())
-        return Init;
-      RHS = Init.get();
-      break;
-    }
-
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType(), Opc);
     if (getLangOpts().CPlusPlus &&
         LHS.get()->getObjectKind() != OK_ObjCProperty) {
