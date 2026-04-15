@@ -545,8 +545,8 @@ static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
   case ReflectionKind::Type: {
     const TypeSourceInfo *Info =
         static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
-    QualType Unwrapped = unwrapReflectedTypeForProfile(Info->getType());
-    ID.AddPointer(Unwrapped.getAsOpaquePtr());
+    QualType QT = unwrapReflectedTypeForProfile(Info->getType());
+    ID.AddPointer(QT.getAsOpaquePtr());
     return;
   }
   }

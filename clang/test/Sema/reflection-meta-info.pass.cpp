@@ -53,6 +53,8 @@ consteval void test()
     static_assert(sizeof(decltype(^^int)) == sizeof(decltype(^^float)));
     static_assert(^^int32_t != ^^int);
     static_assert(^^const int != ^^int);
+    static_assert(^^volatile int32_t == ^^volatile int);
+    static_assert(^^const volatile int32_t == ^^const volatile int);
     static_assert(^^A != ^^int);
 
 
