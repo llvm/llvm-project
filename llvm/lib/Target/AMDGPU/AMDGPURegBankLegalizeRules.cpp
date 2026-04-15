@@ -689,6 +689,20 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivB64, BRC, DivS32},
             {{VgprB64}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}});
 
+  addRulesForGOpcs({G_INSERT_VECTOR_ELT})
+      .Any({{UniBRC, UniBRC, UniB32, UniS32},
+            {{SgprBRC}, {SgprBRC, SgprB32, Sgpr32}}})
+      .Any(
+          {{DivBRC, BRC, B32, UniS32}, {{VgprBRC}, {VgprBRC, VgprB32, Sgpr32}}})
+      .Any({{DivBRC, BRC, B32, DivS32},
+            {{VgprBRC}, {VgprBRC, VgprB32, Vgpr32}, InsVecEltToSel}})
+      .Any({{UniBRC, UniBRC, UniB64, UniS32},
+            {{SgprBRC}, {SgprBRC, SgprB64, Sgpr32}, InsVecEltToSel}})
+      .Any({{DivBRC, BRC, B64, UniS32},
+            {{VgprBRC}, {VgprBRC, VgprB64, Sgpr32}, InsVecEltTo32}})
+      .Any({{DivBRC, BRC, B64, DivS32},
+            {{VgprBRC}, {VgprBRC, VgprB64, Vgpr32}, InsVecEltToSel}});
+
   // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD_NORET {}, {{}, {Imm, VgprSrc, ..., Sgpr_WF_RsrcIdx}}
@@ -762,14 +776,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   // In global-isel G_TRUNC in-reg is treated as no-op, inst selected into COPY.
   // It is up to user to deal with truncated bits.
+  // S1, S16, S32 and S64 results are handled with specific rules. Remaining
+  // (result, source) pairs with valid register classes are covered by the
+  // generic UniBRC/DivBRC wildcard rules.
   addRulesForGOpcs({G_TRUNC})
       .Any({{UniS1, UniS16}, {{None}, {None}}}) // should be combined away
       .Any({{UniS1, UniS32}, {{None}, {None}}}) // should be combined away
       .Any({{UniS1, UniS64}, {{None}, {None}}}) // should be combined away
       .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}})
-      .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
-      .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
-      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}})
+      .Any({{UniBRC, UniBRC}, {{SgprBRC}, {SgprBRC}}})
+      .Any({{DivBRC, DivBRC}, {{VgprBRC}, {VgprBRC}}})
       .Any({{UniV2S16, V2S32}, {{SgprV2S16}, {SgprV2S32}}})
       .Any({{DivV2S16, V2S32}, {{VgprV2S16}, {VgprV2S32}}})
       // This is non-trivial. VgprToVccCopy is done using compare instruction.
@@ -1469,6 +1485,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64}, {Vgpr64}});
 
   using namespace Intrinsic;
+
+  addRulesForIOpcs({returnaddress}).Any({{UniP0}, {{SgprP0}, {}}});
 
   addRulesForIOpcs({amdgcn_s_getpc}).Any({{UniS64, _}, {{Sgpr64}, {None}}});
 
