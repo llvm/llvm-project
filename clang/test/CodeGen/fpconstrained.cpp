@@ -52,10 +52,10 @@ float f0, f1, f2;
 // PRECISE-NEXT:  [[ENTRY:.*:]]
 // PRECISE-NEXT:    [[X:%.*]] = alloca [[CLASS_D:%.*]], align 1
 // PRECISE-NEXT:    [[A:%.*]] = alloca [[CLASS_AAAA:%.*]], align 1
-// PRECISE-NEXT:    call void @_ZN1dC1EPKci(ptr noundef nonnull align 1 dereferenceable(1) [[X]], ptr noundef @.str, i32 noundef 1) #[[ATTR4:[0-9]+]]
+// PRECISE-NEXT:    call void @_ZN1dC1EPKci(ptr noundef nonnull align 1 dereferenceable(1) [[X]], ptr noundef @.str, i32 noundef 1)
 // PRECISE-NEXT:    [[TMP0:%.*]] = load float, ptr @f0, align 4
-// PRECISE-NEXT:    call void @_ZN4aaaaIiED1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR5:[0-9]+]]
-// PRECISE-NEXT:    call void @_ZN1dD1Ev(ptr noundef nonnull align 1 dead_on_return(1) dereferenceable(1) [[X]]) #[[ATTR5]]
+// PRECISE-NEXT:    call void @_ZN4aaaaIiED1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR4:[0-9]+]]
+// PRECISE-NEXT:    call void @_ZN1dD1Ev(ptr noundef nonnull align 1 dead_on_return(1) dereferenceable(1) [[X]]) #[[ATTR4]]
 // PRECISE-NEXT:    ret float [[TMP0]]
 //
 // FAST-LABEL: define dso_local noundef nofpclass(nan inf) float @_Z3foov(
@@ -63,10 +63,10 @@ float f0, f1, f2;
 // FAST-NEXT:  [[ENTRY:.*:]]
 // FAST-NEXT:    [[X:%.*]] = alloca [[CLASS_D:%.*]], align 1
 // FAST-NEXT:    [[A:%.*]] = alloca [[CLASS_AAAA:%.*]], align 1
-// FAST-NEXT:    call void @_ZN1dC1EPKci(ptr noundef nonnull align 1 dereferenceable(1) [[X]], ptr noundef @.str, i32 noundef 1) #[[ATTR4:[0-9]+]]
+// FAST-NEXT:    call void @_ZN1dC1EPKci(ptr noundef nonnull align 1 dereferenceable(1) [[X]], ptr noundef @.str, i32 noundef 1)
 // FAST-NEXT:    [[TMP0:%.*]] = load float, ptr @f0, align 4
-// FAST-NEXT:    call void @_ZN4aaaaIiED1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR5:[0-9]+]]
-// FAST-NEXT:    call void @_ZN1dD1Ev(ptr noundef nonnull align 1 dead_on_return(1) dereferenceable(1) [[X]]) #[[ATTR5]]
+// FAST-NEXT:    call void @_ZN4aaaaIiED1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR4:[0-9]+]]
+// FAST-NEXT:    call void @_ZN1dD1Ev(ptr noundef nonnull align 1 dead_on_return(1) dereferenceable(1) [[X]]) #[[ATTR4]]
 // FAST-NEXT:    ret float [[TMP0]]
 //
 // FASTNOCONTRACT-LABEL: define dso_local noundef nofpclass(nan inf) float @_Z3foov(
@@ -74,10 +74,10 @@ float f0, f1, f2;
 // FASTNOCONTRACT-NEXT:  [[ENTRY:.*:]]
 // FASTNOCONTRACT-NEXT:    [[X:%.*]] = alloca [[CLASS_D:%.*]], align 1
 // FASTNOCONTRACT-NEXT:    [[A:%.*]] = alloca [[CLASS_AAAA:%.*]], align 1
-// FASTNOCONTRACT-NEXT:    call void @_ZN1dC1EPKci(ptr noundef nonnull align 1 dereferenceable(1) [[X]], ptr noundef @.str, i32 noundef 1) #[[ATTR4:[0-9]+]]
+// FASTNOCONTRACT-NEXT:    call void @_ZN1dC1EPKci(ptr noundef nonnull align 1 dereferenceable(1) [[X]], ptr noundef @.str, i32 noundef 1)
 // FASTNOCONTRACT-NEXT:    [[TMP0:%.*]] = load float, ptr @f0, align 4
-// FASTNOCONTRACT-NEXT:    call void @_ZN4aaaaIiED1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR5:[0-9]+]]
-// FASTNOCONTRACT-NEXT:    call void @_ZN1dD1Ev(ptr noundef nonnull align 1 dead_on_return(1) dereferenceable(1) [[X]]) #[[ATTR5]]
+// FASTNOCONTRACT-NEXT:    call void @_ZN4aaaaIiED1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR4:[0-9]+]]
+// FASTNOCONTRACT-NEXT:    call void @_ZN1dD1Ev(ptr noundef nonnull align 1 dead_on_return(1) dereferenceable(1) [[X]]) #[[ATTR4]]
 // FASTNOCONTRACT-NEXT:    ret float [[TMP0]]
 //
 // EXCEPT-LABEL: define dso_local noundef nofpclass(nan inf) float @_Z3foov(
