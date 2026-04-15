@@ -11,7 +11,7 @@
 ; CHECK-DAG: %[[#GENPTR:]] = OpTypePointer Generic %[[#]]
 ; CHECK-DAG: %[[#]] = OpConstantNull %[[#GENPTR]]
 ; CHECK-COUNT-2: %[[#]] = OpSpecConstantOp %[[#]] PtrCastToGeneric %[[#]]
-; CHECK-COUNT-3: OpPtrCastToGeneric
+; CHECK-COUNT-2: OpPtrCastToGeneric
 
 @G1 = addrspace(1) constant { [3 x ptr addrspace(4)] } { [3 x ptr addrspace(4)] [ptr addrspace(4) null, ptr addrspace(4) addrspacecast (ptr @foo to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr @bar to ptr addrspace(4))] }
 @G2 = addrspace(1) constant { [3 x ptr addrspace(4)] } { [3 x ptr addrspace(4)] [ptr addrspace(4) addrspacecast (ptr null to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr @bar to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr @foo to ptr addrspace(4))] }
