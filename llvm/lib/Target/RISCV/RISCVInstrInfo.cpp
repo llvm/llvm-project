@@ -3823,16 +3823,15 @@ RISCVInstrInfo::getOutliningCandidateInfo(
   if (OutlinerEnableRegSave && MOCI == MachineOutlinerDefault) {
     // Set per-candidate overhead based on X5 availability
     for (auto &C : RepeatedSequenceLocs) {
-      unsigned CandCallOverhead;
 
       if (C.isAvailableAcrossAndOutOfSeq(RISCV::X5, RegInfo)) {
         // X5 is available, just need the call
-        CandCallOverhead = 8;
+        unsigned CandCallOverhead = 8;
         C.setCallInfo(MachineOutlinerDefault, CandCallOverhead);
       } else {
         // X5 unavailable, need save + call + restore
         // Save (2-4) + Call (8) + Restore (2-4)
-        CandCallOverhead = InstrSizeCExt + 8 + InstrSizeCExt;
+        unsigned CandCallOverhead = InstrSizeCExt + 8 + InstrSizeCExt;
         C.setCallInfo(MachineOutlinerRegSave, CandCallOverhead);
       }
     }
