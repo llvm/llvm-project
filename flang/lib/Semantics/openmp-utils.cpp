@@ -1289,7 +1289,7 @@ std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
       }
     }
 
-    return success;
+    return success && produced >= level;
   }};
 
   LoopSequence sequence(std::get<parser::Block>(x.t), version, true, semaCtx);
