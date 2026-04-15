@@ -113,6 +113,20 @@ private:
                             uint32_t location);
 
   llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryMultiplication(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                               uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryDivision(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                         uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryRemainder(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                          uint32_t location);
+  llvm::Expected<CompilerType>
+  PickIntegerType(lldb::TypeSystemSP type_system,
+                  std::shared_ptr<ExecutionContextScope> ctx,
+                  const IntegerLiteralNode &literal);
+
+  llvm::Expected<lldb::ValueObjectSP>
   EvaluateAssignment(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                      uint32_t location);
 
@@ -123,11 +137,6 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinarySubAssign(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                           uint32_t location);
-
-  llvm::Expected<CompilerType>
-  PickIntegerType(lldb::TypeSystemSP type_system,
-                  std::shared_ptr<ExecutionContextScope> ctx,
-                  const IntegerLiteralNode &literal);
 
   /// A helper function for VerifyCastType (below). This performs
   /// arithmetic-specific checks. It should only be called if the target_type

@@ -45,6 +45,9 @@ enum class BinaryOpKind {
   Add,       // "+"
   AddAssign, // "+="
   Assign,    // "="
+  Div,       // "/"
+  Mul,       // "*"
+  Rem,       // "%"
   Sub,       // "-"
   SubAssign, // "-="
 };

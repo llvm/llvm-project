@@ -964,8 +964,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
                     Capability::DerivativeControl, Capability::MinLod,
-                    Capability::ImageGatherExtended, Capability::Addresses,
-                    Capability::VulkanMemoryModelKHR});
+                    Capability::ImageQuery, Capability::ImageGatherExtended,
+                    Capability::Addresses, Capability::VulkanMemoryModelKHR});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1078,6 +1078,16 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
   case SPIRV::Dim::DIM_SubpassData:
     Reqs.addRequirements(SPIRV::Capability::InputAttachment);
     break;
+  }
+
+  // Check if the sampled type is a 64-bit integer, which requires
+  // Int64ImageEXT capability.
+  assert(MI.getOperand(1).isReg());
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  SPIRVTypeInst SampledTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+  if (SampledTypeDef.isTypeIntN(64)) {
+    Reqs.addCapability(SPIRV::Capability::Int64ImageEXT);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_image_int64);
   }
 
   // Has optional access qualifier.
@@ -1735,6 +1745,16 @@ void addInstrRequirements(const MachineInstr &MI,
   }
   case SPIRV::OpGroupNonUniformQuadSwap:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformQuad);
+    break;
+  case SPIRV::OpImageQueryLod:
+    Reqs.addCapability(SPIRV::Capability::ImageQuery);
+    break;
+  case SPIRV::OpImageQuerySize:
+  case SPIRV::OpImageQuerySizeLod:
+  case SPIRV::OpImageQueryLevels:
+  case SPIRV::OpImageQuerySamples:
+    if (ST.isShader())
+      Reqs.addCapability(SPIRV::Capability::ImageQuery);
     break;
   case SPIRV::OpImageQueryFormat: {
     Register ResultReg = MI.getOperand(0).getReg();

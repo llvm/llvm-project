@@ -1028,7 +1028,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
                      const DominatorTree &DT,
                      std::optional<int64_t> Stride = std::nullopt) {
   // FIXME: This should probably only return true for NUW.
-  if (AR->getNoWrapFlags(SCEV::NoWrapMask))
+  if (any(AR->getNoWrapFlags(SCEV::NoWrapMask)))
     return true;
 
   if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
@@ -1838,6 +1838,7 @@ MemoryDepChecker::Dependence::isSafeForVectorization(DepType Type) {
   case Backward:
   case BackwardVectorizableButPreventsForwarding:
   case IndirectUnsafe:
+  case InvariantUnsafe:
     return VectorizationSafetyStatus::Unsafe;
   }
   llvm_unreachable("unexpected DepType!");
@@ -1850,6 +1851,7 @@ bool MemoryDepChecker::Dependence::isBackward() const {
   case ForwardButPreventsForwarding:
   case Unknown:
   case IndirectUnsafe:
+  case InvariantUnsafe:
     return false;
 
   case BackwardVectorizable:
@@ -1861,7 +1863,8 @@ bool MemoryDepChecker::Dependence::isBackward() const {
 }
 
 bool MemoryDepChecker::Dependence::isPossiblyBackward() const {
-  return isBackward() || Type == Unknown || Type == IndirectUnsafe;
+  return isBackward() || Type == Unknown || Type == IndirectUnsafe ||
+         Type == InvariantUnsafe;
 }
 
 bool MemoryDepChecker::Dependence::isForward() const {
@@ -1876,6 +1879,7 @@ bool MemoryDepChecker::Dependence::isForward() const {
   case Backward:
   case BackwardVectorizableButPreventsForwarding:
   case IndirectUnsafe:
+  case InvariantUnsafe:
     return false;
   }
   llvm_unreachable("unexpected DepType!");
@@ -2132,9 +2136,15 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   LLVM_DEBUG(dbgs() << "LAA:  Src induction step: " << StrideAPtrInt
                     << " Sink induction step: " << StrideBPtrInt << "\n");
   // At least Src or Sink are loop invariant and the other is strided or
-  // invariant. We can generate a runtime check to disambiguate the accesses.
-  if (!StrideAPtrInt || !StrideBPtrInt)
+  // invariant.
+  if (!StrideAPtrInt || !StrideBPtrInt) {
+    // If both are loop-invariant and access the same location, we cannot
+    // vectorize.
+    if (!StrideAPtrInt && !StrideBPtrInt && Dist->isZero())
+      return MemoryDepChecker::Dependence::InvariantUnsafe;
+    // Otherwise, we can generate a runtime check to disambiguate the accesses.
     return MemoryDepChecker::Dependence::Unknown;
+  }
 
   // Both Src and Sink have a constant stride, check if they are in the same
   // direction.
@@ -2481,6 +2491,7 @@ const char *MemoryDepChecker::Dependence::DepName[] = {
     "NoDep",
     "Unknown",
     "IndirectUnsafe",
+    "InvariantUnsafe",
     "Forward",
     "ForwardButPreventsForwarding",
     "Backward",
@@ -2835,6 +2846,25 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     }
   }
 
+  // Update the invariant address dependence flags based on dependences found
+  // by the dep checker. Even if dependences were not recorded (too many to
+  // track), any InvariantUnsafe dep would still have set the status to Unsafe
+  if (const auto *Deps = DepChecker->getDependences()) {
+    for (const auto &Dep : *Deps) {
+      if (Dep.Type != MemoryDepChecker::Dependence::InvariantUnsafe)
+        continue;
+      Instruction *Src = Dep.getSource(*DepChecker);
+      Instruction *Dst = Dep.getDestination(*DepChecker);
+      if (isa<LoadInst>(Src) != isa<LoadInst>(Dst)) {
+        HasLoadStoreDependenceInvolvingLoopInvariantAddress = true;
+      } else {
+        assert(isa<StoreInst>(Src) && isa<StoreInst>(Dst) &&
+               "Expected both to be stores");
+        HasStoreStoreDependenceInvolvingLoopInvariantAddress = true;
+      }
+    }
+  }
+
   if (HasConvergentOp) {
     recordAnalysis("CantInsertRuntimeCheckWithConvergent")
         << "cannot add control dependency to convergent operation";
@@ -2908,6 +2938,9 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
     break;
   case MemoryDepChecker::Dependence::IndirectUnsafe:
     R << "\nUnsafe indirect dependence.";
+    break;
+  case MemoryDepChecker::Dependence::InvariantUnsafe:
+    R << "\nUnsafe dependence on loop-invariant address.";
     break;
   case MemoryDepChecker::Dependence::Unknown:
     R << "\nUnknown data dependence.";

@@ -1398,6 +1398,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeCpp11BracedList);
     IO.mapOptional("SpaceBeforeCtorInitializerColon",
                    Style.SpaceBeforeCtorInitializerColon);
+    IO.mapOptional("SpaceBeforeEnumUnderlyingTypeColon",
+                   Style.SpaceBeforeEnumUnderlyingTypeColon);
     IO.mapOptional("SpaceBeforeInheritanceColon",
                    Style.SpaceBeforeInheritanceColon);
     IO.mapOptional("SpaceBeforeJsonColon", Style.SpaceBeforeJsonColon);
@@ -1918,6 +1920,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeCaseColon = false;
   LLVMStyle.SpaceBeforeCpp11BracedList = false;
   LLVMStyle.SpaceBeforeCtorInitializerColon = true;
+  LLVMStyle.SpaceBeforeEnumUnderlyingTypeColon = true;
   LLVMStyle.SpaceBeforeInheritanceColon = true;
   LLVMStyle.SpaceBeforeJsonColon = false;
   LLVMStyle.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
@@ -4424,7 +4427,15 @@ const char *StyleOptionHelpDescription =
     "4. \"{key: value, ...}\" to set specific parameters, e.g.:\n"
     "   --style=\"{BasedOnStyle: llvm, IndentWidth: 8}\"";
 
-static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
+static FormatStyle::LanguageKind getLanguageByFileName(StringRef &FileName) {
+  static constexpr std::array<llvm::StringLiteral, 2> TemplateSuffixes{
+      ".in",
+      ".template",
+  };
+  for (auto Suffix : TemplateSuffixes)
+    if (FileName.consume_back(Suffix))
+      break;
+
   if (FileName.ends_with(".c"))
     return FormatStyle::LK_C;
   if (FileName.ends_with(".java"))

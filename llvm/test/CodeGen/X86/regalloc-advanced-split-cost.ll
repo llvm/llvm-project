@@ -14,7 +14,7 @@
 ; The new code choses %ebp as the split candidate as it has lower spill cost.
 
 ; Make sure the split behaves as expected
-; CHECK: RS_Split Cascade 1
+; CHECK: RS_Split Cascade 0
 ; CHECK-NOT: $eax	static = 
 ; CHECK: $eax	no positive bundles
 ; CHECK-NEXT: $ecx	no positive bundles

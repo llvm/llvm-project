@@ -94,7 +94,7 @@ const char *ScriptedThread::GetName() {
   std::optional<std::string> thread_name = GetInterface()->GetName();
   if (!thread_name)
     return nullptr;
-  return ConstString(thread_name->c_str()).AsCString();
+  return ConstString(thread_name->c_str()).AsCString(nullptr);
 }
 
 const char *ScriptedThread::GetQueueName() {
@@ -102,7 +102,7 @@ const char *ScriptedThread::GetQueueName() {
   std::optional<std::string> queue_name = GetInterface()->GetQueue();
   if (!queue_name)
     return nullptr;
-  return ConstString(queue_name->c_str()).AsCString();
+  return ConstString(queue_name->c_str()).AsCString(nullptr);
 }
 
 void ScriptedThread::WillResume(StateType resume_state) {}
@@ -175,7 +175,8 @@ bool ScriptedThread::LoadArtificialStackFrames() {
         error, LLDBLog::Thread);
 
   auto create_frame_from_dict =
-      [this, arr_sp](size_t idx) -> llvm::Expected<StackFrameSP> {
+      [this, arr_sp](size_t idx,
+                     uint32_t frame_list_idx) -> llvm::Expected<StackFrameSP> {
     Status error;
     std::optional<StructuredData::Dictionary *> maybe_dict =
         arr_sp->GetItemAtIndexAsDictionary(idx);
@@ -206,12 +207,12 @@ bool ScriptedThread::LoadArtificialStackFrames() {
     lldb::addr_t cfa = LLDB_INVALID_ADDRESS;
     bool cfa_is_valid = false;
     const bool artificial = false;
-    const bool behaves_like_zeroth_frame = false;
+    const bool behaves_like_zeroth_frame = (frame_list_idx == 0);
     SymbolContext sc;
     symbol_addr.CalculateSymbolContext(&sc);
 
-    return std::make_shared<StackFrame>(shared_from_this(), idx, idx, cfa,
-                                        cfa_is_valid, pc,
+    return std::make_shared<StackFrame>(shared_from_this(), frame_list_idx, idx,
+                                        cfa, cfa_is_valid, pc,
                                         StackFrame::Kind::Synthetic, artificial,
                                         behaves_like_zeroth_frame, &sc);
   };
@@ -247,11 +248,12 @@ bool ScriptedThread::LoadArtificialStackFrames() {
   };
 
   StackFrameListSP frames = GetStackFrameList();
+  uint32_t frame_list_idx = 0;
 
   for (size_t idx = 0; idx < arr_size; idx++) {
     StackFrameSP synth_frame_sp = nullptr;
 
-    auto frame_from_dict_or_err = create_frame_from_dict(idx);
+    auto frame_from_dict_or_err = create_frame_from_dict(idx, frame_list_idx);
     if (!frame_from_dict_or_err) {
       auto frame_from_script_obj_or_err = create_frame_from_script_object(idx);
 
@@ -270,14 +272,24 @@ bool ScriptedThread::LoadArtificialStackFrames() {
       synth_frame_sp = *frame_from_dict_or_err;
     }
 
-    if (!frames->SetFrameAtIndex(static_cast<uint32_t>(idx), synth_frame_sp))
+    if (!frames->SetFrameAtIndex(frame_list_idx, synth_frame_sp))
       return ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
           llvm::Twine("Couldn't add frame (" + llvm::Twine(idx) +
                       llvm::Twine(") to ScriptedThread StackFrameList."))
               .str(),
           error, LLDBLog::Thread);
+    frame_list_idx++;
+
+    // Synthesize inline frames, mirroring StackFrameList::FetchFramesUpTo().
+    frame_list_idx += frames->SynthesizeInlineFrames(
+        synth_frame_sp, /*cfa=*/LLDB_INVALID_ADDRESS);
   }
+
+  // Mark the stack as fully unwound so the regular unwinder doesn't try to
+  // extend it beyond the artificial frames (e.g. by reading lr/fp from the
+  // register context).
+  frames->SetAllFramesFetched();
 
   return true;
 }

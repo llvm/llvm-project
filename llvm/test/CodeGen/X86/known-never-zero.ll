@@ -511,9 +511,9 @@ define i32 @umax_known_nonzero_vec(<16 x i8> %x, ptr %p) {
 ; X86-NEXT:    pcmpgtb %xmm3, %xmm4
 ; X86-NEXT:    movdqa %xmm4, %xmm5
 ; X86-NEXT:    pandn %xmm1, %xmm5
-; X86-NEXT:    psllw $2, %xmm1
+; X86-NEXT:    paddb %xmm1, %xmm1
+; X86-NEXT:    paddb %xmm1, %xmm1
 ; X86-NEXT:    pand %xmm4, %xmm1
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    por %xmm5, %xmm1
 ; X86-NEXT:    paddb %xmm3, %xmm3
 ; X86-NEXT:    pcmpgtb %xmm3, %xmm2
@@ -533,8 +533,8 @@ define i32 @umax_known_nonzero_vec(<16 x i8> %x, ptr %p) {
 ; X64-NEXT:    vpsllw $5, %xmm0, %xmm1
 ; X64-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,0]
 ; X64-NEXT:    vpblendvb %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; X64-NEXT:    vpsllw $2, %xmm2, %xmm3
-; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; X64-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
+; X64-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
 ; X64-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpblendvb %xmm1, %xmm3, %xmm2, %xmm2
 ; X64-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
@@ -627,9 +627,9 @@ define i32 @umin_known_nonzero_vec(<16 x i8> %x, ptr %p) {
 ; X86-NEXT:    pcmpgtb %xmm3, %xmm4
 ; X86-NEXT:    movdqa %xmm4, %xmm5
 ; X86-NEXT:    pandn %xmm1, %xmm5
-; X86-NEXT:    psllw $2, %xmm1
+; X86-NEXT:    paddb %xmm1, %xmm1
+; X86-NEXT:    paddb %xmm1, %xmm1
 ; X86-NEXT:    pand %xmm4, %xmm1
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    por %xmm5, %xmm1
 ; X86-NEXT:    paddb %xmm3, %xmm3
 ; X86-NEXT:    pcmpgtb %xmm3, %xmm2
@@ -651,8 +651,8 @@ define i32 @umin_known_nonzero_vec(<16 x i8> %x, ptr %p) {
 ; X64-NEXT:    vpsllw $5, %xmm0, %xmm1
 ; X64-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,0]
 ; X64-NEXT:    vpblendvb %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; X64-NEXT:    vpsllw $2, %xmm2, %xmm3
-; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; X64-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
+; X64-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
 ; X64-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpblendvb %xmm1, %xmm3, %xmm2, %xmm2
 ; X64-NEXT:    vpaddb %xmm2, %xmm2, %xmm3

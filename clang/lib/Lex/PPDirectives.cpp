@@ -2731,6 +2731,20 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       Diag(FilenameTok, DiagId) << Path <<
         FixItHint::CreateReplacement(FilenameRange, Path);
     }
+
+    bool SuppressBackslashDiag =
+        // The diagnostic logic is expensive, so only run it if it's enabled...
+        Diags->isIgnored(diag::pp_nonportable_path_separator, FilenameLoc) ||
+        // ...and try to only trigger on paths that appear in source.
+        FilenameLoc.isMacroID() ||
+        SourceMgr.isWrittenInBuiltinFile(FilenameLoc) ||
+        SourceMgr.isWrittenInModuleIncludes(FilenameLoc);
+    if (!SuppressBackslashDiag && OriginalFilename.contains('\\')) {
+      std::string SuggestedPath = OriginalFilename.str();
+      llvm::replace(SuggestedPath, '\\', '/');
+      Diag(FilenameTok, diag::pp_nonportable_path_separator)
+          << Name << FixItHint::CreateReplacement(FilenameRange, SuggestedPath);
+    }
   }
 
   switch (Action) {

@@ -40,11 +40,13 @@ public:
     l_square,
     minus,
     minusequal,
+    percent,
     period,
     plus,
     plusequal,
     r_paren,
     r_square,
+    slash,
     star,
   };
 

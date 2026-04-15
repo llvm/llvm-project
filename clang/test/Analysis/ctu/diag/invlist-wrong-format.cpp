@@ -16,6 +16,5 @@
 int foo(int);
 
 void test() {
-  // expected-no-diagnostics
-  foo(1); // no-warning. Ignoring "Invocation list file is in wrong format."
+  foo(1); // expected-error-re{{error parsing invocation list file: '{{.+}}invocations.yaml' line: 1 '<source-file>: [<compiler>, <arg1>, ...]' YAML mapping format expected}}
 }

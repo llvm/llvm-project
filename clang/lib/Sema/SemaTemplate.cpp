@@ -1459,6 +1459,11 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
     return QualType();
   }
 
+  if (T->isBlockPointerType()) {
+    Diag(Loc, diag::err_template_nontype_parm_bad_type) << T;
+    return QualType();
+  }
+
   // C++ [temp.param]p4:
   //
   // A non-type template-parameter shall have one of the following
@@ -3790,6 +3795,11 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
                                 /*UpdateArgsWithConversions=*/true))
     return QualType();
 
+  // FIXME: Diagnose uses of this template. DiagnoseUseOfDecl is quite slow,
+  // and there are no diagnsotics currently implemented for TemplateDecls,
+  // so avoid doing it for now.
+  MarkAnyDeclReferenced(TemplateLoc, Template, /*OdrUse=*/false);
+
   QualType CanonType;
 
   if (isa<TemplateTemplateParmDecl>(Template)) {
@@ -3812,6 +3822,11 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
 
     // Find the canonical type for this type alias template specialization.
     TypeAliasDecl *Pattern = AliasTemplate->getTemplatedDecl();
+
+    // Diagnose uses of the pattern of this template.
+    (void)DiagnoseUseOfDecl(Pattern, TemplateLoc);
+    MarkAnyDeclReferenced(TemplateLoc, Pattern, /*OdrUse=*/false);
+
     if (Pattern->isInvalidDecl())
       return QualType();
 
@@ -3823,9 +3838,6 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
         AliasTemplate->getTemplateParameters()->getDepth());
 
     LocalInstantiationScope Scope(*this);
-
-    // Diagnose uses of this alias.
-    (void)DiagnoseUseOfDecl(AliasTemplate, TemplateLoc);
 
     // FIXME: The TemplateArgs passed here are not used for the context note,
     // nor they should, because this note will be pointing to the specialization
@@ -3930,6 +3942,9 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
         if (CanonType != Injected)
           continue;
 
+        (void)DiagnoseUseOfDecl(Record, TemplateLoc);
+        MarkAnyDeclReferenced(TemplateLoc, Record, /*OdrUse=*/false);
+
         // If so, the canonical type of this TST is the injected
         // class name type of the record we just found.
         CanonType = ICNT;
@@ -3973,6 +3988,7 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
 
     // Diagnose uses of this specialization.
     (void)DiagnoseUseOfDecl(Decl, TemplateLoc);
+    MarkAnyDeclReferenced(TemplateLoc, Decl, /*OdrUse=*/false);
 
     CanonType = Context.getCanonicalTagType(Decl);
     assert(isa<RecordType>(CanonType) &&
@@ -4750,20 +4766,10 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // Note that we do not instantiate a definition until we see an odr-use
   // in DoMarkVarDeclReferenced().
   // FIXME: LateAttrs et al.?
-  VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
-      Template, InstantiationPattern, PartialSpecArgs, CTAI.CanonicalConverted,
-      TemplateNameLoc /*, LateAttrs, StartingScope*/);
-  if (!Decl)
-    return true;
-  if (SetWrittenArgs)
-    Decl->setTemplateArgsAsWritten(TemplateArgs);
-
   if (AmbiguousPartialSpec) {
     // Partial ordering did not produce a clear winner. Complain.
-    Decl->setInvalidDecl();
     Diag(PointOfInstantiation, diag::err_partial_spec_ordering_ambiguous)
-        << Decl;
-
+        << Template;
     // Print the matching partial specializations.
     for (MatchResult P : Matched)
       Diag(P.Partial->getLocation(), diag::note_partial_spec_match)
@@ -4771,6 +4777,14 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
                                              *P.Args);
     return true;
   }
+
+  VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
+      Template, InstantiationPattern, PartialSpecArgs, CTAI.CanonicalConverted,
+      TemplateNameLoc /*, LateAttrs, StartingScope*/);
+  if (!Decl)
+    return true;
+  if (SetWrittenArgs)
+    Decl->setTemplateArgsAsWritten(TemplateArgs);
 
   if (VarTemplatePartialSpecializationDecl *D =
           dyn_cast<VarTemplatePartialSpecializationDecl>(InstantiationPattern))

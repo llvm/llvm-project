@@ -14,6 +14,9 @@
 /// The test should not fail for these cases since the size and alignment match.
 // RUN: %env_asan_opts=free_size_mismatch=1 %run %t 128 256
 
+/// aligned_alloc is not supported on android's libc.
+// UNSUPPORTED: android
+
 #include <stdio.h>
 #include <stdlib.h>
 

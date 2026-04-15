@@ -50,6 +50,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "minus";
   case Kind::minusequal:
     return "minusequal";
+  case Token::percent:
+    return "percent";
   case Kind::period:
     return "period";
   case Kind::plus:
@@ -60,6 +62,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "r_paren";
   case Kind::r_square:
     return "r_square";
+  case Token::slash:
+    return "slash";
   case Token::star:
     return "star";
   }
@@ -194,9 +198,10 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::coloncolon, "::"}, {Token::colon, ":"},
       {Token::equal, "="},       {Token::l_paren, "("},
       {Token::l_square, "["},    {Token::minusequal, "-="},
-      {Token::minus, "-"},       {Token::period, "."},
-      {Token::plusequal, "+="},  {Token::plus, "+"},
-      {Token::r_paren, ")"},     {Token::r_square, "]"},
+      {Token::minus, "-"},       {Token::percent, "%"},
+      {Token::period, "."},      {Token::plusequal, "+="},
+      {Token::plus, "+"},        {Token::r_paren, ")"},
+      {Token::r_square, "]"},    {Token::slash, "/"},
       {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {

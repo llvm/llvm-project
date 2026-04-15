@@ -12,8 +12,12 @@ assignment_operator = "="
                     | "+="
                     | "-=" ;
 
-additive_expression = cast_expression {"+" cast_expression}
-                    | cast_expression {"-" cast_expression} ;
+additive_expression = multiplicative_expression {"+" multiplicative_expression}
+                    | multiplicative_expression {"-" multiplicative_expression} ;
+
+multiplicative_expression = cast_expression {"*" cast_expression}
+                          | cast_expression {"/" cast_expression}
+                          | cast_expression {"%" cast_expression} ;
 
 cast_expression = unary_expression
                 | "(" type_id ")" cast_expression;

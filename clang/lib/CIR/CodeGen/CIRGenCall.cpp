@@ -16,8 +16,10 @@
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Attributes.h"
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/TypeSize.h"
 
 using namespace clang;
@@ -63,16 +65,6 @@ cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
   return cir::FuncType::get(argTypes,
                             (resultType ? resultType : builder.getVoidTy()),
                             info.isVariadic());
-}
-
-cir::FuncType CIRGenTypes::getFunctionTypeForVTable(GlobalDecl gd) {
-  const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
-  const FunctionProtoType *fpt = md->getType()->getAs<FunctionProtoType>();
-
-  if (!isFuncTypeConvertible(fpt))
-    cgm.errorNYI("getFunctionTypeForVTable: non-convertible function type");
-
-  return getFunctionType(gd);
 }
 
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
@@ -431,8 +423,9 @@ void CIRGenModule::constructAttributeList(
       GlobalDecl kernel(calleeInfo.getCalleeDecl());
       llvm::StringRef kernelName = getMangledName(
           kernel.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
-      auto attr =
-          cir::CUDAKernelNameAttr::get(&getMLIRContext(), kernelName.str());
+      auto attr = cir::CUDAKernelNameAttr::get(
+          &getMLIRContext(),
+          mlir::StringAttr::get(&getMLIRContext(), kernelName));
       attrs.set(attr.getMnemonic(), attr);
     }
 
@@ -583,6 +576,16 @@ static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
   return false;
 }
 
+/// Compute the nofpclass mask for FP types based on language options.
+static unsigned getNoFPClassTestMask(const LangOptions &langOpts) {
+  unsigned mask = 0;
+  if (langOpts.NoHonorInfs)
+    mask |= llvm::fcInf;
+  if (langOpts.NoHonorNaNs)
+    mask |= llvm::fcNan;
+  return mask;
+}
+
 void CIRGenModule::constructFunctionReturnAttributes(
     const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
     mlir::NamedAttrList &retAttrs) {
@@ -597,9 +600,10 @@ void CIRGenModule::constructFunctionReturnAttributes(
     retAttrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                  mlir::UnitAttr::get(&getMLIRContext()));
 
-  // TODO(cir): classic codegen adds a bunch of attributes based on
-  // calling-convention lowering results.  However, since calling conventions
-  // haven't happened yet, this work likely has to happen there.
+  if (retTy->hasFloatingRepresentation())
+    if (unsigned mask = getNoFPClassTestMask(getLangOpts()))
+      retAttrs.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
+                   builder.getI64IntegerAttr(mask));
 
   if (!isThunk) {
     // TODO(cir): following comment taken from classic codegen, so if anything
@@ -708,6 +712,11 @@ void CIRGenModule::constructFunctionArgumentAttributes(
             builder.getI64IntegerAttr(
                 getNaturalPointeeTypeAlignment(argType).getQuantity()));
     }
+
+    if (argType->hasFloatingRepresentation())
+      if (unsigned mask = getNoFPClassTestMask(getLangOpts()))
+        argAttrList.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
+                        builder.getI64IntegerAttr(mask));
   }
 }
 
@@ -746,9 +755,8 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
   if (auto *cd = dyn_cast<CXXConstructorDecl>(md)) {
     // A base class inheriting constructor doesn't get forwarded arguments
     // needed to construct a virtual base (or base class thereof)
-    if (cd->getInheritedConstructor())
-      cgm.errorNYI(cd->getSourceRange(),
-                   "arrangeCXXStructorDeclaration: inheriting constructor");
+    if (auto inherited = cd->getInheritedConstructor())
+      passParams = inheritingCtorHasParams(inherited, gd.getCtorType());
   }
 
   CanQual<FunctionProtoType> fpt = getFormalType(md);
@@ -1118,6 +1126,18 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       if (argType != v.getType() && mlir::isa<cir::IntType>(v.getType()))
         cgm.errorNYI(loc, "emitCall: widening integer call argument");
 
+      // If we have a pointer argument and there's an address space mismatch,
+      // insert an address_space cast to match the expected function signature.
+      if (argType != v.getType()) {
+        auto argPtrTy = mlir::dyn_cast<cir::PointerType>(argType);
+        auto vPtrTy = mlir::dyn_cast<cir::PointerType>(v.getType());
+        if (argPtrTy && vPtrTy &&
+            argPtrTy.getPointee() == vPtrTy.getPointee() &&
+            argPtrTy.getAddrSpace() != vPtrTy.getAddrSpace()) {
+          v = performAddrSpaceCast(v, argPtrTy);
+        }
+      }
+
       // If the argument doesn't match, perform a bitcast to coerce it. This
       // can happen due to trivial type mismatches.
       // TODO(cir): When getFunctionType is added, assert that this isn't
@@ -1321,13 +1341,28 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
 
   bool hasAggregateEvalKind = hasAggregateEvaluationKind(argType);
 
-  // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
-  // However, we still have to push an EH-only cleanup in case we unwind before
-  // we make it to the call.
+  // For callee-destructed parameters (trivial_abi, MS ABI), create an
+  // aggregate temp and let the callee destroy it.
   if (argType->isRecordType() &&
       argType->castAsRecordDecl()->isParamDestroyedInCallee()) {
-    assert(!cir::MissingFeatures::msabi());
-    cgm.errorNYI(e->getSourceRange(), "emitCallArg: msabi is NYI");
+    AggValueSlot slot = createAggTemp(argType, getLoc(e->getSourceRange()),
+                                      getCounterAggTmpAsString());
+
+    bool destroyedInCallee = true;
+    if (const auto *rd = argType->getAsCXXRecordDecl())
+      destroyedInCallee = rd->hasNonTrivialDestructor();
+
+    if (destroyedInCallee)
+      slot.setExternallyDestructed();
+
+    emitAggExpr(e, slot);
+    RValue rv = slot.asRValue();
+    args.add(rv, argType);
+
+    if (destroyedInCallee && getLangOpts().Exceptions)
+      cgm.errorNYI(e->getSourceRange(),
+                   "callee-destructed param with exceptions");
+    return;
   }
 
   if (hasAggregateEvalKind && isa<ImplicitCastExpr>(e) &&
@@ -1436,4 +1471,15 @@ void CIRGenFunction::emitCallArgs(
     if (!leftToRight)
       std::reverse(args.begin() + callArgsStart, args.end());
   }
+}
+
+// FIXME(cir): This is identical to the version from classic-codegen, we should
+// figure out how to move this to a common location.
+bool CIRGenTypes::inheritingCtorHasParams(const InheritedConstructor &inherited,
+                                          CXXCtorType type) {
+  // Parameters are unnecessary if we're constructing a base class subobject
+  // and the inherited constructor lives in a virtual base.
+  return type == Ctor_Complete ||
+         !inherited.getShadowDecl()->constructsVirtualBase() ||
+         !getASTContext().getTargetInfo().getCXXABI().hasConstructorVariants();
 }

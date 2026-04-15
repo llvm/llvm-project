@@ -325,6 +325,26 @@ static void collectIteratorIVs(
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
 
+bool ClauseProcessor::processAlign(mlir::omp::AlignClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Align>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    const std::optional<std::int64_t> align = evaluate::ToInt64(clause->v);
+    result.align = firOpBuilder.getI64IntegerAttr(*align);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processAllocator(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::AllocatorClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Allocator>()) {
+    result.allocator = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processBare(mlir::omp::BareClauseOps &result) const {
   return markClauseOccurrence<omp::clause::OmpxBare>(result.bare);
 }
@@ -1644,7 +1664,8 @@ void ClauseProcessor::processMapObjects(
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapVars,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-    llvm::StringRef mapperIdNameRef, bool isMotionModifier) const {
+    llvm::StringRef mapperIdNameRef, bool isMotionModifier,
+    llvm::omp::Directive directive) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   auto getSymbolDerivedType = [](const semantics::Symbol &symbol)
@@ -1659,14 +1680,7 @@ void ClauseProcessor::processMapObjects(
   auto addImplicitMapper = [&](const omp::Object &object,
                                std::string &mapperIdName,
                                bool allowGenerate) -> mlir::FlatSymbolRefAttr {
-    if (mapperIdName.empty())
-      return mlir::FlatSymbolRefAttr();
-
-    if (converter.getModuleOp().lookupSymbol(mapperIdName))
-      return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                          mapperIdName);
-
-    if (!allowGenerate)
+    if (!allowGenerate || mapperIdName.empty())
       return mlir::FlatSymbolRefAttr();
 
     const semantics::DerivedTypeSpec *typeSpec =
@@ -1713,24 +1727,28 @@ void ClauseProcessor::processMapObjects(
     return mapperIdName;
   };
 
-  // Create the mapper symbol from its name, if specified.
-  mlir::FlatSymbolRefAttr mapperId;
-  if (!mapperIdNameRef.empty() && !objects.empty() &&
-      mapperIdNameRef != "__implicit_mapper") {
-    std::string mapperIdName = mapperIdNameRef.str();
-    const omp::Object &object = objects.front();
-    if (mapperIdNameRef == "default") {
-      const semantics::DerivedTypeSpec *typeSpec =
-          getSymbolDerivedType(*object.sym());
-      if (!typeSpec && object.sym()->owner().IsDerivedType())
-        typeSpec = object.sym()->owner().derivedTypeSpec();
-      mapperIdName = getDefaultMapperID(typeSpec);
+  auto findMapperIfTypeMatch =
+      [&](const semantics::DerivedTypeSpec *objectTypeSpec,
+          llvm::StringRef explicitMapperName) -> std::string {
+    auto declMapperOp =
+        converter.getModuleOp().lookupSymbol<mlir::omp::DeclareMapperOp>(
+            explicitMapperName);
+    if (!declMapperOp)
+      return "__implicit_mapper";
+
+    // Verify if the explicit mapper provided matches the type being mapped.
+    // If it does return the mapper name, if it doesn't return null-ary.
+    mlir::Type mapperType = declMapperOp.getType();
+    mlir::Type objectType = converter.genType(*objectTypeSpec);
+    auto mapperRecordType = mlir::dyn_cast<fir::RecordType>(mapperType);
+    auto objectRecordType = mlir::dyn_cast<fir::RecordType>(objectType);
+    if (mapperRecordType && objectRecordType &&
+        mapperRecordType.getName() == objectRecordType.getName()) {
+      return explicitMapperName.str();
     }
-    assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
-           "mapper not found");
-    mapperId =
-        mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(), mapperIdName);
-  }
+
+    return "__implicit_mapper";
+  };
 
   for (const omp::Object &object : objects) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -1765,35 +1783,59 @@ void ClauseProcessor::processMapObjects(
 
     const semantics::DerivedTypeSpec *objectTypeSpec =
         getSymbolDerivedType(*object.sym());
+    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr();
+    if (objectTypeSpec) {
+      std::string mapperIdName = mapperIdNameRef.str();
+      // if we have an explicit mapper specified, we need to check it matches
+      // the type being mapped, if it doesn't we fallback to look for a user
+      // default mapper or generate an compiler defined default mapper if
+      // relevant. This function will return "__implicit_mapper" if we find that
+      // the map isn't relevant to the explicit declare mapper, which allows it
+      // to fallback.
+      if (!mapperIdName.empty() && mapperIdName != "__implicit_mapper")
+        mapperIdName = findMapperIfTypeMatch(objectTypeSpec, mapperIdName);
 
-    if (mapperIdNameRef == "__implicit_mapper") {
-      if (parentObj.has_value()) {
-        mapperId = mlir::FlatSymbolRefAttr();
-      } else if (objectTypeSpec) {
-        std::string mapperIdName = getDefaultMapperID(objectTypeSpec);
-        bool isAllocOrPointer =
-            semantics::IsAllocatableOrObjectPointer(object.sym());
-        bool isPointer = semantics::IsPointer(*object.sym());
-        bool isImplicitMap =
-            (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
-            mlir::omp::ClauseMapFlags::implicit;
-        bool needsDefaultMapper =
-            isAllocOrPointer ||
-            requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
-        // For implicit captures, avoid synthesizing default mappers for pointer
-        // entities (which can over-map pointer payloads) and for plain
-        // non-allocatable/non-pointer entities. Keep implicit mapper support
-        // for allocatables.
-        if (isImplicitMap && (isPointer || !isAllocOrPointer))
-          needsDefaultMapper = false;
-        if (!mapperIdName.empty())
+      if (mapperIdName == "__implicit_mapper") {
+        mapperIdName = getDefaultMapperID(objectTypeSpec);
+        // Currently we do not apply implicit compiler generated delcare mappers
+        // to enter, exit or update directives. However, we will syntheize one
+        // below if we're not a target enter/exit/update and no user defined
+        // implicit declare mapper has been defined and we meet the other
+        // conditions
+        // TODO/FIXME: Loosen this restriction to comply with the OpenMP
+        // specification.
+        auto *userDefinedDefault =
+            converter.getModuleOp().lookupSymbol(mapperIdName);
+        if (!userDefinedDefault && !parentObj.has_value() &&
+            (directive != llvm::omp::Directive::OMPD_target_enter_data &&
+             directive != llvm::omp::Directive::OMPD_target_exit_data &&
+             directive != llvm::omp::Directive::OMPD_target_update)) {
+          bool isAllocOrPointer =
+              semantics::IsAllocatableOrObjectPointer(object.sym());
+          bool isPointer = semantics::IsPointer(*object.sym());
+          bool isImplicitMap =
+              (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
+              mlir::omp::ClauseMapFlags::implicit;
+          bool needsDefaultMapper =
+              isAllocOrPointer ||
+              requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
+          // For implicit captures, avoid synthesizing default mappers for
+          // pointer entities (which can over-map pointer payloads) and for
+          // plain non-allocatable/non-pointer entities. Keep implicit mapper
+          // support for allocatables.
+          if (isImplicitMap && (isPointer || !isAllocOrPointer))
+            needsDefaultMapper = false;
           mapperId = addImplicitMapper(object, mapperIdName,
                                        /*allowGenerate=*/needsDefaultMapper);
-        else
-          mapperId = mlir::FlatSymbolRefAttr();
-      } else {
-        mapperId = mlir::FlatSymbolRefAttr();
+        }
       }
+
+      // Make sure we've generated the symbol in one of our previous steps
+      // before assigning the symbol.
+      if (!mapperIdName.empty() &&
+          converter.getModuleOp().lookupSymbol(mapperIdName))
+        mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                                mapperIdName);
     }
 
     // Explicit map captures are captured ByRef by default,
@@ -1866,15 +1908,9 @@ bool ClauseProcessor::processMap(
     if (attachMod)
       TODO(currentLocation, "ATTACH modifier is not implemented yet");
     mlir::omp::ClauseMapFlags mapTypeBits = mlir::omp::ClauseMapFlags::none;
-    // For data-motion directives we avoid auto-attaching implicit default
-    // mappers. Deep recursive mapping there can conflict with explicit
-    // component enter/exit maps users commonly spell out.
+
     std::string mapperIdName = getMapperIdentifier(converter, mappers);
-    if ((directive == llvm::omp::Directive::OMPD_target_enter_data ||
-         directive == llvm::omp::Directive::OMPD_target_exit_data ||
-         directive == llvm::omp::Directive::OMPD_target_update) &&
-        mapperIdName == "__implicit_mapper")
-      mapperIdName.clear();
+
     // If the map type is specified, then process it else set the appropriate
     // default value
     Map::MapType type;
@@ -1924,7 +1960,7 @@ bool ClauseProcessor::processMap(
     processMapObjects(stmtCtx, clauseLocation,
                       std::get<omp::ObjectList>(clause.t), mapTypeBits,
                       parentMemberIndices, result.mapVars, *ptrMapSyms,
-                      mapperIdName);
+                      mapperIdName, /*isMotionModifier=*/false, directive);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::Map>(process);
@@ -1950,10 +1986,9 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
     if (expectation && *expectation == omp::clause::To::Expectation::Present)
       mapTypeBits |= mlir::omp::ClauseMapFlags::present;
 
-    // Support motion modifiers: mapper, iterator.
+    // Support motion modifiers: iterator.
     std::string mapperIdName = getMapperIdentifier(converter, mapper);
-    if (mapperIdName == "__implicit_mapper")
-      mapperIdName.clear();
+
     if (iterator) {
       TODO(clauseLocation, "Iterator modifier is not supported yet");
     }

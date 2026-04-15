@@ -257,7 +257,7 @@ void CommandInterpreter::ResolveCommand(const char *command_line,
                                         CommandReturnObject &result) {
   std::string command = command_line;
   if (ResolveCommandImpl(command, result) != nullptr) {
-    result.AppendMessageWithFormat("%s", command.c_str());
+    result.GetOutputStream() << command;
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 }
@@ -423,6 +423,15 @@ void CommandInterpreter::Initialize() {
   cmd_obj_sp = GetCommandSPExact("_regexp-bt");
   if (cmd_obj_sp)
     AddAlias("bt", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
+
+  cmd_obj_sp = GetCommandSPExact("thread backtrace");
+  if (cmd_obj_sp) {
+    if (auto *sys_bt = AddAlias("sys_bt", cmd_obj_sp, "--provider 0")) {
+      sys_bt->SetHelp("Show the base unwinder backtrace (without frame "
+                      "providers). Equivalent to 'thread backtrace "
+                      "--provider 0'.");
+    }
+  }
 
   cmd_obj_sp = GetCommandSPExact("target create");
   if (cmd_obj_sp)
@@ -3173,26 +3182,41 @@ void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
 
   uint32_t chars_left = max_columns;
 
-  auto nextWordLength = [](llvm::StringRef S) {
-    size_t pos = S.find(' ');
-    return pos == llvm::StringRef::npos ? S.size() : pos;
+  auto start_new_line = [&] {
+    strm.EOL();
+    strm.Indent();
+    chars_left = max_columns - indent_size;
   };
 
   while (!text.empty()) {
-    if (text.front() == '\n' ||
-        (text.front() == ' ' && nextWordLength(text.ltrim(' ')) > chars_left)) {
-      strm.EOL();
-      strm.Indent();
-      chars_left = max_columns - indent_size;
-      if (text.front() == '\n')
-        text = text.drop_front();
-      else
-        text = text.ltrim(' ');
-    } else {
-      strm.PutChar(text.front());
-      --chars_left;
+    if (text.starts_with('\n')) {
       text = text.drop_front();
+      start_new_line();
+      continue;
     }
+
+    // Calculate the size of the next fragment. A fragment is defined as zero
+    // or more spaces followed by a word (which is sequence of non-whitespace
+    // characters). It is assumed that the only possible whitespaces in the
+    // input text are ' ' and '\n'.
+    size_t word_start_pos = text.find_first_not_of(' ');
+    size_t word_end_pos = text.find_first_of(" \n", /*from=*/word_start_pos);
+    size_t fragment_size =
+        word_end_pos == llvm::StringRef::npos ? text.size() : word_end_pos;
+
+    if (fragment_size > chars_left && text.starts_with(' ')) {
+      // The fragment does not fit on the current line, but begins with a space.
+      // Break the line at the beginning of the word contained in the fragment.
+      text = text.drop_front(word_start_pos);
+      start_new_line();
+      continue;
+    }
+
+    // Print out the fragment. It fits on the current line or does not contain
+    // spaces where we could break the line.
+    strm.PutCString(text.take_front(fragment_size));
+    text = text.drop_front(fragment_size);
+    chars_left = fragment_size > chars_left ? 0 : chars_left - fragment_size;
   }
 
   strm.EOL();

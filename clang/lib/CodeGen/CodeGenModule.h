@@ -1877,7 +1877,7 @@ public:
   // Helper to get the alignment for a variable.
   unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
     LangAS AS = GetGlobalVarAddressSpace(D);
-    unsigned PAlign = getItaniumVTableContext().isRelativeLayout()
+    unsigned PAlign = Context.getLangOpts().RelativeCXXABIVTables
                           ? 32
                           : getTarget().getPointerAlign(AS);
     return PAlign;

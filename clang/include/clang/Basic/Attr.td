@@ -934,9 +934,15 @@ def AlignNatural : InheritableAttr {
 
 def AlwaysInline : DeclOrStmtAttr {
   let Spellings = [GCC<"always_inline">, CXX11<"clang", "always_inline">,
-                   C23<"clang", "always_inline">, CustomKeyword<"__forceinline">];
+                   C23<"clang", "always_inline">, CustomKeyword<"__forceinline">,
+                   CXX11<"msvc", "forceinline">, C23<"msvc", "forceinline">,
+                   CXX11<"msvc", "forceinline_calls">, C23<"msvc", "forceinline_calls">];
   let Accessors = [Accessor<"isClangAlwaysInline", [CXX11<"clang", "always_inline">,
-                                                    C23<"clang", "always_inline">]>];
+                                                    C23<"clang", "always_inline">]>,
+                   Accessor<"isMSVCForceInline", [CXX11<"msvc", "forceinline">,
+                                                  C23<"msvc", "forceinline">]>,
+                   Accessor<"isMSVCForceInlineCalls", [CXX11<"msvc", "forceinline_calls">,
+                                                       C23<"msvc", "forceinline_calls">]>];
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
   let Documentation = [AlwaysInlineDocs];

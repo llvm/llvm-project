@@ -89,6 +89,7 @@ add_llvm_target(HexagonCodeGen
   HexagonInfo
   IPO
   MC
+  MIRParser
   Scalar
   SelectionDAG
   Support

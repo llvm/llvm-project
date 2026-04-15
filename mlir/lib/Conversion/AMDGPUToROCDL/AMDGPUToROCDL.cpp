@@ -13,6 +13,7 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -28,8 +29,10 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 #include <optional>
 
 namespace mlir {
@@ -2109,6 +2112,17 @@ struct GlobalLoadAsyncToLDSOpLowering
         getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
                              adaptor.getDstIndices());
 
+    if (op.getMask()) {
+      Value mask = adaptor.getMask();
+      int64_t nullptrVal =
+          llvm::AMDGPU::getNullPointerValue(llvm::AMDGPUAS::LOCAL_ADDRESS);
+      Value nullInt =
+          createI32Constant(rewriter, loc, static_cast<int32_t>(nullptrVal));
+      Value nullPtr =
+          LLVM::IntToPtrOp::create(rewriter, loc, dstPtr.getType(), nullInt);
+      dstPtr = LLVM::SelectOp::create(rewriter, loc, mask, dstPtr, nullPtr);
+    }
+
     auto offset = rewriter.getI32IntegerAttr(0);
     auto aux = rewriter.getI32IntegerAttr(0);
 
@@ -4027,22 +4041,9 @@ struct GlobalPrefetchOpLowering
     if (chipset < kGfx1250)
       return op->emitOpError("is only supported on gfx1250+");
 
-    const TemporalHint hint = op.getTemporalHint();
     const bool isSpeculative = op.getSpeculative();
-
-    int32_t immArgValue = static_cast<int32_t>(hint);
-
-    // Note that only RT and HT can operate in both speculative and
-    // non-speculative modes. The other variants (NT_RT, RT_NT, NT_HT, etc.)
-    // operate only in the speculative mode and, therefore, do not require
-    // toggling the least significant bit for mode changes
-    // Temporal hint is encoded in lower bits - i.e. [2:0]
-    if (llvm::is_contained({TemporalHint::RT, TemporalHint::HT}, hint))
-      immArgValue = isSpeculative ? immArgValue : immArgValue | 1;
-
-    // Prefetch scope level is encoded in upper bits - i.e., [4:3]
-    immArgValue = static_cast<int32_t>(op.getCacheScope()) << 3 | immArgValue;
-
+    const int32_t immArgValue = getGlobalPrefetchLLVMEncoding(
+        op.getTemporalHint(), op.getCacheScope(), isSpeculative);
     IntegerAttr immArgAttr = rewriter.getI32IntegerAttr(immArgValue);
 
     ValueRange indices = adaptor.getIndices();
@@ -4105,6 +4106,8 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
           return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
         case gpu::AddressSpace::Private:
           return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
+        case gpu::AddressSpace::Constant:
+          return ROCDL::ROCDLDialect::kConstantMemoryAddressSpace;
         }
         llvm_unreachable("unknown address space enum value");
       });
