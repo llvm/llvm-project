@@ -4,7 +4,7 @@
 define <vscale x 8 x i16> @bitcast_vp_load_scalable(ptr %p) {
 ; CHECK-LABEL: define <vscale x 8 x i16> @bitcast_vp_load_scalable(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vp.load.nxv8i16.p0(ptr [[P]], <vscale x 8 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vp.load.nxv8i16.p0(ptr align 16 [[P]], <vscale x 8 x i1> splat (i1 true), i32 4)
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
 ;
   %l = call <vscale x 4 x i32> @llvm.vp.load(ptr %p, <vscale x 4 x i1> splat (i1 true), i32 2)
@@ -16,10 +16,22 @@ define <vscale x 8 x i16> @bitcast_vp_load_scalable_evl(ptr %p, i32 %evl) {
 ; CHECK-LABEL: define <vscale x 8 x i16> @bitcast_vp_load_scalable_evl(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[EVL:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[EVL]], 1
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vp.load.nxv8i16.p0(ptr [[P]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vp.load.nxv8i16.p0(ptr align 16 [[P]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
 ;
   %l = call <vscale x 4 x i32> @llvm.vp.load(ptr %p, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %r = bitcast <vscale x 4 x i32> %l to <vscale x 8 x i16>
+  ret <vscale x 8 x i16> %r
+}
+
+define <vscale x 8 x i16> @bitcast_vp_load_scalable_preserve_align(ptr %p, i32 %evl) {
+; CHECK-LABEL: define <vscale x 8 x i16> @bitcast_vp_load_scalable_preserve_align(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[EVL:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[EVL]], 1
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vp.load.nxv8i16.p0(ptr align 4 [[P]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
+;
+  %l = call <vscale x 4 x i32> @llvm.vp.load(ptr align 4 %p, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   %r = bitcast <vscale x 4 x i32> %l to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %r
 }
@@ -28,7 +40,7 @@ define <8 x i16> @bitcast_vp_load_fixed_evl(ptr %p, i32 %evl) {
 ; CHECK-LABEL: define <8 x i16> @bitcast_vp_load_fixed_evl(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[EVL:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[EVL]], 1
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.vp.load.v8i16.p0(ptr [[P]], <8 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.vp.load.v8i16.p0(ptr align 16 [[P]], <8 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %l = call <4 x i32> @llvm.vp.load(ptr %p, <4 x i1> splat (i1 true), i32 %evl)

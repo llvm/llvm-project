@@ -3972,20 +3972,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::vp_load: {
+    auto *VPI = cast<VPIntrinsic>(II);
     // Fold away bit casts of the loaded value by loading the desired type,
     // if the mask is all-ones.
-    Value *Ptr = II->getArgOperand(0);
-    Value *Mask = II->getArgOperand(1);
-    Value *EVL = II->getArgOperand(2);
+    Value *Mask = VPI->getMaskParam();
+    Value *EVL = VPI->getVectorLengthParam();
     if (!isa<Constant>(Mask) || !cast<Constant>(Mask)->isAllOnesValue() ||
         !II->hasOneUse())
       break;
 
+    const DataLayout &DL = II->getDataLayout();
     auto *Cast = dyn_cast<CastInst>(II->user_back());
-    if (!Cast || !Cast->isNoopCast(II->getDataLayout()) ||
-        !isa<VectorType>(Cast->getDestTy()))
+    if (!Cast || !Cast->isNoopCast(DL) || !isa<VectorType>(Cast->getDestTy()))
       break;
     VectorType *OrigVecTy = cast<VectorType>(II->getType());
+    Align OrigAlign =
+        DL.getValueOrABITypeAlignment(VPI->getPointerAlignment(), OrigVecTy);
     ElementCount OrigVecCnt = OrigVecTy->getElementCount();
     VectorType *NewVecTy = cast<VectorType>(Cast->getDestTy());
     ElementCount NewVecCnt = NewVecTy->getElementCount();
@@ -4000,8 +4002,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
       Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
       Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
-      Value *NewVP = Builder.CreateIntrinsic(NewVecTy, Intrinsic::vp_load,
-                                             {Ptr, NewMask, NewEVL});
+      CallInst *NewVP = Builder.CreateIntrinsic(
+          NewVecTy, Intrinsic::vp_load,
+          {VPI->getMemoryPointerParam(), NewMask, NewEVL});
+      // Preserve the original alignment.
+      NewVP->addParamAttrs(
+          0, AttrBuilder(VPI->getContext()).addAlignmentAttr(OrigAlign));
       replaceInstUsesWith(*Cast, NewVP);
       return eraseInstFromFunction(*Cast);
     }
