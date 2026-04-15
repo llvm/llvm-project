@@ -287,7 +287,6 @@ cc_library(
         "lib/Support/*.h",
         "lib/Support/*.inc",
         "lib/Support/LSP/*.cpp",
-        "lib/Support/HTTP/*.cpp",
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
@@ -631,6 +630,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoDWARF",
+        ":HTTP",
         ":Object",
         ":Support",
         ":Symbolize",
@@ -740,6 +740,7 @@ cc_library(
         ":DebugInfoGSYM",
         ":DebugInfoPDB",
         ":Demangle",
+        ":HTTP",
         ":Object",
         ":Support",
         ":TargetParser",
@@ -4668,6 +4669,14 @@ cc_library(
     }),
 )
 
+cc_library(
+    name = "HTTP",
+    srcs = glob(["lib/HTTP/*.cpp"]),
+    hdrs = glob(["include/llvm/HTTP/*.h"]),
+    includes = ["include"],
+    deps = [":Support"],
+)
+
 ################################################################################
 # LLVM toolchain and development binaries
 
@@ -4974,6 +4983,7 @@ cc_binary(
     deps = [
         ":Coverage",
         ":Debuginfod",
+        ":HTTP",
         ":Instrumentation",
         ":Object",
         ":ProfileData",
@@ -5102,6 +5112,7 @@ cc_library(
         ":Core",
         ":DebugInfodFindOptsTableGen",
         ":Debuginfod",
+        ":HTTP",
         ":Option",
         ":Support",
         ":Symbolize",
@@ -5797,6 +5808,7 @@ cc_library(
         ":DebugInfoDWARFLowLevel",
         ":Debuginfod",
         ":Demangle",
+        ":HTTP",
         ":MC",
         ":MCDisassembler",
         ":ObjdumpOptsTableGen",
@@ -5912,6 +5924,7 @@ cc_library(
     deps = [
         ":Core",
         ":Debuginfod",
+        ":HTTP",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -6212,6 +6225,7 @@ cc_library(
         ":DebugInfoDWARF",
         ":DebugInfoPDB",
         ":Debuginfod",
+        ":HTTP",
         ":Object",
         ":Option",
         ":Support",
