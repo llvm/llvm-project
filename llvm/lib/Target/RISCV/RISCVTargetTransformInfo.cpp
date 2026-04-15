@@ -2669,8 +2669,13 @@ RISCVTTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
                             nullptr);
 }
 
+/// Check to see if this instruction is expected to be combined to a simpler
+/// operation during/before lowering. If so return the cost of the combined
+/// operation rather than provided one. For instance, `udiv i16 %X, 2` is likely
+/// to be combined to `lshr i16 %X, 1`, so return the cost of a `lshr` rather
+/// than the cost of a `udiv`
 std::optional<InstructionCost>
-RISCVTTIImpl::getConvertedArithmeticInstructionCost(
+RISCVTTIImpl::getCombinedArithmeticInstructionCost(
     unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
@@ -2713,10 +2718,10 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
 
-  if (std::optional<InstructionCost> ConvertedCost =
-          getConvertedArithmeticInstructionCost(ISDOpcode, Ty, CostKind,
-                                                Op1Info, Op2Info, Args, CxtI))
-    return *ConvertedCost;
+  if (std::optional<InstructionCost> CombinedCost =
+          getCombinedArithmeticInstructionCost(ISDOpcode, Ty, CostKind, Op1Info,
+                                               Op2Info, Args, CxtI))
+    return *CombinedCost;
 
   // TODO: Handle scalar type.
   if (!LT.second.isVector()) {
