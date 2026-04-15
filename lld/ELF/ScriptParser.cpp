@@ -1157,6 +1157,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
     return make<SymbolAssignment>(".", readAssert(), 0, getCurrentLocation());
 
   const char *oldS = prevTok.data();
+  const char *oldBufBegin = curBuf.begin;
   SymbolAssignment *cmd = nullptr;
   bool savedSeenRelroEnd = ctx.script->seenRelroEnd;
   const StringRef op = peek();
@@ -1179,8 +1180,13 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 
   if (cmd) {
     cmd->dataSegmentRelroEnd = !savedSeenRelroEnd && ctx.script->seenRelroEnd;
-    cmd->commandString = StringRef(oldS, curTok.data() - oldS).str();
-    squeezeSpaces(cmd->commandString);
+    // If the inner buffer of an INCLUDE was exhausted while reading the
+    // expression, oldS lives in a popped buffer and the [oldS, curTok) span is
+    // not a valid pointer range.
+    if (curBuf.begin == oldBufBegin) {
+      cmd->commandString = StringRef(oldS, curTok.data() - oldS).str();
+      squeezeSpaces(cmd->commandString);
+    }
     expect(";");
   }
   return cmd;
