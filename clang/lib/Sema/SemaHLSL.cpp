@@ -2684,6 +2684,36 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
+void SemaHLSL::handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL) {
+  // row_major and column_major are only valid on matrix types.
+  QualType Ty;
+  if (auto *VD = dyn_cast<ValueDecl>(D))
+    Ty = VD->getType();
+  else if (auto *TD = dyn_cast<TypedefNameDecl>(D))
+    Ty = TD->getUnderlyingType();
+
+  if (!Ty.isNull() && !Ty->isDependentType() && !Ty->isConstantMatrixType()) {
+    Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_non_matrix)
+        << AL.getAttrName();
+    return;
+  }
+
+  // Check for conflicting or duplicate matrix layout attributes.
+  if (const auto *Existing = D->getAttr<HLSLMatrixLayoutAttr>()) {
+    if (Existing->getSemanticSpelling() != AL.getSemanticSpelling()) {
+      Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_conflict)
+          << AL.getAttrName() << Existing->getAttrName();
+      Diag(Existing->getLoc(), diag::note_conflicting_attribute);
+    } else {
+      Diag(AL.getLoc(), diag::warn_duplicate_attribute) << AL.getAttrName();
+      Diag(Existing->getLoc(), diag::note_previous_attribute);
+    }
+    return;
+  }
+
+  D->addAttr(::new (getASTContext()) HLSLMatrixLayoutAttr(getASTContext(), AL));
+}
+
 namespace {
 
 /// This class implements HLSL availability diagnostics for default
