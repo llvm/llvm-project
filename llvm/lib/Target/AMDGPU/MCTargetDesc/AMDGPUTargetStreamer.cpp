@@ -607,17 +607,33 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
                amdhsa::COMPUTE_PGM_RSRC3_GFX10_GFX11_SHARED_VGPR_COUNT,
                ".amdhsa_shared_vgpr_count");
   }
-  if (IVersion.Major >= 11) {
-    OS << "\t\t.amdhsa_inst_pref_size ";
+  if (IVersion.Major == 11) {
     if (KD.inst_pref_size) {
+      // CodeGen path: print the MCExpr directly (label subtraction).
+      OS << "\t\t.amdhsa_inst_pref_size ";
       const MCExpr *New = foldAMDGPUMCExpr(KD.inst_pref_size, getContext());
       printAMDGPUMCExpr(New, OS, MAI);
+      OS << '\n';
     } else {
-      OS << 0;
+      // MC assembler path: extract from compute_pgm_rsrc3.
+      PrintField(KD.compute_pgm_rsrc3,
+                 amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT,
+                 amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE,
+                 ".amdhsa_inst_pref_size");
     }
-    OS << '\n';
   }
   if (IVersion.Major >= 12) {
+    if (KD.inst_pref_size) {
+      OS << "\t\t.amdhsa_inst_pref_size ";
+      const MCExpr *New = foldAMDGPUMCExpr(KD.inst_pref_size, getContext());
+      printAMDGPUMCExpr(New, OS, MAI);
+      OS << '\n';
+    } else {
+      PrintField(KD.compute_pgm_rsrc3,
+                 amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT,
+                 amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE,
+                 ".amdhsa_inst_pref_size");
+    }
     PrintField(KD.compute_pgm_rsrc1,
                amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN,
