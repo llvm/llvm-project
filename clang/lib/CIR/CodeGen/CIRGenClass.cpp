@@ -286,7 +286,8 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
   emitAggExpr(baseInit->getInit(), aggSlot);
 
   if (cgm.getLangOpts().Exceptions && !baseClassDecl->hasTrivialDestructor())
-    cgm.errorNYI(baseInit->getSourceRange(), "call base destructor");
+    ehStack.pushCleanup<CallBaseDtor>(EHCleanup, baseClassDecl,
+                                      /*baseIsVirtual=*/isBaseVirtual);
 }
 
 /// This routine generates necessary code to initialize base classes and
