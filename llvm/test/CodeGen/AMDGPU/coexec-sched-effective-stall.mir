@@ -136,14 +136,14 @@ body: |
     ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vreg_128_lo256_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; DEFAULT-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 0, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 64, 0, implicit $exec
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_1:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 128, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_1:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 192, 0, implicit $exec
-    ; DEFAULT-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_2:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 256, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_2:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 320, 0, implicit $exec
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_3:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 384, 0, implicit $exec
@@ -162,7 +162,7 @@ body: |
     ; DEFAULT-NEXT: [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF8]], [[DEF7]].sub1, implicit-def dead $scc
     ; DEFAULT-NEXT: ATOMIC_FENCE 4, 2
-    ; DEFAULT-NEXT: dead early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0, amdgpu_allvgprs
     ;
     ; COEXEC-LABEL: name: test-fence-stall
@@ -191,44 +191,44 @@ body: |
     ; COEXEC-NEXT: [[DEF6:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF7:%[0-9]+]]:vreg_128_lo256_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF8:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; COEXEC-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; COEXEC-NEXT: dead [[DEF4:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF4]], [[DEF3]].sub1, implicit-def dead $scc
-    ; COEXEC-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; COEXEC-NEXT: ATOMIC_FENCE 4, 2
-    ; COEXEC-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: dead early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: dead [[DEF4:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF4]], [[DEF3]].sub1, implicit-def dead $scc
+    ; COEXEC-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: ATOMIC_FENCE 4, 2
+    ; COEXEC-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: S_ENDPGM 0, amdgpu_allvgprs
-    %95:vgpr_32 = IMPLICIT_DEF
-    %90:vreg_256_align2 = IMPLICIT_DEF
-    %91:vreg_256_align2 = IMPLICIT_DEF
-    %85:sreg_64_xexec = IMPLICIT_DEF
-    %249:sreg_32_xm0_xexec = IMPLICIT_DEF
-    %2373:vreg_512_align2 = IMPLICIT_DEF
-    %2369:vreg_512_align2 = IMPLICIT_DEF
-    %2353:vreg_128_lo256_align2 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %3:sreg_64_xexec = IMPLICIT_DEF
+    %4:sreg_32_xm0_xexec = IMPLICIT_DEF
+    %5:vreg_512_align2 = IMPLICIT_DEF
+    %6:vreg_512_align2 = IMPLICIT_DEF
+    %7:vreg_128_lo256_align2 = IMPLICIT_DEF
     %8:vgpr_32_lo256 = IMPLICIT_DEF
-    undef %134.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 0, 0, implicit $exec
-    %134.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 64, 0, implicit $exec
-    undef %143.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 128, 0, implicit $exec
-    %143.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 192, 0, implicit $exec
-    undef %152.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 256, 0, implicit $exec
-    %152.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 320, 0, implicit $exec
-    undef %161.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 384, 0, implicit $exec
-    %161.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 448, 0, implicit $exec
-    undef %170.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 512, 0, implicit $exec
-    %170.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 576, 0, implicit $exec
-    undef %179.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 640, 0, implicit $exec
-    %179.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 704, 0, implicit $exec
-    undef %188.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 768, 0, implicit $exec
-    %188.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 832, 0, implicit $exec
-    %249:sreg_32_xm0_xexec = S_ADD_I32 %249:sreg_32_xm0_xexec, %85.sub1:sreg_64_xexec, implicit-def dead $scc
-    undef %197.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 896, 0, implicit $exec
-    %197.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 960, 0, implicit $exec
+    undef %9.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 0, 0, implicit $exec
+    %9.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 64, 0, implicit $exec
+    undef %10.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 128, 0, implicit $exec
+    %10.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 192, 0, implicit $exec
+    undef %11.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 256, 0, implicit $exec
+    %11.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 320, 0, implicit $exec
+    undef %12.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 384, 0, implicit $exec
+    %12.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 448, 0, implicit $exec
+    undef %13.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 512, 0, implicit $exec
+    %13.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 576, 0, implicit $exec
+    undef %14.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 640, 0, implicit $exec
+    %14.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 704, 0, implicit $exec
+    undef %15.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 768, 0, implicit $exec
+    %15.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 832, 0, implicit $exec
+    %4:sreg_32_xm0_xexec = S_ADD_I32 %4:sreg_32_xm0_xexec, %3.sub1:sreg_64_xexec, implicit-def dead $scc
+    undef %16.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 896, 0, implicit $exec
+    %16.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 960, 0, implicit $exec
     ATOMIC_FENCE 4, 2
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0, amdgpu_allvgprs
 ...
 
@@ -243,14 +243,14 @@ body: |
     ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vreg_128_lo256_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; DEFAULT-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 0, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 64, 0, implicit $exec
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_1:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 128, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_1:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 192, 0, implicit $exec
-    ; DEFAULT-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_2:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 256, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_2:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 320, 0, implicit $exec
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_3:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 384, 0, implicit $exec
@@ -269,7 +269,7 @@ body: |
     ; DEFAULT-NEXT: [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF8]], [[DEF7]].sub1, implicit-def dead $scc
     ; DEFAULT-NEXT: S_WAIT_TENSORCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
-    ; DEFAULT-NEXT: dead early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0, amdgpu_allvgprs
     ;
     ; COEXEC-LABEL: name: test-tensorcnt-stall
@@ -298,44 +298,44 @@ body: |
     ; COEXEC-NEXT: [[DEF6:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF7:%[0-9]+]]:vreg_128_lo256_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF8:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; COEXEC-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; COEXEC-NEXT: dead [[DEF4:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF4]], [[DEF3]].sub1, implicit-def dead $scc
-    ; COEXEC-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; COEXEC-NEXT: S_WAIT_TENSORCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
-    ; COEXEC-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: dead early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: dead [[DEF4:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF4]], [[DEF3]].sub1, implicit-def dead $scc
+    ; COEXEC-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: S_WAIT_TENSORCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
+    ; COEXEC-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: S_ENDPGM 0, amdgpu_allvgprs
-    %95:vgpr_32 = IMPLICIT_DEF
-    %90:vreg_256_align2 = IMPLICIT_DEF
-    %91:vreg_256_align2 = IMPLICIT_DEF
-    %85:sreg_64_xexec = IMPLICIT_DEF
-    %249:sreg_32_xm0_xexec = IMPLICIT_DEF
-    %2373:vreg_512_align2 = IMPLICIT_DEF
-    %2369:vreg_512_align2 = IMPLICIT_DEF
-    %2353:vreg_128_lo256_align2 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %3:sreg_64_xexec = IMPLICIT_DEF
+    %4:sreg_32_xm0_xexec = IMPLICIT_DEF
+    %5:vreg_512_align2 = IMPLICIT_DEF
+    %6:vreg_512_align2 = IMPLICIT_DEF
+    %7:vreg_128_lo256_align2 = IMPLICIT_DEF
     %8:vgpr_32_lo256 = IMPLICIT_DEF
-    undef %134.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 0, 0, implicit $exec
-    %134.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 64, 0, implicit $exec
-    undef %143.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 128, 0, implicit $exec
-    %143.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 192, 0, implicit $exec
-    undef %152.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 256, 0, implicit $exec
-    %152.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 320, 0, implicit $exec
-    undef %161.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 384, 0, implicit $exec
-    %161.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 448, 0, implicit $exec
-    undef %170.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 512, 0, implicit $exec
-    %170.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 576, 0, implicit $exec
-    undef %179.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 640, 0, implicit $exec
-    %179.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 704, 0, implicit $exec
-    undef %188.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 768, 0, implicit $exec
-    %188.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 832, 0, implicit $exec
-    %249:sreg_32_xm0_xexec = S_ADD_I32 %249:sreg_32_xm0_xexec, %85.sub1:sreg_64_xexec, implicit-def dead $scc
-    undef %197.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 896, 0, implicit $exec
-    %197.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 960, 0, implicit $exec
+    undef %9.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 0, 0, implicit $exec
+    %9.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 64, 0, implicit $exec
+    undef %10.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 128, 0, implicit $exec
+    %10.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 192, 0, implicit $exec
+    undef %11.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 256, 0, implicit $exec
+    %11.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 320, 0, implicit $exec
+    undef %12.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 384, 0, implicit $exec
+    %12.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 448, 0, implicit $exec
+    undef %13.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 512, 0, implicit $exec
+    %13.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 576, 0, implicit $exec
+    undef %14.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 640, 0, implicit $exec
+    %14.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 704, 0, implicit $exec
+    undef %15.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 768, 0, implicit $exec
+    %15.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 832, 0, implicit $exec
+    %4:sreg_32_xm0_xexec = S_ADD_I32 %4:sreg_32_xm0_xexec, %3.sub1:sreg_64_xexec, implicit-def dead $scc
+    undef %16.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 896, 0, implicit $exec
+    %16.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 960, 0, implicit $exec
     S_WAIT_TENSORCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0, amdgpu_allvgprs
 ...
 
@@ -349,14 +349,14 @@ body: |
     ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vreg_128_lo256_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; DEFAULT-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 0, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 64, 0, implicit $exec
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_1:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 128, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_1:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 192, 0, implicit $exec
-    ; DEFAULT-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_2:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 256, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_2:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 320, 0, implicit $exec
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_3:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF4]], 384, 0, implicit $exec
@@ -375,7 +375,7 @@ body: |
     ; DEFAULT-NEXT: [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF8]], [[DEF7]].sub1, implicit-def dead $scc
     ; DEFAULT-NEXT: S_WAIT_DSCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
-    ; DEFAULT-NEXT: dead early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 8, 0, [[DEF2]].sub0, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0, amdgpu_allvgprs
     ;
     ; COEXEC-LABEL: name: test-dscnt-stall
@@ -404,43 +404,43 @@ body: |
     ; COEXEC-NEXT: [[DEF6:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF7:%[0-9]+]]:vreg_128_lo256_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF8:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; COEXEC-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; COEXEC-NEXT: dead [[DEF4:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF4]], [[DEF3]].sub1, implicit-def dead $scc
-    ; COEXEC-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; COEXEC-NEXT: S_WAIT_DSCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
-    ; COEXEC-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: dead early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: dead [[DEF4:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF4]], [[DEF3]].sub1, implicit-def dead $scc
+    ; COEXEC-NEXT: dead early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: S_WAIT_DSCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
+    ; COEXEC-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 8, 0, [[DEF7]].sub0, [[DEF8]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: S_ENDPGM 0, amdgpu_allvgprs
-    %95:vgpr_32 = IMPLICIT_DEF
-    %90:vreg_256_align2 = IMPLICIT_DEF
-    %91:vreg_256_align2 = IMPLICIT_DEF
-    %85:sreg_64_xexec = IMPLICIT_DEF
-    %249:sreg_32_xm0_xexec = IMPLICIT_DEF
-    %2373:vreg_512_align2 = IMPLICIT_DEF
-    %2369:vreg_512_align2 = IMPLICIT_DEF
-    %2353:vreg_128_lo256_align2 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %3:sreg_64_xexec = IMPLICIT_DEF
+    %4:sreg_32_xm0_xexec = IMPLICIT_DEF
+    %5:vreg_512_align2 = IMPLICIT_DEF
+    %6:vreg_512_align2 = IMPLICIT_DEF
+    %7:vreg_128_lo256_align2 = IMPLICIT_DEF
     %8:vgpr_32_lo256 = IMPLICIT_DEF
-    undef %134.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 0, 0, implicit $exec
-    %134.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 64, 0, implicit $exec
-    undef %143.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 128, 0, implicit $exec
-    %143.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 192, 0, implicit $exec
-    undef %152.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 256, 0, implicit $exec
-    %152.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 320, 0, implicit $exec
-    undef %161.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 384, 0, implicit $exec
-    %161.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 448, 0, implicit $exec
-    undef %170.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 512, 0, implicit $exec
-    %170.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 576, 0, implicit $exec
-    undef %179.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 640, 0, implicit $exec
-    %179.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 704, 0, implicit $exec
-    undef %188.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 768, 0, implicit $exec
-    %188.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 832, 0, implicit $exec
-    %249:sreg_32_xm0_xexec = S_ADD_I32 %249:sreg_32_xm0_xexec, %85.sub1:sreg_64_xexec, implicit-def dead $scc
-    undef %197.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 896, 0, implicit $exec
-    %197.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %95:vgpr_32, 960, 0, implicit $exec
+    undef %9.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 0, 0, implicit $exec
+    %9.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 64, 0, implicit $exec
+    undef %10.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 128, 0, implicit $exec
+    %10.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 192, 0, implicit $exec
+    undef %11.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 256, 0, implicit $exec
+    %11.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 320, 0, implicit $exec
+    undef %12.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 384, 0, implicit $exec
+    %12.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 448, 0, implicit $exec
+    undef %13.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 512, 0, implicit $exec
+    %13.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 576, 0, implicit $exec
+    undef %14.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 640, 0, implicit $exec
+    %14.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 704, 0, implicit $exec
+    undef %15.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 768, 0, implicit $exec
+    %15.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 832, 0, implicit $exec
+    %4:sreg_32_xm0_xexec = S_ADD_I32 %4:sreg_32_xm0_xexec, %3.sub1:sreg_64_xexec, implicit-def dead $scc
+    undef %16.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 896, 0, implicit $exec
+    %16.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 %0:vgpr_32, 960, 0, implicit $exec
     S_WAIT_DSCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber %2379:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %2373:vreg_512_align2, %2369:vreg_512_align2, 8, 0, %2353.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %18:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0, amdgpu_allvgprs
 ...
