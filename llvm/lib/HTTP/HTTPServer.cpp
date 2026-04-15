@@ -13,7 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/HTTP/HTTPServer.h"
+#include "llvm/HTTP/HTTPServer.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"

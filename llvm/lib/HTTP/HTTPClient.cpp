@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/HTTP/HTTPClient.h"
+#include "llvm/HTTP/HTTPClient.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
