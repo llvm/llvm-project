@@ -408,7 +408,7 @@ void LVCompare::printSummary() const {
     OS << formatv("{0, -9}{1,9}  {2,9}  {3,9}\n", T, U, V, W);
   };
   auto PrintDataRow = [&](const char *T, unsigned U, unsigned V, unsigned W) {
-    OS << formatv("{0, -9}{1,9}  {2,9}  {3,9}\n", T, U, V, W);
+    OS << formatv("{0,-9}{1,9}  {2,9}  {3,9}\n", T, U, V, W);
   };
 
   OS << "\n";
