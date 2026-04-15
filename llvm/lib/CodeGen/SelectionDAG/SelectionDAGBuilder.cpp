@@ -11212,12 +11212,13 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
   case Intrinsic::vector_reduce_fdot:
     if (SDFlags.hasAllowReassociation())
       // Non-sequential: acc added externally, dot product is unordered.
-      Res = DAG.getNode(ISD::FADD, dl, VT, Op1,
-                        DAG.getNode(ISD::VECREDUCE_FDOT, dl, VT, Op2, Op3, SDFlags),
-                        SDFlags);
+      Res = DAG.getNode(
+          ISD::FADD, dl, VT, Op1,
+          DAG.getNode(ISD::VECREDUCE_FDOT, dl, VT, Op2, Op3, SDFlags), SDFlags);
     else
       // Sequential: VECREDUCE_SEQ_FDOT(acc, vecA, vecB).
-      Res = DAG.getNode(ISD::VECREDUCE_SEQ_FDOT, dl, VT, {Op1, Op2, Op3}, SDFlags);
+      Res = DAG.getNode(ISD::VECREDUCE_SEQ_FDOT, dl, VT, {Op1, Op2, Op3},
+                        SDFlags);
     break;
   default:
     llvm_unreachable("Unhandled vector reduce intrinsic");

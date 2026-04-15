@@ -3546,7 +3546,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
-    LLT WideVecTy = MRI.getType(MI.getOperand(1).getReg()).changeElementType(WideTy);
+    LLT WideVecTy =
+        MRI.getType(MI.getOperand(1).getReg()).changeElementType(WideTy);
     widenScalarSrc(MI, WideVecTy, 1, TargetOpcode::G_FPEXT);
     widenScalarSrc(MI, WideVecTy, 2, TargetOpcode::G_FPEXT);
     widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
@@ -3554,11 +3555,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   }
   case TargetOpcode::G_VECREDUCE_SEQ_FDOT: {
-    // (dst: sN, acc: sN, vecA: <k x sN>, vecB: <k x sN>) — widen all FP operands.
+    // (dst: sN, acc: sN, vecA: <k x sN>, vecB: <k x sN>) — widen all FP
+    // operands.
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
-    LLT WideVecTy = MRI.getType(MI.getOperand(2).getReg()).changeElementType(WideTy);
+    LLT WideVecTy =
+        MRI.getType(MI.getOperand(2).getReg()).changeElementType(WideTy);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);    // acc
     widenScalarSrc(MI, WideVecTy, 2, TargetOpcode::G_FPEXT); // vecA
     widenScalarSrc(MI, WideVecTy, 3, TargetOpcode::G_FPEXT); // vecB
@@ -5966,11 +5969,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
             MIRBuilder.buildFMul(DstTy, SplitA[I], SplitB[I], MI.getFlags())
                 .getReg(0));
       else
-        Partials.push_back(
-            MIRBuilder
-                .buildInstr(TargetOpcode::G_VECREDUCE_FDOT, {DstTy},
-                            {SplitA[I], SplitB[I]}, MI.getFlags())
-                .getReg(0));
+        Partials.push_back(MIRBuilder
+                               .buildInstr(TargetOpcode::G_VECREDUCE_FDOT,
+                                           {DstTy}, {SplitA[I], SplitB[I]},
+                                           MI.getFlags())
+                               .getReg(0));
     }
 
     if (isPowerOf2_32(NumParts)) {
@@ -5985,10 +5988,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
       }
     } else {
       for (unsigned I = 1; I < NumParts; I++)
-        Partials[0] = MIRBuilder
-                          .buildFAdd(DstTy, Partials[0], Partials[I],
-                                     MI.getFlags())
-                          .getReg(0);
+        Partials[0] =
+            MIRBuilder.buildFAdd(DstTy, Partials[0], Partials[I], MI.getFlags())
+                .getReg(0);
     }
     MIRBuilder.buildCopy(DstReg, Partials[0]);
     MI.eraseFromParent();
@@ -6102,7 +6104,8 @@ LegalizerHelper::fewerElementsVectorSeqReductions(MachineInstr &MI,
 
     Register Acc = AccReg;
     for (unsigned I = 0; I < NumParts; I++) {
-      auto Mul = MIRBuilder.buildFMul(DstTy, SplitA[I], SplitB[I], MI.getFlags());
+      auto Mul =
+          MIRBuilder.buildFMul(DstTy, SplitA[I], SplitB[I], MI.getFlags());
       Acc = MIRBuilder.buildFAdd(DstTy, Acc, Mul, MI.getFlags()).getReg(0);
     }
     MIRBuilder.buildCopy(DstReg, Acc);

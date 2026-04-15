@@ -99,10 +99,10 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       if (FMF.allowReassoc() && isPowerOf2_32(NumElts)) {
         // Reassoc + power-of-2: fmul vector, shuffle-tree fadd, then add acc.
         Value *Products = Builder.CreateFMul(VecA, VecB);
-        LocalRdx = getShuffleReduction(Builder, Products, Instruction::FAdd,
-                                       RS, RK);
-        LocalRdx = Builder.CreateBinOp(Instruction::FAdd, Acc, LocalRdx,
-                                       "bin.rdx");
+        LocalRdx =
+            getShuffleReduction(Builder, Products, Instruction::FAdd, RS, RK);
+        LocalRdx =
+            Builder.CreateBinOp(Instruction::FAdd, Acc, LocalRdx, "bin.rdx");
       } else {
         LocalRdx = Acc;
         for (unsigned i = 0; i < NumElts; i++) {

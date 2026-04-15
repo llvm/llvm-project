@@ -532,7 +532,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
-  case ISD::VECREDUCE_SEQ_FDOT: // 3-operand sequential: action from getOperand(1)
+  case ISD::VECREDUCE_SEQ_FDOT: // 3-operand sequential: action from
+                                // getOperand(1)
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(1).getValueType());
     break;

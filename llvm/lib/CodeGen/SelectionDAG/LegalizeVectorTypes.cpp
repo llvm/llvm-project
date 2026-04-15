@@ -1263,7 +1263,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_SEQ_FDOT(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_FDOT(SDNode *N) {
-  // 2-operand unordered: ScalarizeVecOp_VECREDUCE_FDOT(a, b) -> FMUL(a[0], b[0]).
+  // 2-operand unordered: ScalarizeVecOp_VECREDUCE_FDOT(a, b) -> FMUL(a[0],
+  // b[0]).
   SDLoc dl(N);
   SDValue VecAOp = N->getOperand(0);
   SDValue VecBOp = N->getOperand(1);
@@ -4050,7 +4051,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE_SEQ_FDOT(SDNode *N) {
   SDValue Partial =
       DAG.getNode(ISD::VECREDUCE_SEQ_FDOT, dl, ResVT, AccOp, LoA, LoB, Flags);
   // Reduce the upper half with the lower-half result as the new accumulator.
-  return DAG.getNode(ISD::VECREDUCE_SEQ_FDOT, dl, ResVT, Partial, HiA, HiB, Flags);
+  return DAG.getNode(ISD::VECREDUCE_SEQ_FDOT, dl, ResVT, Partial, HiA, HiB,
+                     Flags);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE_FDOT(SDNode *N) {

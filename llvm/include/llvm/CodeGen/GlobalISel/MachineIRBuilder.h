@@ -2315,8 +2315,7 @@ public:
   ///
   /// \p Acc is the scalar accumulator. Computes Acc + sum(VecA[i] * VecB[i])
   /// in strict left-to-right order.
-  MachineInstrBuilder buildVecReduceSeqFDot(const DstOp &Dst,
-                                            const SrcOp &Acc,
+  MachineInstrBuilder buildVecReduceSeqFDot(const DstOp &Dst, const SrcOp &Acc,
                                             const SrcOp &VecA,
                                             const SrcOp &VecB) {
     return buildInstr(TargetOpcode::G_VECREDUCE_SEQ_FDOT, {Dst},
@@ -2326,8 +2325,7 @@ public:
   /// Build and insert \p Res = G_VECREDUCE_FDOT \p VecA, \p VecB
   ///
   /// Computes sum(VecA[i] * VecB[i]) in unspecified order (no accumulator).
-  MachineInstrBuilder buildVecReduceFDot(const DstOp &Dst,
-                                         const SrcOp &VecA,
+  MachineInstrBuilder buildVecReduceFDot(const DstOp &Dst, const SrcOp &VecA,
                                          const SrcOp &VecB) {
     return buildInstr(TargetOpcode::G_VECREDUCE_FDOT, {Dst}, {VecA, VecB});
   }

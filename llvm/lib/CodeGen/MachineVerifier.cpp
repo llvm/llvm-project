@@ -2166,7 +2166,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!VecBTy.isVector())
       report("G_VECREDUCE_SEQ_FDOT requires a vector 3rd operand", MI);
     if (VecATy != VecBTy)
-      report("G_VECREDUCE_SEQ_FDOT vector operands must have the same type", MI);
+      report("G_VECREDUCE_SEQ_FDOT vector operands must have the same type",
+             MI);
     break;
   }
   case TargetOpcode::G_VECREDUCE_FDOT: {
