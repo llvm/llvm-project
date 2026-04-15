@@ -6607,8 +6607,7 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
 
   // (and (setne X, 0), (setne X, -1)) --> (setuge (add X, 1), 2)
   // (or  (seteq X, 0), (seteq X, -1)) --> (setult (add X, 1), 2)
-  if (LL == RL && CC0 == CC1 && OpVT.getScalarSizeInBits() > 1 &&
-      IsInteger &&
+  if (LL == RL && CC0 == CC1 && OpVT.getScalarSizeInBits() > 1 && IsInteger &&
       ((IsAnd && CC0 == ISD::SETNE) || (!IsAnd && CC0 == ISD::SETEQ)) &&
       ((isNullConstant(LR) && isAllOnesConstant(RR)) ||
        (isAllOnesConstant(LR) && isNullConstant(RR)))) {
@@ -6616,8 +6615,7 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
     SDValue Two = DAG.getConstant(2, DL, OpVT);
     SDValue Add = DAG.getNode(ISD::ADD, SDLoc(N0), OpVT, LL, One);
     AddToWorklist(Add.getNode());
-    return DAG.getSetCC(DL, VT, Add, Two,
-                        IsAnd ? ISD::SETUGE : ISD::SETULT);
+    return DAG.getSetCC(DL, VT, Add, Two, IsAnd ? ISD::SETUGE : ISD::SETULT);
   }
 
   // Try more general transforms if the predicates match and the only user of
