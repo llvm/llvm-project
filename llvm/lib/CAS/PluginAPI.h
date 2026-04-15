@@ -74,6 +74,9 @@ struct llcas_functions_t {
                            const llcas_objectid_t *refs, size_t refs_count,
                            llcas_objectid_t *, char **error);
 
+  bool (*cas_store_from_filepath)(llcas_cas_t, const char *filepath,
+                                  llcas_objectid_t *, char **error);
+
   llcas_data_t (*loaded_object_get_data)(llcas_cas_t, llcas_loaded_object_t);
 
   llcas_object_refs_t (*loaded_object_get_refs)(llcas_cas_t,
@@ -83,6 +86,11 @@ struct llcas_functions_t {
 
   llcas_objectid_t (*object_refs_get_id)(llcas_cas_t, llcas_object_refs_t,
                                          size_t index);
+
+  bool (*loaded_object_export_data_to_filepath)(llcas_cas_t,
+                                                llcas_loaded_object_t,
+                                                const char *filepath,
+                                                char **error);
 
   /*===--------------------------------------------------------------------===*\
   |* Action cache API
