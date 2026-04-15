@@ -11,12 +11,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_HTTP_STREAMEDHTTPRESPONSEHANDLER_H
-#define LLVM_SUPPORT_HTTP_STREAMEDHTTPRESPONSEHANDLER_H
+#ifndef LLVM_HTTP_STREAMEDHTTPRESPONSEHANDLER_H
+#define LLVM_HTTP_STREAMEDHTTPRESPONSEHANDLER_H
 
+#include "llvm/HTTP/HTTPClient.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/HTTP/HTTPClient.h"
 #include <functional>
 #include <memory>
 
@@ -46,4 +46,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_HTTP_STREAMEDHTTPRESPONSEHANDLER_H
+#endif // LLVM_HTTP_STREAMEDHTTPRESPONSEHANDLER_H
