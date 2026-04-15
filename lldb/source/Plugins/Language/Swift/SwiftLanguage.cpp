@@ -799,6 +799,7 @@ lldb::TypeCategoryImplSP SwiftLanguage::GetFormatters() {
       LoadSwiftFormatters(g_category);
       LoadFoundationValueTypesFormatters(g_category);
       LoadSystemValueTypesFormatters(g_category);
+      formatters::swift::LoadSwiftUIFormatters(g_category);
     }
   });
   return g_category;
