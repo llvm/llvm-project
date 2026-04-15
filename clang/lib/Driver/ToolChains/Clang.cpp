@@ -6409,6 +6409,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_ffixed_point,
                     options::OPT_fno_fixed_point);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_fprofiles,
+                    options::OPT_fno_profiles);
+
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_overflow_behavior_types,
                     options::OPT_fno_experimental_overflow_behavior_types);
 

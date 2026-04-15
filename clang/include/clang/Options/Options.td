@@ -1695,6 +1695,13 @@ defm coroutines : BoolFOption<"coroutines",
           "Enable support for the C++ Coroutines">,
   NegFlag<SetFalse>>;
 
+defm profiles : BoolFOption<"profiles",
+  LangOpts<"Profiles">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable C++ profiles framework (P3589R2)">,
+  NegFlag<SetFalse>>,
+  ShouldParseIf<cplusplus.KeyPath>;
+
 defm coro_aligned_allocation : BoolFOption<"coro-aligned-allocation",
   LangOpts<"CoroAlignedAllocation">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -8835,9 +8842,6 @@ def split_dwarf_file : Separate<["-"], "split-dwarf-file">,
 
 let Visibility = [CC1Option] in {
 
-def fprofiles : Flag<["-"], "fprofiles">,
-  HelpText<"Enable C++ profiles framework (P3589R2)">,
-  MarshallingInfoFlag<LangOpts<"Profiles">>;
 def fblocks_runtime_optional : Flag<["-"], "fblocks-runtime-optional">,
   HelpText<"Weakly link in the blocks runtime">,
   MarshallingInfoFlag<LangOpts<"BlocksRuntimeOptional">>;
