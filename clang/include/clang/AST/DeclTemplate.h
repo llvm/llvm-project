@@ -2471,9 +2471,6 @@ public:
 ///   template \<typename U> friend class Foo<T>::Nested; // friend template
 /// };
 /// \endcode
-///
-/// \note This class is not currently in use.  All of the above
-/// will yield a FriendDecl, not a FriendTemplateDecl.
 class FriendTemplateDecl final
     : public FriendDecl,
       private llvm::TrailingObjects<FriendTemplateDecl,
