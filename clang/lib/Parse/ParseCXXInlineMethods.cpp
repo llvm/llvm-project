@@ -686,20 +686,10 @@ void Parser::ParseLexedMemberInitializer(LateParsedMemberInitializer &MI) {
   EnterExpressionEvaluationContext Eval(
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed);
 
-  // P3589R2: Push profile suppressions from the field so that
-  // profile checks during late-parsed NSDMI see them.
-  unsigned ProfileSuppressCount = 0;
-  if (Actions.getLangOpts().Profiles) {
-    for (const auto *A : MI.Field->specific_attrs<ProfilesSuppressAttr>()) {
-      Actions.pushProfileSuppression(A->getProfileName(), A->getRule());
-      ++ProfileSuppressCount;
-    }
-  }
+  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, MI.Field);
 
   ExprResult Init = ParseCXXMemberInitializer(MI.Field, /*IsFunction=*/false,
                                               EqualLoc);
-
-  Actions.popProfileSuppressions(ProfileSuppressCount);
 
   Actions.ActOnFinishCXXInClassMemberInitializer(MI.Field, EqualLoc, Init);
 

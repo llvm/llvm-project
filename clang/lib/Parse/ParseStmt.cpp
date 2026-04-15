@@ -76,7 +76,7 @@ StmtResult Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   if (getLangOpts().HLSL)
     MaybeParseMicrosoftAttributes(GNUOrMSAttrs);
 
-  Sema::ProfileSuppressRAII ProfileSuppressGuard(Actions, CXX11Attrs);
+  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, CXX11Attrs);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
       Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs,

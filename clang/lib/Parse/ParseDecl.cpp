@@ -2137,7 +2137,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   ParsedAttributes LocalAttrs(AttrFactory);
   LocalAttrs.takeAllPrependingFrom(Attrs);
 
-  Sema::ProfileSuppressRAII ProfileSuppressGuard(Actions, LocalAttrs);
+  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, LocalAttrs);
 
   ParsingDeclarator D(*this, DS, LocalAttrs, Context);
   if (TemplateInfo.TemplateParams)
@@ -2586,13 +2586,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
   SemaCUDA::CUDATargetContextRAII X(Actions.CUDA(),
                                     SemaCUDA::CTCK_InitGlobalVar, ThisDecl);
 
-  unsigned ProfileSuppressCount = 0;
-  if (Actions.getLangOpts().Profiles && ThisDecl) {
-    for (const auto *A : ThisDecl->specific_attrs<ProfilesSuppressAttr>()) {
-      Actions.pushProfileSuppression(A->getProfileName(), A->getRule());
-      ++ProfileSuppressCount;
-    }
-  }
+  Sema::ProfileSuppressScope ProfileSuppressForInit(Actions, ThisDecl);
 
   switch (TheInitKind) {
   // Parse declarator '=' initializer.
@@ -2730,8 +2724,6 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     break;
   }
   }
-
-  Actions.popProfileSuppressions(ProfileSuppressCount);
 
   Actions.FinalizeDeclaration(ThisDecl);
   return OuterDecl ? OuterDecl : ThisDecl;

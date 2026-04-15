@@ -1060,25 +1060,20 @@ public:
 
   ProfilesSuppressAttr *makeProfilesSuppressAttr(const ParsedAttr &AL);
 
-  void pushProfileSuppression(StringRef ProfileName, StringRef RuleName);
-  void popProfileSuppressions(unsigned Count);
-
-  bool isProfileSuppressedByStmt(StringRef ProfileName,
-                                 StringRef RuleName = "") const;
-  bool isProfileSuppressedByDeclAttr(StringRef ProfileName,
-                                     StringRef RuleName = "") const;
   bool isProfileSuppressed(StringRef ProfileName,
                            StringRef RuleName = "") const;
   bool checkProfileViolation(StringRef ProfileName, StringRef RuleName,
                              SourceLocation Loc, unsigned DiagID);
 
-  class ProfileSuppressRAII {
+  class ProfileSuppressScope {
     Sema &S;
-    unsigned Count;
+    unsigned Count = 0;
 
   public:
-    ProfileSuppressRAII(Sema &S, const ParsedAttributesView &Attrs);
-    ~ProfileSuppressRAII();
+    ProfileSuppressScope(Sema &S, const ParsedAttributesView &Attrs);
+    ProfileSuppressScope(Sema &S, const Decl *D);
+    ProfileSuppressScope(Sema &S, ArrayRef<const Attr *> Attrs);
+    ~ProfileSuppressScope();
   };
 
   /// Determines the active Scope associated with the given declaration
