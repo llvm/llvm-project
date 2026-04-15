@@ -2159,7 +2159,7 @@ xpaclri
 # CHECK-NEXT:  1      2     0.50    *                   ldr	d0, #1048572
 # CHECK-NEXT:  1      2     0.50    *                   ldr	q0, #-1048576
 # CHECK-NEXT:  1      2     0.50                  U     prfm	pldl1strm, #0
-# CHECK-NEXT:  1      2     0.50                  U     prfm	#22, #0
+# CHECK-NEXT:  1      2     0.50                  U     prfm	pstslckeep, #0
 # CHECK-NEXT:  2      3     1.00    *      *      U     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  2      3     1.00    *      *      U     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  2      3     1.00    *      *      U     stxr	w5, w6, [x17]
@@ -3391,7 +3391,7 @@ xpaclri
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	d0, #1048572
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	q0, #-1048576
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     prfm	pldl1strm, #0
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     prfm	#22, #0
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     prfm	pstslckeep, #0
 # CHECK-NEXT:  -      -      -      -     0.50   1.50    -      -      -      -      -      -      -     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  -      -      -      -     0.50   1.50    -      -      -      -      -      -      -     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  -      -      -      -     0.50   1.50    -      -      -      -      -      -      -     stxr	w5, w6, [x17]
