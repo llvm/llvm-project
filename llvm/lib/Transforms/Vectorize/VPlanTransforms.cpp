@@ -2870,9 +2870,11 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   if (OnlyLatches)
     VPDT.emplace(Plan);
 
-  SmallVector<VPBlockBase *> DeadSuccs;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getEntry()))) {
+  // Collect all blocks before modifying the CFG so we can identify unreachable
+  // ones after constant branch removal.
+  SmallVector<VPBlockBase *> AllBlocks(vp_depth_first_shallow(Plan.getEntry()));
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(AllBlocks)) {
     VPValue *Cond;
     // Skip blocks that are not terminated by BranchOnCond.
     if (VPBB->empty() || !match(&VPBB->back(), m_BranchOnCond(m_VPValue(Cond))))
@@ -2903,40 +2905,37 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
     // Disconnect blocks and remove the terminator.
     VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);
     VPBB->back().eraseFromParent();
-    DeadSuccs.push_back(RemovedSucc);
   }
 
-  // Transitively disconnect all blocks that became unreachable, removing
-  // incoming values from phi recipes and replacing remaining uses with poison.
-  VPTypeAnalysis TypeInfo(Plan);
-  SmallVector<VPRecipeBase *> ToDelete;
-  SmallPtrSet<VPBlockBase *, 8> Visited;
-  while (!DeadSuccs.empty()) {
-    VPBlockBase *DeadBlock = DeadSuccs.pop_back_val();
-    if (!DeadBlock->getPredecessors().empty() ||
-        !Visited.insert(DeadBlock).second)
+  // Compute which blocks are still reachable from the entry after constant
+  // branch removal.
+  SmallPtrSet<VPBlockBase *, 16> Reachable(
+      llvm::from_range, vp_depth_first_shallow(Plan.getEntry()));
+
+  // Detach all unreachable blocks from their successors, removing incoming
+  // values from phi recipes.
+  SmallVector<VPBasicBlock *> DeadBlocks;
+  for (VPBlockBase *B : AllBlocks) {
+    if (Reachable.contains(B))
       continue;
-    for (VPBlockBase *Succ : to_vector(DeadBlock->successors())) {
+    for (VPBlockBase *Succ : to_vector(B->successors())) {
       if (auto *SuccBB = dyn_cast<VPBasicBlock>(Succ))
         for (VPRecipeBase &R : SuccBB->phis())
-          cast<VPPhiAccessors>(&R)->removeIncomingValueFor(DeadBlock);
-      VPBlockUtils::disconnectBlocks(DeadBlock, Succ);
-      if (Succ->getPredecessors().empty())
-        DeadSuccs.push_back(Succ);
+          cast<VPPhiAccessors>(&R)->removeIncomingValueFor(B);
+      VPBlockUtils::disconnectBlocks(B, Succ);
     }
-    auto *DeadBB = dyn_cast<VPBasicBlock>(DeadBlock);
-    if (!DeadBB)
-      continue;
+    append_range(DeadBlocks, VPBlockUtils::blocksOnly<VPBasicBlock>(
+                                 vp_depth_first_deep(B)));
+  }
+
+  // Erase recipes in dead blocks.
+  VPSymbolicValue Tmp;
+  for (VPBasicBlock *DeadBB : DeadBlocks)
     for (VPRecipeBase &R : make_early_inc_range(*DeadBB)) {
       for (VPValue *Def : R.definedValues())
-        if (Def->getNumUsers() > 0)
-          Def->replaceAllUsesWith(Plan.getOrAddLiveIn(
-              PoisonValue::get(TypeInfo.inferScalarType(Def))));
-      ToDelete.push_back(&R);
+        Def->replaceAllUsesWith(&Tmp);
+      R.eraseFromParent();
     }
-  }
-  for (VPRecipeBase *R : ToDelete)
-    R->eraseFromParent();
 }
 
 void VPlanTransforms::optimize(VPlan &Plan) {
