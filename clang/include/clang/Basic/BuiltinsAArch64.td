@@ -423,4 +423,9 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def __ldapr16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short const volatile *)">;
 	def __ldapr32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int const volatile *)">;
 	def __ldapr64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int const volatile *)">;
+
+	def __cas8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char, unsigned char)">;
+	def __cas16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short, unsigned short)">;
+	def __cas32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int, unsigned int)">;
+	def __cas64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int, unsigned long long int)">;
 }

@@ -60,6 +60,15 @@ void __stlr16(unsigned __int16 volatile *, unsigned __int16);
 void __stlr32(unsigned __int32 volatile *, unsigned __int32);
 void __stlr64(unsigned __int64 volatile *, unsigned __int64);
 
+unsigned __int8 __cas8(unsigned __int8 volatile *, unsigned __int8,
+                       unsigned __int8);
+unsigned __int16 __cas16(unsigned __int16 volatile *, unsigned __int16,
+                         unsigned __int16);
+unsigned __int32 __cas32(unsigned __int32 volatile *, unsigned __int32,
+                         unsigned __int32);
+unsigned __int64 __cas64(unsigned __int64 volatile *, unsigned __int64,
+                         unsigned __int64);
+
 #ifdef __cplusplus
 }
 #endif
