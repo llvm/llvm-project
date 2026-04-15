@@ -442,6 +442,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::riscv32:
     switch (os) {
+    case llvm::Triple::RTEMS:
+      return std::make_unique<RTEMSTargetInfo<RISCV32TargetInfo>>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return std::make_unique<NetBSDTargetInfo<RISCV32TargetInfo>>(Triple,
                                                                    Opts);
@@ -461,6 +463,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::riscv64:
     switch (os) {
+    case llvm::Triple::RTEMS:
+      return std::make_unique<RTEMSTargetInfo<RISCV64TargetInfo>>(Triple, Opts);
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<RISCV64TargetInfo>>(Triple,
                                                                     Opts);
