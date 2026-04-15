@@ -12487,9 +12487,6 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
 
   QualType LHSType = LHS->getType();
   QualType RHSType = RHS->getType();
-  if (LHSType->hasFloatingRepresentation() ||
-      (LHSType->isBlockPointerType() && !BinaryOperator::isEqualityOp(Opc)))
-    return;
 
   // WebAssembly Tables cannot be compared, therefore shouldn't emit
   // Tautological diagnostics.
@@ -12863,6 +12860,9 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   if (this->inTemplateInstantiation()) {
     QualType LHSType = LHS.get()->getType();
     QualType RHSType = RHS.get()->getType();
+    if (LHSType->hasFloatingRepresentation() ||
+        (LHSType->isBlockPointerType() && !BinaryOperator::isEqualityOp(Opc)))
+      return;
     if (!LHSType->isArrayType() && !RHSType->isArrayType())
       return QualType();
   }
