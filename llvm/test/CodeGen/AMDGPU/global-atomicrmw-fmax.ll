@@ -4142,8 +4142,7 @@ define double @global_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory(ptr add
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB24_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v2
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v3
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: global_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory:

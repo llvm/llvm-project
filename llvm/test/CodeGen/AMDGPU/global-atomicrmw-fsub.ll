@@ -3781,8 +3781,7 @@ define double @global_agent_atomic_fsub_ret_f64(ptr addrspace(1) %ptr, double %v
 ; GFX942-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX942-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX942-NEXT:    v_mov_b32_e32 v0, v4
-; GFX942-NEXT:    v_mov_b32_e32 v1, v5
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[4:5]
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: global_agent_atomic_fsub_ret_f64:
@@ -3856,8 +3855,7 @@ define double @global_agent_atomic_fsub_ret_f64(ptr addrspace(1) %ptr, double %v
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v4
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v5
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: global_agent_atomic_fsub_ret_f64:
@@ -4033,8 +4031,7 @@ define double @global_agent_atomic_fsub_ret_f64__offset12b_pos(ptr addrspace(1) 
 ; GFX942-NEXT:    s_cbranch_execnz .LBB17_1
 ; GFX942-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX942-NEXT:    v_mov_b32_e32 v0, v4
-; GFX942-NEXT:    v_mov_b32_e32 v1, v5
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[4:5]
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: global_agent_atomic_fsub_ret_f64__offset12b_pos:
@@ -4108,8 +4105,7 @@ define double @global_agent_atomic_fsub_ret_f64__offset12b_pos(ptr addrspace(1) 
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB17_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v4
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v5
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: global_agent_atomic_fsub_ret_f64__offset12b_pos:
@@ -4286,8 +4282,7 @@ define double @global_agent_atomic_fsub_ret_f64__offset12b_neg(ptr addrspace(1) 
 ; GFX942-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX942-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX942-NEXT:    v_mov_b32_e32 v0, v4
-; GFX942-NEXT:    v_mov_b32_e32 v1, v5
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[4:5]
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: global_agent_atomic_fsub_ret_f64__offset12b_neg:
@@ -4361,8 +4356,7 @@ define double @global_agent_atomic_fsub_ret_f64__offset12b_neg(ptr addrspace(1) 
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v4
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v5
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: global_agent_atomic_fsub_ret_f64__offset12b_neg:

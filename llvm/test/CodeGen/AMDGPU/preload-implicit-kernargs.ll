@@ -498,8 +498,7 @@ define amdgpu_kernel void @preload_block_count_xyz(ptr addrspace(1) inreg %out) 
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB11_0:
 ; GFX942-NEXT:    v_mov_b32_e32 v3, 0
-; GFX942-NEXT:    v_mov_b32_e32 v0, s4
-; GFX942-NEXT:    v_mov_b32_e32 v1, s5
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
 ; GFX942-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX942-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3]
 ; GFX942-NEXT:    s_endpgm

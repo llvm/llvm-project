@@ -848,8 +848,7 @@ define double @v_fma_f64(double %x, double %y, double %z) {
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_fmac_f64_e32 v[4:5], v[0:1], v[2:3]
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v4
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v5
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_f64:
@@ -957,10 +956,8 @@ define <2 x double> @v_fma_v2f64(<2 x double> %x, <2 x double> %y, <2 x double> 
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_fmac_f64_e32 v[8:9], v[0:1], v[4:5]
 ; GFX90A-NEXT:    v_fmac_f64_e32 v[10:11], v[2:3], v[6:7]
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v8
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v9
-; GFX90A-NEXT:    v_mov_b32_e32 v2, v10
-; GFX90A-NEXT:    v_mov_b32_e32 v3, v11
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[8:9], v[8:9] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[10:11], v[10:11] op_sel:[0,1]
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_v2f64:

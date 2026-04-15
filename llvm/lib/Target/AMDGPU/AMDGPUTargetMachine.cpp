@@ -59,6 +59,7 @@
 #include "SILowerWWMCopies.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIMergeVGPRCopies.h"
 #include "SIOptimizeExecMasking.h"
 #include "SIOptimizeExecMaskingPreRA.h"
 #include "SIOptimizeVGPRLiveRange.h"
@@ -673,6 +674,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
+  initializeSIMergeVGPRCopiesLegacyPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
@@ -1884,8 +1886,10 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
 void GCNPassConfig::addPostRegAlloc() {
   addPass(&SIFixVGPRCopiesID);
-  if (getOptLevel() > CodeGenOptLevel::None)
+  if (getOptLevel() > CodeGenOptLevel::None) {
+    addPass(&SIMergeVGPRCopiesID);
     addPass(&SIOptimizeExecMaskingLegacyID);
+  }
   TargetPassConfig::addPostRegAlloc();
 }
 
@@ -2586,8 +2590,10 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(SIFixVGPRCopiesPass(), PMW);
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    addMachineFunctionPass(SIMergeVGPRCopiesPass(), PMW);
     addMachineFunctionPass(SIOptimizeExecMaskingPass(), PMW);
+  }
   Base::addPostRegAlloc(PMW);
 }
 

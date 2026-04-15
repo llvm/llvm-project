@@ -3327,8 +3327,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX942-NEXT:    scratch_store_dwordx2 v6, v[0:1], off
 ; GFX942-NEXT:  .LBB16_6: ; %atomicrmw.phi
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX942-NEXT:    v_mov_b32_e32 v0, v4
-; GFX942-NEXT:    v_mov_b32_e32 v1, v5
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[4:5]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3472,8 +3471,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX90A-NEXT:    buffer_store_dword v1, v6, s[0:3], 0 offen offset:4
 ; GFX90A-NEXT:  .LBB16_6: ; %atomicrmw.phi
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v4
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v5
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
