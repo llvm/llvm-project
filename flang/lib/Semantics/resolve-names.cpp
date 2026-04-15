@@ -4687,6 +4687,10 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
           "Name '%s' from host scope should have a type declaration before its local statement function definition"_port_en_US,
           name.source);
       MakeSymbol(name, Attrs{}, UnknownDetails{});
+      // 'name' may still point to a host-associated SubprogramNameDetails
+      // symbol. Reset it so statement-function processing
+      // re-resolves to the new local SubprogramDetails.
+      name.symbol = nullptr;
     } else if (auto *entity{ultimate.detailsIf<EntityDetails>()};
                entity && !ultimate.has<ProcEntityDetails>()) {
       resultType = entity->type();
