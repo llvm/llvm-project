@@ -5059,16 +5059,13 @@ bool Parser::ParseProfileName(std::string &Name) {
 
 bool Parser::ParseNonCommaBalancedToken(std::string &Spelling) {
   if (Tok.isOneOf(tok::l_paren, tok::l_square, tok::l_brace)) {
-    tok::TokenKind Close = Tok.is(tok::l_paren)   ? tok::r_paren
-                           : Tok.is(tok::l_square) ? tok::r_square
-                                                   : tok::r_brace;
+    tok::TokenKind Close;
     Spelling = PP.getSpelling(Tok);
-    if (Tok.is(tok::l_paren))
-      ConsumeParen();
-    else if (Tok.is(tok::l_square))
-      ConsumeBracket();
-    else
-      ConsumeBrace();
+    switch (Tok.getKind()) {
+    case tok::l_paren:  Close = tok::r_paren;  ConsumeParen();   break;
+    case tok::l_square: Close = tok::r_square; ConsumeBracket(); break;
+    default:            Close = tok::r_brace;  ConsumeBrace();   break;
+    }
 
     CachedTokens Toks;
     if (!ConsumeAndStoreUntil(Close, Toks, /*StopAtSemi=*/false,
@@ -5176,6 +5173,64 @@ bool Parser::ParseProfileDesignatorList(
   return false;
 }
 
+bool Parser::ParseProfileSuppressBody(detail::ProfileSuppressArgs &Args) {
+  if (ParseProfileName(Args.ProfileName))
+    return true;
+
+  auto ParseStringLiteralValue = [&](std::string &Out) -> bool {
+    SmallVector<Token, 1> StringToks;
+    do {
+      StringToks.push_back(Tok);
+      ConsumeStringToken();
+    } while (tok::isStringLiteral(Tok.getKind()));
+    StringLiteralParser Literal(StringToks, PP);
+    if (Literal.hadError)
+      return true;
+    Out = Literal.GetString().str();
+    return false;
+  };
+
+  while (TryConsumeToken(tok::comma)) {
+    if (!Tok.is(tok::identifier) || !NextToken().is(tok::colon)) {
+      std::string Spelling;
+      if (ParseNonOperatorNonPunctuatorToken(Spelling))
+        return true;
+      Args.RawArguments.push_back(std::move(Spelling));
+      continue;
+    }
+
+    IdentifierInfo *KeyII = Tok.getIdentifierInfo();
+    ConsumeToken();
+    ConsumeToken();
+
+    if (KeyII->isStr("justification")) {
+      if (!tok::isStringLiteral(Tok.getKind())) {
+        Diag(Tok, diag::err_profiles_suppress_justification_not_string);
+        return true;
+      }
+      if (ParseStringLiteralValue(Args.Justification))
+        return true;
+      continue;
+    }
+
+    if (KeyII->isStr("rule")) {
+      bool Failed = tok::isStringLiteral(Tok.getKind())
+                        ? ParseStringLiteralValue(Args.Rule)
+                        : ParseNonCommaBalancedToken(Args.Rule);
+      if (Failed)
+        return true;
+      continue;
+    }
+
+    std::string Value;
+    if (ParseNonCommaBalancedToken(Value))
+      return true;
+    Args.RawArguments.push_back(KeyII->getName().str() + " : " + Value);
+  }
+
+  return false;
+}
+
 bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
                                          SourceLocation AttrNameLoc,
                                          ParsedAttributes &Attrs,
@@ -5184,153 +5239,52 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
                                          SourceLocation ScopeLoc) {
   assert(ScopeName && ScopeName->isStr("profiles"));
 
+  if (!AttrName->isStr("enforce") && !AttrName->isStr("suppress") &&
+      !AttrName->isStr("require"))
+    return false;
+
+  ConsumeParen();
+
   AttributePool &Pool = Attrs.getPool();
 
   auto SkipToRParen = [&]() {
     SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
     if (Tok.is(tok::r_paren))
       ConsumeParen();
+    return true;
   };
 
+  void *CustomData;
   if (AttrName->isStr("enforce")) {
-    ConsumeParen();
-
     auto *Args = Pool.make<detail::ProfileEnforceArgs>();
-    if (ParseProfileDesignatorList(Args->Designators)) {
-      SkipToRParen();
-      return true;
-    }
-
-    if (!Tok.is(tok::r_paren)) {
-      Diag(Tok, diag::err_profiles_expected_rparen) << "enforce";
-      SkipToRParen();
-      return true;
-    }
-    SourceLocation RParen = Tok.getLocation();
-    ConsumeParen();
-    if (EndLoc)
-      *EndLoc = RParen;
-
-    ParsedAttr *PA =
-        Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
-                     AttributeScopeInfo(ScopeName, ScopeLoc), nullptr, 0,
-                     ParsedAttr::Form::CXX11());
-    PA->setCustomData(Args);
-    return true;
-  }
-
-  if (AttrName->isStr("suppress")) {
-    ConsumeParen();
-
+    if (ParseProfileDesignatorList(Args->Designators))
+      return SkipToRParen();
+    CustomData = Args;
+  } else if (AttrName->isStr("suppress")) {
     auto *Args = Pool.make<detail::ProfileSuppressArgs>();
-    if (ParseProfileName(Args->ProfileName)) {
-      SkipToRParen();
-      return true;
-    }
-
-    auto ParseStringLiteralValue = [&](std::string &Out) -> bool {
-      SmallVector<Token, 1> StringToks;
-      do {
-        StringToks.push_back(Tok);
-        ConsumeStringToken();
-      } while (tok::isStringLiteral(Tok.getKind()));
-      StringLiteralParser Literal(StringToks, PP);
-      if (Literal.hadError)
-        return true;
-      Out = Literal.GetString().str();
-      return false;
-    };
-
-    while (TryConsumeToken(tok::comma)) {
-      if (Tok.is(tok::identifier) && NextToken().is(tok::colon)) {
-        IdentifierInfo *KeyII = Tok.getIdentifierInfo();
-        ConsumeToken();
-        ConsumeToken();
-
-        if (KeyII->isStr("justification")) {
-          if (!tok::isStringLiteral(Tok.getKind())) {
-            Diag(Tok, diag::err_profiles_suppress_justification_not_string);
-            SkipToRParen();
-            return true;
-          }
-          if (ParseStringLiteralValue(Args->Justification)) {
-            SkipToRParen();
-            return true;
-          }
-        } else if (KeyII->isStr("rule")) {
-          if (tok::isStringLiteral(Tok.getKind())) {
-            if (ParseStringLiteralValue(Args->Rule)) {
-              SkipToRParen();
-              return true;
-            }
-          } else {
-            if (ParseNonCommaBalancedToken(Args->Rule)) {
-              SkipToRParen();
-              return true;
-            }
-          }
-        } else {
-          std::string Value;
-          if (ParseNonCommaBalancedToken(Value)) {
-            SkipToRParen();
-            return true;
-          }
-          Args->RawArguments.push_back(KeyII->getName().str() + " : " + Value);
-        }
-      } else {
-        std::string Spelling;
-        if (ParseNonOperatorNonPunctuatorToken(Spelling)) {
-          SkipToRParen();
-          return true;
-        }
-        Args->RawArguments.push_back(std::move(Spelling));
-      }
-    }
-
-    if (!Tok.is(tok::r_paren)) {
-      Diag(Tok, diag::err_profiles_expected_rparen) << "suppress";
-      SkipToRParen();
-      return true;
-    }
-    SourceLocation RParen = Tok.getLocation();
-    ConsumeParen();
-    if (EndLoc)
-      *EndLoc = RParen;
-
-    ParsedAttr *PA =
-        Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
-                     AttributeScopeInfo(ScopeName, ScopeLoc), nullptr, 0,
-                     ParsedAttr::Form::CXX11());
-    PA->setCustomData(Args);
-    return true;
-  }
-
-  if (AttrName->isStr("require")) {
-    ConsumeParen();
-
+    if (ParseProfileSuppressBody(*Args))
+      return SkipToRParen();
+    CustomData = Args;
+  } else {
     auto *Args = Pool.make<detail::ProfileRequireArgs>();
-    if (ParseProfileDesignator(Args->Designator)) {
-      SkipToRParen();
-      return true;
-    }
-
-    if (!Tok.is(tok::r_paren)) {
-      Diag(Tok, diag::err_profiles_expected_rparen) << "require";
-      SkipToRParen();
-      return true;
-    }
-    SourceLocation RParen = Tok.getLocation();
-    ConsumeParen();
-    if (EndLoc)
-      *EndLoc = RParen;
-
-    ParsedAttr *PA =
-        Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
-                     AttributeScopeInfo(ScopeName, ScopeLoc), nullptr, 0,
-                     ParsedAttr::Form::CXX11());
-    PA->setCustomData(Args);
-    return true;
+    if (ParseProfileDesignator(Args->Designator))
+      return SkipToRParen();
+    CustomData = Args;
   }
 
-  return false;
+  if (!Tok.is(tok::r_paren)) {
+    Diag(Tok, diag::err_profiles_expected_rparen) << AttrName;
+    return SkipToRParen();
+  }
+  SourceLocation RParen = Tok.getLocation();
+  ConsumeParen();
+  if (EndLoc)
+    *EndLoc = RParen;
+
+  ParsedAttr *PA =
+      Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
+                   AttributeScopeInfo(ScopeName, ScopeLoc), nullptr, 0,
+                   ParsedAttr::Form::CXX11());
+  PA->setCustomData(CustomData);
+  return true;
 }

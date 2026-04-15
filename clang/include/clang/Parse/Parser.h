@@ -2285,6 +2285,7 @@ private:
   bool ParseProfileDesignatorList(
       SmallVectorImpl<detail::ProfileDesignator> &Designators);
   bool ParseProfileArgumentList(SmallVectorImpl<std::string> &Args);
+  bool ParseProfileSuppressBody(detail::ProfileSuppressArgs &Args);
   bool ParseNonCommaBalancedToken(std::string &Spelling);
   bool ParseNonOperatorNonPunctuatorToken(std::string &Spelling);
 
