@@ -8776,7 +8776,7 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
 //    fabs(..) >= C where C >= 1.0 -> a != b
 ///
 /// The same logic applies to sitofp.
-static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
+static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
   Value *FAbsArg;
   if (!match(I.getOperand(0), m_FAbs(m_Value(FAbsArg))))
     return nullptr;
@@ -8817,19 +8817,9 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
   if (A->getType() != B->getType())
     return nullptr;
 
-  // The int-to-fp cast must be exact (no precision loss).
-  // For uitofp: we need MantissaWidth >= IntWidth (all bits representable).
-  // For sitofp: we need MantissaWidth >= IntWidth (sign bit + magnitude).
-  // getFPMantissaWidth() returns the number of bits in the mantissa including
-  // the implicit leading 1 bit (i.e., the precision).
-  Type *FPTy = I.getOperand(0)->getType()->getScalarType();
-  int MantissaWidth = FPTy->getFPMantissaWidth();
-  if (MantissaWidth < 0)
-    return nullptr; // Unknown FP type.
-  unsigned IntWidth = A->getType()->getScalarSizeInBits();
-  // For unsigned: need MantissaWidth >= IntWidth
-  // For signed: need MantissaWidth >= IntWidth (to represent most negative val)
-  if ((unsigned)MantissaWidth < IntWidth)
+  Value *Src = I.getOperand(0);
+  auto *FPCast = cast<CastInst>(cast<Instruction>(FAbsArg)->getOperand(0));
+  if (!IC.isKnownExactCastIntToFP(*FPCast))
     return nullptr;
 
   ICmpInst::Predicate ResultPred =
@@ -9150,7 +9140,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (Instruction *R = foldFabsWithFcmpZero(I, *this))
     return R;
 
-  if (Instruction *R = foldFCmpFAbsFSubIntToFP(I))
+  if (Instruction *R = foldFCmpFAbsFSubIntToFP(I, *this))
     return R;
 
   if (Instruction *R = foldSqrtWithFcmpZero(I, *this))
