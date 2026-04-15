@@ -121,3 +121,36 @@ void memberExpr() {
    // CHECK-FIXES:    if (foo.fooBar().z) {
   }
 }
+
+enum class FoldLevel {
+  None = 0x0,
+  HeaderFlag = 0x2000,
+};
+
+constexpr FoldLevel operator&(FoldLevel lhs, FoldLevel rhs) {
+  return static_cast<FoldLevel>(static_cast<int>(lhs) & static_cast<int>(rhs));
+}
+
+constexpr bool UseOperatorAmpersand1(FoldLevel level) {
+  return (level & FoldLevel::HeaderFlag) != FoldLevel::None;
+}
+
+constexpr bool UseOperatorAmpersand2(FoldLevel level) {
+  const FoldLevel l = (level & FoldLevel::HeaderFlag);
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    const FoldLevel l = level & FoldLevel::HeaderFlag;
+  return l != FoldLevel::None;
+}
+
+constexpr bool UseOperatorAmpersand3(FoldLevel level) {
+  const FoldLevel l = level & FoldLevel::HeaderFlag;
+  return (l != FoldLevel::None);
+}
+
+constexpr bool UseOperatorAmpersand4(FoldLevel level) {
+  return ((level & FoldLevel::HeaderFlag) != FoldLevel::None);
+}
+
+const int bracket_int_plus_num = (4) + 5;
+// CHECK-MESSAGES: :[[@LINE-1]]:34: warning: redundant parentheses around expression [readability-redundant-parentheses]
+// CHECK-FIXES:    const int bracket_int_plus_num = 4 + 5;
