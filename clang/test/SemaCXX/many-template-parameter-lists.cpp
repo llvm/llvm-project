@@ -28,9 +28,8 @@ struct X {
   template <class X>
   template <class Y>
   template <class Z>
-  friend void A<U>::template B<V>::template C<W>::template D<X>::template E<Y>::operator+=(Z);
-  // expected-error@-1 {{no member 'operator+=' in 'X<int>'; it has not yet been instantiated}}
-  // expected-note@-2 {{not-yet-instantiated member is declared here}}
+  friend void A<U>::template B<V>::template C<W>::template D<X>::template E<Y>::operator+=(Z); // expected-error {{no member 'operator+=' in 'X<int>'; it has not yet been instantiated}} \
+                                                                                               // expected-note {{not-yet-instantiated member is declared here}}
 };
 
 void test() {

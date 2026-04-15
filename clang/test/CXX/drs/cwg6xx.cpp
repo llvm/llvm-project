@@ -407,29 +407,25 @@ namespace cwg638 { // cwg638: no
   };
 
   class X {
-    typedef int type;
+    typedef int type; // #X_type
     template<class T> friend struct A<T>::B;
     template<class T> friend void A<T>::f();
     template<class T> friend void A<T>::g();
-    template<class T> friend void A<T>::C::h();
-    // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
+    template<class T> friend void A<T>::C::h(); // expected-error {{friend declaration does not name a member of a class template specialization}}
   };
 
   template<> struct A<int> {
-    X::type a;
-    // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
-    // expected-note@-11 {{implicitly declared private here}}
+    X::type a; // expected-error {{'type' is a private member of 'cwg638::X'}} \
+               // expected-note@#X_type {{implicitly declared private here}}
     struct B {
       X::type b; // ok
     };
-    int f() { X::type c; }
-    // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
-    // expected-note@-17 {{implicitly declared private here}}
+    int f() { X::type c; } // expected-error {{'type' is a private member of 'cwg638::X'}} \
+                           // expected-note@#X_type {{implicitly declared private here}}
     void g() { X::type d; } // ok
     struct D {
-      void h() { X::type e; }
-      // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
-      // expected-note@-22 {{implicitly declared private here}}
+      void h() { X::type e; } // expected-error {{'type' is a private member of 'cwg638::X'}}
+                              // expected-note@#X_type {{implicitly declared private here}}
     };
   };
 } // namespace cwg638

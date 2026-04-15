@@ -39,20 +39,23 @@ namespace test2 {
   template <class T> struct A;
 
   class C {
-    static void foo(); // expected-note 3 {{implicitly declared private here}}
+    static void foo(); // #C_foo
     template <class T> friend void A<T>::g();
   };
 
   template <class T> struct A {
-    void f() { C::foo(); } // expected-error {{'foo' is a private member of 'test2::C'}}
+    void f() { C::foo(); } // expected-error {{'foo' is a private member of 'test2::C'}} \
+                           // expected-note@#C_foo {{implicitly declared private here}}
   };
 
   template <class T> struct A<T*> {
-    void f() { C::foo(); } // expected-error {{'foo' is a private member of 'test2::C'}}
+    void f() { C::foo(); } // expected-error {{'foo' is a private member of 'test2::C'}} \
+                           // expected-note@#C_foo {{implicitly declared private here}}
   };
 
   template <> struct A<char> {
-    void f() { C::foo(); } // expected-error {{'foo' is a private member of 'test2::C'}}
+    void f() { C::foo(); } // expected-error {{'foo' is a private member of 'test2::C'}} \
+                           // expected-note@#C_foo {{implicitly declared private here}}
   };
 }
 

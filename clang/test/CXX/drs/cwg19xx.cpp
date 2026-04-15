@@ -101,19 +101,17 @@ template<typename T> struct A {
   };
 };
 class X {
-  static int x;
+  static int x; // #X_c
   template <typename T>
-  friend class A<T>::B::C;
-  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
+  friend class A<T>::B::C; // expected-error {{friend declaration does not name a member of a class template specialization}}
 };
 template<> struct A<int> {
   typedef struct Q B;
 };
 struct Q {
   class C {
-    int f() { return X::x; }
-    // expected-error@-1 {{'x' is a private member of 'cwg1918::X'}}
-    // expected-note@-12 {{implicitly declared private here}}
+    int f() { return X::x; } // expected-error {{'x' is a private member of 'cwg1918::X'}} \
+                             // expected-note@#X_c {{implicitly declared private here}}
   };
 };
 } // namespace cwg1918
@@ -169,8 +167,7 @@ class X {
   static int x;
   // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
   template <typename T>
-  friend class A<T>::B::C;
-  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
+  friend class A<T>::B::C; // expected-error {{friend declaration does not name a member of a class template specialization}}
 };
 } // namespace cwg1945
 
