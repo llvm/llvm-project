@@ -5739,6 +5739,8 @@ getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
   case AMDGPU::V_CMP_LT_I64_e64: // min.i64
   case AMDGPU::V_CMP_GT_U64_e64: // umax.u64
   case AMDGPU::V_CMP_GT_I64_e64: // max.i64
+  case AMDGPU::S_ADD_U64_PSEUDO:
+  case AMDGPU::S_SUB_U64_PSEUDO:
     DPPOpc = AMDGPU::V_MOV_B64_DPP_PSEUDO;
     break;
   default:
@@ -5748,7 +5750,10 @@ getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
   if (!ST.getInstrInfo()->isVALU(Opc)) {
     if (Opc == AMDGPU::S_SUB_I32)
       ClampOpc = AMDGPU::S_ADD_I32;
-    ClampOpc = ST.getInstrInfo()->getVALUOp(ClampOpc);
+    if (Opc == AMDGPU::S_ADD_U64_PSEUDO || Opc == AMDGPU::S_SUB_U64_PSEUDO)
+      ClampOpc = AMDGPU::V_ADD_CO_U32_e64;
+    else
+      ClampOpc = ST.getInstrInfo()->getVALUOp(ClampOpc);
   }
   return {DPPOpc, ClampOpc};
 }
@@ -6312,40 +6317,80 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
           DPPInstr.addImm(SISrcMods::NONE); // src1 modifier
         if (!NeedsMovDPP)
           DPPInstr.addReg(Src); // src1
+        if (AMDGPU::getNamedOperandIdx(DPPOpc, AMDGPU::OpName::clamp) >= 0)
+          DPPInstr.addImm(0); // clamp
         DPPInstr
             .addImm(DPPCtrl) // dpp-ctrl
             .addImm(0xf)     // row-mask
             .addImm(0xf)     // bank-mask
             .addImm(0);      // bound-control
       };
-      auto BuildClampInstr = [&](Register Dst, Register Src0, Register Src1) {
-        auto ClampInstr = BuildMI(*CurrBB, MI, DL, TII->get(ClampOpc), Dst);
+      auto BuildClampInstr = [&](Register Dst, Register Src0, Register Src1,
+                                 bool isAddSub = false,
+                                 bool needsCarryIn = false,
+                                 Register CarryIn = Register()) {
+        unsigned InstrOpc = ClampOpc;
+        Register CarryOutReg = MRI.createVirtualRegister(WaveMaskRegClass);
+        if (needsCarryIn)
+          InstrOpc = AMDGPU::V_ADDC_U32_e64;
+        auto ClampInstr = BuildMI(*CurrBB, MI, DL, TII->get(InstrOpc), Dst);
         if (isFPOp)
           ClampInstr.addImm(SISrcMods::NONE); // src0 mod
+        if (isAddSub) {
+          if (needsCarryIn)
+            ClampInstr.addReg(CarryOutReg,
+                              RegState::Define |
+                                  RegState::Dead); // killed carry-out reg
+          else
+            ClampInstr.addReg(CarryOutReg, RegState::Define); // carry-out reg
+        }
         ClampInstr.addReg(Src0);              // src0
         if (isFPOp)
           ClampInstr.addImm(SISrcMods::NONE); // src1 mod
         ClampInstr.addReg(Src1);              // src1
-        if (TII->hasIntClamp(*ClampInstr) || TII->hasFPClamp(*ClampInstr))
+        if (needsCarryIn)
+          ClampInstr.addReg(CarryIn, RegState::Kill); // carry-in reg
+        if (AMDGPU::getNamedOperandIdx(InstrOpc, AMDGPU::OpName::clamp) >= 0)
           ClampInstr.addImm(0); // clamp
         if (isFPOp)
           ClampInstr.addImm(0); // omod
         LastBcastInstr = ClampInstr;
+        return CarryOutReg;
       };
       auto BuildPostDPPInstr = [&](Register Src0, Register Src1) {
-        Register CmpMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
-        Register MinMaxResultReg = MRI.createVirtualRegister(SrcRegClass);
-        BuildMI(*CurrBB, MI, DL, TII->get(Opc), CmpMaskReg)
-            .addReg(Src0)  // src0
-            .addReg(Src1); // src1
-        LastBcastInstr =
-            BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B64_PSEUDO),
-                    MinMaxResultReg)
-                .addReg(Src1)        // src0
-                .addReg(Src0)        // src1
-                .addReg(CmpMaskReg); // src2
-        expand64BitV_CNDMASK(*LastBcastInstr, CurrBB);
-        return MinMaxResultReg;
+        bool isAddSubOpc =
+            Opc == AMDGPU::S_ADD_U64_PSEUDO || Opc == AMDGPU::S_SUB_U64_PSEUDO;
+        Register ReturnReg = MRI.createVirtualRegister(SrcRegClass);
+        if (isAddSubOpc) {
+          Register ResLo = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          Register ResHi = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          MachineOperand Src0Operand =
+              MachineOperand::CreateReg(Src0, /*isDef=*/false);
+          MachineOperand Src1Operand =
+              MachineOperand::CreateReg(Src1, /*isDef=*/false);
+          auto [Src0Lo, Src0Hi] =
+              ExtractSubRegs(MI, Src0Operand, SrcRegClass, ST, MRI);
+          auto [Src1Lo, Src1Hi] =
+              ExtractSubRegs(MI, Src1Operand, SrcRegClass, ST, MRI);
+          Register CarryReg = BuildClampInstr(
+              ResLo, Src0Lo, Src1Lo, isAddSubOpc, /*needsCarryIn*/ false);
+          BuildClampInstr(ResHi, Src0Hi, Src1Hi, isAddSubOpc,
+                          /*needsCarryIn*/ isAddSubOpc, CarryReg);
+          BuildRegSequence(*CurrBB, MI, ReturnReg, ResLo, ResHi);
+        } else {
+          Register CmpMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
+          BuildMI(*CurrBB, MI, DL, TII->get(Opc), CmpMaskReg)
+              .addReg(Src0)  // src0
+              .addReg(Src1); // src1
+          LastBcastInstr =
+              BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B64_PSEUDO),
+                      ReturnReg)
+                  .addReg(Src1)        // src0
+                  .addReg(Src0)        // src1
+                  .addReg(CmpMaskReg); // src2
+          expand64BitV_CNDMASK(*LastBcastInstr, CurrBB);
+        }
+        return ReturnReg;
       };
 
       // Set inactive lanes to the identity value.
@@ -6562,14 +6607,22 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         BuildRegSequence(*CurrBB, MI, ReducedValSGPR, LaneValueLoReg,
                          LaneValueHiReg);
       }
-      if (Opc == AMDGPU::S_SUB_I32)
+      if (Opc == AMDGPU::S_SUB_I32) {
         BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedReducedVal)
             .addImm(0)
             .addReg(ReducedValSGPR);
+      } else if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
+        auto NegatedValInstr =
+            BuildMI(*CurrBB, MI, DL, TII->get(Opc), NegatedReducedVal)
+                .addImm(0)
+                .addReg(ReducedValSGPR);
+        CurrBB = expand64BitScalarArithmetic(*NegatedValInstr, CurrBB);
+      }
       // Mark the final result as a whole-wave-mode calculation.
       BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::STRICT_WWM), DstReg)
-          .addReg(Opc == AMDGPU::S_SUB_I32 ? NegatedReducedVal
-                                           : ReducedValSGPR);
+          .addReg(Opc == AMDGPU::S_SUB_I32 || Opc == AMDGPU::S_SUB_U64_PSEUDO
+                      ? NegatedReducedVal
+                      : ReducedValSGPR);
       RetBB = CurrBB;
     }
   }
