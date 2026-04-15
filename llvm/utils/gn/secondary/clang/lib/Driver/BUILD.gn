@@ -101,6 +101,7 @@ static_library("Driver") {
     "ToolChains/SPIRV.cpp",
     "ToolChains/SPIRVOpenMP.cpp",
     "ToolChains/SYCL.cpp",
+    "ToolChains/Serenity.cpp",
     "ToolChains/Solaris.cpp",
     "ToolChains/TCE.cpp",
     "ToolChains/UEFI.cpp",

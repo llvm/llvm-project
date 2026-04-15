@@ -217,6 +217,16 @@ New Compiler Flags
   higher), accurate source locations are used; otherwise, a heuristic fallback
   is used with a note suggesting how to enable debug info for better accuracy.
 
+- New option ``-fwin-cfg-mechanism=`` added to control the mechanism used by
+  Control Flow Guard on Windows. Accepted values are ``automatic`` (default),
+  ``dispatch``, and ``check``. The ``dispatch`` mechanism uses the dispatch
+  function to perform indirect call checks and can improve performance, while
+  ``check`` uses the traditional check mechanism.
+- New ``-cl`` option ``/d2guardcfgdispatch`` added to match MSVC. This acts as a
+  shorthand for ``-fwin-cfg-mechanism=dispatch``.
+- New ``-cl`` option ``/d2guardcfgdispatch-`` added to match MSVC. This acts as a
+  shorthand for ``-fwin-cfg-mechanism=check``.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -451,7 +461,7 @@ Bug Fixes to C++ Support
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching 
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported 
   and produce a warning. (#GH162640)
-
+- Correctly diagnose invalid non-dependent calls in dependent contexts. (#GH135694)
 - Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
 - Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
 - We no longer consider conversion operators when copy-initializing from the same type. This was non
@@ -488,6 +498,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when explicitly casting a scalar to an atomic complex. (#GH114885)
 - Fixed an assertion failure when parsing an invalid out-of-line enum definition with template parameters. (#GH187909)
 - Fixed an assertion failure on invalid template template parameter during typo correction. (#GH183983)
+- Fixed an assertion failure when using CTAD for alias templates where the RHS resolves to a non-dependent class template specialization. (#GH190517)
 
 OpenACC Specific Changes
 ------------------------
