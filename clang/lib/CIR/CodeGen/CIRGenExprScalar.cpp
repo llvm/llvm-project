@@ -415,9 +415,9 @@ public:
   mlir::Value VisitInitListExpr(InitListExpr *e);
 
   mlir::Value VisitArrayInitIndexExpr(ArrayInitIndexExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: array init index");
-    return {};
+    assert(cgf.getArrayInitIndex() &&
+           "ArrayInitIndexExpr not inside an ArrayInitLoopExpr?");
+    return cgf.getArrayInitIndex();
   }
 
   mlir::Value VisitImplicitValueInitExpr(const ImplicitValueInitExpr *e) {
@@ -2144,18 +2144,9 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
   case CK_NonAtomicToAtomic:
   case CK_UserDefinedConversion:
     return Visit(const_cast<Expr *>(subExpr));
-  case CK_NoOp: {
-    auto v = Visit(const_cast<Expr *>(subExpr));
-    if (v) {
-      // CK_NoOp can model a pointer qualification conversion, which can remove
-      // an array bound and change the IR type.
-      // FIXME: Once pointee types are removed from IR, remove this.
-      mlir::Type t = cgf.convertType(destTy);
-      if (t != v.getType())
-        cgf.getCIRGenModule().errorNYI("pointer qualification conversion");
-    }
-    return v;
-  }
+  case CK_NoOp:
+    return ce->changesVolatileQualification() ? emitLoadOfLValue(ce)
+                                              : Visit(subExpr);
   case CK_IntegralToPointer: {
     mlir::Type destCIRTy = cgf.convertType(destTy);
     mlir::Value src = Visit(const_cast<Expr *>(subExpr));
