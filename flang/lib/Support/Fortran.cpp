@@ -132,8 +132,8 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
       y.value_or(CUDADataAttr::Device) == CUDADataAttr::Device) {
     return true;
   } else if (ignoreTKR.test(IgnoreTKR::Managed) &&
-      x.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed &&
-      y.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed) {
+      (!x || *x == CUDADataAttr::Managed || *x == CUDADataAttr::Unified) &&
+      (!y || *y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified)) {
     return true;
   } else if (allowUnifiedMatchingRule) {
     if (!x) { // Dummy argument has no attribute -> host
