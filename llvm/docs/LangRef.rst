@@ -20823,13 +20823,12 @@ attached to the call:
   to the running accumulator. Two roundings occur per element (one for the
   multiply, one for the add).
 
-* With the ``contract`` fast-math flag, the computation uses a sequential FMA
-  chain: ``fma(%a[0], %b[0], fma(%a[1], %b[1], ... %acc ...))``. Only one
-  rounding occurs per element.
+* With the ``contract`` fast-math flag, the computation may use a sequential
+  FMA chain: ``fma(%a[0], %b[0], fma(%a[1], %b[1], ... %acc ...))``.
 
 * With the ``reassoc`` fast-math flag, the order of operations is unspecified.
-  Targets may exploit this to perform a tree-based or otherwise reordered
-  reduction for improved performance.
+  The computation may become a tree reduction: ``%c = fmul(%a, %b)`` followed
+  by ``@llvm.vector.reduce.fadd(%c)``.
 
 Examples:
 """""""""
