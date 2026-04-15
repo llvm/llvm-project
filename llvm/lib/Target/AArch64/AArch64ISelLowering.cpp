@@ -24106,37 +24106,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_bsl2n:
   case Intrinsic::aarch64_sve_nbsl:
     return combineSVEBitSel(IID, N, DAG);
-  case Intrinsic::aarch64_sve_udot:
-  case Intrinsic::aarch64_sve_sdot: {
-    // sdot(acc, extend(icmp_ult(A, B)), extend(icmp_ult(A, B)))
-    //  -> sdot(acc, umin(usubsat(B, A)), umin(usubsat(B, A)))
-
-    // sdot(acc, extend(icmp_ugt(A, B)), extend(icmp_ugt(A, B)))
-    //  -> sdot(acc, umin(usubsat(A, B)), umin(usubsat(A, B)))
-    SDValue Extend1 = N->getOperand(2);
-    SDValue Extend2 = N->getOperand(3);
-    if (Extend1 == Extend2 && (Extend1.getOpcode() == ISD::SIGN_EXTEND ||
-                               Extend1.getOpcode() == ISD::ZERO_EXTEND)) {
-      SDValue Compare = Extend1.getOperand(0);
-      if (Compare.getOpcode() != AArch64ISD::SETCC_MERGE_ZERO)
-        break;
-      ISD::CondCode CC = cast<CondCodeSDNode>(Compare.getOperand(3))->get();
-      if (CC != ISD::SETULT && CC != ISD::SETUGT)
-        break;
-      SDLoc DL(N);
-      EVT ResVT = Extend1.getValueType();
-      SDValue A = Compare.getOperand(CC == ISD::SETULT ? 1 : 2);
-      SDValue B = Compare.getOperand(CC == ISD::SETULT ? 2 : 1);
-      SDValue Sub = DAG.getNode(ISD::USUBSAT, DL, ResVT, B, A);
-      SDValue One = DAG.getConstant(1, DL, MVT::i32);
-      SDValue SplatOne = DAG.getSplatVector(ResVT, DL, One);
-      SDValue Min = DAG.getNode(ISD::UMIN, DL, ResVT, Sub, SplatOne);
-      unsigned Opcode = (IID == Intrinsic::aarch64_sve_udot ? AArch64ISD::UDOT
-                                                            : AArch64ISD::SDOT);
-      return DAG.getNode(Opcode, DL, N->getValueType(0), N->getOperand(1), Min,
-                         Min);
-    }
-  }
   }
   return SDValue();
 }
@@ -24468,51 +24437,101 @@ static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG,
                                     const AArch64Subtarget *Subtarget) {
-  // sext(icmp slt(a, b)) -> sclamp(sqsub(a, b), -1, 0)
-  // sext(icmp sgt(a, b)) -> sclamp(sqsub(b, a), -1, 0)
-  if (N->getOpcode() == ISD::SIGN_EXTEND) {
-    SDValue Compare = N->getOperand(0);
-    if (Compare.getOpcode() == AArch64ISD::SETCC_MERGE_ZERO) {
-      ISD::CondCode CC = cast<CondCodeSDNode>(Compare.getOperand(3))->get();
-      if (Compare.hasOneUse() && Subtarget->hasSVE2p1() &&
-          (CC == ISD::SETLT || CC == ISD::SETGT)) {
-        SDLoc DL(N);
-        SDValue A = Compare.getOperand(CC == ISD::SETLT ? 1 : 2);
-        SDValue B = Compare.getOperand(CC == ISD::SETLT ? 2 : 1);
-        SDValue Sub = DAG.getNode(ISD::SSUBSAT, DL, N->getValueType(0), A, B);
-        SDValue MinusOne = DAG.getSplatVector(
-            N->getValueType(0), DL, DAG.getSignedConstant(-1, DL, MVT::i32));
-        SDValue Zero = DAG.getSplatVector(N->getValueType(0), DL,
-                                          DAG.getConstant(0, DL, MVT::i32));
-        SDValue Sclamp = DAG.getNode(
+  // sext(icmp slt a, b) --> asr (shsub a, b), bitwidth-1
+  // sext(icmp ult a, b) --> asr (uhsub a, b), bitwidth-1
+  // zext(icmp slt a, b) --> lsr (shsub a, b), bitwidth-1
+  // zext(icmp ult a, b) --> lsr (uhsub a, b), bitwidth-1
+  // sext(icmp sgt a, b) --> asr (shsub b, a), bitwidth-1
+  // sext(icmp ugt a, b) --> asr (uhsub b, a), bitwidth-1
+  // zext(icmp sgt a, b) --> lsr (shsub b, a), bitwidth-1
+  // zext(icmp ugt a, b) --> lsr (uhsub b, a), bitwidth-1
+  SDValue Compare = N->getOperand(0);
+  SDLoc DL(N);
+  if (Compare.getOpcode() == AArch64ISD::SETCC_MERGE_ZERO &&
+      N->getValueType(0).isScalableVector() &&
+      Compare.getOperand(1).getValueType().getScalarType().isInteger() &&
+      (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
+    SDValue ComparePred = Compare.getOperand(0);
+    unsigned ExtendTy = N->getOpcode(); // sext or zext
+    ISD::CondCode CC = cast<CondCodeSDNode>(Compare.getOperand(3))->get();
+    SDValue A = Compare.getOperand(1);
+    SDValue B = Compare.getOperand(2);
+    unsigned BitwidthMinusOne = N->getValueType(0).getScalarSizeInBits() - 1;
+    EVT PredVT =
+        N->getValueType(0).changeElementType(*DAG.getContext(), MVT::i1);
+    //SDValue AllTruePred = getPTrue(DAG, DL, PredVT, AArch64SVEPredPattern::all);
+    SDValue AllTruePred = ComparePred ;
+    EVT EltVT = N->getValueType(0).getVectorElementType();
+    MVT ConstantTy = EltVT.bitsGT(MVT::i32) ? MVT::i64 : MVT::i32;
+    SDValue ShiftAmt =
+        DAG.getSplatVector(N->getValueType(0), DL,
+                           DAG.getConstant(BitwidthMinusOne, DL, ConstantTy));
+    if (ExtendTy == ISD::SIGN_EXTEND) {
+      if (CC == ISD::SETLT) {
+        // sext(icmp slt a, b) --> asr (shsub a, b), bitwidth-1
+        SDValue Sub = DAG.getNode(
             ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
-            DAG.getConstant(Intrinsic::aarch64_sve_sclamp, DL, MVT::i64), Sub,
-            MinusOne, Zero);
-        return Sclamp;
+            DAG.getConstant(Intrinsic::aarch64_sve_shsub_u, DL, MVT::i64),
+            AllTruePred, A, B);
+        return DAG.getNode(ISD::SRA, DL, N->getValueType(0), Sub, ShiftAmt);
+      }
+      if (CC == ISD::SETULT) {
+        // sext(icmp ult a, b) --> asr (uhsub a, b), bitwidth-1
+        SDValue Sub = DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+            DAG.getConstant(Intrinsic::aarch64_sve_uhsub_u, DL, MVT::i64),
+            AllTruePred, A, B);
+        return DAG.getNode(ISD::SRA, DL, N->getValueType(0), Sub, ShiftAmt);
+      }
+      if (CC == ISD::SETGT) {
+        // sext(icmp sgt a, b) --> asr (shsub b, a), bitwidth-1
+        SDValue Sub = DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+            DAG.getConstant(Intrinsic::aarch64_sve_shsub_u, DL, MVT::i64),
+            AllTruePred, B, A);
+        return DAG.getNode(ISD::SRA, DL, N->getValueType(0), Sub, ShiftAmt);
+      }
+      if (CC == ISD::SETUGT) {
+        // sext(icmp ugt a, b) --> asr (uhsub b, a), bitwidth-1
+        SDValue Sub = DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+            DAG.getConstant(Intrinsic::aarch64_sve_uhsub_u, DL, MVT::i64),
+            AllTruePred, B, A);
+        return DAG.getNode(ISD::SRA, DL, N->getValueType(0), Sub, ShiftAmt);
       }
     }
-  }
-  // zext(icmp slt(a, b)) -> sclamp(sqsub(b,a), 0, 1)
-  // zext(icmp sgt(a, b)) -> sclamp(sqsub(a,b), 0, 1)
-  if (N->getOpcode() == ISD::ZERO_EXTEND) {
-    SDValue Compare = N->getOperand(0);
-    if (Compare.getOpcode() == AArch64ISD::SETCC_MERGE_ZERO) {
-      ISD::CondCode CC = cast<CondCodeSDNode>(Compare.getOperand(3))->get();
-      if (Compare.hasOneUse() && Subtarget->hasSVE2p1() &&
-          (CC == ISD::SETLT || CC == ISD::SETGT)) {
-        SDLoc DL(N);
-        SDValue A = Compare.getOperand(CC == ISD::SETLT ? 1 : 2);
-        SDValue B = Compare.getOperand(CC == ISD::SETLT ? 2 : 1);
-        SDValue Sub = DAG.getNode(ISD::SSUBSAT, DL, N->getValueType(0), B, A);
-        SDValue One = DAG.getSplatVector(N->getValueType(0), DL,
-                                         DAG.getConstant(1, DL, MVT::i32));
-        SDValue Zero = DAG.getSplatVector(N->getValueType(0), DL,
-                                          DAG.getConstant(0, DL, MVT::i32));
-        SDValue Sclamp = DAG.getNode(
+    if (ExtendTy == ISD::ZERO_EXTEND) {
+      if (CC == ISD::SETLT) {
+        // zext(icmp slt a, b) --> lsr (shsub a, b), bitwidth-1
+        SDValue Sub = DAG.getNode(
             ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
-            DAG.getConstant(Intrinsic::aarch64_sve_sclamp, DL, MVT::i64), Sub,
-            Zero, One);
-        return Sclamp;
+            DAG.getConstant(Intrinsic::aarch64_sve_shsub_u, DL, MVT::i64),
+            AllTruePred, A, B);
+        return DAG.getNode(ISD::SRL, DL, N->getValueType(0), Sub, ShiftAmt);
+      }
+      if (CC == ISD::SETULT) {
+        // zext(icmp ult a, b) --> lsr (uhsub a, b), bitwidth-1
+        SDValue Sub = DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+            DAG.getConstant(Intrinsic::aarch64_sve_uhsub_u, DL, MVT::i64),
+            AllTruePred, A, B);
+        return DAG.getNode(ISD::SRL, DL, N->getValueType(0), Sub, ShiftAmt);
+      }
+      if (CC == ISD::SETGT) {
+        // zext(icmp sgt a, b) --> lsr (shsub b, a), bitwidth-1
+        SDValue Sub = DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+            DAG.getConstant(Intrinsic::aarch64_sve_shsub_u, DL, MVT::i64),
+            AllTruePred, B, A);
+        return DAG.getNode(ISD::SRL, DL, N->getValueType(0), Sub, ShiftAmt);
+      }
+      if (CC == ISD::SETUGT) {
+        // zext(icmp ugt a, b) --> lsr (uhsub b, a), bitwidth-1
+        SDValue Sub = DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+            DAG.getConstant(Intrinsic::aarch64_sve_uhsub_u, DL, MVT::i64),
+            AllTruePred, B, A);
+        return DAG.getNode(ISD::SRL, DL, N->getValueType(0), Sub, ShiftAmt);
       }
     }
   }
