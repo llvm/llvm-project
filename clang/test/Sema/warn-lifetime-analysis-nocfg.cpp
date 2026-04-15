@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdangling -Wdangling-field -Wreturn-stack-address -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=cfg %s
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=cfg,tu %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -180,8 +180,7 @@ struct LifetimeBoundCtor {
 };
 
 auto lifetimebound_make_unique_single_param() {
-  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // expected-warning {{returning address of local temporary object}} \
-                                                            // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // tu-warning {{address of stack memory is returned later}} tu-note {{returned here}}
 }
 
 

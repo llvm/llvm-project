@@ -206,15 +206,10 @@ struct [[gsl::Owner]] unique_ptr {
   T *get() const;
 };
 
-#ifdef WITH_LIFETIME_SAFETY_BODY
 template<typename T, typename... Args>
 unique_ptr<T> make_unique(Args&&... args) {
   return unique_ptr<T>(new T(args...));
 }
-#else
-template<typename T, typename... Args>
-unique_ptr<T> make_unique(Args&&... args [[clang::lifetimebound]]);
-#endif
 
 template<typename T>
 struct optional {

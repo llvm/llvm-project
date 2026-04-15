@@ -233,7 +233,6 @@ static const CXXNewExpr *findCXXNewExpr(const Stmt *S) {
 }
 
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
-  llvm::errs() << "JETSKI: inferLifetimeBoundAttribute for " << FD->getNameAsString() << "\n";
   if (FD->getNumParams() == 0)
     return;
   // Skip void returning functions (except constructors). This can occur in
