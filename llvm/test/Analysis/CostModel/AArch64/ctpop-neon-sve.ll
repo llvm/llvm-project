@@ -11,7 +11,7 @@ define <2 x i64> @test_ctpop_v2i64(<2 x i64> %a) {
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %ctpop
 ;
 ; SVE-LABEL: 'test_ctpop_v2i64'
-; SVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctpop = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %a)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctpop = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %a)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %ctpop
 ;
   %ctpop = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %a)
@@ -24,7 +24,7 @@ define <4 x i32> @test_ctpop_v4i32(<4 x i32> %a) {
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %ctpop
 ;
 ; SVE-LABEL: 'test_ctpop_v4i32'
-; SVE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %ctpop = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %a)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctpop = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %a)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %ctpop
 ;
   %ctpop = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %a)
@@ -37,7 +37,7 @@ define <8 x i16> @test_ctpop_v8i16(<8 x i16> %a) {
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %ctpop
 ;
 ; SVE-LABEL: 'test_ctpop_v8i16'
-; SVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctpop = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %a)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctpop = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %a)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %ctpop
 ;
   %ctpop = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %a)
@@ -63,7 +63,7 @@ define <2 x i32> @test_ctpop_v2i32(<2 x i32> %a) {
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %ctpop
 ;
 ; SVE-LABEL: 'test_ctpop_v2i32'
-; SVE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %ctpop = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctpop = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %ctpop
 ;
   %ctpop = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
