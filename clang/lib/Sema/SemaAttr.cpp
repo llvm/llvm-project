@@ -227,9 +227,8 @@ static const CXXNewExpr *findCXXNewExpr(const Stmt *S) {
   if (const auto *E = dyn_cast<CXXNewExpr>(S))
     return E;
   for (const Stmt *Child : S->children())
-    if (Child)
-      if (const CXXNewExpr *E = findCXXNewExpr(Child))
-        return E;
+    if (const CXXNewExpr *E = findCXXNewExpr(Child))
+      return E;
   return nullptr;
 }
 
