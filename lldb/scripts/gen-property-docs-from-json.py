@@ -136,7 +136,7 @@ def main():
 
     root = PropertyTree(items={})
     for input in args.inputs:
-        with open(input) as f:
+        with open(input, encoding="utf-8") as f:
             properties: dict[str, PropertyDef] = json.load(f)
         for key, prop in properties.items():
             if key.startswith("!"):
@@ -145,7 +145,7 @@ def main():
                 continue  # not a property
             append_property(root, Property(prop))
 
-    with open(args.output, "w") as f:
+    with open(args.output, "w", encoding="utf-8") as f:
         f.write(HEADER)
         print_tree(f, 0, "", "", root)
 
