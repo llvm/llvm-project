@@ -536,10 +536,15 @@ def update_checks_list(clang_tidy_path: str) -> None:
                 ref_begin = ""
                 ref_end = "_"
             else:
-                redirect_parts = re.search(r"^\.\./([^/]*)/([^/]*)$", match.group(1))
+                # Match either "../modernize/use-nullptr" or a same-directory
+                # redirect like "prefer-single-char-overloads".
+                redirect_parts = re.search(
+                    r"^(?:\.\./([^/]+)/)?([^/]+)$", match.group(1)
+                )
                 assert redirect_parts
-                title = redirect_parts[1] + "-" + redirect_parts[2]
-                target = redirect_parts[1] + "/" + redirect_parts[2]
+                redirect_module = redirect_parts[1] or module
+                title = redirect_module + "-" + redirect_parts[2]
+                target = redirect_module + "/" + redirect_parts[2]
                 autofix = has_auto_fix(title)
                 ref_begin = ":doc:"
                 ref_end = ""

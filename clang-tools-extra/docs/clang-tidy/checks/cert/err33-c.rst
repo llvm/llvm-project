@@ -1,4 +1,6 @@
 .. title:: clang-tidy - cert-err33-c
+.. meta::
+   :http-equiv=refresh: 5;URL=../bugprone/unused-return-value.html
 
 cert-err33-c
 ============
