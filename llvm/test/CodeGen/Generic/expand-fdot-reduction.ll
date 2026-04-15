@@ -2,7 +2,6 @@
 ; RUN: opt < %s -passes=expand-reductions -S | FileCheck %s
 
 declare float @llvm.vector.reduce.fdot.v4f32(float, <4 x float>, <4 x float>)
-declare float @llvm.fma.f32(float, float, float)
 
 ; Default (no fast-math flags): sequential fmul + fadd chain.
 define float @fdot_ordered(float %acc, <4 x float> %a, <4 x float> %b) {
@@ -45,21 +44,26 @@ define float @fdot_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
   ret float %res
 }
 
-; With contract flag: sequential FMA chain.
+; With contract flag: sequential fmul+fadd chain with contract flags preserved;
+; the backend may fuse each pair into an FMA.
 define float @fdot_contract(float %acc, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @fdot_contract(
 ; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[RDX0:%.*]] = call contract float @llvm.fma.f32(float [[A0]], float [[B0]], float [[ACC:%.*]])
+; CHECK-NEXT:    [[PROD0:%.*]] = fmul contract float [[A0]], [[B0]]
+; CHECK-NEXT:    [[ACC0:%.*]] = fadd contract float [[ACC:%.*]], [[PROD0]]
 ; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i64 1
 ; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i64 1
-; CHECK-NEXT:    [[RDX1:%.*]] = call contract float @llvm.fma.f32(float [[A1]], float [[B1]], float [[RDX0]])
+; CHECK-NEXT:    [[PROD1:%.*]] = fmul contract float [[A1]], [[B1]]
+; CHECK-NEXT:    [[ACC1:%.*]] = fadd contract float [[ACC0]], [[PROD1]]
 ; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i64 2
 ; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i64 2
-; CHECK-NEXT:    [[RDX2:%.*]] = call contract float @llvm.fma.f32(float [[A2]], float [[B2]], float [[RDX1]])
+; CHECK-NEXT:    [[PROD2:%.*]] = fmul contract float [[A2]], [[B2]]
+; CHECK-NEXT:    [[ACC2:%.*]] = fadd contract float [[ACC1]], [[PROD2]]
 ; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i64 3
 ; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i64 3
-; CHECK-NEXT:    [[RDX:%.*]] = call contract float @llvm.fma.f32(float [[A3]], float [[B3]], float [[RDX2]])
+; CHECK-NEXT:    [[PROD3:%.*]] = fmul contract float [[A3]], [[B3]]
+; CHECK-NEXT:    [[RDX:%.*]] = fadd contract float [[ACC2]], [[PROD3]]
 ; CHECK-NEXT:    ret float [[RDX]]
 ;
   %res = call contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)

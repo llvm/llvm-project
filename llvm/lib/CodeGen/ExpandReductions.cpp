@@ -104,19 +104,12 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
         LocalRdx = Builder.CreateBinOp(Instruction::FAdd, Acc, LocalRdx,
                                        "bin.rdx");
       } else {
-        // Sequential: with 'contract': fma(a[i], b[i], rdx) chain.
-        //             without: fmul(a[i], b[i]) + fadd(rdx, prod) chain.
         LocalRdx = Acc;
         for (unsigned i = 0; i < NumElts; i++) {
           Value *Ai = Builder.CreateExtractElement(VecA, i);
           Value *Bi = Builder.CreateExtractElement(VecB, i);
-          if (FMF.allowContract()) {
-            LocalRdx = Builder.CreateIntrinsic(
-                Intrinsic::fma, {VecTy->getElementType()}, {Ai, Bi, LocalRdx});
-          } else {
-            Value *Prod = Builder.CreateFMul(Ai, Bi);
-            LocalRdx = Builder.CreateFAdd(LocalRdx, Prod);
-          }
+          Value *Prod = Builder.CreateFMul(Ai, Bi);
+          LocalRdx = Builder.CreateFAdd(LocalRdx, Prod);
         }
       }
       II->replaceAllUsesWith(LocalRdx);
