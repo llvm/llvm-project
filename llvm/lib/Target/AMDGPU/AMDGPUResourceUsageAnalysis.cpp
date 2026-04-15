@@ -59,6 +59,21 @@ static const Function *getCalleeFunction(const MachineOperand &Op) {
   return cast<Function>(Op.getGlobal()->stripPointerCastsAndAliases());
 }
 
+static const Function *getCalleeFunction(const MachineFunction &MF,
+                                         const MachineInstr &MI,
+                                         const SIInstrInfo &TII) {
+  if (MachineFunction::CalledGlobalInfo CGI = MF.tryGetCalledGlobal(&MI);
+      CGI.Callee) {
+    if (const auto *F =
+            dyn_cast<Function>(CGI.Callee->stripPointerCastsAndAliases()))
+      return F;
+  }
+
+  const MachineOperand *CalleeOp =
+      TII.getNamedOperand(MI, AMDGPU::OpName::callee);
+  return CalleeOp ? getCalleeFunction(*CalleeOp) : nullptr;
+}
+
 static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,
                                   const SIInstrInfo &TII, unsigned Reg) {
   for (const MachineOperand &UseOp : MRI.reg_operands(Reg)) {
@@ -253,16 +268,7 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
       }
 
       if (MI.isCall()) {
-        // Pseudo used just to encode the underlying global. Is there a better
-        // way to track this?
-
-        // TODO: Some of the generic call-like pseudos do not encode the callee,
-        // so we overly conservatively treat this as an indirect call.
-        const MachineOperand *CalleeOp =
-            TII->getNamedOperand(MI, AMDGPU::OpName::callee);
-
-        const Function *Callee =
-            CalleeOp ? getCalleeFunction(*CalleeOp) : nullptr;
+        const Function *Callee = getCalleeFunction(MF, MI, *TII);
 
         auto isSameFunction = [](const MachineFunction &MF, const Function *F) {
           return F == &MF.getFunction();
