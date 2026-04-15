@@ -1131,13 +1131,16 @@ def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier",
     within a CTA (Cooperative Thread Array). It causes executing threads to wait for 
     all non-exited threads participating in the barrier to arrive.
 
-    The operation takes two optional operands:
+    The operation takes the following optional operands and attributes:
 
     - `barrierId`: Specifies a logical barrier resource with value 0 through 15. 
       Each CTA instance has sixteen barriers numbered 0..15. Defaults to 0 if not specified.
     - `numberOfThreads`: Specifies the number of threads participating in the barrier. 
       When specified, the value must be a multiple of the warp size. If not specified, 
       all threads in the CTA participate in the barrier.
+    - `aligned`: When `true` (the default), lowers to the `.aligned` form of the
+      underlying `@llvm.nvvm.barrier.cta.*` intrinsic family. When `false`, lowers
+      to the non-`.aligned` form.
     - `reductionOp`: specifies the reduction operation (`popc`, `and`, `or`).
     - `reductionPredicate`: specifies the predicate to be used with the
       `reductionOp`. 
@@ -1150,7 +1153,7 @@ def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier",
     When a barrier completes, the waiting threads are restarted without delay, and 
     the barrier is reinitialized so that it can be immediately reused.
 
-    This operation generates an aligned barrier, indicating that all threads in the CTA 
+    By default, this operation generates an aligned barrier, indicating that all threads in the CTA
     will execute the same barrier instruction. Behavior is undefined if all threads in the 
     CTA do not reach this instruction.
 
@@ -1159,7 +1162,8 @@ def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier",
 
   let arguments = (ins Optional<I32>:$barrierId, Optional<I32>:$numberOfThreads,
       OptionalAttr<BarrierReductionAttr>:$reductionOp,
-      Optional<I32>:$reductionPredicate);
+      Optional<I32>:$reductionPredicate,
+      DefaultValuedAttr<BoolAttr, "true">:$aligned);
   string llvmBuilder = [{
     auto [id, args] = NVVM::BarrierOp::getIntrinsicIDAndArgs(
                         *op, moduleTranslation, builder);
@@ -1172,16 +1176,20 @@ def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier",
   let results = (outs Optional<I32>:$res);
 
   let hasVerifier = 1;
+  let hasCanonicalizeMethod = 1;
 
   let assemblyFormat =
       "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
+      "custom<Aligned>($aligned) "
       "(qualified($reductionOp)^ $reductionPredicate)? (`->` type($res)^)? attr-dict";
 
   let builders = [OpBuilder<(ins), [{
-      return build($_builder, $_state, TypeRange{}, Value{}, Value{}, {}, Value{});
+      return build($_builder, $_state, TypeRange{}, Value{}, Value{}, {}, Value{},
+                   $_builder.getBoolAttr(true));
     }]>,
                   OpBuilder<(ins "Value":$barrierId), [{
-      return build($_builder, $_state, TypeRange{}, barrierId, Value{}, {}, Value{});
+      return build($_builder, $_state, TypeRange{}, barrierId, Value{}, {}, Value{},
+                   $_builder.getBoolAttr(true));
     }]>];
 }
 

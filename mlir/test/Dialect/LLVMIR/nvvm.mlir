@@ -41,10 +41,17 @@ func.func @nvvm_rcp(%arg0: f32) -> f32 {
 llvm.func @llvm_nvvm_barrier(%barId : i32, %numberOfThreads : i32) {
   // CHECK: nvvm.barrier 
   nvvm.barrier 
+  // CHECK-NOT: aligned
   // CHECK: nvvm.barrier id = %[[barId]]
   nvvm.barrier id = %barId
   // CHECK: nvvm.barrier id = %[[barId]] number_of_threads = %[[numberOfThreads]]
   nvvm.barrier id = %barId number_of_threads = %numberOfThreads
+  // CHECK: nvvm.barrier number_of_threads = %[[numberOfThreads]]
+  nvvm.barrier number_of_threads = %numberOfThreads
+  // CHECK: nvvm.barrier non_aligned
+  nvvm.barrier non_aligned
+  // CHECK: nvvm.barrier id = %[[barId]] non_aligned
+  nvvm.barrier id = %barId non_aligned
   llvm.return
 }
 
