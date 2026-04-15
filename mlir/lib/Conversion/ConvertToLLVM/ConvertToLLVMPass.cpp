@@ -169,8 +169,7 @@ struct DynamicConvertToLLVM : public ConvertToLLVMPassInterface {
     target.addLegalDialect<LLVM::LLVMDialect>();
     // Get the data layout analysis.
     const auto &dlAnalysis = manager.getAnalysis<DataLayoutAnalysis>();
-    LowerToLLVMOptions options(op->getContext(),
-                               dlAnalysis.getAtOrAbove(op));
+    LowerToLLVMOptions options(op->getContext(), dlAnalysis.getAtOrAbove(op));
     LLVMTypeConverter typeConverter(context, options, &dlAnalysis);
 
     // Configure the conversion with dialect level interfaces.

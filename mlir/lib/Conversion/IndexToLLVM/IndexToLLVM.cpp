@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Index/IR/IndexAttrs.h"
@@ -348,23 +349,26 @@ struct ConvertIndexToLLVMPass
 } // namespace
 
 void ConvertIndexToLLVMPass::runOnOperation() {
+  Operation *op = getOperation();
+
   // Configure dialect conversion.
   ConversionTarget target(getContext());
   target.addIllegalDialect<IndexDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
 
   // Set LLVM lowering options.
-  LowerToLLVMOptions options(&getContext());
+  const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+  LowerToLLVMOptions options(&getContext(),
+                             dataLayoutAnalysis.getAtOrAbove(op));
   if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
     options.overrideIndexBitwidth(indexBitwidth);
-  LLVMTypeConverter typeConverter(&getContext(), options);
+  LLVMTypeConverter typeConverter(&getContext(), options, &dataLayoutAnalysis);
 
   // Populate patterns and run the conversion.
   RewritePatternSet patterns(&getContext());
   populateIndexToLLVMConversionPatterns(typeConverter, patterns);
 
-  if (failed(
-          applyPartialConversion(getOperation(), target, std::move(patterns))))
+  if (failed(applyPartialConversion(op, target, std::move(patterns))))
     return signalPassFailure();
 }
 

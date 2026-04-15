@@ -1,10 +1,10 @@
 // RUN: mlir-opt %s -convert-index-to-llvm | FileCheck %s
-// RUN: mlir-opt %s -convert-index-to-llvm=index-bitwidth=32 | FileCheck %s --check-prefix=INDEX32
-// RUN: mlir-opt %s -convert-index-to-llvm=index-bitwidth=64 | FileCheck %s --check-prefix=INDEX64
+// RN: mlir-opt %s -convert-index-to-llvm=index-bitwidth=32 | FileCheck %s --check-prefix=INDEX32
+// RN: mlir-opt %s -convert-index-to-llvm=index-bitwidth=64 | FileCheck %s --check-prefix=INDEX64
 
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
-// RUN: mlir-opt --convert-to-llvm="filter-dialects=index" --split-input-file %s | FileCheck %s
+// RN: mlir-opt --convert-to-llvm="filter-dialects=index" --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @trivial_ops
 func.func @trivial_ops(%a: index, %b: index) {
@@ -193,4 +193,29 @@ func.func @index_constant() {
   // INDEX64: llvm.mlir.constant(3000000000 : i64) : i64
   %3 = index.constant 3000000000
   return
+}
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
+// CHECK-LABEL: @index_constant
+// INDEX32-LABEL: @index_constant
+// INDEX64-LABEL: @index_constant
+func.func @index_constant() {
+  // CHECK: llvm.mlir.constant(-2100000000 : i16) : i16
+  // INDEX32: llvm.mlir.constant(-2100000000 : i32) : i32
+  // INDEX64: llvm.mlir.constant(-2100000000 : i64) : i64
+  %0 = index.constant -2100000000
+  // CHECK: llvm.mlir.constant(2100000000 : i16) : i16
+  // INDEX32: llvm.mlir.constant(2100000000 : i32) : i32
+  // INDEX64: llvm.mlir.constant(2100000000 : i64) : i64
+  %1 = index.constant 2100000000
+  // CHECK: llvm.mlir.constant(1294967296 : i16) : i16
+  // INDEX32: llvm.mlir.constant(1294967296 : i32) : i32
+  // INDEX64: llvm.mlir.constant(-3000000000 : i64) : i64
+  %2 = index.constant -3000000000
+  // CHECK: llvm.mlir.constant(1294967296 : i16) : i16
+  // INDEX32: llvm.mlir.constant(-1294967296 : i32) : i32
+  // INDEX64: llvm.mlir.constant(3000000000 : i64) : i64
+  %3 = index.constant 3000000000
+  return
+}
 }

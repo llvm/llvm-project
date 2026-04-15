@@ -622,6 +622,7 @@ func.func @extract_aligned_pointer_as_index_unranked(%m: memref<*xf32>) -> index
 // CHECK: %[[SIZE1:.*]] = llvm.extractvalue %[[MEM_DESC]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[STRIDE0:.*]] = llvm.extractvalue %[[MEM_DESC]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[STRIDE1:.*]] = llvm.extractvalue %[[MEM_DESC]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
 func.func @extract_strided_metadata(
     %ref: memref<?x?xf32, strided<[?,?], offset: ?>>) {
 
@@ -632,6 +633,7 @@ func.func @extract_strided_metadata(
        index, index
 
   return
+}
 }
 
 // -----
