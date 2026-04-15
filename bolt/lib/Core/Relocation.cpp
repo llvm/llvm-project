@@ -134,6 +134,51 @@ static bool isSupportedRISCV(uint32_t Type) {
   }
 }
 
+static bool isSupportedHexagon(uint32_t Type) {
+  switch (Type) {
+  default:
+    return false;
+  case ELF::R_HEX_B22_PCREL:
+  case ELF::R_HEX_B15_PCREL:
+  case ELF::R_HEX_B7_PCREL:
+  case ELF::R_HEX_B13_PCREL:
+  case ELF::R_HEX_B9_PCREL:
+  case ELF::R_HEX_B32_PCREL_X:
+  case ELF::R_HEX_B22_PCREL_X:
+  case ELF::R_HEX_B15_PCREL_X:
+  case ELF::R_HEX_B13_PCREL_X:
+  case ELF::R_HEX_B9_PCREL_X:
+  case ELF::R_HEX_B7_PCREL_X:
+  case ELF::R_HEX_32_6_X:
+  case ELF::R_HEX_16_X:
+  case ELF::R_HEX_12_X:
+  case ELF::R_HEX_11_X:
+  case ELF::R_HEX_10_X:
+  case ELF::R_HEX_9_X:
+  case ELF::R_HEX_8_X:
+  case ELF::R_HEX_7_X:
+  case ELF::R_HEX_6_X:
+  case ELF::R_HEX_32:
+  case ELF::R_HEX_16:
+  case ELF::R_HEX_8:
+  case ELF::R_HEX_LO16:
+  case ELF::R_HEX_HI16:
+  case ELF::R_HEX_32_PCREL:
+  case ELF::R_HEX_PLT_B22_PCREL:
+  case ELF::R_HEX_GOT_32_6_X:
+  case ELF::R_HEX_GOT_16_X:
+  case ELF::R_HEX_GOT_11_X:
+  case ELF::R_HEX_GOTREL_32_6_X:
+  case ELF::R_HEX_GOTREL_16_X:
+  case ELF::R_HEX_GOTREL_11_X:
+  case ELF::R_HEX_6_PCREL_X:
+  case ELF::R_HEX_TPREL_32_6_X:
+  case ELF::R_HEX_TPREL_16_X:
+  case ELF::R_HEX_TPREL_11_X:
+    return true;
+  }
+}
+
 static size_t getSizeForTypeX86(uint32_t Type) {
   switch (Type) {
   default:
@@ -243,6 +288,54 @@ static size_t getSizeForTypeRISCV(uint32_t Type) {
   }
 }
 
+static size_t getSizeForTypeHexagon(uint32_t Type) {
+  switch (Type) {
+  default:
+    errs() << object::getELFRelocationTypeName(ELF::EM_HEXAGON, Type) << '\n';
+    llvm_unreachable("unsupported relocation type");
+  case ELF::R_HEX_8:
+    return 1;
+  case ELF::R_HEX_16:
+    return 2;
+  case ELF::R_HEX_B22_PCREL:
+  case ELF::R_HEX_B15_PCREL:
+  case ELF::R_HEX_B7_PCREL:
+  case ELF::R_HEX_B13_PCREL:
+  case ELF::R_HEX_B9_PCREL:
+  case ELF::R_HEX_B32_PCREL_X:
+  case ELF::R_HEX_B22_PCREL_X:
+  case ELF::R_HEX_B15_PCREL_X:
+  case ELF::R_HEX_B13_PCREL_X:
+  case ELF::R_HEX_B9_PCREL_X:
+  case ELF::R_HEX_B7_PCREL_X:
+  case ELF::R_HEX_32_6_X:
+  case ELF::R_HEX_16_X:
+  case ELF::R_HEX_12_X:
+  case ELF::R_HEX_11_X:
+  case ELF::R_HEX_10_X:
+  case ELF::R_HEX_9_X:
+  case ELF::R_HEX_8_X:
+  case ELF::R_HEX_7_X:
+  case ELF::R_HEX_6_X:
+  case ELF::R_HEX_32:
+  case ELF::R_HEX_32_PCREL:
+  case ELF::R_HEX_LO16:
+  case ELF::R_HEX_HI16:
+  case ELF::R_HEX_PLT_B22_PCREL:
+  case ELF::R_HEX_GOT_32_6_X:
+  case ELF::R_HEX_GOT_16_X:
+  case ELF::R_HEX_GOT_11_X:
+  case ELF::R_HEX_GOTREL_32_6_X:
+  case ELF::R_HEX_GOTREL_16_X:
+  case ELF::R_HEX_GOTREL_11_X:
+  case ELF::R_HEX_6_PCREL_X:
+  case ELF::R_HEX_TPREL_32_6_X:
+  case ELF::R_HEX_TPREL_16_X:
+  case ELF::R_HEX_TPREL_11_X:
+    return 4;
+  }
+}
+
 static bool skipRelocationTypeX86(uint32_t Type) {
   return Type == ELF::R_X86_64_NONE;
 }
@@ -264,6 +357,19 @@ static bool skipRelocationTypeRISCV(uint32_t Type) {
     return false;
   case ELF::R_RISCV_NONE:
   case ELF::R_RISCV_RELAX:
+    return true;
+  }
+}
+
+static bool skipRelocationTypeHexagon(uint32_t Type) {
+  switch (Type) {
+  default:
+    return false;
+  case ELF::R_HEX_NONE:
+  case ELF::R_HEX_GPREL16_0:
+  case ELF::R_HEX_GPREL16_1:
+  case ELF::R_HEX_GPREL16_2:
+  case ELF::R_HEX_GPREL16_3:
     return true;
   }
 }
@@ -529,6 +635,13 @@ static uint64_t extractValueRISCV(uint32_t Type, uint64_t Contents,
   }
 }
 
+static uint64_t extractValueHexagon(uint32_t Type, uint64_t Contents,
+                                    uint64_t PC) {
+  // For binary analysis (read-only), return the raw contents. Full extraction
+  // of Hexagon instruction-encoded immediates is only needed for rewriting.
+  return Contents;
+}
+
 static bool isGOTX86(uint32_t Type) {
   switch (Type) {
   default:
@@ -575,6 +688,20 @@ static bool isGOTRISCV(uint32_t Type) {
   }
 }
 
+static bool isGOTHexagon(uint32_t Type) {
+  switch (Type) {
+  default:
+    return false;
+  case ELF::R_HEX_GOT_32_6_X:
+  case ELF::R_HEX_GOT_16_X:
+  case ELF::R_HEX_GOT_11_X:
+  case ELF::R_HEX_GOTREL_32_6_X:
+  case ELF::R_HEX_GOTREL_16_X:
+  case ELF::R_HEX_GOTREL_11_X:
+    return true;
+  }
+}
+
 static bool isTLSX86(uint32_t Type) {
   switch (Type) {
   default:
@@ -616,6 +743,17 @@ static bool isTLSRISCV(uint32_t Type) {
   case ELFReserved::R_RISCV_TPREL_I:
   case ELFReserved::R_RISCV_TPREL_S:
     return true;
+  }
+}
+
+static bool isTLSHexagon(uint32_t Type) {
+  switch (Type) {
+  case ELF::R_HEX_TPREL_32_6_X:
+  case ELF::R_HEX_TPREL_16_X:
+  case ELF::R_HEX_TPREL_11_X:
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -722,12 +860,60 @@ static bool isPCRelativeRISCV(uint32_t Type) {
   }
 }
 
+static bool isPCRelativeHexagon(uint32_t Type) {
+  switch (Type) {
+  default:
+    llvm_unreachable("Unknown relocation type");
+  case ELF::R_HEX_32:
+  case ELF::R_HEX_16:
+  case ELF::R_HEX_8:
+  case ELF::R_HEX_LO16:
+  case ELF::R_HEX_HI16:
+  case ELF::R_HEX_32_6_X:
+  case ELF::R_HEX_16_X:
+  case ELF::R_HEX_12_X:
+  case ELF::R_HEX_11_X:
+  case ELF::R_HEX_10_X:
+  case ELF::R_HEX_9_X:
+  case ELF::R_HEX_8_X:
+  case ELF::R_HEX_7_X:
+  case ELF::R_HEX_6_X:
+  case ELF::R_HEX_GOT_32_6_X:
+  case ELF::R_HEX_GOT_16_X:
+  case ELF::R_HEX_GOT_11_X:
+  case ELF::R_HEX_GOTREL_32_6_X:
+  case ELF::R_HEX_GOTREL_16_X:
+  case ELF::R_HEX_GOTREL_11_X:
+  case ELF::R_HEX_TPREL_32_6_X:
+  case ELF::R_HEX_TPREL_16_X:
+  case ELF::R_HEX_TPREL_11_X:
+    return false;
+  case ELF::R_HEX_6_PCREL_X:
+  case ELF::R_HEX_B22_PCREL:
+  case ELF::R_HEX_B15_PCREL:
+  case ELF::R_HEX_B7_PCREL:
+  case ELF::R_HEX_B13_PCREL:
+  case ELF::R_HEX_B9_PCREL:
+  case ELF::R_HEX_B32_PCREL_X:
+  case ELF::R_HEX_B22_PCREL_X:
+  case ELF::R_HEX_B15_PCREL_X:
+  case ELF::R_HEX_B13_PCREL_X:
+  case ELF::R_HEX_B9_PCREL_X:
+  case ELF::R_HEX_B7_PCREL_X:
+  case ELF::R_HEX_32_PCREL:
+  case ELF::R_HEX_PLT_B22_PCREL:
+    return true;
+  }
+}
+
 bool Relocation::isSupported(uint32_t Type) {
   switch (Arch) {
   default:
     return false;
   case Triple::aarch64:
     return isSupportedAArch64(Type);
+  case Triple::hexagon:
+    return isSupportedHexagon(Type);
   case Triple::riscv64:
   case Triple::riscv32:
     return isSupportedRISCV(Type);
@@ -742,6 +928,8 @@ size_t Relocation::getSizeForType(uint32_t Type) {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return getSizeForTypeAArch64(Type);
+  case Triple::hexagon:
+    return getSizeForTypeHexagon(Type);
   case Triple::riscv64:
   case Triple::riscv32:
     return getSizeForTypeRISCV(Type);
@@ -756,6 +944,8 @@ bool Relocation::skipRelocationType(uint32_t Type) {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return skipRelocationTypeAArch64(Type);
+  case Triple::hexagon:
+    return skipRelocationTypeHexagon(Type);
   case Triple::riscv64:
   case Triple::riscv32:
     return skipRelocationTypeRISCV(Type);
@@ -770,6 +960,8 @@ uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return encodeValueAArch64(Type, Value, PC);
+  case Triple::hexagon:
+    llvm_unreachable("not used in Hexagon analysis mode");
   case Triple::riscv64:
   case Triple::riscv32:
     return encodeValueRISCV(Type, Value, PC);
@@ -784,6 +976,8 @@ bool Relocation::canEncodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return canEncodeValueAArch64(Type, Value, PC);
+  case Triple::hexagon:
+    return true;
   case Triple::riscv64:
   case Triple::riscv32:
     return canEncodeValueRISCV(Type, Value, PC);
@@ -799,6 +993,8 @@ uint64_t Relocation::extractValue(uint32_t Type, uint64_t Contents,
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return extractValueAArch64(Type, Contents, PC);
+  case Triple::hexagon:
+    return extractValueHexagon(Type, Contents, PC);
   case Triple::riscv64:
   case Triple::riscv32:
     return extractValueRISCV(Type, Contents, PC);
@@ -813,6 +1009,8 @@ bool Relocation::isGOT(uint32_t Type) {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return isGOTAArch64(Type);
+  case Triple::hexagon:
+    return isGOTHexagon(Type);
   case Triple::riscv64:
   case Triple::riscv32:
     return isGOTRISCV(Type);
@@ -841,6 +1039,8 @@ bool Relocation::isRelative(uint32_t Type) {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return Type == ELF::R_AARCH64_RELATIVE;
+  case Triple::hexagon:
+    return Type == ELF::R_HEX_RELATIVE;
   case Triple::riscv64:
   case Triple::riscv32:
     return Type == ELF::R_RISCV_RELATIVE;
@@ -855,6 +1055,8 @@ bool Relocation::isIRelative(uint32_t Type) {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return Type == ELF::R_AARCH64_IRELATIVE;
+  case Triple::hexagon:
+    return false;
   case Triple::riscv64:
   case Triple::riscv32:
     llvm_unreachable("not implemented");
@@ -869,6 +1071,8 @@ bool Relocation::isTLS(uint32_t Type) {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return isTLSAArch64(Type);
+  case Triple::hexagon:
+    return isTLSHexagon(Type);
   case Triple::riscv64:
   case Triple::riscv32:
     return isTLSRISCV(Type);
@@ -896,6 +1100,8 @@ uint32_t Relocation::getNone() {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return ELF::R_AARCH64_NONE;
+  case Triple::hexagon:
+    return ELF::R_HEX_NONE;
   case Triple::riscv64:
   case Triple::riscv32:
     return ELF::R_RISCV_NONE;
@@ -910,6 +1116,8 @@ uint32_t Relocation::getPC32() {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return ELF::R_AARCH64_PREL32;
+  case Triple::hexagon:
+    return ELF::R_HEX_32_PCREL;
   case Triple::riscv64:
   case Triple::riscv32:
     return ELF::R_RISCV_32_PCREL;
@@ -924,6 +1132,8 @@ uint32_t Relocation::getPC64() {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return ELF::R_AARCH64_PREL64;
+  case Triple::hexagon:
+    llvm_unreachable("not implemented for Hexagon");
   case Triple::riscv64:
   case Triple::riscv32:
     llvm_unreachable("not implemented");
@@ -944,6 +1154,8 @@ bool Relocation::isPCRelative(uint32_t Type) {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return isPCRelativeAArch64(Type);
+  case Triple::hexagon:
+    return isPCRelativeHexagon(Type);
   case Triple::riscv64:
   case Triple::riscv32:
     return isPCRelativeRISCV(Type);
@@ -958,6 +1170,8 @@ uint32_t Relocation::getAbs64() {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return ELF::R_AARCH64_ABS64;
+  case Triple::hexagon:
+    llvm_unreachable("Hexagon is 32-bit, no 64-bit absolute relocation");
   case Triple::riscv64:
   case Triple::riscv32:
     return ELF::R_RISCV_64;
@@ -972,6 +1186,8 @@ uint32_t Relocation::getRelative() {
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return ELF::R_AARCH64_RELATIVE;
+  case Triple::hexagon:
+    return ELF::R_HEX_RELATIVE;
   case Triple::riscv64:
   case Triple::riscv32:
     llvm_unreachable("not implemented");
@@ -1043,6 +1259,9 @@ void Relocation::print(raw_ostream &OS) const {
     break;
   case Triple::aarch64:
     OS << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type);
+    break;
+  case Triple::hexagon:
+    OS << object::getELFRelocationTypeName(ELF::EM_HEXAGON, Type);
     break;
   case Triple::riscv64:
   case Triple::riscv32:
