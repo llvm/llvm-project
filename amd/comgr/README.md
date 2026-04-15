@@ -231,6 +231,43 @@ By default, VFS is turned on.
 * If `AMD_COMGR_SAVE_TEMPS` is set and not "0", VFS support is turned off irrespective
   of `AMD_COMGR_USE_VFS` or the use of `amd_comgr_action_info_set_vfs`.
 
+### Embedded libc++ Headers for HIPRTC
+
+Comgr embeds a subset of libc++ headers to enable HIPRTC programs to use
+standard C++ features without requiring system C++ headers. At runtime, the
+embedded headers are mapped via VFS to clang's default include locations:
+
+* libc++ headers: `<install>/include/c++/v1/`
+* Clang builtin headers: `<resource-dir>/include/`
+
+Because the headers live at the standard clang locations, the clang driver finds
+them automatically — no explicit `-I` flags are needed. The libc++ path is
+injected with `-idirafter`, so system C++ headers (libstdc++ or a host libc++)
+always take priority when available. The embedded headers only serve as a
+fallback for environments without C++ development headers (e.g., driver-only
+installs or minimal containers).
+
+**Supported headers (C++17 or later, no system C library dependencies):**
+* `<type_traits>`, `<limits>`, `<tuple>`, `<cstdint>`, `<cstddef>`
+* `<initializer_list>`
+* `<concepts>` (requires C++20)
+
+**Unsupported headers (require system C headers):**
+
+The following headers require system C library headers (e.g., `<cstring>`,
+`<climits>`) and are not included in the embedded set:
+* `<optional>`, `<variant>` (require `<cstring>` for `std::hash`)
+* `<ratio>` (requires `<climits>`)
+* `<array>`, `<functional>` (require `<cstdlib>`, `<cstring>`)
+
+**Build option:**
+* `COMGR_EMBED_LIBCXX_HEADERS`: Set to `OFF` to disable embedding libc++ headers
+  and reduce library size (default: `ON`).
+
+**Debugging:**
+* Use `AMD_COMGR_SAVE_LLVM_TEMPS=1` to see expanded headers in the `.hipi`
+  preprocessor output file.
+
 Versioning
 ----------
 

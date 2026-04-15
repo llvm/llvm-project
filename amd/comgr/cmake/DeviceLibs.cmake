@@ -95,6 +95,7 @@ add_custom_command(
   DEPENDS bc2h
           ${LLVM_ENABLE_RUNTIMES}
           ${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedResourceDir.cmake
+          ${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedFiles.cmake
           ${RESOURCE_DIRECTORY_DEPENDENCIES}
           ${tool_depends}
           ${embedded_files}

@@ -31,6 +31,12 @@ Extensions (the same license used by LLVM).
 can now be queried with Comgr's metadata APIs.
 - Added support for linking device library files through the use of a Virtual 
 File System (VFS).
+- Added embedded libc++ headers for HIPRTC standard C++ support. A subset of
+  freestanding-safe headers (`<type_traits>`, `<tuple>`, `<cstdint>`, etc.) are
+  embedded at build time and mapped to clang's default include locations via VFS
+  at runtime. The embedded headers are configured as a fallback (`-idirafter`),
+  so system C++ headers take priority when available. Can be disabled with
+  `-DCOMGR_EMBED_LIBCXX_HEADERS=OFF`.
 
 Bug Fixes
 ---------
