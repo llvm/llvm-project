@@ -880,6 +880,13 @@ def err_mmap_module_redefinition : Error<
 def note_mmap_prev_definition : Note<"previously defined here">;
 def err_mmap_umbrella_clash : Error<
   "umbrella for module '%0' already covers this directory">;
+def warn_mmap_duplicate_header_ownership : Warning<
+  "header '%0' is owned by multiple modules">,
+  InGroup<DiagGroup<"duplicate-header-ownership">>, DefaultIgnore;
+def note_mmap_header_owned_by : Note<
+  "header owned by module '%0' here">;
+def note_mmap_header_covered_by_umbrella : Note<
+  "header covered by umbrella for module '%0' here">;
 def err_mmap_module_id : Error<
   "expected a module name or '*'">;
 def err_mmap_expected_library_name : Error<
