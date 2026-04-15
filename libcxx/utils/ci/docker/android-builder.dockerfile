@@ -34,11 +34,6 @@ ARG ANDROID_CLANG_VERSION
 ARG ANDROID_CLANG_PREBUILTS_COMMIT
 ARG ANDROID_SYSROOT_COMMIT
 
-RUN echo "The base image version is: ${BASE_IMAGE_VERSION}"
-RUN echo "The clang version is: ${ANDROID_CLANG_VERSION}"
-RUN echo "The clang prebuilts commit's sha is: ${ANDROID_CLANG_PREBUILTS_COMMIT}"
-RUN echo "The sysroot commit's sha is: ${ANDROID_SYSROOT_COMMIT}"
-
 # Install the Android platform tools (e.g. adb) into /opt/android/sdk.
 RUN <<EOF
   set -e
@@ -53,10 +48,6 @@ EOF
 # this compiler version even after it's removed from HEAD.
 ENV ANDROID_CLANG_VERSION=$ANDROID_CLANG_VERSION
 ENV ANDROID_CLANG_PREBUILTS_COMMIT=$ANDROID_CLANG_PREBUILTS_COMMIT
-RUN echo "The base image version is: ${BASE_IMAGE_VERSION again"
-RUN echo "The clang version is: ${ANDROID_CLANG_VERSION} again"
-RUN echo "The clang prebuilts commit's sha is: ${ANDROID_CLANG_PREBUILTS_COMMIT} again"
-RUN echo "The sysroot commit's sha is: ${ANDROID_SYSROOT_COMMIT} again"
 RUN <<EOF
     set -e
     git clone --filter=blob:none --sparse \
