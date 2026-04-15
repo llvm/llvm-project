@@ -621,7 +621,7 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   // constructor.
   QualType::DestructionKind dtorKind = fieldType.isDestructedType();
   if (needsEHCleanup(dtorKind))
-    cgm.errorNYI(init->getSourceRange(), "call field destructor");
+    pushEHDestroy(dtorKind, lhs.getAddress(), fieldType);
 }
 
 Address CIRGenFunction::emitCXXMemberDataPointerAddress(
