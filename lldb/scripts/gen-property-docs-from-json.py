@@ -76,6 +76,13 @@ def append_property(tree: PropertyTree, prop: Property):
     subtree.items[prop.name] = prop
 
 
+def wrap_inline_code(text: str):
+    fence = "`"
+    if "`" in text:
+        fence = "``"
+    return f"{fence}{text}{fence}"
+
+
 def print_property(f: TextIO, path: str, property: Property):
     # Invoke lldbsetting directive (lldb/docs/_ext/lldb_setting.py)
     f.write(f"```{{lldbsetting}} {path}\n")
@@ -83,7 +90,7 @@ def print_property(f: TextIO, path: str, property: Property):
     f.write(property.description)
     f.write("\n\n")
     if property.default:
-        f.write(f":default: {property.default}\n")
+        f.write(f":default: {wrap_inline_code(property.default)}\n")
     # FIXME: add enumerations (":enum {name}: {description}")
     f.write("```\n")
 
