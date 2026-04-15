@@ -159,13 +159,12 @@ bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
 }
 
 bool runLSROA(Function &F) {
-  BasicBlock &EntryBB = F.getEntryBlock();
   SmallVector<StructuredAllocaInst *> Worklist;
-
-  for (BasicBlock::iterator I = EntryBB.begin(), E = std::prev(EntryBB.end());
-       I != E; ++I) {
-    if (StructuredAllocaInst *SAI = dyn_cast<StructuredAllocaInst>(I))
-      Worklist.push_back(SAI);
+  for (auto &BB : F) {
+    for (auto &I : BB) {
+      if (StructuredAllocaInst *SAI = dyn_cast<StructuredAllocaInst>(&I))
+        Worklist.push_back(SAI);
+    }
   }
 
   bool Changed = false;
