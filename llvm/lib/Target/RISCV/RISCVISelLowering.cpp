@@ -24866,30 +24866,20 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  // Determine which call opcode to use:
-  // - SW_GUARDED_*: Large code model direct calls with cf-protection-branch
-  //   need X7 for landing pad label
-  // - Regular CALL/TAIL: All other cases. Indirect calls use NonX7 register
-  //   classes unconditionally via tablegen patterns.
-  bool HasCFBranch =
-      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
-  bool IsIndirectCall = CLI.CB && CLI.CB->isIndirectCall();
-  bool NeedSWGuarded = getTargetMachine().getCodeModel() == CodeModel::Large &&
-                       HasCFBranch &&
-                       (!IsIndirectCall || CalleeIsLargeExternalSymbol);
-
-  unsigned TailOpc, CallOpc;
-  if (NeedSWGuarded) {
-    TailOpc = RISCVISD::SW_GUARDED_TAIL;
-    CallOpc = RISCVISD::SW_GUARDED_CALL;
-  } else {
-    TailOpc = RISCVISD::TAIL;
-    CallOpc = RISCVISD::CALL;
-  }
+  // Use software guarded branch for large code model non-indirect calls
+  // Tail call to external symbol will have a null CLI.CB and we need another
+  // way to determine the callsite type
+  bool NeedSWGuarded = false;
+  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
+      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
+      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
+    NeedSWGuarded = true;
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(TailOpc, DL, NodeTys, Ops);
+    unsigned CallOpc =
+        NeedSWGuarded ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
+    SDValue Ret = DAG.getNode(CallOpc, DL, NodeTys, Ops);
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
@@ -24897,6 +24887,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     return Ret;
   }
 
+  unsigned CallOpc = NeedSWGuarded ? RISCVISD::SW_GUARDED_CALL : RISCVISD::CALL;
   Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
   if (CLI.CFIType)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
