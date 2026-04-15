@@ -494,7 +494,40 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
         return ""
 
-    def process_doc(doc_file: Tuple[str, str]) -> Tuple[str, Optional[Match[str]]]:
+    def detect_alias_target(check_name: str, content: str) -> Optional[str]:
+        """Return the :doc: target for non-redirect alias pages.
+
+        This recognizes pages that keep their own documentation content, but
+        whose paragraph explicitly states that the current check is an
+        alias of another check.
+        """
+        paragraphs = [
+            re.sub(r"\s+", " ", paragraph.strip())
+            for paragraph in re.split(r"\n\s*\n", content)
+            if paragraph.strip()
+        ]
+
+        self_alias = re.compile(
+            r"^This check is an alias(?: of check| for)\b",
+            re.IGNORECASE,
+        )
+        named_alias = re.compile(
+            rf"^The\s+`?{re.escape(check_name)}(?:\s+check)?`?"
+            rf"(?:\s+check)?\s+is\s+an\s+alias,?\s+please\s+see\b",
+            re.IGNORECASE,
+        )
+
+        for paragraph in paragraphs:
+            if self_alias.search(paragraph) or named_alias.search(paragraph):
+                if match := re.search(r":doc:`[^`<]+?\s*<([^>]+)>`", paragraph):
+                    return match.group(1)
+                if match := re.search(
+                    r"`[^`<]+?\s*<(.+?)\.html(?:#[^>]+)?>`_", paragraph
+                ):
+                    return match.group(1)
+        return None
+
+    def process_doc(doc_file: Tuple[str, str]) -> Tuple[str, Optional[str]]:
         check_name = doc_file[0] + "-" + doc_file[1].replace(".rst", "")
 
         with open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
@@ -504,9 +537,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
                 # Orphan page, don't list it.
                 return "", None
 
-            match = re.search(r".*:http-equiv=refresh: \d+;URL=(.*).html(.*)", content)
-            # Is it a redirect?
-            return check_name, match
+            return check_name, detect_alias_target(check_name, content)
 
     def format_link(doc_file: Tuple[str, str]) -> str:
         check_name, match = process_doc(doc_file)
@@ -522,61 +553,66 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
     def format_link_alias(doc_file: Tuple[str, str]) -> str:
         check_name, match = process_doc(doc_file)
-        if (match or (check_name.startswith("clang-analyzer-"))) and check_name:
-            module = doc_file[0]
-            check_file = doc_file[1].replace(".rst", "")
-            if (
-                not match
-                or match.group(1) == "https://clang.llvm.org/docs/analyzer/checkers"
-            ):
-                title = "Clang Static Analyzer " + check_file
-                # Preserve the anchor in checkers.html from group 2.
-                target = "" if not match else match.group(1) + ".html" + match.group(2)
-                autofix = ""
-                ref_begin = ""
-                ref_end = "_"
-            else:
-                # Match either "../modernize/use-nullptr" or a same-directory
-                # redirect like "prefer-single-char-overloads".
-                redirect_parts = re.search(
-                    r"^(?:\.\./([^/]+)/)?([^/]+)$", match.group(1)
-                )
-                assert redirect_parts
-                redirect_module = redirect_parts[1] or module
-                title = redirect_module + "-" + redirect_parts[2]
-                target = redirect_module + "/" + redirect_parts[2]
-                autofix = has_auto_fix(title)
-                ref_begin = ":doc:"
-                ref_end = ""
+        is_clang_analyzer = check_name.startswith("clang-analyzer-")
+        if not check_name or (not match and not is_clang_analyzer):
+            return ""
 
-            if target:
-                # The checker is just a redirect.
-                return (
-                    "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(ref_begin)s`%(title)s <%(target)s>`%(ref_end)s,%(autofix)s\n"
-                    % {
-                        "check_name": check_name,
-                        "module": module,
-                        "check_file": check_file,
-                        "target": target,
-                        "title": title,
-                        "autofix": autofix,
-                        "ref_begin": ref_begin,
-                        "ref_end": ref_end,
-                    }
-                )
-            else:
-                # The checker is just a alias without redirect.
-                return (
-                    "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(title)s,%(autofix)s\n"
-                    % {
-                        "check_name": check_name,
-                        "module": module,
-                        "check_file": check_file,
-                        "title": title,
-                        "autofix": autofix,
-                    }
-                )
-        return ""
+        module = doc_file[0]
+        check_file = doc_file[1].replace(".rst", "")
+        if is_clang_analyzer:
+            title = "Clang Static Analyzer " + check_file
+            # Clang Static Analyzer aliases still need the external redirect
+            # target so list.rst can link to the upstream analyzer docs.
+            with open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
+                content = doc.read()
+            redirect = re.search(
+                r".*:http-equiv=refresh: \d+;URL=(.*).html(.*)", content
+            )
+            # Preserve the anchor in checkers.html from group 2.
+            target = (
+                "" if not redirect else redirect.group(1) + ".html" + redirect.group(2)
+            )
+            autofix = ""
+            ref_begin = ""
+            ref_end = "_"
+        else:
+            # Match neighbour or current-directory doc targets.
+            redirect_parts = re.search(r"^(?:\.\./([^/]+)/)?([^/]+)$", match)
+            assert redirect_parts
+            redirect_module = redirect_parts[1] or module
+            title = redirect_module + "-" + redirect_parts[2]
+            target = redirect_module + "/" + redirect_parts[2]
+            autofix = has_auto_fix(title)
+            ref_begin = ":doc:"
+            ref_end = ""
+
+        if target:
+            # The checker is just a redirect.
+            return (
+                "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(ref_begin)s`%(title)s <%(target)s>`%(ref_end)s,%(autofix)s\n"
+                % {
+                    "check_name": check_name,
+                    "module": module,
+                    "check_file": check_file,
+                    "target": target,
+                    "title": title,
+                    "autofix": autofix,
+                    "ref_begin": ref_begin,
+                    "ref_end": ref_end,
+                }
+            )
+
+        # The checker is just a alias without redirect.
+        return (
+            "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(title)s,%(autofix)s\n"
+            % {
+                "check_name": check_name,
+                "module": module,
+                "check_file": check_file,
+                "title": title,
+                "autofix": autofix,
+            }
+        )
 
     print("Updating %s..." % filename)
     with open(filename, "w", encoding="utf8", newline="\n") as f:
