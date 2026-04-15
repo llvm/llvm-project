@@ -1021,24 +1021,8 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
 }
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
-  CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
-  mlir::OpBuilder::InsertPoint scopeBegin;
-
-  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
-                       [&](mlir::OpBuilder &b, mlir::Location loc) {
-                         scopeBegin = b.saveInsertionPoint();
-                       });
-
-  {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(scopeBegin);
-    CIRGenFunction::LexicalScope lexScope{cgf, scopeLoc,
-                                          builder.getInsertionBlock()};
-
-    CIRGenFunction::FullExprCleanupScope fullExprScope(cgf, e->getSubExpr());
-    Visit(e->getSubExpr());
-  }
+  CIRGenFunction::FullExprCleanupScope fullExprScope(cgf, e->getSubExpr());
+  Visit(e->getSubExpr());
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {

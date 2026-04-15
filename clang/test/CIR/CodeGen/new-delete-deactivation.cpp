@@ -23,30 +23,29 @@ A *deact_simple() { return new A(makeB()); }
 
 // CIR-LABEL: cir.func {{.*}} @_Z12deact_simplev() -> !cir.ptr<!rec_A> {
 // CIR:   %[[RETVAL:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__retval"]
-// CIR:   cir.scope {
-// CIR:     %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__new_result"]
-// CIR:     %[[TMP:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp0"]
-// CIR:     %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
-// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:   %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__new_result"]
+// CIR:   %[[TMP:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp0"]
+// CIR:   %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
+// CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[TRUE:.*]] = cir.const #true
+// CIR:     cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     %[[MAKEB:.*]] = cir.call @_Z5makeBv() : () -> !rec_B
+// CIR:     cir.store{{.*}} %[[MAKEB]], %[[TMP]] : !rec_B, !cir.ptr<!rec_B>
 // CIR:     cir.cleanup.scope {
-// CIR:       %[[TRUE:.*]] = cir.const #true
-// CIR:       cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:       %[[MAKEB:.*]] = cir.call @_Z5makeBv() : () -> !rec_B
-// CIR:       cir.store{{.*}} %[[MAKEB]], %[[TMP]] : !rec_B, !cir.ptr<!rec_B>
-// CIR:       cir.cleanup.scope {
-// CIR:         %[[CONV:.*]] = cir.call @_ZN1BcviEv(%[[TMP]])
-// CIR:         cir.call @_ZN1AC1Ei({{.*}})
-// CIR:         %[[FALSE:.*]] = cir.const #false
-// CIR:         cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:       } cleanup all {
-// CIR:         cir.call @_ZN1BD1Ev(%[[TMP]]) nothrow
-// CIR:       }
-// CIR:     } cleanup eh {
-// CIR:       %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
-// CIR:       cir.if %[[IS_ACTIVE]] {
-// CIR:         cir.call @_ZdlPv(%[[PTR]]) nothrow {builtin}
-// CIR:       }
+// CIR:       %[[CONV:.*]] = cir.call @_ZN1BcviEv(%[[TMP]])
+// CIR:       cir.call @_ZN1AC1Ei({{.*}})
+// CIR:       %[[FALSE:.*]] = cir.const #false
+// CIR:       cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     } cleanup all {
+// CIR:       cir.call @_ZN1BD1Ev(%[[TMP]]) nothrow
 // CIR:     }
+// CIR:   } cleanup eh {
+// CIR:     %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:     cir.if %[[IS_ACTIVE]] {
+// CIR:       cir.call @_ZdlPv(%[[PTR]]) nothrow {builtin}
+// CIR:     }
+// CIR:   }
 
 // LLVM-LABEL: define dso_local ptr @_Z12deact_simplev() {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[TMP:.*]] = alloca %struct.B
@@ -107,20 +106,18 @@ A *deact_if(bool cond) {
 
 // CIR-LABEL: cir.func {{.*}} @_Z8deact_ifb
 // CIR:   cir.if {{.*}} {
-// CIR:     cir.scope {
-// CIR:       %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
-// CIR:       %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
-// CIR:       cir.cleanup.scope {
-// CIR:         %[[TRUE:.*]] = cir.const #true
-// CIR:         cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:         cir.call @_ZN1AC1Ei({{.*}})
-// CIR:         %[[FALSE:.*]] = cir.const #false
-// CIR:         cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:       } cleanup eh {
-// CIR:         %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
-// CIR:         cir.if %[[IS_ACTIVE]] {
-// CIR:           cir.call @_ZdlPv(%[[PTR]]) nothrow {builtin}
-// CIR:         }
+// CIR:     %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
+// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[TRUE:.*]] = cir.const #true
+// CIR:       cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       cir.call @_ZN1AC1Ei({{.*}})
+// CIR:       %[[FALSE:.*]] = cir.const #false
+// CIR:       cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     } cleanup eh {
+// CIR:       %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:       cir.if %[[IS_ACTIVE]] {
+// CIR:         cir.call @_ZdlPv(%[[PTR]]) nothrow {builtin}
 // CIR:       }
 // CIR:     }
 // CIR:   }
@@ -165,20 +162,18 @@ A *deact_if(bool cond) {
 A *deact_ternary(bool cond) { return (new A(makeB()), cond) ? nullptr : nullptr; }
 
 // CIR-LABEL: cir.func {{.*}} @_Z13deact_ternaryb
-// CIR:   cir.scope {
-// CIR:     %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
-// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
-// CIR:     cir.cleanup.scope {
-// CIR:       %[[TRUE:.*]] = cir.const #true
-// CIR:       cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:       cir.call @_ZN1AC1Ei({{.*}})
-// CIR:       %[[FALSE:.*]] = cir.const #false
-// CIR:       cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:     } cleanup eh {
-// CIR:       %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
-// CIR:       cir.if %[[IS_ACTIVE]] {
-// CIR:         cir.call @_ZdlPv(%[[PTR]]) nothrow {builtin}
-// CIR:       }
+// CIR:   %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
+// CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[TRUE:.*]] = cir.const #true
+// CIR:     cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     cir.call @_ZN1AC1Ei({{.*}})
+// CIR:     %[[FALSE:.*]] = cir.const #false
+// CIR:     cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:   } cleanup eh {
+// CIR:     %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:     cir.if %[[IS_ACTIVE]] {
+// CIR:       cir.call @_ZdlPv(%[[PTR]]) nothrow {builtin}
 // CIR:     }
 // CIR:   }
 
@@ -302,22 +297,20 @@ A *deact_switch(int kind) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z12deact_switchi
+// CIR:   %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
 // CIR:   cir.switch({{.*}}) {
 // CIR:     cir.case(equal, [#cir.int<1> : !s32i]) {
-// CIR:       cir.scope {
-// CIR:         %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
-// CIR:         %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
-// CIR:         cir.cleanup.scope {
-// CIR:           %[[TRUE:.*]] = cir.const #true
-// CIR:           cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:           cir.call @_ZN1AC1Ei({{.*}})
-// CIR:           %[[FALSE:.*]] = cir.const #false
-// CIR:           cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:         } cleanup eh {
-// CIR:           %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
-// CIR:           cir.if %[[IS_ACTIVE]] {
-// CIR:             cir.call @_ZdlPv(%[[PTR]]) nothrow {builtin}
-// CIR:           }
+// CIR:       %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:       cir.cleanup.scope {
+// CIR:         %[[TRUE:.*]] = cir.const #true
+// CIR:         cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:         cir.call @_ZN1AC1Ei({{.*}})
+// CIR:         %[[FALSE:.*]] = cir.const #false
+// CIR:         cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       } cleanup eh {
+// CIR:         %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:         cir.if %[[IS_ACTIVE]] {
+// CIR:           cir.call @_ZdlPv(%[[PTR]]) nothrow {builtin}
 // CIR:         }
 // CIR:       }
 // CIR:     }
