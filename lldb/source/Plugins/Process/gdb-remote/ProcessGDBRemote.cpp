@@ -6018,10 +6018,25 @@ CommandObject *ProcessGDBRemote::GetPluginCommandObject() {
 }
 
 void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(bool enable) {
-  GetBreakpointSiteList().ForEach([this, enable](BreakpointSite *bp_site) {
+  Log *log = GetLog(GDBRLog::Process);
+  bool is_expr = !enable && GetModIDRef().IsRunningExpression();
+
+  GetBreakpointSiteList().ForEach([this, enable, is_expr,
+                                   log](BreakpointSite *bp_site) {
     if (bp_site->IsEnabled() &&
         (bp_site->GetType() == BreakpointSite::eSoftware ||
          bp_site->GetType() == BreakpointSite::eExternal)) {
+      // During expression evaluation, retain internal breakpoints (e.g. the
+      // _start return trap) in the forked child so it dies deterministically
+      // on SIGTRAP rather than executing _start with a corrupted stack.
+      if (is_expr && bp_site->IsInternal()) {
+        LLDB_LOG(log,
+                 "DidForkSwitchSoftwareBreakpoints: retaining internal "
+                 "breakpoint at {0:x} in forked child during expression "
+                 "evaluation",
+                 bp_site->GetLoadAddress());
+        return;
+      }
       m_gdb_comm.SendGDBStoppointTypePacket(
           eBreakpointSoftware, enable, bp_site->GetLoadAddress(),
           GetSoftwareBreakpointTrapOpcode(bp_site), GetInterruptTimeout());

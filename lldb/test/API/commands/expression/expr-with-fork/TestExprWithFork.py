@@ -44,6 +44,19 @@ class ExprWithForkTestCase(TestBase):
             "fork_and_return(42, true)", result_type="int", result_value="42"
         )
 
+    @skipIfWindows
+    @add_test_categories(["fork"])
+    def test_expr_with_fork_trap(self):
+        """Test that expression evaluation handles a child process that triggers a SIGTRAP."""
+        self.build()
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
+
+        self.expect_expr(
+            "fork_and_return_trap(42)", result_type="int", result_value="1"
+        )
+
     # --- follow-fork-mode child override during expression evaluation ---
 
     @skipIfWindows
