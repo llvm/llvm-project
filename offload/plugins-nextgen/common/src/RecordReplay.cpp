@@ -266,9 +266,6 @@ Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
 }
 
 Error NativeRecordReplayTy::recordGlobals(const std::string &Filename) {
-  uint64_t TotalSize = 0;
-  uint32_t NumGlobals = 0;
-
   AllocationLock.lock();
   // Copy the globals into a local vector so we can read it safely from this
   // thread. This vector should have a few entries in general. No need to lock
@@ -276,6 +273,8 @@ Error NativeRecordReplayTy::recordGlobals(const std::string &Filename) {
   SmallVector<GlobalEntryTy> Globals = GlobalEntries;
   AllocationLock.unlock();
 
+  uint64_t TotalSize = sizeof(uint32_t);
+  uint32_t NumGlobals = 0;
   for (auto &Global : Globals) {
     if (!Global.Size)
       continue;
@@ -315,10 +314,10 @@ Error NativeRecordReplayTy::recordGlobals(const std::string &Filename) {
     BufferPtr = utils::advancePtr(BufferPtr, Global.Size);
   }
   assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
-         "Buffer over/under-filled.");
+         "Buffer over or under-filled.");
   assert(TotalSize ==
              utils::getPtrDiff(BufferPtr, GlobalsMB->get()->getBufferStart()) &&
-         "Buffer size mismatch");
+         "Buffer size mismatch.");
 
   StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), TotalSize);
   std::error_code EC;
