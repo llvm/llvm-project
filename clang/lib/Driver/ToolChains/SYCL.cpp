@@ -19,7 +19,7 @@ SYCLInstallationDetector::SYCLInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
     const llvm::opt::ArgList &Args)
     : D(D) {
-  // Detect the presence of the SYCL runtime library (libLLVMSYCL.so) in the
+  // Detect the presence of the SYCL runtime library in the
   // filesystem. This is used to determine whether a usable SYCL installation
   // is available for the current driver invocation.
   StringRef SysRoot = D.SysRoot;
@@ -27,9 +27,22 @@ SYCLInstallationDetector::SYCLInstallationDetector(
   SmallString<128> LibPath(DriverDir);
   llvm::sys::path::append(LibPath, "..", "lib", HostTriple.str(),
                           "libLLVMSYCL.so");
+  // Flat lib path for LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF builds,
+  // where the library is installed directly in lib/ with no triple subdir.
+  SmallString<128> FlatLibPath(DriverDir);
+  llvm::sys::path::append(FlatLibPath, "..", "lib", "libLLVMSYCL.so");
+
   if (DriverDir.starts_with(SysRoot) &&
-      (Args.hasArg(options::OPT_fsycl) || D.getVFS().exists(LibPath))) {
-    llvm::sys::path::append(DriverDir, "..", "lib", HostTriple.str());
+      Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
+    if (D.getVFS().exists(LibPath))
+      // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON: library is in lib/<triple>/
+      llvm::sys::path::append(DriverDir, "..", "lib", HostTriple.str());
+    else if (D.getVFS().exists(FlatLibPath))
+      // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF: library is in lib/
+      llvm::sys::path::append(DriverDir, "..", "lib");
+    else
+      // Neither path exists — broken install, leave SYCLRTLibPath unset
+      return;
     SYCLRTLibPath = DriverDir;
   }
 }
