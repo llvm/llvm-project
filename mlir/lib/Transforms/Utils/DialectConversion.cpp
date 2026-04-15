@@ -1139,7 +1139,7 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   DenseSet<UnrealizedConversionCastOp> patternMaterializations;
 
   /// A mapping for looking up metadata of unresolved materializations.
-  DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationInfo>
+  llvm::MapVector<UnrealizedConversionCastOp, UnresolvedMaterializationInfo>
       unresolvedMaterializations;
 
   /// The current type converter, or nullptr if no type converter is currently
@@ -3243,8 +3243,8 @@ void mlir::reconcileUnrealizedCasts(
 
 namespace mlir {
 static void reconcileUnrealizedCasts(
-    const DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationInfo>
-        &castOps,
+    const llvm::MapVector<UnrealizedConversionCastOp,
+                          UnresolvedMaterializationInfo> &castOps,
     SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
   reconcileUnrealizedCastsImpl(
       castOps.keys(),
@@ -3486,8 +3486,9 @@ LogicalResult OperationConverter::applyConversion(ArrayRef<Operation *> ops) {
   // Reconcile all UnrealizedConversionCastOps that were inserted by the
   // dialect conversion frameworks. (Not the ones that were inserted by
   // patterns.)
-  const DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationInfo>
-      &materializations = rewriterImpl.unresolvedMaterializations;
+  const llvm::MapVector<UnrealizedConversionCastOp,
+                        UnresolvedMaterializationInfo> &materializations =
+      rewriterImpl.unresolvedMaterializations;
   SmallVector<UnrealizedConversionCastOp> remainingCastOps;
   reconcileUnrealizedCasts(materializations, &remainingCastOps);
 

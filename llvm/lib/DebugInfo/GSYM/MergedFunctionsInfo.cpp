@@ -9,7 +9,7 @@
 #include "llvm/DebugInfo/GSYM/MergedFunctionsInfo.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 
 using namespace llvm;
 using namespace gsym;
@@ -33,14 +33,14 @@ llvm::Error MergedFunctionsInfo::encode(FileWriter &Out) const {
 }
 
 llvm::Expected<MergedFunctionsInfo>
-MergedFunctionsInfo::decode(DataExtractor &Data, uint64_t BaseAddr) {
+MergedFunctionsInfo::decode(GsymDataExtractor &Data, uint64_t BaseAddr) {
   MergedFunctionsInfo MFI;
   auto FuncExtractorsOrError = MFI.getFuncsDataExtractors(Data);
 
   if (!FuncExtractorsOrError)
     return FuncExtractorsOrError.takeError();
 
-  for (DataExtractor &FuncData : *FuncExtractorsOrError) {
+  for (GsymDataExtractor &FuncData : *FuncExtractorsOrError) {
     llvm::Expected<FunctionInfo> FI = FunctionInfo::decode(FuncData, BaseAddr);
     if (!FI)
       return FI.takeError();
@@ -50,9 +50,9 @@ MergedFunctionsInfo::decode(DataExtractor &Data, uint64_t BaseAddr) {
   return MFI;
 }
 
-llvm::Expected<std::vector<DataExtractor>>
-MergedFunctionsInfo::getFuncsDataExtractors(DataExtractor &Data) {
-  std::vector<DataExtractor> Results;
+llvm::Expected<std::vector<GsymDataExtractor>>
+MergedFunctionsInfo::getFuncsDataExtractors(GsymDataExtractor &Data) {
+  std::vector<GsymDataExtractor> Results;
   uint64_t Offset = 0;
 
   // Ensure there is enough data to read the function count.
@@ -82,8 +82,7 @@ MergedFunctionsInfo::getFuncsDataExtractors(DataExtractor &Data) {
           i, Offset, FnSize);
 
     // Extract the function data.
-    Results.emplace_back(Data.getData().substr(Offset, FnSize),
-                         Data.isLittleEndian());
+    Results.emplace_back(Data, Offset, FnSize);
 
     Offset += FnSize;
   }

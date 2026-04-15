@@ -15,7 +15,7 @@
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Support/HTTP/HTTPClient.h"
+#include "llvm/HTTP/HTTPClient.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -19,10 +19,6 @@ static bool isRegDef(const MachineOperand &MO) {
   return MO.isReg() && MO.isDef();
 }
 
-static bool isPhysRegDef(const MachineOperand &MO) {
-  return isRegDef(MO) && MO.getReg().isPhysical();
-}
-
 void SystemZPreRASchedStrategy::initializeLatencyReduction() {
   // Enable latency reduction for a region that has a considerable amount of
   // data sequences that should be interlaved. These are SUs that only have
@@ -83,16 +79,6 @@ bool SystemZPreRASchedStrategy::definesCmp0Src(const MachineInstr *MI,
   return false;
 }
 
-static int biasPhysRegExtra(const SUnit *SU) {
-  if (int Res = biasPhysReg(SU, /*isTop=*/false))
-    return Res;
-
-  // Also recognize Load Address. Most of these are with an FI operand.
-  const MachineInstr *MI = SU->getInstr();
-  return MI->getNumOperands() && !MI->isCopy() &&
-         isPhysRegDef(MI->getOperand(0));
-}
-
 bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
                                              SchedCandidate &TryCand,
                                              SchedBoundary *Zone) const {
@@ -105,15 +91,8 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
   }
 
   // Bias physreg defs and copies to their uses and definitions respectively.
-  int TryCandPRegBias = biasPhysRegExtra(TryCand.SU);
-  int CandPRegBias = biasPhysRegExtra(Cand.SU);
-  if (tryGreater(TryCandPRegBias, CandPRegBias, TryCand, Cand, PhysReg))
+  if (tryBiasPhysRegs(TryCand, Cand, Zone, /*BiasPRegsExtra=*/true))
     return TryCand.Reason != NoCand;
-  if (TryCandPRegBias && CandPRegBias) {
-    // Both biased same way.
-    tryGreater(TryCand.SU->NodeNum, Cand.SU->NodeNum, TryCand, Cand, NodeOrder);
-    return TryCand.Reason != NoCand;
-  }
 
   // Don't extend the scheduled latency in regions with many nodes in data
   // sequences, or for (single block loop) regions that are acyclically

@@ -171,7 +171,9 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
             "'%s' is not device or managed or shared data and is not definable in a device subprogram"_err_en_US,
             original);
       }
-    } else if (!isOwnedByDeviceCode) {
+    } else if (!isOwnedByDeviceCode &&
+        !scope.context().languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaUnified)) {
       return BlameSymbol(at,
           "'%s' is a host variable and is not definable in a device subprogram"_err_en_US,
           original);

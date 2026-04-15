@@ -58,6 +58,14 @@ define void @pli_b_store_i32(ptr %p) {
   ret void
 }
 
+define i32 @plui_h_i32(ptr %p) {
+; CHECK-LABEL: plui_h_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    plui.h a0, 511
+; CHECK-NEXT:    ret
+  ret i32 u0x7fc07fc0
+}
+
 define i32 @pack_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: pack_i32:
 ; CHECK:       # %bb.0:
@@ -182,16 +190,16 @@ define i64 @cls_i64(i64 %x) {
 ; CHECK-LABEL: cls_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srai a2, a1, 31
-; CHECK-NEXT:    bne a1, a2, .LBB15_2
+; CHECK-NEXT:    bne a1, a2, .LBB16_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    clz a0, a0
 ; CHECK-NEXT:    addi a0, a0, 32
-; CHECK-NEXT:    j .LBB15_3
-; CHECK-NEXT:  .LBB15_2:
+; CHECK-NEXT:    j .LBB16_3
+; CHECK-NEXT:  .LBB16_2:
 ; CHECK-NEXT:    xor a1, a1, a2
 ; CHECK-NEXT:    clz a0, a1
-; CHECK-NEXT:  .LBB15_3:
+; CHECK-NEXT:  .LBB16_3:
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    wsubu a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -209,7 +217,7 @@ define i64 @cls_i64_2(i64 %x) {
 ; CHECK-NEXT:    xor a1, a1, a2
 ; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    nsrli a1, a0, 31
-; CHECK-NEXT:    bnez a1, .LBB16_2
+; CHECK-NEXT:    bnez a1, .LBB17_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, 1
@@ -217,7 +225,7 @@ define i64 @cls_i64_2(i64 %x) {
 ; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB16_2:
+; CHECK-NEXT:  .LBB17_2:
 ; CHECK-NEXT:    clz a0, a1
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    ret

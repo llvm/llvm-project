@@ -4427,7 +4427,15 @@ const char *StyleOptionHelpDescription =
     "4. \"{key: value, ...}\" to set specific parameters, e.g.:\n"
     "   --style=\"{BasedOnStyle: llvm, IndentWidth: 8}\"";
 
-static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
+static FormatStyle::LanguageKind getLanguageByFileName(StringRef &FileName) {
+  static constexpr std::array<llvm::StringLiteral, 2> TemplateSuffixes{
+      ".in",
+      ".template",
+  };
+  for (auto Suffix : TemplateSuffixes)
+    if (FileName.consume_back(Suffix))
+      break;
+
   if (FileName.ends_with(".c"))
     return FormatStyle::LK_C;
   if (FileName.ends_with(".java"))

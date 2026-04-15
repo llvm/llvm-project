@@ -332,3 +332,21 @@ gpu.module @xevm_module{
     gpu.return
   }
 }
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: gpu.func @convert_layout
+// CHECK-SAME: %[[ARG0:.*]]: !xegpu.mem_desc<32x128xf32>
+  gpu.func @convert_layout(%arg0: !xegpu.mem_desc<32x128xf32>) {
+    // CHECK: %[[C0:.*]] = arith.constant 0 : index
+    %c0 = arith.constant 0 : index
+    // CHECK: %[[V0:.*]] = xegpu.load_matrix %[[ARG0]][%[[C0]], %[[C0]]]
+    // CHECK-SAME: layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>
+    %1 = xegpu.load_matrix %arg0[%c0, %c0] : !xegpu.mem_desc<32x128xf32>, index, index -> vector<32x128xf32>
+    %2 = xegpu.convert_layout %1
+       <{input_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>,
+        target_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>}>
+       : vector<32x128xf32>
+    gpu.return
+  }
+}

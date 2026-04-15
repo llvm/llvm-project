@@ -80,28 +80,38 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
   }
 
   if (STI.hasFeature(RISCV::FeatureStdExtP) && !isInt<12>(Val)) {
-    // Check if the immediate is packed i8 or i10
-    int32_t Bit63To32 = Val >> 32;
+    unsigned Width = 64;
+
     int32_t Bit31To0 = Val;
-    int16_t Bit31To16 = Bit31To0 >> 16;
+    if (!IsRV64 || int32_t(Val >> 32) == Bit31To0)
+      Width = 32;
+
     int16_t Bit15To0 = Bit31To0;
-    int8_t Bit15To8 = Bit15To0 >> 8;
+    if (Width == 32 && int16_t(Bit31To0 >> 16) == Bit15To0)
+      Width = 16;
+
     int8_t Bit7To0 = Bit15To0;
-    if (!IsRV64 || Bit63To32 == Bit31To0) {
-      if (IsRV64 && isInt<10>(Bit63To32)) {
-        Res.emplace_back(RISCV::PLI_W, Bit63To32);
-        return;
-      }
-      if (Bit31To16 == Bit15To0) {
-        if (isInt<10>(Bit31To16)) {
-          Res.emplace_back(RISCV::PLI_H, Bit31To16);
-          return;
-        }
-        if (Bit15To8 == Bit7To0) {
-          Res.emplace_back(RISCV::PLI_B, Bit15To8);
-          return;
-        }
-      }
+    if (Width == 16 && int8_t(Bit15To0 >> 8) == Bit7To0) {
+      Res.emplace_back(RISCV::PLI_B, Bit7To0);
+      return;
+    }
+
+    if (Width == 16 && isInt<10>(Bit15To0)) {
+      Res.emplace_back(RISCV::PLI_H, Bit15To0);
+      return;
+    }
+    if (Width == 16 && isShiftedInt<10, 6>(Bit15To0)) {
+      Res.emplace_back(RISCV::PLUI_H, Bit15To0 >> 6);
+      return;
+    }
+
+    if (Width == 32 && isInt<10>(Bit31To0)) {
+      Res.emplace_back(RISCV::PLI_W, Bit31To0);
+      return;
+    }
+    if (Width == 32 && isShiftedInt<10, 22>(Bit31To0)) {
+      Res.emplace_back(RISCV::PLUI_W, Bit31To0 >> 22);
+      return;
     }
   }
 
@@ -592,6 +602,8 @@ OpndKind Inst::getOpndKind() const {
   case RISCV::PLI_B:
   case RISCV::PLI_H:
   case RISCV::PLI_W:
+  case RISCV::PLUI_H:
+  case RISCV::PLUI_W:
     return RISCVMatInt::Imm;
   case RISCV::ADD_UW:
     return RISCVMatInt::RegX0;

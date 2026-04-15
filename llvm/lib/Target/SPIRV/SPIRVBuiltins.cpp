@@ -1327,12 +1327,35 @@ static bool generateRelationalInst(const SPIRV::IncomingCall *Call,
   std::tie(CompareRegister, RelationType) =
       buildBoolRegister(MIRBuilder, Call->ReturnType, GR);
 
+  // OpAny/OpAll require a boolean vector input, but OpenCL any()/all()
+  // builtins receive integer vectors. Convert via OpINotEqual against zero.
+  SmallVector<Register> Arguments(Call->Arguments.begin(),
+                                  Call->Arguments.end());
+  if ((Opcode == SPIRV::OpAny || Opcode == SPIRV::OpAll) &&
+      !GR->isScalarOrVectorOfType(Arguments[0], SPIRV::OpTypeBool)) {
+    SPIRVTypeInst ArgType = GR->getSPIRVTypeForVReg(Arguments[0]);
+    unsigned NumElts = ArgType->getOperand(2).getImm();
+    SPIRVTypeInst BoolVecTy = GR->getOrCreateSPIRVVectorType(
+        GR->getOrCreateSPIRVBoolType(MIRBuilder, /*EmitIR=*/true), NumElts,
+        MIRBuilder, /*EmitIR=*/true);
+    Register ZeroReg =
+        GR->getOrCreateConsIntVector(uint64_t(0), MIRBuilder, ArgType,
+                                     /*EmitIR=*/true);
+    Register BoolVecReg = createVirtualRegister(BoolVecTy, GR, MIRBuilder);
+    MIRBuilder.buildInstr(SPIRV::OpINotEqual)
+        .addDef(BoolVecReg)
+        .addUse(GR->getSPIRVTypeID(BoolVecTy))
+        .addUse(Arguments[0])
+        .addUse(ZeroReg);
+    Arguments[0] = BoolVecReg;
+  }
+
   // Build relational instruction.
   auto MIB = MIRBuilder.buildInstr(Opcode)
                  .addDef(CompareRegister)
                  .addUse(GR->getSPIRVTypeID(RelationType));
 
-  for (auto Argument : Call->Arguments)
+  for (auto Argument : Arguments)
     MIB.addUse(Argument);
 
   // Build select instruction.

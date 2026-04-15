@@ -21,12 +21,12 @@
 #define HEX64(v) llvm::format_hex(v, 18)
 
 namespace llvm {
-class DataExtractor;
 class raw_ostream;
 
 namespace gsym {
 
 class FileWriter;
+class GsymDataExtractor;
 
 /// AddressRange objects are encoded and decoded to be relative to a base
 /// address. This will be the FunctionInfo's start address if the AddressRange
@@ -37,7 +37,7 @@ class FileWriter;
 /// encoded addresses easy to relocate as we just need to relocate one base
 /// address.
 /// @{
-LLVM_ABI AddressRange decodeRange(DataExtractor &Data, uint64_t BaseAddr,
+LLVM_ABI AddressRange decodeRange(GsymDataExtractor &Data, uint64_t BaseAddr,
                                   uint64_t &Offset);
 LLVM_ABI void encodeRange(const AddressRange &Range, FileWriter &O,
                           uint64_t BaseAddr);
@@ -49,13 +49,13 @@ LLVM_ABI void encodeRange(const AddressRange &Range, FileWriter &O,
 /// \param Data The binary stream to read the data from.
 ///
 /// \param Offset The byte offset within \a Data.
-LLVM_ABI void skipRange(DataExtractor &Data, uint64_t &Offset);
+LLVM_ABI void skipRange(GsymDataExtractor &Data, uint64_t &Offset);
 
 /// Address ranges are decoded and encoded to be relative to a base address.
 /// See the AddressRange comment for the encode and decode methods for full
 /// details.
 /// @{
-LLVM_ABI void decodeRanges(AddressRanges &Ranges, DataExtractor &Data,
+LLVM_ABI void decodeRanges(AddressRanges &Ranges, GsymDataExtractor &Data,
                            uint64_t BaseAddr, uint64_t &Offset);
 LLVM_ABI void encodeRanges(const AddressRanges &Ranges, FileWriter &O,
                            uint64_t BaseAddr);
@@ -69,7 +69,7 @@ LLVM_ABI void encodeRanges(const AddressRanges &Ranges, FileWriter &O,
 /// \param Offset The byte offset within \a Data.
 ///
 /// \returns The number of address ranges that were skipped.
-LLVM_ABI uint64_t skipRanges(DataExtractor &Data, uint64_t &Offset);
+LLVM_ABI uint64_t skipRanges(GsymDataExtractor &Data, uint64_t &Offset);
 
 } // namespace gsym
 

@@ -1005,13 +1005,21 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
         Add, Builder.CreateBinaryIntrinsic(
                  Intrinsic::usub_sat, X, ConstantInt::get(Add.getType(), -*C)));
 
-  // Fold (add (zext (add X, -1)), 1) -> (zext X) if X is non-zero.
-  // TODO: There's a general form for any constant on the outer add.
-  if (C->isOne()) {
-    if (match(Op0, m_ZExt(m_Add(m_Value(X), m_AllOnes())))) {
-      const SimplifyQuery Q = SQ.getWithInstruction(&Add);
-      if (llvm::isKnownNonZero(X, Q))
-        return new ZExtInst(X, Ty);
+  // Fold (add (zext (add X, -C)), C) -> (zext X) if X u>= C.
+  // Truncate C to the narrow type to avoid mismatched width comparisons.
+  {
+    const APInt *InnerC;
+    if (match(Op0, m_ZExt(m_Add(m_Value(X), m_APIntAllowPoison(InnerC))))) {
+      unsigned NarrowBW = InnerC->getBitWidth();
+      if (C->isIntN(NarrowBW)) {
+        APInt NarrowC = C->trunc(NarrowBW);
+        const SimplifyQuery Q = SQ.getWithInstruction(&Add);
+        if (*InnerC == -NarrowC &&
+            (NarrowC.isOne()
+                 ? llvm::isKnownNonZero(X, Q)
+                 : computeKnownBits(X, &Add).getMinValue().uge(NarrowC)))
+          return new ZExtInst(X, Ty);
+      }
     }
   }
 

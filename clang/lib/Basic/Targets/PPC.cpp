@@ -59,6 +59,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasP9Vector = true;
     } else if (Feature == "+power10-vector") {
       HasP10Vector = true;
+    } else if (Feature == "+future-vector") {
+      HasFutureVector = true;
     } else if (Feature == "+pcrelative-memops") {
       HasPCRelativeMemops = true;
     } else if (Feature == "+spe" || Feature == "+efpu2") {
@@ -434,6 +436,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__POWER10_VECTOR__");
   if (HasPCRelativeMemops)
     Builder.defineMacro("__PCREL__");
+  if (HasFutureVector)
+    Builder.defineMacro("__FUTURE_VECTOR__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");

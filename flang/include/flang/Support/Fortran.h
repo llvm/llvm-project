@@ -88,7 +88,7 @@ ENUM_CLASS(IgnoreTKR,
     Kind, // K - don't check kind
     Rank, // R - don't check ranks
     Device, // D - don't check host/device residence
-    Managed, // M - don't check managed storage
+    Managed, // M - don't check managed/unified storage
     Contiguous, // C - don't check for storage sequence association with a
                 // potentially non-contiguous object
     Pointer) // P - ignore pointer and allocatable matching

@@ -40,6 +40,7 @@ protected:
 
 public:
   static bool EnableFunctionCalls;
+  static bool EnableObjectLinking;
   static bool EnableLowerModuleLDS;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

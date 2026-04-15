@@ -131,3 +131,20 @@ mlir::Value fir::integerCast(const fir::LLVMTypeConverter &converter,
   }
   return val;
 }
+
+std::optional<bool> fir::isNewAllocationResult(mlir::OpResult result) {
+  if (!result)
+    return std::nullopt;
+  auto interface =
+      llvm::dyn_cast<mlir::MemoryEffectOpInterface>(result.getOwner());
+  if (!interface)
+    return std::nullopt;
+  llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
+  interface.getEffects(effects);
+  for (mlir::MemoryEffects::EffectInstance &e : effects) {
+    if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
+        e.getValue() && e.getValue() == result)
+      return true;
+  }
+  return false;
+}

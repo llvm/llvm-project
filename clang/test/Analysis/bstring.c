@@ -539,7 +539,7 @@ void nocrash_on_locint_offset(void *addr, void* from, struct S s) {
 void nocrash_on_empty_struct_memcpy(void) {
   struct {} a[10];
   __builtin_memcpy(&a[2], a, 2); // no-crash
-#if !defined(_WIN32)
+#if !defined(_WIN32) || defined(__MINGW32__)
   // expected-warning@-2 {{'memcpy' will always overflow; destination buffer has size 0, but size argument is 2}}
   // expected-warning@-3 {{Memory copy function overflows the destination buffer}}
 #endif

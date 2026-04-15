@@ -26,7 +26,7 @@ static void writeTimestampFile(StringRef TimestampFile) {
 }
 
 void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
-                           time_t PruneAfter) {
+                           time_t PruneAfter, bool PruneTopLevel) {
   if (PruneInterval <= 0 || PruneAfter <= 0)
     return;
 
@@ -95,7 +95,8 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     // If we don't have a directory, try to prune it as a file in the root.
     if (!llvm::sys::fs::is_directory(Dir->path())) {
-      TryPruneFile(Dir->path());
+      if (PruneTopLevel)
+        TryPruneFile(Dir->path());
       continue;
     }
 

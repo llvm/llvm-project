@@ -47,6 +47,8 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -863,10 +865,10 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
     }
     // Report a gap in the table.
     if (Offset < ContributionHeader) {
-      OS << format("0x%8.8" PRIx64 ": Gap, length = ", Offset);
+      OS << formatv("{0:x8}: Gap, length = ", Offset);
       OS << (ContributionHeader - Offset) << "\n";
     }
-    OS << format("0x%8.8" PRIx64 ": ", ContributionHeader);
+    OS << formatv("{0:x8}: ", ContributionHeader);
     // In DWARF v5 the contribution size in the descriptor does not equal
     // the originally encoded length (it does not contain the length of the
     // version field and the padding, a total of 4 bytes). Add them back in
@@ -878,19 +880,20 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
     Offset = Contribution->Base;
     unsigned EntrySize = Contribution->getDwarfOffsetByteSize();
     while (Offset - Contribution->Base < Contribution->Size) {
-      OS << format("0x%8.8" PRIx64 ": ", Offset);
+      OS << formatv("{0:x8}: ", Offset);
       uint64_t StringOffset =
           StrOffsetExt.getRelocatedValue(EntrySize, &Offset);
-      OS << format("%0*" PRIx64 " ", OffsetDumpWidth, StringOffset);
+      OS << formatv("{0:x-} ", fmt_align(StringOffset, AlignStyle::Right,
+                                         OffsetDumpWidth, '0'));
       const char *S = StrData.getCStr(&StringOffset);
       if (S)
-        OS << format("\"%s\"", S);
+        OS << formatv("\"{0}\"", S);
       OS << "\n";
     }
   }
   // Report a gap at the end of the table.
   if (Offset < SectionSize) {
-    OS << format("0x%8.8" PRIx64 ": Gap, length = ", Offset);
+    OS << formatv("{0:x8}: Gap, length = ", Offset);
     OS << (SectionSize - Offset) << "\n";
   }
 }
@@ -1166,8 +1169,7 @@ void DWARFContext::dump(
         Parser.skip(DumpOpts.WarningHandler, DumpOpts.WarningHandler);
         continue;
       }
-      OS << "debug_line[" << format("0x%8.8" PRIx64, Parser.getOffset())
-         << "]\n";
+      OS << "debug_line[" << formatv("{0:x8}", Parser.getOffset()) << "]\n";
       Parser.parseNext(DumpOpts.WarningHandler, DumpOpts.WarningHandler, &OS,
                        DumpOpts.Verbose);
     }
@@ -1184,7 +1186,7 @@ void DWARFContext::dump(
         DumpOpts.WarningHandler(std::move(Err));
         return;
       }
-      OS << format("0x%8.8" PRIx64 ": \"", StrOffset);
+      OS << formatv("{0:x8}: \"", StrOffset);
       OS.write_escaped(CStr);
       OS << "\"\n";
       StrOffset = Offset;

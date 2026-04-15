@@ -26,6 +26,7 @@
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <algorithm>
 
@@ -178,7 +179,50 @@ static bool lowerExecSyncGlobalVariables(
   return Changed;
 }
 
+// With object linking, barrier ID assignment is deferred to the linker.
+// Externalize named barrier globals and emit self-contained metadata so the
+// AsmPrinter can generate the callgraph entries the linker needs.
+static bool handleNamedBarriersForObjectLinking(Module &M) {
+  DenseMap<GlobalVariable *, DenseSet<Function *>> BarrierToFuncs;
+  for (GlobalVariable &GV : M.globals()) {
+    if (!isNamedBarrier(GV) || GV.use_empty())
+      continue;
+    for (User *U : GV.users()) {
+      if (auto *I = dyn_cast<Instruction>(U))
+        BarrierToFuncs[&GV].insert(I->getFunction());
+    }
+  }
+  if (BarrierToFuncs.empty())
+    return false;
+
+  LLVMContext &Ctx = M.getContext();
+  NamedMDNode *BarMD = M.getOrInsertNamedMetadata("amdgpu.named_barrier.uses");
+
+  std::string ModuleId;
+  ModuleId = getUniqueModuleId(&M);
+  assert(!ModuleId.empty() &&
+         "modules with named barriers should have a unique ID");
+  for (auto &[V, Funcs] : BarrierToFuncs) {
+    if (V->hasLocalLinkage())
+      V->setName("__amdgpu_named_barrier." + V->getName() + ModuleId);
+    else if (!V->getName().starts_with("__amdgpu_named_barrier"))
+      V->setName("__amdgpu_named_barrier." + V->getName());
+    V->setInitializer(nullptr);
+    V->setLinkage(GlobalValue::ExternalLinkage);
+
+    SmallVector<Metadata *, 4> Ops;
+    Ops.push_back(ValueAsMetadata::get(V));
+    for (Function *F : Funcs)
+      Ops.push_back(ValueAsMetadata::get(F));
+    BarMD->addOperand(MDNode::get(Ctx, Ops));
+  }
+  return true;
+}
+
 static bool runLowerExecSyncGlobals(Module &M) {
+  if (AMDGPUTargetMachine::EnableObjectLinking)
+    return handleNamedBarriersForObjectLinking(M);
+
   CallGraph CG = CallGraph(M);
   bool Changed = false;
   Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);

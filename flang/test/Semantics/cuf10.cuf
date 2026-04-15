@@ -58,6 +58,17 @@ module m
     integer :: a(10)
     call hostdev(a) ! ok because hostdev is attributes(host,device)
   end subroutine
-    
+
+  subroutine sub_ignore_tkr_m(x, n)
+!dir$ ignore_tkr (m) x
+    integer, unified :: x(n)
+    integer, value :: n
+  end subroutine
+  subroutine test_ignore_tkr_m()
+    integer :: host_arr(10)
+    integer, managed :: managed_arr(10)
+    call sub_ignore_tkr_m(host_arr, 10)
+    call sub_ignore_tkr_m(managed_arr, 10)
+  end subroutine
 
 end

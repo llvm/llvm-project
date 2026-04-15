@@ -1922,29 +1922,38 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
     constrainSelectedInstRegOperands(*Or, TII, TRI, RBI);
   } else if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
     // fcmp ord LHS, RHS => (AND (FEQ LHS, LHS), (FEQ RHS, RHS))
-    // FIXME: If LHS and RHS are the same we can use a single FEQ.
+    // If LHS and RHS are the same, a single FEQ suffices.
     NeedInvert = Pred == CmpInst::FCMP_UNO;
-    Register Cmp1Reg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-    MachineInstr *Cmp1 =
-        BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp1Reg)
-            .addReg(LHS)
-            .addReg(LHS);
-    constrainSelectedInstRegOperands(*Cmp1, TII, TRI, RBI);
-    Register Cmp2Reg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-    MachineInstr *Cmp2 =
-        BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp2Reg)
-            .addReg(RHS)
-            .addReg(RHS);
-    constrainSelectedInstRegOperands(*Cmp2, TII, TRI, RBI);
     if (NeedInvert)
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-    MachineInstr *And = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                                TII.get(RISCV::AND), TmpReg)
-                            .addReg(Cmp1Reg)
-                            .addReg(Cmp2Reg);
-    constrainSelectedInstRegOperands(*And, TII, TRI, RBI);
+    if (LHS == RHS) {
+      MachineInstr *Cmp =
+          BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                  TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), TmpReg)
+              .addReg(LHS)
+              .addReg(LHS);
+      constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
+    } else {
+      Register Cmp1Reg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+      MachineInstr *Cmp1 =
+          BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                  TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp1Reg)
+              .addReg(LHS)
+              .addReg(LHS);
+      constrainSelectedInstRegOperands(*Cmp1, TII, TRI, RBI);
+      Register Cmp2Reg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+      MachineInstr *Cmp2 =
+          BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                  TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp2Reg)
+              .addReg(RHS)
+              .addReg(RHS);
+      constrainSelectedInstRegOperands(*Cmp2, TII, TRI, RBI);
+      MachineInstr *And = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                  TII.get(RISCV::AND), TmpReg)
+                              .addReg(Cmp1Reg)
+                              .addReg(Cmp2Reg);
+      constrainSelectedInstRegOperands(*And, TII, TRI, RBI);
+    }
   } else
     llvm_unreachable("Unhandled predicate");
 

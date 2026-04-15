@@ -252,7 +252,10 @@ llvm::Error PseudoConsole::DrainInitSequences() {
         std::error_code(GetLastError(), std::system_category()),
         "Failed to get the 'COMSPEC' environment variable");
 
-  std::wstring cmdline_str = std::wstring(comspec) + L" /c cls";
+  static constexpr char s_drain_marker[] = "LLDB_CONPTY_DRAIN_DONE";
+  static constexpr wchar_t s_drain_marker_w[] = L"LLDB_CONPTY_DRAIN_DONE";
+  std::wstring cmdline_str =
+      std::wstring(comspec) + L" /c echo " + s_drain_marker_w;
   std::vector<wchar_t> cmdline(cmdline_str.begin(), cmdline_str.end());
   cmdline.push_back(L'\0');
 
@@ -272,12 +275,17 @@ llvm::Error PseudoConsole::DrainInitSequences() {
   OVERLAPPED ov = {};
   ov.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 
-  DWORD read;
+  DWORD read = 0;
   ReadFile(m_conpty_output, buf, sizeof(buf), &read, &ov);
 
   WaitForSingleObject(pi.hProcess, INFINITE);
 
-  if (GetOverlappedResult(m_conpty_output, &ov, &read, FALSE) && read > 0) {
+  std::string accumulated;
+  while (GetOverlappedResult(m_conpty_output, &ov, &read, /*bWait=*/TRUE) &&
+         read > 0) {
+    accumulated.append(buf, read);
+    if (accumulated.find(s_drain_marker) != std::string::npos)
+      break;
     ResetEvent(ov.hEvent);
     ReadFile(m_conpty_output, buf, sizeof(buf), &read, &ov);
   }

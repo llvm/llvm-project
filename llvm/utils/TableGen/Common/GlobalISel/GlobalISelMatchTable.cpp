@@ -409,19 +409,37 @@ void LLTCodeGen::emitCxxEnumValue(raw_ostream &OS) const {
 }
 
 void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
-  if (Ty.isScalar()) {
-    if (Ty.isInteger())
-      OS << "LLT::integer(" << Ty.getScalarSizeInBits() << ")";
-    else if (Ty.isBFloat16())
-      OS << "LLT::bfloat16()";
-    else if (Ty.isPPCF128())
-      OS << "LLT::ppcf128()";
-    else if (Ty.isX86FP80())
-      OS << "LLT::x86fp80()";
-    else if (Ty.isFloat())
-      OS << "LLT::floatIEEE(" << Ty.getScalarSizeInBits() << ")";
+  auto EmitScalarType = [&OS](LLT T) {
+    if (T.isInteger())
+      OS << "LLT(LLT::Kind::INTEGER, ElementCount::getFixed(0), "
+         << T.getScalarSizeInBits() << ")";
+    else if (T.isBFloat16())
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 16, "
+            "LLT::FpSemantics::S_BFloat)";
+    else if (T.isPPCF128())
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 128, "
+            "LLT::FpSemantics::S_PPCDoubleDouble)";
+    else if (T.isX86FP80())
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 80, "
+            "LLT::FpSemantics::S_x87DoubleExtended)";
+    else if (T.isFloat(16))
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 16, "
+            "LLT::FpSemantics::S_IEEEhalf)";
+    else if (T.isFloat(32))
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 32, "
+            "LLT::FpSemantics::S_IEEEsingle)";
+    else if (T.isFloat(64))
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 64, "
+            "LLT::FpSemantics::S_IEEEdouble)";
+    else if (T.isFloat(128))
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 128, "
+            "LLT::FpSemantics::S_IEEEquad)";
     else
-      OS << "LLT::scalar(" << Ty.getScalarSizeInBits() << ")";
+      OS << "LLT::scalar(" << T.getScalarSizeInBits() << ")";
+  };
+
+  if (Ty.isScalar()) {
+    EmitScalarType(Ty);
     return;
   }
 
@@ -430,20 +448,7 @@ void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
        << (Ty.isScalable() ? "ElementCount::getScalable("
                            : "ElementCount::getFixed(")
        << Ty.getElementCount().getKnownMinValue() << "), ";
-
-    LLT ElemTy = Ty.getElementType();
-    if (ElemTy.isInteger())
-      OS << "LLT::integer(" << ElemTy.getScalarSizeInBits() << ")";
-    else if (ElemTy.isBFloat16())
-      OS << "LLT::bfloat16()";
-    else if (ElemTy.isPPCF128())
-      OS << "LLT::ppcf128()";
-    else if (ElemTy.isX86FP80())
-      OS << "LLT::x86fp80()";
-    else if (ElemTy.isFloat())
-      OS << "LLT::floatIEEE(" << ElemTy.getScalarSizeInBits() << ")";
-    else
-      OS << "LLT::scalar(" << Ty.getScalarSizeInBits() << ")";
+    EmitScalarType(Ty.getElementType());
     OS << ")";
     return;
   }

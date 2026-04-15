@@ -4901,3 +4901,59 @@ define <2 x i32> @ceil_div_vec_multi_use(<2 x i32> range(i32 0, 1000) %x) {
 declare void @use_i32(i32)
 declare void @use_vec(<2 x i32>)
 declare void @fake_func(i32)
+; Fold (add (zext (add X, -C)), C) -> (zext X) if X u>= C.
+; General case: C=4, X proven >= 4 via and+or.
+define i32 @zext_add_general_c4(i8 %x) {
+; CHECK-LABEL: @zext_add_general_c4(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[AND]], 4
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[OR]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %and = and i8 %x, -8
+  %or  = or  i8 %and, 4
+  %inner = add i8 %or, -4
+  %z = zext i8 %inner to i32
+  %r = add i32 %z, 4
+  ret i32 %r
+}
+
+; Don't fold: C=260 doesn't fit in i8, even though -C truncated matches -4.
+define i32 @zext_add_no_fold_c260(i8 range(i8 4, 8) %x) {
+; CHECK-LABEL: @zext_add_no_fold_c260(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[TMP1]], 256
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %inner = add i8 %x, -4
+  %z = zext i8 %inner to i32
+  %r = add i32 %z, 260
+  ret i32 %r
+}
+
+; Don't fold: outer C=5 and inner -C=-4 don't match.
+define i32 @zext_add_no_fold_mismatch(i8 %x) {
+; CHECK-LABEL: @zext_add_no_fold_mismatch(
+; CHECK-NEXT:    [[INNER:%.*]] = add i8 [[X:%.*]], -4
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[INNER]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[Z]], 5
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %inner = add i8 %x, -4
+  %z = zext i8 %inner to i32
+  %r = add i32 %z, 5
+  ret i32 %r
+}
+; Don't fold: symmetric pattern zext(X + C) + (-C) is not the same.
+define i32 @zext_add_no_fold_symmetric(i8 %x) {
+; CHECK-LABEL: @zext_add_no_fold_symmetric(
+; CHECK-NEXT:    [[INNER:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[INNER]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[Z]], -4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %inner = add i8 %x, 4
+  %z = zext i8 %inner to i32
+  %r = add i32 %z, -4
+  ret i32 %r
+}

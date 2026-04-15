@@ -5459,7 +5459,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::powi: {
-      if ((InterestedClasses & fcNegative) == fcNone)
+      if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
         break;
 
       const Value *Exp = II->getArgOperand(1);
@@ -5469,11 +5469,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownBits(Exp, isa<VectorType>(ExpTy) ? DemandedElts : APInt(1, 1),
                        ExponentKnownBits, Q, Depth + 1);
 
-      KnownFPClass KnownSrc;
-      if (ExponentKnownBits.isZero() || !ExponentKnownBits.isEven()) {
-        computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
-                            KnownSrc, Q, Depth + 1);
+      FPClassTest InterestedSrcs = fcNone;
+      if (InterestedClasses & fcNan)
+        InterestedSrcs |= fcNan;
+      if (!ExponentKnownBits.isZero()) {
+        if (InterestedClasses & fcInf)
+          InterestedSrcs |= fcFinite | fcInf;
+        if ((InterestedClasses & fcNegative) && !ExponentKnownBits.isEven())
+          InterestedSrcs |= fcNegative;
       }
+
+      KnownFPClass KnownSrc;
+      if (InterestedSrcs != fcNone)
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
+                            KnownSrc, Q, Depth + 1);
 
       Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
       break;

@@ -329,6 +329,7 @@ cc_test(
     srcs = glob(["Debuginfod/*.cpp"]),
     deps = [
         "//llvm:Debuginfod",
+        "//llvm:HTTP",
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//third-party/unittest:gtest",

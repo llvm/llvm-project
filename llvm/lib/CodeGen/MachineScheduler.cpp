@@ -3837,7 +3837,7 @@ unsigned llvm::getWeakLeft(const SUnit *SU, bool isTop) {
 /// copies which can be prescheduled. The rest (e.g. x86 MUL) could be bundled
 /// with the operation that produces or consumes the physreg. We'll do this when
 /// regalloc has support for parallel copies.
-int llvm::biasPhysReg(const SUnit *SU, bool isTop) {
+int llvm::biasPhysReg(const SUnit *SU, bool isTop, bool BiasPRegsExtra) {
   const MachineInstr *MI = SU->getInstr();
 
   if (MI->isCopy()) {
@@ -3870,7 +3870,34 @@ int llvm::biasPhysReg(const SUnit *SU, bool isTop) {
       return isTop ? -1 : 1;
   }
 
+  if (BiasPRegsExtra && !isTop && MI->getNumExplicitDefs() == 1)
+    // Register coalescer will create cases of e.g. Load Address of a frame
+    // index directly into a physreg.
+    return MI->getOperand(0).getReg().isPhysical();
+
   return 0;
+}
+
+bool llvm::tryBiasPhysRegs(GenericSchedulerBase::SchedCandidate &TryCand,
+                           GenericSchedulerBase::SchedCandidate &Cand,
+                           SchedBoundary *Zone, bool BiasPRegsExtra) {
+  int TryCandPRegBias = biasPhysReg(TryCand.SU, TryCand.AtTop, BiasPRegsExtra);
+  int CandPRegBias = biasPhysReg(Cand.SU, Cand.AtTop, BiasPRegsExtra);
+  if (tryGreater(TryCandPRegBias, CandPRegBias, TryCand, Cand,
+                 GenericSchedulerBase::PhysReg))
+    return true;
+  if (BiasPRegsExtra && Zone != nullptr && TryCandPRegBias &&
+      TryCandPRegBias == CandPRegBias) {
+    // Both biased same way - maintain their input order.
+    if (Zone->isTop())
+      tryLess(TryCand.SU->NodeNum, Cand.SU->NodeNum, TryCand, Cand,
+              GenericSchedulerBase::NodeOrder);
+    else
+      tryGreater(TryCand.SU->NodeNum, Cand.SU->NodeNum, TryCand, Cand,
+                 GenericSchedulerBase::NodeOrder);
+    return true;
+  }
+  return false;
 }
 
 void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -3931,8 +3958,7 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
   }
 
   // Bias PhysReg Defs and copies to their uses and defined respectively.
-  if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
-                 biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
+  if (tryBiasPhysRegs(TryCand, Cand, Zone, RegionPolicy.BiasPRegsExtra))
     return TryCand.Reason != NoCand;
 
   // Avoid exceeding the target's limit.

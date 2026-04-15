@@ -612,6 +612,50 @@ let Predicates = [HasFutureVector] in {
                                                      v4i32:$vB))>;
   def : Pat<(v4i32 (int_ppc_altivec_vrlw v4i32:$vA, v4i32:$vB)),
             (v4i32 (XVRLW v4i32:$vA, v4i32:$vB))>;
+
+  // Elliptic Curve Cryptography Patterns
+  def : Pat<(v16i8 (int_ppc_xxmulmul v16i8:$XA, v16i8:$XB, u3imm_timm:$S)),
+            (v16i8 (COPY_TO_REGCLASS (XXMULMUL RCCp.AToVSRC, RCCp.BToVSRC, $S), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxmulmulhiadd v16i8:$XA, v16i8:$XB, u1imm_timm:$S0, u1imm_timm:$S1, u1imm_timm:$S2)),
+            (v16i8 (COPY_TO_REGCLASS (XXMULMULHIADD RCCp.AToVSRC, RCCp.BToVSRC, $S0, $S1, $S2), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxmulmulloadd v16i8:$XA, v16i8:$XB, u1imm_timm:$S1, u1imm_timm:$S2)),
+            (v16i8 (COPY_TO_REGCLASS (XXMULMULLOADD RCCp.AToVSRC, RCCp.BToVSRC, $S1, $S2), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxssumudm v16i8:$XA, v16i8:$XB, u1imm_timm:$P)),
+            (v16i8 (COPY_TO_REGCLASS (XXSSUMUDM RCCp.AToVSRC, RCCp.BToVSRC, $P), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxssumudmc v16i8:$XA, v16i8:$XB, u1imm_timm:$P)),
+            (v16i8 (COPY_TO_REGCLASS (XXSSUMUDMC RCCp.AToVSRC, RCCp.BToVSRC, $P), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxssumudmcext v16i8:$XA, v16i8:$XB, v16i8:$XC, u1imm_timm:$P)),
+            (v16i8 (COPY_TO_REGCLASS (XXSSUMUDMCEXT RCCp.AToVSRC, RCCp.BToVSRC, RCCp.CToVSRC, $P), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddadduqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDADDUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddaddsuqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDADDSUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddsubuqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDSUBUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddsubsuqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDSUBSUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge2t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE2T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge2t2uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE2T2UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge2t3uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE2T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge3t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE3T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t2uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T2UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t3uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t4uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T4UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase3t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE3T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase3t2uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE3T2UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase3t3uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE3T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
 }
 
 //---------------------------- Instruction aliases ---------------------------//
