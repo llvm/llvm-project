@@ -720,52 +720,25 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
   return nullptr;
 }
 
-// Match llvm.amdgcn.mbcnt.lo / mbcnt.hi patterns that compute the lane ID.
-// WaveSize is needed because standalone mbcnt.lo returns lane % 32, which only
-// equals the lane ID on wave32.  On wave64, the full mbcnt.hi(-1, mbcnt.lo(-1, 0))
-// chain is required.
-static bool matchLaneID(const Value *V, unsigned WaveSize) {
-  const auto *II = dyn_cast<IntrinsicInst>(V);
-  if (!II)
-    return false;
-
-  if (II->getIntrinsicID() == Intrinsic::amdgcn_mbcnt_hi) {
-    const auto *Mask = dyn_cast<ConstantInt>(II->getArgOperand(0));
-    if (Mask && Mask->getSExtValue() == -1)
-      return matchLaneID(II->getArgOperand(1), /*WaveSize=*/32);
-    return false;
-  }
-
-  if (II->getIntrinsicID() == Intrinsic::amdgcn_mbcnt_lo) {
-    if (WaveSize > 32)
-      return false;
-    const auto *Mask = dyn_cast<ConstantInt>(II->getArgOperand(0));
-    const auto *Base = dyn_cast<ConstantInt>(II->getArgOperand(1));
-    return Mask && Mask->getSExtValue() == -1 && Base && Base->isZero();
-  }
-
-  return false;
-}
-
-static std::optional<unsigned> evalLaneExpr(const Value *V, unsigned Lane,
-                                            unsigned WaveSize,
+static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
+                                            const GCNSubtarget &ST,
                                             const DataLayout &DL,
                                             unsigned Depth = 0) {
   if (Depth > 16)
     return std::nullopt;
 
-  if (matchLaneID(V, WaveSize))
+  if (isThreadID(ST, V))
     return Lane;
 
   if (const auto *CI = dyn_cast<ConstantInt>(V))
     return CI->getZExtValue();
 
-  const auto *BO = dyn_cast<BinaryOperator>(V);
+  auto *BO = dyn_cast<BinaryOperator>(V);
   if (!BO)
     return std::nullopt;
 
-  auto LHS = evalLaneExpr(BO->getOperand(0), Lane, WaveSize, DL, Depth + 1);
-  auto RHS = evalLaneExpr(BO->getOperand(1), Lane, WaveSize, DL, Depth + 1);
+  auto LHS = evalLaneExpr(BO->getOperand(0), Lane, ST, DL, Depth + 1);
+  auto RHS = evalLaneExpr(BO->getOperand(1), Lane, ST, DL, Depth + 1);
   if (!LHS || !RHS)
     return std::nullopt;
 
@@ -779,12 +752,13 @@ static std::optional<unsigned> evalLaneExpr(const Value *V, unsigned Lane,
   return CI->getZExtValue();
 }
 
-static bool tryBuildShuffleMap(const Value *Index, unsigned WaveSize,
+static bool tryBuildShuffleMap(Value *Index, const GCNSubtarget &ST,
                                SmallVectorImpl<uint8_t> &Ids,
                                const DataLayout &DL) {
+  unsigned WaveSize = ST.getWavefrontSize();
   Ids.resize(WaveSize);
   for (unsigned Lane = 0; Lane < WaveSize; ++Lane) {
-    auto Val = evalLaneExpr(Index, Lane, WaveSize, DL);
+    auto Val = evalLaneExpr(Index, Lane, ST, DL);
     if (!Val || *Val >= WaveSize)
       return false;
     Ids[Lane] = static_cast<uint8_t>(*Val);
@@ -962,80 +936,70 @@ static Value *createPermlane64(IRBuilderBase &B, Value *Val, Module *M) {
 
 /// Try to fold a wave_shuffle whose lane index is a constant function of the
 /// lane ID into a hardware-specific lane permutation intrinsic.
-static std::optional<Instruction *>
-tryOptimizeWaveShuffle(InstCombiner &IC, IntrinsicInst &II,
-                       const GCNSubtarget &ST) {
+/// Returns the replacement Value, or nullptr if no pattern matched.
+static Value *tryOptimizeWaveShuffle(IRBuilderBase &B, IntrinsicInst &II,
+                                     const GCNSubtarget &ST,
+                                     const DataLayout &DL) {
   if (II.getType()->getPrimitiveSizeInBits() != 32)
-    return std::nullopt;
+    return nullptr;
 
   if (!ST.isWaveSizeKnown())
-    return std::nullopt;
+    return nullptr;
 
-  unsigned WaveSize = ST.getWavefrontSize();
   Value *Src = II.getArgOperand(0);
   Value *Index = II.getArgOperand(1);
 
   SmallVector<uint8_t, 64> Ids;
-  if (!tryBuildShuffleMap(Index, WaveSize, Ids, IC.getDataLayout()))
-    return std::nullopt;
+  if (!tryBuildShuffleMap(Index, ST, Ids, DL))
+    return nullptr;
 
-  IRBuilderBase &B = IC.Builder;
   Module *M = II.getModule();
-  Value *Result = nullptr;
 
-  // Try patterns in priority order: most specific first.
   if (auto QP = matchQuadPermPattern(Ids)) {
     if (ST.hasDPP())
-      Result = createUpdateDpp(B, Src, *QP, M);
-    else
-      Result = createDsSwizzle(B, Src, AMDGPU::Swizzle::QUAD_PERM_ENC | *QP, M);
+      return createUpdateDpp(B, Src, *QP, M);
+    return createDsSwizzle(B, Src, AMDGPU::Swizzle::QUAD_PERM_ENC | *QP, M);
   }
 
-  if (!Result && ST.hasDPP() && matchHalfRowMirrorPattern(Ids))
-    Result = createUpdateDpp(B, Src, AMDGPU::DPP::ROW_HALF_MIRROR, M);
+  if (ST.hasDPP() && matchHalfRowMirrorPattern(Ids))
+    return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_HALF_MIRROR, M);
 
-  if (!Result && ST.hasDPP() && matchFullRowMirrorPattern(Ids))
-    Result = createUpdateDpp(B, Src, AMDGPU::DPP::ROW_MIRROR, M);
+  if (ST.hasDPP() && matchFullRowMirrorPattern(Ids))
+    return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_MIRROR, M);
 
-  if (!Result && ST.hasDPP()) {
+  if (ST.hasDPP()) {
     if (auto Amt = matchRowRotatePattern(Ids))
-      Result =
-          createUpdateDpp(B, Src, AMDGPU::DPP::ROW_ROR_FIRST + *Amt - 1, M);
+      return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_ROR_FIRST + *Amt - 1, M);
   }
 
-  if (!Result && ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
+  if (ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
     if (auto Lane = matchRowSharePattern(Ids))
-      Result = createUpdateDpp(B, Src, AMDGPU::DPP::ROW_SHARE_FIRST + *Lane, M);
+      return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_SHARE_FIRST + *Lane, M);
   }
 
-  if (!Result && ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
+  if (ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
     if (auto Mask = matchRowXMaskPattern(Ids))
-      Result = createUpdateDpp(B, Src, AMDGPU::DPP::ROW_XMASK_FIRST + *Mask, M);
+      return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_XMASK_FIRST + *Mask, M);
   }
 
-  if (!Result && ST.hasDPP8()) {
+  if (ST.hasDPP8()) {
     if (auto Sel = matchHalfRowPermPattern(Ids))
-      Result = createMovDpp8(B, Src, *Sel, M);
+      return createMovDpp8(B, Src, *Sel, M);
   }
 
-  if (!Result && ST.hasPermLaneX16() && isFullRowPattern(Ids)) {
+  if (ST.hasPermLaneX16() && isFullRowPattern(Ids)) {
     auto [Lo, Hi] = computePermlane16Masks(Ids);
-    Result = createPermlane16(B, Src, Lo, Hi, M);
+    return createPermlane16(B, Src, Lo, Hi, M);
   }
 
   // DS_SWIZZLE bitmask-mode fallback for targets without DPP8/permlane16.
-  if (!Result) {
-    if (auto Offset = matchHalfRowSharePattern(Ids))
-      Result = createDsSwizzle(B, Src, *Offset, M);
-  }
+  if (auto Offset = matchHalfRowSharePattern(Ids))
+    return createDsSwizzle(B, Src, *Offset, M);
 
-  if (!Result && ST.hasPermLane64() && matchHalfWaveSwapPattern(Ids))
-    Result = createPermlane64(B, Src, M);
+  if (ST.hasPermLane64() && matchHalfWaveSwapPattern(Ids))
+    return createPermlane64(B, Src, M);
 
-  if (!Result)
-    return std::nullopt;
-
-  return IC.replaceInstUsesWith(II, Result);
+  return nullptr;
 }
 
 std::optional<Instruction *>
@@ -1883,8 +1847,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (ST->hasDPP())
       if (auto R = tryWaveShuffleDPP(*ST, IC, II))
         return R;
-    if (auto R = tryOptimizeWaveShuffle(IC, II, *ST))
-      return R;
+    if (Value *R =
+            tryOptimizeWaveShuffle(IC.Builder, II, *ST, IC.getDataLayout()))
+      return IC.replaceInstUsesWith(II, R);
     break;
   }
   case Intrinsic::amdgcn_permlane64:
