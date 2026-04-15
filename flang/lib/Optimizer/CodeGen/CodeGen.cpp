@@ -205,8 +205,6 @@ static std::optional<unsigned> getCUFAddrSpace(fir::GlobalOp global) {
       return static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Constant);
     if (*dataAttr == cuf::DataAttribute::Shared)
       return static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared);
-    if (*dataAttr == cuf::DataAttribute::Managed)
-      return static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Global);
   }
   return std::nullopt;
 }
