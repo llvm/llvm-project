@@ -1012,9 +1012,8 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
 
 LValue CIRGenFunction::emitInitListLValue(const InitListExpr *e) {
   // Initializing an aggregate temporary in C++11: T{...}.
-  if (!e->isGLValue()) {
+  if (!e->isGLValue())
     return emitAggExprToLValue(e);
-  }
 
   // An lvalue initializer list must be initializing a reference.
   assert(e->isTransparent() && "non-transparent glvalue init list");
