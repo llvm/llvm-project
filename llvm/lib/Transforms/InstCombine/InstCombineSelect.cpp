@@ -3439,11 +3439,10 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   }
 
   Value *NewAbs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X);
-  Value *NewCmp = Swapped
-                      ? IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(),
-                                                 OtherOp, NewAbs, OuterCmp)
-                      : IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(),
-                                                 NewAbs, OtherOp, OuterCmp);
+  Value *NewCmp = Swapped ? IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(),
+                                                     OtherOp, NewAbs, OuterCmp)
+                          : IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(),
+                                                     NewAbs, OtherOp, OuterCmp);
   Value *NewSel = IC.Builder.CreateSelectFMF(NewCmp, X, Y, &SI);
   return IC.replaceInstUsesWith(SI, NewSel);
 }
