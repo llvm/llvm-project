@@ -325,20 +325,18 @@ declare i64 @llvm.cttz.i64(i64, i1)
 define i64 @cttz_64_eq_select(i64 %v) nounwind {
 ; NOBMI-LABEL: cttz_64_eq_select:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    rep bsfq %rdi, %rcx
-; NOBMI-NEXT:    addl $6, %ecx
-; NOBMI-NEXT:    testq %rdi, %rdi
-; NOBMI-NEXT:    movl $5, %eax
+; NOBMI-NEXT:    bsfq %rdi, %rcx
+; NOBMI-NEXT:    movq $-1, %rax
 ; NOBMI-NEXT:    cmovneq %rcx, %rax
+; NOBMI-NEXT:    addq $6, %rax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: cttz_64_eq_select:
 ; BMI:       # %bb.0:
 ; BMI-NEXT:    tzcntq %rdi, %rcx
-; BMI-NEXT:    addl $6, %ecx
-; BMI-NEXT:    testq %rdi, %rdi
-; BMI-NEXT:    movl $5, %eax
-; BMI-NEXT:    cmovneq %rcx, %rax
+; BMI-NEXT:    movq $-1, %rax
+; BMI-NEXT:    cmovaeq %rcx, %rax
+; BMI-NEXT:    addq $6, %rax
 ; BMI-NEXT:    retq
 
   %cnt = tail call i64 @llvm.cttz.i64(i64 %v, i1 true)
@@ -351,20 +349,18 @@ define i64 @cttz_64_eq_select(i64 %v) nounwind {
 define i64 @cttz_64_ne_select(i64 %v) nounwind {
 ; NOBMI-LABEL: cttz_64_ne_select:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    rep bsfq %rdi, %rcx
-; NOBMI-NEXT:    addl $6, %ecx
-; NOBMI-NEXT:    testq %rdi, %rdi
-; NOBMI-NEXT:    movl $5, %eax
+; NOBMI-NEXT:    bsfq %rdi, %rcx
+; NOBMI-NEXT:    movq $-1, %rax
 ; NOBMI-NEXT:    cmovneq %rcx, %rax
+; NOBMI-NEXT:    addq $6, %rax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: cttz_64_ne_select:
 ; BMI:       # %bb.0:
 ; BMI-NEXT:    tzcntq %rdi, %rcx
-; BMI-NEXT:    addl $6, %ecx
-; BMI-NEXT:    testq %rdi, %rdi
-; BMI-NEXT:    movl $5, %eax
-; BMI-NEXT:    cmovneq %rcx, %rax
+; BMI-NEXT:    movq $-1, %rax
+; BMI-NEXT:    cmovaeq %rcx, %rax
+; BMI-NEXT:    addq $6, %rax
 ; BMI-NEXT:    retq
 
   %cnt = tail call i64 @llvm.cttz.i64(i64 %v, i1 true)

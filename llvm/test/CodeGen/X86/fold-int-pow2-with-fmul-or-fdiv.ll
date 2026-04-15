@@ -772,8 +772,7 @@ define double @fmul_pow_mul_max_pow2(i16 %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_mul_max_pow2:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    movzbl %dil, %eax
-; CHECK-SSE-NEXT:    movl %eax, %ecx
-; CHECK-SSE-NEXT:    incl %ecx
+; CHECK-SSE-NEXT:    leaq 1(%rax), %rcx
 ; CHECK-SSE-NEXT:    cmpq %rcx, %rax
 ; CHECK-SSE-NEXT:    cmovaq %rax, %rcx
 ; CHECK-SSE-NEXT:    shlq $52, %rcx
@@ -785,8 +784,7 @@ define double @fmul_pow_mul_max_pow2(i16 %cnt) nounwind {
 ; CHECK-AVX-LABEL: fmul_pow_mul_max_pow2:
 ; CHECK-AVX:       # %bb.0:
 ; CHECK-AVX-NEXT:    movzbl %dil, %eax
-; CHECK-AVX-NEXT:    movl %eax, %ecx
-; CHECK-AVX-NEXT:    incl %ecx
+; CHECK-AVX-NEXT:    leaq 1(%rax), %rcx
 ; CHECK-AVX-NEXT:    cmpq %rcx, %rax
 ; CHECK-AVX-NEXT:    cmovaq %rax, %rcx
 ; CHECK-AVX-NEXT:    shlq $52, %rcx

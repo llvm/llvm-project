@@ -376,8 +376,8 @@ define i128 @cmov_bsr128(i128 %x, i128 %y) nounwind {
 ; X64-NEXT:    xorq $63, %r8
 ; X64-NEXT:    movl $127, %eax
 ; X64-NEXT:    bsrq %rdi, %rax
-; X64-NEXT:    xorl $63, %eax
-; X64-NEXT:    addl $64, %eax
+; X64-NEXT:    xorq $63, %rax
+; X64-NEXT:    addq $64, %rax
 ; X64-NEXT:    testq %rsi, %rsi
 ; X64-NEXT:    cmovneq %r8, %rax
 ; X64-NEXT:    xorq $127, %rax
@@ -470,8 +470,8 @@ define i128 @cmov_bsr128_undef(i128 %x, i128 %y) nounwind {
 ; X64-NEXT:    bsrq %rsi, %r8
 ; X64-NEXT:    xorq $63, %r8
 ; X64-NEXT:    bsrq %rdi, %rax
-; X64-NEXT:    xorl $63, %eax
-; X64-NEXT:    orl $64, %eax
+; X64-NEXT:    xorq $63, %rax
+; X64-NEXT:    orq $64, %rax
 ; X64-NEXT:    testq %rsi, %rsi
 ; X64-NEXT:    cmovneq %r8, %rax
 ; X64-NEXT:    xorq $127, %rax

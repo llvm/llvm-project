@@ -99,7 +99,7 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movq x1@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl (%rax), %edx
 ; CHECK-NEXT:    andl $511, %edx # imm = 0x1FF
-; CHECK-NEXT:    leal 1(%rdx), %eax
+; CHECK-NEXT:    leaq 1(%rdx), %rax
 ; CHECK-NEXT:    movq x4@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    movl %eax, (%rcx)
 ; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rcx
@@ -137,7 +137,7 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    leal 8(,%rdx,8), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    leaq 32(%rsi), %rbx
-; CHECK-NEXT:    leal 8(,%rdx,8), %r14d
+; CHECK-NEXT:    leaq 8(,%rdx,8), %r14
 ; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    movq x0@GOTPCREL(%rip), %r12
 ; CHECK-NEXT:    movq %rsi, %r13
