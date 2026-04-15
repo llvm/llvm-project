@@ -194,8 +194,9 @@ struct basic_string {
 using string = basic_string<char>;
 
 template<typename T>
-struct unique_ptr {
+struct [[gsl::Owner]] unique_ptr {
   unique_ptr();
+  explicit unique_ptr(T*);
   unique_ptr(unique_ptr<T>&&);
   unique_ptr& operator=(unique_ptr<T>&&);
   ~unique_ptr();
@@ -205,8 +206,15 @@ struct unique_ptr {
   T *get() const;
 };
 
+#ifdef WITH_LIFETIME_SAFETY_BODY
 template<typename T, typename... Args>
-unique_ptr<T> make_unique(Args&&... args);
+unique_ptr<T> make_unique(Args&&... args) {
+  return unique_ptr<T>(new T(args...));
+}
+#else
+template<typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args [[clang::lifetimebound]]);
+#endif
 
 template<typename T>
 struct optional {

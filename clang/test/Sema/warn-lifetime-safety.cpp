@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=expected,function %s
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=expected,tu %s
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -fcxx-exceptions -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -DWITH_LIFETIME_SAFETY_BODY -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -DWITH_LIFETIME_SAFETY_BODY -verify=expected,tu %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -fcxx-exceptions -DWITH_LIFETIME_SAFETY_BODY -verify=expected,function %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -926,6 +926,7 @@ struct LifetimeBoundCtor {
   LifetimeBoundCtor();
   LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]);
   LifetimeBoundCtor(int* p [[clang::lifetimebound]]);
+  LifetimeBoundCtor(std::string_view sv [[clang::lifetimebound]]);
 };
 
 void lifetimebound_ctor() {
@@ -968,15 +969,15 @@ void lifetimebound_make_unique() {
   std::unique_ptr<LifetimeBoundCtor> ptr;
   {
     MyObj obj;
-    ptr = std::make_unique<LifetimeBoundCtor>(obj); // expected-warning {{object whose reference is captured does not live long enough}}
-  } // expected-note {{destroyed here}}
-  (void)ptr; // expected-note {{later used here}}
+    ptr = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
 }
 
 void lifetimebound_make_unique_temp() {
-  std::unique_ptr<LifetimeBoundCtor> ptr = std::make_unique<LifetimeBoundCtor>(MyObj()); // expected-warning {{object whose reference is captured does not live long enough}} \
-                                                                                         // expected-note {{destroyed here}}
-  (void)ptr; // expected-note {{later used here}}
+  std::unique_ptr<LifetimeBoundCtor> ptr = std::make_unique<LifetimeBoundCtor>(MyObj()); // tu-warning {{object whose reference is captured does not live long enough}} \
+                                                                                         // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
 }
 
 void lifetimebound_make_unique_raw_ptr() {
@@ -984,10 +985,9 @@ void lifetimebound_make_unique_raw_ptr() {
   int x = 0;
   {
     int* p = &x;
-    // FIXME: No warning expected with current implementation
-    ptr = std::make_unique<LifetimeBoundCtor>(p);
-  }
-  (void)ptr;
+    ptr = std::make_unique<LifetimeBoundCtor>(p); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
 }
 
 void lifetimebound_make_unique_string_view_local() {
@@ -995,10 +995,9 @@ void lifetimebound_make_unique_string_view_local() {
   {
     std::string s;
     std::string_view sv(s);
-    // FIXME: No warning expected with current implementation because of reference mismatch
-    ptr = std::make_unique<LifetimeBoundCtor>(sv);
-  }
-  (void)ptr;
+    ptr = std::make_unique<LifetimeBoundCtor>(sv); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
 }
 
 struct MultiLifetimeBoundCtor {
@@ -1012,9 +1011,9 @@ void lifetimebound_make_unique_multi_params() {
   MyObj obj_long;
   {
     MyObj obj_short;
-    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // expected-warning {{object whose reference is captured does not live long enough}}
-  } // expected-note {{destroyed here}}
-  (void)ptr; // expected-note {{later used here}}
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
 }
 
 void lifetimebound_make_unique_multi_params2() {
@@ -1022,9 +1021,9 @@ void lifetimebound_make_unique_multi_params2() {
   MyObj obj_long;
   {
     MyObj obj_short;
-    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // expected-warning {{object whose reference is captured does not live long enough}}
-  } // expected-note {{destroyed here}}
-  (void)ptr; // expected-note {{later used here}}
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
 }
 
 void lifetimebound_make_unique_multi_params3_1() {
@@ -1032,9 +1031,9 @@ void lifetimebound_make_unique_multi_params3_1() {
   MyObj obj_long;
   {
     MyObj obj_short;
-    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // expected-warning {{object whose reference is captured does not live long enough}}
-  } // expected-note {{destroyed here}}
-  (void)ptr; // expected-note {{later used here}}
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
 }
 
 void lifetimebound_make_unique_multi_params3_2() {
@@ -1042,9 +1041,9 @@ void lifetimebound_make_unique_multi_params3_2() {
   MyObj obj_long;
   {
     MyObj obj_short;
-    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // expected-warning {{object whose reference is captured does not live long enough}}
-  } // expected-note {{destroyed here}}
-  (void)ptr; // expected-note {{later used here}}
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
 }
 
 View lifetimebound_return_of_local() {

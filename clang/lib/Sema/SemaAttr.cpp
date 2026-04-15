@@ -221,7 +221,19 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
   inferGslPointerAttribute(Record, Record);
 }
 
+static const CXXNewExpr *findCXXNewExpr(const Stmt *S) {
+  if (!S) return nullptr;
+  if (const auto *E = dyn_cast<CXXNewExpr>(S))
+    return E;
+  for (const Stmt *Child : S->children())
+    if (Child)
+      if (const CXXNewExpr *E = findCXXNewExpr(Child))
+        return E;
+  return nullptr;
+}
+
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
+  llvm::errs() << "JETSKI: inferLifetimeBoundAttribute for " << FD->getNameAsString() << "\n";
   if (FD->getNumParams() == 0)
     return;
   // Skip void returning functions (except constructors). This can occur in
@@ -252,56 +264,20 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
   }
 
   // Handle std::make_unique to propagate lifetimebound attributes from the
-  // constructed type's constructor to make_unique's parameters.
-  if (FD->isInStdNamespace() && FD->getDeclName().isIdentifier() &&
+  // constructed type's constructor to make_unique's parameters by looking
+  // into its body.
+  if (FD->getDeclName().isIdentifier() &&
       FD->getName() == "make_unique") {
-    if (!FD->isFunctionTemplateSpecialization())
-      return;
-
-    const TemplateArgumentList *TAL = FD->getTemplateSpecializationArgs();
-    if (!TAL || TAL->size() < 1)
-      return;
-
-    // make_unique's first template argument is the type being constructed.
-    TemplateArgument TA = TAL->get(0);
-    if (TA.getKind() != TemplateArgument::Type)
-      return;
-
-    QualType T = TA.getAsType();
-    const auto *RD = T->getAsCXXRecordDecl();
-    if (!RD)
-      return;
-
-    // Find the constructor that matches make_unique's arguments.
-    for (const auto *Ctor : RD->ctors()) {
-      if (Ctor->getNumParams() != FD->getNumParams())
-        continue;
-
-      bool Compatible = true;
-      for (unsigned i = 0; i < Ctor->getNumParams(); ++i) {
-        QualType CtorParamType = Ctor->getParamDecl(i)->getType();
-        QualType FDParamType = FD->getParamDecl(i)->getType();
-        // Compare types ignoring references.
-        if (!Context.hasSameUnqualifiedType(
-                CtorParamType.getNonReferenceType(),
-                FDParamType.getNonReferenceType())) {
-          Compatible = false;
-          break;
-        }
-      }
-
-      if (!Compatible)
-        continue;
-      // Propagate lifetimebound attributes only if the constructor parameter is
-      // a reference. This avoids incorrect loan tracking when a by-value view
-      // (like string_view) is passed by reference to make_unique.
-      for (unsigned i = 0; i < Ctor->getNumParams(); ++i)
-        if (Ctor->getParamDecl(i)->hasAttr<LifetimeBoundAttr>() &&
-            Ctor->getParamDecl(i)->getType()->isReferenceType())
-          FD->getParamDecl(i)->addAttr(
-              LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
-      break; // Found matching constructor, done.
-    }
+    const FunctionDecl *BodyDecl = nullptr;
+    if (FD->getBody(BodyDecl))
+      if (const CXXNewExpr *NewExpr = findCXXNewExpr(BodyDecl->getBody()))
+        if (const CXXConstructExpr *ConstructExpr = NewExpr->getConstructExpr())
+          if (const CXXConstructorDecl *Ctor = ConstructExpr->getConstructor())
+            for (unsigned i = 0; i < Ctor->getNumParams(); ++i)
+              if (Ctor->getParamDecl(i)->hasAttr<LifetimeBoundAttr>() &&
+                  i < FD->getNumParams())
+                FD->getParamDecl(i)->addAttr(
+                    LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
     return;
   }
 

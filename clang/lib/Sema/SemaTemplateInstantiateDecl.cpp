@@ -5552,6 +5552,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   if (Function->isInvalidDecl() || isa<CXXDeductionGuideDecl>(Function))
     return;
 
+
+
   // Never instantiate an explicit specialization except if it is a class scope
   // explicit specialization.
   TemplateSpecializationKind TSK =
@@ -5968,6 +5970,9 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // FIXME: finishing the function body while in an expression evaluation
     // context seems wrong. Investigate more.
     ActOnFinishFunctionBody(Function, Body.get(), /*IsInstantiation=*/true);
+
+
+    inferLifetimeBoundAttribute(Function);
 
     checkReferenceToTULocalFromOtherTU(Function, PointOfInstantiation);
 
