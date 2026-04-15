@@ -19,7 +19,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
-#include "clang/Sema/Initialization.h"
 #include <optional>
 using namespace clang;
 
@@ -222,8 +221,19 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
   inferGslPointerAttribute(Record, Record);
 }
 
+static const CXXNewExpr *findCXXNewExpr(const Stmt *S) {
+  if (!S) return nullptr;
+  if (const auto *E = dyn_cast<CXXNewExpr>(S))
+    return E;
+  for (const Stmt *Child : S->children())
+    if (Child)
+      if (const CXXNewExpr *E = findCXXNewExpr(Child))
+        return E;
+  return nullptr;
+}
 
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
+  llvm::errs() << "JETSKI: inferLifetimeBoundAttribute for " << FD->getNameAsString() << "\n";
   if (FD->getNumParams() == 0)
     return;
   // Skip void returning functions (except constructors). This can occur in
@@ -254,51 +264,20 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
   }
 
   // Handle std::make_unique to propagate lifetimebound attributes from the
-  // constructed type's constructor to make_unique's parameters by performing
-  // constructor lookup.
+  // constructed type's constructor to make_unique's parameters by looking
+  // into its body.
   if (FD->getDeclName().isIdentifier() &&
       FD->getName() == "make_unique") {
-    QualType ReturnType = FD->getReturnType();
-    const auto *RT = ReturnType->getAs<RecordType>();
-    if (!RT) return;
-    const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
-    if (!Spec) return;
-    if (Spec->getTemplateArgs().size() == 0) return;
-    QualType T = Spec->getTemplateArgs()[0].getAsType();
-
-    SmallVector<Expr *, 4> Args;
-    for (auto *Parm : FD->parameters()) {
-      QualType ParmTy = Parm->getType();
-      ExprValueKind VK = VK_LValue;
-      QualType ArgTy = ParmTy;
-      if (const auto *RefTy = ParmTy->getAs<ReferenceType>()) {
-        ArgTy = RefTy->getPointeeType();
-        if (ParmTy->isRValueReferenceType())
-          VK = VK_XValue;
-      }
-      Args.push_back(new (Context) OpaqueValueExpr(FD->getLocation(), ArgTy, VK));
-    }
-
-    InitializedEntity Entity = InitializedEntity::InitializeTemporary(T);
-    InitializationKind Kind = InitializationKind::CreateDirect(FD->getLocation(), FD->getLocation(), FD->getLocation());
-    InitializationSequence InitSeq(*this, Entity, Kind, Args);
-
-    if (InitSeq) {
-      for (const auto &Step : InitSeq.steps()) {
-        if (Step.Kind == InitializationSequence::SK_ConstructorInitialization) {
-          if (const auto *Ctor = dyn_cast_or_null<CXXConstructorDecl>(Step.Function.Function)) {
-            for (unsigned i = 0; i < Ctor->getNumParams(); ++i) {
+    const FunctionDecl *BodyDecl = nullptr;
+    if (FD->getBody(BodyDecl))
+      if (const CXXNewExpr *NewExpr = findCXXNewExpr(BodyDecl->getBody()))
+        if (const CXXConstructExpr *ConstructExpr = NewExpr->getConstructExpr())
+          if (const CXXConstructorDecl *Ctor = ConstructExpr->getConstructor())
+            for (unsigned i = 0; i < Ctor->getNumParams(); ++i)
               if (Ctor->getParamDecl(i)->hasAttr<LifetimeBoundAttr>() &&
-                  i < FD->getNumParams()) {
+                  i < FD->getNumParams())
                 FD->getParamDecl(i)->addAttr(
                     LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
-              }
-            }
-          }
-          break;
-        }
-      }
-    }
     return;
   }
 
