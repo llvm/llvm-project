@@ -1,0 +1,13 @@
+# RUN: llc -mtriple=amdgcn \
+# RUN:     "-passes=require<amdgpu-resource-usage>,invalidate<amdgpu-resource-usage>" \
+# RUN:     --print-pipeline-passes --filetype=null %s | FileCheck %s
+
+# CHECK: machine-function(require<amdgpu-resource-usage>,invalidate<amdgpu-resource-usage>)
+---
+name:            test
+body:             |
+  bb.0:
+    S_NOP 0
+...
+
+
