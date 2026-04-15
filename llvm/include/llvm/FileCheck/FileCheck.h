@@ -46,7 +46,7 @@ struct FileCheckRequest {
   bool AllowDeprecatedDagOverlap = false;
   bool Verbose = false;
   bool VerboseVerbose = false;
-  DiffFormatType DiffFormat = DiffFormatType::Unified;
+  DiffFormatType DiffFormat = DiffFormatType::None;
 };
 
 namespace Check {
