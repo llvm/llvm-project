@@ -272,10 +272,11 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
       if (const CXXNewExpr *NewExpr = findCXXNewExpr(BodyDecl->getBody()))
         if (const CXXConstructExpr *ConstructExpr = NewExpr->getConstructExpr())
           if (const CXXConstructorDecl *Ctor = ConstructExpr->getConstructor())
-            for (unsigned i = 0; i < Ctor->getNumParams(); ++i)
-              if (Ctor->getParamDecl(i)->hasAttr<LifetimeBoundAttr>() &&
-                  i < FD->getNumParams())
-                FD->getParamDecl(i)->addAttr(
+            for (unsigned I = 0; I < Ctor->getNumParams(); ++I)
+              if (I < FD->getNumParams() &&
+                  Ctor->getParamDecl(I)->hasAttr<LifetimeBoundAttr>() &&
+                  Ctor->getParamDecl(I)->getType()->isReferenceType())
+                FD->getParamDecl(I)->addAttr(
                     LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
     return;
   }

@@ -991,24 +991,26 @@ void lifetimebound_make_unique_temp() {
   (void)ptr; // tu-note {{later used here}}
 }
 
+// FIXME: make_unique annotation cannot be inferred for pointer param in constructor
 void lifetimebound_make_unique_raw_ptr() {
   std::unique_ptr<LifetimeBoundCtor> ptr;
   int x = 0;
   {
     int* p = &x;
-    ptr = std::make_unique<LifetimeBoundCtor>(p); // tu-warning {{object whose reference is captured does not live long enough}}
-  } // tu-note {{destroyed here}}
-  (void)ptr; // tu-note {{later used here}}
+    ptr = std::make_unique<LifetimeBoundCtor>(p);
+  }
+  (void)ptr;
 }
 
+// FIXME: make_unique annotation cannot be inferred for view-type param in constructor
 void lifetimebound_make_unique_string_view_local() {
   std::unique_ptr<LifetimeBoundCtor> ptr;
   {
     std::string s;
     std::string_view sv(s);
-    ptr = std::make_unique<LifetimeBoundCtor>(sv); // tu-warning {{object whose reference is captured does not live long enough}}
-  }                                                // tu-note {{destroyed here}}
-  (void)ptr;                                       // tu-note {{later used here}}
+    ptr = std::make_unique<LifetimeBoundCtor>(sv);
+  }
+  (void)ptr;
 }
 
 struct MultiLifetimeBoundCtor {
