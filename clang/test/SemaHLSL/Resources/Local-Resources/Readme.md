@@ -15,19 +15,29 @@ DXC has never had structured test coverage for local resource patterns. Many val
 
 ## Organization
 
-Tests are split across two directories based on compiler behavior:
+Tests are split across multiple directories based on compiler behavior:
+
+| Location | Count | Contents |
+|----------|-------|----------|
+| `SemaHLSL/Resources/Local-Resources/` (this directory) | 15 | Fail to compile on **both** compilers (invalid type ops, bad declarations) |
+| `CodeGenHLSL/resources/Local-Resources/` | 11 | Codegen-stage tests (DXC codegen failures, groupshared) |
+| `offload-test-suite/test/Feature/LocalResources/` | 55 | Produce compiled output on **both** compilers (clean, or Clang warns) |
+| `offload-test-suite/test/Feature/LocalResources/ClangPass/` | 4 | Clang compiles, DXC fails (ICE or codegen error) |
+| `offload-test-suite/test/Feature/LocalResources/DXCPass/` | 1 | DXC compiles, Clang fails to compile |
+| **Total** | **86** | |
 
 ### `SemaHLSL/Resources/Local-Resources/` (this directory)
 
-Tests where **sema is the interesting stage**. This includes:
-- Tests that **pass both sema and codegen** in both compilers (clean passes).
-- Tests that **fail during sema** (expected errors caught by `-verify`).
-- Tests where Clang emits **sema-level warnings** (`-Whlsl-explicit-binding`) that DXC does not — these are verified with `expected-warning` annotations and document the DXC difference in comments.
+Tests where **sema is the interesting stage** and **both compilers reject the code**. These are expected errors caught by `-verify`.
 
 ### `CodeGenHLSL/resources/Local-Resources/`
 
 Tests where **codegen is the interesting stage**. This includes:
 - Tests that **pass sema but fail codegen** in either compiler. These use `FileCheck` to verify that Clang produces valid IR and emits the expected diagnostics, while documenting DXC's codegen-stage errors in comments.
+
+### `offload-test-suite/test/Feature/LocalResources/`
+
+Tests where **both compilers produce a compiled output**. This includes tests that are fully clean on both compilers, as well as tests where Clang emits `-Whlsl-explicit-binding` warnings but still compiles successfully. The `ClangPass/` and `DXCPass/` subdirectories contain tests that compile on only one compiler.
 
 ## Test Categories
 
