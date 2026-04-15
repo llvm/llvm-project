@@ -3748,9 +3748,7 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
       }))
     return true;
 
-  bool X5Available = C.isAvailableAcrossAndOutOfSeq(RISCV::X5, RegInfo);
-
-  if (X5Available)
+  if (C.isAvailableAcrossAndOutOfSeq(RISCV::X5, RegInfo))
     return false;
 
   // Save X5 into t1-t6
