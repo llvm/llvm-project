@@ -5424,6 +5424,53 @@ get_integer_value_for_key_name_from_json(const char *key,
 // Returns true if it was able to find the key name, and sets the 'value'
 // argument to the value found.
 
+static bool get_string_value_for_key_name_from_json(const char *key,
+                                                    const char *json_string,
+                                                    std::string &value) {
+  value.clear();
+  std::string key_with_quotes = "\"";
+  key_with_quotes += key;
+  key_with_quotes += "\"";
+  const char *c = strstr(json_string, key_with_quotes.c_str());
+  if (!c)
+    return false;
+
+  c += key_with_quotes.size();
+
+  while (*c != '\0' && (*c == ' ' || *c == '\t' || *c == '\n' || *c == '\r'))
+    c++;
+
+  if (*c == ':') {
+    c++;
+
+    while (*c != '\0' && (*c == ' ' || *c == '\t' || *c == '\n' || *c == '\r'))
+      c++;
+
+    if (*c == '\0')
+      return false;
+
+    bool escaped_char = false;
+    while (*++c != '\0') {
+      if (escaped_char) {
+        value += *c;
+        escaped_char = false;
+        continue;
+      }
+      if (*c == '\\') {
+        value += *c;
+        escaped_char = true;
+        continue;
+      }
+      if (*c == '"')
+        break;
+
+      value += *c;
+    }
+    return true;
+  }
+  return false;
+}
+
 static bool get_boolean_value_for_key_name_from_json(const char *key,
                                                      const char *json_string,
                                                      bool &value) {
@@ -6015,14 +6062,31 @@ RNBRemote::HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p) {
     bool report_load_commands = true;
     get_boolean_value_for_key_name_from_json("report_load_commands", p,
                                              report_load_commands);
+    DNBBinaryInformationLevel info_level = eBinaryInformationLevelFull;
+    if (!report_load_commands)
+      info_level = eBinaryInformationLevelAddrOnly;
+
+    std::string level_str;
+    if (get_string_value_for_key_name_from_json("information-level", p,
+                                                level_str)) {
+      if (level_str == "address-only")
+        info_level = eBinaryInformationLevelAddrOnly;
+      else if (level_str == "address-name")
+        info_level = eBinaryInformationLevelAddrName;
+      else if (level_str == "address-name-uuid")
+        info_level = eBinaryInformationLevelAddrNameUUID;
+      else if (level_str == "full")
+        info_level = eBinaryInformationLevelFull;
+    }
 
     if (get_boolean_value_for_key_name_from_json("fetch_all_solibs", p,
                                                  fetch_all_solibs) &&
         fetch_all_solibs) {
-      json_sp = DNBGetAllLoadedLibrariesInfos(pid, report_load_commands);
+      json_sp = DNBGetAllLoadedLibrariesInfos(pid, info_level);
     } else if (get_array_of_ints_value_for_key_name_from_json(
                    "solib_addresses", p, macho_addresses)) {
-      json_sp = DNBGetLibrariesInfoForAddresses(pid, macho_addresses);
+      json_sp =
+          DNBGetLibrariesInfoForAddresses(pid, info_level, macho_addresses);
     }
 
     if (json_sp.get()) {

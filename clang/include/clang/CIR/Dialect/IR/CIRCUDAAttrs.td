@@ -32,7 +32,7 @@ def CIR_CUDAKernelNameAttr : CIR_Attr<"CUDAKernelName", "cu.kernel_name"> {
     respective function runtime registration on the host.
   }];
 
-  let parameters = (ins "std::string":$kernel_name);
+  let parameters = (ins "mlir::StringAttr":$kernel_name);
   let assemblyFormat = "`<` $kernel_name `>`";
   let canHaveIllegalCXXABIType = 0;
 }
@@ -49,6 +49,23 @@ def CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
     The attribute corresponds to the attribute on LLVM with the same name.
   }];
   let canHaveIllegalCXXABIType = 0;
+}
+def CIR_CUDABinaryHandleAttr : CIR_Attr<
+  "CUDABinaryHandle", "cu.binary_handle"
+> {
+  let summary = "Fat binary handle for device code.";
+  let description =
+  [{
+    This attribute is attached to the ModuleOp and records the binary file
+    name passed to host.
+
+    CUDA first compiles device-side code into a fat binary file. The file
+    name is then passed into host-side code, which is used to create a handle
+    and then generate various registration functions.
+  }];
+
+  let parameters = (ins "mlir::StringAttr":$name);
+  let assemblyFormat = "`<` $name `>`";
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIRCUDAATTRS_TD

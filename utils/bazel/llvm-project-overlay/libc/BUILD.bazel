@@ -3788,6 +3788,63 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_copysign",
+    hdrs = ["src/__support/math/copysign.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_copysignbf16",
+    hdrs = ["src/__support/math/copysignbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_copysignf",
+    hdrs = ["src/__support/math/copysignf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_copysignf128",
+    hdrs = ["src/__support/math/copysignf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_copysignf16",
+    hdrs = ["src/__support/math/copysignf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_copysignl",
+    hdrs = ["src/__support/math/copysignl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_common_constants",
     hdrs = ["src/__support/math/common_constants.h"],
     deps = [
@@ -5255,6 +5312,28 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_log10p1f16",
+    hdrs = ["src/__support/math/log10p1f16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_exp10_float16_constants",
+        ":__support_math_expxf16_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_log10f",
     hdrs = ["src/__support/math/log10f.h"],
     deps = [
@@ -5275,6 +5354,27 @@ libc_support_library(
 libc_support_library(
     name = "__support_math_log2f16",
     hdrs = ["src/__support/math/log2f16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_expxf16_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_log2p1f16",
+    hdrs = ["src/__support/math/log2p1f16.h"],
     deps = [
         ":__support_common",
         ":__support_fputil_cast",
@@ -6896,18 +6996,46 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "copysign")
+libc_math_function(
+    name = "copysign",
+    additional_deps = [
+        ":__support_math_copysign",
+    ],
+)
 
-libc_math_function(name = "copysignf")
+libc_math_function(
+    name = "copysignbf16",
+    additional_deps = [
+        ":__support_math_copysignbf16",
+    ],
+)
 
-libc_math_function(name = "copysignl")
+libc_math_function(
+    name = "copysignf",
+    additional_deps = [
+        ":__support_math_copysignf",
+    ],
+)
+
+libc_math_function(
+    name = "copysignl",
+    additional_deps = [
+        ":__support_math_copysignl",
+    ],
+)
 
 libc_math_function(
     name = "copysignf128",
+    additional_deps = [
+        ":__support_math_copysignf128",
+    ],
 )
 
 libc_math_function(
     name = "copysignf16",
+    additional_deps = [
+        ":__support_math_copysignf16",
+    ],
 )
 
 libc_math_function(
@@ -7987,6 +8115,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "log10p1f16",
+    additional_deps = [
+        ":__support_math_log10p1f16",
+    ],
+)
+
+libc_math_function(
     name = "log1p",
     additional_deps = [":__support_math_log1p"],
 )
@@ -8014,6 +8149,13 @@ libc_math_function(
     name = "log2f16",
     additional_deps = [
         ":__support_math_log2f16",
+    ],
+)
+
+libc_math_function(
+    name = "log2p1f16",
+    additional_deps = [
+        ":__support_math_log2p1f16",
     ],
 )
 
