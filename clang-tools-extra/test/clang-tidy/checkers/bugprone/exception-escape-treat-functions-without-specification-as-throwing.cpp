@@ -68,21 +68,17 @@ struct Member {
 };
 
 struct S {
-  // CHECK-MESSAGES-ALL: :[[@LINE-1]]:8: warning: an exception may be thrown in function 'S' which should not throw exceptions
-  // CHECK-MESSAGES-ALL: :[[@LINE-2]]:8: note: frame #0: an exception of unknown type may be thrown in function 'S' here
-  // CHECK-MESSAGES-ALL: :[[@LINE-3]]:8: warning: an exception may be thrown in function 'operator=' which should not throw exceptions
-  // CHECK-MESSAGES-ALL: :[[@LINE-4]]:8: note: frame #0: an exception of unknown type may be thrown in function 'operator=' here
-  // CHECK-MESSAGES-ALL: :[[@LINE-5]]:8: warning: an exception may be thrown in function '~S' which should not throw exceptions
-  // CHECK-MESSAGES-ALL: :[[@LINE-6]]:8: note: frame #0: an exception of unknown type may be thrown in function '~S' here
-  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-7]]:8: warning: an exception may be thrown in function 'S' which should not throw exceptions
-  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-8]]:8: note: frame #0: an exception of unknown type may be thrown in function 'S' here
-  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-9]]:8: warning: an exception may be thrown in function 'operator=' which should not throw exceptions
-  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-10]]:8: note: frame #0: an exception of unknown type may be thrown in function 'operator=' here
-  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-11]]:8: warning: an exception may be thrown in function '~S' which should not throw exceptions
-  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-12]]:8: note: frame #0: an exception of unknown type may be thrown in function '~S' here
-  // FIXME: clearly non-throwing functions should not be marked as throwing
   Member m;
 };
+
+template <typename T>
+struct TmplNoexcept {
+  void method() noexcept(noexcept(T())) {}
+};
+
+void instantiate_tmpl_noexcept() {
+  TmplNoexcept<int> t;
+}
 
 void explicit_throw() { throw 1; }
 void calls_explicit_throw() noexcept {

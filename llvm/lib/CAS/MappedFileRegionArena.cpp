@@ -252,8 +252,17 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
   // Create the mapped region.
   {
     std::error_code EC;
+    const char *Name = nullptr;
+#ifdef _WIN32
+    // Give the file mapping a name to ensure the same mappings are
+    // shared across processes.
+    std::string MapName = Result.Path;
+    std::replace(MapName.begin(), MapName.end(), '\\', '/');
+    MapName = "Local\\" + MapName;
+    Name = MapName.c_str();
+#endif
     sys::fs::mapped_file_region Map(
-        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC);
+        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC, Name);
     if (EC)
       return createFileError(Result.Path, EC);
     Result.Region = std::move(Map);

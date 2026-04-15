@@ -52,6 +52,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
@@ -79,6 +80,7 @@
 #include <variant>
 
 #include "MatchContext.h"
+#include "SDNodeDbgValue.h"
 
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
@@ -11024,6 +11026,10 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   SDValue LeftOp = ShiftOperand.getOperand(0);
   SDValue RightOp = ShiftOperand.getOperand(1);
 
+  if (LeftOp.getOpcode() != ISD::SIGN_EXTEND &&
+      LeftOp.getOpcode() != ISD::ZERO_EXTEND)
+    std::swap(LeftOp, RightOp);
+
   bool IsSignExt = LeftOp.getOpcode() == ISD::SIGN_EXTEND;
   bool IsZeroExt = LeftOp.getOpcode() == ISD::ZERO_EXTEND;
 
@@ -11056,18 +11062,17 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   }
 
   SDValue MulhRightOp;
-  if (ConstantSDNode *Constant = isConstOrConstSplat(RightOp)) {
-    unsigned ActiveBits = IsSignExt
-                              ? Constant->getAPIntValue().getSignificantBits()
-                              : Constant->getAPIntValue().getActiveBits();
-    if (ActiveBits > NarrowVTSize)
+  if (LeftOp.getOpcode() != RightOp.getOpcode()) {
+    if (IsZeroExt && ShiftOperand.hasOneUse() &&
+        DAG.computeKnownBits(RightOp).countMaxActiveBits() <= NarrowVTSize) {
+      MulhRightOp = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, RightOp);
+    } else if (IsSignExt && ShiftOperand.hasOneUse() &&
+               DAG.ComputeMaxSignificantBits(RightOp) <= NarrowVTSize) {
+      MulhRightOp = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, RightOp);
+    } else {
       return SDValue();
-    MulhRightOp = DAG.getConstant(
-        Constant->getAPIntValue().trunc(NarrowVT.getScalarSizeInBits()), DL,
-        NarrowVT);
+    }
   } else {
-    if (LeftOp.getOpcode() != RightOp.getOpcode())
-      return SDValue();
     // Check that the two extend nodes are the same type.
     if (NarrowVT != RightOp.getOperand(0).getValueType())
       return SDValue();
@@ -14179,11 +14184,12 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitSETCC(SDNode *N) {
-  // setcc is very commonly used as an argument to brcond. This pattern
-  // also lend itself to numerous combines and, as a result, it is desired
-  // we keep the argument to a brcond as a setcc as much as possible.
+  // setcc is very commonly used as an argument to brcond or cond_loop. This
+  // pattern also lend itself to numerous combines and, as a result, it is
+  // desired we keep the argument to a brcond as a setcc as much as possible.
   bool PreferSetCC =
-      N->hasOneUse() && N->user_begin()->getOpcode() == ISD::BRCOND;
+      N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::BRCOND ||
+                         N->user_begin()->getOpcode() == ISD::COND_LOOP);
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
@@ -14843,6 +14849,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                   ISD::LoadExtType ExtLoadType,
                                   ISD::NodeType ExtOpc,
                                   bool NonNegZExt = false) {
+
   bool Frozen = N0.getOpcode() == ISD::FREEZE;
   SDValue Freeze = Frozen ? N0 : SDValue();
   auto *Load = dyn_cast<LoadSDNode>(Frozen ? N0.getOperand(0) : N0);
@@ -14886,8 +14893,80 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
     return {};
 
   SDLoc DL(Load);
-  // If the load value is used only by N, replace it via CombineTo N.
-  bool NoReplaceTrunc = N0.hasOneUse();
+
+  auto SalvageDbgValue = [&](SDDbgValue *Dbg, SDValue Old, SDValue New,
+                             unsigned OldBits, unsigned NewBits,
+                             bool IsSigned) {
+    SmallVector<SDDbgOperand> Locs = Dbg->copyLocationOps();
+    bool Changed = false;
+
+    bool IsVariadic = Dbg->isVariadic();
+    SmallVector<unsigned, 2> AffectedArgs;
+
+    for (unsigned I = 0, E = Locs.size(); I != E; ++I) {
+      SDDbgOperand &Op = Locs[I];
+      if (Op.getKind() != SDDbgOperand::SDNODE)
+        continue;
+
+      if (Op.getSDNode() == Old.getNode() && Op.getResNo() == Old.getResNo()) {
+        Op = SDDbgOperand::fromNode(New.getNode(), New.getResNo());
+        Changed = true;
+
+        if (IsVariadic)
+          AffectedArgs.push_back(I);
+      }
+    }
+
+    if (!Changed)
+      return;
+
+    const DIExpression *OldExpr = Dbg->getExpression();
+    const DIExpression *NewExpr = nullptr;
+
+    if (!IsVariadic) {
+      // Do not introduce DW_OP_LLVM_arg into ordinary single-location
+      // DBG_VALUEs.
+      NewExpr = DIExpression::appendExt(OldExpr, NewBits, OldBits, IsSigned);
+    } else {
+      auto ExtOps = DIExpression::getExtOps(NewBits, OldBits, IsSigned);
+
+      NewExpr = DIExpression::convertToVariadicExpression(OldExpr);
+
+      for (unsigned ArgNo : AffectedArgs)
+        NewExpr = DIExpression::appendOpsToArg(NewExpr, ExtOps, ArgNo,
+                                               /*StackValue=*/false);
+    }
+
+    SDDbgValue *NewDV = DAG.getDbgValueList(
+        Dbg->getVariable(), const_cast<DIExpression *>(NewExpr), Locs,
+        Dbg->getAdditionalDependencies(), Dbg->isIndirect(), Dbg->getDebugLoc(),
+        Dbg->getOrder(), Dbg->isVariadic());
+
+    Dbg->setIsInvalidated();
+    Dbg->setIsEmitted();
+    DAG.AddDbgValue(NewDV, /*isParameter=*/false);
+  };
+
+  // Because we are replacing a load and a s|z ext with a load-s|z ext
+  // instruction, the dbg_value attached to the load will be of a smaller bit
+  // width, and we have to add a DW_OP_LLVM_convert expression to get the
+  // correct size.
+  auto SalvageToOldLoadSize = [&](SDValue Old, SDValue New, bool IsSigned) {
+    SmallVector<SDDbgValue *, 4> DbgVals(
+        DAG.GetDbgValues(Old.getNode()).begin(),
+        DAG.GetDbgValues(Old.getNode()).end());
+
+    unsigned VarBitsOld = Old.getValueSizeInBits();
+    unsigned VarBitsNew = New.getValueSizeInBits();
+
+    for (SDDbgValue *Dbg : DbgVals) {
+      if (Dbg->isInvalidated())
+        continue;
+
+      SalvageDbgValue(Dbg, Old, New, VarBitsOld, VarBitsNew, IsSigned);
+    }
+  };
+
   SDValue ExtLoad =
       DAG.getExtLoad(ExtLoadType, DL, VT, Load->getChain(), Load->getBasePtr(),
                      Load->getValueType(0), Load->getMemOperand());
@@ -14900,8 +14979,18 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                       DAG.getValueType(Load->getValueType(0).getScalarType()));
   }
   Combiner.ExtendSetCCUses(SetCCs, N0, Res, ExtOpc);
-  Combiner.CombineTo(N, Res);
+  // If the load value is used only by N, replace it via CombineTo N.
+  unsigned Opcode_N = N->getOpcode();
+  bool IsSigned = Opcode_N == ISD::SIGN_EXTEND;
+  SDValue OldLoadVal(Load, 0);
+  SDValue OldExtValue(N, 0);
+  bool NoReplaceTrunc = N0.hasOneUse();
   if (NoReplaceTrunc) {
+    if (Load->getHasDebugValue())
+      SalvageToOldLoadSize(OldLoadVal, ExtLoad, IsSigned);
+
+    if (N->getHasDebugValue())
+      DAG.transferDbgValues(OldExtValue, ExtLoad);
     DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), ExtLoad.getValue(1));
     Combiner.recursivelyDeleteUnusedNodes(N0.getNode());
   } else {
@@ -14913,6 +15002,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       Combiner.CombineTo(Load, Trunc, ExtLoad.getValue(1));
     }
   }
+  Combiner.CombineTo(N, Res);
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
 
@@ -26513,9 +26603,11 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
       // If the bitcast type isn't legal, it might be a trunc of a legal type;
       // look through the trunc so we can still do the transform:
       //   concat_vectors(trunc(scalar), undef) -> scalar_to_vector(scalar)
+      // However, this is only equivalent on little-endian targets.
       if (Scalar->getOpcode() == ISD::TRUNCATE &&
           !TLI.isTypeLegal(Scalar.getValueType()) &&
-          TLI.isTypeLegal(Scalar->getOperand(0).getValueType()))
+          TLI.isTypeLegal(Scalar->getOperand(0).getValueType()) &&
+          DAG.getDataLayout().isLittleEndian())
         Scalar = Scalar->getOperand(0);
 
       EVT SclTy = Scalar.getValueType();

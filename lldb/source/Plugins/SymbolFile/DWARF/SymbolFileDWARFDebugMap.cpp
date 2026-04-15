@@ -482,7 +482,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
             "\"%s\" object from the \"%s\" archive: "
             "either the .o file doesn't exist in the archive or the "
             "modification time (0x%8.8x) of the .o file doesn't match",
-            oso_object.AsCString(), oso_file.GetPath().c_str(),
+            oso_object.AsCString(""), oso_file.GetPath().c_str(),
             (uint32_t)llvm::sys::toTimeT(comp_unit_info->oso_mod_time));
       }
     }

@@ -1768,10 +1768,10 @@ defm gnu_inline_asm : BoolFOption<"gnu-inline-asm",
   PosFlag<SetTrue>>;
 
 def fno_profile_sample_use : Flag<["-"], "fno-profile-sample-use">, Group<f_Group>,
-    Visibility<[ClangOption, CLOption]>;
+    Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>;
 def fprofile_sample_use_EQ : Joined<["-"], "fprofile-sample-use=">,
     Group<f_Group>,
-    Visibility<[ClangOption, CLOption, CC1Option]>,
+    Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"Enable sample-based profile guided optimizations">,
     MarshallingInfoString<CodeGenOpts<"SampleProfileFile">>;
 def fprofile_sample_accurate : Flag<["-"], "fprofile-sample-accurate">,
@@ -2342,6 +2342,14 @@ def winx64_eh_unwindv2
       NormalizedValues<["Disabled", "BestEffort", "Required"]>,
       NormalizedValuesScope<"llvm::WinX64EHUnwindV2Mode">,
       MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwindV2">, "Disabled">;
+def win_cfg_mechanism
+    : Joined<["-"], "fwin-cfg-mechanism=">, Group<f_Group>,
+    Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Sets the mechanism to use for Control Flow Guard on Windows">,
+      Values<"automatic,dispatch,check">,
+      NormalizedValues<["Automatic", "Dispatch", "Check"]>,
+      NormalizedValuesScope<"llvm::ControlFlowGuardMechanism">,
+      MarshallingInfoEnum<CodeGenOpts<"WinControlFlowGuardMechanism">, "Automatic">;
 def fexcess_precision_EQ : Joined<["-"], "fexcess-precision=">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Allows control over excess precision on targets where native "
@@ -3857,6 +3865,9 @@ def fno_module_maps : Flag <["-"], "fno-module-maps">, Alias<fno_implicit_module
 def fno_modules_strict_decluse : Flag <["-"], "fno-strict-modules-decluse">, Group<f_Group>;
 def fmodule_file_deps : Flag <["-"], "fmodule-file-deps">, Group<f_Group>;
 def fno_module_file_deps : Flag <["-"], "fno-module-file-deps">, Group<f_Group>;
+def fmodule_file_deps_EQ : Joined<["-"], "fmodule-file-deps=">, Group<f_Group>,
+  HelpText<"Include module files in dependency output">,
+  Values<"none,all,direct">;
 def fno_ms_extensions : Flag<["-"], "fno-ms-extensions">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>;
 def fno_ms_compatibility : Flag<["-"], "fno-ms-compatibility">, Group<f_Group>,
@@ -6690,8 +6701,10 @@ def y : Joined<["-"], "y">;
 
 defm integrated_as : BoolFOption<"integrated-as",
   CodeGenOpts<"DisableIntegratedAS">, DefaultFalse,
-  NegFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption], "Disable">,
-  PosFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption], "Enable">,
+  NegFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
+          "Disable">,
+  PosFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption, FC1Option],
+          "Enable">,
   BothFlags<[], [ClangOption], " the integrated assembler">>;
 
 def fintegrated_cc1 : Flag<["-"], "fintegrated-cc1">,
@@ -6714,7 +6727,7 @@ def fno_integrated_objemitter : Flag<["-"], "fno-integrated-objemitter">,
 
 def : Flag<["-"], "integrated-as">, Alias<fintegrated_as>;
 def : Flag<["-"], "no-integrated-as">, Alias<fno_integrated_as>,
-      Visibility<[ClangOption, CC1Option, FlangOption]>;
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 
 def working_directory : Separate<["-"], "working-directory">,
   Visibility<[ClangOption, CC1Option]>,
@@ -8504,9 +8517,11 @@ let Visibility = [CC1Option] in {
 def sys_header_deps : Flag<["-"], "sys-header-deps">,
   HelpText<"Include system headers in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"IncludeSystemHeaders">>;
-def module_file_deps : Flag<["-"], "module-file-deps">,
+def module_file_deps_EQ : Joined<["-"], "module-file-deps=">,
   HelpText<"Include module files in dependency output">,
-  MarshallingInfoFlag<DependencyOutputOpts<"IncludeModuleFiles">>;
+  Values<"none,all,direct">,
+  NormalizedValues<["MFDK_None", "MFDK_All", "MFDK_Direct"]>,
+  MarshallingInfoEnum<DependencyOutputOpts<"IncludeModuleFiles">, "MFDK_None">;
 def header_include_file : Separate<["-"], "header-include-file">,
   HelpText<"Filename (or -) to write header include output to">,
   MarshallingInfoString<DependencyOutputOpts<"HeaderIncludeOutputFile">>;
@@ -9664,6 +9679,10 @@ def _SLASH_d2epilogunwindrequirev2 : CLFlag<"d2epilogunwindrequirev2">,
   HelpText<"Require generation of unwind v2 (epilog) information for x64 Windows">;
 def _SLASH_d2guardnochecks : CLFlag<"d2guardnochecks">,
   HelpText<"When used with /guard:cf, emits Windows Control Flow Guard tables only (no checks)">;
+def _SLASH_d2guardcfgdispatch : CLFlag<"d2guardcfgdispatch">,
+  HelpText<"Use the dispatch mechanism to call the Control Flow Guard checker">;
+def _SLASH_d2guardcfgdispatch_ : CLFlag<"d2guardcfgdispatch-">,
+  HelpText<"Use the check mechanism to call the Control Flow Guard checker">;
 def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;
@@ -10025,6 +10044,8 @@ def dxc_hlsl_version : Option<["/", "-"], "HV", KIND_JOINED_OR_SEPARATE>,
                      Values<"2016, 2017, 2018, 2021, 202x, 202y">;
 def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
   HelpText<"DXIL validator installation path">;
+def spirv_validator_path_EQ : Joined<["--"], "spirv-val-path=">, Group<dxc_Group>,
+  HelpText<"SPIRV validator installation path">;
 def dxc_disable_validation : DXCFlag<"Vd">,
   HelpText<"Disable validation">;
 def dxc_gis : DXCFlag<"Gis">,
