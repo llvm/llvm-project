@@ -3743,9 +3743,7 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
 
   // Filter out candidates where the X5 register (t0) can't be used to setup
   // the function call.
-  if (llvm::any_of(C, [this](const MachineInstr &MI) {
-        return isMIModifiesReg(MI, &RegInfo, RISCV::X5);
-      }))
+  if (!C.isAvailableInsideSeq(RISCV::X5, RegInfo))
     return true;
 
   // If X5 is available in the region, use X5 directly (MachineOutlinerDefault).
