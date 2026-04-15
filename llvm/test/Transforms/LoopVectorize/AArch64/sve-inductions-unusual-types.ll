@@ -52,7 +52,7 @@ define void @induction_i7(ptr %dst) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv1294 = phi i7 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
   %indvars.iv1286 = phi i64 [ %indvars.iv.next1287, %for.body ], [ 0, %entry ]
   %addi7 = add i7 %indvars.iv1294, 0
@@ -64,7 +64,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next1287, 64
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -115,7 +115,7 @@ define void @induction_i3_zext(ptr %dst) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv1294 = phi i3 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
   %indvars.iv1286 = phi i64 [ %indvars.iv.next1287, %for.body ], [ 0, %entry ]
   %zexti3 = zext i3 %indvars.iv1294 to i64
@@ -126,7 +126,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next1287, 64
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 

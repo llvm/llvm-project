@@ -23,7 +23,7 @@ namespace fputil {
 // which uses FMA instructions to speed up if available.
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
+LIBC_INLINE constexpr cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
 multiply_add(const T &x, const T &y, const T &z) {
   return x * y + z;
 }

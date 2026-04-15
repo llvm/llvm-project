@@ -254,6 +254,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 
   if (ctx.arg.formatBinary) {
     files.push_back(std::make_unique<BinaryFile>(ctx, mbref));
+    if (!isInGroup)
+      ++nextGroupId;
     return;
   }
 
@@ -321,7 +323,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
         ctx, mbref, withLOption ? path::filename(path) : path);
     f->init();
     files.push_back(std::move(f));
-    return;
+    break;
   }
   case file_magic::bitcode:
     files.push_back(std::make_unique<BitcodeFile>(ctx, mbref, "", 0, inLib));
@@ -332,7 +334,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     break;
   default:
     ErrAlways(ctx) << path << ": unknown file type";
+    return;
   }
+  // All files within the same --{start,end}-group get the same group ID.
+  // Otherwise, a new file will get a new group ID.
+  if (!isInGroup)
+    ++nextGroupId;
 }
 
 // Add a given library by searching it from input search paths.
@@ -630,6 +637,25 @@ static ZicfissPolicy getZZicfiss(Ctx &ctx, opt::InputArgList &args) {
   return ret;
 }
 
+static int getZMemtagMode(Ctx &ctx, opt::InputArgList &args) {
+  auto ret = ELF::NT_MEMTAG_LEVEL_NONE;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "memtag-mode") {
+      arg->claim();
+      if (kv.second == "none")
+        ret = ELF::NT_MEMTAG_LEVEL_NONE;
+      else if (kv.second == "sync")
+        ret = ELF::NT_MEMTAG_LEVEL_SYNC;
+      else if (kv.second == "async")
+        ret = ELF::NT_MEMTAG_LEVEL_ASYNC;
+      else
+        ErrAlways(ctx) << "unknown -z memtag-mode= value: " << kv.second;
+    }
+  }
+  return ret;
+}
+
 // Report a warning for an unknown -z option.
 static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   // This function is called before getTarget(), when certain options are not
@@ -846,27 +872,19 @@ static StringRef getDynamicLinker(Ctx &ctx, opt::InputArgList &args) {
 }
 
 static int getMemtagMode(Ctx &ctx, opt::InputArgList &args) {
-  StringRef memtagModeArg = args.getLastArgValue(OPT_android_memtag_mode);
-  if (memtagModeArg.empty()) {
-    if (ctx.arg.androidMemtagStack)
-      Warn(ctx) << "--android-memtag-mode is unspecified, leaving "
-                   "--android-memtag-stack a no-op";
-    else if (ctx.arg.androidMemtagHeap)
-      Warn(ctx) << "--android-memtag-mode is unspecified, leaving "
-                   "--android-memtag-heap a no-op";
-    return ELF::NT_MEMTAG_LEVEL_NONE;
+  auto memtagMode = getZMemtagMode(ctx, args);
+  if (memtagMode == ELF::NT_MEMTAG_LEVEL_NONE) {
+    if (ctx.arg.memtagStack)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "-z memtag-stack a no-op";
+    if (ctx.arg.memtagHeap)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "-z memtag-heap a no-op";
+    if (ctx.arg.memtagAndroidNote)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "--android-memtag-note a no-op";
   }
-
-  if (memtagModeArg == "sync")
-    return ELF::NT_MEMTAG_LEVEL_SYNC;
-  if (memtagModeArg == "async")
-    return ELF::NT_MEMTAG_LEVEL_ASYNC;
-  if (memtagModeArg == "none")
-    return ELF::NT_MEMTAG_LEVEL_NONE;
-
-  ErrAlways(ctx) << "unknown --android-memtag-mode value: \"" << memtagModeArg
-                 << "\", should be one of {async, sync, none}";
-  return ELF::NT_MEMTAG_LEVEL_NONE;
+  return memtagMode;
 }
 
 static ICFLevel getICF(opt::InputArgList &args) {
@@ -1198,6 +1216,54 @@ static CGProfileSortKind getCGProfileSortKind(Ctx &ctx,
 }
 
 static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
+  auto addCompressionSortSpec = [&](StringRef value) {
+    SmallVector<StringRef, 3> parts;
+    value.split(parts, '=');
+
+    StringRef globString = parts[0];
+    unsigned layoutPriority = 0;
+    std::optional<unsigned> matchPriority;
+
+    if (parts.size() > 1 && !parts[1].empty()) {
+      if (!to_integer(parts[1], layoutPriority)) {
+        ErrAlways(ctx) << "--bp-compression-sort-section: expected integer "
+                          "for layout_priority, got '"
+                       << parts[1] << "'";
+        return;
+      }
+    }
+    if (parts.size() > 2 && !parts[2].empty()) {
+      unsigned mp;
+      if (!to_integer(parts[2], mp)) {
+        ErrAlways(ctx) << "--bp-compression-sort-section: expected integer "
+                          "for match_priority, got '"
+                       << parts[2] << "'";
+        return;
+      }
+      matchPriority = mp;
+    }
+    if (parts.size() > 3) {
+      ErrAlways(ctx) << "--bp-compression-sort-section: too many '=' in '"
+                     << value << "'";
+      return;
+    }
+
+    auto spec = BPCompressionSortSpec::create(globString, layoutPriority,
+                                              matchPriority);
+    if (!spec) {
+      ErrAlways(ctx) << "--bp-compression-sort-section: "
+                     << toString(spec.takeError());
+      return;
+    }
+    ctx.arg.bpCompressionSortSpecs.emplace_back(std::move(*spec));
+  };
+
+  for (auto *arg : args.filtered(OPT_bp_compression_sort_section))
+    addCompressionSortSpec(arg->getValue());
+  if (!ctx.arg.bpCompressionSortSpecs.empty() &&
+      args.hasArg(OPT_call_graph_ordering_file))
+    ErrAlways(ctx) << "--bp-compression-sort-section is incompatible with "
+                      "--call-graph-ordering-file";
   if (auto *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef s = arg->getValue();
     if (s == "function") {
@@ -1358,13 +1424,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       hasZOption(args, "muldefs") ||
       args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false);
-  ctx.arg.androidMemtagHeap =
-      args.hasFlag(OPT_android_memtag_heap, OPT_no_android_memtag_heap, false);
-  ctx.arg.androidMemtagStack = args.hasFlag(OPT_android_memtag_stack,
-                                            OPT_no_android_memtag_stack, false);
+  ctx.arg.memtagHeap = hasZOption(args, "memtag-heap");
+  ctx.arg.memtagStack = hasZOption(args, "memtag-stack");
+  ctx.arg.memtagAndroidNote = args.hasArg(OPT_android_memtag_note);
   ctx.arg.fatLTOObjects =
       args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false);
-  ctx.arg.androidMemtagMode = getMemtagMode(ctx, args);
+  ctx.arg.memtagMode = getMemtagMode(ctx, args);
   ctx.arg.auxiliaryList = args::getStrings(args, OPT_auxiliary);
   ctx.arg.armBe8 = args.hasArg(OPT_be8);
   if (opt::Arg *arg = args.getLastArg(
@@ -2716,8 +2781,27 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
 template <class ELFT>
 void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
+
+  // Collect the bitcode library functions that are not safe to call because
+  // they were not yet brought in the link. (Such symbols are lazy.)
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<StringRef> bitcodeLibFuncs;
+  if (!ctx.bitcodeFiles.empty()) {
+    // Triple must be captured before the bitcode is moved into the compiler.
+    // Note that the below assumes that the set of possible libfuncs is roughly
+    // equivalent for all bitcode translation units.
+    llvm::Triple tt =
+        llvm::Triple(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver))
+      if (Symbol *sym = ctx.symtab->find(libFunc);
+          sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
+        bitcodeLibFuncs.push_back(libFunc);
+  }
+
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler(ctx));
+  lto->setBitcodeLibFuncs(bitcodeLibFuncs);
   for (BitcodeFile *file : ctx.bitcodeFiles)
     lto->add(*file);
 

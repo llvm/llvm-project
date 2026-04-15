@@ -498,8 +498,8 @@ void CommandObjectDisassemble::DoExecute(Args &command,
     return;
   } else if (flavor_string != nullptr && !disassembler->FlavorValidForArchSpec(
                                              m_options.arch, flavor_string))
-    result.AppendWarningWithFormat(
-        "invalid disassembler flavor \"%s\", using default.\n", flavor_string);
+    result.AppendWarningWithFormatv(
+        "invalid disassembler flavor \"{0}\", using default", flavor_string);
 
   result.SetStatus(eReturnStatusSuccessFinishResult);
 

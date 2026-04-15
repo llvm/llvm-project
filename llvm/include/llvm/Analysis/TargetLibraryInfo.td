@@ -404,13 +404,6 @@ def dunder_isoc99_scanf : TargetLibCall<"__isoc99_scanf", Int, [Ptr, Ellip]>;
 def dunder_isoc99_sscanf
     : TargetLibCall<"__isoc99_sscanf", Int, [Ptr, Ptr, Ellip]>;
 
-/// void* __kmpc_alloc_shared(size_t nbyte);
-def __kmpc_alloc_shared : TargetLibCall<"__kmpc_alloc_shared", Ptr, [SizeT]>;
-
-/// void __kmpc_free_shared(void *ptr, size_t nbyte);
-def __kmpc_free_shared
-    : TargetLibCall<"__kmpc_free_shared", Void, [Ptr, SizeT]>;
-
 /// double __log10_finite(double x);
 def log10_finite : TargetLibCall<"__log10_finite", Dbl, [Dbl]>;
 

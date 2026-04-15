@@ -109,7 +109,8 @@ llvm::Error OrcIncrementalExecutor::LoadDynamicLibrary(const char *name) {
   // FIXME: Eventually we should put each library in its own JITDylib and
   //        turn off process symbols by default.
   llvm::orc::ExecutionSession &ES = Jit->getExecutionSession();
-  auto DLSGOrErr = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(ES, name);
+  auto DLSGOrErr = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(
+      ES, Jit->getDylibMgr(), name);
   if (!DLSGOrErr)
     return DLSGOrErr.takeError();
 

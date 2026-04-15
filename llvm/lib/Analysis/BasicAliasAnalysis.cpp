@@ -31,6 +31,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -215,7 +216,10 @@ CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(const Value *Object,
 }
 
 static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
-                         const LoopInfo *LI) {
+                         const LoopInfo *LI, const CycleInfo *CI) {
+  if (CI)
+    return !CI->getCycle(I->getParent());
+
   BasicBlock *BB = const_cast<BasicBlock *>(I->getParent());
   SmallVector<BasicBlock *> Succs(successors(BB));
   return Succs.empty() ||
@@ -252,10 +256,10 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
     if (I == CaptureInst) {
       if (OrAt)
         return false;
-      return isNotInCycle(I, &DT, LI);
+      return isNotInCycle(I, &DT, LI, CI);
     }
 
-    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI);
+    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI);
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
@@ -620,9 +624,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     if (Op->getOpcode() == Instruction::BitCast ||
         Op->getOpcode() == Instruction::AddrSpaceCast) {
       Value *NewV = Op->getOperand(0);
-      // Don't look through casts between address spaces with differing index
-      // widths.
-      if (DL.getIndexTypeSizeInBits(NewV->getType()) != IndexSize) {
+      auto *NewVTy = NewV->getType();
+      // Don't look through casts to non-scalar-pointer types or address spaces
+      // with differing index widths.
+      if (!isa<PointerType>(NewVTy) ||
+          DL.getIndexTypeSizeInBits(NewVTy) != IndexSize) {
         Decomposed.Base = V;
         return Decomposed;
       }
@@ -1910,7 +1916,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (!Inst || Inst->getParent()->isEntryBlock())
     return true;
 
-  return isNotInCycle(Inst, getDT(AAQI), /*LI*/ nullptr);
+  return isNotInCycle(Inst, getDT(AAQI), /*LI=*/nullptr, /*CI=*/nullptr);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.

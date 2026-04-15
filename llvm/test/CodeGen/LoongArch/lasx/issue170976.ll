@@ -51,9 +51,12 @@ entry:
 define <8 x i64> @test_i64(<8 x i64> %shuffle) {
 ; LA32-LABEL: test_i64:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvrepli.d $xr2, 3
-; LA32-NEXT:    xvdiv.du $xr0, $xr0, $xr2
-; LA32-NEXT:    xvdiv.du $xr1, $xr1, $xr2
+; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
+; LA32-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI3_0)
+; LA32-NEXT:    xvmuh.du $xr0, $xr0, $xr2
+; LA32-NEXT:    xvsrli.d $xr0, $xr0, 1
+; LA32-NEXT:    xvmuh.du $xr1, $xr1, $xr2
+; LA32-NEXT:    xvsrli.d $xr1, $xr1, 1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_i64:

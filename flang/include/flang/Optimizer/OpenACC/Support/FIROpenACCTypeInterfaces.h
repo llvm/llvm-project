@@ -80,22 +80,29 @@ struct OpenACCMappableModel
   mlir::acc::VariableTypeCategory getTypeCategory(mlir::Type type,
                                                   mlir::Value var) const;
 
+  mlir::acc::VariableInfoAttr
+  genPrivateVariableInfo(mlir::Type type,
+                         mlir::TypedValue<mlir::acc::MappableType> var) const;
+
   mlir::Value generatePrivateInit(mlir::Type type, mlir::OpBuilder &builder,
                                   mlir::Location loc,
                                   mlir::TypedValue<mlir::acc::MappableType> var,
                                   llvm::StringRef varName,
                                   mlir::ValueRange extents, mlir::Value initVal,
+                                  mlir::acc::VariableInfoAttr varInfo,
                                   bool &needsDestroy) const;
 
   bool generatePrivateDestroy(mlir::Type type, mlir::OpBuilder &builder,
                               mlir::Location loc, mlir::Value privatized,
-                              mlir::ValueRange bounds) const;
+                              mlir::ValueRange bounds,
+                              mlir::acc::VariableInfoAttr varInfo) const;
 
   bool generateCopy(mlir::Type type, mlir::OpBuilder &mlirBuilder,
                     mlir::Location loc,
                     mlir::TypedValue<mlir::acc::MappableType> source,
                     mlir::TypedValue<mlir::acc::MappableType> dest,
-                    mlir::ValueRange bounds) const;
+                    mlir::ValueRange bounds,
+                    mlir::acc::VariableInfoAttr varInfo) const;
 
   bool generateCombiner(mlir::Type type, mlir::OpBuilder &mlirBuilder,
                         mlir::Location loc,

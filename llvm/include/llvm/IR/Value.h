@@ -105,13 +105,12 @@ protected:
   ///
   /// Note, this should *NOT* be used directly by any class other than User.
   /// User uses this value to find the Use list.
-  enum : unsigned { NumUserOperandsBits = 27 };
+  enum : unsigned { NumUserOperandsBits = 28 };
   unsigned NumUserOperands : NumUserOperandsBits;
 
   // Use the same type as the bitfield above so that MSVC will pack them.
   unsigned IsUsedByMD : 1;
   unsigned HasName : 1;
-  unsigned HasMetadata : 1; // Has metadata attached to this?
   unsigned HasHungOffUses : 1;
   unsigned HasDescriptor : 1;
 
@@ -574,43 +573,20 @@ protected:
   /// These functions require that the value have at most a single attachment
   /// of the given kind, and return \c nullptr if such an attachment is missing.
   /// @{
-  MDNode *getMetadata(unsigned KindID) const {
-    if (!HasMetadata)
-      return nullptr;
-    return getMetadataImpl(KindID);
-  }
-  LLVM_ABI MDNode *getMetadata(StringRef Kind) const;
+  LLVM_ABI MDNode *getMetadata(StringRef Kind) const LLVM_READONLY;
   /// @}
 
-  /// Appends all attachments with the given ID to \c MDs in insertion order.
-  /// If the Value has no attachments with the given ID, or if ID is invalid,
-  /// leaves MDs unchanged.
-  /// @{
-  LLVM_ABI void getMetadata(unsigned KindID,
-                            SmallVectorImpl<MDNode *> &MDs) const;
-  LLVM_ABI void getMetadata(StringRef Kind,
-                            SmallVectorImpl<MDNode *> &MDs) const;
-  /// @}
+private:
+  LLVM_ABI unsigned getMetadataIndex() const;
+  LLVM_ABI unsigned &getMetadataIndex();
 
+protected:
   /// Appends all metadata attached to this value to \c MDs, sorting by
   /// KindID. The first element of each pair returned is the KindID, the second
   /// element is the metadata value. Attachments with the same ID appear in
   /// insertion order.
   LLVM_ABI void
   getAllMetadata(SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const;
-
-  /// Return true if this value has any metadata attached to it.
-  bool hasMetadata() const { return (bool)HasMetadata; }
-
-  /// Return true if this value has the given type of metadata attached.
-  /// @{
-  bool hasMetadata(unsigned KindID) const {
-    return getMetadata(KindID) != nullptr;
-  }
-  bool hasMetadata(StringRef Kind) const {
-    return getMetadata(Kind) != nullptr;
-  }
-  /// @}
 
   /// Set a particular kind of metadata attachment.
   ///
@@ -641,7 +617,7 @@ protected:
   /// Get metadata for the given kind, if any.
   /// This is an internal function that must only be called after
   /// checking that `hasMetadata()` returns true.
-  LLVM_ABI MDNode *getMetadataImpl(unsigned KindID) const;
+  LLVM_ABI MDNode *getMetadataImpl(unsigned KindID) const LLVM_READONLY;
 
 public:
   /// Return true if this value is a swifterror value.

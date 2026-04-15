@@ -18,6 +18,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   atomic/clc_atomic_store.cl
   collective/clc_work_group_any_all.cl
   collective/clc_work_group_broadcast.cl
+  collective/clc_work_group_scan.cl
   collective/clc_work_group_reduce.cl
   common/clc_degrees.cl
   common/clc_radians.cl

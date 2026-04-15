@@ -122,6 +122,51 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d", [NoMemoryEffect]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: avg_pool2d_adaptive
+//===----------------------------------------------------------------------===//
+def Tosa_AvgPool2dAdaptiveOp
+    : Tosa_InferShapedTypeOp<"avg_pool2d_adaptive", [NoMemoryEffect]> {
+  let summary = "Performs average pooling on the input with shape operands.";
+
+  let description = [{
+    This performs an average pooling over the given input tensor. A sliding
+    window of size given by <kernel size> is passed over the input tensor, with
+    the mean value being placed in the output tensor. When calculating the
+    average, only the number of valid input tensor values, but not padding, are
+    used to calculate the divisor. Compared to avg_pool2d, the kernel/stride/
+    pad values are provided as inputs.
+  }];
+
+  let arguments = (ins Tosa_Tensor4D:$input,
+      Tosa_ScalarIntOrFloatTensor:$input_zp,
+      Tosa_ScalarIntOrFloatTensor:$output_zp, Rank2TosaShape:$kernel,
+      Rank2TosaShape:$stride, Rank4TosaShape:$pad,
+      TypeAttrOf<Tosa_AccType>:$acc_type);
+
+  let results = (outs Tosa_Tensor4D:$output);
+
+  list<Availability> availability =
+      [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+       Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2,
+                  Tosa_EXT_BF16]>,
+  ];
+
+  let builders = [Tosa_AvgPool2dAdaptiveOpQuantInfoBuilder];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getInputZeroPoint();
+    FailureOr<int64_t> getOutputZeroPoint();
+    LogicalResult verifyInputZeroPoint(int64_t zp);
+    LogicalResult verifyOutputZeroPoint(int64_t zp);
+  }];
+
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: conv2d
 //===----------------------------------------------------------------------===//
 def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
@@ -476,6 +521,41 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d", [Pure]> {
   ];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: max_pool2d_adaptive
+//===----------------------------------------------------------------------===//
+def Tosa_MaxPool2dAdaptiveOp
+    : Tosa_InferShapedTypeOp<"max_pool2d_adaptive", [Pure]> {
+  let summary = "Performs max pooling on the input.";
+
+  let description = [{
+    This performs a max pooling over the given input tensor. A sliding window of
+    size given by <kernel size> is passed over the input tensor, with the
+    maximum value being placed in the output tensor.
+    Compared to MAX_POOL2D, MAX_POOL2D_ADAPTIVE has the kernel, stride, 
+    pad arguments as inputs rather than attributes.
+  }];
+
+  let arguments =
+      (ins Tosa_Tensor4D:$input, Rank2TosaShape:$kernel, Rank2TosaShape:$stride,
+          Rank4TosaShape:$pad,
+
+          DefaultValuedAttr<
+              Tosa_NanPropagationModeAttr,
+              "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode);
+
+  let results = (outs Tosa_Tensor4D:$output);
+
+  list<Availability> availability =
+      [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+       Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2,
+                  Tosa_EXT_BF16]>,
+  ];
+
   let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
 }
@@ -2653,6 +2733,7 @@ def Tosa_CastToBlockScaledOp : Tosa_InferShapedTypeOp<"cast_to_block_scaled", [P
     Extension<[Tosa_EXT_BF16, Tosa_EXT_MXFP]>
   ];
 
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
 }

@@ -212,5 +212,16 @@ struct T : S {
     virtual void k() &;
     virtual void l() &&;
 };
+#if __cplusplus >= 202002L
+
+// We should not error on inconsistent ref-qualifiers if the functions
+// have different constraints.
+template <unsigned R> struct type {
+    void func() const requires(R == 0);
+    void func() & requires(R == 1);
+};
+
+#endif
+
 #endif
 }

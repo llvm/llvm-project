@@ -427,6 +427,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("using FuncPointerType = MCStreamer *(*)(MCContext &Ctx);");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_Unknown); // Not TT_CastRParen
+  EXPECT_TOKEN(Tokens[10], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[11], tok::identifier, TT_StartOfName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -3022,6 +3028,61 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::hash, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::hashhash, TT_Unknown);
+
+  // A protected data block that is not empty should be treated as a single
+  // token.
+  Tokens = Annotate(
+      "`pragma protect data_block, encoding=(enctype=\"base64\", bytes=2)\n"
+      "0+0=\n"
+      "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 22u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::string_literal, TT_VerilogProtected);
+  Tokens = Annotate(
+      "`pragma protect data_block, encoding=(enctype=\"base64\", bytes=2)\n"
+      "0+0=");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::string_literal, TT_VerilogProtected);
+  EXPECT_EQ(Tokens[16]->TokenText, "0+0=");
+  Tokens = Annotate("`pragma protect data_block\n"
+                    "0\n"
+                    "+0=\n"
+                    "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_VerilogProtected);
+  EXPECT_EQ(Tokens[4]->TokenText, "0\n+0=");
+  Tokens = Annotate("`pragma protect data_block\n"
+                    "0+0=\n"
+                    "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_VerilogProtected);
+  EXPECT_EQ(Tokens[4]->TokenText, "0+0=");
+
+  // A protected block that is empty should not have tokens.
+  Tokens = Annotate("`pragma protect data_block");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  Tokens = Annotate("`pragma protect data_block\n");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  Tokens = Annotate("`pragma protect data_block\n"
+                    "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+
+  // The standard allows uuencode as well. The program should not confuse the
+  // backticks added by the encoding as the end pragma.
+  Tokens = Annotate("`pragma protect data_block\n"
+                    "`\n"
+                    "end\n"
+                    "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_VerilogProtected);
+  EXPECT_EQ(Tokens[4]->TokenText, "`\nend");
+  Tokens = Annotate("`pragma protect data_block\n"
+                    "!````\n"
+                    "`\n"
+                    "end\n"
+                    "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_VerilogProtected);
+  EXPECT_EQ(Tokens[4]->TokenText, "!````\n`\nend");
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
@@ -4339,10 +4400,26 @@ TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
   EXPECT_EQ(Tokens[3]->TokenText, "2_$");
 }
 
-TEST_F(TokenAnnotatorTest, EnumColonInTypedef) {
-  auto Tokens = annotate("typedef enum : int {} foo;");
+TEST_F(TokenAnnotatorTest, EnumColon) {
+  auto Tokens = annotate("enum A : int {};");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("enum class B : int {};");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::colon, TT_Unknown); // Not TT_InheritanceColon.
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("enum : int { E1 };");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("typedef enum : int {} foo;");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("typedef enum A : int {} foo;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_EnumUnderlyingTypeColon);
 }
 
 TEST_F(TokenAnnotatorTest, BitFieldColon) {

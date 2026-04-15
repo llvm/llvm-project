@@ -74,7 +74,7 @@ define void @arm_var_q31(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[SHR]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY_PREHEADER67]]
-; CHECK:       while.body.preheader67:
+; CHECK:       while.body.preheader63:
 ; CHECK-NEXT:    [[SUMOFSQUARES_043_PH:%.*]] = phi i64 [ 0, [[WHILE_BODY_PREHEADER]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[PSRC_ADDR_042_PH:%.*]] = phi ptr [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[BLKCNT_041_PH:%.*]] = phi i32 [ [[SHR]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP2]], [[MIDDLE_BLOCK]] ]
