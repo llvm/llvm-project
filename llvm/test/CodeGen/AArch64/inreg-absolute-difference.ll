@@ -27,6 +27,23 @@ define <vscale x 16 x i8> @uabs_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8
   ret <vscale x 16 x i8> %uabs
 }
 
+; TODO: This case could be lowered to a sabal[bt] pair.
+define <vscale x 8 x i16> @sabs_nxv16i8_wide_add(<vscale x 8 x i16> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: sabs_nxv16i8_wide_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    sabd z1.b, p0/m, z1.b, z2.b
+; CHECK-NEXT:    uaddwb z0.h, z0.h, z1.b
+; CHECK-NEXT:    uaddwt z0.h, z0.h, z1.b
+; CHECK-NEXT:    ret
+  %smax = tail call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  %smin = tail call <vscale x 16 x i8> @llvm.smin.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  %sabs = sub <vscale x 16 x i8> %smax, %smin
+  %ext = zext <vscale x 16 x i8> %sabs to <vscale x 16 x i16>
+  %reduce = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.v4i32.v16i32(<vscale x 8 x i16> %acc, <vscale x 16 x i16> %ext)
+  ret <vscale x 8 x i16>  %reduce
+}
+
 define <vscale x 4 x i32> @sabs_nxv16i8_dot(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: sabs_nxv16i8_dot:
 ; CHECK:       // %bb.0:
@@ -63,6 +80,23 @@ define <16 x i8> @uabs_v16i8(<16 x i8> %a, <16 x i8> %b) {
   %umin = tail call <16 x i8> @llvm.umin.v16i8(<16 x i8> %a, <16 x i8> %b)
   %uabs = sub <16 x i8> %umax, %umin
   ret <16 x i8> %uabs
+}
+
+; TODO: This case could be lowered to a uabal[bt] pair.
+define <vscale x 4 x i32> @uabs_nxv16i8_wide_add(<vscale x 4 x i32> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: uabs_nxv16i8_wide_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    uabd z1.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    uaddwb z0.s, z0.s, z1.h
+; CHECK-NEXT:    uaddwt z0.s, z0.s, z1.h
+; CHECK-NEXT:    ret
+  %umax = tail call <vscale x 8 x i16> @llvm.umax.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
+  %umin = tail call <vscale x 8 x i16> @llvm.umin.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
+  %uabs = sub <vscale x 8 x i16> %umax, %umin
+  %ext = zext <vscale x 8 x i16> %uabs to <vscale x 8 x i32>
+  %reduce = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %ext)
+  ret <vscale x 4 x i32> %reduce
 }
 
 define <4 x i32> @uabs_v16i8_dot(<4 x i32> %acc, <16 x i8> %a, <16 x i8> %b) {
