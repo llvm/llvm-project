@@ -1379,7 +1379,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FPOWI: {
-    if ((InterestedClasses & fcNegative) == fcNone)
+    if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
       break;
 
     Register Exp = MI.getOperand(2).getReg();
@@ -1387,10 +1387,22 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownBits ExponentKnownBits = getKnownBits(
         Exp, ExpTy.isVector() ? DemandedElts : APInt(1, 1), Depth + 1);
 
-    Register Val = MI.getOperand(1).getReg();
+    FPClassTest InterestedSrcs = fcNone;
+    if (InterestedClasses & fcNan)
+      InterestedSrcs |= fcNan;
+    if (!ExponentKnownBits.isZero()) {
+      if (InterestedClasses & fcInf)
+        InterestedSrcs |= fcFinite | fcInf;
+      if ((InterestedClasses & fcNegative) && !ExponentKnownBits.isEven())
+        InterestedSrcs |= fcNegative;
+    }
+
     KnownFPClass KnownSrc;
-    if (ExponentKnownBits.isZero() || !ExponentKnownBits.isEven())
-      computeKnownFPClass(Val, DemandedElts, fcNegative, KnownSrc, Depth + 1);
+    if (InterestedSrcs != fcNone) {
+      Register Val = MI.getOperand(1).getReg();
+      computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc,
+                          Depth + 1);
+    }
 
     Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
     break;
