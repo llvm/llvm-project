@@ -936,6 +936,33 @@ void lifetimebound_ctor() {
   (void)v;   // expected-note {{later used here}}
 }
 
+void lifetimebound_ctor_functional_cast() {
+  LifetimeBoundCtor v;
+  {
+    MyObj obj;
+    v = LifetimeBoundCtor(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                             // expected-note {{destroyed here}}
+  (void)v;                      // expected-note {{later used here}}
+}
+
+void lifetimebound_ctor_c_style_cast() {
+  LifetimeBoundCtor v;
+  {
+    MyObj obj;
+    v = (LifetimeBoundCtor)(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                               // expected-note {{destroyed here}}
+  (void)v;                        // expected-note {{later used here}}
+}
+
+void lifetimebound_ctor_static_cast() {
+  LifetimeBoundCtor v;
+  {
+    MyObj obj;
+    v = static_cast<LifetimeBoundCtor>(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                                          // expected-note {{destroyed here}}
+  (void)v;                                   // expected-note {{later used here}}
+}
+
 View lifetimebound_return_of_local() {
   MyObj stack;
   return Identity(stack); // expected-warning {{address of stack memory is returned later}}
