@@ -2111,7 +2111,7 @@ void SubstituteParameterMappings::buildParameterMapping(
   {
     llvm::SmallVector<TemplateArgument> DefaultArgs;
     for (unsigned I = TemplateParams->getMinRequiredArguments();
-         I < TemplateParams->size(); I++) {
+         I < TemplateParams->size(); ++I) {
       const NamedDecl *Param = TemplateParams->getParam(I);
       if (Param->isParameterPack())
         break;
@@ -2122,6 +2122,8 @@ void SubstituteParameterMappings::buildParameterMapping(
     }
     SemaRef.MarkUsedTemplateParameters(DefaultArgs, /*Depth=*/0,
                                        OccurringIndices);
+    SemaRef.MarkUsedTemplateParameters(DefaultArgs, /*Depth=*/0,
+                                       OccurringIndicesForSubsumption);
   }
 
   unsigned Size = OccurringIndices.count();
