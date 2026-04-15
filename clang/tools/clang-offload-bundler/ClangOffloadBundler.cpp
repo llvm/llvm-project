@@ -185,8 +185,10 @@ int main(int argc, const char **argv) {
     BundlerConfig.CompressionLevel = CompressionLevel;
 
   BundlerConfig.TargetNames.assign(TargetNames.begin(), TargetNames.end());
-  BundlerConfig.InputFileNames.assign(InputFileNames.begin(), InputFileNames.end());
-  BundlerConfig.OutputFileNames.assign(OutputFileNames.begin(), OutputFileNames.end());
+  BundlerConfig.InputFileNames.assign(InputFileNames.begin(),
+                                      InputFileNames.end());
+  BundlerConfig.OutputFileNames.assign(OutputFileNames.begin(),
+                                       OutputFileNames.end());
 
   /// The index of the host input in the list of inputs.
   BundlerConfig.HostInputIndex = ~0u;
@@ -243,7 +245,8 @@ int main(int argc, const char **argv) {
     s.insert(s.end(), InputFileNamesDeprecatedOpt.begin(),
              InputFileNamesDeprecatedOpt.end());
   }
-  BundlerConfig.InputFileNames.assign(InputFileNames.begin(), InputFileNames.end());
+  BundlerConfig.InputFileNames.assign(InputFileNames.begin(),
+                                      InputFileNames.end());
 
   if (OutputFileNames.getNumOccurrences() != 0 &&
       OutputFileNamesDeprecatedOpt.getNumOccurrences() != 0) {
@@ -259,7 +262,8 @@ int main(int argc, const char **argv) {
     s.insert(s.end(), OutputFileNamesDeprecatedOpt.begin(),
              OutputFileNamesDeprecatedOpt.end());
   }
-  BundlerConfig.OutputFileNames.assign(OutputFileNames.begin(), OutputFileNames.end());
+  BundlerConfig.OutputFileNames.assign(OutputFileNames.begin(),
+                                       OutputFileNames.end());
 
   if (ListBundleIDs) {
     if (Unbundle) {
@@ -395,7 +399,8 @@ int main(int argc, const char **argv) {
     ++Index;
   }
 
-  BundlerConfig.TargetNames.assign(StandardizedTargetNames.begin(), StandardizedTargetNames.end());
+  BundlerConfig.TargetNames.assign(StandardizedTargetNames.begin(),
+                                   StandardizedTargetNames.end());
 
   for (const auto &TargetID : TargetIDs) {
     if (auto ConflictingTID =
