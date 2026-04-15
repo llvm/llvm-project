@@ -266,16 +266,12 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
 unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
   MachineInstr *MI = SU->getInstr();
   unsigned CarriedLatency = 0;
-  for (auto &Op : MI->operands()) {
-    if (!Op.isReg())
-      continue;
-    if (!Op.isUse())
-      continue;
+  for (MachineOperand &Op : MI->all_uses()) {
     auto Reg = Op.getReg();
     if (!Reg.isVirtual())
       continue;
 
-    for (auto &Def : DAG->MRI.def_instructions(Reg)) {
+    for (MachineInstr &Def : DAG->MRI.def_instructions(Reg)) {
       // We don't have the proper modelling to accurately measure all carried
       // latency. Just try to measure carried latency for long latency loads to
       // avoid long stalls.
@@ -287,7 +283,7 @@ unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
       // Load is carried across block
       if (Def.getParent() != MI->getParent()) {
         bool FoundUseInDefBlock = false;
-        for (auto &Use : DAG->MRI.use_nodbg_instructions(Reg)) {
+        for (MachineInstr &Use : DAG->MRI.use_nodbg_instructions(Reg)) {
           if (Use.getParent() != Def.getParent())
             continue;
 
