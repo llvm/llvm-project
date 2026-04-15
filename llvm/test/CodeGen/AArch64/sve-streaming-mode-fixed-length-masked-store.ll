@@ -16,9 +16,9 @@ define void @masked_store_v4i8(ptr %dst, <4 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
-; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
+; CHECK-NEXT:    st1b { z0.h }, p1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v4i8:
@@ -72,9 +72,9 @@ define void @masked_store_v8i8(ptr %dst, <8 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    lsl z0.b, z0.b, #7
 ; CHECK-NEXT:    asr z0.b, z0.b, #7
-; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v8i8:
@@ -165,9 +165,9 @@ define void @masked_store_v16i8(ptr %dst, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    lsl z0.b, z0.b, #7
 ; CHECK-NEXT:    asr z0.b, z0.b, #7
-; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v16i8:
@@ -360,10 +360,10 @@ define void @masked_store_v32i8(ptr %dst, <32 x i1> %mask) {
 ; CHECK-NEXT:    asr z0.b, z0.b, #7
 ; CHECK-NEXT:    asr z1.b, z1.b, #7
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    cmpne p0.b, p0/z, z1.b, #0
+; CHECK-NEXT:    cmpne p2.b, p0/z, z1.b, #0
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
 ; CHECK-NEXT:    st1b { z0.b }, p1, [x0, x8]
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p2, [x0]
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 ;
@@ -598,9 +598,9 @@ define void @masked_store_v2f16(ptr %dst, <2 x i1> %mask) {
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v2f16:
@@ -638,9 +638,9 @@ define void @masked_store_v4f16(ptr %dst, <4 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v4f16:
@@ -699,9 +699,9 @@ define void @masked_store_v8f16(ptr %dst, <8 x i1> %mask) {
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v8f16:
@@ -807,11 +807,11 @@ define void @masked_store_v16f16(ptr %dst, <16 x i1> %mask) {
 ; CHECK-NEXT:    lsl z1.h, z1.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z1.h, z1.h, #15
+; CHECK-NEXT:    cmpne p2.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    mov z1.h, #0 // =0x0
 ; CHECK-NEXT:    st1h { z1.h }, p1, [x0, x8, lsl #1]
-; CHECK-NEXT:    st1h { z1.h }, p0, [x0]
+; CHECK-NEXT:    st1h { z1.h }, p2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v16f16:
@@ -958,9 +958,9 @@ define void @masked_store_v4f32(ptr %dst, <4 x i1> %mask) {
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    lsl z0.s, z0.s, #31
 ; CHECK-NEXT:    asr z0.s, z0.s, #31
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    mov z0.s, #0 // =0x0
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v4f32:
@@ -1034,9 +1034,9 @@ define void @masked_store_v8f32(ptr %dst, <8 x i1> %mask) {
 ; CHECK-NEXT:    asr z0.s, z0.s, #31
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    mov z1.s, #0 // =0x0
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    cmpne p2.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
-; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
+; CHECK-NEXT:    st1w { z1.s }, p2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v8f32:
@@ -1128,9 +1128,9 @@ define void @masked_store_v2f64(ptr %dst, <2 x i1> %mask) {
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    lsl z0.d, z0.d, #63
 ; CHECK-NEXT:    asr z0.d, z0.d, #63
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    mov z0.d, #0 // =0x0
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v2f64:
@@ -1174,11 +1174,11 @@ define void @masked_store_v4f64(ptr %dst, <4 x i1> %mask) {
 ; CHECK-NEXT:    lsl z1.d, z1.d, #63
 ; CHECK-NEXT:    asr z0.d, z0.d, #63
 ; CHECK-NEXT:    asr z1.d, z1.d, #63
+; CHECK-NEXT:    cmpne p2.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    mov z1.d, #0 // =0x0
 ; CHECK-NEXT:    st1d { z1.d }, p1, [x0, x8, lsl #3]
-; CHECK-NEXT:    st1d { z1.d }, p0, [x0]
+; CHECK-NEXT:    st1d { z1.d }, p2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v4f64:
