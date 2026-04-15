@@ -1255,7 +1255,7 @@ std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
   int64_t consuming{0};
   int64_t level{*depth.value};
 
-  auto visit{[&](const LoopSequence &nest, auto &&self) -> void {
+  auto visit{[&](const LoopSequence &nest, auto &&self) -> bool {
     const parser::ExecutionPartConstruct *owner{nest.owner()};
 
     if (auto *doLoop{parser::Unwrap<parser::DoConstruct>(owner)}) {
@@ -1270,7 +1270,7 @@ std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
       auto [cons, _1]{GetAffectedNestDepthWithReason(ods, version, semaCtx)};
       auto [prod, _2]{GetGeneratedNestDepthWithReason(ods, version, semaCtx)};
       if (!cons || !prod) {
-        return;
+        return false;
       }
       if (*prod.value <= consuming) {
         consuming -= *prod.value;
@@ -1281,17 +1281,21 @@ std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
       consuming += *cons.value;
     }
 
+    bool success{true};
     if (produced < level) {
       for (const LoopSequence &child : nest.children()) {
-        self(child, self);
+        success = success && self(child, self);
       }
     }
+
+    return success;
   }};
 
   LoopSequence sequence(std::get<parser::Block>(x.t), version, true, semaCtx);
-  visit(sequence, visit);
-
-  return result;
+  if (visit(sequence, visit)) {
+    return result;
+  }
+  return std::nullopt;
 }
 
 #ifdef EXPENSIVE_CHECKS
