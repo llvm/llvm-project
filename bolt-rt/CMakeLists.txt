@@ -105,7 +105,7 @@ function(add_bolt_rt_library)
   target_compile_options(${ARG_TARGET}
                          PRIVATE ${BOLT_RT_FLAGS} ${ARG_FLAGS})
 
-  # Ouput archives into a per-triple path or with a per triple suffix.
+  # Ouput archives into a per-triple path.
   set_target_properties(${ARG_TARGET} PROPERTIES
                         ARCHIVE_OUTPUT_DIRECTORY "${BOLT_RT_LIBRARY_DIR}/${BOLT_RT_LIBRARY_SUBDIR}"
                         ARCHIVE_OUTPUT_NAME "${ARG_TARGET}")
