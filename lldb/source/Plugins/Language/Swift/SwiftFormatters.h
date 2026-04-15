@@ -29,6 +29,7 @@
 #include "SwiftOptionSet.h"
 #include "SwiftOptional.h"
 #include "SwiftSet.h"
+#include "SwiftUIFormatters.h"
 #include "SwiftUnsafeTypes.h"
 #include "SystemValueTypes.h"
 
