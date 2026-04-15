@@ -34,6 +34,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 
+// This macro should be defined by the build system.
+#ifndef OFFLOAD_MIN_CUDA_VERSION
+#error "Missing OFFLOAD_MIN_CUDA_VERSION macro"
+#endif
+
 using namespace llvm::offload::debug;
 using namespace error;
 
@@ -1601,7 +1606,7 @@ struct CUDAPluginTy final : public GenericPluginTy {
       return std::move(Err);
 
     // Verify that the driver supports the minimum CUDA version required.
-    constexpr int MinVersion = 11080;
+    constexpr int MinVersion = OFFLOAD_MIN_CUDA_VERSION;
     if (Version < MinVersion) {
       ODBG(OLDT_Init) << "Minimum CUDA version not supported by the driver.";
       return Plugin::error(
