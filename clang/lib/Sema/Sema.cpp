@@ -3014,62 +3014,47 @@ bool Sema::processProfilesEnforceAttr(
     const ParsedAttr &AL, Module *Mod,
     SmallVectorImpl<StringRef> *NewNames,
     SmallVectorImpl<StringRef> *NewDesignators) {
-  if (!AL.checkAtLeastNumArgs(*this, 2))
+  const auto &Args = AL.getProfileEnforceArgs();
+  if (Args.Designators.empty()) {
+    Diag(AL.getLoc(), diag::err_attribute_too_few_arguments) << AL << 1;
     return false;
+  }
 
-  unsigned NumDesignators = AL.getNumArgs() / 2;
-  for (unsigned I = 0; I < NumDesignators; ++I) {
-    StringRef Name, Desig;
-    if (!checkStringLiteralArgumentAttr(AL, I * 2, Name) ||
-        !checkStringLiteralArgumentAttr(AL, I * 2 + 1, Desig))
-      continue;
+  for (const auto &D : Args.Designators) {
+    StringRef Name = D.Name;
+    StringRef Spelling = D.Spelling;
 
     bool IsNew = !isProfileEnforced(Name);
-    if (!addProfileEnforcement(Name, Desig, AL.getLoc()))
+    if (!addProfileEnforcement(Name, Spelling, AL.getLoc()))
       continue;
 
     if (Mod && !llvm::any_of(Mod->EnforcedProfileDesignators,
                              [&](const Module::EnforcedProfile &EP) {
                                return EP.ProfileName == Name;
                              }))
-      Mod->EnforcedProfileDesignators.push_back({Name.str(), Desig.str()});
+      Mod->EnforcedProfileDesignators.push_back({Name.str(), Spelling.str()});
 
     if (IsNew) {
       if (NewNames)
         NewNames->push_back(Name);
       if (NewDesignators)
-        NewDesignators->push_back(Desig);
+        NewDesignators->push_back(Spelling);
     }
   }
   return true;
 }
 
-std::optional<Sema::ParsedProfileSuppressInfo>
-Sema::getProfileSuppressInfo(const ParsedAttr &AL) {
-  ParsedProfileSuppressInfo Info;
-  if (!checkStringLiteralArgumentAttr(AL, 0, Info.ProfileName))
-    return std::nullopt;
-  if (AL.getNumArgs() >= 2)
-    checkStringLiteralArgumentAttr(AL, 1, Info.Justification);
-  if (AL.getNumArgs() >= 3)
-    checkStringLiteralArgumentAttr(AL, 2, Info.Rule);
-  return Info;
-}
-
 ProfilesSuppressAttr *Sema::makeProfilesSuppressAttr(const ParsedAttr &AL) {
-  auto Info = getProfileSuppressInfo(AL);
-  if (!Info)
+  const auto &Args = AL.getProfileSuppressArgs();
+  if (Args.ProfileName.empty())
     return nullptr;
 
   SmallVector<StringRef, 4> RawArgs;
-  for (unsigned I = 3; I < AL.getNumArgs(); ++I) {
-    StringRef Arg;
-    if (checkStringLiteralArgumentAttr(AL, I, Arg))
-      RawArgs.push_back(Arg);
-  }
+  for (const auto &Arg : Args.RawArguments)
+    RawArgs.push_back(Arg);
 
   return ::new (Context) ProfilesSuppressAttr(
-      Context, AL, Info->ProfileName, Info->Justification, Info->Rule,
+      Context, AL, Args.ProfileName, Args.Justification, Args.Rule,
       RawArgs.data(), RawArgs.size());
 }
 
@@ -3142,8 +3127,9 @@ Sema::ProfileSuppressRAII::ProfileSuppressRAII(
   for (const auto &AL : Attrs) {
     if (AL.getKind() != ParsedAttr::AT_ProfilesSuppress)
       continue;
-    if (auto Info = S.getProfileSuppressInfo(AL)) {
-      S.pushProfileSuppression(Info->ProfileName, Info->Rule);
+    const auto &Args = AL.getProfileSuppressArgs();
+    if (!Args.ProfileName.empty()) {
+      S.pushProfileSuppression(Args.ProfileName, Args.Rule);
       ++Count;
     }
   }

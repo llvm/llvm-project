@@ -5036,16 +5036,6 @@ void Parser::ParseMicrosoftIfExistsClassDeclaration(
 // C++ Profiles framework (P3589R2)
 //===----------------------------------------------------------------------===//
 
-// Profile names may contain '::' (e.g. "std::type"), so IdentifierLoc is not
-// suitable. We synthesize StringLiteral nodes to pass them through ArgsUnion.
-static Expr *MakeProfileStringLiteral(Parser &P, StringRef Str,
-                                      SourceLocation Loc) {
-  ASTContext &Ctx = P.getActions().Context;
-  QualType StrTy = Ctx.getStringLiteralArrayType(Ctx.CharTy, Str.size());
-  return StringLiteral::Create(Ctx, Str, StringLiteralKind::Ordinary, false,
-                               StrTy, {Loc});
-}
-
 bool Parser::ParseProfileName(std::string &Name) {
   if (!Tok.is(tok::identifier)) {
     Diag(Tok, diag::err_profiles_expected_profile_name);
@@ -5141,17 +5131,16 @@ bool Parser::ParseProfileArgumentList(SmallVectorImpl<std::string> &Args) {
   return false;
 }
 
-bool Parser::ParseProfileDesignator(std::string &Name,
-                                    std::string &Designator) {
-  if (ParseProfileName(Name))
+bool Parser::ParseProfileDesignator(detail::ProfileDesignator &D) {
+  if (ParseProfileName(D.Name))
     return true;
 
-  Designator = Name;
+  D.Spelling = D.Name;
 
   if (!Tok.is(tok::l_paren))
     return false;
 
-  Designator += "(";
+  D.Spelling += "(";
   ConsumeParen();
 
   SmallVector<std::string, 4> Args;
@@ -5160,28 +5149,26 @@ bool Parser::ParseProfileDesignator(std::string &Name,
 
   for (unsigned I = 0; I < Args.size(); ++I) {
     if (I > 0)
-      Designator += ", ";
-    Designator += Args[I];
+      D.Spelling += ", ";
+    D.Spelling += Args[I];
   }
 
   if (!Tok.is(tok::r_paren)) {
     Diag(Tok, diag::err_expected) << tok::r_paren;
     return true;
   }
-  Designator += ")";
+  D.Spelling += ")";
   ConsumeParen();
   return false;
 }
 
 bool Parser::ParseProfileDesignatorList(
-    SmallVectorImpl<std::string> &Names,
-    SmallVectorImpl<std::string> &Designators) {
+    SmallVectorImpl<detail::ProfileDesignator> &Designators) {
   while (true) {
-    std::string Name, Designator;
-    if (ParseProfileDesignator(Name, Designator))
+    detail::ProfileDesignator D;
+    if (ParseProfileDesignator(D))
       return true;
-    Names.push_back(std::move(Name));
-    Designators.push_back(std::move(Designator));
+    Designators.push_back(std::move(D));
 
     if (!TryConsumeToken(tok::comma))
       break;
@@ -5197,6 +5184,8 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
                                          SourceLocation ScopeLoc) {
   assert(ScopeName && ScopeName->isStr("profiles"));
 
+  AttributePool &Pool = Attrs.getPool();
+
   auto SkipToRParen = [&]() {
     SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
     if (Tok.is(tok::r_paren))
@@ -5206,8 +5195,8 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
   if (AttrName->isStr("enforce")) {
     ConsumeParen();
 
-    SmallVector<std::string, 4> Names, Designators;
-    if (ParseProfileDesignatorList(Names, Designators)) {
+    auto *Args = Pool.make<detail::ProfileEnforceArgs>();
+    if (ParseProfileDesignatorList(Args->Designators)) {
       SkipToRParen();
       return true;
     }
@@ -5222,29 +5211,22 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
     if (EndLoc)
       *EndLoc = RParen;
 
-    SmallVector<ArgsUnion, 8> ArgExprs;
-    for (unsigned I = 0; I < Names.size(); ++I) {
-      ArgExprs.push_back(MakeProfileStringLiteral(*this, Names[I], AttrNameLoc));
-      ArgExprs.push_back(
-          MakeProfileStringLiteral(*this, Designators[I], AttrNameLoc));
-    }
-    Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
-                 AttributeScopeInfo(ScopeName, ScopeLoc), ArgExprs.data(),
-                 ArgExprs.size(), ParsedAttr::Form::CXX11());
+    ParsedAttr *PA =
+        Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
+                     AttributeScopeInfo(ScopeName, ScopeLoc), nullptr, 0,
+                     ParsedAttr::Form::CXX11());
+    PA->setCustomData(Args);
     return true;
   }
 
   if (AttrName->isStr("suppress")) {
     ConsumeParen();
 
-    std::string ProfileName;
-    if (ParseProfileName(ProfileName)) {
+    auto *Args = Pool.make<detail::ProfileSuppressArgs>();
+    if (ParseProfileName(Args->ProfileName)) {
       SkipToRParen();
       return true;
     }
-
-    std::string Justification, Rule;
-    SmallVector<std::string, 4> RawArgs;
 
     auto ParseStringLiteralValue = [&](std::string &Out) -> bool {
       SmallVector<Token, 1> StringToks;
@@ -5271,18 +5253,18 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
             SkipToRParen();
             return true;
           }
-          if (ParseStringLiteralValue(Justification)) {
+          if (ParseStringLiteralValue(Args->Justification)) {
             SkipToRParen();
             return true;
           }
         } else if (KeyII->isStr("rule")) {
           if (tok::isStringLiteral(Tok.getKind())) {
-            if (ParseStringLiteralValue(Rule)) {
+            if (ParseStringLiteralValue(Args->Rule)) {
               SkipToRParen();
               return true;
             }
           } else {
-            if (ParseNonCommaBalancedToken(Rule)) {
+            if (ParseNonCommaBalancedToken(Args->Rule)) {
               SkipToRParen();
               return true;
             }
@@ -5293,7 +5275,7 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
             SkipToRParen();
             return true;
           }
-          RawArgs.push_back(KeyII->getName().str() + " : " + Value);
+          Args->RawArguments.push_back(KeyII->getName().str() + " : " + Value);
         }
       } else {
         std::string Spelling;
@@ -5301,7 +5283,7 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
           SkipToRParen();
           return true;
         }
-        RawArgs.push_back(std::move(Spelling));
+        Args->RawArguments.push_back(std::move(Spelling));
       }
     }
 
@@ -5315,26 +5297,19 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
     if (EndLoc)
       *EndLoc = RParen;
 
-    SmallVector<ArgsUnion, 8> ArgExprs;
-    ArgExprs.push_back(
-        MakeProfileStringLiteral(*this, ProfileName, AttrNameLoc));
-    ArgExprs.push_back(
-        MakeProfileStringLiteral(*this, Justification, AttrNameLoc));
-    ArgExprs.push_back(MakeProfileStringLiteral(*this, Rule, AttrNameLoc));
-    for (const auto &Arg : RawArgs)
-      ArgExprs.push_back(MakeProfileStringLiteral(*this, Arg, AttrNameLoc));
-
-    Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
-                 AttributeScopeInfo(ScopeName, ScopeLoc), ArgExprs.data(),
-                 ArgExprs.size(), ParsedAttr::Form::CXX11());
+    ParsedAttr *PA =
+        Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
+                     AttributeScopeInfo(ScopeName, ScopeLoc), nullptr, 0,
+                     ParsedAttr::Form::CXX11());
+    PA->setCustomData(Args);
     return true;
   }
 
   if (AttrName->isStr("require")) {
     ConsumeParen();
 
-    std::string Name, Designator;
-    if (ParseProfileDesignator(Name, Designator)) {
+    auto *Args = Pool.make<detail::ProfileRequireArgs>();
+    if (ParseProfileDesignator(Args->Designator)) {
       SkipToRParen();
       return true;
     }
@@ -5349,10 +5324,11 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
     if (EndLoc)
       *EndLoc = RParen;
 
-    ArgsUnion Arg = MakeProfileStringLiteral(*this, Designator, AttrNameLoc);
-    Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
-                 AttributeScopeInfo(ScopeName, ScopeLoc), &Arg, 1,
-                 ParsedAttr::Form::CXX11());
+    ParsedAttr *PA =
+        Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
+                     AttributeScopeInfo(ScopeName, ScopeLoc), nullptr, 0,
+                     ParsedAttr::Form::CXX11());
+    PA->setCustomData(Args);
     return true;
   }
 

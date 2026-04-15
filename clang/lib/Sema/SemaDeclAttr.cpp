@@ -5493,9 +5493,6 @@ static void handleProfilesEnforceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleProfilesSuppressDeclAttr(Sema &S, Decl *D,
                                            const ParsedAttr &AL) {
-  if (!AL.checkAtLeastNumArgs(S, 1))
-    return;
-
   if (auto *A = S.makeProfilesSuppressAttr(AL))
     D->addAttr(A);
 }

@@ -1058,14 +1058,6 @@ public:
                                   SmallVectorImpl<StringRef> *NewNames,
                                   SmallVectorImpl<StringRef> *NewDesignators);
 
-  struct ParsedProfileSuppressInfo {
-    StringRef ProfileName;
-    StringRef Justification;
-    StringRef Rule;
-  };
-  std::optional<ParsedProfileSuppressInfo>
-  getProfileSuppressInfo(const ParsedAttr &AL);
-
   ProfilesSuppressAttr *makeProfilesSuppressAttr(const ParsedAttr &AL);
 
   void pushProfileSuppression(StringRef ProfileName, StringRef RuleName);

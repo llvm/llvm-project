@@ -2281,9 +2281,9 @@ private:
                                   IdentifierInfo *ScopeName,
                                   SourceLocation ScopeLoc);
   bool ParseProfileName(std::string &Name);
-  bool ParseProfileDesignator(std::string &Name, std::string &Designator);
-  bool ParseProfileDesignatorList(SmallVectorImpl<std::string> &Names,
-                                  SmallVectorImpl<std::string> &Designators);
+  bool ParseProfileDesignator(detail::ProfileDesignator &Designator);
+  bool ParseProfileDesignatorList(
+      SmallVectorImpl<detail::ProfileDesignator> &Designators);
   bool ParseProfileArgumentList(SmallVectorImpl<std::string> &Args);
   bool ParseNonCommaBalancedToken(std::string &Spelling);
   bool ParseNonOperatorNonPunctuatorToken(std::string &Spelling);

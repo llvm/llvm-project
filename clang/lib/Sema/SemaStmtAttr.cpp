@@ -74,9 +74,6 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleProfilesSuppressStmtAttr(Sema &S, Stmt *St,
                                             const ParsedAttr &A,
                                             SourceRange Range) {
-  if (!A.checkAtLeastNumArgs(S, 1))
-    return nullptr;
-
   return S.makeProfilesSuppressAttr(A);
 }
 

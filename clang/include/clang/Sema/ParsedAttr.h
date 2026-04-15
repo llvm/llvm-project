@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <string>
 #include <utility>
 
 namespace clang {
@@ -94,6 +95,26 @@ struct PropertyData {
 
   PropertyData(IdentifierInfo *getterId, IdentifierInfo *setterId)
       : GetterId(getterId), SetterId(setterId) {}
+};
+
+struct ProfileDesignator {
+  std::string Name;
+  std::string Spelling;
+};
+
+struct ProfileEnforceArgs {
+  SmallVector<ProfileDesignator, 2> Designators;
+};
+
+struct ProfileSuppressArgs {
+  std::string ProfileName;
+  std::string Justification;
+  std::string Rule;
+  SmallVector<std::string, 2> RawArguments;
+};
+
+struct ProfileRequireArgs {
+  ProfileDesignator Designator;
 };
 
 } // namespace detail
@@ -183,6 +204,8 @@ private:
   SourceLocation UnavailableLoc;
 
   const Expr *MessageExpr;
+
+  void *CustomData = nullptr;
 
   const ParsedAttrInfo &Info;
 
@@ -473,6 +496,30 @@ public:
     return getPropertyDataBuffer().SetterId;
   }
 
+  void setCustomData(void *Data) { CustomData = Data; }
+
+  template <typename T> T &getCustomData() {
+    assert(CustomData && "No custom data set");
+    return *static_cast<T *>(CustomData);
+  }
+
+  template <typename T> const T &getCustomData() const {
+    assert(CustomData && "No custom data set");
+    return *static_cast<const T *>(CustomData);
+  }
+
+  const detail::ProfileEnforceArgs &getProfileEnforceArgs() const {
+    return getCustomData<detail::ProfileEnforceArgs>();
+  }
+
+  const detail::ProfileSuppressArgs &getProfileSuppressArgs() const {
+    return getCustomData<detail::ProfileSuppressArgs>();
+  }
+
+  const detail::ProfileRequireArgs &getProfileRequireArgs() const {
+    return getCustomData<detail::ProfileRequireArgs>();
+  }
+
   /// Set the macro identifier info object that this parsed attribute was
   /// declared in if it was declared in a macro. Also set the expansion location
   /// of the macro.
@@ -716,6 +763,11 @@ public:
   AttributePool &operator=(AttributePool &&pool) = delete;
 
   AttributeFactory &getFactory() const { return Factory; }
+
+  template <typename T, typename... Args> T *make(Args &&...args) {
+    void *Mem = Factory.Alloc.Allocate(sizeof(T), alignof(T));
+    return ::new (Mem) T(std::forward<Args>(args)...);
+  }
 
   void clear() {
     Factory.reclaimPool(*this);
