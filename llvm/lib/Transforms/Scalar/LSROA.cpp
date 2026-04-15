@@ -163,7 +163,6 @@ PreservedAnalyses LSROAPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
 
