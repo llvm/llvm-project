@@ -523,11 +523,11 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       }
 
       if (IsJumpTable) {
+        auto STIt = STOutSet.find(&BB);
+        bool Found = STIt != STOutSet.end();
         for (BinaryBasicBlock *&Succ : BB.successors()) {
           // Do not instrument edges in the spanning tree
-          auto STIt = STOutSet.find(&BB);
-          if (STIt != STOutSet.end() &&
-              llvm::is_contained(STIt->second, &*Succ)) {
+          if (Found && llvm::is_contained(STIt->second, &*Succ)) {
             auto L = BC.scopeLock();
             createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                   Function, Succ->getInputOffset(),
