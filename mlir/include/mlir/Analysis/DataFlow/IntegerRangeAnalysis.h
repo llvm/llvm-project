@@ -61,6 +61,21 @@ public:
                  ArrayRef<const IntegerValueRangeLattice *> operands,
                  ArrayRef<IntegerValueRangeLattice *> results) override;
 
+  // Override visitRegionSuccessors to add a visit cap on loop-carried
+  // lattice elements, preventing non-convergence on scf.while loops with
+  // dynamic bounds.
+  //
+  // Without this cap, loop-carried values whose ranges grow by +1 per
+  // worklist visit (e.g. [0,0]->[0,1]->[0,2]->...) require O(2^31)
+  // iterations to converge for i32.  The existing widening in
+  // visitOperation only catches op results yielded directly to a
+  // terminator, not values propagated through nested region ops like
+  // scf.if.
+  void visitRegionSuccessors(ProgramPoint *point, 
+                             RegionBranchOpInterface branch,
+                             RegionSuccessor successor,
+                             ArrayRef<AbstractSparseLattice *> lattices) override;
+  
   /// Visit block arguments or operation results of an operation with region
   /// control-flow for which values are not defined by region control-flow. This
   /// function calls `InferIntRangeInterface` to provide values for block
@@ -70,6 +85,14 @@ public:
       Operation *op, const RegionSuccessor &successor,
       ValueRange nonSuccessorInputs,
       ArrayRef<IntegerValueRangeLattice *> nonSuccessorInputLattices) override;
+
+private:
+  // Maximum lattice updates per (loop, element) before forcing max-range.
+  static constexpr int64_t kMaxLoopVisits = 4;
+
+  // Per-(loop-op, lattice-element) visit counter.
+  DenseMap<std::pair<Operation *, AbstractSparseLattice *>, int64_t>
+      loopVisits;
 };
 
 /// Succeeds if an op can be converted to its unsigned equivalent without

@@ -137,6 +137,87 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
   return success();
 }
 
+void IntegerRangeAnalysis::visitRegionSuccessors(
+    ProgramPoint *point, RegionBranchOpInterface branch,
+    RegionSuccessor successor,
+    ArrayRef<AbstractSparseLattice *> lattices) {
+
+  Operation *branchOp = branch.getOperation();
+  bool isLoop = isa<LoopLikeOpInterface>(branchOp);
+
+  // For non-loop regions (scf.if, scf.index_switch, etc.), delegate to
+  // the upstream implementation — no visit cap needed.
+  if (!isLoop) {
+    SparseForwardDataFlowAnalysis::visitRegionSuccessors(
+        point, branch, successor, lattices);
+    return;
+  }
+
+  // For loops: replicate upstream logic with a visit cap.
+  const auto *predecessors =
+      getOrCreateFor<PredecessorState>(point, point);
+  assert(predecessors->allPredecessorsKnown() &&
+         "unexpected unresolved region successors");
+
+  for (Operation *op : predecessors->getKnownPredecessors()) {
+    std::optional<OperandRange> operands;
+    if (op == branch) {
+      operands = branch.getEntrySuccessorOperands(successor);
+    } else if (auto regionTerminator =
+                   dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
+      operands = regionTerminator.getSuccessorOperands(successor);
+    }
+    if (!operands) {
+      setAllToEntryStates(lattices);
+      return;
+    }
+
+    ValueRange inputs = predecessors->getSuccessorInputs(op);
+    assert(inputs.size() == operands->size() &&
+           "expected the same number of successor inputs as operands");
+
+    unsigned firstIndex = 0;
+    if (inputs.size() != lattices.size()) {
+      if (successor.isParent()) {
+        if (!inputs.empty())
+          firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
+      } else {
+        if (!inputs.empty())
+          firstIndex = cast<BlockArgument>(inputs.front()).getArgNumber();
+      }
+    }
+
+    for (auto [oper, lattice] :
+         llvm::zip(*operands, ArrayRef(lattices).drop_front(firstIndex))) {
+      auto key = std::make_pair(branchOp, lattice);
+      int64_t &visits = loopVisits[key];
+
+      if (visits >= kMaxLoopVisits) {
+        // Force to max-range (lattice top) — guarantees convergence.
+        auto *intLattice = static_cast<IntegerValueRangeLattice *>(lattice);
+        ChangeResult changed =
+            intLattice->join(IntegerValueRange::getMaxRange(oper));
+        propagateIfChanged(intLattice, changed);
+        LLVM_DEBUG({
+          if (changed == ChangeResult::Change) {
+            LDBG() << "Forcing max-range after " << visits << " visits for ";
+            oper.printAsOperand(llvm::dbgs(), {});
+            llvm::dbgs() << "\n";
+          }
+        });
+        continue;
+      }
+
+      // Normal join with visit tracking.
+      ChangeResult changed =
+          lattice->join(*getLatticeElementFor(point, oper));
+      propagateIfChanged(lattice, changed);
+      if (changed == ChangeResult::Change)
+        ++visits;
+    }
+  }
+}
+
 void IntegerRangeAnalysis::visitNonControlFlowArguments(
     Operation *op, const RegionSuccessor &successor,
     ValueRange nonSuccessorInputs,
