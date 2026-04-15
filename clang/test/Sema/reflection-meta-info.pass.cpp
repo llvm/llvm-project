@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 %s -std=c++26 -freflection -fsyntax-only
 
+typedef int int32_t;
+using A = int;
+
 using info = decltype(^^int);
 
 template <auto R>
@@ -48,6 +51,9 @@ consteval void test()
     static_assert(sizeof(info) == 8);
     static_assert(alignof(info) == 1);
     static_assert(sizeof(decltype(^^int)) == sizeof(decltype(^^float)));
+    static_assert(^^int32_t != ^^int);
+    static_assert(^^const int != ^^int);
+    static_assert(^^A != ^^int);
 
 
     static_assert(^^int == ^^int);
