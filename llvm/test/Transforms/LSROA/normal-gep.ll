@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='lsroa' -S -debug | FileCheck %s --check-prefixes=CHECK
+; RUN: opt < %s -passes='logical-sroa' -S -debug | FileCheck %s --check-prefixes=CHECK
 
 define i32 @test_normal_gep() {
 ; CHECK-LABEL: @test_normal_gep(

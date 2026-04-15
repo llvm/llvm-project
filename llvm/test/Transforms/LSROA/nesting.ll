@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='lsroa' -S -debug | FileCheck %s --check-prefixes=CHECK
+; RUN: opt < %s -passes='logical-sroa' -S -debug | FileCheck %s --check-prefixes=CHECK
 
 declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @llvm.lifetime.end.p0(ptr nocapture)

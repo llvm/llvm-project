@@ -1,4 +1,4 @@
-//===- LSROA.cpp - Logical Scalar Replacement Of Aggregates ---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,7 +36,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "lsroa"
+#define DEBUG_TYPE "logical-sroa"
 
 namespace {
 
@@ -199,7 +199,7 @@ char LSROALegacyPass::ID = 0;
 
 FunctionPass *llvm::createLSROAPass() { return new LSROALegacyPass(); }
 
-INITIALIZE_PASS_BEGIN(LSROALegacyPass, "lsroa",
+INITIALIZE_PASS_BEGIN(LSROALegacyPass, "logical-sroa",
                       "Logical Scalar Replacement Of Aggregates", false, false)
-INITIALIZE_PASS_END(LSROALegacyPass, "lsroa",
+INITIALIZE_PASS_END(LSROALegacyPass, "logical-sroa",
                     "Logical Scalar Replacement Of Aggregates", false, false)
