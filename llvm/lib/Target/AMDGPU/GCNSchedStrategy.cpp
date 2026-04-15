@@ -2210,6 +2210,17 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
       if (NonDebugReordered)
         DAG.LIS->handleMove(*MI, true);
     } else {
+      // MI is already at the expected position. However, earlier splices in
+      // this loop may have changed neighboring slot indices, so this MI's
+      // slot index can become non-monotonic w.r.t. the physical MBB order.
+      // Only re-seat when monotonicity is actually violated to avoid
+      // unnecessary LiveInterval changes that could perturb scheduling.
+      if (!MI->isDebugInstr()) {
+        SlotIndex MIIdx = DAG.LIS->getInstructionIndex(*MI);
+        SlotIndex PrevIdx = DAG.LIS->getSlotIndexes()->getIndexBefore(*MI);
+        if (PrevIdx >= MIIdx)
+          DAG.LIS->handleMove(*MI, true);
+      }
       ++RegionEnd;
     }
     if (MI->isDebugInstr()) {
