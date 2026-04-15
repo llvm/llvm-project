@@ -8817,7 +8817,6 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
   if (A->getType() != B->getType())
     return nullptr;
 
-  Value *Src = I.getOperand(0);
   auto *FPCast = cast<CastInst>(cast<Instruction>(FAbsArg)->getOperand(0));
   if (!IC.isKnownExactCastIntToFP(*FPCast))
     return nullptr;
