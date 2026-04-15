@@ -32,9 +32,17 @@ func.func @any_vector4(%arg0: vector<4xi1>) -> i1 {
 // -----
 
 func.func @any_scalar(%arg0: i1) -> i1 {
-  // expected-error @+1 {{'spirv.Any' op operand #0 must be fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got 'i1'}}
-  %0 = "spirv.Any"(%arg0) : (i1) -> i1
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'i1'}}
+  %0 = spirv.Any %arg0 : i1
   return %0 : i1
+}
+
+// -----
+
+func.func @any_wrong_result_type(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // expected-error @+1 {{'spirv.Any' op result #0 must be bool, but got 'vector<2xi1>'}}
+  %0 = "spirv.Any"(%arg0) : (vector<2xi1>) -> vector<2xi1>
+  return %0 : vector<2xi1>
 }
 
 // -----
@@ -71,9 +79,17 @@ func.func @all_vector4(%arg0: vector<4xi1>) -> i1 {
 // -----
 
 func.func @all_scalar(%arg0: i1) -> i1 {
-  // expected-error @+1 {{'spirv.All' op operand #0 must be fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got 'i1'}}
-  %0 = "spirv.All"(%arg0) : (i1) -> i1
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'i1'}}
+  %0 = spirv.All %arg0 : i1
   return %0 : i1
+}
+
+// -----
+
+func.func @all_wrong_result_type(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // expected-error @+1 {{'spirv.All' op result #0 must be bool, but got 'vector<2xi1>'}}
+  %0 = "spirv.All"(%arg0) : (vector<2xi1>) -> vector<2xi1>
+  return %0 : vector<2xi1>
 }
 
 // -----
