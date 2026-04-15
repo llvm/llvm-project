@@ -1233,9 +1233,10 @@ std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
   if (!depth) {
     return std::nullopt;
   }
-  if (*depth.value <= 0) {
+  if (*depth.value == 0) {
     return result;
   }
+  assert(*depth.value > 0 && "Expecting positive depth");
 
   // The algorithm is to descend down the nest and keep track of intervening
   // constructs and how many loops they consume and produce. This is similar
