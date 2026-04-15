@@ -19,13 +19,13 @@ namespace clang {
 /// In-memory cache for modules.
 ///
 /// This is a cache for modules for use across a compilation, sharing state
-/// between the CompilerInstances in an implicit modules build.  It must be
-/// shared by each CompilerInstance, ASTReader, ASTWriter, and ModuleManager
-/// that are coordinating.
+/// between the CompilerInstances in a modules build. It must be shared by each
+/// CompilerInstance, ASTReader, ASTWriter, and ModuleManager that are
+/// coordinating.
 ///
 /// Critically, it ensures that a single process has a consistent view of each
-/// PCM.  This is used by \a CompilerInstance when building PCMs to ensure that
-/// each \a ModuleManager sees the same files.
+/// implicitly-built PCM. This is used by \a CompilerInstance when building PCMs
+/// to ensure that each \a ModuleManager sees the same files.
 class InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
   struct PCM {
     /// The contents of the PCM as produced by \c ASTWriter.
