@@ -2985,6 +2985,8 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
 //===----------------------------------------------------------------------===//
 
 bool Sema::isProfileEnforced(StringRef ProfileName) const {
+  if (!getLangOpts().Profiles)
+    return false;
   return getProfileEnforcement(ProfileName) != nullptr;
 }
 
