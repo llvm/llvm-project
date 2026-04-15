@@ -6295,20 +6295,3 @@ QualType SemaHLSL::ActOnTemplateShorthand(TemplateDecl *Template,
       ElaboratedTypeKeyword::None, TemplateName(Template), NameLoc,
       TemplateArgs, nullptr, /*ForNestedNameSpecifier=*/false);
 }
-
-ExprResult SemaHLSL::tryAggregateInitialization(Sema &S, QualType DestTy,
-                                                Expr *RHSExpr) {
-  InitListExpr *ILE =
-      new (S.Context) InitListExpr(S.getASTContext(), RHSExpr->getBeginLoc(),
-                                   {RHSExpr}, RHSExpr->getEndLoc());
-  ILE->setType(S.getASTContext().VoidTy);
-  InitializationKind Kind = InitializationKind::CreateDirectList(
-      RHSExpr->getBeginLoc(), RHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
-  InitializedEntity Entity = InitializedEntity::InitializeTemporary(DestTy);
-  RHSExpr = ILE;
-  InitializationSequence InitSeq(S, Entity, Kind, RHSExpr);
-  if (!transformInitList(Entity, ILE))
-    InitSeq.SetFailed(InitializationSequence::FK_HLSLInitListFlatteningFailed);
-
-  return InitSeq.Perform(S, Entity, Kind, RHSExpr);
-}
