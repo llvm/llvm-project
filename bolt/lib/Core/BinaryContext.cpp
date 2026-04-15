@@ -206,6 +206,15 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
     FeaturesStr = Features->getString();
     break;
   }
+  case llvm::Triple::hexagon:
+    ArchName = "hexagon";
+    if (!Features)
+      return createFatalBOLTError(
+          "Hexagon target needs SubtargetFeatures to determine the "
+          "target CPU; the input ELF may be missing a "
+          ".hexagon.attributes section");
+    FeaturesStr = Features->getString();
+    break;
   default:
     return createStringError(std::errc::not_supported,
                              "BOLT-ERROR: Unrecognized machine in ELF file");

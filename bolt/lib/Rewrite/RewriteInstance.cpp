@@ -369,6 +369,11 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
     return createRISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
+#ifdef HEXAGON_AVAILABLE
+  if (Arch == Triple::hexagon)
+    return createHexagonMCPlusBuilder(Analysis, Info, RegInfo, STI);
+#endif
+
   llvm_unreachable("architecture unsupported by MCPlusBuilder");
 }
 
@@ -424,10 +429,10 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
   Stderr.SetUnbuffered();
   LLVM_DEBUG(dbgs().SetUnbuffered());
 
-  // Read RISCV subtarget features from input file
+  // Read subtarget features from input ELF attributes
   std::unique_ptr<SubtargetFeatures> Features;
   Triple TheTriple = File->makeTriple();
-  if (TheTriple.isRISCV()) {
+  if (TheTriple.isRISCV() || TheTriple.getArch() == Triple::hexagon) {
     Expected<SubtargetFeatures> FeaturesOrErr = File->getFeatures();
     if (auto E = FeaturesOrErr.takeError()) {
       Err = std::move(E);
@@ -2640,7 +2645,7 @@ bool RewriteInstance::analyzeRelocation(
     if (SkipVerification)
       return true;
 
-    if (IsAArch64 || BC->isRISCV())
+    if (IsAArch64 || BC->isRISCV() || BC->isHexagon())
       return true;
 
     if (SymbolName == "__hot_start" || SymbolName == "__hot_end")
