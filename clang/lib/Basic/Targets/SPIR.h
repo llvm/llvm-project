@@ -355,9 +355,12 @@ public:
   bool validateTarget(DiagnosticsEngine &Diags) const override {
     if (getTriple().getOS() != llvm::Triple::Vulkan ||
         getTriple().getVulkanVersion() == llvm::VersionTuple(0)) {
-      Diags.Report(diag::err_fe_spirv_requires_vulkan) << getTriple().str();
+      Diags.Report(diag::err_fe_spirv_requires_vulkan);
       return false;
     }
+    assert(getTriple().getEnvironment() >= llvm::Triple::Pixel &&
+           getTriple().getEnvironment() <= llvm::Triple::Amplification &&
+           "Logical SPIR-V environment must be a valid shader stage.");
     return true;
   }
 
