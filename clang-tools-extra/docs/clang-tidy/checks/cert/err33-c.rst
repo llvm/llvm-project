@@ -1,4 +1,5 @@
 .. title:: clang-tidy - cert-err33-c
+
 cert-err33-c
 ============
 
