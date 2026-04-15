@@ -34,6 +34,10 @@ class VPPredicator {
   /// Post-dominator tree for the VPlan.
   VPPostDominatorTree VPPDT;
 
+  /// Post-dominance frontier for the VPlan.
+  // NOTE: Must appear after VPPDT because VPPDT is used during initialization.
+  VPPostDominanceFrontier VPPDF;
+
   /// When we if-convert we need to create edge masks. We have to cache values
   /// so that we don't end up with exponential recursion/IR.
   using EdgeMaskCacheTy =
@@ -70,7 +74,7 @@ class VPPredicator {
   }
 
 public:
-  VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan) {}
+  VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan), VPPDF(VPPDT) {}
 
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
@@ -133,11 +137,12 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
 }
 
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
-  // Start inserting after the block's phis, which be replaced by blends later.
+  // Insert after the block's phis, which will be replaced by blends later.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
 
-  // Reuse the mask of the immediate dominator if the VPBB post-dominates the
-  // immediate dominator.
+  // Reuse the mask of the immediate dominator if the VPBB post-dominates it.
+  // This is also necessary to avoid traversing past the loop header in the post
+  // dominance frontier below.
   auto *IDom = VPDT.getNode(VPBB)->getIDom();
   assert(IDom && "Block in loop must have immediate dominator");
   auto *IDomBB = cast<VPBasicBlock>(IDom->getBlock());
@@ -145,26 +150,45 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
     setBlockInMask(VPBB, getBlockInMask(IDomBB));
     return;
   }
-  // All-one mask is modelled as no-mask following the convention for masked
-  // load/store/gather/scatter. Initialize BlockMask to no-mask.
+
+  // Identify all edges that **directly** control VPBB's mask, i.e.,
+  //   * control flow does not fully reconverge before reaching VPBB
+  //   * control flow does not branch further before reaching VPBB
+  // Those conditional branches originate exactly in the post-dominance frontier
+  // of VPBB, with the edge destinations being post-dominated by VPBB.
+
   VPValue *BlockMask = nullptr;
-  // This is the block mask. We OR all unique incoming edges.
-  for (auto *Predecessor : SetVector<VPBlockBase *>(
-           VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
-    VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
-    if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
-                     // too.
-      setBlockInMask(VPBB, EdgeMask);
-      return;
-    }
+  auto It = VPPDF.find(VPBB);
+  assert(It != VPPDF.end() &&
+         "PostDomFrontier cannot be empty because header mask should have been "
+         "reused via IDom logic above.");
+  auto FrontierBlocks = It->second;
+  for (VPBlockBase *FrontierBB : FrontierBlocks) {
+    assert(FrontierBB->getParent() == VPBB->getParent() &&
+           "IDom logic above should have prevented going outside loop region "
+           "here!");
+    // A switch can have multiple edges to the same successor, avoid adding such
+    // edges more than once.
+    SmallPtrSet<VPBlockBase *, 4> Visited;
 
-    if (!BlockMask) { // BlockMask has its initial nullptr value.
-      BlockMask = EdgeMask;
-      continue;
-    }
+    for (auto *Succ : FrontierBB->successors()) {
+      if (!VPPDT.dominates(VPBB, Succ))
+        // This edge doesn't **directly** contribute to the VPBB's mask. If VPBB
+        // is reachable through this edge, the condition it "carries" will be
+        // handled through another block in the post-dom-frontier.
+        continue;
 
-    BlockMask = Builder.createOr(BlockMask, EdgeMask, {});
+      if (!Visited.insert(Succ).second)
+        continue;
+
+      VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(FrontierBB),
+                                         cast<VPBasicBlock>(Succ));
+      BlockMask =
+          BlockMask ? Builder.createOr(BlockMask, EdgeMask, {}) : EdgeMask;
+    }
   }
+  assert(BlockMask &&
+         "Header mask reuse expected to have happened using IDom logic above.");
 
   setBlockInMask(VPBB, BlockMask);
 }
