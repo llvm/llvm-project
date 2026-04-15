@@ -325,3 +325,78 @@ class ExprWithForkTestCase(TestBase):
         # DidVFork should have overridden follow-fork-mode to parent.
         self.assertTrue(value.GetError().Fail())
         self.assertEqual(process.GetProcessID(), original_pid)
+
+    # --- concurrent fork on another thread during expression ---
+
+    @skipIfWindows
+    @add_test_categories(["fork"])
+    def test_expr_concurrent_fork_other_thread(self):
+        """Test that a fork on another thread during expression is handled correctly.
+
+        The expression function releases a mutex, letting a helper thread
+        fork, then waits for it to complete.  With SetStopOthers(false),
+        the helper thread runs and forks while the expression is active.
+        The fork must be handled as a normal (non-expression) fork so
+        follow-fork-mode is respected."""
+        self.build()
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
+
+        original_pid = process.GetProcessID()
+
+        options = lldb.SBExpressionOptions()
+        options.SetStopOthers(False)
+
+        value = thread.GetSelectedFrame().EvaluateExpression(
+            "expr_with_concurrent_fork()", options
+        )
+
+        # Expression should complete successfully.
+        self.assertSuccess(value.GetError())
+
+        # The return value is the child PID — must be > 0 (fork succeeded).
+        child_pid = value.GetValueAsSigned()
+        self.assertGreater(child_pid, 0, "fork() should have succeeded")
+
+        # We should still be debugging the original parent process.
+        self.assertEqual(process.GetProcessID(), original_pid)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
+
+        # Breakpoints should still be functional.
+        self.expect_expr("x", result_type="int", result_value="42")
+
+    @skipIfWindows
+    @add_test_categories(["fork"])
+    def test_expr_concurrent_fork_other_thread_follow_child(self):
+        """Test that follow-fork-mode child is respected for a non-expression fork.
+
+        When follow-fork-mode is child and a non-expression thread forks,
+        DidFork follows the child (switching the process via SetID).  This
+        causes the expression thread to vanish, so the expression is
+        interrupted.  The per-thread check ensures we do NOT override
+        follow-fork-mode to parent for non-expression forks."""
+        self.build()
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
+
+        original_pid = process.GetProcessID()
+        self.runCmd("settings set target.process.follow-fork-mode child")
+
+        options = lldb.SBExpressionOptions()
+        options.SetStopOthers(False)
+
+        value = thread.GetSelectedFrame().EvaluateExpression(
+            "expr_with_concurrent_fork()", options
+        )
+
+        # The expression should be interrupted because follow-fork-mode
+        # child switches to the child process, causing the expression
+        # thread (on the parent) to vanish.  This confirms that the
+        # per-thread check correctly did NOT override follow-fork-mode
+        # for the non-expression fork.
+        self.assertTrue(value.GetError().Fail())
+
+        # The process should have switched to the child (different PID).
+        self.assertNotEqual(process.GetProcessID(), original_pid)
