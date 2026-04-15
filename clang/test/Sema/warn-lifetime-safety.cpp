@@ -1026,6 +1026,16 @@ void lifetimebound_make_unique_multi_params2() {
   (void)ptr; // tu-note {{later used here}}
 }
 
+void lifetimebound_make_unique_multi_params2_no_error_case() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1);
+  }
+  (void)ptr;
+}
+
 void lifetimebound_make_unique_multi_params3_1() {
   std::unique_ptr<MultiLifetimeBoundCtor> ptr;
   MyObj obj_long;
