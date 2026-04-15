@@ -40,108 +40,125 @@ using namespace llvm;
 
 namespace {
 
-class LSROA {
-public:
-  LSROA() {}
+// Return all lifetime intrinsics with the instruction I as operand.
+SmallVector<LifetimeIntrinsic *>
+collectLifetimeIntrinsicsUsing(Instruction &I) {
+  SmallVector<LifetimeIntrinsic *> Output;
 
-  bool runLSROA(Function &F);
+  for (const auto &user : I.users()) {
+    auto II = dyn_cast<IntrinsicInst>(user);
+    if (II && isLifetimeIntrinsic(II->getIntrinsicID()))
+      Output.push_back(cast<LifetimeIntrinsic>(II));
+  }
 
-private:
-  bool runOnStructuredAlloca(StructuredAllocaInst &SAI);
-};
+  return Output;
+}
 
-} // end anonymous namespace
+using SGEPVec = SmallVector<StructuredGEPInst *>;
 
-bool LSROA::runOnStructuredAlloca(StructuredAllocaInst &SAI) {
-  // For now, LSROA only handles SGEP on structs.
-  StructType *ST = dyn_cast<StructType>(SAI.getAllocationType());
-  if (!ST)
-    return false;
+// Returns a vector with one element for each field of the struct allocated by
+// SAI. Each element is a vector of SGEP instruction referencing this field.
+//
+// If any user of SAI is not an SGEP, or an SGEP referencing the whole struct,
+// this function returns an empty array. This function ignores lifetime
+// intrinsics.
+SmallVector<SmallVector<StructuredGEPInst *>>
+collectPerFieldSGEP(StructuredAllocaInst &SAI) {
+  StructType *ST = cast<StructType>(SAI.getAllocationType());
+  SmallVector<SmallVector<StructuredGEPInst *>> Output(ST->getNumElements());
 
-  SmallVector<SmallVector<StructuredGEPInst *, 4>, 4> FieldUsers(
-      ST->getNumElements());
   for (const auto &user : SAI.users()) {
-    // Lifetime intrinsincs are handled differently.
     auto II = dyn_cast<IntrinsicInst>(user);
     if (II && II->isLifetimeStartOrEnd())
       continue;
 
     auto SGEP = dyn_cast<StructuredGEPInst>(user);
-    // If any user is not an SGEP, we bail out.
-    if (!SGEP) {
-      return false;
-    }
+    if (!SGEP)
+      return {};
 
     // If the SGEP has no indices, this means we have a pointer on the whole
     // struct. For now, we bail out: if it was not used, it would be DCE'd, so
     // there is probably a reference to the whole struct somewhere.
     if (SGEP->getNumIndices() == 0)
-      return false;
+      return {};
 
     // IR rule: SGEP on struct can only use constant int as indices.
     ConstantInt *Index = cast<ConstantInt>(SGEP->getIndexOperand(0));
-    assert(Index->getZExtValue() < FieldUsers.size());
-    FieldUsers[Index->getZExtValue()].push_back(SGEP);
+    assert(Index->getZExtValue() < Output.size());
+    Output[Index->getZExtValue()].push_back(SGEP);
   }
 
-  bool Changed = false;
-  SmallPtrSet<Instruction *, 4> DeadLifetimeInstrs;
-  IRBuilder B(&SAI);
-  for (size_t I = 0; I < FieldUsers.size(); ++I) {
-    if (FieldUsers[I].size() == 0)
-      continue;
-    Changed = true;
-
-    B.SetInsertPoint(&SAI);
-    StructuredAllocaInst *NSAI = cast<StructuredAllocaInst>(
-        B.CreateStructuredAlloca(ST->getElementType(I)));
-
-    // Step 1: for each lifetime intrinsic, generate one per newly created NSAI.
-    for (const auto &user : SAI.users()) {
-      auto II = dyn_cast<IntrinsicInst>(user);
-      if (II && II->getIntrinsicID() == Intrinsic::lifetime_start) {
-        B.SetInsertPoint(II);
-        B.CreateLifetimeStart(NSAI);
-        DeadLifetimeInstrs.insert(II);
-        continue;
-      }
-
-      if (II && II->getIntrinsicID() == Intrinsic::lifetime_end) {
-        B.SetInsertPoint(II);
-        B.CreateLifetimeEnd(NSAI);
-        DeadLifetimeInstrs.insert(II);
-        continue;
-      }
-    }
-
-    // Step 2: replace each SGEP usage with the new alloca
-    for (StructuredGEPInst *SGEP : FieldUsers[I]) {
-      if (SGEP->getNumIndices() == 1) {
-        SGEP->replaceAllUsesWith(NSAI);
-        SGEP->eraseFromParent();
-        continue;
-      }
-
-      SmallVector<Value *, 4> Indices;
-      for (unsigned J = 1; J < SGEP->getNumIndices(); ++J)
-        Indices.push_back(SGEP->getIndexOperand(J));
-
-      B.SetInsertPoint(SGEP);
-      StructuredGEPInst *NSGEP = cast<StructuredGEPInst>(B.CreateStructuredGEP(
-          ST->getElementType(I), NSAI, Indices, SGEP->getName()));
-      SGEP->replaceAllUsesWith(NSGEP);
-      SGEP->eraseFromParent();
-    }
-  }
-
-  for (Instruction *I : DeadLifetimeInstrs)
-    I->eraseFromParent();
-  SAI.eraseFromParent();
-
-  return Changed;
+  return Output;
 }
 
-bool LSROA::runLSROA(Function &F) {
+// For each lifetime intrinsic in LifetimeIntrinsics, creates a new one, but
+// uses V as operand.
+void copyLifetimeIntrinsicFor(IRBuilder<> &B, LifetimeIntrinsic *II, Value *V) {
+  if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+    B.SetInsertPoint(II);
+    B.CreateLifetimeStart(V);
+  } else if (II->getIntrinsicID() == Intrinsic::lifetime_end) {
+    B.SetInsertPoint(II);
+    B.CreateLifetimeEnd(V);
+  } else
+    llvm_unreachable("invalid argument: expected a lifetime intrinsic");
+}
+
+void rewriteSGEPChain(IRBuilder<> &B, StructuredGEPInst *SGEP,
+                      StructuredAllocaInst *FieldAlloca) {
+  if (SGEP->getNumIndices() == 1) {
+    SGEP->replaceAllUsesWith(FieldAlloca);
+    SGEP->eraseFromParent();
+    return;
+  }
+
+  SmallVector<Value *, 4> Indices;
+  for (unsigned J = 1; J < SGEP->getNumIndices(); ++J)
+    Indices.push_back(SGEP->getIndexOperand(J));
+
+  B.SetInsertPoint(SGEP);
+  auto *I = B.CreateStructuredGEP(FieldAlloca->getAllocationType(), FieldAlloca,
+                                  Indices, SGEP->getName());
+  SGEP->replaceAllUsesWith(I);
+  SGEP->eraseFromParent();
+}
+
+bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
+  // For now, LSROA only handles SGEP on structs.
+  StructType *ST = dyn_cast<StructType>(SAI.getAllocationType());
+  if (!ST)
+    return false;
+
+  SmallVector<LifetimeIntrinsic *> LifetimeIntrinsics =
+      collectLifetimeIntrinsicsUsing(SAI);
+  auto PerFieldSGEP = collectPerFieldSGEP(SAI);
+  if (PerFieldSGEP.size() == 0)
+    return false;
+
+  IRBuilder B(&SAI);
+  for (size_t I = 0; I < PerFieldSGEP.size(); ++I) {
+    auto &Users = PerFieldSGEP[I];
+    if (Users.size() == 0)
+      continue;
+
+    B.SetInsertPoint(&SAI);
+    StructuredAllocaInst *FieldAlloca = cast<StructuredAllocaInst>(
+        B.CreateStructuredAlloca(ST->getElementType(I)));
+
+    for (auto II : LifetimeIntrinsics)
+      copyLifetimeIntrinsicFor(B, II, FieldAlloca);
+
+    for (StructuredGEPInst *SGEP : Users)
+      rewriteSGEPChain(B, SGEP, FieldAlloca);
+  }
+
+  for (auto *II : LifetimeIntrinsics)
+    II->eraseFromParent();
+  SAI.eraseFromParent();
+  return true;
+}
+
+bool runLSROA(Function &F) {
   BasicBlock &EntryBB = F.getEntryBlock();
   SmallVector<StructuredAllocaInst *> Worklist;
 
@@ -157,8 +174,10 @@ bool LSROA::runLSROA(Function &F) {
   return Changed;
 }
 
+} // end anonymous namespace
+
 PreservedAnalyses LSROAPass::run(Function &F, FunctionAnalysisManager &AM) {
-  if (!LSROA().runLSROA(F))
+  if (!runLSROA(F))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -182,7 +201,7 @@ public:
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
-    return LSROA().runLSROA(F);
+    return runLSROA(F);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
