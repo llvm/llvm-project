@@ -60,9 +60,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     and DPAS (matrix multiplication instruction) on Intel GPUs. It encodes the following information:
 
     * shape:  the sizes/shape of the interested data block, e.g., 8x16 means 8 rows
-              and each row contains 16 contiguous data element. If the encoding is a
-              BlockTensorDescAttr, rows are contiguous. If encoding is not set, it is
-              considered as a default BlockTensorDescAttr.
+              and each row contains 16 contiguous data elements.
 
     * element_type: the data type of the data element, e.g., f16, f32.
 
@@ -150,22 +148,16 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     }
 
     xegpu::MemorySpace getMemorySpace() const {
-      auto attr = getBlockAttr();
-      assert(attr && "invalid on non BlockTensorDescAttr.");
-      return attr.getMemorySpace().getValue();
+      return getBlockAttr().getMemorySpace().getValue();
     }
 
     // get the ArrayLength for blocked TensorDesc
     int getArrayLength() {
-      auto attr = getBlockAttr();
-      assert(attr && "invalid on non BlockTensorDescAttr.");
-      return attr.getArrayLength().getInt();
+      return getBlockAttr().getArrayLength().getInt();
     }
 
     bool getBoundaryCheck() {
-      auto attr = getBlockAttr();
-      assert(attr && "invalid on non BlockTensorDescAttr.");
-      return attr.getBoundaryCheck().getValue();
+      return getBlockAttr().getBoundaryCheck().getValue();
     }
 
     /// Helper to drop all layout information from the TensorDesc type.

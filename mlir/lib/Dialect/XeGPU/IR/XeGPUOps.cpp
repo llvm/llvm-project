@@ -774,9 +774,6 @@ LogicalResult LoadGatherOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  if (tdescTy)
-    return success();
-
   auto srcTy = getSourceType();
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
   auto memTy = dyn_cast<MemRefType>(srcTy);
@@ -858,9 +855,6 @@ LogicalResult StoreScatterOp::verify() {
 
   if (!isWriteHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
-
-  if (tdescTy)
-    return success();
 
   auto destTy = getDestType();
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
