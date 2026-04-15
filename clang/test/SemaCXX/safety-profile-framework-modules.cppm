@@ -12,6 +12,11 @@
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_gmf_ok.cpp -fmodule-file=GmfMod=%t/mod_gmf_enforce.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/mod_gmf_only_enforce.cppm -o %t/mod_gmf_only_enforce.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_gmf_only_fail.cpp -fmodule-file=GmfOnlyMod=%t/mod_gmf_only_enforce.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/part_iface.cppm -o %t/part_iface.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_primary_require_ok.cppm -fmodule-file=PartMod:part=%t/part_iface.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_primary_require_fail.cppm -fmodule-file=PartMod:part=%t/part_iface.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_iface_violation.cppm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_impl_enforce.cppm -verify
 
 // ===================================================================
 // Module with enforced profiles
@@ -92,3 +97,49 @@ export void gmf_only_func();
 
 //--- require_gmf_only_fail.cpp
 import GmfOnlyMod [[profiles::require(test::type_cast)]]; // expected-error {{required profile 'test::type_cast' is not enforced by imported module}}
+
+// ===================================================================
+// Partition interface with enforce: the profile is exported via the
+// partition module, so require on partition import succeeds, and
+// enforcement fires locally within the partition.
+// ===================================================================
+//--- part_iface.cppm
+// expected-no-diagnostics
+export module PartMod:part [[profiles::enforce(test::type_cast)]];
+
+export void part_func();
+
+// ===================================================================
+// Partition interface: enforcement fires locally within the partition.
+// ===================================================================
+//--- part_iface_violation.cppm
+export module PartViol:part [[profiles::enforce(test::type_cast)]];
+
+export void part_func() {
+  int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+//--- part_primary_require_ok.cppm
+// expected-no-diagnostics
+export module PartMod;
+import :part [[profiles::require(test::type_cast)]];
+
+// ===================================================================
+// Partition interface: require fails for a profile the partition does
+// not enforce.
+// ===================================================================
+//--- part_primary_require_fail.cppm
+export module PartMod;
+import :part [[profiles::require(test::not_enforced)]]; // expected-error {{required profile 'test::not_enforced' is not enforced by imported module}}
+
+// ===================================================================
+// Partition implementation with enforce: enforcement is active locally
+// but the profile is NOT exported on the module (ExportMod is null
+// for PartitionImplementation).
+// ===================================================================
+//--- part_impl_enforce.cppm
+module PartImpl:impl [[profiles::enforce(test::type_cast)]];
+
+void impl_func() {
+  int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
