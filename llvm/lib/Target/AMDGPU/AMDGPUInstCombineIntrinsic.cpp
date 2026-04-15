@@ -794,11 +794,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_cluster_id_x:
   case Intrinsic::amdgcn_cluster_id_y:
   case Intrinsic::amdgcn_cluster_id_z: {
+    if (!ST->hasClusters())
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
     StringRef Attr =
         IID == Intrinsic::amdgcn_cluster_id_x   ? "amdgpu-no-cluster-id-x"
         : IID == Intrinsic::amdgcn_cluster_id_y ? "amdgpu-no-cluster-id-y"
                                                 : "amdgpu-no-cluster-id-z";
-    if (!ST->hasClusters() || II.getFunction()->hasFnAttribute(Attr))
+    if (II.getFunction()->hasFnAttribute(Attr))
       return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
     return std::nullopt;
   }
