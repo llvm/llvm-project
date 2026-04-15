@@ -278,15 +278,6 @@ static LayoutInfo getDefaultSIMTLayoutInfo(mlir::MLIRContext *ctx,
       xegpu::LayoutAttr::get(ctx, {1, uArch->getSubgroupSize()}, {1, 1}));
 }
 
-static LayoutInfo getDefaultSIMTLayoutInfo(mlir::MLIRContext *ctx,
-                                           unsigned rank, int subgroupSize) {
-  assert((rank == 1 || rank == 2) && "Expected 1D or 2D vector.");
-  if (rank == 1) {
-    return LayoutInfo(xegpu::LayoutAttr::get(ctx, {subgroupSize}, {1}));
-  }
-  return LayoutInfo(xegpu::LayoutAttr::get(ctx, {1, subgroupSize}, {1, 1}));
-}
-
 /// Helper to get the default layout for 2D block operations.
 template <typename Ty>
 static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,
@@ -348,10 +339,6 @@ private:
   void visitVectorBitcastOp(vector::BitCastOp bitcast,
                             ArrayRef<LayoutInfoLattice *> operands,
                             ArrayRef<const LayoutInfoLattice *> results);
-
-  void visitCreateDescOp(xegpu::CreateDescOp createDesc,
-                         ArrayRef<LayoutInfoLattice *> operands,
-                         ArrayRef<const LayoutInfoLattice *> results);
 
   void visitUpdateNdOffsetOp(xegpu::UpdateNdOffsetOp updateNdOffset,
                              ArrayRef<LayoutInfoLattice *> operands,
@@ -450,9 +437,6 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case([&](xegpu::LoadGatherOp loadGatherOp) {
         visitLoadGatherOp(loadGatherOp, operands, results);
-      })
-      .Case([&](xegpu::CreateDescOp createDescOp) {
-        visitCreateDescOp(createDescOp, operands, results);
       })
       .Case([&](xegpu::UpdateNdOffsetOp updateNdOffsetOp) {
         visitUpdateNdOffsetOp(updateNdOffsetOp, operands, results);
@@ -1075,28 +1059,9 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   // Propagate the new layout to the tensor descriptor operand.
   if (isa<xegpu::TensorDescType>(load.getSourceType()))
     propagateIfChanged(operands[0], operands[0]->meet(loadLayoutInfo));
-  // Propagate the new layout to the mask and optional offset operand.
+  // Propagate the new layout to the offset and mask operands.
   propagateIfChanged(operands[1], operands[1]->meet(maskLayoutInfo));
-  if (load.getOffsets())
-    propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
-}
-
-/// Propagate the layout of the descriptor to the vector offset operand in
-/// CreateDescOp.
-void LayoutInfoPropagation::visitCreateDescOp(
-    xegpu::CreateDescOp createDesc, ArrayRef<LayoutInfoLattice *> operands,
-    ArrayRef<const LayoutInfoLattice *> results) {
-  LayoutInfo descLayout = results[0]->getValue();
-  // Need the layout of the descriptor to propagate to the operands.
-  if (!descLayout.isAssigned())
-    return;
-  const uArch *uArch = getUArch(getChipStr(createDesc).value_or(""));
-  if (!uArch)
-    return;
-  // For offset operand propagate 1D default layout.
-  LayoutInfo layout = getDefaultSIMTLayoutInfo(createDesc->getContext(), 1,
-                                               uArch->getSubgroupSize());
-  propagateIfChanged(operands[1], operands[1]->meet(layout));
+  propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
 }
 
 /// Set the layout for the value, tensor descriptor, offset and mask operands in
@@ -1136,10 +1101,9 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   // Propagate the destination (if tdesc) operand layout
   if (isa<xegpu::TensorDescType>(storeScatter.getDestType()))
     propagateIfChanged(operands[1], operands[1]->meet(srcLayoutInfo));
-  // Propagate the new layout to the mask and optional offset operand.
+  // Propagate the new layout to the offset and mask operands.
   propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
-  if (storeScatter.getOffsets())
-    propagateIfChanged(operands[3], operands[3]->meet(maskLayoutInfo));
+  propagateIfChanged(operands[3], operands[3]->meet(maskLayoutInfo));
 }
 
 void LayoutInfoPropagation::visitLoadMatrixOp(
@@ -1420,12 +1384,6 @@ ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
   auto currTDescType = dyn_cast<xegpu::TensorDescType>(tdescValue.getType());
   assert(anchorOp && currTDescType &&
          "Expected anchor layout op and tensor descriptor consumer.");
-  // TODO: Scattered tensor desc is not supported for now.
-  if (currTDescType.isScattered()) {
-    DBGS() << "Scattered tensor descriptor not supported: " << tdescValue
-           << "\n";
-    return failure();
-  }
   Attribute currLayout = currTDescType.getLayout();
   Attribute expectedLayout = anchorOp.getAnchorLayout();
   // A conflict exists in tensor descriptor operand if tensor descriptor's

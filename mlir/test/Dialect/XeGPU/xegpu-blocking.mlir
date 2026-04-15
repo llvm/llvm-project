@@ -414,155 +414,6 @@ gpu.module @test_kernel {
 }
 
 // -----
-
-gpu.module @test_kernel {
-  // CHECK-LABEL: test_prefetch_load_store_update
-  // CHECK-SAME: [[arg0:%.+]]: ui64
-  // CHECK-COUNT-2: xegpu.create_tdesc [[arg0]], {{.*}} : ui64, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>
-  // CHECK-COUNT-2: xegpu.prefetch {{.*}}
-  // CHECK-COUNT-2: xegpu.update_offset {{.*}} : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>, vector<16xindex>
-  // CHECK-COUNT-2: xegpu.load  {{.*}} 
-  // CHECK-COUNT-2: xegpu.store  {{.*}} 
-
-  gpu.func @test_prefetch_load_store_update(%src: ui64)  {
-
-    %cst = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16]>} dense<[
-    0,   8,  16,  24,  32,  40,  48,  56,
-    64,  72,  80,  88,  96, 104, 112, 120,
-    128, 136, 144, 152, 160, 168, 176, 184,
-    192, 200, 208, 216, 224, 232, 240, 248
-    ]> : vector<32xindex>
-
-    %tdesc = xegpu.create_tdesc %src, %cst : ui64, vector<32xindex> -> !xegpu.tensor_desc<32xf32,  #xegpu.scatter_tdesc_attr<>, #xegpu.layout<inst_data = [16]>>
-    xegpu.prefetch %tdesc {layout = #xegpu.layout<inst_data = [16]>}: !xegpu.tensor_desc<32xf32,  #xegpu.scatter_tdesc_attr<>, #xegpu.layout<inst_data = [16]>>
-
-    %delta = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16]>} dense<[
-    32,   32,  32,  32,  32,  32,  32,  32,
-    32,   32,  32,  32,  32,  32,  32,  64,
-    128, 128, 128, 128, 128, 128, 128, 128,
-    128, 128, 128, 128, 128, 128, 128, 256
-    ]> : vector<32xindex>
-    %new_tdesc = xegpu.update_offset %tdesc, %delta
-              : !xegpu.tensor_desc<32xf32, #xegpu.scatter_tdesc_attr<>, #xegpu.layout<inst_data = [16]>>, vector<32xindex>
-
-    %c17 = arith.constant 17: index
-    %mask = vector.create_mask %c17 {layout_result_0 =  #xegpu.layout<inst_data = [16]>} : vector<32xi1>
-
-    %ld_vec = xegpu.load %new_tdesc, %mask {layout = #xegpu.layout<inst_data = [16]>}: !xegpu.tensor_desc<32xf32, #xegpu.scatter_tdesc_attr<>, #xegpu.layout<inst_data = [16]>>, vector<32xi1> -> vector<32xf32>
-
-    %st_vec = arith.addf %ld_vec, %ld_vec {layout_result_0 = #xegpu.layout<inst_data = [16]>} : vector<32xf32>
-    xegpu.store %st_vec, %tdesc, %mask {layout = #xegpu.layout<inst_data = [16]>}:
-                 vector<32xf32>,
-                 !xegpu.tensor_desc<32xf32, #xegpu.scatter_tdesc_attr<>, #xegpu.layout<inst_data = [16]>>,
-                 vector<32xi1>
-
-    gpu.return
-  }
-
-}
-
-// -----
-gpu.module @test_kernel   {
-  // CHECK-LABEL: test_prefetch_load_store_update_chunk
-  // CHECK-SAME: [[arg0:%.+]]: ui64
-  // CHECK-COUNT-4: xegpu.create_tdesc [[arg0]], {{.*}} : ui64, vector<16xindex> -> !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>
-  // CHECK-COUNT-4: xegpu.prefetch {{.*}} : !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>
-  // CHECK-COUNT-4: xegpu.update_offset {{.*}} : !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<16xindex>
-  // CHECK-COUNT-4: xegpu.load  {{.*}} <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<16xi1> -> vector<16x2xf32> 
-  // CHECK-COUNT-4: xegpu.store  {{.*}} <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<16x2xf32>, !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<16xi1>
-
-  gpu.func @test_prefetch_load_store_update_chunk(%src: ui64)  {
-
-    %cst = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16]>} dense<[
-      0,   8,  16,  24,  32,  40,  48,  56,
-      64,  72,  80,  88,  96, 104, 112, 120,
-      128, 136, 144, 152, 160, 168, 176, 184,
-      192, 200, 208, 216, 224, 232, 240, 248
-    ]> : vector<32xindex>
-
-    %tdesc = xegpu.create_tdesc %src, %cst : ui64, vector<32xindex> -> !xegpu.tensor_desc<32x4xf32,  #xegpu.scatter_tdesc_attr<chunk_size=4>, #xegpu.layout<inst_data = [16, 2]>>
-    xegpu.prefetch %tdesc {layout = #xegpu.layout<inst_data = [16, 2]>}: !xegpu.tensor_desc<32x4xf32,  #xegpu.scatter_tdesc_attr<chunk_size=4>, #xegpu.layout<inst_data = [16, 2]>>
-
-    %delta = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16]>} dense<[
-      32,   32,  32,  32,  32,  32,  32,  32,
-      32,   32,  32,  32,  32,  32,  32,  64,
-      128, 128, 128, 128, 128, 128, 128, 128,
-      128, 128, 128, 128, 128, 128, 128, 256
-    ]> : vector<32xindex>
-    %new_tdesc = xegpu.update_offset %tdesc, %delta
-              : !xegpu.tensor_desc<32x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #xegpu.layout<inst_data = [16, 2]>>, vector<32xindex>
-
-    %c17 = arith.constant 17: index
-    %mask = vector.create_mask %c17 {layout_result_0 = #xegpu.layout<inst_data = [16]>} : vector<32xi1>
-
-    %ld_vec = xegpu.load %new_tdesc, %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, layout = #xegpu.layout<inst_data = [16, 2]>}>: !xegpu.tensor_desc<32x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #xegpu.layout<inst_data = [16, 2]>>, vector<32xi1> -> vector<32x4xf32>
-
-    %st_vec = arith.addf %ld_vec, %ld_vec {layout_result_0 = #xegpu.layout<inst_data = [16, 2]>} : vector<32x4xf32>
-    xegpu.store %st_vec, %tdesc, %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, layout = #xegpu.layout<inst_data = [16, 2]>}>:
-                 vector<32x4xf32>,
-                 !xegpu.tensor_desc<32x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #xegpu.layout<inst_data = [16, 2]>>,
-                 vector<32xi1>
-
-    gpu.return
-  }
-}
-
-// -----
-#l = #xegpu.layout<inst_data = [2, 8, 2]>
-
-// test the blocking pass on a 3D scattered tensor descriptor,
-// Ops working 4x8x4xf32 scattered tensor_descs will be unrolled
-// into 4 ops working 2x8x2xf32 scattered tensor_descs based on
-// the given layout.
-gpu.module @test_kernel   {
-  // CHECK-LABEL: test_3d_scattered_tensor_desc
-  // CHECK-SAME: [[arg0:%.+]]: ui64
-  // CHECK: [[cst_1:%.+]] = arith.constant dense<{{.*}}[130, 138, 146, 154, 162, 170, 178, 186], [194, 202, 210, 218, 226, 234, 242, 250]]> : vector<2x8xindex>
-  // CHECK: [[cst_2:%.+]] = arith.constant dense<{{.*}}[2, 10, 18, 26, 34, 42, 50, 58], [66, 74, 82, 90, 98, 106, 114, 122]]> : vector<2x8xindex>
-  // CHECK: [[cst_3:%.+]] = arith.constant dense<{{.*}}[0, 8, 16, 24, 32, 40, 48, 56], [64, 72, 80, 88, 96, 104, 112, 120]]> : vector<2x8xindex>
-  // CHECK: [[cst_4:%.+]] = arith.constant dense<{{.*}}[128, 136, 144, 152, 160, 168, 176, 184], [192, 200, 208, 216, 224, 232, 240, 248]]> : vector<2x8xindex>
-  // CHECK-COUNT-4: xegpu.create_tdesc [[arg0]], {{.*}} : ui64, vector<2x8xindex> -> !xegpu.tensor_desc<2x8x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>
-  // CHECK-COUNT-4: xegpu.prefetch {{.*}} : !xegpu.tensor_desc<2x8x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>
-  // CHECK-COUNT-4: xegpu.update_offset {{.*}} : !xegpu.tensor_desc<2x8x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<2x8xindex>
-  // CHECK-COUNT-4: xegpu.load  {{.*}} : !xegpu.tensor_desc<2x8x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<2x8xi1> -> vector<2x8x2xf32>
-  // CHECK-COUNT-4: xegpu.store  {{.*}} : vector<2x8x2xf32>, !xegpu.tensor_desc<2x8x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<2x8xi1>
-
-
-  gpu.func @test_3d_scattered_tensor_desc(%src: ui64)  {
-    %cst = arith.constant {layout_result_0 = #l} dense<[
-      [0,   8,  16,  24,  32,  40,  48,  56],
-      [64,  72,  80,  88,  96, 104, 112, 120],
-      [128, 136, 144, 152, 160, 168, 176, 184],
-      [192, 200, 208, 216, 224, 232, 240, 248]
-    ]> : vector<4x8xindex>
-
-    %tdesc = xegpu.create_tdesc %src, %cst : ui64, vector<4x8xindex> -> !xegpu.tensor_desc<4x8x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #l>
-    xegpu.prefetch %tdesc {layout = #l}: !xegpu.tensor_desc<4x8x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #l>
-
-    %delta = arith.constant {layout_result_0 = #l} dense<[
-      [32,   32,  32,  32,  32,  32,  32,  32],
-      [32,   32,  32,  32,  32,  32,  32,  64],
-      [128, 128, 128, 128, 128, 128, 128, 128],
-      [128, 128, 128, 128, 128, 128, 128, 256]
-    ]> : vector<4x8xindex>
-    %new_tdesc = xegpu.update_offset %tdesc, %delta
-              : !xegpu.tensor_desc<4x8x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #l>, vector<4x8xindex>
-
-    %c4 = arith.constant 4: index
-    %mask = vector.create_mask %c4, %c4 {layout_result_0 = #l}: vector<4x8xi1>
-
-    %ld_vec = xegpu.load %new_tdesc, %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, layout = #l}>: !xegpu.tensor_desc<4x8x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #l>, vector<4x8xi1> -> vector<4x8x4xf32>
-
-    %st_vec = arith.addf %ld_vec, %ld_vec {layout_result_0 = #l} : vector<4x8x4xf32>
-    xegpu.store %st_vec, %tdesc, %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, layout = #l}>:
-                 vector<4x8x4xf32>,
-                 !xegpu.tensor_desc<4x8x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #l>,
-                 vector<4x8xi1>
-    gpu.return
-  }
-}
-
-// -----
 #a = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>
 #b = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [16, 1]>
 #c = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>
@@ -605,13 +456,13 @@ gpu.module @test_kernel {
 #a = #xegpu.layout<inst_data = [8, 16]>
 gpu.module @test_kernel {
   //CHECK-LABEL: gpu.func @convert_layout_scalar
+  // CHECK-NOT: xegpu.convert_layout
   gpu.func @convert_layout_scalar(%arg0: memref<16x16xf16>, %arg1: memref<4xf16>) {
     %acc = arith.constant 0.000000e+00 : f16
     %c0 = arith.constant 0 : index
     %a_tdesc = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #a>
     %a = xegpu.load_nd %a_tdesc {layout = #a}: !xegpu.tensor_desc<16x16xf16, #a> -> vector<16x16xf16>
     %a_reduce = vector.multi_reduction <add>, %a, %acc {layout_operand_0 = #a, layout_result_0 = #xegpu.slice<#a, dims = [0, 1]>} [0, 1] : vector<16x16xf16> to f16
-    // CHECK-NOT: xegpu.convert_layout
     %13 = xegpu.convert_layout %a_reduce <{input_layout = #xegpu.slice<#a, dims = [0, 1]>, target_layout = #xegpu.slice<#a, dims = [0, 1]>}> : f16
     memref.store %13, %arg1[%c0] : memref<4xf16>
     gpu.return
