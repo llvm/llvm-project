@@ -67,9 +67,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     * element_type: the data type of the data element, e.g., f16, f32.
 
     Similar to the built-in tensor, it also provides optional attributes for encoding
-    additional information via BlockTensorDescAttr, or supporting Workgroup, Subgroup,
-    and workitem (or SIMT) level programmings via the Layout attribute. Please check
-    their definition for details.
+    additional information via BlockTensorDescAttr, or supporting Workgroup & Subgroup
+    level programmings via the Layout attribute. Please check their definition for details.
 
     Syntax:
 
@@ -80,7 +79,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     static-dim-list ::= decimal-literal `x` decimal-literal
     attr-list = (, encoding-attr)? (, layout-attr)?
     enconding-attr = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)?
-    layout-attr = (, layout `<`sg_layout = value, sg_data = value, inst_data = value, lane_layout = value, lane_data = value, order = value`>`)?
+    layout-attr = DistributeLayoutAttr
     ```
 
     Examples:

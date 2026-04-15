@@ -495,10 +495,7 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       return failure();
 
     SmallVector<int64_t> targetMaskShape(*targetShape);
-    // Derive chunk size from the tensor descriptor shape: for 2D descriptors,
-    // the last dimension represents the chunk size; for 1D, chunk size is 1.
-    int64_t originalChunkSize =
-        tdescTy.getRank() > 1 ? tdescTy.getShape().back() : 1;
+    int originalChunkSize = op.getChunkSize().value_or(1);
 
     VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
 
@@ -789,10 +786,7 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
       return failure();
 
     SmallVector<int64_t> targetMaskShape(*targetShape);
-    // Derive chunk size from the tensor descriptor shape: for 2D descriptors,
-    // the last dimension represents the chunk size; for 1D, chunk size is 1.
-    int64_t originalChunkSize =
-        tdescTy.getRank() > 1 ? tdescTy.getShape().back() : 1;
+    int originalChunkSize = op.getChunkSize().value_or(1);
 
     VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
 

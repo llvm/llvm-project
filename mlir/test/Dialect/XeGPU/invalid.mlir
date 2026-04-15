@@ -509,6 +509,125 @@ func.func @convert_layout_unmatch(%a: vector<32x64xf16>) {
 }
 
 // -----
+func.func @layout_rank_mismatch_sg_lane(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  %2 = xegpu.load %src[%offsets], %mask
+      // expected-error@below {{expected sg_layout and lane_layout to have the same rank}}
+      {layout = #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [16, 2, 1], lane_layout = [8, 1], lane_data = [1, 2]>}
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @layout_rank_mismatch_sg_inst(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  %2 = xegpu.load %src[%offsets], %mask
+      // expected-error@below {{expected sg_layout and inst_data to have the same rank}}
+      {layout = #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [16, 2, 1], inst_data = [16, 2]>}
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @layout_rank_mismatch_inst_lane(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  %2 = xegpu.load %src[%offsets], %mask
+      // expected-error@below {{expected inst_data and lane_layout to have the same rank}}
+      {layout = #xegpu.layout<inst_data = [16, 2, 1], lane_layout = [8, 1], lane_data = [1, 2]>}
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @layout_rank_mismatch_lane_data(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  %2 = xegpu.load %src[%offsets], %mask
+      // expected-error@below {{expected lane_data and lane_layout to have the same rank}}
+      {layout = #xegpu.layout<inst_data = [16, 2], lane_layout = [8, 1], lane_data = [1, 2, 1]>}
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @layout_rank_mismatch_sg_data(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  %2 = xegpu.load %src[%offsets], %mask
+      // expected-error@below {{expected sg_data and sg_layout to have the same rank}}
+      {layout = #xegpu.layout<sg_layout = [1, 1], sg_data = [16, 2, 1], inst_data = [16, 2]>}
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @layout_rank_mismatch_tensor(%src: memref<16x32xf32>) {
+  %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<16x32xf32> ->
+      // expected-error@+1 {{expected layout rank to match tensor rank}}
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.layout<sg_layout = [1], sg_data = [32], inst_data = [16]>>
+  return
+}
+
+// -----
+func.func @layout_sg_data_missing(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  %2 = xegpu.load %src[%offsets], %mask
+      // expected-error@below {{sg_layout and sg_data must be used together}}
+      {layout = #xegpu.layout<sg_layout = [2, 1], lane_layout = [8, 1], lane_data = [1, 2]>}
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @layout_lane_data_missing(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  %2 = xegpu.load %src[%offsets], %mask
+      // expected-error@below {{lane_layout and lane_data must be used together}}
+      {layout = #xegpu.layout<inst_data = [16, 2], lane_layout = [16, 1]>}
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @layout_order_without_layout(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  %2 = xegpu.load %src[%offsets], %mask
+      // expected-error@below {{expected sg_layout/lane_layout being used with order}}
+      {layout = #xegpu.layout<inst_data = [16, 2], order = [0, 1]>}
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @layout_order_rank_mismatch_sg(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  %2 = xegpu.load %src[%offsets], %mask
+      // expected-error@below {{expected order and sg_layout to have the same rank}}
+      {layout = #xegpu.layout<sg_layout = [1, 1], sg_data = [16, 2], order = [0, 1, 2]>}
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
+func.func @layout_order_rank_mismatch_lane(%src: memref<?xf32>) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<4xi1>
+  %2 = xegpu.load %src[%offsets], %mask
+      // expected-error@below {{expected order and lane_layout to have the same rank}}
+      {layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 2], order = [0, 1, 2]>}
+      : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+  return
+}
+
+// -----
 #l = #xegpu.layout<sg_layout = [16, 1, 1], sg_data = [1, 8, 2]>
 // expected-error@+1 {{repeated dim (2) in slice attribute}}
 #s = #xegpu.slice<#l, dims = [2, 2]>
