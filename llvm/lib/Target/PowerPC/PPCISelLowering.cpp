@@ -5247,8 +5247,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_AIX(
   if (!areCallingConvEligibleForTCO(CallerCC, CalleeCC))
     return false;
 
-  if (!Subtarget.isUsingPCRelativeCalls() &&
-      !isFunctionGlobalAddress(CalleeGV) && !isCalleeExternalSymbol)
+  if (!isFunctionGlobalAddress(CalleeGV) && !isCalleeExternalSymbol)
     return false;
 
   // TCO allows altering callee ABI, so we don't have to check further.
@@ -5256,8 +5255,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_AIX(
     return true;
 
   // Check if we share the TOC base.
-  if (!Subtarget.isUsingPCRelativeCalls() &&
-      !callsShareTOCBase(CallerFunc, CalleeGV, getTargetMachine()))
+  if (!callsShareTOCBase(CallerFunc, CalleeGV, getTargetMachine()))
     return false;
 
   if (DisableSCO)
@@ -5273,18 +5271,17 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_AIX(
   // TODO: In the future, calculate the actual caller argument size
   // instead of using the minimum parameter save area.
   unsigned MinPSA = 8 * (Subtarget.isPPC64() ? 8 : 4);
+  bool NeedStackSlotPassParameters = CalleeArgSize > MinPSA ? true : false;
 
-  if (CallerCC != CalleeCC && CalleeArgSize > MinPSA)
+  if (CallerCC != CalleeCC && NeedStackSlotPassParameters)
     return false;
 
   // If callee use the same argument list that caller is using, then we can
   // apply SCO on this case. If it is not, then we need to check if callee
-  // needs stack for passing arguments. PC Relative tail calls may not have
-  // a CallBase. If there is no CallBase we cannot verify if we have the
-  // same argument list so assume that we don't have the same argument list.
-  if (CB && !hasSameArgumentList(CallerFunc, *CB) && CalleeArgSize > MinPSA)
-    return false;
-  else if (!CB && CalleeArgSize > MinPSA)
+  // needs stack for passing argumentse
+  assert(CB && "AIX do not support PC relative call.");
+  if (CB && !hasSameArgumentList(CallerFunc, *CB) &&
+      NeedStackSlotPassParameters)
     return false;
 
   return true;
