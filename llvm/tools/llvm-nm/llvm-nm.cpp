@@ -1825,10 +1825,9 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
         return false;
       }
 
-      // Don't drop format specific symbols for ARM and AArch64 ELF targets
-      // if they are mapping symbols (STT_NOTYPE), needed to honor the
-      // --special-syms option. Other format-specific symbols (STT_FILE,
-      // STT_SECTION, etc.) are dropped.
+      // Drop format-specific symbols (STT_FILE, STT_SECTION, etc.) but
+      // retain mapping symbols (STT_NOTYPE such as $d, $x) on ARM, AArch64,
+      // CSKY, and RISC-V targets to honor option --special-syms.
       if (!DebugSyms && (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific)) {
         auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
         bool IsMappingSymbol =
