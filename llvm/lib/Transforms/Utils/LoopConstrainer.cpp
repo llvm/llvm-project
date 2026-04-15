@@ -453,7 +453,8 @@ static void DisableAllLoopOptsOnLoop(Loop &L) {
       Context, {MDString::get(Context, "llvm.loop.licm_versioning.disable")});
   MDNode *DisableDistribution = MDNode::get(
       Context,
-      {MDString::get(Context, "llvm.loop.distribute.enable"), FalseVal});
+      {MDString::get(
+          Context, "llvm.loop.distribute.disable")});
   MDNode *NewLoopID =
       MDNode::get(Context, {Dummy, DisableUnroll, DisableVectorize,
                             DisableLICMVersioning, DisableDistribution});

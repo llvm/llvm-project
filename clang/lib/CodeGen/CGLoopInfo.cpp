@@ -331,11 +331,12 @@ clang::CodeGen::LoopInfo::createLoopDistributeMetadata(
   if (Enabled != true) {
     SmallVector<Metadata *, 4> NewLoopProperties;
     if (Enabled == false) {
-      NewLoopProperties.append(LoopProperties.begin(), LoopProperties.end());
-      NewLoopProperties.push_back(
-          MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.distribute.enable"),
-                            ConstantAsMetadata::get(ConstantInt::get(
-                                llvm::Type::getInt1Ty(Ctx), 0))}));
+      NewLoopProperties.append(
+          LoopProperties.begin(), LoopProperties.end());
+      NewLoopProperties.push_back(MDNode::get(
+          Ctx,
+          {MDString::get(
+              Ctx, "llvm.loop.distribute.disable")}));
       LoopProperties = NewLoopProperties;
     }
     return createLoopVectorizeMetadata(Attrs, LoopProperties,
@@ -344,16 +345,15 @@ clang::CodeGen::LoopInfo::createLoopDistributeMetadata(
 
   bool FollowupHasTransforms = false;
   SmallVector<Metadata *, 4> Followup =
-      createLoopVectorizeMetadata(Attrs, LoopProperties, FollowupHasTransforms);
+      createLoopVectorizeMetadata(
+          Attrs, LoopProperties, FollowupHasTransforms);
 
   SmallVector<Metadata *, 4> Args;
   Args.append(LoopProperties.begin(), LoopProperties.end());
 
-  Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.distribute.enable"),
-                      ConstantAsMetadata::get(ConstantInt::get(
-                          llvm::Type::getInt1Ty(Ctx),
-                          (Attrs.DistributeEnable == LoopAttributes::Enable)))};
-  Args.push_back(MDNode::get(Ctx, Vals));
+  Args.push_back(MDNode::get(
+      Ctx,
+      {MDString::get(Ctx, "llvm.loop.distribute.enable")}));
 
   if (FollowupHasTransforms)
     Args.push_back(
