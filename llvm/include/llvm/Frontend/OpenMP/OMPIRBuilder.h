@@ -1614,7 +1614,7 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       BodyGenCallbackTy BodyGenCB, bool Tied = true, Value *Final = nullptr,
       Value *IfCondition = nullptr, const DependenciesInfo &Dependencies = {},
-      AffinityData Affinities = {}, bool Mergeable = false,
+      const AffinityData &Affinities = {}, bool Mergeable = false,
       Value *EventHandle = nullptr, Value *Priority = nullptr);
 
   /// Generator for the taskgroup construct
@@ -3201,7 +3201,7 @@ public:
                                                   llvm::IntegerType *IntPtrTy,
                                                   bool BranchtoEnd = true);
 
-  /// Create a runtime call for kmpc_Alloc
+  /// Create a runtime call for kmpc_alloc
   ///
   /// \param Loc The insert and source location description.
   /// \param Size Size of allocated memory space
@@ -3211,6 +3211,20 @@ public:
   /// \returns CallInst to the OMP_Alloc call
   LLVM_ABI CallInst *createOMPAlloc(const LocationDescription &Loc, Value *Size,
                                     Value *Allocator, std::string Name = "");
+
+  /// Create a runtime call for kmpc_align_alloc
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param Align Align value
+  /// \param Size Size of allocated memory space
+  /// \param Allocator Allocator information instruction
+  /// \param Name Name of call Instruction for OMP_Align_Alloc
+  ///
+  /// \returns CallInst to the OMP_Align_Alloc call
+  LLVM_ABI CallInst *createOMPAlignedAlloc(const LocationDescription &Loc,
+                                           Value *Align, Value *Size,
+                                           Value *Allocator,
+                                           std::string Name = "");
 
   /// Create a runtime call for kmpc_free
   ///

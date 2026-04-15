@@ -650,6 +650,18 @@ LogicalResult tryUpdateDimOrFailure(Operation *op, int64_t &currDim,
   return success();
 }
 
+static void printShapeToDiagnostic(InFlightDiagnostic &diag,
+                                   ArrayRef<int64_t> shape) {
+  auto printDim = [&](int64_t dim) {
+    if (ShapedType::isDynamic(dim))
+      diag << "?";
+    else
+      diag << dim;
+  };
+
+  llvm::interleaveComma(shape, diag, printDim);
+}
+
 LogicalResult verifyConvOutputSize(
     Operation *op, const int64_t inputSize, const int64_t kernelSize,
     const int64_t outputSize, const int64_t padBefore, const int64_t padAfter,
@@ -2073,15 +2085,9 @@ LogicalResult MatMulOp::verify() {
       failed(
           verifyCompatibleShape(outputType.getShape(), expectedOutputShape))) {
     InFlightDiagnostic opError = emitOpError("expected output shape ");
-    auto stringifyDim = [&](int64_t d) {
-      if (ShapedType::isDynamic(d))
-        opError << "?";
-      else
-        opError << d;
-    };
-    llvm::interleaveComma(outputType.getShape(), opError, stringifyDim);
+    printShapeToDiagnostic(opError, outputType.getShape());
     opError << " to be compatible with expected output shape ";
-    llvm::interleaveComma(expectedOutputShape, opError, stringifyDim);
+    printShapeToDiagnostic(opError, expectedOutputShape);
     return opError;
   }
 
@@ -2214,15 +2220,9 @@ LogicalResult MatmulTBlockScaledOp::verify() {
       failed(
           verifyCompatibleShape(outputType.getShape(), expectedOutputShape))) {
     InFlightDiagnostic opError = emitOpError("expected output shape ");
-    auto stringifyDim = [&](int64_t d) {
-      if (ShapedType::isDynamic(d))
-        opError << "?";
-      else
-        opError << d;
-    };
-    llvm::interleaveComma(outputType.getShape(), opError, stringifyDim);
+    printShapeToDiagnostic(opError, outputType.getShape());
     opError << " to be compatible with expected output shape ";
-    llvm::interleaveComma(expectedOutputShape, opError, stringifyDim);
+    printShapeToDiagnostic(opError, expectedOutputShape);
     return opError;
   }
 

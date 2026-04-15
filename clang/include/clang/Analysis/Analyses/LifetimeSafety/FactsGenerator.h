@@ -36,6 +36,7 @@ public:
   void VisitDeclStmt(const DeclStmt *DS);
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
   void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
@@ -73,6 +74,10 @@ private:
   void handleFullExprCleanup(const CFGFullExprCleanup &FullExprCleanup);
 
   void handleExitBlock();
+
+  /// Mark all fields of the implicit object as used for an instance method
+  /// call, since the callee may access any part of the object.
+  void handleImplicitObjectFieldUses(const Expr *Call, const FunctionDecl *FD);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 

@@ -6487,3 +6487,57 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     for (const VPPartialReductionChain &Chain : Chains)
       transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi);
 }
+
+void VPlanTransforms::makeMemOpWideningDecisions(
+    VPlan &Plan, VFRange &Range, VPRecipeBuilder &RecipeBuilder) {
+  // Collect all loads/stores first. We will start with ones having simpler
+  // decisions followed by more complex ones that are potentially
+  // guided/dependent on the simpler ones.
+  SmallVector<VPInstruction *> MemOps;
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (VPI && VPI->getUnderlyingValue() &&
+          is_contained({Instruction::Load, Instruction::Store},
+                       VPI->getOpcode()))
+        MemOps.push_back(VPI);
+    }
+  }
+
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  VPBuilder FinalRedStoresBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+
+  for (VPInstruction *VPI : MemOps) {
+    auto ReplaceWith = [&](VPRecipeBase *New) {
+      RecipeBuilder.setRecipe(cast<Instruction>(VPI->getUnderlyingValue()),
+                              New);
+      New->insertBefore(VPI);
+      if (VPI->getOpcode() == Instruction::Load)
+        VPI->replaceAllUsesWith(New->getVPSingleValue());
+      VPI->eraseFromParent();
+    };
+
+    // Note: we must do that for scalar VPlan as well.
+    if (RecipeBuilder.replaceWithFinalIfReductionStore(VPI,
+                                                       FinalRedStoresBuilder))
+      continue;
+
+    // Filter out scalar VPlan for the remaining memory operations.
+    if (LoopVectorizationPlanner::getDecisionAndClampRange(
+            [](ElementCount VF) { return VF.isScalar(); }, Range))
+      continue;
+
+    if (VPHistogramRecipe *Histogram = RecipeBuilder.widenIfHistogram(VPI)) {
+      ReplaceWith(Histogram);
+      continue;
+    }
+
+    VPRecipeBase *Recipe = RecipeBuilder.tryToWidenMemory(VPI, Range);
+    if (!Recipe)
+      Recipe = RecipeBuilder.handleReplication(VPI, Range);
+
+    ReplaceWith(Recipe);
+  }
+}
