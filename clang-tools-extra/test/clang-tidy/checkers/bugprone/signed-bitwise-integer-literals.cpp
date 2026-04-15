@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s hicpp-signed-bitwise %t -- \
-// RUN:   -config="{CheckOptions: {hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true}}"
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-signed-bitwise %t -- \
+// RUN:   -config="{CheckOptions: {bugprone-signed-bitwise.IgnorePositiveIntegerLiterals: true}}"
 
 void examples() {
   unsigned UValue = 40u;
@@ -22,7 +22,7 @@ void examples() {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator
   IResult = ~0; //Ok
   IResult = -1 & 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator [hicpp-signed-bitwise]
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator [bugprone-signed-bitwise]
 }
 
 enum EnumConstruction {

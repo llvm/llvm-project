@@ -142,6 +142,7 @@ Clang-Tidy Checks
    :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
    :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
+   :doc:`bugprone-signed-bitwise <bugprone/signed-bitwise>`,
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
    :doc:`bugprone-sizeof-container <bugprone/sizeof-container>`,
    :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
@@ -244,7 +245,6 @@ Clang-Tidy Checks
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
-   :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
@@ -618,6 +618,7 @@ Check aliases
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`, :doc:`portability-no-assembler <portability/no-assembler>`,
    :doc:`hicpp-no-malloc <hicpp/no-malloc>`, :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
    :doc:`hicpp-noexcept-move <hicpp/noexcept-move>`, :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
+   :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`, :doc:`bugprone-signed-bitwise <bugprone/signed-bitwise>`,
    :doc:`hicpp-special-member-functions <hicpp/special-member-functions>`, :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,
    :doc:`hicpp-static-assert <hicpp/static-assert>`, :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`hicpp-undelegated-constructor <hicpp/undelegated-constructor>`, :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,

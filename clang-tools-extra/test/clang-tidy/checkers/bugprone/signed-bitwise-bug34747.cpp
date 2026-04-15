@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s hicpp-signed-bitwise %t --
+// RUN: %check_clang_tidy %s bugprone-signed-bitwise %t --
 
 // Note: this test expects no diagnostics, but FileCheck cannot handle that,
 // hence the use of | count 0.
