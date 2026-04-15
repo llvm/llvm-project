@@ -142,6 +142,9 @@ class CompilerInstance : public ModuleLoader {
   /// The frontend timer.
   std::unique_ptr<llvm::Timer> FrontendTimer;
 
+  /// Whether PrepareForExecution has already been called.
+  bool PreparedForExecution = false;
+
   /// The ASTReader, if one exists.
   IntrusiveRefCntPtr<ASTReader> TheASTReader;
 
@@ -252,6 +255,13 @@ public:
   // FIXME: Eliminate the llvm_shutdown requirement, that should either be part
   // of the context or else not CompilerInstance specific.
   bool ExecuteAction(FrontendAction &Act);
+
+  /// Prepare the CompilerInstance for executing a frontend action.
+  ///
+  /// Called by ExecuteAction. Consolidates instance-level setup that was
+  /// previously duplicated across tool entry points (cc1_main,
+  /// clang-repl/Interpreter, etc.). This method is idempotent.
+  void PrepareForExecution();
 
   /// At the end of a compilation, print the number of warnings/errors.
   void printDiagnosticStats();
@@ -816,13 +826,6 @@ public:
                    bool UseTemporary, bool CreateMissingDirectories = false);
 
 private:
-  /// Prepare the CompilerInstance for executing a frontend action.
-  ///
-  /// Called by ExecuteAction. Consolidates instance-level setup that was
-  /// previously duplicated across tool entry points (cc1_main,
-  /// clang-repl/Interpreter, etc.).
-  void PrepareForExecution();
-
   /// Create a new output file and add it to the list of tracked output files.
   ///
   /// If \p OutputPath is empty, then createOutputFile will derive an output

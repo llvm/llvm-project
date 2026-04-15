@@ -50,6 +50,7 @@
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/BuryPointer.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
@@ -945,19 +946,36 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
 // High-Level Operations
 
 void CompilerInstance::PrepareForExecution() {
+  if (PreparedForExecution)
+    return;
+  PreparedForExecution = true;
+
   // Set up the frontend timer for -ftime-report. BackendConsumer uses
-  // getTimerGroup() and getFrontendTimer() when TimePasses is set. In the
-  // cc1 driver path this was done in cc1_main before calling
-  // ExecuteCompilerInvocation; we consolidate it here so that all tools
-  // (cc1, clang-repl, libclang, etc.) get consistent behavior.
+  // getTimerGroup() and getFrontendTimer() when TimePasses is set.
   if (getCodeGenOpts().TimePasses && !FrontendTimer) {
     createFrontendTimer();
     getFrontendTimer().startTimer();
   }
 
-  // FIXME: Consider consolidating additional per-instance setup here:
-  // - llvm::timeTraceProfilerInitialize) when TimeTracePath is set.
-  // - Plugin loading (LoadRequestedPlugins) and -mllvm argument processing.
+  // Load plugins and pass plugins from -fplugin / -fpass-plugin.
+  LoadRequestedPlugins();
+
+  // Honor -mllvm.
+  //
+  // FIXME: Remove this, one day.
+  // This should happen AFTER plugins have been loaded!
+  if (!getFrontendOpts().LLVMArgs.empty()) {
+    unsigned NumArgs = getFrontendOpts().LLVMArgs.size();
+    auto Args = std::make_unique<const char *[]>(NumArgs + 2);
+    Args[0] = "clang (LLVM option parsing)";
+    for (unsigned i = 0; i != NumArgs; ++i)
+      Args[i + 1] = getFrontendOpts().LLVMArgs[i].c_str();
+    Args[NumArgs + 1] = nullptr;
+    llvm::cl::ParseCommandLineOptions(
+        NumArgs + 1, Args.get(), /*Overview=*/"",
+        /*Errs=*/nullptr,
+        hasVirtualFileSystem() ? &getVirtualFileSystem() : nullptr);
+  }
 }
 
 bool CompilerInstance::ExecuteAction(FrontendAction &Act) {

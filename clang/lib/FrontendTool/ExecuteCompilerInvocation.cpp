@@ -237,23 +237,10 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     return true;
   }
 
-  Clang->LoadRequestedPlugins();
-
-  // Honor -mllvm.
-  //
-  // FIXME: Remove this, one day.
-  // This should happen AFTER plugins have been loaded!
-  if (!Clang->getFrontendOpts().LLVMArgs.empty()) {
-    unsigned NumArgs = Clang->getFrontendOpts().LLVMArgs.size();
-    auto Args = std::make_unique<const char*[]>(NumArgs + 2);
-    Args[0] = "clang (LLVM option parsing)";
-    for (unsigned i = 0; i != NumArgs; ++i)
-      Args[i + 1] = Clang->getFrontendOpts().LLVMArgs[i].c_str();
-    Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
-                                      /*Errs=*/nullptr,
-                                      /*VFS=*/&Clang->getVirtualFileSystem());
-  }
+  // Load plugins, process -mllvm, and set up timers. This is idempotent and
+  // also called by ExecuteAction, but we need it here before
+  // CreateFrontendAction because plugins can replace the main action.
+  Clang->PrepareForExecution();
 
 #if CLANG_ENABLE_STATIC_ANALYZER
   // These should happen AFTER plugins have been loaded!
