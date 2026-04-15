@@ -509,10 +509,8 @@ LogicalResult PrefetchNdOp::verify() {
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
-  if (getAnchorLayout()) {
-    auto layout = getAnchorLayout();
-    auto tdescShape = getShapeOf(tdescTy);
-    if (!layout.isDistributable(tdescShape))
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(tdescTy)))
       return emitOpError(
           "TensorDesc shape is not distributable with the layout");
   }
@@ -641,10 +639,8 @@ LogicalResult LoadNdOp::verify() {
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
-  if (getAnchorLayout()) {
-    auto layout = getAnchorLayout();
-    auto origTdescShape = getShapeOf(tdescTy);
-    if (!layout.isDistributable(origTdescShape))
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(tdescTy)))
       return emitOpError(
           "TensorDesc shape is not distributable with the layout");
   }
@@ -742,8 +738,7 @@ LogicalResult StoreNdOp::verify() {
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
-  if (getAnchorLayout()) {
-    auto layout = getAnchorLayout();
+  if (auto layout = getAnchorLayout()) {
     if (!layout.isDistributable(tdescShape))
       return emitOpError(
           "TensorDesc shape is not distributable with the layout");
@@ -851,15 +846,12 @@ LogicalResult PrefetchOp::verify() {
   if (getOffsetAlignByteAttr() && !srcTy.isInteger())
     return emitOpError("offset_align_byte only allowed with integer source.");
 
-  if (getAnchorLayout()) {
-    auto layout = getAnchorLayout();
+  if (auto layout = getAnchorLayout()) {
     // get the offset operand and its shape
     if (auto offsets = getOffsets()) {
       auto offsetsTy = offsets.getType();
-      if (!llvm::isa<VectorType>(offsetsTy))
-        return emitOpError("Offsets should be a vector.");
-      auto offsetShape = getShapeOf(offsetsTy);
-      if (!layout.isDistributable(offsetShape))
+      if (llvm::isa<VectorType>(offsetsTy) &&
+          !layout.isDistributable(getShapeOf(offsetsTy)))
         return emitOpError("offset shape is not distributable with the layout");
     }
   }
@@ -911,10 +903,8 @@ LogicalResult LoadGatherOp::verify() {
   if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
-  if (getAnchorLayout()) {
-    auto layout = getAnchorLayout();
-    auto valShape = getShapeOf(valueTy);
-    if (!layout.isDistributable(valShape))
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(valueTy)))
       return emitOpError("Value shape is not distributable with the layout");
   }
 
@@ -1002,10 +992,8 @@ LogicalResult StoreScatterOp::verify() {
   if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
-  if (getAnchorLayout()) {
-    auto layout = getAnchorLayout();
-    auto valShape = getShapeOf(valueTy);
-    if (!layout.isDistributable(valShape))
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(valueTy)))
       return emitOpError("Value shape is not distributable with the layout");
   }
 
