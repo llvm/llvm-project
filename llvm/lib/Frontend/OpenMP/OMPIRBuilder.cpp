@@ -2453,7 +2453,7 @@ llvm::StructType *OpenMPIRBuilder::getKmpTaskAffinityInfoTy() {
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB, bool Tied, Value *Final, Value *IfCondition,
-    const DependenciesInfo &Dependencies, AffinityData Affinities,
+    const DependenciesInfo &Dependencies, const AffinityData &Affinities,
     bool Mergeable, Value *EventHandle, Value *Priority) {
 
   if (!updateToLocation(Loc))
@@ -7671,7 +7671,8 @@ CallInst *OpenMPIRBuilder::createOMPAlloc(const LocationDescription &Loc,
                                           Value *Size, Value *Allocator,
                                           std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  updateToLocation(Loc);
+  if (!updateToLocation(Loc))
+    return nullptr;
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
@@ -7684,11 +7685,31 @@ CallInst *OpenMPIRBuilder::createOMPAlloc(const LocationDescription &Loc,
   return createRuntimeFunctionCall(Fn, Args, Name);
 }
 
+CallInst *OpenMPIRBuilder::createOMPAlignedAlloc(const LocationDescription &Loc,
+                                                 Value *Align, Value *Size,
+                                                 Value *Allocator,
+                                                 std::string Name) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
+  if (!updateToLocation(Loc))
+    return nullptr;
+
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Value *ThreadId = getOrCreateThreadID(Ident);
+  Value *Args[] = {ThreadId, Align, Size, Allocator};
+
+  Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_aligned_alloc);
+
+  return Builder.CreateCall(Fn, Args, Name);
+}
+
 CallInst *OpenMPIRBuilder::createOMPFree(const LocationDescription &Loc,
                                          Value *Addr, Value *Allocator,
                                          std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  updateToLocation(Loc);
+  if (!updateToLocation(Loc))
+    return nullptr;
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);

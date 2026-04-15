@@ -832,6 +832,8 @@ StringRef ToolChain::getOSLibName() const {
     return "sunos";
   case llvm::Triple::AIX:
     return "aix";
+  case llvm::Triple::Serenity:
+    return "serenity";
   default:
     return getOS();
   }
@@ -1472,7 +1474,8 @@ ToolChain::UnwindLibType ToolChain::GetUnwindLibType(
   else if (LibName == "platform" || LibName == "") {
     ToolChain::RuntimeLibType RtLibType = GetRuntimeLibType(Args);
     if (RtLibType == ToolChain::RLT_CompilerRT) {
-      if (getTriple().isAndroid() || getTriple().isOSAIX())
+      if (getTriple().isAndroid() || getTriple().isOSAIX() ||
+          getTriple().isOSSerenity())
         unwindLibType = ToolChain::UNW_CompilerRT;
       else
         unwindLibType = ToolChain::UNW_None;

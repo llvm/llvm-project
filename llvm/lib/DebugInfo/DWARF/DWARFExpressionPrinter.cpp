@@ -29,19 +29,19 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
                                    unsigned Operand) {
   assert(Operand < Operands.size() && "operand out of bounds");
   if (!U) {
-    OS << format(" <base_type ref: 0x%" PRIx64 ">", Operands[Operand]);
+    OS << formatv(" <base_type ref: {0:x}>", Operands[Operand]);
     return;
   }
   auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
   if (Die && Die.getTag() == dwarf::DW_TAG_base_type) {
     OS << " (";
     if (DumpOpts.Verbose)
-      OS << format("0x%08" PRIx64 " -> ", Operands[Operand]);
-    OS << format("0x%08" PRIx64 ")", U->getOffset() + Operands[Operand]);
+      OS << formatv("{0:x8} -> ", Operands[Operand]);
+    OS << formatv("{0:x8})", U->getOffset() + Operands[Operand]);
     if (auto Name = dwarf::toString(Die.find(dwarf::DW_AT_name)))
       OS << " \"" << *Name << "\"";
   } else {
-    OS << format(" <invalid base_type ref: 0x%" PRIx64 ">", Operands[Operand]);
+    OS << formatv(" <invalid base_type ref: {0:x}>", Operands[Operand]);
   }
 }
 
@@ -142,7 +142,7 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
         case 2:
         case 3: // global as uint32
         case 4:
-          OS << format(" 0x%" PRIx64, Op->getRawOperand(Operand));
+          OS << formatv(" {0:x}", Op->getRawOperand(Operand));
           break;
         default:
           assert(false);
@@ -150,14 +150,14 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
       } else if (Size == DWARFExpression::Operation::SizeBlock) {
         uint64_t Offset = Op->getRawOperand(Operand);
         for (unsigned i = 0; i < Op->getRawOperand(Operand - 1); ++i)
-          OS << format(" 0x%02x",
-                       static_cast<uint8_t>(Expr->getData()[Offset++]));
+          OS << formatv(" {0:x2}",
+                        static_cast<uint8_t>(Expr->getData()[Offset++]));
       } else {
         if (Signed)
           OS << formatv(" {0:+d}", (int64_t)Op->getRawOperand(Operand));
         else if (Op->getCode() != DW_OP_entry_value &&
                  Op->getCode() != DW_OP_GNU_entry_value)
-          OS << format(" 0x%" PRIx64, Op->getRawOperand(Operand));
+          OS << formatv(" {0:x}", Op->getRawOperand(Operand));
       }
     }
   }
@@ -176,7 +176,8 @@ void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
     if (!printOp(&Op, OS, DumpOpts, E, U) && !DumpOpts.PrintRegisterOnly) {
       uint64_t FailOffset = Op.getEndOffset();
       while (FailOffset < E->getData().size())
-        OS << format(" %02x", static_cast<uint8_t>(E->getData()[FailOffset++]));
+        OS << formatv(" {0:x-2}",
+                      static_cast<uint8_t>(E->getData()[FailOffset++]));
       return;
     }
     if (!DumpOpts.PrintRegisterOnly) {
