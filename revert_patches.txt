@@ -14,3 +14,9 @@ breaks rocgdb UT
 needs SPIRV/COMGR
 18e695890306 [SPIRV][AMDGPU][clang][CodeGen][opt] Add late-resolved 
 ---
+breaks build of llvm
+[clang][CIR][doc] Add auto-generated ClangIR documentation (#190354)
+---
+ubsan issues
+Reapply "[compiler-rt] Enable minimal ubsan for GPU targets (#188289)"
+---
