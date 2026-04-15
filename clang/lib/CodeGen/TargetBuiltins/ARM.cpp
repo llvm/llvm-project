@@ -5344,6 +5344,18 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Load;
   }
 
+  if (BuiltinID == AArch64::BI__stlr8 || BuiltinID == AArch64::BI__stlr16 ||
+      BuiltinID == AArch64::BI__stlr32 || BuiltinID == AArch64::BI__stlr64) {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    QualType ElTy = E->getArg(0)->getType()->getPointeeType();
+    CharUnits StoreSize = CGM.getContext().getTypeSizeInChars(ElTy);
+    llvm::StoreInst *Store = Builder.CreateAlignedStore(Val, Ptr, StoreSize);
+    Store->setAtomic(llvm::AtomicOrdering::Release);
+    Store->setVolatile(true);
+    return Store;
+  }
+
   if (BuiltinID == NEON::BI__builtin_neon_vcvth_bf16_f32)
     return Builder.CreateFPTrunc(
         Builder.CreateBitCast(EmitScalarExpr(E->getArg(0)),

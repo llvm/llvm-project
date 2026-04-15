@@ -700,6 +700,50 @@ unsigned long long int  check__ldar64(unsigned long long int volatile *p) {
 // CHECK-MSCOMPAT:       ret i64 %[[RET]]
 // CHECK-LINUX: error: call to undeclared function '__ldar64'
 
+void test__stlr8(unsigned __int8 volatile *p, unsigned __int8 v)
+{
+  __stlr8 (p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @test__stlr8(ptr{{.*}}%p, i8{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[DEST:[0-9]+]] = load ptr, ptr %p.addr, align 8
+// CHECK-MSCOMPAT:       %[[VALUE:[0-9]+]] = load i8, ptr %v.addr, align 1
+// CHECK-MSCOMPAT:       store atomic volatile i8 %[[VALUE]], ptr %[[DEST]] release, align 1
+// CHECK-MSCOMPAT:       ret void
+// CHECK-LINUX: error: call to undeclared function '__stlr8'
+
+void test__stlr16(unsigned __int16 volatile *p, unsigned __int16 v)
+{
+  __stlr16 (p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @test__stlr16(ptr{{.*}}%p, i16{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[DEST:[0-9]+]] = load ptr, ptr %p.addr, align 8
+// CHECK-MSCOMPAT:       %[[VALUE:[0-9]+]] = load i16, ptr %v.addr, align 2
+// CHECK-MSCOMPAT:       store atomic volatile i16 %[[VALUE]], ptr %[[DEST]] release, align 2
+// CHECK-MSCOMPAT:       ret void
+// CHECK-LINUX: error: call to undeclared function '__stlr16'
+
+void test__stlr32(unsigned __int32 volatile *p, unsigned __int32 v)
+{
+  __stlr32(p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @test__stlr32(ptr{{.*}}%p, i32{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[DEST:[0-9]+]] = load ptr, ptr %p.addr, align 8
+// CHECK-MSCOMPAT:       %[[VALUE:[0-9]+]] = load i32, ptr %v.addr, align 4
+// CHECK-MSCOMPAT:       store atomic volatile i32 %[[VALUE]], ptr %[[DEST]] release, align 4
+// CHECK-MSCOMPAT:       ret void
+// CHECK-LINUX: error: call to undeclared function '__stlr32'
+
+void test__stlr64(unsigned __int64 volatile *p, unsigned __int64 v)
+{
+  __stlr64(p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @test__stlr64(ptr{{.*}}%p, i64{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[DEST:[0-9]+]] = load ptr, ptr %p.addr, align 8
+// CHECK-MSCOMPAT:       %[[VALUE:[0-9]+]] = load i64, ptr %v.addr, align 8
+// CHECK-MSCOMPAT:       store atomic volatile i64 %[[VALUE]], ptr %[[DEST]] release, align 8
+// CHECK-MSCOMPAT:       ret void
+// CHECK-LINUX: error: call to undeclared function '__stlr64'
+
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
 // CHECK-MSCOMPAT: ![[MD3]] = !{!"sp"}
 // CHECK-MSCOMPAT: ![[MD4]] = !{!"d5"}
