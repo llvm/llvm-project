@@ -320,6 +320,8 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
         return "rv64imafdcv_zba_zbb_zbs";
       if (Triple.isOSFuchsia())
         return "rva22u64_v";
+      if (Triple.getVendor() == llvm::Triple::openRuyi)
+        return "rva23u64";
       return "rv64imafdc";
     }
   }
@@ -341,6 +343,8 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
     return "rv64imafdcv_zba_zbb_zbs";
   if (Triple.isOSFuchsia())
     return "rva22u64_v";
+  if (Triple.getVendor() == llvm::Triple::openRuyi)
+    return "rva23u64";
   return "rv64imafdc";
 }
 
