@@ -3748,10 +3748,11 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
       }))
     return true;
 
+  // If X5 is available in the region, use X5 directly (MachineOutlinerDefault).
   if (C.isAvailableAcrossAndOutOfSeq(RISCV::X5, RegInfo))
     return false;
 
-  // Save X5 into t1-t6
+  // Otherwise, try to save X5 into t1-t6 (MachineOutlinerRegSave).
   if (OutlinerEnableRegSave && findRegisterToSaveX5To(C, RegInfo))
     return false;
 
