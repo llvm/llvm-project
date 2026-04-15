@@ -416,7 +416,7 @@ struct A<float*> {
 };
 
 class C {
-  int private_int;
+  int private_int; // #C_private_int
 
   template<class T>
   friend struct A<T>::B;
@@ -425,8 +425,7 @@ class C {
   friend void A<T>::f();
 
   template<class T>
-  friend void A<T>::D::g();
-  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
+  friend void A<T>::D::g(); // expected-error {{friend declaration does not name a member of a class template specialization}}
 
   template<class T>
   friend int *A<T*>::h();
@@ -444,16 +443,14 @@ void A<int>::B::e() { (void)c.private_int; }
 
 template<class T>
 void A<T>::f() { (void)c.private_int; }
-int A<int>::f() { (void)c.private_int; return 0; }
-// expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
-// expected-note@-30 {{implicitly declared private here}}
+int A<int>::f() { (void)c.private_int; return 0; } // expected-error {{'private_int' is a private member of 'cwg1862::C'}} \
+                                                   // expected-note@#C_private_int {{implicitly declared private here}}
 
 // FIXME: both definition of 'D::g' are not friends, so they don't have access to 'private_int'
 template<class T>
 void A<T>::D::g() { (void)c.private_int; }
-void A<int>::D::g() { (void)c.private_int; }
-// expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
-// expected-note@-37 {{implicitly declared private here}}
+void A<int>::D::g() { (void)c.private_int; } // expected-error {{'private_int' is a private member of 'cwg1862::C'}} \
+                                             // expected-note@#C_private_int {{implicitly declared private here}}
 
 template<class T>
 T A<T>::h() { (void)c.private_int; }
