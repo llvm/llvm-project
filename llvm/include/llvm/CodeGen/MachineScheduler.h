@@ -218,6 +218,9 @@ struct MachineSchedPolicy {
   // Compute DFSResult for use in scheduling heuristics.
   bool ComputeDFSResult = false;
 
+  // If enabled, some extra cases of physreg defs will be biased towards user.
+  bool BiasPRegsExtra = false;
+
   MachineSchedPolicy() = default;
 };
 

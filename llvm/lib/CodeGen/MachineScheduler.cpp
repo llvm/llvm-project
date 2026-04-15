@@ -3958,7 +3958,7 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
   }
 
   // Bias PhysReg Defs and copies to their uses and defined respectively.
-  if (tryBiasPhysRegs(TryCand, Cand, Zone, DAG->TII->biasPRegsExtra()))
+  if (tryBiasPhysRegs(TryCand, Cand, Zone, RegionPolicy.BiasPRegsExtra))
     return TryCand.Reason != NoCand;
 
   // Avoid exceeding the target's limit.
