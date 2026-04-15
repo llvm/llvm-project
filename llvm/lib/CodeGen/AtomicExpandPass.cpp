@@ -1997,7 +1997,10 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I) {
           NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
 
           // ...and then expand the CAS into a libcall.
-          expandAtomicCASToLibcall(Pair, "atomicrmw " + AtomicRMWInst::getOperationName(I->getOperation()), MetadataSrc);
+          expandAtomicCASToLibcall(
+              Pair,
+              "atomicrmw " + AtomicRMWInst::getOperationName(I->getOperation()),
+              MetadataSrc);
         });
   }
 }
