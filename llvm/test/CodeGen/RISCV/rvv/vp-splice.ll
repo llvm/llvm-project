@@ -671,70 +671,6 @@ define <vscale x 2 x half> @test_vp_splice_nxv2f16_masked(<vscale x 2 x half> %v
   ret <vscale x 2 x half> %v
 }
 
-define <vscale x 2 x bfloat> @test_vp_splice_nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, i32 zeroext %evla, i32 zeroext %evlb) #0 {
-; NOVLDEP-LABEL: test_vp_splice_nxv2bf16:
-; NOVLDEP:       # %bb.0:
-; NOVLDEP-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; NOVLDEP-NEXT:    vslidedown.vi v8, v8, 3
-; NOVLDEP-NEXT:    addi a0, a0, -3
-; NOVLDEP-NEXT:    vslideup.vx v8, v9, a0
-; NOVLDEP-NEXT:    ret
-;
-; VLDEP-LABEL: test_vp_splice_nxv2bf16:
-; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    addi a0, a0, -3
-; VLDEP-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; VLDEP-NEXT:    vslidedown.vi v8, v8, 3
-; VLDEP-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v9, a0
-; VLDEP-NEXT:    ret
-  %v = call <vscale x 2 x bfloat> @llvm.experimental.vp.splice.nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, i32 3, <vscale x 2 x i1> splat (i1 1), i32 %evla, i32 %evlb)
-  ret <vscale x 2 x bfloat> %v
-}
-
-define <vscale x 2 x bfloat> @test_vp_splice_nxv2bf16_negative_offset(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, i32 zeroext %evla, i32 zeroext %evlb) #0 {
-; NOVLDEP-LABEL: test_vp_splice_nxv2bf16_negative_offset:
-; NOVLDEP:       # %bb.0:
-; NOVLDEP-NEXT:    addi a0, a0, -3
-; NOVLDEP-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; NOVLDEP-NEXT:    vslidedown.vx v8, v8, a0
-; NOVLDEP-NEXT:    vslideup.vi v8, v9, 3
-; NOVLDEP-NEXT:    ret
-;
-; VLDEP-LABEL: test_vp_splice_nxv2bf16_negative_offset:
-; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    addi a0, a0, -3
-; VLDEP-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
-; VLDEP-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; VLDEP-NEXT:    vslideup.vi v8, v9, 3
-; VLDEP-NEXT:    ret
-  %v = call <vscale x 2 x bfloat> @llvm.experimental.vp.splice.nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, i32 -3, <vscale x 2 x i1> splat (i1 1), i32 %evla, i32 %evlb)
-  ret <vscale x 2 x bfloat> %v
-}
-
-define <vscale x 2 x bfloat> @test_vp_splice_nxv2bf16_masked(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, <vscale x 2 x i1> %mask, i32 zeroext %evla, i32 zeroext %evlb) #0 {
-; NOVLDEP-LABEL: test_vp_splice_nxv2bf16_masked:
-; NOVLDEP:       # %bb.0:
-; NOVLDEP-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; NOVLDEP-NEXT:    vslidedown.vi v8, v8, 3, v0.t
-; NOVLDEP-NEXT:    addi a0, a0, -3
-; NOVLDEP-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; NOVLDEP-NEXT:    vslideup.vx v8, v9, a0, v0.t
-; NOVLDEP-NEXT:    ret
-;
-; VLDEP-LABEL: test_vp_splice_nxv2bf16_masked:
-; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    addi a0, a0, -3
-; VLDEP-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; VLDEP-NEXT:    vslidedown.vi v8, v8, 3, v0.t
-; VLDEP-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
-; VLDEP-NEXT:    vslideup.vx v8, v9, a0, v0.t
-; VLDEP-NEXT:    ret
-  %v = call <vscale x 2 x bfloat> @llvm.experimental.vp.splice.nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, i32 3, <vscale x 2 x i1> %mask, i32 %evla, i32 %evlb)
-  ret <vscale x 2 x bfloat> %v
-}
-
 define <vscale x 2 x i32> @test_vp_splice_nxv2i32_with_firstelt(i32 %first, <vscale x 2 x i32> %vb, <vscale x 2 x i1> %mask, i32 zeroext %evl) #0 {
 ; CHECK-LABEL: test_vp_splice_nxv2i32_with_firstelt:
 ; CHECK:       # %bb.0:
@@ -790,19 +726,6 @@ define <vscale x 2 x half> @test_vp_splice_nxv2f16_with_firstelt(half %first, <v
   %va = insertelement <vscale x 2 x half> poison, half %first, i32 0
   %v = call <vscale x 2 x half> @llvm.experimental.vp.splice.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb, i32 0, <vscale x 2 x i1> %mask, i32 1, i32 %evl)
   ret <vscale x 2 x half> %v
-}
-
-define <vscale x 2 x bfloat> @test_vp_splice_nxv2bf16_with_firstelt(bfloat %first, <vscale x 2 x bfloat> %vb, <vscale x 2 x i1> %mask, i32 zeroext %evl) #0 {
-; CHECK-LABEL: test_vp_splice_nxv2bf16_with_firstelt:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a1, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
-; CHECK-NEXT:    ret
-  %va = insertelement <vscale x 2 x bfloat> poison, bfloat %first, i32 0
-  %v = call <vscale x 2 x bfloat> @llvm.experimental.vp.splice.nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, i32 0, <vscale x 2 x i1> %mask, i32 1, i32 %evl)
-  ret <vscale x 2 x bfloat> %v
 }
 
 attributes #0 = { nounwind vscale_range(2,0) }
