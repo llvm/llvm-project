@@ -2687,10 +2687,8 @@ RISCVTTIImpl::getCombinedArithmeticInstructionCost(
                                     Opd1Info.getNoProps(),
                                     Opd2Info.getNoProps());
     // UREM
-    else
-      return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
-                                    Opd1Info.getNoProps(),
-                                    Opd2Info.getNoProps());
+    return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
+                                  Opd1Info.getNoProps(), Opd2Info.getNoProps());
   }
   return std::nullopt;
 }
