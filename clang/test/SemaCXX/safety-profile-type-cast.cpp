@@ -287,3 +287,21 @@ void test_trailing_suppress_block() {
   int *p [[profiles::suppress(test::type_cast)]] = reinterpret_cast<int*>(0);
   int *q = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }
+
+// Suppress on variable template: suppression must carry through instantiation.
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] T *var_tmpl_suppress = reinterpret_cast<T*>(0);
+template int *var_tmpl_suppress<int>;
+
+// Suppress on static data member template: suppression must carry through
+// instantiation even when the suppress is only on the variable, not the class.
+template <typename T>
+struct StaticMemberSuppressTemplate {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] static T *p;
+};
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] T *StaticMemberSuppressTemplate<T>::p = reinterpret_cast<T*>(0);
+template struct StaticMemberSuppressTemplate<int>;
