@@ -10,18 +10,14 @@ define i32 @split_ctlz_phi(i64 noundef %val) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SHR]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc nuw i64 [[VAL]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[CONV1]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VAL]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP0]], 32
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[TMP1]], i32 63, i32 [[TMP2]]
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[CONV]], i1 true)
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ [[TMP4]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[VAL]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 63, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
@@ -55,18 +51,14 @@ define i32 @split_ctlz_phi_add(i64 noundef %val) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SHR]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc nuw i64 [[VAL]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV1]], i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VAL]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], 32
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[TMP1]], i32 63, i32 [[TMP2]]
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV]], i1 true)
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ [[TMP4]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[VAL]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 63, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
@@ -96,14 +88,8 @@ cleanup:
 define i32 @split_ctlz_select(i64 noundef %val) {
 ; CHECK-LABEL: @split_ctlz_select(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[VAL:%.*]], 32
-; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV_HI]], 0
-; CHECK-NEXT:    [[CONV_LO:%.*]] = trunc nuw i64 [[VAL]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_LO]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[VAL:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -122,14 +108,8 @@ entry:
 define i32 @split_ctlz_select_i64cmp(i64 noundef %val) {
 ; CHECK-LABEL: @split_ctlz_select_i64cmp(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[VAL:%.*]], 32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SHR]], 0
-; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[CONV_LO:%.*]] = trunc nuw i64 [[VAL]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_LO]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[VAL:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -148,14 +128,8 @@ entry:
 define i32 @split_ctlz_select_ne(i64 noundef %val) {
 ; CHECK-LABEL: @split_ctlz_select_ne(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[VAL:%.*]], 32
-; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[CONV_HI]], 0
-; CHECK-NEXT:    [[CONV_LO:%.*]] = trunc nuw i64 [[VAL]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_LO]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i32 [[TMP2]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[VAL:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -174,14 +148,8 @@ entry:
 define i32 @split_ctlz_select_or(i64 noundef %val) {
 ; CHECK-LABEL: @split_ctlz_select_or(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[VAL:%.*]], 32
-; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV_HI]], 0
-; CHECK-NEXT:    [[CONV_LO:%.*]] = trunc nuw i64 [[VAL]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_LO]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[VAL:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
