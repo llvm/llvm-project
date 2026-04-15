@@ -2,7 +2,7 @@
 // RUN: %libomptarget-compilexx-generic
 // RUN: rm -rf %t.testdir
 // RUN: mkdir -p %t.testdir
-// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_MEMSIZE=16384 LIBOMPTARGET_RECORD_DIR=%t.testdir %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_MEMSIZE=536870912 LIBOMPTARGET_RECORD_DIR=%t.testdir %libomptarget-run-generic 2>&1 | %fcheck-generic
 // RUN: ls -t %t.testdir/*.json | sed -n '1p' | grep . | xargs -I {} %omp-kernel-replay --verify {}
 // RUN: ls -t %t.testdir/*.json | sed -n '2p' | grep . | xargs -I {} %omp-kernel-replay --verify {}
 // RUN: ls -t %t.testdir/*.json | sed -n '3p' | grep . | xargs -I {} %omp-kernel-replay --verify {}
