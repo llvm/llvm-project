@@ -1010,6 +1010,17 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   return retTy;
 }
 
+LValue CIRGenFunction::emitInitListLValue(const InitListExpr *e) {
+  // Initializing an aggregate temporary in C++11: T{...}.
+  if (!e->isGLValue()) {
+    return emitAggExprToLValue(e);
+  }
+
+  // An lvalue initializer list must be initializing a reference.
+  assert(e->isTransparent() && "non-transparent glvalue init list");
+  return emitLValue(e->getInit(0));
+}
+
 /// Emit code to compute a designator that specifies the location
 /// of the expression.
 /// FIXME: document this function better.
@@ -1084,7 +1095,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
   case Expr::CXXConstCastExprClass:
-    // TODO(cir): The above list is missing CXXFunctionalCastExprClass,
+  case Expr::CXXFunctionalCastExprClass:
+    // TODO(cir): The above list is missing
     // CXXAddrSpaceCastExprClass, and ObjCBridgedCastExprClass.
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
@@ -1095,6 +1107,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   case Expr::SubstNonTypeTemplateParmExprClass:
     return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
+  case Expr::InitListExprClass:
+    return emitInitListLValue(cast<InitListExpr>(e));
   }
 }
 
