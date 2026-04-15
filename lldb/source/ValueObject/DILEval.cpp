@@ -618,6 +618,8 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return value_object(l / r);
   case BinaryOpKind::Rem:
     return value_object(l % r);
+   default:
+     break;
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
