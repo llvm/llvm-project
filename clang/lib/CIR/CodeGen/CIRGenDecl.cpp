@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenCleanup.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "mlir/IR/Location.h"
@@ -1126,10 +1127,19 @@ void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
   pushCleanupAfterFullExpr(cleanupKind, addr, type, destroyer);
 }
 
-void CIRGenFunction::pushLifetimeExtendedCleanupToEHStack(
-    const LifetimeExtendedCleanupEntry &entry) {
+void CIRGenFunction::pushPendingCleanupToEHStack(
+    const PendingCleanupEntry &entry) {
   ehStack.pushCleanup<DestroyObject>(entry.kind, entry.addr, entry.type,
                                      entry.destroyer);
+
+  if (entry.activeFlag.isValid()) {
+    EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
+    scope.setActiveFlag(entry.activeFlag);
+    if (scope.isNormalCleanup())
+      scope.setTestFlagInNormalCleanup();
+    if (scope.isEHCleanup())
+      scope.setTestFlagInEHCleanup();
+  }
 }
 
 /// Destroys all the elements of the given array, beginning from last to first.

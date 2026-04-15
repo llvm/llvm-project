@@ -1020,17 +1020,10 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
 }
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
-  CIRGenFunction::RunCleanupsScope cleanups(cgf);
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
   mlir::OpBuilder::InsertPoint scopeBegin;
 
-  // Explicitly introduce a scope for cleanup expressions, even though this
-  // overlaps with the RunCleanupsScope above.
-  //
-  // CIR does not yet model cleanup scopes explicitly, so a lexical scope is
-  // used as a temporary approximation. This is expected to be revisited once
-  // cleanup handling is redesigned.
   cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
                        [&](mlir::OpBuilder &b, mlir::Location loc) {
                          scopeBegin = b.saveInsertionPoint();
@@ -1041,6 +1034,8 @@ void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
     builder.restoreInsertionPoint(scopeBegin);
     CIRGenFunction::LexicalScope lexScope{cgf, scopeLoc,
                                           builder.getInsertionBlock()};
+
+    CIRGenFunction::FullExprCleanupScope fullExprScope(cgf, e->getSubExpr());
     Visit(e->getSubExpr());
   }
 }

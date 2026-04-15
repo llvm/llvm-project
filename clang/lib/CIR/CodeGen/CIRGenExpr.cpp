@@ -1725,8 +1725,16 @@ static Address createReferenceTemporary(CIRGenFunction &cgf,
         extDeclAlloca = extDeclAddrIter->second.getDefiningOp<cir::AllocaOp>();
     }
     mlir::OpBuilder::InsertPoint ip;
-    if (extDeclAlloca)
+    if (extDeclAlloca) {
       ip = {extDeclAlloca->getBlock(), extDeclAlloca->getIterator()};
+    } else if (cgf.isInConditionalBranch() &&
+               m->getStorageDuration() == SD_FullExpression) {
+      // Place in the function entry block so the alloca dominates both
+      // regions of any enclosing cir.cleanup.scope.  The default path
+      // would use curLexScope which may be a ternary branch.
+      ip = cgf.getBuilder().getBestAllocaInsertPoint(
+          cgf.getCurFunctionEntryBlock());
+    }
     return cgf.createMemTemp(ty, cgf.getLoc(m->getSourceRange()),
                              cgf.getCounterRefTmpAsString(), /*alloca=*/nullptr,
                              ip);
