@@ -434,8 +434,7 @@ static bool tryToRecognizePopCount1(Instruction &I) {
     APInt Mask = APInt::getSplat(Len, APInt::getLowBitsSet(I, I / 2));
     // Matching "(uWord & Mask) + (uWord>>I/2)".
     // OR
-    // Matching "(uWord & Mask) + ((uWord>>I/2) &
-    // Mask)".
+    // Matching "(uWord & Mask) + ((uWord>>I/2) & Mask)".
     if (!match(Start,
                m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
                              m_SpecificInt(Mask)),
