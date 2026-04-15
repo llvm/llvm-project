@@ -699,7 +699,7 @@ unsigned long __make_mantissa(const char *__tagp) {
     ++__tagp;
 
     if (*__tagp == 'x' || *__tagp == 'X')
-      return __make_mantissa_base16(__tagp);
+      return __make_mantissa_base16(++__tagp);
     else
       return __make_mantissa_base8(__tagp);
   }
