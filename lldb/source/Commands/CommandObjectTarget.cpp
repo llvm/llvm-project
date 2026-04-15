@@ -4405,6 +4405,8 @@ protected:
       if (module_spec.GetSymbolFileSpec())
         return AddModuleSymbols(m_exe_ctx.GetTargetPtr(), module_spec, flush,
                                 result);
+      if (module_spec.GetFileSpec())
+        return true;
     } else {
       result.SetError(std::move(error));
     }
@@ -4484,6 +4486,10 @@ protected:
 
     ModuleSP frame_module_sp(
         frame->GetSymbolContext(eSymbolContextModule).module_sp);
+    if (!frame_module_sp)
+      process->GetLoadedDynamicLibrariesInfos(eBinaryInformationLevelAddrName);
+    frame_module_sp = frame->GetSymbolContext(eSymbolContextModule).module_sp;
+
     if (!frame_module_sp) {
       result.AppendError("frame has no module");
       return false;
@@ -4497,6 +4503,42 @@ protected:
     if (!DownloadObjectAndSymbolFile(module_spec, result, flush)) {
       result.AppendError("unable to find debug symbols for the current frame");
       return false;
+    }
+
+    // If the current module is backed by a JSON object file (e.g. from a
+    // crashlog scripted process), replace it with the real downloaded module
+    // so that the full Mach-O is used instead of the lightweight JSON stub.
+    ObjectFile *obj_file = frame_module_sp->GetObjectFile();
+    if (obj_file && obj_file->GetPluginName() == "JSON" &&
+        module_spec.GetFileSpec()) {
+      Target *target = m_exe_ctx.GetTargetPtr();
+      addr_t load_addr = LLDB_INVALID_ADDRESS;
+      // Get the load address from the JSON module's first section.
+      SectionList *sections = obj_file->GetSectionList();
+      if (sections && sections->GetSize() > 0) {
+        SectionSP section = sections->GetSectionAtIndex(0);
+        load_addr = section->GetLoadBaseAddress(target);
+      }
+
+      // Create a new module from the real Mach-O.
+      ModuleSP new_module_sp =
+          target->GetOrCreateModule(module_spec, true /* notify */);
+      if (new_module_sp && new_module_sp != frame_module_sp) {
+        // Remove the JSON module.
+        target->GetImages().Remove(frame_module_sp);
+        if (load_addr != LLDB_INVALID_ADDRESS) {
+          bool changed = false;
+          new_module_sp->SetLoadAddress(*target, load_addr,
+                                        false /* value_is_offset */, changed);
+        }
+        if (module_spec.GetSymbolFileSpec())
+          new_module_sp->SetSymbolFileFileSpec(module_spec.GetSymbolFileSpec());
+
+        ModuleList module_list;
+        module_list.Append(new_module_sp);
+        target->SymbolsDidLoad(module_list);
+        flush = true;
+      }
     }
 
     return true;
