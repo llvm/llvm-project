@@ -701,10 +701,22 @@ int clangTidyMain(int argc, const char **argv) {
     const std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
         OptionsProvider->getRawOptions(FileName);
 
-    std::optional<ClangTidyOptions::CustomCheckValueList> AllCustomChecks = OptionsProvider->getOptions(FileName).CustomChecks;
+    ClangTidyOptions AllCustomChecksOptions;
+    {
+      unsigned Priority = 0;
+      for (const auto &Source : RawOptions) {
+        ClangTidyOptions PartialOptions;
+        PartialOptions.CustomChecks = Source.first.CustomChecks;
+        AllCustomChecksOptions.mergeWith(PartialOptions, ++Priority);
+      }
+    }
+
+    std::optional<ClangTidyOptions::CustomCheckValueList> AllCustomChecks =
+        AllCustomChecksOptions.CustomChecks;
 
     const ChecksAndOptions Valid = getAllChecksAndOptions(
-        AllowEnablingAnalyzerAlphaCheckers, ExperimentalCustomChecks, std::move(AllCustomChecks));
+        AllowEnablingAnalyzerAlphaCheckers, ExperimentalCustomChecks,
+        std::move(AllCustomChecks));
     bool AnyInvalid = false;
     for (const auto &[Opts, Source] : RawOptions) {
       if (Opts.Checks)
