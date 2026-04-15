@@ -106,10 +106,10 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
     return;
   }
   bool ValidTerminator =
-    Parent->kind() == Archive::K_ZOS ? (ArMemHdr->Terminator[0] == '\x79' &&
-              ArMemHdr->Terminator[1] == '\x15')
-          : (ArMemHdr->Terminator[0] == '`' &&
-              ArMemHdr->Terminator[1] == '\n');
+      Parent->kind() == Archive::K_ZOS
+          ? (ArMemHdr->Terminator[0] == '\x79' &&
+             ArMemHdr->Terminator[1] == '\x15')
+          : (ArMemHdr->Terminator[0] == '`' && ArMemHdr->Terminator[1] == '\n');
   if (!ValidTerminator) {
     if (Err) {
       std::string Buf;
@@ -376,7 +376,8 @@ Expected<uint64_t> BigArchiveMemberHeader::getSize() const {
 }
 
 template <std::size_t N>
-StringRef ebcdicFieldToASCII(const char (&Field)[N], SmallVectorImpl<char> &Dst) {
+StringRef ebcdicFieldToASCII(const char (&Field)[N],
+                             SmallVectorImpl<char> &Dst) {
   Dst.clear();
   StringRef Src = StringRef(Field, N);
   ConverterEBCDIC::convertToUTF8(Src, Dst);
@@ -450,8 +451,10 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   // LastModified
   StringRef LastModifiedRef = ebcdicFieldToASCII(ArMemHdr->LastModified, Dst);
   if (LastModifiedRef.empty()) {
-    *Err = malformedError("LastModified field is empty or contains only spaces in "
-                              "archive member header at offset " + Twine(Offset));
+    *Err =
+        malformedError("LastModified field is empty or contains only spaces in "
+                       "archive member header at offset " +
+                       Twine(Offset));
     return;
   }
   LastModified.append(LastModifiedRef);
@@ -460,7 +463,8 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   StringRef UIDRef = ebcdicFieldToASCII(ArMemHdr->UID, Dst);
   if (UIDRef.empty()) {
     *Err = malformedError("UID field is empty or contains only spaces in "
-                          "archive member header at offset " + Twine(Offset));
+                          "archive member header at offset " +
+                          Twine(Offset));
     return;
   }
   UID.append(UIDRef);
@@ -469,7 +473,8 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   StringRef GIDRef = ebcdicFieldToASCII(ArMemHdr->GID, Dst);
   if (GIDRef.empty()) {
     *Err = malformedError("GID field is empty or contains only spaces in "
-                          "archive member header at offset " + Twine(Offset));
+                          "archive member header at offset " +
+                          Twine(Offset));
     return;
   }
   GID.append(GIDRef);
@@ -477,8 +482,10 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   // AccessMode
   StringRef AccessModeRef = ebcdicFieldToASCII(ArMemHdr->AccessMode, Dst);
   if (AccessModeRef.empty()) {
-    *Err = malformedError("AccessMode field is empty or contains only spaces in "
-                          "archive member header at offset " + Twine(Offset));
+    *Err =
+        malformedError("AccessMode field is empty or contains only spaces in "
+                       "archive member header at offset " +
+                       Twine(Offset));
     return;
   }
   AccessMode.append(AccessModeRef);
@@ -1387,7 +1394,7 @@ uint32_t Archive::getNumberOfSymbols() const {
     return read32le(buf) / 8;
   if (kind() == K_DARWIN64)
     return read64le(buf) / 16;
-  if (kind() == K_ZOS) 
+  if (kind() == K_ZOS)
     return read32be(buf);
   uint32_t member_count = 0;
   member_count = read32le(buf);
@@ -1630,7 +1637,8 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
     // Copy symbol table converting embedded EBCDIC names to ASCII.
     StringRef EbcdicSymbolTable = BufOrErr.get();
     if (EbcdicSymbolTable.size() < sizeof(uint32_t)) {
-      Err = malformedError("z/OS symbol table is too small to read the symbol count");
+      Err = malformedError(
+          "z/OS symbol table is too small to read the symbol count");
       return;
     }
     uint64_t EbcdicSymbolCount = read32be(EbcdicSymbolTable.data());
@@ -1654,7 +1662,7 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
     if (Err)
       return;
     C = &*I;
-    
+
     setFirstRegular(*C);
     Err = Error::success();
     return;
