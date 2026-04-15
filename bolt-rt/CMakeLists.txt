@@ -32,14 +32,20 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
        "--target=${BOLT_RT_TARGET_TRIPLE}")
 endif()
 
-# TODO: Fix reported warnings.
 list(APPEND BOLT_RT_FLAGS
+     # TODO: Fix reported warnings.
      -Wno-unused-function
      -Wno-unused-variable
      -Wno-unused-but-set-variable
      -Wno-cast-qual
      -Wno-sign-compare
-     -Wno-unknown-attributes)
+     -Wno-unknown-attributes
+     # Disable function/data sections, these are set in
+     # llvm/cmake/modules/HandleLLVMOptions.cmake.
+     # Leaving them turned on breaks
+     # bolt/test/runtimes/X86/section-order.test.
+     -fno-function-sections
+     -fno-data-sections)
 
 message(STATUS "bolt-rt: targeting ${BOLT_RT_TARGET_TRIPLE}")
 
@@ -101,6 +107,9 @@ function(add_bolt_rt_library)
   # Don't let the compiler think it can create calls to standard libs
   target_include_directories(${ARG_TARGET}
                              PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+
+  # Use C++17
+  target_compile_features(${ARG_TARGET} PUBLIC cxx_std_17)
 
   target_compile_options(${ARG_TARGET}
                          PRIVATE ${BOLT_RT_FLAGS} ${ARG_FLAGS})
