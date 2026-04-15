@@ -276,14 +276,14 @@ static Error writeFormValues(raw_ostream &OS, const FormTy &Forms,
         // TODO: Test this error.
         if (Error Err = writeVariableSizedInteger(
                 FormVal->Value, Params.AddrSize, OS, IsLittleEndian))
-          return std::move(Err);
+          return Err;
         break;
       case dwarf::DW_FORM_ref_addr:
         // TODO: Test this error.
         if (Error Err = writeVariableSizedInteger(FormVal->Value,
                                                   Params.getRefAddrByteSize(),
                                                   OS, IsLittleEndian))
-          return std::move(Err);
+          return Err;
         break;
       case dwarf::DW_FORM_exprloc:
       case dwarf::DW_FORM_block:
