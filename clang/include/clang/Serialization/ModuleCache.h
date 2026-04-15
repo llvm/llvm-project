@@ -65,7 +65,8 @@ public:
 IntrusiveRefCntPtr<ModuleCache> createCrossProcessModuleCache();
 
 /// Shared implementation of `ModuleCache::maybePrune()`.
-void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter);
+void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter,
+                    bool PruneTopLevel = false);
 } // namespace clang
 
 #endif
