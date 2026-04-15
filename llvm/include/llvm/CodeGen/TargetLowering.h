@@ -5863,9 +5863,10 @@ public:
   /// Expand a VECREDUCE_SEQ_* into an explicit ordered calculation.
   SDValue expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) const;
 
-  /// Expand a VECREDUCE_SEQ_FDOT into a sequential chain of fmul+fadd (or FMA
-  /// with the 'contract' flag). The accumulator is operand 0; vectors are
-  /// operands 1 and 2.
+  /// Expand a VECREDUCE_SEQ_FDOT into a sequential fmul+fadd chain with the
+  /// node's fast-math flags preserved. The accumulator is operand 0; vectors
+  /// are operands 1 and 2. DAGCombiner may fuse pairs into FMA if 'contract'
+  /// is set.
   SDValue expandVecReduceSeqDot(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand a VECREDUCE_FDOT into FMUL(vecA, vecB) followed by
