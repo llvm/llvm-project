@@ -36,8 +36,8 @@ define <vscale x 8 x float> @test_split_expandload(ptr %base, <vscale x 8 x floa
   ret <vscale x 8 x float> %res
 }
 
-define <vscale x 1 x i64> @test_promote_expandload(ptr %base, <vscale x 1 x i64> %passthru, <vscale x 1 x i1> %pred) {
-; CHECK-LABEL: test_promote_expandload:
+define <vscale x 1 x i64> @test_widen_expandload(ptr %base, <vscale x 1 x i64> %passthru, <vscale x 1 x i1> %pred) {
+; CHECK-LABEL: test_widen_expandload:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    pfalse p1.b
 ; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
@@ -51,8 +51,8 @@ define <vscale x 1 x i64> @test_promote_expandload(ptr %base, <vscale x 1 x i64>
   ret <vscale x 1 x i64> %res
 }
 
-define <vscale x 4 x i8> @test_widen_expandload(ptr %base, <vscale x 4 x i1> %pred, <vscale x 4 x i8> %passthru) {
-; CHECK-LABEL: test_widen_expandload:
+define <vscale x 4 x i8> @test_promote_expandload(ptr %base, <vscale x 4 x i1> %pred, <vscale x 4 x i8> %passthru) {
+; CHECK-LABEL: test_promote_expandload:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cntp x8, p0, p0.s
 ; CHECK-NEXT:    whilelo p1.s, xzr, x8

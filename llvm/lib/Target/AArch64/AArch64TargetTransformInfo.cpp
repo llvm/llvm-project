@@ -4916,9 +4916,13 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
-  if (MICA.getID() == Intrinsic::masked_expandload &&
-      !isLegalMaskedExpandLoad(Src, MICA.getAlignment()))
-    return InstructionCost::getInvalid();
+  if (MICA.getID() == Intrinsic::masked_expandload) {
+    if (!isLegalMaskedExpandLoad(Src, MICA.getAlignment()))
+      return InstructionCost::getInvalid();
+
+    // Operation will be split into expand of masked.load
+    return LT.first * 2;
+  }
 
   // If we need to split the memory operation, we will also need to split the
   // mask. This will likely lead to overestimating the cost in some cases if

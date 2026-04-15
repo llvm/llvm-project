@@ -7323,7 +7323,7 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   // Return if EXPAND instruction is not available.
   if ((!Subtarget->isSVEAvailable() || !Subtarget->hasSVE2p2()) &&
       (!Subtarget->isSVEorStreamingSVEAvailable() || !Subtarget->hasSME2p2()))
-    return Op;
+    return SDValue();
 
   // Create mask using the number of active lanes in the predicate.
   SDValue CntActive = DAG.getNode(
@@ -7343,7 +7343,7 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
       LoadNode->getAddressingMode(), LoadNode->getExtensionType());
 
   // Expand instruction copies the low-numbered elements to active elements
-  // in the original predicate.
+  // in the original predicate and zeros all other lanes.
   SDValue Result = DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, VT,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_expand, DL, MVT::i64), Mask,
