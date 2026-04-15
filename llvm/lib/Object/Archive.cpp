@@ -105,11 +105,12 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
     *Err = createMemberHeaderParseError(this, RawHeaderPtr, Size);
     return;
   }
-  if ((ArMemHdr->Terminator[0] != '`' || ArMemHdr->Terminator[1] != '\n') &&
-      (ArMemHdr->Terminator[0] != '\x79' ||
-       ArMemHdr->Terminator[1] !=
-           '\x15') // '\x79\x15' is '`\n' in EBCDIC for z/OS archive terminator.
-  ) {
+  bool ValidTerminator =
+    Parent->kind() == Archive::K_ZOS ? (ArMemHdr->Terminator[0] == '\x79' &&
+              ArMemHdr->Terminator[1] == '\x15')
+          : (ArMemHdr->Terminator[0] == '`' &&
+              ArMemHdr->Terminator[1] == '\n');
+  if (!ValidTerminator) {
     if (Err) {
       std::string Buf;
       raw_string_ostream OS(Buf);
@@ -123,8 +124,9 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
         consumeError(NameOrErr.takeError());
         uint64_t Offset = RawHeaderPtr - Parent->getData().data();
         *Err = malformedError(Msg + "at offset " + Twine(Offset));
-      } else
+      } else {
         *Err = malformedError(Msg + "for " + NameOrErr.get());
+      }
     }
     return;
   }
@@ -374,11 +376,11 @@ Expected<uint64_t> BigArchiveMemberHeader::getSize() const {
 }
 
 template <std::size_t N>
-StringRef getFieldRawStringE2A(const char (&Field)[N], SmallString<64> &Dst) {
+StringRef ebcdicFieldToASCII(const char (&Field)[N], SmallVectorImpl<char> &Dst) {
   Dst.clear();
   StringRef Src = StringRef(Field, N);
   ConverterEBCDIC::convertToUTF8(Src, Dst);
-  return Dst.str().rtrim(" ");
+  return StringRef(Dst.data(), Dst.size()).rtrim(" ");
 }
 
 ZOSArchiveMemberHeader::ZOSArchiveMemberHeader(const Archive *Parent,
@@ -392,7 +394,7 @@ ZOSArchiveMemberHeader::ZOSArchiveMemberHeader(const Archive *Parent,
 Expected<uint64_t> ZOSArchiveMemberHeader::getSize() const {
   SmallString<64> Dst;
   return getArchiveMemberDecField(
-      "size", getFieldRawStringE2A(ArMemHdr->Size, Dst), Parent, this);
+      "size", ebcdicFieldToASCII(ArMemHdr->Size, Dst), Parent, this);
 }
 
 Expected<StringRef> ZOSArchiveMemberHeader::getRawName() const {
@@ -420,18 +422,18 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   uint64_t Offset =
       reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
 
-  // Set RawMemberName.
-  StringRef RawNameSR = getFieldRawStringE2A(ArMemHdr->Name, Dst);
-  if (RawNameSR.empty() || RawNameSR[0] == ' ') {
+  // Set RawMemberName
+  StringRef RawNameRef = ebcdicFieldToASCII(ArMemHdr->Name, Dst);
+  if (RawNameRef.empty() || RawNameRef[0] == ' ') {
     *Err = malformedError("name contains a leading space for archive member "
                           "header at offset " +
                           Twine(Offset));
     return;
   }
-  RawMemberName.append(RawNameSR);
+  RawMemberName.append(RawNameRef);
 
   // Set MemberName.
-  if (RawNameSR.starts_with("#1/")) {
+  if (RawNameRef.starts_with("#1/")) {
     Expected<StringRef> NameOrErr = ArchiveMemberHeader::getName(Size);
     if (!NameOrErr) {
       *Err = NameOrErr.takeError();
@@ -441,48 +443,45 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
     Dst.clear();
     ConverterEBCDIC::convertToUTF8(Name, Dst);
     MemberName.append(Dst.str());
-  } else
+  } else {
     MemberName = RawMemberName;
+  }
 
   // LastModified
-  StringRef LastModifiedSR = getFieldRawStringE2A(ArMemHdr->LastModified, Dst);
-  if (LastModifiedSR.empty()) {
-    *Err = malformedError("problem converting LastModified field in "
-                          "header at offset " +
-                          Twine(Offset));
+  StringRef LastModifiedRef = ebcdicFieldToASCII(ArMemHdr->LastModified, Dst);
+  if (LastModifiedRef.empty()) {
+    *Err = malformedError("LastModified field is empty or contains only spaces in "
+                              "archive member header at offset " + Twine(Offset));
     return;
   }
-  LastModified.append(LastModifiedSR);
+  LastModified.append(LastModifiedRef);
 
   // UID
-  StringRef UIDSR = getFieldRawStringE2A(ArMemHdr->UID, Dst);
-  if (UIDSR.empty()) {
-    *Err = malformedError("problem converting UID field in "
-                          "header at offset " +
-                          Twine(Offset));
+  StringRef UIDRef = ebcdicFieldToASCII(ArMemHdr->UID, Dst);
+  if (UIDRef.empty()) {
+    *Err = malformedError("UID field is empty or contains only spaces in "
+                          "archive member header at offset " + Twine(Offset));
     return;
   }
-  UID.append(UIDSR);
+  UID.append(UIDRef);
 
   // GID
-  StringRef GIDSR = getFieldRawStringE2A(ArMemHdr->GID, Dst);
-  if (GIDSR.empty()) {
-    *Err = malformedError("problem converting GID field in "
-                          "header at offset " +
-                          Twine(Offset));
+  StringRef GIDRef = ebcdicFieldToASCII(ArMemHdr->GID, Dst);
+  if (GIDRef.empty()) {
+    *Err = malformedError("GID field is empty or contains only spaces in "
+                          "archive member header at offset " + Twine(Offset));
     return;
   }
-  GID.append(GIDSR);
+  GID.append(GIDRef);
 
   // AccessMode
-  StringRef AccessModeSR = getFieldRawStringE2A(ArMemHdr->AccessMode, Dst);
-  if (AccessModeSR.empty()) {
-    *Err = malformedError("problem converting AccessMode field in "
-                          "header at offset " +
-                          Twine(Offset));
+  StringRef AccessModeRef = ebcdicFieldToASCII(ArMemHdr->AccessMode, Dst);
+  if (AccessModeRef.empty()) {
+    *Err = malformedError("AccessMode field is empty or contains only spaces in "
+                          "archive member header at offset " + Twine(Offset));
     return;
   }
-  AccessMode.append(AccessModeSR);
+  AccessMode.append(AccessModeRef);
 }
 
 Expected<uint64_t> BigArchiveMemberHeader::getRawNameSize() const {
@@ -818,6 +817,7 @@ uint64_t Archive::getArchiveMagicLen() const {
 
   return sizeof(ArchiveMagic) - 1;
 }
+
 void Archive::setFirstRegular(const Child &C) {
   FirstRegularData = C.Data;
   FirstRegularStartOfFile = C.StartOfFile;
@@ -1312,8 +1312,8 @@ Archive::symbol_iterator Archive::symbol_begin() const {
     // bytes.
     // 3. NS null terminated strings of corresponding symbol names.
     // Here we skip parts 1 and 2 to reach the start of the string table.
-    uint32_t symbol_count = read32be(buf);
-    buf += sizeof(uint32_t) + (symbol_count * (sizeof(uint64_t)));
+    uint32_t SymbolCount = read32be(buf);
+    buf += sizeof(uint32_t) + (SymbolCount * (sizeof(uint64_t)));
   } else {
     uint32_t member_count = 0;
     uint32_t symbol_count = 0;
@@ -1387,9 +1387,8 @@ uint32_t Archive::getNumberOfSymbols() const {
     return read32le(buf) / 8;
   if (kind() == K_DARWIN64)
     return read64le(buf) / 16;
-  if (kind() == K_ZOS) {
+  if (kind() == K_ZOS) 
     return read32be(buf);
-  }
   uint32_t member_count = 0;
   member_count = read32le(buf);
   buf += 4 + (member_count * 4); // Skip offsets.
@@ -1629,32 +1628,34 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
     }
 
     // Copy symbol table converting embedded EBCDIC names to ASCII.
-    StringRef ESymbolTable = BufOrErr.get();
-    uint32_t ESymbolCount = read32be(ESymbolTable.data());
-    uint32_t OffsetToENames =
-        sizeof(uint32_t) + (ESymbolCount * (sizeof(uint64_t)));
-    uint32_t ENamesSize = (uint32_t)ESymbolTable.size() - OffsetToENames;
-    const char *ENamesPtr = (const char *)ESymbolTable.data() + OffsetToENames;
-    StringRef ENames(ENamesPtr, ENamesSize);
+    StringRef EbcdicSymbolTable = BufOrErr.get();
+    if (EbcdicSymbolTable.size() < sizeof(uint32_t)) {
+      Err = malformedError("z/OS symbol table is too small to read the symbol count");
+      return;
+    }
+    uint64_t EbcdicSymbolCount = read32be(EbcdicSymbolTable.data());
+    uint64_t OffsetToEbcdicNames =
+        sizeof(uint32_t) + (EbcdicSymbolCount * (sizeof(uint64_t)));
+    if (OffsetToEbcdicNames > EbcdicSymbolTable.size()) {
+      Err = malformedError("z/OS symbol table count exceeds buffer size");
+      return;
+    }
+    uint64_t EbcdicNamesSize = EbcdicSymbolTable.size() - OffsetToEbcdicNames;
+    const char *EbcdicNamesPtr = EbcdicSymbolTable.data() + OffsetToEbcdicNames;
+    StringRef EbcdicNames(EbcdicNamesPtr, EbcdicNamesSize);
 
     SmallString<64> Dst;
-    ConverterEBCDIC::convertToUTF8(ENames, Dst);
-    SymbolTableBuf.append(ESymbolTable.data(), OffsetToENames);
+    ConverterEBCDIC::convertToUTF8(EbcdicNames, Dst);
+    SymbolTableBuf.append(EbcdicSymbolTable.data(), OffsetToEbcdicNames);
     SymbolTableBuf.append(Dst.str());
     SymbolTable = StringRef(SymbolTableBuf.data(), SymbolTableBuf.size());
 
-    auto Increment = [&]() {
-      ++I;
-      if (Err)
-        return false;
-      C = &*I;
-      return true;
-    };
-
-    if (!Increment())
+    ++I;
+    if (Err)
       return;
+    C = &*I;
+    
     setFirstRegular(*C);
-
     Err = Error::success();
     return;
   }

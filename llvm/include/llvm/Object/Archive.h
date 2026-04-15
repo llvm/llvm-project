@@ -161,7 +161,7 @@ public:
 // Define file member header of z/OS archive.
 // The fixed part of the member header (in EBCDIC) is:
 // struct ar_hdr {
-//   char ar_name[16]; /* blank terminated member name */
+//   char ar_name[16]; /* space-padded member name */
 //   char ar_date[12]; /* date (decimal) */
 //   char ar_uid[6];   /* user id (decimal) */
 //   char ar_gid[6];   /* group id (decimal) */
