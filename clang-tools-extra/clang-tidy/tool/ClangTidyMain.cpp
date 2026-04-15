@@ -700,8 +700,11 @@ int clangTidyMain(int argc, const char **argv) {
   if (VerifyConfig) {
     const std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
         OptionsProvider->getRawOptions(FileName);
+
+    std::optional<ClangTidyOptions::CustomCheckValueList> AllCustomChecks = OptionsProvider->getOptions(FileName).CustomChecks;
+
     const ChecksAndOptions Valid = getAllChecksAndOptions(
-        AllowEnablingAnalyzerAlphaCheckers, ExperimentalCustomChecks);
+        AllowEnablingAnalyzerAlphaCheckers, ExperimentalCustomChecks, std::move(AllCustomChecks));
     bool AnyInvalid = false;
     for (const auto &[Opts, Source] : RawOptions) {
       if (Opts.Checks)

@@ -703,11 +703,14 @@ void exportReplacements(const StringRef MainFilePath,
   YAML << TUD;
 }
 
-ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
-                                        bool ExperimentalCustomChecks) {
+ChecksAndOptions getAllChecksAndOptions(
+    bool AllowEnablingAnalyzerAlphaCheckers, bool ExperimentalCustomChecks,
+    std::optional<ClangTidyOptions::CustomCheckValueList> &&AllCustomChecks) {
   ChecksAndOptions Result;
   ClangTidyOptions Opts;
   Opts.Checks = "*";
+  Opts.CustomChecks = std::move(AllCustomChecks);
+
   ClangTidyContext Context(
       std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(), Opts),
       AllowEnablingAnalyzerAlphaCheckers, false, ExperimentalCustomChecks);
