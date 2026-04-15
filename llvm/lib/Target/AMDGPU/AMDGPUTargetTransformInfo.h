@@ -148,6 +148,7 @@ public:
                                    unsigned AddrSpace) const override;
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const override;
+  unsigned getMaxAtomicVectorSizeInBits(unsigned AddrSpace) const override;
 
   uint64_t getMaxMemIntrinsicInlineSizeThreshold() const override;
   Type *getMemcpyLoopLoweringType(

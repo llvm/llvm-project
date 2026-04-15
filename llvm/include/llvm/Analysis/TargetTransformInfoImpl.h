@@ -1131,6 +1131,10 @@ public:
     return true;
   }
 
+  virtual unsigned getMaxAtomicVectorSizeInBits(unsigned AddrSpace) const {
+    return 0;
+  }
+
   virtual bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                            ElementCount VF) const {
     return true;

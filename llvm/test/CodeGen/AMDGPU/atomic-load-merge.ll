@@ -4,7 +4,7 @@
 define amdgpu_cs void @atomic_two_load_monotonic_merge(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_cs void @atomic_two_load_monotonic_merge(
 ; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("agent") monotonic, align 16
 ; CHECK-NEXT:    [[A01:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[A12:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A01]], [[A12]]
@@ -19,14 +19,34 @@ define amdgpu_cs void @atomic_two_load_monotonic_merge(ptr addrspace(1) align 16
   ret void
 }
 
-define amdgpu_cs void @atomic_two_load_monotonic_merge2(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
-; CHECK-LABEL: define amdgpu_cs void @atomic_two_load_monotonic_merge2(
+define amdgpu_cs void @atomic_two_load_monotonic_merge2_no_merge(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: define amdgpu_cs void @atomic_two_load_monotonic_merge2_no_merge(
+; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 8
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 12
+; CHECK-NEXT:    [[A01:%.*]] = load atomic float, ptr addrspace(1) [[P1]] syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    [[A12:%.*]] = load atomic float, ptr addrspace(1) [[P2]] syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A01]], [[A12]]
+; CHECK-NEXT:    store float [[RES]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i8, ptr addrspace(1) %p, i64 8
+  %p2 = getelementptr inbounds i8, ptr addrspace(1) %p, i64 12
+  %a0 = load atomic float, ptr addrspace(1) %p1  syncscope("agent") monotonic, align 4
+  %a1 = load atomic float, ptr addrspace(1) %p2 syncscope("agent") monotonic, align 4
+  %res = fadd float %a0, %a1
+  store float %res, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_cs void @atomic_two_load_monotonic_unaligned_no_merge(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: define amdgpu_cs void @atomic_two_load_monotonic_unaligned_no_merge(
 ; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P1]] syncscope("agent") monotonic, align 4
-; CHECK-NEXT:    [[A01:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[A12:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A01]], [[A12]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 8
+; CHECK-NEXT:    [[A0:%.*]] = load atomic float, ptr addrspace(1) [[P1]] syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    [[A1:%.*]] = load atomic float, ptr addrspace(1) [[P2]] syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A0]], [[A1]]
 ; CHECK-NEXT:    store float [[RES]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -42,7 +62,7 @@ define amdgpu_cs void @atomic_two_load_monotonic_merge2(ptr addrspace(1) align 1
 define amdgpu_cs void @atomic_two_load_unordered_merge(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_cs void @atomic_two_load_unordered_merge(
 ; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("agent") unordered, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("agent") unordered, align 16
 ; CHECK-NEXT:    [[A01:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[A12:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A01]], [[A12]]
@@ -60,7 +80,7 @@ define amdgpu_cs void @atomic_two_load_unordered_merge(ptr addrspace(1) align 16
 define amdgpu_cs void @atomic_two_load_unordered_workgroup_merge(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_cs void @atomic_two_load_unordered_workgroup_merge(
 ; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("workgroup") unordered, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("workgroup") unordered, align 16
 ; CHECK-NEXT:    [[A01:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[A12:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A01]], [[A12]]
@@ -78,7 +98,7 @@ define amdgpu_cs void @atomic_two_load_unordered_workgroup_merge(ptr addrspace(1
 define amdgpu_cs void @atomic_two_load_monotonic_workgroup_merge(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_cs void @atomic_two_load_monotonic_workgroup_merge(
 ; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("workgroup") monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("workgroup") monotonic, align 16
 ; CHECK-NEXT:    [[A01:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[A12:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A01]], [[A12]]
@@ -186,7 +206,7 @@ define amdgpu_cs void @atomic_two_load_seq_cst_no_merge(ptr addrspace(1) align 1
 define amdgpu_cs void @atomic_two_load_same_offset_no_merge(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_cs void @atomic_two_load_same_offset_no_merge(
 ; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[P]] syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[P]] syncscope("agent") monotonic, align 16
 ; CHECK-NEXT:    [[NUM1:%.*]] = fadd float [[TMP1]], 1.000000e+00
 ; CHECK-NEXT:    [[NUM2:%.*]] = fadd float [[TMP1]], 2.000000e+00
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[NUM1]], [[NUM2]]
@@ -241,13 +261,15 @@ define amdgpu_cs void @atomic_two_load_mixed_scope_no_merge(ptr addrspace(1) ali
 define amdgpu_cs void @atomic_four_load_monotonic_merge_b128(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_cs void @atomic_four_load_monotonic_merge_b128(
 ; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x float>, ptr addrspace(1) [[P]] syncscope("agent") monotonic, align 4
-; CHECK-NEXT:    [[A01:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[A12:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[A23:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[A34:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[S01:%.*]] = fadd float [[A01]], [[A12]]
-; CHECK-NEXT:    [[S23:%.*]] = fadd float [[A23]], [[A34]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 12
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("agent") monotonic, align 16
+; CHECK-NEXT:    [[A23:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[A34:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = load atomic float, ptr addrspace(1) [[P2]] syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    [[A3:%.*]] = load atomic float, ptr addrspace(1) [[P3]] syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    [[S01:%.*]] = fadd float [[A23]], [[A34]]
+; CHECK-NEXT:    [[S23:%.*]] = fadd float [[A2]], [[A3]]
 ; CHECK-NEXT:    [[SUM:%.*]] = fadd float [[S01]], [[S23]]
 ; CHECK-NEXT:    store float [[SUM]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -269,13 +291,15 @@ define amdgpu_cs void @atomic_four_load_monotonic_merge_b128(ptr addrspace(1) al
 define amdgpu_cs void @atomic_four_load_monotonic_workgroup_merge_b128(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_cs void @atomic_four_load_monotonic_workgroup_merge_b128(
 ; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x float>, ptr addrspace(1) [[P]] syncscope("workgroup") monotonic, align 4
-; CHECK-NEXT:    [[A01:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[A12:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[A23:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[A34:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[S01:%.*]] = fadd float [[A01]], [[A12]]
-; CHECK-NEXT:    [[S23:%.*]] = fadd float [[A23]], [[A34]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 12
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("workgroup") monotonic, align 16
+; CHECK-NEXT:    [[A23:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[A34:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = load atomic float, ptr addrspace(1) [[P2]] syncscope("workgroup") monotonic, align 4
+; CHECK-NEXT:    [[A3:%.*]] = load atomic float, ptr addrspace(1) [[P3]] syncscope("workgroup") monotonic, align 4
+; CHECK-NEXT:    [[S01:%.*]] = fadd float [[A23]], [[A34]]
+; CHECK-NEXT:    [[S23:%.*]] = fadd float [[A2]], [[A3]]
 ; CHECK-NEXT:    [[SUM:%.*]] = fadd float [[S01]], [[S23]]
 ; CHECK-NEXT:    store float [[SUM]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -297,13 +321,15 @@ define amdgpu_cs void @atomic_four_load_monotonic_workgroup_merge_b128(ptr addrs
 define amdgpu_cs void @atomic_four_load_unordered_merge_b128(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_cs void @atomic_four_load_unordered_merge_b128(
 ; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x float>, ptr addrspace(1) [[P]] syncscope("agent") unordered, align 4
-; CHECK-NEXT:    [[A01:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[A12:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[A23:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[A34:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[S01:%.*]] = fadd float [[A01]], [[A12]]
-; CHECK-NEXT:    [[S23:%.*]] = fadd float [[A23]], [[A34]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 12
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("agent") unordered, align 16
+; CHECK-NEXT:    [[A23:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[A34:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = load atomic float, ptr addrspace(1) [[P2]] syncscope("agent") unordered, align 4
+; CHECK-NEXT:    [[A3:%.*]] = load atomic float, ptr addrspace(1) [[P3]] syncscope("agent") unordered, align 4
+; CHECK-NEXT:    [[S01:%.*]] = fadd float [[A23]], [[A34]]
+; CHECK-NEXT:    [[S23:%.*]] = fadd float [[A2]], [[A3]]
 ; CHECK-NEXT:    [[SUM:%.*]] = fadd float [[S01]], [[S23]]
 ; CHECK-NEXT:    store float [[SUM]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -325,13 +351,15 @@ define amdgpu_cs void @atomic_four_load_unordered_merge_b128(ptr addrspace(1) al
 define amdgpu_cs void @atomic_four_load_unordered_workgroup_merge_b128(ptr addrspace(1) align 16 %p, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_cs void @atomic_four_load_unordered_workgroup_merge_b128(
 ; CHECK-SAME: ptr addrspace(1) align 16 [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x float>, ptr addrspace(1) [[P]] syncscope("workgroup") unordered, align 4
-; CHECK-NEXT:    [[A01:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[A12:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[A23:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[A34:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[S01:%.*]] = fadd float [[A01]], [[A12]]
-; CHECK-NEXT:    [[S23:%.*]] = fadd float [[A23]], [[A34]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 12
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[P]] syncscope("workgroup") unordered, align 16
+; CHECK-NEXT:    [[A23:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[A34:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = load atomic float, ptr addrspace(1) [[P2]] syncscope("workgroup") unordered, align 4
+; CHECK-NEXT:    [[A3:%.*]] = load atomic float, ptr addrspace(1) [[P3]] syncscope("workgroup") unordered, align 4
+; CHECK-NEXT:    [[S01:%.*]] = fadd float [[A23]], [[A34]]
+; CHECK-NEXT:    [[S23:%.*]] = fadd float [[A2]], [[A3]]
 ; CHECK-NEXT:    [[SUM:%.*]] = fadd float [[S01]], [[S23]]
 ; CHECK-NEXT:    store float [[SUM]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void

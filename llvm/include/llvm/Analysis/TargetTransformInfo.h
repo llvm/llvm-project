@@ -1912,6 +1912,10 @@ public:
                                              Align Alignment,
                                              unsigned AddrSpace) const;
 
+  /// \returns The maximum vector size in bits that should be used to
+  /// load/store.
+  LLVM_ABI unsigned getMaxAtomicVectorSizeInBits(unsigned AddrSpace = 0) const;
+
   /// \returns True if it is legal to vectorize the given reduction kind.
   LLVM_ABI bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                             ElementCount VF) const;
