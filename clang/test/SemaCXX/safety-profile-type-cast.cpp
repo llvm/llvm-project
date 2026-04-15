@@ -413,3 +413,20 @@ void NestedSuppressNS::Inner<T>::out_of_line() {
 }
 
 template struct NestedSuppressNS::Inner<int>; // expected-note {{in instantiation of member function 'NestedSuppressNS::Inner<int>::out_of_line' requested here}}
+
+// NSDMI in a suppressed class template: suppression applies via the lexical
+// parent chain during default member initializer instantiation.
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] SuppressedNSDMI {
+  T *p = reinterpret_cast<T*>(0);
+};
+SuppressedNSDMI<int> suppressed_nsdmi_inst;
+
+// Inline static data member in a suppressed class template.
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] SuppressedInlineStatic {
+  static inline T *s = reinterpret_cast<T*>(0);
+};
+template struct SuppressedInlineStatic<int>;

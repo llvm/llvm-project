@@ -6233,6 +6233,8 @@ void Sema::InstantiateVariableInitializer(
 
   ContextRAII SwitchContext(*this, Var->getDeclContext());
   ProfileSuppressScope ProfileSuppressGuard(*this, OldVar);
+  ProfileSuppressScope ProfileSuppressLexicalGuard(
+      *this, OldVar->getLexicalDeclContext());
 
   EnterExpressionEvaluationContext Evaluated(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var,
