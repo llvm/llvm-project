@@ -3,19 +3,29 @@
 
 ;; Verify that inst_pref_size resolves to the correct value in the object file.
 ;; COMPUTE_PGM_RSRC3 is at offset 0x2C in each 64-byte kernel descriptor.
-;; GFX11 inst_pref_size is bits [9:4], so value N is encoded as N << 4.
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 --amdgpu-memcpy-loop-unroll=100000 -filetype=obj < %s -o %t.o
-; RUN: llvm-objdump -s -j .rodata %t.o | FileCheck --check-prefix=OBJ %s
+;; inst_pref_size is bits [9:4] on GFX11 (6-bit) and bits [11:4] on GFX12+ (8-bit).
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 --amdgpu-memcpy-loop-unroll=100000 -filetype=obj < %s -o %t.gfx11.o
+; RUN: llvm-objdump -s -j .rodata %t.gfx11.o | FileCheck --check-prefix=OBJ-GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 --amdgpu-memcpy-loop-unroll=100000 -filetype=obj < %s -o %t.gfx12.o
+; RUN: llvm-objdump -s -j .rodata %t.gfx12.o | FileCheck --check-prefix=OBJ-GFX12 %s
 
-; The inst_pref_size is computed via MCExpr label subtraction
-; (code_end - func_sym), which resolves at assembly/link time.
-; In text output it appears as a symbolic expression.
+; The inst_pref_size is computed via MCExpr label subtraction, resolved at
+; assembly/link time. In text output it appears as a symbolic expression:
+;   ((instprefsize(<code_size>, <field_width>) << 4) & <mask>) >> 4
+; where:
+;   <code_size>   = .Lfunc_endN - func_sym (exact function code size in bytes)
+;   <field_width> = bit width of the inst_pref_size field (6 for GFX11, 8 for GFX12+)
+;   instprefsize  = min(divideCeil(code_size, 128), (1 << field_width) - 1)
+;   << 4, & mask, >> 4 = bit-field insertion/extraction within COMPUTE_PGM_RSRC3
 
 ; GCN-LABEL: .amdhsa_kernel large
-; GFX11: .amdhsa_inst_pref_size {{.*}}instprefsize({{.*}}large, 6){{.*}}
-; GFX11: codeLenInByte = 3{{[0-9][0-9]$}}
-; GFX12: .amdhsa_inst_pref_size {{.*}}instprefsize({{.*}}large, 8){{.*}}
-; GFX12: codeLenInByte = 4{{[0-9][0-9]$}}
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-large, 6)<<4)&1008)>>4
+; GFX11: codeLenInByte = 348
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-large, 8)<<4)&4080)>>4
+; GFX12: codeLenInByte = 476
+;; Object: kernel descriptor at 0x00, COMPUTE_PGM_RSRC3 at 0x2C: gfx11 pref=3 (0x30), gfx12 pref=4 (0x40)
+; OBJ-GFX11: 0020 {{.*}}30000000
+; OBJ-GFX12: 0020 {{.*}}40000000
 define amdgpu_kernel void @large(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 bb:
   call void @llvm.memcpy.p1.p3.i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 256, i1 false)
@@ -23,8 +33,12 @@ bb:
 }
 
 ; GCN-LABEL: .amdhsa_kernel small
-; GCN: .amdhsa_inst_pref_size {{.*}}instprefsize({{.*}}small, {{[0-9]+}}){{.*}}
-; GCN: codeLenInByte = {{[0-9]+$}}
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-small, 6)<<4)&1008)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-small, 8)<<4)&4080)>>4
+; GCN: codeLenInByte = 4
+;; Object: kernel descriptor at 0x40, COMPUTE_PGM_RSRC3 at 0x6C: pref=1 (0x10) for both
+; OBJ-GFX11: 0060 {{.*}}10000000
+; OBJ-GFX12: 0060 {{.*}}10000000
 define amdgpu_kernel void @small() {
 bb:
   ret void
@@ -34,21 +48,15 @@ bb:
 ; The MCExpr resolves to the correct inst_pref_size at assembly time.
 
 ; GCN-LABEL: .amdhsa_kernel inline_asm
-; GCN: .amdhsa_inst_pref_size {{.*}}instprefsize({{.*}}inline_asm, {{[0-9]+}}){{.*}}
-; GCN: codeLenInByte = {{[0-9]+$}}
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-inline_asm, 6)<<4)&1008)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-inline_asm, 8)<<4)&4080)>>4
+; GCN: codeLenInByte = 24
+;; Object: kernel descriptor at 0x80, COMPUTE_PGM_RSRC3 at 0xAC: pref=9 (0x90) for both
+;; (.fill 256, 4, 0 = 1024 bytes + 4 s_endpgm = 1028 -> divideCeil(1028,128) = 9)
+; OBJ-GFX11: 00a0 {{.*}}90000000
+; OBJ-GFX12: 00a0 {{.*}}90000000
 define amdgpu_kernel void @inline_asm() {
 bb:
   call void asm sideeffect ".fill 256, 4, 0", ""()
   ret void
 }
-
-;; Object file checks: verify COMPUTE_PGM_RSRC3 at offset 0x2C in each KD.
-;; COMPUTE_PGM_RSRC3 is the last dword on the 0x0020/0x0060/0x00a0 lines.
-;; GFX11 inst_pref_size is bits [9:4], so value N is encoded as N << 4.
-;;
-;; large: 348 bytes -> pref_size=3 -> 3<<4=0x30
-; OBJ: 0020 {{.*}}30000000
-;; small: 4 bytes -> pref_size=1 -> 1<<4=0x10
-; OBJ: 0060 {{.*}}10000000
-;; inline_asm: 1028 bytes -> pref_size=9 -> 9<<4=0x90
-; OBJ: 00a0 {{.*}}90000000
