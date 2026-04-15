@@ -69,9 +69,9 @@ static void printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
     break;
   case CFIProgram::OT_FactoredCodeOffset: // Always Unsigned
     if (P.codeAlign())
-      OS << formatv(" {0}", Operand * P.codeAlign());
+      OS << formatv(" {0}", int64_t(Operand * P.codeAlign()));
     else
-      OS << formatv(" {0}*code_alignment_factor", Operand);
+      OS << formatv(" {0}*code_alignment_factor", int64_t(Operand));
     if (Address && P.codeAlign()) {
       *Address += Operand * P.codeAlign();
       OS << formatv(" to {0:x+}", *Address);
@@ -87,7 +87,7 @@ static void printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
     if (P.dataAlign())
       OS << formatv(" {0}", int64_t(Operand * P.dataAlign()));
     else
-      OS << formatv(" {0}*data_alignment_factor", Operand);
+      OS << formatv(" {0}*data_alignment_factor", int64_t(Operand));
     break;
   case CFIProgram::OT_Register:
     OS << ' ';
