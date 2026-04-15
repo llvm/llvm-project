@@ -1468,8 +1468,6 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
   if (T->isIntegralOrEnumerationType() ||
       //   -- pointer to object or pointer to function,
       T->isPointerType() ||
-      //   -- block pointer type,
-      T->isBlockPointerType() ||
       //   -- lvalue reference to object or lvalue reference to function,
       T->isLValueReferenceType() ||
       //   -- pointer to member,
@@ -1482,6 +1480,10 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
     // are ignored when determining its type.
     return T.getUnqualifiedType();
   }
+
+  // Allow block pointer types as an extension.
+  if (T->isBlockPointerType())
+    return T.getUnqualifiedType();
 
   // C++ [temp.param]p8:
   //
