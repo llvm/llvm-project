@@ -2280,12 +2280,23 @@ private:
                                   SourceLocation *EndLoc,
                                   IdentifierInfo *ScopeName,
                                   SourceLocation ScopeLoc);
+  struct ParsedProfileDesignator {
+    std::string Name;
+    std::string Spelling;
+  };
+  struct ParsedProfileSuppressArgs {
+    std::string Name;
+    std::string Justification;
+    std::string Rule;
+    SmallVector<std::string, 2> RawArguments;
+  };
+
   bool ParseProfileName(std::string &Name);
-  bool ParseProfileDesignator(detail::ProfileDesignator &Designator);
+  bool ParseProfileDesignator(ParsedProfileDesignator &Designator);
   bool ParseProfileDesignatorList(
-      SmallVectorImpl<detail::ProfileDesignator> &Designators);
+      SmallVectorImpl<ParsedProfileDesignator> &Designators);
   bool ParseProfileArgumentList(SmallVectorImpl<std::string> &Args);
-  bool ParseProfileSuppressBody(detail::ProfileSuppressArgs &Args);
+  bool ParseProfileSuppressBody(ParsedProfileSuppressArgs &Args);
   bool ParseNonCommaBalancedToken(std::string &Spelling);
   bool ParseNonOperatorNonPunctuatorToken(std::string &Spelling);
 

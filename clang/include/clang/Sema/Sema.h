@@ -1045,8 +1045,8 @@ public:
   SmallVector<ProfileEnforcement, 4> EnforcedProfiles;
 
   struct ProfileSuppressEntry {
-    std::string ProfileName;
-    std::string RuleName;
+    StringRef ProfileName;
+    StringRef RuleName;
   };
   SmallVector<ProfileSuppressEntry, 4> ProfileSuppressStack;
 

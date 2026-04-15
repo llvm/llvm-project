@@ -28,7 +28,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
-#include <string>
 #include <utility>
 
 namespace clang {
@@ -98,19 +97,19 @@ struct PropertyData {
 };
 
 struct ProfileDesignator {
-  std::string Name;
-  std::string Spelling;
+  StringRef Name;
+  StringRef Spelling;
 };
 
 struct ProfileEnforceArgs {
-  SmallVector<ProfileDesignator, 2> Designators;
+  ArrayRef<ProfileDesignator> Designators;
 };
 
 struct ProfileSuppressArgs {
-  std::string ProfileName;
-  std::string Justification;
-  std::string Rule;
-  SmallVector<std::string, 2> RawArguments;
+  StringRef Name;
+  StringRef Justification;
+  StringRef Rule;
+  ArrayRef<StringRef> RawArguments;
 };
 
 struct ProfileRequireArgs {
@@ -767,6 +766,24 @@ public:
   template <typename T, typename... Args> T *make(Args &&...args) {
     void *Mem = Factory.Alloc.Allocate(sizeof(T), alignof(T));
     return ::new (Mem) T(std::forward<Args>(args)...);
+  }
+
+  StringRef copyString(StringRef S) {
+    if (S.empty())
+      return {};
+    char *Data = static_cast<char *>(Factory.Alloc.Allocate(S.size(), 1));
+    std::memcpy(Data, S.data(), S.size());
+    return {Data, S.size()};
+  }
+
+  template <typename T> MutableArrayRef<T> allocateArray(unsigned N) {
+    if (N == 0)
+      return {};
+    auto *Arr =
+        static_cast<T *>(Factory.Alloc.Allocate(sizeof(T) * N, alignof(T)));
+    for (unsigned I = 0; I < N; ++I)
+      ::new (&Arr[I]) T();
+    return {Arr, N};
   }
 
   void clear() {

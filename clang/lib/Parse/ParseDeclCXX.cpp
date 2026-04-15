@@ -5128,7 +5128,7 @@ bool Parser::ParseProfileArgumentList(SmallVectorImpl<std::string> &Args) {
   return false;
 }
 
-bool Parser::ParseProfileDesignator(detail::ProfileDesignator &D) {
+bool Parser::ParseProfileDesignator(ParsedProfileDesignator &D) {
   if (ParseProfileName(D.Name))
     return true;
 
@@ -5160,9 +5160,9 @@ bool Parser::ParseProfileDesignator(detail::ProfileDesignator &D) {
 }
 
 bool Parser::ParseProfileDesignatorList(
-    SmallVectorImpl<detail::ProfileDesignator> &Designators) {
+    SmallVectorImpl<ParsedProfileDesignator> &Designators) {
   while (true) {
-    detail::ProfileDesignator D;
+    ParsedProfileDesignator D;
     if (ParseProfileDesignator(D))
       return true;
     Designators.push_back(std::move(D));
@@ -5173,8 +5173,8 @@ bool Parser::ParseProfileDesignatorList(
   return false;
 }
 
-bool Parser::ParseProfileSuppressBody(detail::ProfileSuppressArgs &Args) {
-  if (ParseProfileName(Args.ProfileName))
+bool Parser::ParseProfileSuppressBody(ParsedProfileSuppressArgs &Args) {
+  if (ParseProfileName(Args.Name))
     return true;
 
   auto ParseStringLiteralValue = [&](std::string &Out) -> bool {
@@ -5256,19 +5256,43 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
 
   void *CustomData;
   if (AttrName->isStr("enforce")) {
-    auto *Args = Pool.make<detail::ProfileEnforceArgs>();
-    if (ParseProfileDesignatorList(Args->Designators))
+    SmallVector<ParsedProfileDesignator, 2> Parsed;
+    if (ParseProfileDesignatorList(Parsed))
       return SkipToRParen();
+
+    auto Desigs = Pool.allocateArray<detail::ProfileDesignator>(Parsed.size());
+    for (unsigned I = 0; I < Parsed.size(); ++I) {
+      Desigs[I].Name = Pool.copyString(Parsed[I].Name);
+      Desigs[I].Spelling = Pool.copyString(Parsed[I].Spelling);
+    }
+
+    auto *Args = Pool.make<detail::ProfileEnforceArgs>();
+    Args->Designators = Desigs;
     CustomData = Args;
   } else if (AttrName->isStr("suppress")) {
-    auto *Args = Pool.make<detail::ProfileSuppressArgs>();
-    if (ParseProfileSuppressBody(*Args))
+    ParsedProfileSuppressArgs Parsed;
+    if (ParseProfileSuppressBody(Parsed))
       return SkipToRParen();
+
+    auto *Args = Pool.make<detail::ProfileSuppressArgs>();
+    Args->Name = Pool.copyString(Parsed.Name);
+    Args->Justification = Pool.copyString(Parsed.Justification);
+    Args->Rule = Pool.copyString(Parsed.Rule);
+    if (!Parsed.RawArguments.empty()) {
+      auto RawBuf = Pool.allocateArray<StringRef>(Parsed.RawArguments.size());
+      for (unsigned I = 0; I < Parsed.RawArguments.size(); ++I)
+        RawBuf[I] = Pool.copyString(Parsed.RawArguments[I]);
+      Args->RawArguments = RawBuf;
+    }
     CustomData = Args;
   } else {
-    auto *Args = Pool.make<detail::ProfileRequireArgs>();
-    if (ParseProfileDesignator(Args->Designator))
+    ParsedProfileDesignator Parsed;
+    if (ParseProfileDesignator(Parsed))
       return SkipToRParen();
+
+    auto *Args = Pool.make<detail::ProfileRequireArgs>();
+    Args->Designator.Name = Pool.copyString(Parsed.Name);
+    Args->Designator.Spelling = Pool.copyString(Parsed.Spelling);
     CustomData = Args;
   }
 
