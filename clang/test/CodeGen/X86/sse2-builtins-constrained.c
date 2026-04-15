@@ -21,7 +21,7 @@
 __m128d test_mm_sqrt_pd(__m128d x) {
   // COMMON-LABEL: test_mm_sqrt_pd
   // UNCONSTRAINED: call {{.*}}<2 x double> @llvm.sqrt.v2f64(<2 x double> {{.*}})
-  // CONSTRAINED: call {{.*}}<2 x double> @llvm.experimental.constrained.sqrt.v2f64(<2 x double> {{.*}}, metadata !{{.*}})
+  // CONSTRAINED: call {{.*}}<2 x double> @llvm.sqrt.v2f64(<2 x double> {{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: sqrtpd
   return _mm_sqrt_pd(x);
 }
@@ -30,7 +30,7 @@ __m128d test_sqrt_sd(__m128d x, __m128d y) {
   // COMMON-LABEL: test_sqrt_sd
   // COMMONIR: extractelement <2 x double> {{.*}}, i32 0
   // UNCONSTRAINED: call double @llvm.sqrt.f64(double {{.*}})
-  // CONSTRAINED: call double @llvm.experimental.constrained.sqrt.f64(double {{.*}}, metadata !{{.*}})
+  // CONSTRAINED: call double @llvm.sqrt.f64(double {{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: sqrtsd
   // COMMONIR: insertelement <2 x double> {{.*}}, double {{.*}}, i32 0
   return _mm_sqrt_sd(x, y);

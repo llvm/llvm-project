@@ -10,41 +10,41 @@ volatile vec_float vf;
 
 void test_float(void) {
   vd = __builtin_s390_vfmaxdb(vd, vd, 4);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.maxnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: call <2 x double> @llvm.maxnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
 
   vd = __builtin_s390_vfmindb(vd, vd, 4);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.minnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: call <2 x double> @llvm.minnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   vd = __builtin_s390_vfmindb(vd, vd, 0);
 
   vd = __builtin_s390_vfnmadb(vd, vd, vd);
-  // CHECK: [[RES:%[^ ]+]] = call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: [[RES:%[^ ]+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK: fneg <2 x double> [[RES]]
 
   vd = __builtin_s390_vfnmsdb(vd, vd, vd);
   // CHECK: [[NEG:%[^ ]+]] = fneg <2 x double> {{.*}}
-  // CHECK:  [[RES:%[^ ]+]] = call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]], metadata !{{.*}})
+  // CHECK:  [[RES:%[^ ]+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK: fneg <2 x double> [[RES]]
 
   vf = __builtin_s390_vfmaxsb(vf, vf, 4);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
 
   vf = __builtin_s390_vfminsb(vf, vf, 4);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.minnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.minnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
 
   vf = __builtin_s390_vfsqsb(vf);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.sqrt.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.sqrt.v4f32(<4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
 
   vf = __builtin_s390_vfmasb(vf, vf, vf);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   vf = __builtin_s390_vfmssb(vf, vf, vf);
   // CHECK: [[NEG:%[^ ]+]] = fneg <4 x float> %{{.*}}
-  // CHECK: call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]], metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   vf = __builtin_s390_vfnmasb(vf, vf, vf);
-  // CHECK: [[RES:%[^ ]+]] = call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: [[RES:%[^ ]+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK: fneg <4 x float> [[RES]]
   vf = __builtin_s390_vfnmssb(vf, vf, vf);
   // CHECK: [[NEG:%[^ ]+]] = fneg <4 x float> %{{.*}}
-  // CHECK: [[RES:%[^ ]+]] = call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]], metadata !{{.*}})
+  // CHECK: [[RES:%[^ ]+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK: fneg <4 x float> [[RES]]
 
   vf = __builtin_s390_vflpsb(vf);
@@ -54,19 +54,19 @@ void test_float(void) {
   // CHECK: fneg <4 x float> [[ABS]]
 
   vf = __builtin_s390_vfisb(vf, 0, 0);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.rint.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.rint.v4f32(<4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   vf = __builtin_s390_vfisb(vf, 4, 0);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   vf = __builtin_s390_vfisb(vf, 4, 1);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.round.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.round.v4f32(<4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   vf = __builtin_s390_vfisb(vf, 4, 4);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.roundeven.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.roundeven.v4f32(<4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   vf = __builtin_s390_vfisb(vf, 4, 5);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.trunc.v4f32(<4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   vf = __builtin_s390_vfisb(vf, 4, 6);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.ceil.v4f32(<4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   vf = __builtin_s390_vfisb(vf, 4, 7);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.floor.v4f32(<4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   vf = __builtin_s390_vfisb(vf, 4, 3);
   // CHECK: call <4 x float> @llvm.s390.vfisb(<4 x float> %{{.*}}, i32 4, i32 3)
 }

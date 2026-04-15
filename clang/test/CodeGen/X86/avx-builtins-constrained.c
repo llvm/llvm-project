@@ -21,7 +21,7 @@
 __m256 test_mm256_sqrt_ps(__m256 x) {
   // COMMON-LABEL: test_mm256_sqrt_ps
   // UNCONSTRAINED: call {{.*}}<8 x float> @llvm.sqrt.v8f32(<8 x float> {{.*}})
-  // CONSTRAINED: call {{.*}}<8 x float> @llvm.experimental.constrained.sqrt.v8f32(<8 x float> {{.*}}, metadata !{{.*}})
+  // CONSTRAINED: call {{.*}}<8 x float> @llvm.sqrt.v8f32(<8 x float> {{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vsqrtps %ymm{{.*}}, 
   return _mm256_sqrt_ps(x);
 }
@@ -29,7 +29,7 @@ __m256 test_mm256_sqrt_ps(__m256 x) {
 __m256d test_mm256_sqrt_pd(__m256d x) {
   // COMMON-LABEL: test_mm256_sqrt_pd
   // UNCONSTRAINED: call {{.*}}<4 x double> @llvm.sqrt.v4f64(<4 x double> {{.*}})
-  // CONSTRAINED: call {{.*}}<4 x double> @llvm.experimental.constrained.sqrt.v4f64(<4 x double> {{.*}}, metadata !{{.*}})
+  // CONSTRAINED: call {{.*}}<4 x double> @llvm.sqrt.v4f64(<4 x double> {{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vsqrtpd %ymm{{.*}}, 
   return _mm256_sqrt_pd(x);
 }
@@ -48,7 +48,7 @@ __m256d test_mm256_round_pd_fround_no_exc(__m256d x) {
 
 __m256d test_mm256_round_pd_trunc(__m256d x) {
   // CONSTRAINED-LABEL: test_mm256_round_pd_trunc
-  // CONSTRAINED: %{{.*}} = call <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double> %{{.*}}, metadata !"fpexcept.ignore")
+  // CONSTRAINED: %{{.*}} = call <4 x double> @llvm.trunc.v4f64(<4 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   return _mm256_round_pd(x, 0b1011);
 }
 
@@ -66,6 +66,6 @@ __m256 test_mm256_round_ps_fround_no_exc(__m256 x) {
 
 __m256 test_mm256_round_ps_trunc(__m256 x) {
   // CONSTRAINED-LABEL: test_mm256_round_ps_trunc
-  // CONSTRAINED: %{{.*}} = call <8 x float> @llvm.experimental.constrained.trunc.v8f32(<8 x float> %{{.*}}, metadata !"fpexcept.ignore")
+  // CONSTRAINED: %{{.*}} = call <8 x float> @llvm.trunc.v8f32(<8 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   return _mm256_round_ps(x, 0b1011);
 }

@@ -80,30 +80,30 @@ void test_float(void) {
   // CHECK-ASM-LABEL: test_float
 
   vd = vec_double(vsl);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vcdgb
   vd = vec_double(vul);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vcdlgb
   vf = vec_float(vsi);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.sitofp.v4f32.v4i32(<4 x i32> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vcefb
   vf = vec_float(vui);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i32(<4 x i32> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.uitofp.v4f32.v4i32(<4 x i32> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vcelfb
 
   vsl = vec_signed(vd);
-  // CHECK: call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x i64> @llvm.fptosi.v2i64.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vcgdb
   vsi = vec_signed(vf);
-  // CHECK: call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x i32> @llvm.fptosi.v4i32.v4f32(<4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vcfeb
   vul = vec_unsigned(vd);
-  // CHECK: call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x i64> @llvm.fptoui.v2i64.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vclgdb
   vui = vec_unsigned(vf);
   // xHECK: fptoui <4 x float> %{{.*}} to <4 x i32>
-  // CHECK: call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x i32> @llvm.fptoui.v4i32.v4f32(<4 x float> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vclfeb
 }
 
