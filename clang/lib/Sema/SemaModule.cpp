@@ -483,11 +483,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // P3589R2 [decl.attr.enforce]p4: propagate interface's enforced profiles to
   // implementation unit.
   if (Interface) {
-    for (const auto &EP : Interface->EnforcedProfileDesignators) {
-      if (!isProfileEnforced(EP.ProfileName))
-        EnforcedProfiles.push_back(
-            {EP.ProfileName, EP.Designator, ModuleLoc});
-    }
+    for (const auto &EP : Interface->EnforcedProfileDesignators)
+      addProfileEnforcement(EP.ProfileName, EP.Designator, ModuleLoc);
   }
 
   // We already potentially made an implicit import (in the case of a module
