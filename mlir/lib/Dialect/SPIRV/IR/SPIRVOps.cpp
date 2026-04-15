@@ -1339,6 +1339,16 @@ LogicalResult spirv::GlobalVariableOp::verify() {
            << stringifyStorageClass(storageClass) << "'";
   }
 
+  // SPIR-V spec: "If Linkage Type is Import, no further operands are
+  // permitted." — i.e. an Import-linkage variable must not have an initializer.
+  if (auto linkage = getLinkageAttributes()) {
+    if (linkage->getLinkageType().getValue() == spirv::LinkageType::Import &&
+        getInitializer()) {
+      return emitOpError(
+          "with Import linkage type must not have an initializer");
+    }
+  }
+
   if (auto init = (*this)->getAttrOfType<FlatSymbolRefAttr>(
           this->getInitializerAttrName())) {
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
