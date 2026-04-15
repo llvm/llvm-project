@@ -368,17 +368,10 @@ void TextOutputSection::finalize() {
         assert(callVA != TargetInfo::outOfRangeVA);
         continue;
       }
-      // For non-zero addends, branch directly to the symbol body rather than
-      // through any stub (`resolveBranchVA()` would prefer the stub VA when
-      // present). This mirrors the writer-side rule in `resolveSymbolOffsetVA`:
-      // branching to the interior of a stub trampoline is meaningless, so for
-      // `bl _func+N` we resolve against `_func`'s own body. The two helpers
-      // only diverge when `funcSym` is a Defined that is *also* in stubs (e.g.
-      // an interposable extern), but `finalize()` has to agree with the writer
-      // in that case or reachability analysis drifts.
+      // Use the same resolution rules as the writer: for non-zero addends this
+      // goes directly to the symbol body rather than any stub trampoline.
       // See INTERP check lines in arm64-thunk-branch-addend.s.
-      uint64_t funcVA = r.addend != 0 ? funcSym->getVA() + r.addend
-                                      : funcSym->resolveBranchVA();
+      uint64_t funcVA = resolveSymbolOffsetVA(funcSym, r.type, r.addend);
       ++thunkInfo.callSitesUsed;
       if (lowVA <= funcVA && funcVA <= highVA) {
         // The referent is reachable with a simple call instruction.
