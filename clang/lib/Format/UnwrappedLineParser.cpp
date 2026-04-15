@@ -566,8 +566,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
               (IsCpp && (PrevTok->Tok.isLiteral() ||
                          NextTok->isOneOf(tok::l_paren, tok::arrow)));
 
-          // If there is a comma, semicolon or right paren after the closing
-          // brace, we assume this is a braced initializer list.
+          // If there is a comma, or right paren after the closing brace, we
+          // assume this is a braced initializer list.
           // FIXME: Some of these do not apply to JS, e.g. "} {" can never be a
           // braced list in JS.
           ProbablyBracedList =
