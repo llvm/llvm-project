@@ -403,6 +403,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOMPGenericLoopDirective(cast<OMPGenericLoopDirective>(*s));
   case Stmt::OMPReverseDirectiveClass:
     return emitOMPReverseDirective(cast<OMPReverseDirective>(*s));
+  case Stmt::OMPSplitDirectiveClass:
+    return emitOMPSplitDirective(cast<OMPSplitDirective>(*s));
   case Stmt::OMPInterchangeDirectiveClass:
     return emitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*s));
   case Stmt::OMPAssumeDirectiveClass:
@@ -667,6 +669,7 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
       builder.restoreInsertionPoint(scopeBody);
       CIRGenFunction::LexicalScope lexScope{*this, scopeLoc,
                                             builder.getInsertionBlock()};
+      FullExprCleanupScope fullExprScope(*this, rv);
       handleReturnVal();
     }
   }

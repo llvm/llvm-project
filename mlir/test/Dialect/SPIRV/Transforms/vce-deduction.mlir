@@ -243,6 +243,17 @@ spirv.module Logical Vulkan attributes {
   }
 }
 
+// Check that `bind(set, binding)` on spirv.GlobalVariable deduces the Shader
+// capability (DescriptorSet and Binding decorations require Shader per the spec).
+// CHECK: requires #spirv.vce<v1.5, [Shader, VulkanMemoryModel, Matrix], [SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, VulkanMemoryModel], [SPV_KHR_vulkan_memory_model]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @var bind(0, 0) : !spirv.ptr<!spirv.struct<(i32 [0])>, UniformConstant>
+}
+
 // Check that extension and capability queries handle recursive types.
 // CHECK: requires #spirv.vce<v1.0, [Shader, Addresses, Matrix], [SPV_KHR_storage_buffer_storage_class]>
 spirv.module Physical64 GLSL450 attributes {
