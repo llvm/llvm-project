@@ -9,10 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTERTYPEBUILDER_REGISTERTYPEBUILDERCLANG_H
 #define LLDB_SOURCE_PLUGINS_REGISTERTYPEBUILDER_REGISTERTYPEBUILDERCLANG_H
 
-#include "clang/AST/ExternalASTSource.h"
-
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/Target.h"
+#include "clang/AST/ExternalASTSource.h"
 
 namespace lldb_private {
 class RegisterTypeBuilderClang : public RegisterTypeBuilder {
