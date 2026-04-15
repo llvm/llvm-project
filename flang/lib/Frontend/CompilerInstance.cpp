@@ -28,6 +28,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -309,6 +310,29 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
   return llvm::join(featuresVec, ",");
 }
 
+static std::string getExplicitAndImplicitPPCTargetFeatures(
+    clang::DiagnosticsEngine &diags, const TargetOptions &targetOpts,
+    const llvm::Triple triple, const CodeGenOptions &CGOpts) {
+  std::vector<std::string> featuresVec;
+  std::optional<llvm::StringMap<bool>> FeaturesOpt =
+      llvm::PPC::getPPCDefaultTargetFeatures(triple, targetOpts.cpu);
+  if (FeaturesOpt) {
+    for (auto &I : FeaturesOpt.value()) {
+      featuresVec.push_back(
+          (llvm::Twine(I.second ? "+" : "-") + I.first().str()).str());
+    }
+  }
+
+  // Include others set by ppc::getPPCTargetFeatures() and specified by users
+  for (auto &userFeature : targetOpts.featuresAsWritten) {
+    llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
+    featuresVec.push_back(userFeature[0] + userKeyString.str());
+  }
+
+  llvm::sort(featuresVec);
+  return llvm::join(featuresVec, ",");
+}
+
 std::string CompilerInstance::getTargetFeatures() {
   const TargetOptions &targetOpts = getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
@@ -325,6 +349,9 @@ std::string CompilerInstance::getTargetFeatures() {
   } else if (triple.isNVPTX()) {
     return getExplicitAndImplicitNVPTXTargetFeatures(getDiagnostics(),
                                                      targetOpts, triple);
+  } else if (triple.isPPC()) {
+    return getExplicitAndImplicitPPCTargetFeatures(
+        getDiagnostics(), targetOpts, triple, getInvocation().getCodeGenOpts());
   }
   return llvm::join(targetOpts.featuresAsWritten.begin(),
                     targetOpts.featuresAsWritten.end(), ",");
@@ -356,6 +383,7 @@ bool CompilerInstance::setUpTargetMachine() {
   llvm::TargetOptions tOpts = llvm::TargetOptions();
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
   tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
+  tOpts.DisableIntegratedAS = CGOpts.DisableIntegratedAS;
 
   targetMachine.reset(theTarget->createTargetMachine(
       triple, /*CPU=*/targetOpts.cpu,

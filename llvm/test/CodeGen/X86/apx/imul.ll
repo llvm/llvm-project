@@ -104,14 +104,16 @@ entry:
 define i16 @mul16rm(i16 noundef %a, ptr %ptr) {
 ; NDD-LABEL: mul16rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzwl (%rsi), %eax
-; NDD-NEXT:    imulw %di, %ax
+; NDD-NEXT:    movl %edi, %eax
+; NDD-NEXT:    imulw (%rsi), %ax
+; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NDD-NEXT:    retq
 ;
 ; IMM-LABEL: mul16rm:
 ; IMM:       # %bb.0: # %entry
-; IMM-NEXT:    movzwl (%rsi), %eax
-; IMM-NEXT:    imulw %di, %ax
+; IMM-NEXT:    movl %edi, %eax
+; IMM-NEXT:    imulw (%rsi), %ax
+; IMM-NEXT:    # kill: def $ax killed $ax killed $eax
 ; IMM-NEXT:    retq
 ;
 ; MEM-LABEL: mul16rm:
@@ -121,8 +123,9 @@ define i16 @mul16rm(i16 noundef %a, ptr %ptr) {
 ;
 ; NF-LABEL: mul16rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rsi), %eax
-; NF-NEXT:    imulw %di, %ax
+; NF-NEXT:    movl %edi, %eax
+; NF-NEXT:    imulw (%rsi), %ax
+; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq
 entry:
   %b = load i16, ptr %ptr
@@ -133,14 +136,14 @@ entry:
 define i32 @mul32rm(i32 noundef %a, ptr %ptr) {
 ; NDD-LABEL: mul32rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl (%rsi), %eax
-; NDD-NEXT:    imull %edi, %eax
+; NDD-NEXT:    movl %edi, %eax
+; NDD-NEXT:    imull (%rsi), %eax
 ; NDD-NEXT:    retq
 ;
 ; IMM-LABEL: mul32rm:
 ; IMM:       # %bb.0: # %entry
-; IMM-NEXT:    movl (%rsi), %eax
-; IMM-NEXT:    imull %edi, %eax
+; IMM-NEXT:    movl %edi, %eax
+; IMM-NEXT:    imull (%rsi), %eax
 ; IMM-NEXT:    retq
 ;
 ; MEM-LABEL: mul32rm:
@@ -150,8 +153,8 @@ define i32 @mul32rm(i32 noundef %a, ptr %ptr) {
 ;
 ; NF-LABEL: mul32rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl (%rsi), %eax
-; NF-NEXT:    imull %edi, %eax
+; NF-NEXT:    movl %edi, %eax
+; NF-NEXT:    imull (%rsi), %eax
 ; NF-NEXT:    retq
 entry:
   %b = load i32, ptr %ptr
@@ -162,14 +165,14 @@ entry:
 define i64 @mul64rm(i64 noundef %a, ptr %ptr) {
 ; NDD-LABEL: mul64rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movq (%rsi), %rax
-; NDD-NEXT:    imulq %rdi, %rax
+; NDD-NEXT:    movq %rdi, %rax
+; NDD-NEXT:    imulq (%rsi), %rax
 ; NDD-NEXT:    retq
 ;
 ; IMM-LABEL: mul64rm:
 ; IMM:       # %bb.0: # %entry
-; IMM-NEXT:    movq (%rsi), %rax
-; IMM-NEXT:    imulq %rdi, %rax
+; IMM-NEXT:    movq %rdi, %rax
+; IMM-NEXT:    imulq (%rsi), %rax
 ; IMM-NEXT:    retq
 ;
 ; MEM-LABEL: mul64rm:
@@ -179,8 +182,8 @@ define i64 @mul64rm(i64 noundef %a, ptr %ptr) {
 ;
 ; NF-LABEL: mul64rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movq (%rsi), %rax
-; NF-NEXT:    imulq %rdi, %rax
+; NF-NEXT:    movq %rdi, %rax
+; NF-NEXT:    imulq (%rsi), %rax
 ; NF-NEXT:    retq
 entry:
   %b = load i64, ptr %ptr
@@ -191,14 +194,16 @@ entry:
 define i16 @smul16rm(i16 noundef %a, ptr %ptr) {
 ; NDD-LABEL: smul16rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzwl (%rsi), %eax
-; NDD-NEXT:    imulw %di, %ax
+; NDD-NEXT:    movl %edi, %eax
+; NDD-NEXT:    imulw (%rsi), %ax
+; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NDD-NEXT:    retq
 ;
 ; IMM-LABEL: smul16rm:
 ; IMM:       # %bb.0: # %entry
-; IMM-NEXT:    movzwl (%rsi), %eax
-; IMM-NEXT:    imulw %di, %ax
+; IMM-NEXT:    movl %edi, %eax
+; IMM-NEXT:    imulw (%rsi), %ax
+; IMM-NEXT:    # kill: def $ax killed $ax killed $eax
 ; IMM-NEXT:    retq
 ;
 ; MEM-LABEL: smul16rm:
@@ -208,8 +213,9 @@ define i16 @smul16rm(i16 noundef %a, ptr %ptr) {
 ;
 ; NF-LABEL: smul16rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rsi), %eax
-; NF-NEXT:    imulw %di, %ax
+; NF-NEXT:    movl %edi, %eax
+; NF-NEXT:    imulw (%rsi), %ax
+; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq
 entry:
   %b = load i16, ptr %ptr
@@ -221,14 +227,14 @@ entry:
 define i32 @smul32rm(i32 noundef %a, ptr %ptr) {
 ; NDD-LABEL: smul32rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl (%rsi), %eax
-; NDD-NEXT:    imull %edi, %eax
+; NDD-NEXT:    movl %edi, %eax
+; NDD-NEXT:    imull (%rsi), %eax
 ; NDD-NEXT:    retq
 ;
 ; IMM-LABEL: smul32rm:
 ; IMM:       # %bb.0: # %entry
-; IMM-NEXT:    movl (%rsi), %eax
-; IMM-NEXT:    imull %edi, %eax
+; IMM-NEXT:    movl %edi, %eax
+; IMM-NEXT:    imull (%rsi), %eax
 ; IMM-NEXT:    retq
 ;
 ; MEM-LABEL: smul32rm:
@@ -238,8 +244,8 @@ define i32 @smul32rm(i32 noundef %a, ptr %ptr) {
 ;
 ; NF-LABEL: smul32rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl (%rsi), %eax
-; NF-NEXT:    imull %edi, %eax
+; NF-NEXT:    movl %edi, %eax
+; NF-NEXT:    imull (%rsi), %eax
 ; NF-NEXT:    retq
 entry:
   %b = load i32, ptr %ptr
@@ -251,14 +257,14 @@ entry:
 define i64 @smul64rm(i64 noundef %a, ptr %ptr) {
 ; NDD-LABEL: smul64rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movq (%rsi), %rax
-; NDD-NEXT:    imulq %rdi, %rax
+; NDD-NEXT:    movq %rdi, %rax
+; NDD-NEXT:    imulq (%rsi), %rax
 ; NDD-NEXT:    retq
 ;
 ; IMM-LABEL: smul64rm:
 ; IMM:       # %bb.0: # %entry
-; IMM-NEXT:    movq (%rsi), %rax
-; IMM-NEXT:    imulq %rdi, %rax
+; IMM-NEXT:    movq %rdi, %rax
+; IMM-NEXT:    imulq (%rsi), %rax
 ; IMM-NEXT:    retq
 ;
 ; MEM-LABEL: smul64rm:
@@ -268,8 +274,8 @@ define i64 @smul64rm(i64 noundef %a, ptr %ptr) {
 ;
 ; NF-LABEL: smul64rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movq (%rsi), %rax
-; NF-NEXT:    imulq %rdi, %rax
+; NF-NEXT:    movq %rdi, %rax
+; NF-NEXT:    imulq (%rsi), %rax
 ; NF-NEXT:    retq
 entry:
   %b = load i64, ptr %ptr

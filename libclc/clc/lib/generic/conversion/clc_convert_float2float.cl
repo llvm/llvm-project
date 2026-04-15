@@ -13,6 +13,7 @@
 #include "clc/math/clc_nextafter.h"
 #include "clc/math/clc_nextdown.h"
 #include "clc/math/clc_nextup.h"
+#include "clc/math/clc_subnormal_config.h"
 #include "clc/relational/clc_select.h"
 #include "clc/shared/clc_clamp.h"
 

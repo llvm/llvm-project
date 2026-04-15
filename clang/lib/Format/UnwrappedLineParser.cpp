@@ -3838,6 +3838,8 @@ bool UnwrappedLineParser::parseEnum() {
          FormatTok->isOneOf(tok::colon, tok::coloncolon, tok::less,
                             tok::greater, tok::comma, tok::question,
                             tok::l_square)) {
+    if (FormatTok->is(tok::colon))
+      FormatTok->setFinalizedType(TT_EnumUnderlyingTypeColon);
     if (Style.isVerilog()) {
       FormatTok->setFinalizedType(TT_VerilogDimensionedTypeName);
       nextToken();
@@ -3875,26 +3877,40 @@ bool UnwrappedLineParser::parseEnum() {
     return true;
   }
 
+  const bool ManageWhitesmithsBraces =
+      Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths;
+
   if (!Style.AllowShortEnumsOnASingleLine &&
       ShouldBreakBeforeBrace(Style, InitialToken,
                              Tokens->peekNextToken()->is(tok::r_brace))) {
     addUnwrappedLine();
+
+    // If we're in Whitesmiths mode, indent the brace if we're not indenting
+    // the whole block.
+    if (ManageWhitesmithsBraces)
+      ++Line->Level;
   }
   // Parse enum body.
   nextToken();
   if (!Style.AllowShortEnumsOnASingleLine) {
     addUnwrappedLine();
-    Line->Level += 1;
+    if (!ManageWhitesmithsBraces)
+      ++Line->Level;
   }
+  const auto OpeningLineIndex = CurrentLines->empty()
+                                    ? UnwrappedLine::kInvalidIndex
+                                    : CurrentLines->size() - 1;
   bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
-  if (!Style.AllowShortEnumsOnASingleLine)
-    Line->Level -= 1;
+  if (!Style.AllowShortEnumsOnASingleLine && !ManageWhitesmithsBraces)
+    --Line->Level;
   if (HasError) {
     if (FormatTok->is(tok::semi))
       nextToken();
     addUnwrappedLine();
   }
   setPreviousRBraceType(TT_EnumRBrace);
+  if (ManageWhitesmithsBraces)
+    Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
   return true;
 
   // There is no addUnwrappedLine() here so that we fall through to parsing a

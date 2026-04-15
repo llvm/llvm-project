@@ -39,6 +39,7 @@ add_clang_library(clangDriver
   Tool.cpp
   ToolChain.cpp
   ToolChains/Arch/AArch64.cpp
+  ToolChains/Arch/AMDGPU.cpp
   ToolChains/Arch/ARM.cpp
   ToolChains/Arch/CSKY.cpp
   ToolChains/Arch/LoongArch.cpp
@@ -85,6 +86,7 @@ add_clang_library(clangDriver
   ToolChains/OHOS.cpp
   ToolChains/OpenBSD.cpp
   ToolChains/PS4CPU.cpp
+  ToolChains/Serenity.cpp
   ToolChains/Solaris.cpp
   ToolChains/SPIRV.cpp
   ToolChains/SPIRVOpenMP.cpp
@@ -110,6 +112,7 @@ add_clang_library(clangDriver
   clangBasic
   clangDependencyScanning
   clangFrontend
+  clangScalableStaticAnalysisFrameworkAnalyses
   clangScalableStaticAnalysisFrameworkCore
   clangScalableStaticAnalysisFrameworkFrontend
   clangSerialization

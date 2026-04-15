@@ -15,7 +15,7 @@
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__) &&     \
     !(defined(__sun__) && defined(__svr4__)) && !defined(__HAIKU__) &&      \
-    !defined(__wasi__)
+    !defined(__wasi__) && !defined(__NVPTX__) && !defined(__AMDGPU__)
 #  error "This operating system is not supported"
 #endif
 
@@ -300,6 +300,18 @@
 #  define SANITIZER_LOONGARCH64 1
 #else
 #  define SANITIZER_LOONGARCH64 0
+#endif
+
+#if defined(__AMDGPU__)
+#  define SANITIZER_AMDGPU 1
+#else
+#  define SANITIZER_AMDGPU 0
+#endif
+
+#if defined(__NVPTX__)
+#  define SANITIZER_NVPTX 1
+#else
+#  define SANITIZER_NVPTX 0
 #endif
 
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.

@@ -106,6 +106,10 @@ static cl::opt<bool> ThreadAcrossLoopHeaders(
     cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
     cl::init(false), cl::Hidden);
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 JumpThreadingPass::JumpThreadingPass(int T) {
   DefaultBBDupThreshold = (T == -1) ? BBDuplicateThreshold : unsigned(T);
 }
@@ -2993,6 +2997,33 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
     NewPN->addIncoming(SI->getFalseValue(), BB);
     NewPN->setDebugLoc(SI->getDebugLoc());
     SI->replaceAllUsesWith(NewPN);
+
+    auto *BPI = getBPI();
+    auto *BFI = getBFI();
+    if (!ProfcheckDisableMetadataFixes && BranchWeights) {
+      SmallVector<uint32_t, 2> BW;
+      [[maybe_unused]] bool Extracted = extractBranchWeights(BranchWeights, BW);
+      assert(Extracted);
+      uint64_t Denominator =
+          sum_of(llvm::map_range(BW, StaticCastTo<uint64_t>));
+      assert(Denominator > 0 &&
+             "At least one of the branch probabilities should be non-zero");
+      BranchProbability TrueProb =
+          BranchProbability::getBranchProbability(BW[0], Denominator);
+      BranchProbability FalseProb =
+          BranchProbability::getBranchProbability(BW[1], Denominator);
+      SmallVector<BranchProbability, 2> BP = {TrueProb, FalseProb};
+
+      if (BPI)
+        BPI->setEdgeProbability(BB, BP);
+
+      if (BFI) {
+        auto BBOrigFreq = BFI->getBlockFreq(BB);
+        auto NewBBFreq = BBOrigFreq * TrueProb;
+        BFI->setBlockFreq(NewBB, NewBBFreq);
+        BFI->setBlockFreq(SplitBB, BBOrigFreq);
+      }
+    }
     SI->eraseFromParent();
     // NewBB and SplitBB are newly created blocks which require insertion.
     std::vector<DominatorTree::UpdateType> Updates;

@@ -71,7 +71,7 @@ define void @func_21() {
 entry:
   br label %loop
 
-loop:                                    ; preds = %loop, %entry
+loop:
   %rec = phi i32 [ 0, %entry], [ %lv, %loop ]
   %indvars.iv = phi i64 [ 0, %entry], [ %indvars.iv.next, %loop ]
   %A.ptr= getelementptr inbounds [5 x i32], ptr @A, i64 0, i64 %indvars.iv
@@ -82,6 +82,6 @@ loop:                                    ; preds = %loop, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 5
   br i1 %exitcond, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   ret void
 }

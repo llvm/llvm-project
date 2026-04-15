@@ -4,7 +4,7 @@
 define amdgpu_kernel void @kernel(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ASCAST:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <14 x i32> poison
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[ASCAST]], align 4
@@ -13,8 +13,7 @@ define amdgpu_kernel void @kernel(ptr %p) {
 ; CHECK:       [[BB_2]]:
 ; CHECK-NEXT:    br label %[[BB_1]]
 ; CHECK:       [[BB_1]]:
-; CHECK-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <14 x i32> [ [[ALLOCA]], %[[BB_2]] ], [ [[ALLOCA]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <14 x i32> [[PROMOTEALLOCA]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <14 x i32> [[ALLOCA]], i32 0, i32 0
 ; CHECK-NEXT:    ret void
 ;
 entry:

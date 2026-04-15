@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -53,14 +54,30 @@ template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
 const Scope &GetScopingUnit(const Scope &scope);
 const Scope &GetProgramUnit(const Scope &scope);
 
+template <typename T> struct WithSource {
+  template < //
+      typename U = std::remove_reference_t<T>,
+      typename = std::enable_if_t<std::is_default_constructible_v<U>>>
+  WithSource() : value(), source() {}
+  WithSource(const WithSource<T> &) = default;
+  WithSource(WithSource<T> &&) = default;
+  WithSource(const T &t, parser::CharBlock s) : value(t), source(s) {}
+  WithSource(T &&t, parser::CharBlock s) : value(std::move(t)), source(s) {}
+  WithSource &operator=(const WithSource<T> &) = default;
+  WithSource &operator=(WithSource<T> &&) = default;
+
+  using value_type = T;
+  T value;
+  parser::CharBlock source;
+};
+
 // There is no consistent way to get the source of an ActionStmt, but there
 // is "source" in Statement<T>. This structure keeps the ActionStmt with the
 // extracted source for further use.
-struct SourcedActionStmt {
-  const parser::ActionStmt *stmt{nullptr};
-  parser::CharBlock source;
-
-  operator bool() const { return stmt != nullptr; }
+struct SourcedActionStmt : public WithSource<const parser::ActionStmt *> {
+  using WithSource<value_type>::WithSource;
+  value_type stmt() const { return value; }
+  operator bool() const { return stmt() != nullptr; }
 };
 
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x);
@@ -101,17 +118,53 @@ std::optional<evaluate::DynamicType> GetDynamicType(
     const parser::Expr &parserExpr);
 
 std::optional<bool> GetLogicalValue(const SomeExpr &expr);
+std::optional<int64_t> GetIntValueFromExpr(
+    const parser::Expr &parserExpr, SemanticsContext *semaCtx = nullptr);
+
+template <typename T>
+std::optional<int64_t> GetIntValueFromExpr(
+    const T &wrappedExpr, SemanticsContext *semaCtx = nullptr) {
+  if (auto *parserExpr{parser::Unwrap<parser::Expr>(wrappedExpr)}) {
+    return GetIntValueFromExpr(*parserExpr, semaCtx);
+  }
+  return std::nullopt;
+}
 
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 
-std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr);
+std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
+
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
+
+bool IsLoopTransforming(llvm::omp::Directive dir);
+bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
+
+inline bool IsDoConcurrentLegal(unsigned version) {
+  // DO CONCURRENT is allowed (as an alternative to a Canonical Loop Nest)
+  // in OpenMP 6.0+.
+  return version >= 60;
+}
+
+struct LoopControl {
+  LoopControl(LoopControl &&x) = default;
+  LoopControl(const LoopControl &x) = default;
+  LoopControl(const parser::LoopControl::Bounds &x);
+  LoopControl(const parser::ConcurrentControl &x);
+
+  const Symbol *iv{nullptr};
+  WithSource<MaybeExpr> lbound, ubound, step;
+
+private:
+  static WithSource<MaybeExpr> fromParserExpr(const parser::Expr &x);
+};
+
+std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x);
 
 /// A representation of a "because" message.
 struct Reason {
@@ -152,38 +205,51 @@ template <typename T> struct WithReason {
 
 WithReason<int64_t> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version);
+    unsigned version, SemanticsContext *semaCtx = nullptr);
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version);
+    unsigned version, SemanticsContext *semaCtx = nullptr);
+WithReason<int64_t> GetHeightWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
 
-bool IsLoopTransforming(llvm::omp::Directive dir);
-bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
-
-// Return the depth of the affected nests:
-//   {affected-depth, reason, must-be-perfect-nest}.
+/// Return the depth of the affected nest(s):
+///   {affected-depth, must-be-perfect-nest}.
 std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version);
-// Return the range of the affected nests in the sequence:
-//   {first, count, reason}.
-// If the range is "the whole sequence", the return value will be {1, -1, ...}.
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
+/// Return the depth of the generated nest(s):
+///   {generated-depth, is-perfect-nest}
+std::pair<WithReason<int64_t>, bool> GetGeneratedNestDepthWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
+/// Return the range of the affected nests in the sequence:
+///   {first, count}.
+/// If the range is "the whole sequence", the return value will be {1, -1}.
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version);
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
+/// Return the depth in which all loops must be rectangular.
+WithReason<int64_t> GetRectangularNestDepthWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
 
-// Count the required loop count from range. If count == -1, return -1,
-// indicating all loops in the sequence.
-std::optional<int64_t> GetRequiredCount(
+/// Calculate the minimum length of a sequence that contains the specified
+/// range. If the range's count is -1, return -1 indicating all loops in the
+/// sequence.
+std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<int64_t> first, std::optional<int64_t> count);
-std::optional<int64_t> GetRequiredCount(
+std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<std::pair<int64_t, int64_t>> range);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,
-      bool allowAllLoops = false);
+      bool allowAllLoops = false, SemanticsContext *semaCtx = nullptr);
 
   template <typename R, typename = std::enable_if_t<is_range_v<R>>>
-  LoopSequence(const R &range, unsigned version, bool allowAllLoops = false)
-      : version_(version), allowAllLoops_(allowAllLoops) {
+  LoopSequence(const R &range, unsigned version, bool allowAllLoops = false,
+      SemanticsContext *semaCtx = nullptr)
+      : version_(version), allowAllLoops_(allowAllLoops), semaCtx_(semaCtx) {
     entry_ = std::make_unique<Construct>(range, nullptr);
     createChildrenFromRange(entry_->location);
     precalculate();
@@ -192,22 +258,37 @@ struct LoopSequence {
   struct Depth {
     // If this sequence is a nest, the depth of the Canonical Loop Nest rooted
     // at this sequence. Otherwise unspecified.
-    std::optional<int64_t> semantic;
+    WithReason<int64_t> semantic;
     // If this sequence is a nest, the depth of the perfect Canonical Loop Nest
     // rooted at this sequence. Otherwise unspecified.
-    std::optional<int64_t> perfect;
+    WithReason<int64_t> perfect;
   };
 
-  bool isNest() const { return length_ && *length_ == 1; }
-  std::optional<int64_t> length() const { return length_; }
+  bool isNest() const { return length_.value == 1; }
+  const WithReason<int64_t> &length() const { return length_; }
+  const WithReason<int64_t> &height() const { return height_; }
   const Depth &depth() const { return depth_; }
   const std::vector<LoopSequence> &children() const { return children_; }
+  const parser::ExecutionPartConstruct *owner() const { return entry_->owner; }
+
+  WithReason<bool> isWellFormedSequence() const;
+  WithReason<bool> isWellFormedNest() const;
+
+  /// Return the first DO CONCURRENT loop contained in this sequence.
+  /// If there are no such loops, return nullptr.
+  const LoopSequence *getNestedDoConcurrent() const;
+
+  std::vector<LoopControl> getLoopControls() const;
+  // Check if this loop's bounds are invariant in each of the `outer`
+  // constructs.
+  WithReason<bool> isRectangular(
+      const std::vector<const LoopSequence *> &outer) const;
 
 private:
   using Construct = ExecutionPartIterator::Construct;
 
-  LoopSequence(
-      std::unique_ptr<Construct> entry, unsigned version, bool allowAllLoops);
+  LoopSequence(std::unique_ptr<Construct> entry, unsigned version,
+      bool allowAllLoops, SemanticsContext *semaCtx = nullptr);
 
   template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   void createChildrenFromRange(const R &range) {
@@ -224,10 +305,11 @@ private:
   /// Precalculate length and depth.
   void precalculate();
 
-  std::optional<int64_t> calculateLength() const;
-  std::optional<int64_t> getNestedLength() const;
+  WithReason<int64_t> calculateLength() const;
+  WithReason<int64_t> getNestedLength() const;
   Depth calculateDepths() const;
   Depth getNestedDepths() const;
+  WithReason<int64_t> calculateHeight() const;
 
   /// The construct that is not a loop or a loop-transforming construct,
   /// that is also not a valid intervening code. Unset if no such code is
@@ -242,15 +324,23 @@ private:
   /// the number of children because a child may result in a sequence, for
   /// example a fuse with a reduced loop range. The length of that sequence
   /// adds to the length of the owning LoopSequence.
-  std::optional<int64_t> length_;
+  WithReason<int64_t> length_;
   /// Precalculated depths. Only meaningful if the sequence is a nest.
   Depth depth_;
+  /// Precalculated height of the sequence. The height is the difference
+  /// in the nesting level between "this" and any of the children (should
+  /// be the same for each child). Intuitively it is the number of nested
+  /// loops that are added by this construct. If this->depth_ included
+  /// child->depth_ for some child, then
+  ///   height_ = this->depth_ - child->depth_
+  WithReason<int64_t> height_;
 
   // The core structure of the class:
   unsigned version_; // Needed for GetXyzWithReason
   bool allowAllLoops_;
   std::unique_ptr<Construct> entry_;
   std::vector<LoopSequence> children_;
+  SemanticsContext *semaCtx_{nullptr};
 };
 } // namespace omp
 } // namespace Fortran::semantics

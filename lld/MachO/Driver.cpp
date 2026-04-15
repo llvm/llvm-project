@@ -2062,6 +2062,50 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (config->irpgoProfilePath.empty() && config->bpStartupFunctionSort)
     error("--bp-startup-sort=function must be used with "
           "--irpgo-profile");
+  auto addCompressionSortSpec = [&](StringRef value) {
+    SmallVector<StringRef, 3> parts;
+    value.split(parts, '=');
+
+    StringRef globString = parts[0];
+    unsigned layoutPriority = 0;
+    std::optional<unsigned> matchPriority;
+
+    if (parts.size() > 1 && !parts[1].empty()) {
+      if (!to_integer(parts[1], layoutPriority)) {
+        error("--bp-compression-sort-section: expected integer "
+              "for layout_priority, got '" +
+              parts[1] + "'");
+        return;
+      }
+    }
+    if (parts.size() > 2 && !parts[2].empty()) {
+      unsigned mp;
+      if (!to_integer(parts[2], mp)) {
+        error("--bp-compression-sort-section: expected integer "
+              "for match_priority, got '" +
+              parts[2] + "'");
+        return;
+      }
+      matchPriority = mp;
+    }
+    if (parts.size() > 3) {
+      error("--bp-compression-sort-section: too many '=' in '" + value + "'");
+      return;
+    }
+
+    auto spec = BPCompressionSortSpec::create(globString, layoutPriority,
+                                              matchPriority);
+    if (!spec) {
+      error("--bp-compression-sort-section: " + toString(spec.takeError()));
+      return;
+    }
+    config->bpCompressionSortSpecs.emplace_back(std::move(*spec));
+  };
+
+  for (const Arg *arg : args.filtered(OPT_bp_compression_sort_section))
+    addCompressionSortSpec(arg->getValue());
+  if (!config->bpCompressionSortSpecs.empty())
+    IncompatWithCGSort("--bp-compression-sort-section");
   if (const Arg *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef compressionSortStr = arg->getValue();
     if (compressionSortStr == "function") {

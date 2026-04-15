@@ -11,13 +11,13 @@ define void @test1() {
 entry:
   br label %loop
 
-loop:                                              ; preds = %loop, %entry
+loop:
   %iv = phi i32 [ 0, %entry ], [ %ivnext, %loop ]
   %fcmp = fcmp uno float 0.000000e+00, 0.000000e+00
   %ivnext = add nsw i32 %iv, 1
   %cnd = icmp sgt i32 %iv, 142
   br i1 %cnd, label %exit, label %loop
 
-exit:                                              ; preds = %loop
+exit:
   ret void
 }

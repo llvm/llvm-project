@@ -177,7 +177,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
       Text = Text.ltrim();
       if (!Text.empty()) {
         if (!Comment.empty())
-          Comment += " ";
+          Comment += ' ';
         Comment += Text;
       }
     };

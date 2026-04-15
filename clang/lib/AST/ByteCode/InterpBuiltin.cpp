@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "../ExprConstShared.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "EvalEmitter.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpHelpers.h"
@@ -283,6 +284,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
     return false;
   if (!A.isBlockPointer() || !B.isBlockPointer())
     return false;
+  if (!A.getFieldDesc()->isPrimitiveArray() ||
+      !B.getFieldDesc()->isPrimitiveArray())
+    return false;
 
   bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
                 ID == Builtin::BI__builtin_wcscmp ||
@@ -367,14 +371,15 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     return false;
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
-  unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
+  PrimType ElemT = StrPtr.getFieldDesc()->getPrimType();
+  unsigned ElemSize = StrPtr.getFieldDesc()->getElemDataSize();
   if (ElemSize != 1 && ElemSize != 2 && ElemSize != 4)
     return Invalid(S, OpPC);
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
     const ASTContext &AC = S.getASTContext();
     unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
-    if (ElemSize != WCharSize)
+    if (StrPtr.getFieldDesc()->getElemDataSize() != WCharSize)
       return false;
   }
 
@@ -386,19 +391,8 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
       return false;
 
     uint32_t Val;
-    switch (ElemSize) {
-    case 1:
-      Val = ElemPtr.deref<uint8_t>();
-      break;
-    case 2:
-      Val = ElemPtr.deref<uint16_t>();
-      break;
-    case 4:
-      Val = ElemPtr.deref<uint32_t>();
-      break;
-    default:
-      llvm_unreachable("Unsupported char size");
-    }
+    FIXED_SIZE_INT_TYPE_SWITCH(
+        ElemT, { Val = static_cast<uint32_t>(ElemPtr.deref<T>()); });
     if (Val == 0)
       break;
   }
@@ -1401,11 +1395,11 @@ interp__builtin_ptrauth_string_discriminator(InterpState &S, CodePtr OpPC,
   const auto &Ptr = S.Stk.pop<Pointer>();
   assert(Ptr.getFieldDesc()->isPrimitiveArray());
 
-  // This should be created for a StringLiteral, so should alway shold at least
+  // This should be created for a StringLiteral, so always holds at least
   // one array element.
   assert(Ptr.getFieldDesc()->getNumElems() >= 1);
-  StringRef R(&Ptr.deref<char>(), Ptr.getFieldDesc()->getNumElems() - 1);
-  uint64_t Result = getPointerAuthStableSipHash(R);
+  uint64_t Result = getPointerAuthStableSipHash(
+      cast<StringLiteral>(Ptr.getFieldDesc()->asExpr())->getString());
   pushInteger(S, Result, Call->getType());
   return true;
 }
@@ -1946,8 +1940,8 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     Pointer SrcP = SrcPtr.stripBaseCasts();
     Pointer DestP = DestPtr.stripBaseCasts();
 
-    unsigned SrcIndex = SrcP.expand().getIndex() * SrcP.elemSize();
-    unsigned DstIndex = DestP.expand().getIndex() * DestP.elemSize();
+    unsigned SrcIndex = SrcP.expand().getIndex() * SrcElemSize;
+    unsigned DstIndex = DestP.expand().getIndex() * DestElemSize;
 
     if ((SrcIndex <= DstIndex && (SrcIndex + Size) > DstIndex) ||
         (DstIndex <= SrcIndex && (DstIndex + Size) > SrcIndex)) {
@@ -2015,6 +2009,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   BitcastBuffer BufferA(
       Bits(ASTCtx.getTypeSize(ElemTypeA) * PtrA.getNumElems()));
   readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
+
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
   if (ASTCtx.getTargetInfo().isBigEndian())
@@ -2041,21 +2036,22 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   for (size_t I = 0; I != CmpSize; I += ElemSize) {
     if (IsWide) {
-      INT_TYPE_SWITCH(*S.getContext().classify(ASTCtx.getWCharType()), {
-        T A = *reinterpret_cast<T *>(BufferA.atByte(I));
-        T B = *reinterpret_cast<T *>(BufferB.atByte(I));
-        if (A < B) {
-          pushInteger(S, -1, Call->getType());
-          return true;
-        }
-        if (A > B) {
-          pushInteger(S, 1, Call->getType());
-          return true;
-        }
-      });
+      FIXED_SIZE_INT_TYPE_SWITCH(
+          *S.getContext().classify(ASTCtx.getWCharType()), {
+            T A = T::bitcastFromMemory(BufferA.atByte(I), T::bitWidth());
+            T B = T::bitcastFromMemory(BufferB.atByte(I), T::bitWidth());
+            if (A < B) {
+              pushInteger(S, -1, Call->getType());
+              return true;
+            }
+            if (A > B) {
+              pushInteger(S, 1, Call->getType());
+              return true;
+            }
+          });
     } else {
-      std::byte A = BufferA.deref<std::byte>(Bytes(I));
-      std::byte B = BufferB.deref<std::byte>(Bytes(I));
+      auto A = BufferA.deref<std::byte>(Bytes(I));
+      auto B = BufferB.deref<std::byte>(Bytes(I));
 
       if (A < B) {
         pushInteger(S, -1, Call->getType());

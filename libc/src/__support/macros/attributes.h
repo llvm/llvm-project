@@ -29,13 +29,18 @@
 #define LIBC_INLINE_ASM __asm__ __volatile__
 #define LIBC_UNUSED __attribute__((unused))
 
+#ifndef LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+#define LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED                                 \
+  (__has_builtin(__builtin_is_constant_evaluated))
+#endif // LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+
 // TODO: Remove the macro once Clang/LLVM bump their minimum compilers' version.
 // The reason for indirection is GCC is known to fail with constexpr qualified
 // functions that doesn't produce constant expression. This avoids it by using
 // LIBC_ENABLE_CONSTEXPR as a flag to control whether the function should be
 // constexpr qualified or not.
 #if LIBC_ENABLE_CONSTEXPR &&                                                   \
-    (__has_builtin(__builtin_is_constant_evaluated) ||                         \
+    (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED ||                                 \
      (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||      \
      (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 1100))
 #define LIBC_HAS_CONSTANT_EVALUATION

@@ -1034,69 +1034,67 @@ entry:
 define i128 @udiv_i128_100(i128 %x) nounwind {
 ; X86-64-LABEL: udiv_i128_100:
 ; X86-64:       # %bb.0: # %entry
+; X86-64-NEXT:    movq %rdi, %rax
+; X86-64-NEXT:    shrdq $62, %rsi, %rax
+; X86-64-NEXT:    movabsq $1152921504606846975, %rdx # imm = 0xFFFFFFFFFFFFFFF
+; X86-64-NEXT:    andq %rdx, %rax
 ; X86-64-NEXT:    shrdq $2, %rsi, %rdi
-; X86-64-NEXT:    movabsq $1152921504606846975, %rax # imm = 0xFFFFFFFFFFFFFFF
-; X86-64-NEXT:    movq %rdi, %rdx
-; X86-64-NEXT:    andq %rax, %rdx
+; X86-64-NEXT:    andq %rdi, %rdx
+; X86-64-NEXT:    addq %rax, %rdx
 ; X86-64-NEXT:    movq %rsi, %rcx
-; X86-64-NEXT:    shrq $2, %rcx
-; X86-64-NEXT:    movq %rdi, %r8
-; X86-64-NEXT:    shrdq $60, %rcx, %r8
-; X86-64-NEXT:    andq %rax, %r8
-; X86-64-NEXT:    shrq $58, %rsi
-; X86-64-NEXT:    addq %rdx, %rsi
-; X86-64-NEXT:    addq %r8, %rsi
+; X86-64-NEXT:    shrq $58, %rcx
+; X86-64-NEXT:    addq %rdx, %rcx
 ; X86-64-NEXT:    movabsq $2951479051793528259, %rdx # imm = 0x28F5C28F5C28F5C3
-; X86-64-NEXT:    movq %rsi, %rax
+; X86-64-NEXT:    movq %rcx, %rax
 ; X86-64-NEXT:    mulq %rdx
 ; X86-64-NEXT:    shrq $2, %rdx
 ; X86-64-NEXT:    leaq (%rdx,%rdx,4), %rax
 ; X86-64-NEXT:    leaq (%rax,%rax,4), %rax
-; X86-64-NEXT:    subq %rax, %rsi
-; X86-64-NEXT:    subq %rsi, %rdi
-; X86-64-NEXT:    sbbq $0, %rcx
-; X86-64-NEXT:    movabsq $2951479051793528258, %rsi # imm = 0x28F5C28F5C28F5C2
-; X86-64-NEXT:    imulq %rdi, %rsi
+; X86-64-NEXT:    subq %rax, %rcx
+; X86-64-NEXT:    shrq $2, %rsi
+; X86-64-NEXT:    subq %rcx, %rdi
+; X86-64-NEXT:    sbbq $0, %rsi
+; X86-64-NEXT:    movabsq $2951479051793528258, %rcx # imm = 0x28F5C28F5C28F5C2
+; X86-64-NEXT:    imulq %rdi, %rcx
 ; X86-64-NEXT:    movabsq $-8116567392432202711, %r8 # imm = 0x8F5C28F5C28F5C29
 ; X86-64-NEXT:    movq %rdi, %rax
 ; X86-64-NEXT:    mulq %r8
-; X86-64-NEXT:    addq %rsi, %rdx
-; X86-64-NEXT:    imulq %r8, %rcx
 ; X86-64-NEXT:    addq %rcx, %rdx
+; X86-64-NEXT:    imulq %rsi, %r8
+; X86-64-NEXT:    addq %r8, %rdx
 ; X86-64-NEXT:    retq
 ;
 ; WIN64-LABEL: udiv_i128_100:
 ; WIN64:       # %bb.0: # %entry
 ; WIN64-NEXT:    movq %rdx, %r8
-; WIN64-NEXT:    shrdq $2, %rdx, %rcx
-; WIN64-NEXT:    movabsq $1152921504606846975, %rax # imm = 0xFFFFFFFFFFFFFFF
-; WIN64-NEXT:    movq %rcx, %rdx
-; WIN64-NEXT:    andq %rax, %rdx
+; WIN64-NEXT:    movq %rcx, %rax
+; WIN64-NEXT:    shrdq $62, %rdx, %rax
+; WIN64-NEXT:    movabsq $1152921504606846975, %rdx # imm = 0xFFFFFFFFFFFFFFF
+; WIN64-NEXT:    andq %rdx, %rax
+; WIN64-NEXT:    shrdq $2, %r8, %rcx
+; WIN64-NEXT:    andq %rcx, %rdx
+; WIN64-NEXT:    addq %rax, %rdx
 ; WIN64-NEXT:    movq %r8, %r9
-; WIN64-NEXT:    shrq $2, %r9
-; WIN64-NEXT:    movq %rcx, %r10
-; WIN64-NEXT:    shrdq $60, %r9, %r10
-; WIN64-NEXT:    andq %rax, %r10
-; WIN64-NEXT:    shrq $58, %r8
-; WIN64-NEXT:    addq %rdx, %r8
-; WIN64-NEXT:    addq %r10, %r8
+; WIN64-NEXT:    shrq $58, %r9
+; WIN64-NEXT:    addq %rdx, %r9
 ; WIN64-NEXT:    movabsq $2951479051793528259, %rdx # imm = 0x28F5C28F5C28F5C3
-; WIN64-NEXT:    movq %r8, %rax
+; WIN64-NEXT:    movq %r9, %rax
 ; WIN64-NEXT:    mulq %rdx
 ; WIN64-NEXT:    shrq $2, %rdx
 ; WIN64-NEXT:    leaq (%rdx,%rdx,4), %rax
 ; WIN64-NEXT:    leaq (%rax,%rax,4), %rax
-; WIN64-NEXT:    subq %rax, %r8
-; WIN64-NEXT:    subq %r8, %rcx
-; WIN64-NEXT:    sbbq $0, %r9
-; WIN64-NEXT:    movabsq $2951479051793528258, %r8 # imm = 0x28F5C28F5C28F5C2
-; WIN64-NEXT:    imulq %rcx, %r8
+; WIN64-NEXT:    subq %rax, %r9
+; WIN64-NEXT:    shrq $2, %r8
+; WIN64-NEXT:    subq %r9, %rcx
+; WIN64-NEXT:    sbbq $0, %r8
+; WIN64-NEXT:    movabsq $2951479051793528258, %r9 # imm = 0x28F5C28F5C28F5C2
+; WIN64-NEXT:    imulq %rcx, %r9
 ; WIN64-NEXT:    movabsq $-8116567392432202711, %r10 # imm = 0x8F5C28F5C28F5C29
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %r10
-; WIN64-NEXT:    addq %r8, %rdx
-; WIN64-NEXT:    imulq %r10, %r9
 ; WIN64-NEXT:    addq %r9, %rdx
+; WIN64-NEXT:    imulq %r10, %r8
+; WIN64-NEXT:    addq %r8, %rdx
 ; WIN64-NEXT:    retq
 entry:
   %rem = udiv i128 %x, 100

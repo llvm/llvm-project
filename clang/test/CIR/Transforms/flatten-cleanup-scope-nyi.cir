@@ -5,92 +5,6 @@
 !u8i = !cir.int<u, 8>
 !void = !cir.void
 
-cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
-
-// Test that we issue a diagnostic for throwing calls in an EH cleanup region.
-cir.func @test_eh_cleanup_in_try() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
-  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  cir.try {
-    // expected-error @below {{throwing calls in cleanup region are not yet implemented}}
-    cir.cleanup.scope {
-      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-      cir.yield
-    } cleanup eh {
-      cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-      cir.yield
-    }
-    cir.yield
-  }
-  cir.return
-}
-
-// Test that we issue a diagnostic for throwing calls in a Normal+EH cleanup region.
-cir.func @test_all_cleanup_in_try() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
-  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  cir.try {
-    // expected-error @below {{throwing calls in cleanup region are not yet implemented}}
-    cir.cleanup.scope {
-      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-      cir.yield
-    } cleanup all {
-      cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-      cir.yield
-    }
-    cir.yield
-  }
-  cir.return
-}
-
-// Test that we issue a diagnostic for throwing calls in the cleanup region
-// of a nested EH cleanup scope (the dtor is not nothrow).
-cir.func @test_nested_eh_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
-  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  cir.cleanup.scope {
-    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{throwing calls in cleanup region are not yet implemented}}
-    cir.cleanup.scope {
-      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-      cir.yield
-    } cleanup eh {
-      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
-      cir.yield
-    }
-    cir.yield
-  } cleanup normal {
-    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.yield
-  }
-  cir.return
-}
-
-// Test that we issue a diagnostic for throwing calls in the cleanup region
-// of a nested Normal+EH cleanup scope (the dtor is not nothrow).
-cir.func @test_nested_all_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
-  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  cir.cleanup.scope {
-    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{throwing calls in cleanup region are not yet implemented}}
-    cir.cleanup.scope {
-      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-      cir.yield
-    } cleanup all {
-      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
-      cir.yield
-    }
-    cir.yield
-  } cleanup normal {
-    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.yield
-  }
-  cir.return
-}
-
 // Test that we issue a diagnostic for a single goto out of a cleanup scope.
 // Strictly speaking, we could handle this case, but it's left unimplemented
 // because when we handle multiple exits we'll need to do something to determine
@@ -141,40 +55,6 @@ cir.func @test_goto_in_nested_cleanup() {
   cir.label "target"
   cir.br ^bb_end
 ^bb_end:
-  cir.return
-}
-
-// Test that we issue a diagnostic for throwing calls in the cleanup region
-// of an EH cleanup scope.
-cir.func @test_throwing_call_in_eh_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
-  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  // expected-error @below {{throwing calls in cleanup region are not yet implemented}}
-  cir.cleanup.scope {
-    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.yield
-  } cleanup eh {
-    // Throwing destructor
-    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.yield
-  }
-  cir.return
-}
-
-// Test that we issue a diagnostic for throwing calls in the cleanup region
-// of an "all" cleanup scope.
-cir.func @test_throwing_call_in_all_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
-  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  // expected-error @below {{throwing calls in cleanup region are not yet implemented}}
-  cir.cleanup.scope {
-    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.yield
-  } cleanup all {
-    // Throwing destructor
-    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.yield
-  }
   cir.return
 }
 

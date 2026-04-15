@@ -110,29 +110,27 @@ xegpu::getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
     return failure();
   assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
          "Expecting a valid layout.");
-  SmallVector<int64_t> effectiveLaneLayout =
-      layout.getEffectiveLaneLayoutAsInt();
-  assert(static_cast<size_t>(originalType.getRank()) >=
-             effectiveLaneLayout.size() &&
-         "Rank of the original vector type should be greater or equal to the "
-         "size of the lane layout to distribute the vector type.");
-  // TODO: replace the implementation with
-  //   auto distributedShape = layout.computeDistributedShape(
-  //       SmallVector<int64_t>(originalType.getShape()));
-  SmallVector<int64_t> distributedShape(originalType.getShape());
-  // Only distribute the last `laneLayout.size()` dimensions. The remaining
-  // dimensions are not distributed.
-  unsigned distributionStart =
-      originalType.getRank() - effectiveLaneLayout.size();
-  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
-    if (i < distributionStart)
-      continue;
-    // Check if the dimension can be distributed evenly.
-    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
-      return failure();
-    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
-  }
-  return VectorType::get(distributedShape, originalType.getElementType());
+
+  int64_t vectorRank = originalType.getRank();
+  int64_t layoutRank = layout.getRank();
+  assert(vectorRank >= layoutRank && "Vector rank must be >= layout rank.");
+
+  // When the vector has more dimensions than the layout, only the trailing
+  // dimensions are distributed. Leading dimensions are preserved as-is.
+  int64_t offset = vectorRank - layoutRank;
+  ArrayRef<int64_t> fullShape = originalType.getShape();
+  SmallVector<int64_t> trailingShape(fullShape.begin() + offset,
+                                     fullShape.end());
+  auto distributedShapeOrFailure =
+      layout.computeDistributedShape(trailingShape);
+  if (failed(distributedShapeOrFailure))
+    return failure();
+
+  SmallVector<int64_t> resultShape(fullShape.begin(),
+                                   fullShape.begin() + offset);
+  resultShape.append(distributedShapeOrFailure->begin(),
+                     distributedShapeOrFailure->end());
+  return VectorType::get(resultShape, originalType.getElementType());
 }
 
 std::string xegpu::getTemporaryLayoutName(const OpOperand &operand) {
@@ -692,6 +690,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
+  // TODO: Remove these get/setTemporaryLayout calls after we deprecate the old
+  // XeGPUSubgroupDistribute pass.
   auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
   auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
   // Reduction result should have the same layout as the accumulator.
@@ -750,11 +750,18 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
     TypedValue<VectorType> src, TypedValue<VectorType> acc,
     vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
     Location loc, PatternRewriter &rewriter) {
-  // Expecting a 2D source vector.
-  assert(src.getType().getRank() == 2 && "expected a 2D source vector");
   VectorType sourceType = src.getType();
-  int64_t sourceH = sourceType.getShape()[0];
-  int64_t sourceW = sourceType.getShape()[1];
+  int64_t sourceRank = sourceType.getRank();
+  // Expecting at least a 2D source vector. Leading dimensions (all except the
+  // last two) must be unit.
+  assert(sourceRank >= 2 && "expected at least a 2D source vector");
+  for (int64_t i = 0; i < sourceRank - 2; ++i)
+    assert(sourceType.getShape()[i] == 1 &&
+           "expected leading dimensions to be unit");
+  int64_t rowIdx = sourceRank - 2;
+  int64_t columnIdx = sourceRank - 1;
+  int64_t sourceH = sourceType.getShape()[rowIdx];
+  int64_t sourceW = sourceType.getShape()[columnIdx];
 
   // Create a constant vector to hold the result of the reduction.
   TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
@@ -763,115 +770,105 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
       DenseElementsAttr::get(acc.getType(), zeroAttr));
 
   // nSlices is the number of reduction operations needed to reduce the entire
-  // source vector. For example, if reductionDim is 0, we are reducing across
-  // rows, and each slice is a column of the source vector. So the number of
-  // slices is the number of columns, which is sourceW.
-  int nSlices = (reductionDim == 0) ? sourceW : sourceH;
+  // source vector. For example, if reductionDim is the row dim, we are
+  // reducing across rows, and each slice is a column. So the number of slices
+  // is the number of columns, which is sourceW.
+  int nSlices = (reductionDim == rowIdx) ? sourceW : sourceH;
 
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
+  int64_t accRank = acc.getType().getRank();
   for (int i = 0; i < nSlices; ++i) {
-    SmallVector<int64_t, 2> sliceOffsets, sliceSizes;
-    if (reductionDim == 1) {
-      sliceOffsets = {i, 0};
-      sliceSizes = {1, sourceW};
+    // Build nD offsets, sizes, and strides. Leading unit dims get
+    // offset=0, size=1. The last two dims are set based on reductionDim.
+    SmallVector<int64_t> sliceOffsets(sourceRank, 0);
+    SmallVector<int64_t> sliceSizes(sourceRank, 1);
+    SmallVector<int64_t> strides(sourceRank, 1);
+    if (reductionDim == columnIdx) {
+      sliceOffsets[rowIdx] = i;
+      sliceSizes[columnIdx] = sourceW;
     } else {
-      sliceOffsets = {0, i};
-      sliceSizes = {sourceH, 1};
+      sliceOffsets[columnIdx] = i;
+      sliceSizes[rowIdx] = sourceH;
     }
 
     vector::ExtractStridedSliceOp extractOp =
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
-                                              sliceSizes, {1, 1});
+                                              sliceSizes, strides);
     int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
     vector::ShapeCastOp slice = vector::ShapeCastOp::create(
         rewriter, loc,
         VectorType::get({nSliceElements}, sourceType.getElementType()),
         extractOp.getResult());
 
-    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
+    SmallVector<int64_t> accIdx(accRank, 0);
+    accIdx[accRank - 1] = i;
+    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
     Value fullReduce =
         xegpu::subgroupReduction(loc, rewriter, slice, kind, reductionSize);
     fullReduce =
         vector::makeArithReduction(rewriter, loc, kind, fullReduce, accExtract);
-    reductionResult =
-        vector::InsertOp::create(rewriter, loc, fullReduce, reductionResult, i);
+    reductionResult = vector::InsertOp::create(rewriter, loc, fullReduce,
+                                               reductionResult, accIdx);
   }
   return reductionResult;
 }
 
 Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
-                                         VectorType type,
+                                         Type type,
                                          vector::CombiningKind kind) {
-  Type elemTy = type.getElementType();
+  auto vecTy = dyn_cast<VectorType>(type);
+  Type elemTy = vecTy ? vecTy.getElementType() : type;
+
+  // Helper to create either a splat vector or scalar constant from an attr.
+  auto makeConst = [&](Attribute scalarAttr) -> Value {
+    if (vecTy)
+      return arith::ConstantOp::create(
+          builder, loc, vecTy, DenseElementsAttr::get(vecTy, scalarAttr));
+    return arith::ConstantOp::create(builder, loc, cast<TypedAttr>(scalarAttr));
+  };
 
   switch (kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::XOR:
   case vector::CombiningKind::OR:
-    return arith::ConstantOp::create(
-        builder, loc, type,
-        DenseElementsAttr::get(type, builder.getZeroAttr(elemTy)));
+  case vector::CombiningKind::MAXUI:
+    return makeConst(builder.getZeroAttr(elemTy));
 
   case vector::CombiningKind::MUL:
   case vector::CombiningKind::AND:
-    return arith::ConstantOp::create(
-        builder, loc, type,
-        DenseElementsAttr::get(type, builder.getOneAttr(elemTy)));
+    return makeConst(builder.getOneAttr(elemTy));
 
   case vector::CombiningKind::MINSI:
-    // Use max signed int value for signed integer min
-    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
-      auto maxVal = APInt::getSignedMaxValue(intTy.getWidth());
-      return arith::ConstantOp::create(
-          builder, loc, type,
-          DenseElementsAttr::get(type, builder.getIntegerAttr(elemTy, maxVal)));
-    }
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(builder.getIntegerAttr(
+          elemTy, APInt::getSignedMaxValue(intTy.getWidth())));
     return nullptr;
 
   case vector::CombiningKind::MINUI:
-    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
-      auto maxVal = APInt::getMaxValue(intTy.getWidth());
-      return arith::ConstantOp::create(
-          builder, loc, type,
-          DenseElementsAttr::get(type, builder.getIntegerAttr(elemTy, maxVal)));
-    }
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(
+          builder.getIntegerAttr(elemTy, APInt::getMaxValue(intTy.getWidth())));
     return nullptr;
 
   case vector::CombiningKind::MAXSI:
-    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
-      auto minVal = APInt::getSignedMinValue(intTy.getWidth());
-      return arith::ConstantOp::create(
-          builder, loc, type,
-          DenseElementsAttr::get(type, builder.getIntegerAttr(elemTy, minVal)));
-    }
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(builder.getIntegerAttr(
+          elemTy, APInt::getSignedMinValue(intTy.getWidth())));
     return nullptr;
-
-  case vector::CombiningKind::MAXUI:
-    return arith::ConstantOp::create(
-        builder, loc, type,
-        DenseElementsAttr::get(type, builder.getZeroAttr(elemTy)));
 
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
-    // Use +infinity for float min operations
-    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
-      auto posInf = APFloat::getInf(floatTy.getFloatSemantics());
-      return arith::ConstantOp::create(
-          builder, loc, type,
-          DenseElementsAttr::get(type, builder.getFloatAttr(elemTy, posInf)));
-    }
+    if (auto floatTy = dyn_cast<FloatType>(elemTy))
+      return makeConst(builder.getFloatAttr(
+          elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
     return nullptr;
 
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
-    // Use -infinity for float max operations
-    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
-      auto negInf = APFloat::getInf(floatTy.getFloatSemantics(), true);
-      return arith::ConstantOp::create(
-          builder, loc, type,
-          DenseElementsAttr::get(type, builder.getFloatAttr(elemTy, negInf)));
-    }
+    if (auto floatTy = dyn_cast<FloatType>(elemTy))
+      return makeConst(builder.getFloatAttr(
+          elemTy, APFloat::getInf(floatTy.getFloatSemantics(), true)));
     return nullptr;
   }
   return nullptr;
@@ -884,7 +881,7 @@ template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
 
-bool xegpu::requirePacked(const xegpu::LayoutAttr layout) {
+bool xegpu::requirePacked(const xegpu::DistributeLayoutAttr layout) {
   if (!layout)
     return false;
   auto laneData = layout.getEffectiveLaneDataAsInt();
@@ -893,7 +890,7 @@ bool xegpu::requirePacked(const xegpu::LayoutAttr layout) {
   return laneData[0] != 1;
 }
 
-bool xegpu::requireTranspose(const xegpu::LayoutAttr layout,
+bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.

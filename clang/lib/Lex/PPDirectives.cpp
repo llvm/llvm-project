@@ -466,6 +466,9 @@ SourceLocation
 Preprocessor::CheckEndOfDirective(StringRef DirType, bool EnableMacros,
                                   SmallVectorImpl<Token> *ExtraToks) {
   Token Tmp;
+  // Avoid use-of-uninitialized-memory for edge case(s) where there is no extra
+  // token to be parsed.
+  Tmp.startToken();
   auto ReadNextTok = [this, ExtraToks, &Tmp](auto &&LexFn) {
     std::invoke(LexFn, this, Tmp);
     if (ExtraToks && Tmp.isNot(tok::eod))
@@ -2728,6 +2731,20 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       Diag(FilenameTok, DiagId) << Path <<
         FixItHint::CreateReplacement(FilenameRange, Path);
     }
+
+    bool SuppressBackslashDiag =
+        // The diagnostic logic is expensive, so only run it if it's enabled...
+        Diags->isIgnored(diag::pp_nonportable_path_separator, FilenameLoc) ||
+        // ...and try to only trigger on paths that appear in source.
+        FilenameLoc.isMacroID() ||
+        SourceMgr.isWrittenInBuiltinFile(FilenameLoc) ||
+        SourceMgr.isWrittenInModuleIncludes(FilenameLoc);
+    if (!SuppressBackslashDiag && OriginalFilename.contains('\\')) {
+      std::string SuggestedPath = OriginalFilename.str();
+      llvm::replace(SuggestedPath, '\\', '/');
+      Diag(FilenameTok, diag::pp_nonportable_path_separator)
+          << Name << FixItHint::CreateReplacement(FilenameRange, SuggestedPath);
+    }
   }
 
   switch (Action) {
@@ -4407,18 +4424,19 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
 
   // Consume the pp-import-suffix and expand any macros in it now, if we're not
   // at the semicolon already.
-  std::optional<Token> NextPPTok = DirToks.back();
-  if (DirToks.back().is(tok::eod)) {
-    NextPPTok = peekNextPPToken();
-    if (NextPPTok && NextPPTok->is(tok::raw_identifier))
-      LookUpIdentifierInfo(*NextPPTok);
-  }
+  std::optional<Token> NextPPTok =
+      DirToks.back().is(tok::eod) ? peekNextPPToken() : DirToks.back();
 
   // Only ';' and '[' are allowed after module name.
   // We also check 'private' because the previous is not a module name.
-  if (!NextPPTok->isOneOf(tok::semi, tok::eod, tok::l_square, tok::kw_private))
-    Diag(*NextPPTok, diag::err_pp_unexpected_tok_after_module_name)
-        << getSpelling(*NextPPTok);
+  if (NextPPTok) {
+    if (NextPPTok->is(tok::raw_identifier))
+      LookUpIdentifierInfo(*NextPPTok);
+    if (!NextPPTok->isOneOf(tok::semi, tok::eod, tok::l_square,
+                            tok::kw_private))
+      Diag(*NextPPTok, diag::err_pp_unexpected_tok_after_module_name)
+          << getSpelling(*NextPPTok);
+  }
 
   if (!DirToks.back().isOneOf(tok::semi, tok::eod)) {
     // Consume the pp-import-suffix and expand any macros in it now. We'll add

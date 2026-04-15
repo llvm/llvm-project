@@ -1556,13 +1556,28 @@ public:
     return get(pseudoToMCOpcode(Opcode));
   }
 
-  Register isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
-  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isStackAccess(const MachineInstr &MI, int &FrameIndex,
+                         TypeSize &MemBytes) const;
+  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
+                             TypeSize &MemBytes) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
-                               int &FrameIndex) const override;
+                               int &FrameIndex) const override {
+    TypeSize MemBytes = TypeSize::getZero();
+    return isLoadFromStackSlot(MI, FrameIndex, MemBytes);
+  }
+
+  Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
+                               TypeSize &MemBytes) const override;
+
   Register isStoreToStackSlot(const MachineInstr &MI,
-                              int &FrameIndex) const override;
+                              int &FrameIndex) const override {
+    TypeSize MemBytes = TypeSize::getZero();
+    return isStoreToStackSlot(MI, FrameIndex, MemBytes);
+  }
+
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+                              TypeSize &MemBytes) const override;
 
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
@@ -1667,7 +1682,7 @@ public:
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                       ArrayRef<unsigned> Ops,
                                       MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex,
+                                      int FrameIndex, MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
@@ -1677,11 +1692,9 @@ public:
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
-  InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const final;
+  ValueUniformity getValueUniformity(const MachineInstr &MI) const final;
 
-  InstructionUniformity
-  getGenericInstructionUniformity(const MachineInstr &MI) const;
+  ValueUniformity getGenericValueUniformity(const MachineInstr &MI) const;
 
   const MIRFormatter *getMIRFormatter() const override;
 
