@@ -497,11 +497,26 @@ public:
                                     e->getArrayFiller());
   }
 
-  void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *e,
-                              llvm::Value *outerBegin = nullptr) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitArrayInitLoopExpr");
+  void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *e) {
+    CIRGenFunction::OpaqueValueMapping binding(cgf, e->getCommonExpr());
+    uint64_t numElements = e->getArraySize().getZExtValue();
+
+    if (!numElements)
+      return;
+
+    const mlir::Location loc = cgf.getLoc(e->getSourceRange());
+
+    if (!e->getType()->isConstantArrayType())
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "VisitArrayInitLoopExpr: Non-constant array");
+
+    Address dest = ensureSlot(loc, e->getType()).getAddress();
+    cir::ArrayType arrayTy = cast<cir::ArrayType>(dest.getElementType());
+
+    emitArrayInit(dest, arrayTy, e->getType(),
+                  const_cast<ArrayInitLoopExpr *>(e), {}, e->getSubExpr());
   }
+
   void VisitImplicitValueInitExpr(ImplicitValueInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitImplicitValueInitExpr");
@@ -687,6 +702,8 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
   const uint64_t numInitElements = args.size();
 
+  bool setArrayInitLoopExprScope = isa<ArrayInitLoopExpr>(e);
+
   const QualType elementType =
       cgf.getContext().getAsArrayType(arrayQTy)->getElementType();
 
@@ -784,6 +801,15 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
           LValue elementLV = cgf.makeAddrLValue(
               Address(currentElement, cirElementType, elementAlign),
               elementType);
+
+          mlir::Value idx;
+          if (setArrayInitLoopExprScope)
+            idx = cir::PtrDiffOp::create(b, loc, cgf.ptrDiffTy, currentElement,
+                                         begin);
+
+          CIRGenFunction::ArrayInitLoopExprScope loopExprScope(
+              cgf, setArrayInitLoopExprScope, idx);
+
           if (arrayFiller)
             emitInitializationToLValue(arrayFiller, elementLV);
           else
