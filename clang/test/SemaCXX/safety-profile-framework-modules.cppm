@@ -17,6 +17,10 @@
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_primary_require_fail.cppm -fmodule-file=PartMod:part=%t/part_iface.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_iface_violation.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_impl_enforce.cppm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_no_local_enforce.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_gmf_only_no_leak.cpp -fmodule-file=GmfOnlyMod=%t/mod_gmf_only_enforce.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/mod_different_desig.cppm -o %t/mod_different_desig.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_two_modules.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -fmodule-file=DiffDesigMod=%t/mod_different_desig.pcm -verify
 
 // ===================================================================
 // Module with enforced profiles
@@ -143,3 +147,45 @@ module PartImpl:impl [[profiles::enforce(test::type_cast)]];
 void impl_func() {
   int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }
+
+// ===================================================================
+// Importing a module with enforce must NOT leak enforcement into the
+// importer's own TU. Without a local enforce, reinterpret_cast is OK.
+// ===================================================================
+//--- import_no_local_enforce.cpp
+// expected-no-diagnostics
+import TestMod;
+
+void importer_func() {
+  int *p = reinterpret_cast<int*>(0);
+}
+
+// ===================================================================
+// GMF-only enforce must NOT leak into importers.
+// ===================================================================
+//--- import_gmf_only_no_leak.cpp
+// expected-no-diagnostics
+import GmfOnlyMod;
+
+void gmf_importer_func() {
+  int *p = reinterpret_cast<int*>(0);
+}
+
+// ===================================================================
+// Second module enforcing test::type_cast with a different designator.
+// ===================================================================
+//--- mod_different_desig.cppm
+// expected-no-diagnostics
+export module DiffDesigMod [[profiles::enforce(test::type_cast(strict: true))]];
+
+export void diff_func();
+
+// ===================================================================
+// Importing two modules that enforce the same profile name with
+// different designators must NOT produce err_profiles_enforce_mismatch
+// in the importer.
+// ===================================================================
+//--- import_two_modules.cpp
+// expected-no-diagnostics
+import TestMod;
+import DiffDesigMod;

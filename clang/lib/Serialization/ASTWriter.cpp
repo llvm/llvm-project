@@ -5303,6 +5303,8 @@ void ASTWriter::WriteRISCVIntrinsicPragmas(Sema &SemaRef) {
 }
 
 void ASTWriter::WriteEnforcedProfiles(Sema &SemaRef) {
+  if (WritingModule)
+    return;
   if (SemaRef.EnforcedProfiles.empty())
     return;
 
