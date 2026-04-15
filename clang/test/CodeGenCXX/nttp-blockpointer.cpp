@@ -21,3 +21,50 @@ int test_param(int x) {
   // CHECK: call noundef i32 @_ZN1SIXadUb1_EE4callEi(i32 noundef %0)
   return S<^(int x) { return x + 1; }>::call(x);
 }
+
+void test_nullptr() {
+  // CHECK: call void @_Z1fILU13block_pointerFvvE0EEvv()
+  f<nullptr>();
+}
+
+namespace TestNamespace {
+  template<void (^B)()> struct S {
+    static void call() { B(); }
+  };
+  void test_namespace() {
+    // CHECK: call void @_ZN13TestNamespace1SIXadUb2_EE4callEv()
+    S<^{}>::call();
+  }
+}
+
+template<void (^B)() = ^{}>
+void f_default() { B(); }
+
+void test_default() {
+  // CHECK: call void @_Z9f_defaultIXcvU13block_pointerFvvEadUb_EEvv()
+  f_default();
+}
+
+struct Structural {
+  void (^b)();
+};
+
+template<Structural s>
+void f_struct() {
+  s.b();
+}
+
+void test_struct() {
+  // CHECK: call void @_Z8f_structIXtl10StructuraladUb3_EEEvv()
+  f_struct<Structural{^{}}>();
+}
+
+template<void (^...Blocks)()>
+void f_variadic() {
+  (Blocks(), ...);
+}
+
+void test_variadic() {
+  // CHECK: call void @_Z10f_variadicIJXcvU13block_pointerFvvEadUb4_EXcvS1_adUb5_EEEvv()
+  f_variadic<^{}, ^{}>();
+}

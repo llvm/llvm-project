@@ -122,6 +122,8 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
+- Clang now supports block pointers as non-type template parameters. (#GH189247)
+
 - ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
 
 C++2c Feature Support
