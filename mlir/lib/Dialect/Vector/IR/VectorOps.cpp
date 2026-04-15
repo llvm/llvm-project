@@ -2469,35 +2469,28 @@ struct FoldExtractFromInsertUnitDim final
 
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
-    if (extractOp.hasDynamicPosition()) {
+    if (extractOp.hasDynamicPosition())
       return failure();
-    }
 
     auto insertOp = extractOp.getSource().getDefiningOp<vector::InsertOp>();
-    if (!insertOp || insertOp.hasDynamicPosition()) {
+    if (!insertOp || insertOp.hasDynamicPosition())
       return failure();
-    }
 
     ArrayRef<int64_t> extractPos = extractOp.getStaticPosition();
     ArrayRef<int64_t> insertPos = insertOp.getStaticPosition();
 
     // The extract position must be a strict prefix of the insert position.
-    if (extractPos.size() >= insertPos.size()) {
+    if (extractPos.size() >= insertPos.size() ||
+        extractPos != insertPos.take_front(extractPos.size()))
       return failure();
-    }
-    if (extractPos != insertPos.take_front(extractPos.size())) {
-      return failure();
-    }
 
     // The remaining dimensions (those not indexed by the extract) must all
     // be size 1 in the source vector type. This guarantees that the inserted
     // value fully determines the extracted sub-vector.
     auto srcVecType = extractOp.getSourceVectorType();
-    for (int64_t i = extractPos.size(), e = srcVecType.getRank(); i < e; ++i) {
-      if (srcVecType.getDimSize(i) != 1) {
+    for (int64_t i = extractPos.size(), e = srcVecType.getRank(); i < e; ++i)
+      if (srcVecType.getDimSize(i) != 1)
         return failure();
-      }
-    }
 
     // The inserted value fully determines the extracted sub-vector; broadcast
     // it to the extracted type.
