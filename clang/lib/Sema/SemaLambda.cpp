@@ -16,6 +16,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/Attr.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -1501,6 +1502,16 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
+
+  // P3589R2: Propagate active profile suppressions to the call operator so
+  // that generic lambda instantiation (which walks lexical Decl parents, not
+  // the enclosing stmt tree) can recover them.
+  if (getLangOpts().Profiles) {
+    for (const auto &E : ProfileSuppressStack)
+      Method->addAttr(ProfilesSuppressAttr::CreateImplicit(
+          Context, E.ProfileName, /*Justification=*/"", E.RuleName,
+          /*RawArguments=*/nullptr, /*RawArgumentsSize=*/0));
+  }
 
   if (Context.getTargetInfo().getTriple().isAArch64())
     ARM().CheckSMEFunctionDefAttributes(Method);

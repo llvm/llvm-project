@@ -430,3 +430,68 @@ struct [[profiles::suppress(test::type_cast)]] SuppressedInlineStatic {
   static inline T *s = reinterpret_cast<T*>(0);
 };
 template struct SuppressedInlineStatic<int>;
+
+// Generic lambda defined inside a suppress block, returned, and instantiated
+// outside -- the suppress must carry through instantiation.
+auto get_suppressed_generic_lambda() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] {
+    auto l = [](auto x) { return reinterpret_cast<int*>(x); };
+    return l;
+  }
+}
+void test_generic_lambda_suppress_propagation() {
+  auto l = get_suppressed_generic_lambda();
+  l(0);
+}
+
+// Generic lambda inside a suppress with rule restriction: only the matching
+// rule is suppressed.
+auto get_rule_restricted_lambda() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast, rule: "reinterpret_cast")]] {
+    auto l = [](auto x) { return reinterpret_cast<int*>(x); };
+    return l;
+  }
+}
+void test_generic_lambda_rule_suppress() {
+  auto l = get_rule_restricted_lambda();
+  l(0);
+}
+
+// Generic lambda without suppress: the violation still fires during
+// instantiation.
+auto get_unsuppressed_generic_lambda() {
+  auto l = [](auto x) {
+    return reinterpret_cast<int*>(x); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  };
+  return l;
+}
+void test_generic_lambda_no_suppress() {
+  auto l = get_unsuppressed_generic_lambda();
+  l(0); // expected-note {{in instantiation of function template specialization 'get_unsuppressed_generic_lambda()::(lambda)::operator()<int>' requested here}}
+}
+
+// Non-generic lambda inside suppress: still works (regression check).
+void test_nongeneric_lambda_suppress() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] {
+    auto l = []() { return reinterpret_cast<int*>(0); };
+    l();
+  }
+}
+
+// Suppress of a different profile does not propagate to the generic lambda.
+auto get_wrong_profile_lambda() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::other)]] {
+    auto l = [](auto x) {
+      return reinterpret_cast<int*>(x); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+    };
+    return l;
+  }
+}
+void test_wrong_profile_lambda() {
+  auto l = get_wrong_profile_lambda();
+  l(0); // expected-note {{in instantiation of function template specialization 'get_wrong_profile_lambda()::(lambda)::operator()<int>' requested here}}
+}
