@@ -1363,24 +1363,20 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
                            << chunkAlignmentFactor;
     }
   }
-
-  auto layoutAttr = llvm::dyn_cast_if_present<LayoutAttr>(layout);
-  if (layoutAttr) {
+  if (auto layoutAttr =
+          mlir::dyn_cast_if_present<DistributeLayoutAttr>(layout)) {
     if (rank != (size_t)layoutAttr.getRank())
       return emitError() << "expected layout rank to match tensor rank";
 
-    auto laneData = layoutAttr.getLaneData();
-    if (scatterAttr && laneData) {
-      // Validate subgroup mapping rules for scattered tensors.
-      // if chunkSize > 1, the last dimension of the tensor should
-      // be distributed in the units divisible by chunkAlignmentFactor.
-      int64_t chunkSize = scatterAttr.getChunkSizeAsInt();
-      if (chunkSize > 1 && laneData[rank - 1] % chunkAlignmentFactor)
-        return emitError()
-               << "expected last dim of lane_data to be a multiple of: "
-               << chunkAlignmentFactor;
+    if (!layoutAttr.isDistributable(SmallVector<int64_t>(shape))) {
+      std::string shapeStr;
+      llvm::raw_string_ostream stream(shapeStr);
+      llvm::interleaveComma(shape, stream);
+      return emitError() << "cannot distribute [" << shapeStr << "] using "
+                         << layoutAttr;
     }
   }
+
   return success();
 }
 
