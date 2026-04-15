@@ -1489,9 +1489,8 @@ enum NodeType {
   VECREDUCE_SEQ_FMUL,
   /// VECREDUCE_SEQ_FDOT(Acc: scalar, VecA, VecB) - Sequential floating-point
   /// dot product reduction. Computes Acc + sum(VecA[i] * VecB[i]) in strict
-  /// left-to-right order.
-  /// Without 'contract' flag: sequential fmul+fadd pairs (two roundings each).
-  /// With 'contract' flag: sequential FMA chain (single rounding per element).
+  /// left-to-right order as sequential fmul+fadd pairs. When the 'contract'
+  /// flag is set, DAGCombiner may fuse each fmul+fadd into an FMA.
   VECREDUCE_SEQ_FDOT,
 
   /// These reductions have relaxed evaluation order semantics, and have a
@@ -1517,8 +1516,8 @@ enum NodeType {
   VECREDUCE_FMINIMUM,
   /// VECREDUCE_FDOT(VecA, VecB) - Unordered floating-point dot product
   /// reduction. Computes sum(VecA[i] * VecB[i]) with unspecified evaluation
-  /// order. The caller adds the accumulator via a separate FADD. Decomposes
-  /// to FMUL(VecA, VecB) followed by VECREDUCE_FADD on the products.
+  /// order. Decomposes to a vector FMUL followed by VECREDUCE_FADD on the
+  /// products; the caller adds the accumulator via a separate FADD.
   VECREDUCE_FDOT,
   /// Integer reductions may have a result type larger than the vector element
   /// type. However, the reduction is performed using the vector element type
