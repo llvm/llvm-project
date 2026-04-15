@@ -315,7 +315,7 @@
 #  define SANITIZER_ALPHA 0
 #endif
 
-#if defined(__AMDGPU__)
+#if SANITIZER_AMDGPU || defined(__AMDGPU__)
 #  define SANITIZER_AMDGPU 1
 #else
 #  define SANITIZER_AMDGPU 0
