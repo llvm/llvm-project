@@ -447,7 +447,7 @@ exit:
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.disable"}
 ; CHECK: [[META3]] = !{!"llvm.loop.vectorize.enable", i1 false}
 ; CHECK: [[META4]] = !{!"llvm.loop.licm_versioning.disable"}
-; CHECK: [[META5]] = !{!"llvm.loop.distribute.enable", i1 false}
+; CHECK: [[META5]] = !{!"llvm.loop.distribute.disable"}
 ; CHECK: [[META6]] = !{}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META3]], [[META4]], [[META5]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META3]], [[META4]], [[META5]]}

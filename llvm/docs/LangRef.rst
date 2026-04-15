@@ -8128,18 +8128,17 @@ this is only performed if the entire loop cannot be vectorized due to unsafe
 memory dependencies.  The transformation will attempt to isolate the unsafe
 dependencies into their own loop.
 
-This metadata can be used to selectively enable or disable distribution of the
-loop.  The first operand is the string ``llvm.loop.distribute.enable`` and the
-second operand is a bit. If the bit operand value is 1 distribution is
-enabled. A value of 0 disables distribution:
+This metadata can be used to selectively enable or disable
+distribution of the loop.  Each node has a single operand
+containing the name string:
 
 .. code-block:: llvm
 
-   !0 = !{!"llvm.loop.distribute.enable", i1 0}
-   !1 = !{!"llvm.loop.distribute.enable", i1 1}
+   !0 = !{!"llvm.loop.distribute.enable"}
+   !1 = !{!"llvm.loop.distribute.disable"}
 
-This metadata should be used in conjunction with ``llvm.loop`` loop
-identification metadata.
+This metadata should be used in conjunction with ``llvm.loop``
+loop identification metadata.
 
 '``llvm.loop.distribute.followup_coincident``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

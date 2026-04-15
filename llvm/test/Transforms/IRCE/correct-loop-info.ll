@@ -181,6 +181,6 @@ declare void @pluto()
 !1 = !{!"llvm.loop.unroll.disable"}
 !2 = !{!"llvm.loop.vectorize.enable", i1 false}
 !3 = !{!"llvm.loop.licm_versioning.disable"}
-!4 = !{!"llvm.loop.distribute.enable", i1 false}
+!4 = !{!"llvm.loop.distribute.disable"}
 !5 = !{}
 !6 = distinct !{!6, !1, !2, !3, !4}

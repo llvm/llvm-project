@@ -89,4 +89,4 @@ attributes #0 = { nounwind readnone convergent }
 attributes #1 = { nounwind convergent }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.distribute.enable", i1 true}
+!1 = !{!"llvm.loop.distribute.enable"}

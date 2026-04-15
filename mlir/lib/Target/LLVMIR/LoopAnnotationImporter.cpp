@@ -358,8 +358,10 @@ FailureOr<LoopLICMAttr> LoopMetadataConversion::convertLICMAttr() {
 }
 
 FailureOr<LoopDistributeAttr> LoopMetadataConversion::convertDistributeAttr() {
-  FailureOr<BoolAttr> disable =
-      lookupBoolNode("llvm.loop.distribute.enable", true);
+  FailureOr<BoolAttr> disable = lookupBooleanUnitNode(
+      "llvm.loop.distribute.enable",
+      "llvm.loop.distribute.disable",
+      /*negated=*/true);
   FailureOr<LoopAnnotationAttr> followupCoincident =
       lookupFollowupNode("llvm.loop.distribute.followup_coincident");
   FailureOr<LoopAnnotationAttr> followupSequential =
