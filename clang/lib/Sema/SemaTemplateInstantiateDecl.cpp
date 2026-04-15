@@ -5931,10 +5931,9 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // PushDeclContext because we don't have a scope.
     Sema::ContextRAII savedContext(*this, Function);
 
-    // P3589R2 [decl.attr.suppress]p3: push profile suppressions from the
-    // pattern's lexical parent chain so that inline members of a suppressed
-    // class/namespace retain suppression during instantiation.
     ProfileSuppressScope ProfileSuppressGuard(
+        *this, static_cast<const Decl *>(PatternDecl));
+    ProfileSuppressScope ProfileSuppressLexicalGuard(
         *this, PatternDecl->getLexicalDeclContext());
 
     FPFeaturesStateRAII SavedFPFeatures(*this);
