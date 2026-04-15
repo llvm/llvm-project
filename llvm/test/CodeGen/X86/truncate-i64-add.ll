@@ -60,7 +60,7 @@ define i64 @add_zext_i16_const(i16 %a) nounwind {
 ; X64-LABEL: add_zext_i16_const:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    addl $42, %eax
+; X64-NEXT:    addq $42, %rax
 ; X64-NEXT:    retq
   %za = zext i16 %a to i64
   %sum = add nuw nsw i64 %za, 42

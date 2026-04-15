@@ -28,6 +28,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -59406,6 +59407,13 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   if (VT == MVT::i64) {
     APInt Mask = APInt::getHighBitsSet(64, 33);
     if (DAG.MaskedValueIsZero(Op0, Mask) && DAG.MaskedValueIsZero(Op1, Mask)) {
+      // Guard to check if one of the  operand is constant.
+      // promoteExtBeforeAdd() will revert this fold, if guard not present.
+
+      if (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1)) {
+        return SDValue();
+      }
+
       // Truncate operands  MVT::i64 -> MVT::i32
       SDValue X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op0);
       SDValue Y = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op1);
