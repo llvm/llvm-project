@@ -24,16 +24,15 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> getsockopt(int sockfd, int level, int optname,
                                     void *optval, socklen_t *optlen) {
 #ifdef SYS_getsockopt
-  int ret = syscall_impl<int>(SYS_getsockopt, sockfd, level,
-                                              optname, optval, optlen);
+  int ret =
+      syscall_impl<int>(SYS_getsockopt, sockfd, level, optname, optval, optlen);
 #elif defined(SYS_socketcall)
   unsigned long sockcall_args[5] = {static_cast<unsigned long>(sockfd),
                                     static_cast<unsigned long>(level),
                                     static_cast<unsigned long>(optname),
                                     reinterpret_cast<unsigned long>(optval),
                                     reinterpret_cast<unsigned long>(optlen)};
-  int ret = syscall_impl<int>(SYS_socketcall, SYS_GETSOCKOPT,
-                                              sockcall_args);
+  int ret = syscall_impl<int>(SYS_socketcall, SYS_GETSOCKOPT, sockcall_args);
 #else
 #error "getsockopt and socketcall syscalls unavailable for this platform."
 #endif
