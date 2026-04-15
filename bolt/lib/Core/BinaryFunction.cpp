@@ -35,6 +35,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/GenericLoopInfoImpl.h"
 #include "llvm/Support/GraphWriter.h"
@@ -1543,6 +1544,27 @@ add_instruction:
       MIB->setSize(Instruction, Size);
     }
 
+    // Annotate Hexagon packet boundaries from parse bits in the raw
+    // instruction word. The Hexagon disassembler returns individual
+    // instructions but does not convey packet structure. We recover it
+    // by inspecting bits [15:14] of the 32-bit instruction word:
+    //   0b11 = packet end,
+    //   0b10 = hardware loop end (NOT a packet end -- marks endloop0/1),
+    //   0b01 = not end (middle of packet),
+    //   0b00 = duplex (always last word in packet).
+    if (BC.isHexagon() && Size >= 4) {
+      uint32_t RawWord =
+          support::endian::read32le(FunctionData.data() + Offset);
+      uint32_t ParseBits = RawWord & 0xc000;
+      // Packet end: 0xc000 (end) or 0x0000 (duplex, always last).
+      if (ParseBits == 0xc000 || ParseBits == 0x0000)
+        MIB->addAnnotation(Instruction, "HexPacketEnd", true);
+      // Hardware loop end marker on slot 0 (inner) or slot 1 (outer).
+      // This does NOT terminate the packet.
+      if (ParseBits == 0x8000)
+        MIB->addAnnotation(Instruction, "HexLoopEnd", true);
+    }
+
     addInstruction(Offset, std::move(Instruction));
   }
 
@@ -1827,6 +1849,13 @@ bool BinaryFunction::scanExternalRefs() {
         }
       }
     }
+
+    // On Hexagon, the MC encoder expects BUNDLE MCInsts and the
+    // createRelocation method is not implemented, so skip instruction
+    // encoding for external reference scanning. The branch-target
+    // handling above (which doesn't need encoding) is sufficient.
+    if (BC.isHexagon())
+      continue;
 
     // Emit the instruction using temp emitter and generate relocations.
     SmallString<256> Code;
@@ -2363,8 +2392,41 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       // If "Offset" annotation is not present, set it and mark the nop for
       // deletion.
       MIB->setOffset(Instr, static_cast<uint32_t>(Offset));
+      // Don't mark endloop NOPs for deletion -- Hexagon hardware loops
+      // require a minimum packet size at the endloop marker.
+      bool InEndLoopPacket = false;
+      if (BC.isHexagon()) {
+        if (MIB->hasAnnotation(Instr, "HexLoopEnd")) {
+          InEndLoopPacket = true;
+        } else {
+          // Look backward: the endloop marker (PP=10) is typically on an
+          // earlier instruction in the same packet, with the NOP at the
+          // packet end (PP=11).
+          for (auto J = I; J != Instructions.begin();) {
+            --J;
+            if (MIB->hasAnnotation(J->second, "HexLoopEnd")) {
+              InEndLoopPacket = true;
+              break;
+            }
+            if (MIB->hasAnnotation(J->second, "HexPacketEnd"))
+              break;
+          }
+          // Also look forward in case the endloop marker follows the NOP.
+          if (!InEndLoopPacket) {
+            for (auto J = std::next(I); J != E; ++J) {
+              if (MIB->hasAnnotation(J->second, "HexLoopEnd")) {
+                InEndLoopPacket = true;
+                break;
+              }
+              if (MIB->hasAnnotation(J->second, "HexPacketEnd"))
+                break;
+            }
+          }
+        }
+      }
       // Annotate ordinary nops, so we can safely delete them if required.
-      MIB->addAnnotation(Instr, "NOP", static_cast<uint32_t>(1), AllocatorId);
+      if (!InEndLoopPacket)
+        MIB->addAnnotation(Instr, "NOP", static_cast<uint32_t>(1), AllocatorId);
     }
 
     if (!InsertBB) {
@@ -2550,6 +2612,11 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     // optimizing it.
     setSimple(false);
   }
+
+  // Hexagon VLIW: nops are structurally significant within packets,
+  // affecting packet size and hardware loop (endloop) marker positioning.
+  if (BC.isHexagon())
+    PreserveNops = true;
 
   clearList(ExternallyReferencedOffsets);
   clearList(UnknownIndirectBranchOffsets);
