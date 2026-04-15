@@ -376,13 +376,118 @@ static LogicalResult getFuncOpsOrderedByCalls(
   return success();
 }
 
-/// Helper function that extracts the source from a memref.cast. If the given
-/// value is not a memref.cast result, simply returns the given value.
-static Value unpackCast(Value v) {
-  auto castOp = v.getDefiningOp<memref::CastOp>();
-  if (!castOp)
+// this code will decide whether removing a direct memref.cast (by returning the cast source)
+// is guaranteed to NOT lose useful type information for return-type tightening.
+//
+// Goal of foldMemRefCasts:
+// - drop "signature accommodation" casts (usually layout/generalization casts)
+// - keep casts that encode strictly better info at the result (rank/dims/layout)
+//
+// "Safe to drop" means:
+// - returning the cast source instead of the cast result will not drop
+//   (a) rank information
+//   (b) static dimension information
+//   (c) layout information (when cast result layout is more specific)
+//
+// Notes:
+// This code will calculate whether stripping a defining memref.cast loses type precision
+// that foldMemRefCasts tries to preserve for function results.
+// canSafelyDropMemrefCast(castOp) == true means dest is not adding info --> safe to drop the cast and use the source directly.
+// It is safe to remove the memref.cast and use the cast’s source value directly
+static bool canSafelyDropMemrefCast(memref::CastOp castOp) {
+  Type srcTy = castOp.getSource().getType();
+  Type dstTy = castOp.getType();
+
+  auto srcU = dyn_cast<UnrankedMemRefType>(srcTy);
+  auto dstU = dyn_cast<UnrankedMemRefType>(dstTy);
+  auto srcR = dyn_cast<MemRefType>(srcTy);
+  auto dstR = dyn_cast<MemRefType>(dstTy);
+
+  //src and dst must be memref types, and at least one of them must be ranked (otherwise, no precision to lose)
+  if (!srcU && !srcR)
+    return false;
+
+  //if dest is not memref type --> 
+  if (!dstU && !dstR)
+      return false;
+
+  // Rank precision: do not drop unranked -> ranked.
+  if (srcU && dstR)
+    return false; //our case
+  if (srcR && dstU)
+    return true;
+  if (srcU && dstU)
+    return true;
+
+  // Both ranked from here.
+  if (srcR.getRank() != dstR.getRank())
+    return false;
+
+  // Shape precision: veto dynamic -> static in dst.
+  ArrayRef<int64_t> s = srcR.getShape();
+  ArrayRef<int64_t> d = dstR.getShape();
+  for (int64_t i = 0, e = srcR.getRank(); i < e; ++i)
+    if (ShapedType::isDynamic(s[i]) && !ShapedType::isDynamic(d[i]))
+      return false;
+
+  // Layout precision:
+  // - if dst is identity and src is not, dst is more specific: keep cast.
+  // - if both are strided, check in offset/strides.
+  // - otherwise (custom maps), stay conservative and keep cast.
+  auto sLayout = srcR.getLayout();
+  auto dLayout = dstR.getLayout();
+
+  auto sStrided = dyn_cast<StridedLayoutAttr>(sLayout);
+  auto dStrided = dyn_cast<StridedLayoutAttr>(dLayout);
+
+  bool sCustom = !sStrided && !sLayout.isIdentity();
+  bool dCustom = !dStrided && !dLayout.isIdentity();
+  if (sCustom || dCustom)
+    return sLayout.isIdentity() && dLayout.isIdentity();
+
+  if (dLayout.isIdentity() && !sLayout.isIdentity())
+    return false;
+
+  if (sStrided && dStrided) {
+    if (ShapedType::isDynamic(sStrided.getOffset()) &&
+        !ShapedType::isDynamic(dStrided.getOffset()))
+      return false;
+
+    ArrayRef<int64_t> ss = sStrided.getStrides();
+    ArrayRef<int64_t> ds = dStrided.getStrides();
+    if (ss.size() != ds.size())
+      return false;
+
+    for (size_t i = 0; i < ss.size(); ++i)
+      if (ShapedType::isDynamic(ss[i]) && !ShapedType::isDynamic(ds[i]))
+        return false;
+  }
+
+  return true;
+}
+
+// this code will return the defining memref.cast op for a value, or nullptr
+static memref::CastOp getDefiningMemRefCast(Value v) {
+  return v.getDefiningOp<memref::CastOp>();
+}
+
+// this code will return the value that should be used for return-type comparison
+// and for optional cast-stripping at func.return.
+//
+// Rule:
+// - when the value is not a memref.cast result, return the value
+// - when the value is a memref.cast result:
+//     - if canSafelyDropMemrefCast(castOp) is true, return the cast source
+//       (cast is layout-only / non-precision-gaining, safe to drop)
+//     - else return the cast result
+//       (cast is precision-gaining: unranked->ranked, dynamic->static, layout refinement, etc)
+static Value canonicalizeReturnValue(Value v) {
+  if (auto castOp = getDefiningMemRefCast(v)) {
+    if (canSafelyDropMemrefCast(castOp))
+      return castOp.getSource();
     return v;
-  return castOp.getSource();
+  }
+  return v;
 }
 
 /// Helper function that returns the return types (skipping casts) of the given
@@ -393,17 +498,19 @@ static SmallVector<Type> getReturnTypes(SmallVector<func::ReturnOp> returnOps) {
   assert(!returnOps.empty() && "expected at least one ReturnOp");
   int numOperands = returnOps.front()->getNumOperands();
 
-  // Helper function that unpacks memref.cast ops and returns the type.
-  auto getSourceType = [&](Value v) { return unpackCast(v).getType(); };
+  // Helper function that conditionally drops memref.cast ops and returns the type.
+  auto getComparableType = [&](Value v) {
+    return canonicalizeReturnValue(v).getType();
+  };
 
   SmallVector<Type> result;
   for (int i = 0; i < numOperands; ++i) {
     // Get the type of the i-th operand of the first func.return ops.
-    Type t = getSourceType(returnOps.front()->getOperand(i));
+    Type t = getComparableType(returnOps.front()->getOperand(i));
 
     // Check if all other func.return ops have a matching operand type.
     for (int j = 1; j < static_cast<int>(returnOps.size()); ++j)
-      if (getSourceType(returnOps[j]->getOperand(i)) != t)
+      if (getComparableType(returnOps[j]->getOperand(i)) != t)
         t = Type();
 
     result.push_back(t);
@@ -432,8 +539,18 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
   for (func::ReturnOp returnOp : returnOps) {
     for (OpOperand &operand : returnOp->getOpOperands()) {
       // Bail if no common result type was found.
-      if (resultTypes[operand.getOperandNumber()]) {
-        operand.set(unpackCast(operand.get()));
+      int pos = operand.getOperandNumber();
+
+      // this code will skip rewriting when no common result type exists for pos
+      if (!resultTypes[pos])
+        continue;
+
+      Value v = operand.get();
+      if (auto castOp = getDefiningMemRefCast(v)) {
+        // this code will strip cast only when safe
+        if (canSafelyDropMemrefCast(castOp))
+          operand.set(castOp.getSource());
+        // else keep operand as-is (cast result)
       }
     }
   }
