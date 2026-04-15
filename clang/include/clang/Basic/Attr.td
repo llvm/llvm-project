@@ -3147,6 +3147,17 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
+// FIXME: The following Swift interop attributes currently use the Clang
+// vendor namespace for their CXX11/C23 spellings, consistent with other
+// Swift-related attributes e.g., clang::swift_async.
+//
+// A Swift vendor namespace was considered e.g., swift::name rather than
+// clang::swift_name, but it was decided not to claim that prematurely.
+// Doing so deserves more attention -- among other things, one would
+// want to avoid stuttering e.g., swift::swift_name.
+//
+// See https://github.com/llvm/llvm-project/pull/183484
+
 def SwiftType : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
@@ -3168,14 +3179,14 @@ def SwiftNullability : Attr {
 }
 
 def SwiftAsyncName : InheritableAttr {
-  let Spellings = [GNU<"swift_async_name">];
+  let Spellings = [Clang<"swift_async_name">];
   let Args = [StringArgument<"Name">];
   let Subjects = SubjectList<[ObjCMethod, Function], ErrorDiag>;
   let Documentation = [SwiftAsyncNameDocs];
 }
 
 def SwiftAttr : DeclOrTypeAttr {
-  let Spellings = [GNU<"swift_attr">];
+  let Spellings = [Clang<"swift_attr">];
   let Args = [StringArgument<"Attribute">];
   let Documentation = [SwiftAttrDocs];
   let PragmaAttributeSupport = 1;
@@ -3231,13 +3242,13 @@ def SwiftImportPropertyAsAccessors : InheritableAttr {
 }
 
 def SwiftName : InheritableAttr {
-  let Spellings = [GNU<"swift_name">];
+  let Spellings = [Clang<"swift_name">];
   let Args = [StringArgument<"Name">];
   let Documentation = [SwiftNameDocs];
 }
 
 def SwiftNewType : InheritableAttr {
-  let Spellings = [GNU<"swift_newtype">, GNU<"swift_wrapper">];
+  let Spellings = [Clang<"swift_newtype">, Clang<"swift_wrapper">];
   let Args = [EnumArgument<"NewtypeKind", "NewtypeKind", /*is_string=*/false,
                            ["struct", "enum"], ["NK_Struct", "NK_Enum"]>];
   let Subjects = SubjectList<[TypedefName], ErrorDiag>;
@@ -3246,7 +3257,7 @@ def SwiftNewType : InheritableAttr {
 }
 
 def SwiftPrivate : InheritableAttr {
-  let Spellings = [GNU<"swift_private">];
+  let Spellings = [Clang<"swift_private">];
   let Documentation = [SwiftPrivateDocs];
   let SimpleHandler = 1;
 }

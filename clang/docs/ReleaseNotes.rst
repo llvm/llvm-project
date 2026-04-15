@@ -242,6 +242,13 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- Added C++11/C23 style spellings for Swift import attributes. The
+  ``swift_async_name``, ``swift_attr``, ``swift_name``, ``swift_newtype``,
+  ``swift_wrapper``, and ``swift_private`` attributes now support the
+  ``[[clang::...]]`` syntax in addition to the GNU ``__attribute__`` style,
+  bringing them in line with other Clang attributes and improving compatibility
+  with C++11/C23 codebases.
+
 - Added new attribute ``stack_protector_ignore`` to opt specific local variables out of
   the analysis which determines if a function should get a stack protector.  A function
   will still generate a stack protector if other local variables or command line flags
