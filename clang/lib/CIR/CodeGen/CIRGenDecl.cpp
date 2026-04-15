@@ -1112,15 +1112,10 @@ void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
     return;
   }
 
-  // Classic codegen also uses pushDestroyAndDeferDeactivation here to push an
-  // EH cleanup that protects the temporary during the rest of the full
-  // expression, then deactivates it when the full expression ends. Deferred
-  // deactivation is being implemented now, but it wasn't when this code was
-  // implemented. This will be updated in a separate change.
-  if (getLangOpts().Exceptions) {
-    cgm.errorNYI("lifetime-extended cleanup with exceptions enabled");
-    return;
-  }
+  // Add the cleanup to the EHStack. After the full-expr, this would be
+  // deactivated before being popped from the stack.
+  pushDestroyAndDeferDeactivation(cleanupKind, addr, type, destroyer,
+                                  useEHCleanupForArray);
 
   assert(!cir::MissingFeatures::useEHCleanupForArray());
 
