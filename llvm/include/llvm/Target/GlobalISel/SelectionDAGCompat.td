@@ -61,6 +61,7 @@ def : GINodeEquiv<G_CONSTANT, imm>;
 // timm must not be materialized and therefore has no GlobalISel equivalent
 def : GINodeEquiv<G_FCONSTANT, fpimm>;
 def : GINodeEquiv<G_IMPLICIT_DEF, undef>;
+def : GINodeEquiv<G_POISON, undef>;
 def : GINodeEquiv<G_FRAME_INDEX, frameindex>;
 def : GINodeEquiv<G_BLOCK_ADDR, blockaddress>;
 def : GINodeEquiv<G_PTR_ADD, ptradd>;
