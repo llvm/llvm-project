@@ -103,6 +103,7 @@ void FactsGenerator::run() {
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
     EscapesInCurrentBlock.clear();
+    CurrentBlock = Block;
     if (Block == &Cfg.getEntry())
       CurrentBlockFacts.append(PlaceholderLoanFacts.begin(),
                                PlaceholderLoanFacts.end());
@@ -204,6 +205,11 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
   handleFunctionCall(CCE, CCE->getConstructor(),
                      {CCE->getArgs(), CCE->getNumArgs()},
                      /*IsGslConstruction=*/false);
+}
+
+void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
+  if (const Expr *Init = DIE->getExpr())
+    killAndFlowOrigin(*DIE, *Init);
 }
 
 void FactsGenerator::handleCXXCtorInitializer(const CXXCtorInitializer *CII) {
@@ -371,8 +377,29 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   // assigned.
   RHSList = getRValueOrigins(RHSExpr, RHSList);
 
-  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
-    markUseAsWrite(DRE_LHS);
+  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
+    QualType QT = DRE_LHS->getDecl()->getType();
+    if (QT->isReferenceType()) {
+      if (hasOrigins(QT->getPointeeType())) {
+        // Writing through a reference uses the binding but overwrites the
+        // pointee. Model this as a Read of the outer origin (keeping the
+        // binding live) and a Write of the inner origins (killing the pointee's
+        // liveness).
+        if (UseFact *UF = UseFacts.lookup(DRE_LHS)) {
+          const OriginList *FullList = UF->getUsedOrigins();
+          assert(FullList);
+          UF->setUsedOrigins(FactMgr.getOriginMgr().createSingleOriginList(
+              FullList->getOuterOriginID()));
+          if (const OriginList *InnerList = FullList->peelOuterOrigin()) {
+            UseFact *WriteUF = FactMgr.createFact<UseFact>(DRE_LHS, InnerList);
+            WriteUF->markAsWritten();
+            CurrentBlockFacts.push_back(WriteUF);
+          }
+        }
+      }
+    } else
+      markUseAsWrite(DRE_LHS);
+  }
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
@@ -401,12 +428,58 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
-  if (hasOrigins(CO)) {
-    // Merge origins from both branches of the conditional operator.
-    // We kill to clear the initial state and merge both origins into it.
-    killAndFlowOrigin(*CO, *CO->getTrueExpr());
-    flowOrigin(*CO, *CO->getFalseExpr());
+  if (!hasOrigins(CO))
+    return;
+
+  const Expr *TrueExpr = CO->getTrueExpr();
+  const Expr *FalseExpr = CO->getFalseExpr();
+
+  const auto Preds = CurrentBlock->preds();
+
+  // Skip origin flow from conditional operator arms that cannot produce the
+  // result value: throw arms and calls to noreturn functions.
+  bool TBHasEdge = true;
+  bool FBHasEdge = true;
+
+  switch (CurrentBlock->pred_size()) {
+  case 0:
+    return;
+  case 1: {
+    TBHasEdge = llvm::any_of(**Preds.begin(),
+                             [ExpectedStmt = TrueExpr->IgnoreParenImpCasts()](
+                                 const CFGElement &Elt) {
+                               if (auto CS = Elt.getAs<CFGStmt>())
+                                 return CS->getStmt() == ExpectedStmt;
+                               return false;
+                             });
+    FBHasEdge = !TBHasEdge;
+    break;
   }
+  case 2: {
+    const auto *It = Preds.begin();
+    TBHasEdge = It->isReachable();
+    FBHasEdge = (++It)->isReachable();
+    break;
+  }
+  default:
+    llvm_unreachable("expected at most 2 predecessors");
+    return;
+  }
+
+  bool FirstFlow = true;
+  auto HandleFlow = [&](const Expr *E) {
+    if (FirstFlow) {
+      killAndFlowOrigin(*CO, *E);
+      FirstFlow = false;
+    } else {
+      flowOrigin(*CO, *E);
+    }
+  };
+
+  if (TBHasEdge)
+    HandleFlow(TrueExpr);
+  if (FBHasEdge)
+    HandleFlow(FalseExpr);
 }
 
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
@@ -719,6 +792,17 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         // The constructed gsl::Pointer borrows from the Owner's storage, not
         // from what the Owner itself borrows, so only the outermost origin is
         // needed.
+        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
+            KillSrc));
+        KillSrc = false;
+      } else if (IsArgLifetimeBound(I)) {
+        // Only flow the outer origin here. For lifetimebound args in
+        // gsl::Pointer construction, we do not have enough information to
+        // safely match inner origins, so the source and
+        // destination origin lists may have different lengths.
+        // FIXME: Handle origin-shape mismatches gracefully so we can also flow
+        // inner origins.
         CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
             CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
             KillSrc));

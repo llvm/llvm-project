@@ -39,6 +39,10 @@ public:
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
 
+  llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *Ty,
+                             const LangOptions &LangOpt) const override;
+
 private:
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
 };
@@ -398,6 +402,17 @@ void AMDGCNSPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
     else
       I.info = classifyArgumentType(I.type);
   }
+}
+
+llvm::FixedVectorType *
+SPIRVABIInfo::getOptimalVectorMemoryType(llvm::FixedVectorType *Ty,
+                                         const LangOptions &LangOpt) const {
+  // For Logical SPIR-V, we don't know the underlying hardware or layout.
+  // This means we don't know which vector size is better, and also cannot
+  // assume a smaller vector size is stored in a larger vector size.
+  if (getTarget().getTriple().isSPIRVLogical())
+    return Ty;
+  return DefaultABIInfo::getOptimalVectorMemoryType(Ty, LangOpt);
 }
 
 llvm::FixedVectorType *AMDGCNSPIRVABIInfo::getOptimalVectorMemoryType(

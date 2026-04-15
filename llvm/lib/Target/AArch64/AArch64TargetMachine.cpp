@@ -222,11 +222,6 @@ static cl::opt<bool>
                            cl::desc("Enable Machine Pipeliner for AArch64"),
                            cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    EnableNewSMEABILowering("aarch64-new-sme-abi",
-                            cl::desc("Enable new lowering for the SME ABI"),
-                            cl::init(true), cl::Hidden);
-
 static cl::opt<bool> EnableSRLTSubregToRegMitigation(
     "aarch64-srlt-mitigate-sr2r",
     cl::desc("Enable SUBREG_TO_REG mitigation by adding 'implicit-def' for "
@@ -244,7 +239,7 @@ LLVMInitializeAArch64Target() {
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeAArch64A53Fix835769LegacyPass(PR);
-  initializeAArch64A57FPLoadBalancingPass(PR);
+  initializeAArch64A57FPLoadBalancingLegacyPass(PR);
   initializeAArch64AdvSIMDScalarLegacyPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsLegacyPass(PR);
@@ -258,21 +253,20 @@ LLVMInitializeAArch64Target() {
   initializeAArch64MIPeepholeOptLegacyPass(PR);
   initializeAArch64SIMDInstrOptPass(PR);
   initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
-  initializeAArch64PreLegalizerCombinerPass(PR);
+  initializeAArch64PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerLegacyPass(PR);
   initializeAArch64PostLegalizerCombinerPass(PR);
   initializeAArch64PostLegalizerLoweringPass(PR);
   initializeAArch64PostSelectOptimizePass(PR);
   initializeAArch64PromoteConstantPass(PR);
-  initializeAArch64RedundantCopyEliminationPass(PR);
+  initializeAArch64RedundantCopyEliminationLegacyPass(PR);
   initializeAArch64RedundantCondBranchPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
   initializeLDTLSCleanupPass(PR);
   initializeKCFIPass(PR);
-  initializeSMEABIPass(PR);
   initializeMachineSMEABIPass(PR);
   initializeAArch64SRLTDefineSuperRegsPass(PR);
   initializeSMEPeepholeOptPass(PR);
@@ -357,8 +351,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                computeDefaultCPU(TT, CPU), FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
-      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian),
-      UseNewSMEABILowering(EnableNewSMEABILowering) {
+      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 
   if (TT.isOSBinFormatMachO()) {
@@ -693,13 +686,6 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createInterleavedAccessPass());
   }
 
-  if (!EnableNewSMEABILowering) {
-    // Expand any functions marked with SME attributes which require special
-    // changes for the calling convention or that require the lazy-saving
-    // mechanism specified in the SME ABI.
-    addPass(createSMEABIPass());
-  }
-
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows()) {
     if (TM->getTargetTriple().isWindowsArm64EC())
@@ -802,7 +788,7 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
-  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableNewSMEABILowering)
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createMachineSMEABIPass(TM->getOptLevel()));
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
@@ -835,7 +821,7 @@ bool AArch64PassConfig::addILPOpts() {
 }
 
 void AArch64PassConfig::addPreRegAlloc() {
-  if (TM->getOptLevel() == CodeGenOptLevel::None && EnableNewSMEABILowering)
+  if (TM->getOptLevel() == CodeGenOptLevel::None)
     addPass(createMachineSMEABIPass(CodeGenOptLevel::None));
 
   // Change dead register definitions to refer to the zero register.
@@ -867,7 +853,7 @@ void AArch64PassConfig::addPostRegAlloc() {
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && usingDefaultRegAlloc())
     // Improve performance for some FP/SIMD code for A57.
-    addPass(createAArch64A57FPLoadBalancing());
+    addPass(createAArch64A57FPLoadBalancingLegacyPass());
 }
 
 void AArch64PassConfig::addPreSched2() {

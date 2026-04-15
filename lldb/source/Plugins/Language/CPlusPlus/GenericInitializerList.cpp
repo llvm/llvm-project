@@ -9,6 +9,7 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <cstddef>
 #include <optional>
 #include <type_traits>
@@ -114,13 +115,11 @@ public:
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_start) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
+      return llvm::createStringErrorV("type has no child named '{0}'", name);
     }
     auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
     if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
+      return llvm::createStringErrorV("type has no child named '{0}'", name);
     }
     return *optional_idx;
   }

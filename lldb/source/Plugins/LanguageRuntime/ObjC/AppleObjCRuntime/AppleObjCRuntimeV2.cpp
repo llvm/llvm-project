@@ -59,6 +59,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 
 #include <cstdint>
@@ -68,6 +69,23 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+namespace {
+struct RuntimeGlobalSymbolSpec {
+  ConstString name;
+
+  /// Whether to only return the address or also the value.
+  bool read_value = true;
+
+  /// A byte size of 0 means use the process pointer size.
+  uint8_t byte_size = 0;
+};
+
+struct RuntimeGlobalSymbolResult {
+  uint64_t value = LLDB_INVALID_ADDRESS;
+  bool success = false;
+};
+} // namespace
 
 char AppleObjCRuntimeV2::ID = 0;
 
@@ -312,8 +330,8 @@ __lldb_apple_objc_v2_get_dynamic_class_info3(void *gdb_objc_realized_classes_ptr
 static const char *g_shared_cache_class_name_funcptr = R"(
 extern "C"
 {
-    const char *%s(void *objc_class);
-    const char *(*class_name_lookup_func)(void *) = %s;
+    const char *{0}(void *objc_class);
+    const char *(*class_name_lookup_func)(void *) = {1};
 }
 )";
 
@@ -759,6 +777,75 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
   return symbol_load_addr;
 }
 
+// Batched version of ExtractRuntimeGlobalSymbol. Resolves symbols and reads
+// their values in a single batch using ReadUnsignedIntegersFromMemory.
+static llvm::SmallVector<RuntimeGlobalSymbolResult>
+ExtractRuntimeGlobalSymbolsBatched(
+    Process *process, const ModuleSP &module_sp,
+    llvm::ArrayRef<RuntimeGlobalSymbolSpec> specs) {
+
+  // Start out with all results in a failed state.
+  llvm::SmallVector<RuntimeGlobalSymbolResult> results(specs.size());
+
+  if (!process || !module_sp)
+    return results;
+
+  const uint8_t ptr_size = process->GetAddressByteSize();
+
+  // Phase 1: Resolve all symbols to addresses. Build a work list of entries
+  // that need their values read in Phase 2.
+  struct ReadEntry {
+    size_t result_idx;
+    lldb::addr_t addr;
+    uint8_t byte_size;
+  };
+  llvm::SmallVector<ReadEntry> work_list;
+  for (auto [i, spec] : llvm::enumerate(specs)) {
+    const uint8_t size = spec.byte_size ? spec.byte_size : ptr_size;
+    const Symbol *symbol = module_sp->FindFirstSymbolWithNameAndType(
+        spec.name, lldb::eSymbolTypeData);
+
+    if (!symbol || !symbol->ValueIsAddress())
+      continue;
+
+    lldb::addr_t symbol_load_addr =
+        symbol->GetAddressRef().GetLoadAddress(&process->GetTarget());
+    if (symbol_load_addr == LLDB_INVALID_ADDRESS)
+      continue;
+
+    if (!spec.read_value)
+      results[i] = {symbol_load_addr, true};
+    else
+      work_list.push_back({i, symbol_load_addr, size});
+  }
+
+  // Phase 2: Batch read values, grouping consecutive entries with the same
+  // byte size into a single ReadUnsignedIntegersFromMemory call.
+  llvm::stable_sort(work_list, [](const ReadEntry &a, const ReadEntry &b) {
+    return a.byte_size < b.byte_size;
+  });
+
+  for (size_t i = 0; i < work_list.size();) {
+    const uint8_t byte_size = work_list[i].byte_size;
+    const size_t group_start = i;
+
+    llvm::SmallVector<lldb::addr_t> addrs;
+    while (i < work_list.size() && work_list[i].byte_size == byte_size)
+      addrs.push_back(work_list[i++].addr);
+
+    auto read_values =
+        process->ReadUnsignedIntegersFromMemory(addrs, byte_size);
+
+    for (size_t j = 0; j < addrs.size(); ++j) {
+      size_t idx = work_list[group_start + j].result_idx;
+      if (read_values[j].has_value())
+        results[idx] = {*read_values[j], true};
+    }
+  }
+
+  return results;
+}
+
 static void RegisterObjCExceptionRecognizer(Process *process);
 
 AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
@@ -1189,7 +1276,7 @@ AppleObjCRuntimeV2::CreateExceptionResolver(const BreakpointSP &bkpt,
 
   if (throw_bp)
     resolver_sp = std::make_shared<BreakpointResolverName>(
-        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(),
+        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(nullptr),
         eFunctionNameTypeBase, eLanguageTypeUnknown, Breakpoint::Exact, 0,
         /*offset_is_insn_count = */ false, eLazyBoolNo);
   // FIXME: We don't do catch breakpoints for ObjC yet.
@@ -1960,10 +2047,9 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   // concatenate the two parts of our expression text.  The format string has
   // two %s's, so provide the name twice.
   std::string shared_class_expression;
-  llvm::raw_string_ostream(shared_class_expression)
-      << llvm::format(g_shared_cache_class_name_funcptr,
-                      class_name_getter_function_name.AsCString(),
-                      class_name_getter_function_name.AsCString());
+  llvm::raw_string_ostream(shared_class_expression) << llvm::formatv(
+      g_shared_cache_class_name_funcptr, class_name_getter_function_name,
+      class_name_getter_function_name);
 
   shared_class_expression += g_get_shared_cache_class_info_definitions;
   shared_class_expression += g_get_shared_cache_class_info_body;
@@ -2709,20 +2795,20 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
   case SharedCacheWarningReason::eNotEnoughClassesRead:
     Debugger::ReportWarning("could not find Objective-C class data in "
                             "the process. This may reduce the quality of type "
-                            "information available.\n",
+                            "information available\n",
                             debugger.GetID(), &m_no_classes_cached_warning);
     break;
   case SharedCacheWarningReason::eExpressionExecutionFailure:
     Debugger::ReportWarning(
         "could not execute support code to read "
         "Objective-C class data in the process. This may "
-        "reduce the quality of type information available.\n",
+        "reduce the quality of type information available\n",
         debugger.GetID(), &m_no_classes_cached_warning);
     break;
   case SharedCacheWarningReason::eExpressionUnableToRun:
     Debugger::ReportWarning(
         "could not execute support code to read Objective-C class data because "
-        "it's not yet safe to do so, and will be retried later.\n",
+        "it's not yet safe to do so, and will be retried later\n",
         debugger.GetID(), nullptr);
     break;
   }
@@ -2759,7 +2845,7 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
   } else {
     os << "read from the shared cache";
   }
-  os << ". This will likely reduce debugging performance.\n";
+  os << ". This will likely reduce debugging performance\n";
 
   Debugger::ReportWarning(buffer, debugger.GetID(),
                           &m_no_expanded_cache_warning);
@@ -2775,7 +2861,7 @@ DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
 lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
   lldb::addr_t ret = LLDB_INVALID_ADDRESS;
 
-  const char *name_cstr = name.AsCString();
+  const char *name_cstr = name.AsCString(nullptr);
 
   if (name_cstr) {
     llvm::StringRef name_strref(name_cstr);
@@ -2796,7 +2882,7 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
 
         if (descriptor) {
           const ConstString ivar_name_cs(class_and_ivar.second);
-          const char *ivar_name_cstr = ivar_name_cs.AsCString();
+          const char *ivar_name_cstr = ivar_name_cs.AsCString(nullptr);
 
           auto ivar_func = [&ret,
                             ivar_name_cstr](const char *name, const char *type,
@@ -2836,56 +2922,61 @@ AppleObjCRuntimeV2::NonPointerISACache::CreateInstance(
     AppleObjCRuntimeV2 &runtime, const lldb::ModuleSP &objc_module_sp) {
   Process *process(runtime.GetProcess());
 
-  Status error;
-
   Log *log = GetLog(LLDBLog::Types);
 
-  auto objc_debug_isa_magic_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_isa_magic_mask"), objc_module_sp, error);
-  if (error.Fail())
+  // Batch read all the ISA-related symbols in one go.
+  enum ISASymbol {
+    kMagicMask,
+    kMagicValue,
+    kClassMask,
+    kIndexedMagicMask,
+    kIndexedMagicValue,
+    kIndexedIndexMask,
+    kIndexedIndexShift,
+    kIndexedClasses,
+    kISASymbolCount,
+  };
+  llvm::SmallVector<RuntimeGlobalSymbolSpec> specs = {
+      {ConstString("objc_debug_isa_magic_mask")},
+      {ConstString("objc_debug_isa_magic_value")},
+      {ConstString("objc_debug_isa_class_mask")},
+      {ConstString("objc_debug_indexed_isa_magic_mask")},
+      {ConstString("objc_debug_indexed_isa_magic_value")},
+      {ConstString("objc_debug_indexed_isa_index_mask")},
+      {ConstString("objc_debug_indexed_isa_index_shift")},
+      {ConstString("objc_indexed_classes"), /*read_value=*/false},
+  };
+  assert(specs.size() == kISASymbolCount);
+
+  auto results =
+      ExtractRuntimeGlobalSymbolsBatched(process, objc_module_sp, specs);
+
+  // Check required symbols.
+  if (!results[kMagicMask].success || !results[kMagicValue].success ||
+      !results[kClassMask].success)
     return nullptr;
 
-  auto objc_debug_isa_magic_value = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_isa_magic_value"), objc_module_sp,
-      error);
-  if (error.Fail())
-    return nullptr;
-
-  auto objc_debug_isa_class_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_isa_class_mask"), objc_module_sp, error);
-  if (error.Fail())
-    return nullptr;
+  auto objc_debug_isa_magic_mask = results[kMagicMask].value;
+  auto objc_debug_isa_magic_value = results[kMagicValue].value;
+  auto objc_debug_isa_class_mask = results[kClassMask].value;
 
   if (log)
     log->PutCString("AOCRT::NPI: Found all the non-indexed ISA masks");
 
-  bool foundError = false;
-  auto objc_debug_indexed_isa_magic_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_indexed_isa_magic_mask"), objc_module_sp,
-      error);
-  foundError |= error.Fail();
+  // Check optional indexed ISA symbols.
+  bool foundError = !results[kIndexedMagicMask].success ||
+                    !results[kIndexedMagicValue].success ||
+                    !results[kIndexedIndexMask].success ||
+                    !results[kIndexedIndexShift].success ||
+                    !results[kIndexedClasses].success;
 
-  auto objc_debug_indexed_isa_magic_value = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_indexed_isa_magic_value"),
-      objc_module_sp, error);
-  foundError |= error.Fail();
+  auto objc_debug_indexed_isa_magic_mask = results[kIndexedMagicMask].value;
+  auto objc_debug_indexed_isa_magic_value = results[kIndexedMagicValue].value;
+  auto objc_debug_indexed_isa_index_mask = results[kIndexedIndexMask].value;
+  auto objc_debug_indexed_isa_index_shift = results[kIndexedIndexShift].value;
+  auto objc_indexed_classes = results[kIndexedClasses].value;
 
-  auto objc_debug_indexed_isa_index_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_indexed_isa_index_mask"), objc_module_sp,
-      error);
-  foundError |= error.Fail();
-
-  auto objc_debug_indexed_isa_index_shift = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_indexed_isa_index_shift"),
-      objc_module_sp, error);
-  foundError |= error.Fail();
-
-  auto objc_indexed_classes =
-      ExtractRuntimeGlobalSymbol(process, ConstString("objc_indexed_classes"),
-                                 objc_module_sp, error, false);
-  foundError |= error.Fail();
-
-  if (log)
+  if (log && !foundError)
     log->PutCString("AOCRT::NPI: Found all the indexed ISA masks");
 
   // we might want to have some rules to outlaw these other values (e.g if the
@@ -2904,84 +2995,72 @@ AppleObjCRuntimeV2::TaggedPointerVendorV2::CreateInstance(
     AppleObjCRuntimeV2 &runtime, const lldb::ModuleSP &objc_module_sp) {
   Process *process(runtime.GetProcess());
 
-  Status error;
+  // Batch read all tagged pointer symbols in one go.
+  enum TaggedPtrSymbol {
+    kMask,
+    kSlotShift,
+    kSlotMask,
+    kPayloadLshift,
+    kPayloadRshift,
+    kClasses,
+    kExtMask,
+    kExtSlotShift,
+    kExtSlotMask,
+    kExtClasses,
+    kExtPayloadLshift,
+    kExtPayloadRshift,
+    kTaggedPtrSymbolCount,
+  };
+  llvm::SmallVector<RuntimeGlobalSymbolSpec> specs = {
+      {ConstString("objc_debug_taggedpointer_mask")},
+      {ConstString("objc_debug_taggedpointer_slot_shift"), true, 4},
+      {ConstString("objc_debug_taggedpointer_slot_mask"), true, 4},
+      {ConstString("objc_debug_taggedpointer_payload_lshift"), true, 4},
+      {ConstString("objc_debug_taggedpointer_payload_rshift"), true, 4},
+      {ConstString("objc_debug_taggedpointer_classes"), false},
+      {ConstString("objc_debug_taggedpointer_ext_mask")},
+      {ConstString("objc_debug_taggedpointer_ext_slot_shift"), true, 4},
+      {ConstString("objc_debug_taggedpointer_ext_slot_mask"), true, 4},
+      {ConstString("objc_debug_taggedpointer_ext_classes"), false},
+      {ConstString("objc_debug_taggedpointer_ext_payload_lshift"), true, 4},
+      {ConstString("objc_debug_taggedpointer_ext_payload_rshift"), true, 4},
+  };
+  assert(specs.size() == kTaggedPtrSymbolCount);
 
-  auto objc_debug_taggedpointer_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_mask"), objc_module_sp,
-      error);
-  if (error.Fail())
+  auto results =
+      ExtractRuntimeGlobalSymbolsBatched(process, objc_module_sp, specs);
+
+  // Check required symbols.
+  bool required_success =
+      results[kMask].success && results[kSlotShift].success &&
+      results[kSlotMask].success && results[kPayloadLshift].success &&
+      results[kPayloadRshift].success && results[kClasses].success;
+
+  if (!required_success)
     return new TaggedPointerVendorLegacy(runtime);
 
-  auto objc_debug_taggedpointer_slot_shift = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_slot_shift"),
-      objc_module_sp, error, true, 4);
-  if (error.Fail())
-    return new TaggedPointerVendorLegacy(runtime);
+  auto objc_debug_taggedpointer_mask = results[kMask].value;
+  auto objc_debug_taggedpointer_slot_shift = results[kSlotShift].value;
+  auto objc_debug_taggedpointer_slot_mask = results[kSlotMask].value;
+  auto objc_debug_taggedpointer_payload_lshift = results[kPayloadLshift].value;
+  auto objc_debug_taggedpointer_payload_rshift = results[kPayloadRshift].value;
+  auto objc_debug_taggedpointer_classes = results[kClasses].value;
 
-  auto objc_debug_taggedpointer_slot_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_slot_mask"),
-      objc_module_sp, error, true, 4);
-  if (error.Fail())
-    return new TaggedPointerVendorLegacy(runtime);
+  // Check if extended symbols are all present.
+  bool extended_success =
+      results[kExtMask].success && results[kExtSlotShift].success &&
+      results[kExtSlotMask].success && results[kExtClasses].success &&
+      results[kExtPayloadLshift].success && results[kExtPayloadRshift].success;
 
-  auto objc_debug_taggedpointer_payload_lshift = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_payload_lshift"),
-      objc_module_sp, error, true, 4);
-  if (error.Fail())
-    return new TaggedPointerVendorLegacy(runtime);
-
-  auto objc_debug_taggedpointer_payload_rshift = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_payload_rshift"),
-      objc_module_sp, error, true, 4);
-  if (error.Fail())
-    return new TaggedPointerVendorLegacy(runtime);
-
-  auto objc_debug_taggedpointer_classes = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_classes"), objc_module_sp,
-      error, false);
-  if (error.Fail())
-    return new TaggedPointerVendorLegacy(runtime);
-
-  // try to detect the "extended tagged pointer" variables - if any are
-  // missing, use the non-extended vendor
-  do {
-    auto objc_debug_taggedpointer_ext_mask = ExtractRuntimeGlobalSymbol(
-        process, ConstString("objc_debug_taggedpointer_ext_mask"),
-        objc_module_sp, error);
-    if (error.Fail())
-      break;
-
-    auto objc_debug_taggedpointer_ext_slot_shift = ExtractRuntimeGlobalSymbol(
-        process, ConstString("objc_debug_taggedpointer_ext_slot_shift"),
-        objc_module_sp, error, true, 4);
-    if (error.Fail())
-      break;
-
-    auto objc_debug_taggedpointer_ext_slot_mask = ExtractRuntimeGlobalSymbol(
-        process, ConstString("objc_debug_taggedpointer_ext_slot_mask"),
-        objc_module_sp, error, true, 4);
-    if (error.Fail())
-      break;
-
-    auto objc_debug_taggedpointer_ext_classes = ExtractRuntimeGlobalSymbol(
-        process, ConstString("objc_debug_taggedpointer_ext_classes"),
-        objc_module_sp, error, false);
-    if (error.Fail())
-      break;
-
+  if (extended_success) {
+    auto objc_debug_taggedpointer_ext_mask = results[kExtMask].value;
+    auto objc_debug_taggedpointer_ext_slot_shift = results[kExtSlotShift].value;
+    auto objc_debug_taggedpointer_ext_slot_mask = results[kExtSlotMask].value;
+    auto objc_debug_taggedpointer_ext_classes = results[kExtClasses].value;
     auto objc_debug_taggedpointer_ext_payload_lshift =
-        ExtractRuntimeGlobalSymbol(
-            process, ConstString("objc_debug_taggedpointer_ext_payload_lshift"),
-            objc_module_sp, error, true, 4);
-    if (error.Fail())
-      break;
-
+        results[kExtPayloadLshift].value;
     auto objc_debug_taggedpointer_ext_payload_rshift =
-        ExtractRuntimeGlobalSymbol(
-            process, ConstString("objc_debug_taggedpointer_ext_payload_rshift"),
-            objc_module_sp, error, true, 4);
-    if (error.Fail())
-      break;
+        results[kExtPayloadRshift].value;
 
     return new TaggedPointerVendorExtended(
         runtime, objc_debug_taggedpointer_mask,
@@ -2994,7 +3073,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorV2::CreateInstance(
         objc_debug_taggedpointer_ext_payload_lshift,
         objc_debug_taggedpointer_ext_payload_rshift,
         objc_debug_taggedpointer_classes, objc_debug_taggedpointer_ext_classes);
-  } while (false);
+  }
 
   // we might want to have some rules to outlaw these values (e.g if the
   // table's address is zero)

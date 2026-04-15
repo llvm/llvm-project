@@ -18,8 +18,8 @@ module @parseAnyNoExpressedType attributes {
 
 // CHECK-LABEL: parseAnyOnlyStorageType
 module @parseAnyOnlyStorageType attributes {
-  // CHECK: bytecode.test = !quant.any<i8<-8:7>>
-  bytecode.test = !quant.any<i8<-8:7>>
+  // CHECK: bytecode.test = !quant.any<i8>
+  bytecode.test = !quant.any<i8>
 } {}
 
 //===----------------------------------------------------------------------===//

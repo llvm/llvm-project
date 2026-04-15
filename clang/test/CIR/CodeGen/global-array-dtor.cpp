@@ -22,7 +22,6 @@ ArrayDtor arrDtor[16];
 // CIR-BEFORE-LPP:          cir.array.dtor %[[THIS]] : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>> {
 // CIR-BEFORE-LPP:          ^bb0(%[[ELEM:.*]]: !cir.ptr<!rec_ArrayDtor>):
 // CIR-BEFORE-LPP:            cir.call @_ZN9ArrayDtorD1Ev(%[[ELEM]]) nothrow : (!cir.ptr<!rec_ArrayDtor> {{.*}}) -> ()
-// CIR-BEFORE-LPP:            cir.yield
 // CIR-BEFORE-LPP:          }
 // CIR-BEFORE-LPP:        }
 
