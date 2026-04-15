@@ -748,6 +748,9 @@ enum ASTRecordTypes {
 
   /// Record code for #pragma clang riscv intrinsic vector.
   RISCV_VECTOR_INTRINSICS_PRAGMA = 78,
+
+  /// Record code for enforced profile designators (P3589R2).
+  ENFORCED_PROFILES = 79,
 };
 
 /// Record types used within a source manager block.

@@ -977,6 +977,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PP_UNSAFE_BUFFER_USAGE);
   RECORD(VTABLES_TO_EMIT);
   RECORD(RISCV_VECTOR_INTRINSICS_PRAGMA);
+  RECORD(ENFORCED_PROFILES);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -5301,6 +5302,24 @@ void ASTWriter::WriteRISCVIntrinsicPragmas(Sema &SemaRef) {
   Stream.EmitRecord(RISCV_VECTOR_INTRINSICS_PRAGMA, Record);
 }
 
+void ASTWriter::WriteEnforcedProfiles(Sema &SemaRef) {
+  if (SemaRef.EnforcedProfiles.empty())
+    return;
+
+  auto Abbrev = std::make_shared<llvm::BitCodeAbbrev>();
+  Abbrev->Add(llvm::BitCodeAbbrevOp(ENFORCED_PROFILES));
+  Abbrev->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
+  Abbrev->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
+  unsigned AbbrevID = Stream.EmitAbbrev(std::move(Abbrev));
+
+  for (const auto &EP : SemaRef.EnforcedProfiles) {
+    RecordData::value_type Record[] = {ENFORCED_PROFILES,
+                                       EP.ProfileName.size()};
+    Stream.EmitRecordWithBlob(AbbrevID, Record,
+                              EP.ProfileName + EP.CanonicalDesignator);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // General Serialization Routines
 //===----------------------------------------------------------------------===//
@@ -6204,6 +6223,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     WriteOpenCLExtensions(*SemaPtr);
     WriteCUDAPragmas(*SemaPtr);
     WriteRISCVIntrinsicPragmas(*SemaPtr);
+    WriteEnforcedProfiles(*SemaPtr);
   }
 
   // If we're emitting a module, write out the submodule information.

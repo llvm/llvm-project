@@ -4363,6 +4363,14 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       FPPragmaOptions.swap(Record);
       break;
 
+    case ENFORCED_PROFILES: {
+      unsigned NameLen = Record[0];
+      std::string Name = Blob.substr(0, NameLen).str();
+      std::string Desig = Blob.substr(NameLen).str();
+      SerializedEnforcedProfiles.push_back({std::move(Name), std::move(Desig)});
+      break;
+    }
+
     case DECLS_WITH_EFFECTS_TO_VERIFY:
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
         DeclsWithEffectsToVerify.push_back(ReadDeclID(F, Record, I));
@@ -9281,6 +9289,12 @@ void ASTReader::UpdateSema() {
       SemaObj->FpPragmaStack.CurrentPragmaLocation = FpPragmaCurrentLocation;
     }
   }
+
+  // Restore enforced profile designators (P3589R2).
+  for (const auto &EP : SerializedEnforcedProfiles)
+    SemaObj->addProfileEnforcement(EP.ProfileName, EP.Designator,
+                                   SourceLocation());
+  SerializedEnforcedProfiles.clear();
 
   // For non-modular AST files, restore visiblity of modules.
   for (auto &Import : PendingImportedModulesSema) {

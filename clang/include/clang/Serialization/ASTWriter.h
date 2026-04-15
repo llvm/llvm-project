@@ -641,6 +641,7 @@ private:
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
   void WriteRISCVIntrinsicPragmas(Sema &SemaRef);
+  void WriteEnforcedProfiles(Sema &SemaRef);
 
   unsigned DeclParmVarAbbrev = 0;
   unsigned DeclContextLexicalAbbrev = 0;
