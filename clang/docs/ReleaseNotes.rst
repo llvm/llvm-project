@@ -382,6 +382,11 @@ Improvements to Clang's diagnostics
   code can automatically be made portable to other host platforms that don't
   support backslashes.
 
+- The :doc:`ThreadSafetyAnalysis` dropped most call-based alias
+  invalidation (alias analysis only with ``-Wthread-safety-beta``), eliminating
+  false positives when passing local variable aliases by non-const pointer or
+  reference.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
