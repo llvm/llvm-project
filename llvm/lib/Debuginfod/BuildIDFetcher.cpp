@@ -15,15 +15,18 @@
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 
 #include "llvm/Debuginfod/Debuginfod.h"
+#include "llvm/Support/Error.h"
 
 using namespace llvm;
 
 Expected<std::string>
 DebuginfodFetcher::fetch(ArrayRef<uint8_t> BuildID) const {
-  if (Expected<std::string> Path = BuildIDFetcher::fetch(BuildID))
-    return std::move(*Path);
-  else
-    consumeError(Path.takeError());
-
+  Expected<std::string> Path = BuildIDFetcher::fetch(BuildID);
+  if (Path)
+    return Path;
+  assert(errorToErrorCode(Path.takeError()) ==
+             std::errc::no_such_file_or_directory &&
+         "BuildIDFetcher::fetch() failed in an unexpected way");
+  consumeError(Path.takeError());
   return getCachedOrDownloadDebuginfo(BuildID);
 }

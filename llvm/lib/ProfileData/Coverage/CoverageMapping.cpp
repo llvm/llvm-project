@@ -1106,8 +1106,7 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     }
 
     for (object::BuildIDRef BinaryID : BinaryIDsToFetch) {
-      Expected<std::string> Path = BIDFetcher->fetch(BinaryID);
-      if (Path) {
+      if (Expected<std::string> Path = BIDFetcher->fetch(BinaryID)) {
         StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
         if (Error E = loadFromFile(*Path, Arch, CompilationDir,
                                    ProfileReaderRef, *Coverage, DataFound))
