@@ -273,6 +273,10 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
         if (const CXXConstructExpr *ConstructExpr = NewExpr->getConstructExpr())
           if (const CXXConstructorDecl *Ctor = ConstructExpr->getConstructor())
             for (unsigned I = 0; I < Ctor->getNumParams(); ++I)
+              // Only infer lifetimebound for references. For pointers and
+              // views, the forwarding reference in make_unique would
+              // incorrectly track the lifetime of the local pointer variable
+              // itself, rather than the data it points to.
               if (I < FD->getNumParams() &&
                   Ctor->getParamDecl(I)->hasAttr<LifetimeBoundAttr>() &&
                   Ctor->getParamDecl(I)->getType()->isReferenceType())
