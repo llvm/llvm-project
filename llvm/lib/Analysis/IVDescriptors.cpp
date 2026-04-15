@@ -1231,6 +1231,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMulAdd:
   case RecurKind::FAdd:
     return Instruction::FAdd;
+  case RecurKind::FSub:
+    return Instruction::FSub;
   case RecurKind::SMax:
   case RecurKind::SMin:
   case RecurKind::UMax:
