@@ -572,6 +572,12 @@ Bug Fixes in This Version
   by diagnosing invalid comma-separated argument lists. (#GH166325)
 - Clang now treats enumeration constants of fixed-underlying enums as the enumerated type. (#GH172118)
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
+- Fixed the interaction between ``-pedantic-errors`` and ``-Wno-error=X``.
+  Previously, ``-Wno-error=X`` failed to downgrade ``-pedantic-errors``
+  diagnostics to warnings (e.g., ``-pedantic-errors -Wno-error=long-long``
+  still emitted an error for ``long long`` in C89 mode). Now ``-Wno-error=X``
+  correctly downgrades the diagnostic to a warning, matching GCC's behavior.
+  (#GH184250)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
