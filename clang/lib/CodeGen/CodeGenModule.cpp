@@ -247,6 +247,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
 
   case llvm::Triple::tce:
   case llvm::Triple::tcele:
+  case llvm::Triple::tcele64:
     return createTCETargetCodeGenInfo(CGM);
 
   case llvm::Triple::x86: {
