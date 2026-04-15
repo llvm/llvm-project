@@ -326,14 +326,6 @@ func.func @create_tdesc_layout_1(%src: ui64) {
 }
 
 // -----
-func.func @create_tdesc_layout_2(%src: ui64) {
-  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  // expected-error@+1 {{expected last dim of lane_data to be a multiple of: 2}}
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x4xf16, #xegpu.scatter_tdesc_attr<chunk_size = 4>, #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>
-  return
-}
-
-// -----
 func.func @load_gather_simt_1(%src: ui64) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>

@@ -218,6 +218,11 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
       }
     }
   }
+
+  if (layout && !layout.isDistributable(
+                    SmallVector<int64_t>(dataShape.begin(), dataShape.end())))
+    return emitError() << "Value shape is not distributable with the layout";
+
   if (dataShape.size() == 2) {
     if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                      [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
@@ -504,6 +509,12 @@ LogicalResult PrefetchNdOp::verify() {
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(tdescTy)))
+      return emitOpError(
+          "TensorDesc shape is not distributable with the layout");
+  }
+
   return success();
 }
 
@@ -628,6 +639,12 @@ LogicalResult LoadNdOp::verify() {
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(tdescTy)))
+      return emitOpError(
+          "TensorDesc shape is not distributable with the layout");
+  }
+
   return success();
 }
 
@@ -720,6 +737,12 @@ LogicalResult StoreNdOp::verify() {
   if (offsetSize != 0 && offsetSize != tDescRank)
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
+
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(tdescShape))
+      return emitOpError(
+          "TensorDesc shape is not distributable with the layout");
+  }
 
   return success();
 }
@@ -823,6 +846,16 @@ LogicalResult PrefetchOp::verify() {
   if (getOffsetAlignByteAttr() && !srcTy.isInteger())
     return emitOpError("offset_align_byte only allowed with integer source.");
 
+  if (auto layout = getAnchorLayout()) {
+    // get the offset operand and its shape
+    if (auto offsets = getOffsets()) {
+      auto offsetsTy = offsets.getType();
+      if (llvm::isa<VectorType>(offsetsTy) &&
+          !layout.isDistributable(getShapeOf(offsetsTy)))
+        return emitOpError("offset shape is not distributable with the layout");
+    }
+  }
+
   return success();
 }
 
@@ -869,6 +902,11 @@ LogicalResult LoadGatherOp::verify() {
 
   if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
+
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(valueTy)))
+      return emitOpError("Value shape is not distributable with the layout");
+  }
 
   auto offsetsTy = getOffsets().getType();
   return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
@@ -953,6 +991,11 @@ LogicalResult StoreScatterOp::verify() {
 
   if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
+
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(valueTy)))
+      return emitOpError("Value shape is not distributable with the layout");
+  }
 
   auto offsetsTy = getOffsets().getType();
   return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
@@ -1052,6 +1095,21 @@ LogicalResult DpasOp::verify() {
   auto rhsShape = getRhsType().getShape();
   auto resShape = getResultType().getShape();
 
+  if (auto cdLayout = getLayoutCd())
+    if (!cdLayout->isDistributable(
+            SmallVector<int64_t>(resShape.begin(), resShape.end())))
+      return emitOpError("Value shape is not distributable with the layout");
+
+  if (auto aLayout = getLayoutA())
+    if (!aLayout->isDistributable(
+            SmallVector<int64_t>(lhsShape.begin(), lhsShape.end())))
+      return emitOpError("Value shape is not distributable with the layout");
+
+  if (auto bLayout = getLayoutB())
+    if (!bLayout->isDistributable(
+            SmallVector<int64_t>(rhsShape.begin(), rhsShape.end())))
+      return emitOpError("Value shape is not distributable with the layout");
+
   if (getAcc() && getAcc().getType() != getResultType())
     return emitOpError("Expecting the acc type to be the same as result.");
 
@@ -1103,12 +1161,12 @@ LogicalResult ConvertLayoutOp::verify() {
 
   Type srcType = getSource().getType();
   if (llvm::isa<VectorType>(srcType)) {
-    auto shape = llvm::cast<VectorType>(srcType).getShape();
-    if (!XeGPUDialect::isEvenlyDistributable(shape, srcLayout))
+    SmallVector<int64_t> shape(llvm::cast<VectorType>(srcType).getShape());
+    if (!srcLayout.isDistributable(shape))
       return emitOpError(
           "invalid input layout, data cannot be evenly distributed.");
 
-    if (!XeGPUDialect::isEvenlyDistributable(shape, resLayout))
+    if (!resLayout.isDistributable(shape))
       return emitOpError(
           "invalid target layout, data cannot be evenly distributed.");
   }
