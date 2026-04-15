@@ -1192,11 +1192,9 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     if (QualType::DestructionKind dtorKind =
             field->getType().isDestructedType()) {
       assert(lv.isSimple());
-      if (dtorKind) {
-        cgf.pushDestroyAndDeferDeactivation(NormalAndEHCleanup, lv.getAddress(),
-                                            field->getType(),
-                                            cgf.getDestroyer(dtorKind), false);
-      }
+      cgf.pushDestroyAndDeferDeactivation(NormalAndEHCleanup, lv.getAddress(),
+                                          field->getType(),
+                                          cgf.getDestroyer(dtorKind), false);
     }
 
     // From classic codegen, maybe not useful for CIR:
