@@ -241,6 +241,7 @@ class SPIRVEmitIntrinsics
 
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
+  void simplifyNullAddrSpaceCasts();
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
                         bool IsPostprocessing);
@@ -1533,23 +1534,21 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
   }
 }
 
-void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
-  // Simplify addrspacecast(null) to ConstantPointerNull of the target type.
-  // Casting null always yields null, and this avoids SPIR-V lowering issues
-  // where the null gets typed as an integer instead of a pointer. This handles
-  // addrspacecast instructions (from expanded ConstantExprs); ConstantExpr
-  // sub-elements inside composites are simplified in the decomposition below.
-  SmallVector<Instruction *, 4> ToErase;
-  for (Instruction &I : instructions(CurrF))
+// Simplify addrspacecast(null) instructions to ConstantPointerNull of the
+// target type. Casting null always yields null, and this avoids SPIR-V
+// lowering issues where the null gets typed as an integer instead of a
+// pointer.
+void SPIRVEmitIntrinsics::simplifyNullAddrSpaceCasts() {
+  for (Instruction &I : make_early_inc_range(instructions(CurrF)))
     if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
       if (isa<ConstantPointerNull>(ASC->getPointerOperand())) {
         ASC->replaceAllUsesWith(
             ConstantPointerNull::get(cast<PointerType>(ASC->getType())));
-        ToErase.push_back(ASC);
+        ASC->eraseFromParent();
       }
-  for (Instruction *I : ToErase)
-    I->eraseFromParent();
+}
 
+void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
   std::queue<Instruction *> Worklist;
   for (auto &I : instructions(CurrF))
     Worklist.push(&I);
@@ -3196,6 +3195,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     processGlobalValue(GV, B);
 
   preprocessUndefs(B);
+  simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
 
   for (BasicBlock &BB : Func)
