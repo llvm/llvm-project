@@ -557,7 +557,8 @@ void uaf_via_inferred_lifetimebound() {
 namespace make_unique_suggestion {
 
 struct LifetimeBoundCtor {
-  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]);
+  View v;
+  LifetimeBoundCtor(const MyObj& obj): v(obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
 };
 
 std::unique_ptr<LifetimeBoundCtor> create_target(const MyObj& obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
