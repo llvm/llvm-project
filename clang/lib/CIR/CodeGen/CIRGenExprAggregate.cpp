@@ -1125,7 +1125,7 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
-  assert(!cir::MissingFeatures::requiresCleanups());
+  CIRGenFunction::CleanupDeactivationScope deactivateCleanups(cgf);
 
   unsigned curInitIndex = 0;
 
@@ -1226,10 +1226,12 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     // Push a destructor if necessary.
     // FIXME: if we have an array of structures, all explicitly
     // initialized, we can end up pushing a linear number of cleanups.
-    if (field->getType().isDestructedType()) {
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "visitCXXParenListOrInitListExpr destructor");
-      return;
+    if (QualType::DestructionKind dtorKind =
+            field->getType().isDestructedType()) {
+      assert(lv.isSimple());
+      cgf.pushDestroyAndDeferDeactivation(NormalAndEHCleanup, lv.getAddress(),
+                                          field->getType(),
+                                          cgf.getDestroyer(dtorKind), false);
     }
 
     // From classic codegen, maybe not useful for CIR:
