@@ -498,7 +498,7 @@ struct WgToSgVectorBroadcastOp
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
-    if (!xegpu::XeGPUDialect::isEvenlyDistributable(wgShape, layout))
+    if (!layout.isDistributable(SmallVector<int64_t>(wgShape)))
       return failure();
 
     SmallVector<Value> newBroadcastOps;

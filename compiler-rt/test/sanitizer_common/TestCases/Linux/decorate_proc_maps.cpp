@@ -4,9 +4,6 @@
 // REQUIRES: stable-runtime
 // XFAIL: android && asan
 
-// Implement
-// XFAIL: tysan
-
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>

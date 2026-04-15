@@ -1,4 +1,5 @@
 add_clang_unittest(StaticAnalysisTests
+  AnalyzerFormattingTest.cpp
   AnalyzerOptionsTest.cpp
   APSIntTypeTest.cpp
   BlockEntranceCallbackTest.cpp
