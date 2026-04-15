@@ -428,7 +428,17 @@ public:
     if (TII.isWaitcnt(MI.getOpcode()))
       return false;
 
-    ThenCyclesCost += SchedModel.computeInstrLatency(&MI);
+    // Async loads to LDS use the issue cost (1 cycle) instead of the
+    // scheduling model's resource latency so the cost model can remove the
+    // execz branch when the block is cheap enough. Only loads are
+    // overridden; async stores risk writing zeros to global memory for
+    // OOB LDS source addresses. Async loads have a vdst operand (LDS
+    // destination); stores do not.
+    if (SIInstrInfo::usesASYNC_CNT(MI) &&
+        TII.getNamedOperand(MI, AMDGPU::OpName::vdst))
+      ThenCyclesCost += 1;
+    else
+      ThenCyclesCost += SchedModel.computeInstrLatency(&MI);
 
     // Consider `P = N/D` to be the probability of execz being false (skipping
     // the then-block) The transformation is profitable if always executing the
