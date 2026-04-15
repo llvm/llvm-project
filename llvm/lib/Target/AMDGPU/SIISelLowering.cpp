@@ -5744,6 +5744,10 @@ getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
   case AMDGPU::S_AND_B64:
   case AMDGPU::S_OR_B64:
   case AMDGPU::S_XOR_B64:
+  case AMDGPU::V_MIN_NUM_F64_e64:
+  case AMDGPU::V_MIN_F64_e64:
+  case AMDGPU::V_MAX_NUM_F64_e64:
+  case AMDGPU::V_MAX_F64_e64:
     DPPOpc = AMDGPU::V_MOV_B64_DPP_PSEUDO;
     break;
   default:
@@ -6319,10 +6323,10 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                                       unsigned DPPCtrl) {
         auto DPPInstr =
             BuildMI(*CurrBB, MI, DL, TII->get(DPPOpc), Dst).addReg(Src); // old
-        if (isFPOp)
+        if (isFPOp && !NeedsMovDPP)
           DPPInstr.addImm(SISrcMods::NONE); // src0 modifier
         DPPInstr.addReg(Src);               // src0
-        if (isFPOp)
+        if (isFPOp && !NeedsMovDPP)
           DPPInstr.addImm(SISrcMods::NONE); // src1 modifier
         if (!NeedsMovDPP)
           DPPInstr.addReg(Src); // src1
@@ -6389,17 +6393,27 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                           /*needsCarryIn*/ isAddSubOpc, CarryReg);
           BuildRegSequence(*CurrBB, MI, ReturnReg, ResLo, ResHi);
         } else {
-          Register CmpMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
-          BuildMI(*CurrBB, MI, DL, TII->get(Opc), CmpMaskReg)
-              .addReg(Src0)  // src0
-              .addReg(Src1); // src1
-          LastBcastInstr =
-              BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B64_PSEUDO),
-                      ReturnReg)
-                  .addReg(Src1)        // src0
-                  .addReg(Src0)        // src1
-                  .addReg(CmpMaskReg); // src2
-          expand64BitV_CNDMASK(*LastBcastInstr, CurrBB);
+          if (isFPOp) {
+            BuildMI(*CurrBB, MI, DL, TII->get(Opc), ReturnReg)
+                .addImm(SISrcMods::NONE) // src0 modifiers
+                .addReg(Src0)
+                .addImm(SISrcMods::NONE) // src1 modifiers
+                .addReg(Src1)
+                .addImm(SISrcMods::NONE)  // clamp
+                .addImm(SISrcMods::NONE); // omod
+          } else {
+            Register CmpMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
+            BuildMI(*CurrBB, MI, DL, TII->get(Opc), CmpMaskReg)
+                .addReg(Src0)  // src0
+                .addReg(Src1); // src1
+            LastBcastInstr =
+                BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B64_PSEUDO),
+                        ReturnReg)
+                    .addReg(Src1)        // src0
+                    .addReg(Src0)        // src1
+                    .addReg(CmpMaskReg); // src2
+            expand64BitV_CNDMASK(*LastBcastInstr, CurrBB);
+          }
         }
         return ReturnReg;
       };
