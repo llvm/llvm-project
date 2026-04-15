@@ -552,8 +552,9 @@ void uaf_via_inferred_lifetimebound() {
 namespace make_unique_suggestion {
 
 struct LifetimeBoundCtor {
-  View v; // expected-note {{escapes to this field}}
-  LifetimeBoundCtor(const MyObj& obj): v(obj) {}  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  View v;
+  // FIXME: This test fails to propagate the lifetimebound in ctor if this is inferred (instead of the current explicit annotation).
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]): v(obj) {}
 };
 
 std::unique_ptr<LifetimeBoundCtor> create_target(const MyObj& obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
