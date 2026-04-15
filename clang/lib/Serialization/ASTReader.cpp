@@ -9675,7 +9675,7 @@ void ASTReader::ReadUnusedLocalTypedefNameCandidates(
 void ASTReader::ReadDeclsToCheckForDeferredDiags(
     llvm::SmallSetVector<Decl *, 4> &Decls) {
   for (auto I : DeclsToCheckForDeferredDiags) {
-    auto *D = GetDecl(I);
+    Decl *D = GetDecl(I);
     if (D)
       Decls.insert(D);
   }

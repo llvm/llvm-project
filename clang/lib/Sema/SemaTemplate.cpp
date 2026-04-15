@@ -12,6 +12,7 @@
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
@@ -10165,7 +10166,7 @@ static bool ScopeSpecifierHasTemplateId(const CXXScopeSpec &SS) {
 /// effect.
 static void dllExportImportClassTemplateSpecialization(
     Sema &S, ClassTemplateSpecializationDecl *Def) {
-  auto *A = getDLLAttr(Def);
+  InheritableAttr *A = getDLLAttr(Def);
   assert(A && "dllExportImportClassTemplateSpecialization called "
               "on Def without dllexport or dllimport");
 

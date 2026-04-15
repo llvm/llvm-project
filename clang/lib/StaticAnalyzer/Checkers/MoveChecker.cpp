@@ -581,7 +581,7 @@ void MoveChecker::explainObject(ProgramStateRef State, llvm::raw_ostream &OS,
   // and we never know if we are to explain anything until we try.
   if (const auto DR =
           dyn_cast_or_null<DeclRegion>(unwrapRValueReferenceIndirection(MR))) {
-    const auto *RegionDecl = DR->getDecl();
+    const NamedDecl *RegionDecl = DR->getDecl();
     OS << " '" << RegionDecl->getDeclName() << "'";
   }
 

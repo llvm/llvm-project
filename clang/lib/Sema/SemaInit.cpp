@@ -12,6 +12,7 @@
 
 #include "CheckExprLifetime.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -10310,7 +10311,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         Pattern = Pattern->getInstantiatedFromMemberTemplate();
       }
 
-      auto *RD = Pattern->getTemplatedDecl();
+      const CXXRecordDecl *RD = Pattern->getTemplatedDecl();
       if (!(RD->getDefinition() && RD->isAggregate()))
         return;
       QualType Ty = Context.getCanonicalTagType(RD);

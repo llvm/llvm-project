@@ -23010,7 +23010,7 @@ static ExprResult buildImplicitMapper(Sema &S, QualType BaseType,
     S.PushOnScopeChains(DMD, Scope, /*AddToContext=*/false);
   DCT->addDecl(DMD);
   DMD->setAccess(clang::AS_none);
-  auto *VD = MapperVarRef->getDecl();
+  ValueDecl *VD = MapperVarRef->getDecl();
   VD->setDeclContext(DMD);
   VD->setLexicalDeclContext(DMD);
   DMD->addDecl(VD);

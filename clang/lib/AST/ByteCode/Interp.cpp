@@ -18,6 +18,7 @@
 #include "State.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -444,7 +445,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   // If we're evaluating the initializer for a constexpr variable in C23, we may
   // only read other contexpr variables. Abort here since this one isn't
   // constexpr.
-  if (const auto *VD = S.EvaluatingDecl;
+  if (const VarDecl *VD = S.EvaluatingDecl;
       VD && VD->isConstexpr() && S.getLangOpts().C23)
     return Invalid(S, OpPC);
 
@@ -1772,7 +1773,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     return false;
   assert(DynamicDecl);
 
-  const auto *StaticDecl = Func->getParentDecl();
+  const CXXRecordDecl *StaticDecl = Func->getParentDecl();
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider;
 

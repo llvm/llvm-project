@@ -480,7 +480,7 @@ til::SExpr *SExprBuilder::translateObjCIVarRefExpr(const ObjCIvarRefExpr *IVRE,
   til::SExpr *BE = translate(IVRE->getBase(), Ctx);
   til::SExpr *E = new (Arena) til::SApply(BE);
 
-  const auto *D = IVRE->getDecl()->getCanonicalDecl();
+  const ObjCIvarDecl *D = IVRE->getDecl()->getCanonicalDecl();
 
   til::Project *P = new (Arena) til::Project(E, D);
   if (hasAnyPointerType(BE))
