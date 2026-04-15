@@ -442,22 +442,22 @@ let Predicates = [HasFutureVector] in {
       : VXForm_VRTB5_UIM2<387, 2, (outs vrrc:$VRT), (ins vrrc:$VRB, u2imm:$UIM),
                           "vupkint4tobf16 $VRT, $VRB, $UIM",
                           [(set v16i8:$VRT,
-                            (int_ppc_altivec_vupkint4tobf16 v16i8:$VRB, timm:$UIM))]>;
+                            (int_ppc_altivec_vupkint4tobf16 v16i8:$VRB, u2imm_timm:$UIM))]>;
   def VUPKINT8TOBF16
       : VXForm_VRTB5_UIM1<387, 1, (outs vrrc:$VRT), (ins vrrc:$VRB, u1imm:$UIM),
                           "vupkint8tobf16 $VRT, $VRB, $UIM",
                           [(set v16i8:$VRT,
-                            (int_ppc_altivec_vupkint8tobf16 v16i8:$VRB, timm:$UIM))]>;
+                            (int_ppc_altivec_vupkint8tobf16 v16i8:$VRB, u1imm_timm:$UIM))]>;
   def VUPKINT8TOFP32
       : VXForm_VRTB5_UIM2<387, 3, (outs vrrc:$VRT), (ins vrrc:$VRB, u2imm:$UIM),
                           "vupkint8tofp32 $VRT, $VRB, $UIM",
                           [(set v16i8:$VRT,
-                            (int_ppc_altivec_vupkint8tofp32 v16i8:$VRB, timm:$UIM))]>;
+                            (int_ppc_altivec_vupkint8tofp32 v16i8:$VRB, u2imm_timm:$UIM))]>;
   def VUPKINT4TOFP32
       : VXForm_VRTB5_UIM3<387, 2, (outs vrrc:$VRT), (ins vrrc:$VRB, u3imm:$UIM),
                           "vupkint4tofp32 $VRT, $VRB, $UIM",
                           [(set v16i8:$VRT,
-                            (int_ppc_altivec_vupkint4tofp32 v16i8:$VRB, timm:$UIM))]>;
+                            (int_ppc_altivec_vupkint4tofp32 v16i8:$VRB, u3imm_timm:$UIM))]>;
 
   def VUCMPRHN : VXForm_VRTAB5<3, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
                                "vucmprhn $VRT, $VRA, $VRB",
