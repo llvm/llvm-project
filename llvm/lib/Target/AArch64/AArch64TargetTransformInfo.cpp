@@ -3753,12 +3753,20 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_TO_UINT, MVT::v2i64, MVT::v2f32, 2},
       {ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f32, 1},
       {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f32, 1},
-
       // Complex, from v4f32: legal type is v4i16, 1 narrowing => ~2
+      {ISD::FP_TO_SINT, MVT::v4i64, MVT::v4f32, 4},
       {ISD::FP_TO_SINT, MVT::v4i16, MVT::v4f32, 2},
       {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f32, 2},
+      {ISD::FP_TO_UINT, MVT::v4i64, MVT::v4f32, 4},
       {ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 2},
       {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f32, 2},
+      // From v8f32: 2 * fcvtzs + uzp [+ xtn]
+      {ISD::FP_TO_SINT, MVT::v8i16, MVT::v8f32, 3},
+      {ISD::FP_TO_SINT, MVT::v8i8, MVT::v8f32, 4},
+      {ISD::FP_TO_SINT, MVT::v16i8, MVT::v16f32, 7},
+      {ISD::FP_TO_UINT, MVT::v8i16, MVT::v8f32, 3},
+      {ISD::FP_TO_UINT, MVT::v8i8, MVT::v8f32, 4},
+      {ISD::FP_TO_UINT, MVT::v16i8, MVT::v16f32, 7},
 
       // Complex, from v2f64: legal type is v2i32, 1 narrowing => ~2.
       {ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f64, 2},
@@ -3767,6 +3775,20 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_TO_UINT, MVT::v2i32, MVT::v2f64, 2},
       {ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f64, 2},
       {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f64, 2},
+      // From v4f64: 2 * fcvtzs + uzp [+ xtn]
+      {ISD::FP_TO_SINT, MVT::v4i32, MVT::v4f64, 3},
+      {ISD::FP_TO_SINT, MVT::v4i16, MVT::v4f64, 4},
+      {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f64, 4},
+      {ISD::FP_TO_UINT, MVT::v4i32, MVT::v4f64, 3},
+      {ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f64, 4},
+      {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f64, 4},
+      // From v8f32: 4 * fcvtzs + uzp [+ xtn]
+      {ISD::FP_TO_SINT, MVT::v8i16, MVT::v8f64, 7},
+      {ISD::FP_TO_SINT, MVT::v8i8, MVT::v8f64, 8},
+      {ISD::FP_TO_SINT, MVT::v16i8, MVT::v16f64, 15},
+      {ISD::FP_TO_UINT, MVT::v8i16, MVT::v8f64, 7},
+      {ISD::FP_TO_UINT, MVT::v8i8, MVT::v8f64, 8},
+      {ISD::FP_TO_UINT, MVT::v16i8, MVT::v16f64, 15},
 
       // Complex, from nxv2f32.
       {ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f32, 1},
