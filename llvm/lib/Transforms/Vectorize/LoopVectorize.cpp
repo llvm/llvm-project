@@ -205,30 +205,25 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
     cl::desc("Assume the target supports masked memory operations (used for "
              "testing)."));
 
-// Option prefer-tail-folding indicates that an epilogue is undesired, that
+// Option tail-folding-policy indicates that an epilogue is undesired, that
 // tail folding is preferred, and this lists all options. I.e., the vectorizer
-// will try to fold the tail-loop (epilogue) into the vector body and the
-// instructions accordingly. If tail-folding fails, there are different fallback
-// strategies depending on these values:
+// will try to fold the tail-loop (epilogue) into the vector body and predicate
+// the instructions accordingly. If tail-folding fails, there are different
+// fallback strategies depending on these values:
 namespace TailFoldingPolicyTy {
-enum Option {
-  PreferEpilogue = 0,
-  FoldTailElseEpilogue,
-  FoldTailOrDontVectorize
-};
+enum Option { None = 0, FoldTailElseEpilogue, FoldTailOrDontVectorize };
 } // namespace TailFoldingPolicyTy
 
 static cl::opt<TailFoldingPolicyTy::Option> TailFoldingPolicy(
-    "tail-folding-policy", cl::init(TailFoldingPolicyTy::PreferEpilogue),
-    cl::Hidden,
+    "tail-folding-policy", cl::init(TailFoldingPolicyTy::None), cl::Hidden,
     cl::desc("Tail-folding preferences over creating an epilogue loop."),
     cl::values(
-        clEnumValN(TailFoldingPolicyTy::PreferEpilogue, "prefer-epilogue",
-                   "Don't tail-fold loops, create an epilogue"),
+        clEnumValN(TailFoldingPolicyTy::None, "prefer-epilogue",
+                   "Don't tail-fold loops."),
         clEnumValN(TailFoldingPolicyTy::FoldTailElseEpilogue,
                    "fold-tail-else-epilogue",
-                   "prefer tail-folding, create an epilogue if tail "
-                   "folding fails."),
+                   "prefer tail-folding, otherwise create an epilogue when "
+                   "appropriate."),
         clEnumValN(TailFoldingPolicyTy::FoldTailOrDontVectorize,
                    "fold-tail-dont-vectorize",
                    "prefers tail-folding, don't attempt vectorization if "
@@ -8272,7 +8267,7 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
   // 2) If set, obey the directives
   if (TailFoldingPolicy.getNumOccurrences()) {
     switch (TailFoldingPolicy) {
-    case TailFoldingPolicyTy::PreferEpilogue:
+    case TailFoldingPolicyTy::None:
       return CM_EpilogueAllowed;
     case TailFoldingPolicyTy::FoldTailElseEpilogue:
       return CM_EpilogueNotNeededFoldTail;
