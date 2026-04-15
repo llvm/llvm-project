@@ -67,6 +67,25 @@ subroutine do_simd_reduction()
   !$omp end do simd
 end subroutine do_simd_reduction
 
+! Verify that the simd reduction var references the wsloop's reduction
+! block arg (not the original array), ensuring proper chaining of
+! per-SIMD-lane results into the wsloop's thread-private reduction copy.
+! CHECK-LABEL: {{.*}}do_simd_array_reduction{{.*}}
+subroutine do_simd_array_reduction()
+  integer :: a(100)
+  a = 0
+  ! CHECK:      omp.wsloop
+  ! CHECK-SAME: reduction(byref @[[ADD_RED_SYM:.*]] %{{.*}} -> %[[ADD_RED_OUTER:.*]] : !fir.ref<!fir.box<!fir.array<100xi32>>>)
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-SAME: reduction(byref @[[ADD_RED_SYM]] %[[ADD_RED_OUTER]] -> %[[ADD_RED_INNER:.*]] : !fir.ref<!fir.box<!fir.array<100xi32>>>)
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp do simd reduction(+:a)
+    do index_ = 1, 10
+      a = a + index_
+    end do
+  !$omp end do simd
+end subroutine do_simd_array_reduction
+
 ! CHECK-LABEL: func.func @_QPdo_simd_private(
 subroutine do_simd_private()
   integer, allocatable :: tmp

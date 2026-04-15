@@ -3601,6 +3601,22 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
       converter, loc, wsloopClauseOps, wsloopArgs);
   wsloopOp.setComposite(/*val=*/true);
 
+  // For composite DO SIMD, the simd reduction vars must reference the
+  // wsloop's reduction block args (thread-private copies) rather than the
+  // original variables. This ensures that
+  //   1) per-SIMD-lane reduction results are combined into the wsloop's
+  //   thread-local copies
+  //   2) wsloop thread-local copies are combined across
+  //   threads by the wsloop reduction.
+  auto wsloopBlockArgIface =
+      llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*wsloopOp);
+  for (unsigned i = 0; i < simdClauseOps.reductionVars.size() &&
+                       i < wsloopBlockArgIface.numReductionBlockArgs();
+       ++i) {
+    simdClauseOps.reductionVars[i] =
+        wsloopBlockArgIface.getReductionBlockArgs()[i];
+  }
+
   EntryBlockArgs simdArgs;
   simdArgs.priv.syms = simdItemDSP.getDelayedPrivSymbols();
   simdArgs.priv.vars = simdClauseOps.privateVars;
