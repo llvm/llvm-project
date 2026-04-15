@@ -223,10 +223,11 @@ static const unsigned
         AMDGPU::S_WAIT_KMCNT,     AMDGPU::S_WAIT_XCNT,
         AMDGPU::S_WAIT_ASYNCCNT};
 
-// ASYNCMARK is a meta instruction that emits no hardware code but still
-// needs to be processed by this pass for async vmcnt tracking.
-static bool shouldSkipWaitcntInsertionBefore(const MachineInstr &MI) {
-  return MI.isMetaInstruction() && MI.getOpcode() != AMDGPU::ASYNCMARK;
+// ASYNCMARK and WAIT_ASYNCMARK are meta instructions that emit no hardware
+// code but still need to be processed by this pass for async vmcnt tracking.
+static bool isNonWaitcntMetaInst(const MachineInstr &MI) {
+  return MI.isMetaInstruction() && MI.getOpcode() != AMDGPU::ASYNCMARK &&
+         MI.getOpcode() != AMDGPU::WAIT_ASYNCMARK;
 }
 
 static bool updateVMCntOnly(const MachineInstr &Inst) {
@@ -1816,7 +1817,7 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
     LLVM_DEBUG(dbgs() << "pre-existing iter: " << II);
-    if (II.isMetaInstruction()) {
+    if (isNonWaitcntMetaInst(II)) {
       LLVM_DEBUG(dbgs() << "skipped meta instruction\n");
       continue;
     }
@@ -2065,7 +2066,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
     LLVM_DEBUG(dbgs() << "pre-existing iter: " << II);
-    if (II.isMetaInstruction()) {
+    if (isNonWaitcntMetaInst(II)) {
       LLVM_DEBUG(dbgs() << "skipped meta instruction\n");
       continue;
     }
@@ -2461,7 +2462,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   LLVM_DEBUG(dbgs() << "\n*** GenerateWaitcntInstBefore: "; MI.print(dbgs()););
   setForceEmitWaitcnt();
 
-  assert(!shouldSkipWaitcntInsertionBefore(MI));
+  assert(!isNonWaitcntMetaInst(MI));
 
   AMDGPU::Waitcnt Wait;
   const unsigned Opc = MI.getOpcode();
@@ -3314,7 +3315,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                          E = Block.instr_end();
        Iter != E; ++Iter) {
     MachineInstr &Inst = *Iter;
-    if (shouldSkipWaitcntInsertionBefore(Inst))
+    if (isNonWaitcntMetaInst(Inst))
       continue;
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
