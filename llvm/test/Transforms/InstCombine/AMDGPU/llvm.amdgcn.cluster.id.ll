@@ -71,11 +71,10 @@ entry:
   ret i32 %tmp
 }
 
-declare i32 @llvm.amdgcn.cluster.id.x() #3
-declare i32 @llvm.amdgcn.cluster.id.y() #3
-declare i32 @llvm.amdgcn.cluster.id.z() #3
+declare i32 @llvm.amdgcn.cluster.id.x()
+declare i32 @llvm.amdgcn.cluster.id.y()
+declare i32 @llvm.amdgcn.cluster.id.z()
 
 attributes #0 = { "amdgpu-no-cluster-id-x" }
 attributes #1 = { "amdgpu-no-cluster-id-y" }
 attributes #2 = { "amdgpu-no-cluster-id-z" }
-attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
