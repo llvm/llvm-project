@@ -221,6 +221,9 @@ cl::opt<bool> SupportsHotColdNew(
     "supports-hot-cold-new", cl::init(false), cl::Hidden,
     cl::desc("Linking with hot/cold operator new interfaces"));
 
+// This is true because we cannot guarantee that function declarations of dead
+// functions have been stripped, even after running `dropDeadSymbols` before
+// ThinLTO optimization pipeline.
 static cl::opt<bool> MemProfRequireDefinitionForPromotion(
     "memprof-require-definition-for-promotion", cl::init(true), cl::Hidden,
     cl::desc(
