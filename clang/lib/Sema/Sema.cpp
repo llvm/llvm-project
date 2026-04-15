@@ -3068,16 +3068,6 @@ bool Sema::isProfileSuppressed(StringRef ProfileName,
     if (E.RuleName.empty() || E.RuleName == RuleName)
       return true;
   }
-  for (const DeclContext *DC = CurContext; DC; DC = DC->getParent()) {
-    if (const auto *D = dyn_cast<Decl>(DC)) {
-      for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>()) {
-        if (A->getProfileName() != ProfileName)
-          continue;
-        if (A->getRule().empty() || A->getRule() == RuleName)
-          return true;
-      }
-    }
-  }
   return false;
 }
 
@@ -3139,6 +3129,22 @@ Sema::ProfileSuppressScope::ProfileSuppressScope(Sema &S,
       S.ProfileSuppressStack.push_back(
           {PSA->getProfileName(), PSA->getRule()});
       ++Count;
+    }
+  }
+}
+
+Sema::ProfileSuppressScope::ProfileSuppressScope(Sema &S,
+                                                  const DeclContext *DC)
+    : S(S) {
+  if (!S.getLangOpts().Profiles)
+    return;
+  for (; DC; DC = DC->getLexicalParent()) {
+    if (const auto *D = dyn_cast<Decl>(DC)) {
+      for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>()) {
+        S.ProfileSuppressStack.push_back(
+            {A->getProfileName(), A->getRule()});
+        ++Count;
+      }
     }
   }
 }

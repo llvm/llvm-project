@@ -207,6 +207,8 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
       getCurScope(), InlineLoc, NamespaceLoc, IdentLoc, Ident,
       T.getOpenLocation(), attrs, ImplicitUsingDirectiveDecl, false);
 
+  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, NamespcDecl);
+
   PrettyDeclStackTraceEntry CrashInfo(Actions.Context, NamespcDecl,
                                       NamespaceLoc, "parsing namespace");
 
@@ -255,6 +257,8 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
       Tracker.getOpenLocation(), attrs, ImplicitUsingDirectiveDecl, true);
   assert(!ImplicitUsingDirectiveDecl &&
          "nested namespace definition cannot define anonymous namespace");
+
+  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, NamespcDecl);
 
   ParseInnerNamespace(InnerNSs, ++index, InlineLoc, attrs, Tracker);
 
@@ -3657,6 +3661,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl, FinalLoc,
                                             IsFinalSpelledSealed, IsAbstract,
                                             T.getOpenLocation());
+
+  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, TagDecl);
 
   // C++ 11p3: Members of a class defined with the keyword class are private
   // by default. Members of a class defined with the keywords struct or union

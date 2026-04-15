@@ -1073,6 +1073,7 @@ public:
     ProfileSuppressScope(Sema &S, const ParsedAttributesView &Attrs);
     ProfileSuppressScope(Sema &S, const Decl *D);
     ProfileSuppressScope(Sema &S, ArrayRef<const Attr *> Attrs);
+    ProfileSuppressScope(Sema &S, const DeclContext *LexicalChain);
     ~ProfileSuppressScope();
   };
 

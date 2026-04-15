@@ -328,3 +328,88 @@ template <typename T>
 // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
 [[profiles::suppress(test::type_cast)]] T *StaticMemberSuppressTemplate<T>::p = reinterpret_cast<T*>(0);
 template struct StaticMemberSuppressTemplate<int>;
+
+// Out-of-line member function of a suppressed class: suppression does NOT
+// extend past the class body.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] OutOfLineSuppressedClass {
+  void inline_ok() {
+    int *p = reinterpret_cast<int*>(0);
+  }
+  void out_of_line();
+  static int *s;
+};
+
+void OutOfLineSuppressedClass::out_of_line() {
+  int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] int *OutOfLineSuppressedClass::s = reinterpret_cast<int*>(0);
+
+// Out-of-line function in a formerly-suppressed namespace: suppression does
+// NOT extend past the namespace body.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+namespace [[profiles::suppress(test::type_cast)]] OutOfLineSuppressedNS {
+  void inline_ok() {
+    int *p = reinterpret_cast<int*>(0);
+  }
+  void out_of_line();
+}
+
+void OutOfLineSuppressedNS::out_of_line() {
+  int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+// Out-of-line member of a suppressed class template.
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] OutOfLineSuppressedClassTemplate {
+  void inline_ok() {
+    T *p = reinterpret_cast<T*>(0);
+  }
+  void out_of_line();
+};
+
+template <typename T>
+void OutOfLineSuppressedClassTemplate<T>::out_of_line() {
+  T *p = reinterpret_cast<T*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+template struct OutOfLineSuppressedClassTemplate<int>; // expected-note {{in instantiation of member function 'OutOfLineSuppressedClassTemplate<int>::out_of_line' requested here}}
+
+// Nested suppress: class template inside a suppressed outer class.
+// Suppression on Outer must propagate to inline members of Inner during
+// instantiation via the lexical parent chain.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] NestedSuppressOuter {
+  template <typename T>
+  struct Inner {
+    void f() { T *p = reinterpret_cast<T*>(0); }
+    void out_of_line();
+  };
+};
+
+template <typename T>
+void NestedSuppressOuter::Inner<T>::out_of_line() {
+  T *p = reinterpret_cast<T*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+template struct NestedSuppressOuter::Inner<int>; // expected-note {{in instantiation of member function 'NestedSuppressOuter::Inner<int>::out_of_line' requested here}}
+
+// Nested suppress: class template inside a suppressed namespace.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+namespace [[profiles::suppress(test::type_cast)]] NestedSuppressNS {
+  template <typename T>
+  struct Inner {
+    void f() { T *p = reinterpret_cast<T*>(0); }
+    void out_of_line();
+  };
+}
+
+template <typename T>
+void NestedSuppressNS::Inner<T>::out_of_line() {
+  T *p = reinterpret_cast<T*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+template struct NestedSuppressNS::Inner<int>; // expected-note {{in instantiation of member function 'NestedSuppressNS::Inner<int>::out_of_line' requested here}}
