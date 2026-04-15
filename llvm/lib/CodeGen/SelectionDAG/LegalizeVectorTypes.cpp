@@ -1248,7 +1248,6 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_SEQ_FDOT(SDNode *N) {
-  // 3-operand sequential: ScalarizeVecOp_VECREDUCE_SEQ_FDOT(acc, a, b) -> FMA or FMUL+FADD.
   SDLoc dl(N);
   SDValue AccOp = N->getOperand(0);
   SDValue VecAOp = N->getOperand(1);
@@ -1258,9 +1257,6 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_SEQ_FDOT(SDNode *N) {
 
   SDValue A = GetScalarizedVector(VecAOp);
   SDValue B = GetScalarizedVector(VecBOp);
-
-  if (Flags.hasAllowContract())
-    return DAG.getNode(ISD::FMA, dl, EltVT, A, B, AccOp, Flags);
 
   SDValue Mul = DAG.getNode(ISD::FMUL, dl, EltVT, A, B, Flags);
   return DAG.getNode(ISD::FADD, dl, EltVT, AccOp, Mul, Flags);

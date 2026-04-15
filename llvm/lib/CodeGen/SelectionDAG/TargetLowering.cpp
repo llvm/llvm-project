@@ -12279,14 +12279,10 @@ SDValue TargetLowering::expandVecReduceSeqDot(SDNode *Node,
   DAG.ExtractVectorElements(VecB, OpsB, 0, NumElts);
 
   SDValue Res = AccOp;
-  if (Flags.hasAllowContract())
-    for (unsigned i = 0; i < NumElts; i++)
-      Res = DAG.getNode(ISD::FMA, dl, EltVT, OpsA[i], OpsB[i], Res, Flags);
-  else
-    for (unsigned i = 0; i < NumElts; i++) {
-      SDValue Mul = DAG.getNode(ISD::FMUL, dl, EltVT, OpsA[i], OpsB[i], Flags);
-      Res = DAG.getNode(ISD::FADD, dl, EltVT, Res, Mul, Flags);
-    }
+  for (unsigned i = 0; i < NumElts; i++) {
+    SDValue Mul = DAG.getNode(ISD::FMUL, dl, EltVT, OpsA[i], OpsB[i], Flags);
+    Res = DAG.getNode(ISD::FADD, dl, EltVT, Res, Mul, Flags);
+  }
   return Res;
 }
 

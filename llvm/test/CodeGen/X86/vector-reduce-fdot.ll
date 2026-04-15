@@ -70,39 +70,25 @@ define float @fdot_f32_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
   ret float %res
 }
 
-; With contract and FMA hardware: vfmadd chain.
+; With contract: DAGCombiner fuses to vfmadd chain when FMA hardware is available.
 define float @fdot_f32_contract(float %acc, <4 x float> %a, <4 x float> %b) {
 ; AVX2-LABEL: fdot_f32_contract:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    subq $40, %rsp
-; AVX2-NEXT:    .cfi_def_cfa_offset 48
-; AVX2-NEXT:    vmovaps %xmm2, %xmm3
-; AVX2-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    vmovaps %xmm1, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovaps %xmm0, %xmm2
-; AVX2-NEXT:    vmovaps %xmm1, %xmm0
-; AVX2-NEXT:    vmovaps %xmm3, %xmm1
-; AVX2-NEXT:    callq fmaf@PLT
-; AVX2-NEXT:    vmovaps %xmm0, %xmm2
-; AVX2-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm1 = mem[1,1,3,3]
-; AVX2-NEXT:    callq fmaf@PLT
-; AVX2-NEXT:    vmovaps %xmm0, %xmm2
-; AVX2-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm1 = mem[1,0]
-; AVX2-NEXT:    callq fmaf@PLT
-; AVX2-NEXT:    vmovapd %xmm0, %xmm2
-; AVX2-NEXT:    vpermilps $255, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm1 = mem[3,3,3,3]
-; AVX2-NEXT:    addq $40, %rsp
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
-; AVX2-NEXT:    jmp fmaf@PLT # TAILCALL
+; AVX2-NEXT:    vmulss %xmm2, %xmm1, %xmm3
+; AVX2-NEXT:    vaddss %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; AVX2-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm2[1,1,3,3]
+; AVX2-NEXT:    vmulss %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    vaddss %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm2[1,0]
+; AVX2-NEXT:    vmulss %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    vaddss %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
+; AVX2-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; FMA-LABEL: fdot_f32_contract:
 ; FMA:       # %bb.0:
