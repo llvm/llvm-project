@@ -986,17 +986,9 @@ static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
 
   switch (Use.getKind()) {
   case UninitUse::Always:
-    // In C++26, reading an uninitialized local variable without
-    // [[indeterminate]] is erroneous behavior ([basic.indet]).
-    if (S.getLangOpts().CPlusPlus26 && VD->hasLocalStorage()) {
-      S.Diag(Use.getUser()->getBeginLoc(), diag::err_uninit_var)
-          << VD->getDeclName() << IsCapturedByBlock
-          << Use.getUser()->getSourceRange();
-    } else {
-      S.Diag(Use.getUser()->getBeginLoc(), diag::warn_uninit_var)
-          << VD->getDeclName() << IsCapturedByBlock
-          << Use.getUser()->getSourceRange();
-    }
+    S.Diag(Use.getUser()->getBeginLoc(), diag::warn_uninit_var)
+        << VD->getDeclName() << IsCapturedByBlock
+        << Use.getUser()->getSourceRange();
     return;
 
   case UninitUse::AfterDecl:
@@ -3139,8 +3131,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     Analyzer.run(AC);
   }
 
-  if (S.getLangOpts().CPlusPlus26 ||
-      !Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
+  if (!Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_sometimes_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_uninit_const_reference, D->getBeginLoc()) ||

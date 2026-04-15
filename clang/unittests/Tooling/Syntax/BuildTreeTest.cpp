@@ -258,7 +258,7 @@ TEST_P(BuildSyntaxTreeTest, IfDecl) {
       R"cpp(
 void test() {
   [[if (int a = 5) {}]]
-  [[if (int a = 0; a == 5) {}]]
+  [[if (int a; a == 5) {}]]
 }
 )cpp",
       {R"txt(
@@ -288,10 +288,7 @@ IfStatement Statement
 | | |-'int'
 | | `-DeclaratorList Declarators
 | |   `-SimpleDeclarator ListElement
-| |     |-'a'
-| |     |-'='
-| |     `-IntegerLiteralExpression
-| |       `-'0' LiteralToken
+| |     `-'a'
 | `-';'
 |-ExpressionStatement Condition
 | `-BinaryOperatorExpression Expression

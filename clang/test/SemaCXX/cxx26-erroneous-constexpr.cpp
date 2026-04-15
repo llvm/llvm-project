@@ -6,10 +6,8 @@
 
 // Direct read of default-initialized variable
 constexpr int test1() {
-  int x;        // default-initialized, has erroneous value \
-                // expected-note {{initialize the variable 'x' to silence this warning}}
-  return x;     // expected-note {{read of uninitialized object is not allowed in a constant expression}} \
-                // expected-error {{variable 'x' is uninitialized when used here}}
+  int x;        // default-initialized, has erroneous value
+  return x;     // expected-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 constexpr int val1 = test1();  // expected-error {{constexpr variable 'val1' must be initialized by a constant expression}} \
                                // expected-note {{in call to 'test1()'}}

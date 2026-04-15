@@ -563,8 +563,8 @@ bool operator!=(const HasOpFree& lhs, const HasOpFree& rhs)
 
 void binop()
 {
-    int s1 = 0;
-    int s2 = 0;
+    int s1;
+    int s2;
     if (s1 != s2)
         return;
 }
@@ -815,7 +815,7 @@ bool operator!(HasOpBangFree const&)
 
 void unop()
 {
-    int s1 = 0;
+    int s1;
     if (!s1)
         return;
 }
@@ -1377,7 +1377,7 @@ TEST_P(ASTMatchersTest, HasType_MatchesAsString) {
   }
 
   EXPECT_TRUE(
-      matches("class Y { public: void x(); }; void z() {Y* y = 0; y->x(); }",
+      matches("class Y { public: void x(); }; void z() {Y* y; y->x(); }",
               cxxMemberCallExpr(on(hasType(asString("Y *"))))));
   EXPECT_TRUE(
       matches("class X { void x(int x) {} };",
@@ -2235,25 +2235,22 @@ TEST_P(ASTMatchersTest, HasArgument_CXXConstructorDecl) {
       TK_AsIs,
       cxxConstructExpr(hasArgument(0, declRefExpr(to(varDecl(hasName("y")))))));
 
-  EXPECT_TRUE(
-      matches("class X { public: X(int); }; void x() { int y = 0; X x(y); }",
-              Constructor));
   EXPECT_TRUE(matches(
-      "class X { public: X(int); }; void x() { int y = 0; X x = X(y); }",
-      Constructor));
+      "class X { public: X(int); }; void x() { int y; X x(y); }", Constructor));
   EXPECT_TRUE(
-      matches("class X { public: X(int); }; void x() { int y = 0; X x = y; }",
+      matches("class X { public: X(int); }; void x() { int y; X x = X(y); }",
               Constructor));
   EXPECT_TRUE(
-      notMatches("class X { public: X(int); }; void x() { int z = 0; X x(z); }",
-                 Constructor));
+      matches("class X { public: X(int); }; void x() { int y; X x = y; }",
+              Constructor));
+  EXPECT_TRUE(notMatches(
+      "class X { public: X(int); }; void x() { int z; X x(z); }", Constructor));
 
   StatementMatcher WrongIndex =
       traverse(TK_AsIs, cxxConstructExpr(hasArgument(
                             42, declRefExpr(to(varDecl(hasName("y")))))));
-  EXPECT_TRUE(
-      notMatches("class X { public: X(int); }; void x() { int y = 0; X x(y); }",
-                 WrongIndex));
+  EXPECT_TRUE(notMatches(
+      "class X { public: X(int); }; void x() { int y; X x(y); }", WrongIndex));
 }
 
 TEST_P(ASTMatchersTest, ArgumentCountIs_CXXConstructExpr) {
@@ -2409,7 +2406,7 @@ TEST(ASTMatchersTest, ArgumentCountIs_CXXUnresolvedConstructExpr) {
 TEST(ASTMatchersTest, HasArgument_CXXUnresolvedConstructExpr) {
   const auto *Code =
       "template <typename T> struct S{ S(int){} }; template <typename "
-      "T> void x() { int y = 0; auto s = S<T>(y); }";
+      "T> void x() { int y; auto s = S<T>(y); }";
   EXPECT_TRUE(matches(Code, cxxUnresolvedConstructExpr(hasArgument(
                                 0, declRefExpr(to(varDecl(hasName("y"))))))));
   EXPECT_TRUE(
@@ -4273,14 +4270,14 @@ TEST_P(ASTMatchersTest, IsAssignmentOperator) {
   StatementMatcher CXXAsgmtOperator =
       cxxOperatorCallExpr(isAssignmentOperator());
 
-  EXPECT_TRUE(matches("void x() { int a = 0; a += 1; }", BinAsgmtOperator));
-  EXPECT_TRUE(matches("void x() { int a = 0; a = 2; }", BinAsgmtOperator));
-  EXPECT_TRUE(matches("void x() { int a = 0; a &= 3; }", BinAsgmtOperator));
+  EXPECT_TRUE(matches("void x() { int a; a += 1; }", BinAsgmtOperator));
+  EXPECT_TRUE(matches("void x() { int a; a = 2; }", BinAsgmtOperator));
+  EXPECT_TRUE(matches("void x() { int a; a &= 3; }", BinAsgmtOperator));
   EXPECT_TRUE(matches("struct S { S& operator=(const S&); };"
                       "void x() { S s1, s2; s1 = s2; }",
                       CXXAsgmtOperator));
-  EXPECT_TRUE(notMatches("void x() { int a = 0; if(a == 0) return; }",
-                         BinAsgmtOperator));
+  EXPECT_TRUE(
+      notMatches("void x() { int a; if(a == 0) return; }", BinAsgmtOperator));
 }
 
 TEST_P(ASTMatchersTest, IsComparisonOperator) {
@@ -4292,13 +4289,13 @@ TEST_P(ASTMatchersTest, IsComparisonOperator) {
   StatementMatcher CXXCompOperator =
       cxxOperatorCallExpr(isComparisonOperator());
 
-  EXPECT_TRUE(matches("void x() { int a = 0; a == 1; }", BinCompOperator));
-  EXPECT_TRUE(matches("void x() { int a = 0; a > 2; }", BinCompOperator));
+  EXPECT_TRUE(matches("void x() { int a; a == 1; }", BinCompOperator));
+  EXPECT_TRUE(matches("void x() { int a; a > 2; }", BinCompOperator));
   EXPECT_TRUE(matches("struct S { bool operator==(const S&); };"
                       "void x() { S s1, s2; bool b1 = s1 == s2; }",
                       CXXCompOperator));
   EXPECT_TRUE(
-      notMatches("void x() { int a = 0; if(a = 0) return; }", BinCompOperator));
+      notMatches("void x() { int a; if(a = 0) return; }", BinCompOperator));
 }
 
 TEST_P(ASTMatchersTest, isRightFold) {
@@ -5516,12 +5513,12 @@ TEST_P(ASTMatchersTest, IsImplicit_LambdaCapture) {
   }
   auto matcher = lambdaExpr(hasAnyCapture(
       lambdaCapture(isImplicit(), capturesVar(varDecl(hasName("cc"))))));
-  EXPECT_TRUE(matches(
-      "int main() { int cc = 0; auto f = [&](){ return cc; }; }", matcher));
-  EXPECT_TRUE(matches(
-      "int main() { int cc = 0; auto f = [=](){ return cc; }; }", matcher));
-  EXPECT_FALSE(matches(
-      "int main() { int cc = 0; auto f = [cc](){ return cc; }; }", matcher));
+  EXPECT_TRUE(
+      matches("int main() { int cc; auto f = [&](){ return cc; }; }", matcher));
+  EXPECT_TRUE(
+      matches("int main() { int cc; auto f = [=](){ return cc; }; }", matcher));
+  EXPECT_FALSE(matches("int main() { int cc; auto f = [cc](){ return cc; }; }",
+                       matcher));
 }
 
 } // namespace ast_matchers
