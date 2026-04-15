@@ -749,10 +749,9 @@ define void @test_fccmp(bfloat %in, ptr %out) {
 ; CHECK-NEXT:    movi v1.2s, #69, lsl #24
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    shll v2.4s, v0.4h, #16
-; CHECK-NEXT:    adrp x8, .LCPI29_0
 ; CHECK-NEXT:    movi v3.2s, #72, lsl #24
 ; CHECK-NEXT:    fcmp s2, s1
-; CHECK-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
+; CHECK-NEXT:    movi v1.4h, #69, lsl #8
 ; CHECK-NEXT:    fccmp s2, s3, #4, mi
 ; CHECK-NEXT:    fcsel s0, s0, s1, gt
 ; CHECK-NEXT:    str h0, [x0]
