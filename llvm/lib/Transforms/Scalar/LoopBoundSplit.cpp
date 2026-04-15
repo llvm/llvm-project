@@ -358,9 +358,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
 
   // Replace exit branch target of pre-loop by post-loop's preheader.
   // Note: update the branch here after calling cloneLoopWithPreheader()
-  // to keep the IR valid. Otherwise LI.verify(DT) would fail below
-  // because with invalide IR it would not be able to correctly compute
-  // another fresh LoopInfo for verification.
+  // to keep the IR valid.
   if (L.getExitBlock() == ExitingCond.BI->getSuccessor(0))
     ExitingCond.BI->setSuccessor(0, PostLoopPreHeader);
   else
