@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++26 -freflection -fsyntax-only
+// RUN: %clang_cc1 %s -std=c++26 -freflection -fexperimental-new-constant-interpreter -fsyntax-only
 
 typedef int int32_t;
 using A = int;

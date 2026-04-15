@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++26 -freflection -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++26 -freflection -fexperimental-new-constant-interpreter -fsyntax-only -verify
 
 using info = decltype(^^int);
 
