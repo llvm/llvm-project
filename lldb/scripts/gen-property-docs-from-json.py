@@ -2,6 +2,7 @@ import argparse
 from typing import TypedDict, Union, Optional, TextIO, NotRequired
 from dataclasses import dataclass
 import json
+import re
 
 
 PropertyDef = TypedDict(
@@ -77,9 +78,10 @@ def append_property(tree: PropertyTree, prop: Property):
 
 
 def wrap_inline_code(text: str):
-    fence = "`"
-    if "`" in text:
-        fence = "``"
+    n_backticks = max([len(s) for s in re.findall("`+", text)], default=0)
+    fence = "`" * (n_backticks + 1)
+    if text.startswith("`") or text.endswith("`"):
+        text = f" {text} "
     return f"{fence}{text}{fence}"
 
 
