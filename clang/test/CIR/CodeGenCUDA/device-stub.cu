@@ -24,7 +24,7 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // Check module constructor is registered in module attributes.
 // CIR: cir.global_ctors = [#cir.global_ctor<"__cuda_module_ctor", 65535>]
 
-// Check runtime function declarations (appear before dtor in output).
+// Check runtime function declarations.
 // CIR: cir.func private @atexit(!cir.ptr<!cir.func<()>>) -> !s32i
 // CIR: cir.func private @__cudaUnregisterFatBinary(!cir.ptr<!cir.ptr<!void>>)
 
@@ -36,6 +36,25 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // CIR-NEXT: cir.return
 
 // CIR: cir.func private @__cudaRegisterFatBinaryEnd(!cir.ptr<!cir.ptr<!void>>)
+
+// Check the __cudaRegisterFunction runtime declaration:
+//   int __cudaRegisterFunction(void**, void*, void*, void*, int,
+//                              void*, void*, void*, void*, void*)
+// CIR: cir.func private @__cudaRegisterFunction(!cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>, !s32i, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>) -> !s32i
+
+// Check the device-side name string for kernelfunc (mangled, null-terminated).
+// CIR: cir.global "private" constant cir_private @".str_Z10kernelfunciii" = #cir.const_array<"_Z10kernelfunciii", trailing_zeros> : !cir.array<!u8i x 18>
+
+// Check __cuda_register_globals body: one __cudaRegisterFunction call per kernel.
+// CIR: cir.func internal private @__cuda_register_globals(%arg0: !cir.ptr<!cir.ptr<!void>>
+// CIR-NEXT: %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CIR-NEXT: %[[STR_ADDR:.*]] = cir.get_global @".str_Z10kernelfunciii"
+// CIR-NEXT: %[[DEVICE_FUNC:.*]] = cir.cast bitcast %[[STR_ADDR]]
+// CIR-NEXT: %[[HOST_FUNC_RAW:.*]] = cir.get_global @{{.*}}kernelfunc{{.*}}
+// CIR-NEXT: %[[HOST_FUNC:.*]] = cir.cast bitcast %[[HOST_FUNC_RAW]]
+// CIR-NEXT: %[[THREAD_LIMIT:.*]] = cir.const #cir.int<-1> : !s32i
+// CIR-NEXT: cir.call @__cudaRegisterFunction(%{{.*}}, %[[HOST_FUNC]], %[[DEVICE_FUNC]], %[[DEVICE_FUNC]], %[[THREAD_LIMIT]], %[[NULL]], %[[NULL]], %[[NULL]], %[[NULL]], %[[NULL]])
+// CIR-NEXT: cir.return
 
 // CIR: cir.global "private" constant cir_private @__cuda_fatbin_str = #cir.const_array<"GPU binary would be here."> : !cir.array<!u8i x 25> {alignment = 8 : i64, section = ".nv_fatbin"}
 
@@ -53,13 +72,15 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // CIR: cir.func private @__cudaRegisterFatBinary(!cir.ptr<!void>) -> !cir.ptr<!cir.ptr<!void>>
 
 // Check the module constructor body: register fatbin, store handle,
-// call RegisterFatBinaryEnd (CUDA >= 10.1), then register dtor with atexit.
+// call __cuda_register_globals, call RegisterFatBinaryEnd (CUDA >= 10.1),
+// then register dtor with atexit.
 // CIR: cir.func internal private @__cuda_module_ctor()
 // CIR-NEXT: %[[WRAPPER:.*]] = cir.get_global @__cuda_fatbin_wrapper
 // CIR-NEXT: %[[VOID_PTR:.*]] = cir.cast bitcast %[[WRAPPER]]
 // CIR-NEXT: %[[RET:.*]] = cir.call @__cudaRegisterFatBinary(%[[VOID_PTR]])
 // CIR-NEXT: %[[HANDLE_ADDR:.*]] = cir.get_global @__cuda_gpubin_handle
 // CIR-NEXT: cir.store %[[RET]], %[[HANDLE_ADDR]]
+// CIR-NEXT: cir.call @__cuda_register_globals(%[[RET]])
 // CIR-NEXT: cir.call @__cudaRegisterFatBinaryEnd(%[[RET]])
 // CIR-NEXT: %[[DTOR_PTR:.*]] = cir.get_global @__cuda_module_dtor
 // CIR-NEXT: {{.*}} = cir.call @atexit(%[[DTOR_PTR]])
@@ -70,9 +91,14 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // OGCG: @__cuda_gpubin_handle = internal global ptr null
 // OGCG: @llvm.global_ctors = appending global {{.*}}@__cuda_module_ctor
 
+// OGCG: define internal void @__cuda_register_globals
+// OGCG: call{{.*}}__cudaRegisterFunction(ptr %0, {{.*}}kernelfunc{{.*}}, ptr @0
+// OGCG: ret void
+
 // OGCG: define internal void @__cuda_module_ctor
 // OGCG: call{{.*}}__cudaRegisterFatBinary(ptr @__cuda_fatbin_wrapper)
 // OGCG: store ptr %{{.*}}, ptr @__cuda_gpubin_handle
+// OGCG-NEXT: call void @__cuda_register_globals
 // OGCG: call i32 @atexit(ptr @__cuda_module_dtor)
 
 // OGCG: define internal void @__cuda_module_dtor

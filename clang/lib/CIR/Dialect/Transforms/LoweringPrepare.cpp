@@ -10,6 +10,8 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/Value.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Cuda.h"
@@ -30,6 +32,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -127,6 +130,9 @@ struct LoweringPreparePass
   /// with the CUDA runtime.
   void buildCUDAModuleCtor();
   std::optional<FuncOp> buildCUDAModuleDtor();
+  std::optional<FuncOp> buildCUDARegisterGlobals();
+  void buildCUDARegisterGlobalFunctions(cir::CIRBaseBuilderTy &builder,
+                                        FuncOp regGlobalFunc);
 
   /// Handle static local variable initialization with guard variables.
   void handleStaticLocal(cir::GlobalOp globalOp, cir::GetGlobalOp getGlobalOp);
@@ -1922,8 +1928,10 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
     mlir::Value gpuBinaryHandleGlobal = builder.createGetGlobal(gpuBinHandle);
     builder.createStore(loc, gpuBinaryHandle, gpuBinaryHandleGlobal);
 
-    // TODO: Generate __cuda_register_globals and emit a call.
-    assert(!cir::MissingFeatures::globalRegistration());
+    // --- Generate __cuda_register_globals and call it ---
+    if (std::optional<FuncOp> regGlobal = buildCUDARegisterGlobals()) {
+      builder.createCallOp(loc, *regGlobal, gpuBinaryHandle);
+    }
 
     // From CUDA 10.1 onwards, we must call this function to end registration:
     //      void __cudaRegisterFatBinaryEnd(void **fatbinHandle);
@@ -2003,6 +2011,115 @@ std::optional<FuncOp> LoweringPreparePass::buildCUDAModuleDtor() {
   ReturnOp::create(builder, loc);
 
   return dtor;
+}
+
+std::optional<FuncOp> LoweringPreparePass::buildCUDARegisterGlobals() {
+  // There is nothing to register.
+  if (cudaKernelMap.empty())
+    return {};
+
+  cir::CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  mlir::Location loc = mlirModule.getLoc();
+  llvm::StringRef cudaPrefix = getCUDAPrefix(astCtx);
+
+  auto voidTy = VoidType::get(&getContext());
+  auto voidPtrTy = PointerType::get(voidTy);
+  auto voidPtrPtrTy = PointerType::get(voidPtrTy);
+
+  // Create the function:
+  //      void __cuda_register_globals(void **fatbinHandle)
+  std::string regGlobalFuncName =
+      addUnderscoredPrefix(cudaPrefix, "_register_globals");
+  auto regGlobalFuncTy = FuncType::get({voidPtrPtrTy}, voidTy);
+  FuncOp regGlobalFunc =
+      buildRuntimeFunction(builder, regGlobalFuncName, loc, regGlobalFuncTy,
+                           /*linkage=*/GlobalLinkageKind::InternalLinkage);
+  builder.setInsertionPointToStart(regGlobalFunc.addEntryBlock());
+
+  buildCUDARegisterGlobalFunctions(builder, regGlobalFunc);
+  // TODO: Handle shadow registration
+  assert(!cir::MissingFeatures::globalRegistration());
+
+  ReturnOp::create(builder, loc);
+  return regGlobalFunc;
+}
+
+void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
+    cir::CIRBaseBuilderTy &builder, FuncOp regGlobalFunc) {
+  mlir::Location loc = mlirModule.getLoc();
+  llvm::StringRef cudaPrefix = getCUDAPrefix(astCtx);
+  cir::CIRDataLayout dataLayout(mlirModule);
+
+  auto voidTy = VoidType::get(&getContext());
+  auto voidPtrTy = PointerType::get(voidTy);
+  auto voidPtrPtrTy = PointerType::get(voidPtrTy);
+  IntType intTy = builder.getSIntNTy(32);
+  IntType charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
+                                     /*isSigned=*/false);
+
+  // Extract the GPU binary handle argument.
+  mlir::Value fatbinHandle = *regGlobalFunc.args_begin();
+
+  cir::CIRBaseBuilderTy globalBuilder(getContext());
+  globalBuilder.setInsertionPointToStart(mlirModule.getBody());
+
+  // Declare CUDA internal functions:
+  // int __cudaRegisterFunction(
+  //   void **fatbinHandle,
+  //   const char *hostFunc,
+  //   char *deviceFunc,
+  //   const char *deviceName,
+  //   int threadLimit,
+  //   uint3 *tid, uint3 *bid, dim3 *bDim, dim3 *gDim,
+  //   int *wsize
+  // )
+  // OG doesn't care about the types at all. They're treated as void*.
+
+  FuncOp cudaRegisterFunction = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterFunction"), loc,
+      FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
+                     voidPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, voidPtrTy},
+                    intTy));
+
+  auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
+    auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
+    auto tmpString = cir::GlobalOp::create(
+        globalBuilder, loc, (".str" + str).str(), strType,
+        /*isConstant=*/true, {},
+        /*linkage=*/cir::GlobalLinkageKind::PrivateLinkage);
+
+    // We must make the string zero-terminated.
+    tmpString.setInitialValueAttr(ConstArrayAttr::get(
+        strType, StringAttr::get(&getContext(), str + "\0")));
+    tmpString.setPrivate();
+    return tmpString;
+  };
+
+  cir::ConstantOp cirNullPtr = builder.getNullPtr(voidPtrTy, loc);
+  bool isHIP = astCtx->getLangOpts().HIP;
+  for (auto kernelName : cudaKernelMap.keys()) {
+    FuncOp deviceStub = cudaKernelMap[kernelName];
+    GlobalOp deviceFuncStr = makeConstantString(kernelName);
+    mlir::Value deviceFunc = builder.createBitcast(
+        builder.createGetGlobal(deviceFuncStr), voidPtrTy);
+
+    if (isHIP) {
+      llvm_unreachable("HIP kernel registration NYI");
+    } else {
+      mlir::Value hostFunc = builder.createBitcast(
+          GetGlobalOp::create(
+              builder, loc, PointerType::get(deviceStub.getFunctionType()),
+              mlir::FlatSymbolRefAttr::get(deviceStub.getSymNameAttr())),
+          voidPtrTy);
+      builder.createCallOp(
+          loc, cudaRegisterFunction,
+          {fatbinHandle, hostFunc, deviceFunc, deviceFunc,
+           ConstantOp::create(builder, loc, IntAttr::get(intTy, -1)),
+           cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr});
+    }
+  }
 }
 
 void LoweringPreparePass::runOnOperation() {
