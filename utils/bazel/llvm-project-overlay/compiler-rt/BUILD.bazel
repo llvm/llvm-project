@@ -317,13 +317,10 @@ AARCH64_OUTLINE_ATOMICS_FMT = "lib/builtins/aarch64/outline_atomic_{0}{1}_{2}.S"
 
 # Source files for the AArch64 architecture-specific builtins.
 filegroup(
-    name = "builtins_unfiltered_aarch64_srcs",
+    name = "builtins_aarch64_arch_srcs",
     srcs = [
         "lib/builtins/cpu_model/aarch64.c",
         "lib/builtins/cpu_model/aarch64.h",
-        ":builtins_bf16_srcs",
-        ":builtins_generic_srcs",
-        ":builtins_tf_srcs",
     ] + [
         AARCH64_OUTLINE_ATOMICS_FMT.format(pat, size, model)
         for (pat, size, model) in AARCH64_OUTLINE_ATOMICS
@@ -349,6 +346,16 @@ filegroup(
             "lib/builtins/aarch64/emupac.cpp",
         ],
     ),
+)
+
+filegroup(
+    name = "builtins_unfiltered_aarch64_srcs",
+    srcs = [
+        ":builtins_aarch64_arch_srcs",
+        ":builtins_bf16_srcs",
+        ":builtins_generic_srcs",
+        ":builtins_tf_srcs",
+    ],
 )
 
 make_filtered_builtins_srcs_groups(
@@ -432,11 +439,8 @@ make_filtered_builtins_srcs_groups(
 )
 
 filegroup(
-    name = "builtins_unfiltered_ppc64_srcs",
-    srcs = [
-        ":builtins_generic_srcs",
-        ":builtins_tf_srcs",
-    ] + glob(
+    name = "builtins_ppc_arch_srcs",
+    srcs = glob(
         [
             "lib/builtins/ppc/*.S",
             "lib/builtins/ppc/*.c",
@@ -445,6 +449,15 @@ filegroup(
         ],
         allow_empty = True,
     ),
+)
+
+filegroup(
+    name = "builtins_unfiltered_ppc64_srcs",
+    srcs = [
+        ":builtins_generic_srcs",
+        ":builtins_ppc_arch_srcs",
+        ":builtins_tf_srcs",
+    ],
 )
 
 make_filtered_builtins_srcs_groups(
@@ -463,11 +476,8 @@ make_filtered_builtins_srcs_groups(
 )
 
 filegroup(
-    name = "builtins_unfiltered_riscv64_srcs",
-    srcs = [
-        ":builtins_generic_srcs",
-        ":builtins_tf_srcs",
-    ] + glob(
+    name = "builtins_riscv_arch_srcs",
+    srcs = glob(
         [
             "lib/builtins/riscv/*.S",
             "lib/builtins/riscv/*.c",
@@ -476,6 +486,15 @@ filegroup(
         ],
         allow_empty = True,
     ),
+)
+
+filegroup(
+    name = "builtins_unfiltered_riscv64_srcs",
+    srcs = [
+        ":builtins_generic_srcs",
+        ":builtins_riscv_arch_srcs",
+        ":builtins_tf_srcs",
+    ],
 )
 
 make_filtered_builtins_srcs_groups(
@@ -487,15 +506,8 @@ filegroup(
     name = "builtins_unfiltered_riscv32_srcs",
     srcs = [
         ":builtins_generic_srcs",
-    ] + glob(
-        [
-            "lib/builtins/riscv/*.S",
-            "lib/builtins/riscv/*.c",
-            "lib/builtins/riscv/*.cpp",
-            "lib/builtins/riscv/*.h",
-        ],
-        allow_empty = True,
-    ),
+        ":builtins_riscv_arch_srcs",
+    ],
 )
 
 make_filtered_builtins_srcs_groups(
@@ -513,16 +525,9 @@ filegroup(
     ],
 )
 
-# Source files for the x86-64 architecture specific builtins.
 filegroup(
-    name = "builtins_unfiltered_x86_64_srcs",
-    srcs = [
-        ":builtins_bf16_srcs",
-        ":builtins_generic_srcs",
-        ":builtins_tf_srcs",
-        ":builtins_x86_arch_srcs",
-        ":builtins_x86_fp80_srcs",
-    ] + glob(
+    name = "builtins_x86_64_arch_srcs",
+    srcs = glob(
         [
             "lib/builtins/x86_64/*.S",
             "lib/builtins/x86_64/*.c",
@@ -538,20 +543,27 @@ filegroup(
     ),
 )
 
+# Source files for the x86-64 architecture specific builtins.
+filegroup(
+    name = "builtins_unfiltered_x86_64_srcs",
+    srcs = [
+        ":builtins_bf16_srcs",
+        ":builtins_generic_srcs",
+        ":builtins_tf_srcs",
+        ":builtins_x86_64_arch_srcs",
+        ":builtins_x86_arch_srcs",
+        ":builtins_x86_fp80_srcs",
+    ],
+)
+
 make_filtered_builtins_srcs_groups(
     name = "builtins_x86_64_srcs",
     srcs = [":builtins_unfiltered_x86_64_srcs"],
 )
 
-# Source files for the 32-bit-specific x86 architecture specific builtins.
 filegroup(
-    name = "builtins_unfiltered_i386_srcs",
-    srcs = [
-        ":builtins_bf16_srcs",
-        ":builtins_generic_srcs",
-        ":builtins_x86_arch_srcs",
-        ":builtins_x86_fp80_srcs",
-    ] + glob(
+    name = "builtins_i386_arch_srcs",
+    srcs = glob(
         [
             "lib/builtins/i386/*.S",
             "lib/builtins/i386/*.c",
@@ -569,6 +581,18 @@ filegroup(
             "lib/builtins/i386/chkstk2.S",
         ],
     ),
+)
+
+# Source files for the 32-bit-specific x86 architecture specific builtins.
+filegroup(
+    name = "builtins_unfiltered_i386_srcs",
+    srcs = [
+        ":builtins_bf16_srcs",
+        ":builtins_generic_srcs",
+        ":builtins_i386_arch_srcs",
+        ":builtins_x86_arch_srcs",
+        ":builtins_x86_fp80_srcs",
+    ],
 )
 
 make_filtered_builtins_srcs_groups(
