@@ -34,7 +34,7 @@
 //      a. Remove the initial store (fir.store %iter_arg to %iv_alloca)
 //      b. Forward all loads of IV alloca inside loop body to fir.convert(IV)
 //      todo: the forwarding of load of iv alloca can be done by some other pass
-//      like fir-memref-dataflow-opt pass (if it is available). 
+//      like fir-memref-dataflow-opt pass (if it is available).
 //      c. Strip iter_args and fir.result, rebuild as simple fir.do_loop
 //   2. After the outermost loop, compute and store final IV values
 //      for all loops whose IV is live after the loop (outer to inner order).
@@ -50,6 +50,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -263,9 +264,8 @@ static bool ivDoesNotEscape(ArrayRef<Value> ivAliases) {
     for (auto *user : alias.getUsers()) {
       if (auto store = dyn_cast<fir::StoreOp>(user)) {
         if (store.getMemref() != alias) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "  [escape] IV used as stored value: " << *user
-                     << "\n");
+          LLVM_DEBUG(llvm::dbgs() << "  [escape] IV used as stored value: "
+                                  << *user << "\n");
           return false;
         }
         continue;
@@ -276,6 +276,57 @@ static bool ivDoesNotEscape(ArrayRef<Value> ivAliases) {
       }
     }
   return true;
+}
+
+// ---- Check if a bound value can be safely rematerialized after the loop ---
+// Runs during analysis (pre-transformation) to reject nests whose bounds
+// contain ops that cannot be correctly duplicated after the outermost loop.
+//
+// Safe:  values defined outside the outermost loop, loop IVs (block args of
+//        fir.do_loop — resolved via ivFinalMap), fir.convert, arith constants,
+//        and arithmetic over safe values.  Loads of IV allocas are safe because
+//        transformOneLoop will forward them to fir.convert(IV) before
+//        rematerializeOutside runs.
+// Unsafe: fir.load of a non-IV address inside the loop — the memory may have
+//         been modified between the original load and the post-loop insertion
+//         point, so duplicating the load would read a wrong value.
+
+static bool canSafelyRematerialize(Value val, fir::DoLoopOp outermost,
+                                   ArrayRef<LoopIVInfo> infos) {
+  if (auto blockArg = dyn_cast<BlockArgument>(val)) {
+    auto *owner = blockArg.getOwner()->getParentOp();
+    if (!outermost->isAncestor(owner))
+      return true;
+    return isa<fir::DoLoopOp>(owner);
+  }
+
+  auto *defOp = val.getDefiningOp();
+  if (!defOp || !outermost->isAncestor(defOp))
+    return true;
+
+  if (auto conv = dyn_cast<fir::ConvertOp>(*defOp))
+    return canSafelyRematerialize(conv.getValue(), outermost, infos);
+
+  if (auto load = dyn_cast<fir::LoadOp>(*defOp)) {
+    for (const auto &info : infos)
+      if (llvm::is_contained(info.ivAliases, load.getMemref()))
+        return true;
+    LLVM_DEBUG(llvm::dbgs() << "  [remat] non-IV load in bound: " << *defOp
+                            << "\n");
+    return false;
+  }
+
+  if (isa<arith::ConstantOp>(*defOp))
+    return true;
+
+  if (defOp->getNumResults() == 1 && mlir::isPure(defOp)) {
+    for (Value operand : defOp->getOperands())
+      if (!canSafelyRematerialize(operand, outermost, infos))
+        return false;
+    return true;
+  }
+
+  return false;
 }
 
 // ---- Full nest analysis ---------------------------------------------------
@@ -343,6 +394,19 @@ static bool analyzeNest(SmallVector<LoopIVInfo> &infos) {
     }
   }
 
+  // --- Verify that loop bounds can be safely rematerialized after the loop ---
+  fir::DoLoopOp outermost = infos.front().loop;
+  for (auto &info : infos) {
+    if (!canSafelyRematerialize(info.lowerBound, outermost, infos) ||
+        !canSafelyRematerialize(info.upperBound, outermost, infos) ||
+        !canSafelyRematerialize(info.step, outermost, infos)) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  bounds not safely rematerializable at "
+                 << info.loop.getLoc() << "\n");
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -353,7 +417,12 @@ static bool analyzeNest(SmallVector<LoopIVInfo> &infos) {
 /// Ensure a value is available (dominates) at the current insertion point.
 /// If the value is already defined outside `outermost`, return it directly.
 /// Otherwise, rematerialize the computation by cloning through simple ops
-/// (fir.convert, fir.load, arith constants).
+/// (fir.convert, arith constants, arithmetic).
+///
+/// Precondition: canSafelyRematerialize() has already verified that the
+/// bound values do not depend on non-IV loads inside the loop.  Any IV loads
+/// (fir.load of IV alloca) have been forwarded to fir.convert(IV) by
+/// transformOneLoop before this function is called.
 ///
 /// `ivFinalMap` maps loop induction variables (block arguments) to their
 /// already-computed final index values.  This allows inner loop bounds that
@@ -377,15 +446,8 @@ static Value rematerializeOutside(Value val, fir::DoLoopOp outermost,
   // fir.convert: rematerialize the input, then re-emit the convert.
   if (auto conv = dyn_cast<fir::ConvertOp>(*defOp)) {
     Value newInput = rematerializeOutside(conv.getValue(), outermost, builder,
-                                         loc, ivFinalMap);
+                                          loc, ivFinalMap);
     return fir::ConvertOp::create(builder, loc, conv.getType(), newInput);
-  }
-
-  // fir.load: the address must already be outside (alloca/declare/etc).
-  if (auto load = dyn_cast<fir::LoadOp>(*defOp)) {
-    Value addr = rematerializeOutside(load.getMemref(), outermost, builder, loc,
-                                     ivFinalMap);
-    return fir::LoadOp::create(builder, loc, addr);
   }
 
   // arith.constant: just clone it.
@@ -394,10 +456,9 @@ static Value rematerializeOutside(Value val, fir::DoLoopOp outermost,
     return cloned->getResult(0);
   }
 
-  // Arithmetic ops (addi, subi, muli, divsi, cmpi, select): rematerialize
-  // all operands recursively, then clone the op with new operands.
-  if (isa<arith::AddIOp, arith::SubIOp, arith::MulIOp, arith::DivSIOp,
-          arith::CmpIOp, arith::SelectOp>(*defOp)) {
+  // Pure ops (no side effects): rematerialize all operands recursively,
+  // then clone the op with new operands.
+  if (defOp->getNumResults() == 1 && mlir::isPure(defOp)) {
     SmallVector<Value> newOperands;
     for (auto operand : defOp->getOperands())
       newOperands.push_back(
@@ -431,8 +492,8 @@ static Value rematerializeOutside(Value val, fir::DoLoopOp outermost,
 /// the Fortran final value (which is one step past the last iteration).
 /// Example: for `do i=1,100; do j=1,i`, j's final value must be computed
 /// with i=100 (last iteration), not i=101 (Fortran final).
-static void emitFinalIVStore(OpBuilder &builder, Location loc,
-                             LoopIVInfo &info, fir::DoLoopOp outermost,
+static void emitFinalIVStore(OpBuilder &builder, Location loc, LoopIVInfo &info,
+                             fir::DoLoopOp outermost,
                              DenseMap<Value, Value> &ivFinalMap) {
   // Rematerialize bounds outside the outermost loop if needed.
   // For inner loops with IV-dependent bounds (e.g. do j=1,i), the outer IV
