@@ -877,6 +877,62 @@ void test__stlr64(unsigned __int64 volatile *p, unsigned __int64 v)
 // CHECK-MSCOMPAT:       ret void
 // CHECK-LINUX: error: call to undeclared function '__stlr64'
 
+unsigned char test__cas8(unsigned char volatile* t, unsigned char c, unsigned char v)
+{
+  return __cas8 (t, c, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @test__cas8(ptr{{.*}}%t, i8{{.*}}%c, i8{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[TMPT:[0-9]+]] = load ptr, ptr %t.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMPC:[0-9]+]] = load i8, ptr %c.addr, align 1
+// CHECK-MSCOMPAT:       %[[TMPV:[0-9]+]] = load i8, ptr %v.addr, align 1
+// CHECK-MSCOMPAT:       %[[ZEXTC:[0-9]+]] = zext i8 %[[TMPC]] to i32
+// CHECK-MSCOMPAT:       %[[ZEXTV:[0-9]+]]  = zext i8 %[[TMPV]] to i32
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = call i32 @llvm.aarch64.cas8(ptr %[[TMPT]], i32 %[[ZEXTC]], i32 %[[ZEXTV]])
+// CHECK-MSCOMPAT:       %[[RETT:[0-9]+]]  = trunc i32 %[[RET]] to i8
+// CHECK-MSCOMPAT:       ret i8 %[[RETT]]
+// CHECK-LINUX: error: call to undeclared function '__cas8'
+
+unsigned short test__cas16(unsigned short volatile* t, unsigned short c, unsigned short v)
+{
+  return __cas16 (t, c, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i16 @test__cas16(ptr{{.*}}%t, i16{{.*}}%c, i16{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[TMPT:[0-9]+]] = load ptr, ptr %t.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMPC:[0-9]+]] = load i16, ptr %c.addr, align 2
+// CHECK-MSCOMPAT:       %[[TMPV:[0-9]+]] = load i16, ptr %v.addr, align 2
+// CHECK-MSCOMPAT:       %[[ZEXTC:[0-9]+]] = zext i16 %[[TMPC]] to i32
+// CHECK-MSCOMPAT:       %[[ZEXTV:[0-9]+]]  = zext i16 %[[TMPV]] to i32 
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = call i32 @llvm.aarch64.cas16(ptr %[[TMPT]], i32 %[[ZEXTC]], i32 %[[ZEXTV]])
+// CHECK-MSCOMPAT:       %[[RETT:[0-9]+]]  = trunc i32 %[[RET]] to i16
+// CHECK-MSCOMPAT:       ret i16 %[[RETT]]
+// CHECK-LINUX: error: call to undeclared function '__cas16'
+
+unsigned int test__cas32(unsigned int volatile* t, unsigned int c, unsigned int v)
+{
+  return __cas32 (t, c, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i32 @test__cas32(ptr{{.*}}%t, i32{{.*}}%c, i32{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[TMPT:[0-9]+]] = load ptr, ptr %t.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMPC:[0-9]+]] = load i32, ptr %c.addr, align 4
+// CHECK-MSCOMPAT:       %[[TMPV:[0-9]+]] = load i32, ptr %v.addr, align 4
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = call i32 @llvm.aarch64.cas32(ptr %[[TMPT]], i32 %[[TMPC]], i32 %[[TMPV]])
+// CHECK-MSCOMPAT:       ret i32 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__cas32'
+
+unsigned long long int test__cas64(unsigned long long int volatile* t,
+                                   unsigned long long int c,
+                                   unsigned long long int v)
+{
+  return __cas64 (t, c, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i64 @test__cas64(ptr{{.*}}%t, i64{{.*}}%c, i64{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[TMPT:[0-9]+]] = load ptr, ptr %t.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMPC:[0-9]+]] = load i64, ptr %c.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMPV:[0-9]+]] = load i64, ptr %v.addr, align 8
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = call i64 @llvm.aarch64.cas64(ptr %[[TMPT]], i64 %[[TMPC]], i64 %[[TMPV]])
+// CHECK-MSCOMPAT:       ret i64 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__cas64'
+
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
 // CHECK-MSCOMPAT: ![[MD3]] = !{!"sp"}
 // CHECK-MSCOMPAT: ![[MD4]] = !{!"d5"}
