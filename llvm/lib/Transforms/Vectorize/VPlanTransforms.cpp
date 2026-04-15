@@ -6034,8 +6034,8 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
   // -> reduce.add(ext(absolute-difference(A, B)))
   VPValue *X, *Y;
   if (match(BinOp,
-            m_Intrinsic<Intrinsic::abs>(m_Sub(m_ZExtOrSExt(m_VPValue(X)),
-                                              m_ZExtOrSExt(m_VPValue(Y)))))) {
+            m_WidenIntrinsic<Intrinsic::abs>(m_Sub(
+                m_ZExtOrSExt(m_VPValue(X)), m_ZExtOrSExt(m_VPValue(Y)))))) {
     auto *Sub = BinOp->getOperand(0)->getDefiningRecipe();
     auto *Ext = cast<VPWidenCastRecipe>(Sub->getOperand(0));
     assert(Ext->getOpcode() ==
