@@ -1514,19 +1514,34 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{Sgpr32}, {IntrId}});
 
   // Intrinsics with no register operands.
-  addRulesForIOpcs({amdgcn_endpgm,           amdgcn_init_exec,
-                    amdgcn_s_barrier,        amdgcn_s_barrier_leave,
-                    amdgcn_s_barrier_signal, amdgcn_s_barrier_wait,
-                    amdgcn_s_monitor_sleep,  amdgcn_s_nop,
-                    amdgcn_s_sethalt,        amdgcn_s_setprio,
-                    amdgcn_s_setprio_inc_wg, amdgcn_s_sleep,
-                    amdgcn_s_ttracedata_imm, amdgcn_s_wait_asynccnt,
-                    amdgcn_s_wait_bvhcnt,    amdgcn_s_wait_dscnt,
-                    amdgcn_s_wait_event,     amdgcn_s_wait_event_export_ready,
-                    amdgcn_s_wait_expcnt,    amdgcn_s_wait_kmcnt,
-                    amdgcn_s_wait_loadcnt,   amdgcn_s_wait_samplecnt,
-                    amdgcn_s_wait_storecnt,  amdgcn_s_wait_tensorcnt,
-                    amdgcn_s_waitcnt,        amdgcn_wave_barrier})
+  addRulesForIOpcs({amdgcn_asyncmark,
+                    amdgcn_endpgm,
+                    amdgcn_init_exec,
+                    amdgcn_s_barrier,
+                    amdgcn_s_barrier_leave,
+                    amdgcn_s_barrier_signal,
+                    amdgcn_s_barrier_wait,
+                    amdgcn_s_monitor_sleep,
+                    amdgcn_s_nop,
+                    amdgcn_s_sethalt,
+                    amdgcn_s_setprio,
+                    amdgcn_s_setprio_inc_wg,
+                    amdgcn_s_sleep,
+                    amdgcn_s_ttracedata_imm,
+                    amdgcn_s_wait_asynccnt,
+                    amdgcn_s_wait_bvhcnt,
+                    amdgcn_s_wait_dscnt,
+                    amdgcn_s_wait_event,
+                    amdgcn_s_wait_event_export_ready,
+                    amdgcn_s_wait_expcnt,
+                    amdgcn_s_wait_kmcnt,
+                    amdgcn_s_wait_loadcnt,
+                    amdgcn_s_wait_samplecnt,
+                    amdgcn_s_wait_storecnt,
+                    amdgcn_s_wait_tensorcnt,
+                    amdgcn_s_waitcnt,
+                    amdgcn_wait_asyncmark,
+                    amdgcn_wave_barrier})
       .Any({{}, {{}, {}}});
 
   addRulesForIOpcs({amdgcn_init_exec_from_input})
@@ -1715,6 +1730,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_global_load_lds})
       .Any({{}, {{}, {IntrId, VgprP1, SgprB32_M0}}});
+
+  addRulesForIOpcs({amdgcn_global_load_async_to_lds_b8,
+                    amdgcn_global_load_async_to_lds_b32,
+                    amdgcn_global_load_async_to_lds_b64,
+                    amdgcn_global_load_async_to_lds_b128})
+      .Any({{}, {{}, {IntrId, VgprP1, VgprP3}}});
 
   addRulesForIOpcs({amdgcn_wwm, amdgcn_strict_wwm, amdgcn_wqm, amdgcn_softwqm,
                     amdgcn_strict_wqm},
