@@ -1351,14 +1351,8 @@ void Preprocessor::HandleDirective(Token &Result) {
   // not support this for #include-like directives, since that can result in
   // terrible diagnostics, and does not work in GCC.
   if (InMacroArgs) {
-    IdentifierInfo *II = Result.getIdentifierInfo();
-
-    // Certain #include-like and module-related directives never work inside
-    // a macro argument list: supporting them would produce terrible
-    // diagnostics and is already incompatible with GCC. They are always an
-    // error regardless of language mode.
-    auto IsAlwaysUnsupported = [](tok::PPKeywordKind K) {
-      switch (K) {
+    if (IdentifierInfo *II = Result.getIdentifierInfo()) {
+      switch (II->getPPKeywordID()) {
       case tok::pp_include:
       case tok::pp_import:
       case tok::pp_include_next:
@@ -1368,30 +1362,20 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp_module:
       case tok::pp___preprocessed_module:
       case tok::pp___preprocessed_import:
-        return true;
+        Diag(Result, diag::err_embedded_directive)
+            << (getLangOpts().CPlusPlusModules &&
+                Introducer.isModuleContextualKeyword(
+                    /*AllowExport=*/false))
+            << II->getName();
+        Diag(*ArgMacro, diag::note_macro_expansion_here)
+            << ArgMacro->getIdentifierInfo();
+        DiscardUntilEndOfDirective();
+        return;
       default:
-        return false;
+        break;
       }
-    };
-
-    // [cpp.replace.general] makes any embedded directive ill-formed in
-    // C++26; in earlier modes the construct is undefined behavior and only
-    // pedantically warned about.
-    const bool IsError = LangOpts.CPlusPlus26 ||
-                         (II && IsAlwaysUnsupported(II->getPPKeywordID()));
-
-    if (!IsError) {
-      Diag(Result, diag::ext_embedded_directive);
-    } else {
-      Diag(Result, diag::err_embedded_directive)
-          << (LangOpts.CPlusPlusModules &&
-              Introducer.isModuleContextualKeyword(/*AllowExport=*/false))
-          << (II ? II->getName() : StringRef());
-      Diag(*ArgMacro, diag::note_macro_expansion_here)
-          << ArgMacro->getIdentifierInfo();
-      DiscardUntilEndOfDirective();
-      return;
     }
+    Diag(Result, diag::ext_embedded_directive);
   }
 
   // Temporarily enable macro expansion if set so
