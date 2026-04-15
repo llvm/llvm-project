@@ -723,13 +723,33 @@ if(build_runtimes)
         # Generate the file into a temporary. We only copy this if the user has
         # not provided one either in the build tree or the install directory.
         if(_multilibs_for_target)
-          set(_yaml "MultilibVersion: 1.0\n\nVariants:\n- Dir: .\n  Flags: []\n")
+          set(_yaml [=[
+MultilibVersion: 1.0
+
+Variants:
+- Dir: .
+  Flags: []
+]=])
           set(_flag_values "")
           foreach(multilib ${_multilibs_for_target})
-            string(APPEND _yaml "- Dir: ${multilib}\n  Flags: [-fmultilib-flag=${multilib}]\n")
-            string(APPEND _flag_values "  - Name: ${multilib}\n")
+            string(APPEND _yaml "\
+- Dir: ${multilib}
+  Flags: [-fmultilib-flag=${multilib}]
+")
+            string(APPEND _flag_values "\
+  - Name: ${multilib}
+")
           endforeach()
-          string(APPEND _yaml "\nMappings: []\n\nFlags:\n- Name: multilib\n  Values:\n  - Name: none\n${_flag_values}  Default: none\n")
+          string(APPEND _yaml "
+Mappings: []
+
+Flags:
+- Name: multilib
+  Values:
+  - Name: none
+${_flag_values}\
+  Default: none
+")
 
           set(_staged_dir "${CMAKE_CURRENT_BINARY_DIR}/multilib-yaml/${name}")
           set(_staged "${_staged_dir}/multilib.yaml")
