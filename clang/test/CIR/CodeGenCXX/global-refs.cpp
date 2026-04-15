@@ -26,9 +26,9 @@ int &globalIntRef = globalInt;
 // LLVM: @globalIntRef = constant ptr @globalInt, align 8
 
 const int &constGlobalIntRef = 5;
-// CIR: cir.global "private" external @_ZGR17constGlobalIntRef_ = #cir.int<5> : !s32i {alignment = 4 : i64}
+// CIR: cir.global "private" constant external @_ZGR17constGlobalIntRef_ = #cir.int<5> : !s32i {alignment = 4 : i64}
 // CIR: cir.global constant external @constGlobalIntRef = #cir.global_view<@_ZGR17constGlobalIntRef_> : !cir.ptr<!s32i> {alignment = 8 : i64}
-// LLVM: @_ZGR17constGlobalIntRef_ = {{.*}}global i32 5, align 4
+// LLVM: @_ZGR17constGlobalIntRef_ = {{.*}}constant i32 5, align 4
 // LLVM: @constGlobalIntRef = constant ptr @_ZGR17constGlobalIntRef_, align 8
 
 DefCtor defCtor{};

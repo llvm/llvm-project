@@ -1919,6 +1919,15 @@ let Command = "thread backtrace" in {
                                     Group<1>,
                                     Desc<"Do not filter out frames according "
                                          "to installed frame recognizers">;
+  def thread_backtrace_provider
+      : Option<"provider", "p">,
+        Group<1>,
+        Arg<"FrameProviderIDRange">,
+        Desc<"Show backtrace from specific frame provider(s). "
+             "Use a single ID (e.g., '2') for one provider, "
+             "a range (e.g., '0-2', '0 to 2') for multiple, "
+             "or '*'/'all' to show every provider. "
+             "ID 0 is the base unwinder, 1+ are synthetic providers.">;
 }
 
 let Command = "thread step scope" in {
@@ -2267,6 +2276,12 @@ let Command = "type synth add" in {
   def type_synth_add_cascade : Option<"cascade", "C">,
                                Arg<"Boolean">,
                                Desc<"If true, cascade through typedef chains.">;
+  def type_synth_add_wants_deref
+      : Option<"requires-dereference", "D">,
+        Arg<"Boolean">,
+        Desc<"If true, when this synthetic provider matches a pointer or "
+             "reference type, it will receive the dereferenced value object "
+             "instead of the raw pointer or reference.">;
   def type_synth_add_skip_pointers
       : Option<"skip-pointers", "p">,
         Desc<"Don't use this format for pointers-to-type objects.">;

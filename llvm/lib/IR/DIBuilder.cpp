@@ -1126,7 +1126,7 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     BasicBlock *InsertAtEnd) {
   // If this block already has a terminator then insert this intrinsic before
   // the terminator. Otherwise, put it at the end of the block.
-  Instruction *InsertBefore = InsertAtEnd->getTerminator();
+  Instruction *InsertBefore = InsertAtEnd->getTerminatorOrNull();
   return insertDeclare(Storage, VarInfo, Expr, DL,
                        InsertBefore ? InsertBefore->getIterator()
                                     : InsertAtEnd->end());

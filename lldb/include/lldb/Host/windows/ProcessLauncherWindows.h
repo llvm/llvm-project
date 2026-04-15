@@ -81,7 +81,6 @@ public:
   HostProcess LaunchProcess(const ProcessLaunchInfo &launch_info,
                             Status &error) override;
 
-protected:
   /// Get the list of Windows handles that should be inherited by the child
   /// process and update `STARTUPINFOEXW` with the handle list.
   ///

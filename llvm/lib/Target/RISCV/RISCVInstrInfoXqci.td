@@ -29,6 +29,12 @@ def qc_insb : RVSDNode<"QC_INSB", SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<4>]>,
                        []>;
 
+def SDTIntMulAddOp : SDTypeProfile<1, 3, [
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i32>, SDTCisInt<2>
+]>;
+
+def qc_muliadd : RVSDNode<"QC_MULIADD", SDTIntMulAddOp>;
+
 def qc_e_li : RVSDNode<"QC_E_LI", SDTIntUnaryOp>;
 
 def uimm5nonzero : RISCVOp<XLenVT>,
@@ -54,26 +60,6 @@ def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
 }
 
 def tuimm5gt3 : TImmLeaf<XLenVT, [{return (Imm > 3) && isUInt<5>(Imm);}]>;
-
-def UImm5Plus1AsmOperand : AsmOperandClass {
-  let Name = "UImm5Plus1";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidUImm5Plus1";
-}
-
-def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
-  [{return Imm >= 1 && Imm <= 32;}]> {
-  let ParserMatchClass = UImm5Plus1AsmOperand;
-  let EncoderMethod = "getImmOpValueMinus1";
-  let DecoderMethod = "decodeUImmPlus1Operand<5>";
-  let OperandType = "OPERAND_UIMM5_PLUS1";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return Imm >= 1 && Imm <= 32;
-  }];
-}
 
 def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   [{return Imm >= 6 && Imm <= 32;}]> {
@@ -1496,6 +1482,8 @@ class SelectQCbiSFB<CondCode Cond, DAGOperand InTyImm, SDNodeXForm xform>
 let Predicates = [HasVendorXqciac, IsRV32] in {
 def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12_lo:$imm12))),
           (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12)>;
+def : Pat<(i32 (qc_muliadd GPRNoX0:$rd, GPRNoX0:$rs1, (i32 timm:$imm12))),
+          (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, timm:$imm12)>;
 def : Pat<(i32 (riscv_add_like_non_imm12 (shl GPRNoX0:$rs1, (i32 uimm5gt3:$imm)), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
 def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, (i32 tuimm5gt3:$imm), GPRNoX0:$rs2)),
@@ -1903,6 +1891,8 @@ def : CompressPat<(QC_E_XORAI GPRNoX0:$rd, simm12_lo:$imm),
 let isCompressOnly = true, Predicates = [HasVendorXqciac, IsRV32] in {
 def : CompressPat<(QC_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5),
                   (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5)>;
+def : CompressPat<(QC_SHLADD GPRC:$rd, GPRC:$rs1, GPRC:$rd, 4),
+                  (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, 16)>;
 } // isCompressOnly = true, Predicates = [HasVendorXqciac, IsRV32]
 
 let isCompressOnly = true, Predicates = [HasVendorXqciac, HasStdExtZba, IsRV32] in {

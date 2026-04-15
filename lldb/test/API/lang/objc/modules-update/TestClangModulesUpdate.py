@@ -8,6 +8,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestClangModuleUpdate(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @add_test_categories(["gmodules"])
     @skipIfDarwin  # rdar://76540904
     def test_expr(self):

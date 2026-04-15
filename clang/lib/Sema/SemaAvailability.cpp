@@ -121,12 +121,6 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
     }
   }
 done:
-  // For alias templates, get the underlying declaration.
-  if (const auto *ADecl = dyn_cast<TypeAliasTemplateDecl>(D)) {
-    D = ADecl->getTemplatedDecl();
-    Result = D->getAvailability(Message);
-  }
-
   // Forward class declarations get their attributes from their definition.
   if (const auto *IDecl = dyn_cast<ObjCInterfaceDecl>(D)) {
     if (IDecl->getDefinition()) {
@@ -988,12 +982,26 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     const char *ExtraIndentation = "    ";
     std::string FixItString;
     llvm::raw_string_ostream FixItOS(FixItString);
-    FixItOS << "if (" << (SemaRef.getLangOpts().ObjC ? "@available"
-                                                     : "__builtin_available")
-            << "("
-            << AvailabilityAttr::getPlatformNameSourceSpelling(
-                   SemaRef.getASTContext().getTargetInfo().getPlatformName())
-            << " " << Introduced.getAsString() << ", *)) {\n"
+    // If the attr was derived from anyAppleOS, emit the fix-it using
+    // anyAppleOS and the original anyAppleOS version rather than the
+    // platform-specific name and version.
+    VersionTuple OrigAnyAppleOSVersion = AA->getOrigAnyAppleOSVersion();
+    StringRef FixItPlatformName;
+    VersionTuple FixItVersion;
+
+    if (OrigAnyAppleOSVersion.empty()) {
+      FixItPlatformName = AvailabilityAttr::getPlatformNameSourceSpelling(
+          SemaRef.getASTContext().getTargetInfo().getPlatformName());
+      FixItVersion = Introduced;
+    } else {
+      FixItPlatformName = "anyAppleOS";
+      FixItVersion = OrigAnyAppleOSVersion;
+    }
+    FixItOS << "if ("
+            << (SemaRef.getLangOpts().ObjC ? "@available"
+                                           : "__builtin_available")
+            << "(" << FixItPlatformName << " " << FixItVersion.getAsString()
+            << ", *)) {\n"
             << Indentation << ExtraIndentation;
     FixitDiag << FixItHint::CreateInsertion(IfInsertionLoc, FixItOS.str());
     SourceLocation ElseInsertionLoc = Lexer::findLocationAfterToken(

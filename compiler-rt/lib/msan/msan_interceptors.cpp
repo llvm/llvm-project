@@ -1672,6 +1672,7 @@ static int msan_dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,
   return cbdata->callback(info, size, cbdata->data);
 }
 
+#if SANITIZER_INTERCEPT_SHMAT
 INTERCEPTOR(void *, shmat, int shmid, const void *shmaddr, int shmflg) {
   ENSURE_MSAN_INITED();
   void *p = REAL(shmat)(shmid, shmaddr, shmflg);
@@ -1684,6 +1685,10 @@ INTERCEPTOR(void *, shmat, int shmid, const void *shmaddr, int shmflg) {
   }
   return p;
 }
+#  define MSAN_MAYBE_INTERCEPT_SHMAT INTERCEPT_FUNCTION(shmat)
+#else
+#  define MSAN_MAYBE_INTERCEPT_SHMAT
+#endif
 
 INTERCEPTOR(int, dl_iterate_phdr, dl_iterate_phdr_cb callback, void *data) {
   void *ctx;
@@ -1944,7 +1949,7 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(tzset);
   INTERCEPT_FUNCTION(atexit);
   INTERCEPT_FUNCTION(__cxa_atexit);
-  INTERCEPT_FUNCTION(shmat);
+  MSAN_MAYBE_INTERCEPT_SHMAT;
   MSAN_MAYBE_INTERCEPT_OPENPTY;
   MSAN_MAYBE_INTERCEPT_FORKPTY;
 

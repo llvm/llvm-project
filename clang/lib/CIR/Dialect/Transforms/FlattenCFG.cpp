@@ -16,6 +16,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -704,17 +705,30 @@ static void replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
 // Create a shared unwind destination block. The block contains a
 // cir.eh.initiate operation (optionally with the cleanup attribute) and a
 // branch to the given destination block, passing the eh_token.
-static mlir::Block *buildUnwindBlock(mlir::Block *dest, bool hasCleanup,
+static mlir::Block *buildUnwindBlock(mlir::Block *dest, bool isCleanupOnly,
                                      mlir::Location loc,
                                      mlir::Block *insertBefore,
                                      mlir::PatternRewriter &rewriter) {
   mlir::Block *unwindBlock = rewriter.createBlock(insertBefore);
   rewriter.setInsertionPointToEnd(unwindBlock);
   auto ehInitiate =
-      cir::EhInitiateOp::create(rewriter, loc, /*cleanup=*/hasCleanup);
+      cir::EhInitiateOp::create(rewriter, loc, /*cleanup=*/isCleanupOnly);
   cir::BrOp::create(rewriter, loc, mlir::ValueRange{ehInitiate.getEhToken()},
                     dest);
   return unwindBlock;
+}
+
+// Create a shared terminate unwind block for throwing calls in EH cleanup
+// regions. When an exception is thrown during cleanup (unwinding), the C++
+// standard requires that std::terminate() be called.
+static mlir::Block *buildTerminateUnwindBlock(mlir::Location loc,
+                                              mlir::Block *insertBefore,
+                                              mlir::PatternRewriter &rewriter) {
+  mlir::Block *terminateBlock = rewriter.createBlock(insertBefore);
+  rewriter.setInsertionPointToEnd(terminateBlock);
+  auto ehInitiate = cir::EhInitiateOp::create(rewriter, loc, /*cleanup=*/false);
+  cir::EhTerminateOp::create(rewriter, loc, ehInitiate.getEhToken());
+  return terminateBlock;
 }
 
 class CIRCleanupScopeOpFlattening
@@ -1207,8 +1221,8 @@ public:
       // need a shared unwind destination. Resume ops from inner cleanups
       // branch directly to the EH cleanup entry.
       if (!callsToRewrite.empty())
-        unwindBlock = buildUnwindBlock(ehCleanupEntry, /*hasCleanup=*/true, loc,
-                                       ehCleanupEntry, rewriter);
+        unwindBlock = buildUnwindBlock(ehCleanupEntry, /*isCleanupOnly=*/true,
+                                       loc, ehCleanupEntry, rewriter);
     }
 
     // All normal flow blocks are inserted before this point — either before
@@ -1332,6 +1346,28 @@ public:
         replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
     }
 
+    // Handle throwing calls in EH cleanup blocks. When an exception is thrown
+    // during cleanup code that runs on the exception unwind path, the C++
+    // standard requires that std::terminate() be called. Replace such calls
+    // with try_call operations that unwind to a terminate block containing
+    // cir.eh.initiate + cir.eh.terminate.
+    if (ehCleanupEntry) {
+      llvm::SmallVector<cir::CallOp> ehCleanupThrowingCalls;
+      for (mlir::Block *block = ehCleanupEntry; block != continueBlock;
+           block = block->getNextNode()) {
+        block->walk([&](cir::CallOp callOp) {
+          if (!callOp.getNothrow())
+            ehCleanupThrowingCalls.push_back(callOp);
+        });
+      }
+      if (!ehCleanupThrowingCalls.empty()) {
+        mlir::Block *terminateBlock =
+            buildTerminateUnwindBlock(loc, continueBlock, rewriter);
+        for (cir::CallOp callOp : ehCleanupThrowingCalls)
+          replaceCallWithTryCall(callOp, terminateBlock, loc, rewriter);
+      }
+    }
+
     // Chain inner EH cleanup resume ops to this cleanup's EH handler.
     // Each cir.resume from an already-flattened inner cleanup is replaced
     // with a branch to the outer EH cleanup entry, passing the eh_token
@@ -1360,6 +1396,23 @@ public:
     // Nested cleanup scopes and try operations must be flattened before the
     // enclosing cleanup scope so that EH cleanup inside them is properly
     // handled. Fail the match so the pattern rewriter processes them first.
+    //
+    // Before checking, erase any trivially dead nested cleanup scopes. These
+    // arise from deactivated cleanups (e.g. partial-construction guards for
+    // lambda captures). The greedy rewriter may have already DCE'd them, but
+    // when a trivially dead nested op is erased first, the parent isn't always
+    // re-added to the worklist, so we handle it here. These types of operations
+    // will normally be removed by the canonicalizer, but we handle it here
+    // also, because DCE can run between pattern matches in the current pass,
+    // and if a trivially dead operation makes it this far, we will fail.
+    llvm::SmallVector<cir::CleanupScopeOp> deadNestedOps;
+    cleanupOp.getBodyRegion().walk([&](cir::CleanupScopeOp nested) {
+      if (mlir::isOpTriviallyDead(nested))
+        deadNestedOps.push_back(nested);
+    });
+    for (auto op : deadNestedOps)
+      rewriter.eraseOp(op);
+
     bool hasNestedOps = cleanupOp.getBodyRegion()
                             .walk([&](mlir::Operation *op) {
                               if (isa<cir::CleanupScopeOp, cir::TryOp>(op))
@@ -1371,17 +1424,6 @@ public:
       return mlir::failure();
 
     cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
-
-    // Throwing calls in the cleanup region of an EH-enabled cleanup scope
-    // are not yet supported. Such calls would need their own EH handling
-    // (e.g., terminate or nested cleanup) during the unwind path.
-    if (cleanupKind != cir::CleanupKind::Normal) {
-      llvm::SmallVector<cir::CallOp> cleanupThrowingCalls;
-      collectThrowingCalls(cleanupOp.getCleanupRegion(), cleanupThrowingCalls);
-      if (!cleanupThrowingCalls.empty())
-        return cleanupOp->emitError(
-            "throwing calls in cleanup region are not yet implemented");
-    }
 
     // Collect all exits from the body region.
     llvm::SmallVector<CleanupExit> exits;
@@ -1407,6 +1449,27 @@ public:
                           rewriter);
   }
 };
+
+// Trace an !cir.eh_token value back through block arguments to find the
+// cir.eh.initiate operation that defines it. Returns {} if the defining op
+// cannot be found (e.g. multiple predecessors).
+static cir::EhInitiateOp traceToEhInitiate(mlir::Value ehToken) {
+  while (ehToken) {
+    if (auto initiate = ehToken.getDefiningOp<cir::EhInitiateOp>())
+      return initiate;
+    auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(ehToken);
+    if (!blockArg)
+      return {};
+    mlir::Block *pred = blockArg.getOwner()->getSinglePredecessor();
+    if (!pred)
+      return {};
+    auto brOp = mlir::dyn_cast<cir::BrOp>(pred->getTerminator());
+    if (!brOp)
+      return {};
+    ehToken = brOp.getDestOperands()[blockArg.getArgNumber()];
+  }
+  return {};
+}
 
 class CIRTryOpFlattening : public mlir::OpRewritePattern<cir::TryOp> {
 public:
@@ -1630,16 +1693,29 @@ public:
         buildCatchDispatchBlock(tryOp, handlerTypes, catchHandlerBlocks, loc,
                                 catchHandlerBlocks.front(), rewriter);
 
+    // Check whether the try has a catch-all handler. When catch-all is
+    // present, the personality function will always stop unwinding at this
+    // frame (because catch-all matches every exception type). The LLVM
+    // landingpad therefore needs "catch ptr null" rather than "cleanup".
+    // The downstream pipeline (EHABILowering + LowerToLLVM) emits
+    // "catch ptr null" when the EhInitiateOp has neither cleanup nor typed
+    // catch types, so we clear the cleanup flag on every EhInitiateOp that
+    // feeds into a dispatch with a catch-all handler.
+    bool hasCatchAll =
+        handlerTypes && llvm::any_of(handlerTypes, [](mlir::Attribute attr) {
+          return mlir::isa<cir::CatchAllAttr>(attr);
+        });
+
     // Build a block to be the unwind desination for throwing calls and replace
     // the calls with try_call ops. Note that the unwind block created here is
     // something different than the unwind handler that we may have created
     // above. The unwind handler continues unwinding after uncaught exceptions.
     // This is the block that will eventually become the landing pad for invoke
     // instructions.
-    bool hasCleanup = tryOp.getCleanup();
+    bool isCleanupOnly = tryOp.getCleanup() && !hasCatchAll;
     if (!callsToRewrite.empty()) {
       // Create a shared unwind block for all throwing calls.
-      mlir::Block *unwindBlock = buildUnwindBlock(dispatchBlock, hasCleanup,
+      mlir::Block *unwindBlock = buildUnwindBlock(dispatchBlock, isCleanupOnly,
                                                   loc, dispatchBlock, rewriter);
 
       for (cir::CallOp callOp : callsToRewrite)
@@ -1650,6 +1726,14 @@ public:
     // Resume ops from already-flattened cleanup scopes within the try body
     // should branch to the catch dispatch block instead of unwinding directly.
     for (cir::ResumeOp resumeOp : resumeOpsToChain) {
+      // When there is a catch-all handler, clear the cleanup flag on the
+      // cir.eh.initiate that produced this token. With catch-all, the LLVM
+      // landingpad needs "catch ptr null" instead of "cleanup".
+      if (hasCatchAll) {
+        if (auto ehInitiate = traceToEhInitiate(resumeOp.getEhToken()))
+          ehInitiate.removeCleanupAttr();
+      }
+
       mlir::Value ehToken = resumeOp.getEhToken();
       rewriter.setInsertionPoint(resumeOp);
       rewriter.replaceOpWithNewOp<cir::BrOp>(

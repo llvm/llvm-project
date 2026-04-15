@@ -178,8 +178,6 @@ exit:
   ret float %red.next
 }
 
-declare float @llvm.minimumnum.f32(float, float)
-declare float @llvm.maximumnum.f32(float, float)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

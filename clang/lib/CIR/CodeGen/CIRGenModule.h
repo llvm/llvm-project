@@ -26,6 +26,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "TargetInfo.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -100,6 +101,9 @@ private:
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
+  /// Accumulated record layout entries, materialized in release().
+  llvm::SmallVector<mlir::NamedAttribute> recordLayoutEntries;
+
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
   /// A queue of (optional) vtables to consider emitting.
@@ -131,6 +135,11 @@ private:
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
+
+  /// Queue a record layout entry for materialization in release().
+  void addRecordLayout(mlir::StringAttr name, cir::RecordLayoutAttr attr) {
+    recordLayoutEntries.push_back(mlir::NamedAttribute(name, attr));
+  }
   clang::ASTContext &getASTContext() const { return astContext; }
   const clang::TargetInfo &getTarget() const { return target; }
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
@@ -175,6 +184,19 @@ public:
   void mapResolvedBlockAddress(cir::BlockAddressOp op, cir::LabelOp);
   void updateResolvedBlockAddress(cir::BlockAddressOp op,
                                   cir::LabelOp newLabel);
+
+  /// Add a global value to the llvmUsed list.
+  void addUsedGlobal(cir::CIRGlobalValueInterface gv);
+
+  /// Add a global value to the llvmCompilerUsed list.
+  void addCompilerUsedGlobal(cir::CIRGlobalValueInterface gv);
+
+  /// Add a global to a list to be added to the llvm.compiler.used metadata.
+  void addUsedOrCompilerUsedGlobal(cir::CIRGlobalValueInterface gv);
+
+  /// Emit llvm.used and llvm.compiler.used globals.
+  void emitLLVMUsed();
+
   /// Tell the consumer that this variable has been instantiated.
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
@@ -206,10 +228,11 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
-  static cir::GlobalOp createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
-                                      llvm::StringRef name, mlir::Type t,
-                                      bool isConstant = false,
-                                      mlir::Operation *insertPoint = nullptr);
+  static cir::GlobalOp
+  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, llvm::StringRef name,
+                 mlir::Type t, bool isConstant = false,
+                 mlir::ptr::MemorySpaceAttrInterface addrSpace = {},
+                 mlir::Operation *insertPoint = nullptr);
 
   /// Add a global constructor or destructor to the module.
   /// The priority is optional, if not specified, the default priority is used.
@@ -398,6 +421,9 @@ public:
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
                                            LValueBaseInfo *baseInfo = nullptr,
                                            bool forPointeeType = false);
+  clang::CharUnits
+  getNaturalPointeeTypeAlignment(clang::QualType t,
+                                 LValueBaseInfo *baseInfo = nullptr);
 
   /// Returns the minimum object size for an object of the given class type
   /// (or a class derived from it).
@@ -434,6 +460,12 @@ public:
       clang::GlobalDecl gd, const CIRGenFunctionInfo *fnInfo = nullptr,
       cir::FuncType fnType = nullptr, bool dontDefer = false,
       ForDefinition_t isForDefinition = NotForDefinition);
+
+  /// List of global values which are required to be present in the object file;
+  /// This is used for forcing visibility of symbols which may otherwise be
+  /// optimized out.
+  std::vector<cir::CIRGlobalValueInterface> llvmUsed;
+  std::vector<cir::CIRGlobalValueInterface> llvmCompilerUsed;
 
   mlir::Type getVTableComponentType();
   CIRGenVTables &getVTables() { return vtables; }
@@ -794,15 +826,20 @@ private:
   /// Call replaceAllUsesWith on all pairs in replacements.
   void applyReplacements();
 
-  /// A helper function to replace all uses of OldF to NewF that replace
-  /// the type of pointer arguments. This is not needed to tradtional
-  /// pipeline since LLVM has opaque pointers but CIR not.
-  void replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF);
-
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 
   /// Map source language used to a CIR attribute.
   std::optional<cir::SourceLanguage> getCIRSourceLanguage() const;
+
+  /// Return the AST address space of the underlying global variable for D, as
+  /// determined by its declaration. Normally this is the same as the address
+  /// space of D's type, but in CUDA, address spaces are associated with
+  /// declarations, not types. If D is nullptr, return the default address
+  /// space for global variable.
+  ///
+  /// For languages without explicit address spaces, if D has default address
+  /// space, target-specific global or constant address space may be returned.
+  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 };
 } // namespace CIRGen
 

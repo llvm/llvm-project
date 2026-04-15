@@ -4200,6 +4200,10 @@ struct FormatStyle {
   /// one line. If it matches a comment that is the only token of a line,
   /// clang-format skips the comment and the next line. Otherwise, clang-format
   /// skips lines containing a matched token.
+  /// \note
+  ///  This option does not apply to ``IntegerLiteralSeparator`` and
+  ///  ``NumericLiteralCase``.
+  /// \endnote
   /// \code
   ///    // OneLineFormatOffRegex: ^(// NOLINT|logger$)
   ///    // results in the output below:
@@ -5116,6 +5120,14 @@ struct FormatStyle {
   /// \endcode
   /// \version 7
   bool SpaceBeforeCtorInitializerColon;
+
+  /// If ``false``, spaces will be removed before enum underlying type colon.
+  /// \code
+  ///    true:                                  false:
+  ///    enum E : int {}                        enum E: int {}
+  /// \endcode
+  /// \version 23
+  bool SpaceBeforeEnumUnderlyingTypeColon;
 
   /// If ``false``, spaces will be removed before inheritance colon.
   /// \code

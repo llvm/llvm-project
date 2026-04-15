@@ -4,10 +4,10 @@
 target triple = "aarch64"
 
 ; CHECK: LV: Checking a loop in 'test_vf_8_better_vf_than_16_given_tripcount_of_24'
-; CHECK: Cost for VF 2: 15 (Estimated cost per lane: 7.5)
-; CHECK: Cost for VF 4: 9 (Estimated cost per lane: 2.2)
-; CHECK: Cost for VF 8: 6 (Estimated cost per lane: 0.8)
-; CHECK: Cost for VF 16: 6 (Estimated cost per lane: 0.4)
+; CHECK: Cost for VF 2: 15
+; CHECK: Cost for VF 4: 9
+; CHECK: Cost for VF 8: 6
+; CHECK: Cost for VF 16: 6
 ; CHECK: LV: VF 8 has lower cost than VF 16 when taking the cost of the remaining scalar loop iterations into consideration for a maximum trip count of 24.
 ; CHECK: LV: Selecting VF: 8.
 
@@ -15,7 +15,7 @@ define void @test_vf_8_better_vf_than_16_given_tripcount_of_24(ptr %a, ptr %b){
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %a.iv = getelementptr inbounds nuw i8, ptr %a, i64 %iv
   %a.ld = load i8, ptr %a.iv
@@ -30,6 +30,6 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, 24
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }

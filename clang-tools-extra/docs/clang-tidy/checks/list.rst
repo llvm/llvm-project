@@ -81,6 +81,7 @@ Clang-Tidy Checks
    :doc:`bugprone-argument-comment <bugprone/argument-comment>`, "Yes"
    :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,
    :doc:`bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition>`,
+   :doc:`bugprone-assignment-in-selection-statement <bugprone/assignment-in-selection-statement>`,
    :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
    :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
@@ -141,6 +142,7 @@ Clang-Tidy Checks
    :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
    :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
+   :doc:`bugprone-signed-bitwise <bugprone/signed-bitwise>`,
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
    :doc:`bugprone-sizeof-container <bugprone/sizeof-container>`,
    :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
@@ -183,7 +185,6 @@ Clang-Tidy Checks
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
-   :doc:`cert-err33-c <cert/err33-c>`,
    :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,
    :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
    :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines <cppcoreguidelines/avoid-capturing-lambda-coroutines>`,
@@ -243,7 +244,6 @@ Clang-Tidy Checks
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
-   :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
@@ -251,6 +251,7 @@ Clang-Tidy Checks
    :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes"
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
    :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
+   :doc:`llvm-redundant-casting <llvm/redundant-casting>`, "Yes"
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
    :doc:`llvm-type-switch-case-types <llvm/type-switch-case-types>`, "Yes"
    :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
@@ -364,6 +365,7 @@ Clang-Tidy Checks
    :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes"
    :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
    :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes"
+   :doc:`performance-prefer-single-char-overloads <performance/prefer-single-char-overloads>`, "Yes"
    :doc:`performance-string-view-conversions <performance/string-view-conversions>`, "Yes"
    :doc:`performance-trivially-destructible <performance/trivially-destructible>`, "Yes"
    :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
@@ -457,6 +459,7 @@ Check aliases
    :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
    :doc:`cert-env33-c <cert/env33-c>`, :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
+   :doc:`cert-err33-c <cert/err33-c>`, :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`cert-err52-cpp <cert/err52-cpp>`, :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`, :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,
@@ -615,6 +618,7 @@ Check aliases
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`, :doc:`portability-no-assembler <portability/no-assembler>`,
    :doc:`hicpp-no-malloc <hicpp/no-malloc>`, :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
    :doc:`hicpp-noexcept-move <hicpp/noexcept-move>`, :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
+   :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`, :doc:`bugprone-signed-bitwise <bugprone/signed-bitwise>`,
    :doc:`hicpp-special-member-functions <hicpp/special-member-functions>`, :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,
    :doc:`hicpp-static-assert <hicpp/static-assert>`, :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`hicpp-undelegated-constructor <hicpp/undelegated-constructor>`, :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,

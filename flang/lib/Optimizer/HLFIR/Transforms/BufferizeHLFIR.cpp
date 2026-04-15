@@ -382,11 +382,12 @@ static bool allOtherUsesAreSafeForAssociate(mlir::Value value,
         if (!endAssociate)
           continue;
         // If useOp dominates the endAssociate, then it is definitely safe.
-        if (useOp->getBlock() != endAssociate->getBlock())
+        if (useOp->getBlock() != endAssociate->getBlock()) {
           if (mlir::DominanceInfo{}.dominates(useOp, endAssociate))
             continue;
-        if (useOp->isBeforeInBlock(endAssociate))
+        } else if (useOp->isBeforeInBlock(endAssociate)) {
           continue;
+        }
       }
       return false;
     }

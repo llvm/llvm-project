@@ -40,8 +40,7 @@ class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,
               std::shared_ptr<StackFrame> frame_sp,
-              lldb::DynamicValueType use_dynamic, bool use_synthetic,
-              bool fragile_ivar, bool check_ptr_vs_member);
+              lldb::DynamicValueType use_dynamic, uint32_t options);
 
   /// Evaluate an ASTNode.
   /// \returns A non-null lldb::ValueObjectSP or an Error.
@@ -107,6 +106,15 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinarySubtraction(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                             uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryMultiplication(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                               uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryDivision(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                         uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryRemainder(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                          uint32_t location);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,
@@ -137,6 +145,8 @@ private:
   bool m_use_synthetic;
   bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
+  // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
+  [[maybe_unused]] bool m_allow_var_updates;
 };
 
 } // namespace lldb_private::dil

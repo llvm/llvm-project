@@ -523,12 +523,12 @@ multiclass SiFive7WriteResBase<int VLEN,
   def : WriteRes<WriteFCmp16, [PipeB]>;
   def : WriteRes<WriteFCmp32, [PipeB]>;
   def : WriteRes<WriteFCmp64, [PipeB]>;
-  def : WriteRes<WriteFMovI16ToF16, [PipeB]>;
-  def : WriteRes<WriteFMovF16ToI16, [PipeB]>;
-  def : WriteRes<WriteFMovI32ToF32, [PipeB]>;
-  def : WriteRes<WriteFMovF32ToI32, [PipeB]>;
-  def : WriteRes<WriteFMovI64ToF64, [PipeB]>;
-  def : WriteRes<WriteFMovF64ToI64, [PipeB]>;
+  def : WriteRes<WriteFMovI16ToF16, [PipeA]>;
+  def : WriteRes<WriteFMovF16ToI16, [PipeA]>;
+  def : WriteRes<WriteFMovI32ToF32, [PipeA]>;
+  def : WriteRes<WriteFMovF32ToI32, [PipeA]>;
+  def : WriteRes<WriteFMovI64ToF64, [PipeA]>;
+  def : WriteRes<WriteFMovF64ToI64, [PipeA]>;
   }
 
   // 6. Configuration-Setting Instructions

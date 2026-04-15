@@ -12,8 +12,8 @@ define <4 x i8> @select_v4i8(<4 x i8> %op1, <4 x i8> %op2, <4 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v4i8:
@@ -64,8 +64,8 @@ define <8 x i8> @select_v8i8(<8 x i8> %op1, <8 x i8> %op2, <8 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    asr z2.b, z2.b, #7
 ; CHECK-NEXT:    and z2.b, z2.b, #0x1
-; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    sel z0.b, p0, z0.b, z1.b
+; CHECK-NEXT:    cmpne p1.b, p0/z, z2.b, #0
+; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v8i8:
@@ -144,8 +144,8 @@ define <16 x i8> @select_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %mask) 
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    asr z2.b, z2.b, #7
 ; CHECK-NEXT:    and z2.b, z2.b, #0x1
-; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    sel z0.b, p0, z0.b, z1.b
+; CHECK-NEXT:    cmpne p1.b, p0/z, z2.b, #0
+; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v16i8:
@@ -281,9 +281,9 @@ define void @select_v32i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q2, q1, [x0]
 ; CHECK-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    cmpne p2.b, p0/z, z2.b, z3.b
 ; CHECK-NEXT:    st1b { z0.b }, p1, [x0, x8]
-; CHECK-NEXT:    st1b { z3.b }, p0, [x0]
+; CHECK-NEXT:    st1b { z3.b }, p2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v32i8:
@@ -502,8 +502,8 @@ define <2 x i16> @select_v2i16(<2 x i16> %op1, <2 x i16> %op2, <2 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    asr z2.s, z2.s, #31
 ; CHECK-NEXT:    and z2.s, z2.s, #0x1
-; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v2i16:
@@ -539,8 +539,8 @@ define <4 x i16> @select_v4i16(<4 x i16> %op1, <4 x i16> %op2, <4 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v4i16:
@@ -592,8 +592,8 @@ define <8 x i16> @select_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) {
 ; CHECK-NEXT:    lsl z2.h, z2.h, #15
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v8i16:
@@ -673,9 +673,9 @@ define void @select_v16i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q2, q1, [x0]
 ; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, z0.h
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpne p2.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    st1h { z0.h }, p1, [x0, x8, lsl #1]
-; CHECK-NEXT:    st1h { z3.h }, p0, [x0]
+; CHECK-NEXT:    st1h { z3.h }, p2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v16i16:
@@ -788,8 +788,8 @@ define <2 x i32> @select_v2i32(<2 x i32> %op1, <2 x i32> %op2, <2 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    asr z2.s, z2.s, #31
 ; CHECK-NEXT:    and z2.s, z2.s, #0x1
-; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v2i32:
@@ -826,8 +826,8 @@ define <4 x i32> @select_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %mask) {
 ; CHECK-NEXT:    lsl z2.s, z2.s, #31
 ; CHECK-NEXT:    asr z2.s, z2.s, #31
 ; CHECK-NEXT:    and z2.s, z2.s, #0x1
-; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v4i32:
@@ -879,9 +879,9 @@ define void @select_v8i32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q2, q1, [x0]
 ; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, z0.s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, z3.s
+; CHECK-NEXT:    cmpne p2.s, p0/z, z2.s, z3.s
 ; CHECK-NEXT:    st1w { z0.s }, p1, [x0, x8, lsl #2]
-; CHECK-NEXT:    st1w { z3.s }, p0, [x0]
+; CHECK-NEXT:    st1w { z3.s }, p2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v8i32:
@@ -938,8 +938,8 @@ define <1 x i64> @select_v1i64(<1 x i64> %op1, <1 x i64> %op2, <1 x i1> %mask) {
 ; CHECK-NEXT:    and x8, x0, #0x1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v1i64:
@@ -965,8 +965,8 @@ define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask) {
 ; CHECK-NEXT:    lsl z2.d, z2.d, #63
 ; CHECK-NEXT:    asr z2.d, z2.d, #63
 ; CHECK-NEXT:    and z2.d, z2.d, #0x1
-; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v2i64:
@@ -1003,9 +1003,9 @@ define void @select_v4i64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q2, q1, [x0]
 ; CHECK-NEXT:    mov x8, #2 // =0x2
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, z0.d
-; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, z3.d
+; CHECK-NEXT:    cmpne p2.d, p0/z, z2.d, z3.d
 ; CHECK-NEXT:    st1d { z0.d }, p1, [x0, x8, lsl #3]
-; CHECK-NEXT:    st1d { z3.d }, p0, [x0]
+; CHECK-NEXT:    st1d { z3.d }, p2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v4i64:

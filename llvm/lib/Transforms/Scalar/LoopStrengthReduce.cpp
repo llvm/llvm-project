@@ -1366,23 +1366,31 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  bool HasBaseReg, int64_t Scale,
                                  Instruction *Fixup = nullptr);
 
-static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
-  if (isa<SCEVUnknown>(Reg) || isa<SCEVConstant>(Reg))
+static unsigned getSetupCost(const SCEV *Reg, unsigned Depth,
+                             const TargetTransformInfo &TTI) {
+  if (isa<SCEVUnknown>(Reg))
     return 1;
+  if (const auto *C = dyn_cast<SCEVConstant>(Reg)) {
+    if (TTI.getIntImmCost(C->getAPInt(), C->getType(),
+                          TargetTransformInfo::TCK_RecipThroughput) ==
+        TargetTransformInfo::TCC_Free)
+      return 0;
+    return 1;
+  }
   if (Depth == 0)
     return 0;
   if (const auto *S = dyn_cast<SCEVAddRecExpr>(Reg))
-    return getSetupCost(S->getStart(), Depth - 1);
+    return getSetupCost(S->getStart(), Depth - 1, TTI);
   if (auto S = dyn_cast<SCEVIntegralCastExpr>(Reg))
-    return getSetupCost(S->getOperand(), Depth - 1);
+    return getSetupCost(S->getOperand(), Depth - 1, TTI);
   if (auto S = dyn_cast<SCEVNAryExpr>(Reg))
     return std::accumulate(S->operands().begin(), S->operands().end(), 0,
                            [&](unsigned i, const SCEV *Reg) {
-                             return i + getSetupCost(Reg, Depth - 1);
+                             return i + getSetupCost(Reg, Depth - 1, TTI);
                            });
   if (auto S = dyn_cast<SCEVUDivExpr>(Reg))
-    return getSetupCost(S->getLHS(), Depth - 1) +
-           getSetupCost(S->getRHS(), Depth - 1);
+    return getSetupCost(S->getLHS(), Depth - 1, TTI) +
+           getSetupCost(S->getRHS(), Depth - 1, TTI);
   return 0;
 }
 
@@ -1452,7 +1460,7 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 
   // Rough heuristic; favor registers which don't require extra setup
   // instructions in the preheader.
-  C.SetupCost += getSetupCost(Reg, SetupCostDepthLimit);
+  C.SetupCost += getSetupCost(Reg, SetupCostDepthLimit, *TTI);
   // Ensure we don't, even with the recusion limit, produce invalid costs.
   C.SetupCost = std::min<unsigned>(C.SetupCost, 1 << 16);
 

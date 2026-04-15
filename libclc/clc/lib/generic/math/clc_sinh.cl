@@ -7,17 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clc/clc_convert.h"
-#include "clc/internal/clc.h"
 #include "clc/math/clc_copysign.h"
-#include "clc/math/clc_exp.h"
+#include "clc/math/clc_ep.h"
+#include "clc/math/clc_exp2_fast.h"
 #include "clc/math/clc_fabs.h"
-#include "clc/math/clc_fma.h"
-#include "clc/math/clc_mad.h"
-#include "clc/math/math.h"
-#include "clc/math/tables.h"
-#include "clc/relational/clc_isinf.h"
-#include "clc/relational/clc_isnan.h"
-#include "clc/shared/clc_min.h"
+#include "clc/math/clc_sinh.h"
 
 #define __CLC_BODY "clc_sinh.inc"
 #include "clc/math/gentype.inc"
