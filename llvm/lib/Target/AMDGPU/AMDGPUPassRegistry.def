@@ -133,6 +133,7 @@ MACHINE_FUNCTION_PASS("si-fix-vgpr-copies", SIFixVGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-fold-operands", SIFoldOperandsPass());
 MACHINE_FUNCTION_PASS("si-form-memory-clauses", SIFormMemoryClausesPass())
 MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())
+MACHINE_FUNCTION_PASS("si-fix-xcnt-stall-saddr-reuse", SIFixXcntStallSAddrReusePass())
 MACHINE_FUNCTION_PASS("si-insert-hard-clauses", SIInsertHardClausesPass())
 MACHINE_FUNCTION_PASS("si-insert-waitcnts", SIInsertWaitcntsPass())
 MACHINE_FUNCTION_PASS("si-late-branch-lowering", SILateBranchLoweringPass())

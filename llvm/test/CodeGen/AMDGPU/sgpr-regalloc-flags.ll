@@ -16,6 +16,7 @@
 ; REGALLOC: -regalloc not supported with amdgcn. Use -sgpr-regalloc, -wwm-regalloc, and -vgpr-regalloc
 
 ; DEFAULT: Greedy Register Allocator
+; DEFAULT-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; DEFAULT-NEXT: Virtual Register Rewriter
 ; DEFAULT-NEXT: Stack Slot Coloring
 ; DEFAULT-NEXT: Machine Cycle Info Analysis
@@ -61,6 +62,7 @@
 ; BASIC-DEFAULT-NEXT: Virtual Register Map
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
 ; BASIC-DEFAULT-NEXT: Basic Register Allocator
+; BASIC-DEFAULT-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
 ; BASIC-DEFAULT-NEXT: Stack Slot Coloring
 ; BASIC-DEFAULT-NEXT: Machine Cycle Info Analysis
@@ -89,6 +91,7 @@
 
 
 ; DEFAULT-BASIC: Greedy Register Allocator
+; DEFAULT-BASIC-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
 ; DEFAULT-BASIC-NEXT: Stack Slot Coloring
 ; DEFAULT-BASIC-NEXT: Machine Cycle Info Analysis
@@ -119,6 +122,7 @@
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix
 ; BASIC-BASIC-NEXT: Basic Register Allocator
+; BASIC-BASIC-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
 ; BASIC-BASIC-NEXT: Stack Slot Coloring
 ; BASIC-BASIC-NEXT: Machine Cycle Info Analysis

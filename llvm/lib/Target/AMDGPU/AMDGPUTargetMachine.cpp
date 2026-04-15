@@ -50,6 +50,7 @@
 #include "R600TargetMachine.h"
 #include "SIFixSGPRCopies.h"
 #include "SIFixVGPRCopies.h"
+#include "SIFixXcntStallSAddrReuse.h"
 #include "SIFoldOperands.h"
 #include "SIFormMemoryClauses.h"
 #include "SILoadStoreOptimizer.h"
@@ -733,6 +734,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
   initializeAMDGPUUniformIntrinsicCombineLegacyPass(*PR);
+  initializeSIFixXcntStallSAddrReuseLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1845,6 +1847,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   addPass(createSGPRAllocPass(true));
 
+  addPass(&SIFixXcntStallSAddrReuseLegacyID);
+
   // Commit allocated register changes. This is mostly necessary because too
   // many things rely on the use lists of the physical registers, such as the
   // verifier. This is only necessary with allocators which use LiveIntervals,
@@ -2540,6 +2544,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
                            PMW);
   else
     addMachineFunctionPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}), PMW);
+
+  addMachineFunctionPass(SIFixXcntStallSAddrReusePass(), PMW);
 
   // Commit allocated register changes. This is mostly necessary because too
   // many things rely on the use lists of the physical registers, such as the

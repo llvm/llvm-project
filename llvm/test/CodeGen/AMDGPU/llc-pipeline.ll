@@ -376,6 +376,7 @@
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:        Greedy Register Allocator
+; GCN-O1-NEXT:        SI Fix Xcnt Stall SAddr Reuse
 ; GCN-O1-NEXT:        Virtual Register Rewriter
 ; GCN-O1-NEXT:        Stack Slot Coloring
 ; GCN-O1-NEXT:        Machine Cycle Info Analysis
@@ -694,6 +695,7 @@
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
+; GCN-O1-OPTS-NEXT:        SI Fix Xcnt Stall SAddr Reuse
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
 ; GCN-O1-OPTS-NEXT:        Machine Cycle Info Analysis
@@ -1017,6 +1019,7 @@
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:        Greedy Register Allocator
+; GCN-O2-NEXT:        SI Fix Xcnt Stall SAddr Reuse
 ; GCN-O2-NEXT:        Virtual Register Rewriter
 ; GCN-O2-NEXT:        Stack Slot Coloring
 ; GCN-O2-NEXT:        Machine Cycle Info Analysis
@@ -1353,6 +1356,7 @@
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        Greedy Register Allocator
+; GCN-O3-NEXT:        SI Fix Xcnt Stall SAddr Reuse
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        Stack Slot Coloring
 ; GCN-O3-NEXT:        Machine Cycle Info Analysis

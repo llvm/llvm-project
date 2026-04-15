@@ -214,6 +214,9 @@ extern char &AMDGPUMarkLastScratchLoadID;
 void initializeSILowerSGPRSpillsLegacyPass(PassRegistry &);
 extern char &SILowerSGPRSpillsLegacyID;
 
+void initializeSIFixXcntStallSAddrReuseLegacyPass(PassRegistry &);
+extern char &SIFixXcntStallSAddrReuseLegacyID;
+
 void initializeSILoadStoreOptimizerLegacyPass(PassRegistry &);
 extern char &SILoadStoreOptimizerLegacyID;
 

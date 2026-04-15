@@ -208,6 +208,7 @@
 ; GCN-O2-NEXT: si-form-memory-clauses
 ; GCN-O2-NEXT: amdgpu-pre-ra-long-branch-reg
 ; GCN-O2-NEXT: greedy<sgpr>
+; GCN-O2-NEXT: si-fix-xcnt-stall-saddr-reuse
 ; GCN-O2-NEXT: virt-reg-rewriter<no-clear-vregs>
 ; GCN-O2-NEXT: stack-slot-coloring
 ; GCN-O2-NEXT: si-lower-sgpr-spills
@@ -377,6 +378,7 @@
 ; GCN-O3-NEXT: si-form-memory-clauses
 ; GCN-O3-NEXT: amdgpu-pre-ra-long-branch-reg
 ; GCN-O3-NEXT: greedy<sgpr>
+; GCN-O3-NEXT: si-fix-xcnt-stall-saddr-reuse
 ; GCN-O3-NEXT: virt-reg-rewriter<no-clear-vregs>
 ; GCN-O3-NEXT: stack-slot-coloring
 ; GCN-O3-NEXT: si-lower-sgpr-spills
