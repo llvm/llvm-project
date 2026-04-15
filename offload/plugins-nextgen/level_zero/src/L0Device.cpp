@@ -238,7 +238,8 @@ Error L0DeviceTy::deinitImpl() {
 
 Expected<DeviceImageTy *>
 L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                           int32_t ImageId) {
+                           int32_t ImageId,
+                           const OffloadBinMetadataTy *Metadata) {
   auto *PGM = getProgramFromImage(TgtImage->getMemBufferRef());
   if (PGM) {
     // Program already exists.
@@ -259,7 +260,8 @@ L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
   CompilationOptions += " ";
   CompilationOptions += Options.InternalCompilationOptions;
 
-  L0ProgramBuilderTy Builder(*this, std::move(TgtImage));
+  // Pass metadata to builder
+  L0ProgramBuilderTy Builder(*this, std::move(TgtImage), ImageId, Metadata);
   if (auto Err = Builder.buildModules(CompilationOptions))
     return std::move(Err);
 

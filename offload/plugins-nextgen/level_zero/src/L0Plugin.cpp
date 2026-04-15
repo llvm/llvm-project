@@ -168,38 +168,27 @@ Expected<bool> LevelZeroPluginTy::isELFCompatible(uint32_t DeviceId,
 
 // We only need to check for formats other than ELF here.
 Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
-  switch (identify_magic(Image)) {
-  case file_magic::spirv_object:
-    // Handle SPIRV objects directly
-    return true;
-  case file_magic::offload_binary: {
-    // Handle OffloadBinary format
-    MemoryBufferRef Buffer(Image, "offload_binary");
-    auto BinariesOrErr = OffloadBinary::create(Buffer);
-    if (!BinariesOrErr)
-      return BinariesOrErr.takeError();
+  return identify_magic(Image) == file_magic::spirv_object;
+}
 
-    auto &Binaries = *BinariesOrErr;
-    if (Binaries.size() != 1)
-      return false;
+Expected<bool> LevelZeroPluginTy::isMetadataCompatible(
+    const OffloadBinMetadataTy &Metadata) const {
 
-    const OffloadBinary *InnerBinary = Binaries[0].get();
-    ImageKind ImageKind = InnerBinary->getImageKind();
-    llvm::Triple Triple(InnerBinary->getTriple());
-
-    if (Triple.getArch() != getTripleArch())
-      return false;
-
-    if (ImageKind != llvm::object::IMG_SPIRV &&
-        ImageKind != llvm::object::IMG_Object)
-      return false;
-
-    return true;
-  }
-  default:
-    // Unknown format
+  llvm::Triple Triple(Metadata.Triple);
+  if (!Triple.isSPIRV() || Triple.getVendor() != llvm::Triple::Intel) {
+    ODBG(OLDT_Init) << "Rejecting image: incompatible triple '"
+                    << Metadata.Triple << "' (expected spirv64-intel)";
     return false;
   }
+
+  llvm::object::ImageKind Kind = Metadata.ImageKind;
+  if (Kind != llvm::object::IMG_SPIRV && Kind != llvm::object::IMG_Object) {
+    ODBG(OLDT_Init) << "Rejecting image: incompatible ImageKind " << Kind
+                    << " (expected IMG_SPIRV=" << llvm::object::IMG_SPIRV
+                    << " or IMG_Object=" << llvm::object::IMG_Object << ")";
+    return false;
+  }
+  return true;
 }
 
 Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {

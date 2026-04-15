@@ -229,42 +229,14 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   auto &l0Device = getL0Device();
   auto Image = getMemoryBuffer();
 
-  // Check if image is an inner OffloadBinary (nested format)
-  if (identify_magic(Image.getBuffer()) == file_magic::offload_binary) {
-    ODBG(OLDT_Module) << "Processing nested OffloadBinary image";
+  // Use metadata passed during loading if available
+  if (Metadata) {
+    llvm::object::ImageKind ImageKind = Metadata->ImageKind;
+    StringRef CompileOpts = Metadata->getString("compile-opts");
+    StringRef LinkOpts = Metadata->getString("link-opts");
 
-    // Parse inner OffloadBinary
-    auto InnerBinariesOrErr = llvm::object::OffloadBinary::create(Image);
-    if (!InnerBinariesOrErr)
-      return Plugin::error(
-          ErrorCode::UNKNOWN, "Failed to parse inner OffloadBinary: %s",
-          llvm::toString(InnerBinariesOrErr.takeError()).c_str());
+    ODBG(OLDT_Module) << "Using OffloadBinary metadata: kind=" << ImageKind;
 
-    auto &InnerBinaries = *InnerBinariesOrErr;
-
-    // Should contain exactly one image
-    if (InnerBinaries.size() != 1)
-      return Plugin::error(ErrorCode::UNKNOWN,
-                           "Expected single inner OffloadBinary entry, got %zu",
-                           InnerBinaries.size());
-
-    const llvm::object::OffloadBinary *InnerBinary = InnerBinaries[0].get();
-    llvm::object::ImageKind ImageKind = InnerBinary->getImageKind();
-
-    // Extract image data from inner binary
-    llvm::StringRef ImageData = InnerBinary->getImage();
-    const uint8_t *ImgBegin =
-        reinterpret_cast<const uint8_t *>(ImageData.data());
-
-    // Read metadata from inner binary
-    llvm::StringRef Version = InnerBinary->getString("version");
-    llvm::StringRef CompileOpts = InnerBinary->getString("compile-opts");
-    llvm::StringRef LinkOpts = InnerBinary->getString("link-opts");
-
-    ODBG(OLDT_Module) << "Inner OffloadBinary metadata: version=" << Version
-                      << ", kind=" << ImageKind;
-
-    // Build options string combining BuildOptions with compile/link opts
     std::string Options(BuildOptions);
     if (!CompileOpts.empty() || !LinkOpts.empty()) {
       if (!CompileOpts.empty())
@@ -276,26 +248,25 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
                         << ", link options: " << LinkOpts;
     }
 
-    // Determine module format based on image kind
     ze_module_format_t ModuleFormat;
     if (ImageKind == llvm::object::IMG_SPIRV) {
-      // SPIR-V intermediate language
       ODBG(OLDT_Module) << "Loading SPIR-V module";
       ModuleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
     } else if (ImageKind == llvm::object::IMG_Object) {
-      // Native binary format
       ODBG(OLDT_Module) << "Loading native binary module";
       ModuleFormat = ZE_MODULE_FORMAT_NATIVE;
     } else {
-      return Plugin::error(ErrorCode::UNKNOWN,
-                           "Unsupported image kind %d in inner OffloadBinary",
-                           static_cast<int>(ImageKind));
+      return Plugin::error(
+          ErrorCode::UNKNOWN,
+          "Unsupported image kind %d in OffloadBinary metadata",
+          static_cast<int>(ImageKind));
     }
 
-    // Load module into Level Zero
-    return addModule(ImageData.size(), ImgBegin, Options, ModuleFormat);
+    const uint8_t *ImgBegin = (const uint8_t *)Image.getBufferStart();
+    return addModule(Image.getBufferSize(), ImgBegin, Options, ModuleFormat);
   }
 
+  // Fallback: Raw SPIRV without metadata (existing code unchanged)
   if (identify_magic(Image.getBuffer()) == file_magic::spirv_object) {
     ODBG(OLDT_Module) << "Processing raw SPIR-V image";
     const uint8_t *ImgBegin =

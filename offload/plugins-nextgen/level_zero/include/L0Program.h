@@ -22,6 +22,8 @@ class L0DeviceTy;
 class L0ProgramBuilderTy {
   L0DeviceTy &Device;
   std::unique_ptr<MemoryBuffer> Image;
+  const OffloadBinMetadataTy *Metadata;
+
   /// Handle multiple modules within a single target image.
   llvm::SmallVector<ze_module_handle_t> Modules;
 
@@ -39,8 +41,11 @@ class L0ProgramBuilderTy {
   Error linkModules();
 
 public:
-  L0ProgramBuilderTy(L0DeviceTy &Device, std::unique_ptr<MemoryBuffer> &&Image)
-      : Device(Device), Image(std::move(Image)) {}
+  L0ProgramBuilderTy(L0DeviceTy &Device, std::unique_ptr<MemoryBuffer> &&Image,
+                     int32_t ImageId, const OffloadBinMetadataTy *Metadata)
+      : Device(Device), Image(std::move(Image)), Metadata(Metadata) {
+    (void)ImageId; // Unused parameter
+  }
   ~L0ProgramBuilderTy() = default;
 
   L0DeviceTy &getL0Device() const { return Device; }
@@ -48,6 +53,7 @@ public:
   llvm::SmallVector<ze_module_handle_t> &getModules() { return Modules; }
 
   MemoryBufferRef getMemoryBuffer() const { return MemoryBufferRef(*Image); }
+  const OffloadBinMetadataTy *getMetadata() const { return Metadata; }
   Error buildModules(const std::string_view BuildOptions);
 
   /// Retrieve the ELF binary for the program.

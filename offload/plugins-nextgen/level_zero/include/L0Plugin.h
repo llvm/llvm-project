@@ -109,6 +109,9 @@ public:
   Error asyncBarrierImpl(omp_interop_val_t *Interop) override;
 
   Expected<bool> isImageCompatible(StringRef Image) const override;
+
+  Expected<bool>
+  isMetadataCompatible(const OffloadBinMetadataTy &Metadata) const override;
 };
 
 } // namespace llvm::omp::target::plugin

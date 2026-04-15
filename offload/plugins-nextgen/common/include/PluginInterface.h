@@ -41,8 +41,10 @@
 #endif
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -313,10 +315,27 @@ struct DynBlockMemConfTy {
   void *FallbackPtr = nullptr;
 };
 
+/// Metadata extracted from OffloadBinary format
+struct OffloadBinMetadataTy {
+  llvm::object::ImageKind ImageKind;
+  llvm::object::OffloadKind OffloadKind;
+  std::string Triple;
+  std::string Arch;
+  llvm::StringMap<std::string> StringData;
+
+  StringRef getString(StringRef Key) const {
+    auto It = StringData.find(Key);
+    if (It != StringData.end())
+      return It->second;
+    return StringRef();
+  }
+};
+
 /// Class wrapping a __tgt_device_image and its offload entry table on a
 /// specific device. This class is responsible for storing and managing
 /// the offload entries for an image on a device.
 class DeviceImageTy {
+private:
   /// Image identifier within the corresponding device. Notice that this id is
   /// not unique between different device; they may overlap.
   int32_t ImageId;
@@ -808,7 +827,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
                                        StringRef TgtImage);
   virtual Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId) = 0;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 const OffloadBinMetadataTy *Metadata) = 0;
 
   /// Unload a previously loaded Image from the device
   Error unloadBinary(DeviceImageTy *Image);
@@ -1422,6 +1442,15 @@ struct GenericPluginTy {
   virtual Expected<bool> isImageCompatible(uint32_t DeviceID,
                                            StringRef Image) const {
     return isImageCompatible(Image);
+  }
+
+  /// Validate OffloadBinary metadata for compatibility with the plugin.
+  /// This is called when unwrapping OffloadBinary to check if the metadata
+  /// (triple, arch, ImageKind, etc.) is compatible before checking the inner
+  /// image. Returns true if metadata is compatible, false otherwise.
+  virtual Expected<bool>
+  isMetadataCompatible(const OffloadBinMetadataTy &Metadata) const {
+    return true;
   }
 
   virtual Error flushQueueImpl(omp_interop_val_t *Interop) {
