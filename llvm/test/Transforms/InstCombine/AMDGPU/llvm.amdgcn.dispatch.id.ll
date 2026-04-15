@@ -27,7 +27,6 @@ entry:
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare i64 @llvm.amdgcn.dispatch.id() #1
+declare i64 @llvm.amdgcn.dispatch.id()
 
 attributes #0 = { "amdgpu-no-dispatch-id" }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

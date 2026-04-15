@@ -48,11 +48,10 @@ entry:
   ret i32 %tmp
 }
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #3
-declare i32 @llvm.amdgcn.workgroup.id.y() #3
-declare i32 @llvm.amdgcn.workgroup.id.z() #3
+declare i32 @llvm.amdgcn.workgroup.id.x()
+declare i32 @llvm.amdgcn.workgroup.id.y()
+declare i32 @llvm.amdgcn.workgroup.id.z()
 
 attributes #0 = { "amdgpu-no-workgroup-id-x" }
 attributes #1 = { "amdgpu-no-workgroup-id-y" }
 attributes #2 = { "amdgpu-no-workgroup-id-z" }
-attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

@@ -27,7 +27,6 @@ entry:
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare i32 @llvm.amdgcn.lds.kernel.id() #1
+declare i32 @llvm.amdgcn.lds.kernel.id()
 
 attributes #0 = { "amdgpu-no-lds-kernel-id" }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

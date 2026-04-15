@@ -43,7 +43,6 @@ entry:
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() #1
+declare ptr addrspace(4) @llvm.amdgcn.queue.ptr()
 
 attributes #0 = { "amdgpu-no-queue-ptr" }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
