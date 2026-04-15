@@ -17,6 +17,9 @@ def should_rebuild(build_dir, patch_path, binary_path):
     new_hash = compute_patch_hash(patch_path)
     hash_file = os.path.join(build_dir, ".last_patch_hash")
 
+    if not binary_path:
+        return True
+
     binary_path = os.path.abspath(binary_path)
 
     if not os.path.exists(binary_path):
@@ -75,7 +78,7 @@ def classify_tests(patch_path):
     )
 
     lit_tests = re.findall(
-        r"^\+\+\+ [ab]/(llvm/test/.*\.(?:ll|mir|mlir|fir|test|txt))$",
+        r"^\+\+\+ [ab]/(.*test/.*\.(?:ll|mir|mlir|fir|test|txt|s|c|cpp|f90))$",
         patch_diff,
         re.MULTILINE,
     )
@@ -103,3 +106,22 @@ def target_name(patch_path, inst_build_dir):
     except Exception as e:
         log(f"Error finding target name: {e}")
         sys.exit(1)
+
+
+def get_projects_from_cache(cache_file):
+    with open(cache_file) as f:
+        for line in f:
+            if line.startswith("LLVM_ENABLE_PROJECTS"):
+                return line.split("=")[1].strip()
+    return ""
+
+
+def resolve_projects(projects, build_dir):
+    if projects:
+        return projects
+
+    cache_file = os.path.join(build_dir, "CMakeCache.txt")
+    if os.path.exists(cache_file):
+        return get_projects_from_cache(cache_file)
+
+    return ""

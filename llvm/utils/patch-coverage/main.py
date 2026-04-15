@@ -30,6 +30,7 @@ from utils import classify_tests
 from utils import delete_profraw
 from utils import log
 from utils import mark_build_success
+from utils import resolve_projects
 from utils import should_rebuild
 from utils import target_name
 
@@ -59,6 +60,11 @@ def parse_args():
 
     parser.add_argument("test_path", nargs="*")
 
+    parser.add_argument(
+        "--projects",
+        help="LLVM projects to enable (semicolon-separated, e.g. clang;mlir)",
+    )
+
     args = parser.parse_args()
 
     if not args.test_path:
@@ -70,6 +76,7 @@ def parse_args():
         args.num_commits,
         args.binary,
         args.test_path,
+        args.projects,
     )
 
 
@@ -80,12 +87,14 @@ def main():
         num_commits,
         binary,
         test_paths,
+        projects,
     ) = parse_args()
 
     configure_logging(inst_build_dir)
+    projects = resolve_projects(projects, build_dir)
 
     # Ensure we have required tools to parse test suite info.
-    ensure_llvm_tools(build_dir)
+    ensure_llvm_tools(build_dir, projects, binary)
 
     # Create a diff file from the commit/s.
     patch_path = os.path.join(build_dir, "patch.diff")
@@ -124,7 +133,7 @@ def main():
     rebuild = should_rebuild(inst_build_dir, patch_path, lit_binary or unit_binary)
     if rebuild:
         delete_profraw(inst_build_dir)
-        build_llvm(inst_build_dir, binary, allowlist_path)
+        build_llvm(inst_build_dir, build_dir, binary, projects, allowlist_path)
         mark_build_success(inst_build_dir, patch_path)
     else:
         print("\n[patch-coverage] Skipping patch coverage (no changes)")

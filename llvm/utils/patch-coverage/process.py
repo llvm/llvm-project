@@ -19,7 +19,7 @@ def process_coverage_data(
 
         unit_tests, lit_tests = classify_tests(patch_path)
         if not (unit_tests or lit_tests):
-            return coverage_map
+            return coverage_files
 
         binary = unit_binary if unit_tests else lit_binary
 

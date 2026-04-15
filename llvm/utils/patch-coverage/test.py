@@ -60,7 +60,6 @@ def run_modified_lit_tests(llvm_lit_path, patch_path, tests, inst_build_dir):
             abs_path = os.path.normpath(
                 os.path.abspath(os.path.join(os.getcwd(), file_path))
             )
-
             if abs_path in tests_set:
                 modified_tests.add(abs_path)
                 log("Lit test file in patch:", abs_path)
