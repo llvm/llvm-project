@@ -429,6 +429,9 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasDistributeTransformation(const Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.distribute.disable"))
+    return TM_SuppressedByUser;
+
   if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
     return TM_ForcedByUser;
 

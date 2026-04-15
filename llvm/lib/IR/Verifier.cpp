@@ -1145,6 +1145,12 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
           &MD);
   }
 
+  if (MD.getNumOperands() > 0 &&
+      (MD.getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
+       MD.getOperand(0).equalsStr("llvm.loop.distribute.disable")))
+    Check(MD.getNumOperands() == 1,
+          "Expected one operand for llvm.loop.distribute metadata", &MD);
+
   // Check these last, so we diagnose problems in operands first.
   Check(!MD.isTemporary(), "Expected no forward declarations!", &MD);
   Check(MD.isResolved(), "All nodes should be resolved!", &MD);

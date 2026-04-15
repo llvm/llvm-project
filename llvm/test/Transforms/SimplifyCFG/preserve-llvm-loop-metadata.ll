@@ -147,7 +147,7 @@ while.end:                                        ; preds = %while.cond
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !{!1, !2}
-!2 = !{!"llvm.loop.distribute.enable", i1 true}
+!2 = !{!"llvm.loop.distribute.enable"}
 !3 = distinct !{!3, !4}
 !4 = !{!"llvm.loop.mustprogress"}
 !5 = distinct !{!5, !4, !6}
@@ -161,7 +161,7 @@ while.end:                                        ; preds = %while.cond
 !13 = !DILocation(line: 9, column: 23, scope: !12)
 
 ; CHECK: !1 = distinct !{!1, !2}
-; CHECK: !2 = !{!"llvm.loop.distribute.enable", i1 true}
+; CHECK: !2 = !{!"llvm.loop.distribute.enable"}
 ; CHECK: !3 = distinct !{!3, !4}
 ; CHECK: !4 = !{!"llvm.loop.mustprogress"}
 ; CHECK: !5 = distinct !{!5, !4, !6}

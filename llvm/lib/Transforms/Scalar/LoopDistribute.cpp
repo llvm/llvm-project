@@ -938,14 +938,11 @@ private:
   /// Check whether the loop metadata is forcing distribution to be
   /// enabled/disabled.
   void setForced() {
-    std::optional<const MDOperand *> Value =
-        findStringMetadataForLoop(L, "llvm.loop.distribute.enable");
-    if (!Value)
-      return;
-
-    const MDOperand *Op = *Value;
-    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
-    IsForced = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+    if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
+      IsForced = true;
+    else if (getBooleanLoopAttribute(
+                 L, "llvm.loop.distribute.disable"))
+      IsForced = false;
   }
 
   Loop *L;
