@@ -195,38 +195,6 @@ define <3 x float> @si2fp_v3i7_v3f32(<3 x i7> %x) {
 ; ZVFHMIN64-NEXT:    vsext.vf2 v9, v8
 ; ZVFHMIN64-NEXT:    vfwcvt.f.x.v v8, v9
 ; ZVFHMIN64-NEXT:    ret
-; ZVFBFA32-LABEL: si2fp_v3i7_v3f32:
-; ZVFBFA32:       # %bb.0:
-; ZVFBFA32-NEXT:    lw a1, 0(a0)
-; ZVFBFA32-NEXT:    lw a2, 4(a0)
-; ZVFBFA32-NEXT:    lw a0, 8(a0)
-; ZVFBFA32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; ZVFBFA32-NEXT:    vmv.v.x v8, a1
-; ZVFBFA32-NEXT:    vslide1down.vx v8, v8, a2
-; ZVFBFA32-NEXT:    vslide1down.vx v8, v8, a0
-; ZVFBFA32-NEXT:    vslidedown.vi v8, v8, 1
-; ZVFBFA32-NEXT:    vadd.vv v8, v8, v8
-; ZVFBFA32-NEXT:    vsra.vi v8, v8, 1
-; ZVFBFA32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; ZVFBFA32-NEXT:    vsext.vf2 v9, v8
-; ZVFBFA32-NEXT:    vfwcvt.f.x.v v8, v9
-; ZVFBFA32-NEXT:    ret
-; ZVFBFA64-LABEL: si2fp_v3i7_v3f32:
-; ZVFBFA64:       # %bb.0:
-; ZVFBFA64-NEXT:    ld a1, 0(a0)
-; ZVFBFA64-NEXT:    ld a2, 8(a0)
-; ZVFBFA64-NEXT:    ld a0, 16(a0)
-; ZVFBFA64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; ZVFBFA64-NEXT:    vmv.v.x v8, a1
-; ZVFBFA64-NEXT:    vslide1down.vx v8, v8, a2
-; ZVFBFA64-NEXT:    vslide1down.vx v8, v8, a0
-; ZVFBFA64-NEXT:    vslidedown.vi v8, v8, 1
-; ZVFBFA64-NEXT:    vadd.vv v8, v8, v8
-; ZVFBFA64-NEXT:    vsra.vi v8, v8, 1
-; ZVFBFA64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; ZVFBFA64-NEXT:    vsext.vf2 v9, v8
-; ZVFBFA64-NEXT:    vfwcvt.f.x.v v8, v9
-; ZVFBFA64-NEXT:    ret
   %z = sitofp <3 x i7> %x to <3 x float>
   ret <3 x float> %z
 }
@@ -300,38 +268,6 @@ define <3 x float> @ui2fp_v3i7_v3f32(<3 x i7> %x) {
 ; ZVFHMIN64-NEXT:    vzext.vf2 v9, v8
 ; ZVFHMIN64-NEXT:    vfwcvt.f.xu.v v8, v9
 ; ZVFHMIN64-NEXT:    ret
-; ZVFBFA32-LABEL: ui2fp_v3i7_v3f32:
-; ZVFBFA32:       # %bb.0:
-; ZVFBFA32-NEXT:    lw a1, 0(a0)
-; ZVFBFA32-NEXT:    lw a2, 4(a0)
-; ZVFBFA32-NEXT:    lw a0, 8(a0)
-; ZVFBFA32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; ZVFBFA32-NEXT:    vmv.v.x v8, a1
-; ZVFBFA32-NEXT:    vslide1down.vx v8, v8, a2
-; ZVFBFA32-NEXT:    vslide1down.vx v8, v8, a0
-; ZVFBFA32-NEXT:    vslidedown.vi v8, v8, 1
-; ZVFBFA32-NEXT:    li a0, 127
-; ZVFBFA32-NEXT:    vand.vx v8, v8, a0
-; ZVFBFA32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; ZVFBFA32-NEXT:    vzext.vf2 v9, v8
-; ZVFBFA32-NEXT:    vfwcvt.f.xu.v v8, v9
-; ZVFBFA32-NEXT:    ret
-; ZVFBFA64-LABEL: ui2fp_v3i7_v3f32:
-; ZVFBFA64:       # %bb.0:
-; ZVFBFA64-NEXT:    ld a1, 0(a0)
-; ZVFBFA64-NEXT:    ld a2, 8(a0)
-; ZVFBFA64-NEXT:    ld a0, 16(a0)
-; ZVFBFA64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; ZVFBFA64-NEXT:    vmv.v.x v8, a1
-; ZVFBFA64-NEXT:    vslide1down.vx v8, v8, a2
-; ZVFBFA64-NEXT:    vslide1down.vx v8, v8, a0
-; ZVFBFA64-NEXT:    vslidedown.vi v8, v8, 1
-; ZVFBFA64-NEXT:    li a0, 127
-; ZVFBFA64-NEXT:    vand.vx v8, v8, a0
-; ZVFBFA64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; ZVFBFA64-NEXT:    vzext.vf2 v9, v8
-; ZVFBFA64-NEXT:    vfwcvt.f.xu.v v8, v9
-; ZVFBFA64-NEXT:    ret
   %z = uitofp <3 x i7> %x to <3 x float>
   ret <3 x float> %z
 }

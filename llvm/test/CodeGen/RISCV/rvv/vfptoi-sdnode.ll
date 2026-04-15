@@ -1157,6 +1157,7 @@ define <vscale x 1 x i1> @vfptosi_nxv1f16_nxv1i1(<vscale x 1 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v9, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv1f16_nxv1i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
@@ -1175,6 +1176,7 @@ define <vscale x 1 x i7> @vfptosi_nxv1f16_nxv1i7(<vscale x 1 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv1f16_nxv1i7:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
@@ -1194,6 +1196,7 @@ define <vscale x 1 x i7> @vfptoui_nxv1f16_nxv1i7(<vscale x 1 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv1f16_nxv1i7:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
@@ -1213,6 +1216,7 @@ define <vscale x 1 x i1> @vfptoui_nxv1f16_nxv1i1(<vscale x 1 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v9, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv1f16_nxv1i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
@@ -1231,6 +1235,7 @@ define <vscale x 1 x i8> @vfptosi_nxv1f16_nxv1i8(<vscale x 1 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv1f16_nxv1i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
@@ -1250,6 +1255,7 @@ define <vscale x 1 x i8> @vfptoui_nxv1f16_nxv1i8(<vscale x 1 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv1f16_nxv1i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
@@ -1268,6 +1274,7 @@ define <vscale x 1 x i16> @vfptosi_nxv1f16_nxv1i16(<vscale x 1 x half> %va) {
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv1f16_nxv1i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
@@ -1284,6 +1291,7 @@ define <vscale x 1 x i16> @vfptoui_nxv1f16_nxv1i16(<vscale x 1 x half> %va) {
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv1f16_nxv1i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
@@ -1301,6 +1309,7 @@ define <vscale x 1 x i32> @vfptosi_nxv1f16_nxv1i32(<vscale x 1 x half> %va) {
 ; ZVFH-NEXT:    vfwcvt.rtz.x.f.v v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv1f16_nxv1i32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
@@ -1319,6 +1328,7 @@ define <vscale x 1 x i32> @vfptoui_nxv1f16_nxv1i32(<vscale x 1 x half> %va) {
 ; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv1f16_nxv1i32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
@@ -1361,6 +1371,7 @@ define <vscale x 2 x i1> @vfptosi_nxv2f16_nxv2i1(<vscale x 2 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v9, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv2f16_nxv2i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -1379,6 +1390,7 @@ define <vscale x 2 x i1> @vfptoui_nxv2f16_nxv2i1(<vscale x 2 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v9, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv2f16_nxv2i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -1397,6 +1409,7 @@ define <vscale x 2 x i8> @vfptosi_nxv2f16_nxv2i8(<vscale x 2 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv2f16_nxv2i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -1416,6 +1429,7 @@ define <vscale x 2 x i8> @vfptoui_nxv2f16_nxv2i8(<vscale x 2 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv2f16_nxv2i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -1434,6 +1448,7 @@ define <vscale x 2 x i16> @vfptosi_nxv2f16_nxv2i16(<vscale x 2 x half> %va) {
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv2f16_nxv2i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -1450,6 +1465,7 @@ define <vscale x 2 x i16> @vfptoui_nxv2f16_nxv2i16(<vscale x 2 x half> %va) {
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv2f16_nxv2i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -1467,6 +1483,7 @@ define <vscale x 2 x i32> @vfptosi_nxv2f16_nxv2i32(<vscale x 2 x half> %va) {
 ; ZVFH-NEXT:    vfwcvt.rtz.x.f.v v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv2f16_nxv2i32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -1485,6 +1502,7 @@ define <vscale x 2 x i32> @vfptoui_nxv2f16_nxv2i32(<vscale x 2 x half> %va) {
 ; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv2f16_nxv2i32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -1527,6 +1545,7 @@ define <vscale x 4 x i1> @vfptosi_nxv4f16_nxv4i1(<vscale x 4 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v9, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv4f16_nxv4i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
@@ -1545,6 +1564,7 @@ define <vscale x 4 x i1> @vfptoui_nxv4f16_nxv4i1(<vscale x 4 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v9, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv4f16_nxv4i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
@@ -1563,6 +1583,7 @@ define <vscale x 4 x i8> @vfptosi_nxv4f16_nxv4i8(<vscale x 4 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv4f16_nxv4i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
@@ -1582,6 +1603,7 @@ define <vscale x 4 x i8> @vfptoui_nxv4f16_nxv4i8(<vscale x 4 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v9, v8
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv4f16_nxv4i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
@@ -1600,6 +1622,7 @@ define <vscale x 4 x i16> @vfptosi_nxv4f16_nxv4i16(<vscale x 4 x half> %va) {
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv4f16_nxv4i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
@@ -1616,6 +1639,7 @@ define <vscale x 4 x i16> @vfptoui_nxv4f16_nxv4i16(<vscale x 4 x half> %va) {
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv4f16_nxv4i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
@@ -1633,6 +1657,7 @@ define <vscale x 4 x i32> @vfptosi_nxv4f16_nxv4i32(<vscale x 4 x half> %va) {
 ; ZVFH-NEXT:    vmv1r.v v10, v8
 ; ZVFH-NEXT:    vfwcvt.rtz.x.f.v v8, v10
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv4f16_nxv4i32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
@@ -1651,6 +1676,7 @@ define <vscale x 4 x i32> @vfptoui_nxv4f16_nxv4i32(<vscale x 4 x half> %va) {
 ; ZVFH-NEXT:    vmv1r.v v10, v8
 ; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v8, v10
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv4f16_nxv4i32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
@@ -1693,6 +1719,7 @@ define <vscale x 8 x i1> @vfptosi_nxv8f16_nxv8i1(<vscale x 8 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v10, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v10, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv8f16_nxv8i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1711,6 +1738,7 @@ define <vscale x 8 x i1> @vfptoui_nxv8f16_nxv8i1(<vscale x 8 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v10, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v10, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv8f16_nxv8i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1729,6 +1757,7 @@ define <vscale x 8 x i8> @vfptosi_nxv8f16_nxv8i8(<vscale x 8 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v10, v8
 ; ZVFH-NEXT:    vmv.v.v v8, v10
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv8f16_nxv8i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1748,6 +1777,7 @@ define <vscale x 8 x i8> @vfptoui_nxv8f16_nxv8i8(<vscale x 8 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v10, v8
 ; ZVFH-NEXT:    vmv.v.v v8, v10
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv8f16_nxv8i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1766,6 +1796,7 @@ define <vscale x 8 x i16> @vfptosi_nxv8f16_nxv8i16(<vscale x 8 x half> %va) {
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv8f16_nxv8i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1782,6 +1813,7 @@ define <vscale x 8 x i16> @vfptoui_nxv8f16_nxv8i16(<vscale x 8 x half> %va) {
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv8f16_nxv8i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1799,6 +1831,7 @@ define <vscale x 8 x i32> @vfptosi_nxv8f16_nxv8i32(<vscale x 8 x half> %va) {
 ; ZVFH-NEXT:    vmv2r.v v12, v8
 ; ZVFH-NEXT:    vfwcvt.rtz.x.f.v v8, v12
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv8f16_nxv8i32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1817,6 +1850,7 @@ define <vscale x 8 x i32> @vfptoui_nxv8f16_nxv8i32(<vscale x 8 x half> %va) {
 ; ZVFH-NEXT:    vmv2r.v v12, v8
 ; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v8, v12
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv8f16_nxv8i32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1859,6 +1893,7 @@ define <vscale x 16 x i1> @vfptosi_nxv16f16_nxv16i1(<vscale x 16 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v12, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv16f16_nxv16i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -1877,6 +1912,7 @@ define <vscale x 16 x i1> @vfptoui_nxv16f16_nxv16i1(<vscale x 16 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v12, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv16f16_nxv16i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -1895,6 +1931,7 @@ define <vscale x 16 x i8> @vfptosi_nxv16f16_nxv16i8(<vscale x 16 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; ZVFH-NEXT:    vmv.v.v v8, v12
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv16f16_nxv16i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -1914,6 +1951,7 @@ define <vscale x 16 x i8> @vfptoui_nxv16f16_nxv16i8(<vscale x 16 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; ZVFH-NEXT:    vmv.v.v v8, v12
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv16f16_nxv16i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -1932,6 +1970,7 @@ define <vscale x 16 x i16> @vfptosi_nxv16f16_nxv16i16(<vscale x 16 x half> %va) 
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv16f16_nxv16i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -1948,6 +1987,7 @@ define <vscale x 16 x i16> @vfptoui_nxv16f16_nxv16i16(<vscale x 16 x half> %va) 
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv16f16_nxv16i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -1965,6 +2005,7 @@ define <vscale x 16 x i32> @vfptosi_nxv16f16_nxv16i32(<vscale x 16 x half> %va) 
 ; ZVFH-NEXT:    vmv4r.v v16, v8
 ; ZVFH-NEXT:    vfwcvt.rtz.x.f.v v8, v16
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv16f16_nxv16i32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -1983,6 +2024,7 @@ define <vscale x 16 x i32> @vfptoui_nxv16f16_nxv16i32(<vscale x 16 x half> %va) 
 ; ZVFH-NEXT:    vmv4r.v v16, v8
 ; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v8, v16
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv16f16_nxv16i32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -2001,6 +2043,7 @@ define <vscale x 32 x i1> @vfptosi_nxv32f16_nxv32i1(<vscale x 32 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v16, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v16, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv32f16_nxv32i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
@@ -2026,6 +2069,7 @@ define <vscale x 32 x i1> @vfptoui_nxv32f16_nxv32i1(<vscale x 32 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v16, v8
 ; ZVFH-NEXT:    vmsne.vi v0, v16, 0
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv32f16_nxv32i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
@@ -2051,6 +2095,7 @@ define <vscale x 32 x i8> @vfptosi_nxv32f16_nxv32i8(<vscale x 32 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v16, v8
 ; ZVFH-NEXT:    vmv.v.v v8, v16
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv32f16_nxv32i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -2075,6 +2120,7 @@ define <vscale x 32 x i8> @vfptoui_nxv32f16_nxv32i8(<vscale x 32 x half> %va) {
 ; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v16, v8
 ; ZVFH-NEXT:    vmv.v.v v8, v16
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv32f16_nxv32i8:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -2098,6 +2144,7 @@ define <vscale x 32 x i16> @vfptosi_nxv32f16_nxv32i16(<vscale x 32 x half> %va) 
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptosi_nxv32f16_nxv32i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -2116,6 +2163,7 @@ define <vscale x 32 x i16> @vfptoui_nxv32f16_nxv32i16(<vscale x 32 x half> %va) 
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; ZVFH-NEXT:    ret
+;
 ; ZVFHMIN-LABEL: vfptoui_nxv32f16_nxv32i16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
