@@ -5501,38 +5501,41 @@ class CXXReflectExpr : public Expr {
 private:
   // TODO(Reflection): add support for TemplateReference, NamespaceReference and
   // DeclRefExpr
-  using operand_type = llvm::PointerUnion<const TypeSourceInfo *>;
+  using operand_type = llvm::PointerUnion<TypeSourceInfo *>;
 
   SourceLocation CaretCaretLoc;
   ReflectionKind Kind;
   operand_type Operand;
 
   CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
-                 const TypeSourceInfo *TSI);
+                TypeSourceInfo *TSI);
   CXXReflectExpr(EmptyShell Empty);
 
 public:
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
-                                const TypeSourceInfo *TSI);
+                                TypeSourceInfo *TSI);
 
   static CXXReflectExpr *CreateEmpty(ASTContext &C);
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
-        .Case<const TypeSourceInfo *>(
+        .Case<TypeSourceInfo *>(
             [](auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
   }
 
   SourceLocation getEndLoc() const LLVM_READONLY {
     return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
-        .Case<const TypeSourceInfo *>(
+        .Case<TypeSourceInfo *>(
             [](auto *Ptr) { return Ptr->getTypeLoc().getEndLoc(); });
   }
 
   /// Returns location of the '^^'-operator.
   SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
   ReflectionKind getKind() const { return Kind; }
-  const void *getOpaqueValue() const { return Operand.getOpaqueValue(); }
+  void *getOpaqueValue() const { return Operand.getOpaqueValue(); }
+  TypeSourceInfo *getTypeSourceInfo() const {
+    return cast<TypeSourceInfo *>(Operand);
+  }
 
   child_range children() {
     // TODO(Reflection)

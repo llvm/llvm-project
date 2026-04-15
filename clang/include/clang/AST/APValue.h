@@ -317,7 +317,7 @@ private:
     const AddrLabelExpr* RHSExpr;
   };
   struct ReflectionData {
-    const ReflectionKind OperandKind;
+    ReflectionKind OperandKind;
     const void *Operand;
   };
   struct MemberPointerData;
