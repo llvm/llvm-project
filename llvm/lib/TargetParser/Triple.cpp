@@ -2141,7 +2141,7 @@ Triple Triple::get32BitArchVariant() const {
     break;
   case Triple::tcele64:
     T.setArch(Triple::tcele);
-    break;  
+    break;
   case Triple::wasm64:
     T.setArch(Triple::wasm32);
     break;
