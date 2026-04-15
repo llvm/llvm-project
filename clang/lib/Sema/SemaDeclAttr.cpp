@@ -1558,36 +1558,38 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       // Cannot have two ownership attributes of different kinds for the same
       // index.
       if (I->getOwnKind() != K && llvm::is_contained(I->args(), Idx)) {
-          S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-              << AL << I
-              << (AL.isRegularKeywordAttribute() ||
-                  I->isRegularKeywordAttribute());
-          return;
-      } else if (K == OwnershipAttr::Returns &&
-                 I->getOwnKind() == OwnershipAttr::Returns) {
-        // A returns attribute conflicts with any other returns attribute using
-        // a different index.
-        if (!llvm::is_contained(I->args(), Idx)) {
-          S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
-              << I->args_begin()->getSourceIndex();
-          if (I->args_size())
-            S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
-                << Idx.getSourceIndex() << Ex->getSourceRange();
-          return;
-        }
-      } else if (K == OwnershipAttr::Takes &&
-                 I->getOwnKind() == OwnershipAttr::Takes) {
-        if (I->getModule()->getName() != ModuleName) {
-          S.Diag(I->getLocation(), diag::err_ownership_takes_class_mismatch)
-              << I->getModule()->getName();
-          S.Diag(AL.getLoc(), diag::note_ownership_takes_class_mismatch)
-              << ModuleName << Ex->getSourceRange();
-
-          return;
-        }
+        S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+            << AL << I
+            << (AL.isRegularKeywordAttribute() ||
+                I->isRegularKeywordAttribute());
+        return;
       }
     }
     OwnershipArgs.push_back(Idx);
+  }
+
+  for (const auto *I : D->specific_attrs<OwnershipAttr>()) {
+    if (K == OwnershipAttr::Returns &&
+        I->getOwnKind() == OwnershipAttr::Returns) {
+      // Enforce that all ownership_returns attributes have the exact same
+      // arguments.
+      bool ExactMatch =
+          (I->getModule() == Module) && llvm::equal(I->args(), OwnershipArgs);
+
+      if (!ExactMatch) {
+        S.Diag(AL.getLoc(), diag::err_ownership_param_mismatch);
+      }
+      return;
+    } else if (K == OwnershipAttr::Takes &&
+               I->getOwnKind() == OwnershipAttr::Takes) {
+      if (I->getModule() != Module) {
+        S.Diag(I->getLocation(), diag::err_ownership_takes_class_mismatch)
+            << I->getModule()->getName();
+        S.Diag(AL.getLoc(), diag::note_ownership_takes_class_mismatch)
+            << ModuleName << AL.getRange();
+        return;
+      }
+    }
   }
 
   ParamIdx *Start = OwnershipArgs.data();
