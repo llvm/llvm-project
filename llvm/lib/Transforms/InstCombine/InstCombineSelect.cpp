@@ -3347,9 +3347,50 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
   return ChangedFMF ? &SI : nullptr;
 }
 
+static bool matchIsNaNTest(FCmpInst *Cmp, Value *X, bool MatchIsNaN,
+                           InstCombinerImpl &IC) {
+  FCmpInst::Predicate ExpectedPred =
+      MatchIsNaN ? FCmpInst::FCMP_UNO : FCmpInst::FCMP_ORD;
+  if (Cmp->getPredicate() != ExpectedPred)
+    return false;
+
+  Value *Cmp0 = Cmp->getOperand(0), *Cmp1 = Cmp->getOperand(1);
+  if (Cmp0 == X && Cmp1 == X)
+    return true;
+
+  auto IsKnownNeverNaN = [&](Value *V) {
+    return match(V, m_NonNaN()) ||
+           isKnownNeverNaN(V, IC.getSimplifyQuery().getWithInstruction(Cmp));
+  };
+
+  return (Cmp0 == X && IsKnownNeverNaN(Cmp1)) ||
+         (Cmp1 == X && IsKnownNeverNaN(Cmp0));
+}
+
+// Match a select that returns X when X is not NaN, and Y otherwise.
+static Value *matchNaNScrubbedValue(SelectInst *SI, Value *Y,
+                                    InstCombinerImpl &IC) {
+  auto *Cmp = dyn_cast<FCmpInst>(SI->getCondition());
+  if (!Cmp || !Cmp->hasOneUse())
+    return nullptr;
+
+  Value *X;
+  bool MatchIsNaN;
+  if (SI->getFalseValue() == Y) {
+    X = SI->getTrueValue();
+    MatchIsNaN = false;
+  } else if (SI->getTrueValue() == Y) {
+    X = SI->getFalseValue();
+    MatchIsNaN = true;
+  } else {
+    return nullptr;
+  }
+
+  return matchIsNaNTest(Cmp, X, MatchIsNaN, IC) ? X : nullptr;
+}
+
 // Fold a select of an ordered fcmp using fabs of a NaN-scrubbed value:
-//   %ord = fcmp ord T %x, 0.0
-//   %s   = select i1 %ord, T %x, T %y
+//   %s   = select i1 (isnotnan T %x), T %x, T %y
 //   %a   = call T @llvm.fabs.T(T %s)
 //   %c   = fcmp <ordered-pred> T %a, %k
 //   %r   = select i1 %c, T %s, T %y
@@ -3377,16 +3418,8 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   if (!InnerSel)
     return nullptr;
 
-  // Match: select (fcmp ord X, 0.0), X, Y
-  auto *InnerCmp = dyn_cast<FCmpInst>(InnerSel->getCondition());
-  if (!InnerCmp || !InnerCmp->hasOneUse() ||
-      InnerCmp->getPredicate() != FCmpInst::FCMP_ORD ||
-      InnerSel->getFalseValue() != Y)
-    return nullptr;
-
-  X = InnerSel->getTrueValue();
-  if (InnerCmp->getOperand(0) != X ||
-      !match(InnerCmp->getOperand(1), m_AnyZeroFP()))
+  X = matchNaNScrubbedValue(InnerSel, Y, IC);
+  if (!X)
     return nullptr;
 
   bool Swapped = false;

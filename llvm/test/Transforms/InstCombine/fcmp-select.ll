@@ -296,6 +296,130 @@ define double @test_fcmp_ord_select_fabs_fcmp_one_select_var_const(double %x) {
   ret double %sel2
 }
 
+define double @test_fcmp_ord_commuted_select_fabs_fcmp_one_select_var_const(double %x) {
+; CHECK-LABEL: @test_fcmp_ord_commuted_select_fabs_fcmp_one_select_var_const(
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double 0.000000e+00
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp1 = fcmp ord double 0.000000e+00, %x
+  %sel1 = select i1 %cmp1, double %x, double 0.000000e+00
+  %abs = call double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %sel2 = select i1 %cmp2, double %sel1, double 0.000000e+00
+  ret double %sel2
+}
+
+define double @test_fcmp_uno_select_fabs_fcmp_one_select_var_var(double %x, double %y) {
+; CHECK-LABEL: @test_fcmp_uno_select_fabs_fcmp_one_select_var_var(
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp1 = fcmp uno double %x, 0.000000e+00
+  %sel1 = select i1 %cmp1, double %y, double %x
+  %abs = call double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %sel2 = select i1 %cmp2, double %sel1, double %y
+  ret double %sel2
+}
+
+define double @test_fcmp_ord_select_fabs_fcmp_one_select_nonnan_const(double %x, double %y) {
+; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_one_select_nonnan_const(
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp1 = fcmp ord double %x, 1.000000e+00
+  %sel1 = select i1 %cmp1, double %x, double %y
+  %abs = call double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %sel2 = select i1 %cmp2, double %sel1, double %y
+  ret double %sel2
+}
+
+define double @test_fcmp_ord_self_select_fabs_fcmp_one_select_var_var(double %x, double %y) {
+; CHECK-LABEL: @test_fcmp_ord_self_select_fabs_fcmp_one_select_var_var(
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp1 = fcmp ord double %x, %x
+  %sel1 = select i1 %cmp1, double %x, double %y
+  %abs = call double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %sel2 = select i1 %cmp2, double %sel1, double %y
+  ret double %sel2
+}
+
+define double @test_fcmp_ord_select_fabs_fcmp_one_select_uitofp_nonnan(double %x, double %y, i32 %i) {
+; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_one_select_uitofp_nonnan(
+; CHECK:         [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %nonnan = uitofp i32 %i to double
+  %cmp1 = fcmp ord double %x, %nonnan
+  %sel1 = select i1 %cmp1, double %x, double %y
+  %abs = call double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %sel2 = select i1 %cmp2, double %sel1, double %y
+  ret double %sel2
+}
+
+define double @test_fcmp_ord_commuted_select_fabs_fcmp_one_select_sitofp_nonnan(double %x, double %y, i32 %i) {
+; CHECK-LABEL: @test_fcmp_ord_commuted_select_fabs_fcmp_one_select_sitofp_nonnan(
+; CHECK:         [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %nonnan = sitofp i32 %i to double
+  %cmp1 = fcmp ord double %nonnan, %x
+  %sel1 = select i1 %cmp1, double %x, double %y
+  %abs = call double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %sel2 = select i1 %cmp2, double %sel1, double %y
+  ret double %sel2
+}
+
+define double @test_fcmp_uno_select_fabs_fcmp_one_select_uitofp_nonnan(double %x, double %y, i32 %i) {
+; CHECK-LABEL: @test_fcmp_uno_select_fabs_fcmp_one_select_uitofp_nonnan(
+; CHECK:         [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %nonnan = uitofp i32 %i to double
+  %cmp1 = fcmp uno double %x, %nonnan
+  %sel1 = select i1 %cmp1, double %y, double %x
+  %abs = call double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %sel2 = select i1 %cmp2, double %sel1, double %y
+  ret double %sel2
+}
+
+define double @test_fcmp_ord_select_fabs_rhs_fcmp_ogt_select_uitofp_nonnan(double %x, double %y, double %k, i32 %i) {
+; CHECK-LABEL: @test_fcmp_ord_select_fabs_rhs_fcmp_ogt_select_uitofp_nonnan(
+; CHECK:         [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[K:%.*]], [[ABS]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %nonnan = uitofp i32 %i to double
+  %cmp1 = fcmp ord double %x, %nonnan
+  %sel1 = select i1 %cmp1, double %x, double %y
+  %abs = call double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp ogt double %k, %abs
+  %sel2 = select i1 %cmp2, double %sel1, double %y
+  ret double %sel2
+}
+
 define double @test_fcmp_ord_select_fabs_fcmp_une_select_var_const(double %x) {
 ; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_une_select_var_const(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[X:%.*]], 0.000000e+00
