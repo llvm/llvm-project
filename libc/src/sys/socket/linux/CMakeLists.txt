@@ -62,6 +62,7 @@ add_entrypoint_object(
     libc.include.sys_socket
     libc.src.__support.OSUtil.osutil
     libc.hdr.types.socklen_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getsockopt
     libc.src.errno.errno
 )
 
@@ -129,6 +130,7 @@ add_entrypoint_object(
     libc.include.sys_socket
     libc.src.__support.OSUtil.osutil
     libc.hdr.types.socklen_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setsockopt
     libc.src.errno.errno
 )
 
