@@ -18,6 +18,11 @@
 
 namespace llvm {
 
+class Triple;
+namespace object {
+class Binary;
+}
+
 class ETMDecoder {
 public:
   virtual ~ETMDecoder() = default;
@@ -28,7 +33,8 @@ public:
     virtual void processInstructionRange(uint64_t Start, uint64_t End) = 0;
   };
 
-  static Expected<std::unique_ptr<ETMDecoder>> create(StringRef BinaryPath);
+  static Expected<std::unique_ptr<ETMDecoder>>
+  create(const object::Binary &Binary, const Triple &TargetTriple);
 
   virtual Error processTrace(ArrayRef<uint8_t> TraceData,
                              Callback &TraceCallback) = 0;

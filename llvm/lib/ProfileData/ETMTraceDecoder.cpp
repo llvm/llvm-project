@@ -11,6 +11,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 
 #ifdef HAVE_OPENCSD
 #include "opencsd/c_api/opencsd_c_api.h"
@@ -20,8 +21,8 @@ namespace llvm {
 namespace {
 class ETMDecoderImpl : public ETMDecoder {
   dcd_tree_handle_t DcdTree = 0;
-  std::string BinaryPath;
-  Triple TargetTriple;
+  const object::Binary &Binary;
+  const Triple &TargetTriple;
 
   // Trace processing and Callback handling.
   static ocsd_datapath_resp_t
@@ -53,7 +54,8 @@ class ETMDecoderImpl : public ETMDecoder {
   // segments. These are registered as a single transaction to the OpenCSD
   // memory manager to prevent overlap/collision errors between different
   // memory regions.
-  Error mapELFSegments(dcd_tree_handle_t DcdTree, object::Binary &SourceBin) {
+  Error mapELFSegments(dcd_tree_handle_t DcdTree,
+                       const object::Binary &SourceBin) {
     SmallVector<ocsd_file_mem_region_t, 4> Regions;
     auto ProcessHeaders = [&](const auto &ElfFile) {
       auto ProgramHeaders = ElfFile.program_headers();
@@ -82,9 +84,10 @@ class ETMDecoderImpl : public ETMDecoder {
       ProcessHeaders(O->getELFFile());
 
     if (!Regions.empty()) {
+      std::string Path = SourceBin.getFileName().str();
       if (ocsd_dt_add_binfile_region_mem_acc(
               DcdTree, Regions.data(), (uint32_t)Regions.size(),
-              OCSD_MEM_SPACE_ANY, BinaryPath.c_str()) != 0) {
+              OCSD_MEM_SPACE_ANY, Path.c_str()) != 0) {
         return createStringError(
             inconvertibleErrorCode(),
             "OpenCSD: Failed to map ELF executable segments.");
@@ -94,46 +97,41 @@ class ETMDecoderImpl : public ETMDecoder {
   }
 
 public:
-  ETMDecoderImpl(StringRef BinaryPath) : BinaryPath(BinaryPath.str()) {}
+  ETMDecoderImpl(const object::Binary &Binary, const Triple &Triple)
+      : Binary(Binary), TargetTriple(Triple) {}
+
   ~ETMDecoderImpl() override {
     if (DcdTree)
       // Deallocate the decoder tree resources.
       ocsd_destroy_dcd_tree(DcdTree);
   }
 
-  /// Initialize the decoder by auto-detecting the target architecture and
-  /// configuring the OpenCSD decoder.
+  // Initialize the decoder by auto-detecting the target architecture and
+  // configuring the OpenCSD decoder.
   Error initialize() {
-    auto BinaryOrErr = object::createBinary(BinaryPath);
-    if (!BinaryOrErr)
-      return BinaryOrErr.takeError();
-
-    object::Binary &SourceBin = *BinaryOrErr.get().getBinary();
-    auto *ElfBase = dyn_cast<object::ELFObjectFileBase>(&SourceBin);
-    if (!ElfBase)
-      return createStringError(inconvertibleErrorCode(),
-                               "OpenCSD: Unsupported binary format. Only ELF "
-                               "is currently supported.");
-
-    TargetTriple = ElfBase->makeTriple();
-
     DcdTree = ocsd_create_dcd_tree(OCSD_TRC_SRC_SINGLE, 0);
     if (!DcdTree)
       return createStringError(inconvertibleErrorCode(),
                                "Failed to create OpenCSD decoder tree.");
 
     // Configure and initialize the instruction-level decoder.
-    ocsd_etmv4_cfg Config{};
-    // Initialize the decoder for microcontroller-class targets.
-    if (TargetTriple.isArmMClass() || TargetTriple.isThumb()) {
-      Config.arch_ver = ARCH_V8;
-      Config.core_prof = profile_CortexM;
-    } else {
+    ocsd_arch_version_t ArchVer = ARCH_UNKNOWN;
+    if (TargetTriple.isArmMClass()) {
+      if (ARM::parseArchVersion(TargetTriple.getArchName()) >= 8)
+        ArchVer = ARCH_V8;
+      else
+        ArchVer = ARCH_V7;
+    }
+    if (ArchVer == ARCH_UNKNOWN)
       return createStringError(
           inconvertibleErrorCode(),
           "OpenCSD: Unsupported processor architecture. Only "
           "microcontroller-class (Cortex-M) is currently supported.");
-    }
+
+    ocsd_etmv4_cfg Config{};
+    // Initialize the decoder for microcontroller-class targets.
+    Config.arch_ver = ArchVer;
+    Config.core_prof = profile_CortexM;
 
     // The CoreSight Trace ID (CSID) is a hardware-assigned 7-bit identifier
     // used to route trace data. 0x10 is the most common default value for the
@@ -149,7 +147,7 @@ public:
           "OpenCSD: Failed to initialize the instruction decoder.");
 
     // Extract and map executable segments from the ELF binary.
-    if (Error E = mapELFSegments(DcdTree, SourceBin))
+    if (Error E = mapELFSegments(DcdTree, Binary))
       return E;
 
     // Register the high-level packet callback. The 'processTrace' function
@@ -200,9 +198,9 @@ public:
 };
 } // namespace
 
-Expected<std::unique_ptr<ETMDecoder>> ETMDecoder::create(StringRef BinaryPath) {
-  auto Decoder =
-      std::unique_ptr<ETMDecoderImpl>(new ETMDecoderImpl(BinaryPath));
+Expected<std::unique_ptr<ETMDecoder>>
+ETMDecoder::create(const object::Binary &Binary, const Triple &Triple) {
+  auto Decoder = std::make_unique<ETMDecoderImpl>(Binary, Triple);
   if (Error E = Decoder->initialize())
     return std::move(E);
   return std::unique_ptr<ETMDecoder>(std::move(Decoder));
@@ -214,9 +212,10 @@ Expected<std::unique_ptr<ETMDecoder>> ETMDecoder::create(StringRef BinaryPath) {
 
 namespace llvm {
 
-Expected<std::unique_ptr<ETMDecoder>> ETMDecoder::create(StringRef BinaryPath) {
-  return createStringError(inconvertibleErrorCode(),
-                           "OpenCSD support was not found or enabled.");
+Expected<std::unique_ptr<ETMDecoder>>
+ETMDecoder::create(const object::Binary & /*Binary*/,
+                   const Triple & /*Triple*/) {
+  return createStringError(inconvertibleErrorCode(), "OpenCSD not enabled.");
 }
 
 } // namespace llvm

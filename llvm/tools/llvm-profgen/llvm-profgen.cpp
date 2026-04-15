@@ -83,6 +83,11 @@ static cl::opt<std::string> ETMPath("etm", cl::value_desc("etm"),
                                     cl::desc("Path of raw ETM trace file"),
                                     cl::cat(ProfGenCategory));
 
+static cl::opt<std::string>
+    TargetTriple("target-triple", cl::value_desc("triple"),
+                 cl::desc("Override the target triple for the binary"),
+                 cl::cat(ProfGenCategory));
+
 // Validate the command line input.
 static void validateCommandLine() {
   // Allow the missing perfscript if we only use to show binary disassembly.
@@ -171,6 +176,8 @@ int main(int argc, const char *argv[]) {
   // Load symbols and disassemble the code of a given binary.
   std::unique_ptr<ProfiledBinary> Binary =
       std::make_unique<ProfiledBinary>(BinaryPath, DebugBinPath);
+  Binary->load(TargetTriple);
+
   if (ShowDisassemblyOnly)
     return EXIT_SUCCESS;
 

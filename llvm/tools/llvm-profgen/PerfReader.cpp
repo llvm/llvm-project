@@ -1410,7 +1410,9 @@ void ETMReader::parseETMTraces() {
     exitWithError("No synchronization header (0x80) found in the bitstream.");
   ArrayRef<uint8_t> TraceSlice = Data.slice(StartIdx);
 
-  auto DecoderOrErr = ETMDecoder::create(Binary->getPath());
+  auto DecoderOrErr =
+      ETMDecoder::create(Binary->getBinary(), Binary->getTriple());
+
   if (!DecoderOrErr)
     exitWithError(toString(DecoderOrErr.takeError()));
   auto Decoder = std::move(*DecoderOrErr);
