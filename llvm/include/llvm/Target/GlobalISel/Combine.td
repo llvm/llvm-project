@@ -1363,11 +1363,19 @@ def constant_fold_binop : GICombineRule<
    [{ return Helper.matchConstantFoldBinOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
+def constant_fold_fp_binop_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op,
+           [G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FREM, G_FCOPYSIGN,
+            G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM,
+            G_FMINIMUMNUM, G_FMAXIMUMNUM],
+           (pattern (op $dst, $src0, $src1)))>;
+
 def constant_fold_fp_binop : GICombineRule<
   (defs root:$d, constantfp_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_FADD, G_FSUB, G_FMUL, G_FDIV):$d,
-   [{ return Helper.matchConstantFoldFPBinOp(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithFConstant(*${d}, ${matchinfo}); }])>;
+  (match (constant_fold_fp_binop_frags $d):$mi,
+   [{ return Helper.matchConstantFoldFPBinOp(*${mi}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceInstWithFConstant(*${mi}, ${matchinfo}); }])>;
 
 
 def constant_fold_fma : GICombineRule<

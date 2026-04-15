@@ -13,6 +13,7 @@
 #include "SystemZMCInstLower.h"
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/Compiler.h"
@@ -28,8 +29,6 @@ public:
   static char ID;
 
 private:
-  MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
-  MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
   MCSymbol *PPA2Sym;
 
   SystemZTargetStreamer *getTargetStreamer() {
@@ -99,15 +98,38 @@ private:
   DenseMap<const GlobalObject *, SmallVector<const GlobalAlias *, 1>>
       GOAliasMap;
 
-  void emitPPA1(MCSymbol *FnEndSym);
+  struct PPA1Info {
+    StringRef Name;
+    MCSymbol *FnEnd = nullptr;    // Symbol marking function end.
+    MCSymbol *PPA1 = nullptr;     // Symbol marking PPA1 begin.
+    MCSymbol *EPMarker = nullptr; // Symbol marking entry point.
+    MCSymbol *PersonalityRoutine = nullptr;
+    MCSymbol *GCCEH = nullptr;
+    int64_t OffsetFPR = 0;
+    int64_t OffsetVR = 0;
+    uint64_t CallFrameSize = 0;
+    unsigned SizeOfFnParams = 0;
+    uint32_t FrameAndFPROffset;
+    uint32_t FrameAndVROffset;
+    uint16_t SavedGPRMask = 0;
+    uint16_t SavedFPRMask = 0;
+    uint8_t SavedVRMask = 0;
+    uint8_t FrameReg = 0;
+    uint8_t AllocaReg = 0;
+    bool IsVarArg = false;
+    bool HasStackProtector = false;
+  };
+  SmallVector<PPA1Info, 0> DeferredPPA1;
+
+  void calculatePPA1();
+  void emitPPA1(PPA1Info &Info);
   void emitPPA2(Module &M);
   void emitADASection();
   void emitIDRLSection(Module &M);
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), CurrentFnPPA1Sym(nullptr),
-        CurrentFnEPMarkerSym(nullptr), PPA2Sym(nullptr),
+      : AsmPrinter(TM, std::move(Streamer), ID), PPA2Sym(nullptr),
         ADATable(TM.getPointerSize(0)) {}
 
   // Override AsmPrinter.

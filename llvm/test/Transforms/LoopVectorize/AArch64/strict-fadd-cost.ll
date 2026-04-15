@@ -72,7 +72,6 @@ for.end:
   ret float %muladd
 }
 
-declare float @llvm.fmuladd.f32(float, float, float)
 
 ; CHECK-VF4: Found an estimated cost of 16 for VF 4 For instruction:   %muladd = tail call double @llvm.fmuladd.f64(double %0, double %1, double %sum.07)
 ; CHECK-VF8: Found an estimated cost of 32 for VF 8 For instruction:   %muladd = tail call double @llvm.fmuladd.f64(double %0, double %1, double %sum.07)
@@ -97,4 +96,3 @@ for.end:
   ret double %muladd
 }
 
-declare double @llvm.fmuladd.f64(double, double, double)

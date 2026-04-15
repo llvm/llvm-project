@@ -19,11 +19,11 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define i32 @foo(i32 %n, ptr nocapture %A) {
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %0
+.lr.ph:
   %2 = sext i32 %n to i64
   br label %3
 
-; <label>:3                                       ; preds = %.lr.ph, %3
+; <label>:
   %indvars.iv = phi i64 [ %2, %.lr.ph ], [ %indvars.iv.next, %3 ]
   %sum.01 = phi i32 [ 0, %.lr.ph ], [ %9, %3 ]
   %4 = trunc i64 %indvars.iv to i32
@@ -37,7 +37,7 @@ define i32 @foo(i32 %n, ptr nocapture %A) {
   %11 = icmp sgt i32 %10, 0
   br i1 %11, label %3, label %._crit_edge
 
-._crit_edge:                                      ; preds = %3
+._crit_edge:
   ret i32 %9
 }
 

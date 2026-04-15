@@ -1336,6 +1336,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     emitTrap(loc, /*createNewBlock=*/true);
     return RValue::getIgnored();
   case Builtin::BI__builtin_verbose_trap:
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    emitTrap(loc, /*createNewBlock=*/true);
+    return RValue::getIgnored();
   case Builtin::BI__debugbreak:
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_unreachable:
@@ -1580,9 +1583,23 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value result = builder.createSelect(loc, isInf, signResult, zero);
     return RValue::get(result);
   }
-  case Builtin::BI__builtin_flt_rounds:
-  case Builtin::BI__builtin_set_flt_rounds:
-    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_flt_rounds: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Type resultType = convertType(e->getType());
+    mlir::Value result =
+        builder.emitIntrinsicCallOp(loc, "get.rounding", resultType);
+    if (result.getType() != resultType)
+      result =
+          builder.createCast(loc, cir::CastKind::integral, result, resultType);
+    return RValue::get(result);
+  }
+  case Builtin::BI__builtin_set_flt_rounds: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value v = emitScalarExpr(e->getArg(0));
+    builder.emitIntrinsicCallOp(loc, "set.rounding", builder.getVoidTy(),
+                                mlir::ValueRange{v});
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_fpclassify: {
     CIRGenFunction::CIRGenFPOptionsRAII fPOptsRAII(*this, e);
     mlir::Location loc = getLoc(e->getBeginLoc());
@@ -1943,9 +1960,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
   case Builtin::BI__scoped_atomic_thread_fence:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:
-  case Builtin::BI__builtin_signbitl:
+  case Builtin::BI__builtin_signbitl: {
+    CIRGenFunction::CIRGenFPOptionsRAII fPOptsRAII(*this, e);
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    mlir::Value value = emitScalarExpr(e->getArg(0));
+    mlir::Operation *signBitOp = cir::SignBitOp::create(builder, loc, value);
+    mlir::Value result = builder.createBoolToInt(signBitOp->getResult(0),
+                                                 convertType(e->getType()));
+    return RValue::get(result);
+  }
   case Builtin::BI__warn_memset_zero_len:
   case Builtin::BI__annotation:
   case Builtin::BI__builtin_annotation:

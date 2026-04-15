@@ -2389,13 +2389,16 @@ func.func @omp_cancel_taskgroup() -> () {
 }
 
 func.func @omp_taskloop_cancel_taskgroup(%lb : index, %ub : index, %step : index) {
-  omp.taskloop {
-    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
-      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
-      omp.cancel cancellation_construct_type(taskgroup)
-      // CHECK: omp.yield
-      omp.yield
+  omp.taskloop.context {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+        omp.cancel cancellation_construct_type(taskgroup)
+        // CHECK: omp.yield
+        omp.yield
+      }
     }
+    omp.terminator
   }
   return
 }
@@ -2631,160 +2634,251 @@ func.func @omp_taskgroup_clauses() -> () {
 // CHECK-LABEL: @omp_taskloop
 func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
 
-  // CHECK: omp.taskloop {
-  omp.taskloop {
-    omp.loop_nest (%i) : i32 = (%lb) to (%ub) step (%step)  {
-      // CHECK: omp.yield
-      omp.yield
+  // CHECK: omp.taskloop.context {
+  omp.taskloop.context {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i) : i32 = (%lb) to (%ub) step (%step)  {
+        // CHECK: omp.yield
+        omp.yield
+      }
     }
+    omp.terminator
   }
 
   %testbool = "test.bool"() : () -> (i1)
 
-  // CHECK: omp.taskloop if(%{{[^)]+}}) {
-  omp.taskloop if(%testbool) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // CHECK: omp.taskloop final(%{{[^)]+}}) {
-  omp.taskloop final(%testbool) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // CHECK: omp.taskloop untied {
-  omp.taskloop untied {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // CHECK: omp.taskloop mergeable {
-  omp.taskloop mergeable {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  %testf32 = "test.f32"() : () -> (!llvm.ptr)
-  %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
-  // CHECK: omp.taskloop in_reduction(@add_f32 %{{.+}} -> %{{.+}}, @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
-  omp.taskloop in_reduction(@add_f32 %testf32 -> %arg0, @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // Checking byref attribute for in_reduction
-  // CHECK: omp.taskloop in_reduction(byref @add_f32 %{{.+}} -> %{{.+}}, @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
-  omp.taskloop in_reduction(byref @add_f32 %testf32 -> %arg0, @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // CHECK: omp.taskloop reduction(byref @add_f32 %{{.+}} -> %{{.+}}, @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
-  omp.taskloop reduction(byref @add_f32 %testf32 -> %arg0, @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // check byref attrbute for reduction
-  // CHECK: omp.taskloop reduction(byref @add_f32 %{{.+}} -> %{{.+}}, byref @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
-  omp.taskloop reduction(byref @add_f32 %testf32 -> %arg0, byref @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // CHECK: omp.taskloop in_reduction(@add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr) reduction(@add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr) {
-  omp.taskloop in_reduction(@add_f32 %testf32 -> %arg0 : !llvm.ptr) reduction(@add_f32 %testf32_2 -> %arg1 : !llvm.ptr) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  %testi32 = "test.i32"() : () -> (i32)
-  // CHECK: omp.taskloop priority(%{{[^:]+}}: i32) {
-  omp.taskloop priority(%testi32 : i32) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  %testmemref = "test.memref"() : () -> (memref<i32>)
-  // CHECK: omp.taskloop allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>) {
-  omp.taskloop allocate(%testmemref : memref<i32> -> %testmemref : memref<i32>) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  %testi64 = "test.i64"() : () -> (i64)
-  // CHECK: omp.taskloop grainsize(%{{[^:]+}}: i64) {
-  omp.taskloop grainsize(%testi64: i64) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // CHECK: omp.taskloop num_tasks(%{{[^:]+}}: i64) {
-  omp.taskloop num_tasks(%testi64: i64) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // CHECK: omp.taskloop grainsize(strict, %{{[^:]+}}: i64) {
-  omp.taskloop grainsize(strict, %testi64: i64) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // CHECK: omp.taskloop num_tasks(strict, %{{[^:]+}}: i64) {
-  omp.taskloop num_tasks(strict, %testi64: i64) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // CHECK: omp.taskloop nogroup {
-  omp.taskloop nogroup {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      // CHECK: omp.yield
-      omp.yield
-    }
-  }
-
-  // CHECK: omp.taskloop {
-  omp.taskloop {
-    omp.simd {
+  // CHECK: omp.taskloop.context if(%{{[^)]+}}) {
+  omp.taskloop.context if(%testbool) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
       omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
         // CHECK: omp.yield
         omp.yield
       }
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context final(%{{[^)]+}}) {
+  omp.taskloop.context final(%testbool) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context untied {
+  omp.taskloop.context untied {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context mergeable {
+  omp.taskloop.context mergeable {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  %testf32 = "test.f32"() : () -> (!llvm.ptr)
+  %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
+  // CHECK: omp.taskloop.context in_reduction(@add_f32 %{{.+}} -> %{{.+}}, @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
+  omp.taskloop.context in_reduction(@add_f32 %testf32 -> %arg0, @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // Checking byref attribute for in_reduction
+  // CHECK: omp.taskloop.context in_reduction(byref @add_f32 %{{.+}} -> %{{.+}}, @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
+  omp.taskloop.context in_reduction(byref @add_f32 %testf32 -> %arg0, @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context reduction(byref @add_f32 %{{.+}} -> %{{.+}}, @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
+  omp.taskloop.context reduction(byref @add_f32 %testf32 -> %arg0, @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // check byref attrbute for reduction
+  // CHECK: omp.taskloop.context reduction(byref @add_f32 %{{.+}} -> %{{.+}}, byref @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
+  omp.taskloop.context reduction(byref @add_f32 %testf32 -> %arg0, byref @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context in_reduction(@add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr) reduction(@add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr) {
+  omp.taskloop.context in_reduction(@add_f32 %testf32 -> %arg0 : !llvm.ptr) reduction(@add_f32 %testf32_2 -> %arg1 : !llvm.ptr) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  %testi32 = "test.i32"() : () -> (i32)
+  // CHECK: omp.taskloop.context priority(%{{[^:]+}}: i32) {
+  omp.taskloop.context priority(%testi32 : i32) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  %testmemref = "test.memref"() : () -> (memref<i32>)
+  // CHECK: omp.taskloop.context allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>) {
+  omp.taskloop.context allocate(%testmemref : memref<i32> -> %testmemref : memref<i32>) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  %testi64 = "test.i64"() : () -> (i64)
+  // CHECK: omp.taskloop.context grainsize(%{{[^:]+}}: i64) {
+  omp.taskloop.context grainsize(%testi64: i64) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context num_tasks(%{{[^:]+}}: i64) {
+  omp.taskloop.context num_tasks(%testi64: i64) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context grainsize(strict, %{{[^:]+}}: i64) {
+  omp.taskloop.context grainsize(strict, %testi64: i64) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context num_tasks(strict, %{{[^:]+}}: i64) {
+  omp.taskloop.context num_tasks(strict, %testi64: i64) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context nogroup {
+  omp.taskloop.context nogroup {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context {
+  omp.taskloop.context {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.simd {
+        omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+          // CHECK: omp.yield
+          omp.yield
+        }
+      } {omp.composite}
     } {omp.composite}
-  } {omp.composite}
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop.context {
+  omp.taskloop.context {
+    // CHECK: %[[LB:.+]] = arith.constant 1 : i32
+    %local_lb = arith.constant 1 : i32
+    // CHECK: %[[UB:.+]] = arith.constant 10 : i32
+    %local_ub = arith.constant 10 : i32
+    // CHECK: %[[STEP:.+]] = arith.constant 1 : i32
+    %local_step = arith.constant 1 : i32
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      // CHECK: omp.loop_nest (%{{.+}}) : i32 = (%[[LB]]) to (%[[UB]]) step (%[[STEP]]) {
+      omp.loop_nest (%i) : i32 = (%local_lb) to (%local_ub) step (%local_step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
 
   // CHECK: return
   return
@@ -3391,27 +3485,51 @@ func.func @omp_allocate_dir(%arg0 : memref<i32>, %arg1 : memref<i32>) -> () {
   // Test with one data var and allocator clause
   // CHECK: %[[VAL_1:.*]] = arith.constant 1 : i64
   %omp_default_mem_alloc = arith.constant 1 : i64
-  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(%[[VAL_1:.*]])
-  omp.allocate_dir (%arg0 : memref<i32>) allocator(%omp_default_mem_alloc)
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(%[[VAL_1:.*]]  : i64)
+  omp.allocate_dir (%arg0 : memref<i32>) allocator(%omp_default_mem_alloc : i64)
 
   // Test with one data var, align clause and allocator clause
   // CHECK: %[[VAL_2:.*]] = arith.constant 7 : i64
   %omp_pteam_mem_alloc = arith.constant 7 : i64
-  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>)  align(4) allocator(%[[VAL_2:.*]])
-  omp.allocate_dir (%arg0 : memref<i32>)  align(4) allocator(%omp_pteam_mem_alloc)
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>)  align(4) allocator(%[[VAL_2:.*]]  : i64)
+  omp.allocate_dir (%arg0 : memref<i32>)  align(4) allocator(%omp_pteam_mem_alloc  : i64)
 
   // Test with two data vars, align clause and allocator clause
   // CHECK: %[[VAL_3:.*]] = arith.constant 6 : i64
   %omp_cgroup_mem_alloc = arith.constant 6 : i64
-  // CHECK: omp.allocate_dir(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) align(8) allocator(%[[VAL_3:.*]])
-  omp.allocate_dir (%arg0, %arg1 : memref<i32>, memref<i32>) align(8) allocator(%omp_cgroup_mem_alloc)
+  // CHECK: omp.allocate_dir(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) align(8) allocator(%[[VAL_3:.*]] : i64)
+  omp.allocate_dir (%arg0, %arg1 : memref<i32>, memref<i32>) align(8) allocator(%omp_cgroup_mem_alloc : i64)
 
   // Test with one data var and user defined allocator clause
   // CHECK: %[[VAL_4:.*]] = arith.constant 9 : i64
   %custom_allocator = arith.constant 9 : i64
   %custom_mem_alloc = func.call @omp_init_allocator(%custom_allocator) : (i64) -> (i64)
-  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(%[[VAL_5:.*]])
-  omp.allocate_dir (%arg0 : memref<i32>) allocator(%custom_mem_alloc)
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(%[[VAL_5:.*]] : i64)
+  omp.allocate_dir (%arg0 : memref<i32>) allocator(%custom_mem_alloc : i64)
+
+  return
+}
+
+// CHECK-LABEL: func.func @omp_allocate_free(
+// CHECK-SAME: %[[ARG0:.*]]: memref<i32>,
+// CHECK-SAME: %[[ARG1:.*]]: memref<i32>) {
+func.func @omp_allocate_free(%arg0 : memref<i32>, %arg1 : memref<i32>) -> () {
+
+  // Test free with no allocator
+  // CHECK: omp.allocate_free(%[[ARG0]] : memref<i32>)
+  omp.allocate_free (%arg0 : memref<i32>)
+
+  // Test free with allocator clause
+  // CHECK: %[[VAL_1:.*]] = arith.constant 1 : i64
+  %omp_default_mem_alloc = arith.constant 1 : i64
+  // CHECK: omp.allocate_free(%[[ARG0]] : memref<i32>) allocator(%[[VAL_1:.*]] : i64)
+  omp.allocate_free (%arg0 : memref<i32>) allocator(%omp_default_mem_alloc : i64)
+
+  // Test free with two variables and allocator clause
+  // CHECK: %[[VAL_3:.*]] = arith.constant 6 : i64
+  %omp_cgroup_mem_alloc = arith.constant 6 : i64
+  // CHECK: omp.allocate_free(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) allocator(%[[VAL_3:.*]] : i64)
+  omp.allocate_free (%arg0, %arg1 : memref<i32>, memref<i32>) allocator(%omp_cgroup_mem_alloc : i64)
 
   return
 }

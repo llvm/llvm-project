@@ -185,6 +185,10 @@ clang_tablegen("BuiltinsSPIRVCL") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinsSystemZ") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 clang_tablegen("BuiltinsX86") {
   args = [ "-gen-clang-builtins" ]
 }

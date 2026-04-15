@@ -362,13 +362,18 @@ enum MlirLLVMDINameTableKind {
 
 typedef enum MlirLLVMDINameTableKind MlirLLVMDINameTableKind;
 
+/// Creates a self-referencing LLVM DICompileUnitAttr attribute.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMDICompileUnitAttrGetRecSelf(MlirAttribute recId);
+
 /// Creates a LLVM DICompileUnit attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompileUnitAttrGet(
-    MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
-    MlirAttribute file, MlirAttribute producer, bool isOptimized,
-    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
-    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
-    intptr_t nImportedEntities, MlirAttribute const *importedEntities);
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    unsigned int sourceLanguage, MlirAttribute file, MlirAttribute producer,
+    bool isOptimized, MlirLLVMDIEmissionKind emissionKind,
+    bool isDebugInfoForProfiling, MlirLLVMDINameTableKind nameTableKind,
+    MlirAttribute splitDebugFilename, intptr_t nImportedEntities,
+    MlirAttribute const *importedEntities);
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDICompileUnitAttrGetName(void);
 

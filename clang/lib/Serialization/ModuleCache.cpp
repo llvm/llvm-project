@@ -10,6 +10,7 @@
 
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
@@ -25,7 +26,7 @@ static void writeTimestampFile(StringRef TimestampFile) {
 }
 
 void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
-                           time_t PruneAfter) {
+                           time_t PruneAfter, bool PruneTopLevel) {
   if (PruneInterval <= 0 || PruneAfter <= 0)
     return;
 
@@ -94,7 +95,8 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     // If we don't have a directory, try to prune it as a file in the root.
     if (!llvm::sys::fs::is_directory(Dir->path())) {
-      TryPruneFile(Dir->path());
+      if (PruneTopLevel)
+        TryPruneFile(Dir->path());
       continue;
     }
 
@@ -151,6 +153,7 @@ clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
       llvm::sys::fs::openNativeFileForRead(FileName);
   if (!FD)
     return FD.takeError();
+  llvm::scope_exit CloseFD([&FD]() { llvm::sys::fs::closeFile(*FD); });
   llvm::sys::fs::file_status Status;
   if (std::error_code EC = llvm::sys::fs::status(*FD, Status))
     return llvm::errorCodeToError(EC);

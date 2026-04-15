@@ -238,7 +238,7 @@ def SVLDNT1 : MInst<"svldnt1[_{2}]", "dPc", "csilUcUsUiUlhfdbm", [IsLoad, Verify
 def SVLDNT1_VNUM : MInst<"svldnt1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfdbm", [IsLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_ldnt1">;
 
 // Load one quadword and replicate (scalar base)
-def SVLD1RQ : SInst<"svld1rq[_{2}]", "dPc", "csilUcUsUiUlhfdbm", MergeNone, "aarch64_sve_ld1rq", [VerifyRuntimeMode]>;
+def SVLD1RQ : MInst<"svld1rq[_{2}]", "dPc", "csilUcUsUiUlhfdbm", [IsLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_ld1rq">;
 
 // Load N-element structure into N vectors (scalar base)
 def SVLD2 : SInst<"svld2[_{2}]", "2Pc", "csilUcUsUiUlhfdbm", MergeNone, "aarch64_sve_ld2_sret", [IsStructLoad, VerifyRuntimeMode]>;
@@ -252,7 +252,7 @@ def SVLD4_VNUM : SInst<"svld4_vnum[_{2}]", "4Pcl", "csilUcUsUiUlhfdbm", MergeNon
 
 // Load one octoword and replicate (scalar base)
 let SVETargetGuard = "f64mm", SMETargetGuard = InvalidMode in {
-  def SVLD1RO : SInst<"svld1ro[_{2}]", "dPc", "csilUcUsUiUlhfdbm", MergeNone, "aarch64_sve_ld1ro">;
+  def SVLD1RO : MInst<"svld1ro[_{2}]", "dPc", "csilUcUsUiUlhfdbm", [IsLoad], MemEltTyDefault, "aarch64_sve_ld1ro">;
 }
 
 let SVETargetGuard = "bf16", SMETargetGuard = InvalidMode in {

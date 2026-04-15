@@ -1255,7 +1255,7 @@ TEST_F(FormatTestVerilog, Primitive) {
 
 TEST_F(FormatTestVerilog, Protected) {
   // The mess-up function does not know that the pragma needs to be on its own
-  // line. So the 1-argument `verifyFormat` function is avoided here.
+  // line. So the 1-argument version of `verifyFormat` is avoided here.
 
   // Stuff inside the block should not change.
   verifyNoChange("`pragma protect data_block\n"
