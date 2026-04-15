@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
@@ -38,23 +39,14 @@ llvm::cl::opt<bool> supportCrayPointers(
     llvm::cl::init(false));
 
 // Inspect for value-scoped Allocate effects and determine whether
-// 'candidate' is a new allocation. Returns SourceKind::Allocate if a
+// 'result' is a new allocation. Returns SourceKind::Allocate if a
 // MemAlloc effect is attached
 static fir::AliasAnalysis::SourceKind
-classifyAllocateFromEffects(mlir::Operation *op, mlir::Value candidate) {
-  if (!op)
-    return fir::AliasAnalysis::SourceKind::Unknown;
-  auto interface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(op);
-  if (!interface)
-    return fir::AliasAnalysis::SourceKind::Unknown;
-  llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
-  interface.getEffects(effects);
-  for (mlir::MemoryEffects::EffectInstance &e : effects) {
-    if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
-        e.getValue() && e.getValue() == candidate)
-      return fir::AliasAnalysis::SourceKind::Allocate;
-  }
-  return fir::AliasAnalysis::SourceKind::Unknown;
+classifyAllocateFromEffects(OpResult result) {
+  std::optional<bool> isNewAllocation = fir::isNewAllocationResult(result);
+  return isNewAllocation.value_or(false)
+             ? fir::AliasAnalysis::SourceKind::Allocate
+             : fir::AliasAnalysis::SourceKind::Unknown;
 }
 
 //===----------------------------------------------------------------------===//
@@ -767,6 +759,12 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
     if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
       continue;
 
+    // An effect on a non-addressable resource cannot affect
+    // memory pointed to by 'location'.
+    mlir::SideEffects::Resource *resource = effect.getResource();
+    if (!resource->isAddressable())
+      continue;
+
     // Check for an alias between the effect and our memory location.
     AliasResult aliasResult = AliasResult::MayAlias;
     if (Value effectValue = effect.getValue())
@@ -822,15 +820,15 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   Source::AccessPath accessPath;
   bool accessPathFinalized{false};
   while (defOp && !breakFromLoop) {
-    // Value-scoped allocation detection via effects.
-    if (classifyAllocateFromEffects(defOp, v) == SourceKind::Allocate) {
-      type = SourceKind::Allocate;
-      break;
-    }
     // Operations may have multiple results, so we need to analyze
     // the result for which the source is queried.
     auto opResult = mlir::cast<OpResult>(v);
     assert(opResult.getOwner() == defOp && "v must be a result of defOp");
+    // Value-scoped allocation detection via effects.
+    if (classifyAllocateFromEffects(opResult) == SourceKind::Allocate) {
+      type = SourceKind::Allocate;
+      break;
+    }
     ty = opResult.getType();
     std::optional<AliasAnalysis::Source> accSourceReturn;
     llvm::TypeSwitch<Operation *>(defOp)
@@ -926,11 +924,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             } else {
               auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
               bool classified = false;
-              if (auto defDefOp = def.getDefiningOp()) {
-                if (classifyAllocateFromEffects(defDefOp, def) ==
+              if (auto defAsOpResult = mlir::dyn_cast<OpResult>(def)) {
+                if (classifyAllocateFromEffects(defAsOpResult) ==
                     SourceKind::Allocate) {
                   v = def;
-                  defOp = defDefOp;
+                  defOp = defAsOpResult.getOwner();
                   type = SourceKind::Allocate;
                   classified = true;
                 }
