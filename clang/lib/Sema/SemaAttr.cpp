@@ -222,7 +222,8 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 }
 
 static const CXXNewExpr *findCXXNewExpr(const Stmt *S) {
-  if (!S) return nullptr;
+  if (!S)
+    return nullptr;
   if (const auto *E = dyn_cast<CXXNewExpr>(S))
     return E;
   for (const Stmt *Child : S->children())
@@ -265,8 +266,7 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
   // Handle std::make_unique to propagate lifetimebound attributes from the
   // constructed type's constructor to make_unique's parameters by looking
   // into its body.
-  if (FD->getDeclName().isIdentifier() &&
-      FD->getName() == "make_unique") {
+  if (FD->getDeclName().isIdentifier() && FD->getName() == "make_unique") {
     const FunctionDecl *BodyDecl = nullptr;
     if (FD->getBody(BodyDecl))
       if (const CXXNewExpr *NewExpr = findCXXNewExpr(BodyDecl->getBody()))
@@ -280,8 +280,8 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
               if (I < FD->getNumParams() &&
                   Ctor->getParamDecl(I)->hasAttr<LifetimeBoundAttr>() &&
                   Ctor->getParamDecl(I)->getType()->isReferenceType())
-                FD->getParamDecl(I)->addAttr(
-                    LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+                FD->getParamDecl(I)->addAttr(LifetimeBoundAttr::CreateImplicit(
+                    Context, FD->getLocation()));
     return;
   }
 
