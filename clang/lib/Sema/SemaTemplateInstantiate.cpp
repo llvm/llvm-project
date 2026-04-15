@@ -3842,9 +3842,8 @@ bool Sema::InstantiateInClassInitializer(
   ActOnStartCXXInClassMemberInitializer();
   CXXThisScopeRAII ThisScope(*this, Instantiation->getParent(), Qualifiers());
 
-  ProfileSuppressScope ProfileSuppressGuard(*this, Pattern);
-  ProfileSuppressScope ProfileSuppressLexicalGuard(
-      *this, Pattern->getLexicalDeclContext());
+  ProfileSuppressScope ProfileSuppressGuard(
+      *this, Pattern, /*WalkLexicalParents=*/true);
 
   ExprResult NewInit = SubstInitializer(OldInit, TemplateArgs,
                                         /*CXXDirectInit=*/false);

@@ -5932,9 +5932,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     Sema::ContextRAII savedContext(*this, Function);
 
     ProfileSuppressScope ProfileSuppressGuard(
-        *this, static_cast<const Decl *>(PatternDecl));
-    ProfileSuppressScope ProfileSuppressLexicalGuard(
-        *this, PatternDecl->getLexicalDeclContext());
+        *this, PatternDecl, /*WalkLexicalParents=*/true);
 
     FPFeaturesStateRAII SavedFPFeatures(*this);
     CurFPFeatures = FPOptions(getLangOpts());
@@ -6231,9 +6229,8 @@ void Sema::InstantiateVariableInitializer(
     Var->setImplicitlyInline();
 
   ContextRAII SwitchContext(*this, Var->getDeclContext());
-  ProfileSuppressScope ProfileSuppressGuard(*this, OldVar);
-  ProfileSuppressScope ProfileSuppressLexicalGuard(
-      *this, OldVar->getLexicalDeclContext());
+  ProfileSuppressScope ProfileSuppressGuard(
+      *this, OldVar, /*WalkLexicalParents=*/true);
 
   EnterExpressionEvaluationContext Evaluated(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var,

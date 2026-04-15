@@ -3108,14 +3108,25 @@ Sema::ProfileSuppressScope::ProfileSuppressScope(
   }
 }
 
-Sema::ProfileSuppressScope::ProfileSuppressScope(Sema &S, const Decl *D)
-    : S(S) {
-  if (!S.getLangOpts().Profiles || !D)
-    return;
+void Sema::ProfileSuppressScope::addFromDecl(const Decl *D) {
   for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>()) {
     S.ProfileSuppressStack.push_back(
         {A->getProfileName(), A->getRule()});
     ++Count;
+  }
+}
+
+Sema::ProfileSuppressScope::ProfileSuppressScope(Sema &S, const Decl *D,
+                                                  bool WalkLexicalParents)
+    : S(S) {
+  if (!S.getLangOpts().Profiles || !D)
+    return;
+  addFromDecl(D);
+  if (WalkLexicalParents) {
+    for (const DeclContext *DC = D->getLexicalDeclContext(); DC;
+         DC = DC->getLexicalParent())
+      if (const auto *Parent = dyn_cast<Decl>(DC))
+        addFromDecl(Parent);
   }
 }
 
@@ -3129,22 +3140,6 @@ Sema::ProfileSuppressScope::ProfileSuppressScope(Sema &S,
       S.ProfileSuppressStack.push_back(
           {PSA->getProfileName(), PSA->getRule()});
       ++Count;
-    }
-  }
-}
-
-Sema::ProfileSuppressScope::ProfileSuppressScope(Sema &S,
-                                                  const DeclContext *DC)
-    : S(S) {
-  if (!S.getLangOpts().Profiles)
-    return;
-  for (; DC; DC = DC->getLexicalParent()) {
-    if (const auto *D = dyn_cast<Decl>(DC)) {
-      for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>()) {
-        S.ProfileSuppressStack.push_back(
-            {A->getProfileName(), A->getRule()});
-        ++Count;
-      }
     }
   }
 }
