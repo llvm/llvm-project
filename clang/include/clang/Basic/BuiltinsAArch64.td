@@ -415,4 +415,8 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def __ldar16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short const volatile *)">;
 	def __ldar32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int const volatile *)">;
 	def __ldar64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int const volatile*)">;
+	def __stlr8  : AArch64NoPrefixTargetLibBuiltin<"void (unsigned char volatile *, unsigned char)">;
+	def __stlr16 : AArch64NoPrefixTargetLibBuiltin<"void (unsigned short volatile *, unsigned short)">;
+	def __stlr32 : AArch64NoPrefixTargetLibBuiltin<"void (unsigned int volatile *, unsigned int)">;
+	def __stlr64 : AArch64NoPrefixTargetLibBuiltin<"void (unsigned long long int volatile *, unsigned long long int)">;
 }
