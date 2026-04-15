@@ -2416,7 +2416,7 @@ void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
   }
 
   auto BindItr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCBindClause>);
-      if (BindItr != Clauses.end()) {
+  if (BindItr != Clauses.end()) {
     for (auto *A : NextParsedFDecl->attrs()) {
       // OpenACC 3.3 2.15:
       // If a procedure has a bind clause on both the declaration and definition
@@ -2449,7 +2449,7 @@ void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
         return;
       }
     }
-      }
+  }
 
   CreateRoutineDeclAttr(*this, DirLoc, Clauses, NextParsedFDecl);
 }
