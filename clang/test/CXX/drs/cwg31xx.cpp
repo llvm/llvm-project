@@ -10,7 +10,7 @@
 // expected-no-diagnostics
 
 namespace cwg3106 { // cwg3106: 2.7
-#if __cplusplus >= 201102L
+#if __cplusplus >= 201103L
 const char str[9] = R"(\u{1234})";
 #endif
 } // namespace cwg3106
