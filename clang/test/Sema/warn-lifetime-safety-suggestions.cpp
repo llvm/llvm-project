@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
-// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -fixit %t/test_source.cpp
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -Werror=lifetime-safety-suggestions %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -I%S -Werror=lifetime-safety-suggestions %t/test_source.cpp
 
 View definition_before_header(View a);
 
@@ -67,6 +67,7 @@ struct ReturnThisPointer {
 //--- test_source.cpp
 
 #include "test_header.h"
+#include "Inputs/lifetime-analysis.h"
 
 View definition_before_header(View a) {
   return a;                               // expected-note {{param returned here}}
@@ -456,3 +457,93 @@ S forward(const MyObj &obj) { // expected-warning {{parameter in intra-TU functi
 }
 
 } // namespace track_origins_for_lifetimebound_record_type
+
+namespace capturing_constructor {
+struct CaptureRefToView {
+  View v; // expected-note {{escapes to this field}}
+  CaptureRefToView(const MyObj& obj) : v(obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+CaptureRefToView test_ref_to_view() {
+  MyObj obj;
+  CaptureRefToView x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
+
+struct CaptureRefToPtr {
+  const MyObj* p; // expected-note {{escapes to this field}}
+  CaptureRefToPtr(const MyObj& obj) : p(&obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+CaptureRefToPtr test_ref_to_ptr() {
+  MyObj obj;
+  CaptureRefToPtr x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
+
+struct CaptureViewToView {
+  View v; // expected-note {{escapes to this field}}
+  CaptureViewToView(View v_param) : v(v_param) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+CaptureViewToView test_view_to_view() {
+  MyObj obj;
+  View v(obj); // expected-warning {{address of stack memory is returned later}}
+  CaptureViewToView x(v);
+  return x; // expected-note {{returned here}}
+}
+
+struct CapturePtrToPtr {
+  const MyObj* p; // expected-note {{escapes to this field}}
+  CapturePtrToPtr(const MyObj* p_param) : p(p_param) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+CapturePtrToPtr test_ptr_to_ptr() {
+  MyObj obj;
+  CapturePtrToPtr x(&obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
+
+struct CaptureRefToRef {
+  const MyObj& r; // expected-note {{escapes to this field}}
+  CaptureRefToRef(const MyObj& obj) : r(obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+CaptureRefToRef test_ref_to_ref() {
+  MyObj obj;
+  CaptureRefToRef x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
+
+struct BaseWithView {
+  View v; // expected-note {{escapes to this field}}
+};
+struct CaptureRefToBaseView : BaseWithView {
+  CaptureRefToBaseView(const MyObj& obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+    v = obj;
+  }
+};
+
+CaptureRefToBaseView test_ref_to_base_view() {
+  MyObj obj;
+  CaptureRefToBaseView x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
+} // namespace capturing_constructor
+
+namespace callable_wrappers {
+
+std::function<void()> return_lambda_capturing_param(int &x) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return [&]() { (void)x; }; // expected-note {{param returned here}}
+}
+
+void uaf_via_inferred_lifetimebound() {
+  std::function<void()> f = []() {};
+  {
+    int local;
+    f = return_lambda_capturing_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)f; // expected-note {{later used here}}
+}
+
+} // namespace callable_wrappers

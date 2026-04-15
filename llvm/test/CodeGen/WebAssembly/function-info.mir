@@ -53,7 +53,7 @@ machineFunctionInfo:
     2:               3
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
+    successors: %bb.1, %bb.2, %bb.3
     CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64, implicit-def dead $arguments, implicit $sp32, implicit $sp64
 
   bb.1:

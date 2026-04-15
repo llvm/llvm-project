@@ -6,8 +6,8 @@ define void @sve_load_compare_store(ptr noalias nocapture noundef readonly %a, p
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    cmphs p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    st1b { z0.s }, p0, [x1]
+; CHECK-NEXT:    cmphs p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    st1b { z0.s }, p1, [x1]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
