@@ -7,5 +7,8 @@ add_libc_unittest(
   SRCS
     semaphore_test.cpp
   DEPENDS
-    libc.src.semaphore.posix_semaphore
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.src.semaphore.linux.semaphore
+    libc.src.semaphore.linux.named_semaphore
 )
