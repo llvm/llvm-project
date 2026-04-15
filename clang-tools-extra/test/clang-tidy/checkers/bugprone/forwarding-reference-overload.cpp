@@ -1,13 +1,8 @@
 // RUN: %check_clang_tidy %s bugprone-forwarding-reference-overload %t
 
+#include <utility>
+
 namespace std {
-template <bool B, class T = void> struct enable_if { typedef T type; };
-
-template <class T> struct enable_if<true, T> { typedef T type; };
-
-template <bool B, class T = void>
-using enable_if_t = typename enable_if<B, T>::type;
-
 template <class T> struct enable_if_nice { typedef T type; };
 } // namespace std
 
@@ -20,30 +15,30 @@ template <typename T> constexpr bool just_true = true;
 class Test1 {
 public:
   template <typename T> Test1(T &&n);
-  // CHECK-NOTES: [[@LINE-1]]:25: warning: constructor accepting a forwarding reference can hide the copy and move constructors [bugprone-forwarding-reference-overload]
-  // CHECK-NOTES: 48:3: note: copy constructor declared here
-  // CHECK-NOTES: 49:3: note: copy constructor declared here
-  // CHECK-NOTES: 50:3: note: move constructor declared here
+  // CHECK-NOTES: :[[@LINE-1]]:25: warning: constructor accepting a forwarding reference can hide the copy and move constructors [bugprone-forwarding-reference-overload]
+  // CHECK-NOTES: :[[@LINE+24]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+24]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+24]]:3: note: move constructor declared here
 
   template <typename T> Test1(T &&n, int i = 5, ...);
   // CHECK-NOTES: :[[@LINE-1]]:25: warning: constructor accepting a forwarding reference can hide the copy and move constructors
-  // CHECK-NOTES: 48:3: note: copy constructor declared here
-  // CHECK-NOTES: 49:3: note: copy constructor declared here
-  // CHECK-NOTES: 50:3: note: move constructor declared here
+  // CHECK-NOTES: :[[@LINE+18]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+18]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+18]]:3: note: move constructor declared here
 
   template <typename T, typename U = typename std::enable_if_nice<T>::type>
   Test1(T &&n);
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: constructor accepting a forwarding reference can hide the copy and move constructors
-  // CHECK-NOTES: 48:3: note: copy constructor declared here
-  // CHECK-NOTES: 49:3: note: copy constructor declared here
-  // CHECK-NOTES: 50:3: note: move constructor declared here
+  // CHECK-NOTES: :[[@LINE+11]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+11]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+11]]:3: note: move constructor declared here
 
   template <typename T>
   Test1(T &&n, typename foo::enable_if<long>::type i = 5, ...);
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: constructor accepting a forwarding reference can hide the copy and move constructors
-  // CHECK-NOTES: 48:3: note: copy constructor declared here
-  // CHECK-NOTES: 49:3: note: copy constructor declared here
-  // CHECK-NOTES: 50:3: note: move constructor declared here
+  // CHECK-NOTES: :[[@LINE+4]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+4]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+4]]:3: note: move constructor declared here
 
   Test1(const Test1 &other) {}
   Test1(Test1 &other) {}
@@ -58,11 +53,11 @@ public:
   // Guarded with enable_if.
   template <typename T>
   Test2(T &&n, int i = 5,
-        std::enable_if_t<sizeof(int) < sizeof(long), int> a = 5, ...);
+        std::enable_if_t<sizeof(int) < sizeof(long long), int> a = 5, ...);
 
   // Guarded with enable_if.
   template <typename T, typename X = typename std::enable_if<
-                            sizeof(int) < sizeof(long), double>::type &>
+                            sizeof(int) < sizeof(long long), double>::type &>
   Test2(T &&n);
 
   // Guarded with enable_if.
@@ -151,23 +146,6 @@ public:
   // CHECK-NOTES: :[[@LINE-1]]:13: warning: constructor accepting a forwarding reference can hide the copy and move constructors
 };
 
-namespace std {
-template <class T, class U> struct is_same { static constexpr bool value = false; };
-template <class T> struct is_same<T, T> { static constexpr bool value = true; };
-template <class T, class U> constexpr bool is_same_v = is_same<T, U>::value;
-template <class T> struct remove_reference { using type = T; };
-template <class T> struct remove_reference<T&> { using type = T; };
-template <class T> struct remove_reference<T&&> { using type = T; };
-template <class T> using remove_reference_t = typename remove_reference<T>::type;
-template <class T> struct remove_cv { using type = T; };
-template <class T> struct remove_cv<const T> { using type = T; };
-template <class T> struct remove_cv<volatile T> { using type = T; };
-template <class T> struct remove_cv<const volatile T> { using type = T; };
-template <class T> using remove_cv_t = typename remove_cv<T>::type;
-template <class T> struct remove_cvref { using type = remove_cv_t<remove_reference_t<T>>; };
-template <class T> using remove_cvref_t = typename remove_cvref<T>::type;
-} // namespace std
-
 // Handle enable_if when used as a non-type template parameter.
 class Test7 {
 public:
@@ -210,32 +188,32 @@ public:
     std::enable_if_t<std::is_same_v<std::remove_cvref_t<T>, bool>, int>>
   Test9(T &&t);
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: constructor accepting a forwarding reference can hide the copy and move constructors
-  // CHECK-NOTES: 240:3: note: copy constructor declared here
-  // CHECK-NOTES: 241:3: note: move constructor declared here
+  // CHECK-NOTES: :[[@LINE+27]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+27]]:3: note: move constructor declared here
 
   // Requires a default argument (such as a literal, implicit cast expression, etc.)
   template <class T,
     std::enable_if_t<std::is_same_v<std::remove_cvref_t<T>, long>>*>
   Test9(T &&t);
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: constructor accepting a forwarding reference can hide the copy and move constructors
-  // CHECK-NOTES: 240:3: note: copy constructor declared here
-  // CHECK-NOTES: 241:3: note: move constructor declared here
+  // CHECK-NOTES: :[[@LINE+19]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+19]]:3: note: move constructor declared here
 
   // Only std::enable_if or std::enable_if_t are supported
   template <class T,
     typename std::enable_if_nice<T>::type* = nullptr>
   Test9(T &&t);
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: constructor accepting a forwarding reference can hide the copy and move constructors
-  // CHECK-NOTES: 240:3: note: copy constructor declared here
-  // CHECK-NOTES: 241:3: note: move constructor declared here
+  // CHECK-NOTES: :[[@LINE+11]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+11]]:3: note: move constructor declared here
 
   // Only std::enable_if or std::enable_if_t are supported
   template <class T,
     typename foo::enable_if<T>::type = 0>
   Test9(T &&t);
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: constructor accepting a forwarding reference can hide the copy and move constructors
-  // CHECK-NOTES: 240:3: note: copy constructor declared here
-  // CHECK-NOTES: 241:3: note: move constructor declared here
+  // CHECK-NOTES: :[[@LINE+3]]:3: note: copy constructor declared here
+  // CHECK-NOTES: :[[@LINE+3]]:3: note: move constructor declared here
 
   Test9(const Test9 &other) = default;
   Test9(Test9 &&other) = default;

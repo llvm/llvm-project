@@ -547,7 +547,7 @@ TEST_F(IRBuilderTest, CreateCondBr) {
   BasicBlock *TBB = BasicBlock::Create(Ctx, "", F);
   BasicBlock *FBB = BasicBlock::Create(Ctx, "", F);
 
-  BranchInst *BI = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB);
+  CondBrInst *BI = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB);
   Instruction *TI = BB->getTerminator();
   EXPECT_EQ(BI, TI);
   EXPECT_EQ(2u, TI->getNumSuccessors());
@@ -1229,7 +1229,7 @@ TEST_F(IRBuilderTest, DebugLoc) {
   DebugLoc DL2 = DILocation::get(Ctx, 3, 0, SP);
 
   auto BB2 = BasicBlock::Create(Ctx, "bb2", F);
-  auto Br = BranchInst::Create(BB2, BB);
+  auto Br = UncondBrInst::Create(BB2, BB);
   Br->setDebugLoc(DL1);
 
   IRBuilder<> Builder(Ctx);
@@ -1414,5 +1414,26 @@ TEST_F(IRBuilderTest, finalizeSubprogram) {
   EXPECT_EQ(BarSP->getRetainedNodes().size(), 1u);
   EXPECT_EQ(BarSP->getRetainedNodes()[0], Type);
   EXPECT_TRUE(FooSP->getRetainedNodes().empty());
+}
+
+TEST_F(IRBuilderTest, CreateAggregateRet) {
+  IRBuilder<> Builder(BB);
+  // Terminate the function/block created in SetUp.
+  Builder.CreateRetVoid();
+
+  Type *AggType =
+      StructType::create(Ctx, {Builder.getInt8Ty(), Builder.getInt64Ty()});
+  ConstantInt *RV0 = Builder.getInt8(5);
+  ConstantInt *RV1 = Builder.getInt64(55);
+
+  FunctionType *FTy = FunctionType::get(AggType, /*isVarArg=*/false);
+
+  Function *F1 =
+      Function::Create(FTy, Function::ExternalLinkage, "F2", M.get());
+  BasicBlock *CalleeBB = BasicBlock::Create(Ctx, "", F1);
+  IRBuilder<> CalleeBuilder(CalleeBB);
+  CalleeBuilder.CreateAggregateRet({RV0, RV1});
+
+  EXPECT_FALSE(verifyModule(*M));
 }
 }

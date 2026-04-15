@@ -279,14 +279,41 @@ struct BMGuArch : public Xe2Plus {
   }
 };
 
+struct CRIuArch : public Xe2Plus {
+  static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
+    static const SubgroupMatrixMultiplyAcc dpasInst{16, 32};
+    static const Subgroup2DBlockLoadInstruction loadNdInst;
+    static const Subgroup2DBlockStoreInstruction storeNdInst;
+    static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
+    static const SpirvStoreScatterInstruction storeScatterInst;
+    static const SpirvLoadGatherInstruction loadGatherInst;
+    static const Instruction *arr[] = {&dpasInst,         &loadNdInst,
+                                       &storeNdInst,      &prefetchNdInst,
+                                       &storeScatterInst, &loadGatherInst};
+    return arr;
+  }
+
+  CRIuArch()
+      : Xe2Plus("cri",                          // archName
+                "Crescent Island Architecture", // archDescription
+                getInstructionRegistryArr(),
+                // Using bmg config as placeholder
+                // TODO: Update to actual XeCore and SharedMemory config
+                XeCoreInfo(8, SharedMemory(256 * 1024, 4), 8, 8) // xeCore
+        ) {}
+  static const uArch *getInstance() {
+    static const CRIuArch instance;
+    return reinterpret_cast<const uArch *>(&instance);
+  }
+};
+
 inline const uArch *getUArch(llvm::StringRef archName) {
   if (archName.equals_insensitive("pvc"))
     return PVCuArch::getInstance();
-  else if (archName.equals_insensitive("bmg"))
+  if (archName.equals_insensitive("bmg"))
     return BMGuArch::getInstance();
-  else
-    llvm_unreachable("No matching uArch found");
-
+  if (archName.equals_insensitive("cri"))
+    return CRIuArch::getInstance();
   return nullptr;
 }
 

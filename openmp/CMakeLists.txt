@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "OpenMP")
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
 
 # Add path for custom modules
 list(INSERT CMAKE_MODULE_PATH 0
@@ -33,8 +35,14 @@ endif ()
 set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 
 # When building in tree we install the runtime according to the LLVM settings.
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(OPENMP_INSTALL_LIBDIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
+  set(OPENMP_TARGET_SUBDIR "${LLVM_DEFAULT_TARGET_TRIPLE}")
+  if(OPENMP_LIBDIR_SUBDIR)
+    string(APPEND OPENMP_TARGET_SUBDIR "/${OPENMP_LIBDIR_SUBDIR}")
+  endif()
+  cmake_path(NORMAL_PATH OPENMP_TARGET_SUBDIR)
+  set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}/${OPENMP_TARGET_SUBDIR}" CACHE STRING
       "Path where built openmp libraries should be installed.")
 else()
   set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}" CACHE STRING
@@ -165,7 +173,7 @@ else()
 
   # Build documentation
   add_subdirectory(docs)
-
-  # Now that we have seen all testsuites, create the check-openmp target.
-  construct_check_openmp_target()
 endif()
+
+# Now that we have seen all testsuites, create the check-openmp target.
+construct_check_openmp_target()

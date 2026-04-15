@@ -710,7 +710,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         return false;
       if (Tok->is(TT_TemplateCloser)) {
         Tok = Tok->MatchingParen;
-        assert(Tok);
+        if (!Tok)
+          return false;
       }
       if (Tok->FirstAfterPPLine)
         return false;
@@ -878,7 +879,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
         State.Line->InMacroBody && Current.isNot(TT_LineComment);
     Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
                                   State.Column + Spaces + PPColumnCorrection,
-                                  /*IsAligned=*/false, ContinuePPDirective);
+                                  /*AlignTo=*/nullptr, ContinuePPDirective);
   }
 
   // If "BreakBeforeInheritanceComma" mode, don't break within the inheritance
@@ -1016,14 +1017,11 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
        (Previous.is(BK_BracedInit) &&
-        (Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall ||
-         !Previous.Previous ||
-         Previous.Previous->isNoneOf(tok::identifier, tok::l_paren,
-                                     BK_BracedInit))) ||
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall) ||
        Previous.is(TT_VerilogMultiLineListLParen)) &&
       !IsInTemplateString(Current, false)) {
     CurrentState.Indent = State.Column + Spaces;
-    CurrentState.IsAligned = true;
+    CurrentState.AlignedTo = &Previous;
   }
   if (CurrentState.AvoidBinPacking && startsNextParameter(Current, Style))
     CurrentState.NoLineBreak = true;
@@ -1237,6 +1235,26 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     }
   }
 
+  switch (Style.BreakInheritanceList) {
+  case FormatStyle::BILS_BeforeColon:
+  case FormatStyle::BILS_AfterComma:
+    if (Current.is(TT_InheritanceColon) || Previous.is(TT_InheritanceComma)) {
+      CurrentState.AlignedTo = Previous.getPreviousOneOf(
+          tok::kw_class, tok::kw_struct, tok::kw_union);
+    }
+    break;
+  case FormatStyle::BILS_BeforeComma:
+    if (Current.isOneOf(TT_InheritanceColon, TT_InheritanceComma)) {
+      CurrentState.AlignedTo = Previous.getPreviousOneOf(
+          tok::kw_class, tok::kw_struct, tok::kw_union);
+    }
+    break;
+  case FormatStyle::BILS_AfterColon:
+    if (Previous.isOneOf(TT_InheritanceColon, TT_InheritanceComma))
+      CurrentState.AlignedTo = &Previous;
+    break;
+  }
+
   if ((PreviousNonComment &&
        PreviousNonComment->isOneOf(tok::comma, tok::semi) &&
        !CurrentState.AvoidBinPacking) ||
@@ -1253,8 +1271,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       (PreviousNonComment && PreviousNonComment->is(tok::question))) {
     CurrentState.BreakBeforeParameter = true;
   }
-  if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore)
+  if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore) {
     CurrentState.BreakBeforeParameter = false;
+    CurrentState.AlignedTo = &Current;
+  }
 
   if (!DryRun) {
     unsigned MaxEmptyLinesToKeep = Style.MaxEmptyLinesToKeep + 1;
@@ -1273,7 +1293,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
                                      State.Line->Type != LT_ImportStatement &&
                                      Current.isNot(TT_LineComment);
     Whitespaces.replaceWhitespace(Current, Newlines, State.Column, State.Column,
-                                  CurrentState.IsAligned, ContinuePPDirective,
+                                  CurrentState.AlignedTo, ContinuePPDirective,
                                   IndentedFromColumn);
   }
 
@@ -1985,7 +2005,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         NewParenState.UnindentOperator = true;
       // Mark indentation as alignment if the expression is aligned.
       if (Style.AlignOperands != FormatStyle::OAS_DontAlign)
-        NewParenState.IsAligned = true;
+        NewParenState.AlignedTo = Previous;
     }
 
     // Do not indent relative to the fake parentheses inserted for "." or "->".
@@ -2500,7 +2520,7 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
       Strict = StrictPenalty <= Penalty;
       if (Strict) {
         Penalty = StrictPenalty;
-        State = StrictState;
+        State = std::move(StrictState);
       }
     }
     if (!DryRun) {

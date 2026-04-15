@@ -128,6 +128,10 @@ uptr internal_close(fd_t fd) {
   RETURN_AND_SET_ERRNO(_kern_close(fd));
 }
 
+uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags) {
+  return -1;  // Not supported.
+}
+
 uptr internal_open(const char *filename, int flags) {
   CHECK(&_kern_open);
   RETURN_AND_SET_ERRNO(_kern_open(-1, filename, flags, 0));

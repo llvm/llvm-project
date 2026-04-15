@@ -1,7 +1,7 @@
+from __future__ import annotations
 import sys
 
 from argparse import Namespace
-from typing import Optional, List
 from lit.Test import Test
 
 
@@ -19,7 +19,9 @@ def create_display(opts, tests, total_tests, workers):
 
         try:
             tc = lit.ProgressBar.TerminalController()
-            progress_bar = lit.ProgressBar.ProgressBar(tc, header)
+            progress_bar = lit.ProgressBar.ProgressBar(
+                tc, header, minOutputInterval=opts.minOutputInterval
+            )
             header = None
         except ValueError:
             progress_bar = lit.ProgressBar.SimpleProgressBar("Testing: ")
@@ -94,8 +96,8 @@ class Display(object):
     def __init__(
         self,
         opts: Namespace,
-        tests: List[Test],
-        header: Optional[str],
+        tests: list[Test],
+        header: str | None,
         progress_bar,
     ):
         self.opts = opts

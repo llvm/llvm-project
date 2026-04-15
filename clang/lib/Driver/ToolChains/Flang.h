@@ -78,6 +78,9 @@ private:
   void AddAMDGPUTargetArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const;
 
+  void AddNVPTXTargetArgs(const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs) const;
+
   /// Add specific options for LoongArch64 target.
   ///
   /// \param [in] Args The list of input driver arguments

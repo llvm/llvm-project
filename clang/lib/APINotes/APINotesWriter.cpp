@@ -50,6 +50,9 @@ class APINotesWriter::Implementation {
   /// Indexed by context ID, provides the parent context ID.
   llvm::DenseMap<uint32_t, uint32_t> ParentContexts;
 
+  /// Mapping from context IDs to the kind of context.
+  llvm::DenseMap<unsigned, uint8_t> ContextKinds;
+
   /// Mapping from context IDs to the identifier ID holding the name.
   llvm::DenseMap<unsigned, unsigned> ContextNames;
 
@@ -1071,14 +1074,45 @@ void APINotesWriter::Implementation::writeGlobalVariableBlock(
 }
 
 namespace {
+void emitBoundsSafetyInfo(raw_ostream &OS, const BoundsSafetyInfo &BSI) {
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
+  uint8_t flags = 0;
+  if (auto kind = BSI.getKind()) {
+    assert(*kind <= BoundsSafetyInfo::BoundsSafetyKind::EndedBy);
+    flags |= 0x01;                // 1 bit
+    flags |= (uint8_t)*kind << 1; // 3 bits
+  }
+  flags <<= 4;
+  if (auto level = BSI.getLevel()) {
+    assert(*level < (1u << 3));
+    flags |= 0x01;                 // 1 bit
+    flags |= (uint8_t)*level << 1; // 3 bits
+  }
+
+  writer.write<uint8_t>(flags);
+  writer.write<uint16_t>(BSI.ExternalBounds.size());
+  writer.write(
+      ArrayRef<char>{BSI.ExternalBounds.data(), BSI.ExternalBounds.size()});
+}
+
+unsigned getBoundsSafetyInfoSize(const BoundsSafetyInfo &BSI) {
+  return 1 + sizeof(uint16_t) + BSI.ExternalBounds.size();
+}
+
 unsigned getParamInfoSize(const ParamInfo &PI) {
-  return getVariableInfoSize(PI) + 1;
+  unsigned BSISize = 0;
+  if (auto BSI = PI.BoundsSafety)
+    BSISize = getBoundsSafetyInfoSize(*BSI);
+  return getVariableInfoSize(PI) + 1 + BSISize;
 }
 
 void emitParamInfo(raw_ostream &OS, const ParamInfo &PI) {
   emitVariableInfo(OS, PI);
 
   uint8_t flags = 0;
+  if (PI.BoundsSafety)
+    flags |= 0x01;
+  flags <<= 2;
   if (auto noescape = PI.isNoEscape()) {
     flags |= 0x01;
     if (*noescape)
@@ -1096,6 +1130,8 @@ void emitParamInfo(raw_ostream &OS, const ParamInfo &PI) {
 
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
   writer.write<uint8_t>(flags);
+  if (auto BSI = PI.BoundsSafety)
+    emitBoundsSafetyInfo(OS, *BSI);
 }
 
 /// Retrieve the serialized size of the given FunctionInfo, for use in on-disk
@@ -1461,6 +1497,7 @@ ContextID APINotesWriter::addContext(std::optional<ContextID> ParentCtxID,
 
     Implementation->ContextNames[NextID] = NameID;
     Implementation->ParentContexts[NextID] = RawParentCtxID;
+    Implementation->ContextKinds[NextID] = static_cast<uint8_t>(Kind);
   }
 
   // Add this version information.
@@ -1505,7 +1542,7 @@ void APINotesWriter::addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
     assert(Implementation->ParentContexts.contains(CtxID.Value));
     uint32_t ParentCtxID = Implementation->ParentContexts[CtxID.Value];
     ContextTableKey CtxKey(ParentCtxID,
-                           static_cast<uint8_t>(ContextKind::ObjCClass),
+                           Implementation->ContextKinds[CtxID.Value],
                            Implementation->ContextNames[CtxID.Value]);
     assert(Implementation->Contexts.contains(CtxKey));
     auto &VersionedVec = Implementation->Contexts[CtxKey].second;

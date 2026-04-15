@@ -33,7 +33,7 @@ define void @test_b128_input_from_load(ptr nocapture readonly %data) {
 ; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_b128_input_from_load_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_b128_input_from_load_param_0];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd3, %rd2;
 ; CHECK-NEXT:    ld.global.v2.b64 {%rd4, %rd5}, [%rd3];
 ; CHECK-NEXT:    mov.b64 %rd6, value;
@@ -59,7 +59,7 @@ define void @test_b128_input_from_select(ptr nocapture readonly %flag) {
 ; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_b128_input_from_select_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_b128_input_from_select_param_0];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd3, %rd2;
 ; CHECK-NEXT:    ld.global.b8 %rs1, [%rd3];
 ; CHECK-NEXT:    setp.eq.b16 %p1, %rs1, 0;
@@ -109,7 +109,7 @@ define void @test_use_of_b128_output(ptr nocapture readonly %data) {
 ; CHECK-NEXT:    .reg .b128 %rq<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_use_of_b128_output_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_use_of_b128_output_param_0];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; CHECK-NEXT:    ld.global.v2.b64 {%rd3, %rd4}, [%rd2];
 ; CHECK-NEXT:    mov.b128 %rq2, {%rd3, %rd4};

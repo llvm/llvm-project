@@ -11,7 +11,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/AnnexKDetection.h"
-#include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include <cassert>
 
@@ -228,7 +227,7 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
   }
 
   if (!CustomFunctions.empty()) {
-    std::vector<llvm::StringRef> FunctionNames;
+    std::vector<StringRef> FunctionNames;
     FunctionNames.reserve(CustomFunctions.size());
 
     for (const auto &Entry : CustomFunctions)

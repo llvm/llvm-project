@@ -1,5 +1,4 @@
 add_llvm_unittest(DebuginfodTests
-  HTTPServerTests.cpp
   DebuginfodTests.cpp
   )
 

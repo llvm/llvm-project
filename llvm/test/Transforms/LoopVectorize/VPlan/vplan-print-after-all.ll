@@ -4,7 +4,9 @@
 ; Verify that `-vplan-print-after-all` option works.
 
 ; CHECK: VPlan for loop in 'foo' after printAfterInitialConstruction
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createLoopRegions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::introduceMasksAndLinearize
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeMemOpWideningDecisions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::clearReductionWrapFlags
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimizeFindIVReductions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleMultiUseReductions
@@ -35,7 +37,7 @@
 ; CHECK: VPlan for loop in 'foo' after mergeBlocksIntoPredecessors
 ; CHECK: VPlan for loop in 'foo' after licm
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimize
-; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializeConstantVectorTripCount
+; CHECK: VPlan for loop in 'foo' after printOptimizedVPlan
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::unrollByUF
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializePacksAndUnpacks
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializeBroadcasts

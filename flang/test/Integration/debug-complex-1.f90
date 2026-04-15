@@ -16,7 +16,7 @@ contains
   end function
 end program
 
-! CHECK-DAG: ![[C4:.*]] = !DIBasicType(name: "complex", size: 64, encoding: DW_ATE_complex_float)
+! CHECK-DAG: ![[C4:.*]] = !DIBasicType(name: "complex(kind=4)", size: 64, encoding: DW_ATE_complex_float)
 ! CHECK-DAG: ![[C8:.*]] = !DIBasicType(name: "complex(kind=8)", size: 128, encoding: DW_ATE_complex_float)
 ! CHECK-DAG: ![[C16:.*]] = !DIBasicType(name: "complex(kind=16)", size: 256, encoding: DW_ATE_complex_float)
 ! CHECK-DAG: !DILocalVariable(name: "c4"{{.*}}type: ![[C4]])

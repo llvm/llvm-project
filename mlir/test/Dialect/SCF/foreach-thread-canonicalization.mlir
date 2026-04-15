@@ -1,5 +1,6 @@
-// RUN: mlir-opt %s -scf-for-loop-canonicalization | FileCheck %s
+// RUN: mlir-opt %s -scf-for-loop-canonicalization -split-input-file | FileCheck %s
 
+// CHECK-LABEL: func @reduce
 func.func @reduce() {
   // CHECK: %[[C64:.*]] = arith.constant 64 : index
   %c2 = arith.constant 2 : index
@@ -31,6 +32,56 @@ func.func @reduce() {
           %14 = arith.addf %arg1, %arg2 : f32
           linalg.yield %14 : f32
       }
+  }
+  return
+}
+
+// -----
+
+// Regression test for GH#127436: simplifyConstrainedMinMaxOp must handle
+// null-value operands produced when scf.forall has static (integer attribute)
+// bounds. In addLoopRangeConstraints, static lb/ub produce null-value symbol
+// variables in FlatAffineValueConstraints (via appendSymbolVar with no SSA
+// value). These must be removed before calling canonicalizeMapAndOperands to
+// avoid undefined behavior (null Value used as DenseMap key or passed to
+// matchPattern). The filter in simplifyConstrainedMinMaxOp compacts the
+// operands by replacing null positions with constant 0 and discarding them.
+
+// CHECK-LABEL: func @forall_static_bounds_affine_min_simplify
+// CHECK: %[[C64:.*]] = arith.constant 64 : i32
+// CHECK-NOT: affine.min
+// CHECK: memref.store %[[C64]]
+func.func @forall_static_bounds_affine_min_simplify(%A : memref<128xi32>) {
+  // lb=0, ub=2, step=1 are static integers -> IntegerAttr in OpFoldResult
+  // -> null-value symbols in the constraint system.
+  scf.forall (%i) = (0) to (2) step (1) {
+    // For i in [0, 2): min(-64*i + 128, 64) = 64 always.
+    %tile = affine.min affine_map<(d0) -> (d0 * -64 + 128, 64)>(%i)
+    %cast = arith.index_cast %tile : index to i32
+    %c0 = arith.constant 0 : index
+    memref.store %cast, %A[%c0] : memref<128xi32>
+    scf.forall.in_parallel {}
+  }
+  return
+}
+
+// -----
+
+// Regression test for GH#127436: same as above but with a 3-result affine.min
+// to exercise multiple resultDimStart null-value dim slots.
+
+// CHECK-LABEL: func @forall_static_bounds_multi_result_min_simplify
+// CHECK: %[[C32:.*]] = arith.constant 32 : i32
+// CHECK-NOT: affine.min
+// CHECK: memref.store %[[C32]]
+func.func @forall_static_bounds_multi_result_min_simplify(%A : memref<128xi32>) {
+  scf.forall (%i) = (0) to (2) step (1) {
+    // 3 results; for i in [0, 2): all results are >= 32, so min = 32.
+    %tile = affine.min affine_map<(d0) -> (d0 * -64 + 128, d0 * -64 + 96, 32)>(%i)
+    %cast = arith.index_cast %tile : index to i32
+    %c0 = arith.constant 0 : index
+    memref.store %cast, %A[%c0] : memref<128xi32>
+    scf.forall.in_parallel {}
   }
   return
 }

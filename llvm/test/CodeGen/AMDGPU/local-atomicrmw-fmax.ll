@@ -387,8 +387,7 @@ define double @local_atomic_fmax_ret_f64(ptr addrspace(3) %ptr) nounwind {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0x40100000
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0x40100000
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_max_num_rtn_f64 v[0:1], v0, v[1:2]
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -406,8 +405,7 @@ define double @local_atomic_fmax_ret_f64(ptr addrspace(3) %ptr) nounwind {
 ; GFX11-LABEL: local_atomic_fmax_ret_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0x40100000
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0x40100000
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ds_max_rtn_f64 v[0:1], v0, v[1:2]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -484,8 +482,7 @@ define double @local_atomic_fmax_ret_f64__offset(ptr addrspace(3) %ptr) nounwind
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0x40100000
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0x40100000
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_max_num_rtn_f64 v[0:1], v0, v[1:2] offset:65528
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -503,8 +500,7 @@ define double @local_atomic_fmax_ret_f64__offset(ptr addrspace(3) %ptr) nounwind
 ; GFX11-LABEL: local_atomic_fmax_ret_f64__offset:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0x40100000
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0x40100000
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ds_max_rtn_f64 v[0:1], v0, v[1:2] offset:65528
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -583,8 +579,7 @@ define void @local_atomic_fmax_noret_f64(ptr addrspace(3) %ptr) nounwind {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0x40100000
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0x40100000
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_max_num_f64 v0, v[1:2]
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -602,8 +597,7 @@ define void @local_atomic_fmax_noret_f64(ptr addrspace(3) %ptr) nounwind {
 ; GFX11-LABEL: local_atomic_fmax_noret_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0x40100000
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0x40100000
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ds_max_f64 v0, v[1:2]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -680,8 +674,7 @@ define void @local_atomic_fmax_noret_f64__offset(ptr addrspace(3) %ptr) nounwind
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0x40100000
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0x40100000
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_max_num_f64 v0, v[1:2] offset:65528
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -699,8 +692,7 @@ define void @local_atomic_fmax_noret_f64__offset(ptr addrspace(3) %ptr) nounwind
 ; GFX11-LABEL: local_atomic_fmax_noret_f64__offset:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0x40100000
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0x40100000
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ds_max_f64 v0, v[1:2] offset:65528
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)

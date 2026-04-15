@@ -78,13 +78,13 @@
 
 ;; Cold context 234 is cloned, and only the cloned context is Cold hinted
 ;; (the original doesn't full match with any IR due to inlining).
-; SIZES: NotCold full allocation context 456 with total size 400 is NotCold after cloning (context id 2)
-; SIZES: NotCold full allocation context 123 with total size 100 is NotColdCold after cloning (context id 3)
-; SIZES: Cold full allocation context 234 with total size 200 is NotColdCold after cloning (context id 4)
-; SIZES: NotCold full allocation context 123 with total size 100 is NotColdCold after cloning (context id 7)
-; SIZES: Cold full allocation context 345 with total size 300 is Cold after cloning (context id 1)
-; SIZES: Cold full allocation context 345 with total size 300 is Cold after cloning (context id 6)
-; SIZES: Cold full allocation context 234 with total size 200 is Cold after cloning (context id 5)
+; SIZES: NotCold full allocation context 456 with total size 400 is NotCold after cloning (internal context id 2)
+; SIZES: NotCold full allocation context 123 with total size 100 is NotColdCold after cloning (internal context id 3)
+; SIZES: Cold full allocation context 234 with total size 200 is NotColdCold after cloning (internal context id 4)
+; SIZES: NotCold full allocation context 123 with total size 100 is NotColdCold after cloning (internal context id 7)
+; SIZES: Cold full allocation context 345 with total size 300 is Cold after cloning (internal context id 1)
+; SIZES: Cold full allocation context 345 with total size 300 is Cold after cloning (internal context id 6)
+; SIZES: Cold full allocation context 234 with total size 200 is Cold after cloning (internal context id 5)
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

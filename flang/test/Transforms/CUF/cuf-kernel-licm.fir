@@ -80,3 +80,68 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.array<10xf32>> {cuf.data_attr = #cuf.cud
   }
   return
 }
+
+// -----
+
+// Verify that scf.if containing fir.convert with !fir.ref operand is NOT
+// hoisted out of cuf.kernel as a whole.  The canMoveOutOf restriction must
+// be checked transitively for all nested operations of the candidate,
+// not just the candidate itself.  fir.convert can convert !fir.ref to i64,
+// so scf.if may yield an integer result produced from a !fir.ref.
+// CHECK-LABEL: func.func @transitive_canMoveOutOf(
+// CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>
+// CHECK-SAME:    %[[COND:.*]]: i1)
+// CHECK:         cuf.kernel
+// CHECK:           %[[ADDR:.*]] = scf.if %[[COND]] -> (i64)
+// CHECK:             fir.convert %[[ARG0]]
+// CHECK:           %[[REF:.*]] = fir.convert %[[ADDR]] : (i64) -> !fir.ref<f32>
+// CHECK:           fir.store %{{.*}} to %[[REF]]
+func.func @transitive_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf32>> {cuf.data_attr = #cuf.cuda<device>}, %cond: i1) {
+  %c0_i64 = arith.constant 0 : i64
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  cuf.kernel<<<*, *>>> (%arg2 : index) = (%c1 : index) to (%c10 : index)  step (%c1 : index) {
+    %addr = scf.if %cond -> (i64) {
+      %ptr = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> i64
+      scf.yield %ptr : i64
+    } else {
+      scf.yield %c0_i64 : i64
+    }
+    %ref = fir.convert %addr : (i64) -> !fir.ref<f32>
+    fir.store %cst to %ref : !fir.ref<f32>
+    "fir.end"() : () -> ()
+  }
+  return
+}
+
+// -----
+
+// Verify that Pure fir.address_of operation is not hoisted by LICM
+// out of cuf.kernel.
+// CHECK-LABEL: func.func @_QQmain() {
+// CHECK-NOT: fir.address_of
+// CHECK: cuf.kernel
+func.func @_QQmain() {
+  %c100 = arith.constant 100 : index
+  %c4_i32 = arith.constant 4 : i32
+  %c6_i32 = arith.constant 6 : i32
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = cuf.alloc i32 {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<i32>
+  %2 = fir.declare %1 {data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+  %4 = fir.declare %3 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  cuf.kernel<<<*, *>>> (%arg0 : index) = (%c1 : index) to (%c100 : index)  step (%c1 : index) {
+    %5 = fir.convert %arg0 : (index) -> i32
+    fir.store %5 to %4 : !fir.ref<i32>
+    %6 = fir.address_of(@_QQclXb12241cc4e2d1775ec743d7d1b7d73f7) : !fir.ref<!fir.char<1,38>>
+    %7 = fir.convert %6 : (!fir.ref<!fir.char<1,38>>) -> !fir.ref<i8>
+    %8 = fir.call @_FortranAioBeginExternalListOutput(%c6_i32, %7, %c4_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+    %9 = fir.load %2 : !fir.ref<i32>
+    %10 = fir.call @_FortranAioOutputInteger32(%8, %9) fastmath<contract> : (!fir.ref<i8>, i32) -> i1
+    %11 = fir.call @_FortranAioEndIoStatement(%8) fastmath<contract> : (!fir.ref<i8>) -> i32
+    "fir.end"() : () -> ()
+  }
+  return
+}

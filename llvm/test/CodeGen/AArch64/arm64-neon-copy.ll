@@ -980,18 +980,11 @@ define <1 x double> @test_bitcasti64tov1f64(i64 %in) {
 }
 
 define <1 x i64> @test_bitcastv8i8tov1f64(<8 x i8> %a) #0 {
-; CHECK-SD-LABEL: test_bitcastv8i8tov1f64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    neg v0.8b, v0.8b
-; CHECK-SD-NEXT:    fcvtzs x8, d0
-; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_bitcastv8i8tov1f64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    neg v0.8b, v0.8b
-; CHECK-GI-NEXT:    fcvtzs d0, d0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_bitcastv8i8tov1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg v0.8b, v0.8b
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
   %sub.i = sub <8 x i8> zeroinitializer, %a
   %1 = bitcast <8 x i8> %sub.i to <1 x double>
   %vcvt.i = fptosi <1 x double> %1 to <1 x i64>
@@ -999,18 +992,11 @@ define <1 x i64> @test_bitcastv8i8tov1f64(<8 x i8> %a) #0 {
 }
 
 define <1 x i64> @test_bitcastv4i16tov1f64(<4 x i16> %a) #0 {
-; CHECK-SD-LABEL: test_bitcastv4i16tov1f64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    neg v0.4h, v0.4h
-; CHECK-SD-NEXT:    fcvtzs x8, d0
-; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_bitcastv4i16tov1f64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    neg v0.4h, v0.4h
-; CHECK-GI-NEXT:    fcvtzs d0, d0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_bitcastv4i16tov1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg v0.4h, v0.4h
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
   %sub.i = sub <4 x i16> zeroinitializer, %a
   %1 = bitcast <4 x i16> %sub.i to <1 x double>
   %vcvt.i = fptosi <1 x double> %1 to <1 x i64>
@@ -1018,18 +1004,11 @@ define <1 x i64> @test_bitcastv4i16tov1f64(<4 x i16> %a) #0 {
 }
 
 define <1 x i64> @test_bitcastv2i32tov1f64(<2 x i32> %a) #0 {
-; CHECK-SD-LABEL: test_bitcastv2i32tov1f64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    neg v0.2s, v0.2s
-; CHECK-SD-NEXT:    fcvtzs x8, d0
-; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_bitcastv2i32tov1f64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    neg v0.2s, v0.2s
-; CHECK-GI-NEXT:    fcvtzs d0, d0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_bitcastv2i32tov1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg v0.2s, v0.2s
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
   %sub.i = sub <2 x i32> zeroinitializer, %a
   %1 = bitcast <2 x i32> %sub.i to <1 x double>
   %vcvt.i = fptosi <1 x double> %1 to <1 x i64>
@@ -1040,8 +1019,7 @@ define <1 x i64> @test_bitcastv1i64tov1f64(<1 x i64> %a) #0 {
 ; CHECK-SD-LABEL: test_bitcastv1i64tov1f64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    neg d0, d0
-; CHECK-SD-NEXT:    fcvtzs x8, d0
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fcvtzs d0, d0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_bitcastv1i64tov1f64:
@@ -1061,8 +1039,7 @@ define <1 x i64> @test_bitcastv2f32tov1f64(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_bitcastv2f32tov1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fneg v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzs d0, d0
 ; CHECK-NEXT:    ret
   %sub.i = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %a
   %1 = bitcast <2 x float> %sub.i to <1 x double>
@@ -1681,12 +1658,11 @@ entry:
 define <2 x i32> @test_concat_diff_v1i32_v1i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_concat_diff_v1i32_v1i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    sqabs s2, s0
-; CHECK-NEXT:    sqabs s0, s1
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    fmov s1, w1
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    sqabs s0, s0
+; CHECK-NEXT:    sqabs s1, s1
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:

@@ -1,4 +1,4 @@
-! REQUIRES: flang, libc
+! REQUIRES: flang, flang-rt, libc, amdgpu
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 
 program io_test

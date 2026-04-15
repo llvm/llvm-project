@@ -34,18 +34,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Iter>
 class __wrap_iter {
 public:
-  typedef _Iter iterator_type;
-  typedef typename iterator_traits<iterator_type>::value_type value_type;
-  typedef typename iterator_traits<iterator_type>::difference_type difference_type;
-  typedef typename iterator_traits<iterator_type>::pointer pointer;
-  typedef typename iterator_traits<iterator_type>::reference reference;
-  typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
+  typedef typename iterator_traits<_Iter>::value_type value_type;
+  typedef typename iterator_traits<_Iter>::difference_type difference_type;
+  typedef typename iterator_traits<_Iter>::pointer pointer;
+  typedef typename iterator_traits<_Iter>::reference reference;
+  typedef typename iterator_traits<_Iter>::iterator_category iterator_category;
 #if _LIBCPP_STD_VER >= 20
   typedef contiguous_iterator_tag iterator_concept;
 #endif
 
 private:
-  iterator_type __i_;
+  _Iter __i_;
+
+  friend struct pointer_traits<__wrap_iter<_Iter> >;
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
@@ -100,10 +101,8 @@ public:
     return __i_[__n];
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 iterator_type base() const _NOEXCEPT { return __i_; }
-
 private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __wrap_iter(iterator_type __x) _NOEXCEPT : __i_(__x) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __wrap_iter(_Iter __x) _NOEXCEPT : __i_(__x) {}
 
   template <class _Up>
   friend class __wrap_iter;
@@ -117,29 +116,27 @@ private:
   friend class span;
   template <class _Tp, size_t _Size>
   friend struct array;
-  template <class _Tp, class>
-  friend struct __optional_iterator;
 
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
   operator==(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
-    return __x.base() == __y.base();
+    return __x.__i_ == __y.__i_;
   }
 
   template <class _Iter2>
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
   operator==(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-    return __x.base() == __y.base();
+    return __x.__i_ == __y.__i_;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
   operator<(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
-    return __x.base() < __y.base();
+    return __x.__i_ < __y.__i_;
   }
 
   template <class _Iter2>
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
   operator<(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-    return __x.base() < __y.base();
+    return __x.__i_ < __y.__i_;
   }
 
 #if _LIBCPP_STD_VER <= 17
@@ -192,12 +189,12 @@ private:
   _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
   operator<=>(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) noexcept {
     if constexpr (three_way_comparable_with<_Iter, _Iter2, strong_ordering>) {
-      return __x.base() <=> __y.base();
+      return __x.__i_ <=> __y.__i_;
     } else {
-      if (__x.base() < __y.base())
+      if (__x.__i_ < __y.__i_)
         return strong_ordering::less;
 
-      if (__x.base() == __y.base())
+      if (__x.__i_ == __y.__i_)
         return strong_ordering::equal;
 
       return strong_ordering::greater;
@@ -208,14 +205,14 @@ private:
 #ifndef _LIBCPP_CXX03_LANG
   template <class _Iter2>
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 auto
-  operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
+  operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.__i_ - __y.__i_)
 #else
   template <class _Iter2>
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14
   typename __wrap_iter::difference_type operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
   {
-    return __x.base() - __y.base();
+    return __x.__i_ - __y.__i_;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter
@@ -237,7 +234,7 @@ struct pointer_traits<__wrap_iter<_It> > {
   typedef typename pointer_traits<_It>::difference_type difference_type;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __w) _NOEXCEPT {
-    return std::__to_address(__w.base());
+    return std::__to_address(__w.__i_);
   }
 };
 

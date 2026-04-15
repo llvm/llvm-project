@@ -867,6 +867,13 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 
     switch (ExtraCode[0]) {
     default: return true;  // Unknown modifier.
+    case 'a': {
+      // Print as address — only valid with 'p' constraint.
+      const InlineAsm::Flag Flags(MI->getOperand(OpNo - 1).getImm());
+      if (Flags.getMemoryConstraintID() != InlineAsm::ConstraintCode::p)
+        return true;
+      break;
+    }
     case 'b': // Print QImode register
     case 'h': // Print QImode high register
     case 'w': // Print HImode register
@@ -892,6 +899,11 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
       }
       return false;
     }
+  } else {
+    // Constraint 'p' requires modifier 'a'.
+    const InlineAsm::Flag Flags(MI->getOperand(OpNo - 1).getImm());
+    if (Flags.getMemoryConstraintID() == InlineAsm::ConstraintCode::p)
+      return true;
   }
   if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
     PrintIntelMemReference(MI, OpNo, O);
@@ -951,7 +963,8 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   }
 
   // TODO: Support prefixed registers for the Intel syntax.
-  const bool IntelSyntax = MAI->getAssemblerDialect() == InlineAsm::AD_Intel;
+  const bool IntelSyntax =
+      MAI->getOutputAssemblerDialect() == InlineAsm::AD_Intel;
   OutStreamer->emitSyntaxDirective(IntelSyntax ? "intel" : "att",
                                    IntelSyntax ? "noprefix" : "");
 
@@ -1115,7 +1128,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       Align Alignment(1);
       MCSection *ReadOnlySection = getObjFileLowering().getSectionForConstant(
           getDataLayout(), SectionKind::getReadOnly(),
-          /*C=*/nullptr, Alignment);
+          /*C=*/nullptr, Alignment, /*F=*/nullptr);
       OutStreamer->switchSection(ReadOnlySection);
       OutStreamer->emitLabel(AddrSymbol);
 
@@ -1143,10 +1156,8 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
 
 PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
-  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-  if (!Streamer)
-    reportFatalInternalError("Failed to create MCStreamer");
-  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };
@@ -1158,10 +1169,10 @@ PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
 
 PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
-  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-  if (!Streamer)
-    reportFatalInternalError("Failed to create MCStreamer");
-  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
   AsmPrinter.GetPSI = [&MFAM, &MF](Module &M) {
     return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
         .getCachedResult<ProfileSummaryAnalysis>(M);
@@ -1174,10 +1185,8 @@ PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
 
 PreservedAnalyses X86AsmPrinterEndPass::run(Module &M,
                                             ModuleAnalysisManager &MAM) {
-  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-  if (!Streamer)
-    reportFatalInternalError("Failed to create MCStreamer");
-  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
+      MAM.getCachedResult<AsmPrinterAnalysis>(M)->getPrinter());
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };

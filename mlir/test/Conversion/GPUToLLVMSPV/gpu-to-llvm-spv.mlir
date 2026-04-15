@@ -238,6 +238,10 @@ gpu.module @barriers {
     // CHECK:         [[NONE_FLAG2:%.*]] = llvm.mlir.constant(0 : i32) : i32
     // CHECK:         llvm.call spir_funccc @_Z7barrierj([[NONE_FLAG2]])
     gpu.barrier memfence [#gpu.address_space<private>]
+    // Constant memory is read-only, no fencing needed (same as private)
+    // CHECK:         [[NONE_FLAG3:%.*]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[NONE_FLAG3]])
+    gpu.barrier memfence [#gpu.address_space<constant>]
     return
   }
 }
@@ -338,6 +342,25 @@ gpu.module @shuffles {
     %shuffleResult6, %valid6 = gpu.shuffle down %f64_val, %offset, %width : f64
     %shuffleResult7, %valid7 = gpu.shuffle down %bf16_val, %offset, %width : bf16
     %shuffleResult8, %valid8 = gpu.shuffle xor %i1_val, %offset, %width : i1
+    llvm.return
+  }
+}
+
+// -----
+
+// Check `gpu.shuffle` conversion with no explicit subgroup size.
+
+// CHECK: llvm.func spir_funccc @_Z17sub_group_shuffleij(i32, i32) -> i32 attributes {convergent, no_unwind, will_return}
+// CHECK-LABEL: llvm.func @gpu_shuffles(
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
+// CHECK: %[[C16:.*]] = arith.constant 16 : i32
+// CHECK: %[[SHUF:.*]] = llvm.call spir_funccc @_Z17sub_group_shuffleij(%[[ARG0]], %[[ARG1]]) {convergent, no_unwind, will_return} : (i32, i32) -> i32
+// CHECK: %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
+// CHECK: llvm.return
+gpu.module @shuffles_without_intel_reqd_sub_group_size_attribute {
+  llvm.func @gpu_shuffles(%val: i32, %id: i32) {
+    %width = arith.constant 16 : i32
+    %shuffleResult, %valid = gpu.shuffle idx %val, %id, %width : i32
     llvm.return
   }
 }

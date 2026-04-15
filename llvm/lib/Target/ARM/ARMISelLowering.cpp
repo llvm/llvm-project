@@ -960,6 +960,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
   setOperationAction(ISD::UADDO_CARRY, MVT::i32, Custom);
   setOperationAction(ISD::USUBO_CARRY, MVT::i32, Custom);
+  setOperationAction(ISD::SADDO_CARRY, MVT::i32, Custom);
+  setOperationAction(ISD::SSUBO_CARRY, MVT::i32, Custom);
   if (Subtarget->hasDSP()) {
     setOperationAction(ISD::SADDSAT, MVT::i8, Custom);
     setOperationAction(ISD::SSUBSAT, MVT::i8, Custom);
@@ -1370,18 +1372,13 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
       setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
 
-      setOperationAction(ISD::FFLOOR, MVT::v4f16, Legal);
-      setOperationAction(ISD::FFLOOR, MVT::v8f16, Legal);
-      setOperationAction(ISD::FROUND, MVT::v4f16, Legal);
-      setOperationAction(ISD::FROUND, MVT::v8f16, Legal);
-      setOperationAction(ISD::FROUNDEVEN, MVT::v4f16, Legal);
-      setOperationAction(ISD::FROUNDEVEN, MVT::v8f16, Legal);
-      setOperationAction(ISD::FCEIL, MVT::v4f16, Legal);
-      setOperationAction(ISD::FCEIL, MVT::v8f16, Legal);
-      setOperationAction(ISD::FTRUNC, MVT::v4f16, Legal);
-      setOperationAction(ISD::FTRUNC, MVT::v8f16, Legal);
-      setOperationAction(ISD::FRINT, MVT::v4f16, Legal);
-      setOperationAction(ISD::FRINT, MVT::v8f16, Legal);
+      for (auto Op : {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
+                      ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC,
+                      ISD::FRINT, ISD::STRICT_FRINT, ISD::FFLOOR,
+                      ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
+        setOperationAction(Op, MVT::v4f16, Legal);
+        setOperationAction(Op, MVT::v8f16, Legal);
+      }
     }
   }
 
@@ -1719,10 +1716,10 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
   case CallingConv::Fast:
   case CallingConv::CXX_FAST_TLS:
     if (!getTM().isAAPCS_ABI()) {
-      if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() && !isVarArg)
+      if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() && !isVarArg)
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
-    } else if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() &&
+    } else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
                !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
@@ -3206,13 +3203,11 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
     auto C = const_cast<Constant*>(CP->getConstVal());
     auto M = DAG.getMachineFunction().getFunction().getParent();
     auto GV = new GlobalVariable(
-                    *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
-                    Twine(DAG.getDataLayout().getPrivateGlobalPrefix()) + "CP" +
-                    Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
-                    Twine(AFI->createPICLabelUId())
-                  );
-    SDValue GA = DAG.getTargetGlobalAddress(dyn_cast<GlobalValue>(GV),
-                                            dl, PtrVT);
+        *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
+        Twine(DAG.getDataLayout().getInternalSymbolPrefix()) + "CP" +
+            Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
+            Twine(AFI->createPICLabelUId()));
+    SDValue GA = DAG.getTargetGlobalAddress(GV, dl, PtrVT);
     return LowerGlobalAddress(GA, DAG);
   }
 
@@ -3542,7 +3537,7 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
   // size (implying the constant is no larger than 4 bytes).
   const Function &F = DAG.getMachineFunction().getFunction();
 
-  // We rely on this decision to inline being idemopotent and unrelated to the
+  // We rely on this decision to inline being idempotent and unrelated to the
   // use-site. We know that if we inline a variable at one use site, we'll
   // inline it elsewhere too (and reuse the constant pool entry). Fast-isel
   // doesn't know about this optimization, so bail out if it's enabled else
@@ -3957,6 +3952,12 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::arm_mve_asrl:
     return DAG.getNode(ARMISD::ASRL, SDLoc(Op), Op->getVTList(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::arm_mve_vsli:
+    return DAG.getNode(ARMISD::VSLIIMM, SDLoc(Op), Op->getVTList(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::arm_mve_vsri:
+    return DAG.getNode(ARMISD::VSRIIMM, SDLoc(Op), Op->getVTList(),
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   }
 }
@@ -4458,6 +4459,29 @@ static bool isFloatingPointZero(SDValue Op) {
   return false;
 }
 
+static bool isSafeSignedCMN(SDValue Op, SelectionDAG &DAG) {
+  // 0 - INT_MIN sign wraps, so no signed wrap means cmn is safe.
+  if (Op->getFlags().hasNoSignedWrap())
+    return true;
+
+  // We can still figure out if the second operand is safe to use
+  // in a CMN instruction by checking if it is known to be not the minimum
+  // signed value. If it is not, then we can safely use CMN.
+  // Note: We can eventually remove this check and simply rely on
+  // Op->getFlags().hasNoSignedWrap() once SelectionDAG/ISelLowering
+  // consistently sets them appropriately when making said nodes.
+
+  KnownBits KnownSrc = DAG.computeKnownBits(Op.getOperand(1));
+  return !KnownSrc.getSignedMinValue().isMinSignedValue();
+}
+
+static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
+  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0)) &&
+         (isIntEqualitySetCC(CC) ||
+          (isUnsignedIntSetCC(CC) && DAG.isKnownNeverZero(Op.getOperand(1))) ||
+          (isSignedIntSetCC(CC) && isSafeSignedCMN(Op, DAG)));
+}
+
 /// Returns appropriate ARM CMP (cmp) and corresponding condition code for
 /// the given operands.
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -4591,6 +4615,21 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     CompareType = ARMISD::CMPZ;
     break;
   }
+
+  // TODO: Remove CMPZ check once we generalize and remove the CMPZ enum from
+  // the codebase.
+
+  // TODO: When we have a solution to the vselect predicate not allowing pl/mi
+  // all the time, allow those cases to be cmn too no matter what.
+  if (CompareType != ARMISD::CMPZ && isCMN(RHS, CC, DAG)) {
+    CompareType = ARMISD::CMN;
+    RHS = RHS.getOperand(1);
+  } else if (CompareType != ARMISD::CMPZ && isCMN(LHS, CC, DAG)) {
+    CompareType = ARMISD::CMN;
+    LHS = LHS.getOperand(1);
+    CondCode = IntCCToARMCC(ISD::getSetCCSwappedOperands(CC));
+  }
+
   ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
   return DAG.getNode(CompareType, dl, FlagsVT, LHS, RHS);
 }
@@ -4684,28 +4723,45 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
   return std::make_pair(Value, OverflowCmp);
 }
 
-static SDValue ConvertBooleanCarryToCarryFlag(SDValue BoolCarry,
-                                              SelectionDAG &DAG) {
-  SDLoc DL(BoolCarry);
-  EVT CarryVT = BoolCarry.getValueType();
+static SDValue valueToCarryFlag(SDValue Value, SelectionDAG &DAG, bool Invert) {
+  SDLoc DL(Value);
+  EVT VT = Value.getValueType();
 
-  // This converts the boolean value carry into the carry flag by doing
-  // ARMISD::SUBC Carry, 1
-  SDValue Carry = DAG.getNode(ARMISD::SUBC, DL,
-                              DAG.getVTList(CarryVT, MVT::i32),
-                              BoolCarry, DAG.getConstant(1, DL, CarryVT));
-  return Carry.getValue(1);
+  if (Invert)
+    Value = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                        DAG.getConstant(1, DL, MVT::i32), Value);
+
+  SDValue Cmp = DAG.getNode(ARMISD::SUBC, DL, DAG.getVTList(VT, MVT::i32),
+                            Value, DAG.getConstant(1, DL, VT));
+  return Cmp.getValue(1);
 }
 
-static SDValue ConvertCarryFlagToBooleanCarry(SDValue Flags, EVT VT,
-                                              SelectionDAG &DAG) {
+static SDValue carryFlagToValue(SDValue Flags, EVT VT, SelectionDAG &DAG,
+                                bool Invert) {
   SDLoc DL(Flags);
 
+  if (Invert) {
+    // Convert flags to boolean with ADDE 0,0,Carry then compute 1 - bool.
+    SDValue BoolCarry = DAG.getNode(
+        ARMISD::ADDE, DL, DAG.getVTList(VT, MVT::i32),
+        DAG.getConstant(0, DL, VT), DAG.getConstant(0, DL, VT), Flags);
+    return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(1, DL, VT), BoolCarry);
+  }
+
   // Now convert the carry flag into a boolean carry. We do this
-  // using ARMISD:ADDE 0, 0, Carry
+  // using ARMISD::ADDE 0, 0, Carry
   return DAG.getNode(ARMISD::ADDE, DL, DAG.getVTList(VT, MVT::i32),
-                     DAG.getConstant(0, DL, MVT::i32),
-                     DAG.getConstant(0, DL, MVT::i32), Flags);
+                     DAG.getConstant(0, DL, VT), DAG.getConstant(0, DL, VT),
+                     Flags);
+}
+
+// Value is 1 if 'V' bit is 1, else 0
+static SDValue overflowFlagToValue(SDValue Flags, EVT VT, SelectionDAG &DAG) {
+  SDLoc DL(Flags);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue ARMcc = DAG.getConstant(ARMCC::VS, DL, MVT::i32);
+  return DAG.getNode(ARMISD::CMOV, DL, VT, Zero, One, ARMcc, Flags);
 }
 
 SDValue ARMTargetLowering::LowerALUO(SDValue Op, SelectionDAG &DAG) const {
@@ -4725,16 +4781,12 @@ SDValue ARMTargetLowering::LowerALUO(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UADDO:
     Value = DAG.getNode(ARMISD::ADDC, dl, VTs, LHS, RHS);
     // Convert the carry flag into a boolean value.
-    Overflow = ConvertCarryFlagToBooleanCarry(Value.getValue(1), VT, DAG);
+    Overflow = carryFlagToValue(Value.getValue(1), VT, DAG, false);
     break;
   case ISD::USUBO:
     Value = DAG.getNode(ARMISD::SUBC, dl, VTs, LHS, RHS);
     // Convert the carry flag into a boolean value.
-    Overflow = ConvertCarryFlagToBooleanCarry(Value.getValue(1), VT, DAG);
-    // ARMISD::SUBC returns 0 when we have to borrow, so make it an overflow
-    // value. So compute 1 - C.
-    Overflow = DAG.getNode(ISD::SUB, dl, MVT::i32,
-                           DAG.getConstant(1, dl, MVT::i32), Overflow);
+    Overflow = carryFlagToValue(Value.getValue(1), VT, DAG, true);
     break;
   default: {
     // Handle other operations with getARMXALUOOp
@@ -4984,7 +5036,7 @@ static bool isLowerSaturate(const SDValue LHS, const SDValue RHS,
 // pattern. This function tries to match one of these and will return a SSAT
 // node if successful.
 //
-// USAT works similarily to SSAT but bounds on the interval [0, k] where k + 1
+// USAT works similarly to SSAT but bounds on the interval [0, k] where k + 1
 // is a power of 2.
 static SDValue LowerSaturatingConditional(SDValue Op, SelectionDAG &DAG) {
   EVT VT = Op.getValueType();
@@ -5096,6 +5148,54 @@ bool ARMTargetLowering::isUnsupportedFloatingType(EVT VT) const {
   return false;
 }
 
+static SDValue matchCSET(unsigned &Opcode, bool &InvertCond, SDValue TrueVal,
+                         SDValue FalseVal, const ARMSubtarget *Subtarget) {
+  ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
+  ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
+  if (!CFVal || !CTVal || !Subtarget->hasV8_1MMainlineOps())
+    return SDValue();
+
+  unsigned TVal = CTVal->getZExtValue();
+  unsigned FVal = CFVal->getZExtValue();
+
+  Opcode = 0;
+  InvertCond = false;
+  if (TVal == ~FVal) {
+    Opcode = ARMISD::CSINV;
+  } else if (TVal == ~FVal + 1) {
+    Opcode = ARMISD::CSNEG;
+  } else if (TVal + 1 == FVal) {
+    Opcode = ARMISD::CSINC;
+  } else if (TVal == FVal + 1) {
+    Opcode = ARMISD::CSINC;
+    std::swap(TrueVal, FalseVal);
+    std::swap(TVal, FVal);
+    InvertCond = !InvertCond;
+  } else {
+    return SDValue();
+  }
+
+  // If one of the constants is cheaper than another, materialise the
+  // cheaper one and let the csel generate the other.
+  if (Opcode != ARMISD::CSINC &&
+      HasLowerConstantMaterializationCost(FVal, TVal, Subtarget)) {
+    std::swap(TrueVal, FalseVal);
+    std::swap(TVal, FVal);
+    InvertCond = !InvertCond;
+  }
+
+  // Attempt to use ZR checking TVal is 0, possibly inverting the condition
+  // to get there. CSINC not is invertable like the other two (~(~a) == a,
+  // -(-a) == a, but (a+1)+1 != a).
+  if (FVal == 0 && Opcode != ARMISD::CSINC) {
+    std::swap(TrueVal, FalseVal);
+    std::swap(TVal, FVal);
+    InvertCond = !InvertCond;
+  }
+
+  return TrueVal;
+}
+
 SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
@@ -5131,7 +5231,6 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
-  ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
   ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
   if (Op.getValueType().isInteger()) {
 
@@ -5152,53 +5251,26 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
 
       return DAG.getNode(ISD::AND, dl, VT, LHS, Shift);
     }
+
+    // (SELECT_CC setlt, x, 0, 1, 0) -> SRL(x, bw-1)
+    if (CC == ISD::SETLT && isNullConstant(RHS) && isOneConstant(TrueVal) &&
+        isNullConstant(FalseVal) && LHS.getValueType() == VT)
+      return DAG.getNode(ISD::SRL, dl, VT, LHS,
+                         DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
   }
 
-  if (Subtarget->hasV8_1MMainlineOps() && CFVal && CTVal &&
-      LHS.getValueType() == MVT::i32 && RHS.getValueType() == MVT::i32) {
-    unsigned TVal = CTVal->getZExtValue();
-    unsigned FVal = CFVal->getZExtValue();
-    unsigned Opcode = 0;
-
-    if (TVal == ~FVal) {
-      Opcode = ARMISD::CSINV;
-    } else if (TVal == ~FVal + 1) {
-      Opcode = ARMISD::CSNEG;
-    } else if (TVal + 1 == FVal) {
-      Opcode = ARMISD::CSINC;
-    } else if (TVal == FVal + 1) {
-      Opcode = ARMISD::CSINC;
-      std::swap(TrueVal, FalseVal);
-      std::swap(TVal, FVal);
-      CC = ISD::getSetCCInverse(CC, LHS.getValueType());
-    }
-
-    if (Opcode) {
-      // If one of the constants is cheaper than another, materialise the
-      // cheaper one and let the csel generate the other.
-      if (Opcode != ARMISD::CSINC &&
-          HasLowerConstantMaterializationCost(FVal, TVal, Subtarget)) {
-        std::swap(TrueVal, FalseVal);
-        std::swap(TVal, FVal);
+  if (LHS.getValueType() == MVT::i32) {
+    unsigned Opcode;
+    bool InvertCond;
+    if (SDValue Op =
+            matchCSET(Opcode, InvertCond, TrueVal, FalseVal, Subtarget)) {
+      if (InvertCond)
         CC = ISD::getSetCCInverse(CC, LHS.getValueType());
-      }
-
-      // Attempt to use ZR checking TVal is 0, possibly inverting the condition
-      // to get there. CSINC not is invertable like the other two (~(~a) == a,
-      // -(-a) == a, but (a+1)+1 != a).
-      if (FVal == 0 && Opcode != ARMISD::CSINC) {
-        std::swap(TrueVal, FalseVal);
-        std::swap(TVal, FVal);
-        CC = ISD::getSetCCInverse(CC, LHS.getValueType());
-      }
-
-      // Drops F's value because we can get it by inverting/negating TVal.
-      FalseVal = TrueVal;
 
       SDValue ARMcc;
       SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl);
-      EVT VT = TrueVal.getValueType();
-      return DAG.getNode(Opcode, dl, VT, TrueVal, FalseVal, ARMcc, Cmp);
+      EVT VT = Op.getValueType();
+      return DAG.getNode(Opcode, dl, VT, Op, Op, ARMcc, Cmp);
     }
   }
 
@@ -5406,6 +5478,13 @@ SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
                      DAG.getConstant(ARMCC::MI, DL, MVT::i32), Cmp);
 }
 
+static SDValue getInvertedARMCondCode(SDValue ARMcc, SelectionDAG &DAG) {
+  ARMCC::CondCodes CondCode =
+      (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
+  CondCode = ARMCC::getOppositeCondition(CondCode);
+  return DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+}
+
 SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDValue Cond = Op.getOperand(1);
@@ -5430,10 +5509,7 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     std::tie(Value, OverflowCmp) = getARMXALUOOp(Cond, DAG, ARMcc);
 
     // Reverse the condition code.
-    ARMCC::CondCodes CondCode =
-        (ARMCC::CondCodes)cast<const ConstantSDNode>(ARMcc)->getZExtValue();
-    CondCode = ARMCC::getOppositeCondition(CondCode);
-    ARMcc = DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+    ARMcc = getInvertedARMCondCode(ARMcc, DAG);
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,
                        OverflowCmp);
@@ -5481,10 +5557,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
     if ((CC == ISD::SETNE) != isOneConstant(RHS)) {
       // Reverse the condition code.
-      ARMCC::CondCodes CondCode =
-          (ARMCC::CondCodes)cast<const ConstantSDNode>(ARMcc)->getZExtValue();
-      CondCode = ARMCC::getOppositeCondition(CondCode);
-      ARMcc = DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+      ARMcc = getInvertedARMCondCode(ARMcc, DAG);
     }
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,
@@ -6647,21 +6720,19 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
 static SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
+
+  assert(LHS.getSimpleValueType().isInteger() && "SETCCCARRY is integer only.");
+
   SDValue Carry = Op.getOperand(2);
   SDValue Cond = Op.getOperand(3);
   SDLoc DL(Op);
 
-  assert(LHS.getSimpleValueType().isInteger() && "SETCCCARRY is integer only.");
-
   // ARMISD::SUBE expects a carry not a borrow like ISD::USUBO_CARRY so we
   // have to invert the carry first.
-  Carry = DAG.getNode(ISD::SUB, DL, MVT::i32,
-                      DAG.getConstant(1, DL, MVT::i32), Carry);
-  // This converts the boolean value carry into the carry flag.
-  Carry = ConvertBooleanCarryToCarryFlag(Carry, DAG);
+  SDValue InvCarry = valueToCarryFlag(Carry, DAG, true);
 
   SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
-  SDValue Cmp = DAG.getNode(ARMISD::SUBE, DL, VTs, LHS, RHS, Carry);
+  SDValue Cmp = DAG.getNode(ARMISD::SUBE, DL, VTs, LHS, RHS, InvCarry);
 
   SDValue FVal = DAG.getConstant(0, DL, MVT::i32);
   SDValue TVal = DAG.getConstant(1, DL, MVT::i32);
@@ -7312,7 +7383,7 @@ static bool isVMOVNTruncMask(ArrayRef<int> M, EVT ToVT, bool rev) {
   if (NumElts != M.size())
     return false;
 
-  // Test if the Trunc can be convertable to a VMOVN with this shuffle. We are
+  // Test if the Trunc can be convertible to a VMOVN with this shuffle. We are
   // looking for patterns of:
   // !rev: 0 N/2 1 N/2+1 2 N/2+2 ...
   //  rev: N/2 0 N/2+1 1 N/2+2 2 ...
@@ -9554,48 +9625,26 @@ static SDValue LowerUDIV(SDValue Op, SelectionDAG &DAG,
   return N0;
 }
 
-static SDValue LowerUADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) {
-  SDNode *N = Op.getNode();
-  EVT VT = N->getValueType(0);
-  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+static SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG,
+                                  unsigned Opcode, bool IsSigned) {
+  EVT VT0 = Op.getValue(0).getValueType();
+  EVT VT1 = Op.getValue(1).getValueType();
 
-  SDValue Carry = Op.getOperand(2);
+  bool InvertCarry = Opcode == ARMISD::SUBE;
+  SDValue OpLHS = Op.getOperand(0);
+  SDValue OpRHS = Op.getOperand(1);
+  SDValue OpCarryIn = valueToCarryFlag(Op.getOperand(2), DAG, InvertCarry);
 
   SDLoc DL(Op);
 
-  SDValue Result;
-  if (Op.getOpcode() == ISD::UADDO_CARRY) {
-    // This converts the boolean value carry into the carry flag.
-    Carry = ConvertBooleanCarryToCarryFlag(Carry, DAG);
+  SDValue Result = DAG.getNode(Opcode, DL, DAG.getVTList(VT0, MVT::i32), OpLHS,
+                               OpRHS, OpCarryIn);
 
-    // Do the addition proper using the carry flag we wanted.
-    Result = DAG.getNode(ARMISD::ADDE, DL, VTs, Op.getOperand(0),
-                         Op.getOperand(1), Carry);
+  SDValue OutFlag =
+      IsSigned ? overflowFlagToValue(Result.getValue(1), VT1, DAG)
+               : carryFlagToValue(Result.getValue(1), VT1, DAG, InvertCarry);
 
-    // Now convert the carry flag into a boolean value.
-    Carry = ConvertCarryFlagToBooleanCarry(Result.getValue(1), VT, DAG);
-  } else {
-    // ARMISD::SUBE expects a carry not a borrow like ISD::USUBO_CARRY so we
-    // have to invert the carry first.
-    Carry = DAG.getNode(ISD::SUB, DL, MVT::i32,
-                        DAG.getConstant(1, DL, MVT::i32), Carry);
-    // This converts the boolean value carry into the carry flag.
-    Carry = ConvertBooleanCarryToCarryFlag(Carry, DAG);
-
-    // Do the subtraction proper using the carry flag we wanted.
-    Result = DAG.getNode(ARMISD::SUBE, DL, VTs, Op.getOperand(0),
-                         Op.getOperand(1), Carry);
-
-    // Now convert the carry flag into a boolean value.
-    Carry = ConvertCarryFlagToBooleanCarry(Result.getValue(1), VT, DAG);
-    // But the carry returned by ARMISD::SUBE is not a borrow as expected
-    // by ISD::USUBO_CARRY, so compute 1 - C.
-    Carry = DAG.getNode(ISD::SUB, DL, MVT::i32,
-                        DAG.getConstant(1, DL, MVT::i32), Carry);
-  }
-
-  // Return both values.
-  return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Result, Carry);
+  return DAG.getMergeValues({Result, OutFlag}, DL);
 }
 
 SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
@@ -10461,8 +10510,13 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
       return LowerDIV_Windows(Op, DAG, /* Signed */ false);
     return LowerUDIV(Op, DAG, Subtarget);
   case ISD::UADDO_CARRY:
+    return LowerADDSUBO_CARRY(Op, DAG, ARMISD::ADDE, false /*unsigned*/);
   case ISD::USUBO_CARRY:
-    return LowerUADDSUBO_CARRY(Op, DAG);
+    return LowerADDSUBO_CARRY(Op, DAG, ARMISD::SUBE, false /*unsigned*/);
+  case ISD::SADDO_CARRY:
+    return LowerADDSUBO_CARRY(Op, DAG, ARMISD::ADDE, true /*signed*/);
+  case ISD::SSUBO_CARRY:
+    return LowerADDSUBO_CARRY(Op, DAG, ARMISD::SUBE, true /*signed*/);
   case ISD::UADDO:
   case ISD::USUBO:
   case ISD::UMULO:
@@ -13916,8 +13970,25 @@ static SDValue PerformSubCSINCCombine(SDNode *N, SelectionDAG &DAG) {
                      CSINC.getOperand(3));
 }
 
-static bool isNegatedInteger(SDValue Op) {
-  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0));
+static int getNegationCost(SDValue Op) {
+  // Free to negate.
+  if (isa<ConstantSDNode>(Op))
+    return 0;
+
+  // Will save one instruction.
+  if (Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0)))
+    return -1;
+
+  // Can freely negate by converting sra <-> srl.
+  if (Op.getOpcode() == ISD::SRA || Op.getOpcode() == ISD::SRL) {
+    ConstantSDNode *ShiftAmt = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    if (Op.hasOneUse() && ShiftAmt &&
+        ShiftAmt->getZExtValue() == Op.getValueType().getScalarSizeInBits() - 1)
+      return 0;
+  }
+
+  // Will have to create sub.
+  return 1;
 }
 
 // Try to fold
@@ -13927,7 +13998,8 @@ static bool isNegatedInteger(SDValue Op) {
 // The folding helps cmov to be matched with csneg without generating
 // redundant neg instruction.
 static SDValue performNegCMovCombine(SDNode *N, SelectionDAG &DAG) {
-  if (!isNegatedInteger(SDValue(N, 0)))
+  assert(N->getOpcode() == ISD::SUB);
+  if (!isNullConstant(N->getOperand(0)))
     return SDValue();
 
   SDValue CMov = N->getOperand(1);
@@ -13937,9 +14009,8 @@ static SDValue performNegCMovCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = CMov.getOperand(0);
   SDValue N1 = CMov.getOperand(1);
 
-  // If neither of them are negations, it's not worth the folding as it
-  // introduces two additional negations while reducing one negation.
-  if (!isNegatedInteger(N0) && !isNegatedInteger(N1))
+  // Only perform the fold if we actually save something.
+  if (getNegationCost(N0) + getNegationCost(N1) > 0)
     return SDValue();
 
   SDLoc DL(N);
@@ -14692,8 +14763,10 @@ static SDValue PerformORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   // (or (and X, C1), (srl Y, C2)) -> VSRI X, Y, #C2
   // (or (and X, C1), (shl Y, C2)) -> VSLI X, Y, #C2
-  if (Subtarget->hasNEON() && VT.isVector() &&
-      DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
+  if (VT.isVector() &&
+      ((Subtarget->hasNEON() && DAG.getTargetLoweringInfo().isTypeLegal(VT)) ||
+       (Subtarget->hasMVEIntegerOps() &&
+        (VT == MVT::v16i8 || VT == MVT::v8i16 || VT == MVT::v4i32)))) {
     if (SDValue ShiftInsert =
             PerformORCombineToShiftInsert(DAG, N0, N1, VT, dl))
       return ShiftInsert;
@@ -14983,7 +15056,7 @@ static SDValue PerformCMPZCombine(SDNode *N, SelectionDAG &DAG) {
 }
 
 static SDValue PerformCSETCombine(SDNode *N, SelectionDAG &DAG) {
-  // Fold away an unneccessary CMPZ/CSINC
+  // Fold away an unnecessary CMPZ/CSINC
   // CSXYZ A, B, C1 (CMPZ (CSINC 0, 0, C2, D), 0) ->
   // if C1==EQ -> CSXYZ A, B, C2, D
   // if C1==NE -> CSXYZ A, B, NOT(C2), D
@@ -15977,7 +16050,7 @@ static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
   //   intrinsics, so, likewise, there's nothing to do.
   // - generic load/store instructions: the alignment is specified as an
   //   explicit operand, rather than implicitly as the standard alignment
-  //   of the memory type (like the intrisics).  We need to change the
+  //   of the memory type (like the intrinsics).  We need to change the
   //   memory type to match the explicit alignment.  That way, we don't
   //   generate non-standard-aligned ARMISD::VLDx nodes.
   if (isa<LSBaseSDNode>(N)) {
@@ -16153,25 +16226,27 @@ static SDValue CombineBaseUpdate(SDNode *N,
   if (findPointerConstIncrement(Addr.getNode(), &Base, &CInc)) {
     unsigned Offset =
         getPointerConstIncrement(Addr->getOpcode(), Base, CInc, DCI.DAG);
-    for (SDUse &Use : Base->uses()) {
+    if (Offset) {
+      for (SDUse &Use : Base->uses()) {
 
-      SDNode *User = Use.getUser();
-      if (Use.getResNo() != Base.getResNo() || User == Addr.getNode() ||
-          User->getNumOperands() != 2)
-        continue;
+        SDNode *User = Use.getUser();
+        if (Use.getResNo() != Base.getResNo() || User == Addr.getNode() ||
+            User->getNumOperands() != 2)
+          continue;
 
-      SDValue UserInc = User->getOperand(Use.getOperandNo() == 0 ? 1 : 0);
-      unsigned UserOffset =
-          getPointerConstIncrement(User->getOpcode(), Base, UserInc, DCI.DAG);
+        SDValue UserInc = User->getOperand(Use.getOperandNo() == 0 ? 1 : 0);
+        unsigned UserOffset =
+            getPointerConstIncrement(User->getOpcode(), Base, UserInc, DCI.DAG);
 
-      if (!UserOffset || UserOffset <= Offset)
-        continue;
+        if (!UserOffset || UserOffset <= Offset)
+          continue;
 
-      unsigned NewConstInc = UserOffset - Offset;
-      SDValue NewInc = DCI.DAG.getConstant(NewConstInc, SDLoc(N), MVT::i32);
-      BaseUpdates.push_back({User, NewInc, NewConstInc});
-      if (BaseUpdates.size() >= MaxBaseUpdates)
-        break;
+        unsigned NewConstInc = UserOffset - Offset;
+        SDValue NewInc = DCI.DAG.getConstant(NewConstInc, SDLoc(N), MVT::i32);
+        BaseUpdates.push_back({User, NewInc, NewConstInc});
+        if (BaseUpdates.size() >= MaxBaseUpdates)
+          break;
+      }
     }
   }
 
@@ -16607,7 +16682,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   if (FromVT.getVectorNumElements() % NumElements != 0)
     return SDValue();
 
-  // Test if the Trunc will be convertable to a VMOVN with a shuffle, and if so
+  // Test if the Trunc will be convertible to a VMOVN with a shuffle, and if so
   // use the VMOVN over splitting the store. We are looking for patterns of:
   // !rev: 0 N 1 N+1 2 N+2 ...
   //  rev: N 0 N+1 1 N+2 2 ...
@@ -16867,7 +16942,7 @@ static SDValue PerformVCVTCombine(SDNode *N, SelectionDAG &DAG,
     // These instructions only exist converting from f32 to i32. We can handle
     // smaller integers by generating an extra truncate, but larger ones would
     // be lossy. We also can't handle anything other than 2 or 4 lanes, since
-    // these intructions only support v2i32/v4i32 types.
+    // these instructions only support v2i32/v4i32 types.
     return SDValue();
   }
 
@@ -17008,7 +17083,7 @@ static SDValue PerformVMulVCTPCombine(SDNode *N, SelectionDAG &DAG,
     // These instructions only exist converting from i32 to f32. We can handle
     // smaller integers by generating an extra extend, but larger ones would
     // be lossy. We also can't handle anything other than 2 or 4 lanes, since
-    // these intructions only support v2i32/v4i32 types.
+    // these instructions only support v2i32/v4i32 types.
     return SDValue();
   }
 
@@ -18335,18 +18410,33 @@ ARMTargetLowering::PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const {
 /// PerformCMOVCombine - Target-specific DAG combining for ARMISD::CMOV.
 SDValue
 ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  SDValue FalseVal = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue ARMcc = N->getOperand(2);
   SDValue Cmp = N->getOperand(3);
+
+  // Try to form CSINV etc.
+  unsigned Opcode;
+  bool InvertCond;
+  if (SDValue CSetOp =
+          matchCSET(Opcode, InvertCond, TrueVal, FalseVal, Subtarget)) {
+    if (InvertCond) {
+      ARMCC::CondCodes CondCode =
+          (ARMCC::CondCodes)cast<const ConstantSDNode>(ARMcc)->getZExtValue();
+      CondCode = ARMCC::getOppositeCondition(CondCode);
+      ARMcc = DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+    }
+    return DAG.getNode(Opcode, dl, VT, CSetOp, CSetOp, ARMcc, Cmp);
+  }
+
   if (Cmp.getOpcode() != ARMISD::CMPZ)
     // Only looking at EQ and NE cases.
     return SDValue();
 
-  EVT VT = N->getValueType(0);
-  SDLoc dl(N);
   SDValue LHS = Cmp.getOperand(0);
   SDValue RHS = Cmp.getOperand(1);
-  SDValue FalseVal = N->getOperand(0);
-  SDValue TrueVal = N->getOperand(1);
-  SDValue ARMcc = N->getOperand(2);
   ARMCC::CondCodes CC = (ARMCC::CondCodes)ARMcc->getAsZExtVal();
 
   // BFI is only available on V6T2+.
@@ -18394,7 +18484,7 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   if (!VT.isInteger())
       return SDValue();
 
-  // Fold away an unneccessary CMPZ/CMOV
+  // Fold away an unnecessary CMPZ/CMOV
   // CMOV A, B, C1, (CMPZ (CMOV 1, 0, C2, D), 0) ->
   // if C1==EQ -> CMOV A, B, C2, D
   // if C1==NE -> CMOV A, B, NOT(C2), D

@@ -20,7 +20,7 @@ define i32 @add(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -30,7 +30,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %add
 }
 
@@ -50,7 +50,7 @@ define i32 @or(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %or, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -60,7 +60,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %or
 }
 
@@ -80,7 +80,7 @@ define i32 @and(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %and, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -90,7 +90,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %and
 }
 
@@ -110,7 +110,7 @@ define i32 @xor(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %xor, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -120,7 +120,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %xor
 }
 
@@ -142,7 +142,7 @@ define i32 @smin(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.010 = phi i32 [ 2, %entry ], [ %.sroa.speculated, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -175,7 +175,7 @@ define i32 @umax(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.010 = phi i32 [ 2, %entry ], [ %.sroa.speculated, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -252,15 +252,15 @@ for.end:
 ; FMIN (FAST)
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define float @fmin_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
+define float @fmin_fast(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-LABEL: @fmin_fast
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[FCMP1:.*]] = fcmp fast olt <vscale x 8 x float> %[[LOAD1]]
 ; CHECK: %[[FCMP2:.*]] = fcmp fast olt <vscale x 8 x float> %[[LOAD2]]
-; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
-; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
+; CHECK: %[[SEL2:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[FCMP:.*]] = fcmp fast olt <vscale x 8 x float> %[[SEL1]], %[[SEL2]]
 ; CHECK-NEXT: %[[SEL:.*]] = select fast <vscale x 8 x i1> %[[FCMP]], <vscale x 8 x float> %[[SEL1]], <vscale x 8 x float> %[[SEL2]]
@@ -274,7 +274,7 @@ for.body:
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp.i = fcmp fast olt float %0, %sum.07
-  %.sroa.speculated = select i1 %cmp.i, float %0, float %sum.07
+  %.sroa.speculated = select nnan nsz i1 %cmp.i, float %0, float %sum.07
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -286,15 +286,15 @@ for.end:
 ; FMAX (FAST)
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define float @fmax_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
+define float @fmax_fast(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-LABEL: @fmax_fast
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[FCMP1:.*]] = fcmp fast ogt <vscale x 8 x float> %[[LOAD1]]
 ; CHECK: %[[FCMP2:.*]] = fcmp fast ogt <vscale x 8 x float> %[[LOAD2]]
-; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
-; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
+; CHECK: %[[SEL2:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[FCMP:.*]] = fcmp fast ogt <vscale x 8 x float> %[[SEL1]], %[[SEL2]]
 ; CHECK-NEXT: %[[SEL:.*]] = select fast <vscale x 8 x i1> %[[FCMP]], <vscale x 8 x float> %[[SEL1]], <vscale x 8 x float> %[[SEL2]]
@@ -308,7 +308,7 @@ for.body:
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp.i = fcmp fast ogt float %0, %sum.07
-  %.sroa.speculated = select i1 %cmp.i, float %0, float %sum.07
+  %.sroa.speculated = select nnan nsz i1 %cmp.i, float %0, float %sum.07
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -401,7 +401,7 @@ define i32 @mul(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %mul, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -411,7 +411,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %mul
 }
 
@@ -451,7 +451,6 @@ for.end:
   ret i32 %mul
 }
 
-attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}

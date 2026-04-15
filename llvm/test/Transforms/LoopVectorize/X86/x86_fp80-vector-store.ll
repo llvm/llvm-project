@@ -30,12 +30,11 @@ define void @example() {
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; FORCED-NEXT:    [[TMP2:%.*]] = sitofp <2 x i64> [[VEC_IND]] to <2 x x86_fp80>
 ; FORCED-NEXT:    [[TMP5:%.*]] = extractelement <2 x x86_fp80> [[TMP2]], i32 0
 ; FORCED-NEXT:    [[TMP6:%.*]] = extractelement <2 x x86_fp80> [[TMP2]], i32 1
-; FORCED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[TMP0]]
+; FORCED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[INDEX]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[TMP1]]
 ; FORCED-NEXT:    store x86_fp80 [[TMP5]], ptr [[TMP3]], align 16
 ; FORCED-NEXT:    store x86_fp80 [[TMP6]], ptr [[TMP4]], align 16
@@ -117,7 +116,7 @@ define void @test_replicating_store_x86_fp80_cost(i32 %n, ptr %dst) #0 {
 entry:
   br label %loop
 
-loop:                            ; preds = %loop, %entry
+loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %iv.ext = zext i32 %iv to i64
   %gep.dst = getelementptr x86_fp80, ptr %dst, i64 %iv.ext

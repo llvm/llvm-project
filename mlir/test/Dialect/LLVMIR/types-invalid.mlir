@@ -14,6 +14,13 @@ func.func @function_returning_function() {
 
 // -----
 
+func.func @function_taking_opaque_struct() {
+  // expected-error @+1 {{invalid function argument type}}
+  "some.op"() : () -> !llvm.func<void(struct<"foo", opaque>)>
+}
+
+// -----
+
 func.func @function_taking_function() {
   // expected-error @+1 {{invalid function argument type}}
   "some.op"() : () -> !llvm.func<void (func<void ()>)>

@@ -815,6 +815,89 @@ func.func @test_pool_stride(%arg0: tensor<3x14x12x7xf32>) {
 
 // -----
 
+// CHECK-LABEL: @test_avg_pool2d_adaptive_static
+func.func @test_avg_pool2d_adaptive_static(%arg0: tensor<3x5x6x7xf32>) {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape { values = dense<[4, 3]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %stride = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %pad = tosa.const_shape { values = dense<[0, 0, 0, 0]> : tensor<4xindex> } : () -> !tosa.shape<4>
+
+  // CHECK: -> tensor<3x2x4x7xf32>
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad {acc_type = f32} : (tensor<3x5x6x7xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_avg_pool2d_adaptive_dynamic_input
+func.func @test_avg_pool2d_adaptive_dynamic_input(%arg0: tensor<?x?x?x?xf32>) {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape { values = dense<[4, 3]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %stride = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %pad = tosa.const_shape { values = dense<[0, 0, 0, 0]> : tensor<4xindex> } : () -> !tosa.shape<4>
+
+  // CHECK: -> tensor<?x?x?x?xf32>
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad {acc_type = f32} : (tensor<?x?x?x?xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_avg_pool2d_adaptive_padded
+func.func @test_avg_pool2d_adaptive_padded(%arg0: tensor<3x5x6x7xf32>) {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape { values = dense<[4, 3]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %stride = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %pad = tosa.const_shape { values = dense<[3, 2, 1, 0]> : tensor<4xindex> } : () -> !tosa.shape<4>
+
+  // CHECK: -> tensor<3x7x5x7xf32>
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad {acc_type = f32} : (tensor<3x5x6x7xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_avg_pool2d_adaptive_stride
+func.func @test_avg_pool2d_adaptive_stride(%arg0: tensor<3x14x12x7xf32>) {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape { values = dense<[4, 3]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %stride = tosa.const_shape { values = dense<[2, 3]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %pad = tosa.const_shape { values = dense<[0, 0, 0, 0]> : tensor<4xindex> } : () -> !tosa.shape<4>
+
+  // CHECK: -> tensor<3x6x4x7xf32>
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad {acc_type = f32} : (tensor<3x14x12x7xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_avg_pool2d_adaptive_non_constshape_operands
+func.func @test_avg_pool2d_adaptive_non_constshape_operands(%arg0: tensor<3x5x6x7xf32>) {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %k0 = tosa.const_shape { values = dense<[4]> : tensor<1xindex> } : () -> !tosa.shape<1>
+  %k1 = tosa.const_shape { values = dense<[3]> : tensor<1xindex> } : () -> !tosa.shape<1>
+  %kernel = tosa.concat_shape %k0, %k1 : (!tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<2>
+  %s0 = tosa.const_shape { values = dense<[2]> : tensor<1xindex> } : () -> !tosa.shape<1>
+  %s1 = tosa.const_shape { values = dense<[3]> : tensor<1xindex> } : () -> !tosa.shape<1>
+  %stride = tosa.concat_shape %s0, %s1 : (!tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<2>
+  %p0 = tosa.const_shape { values = dense<[0]> : tensor<1xindex> } : () -> !tosa.shape<1>
+  %pad = tosa.concat_shape %p0, %p0, %p0, %p0 : (!tosa.shape<1>, !tosa.shape<1>, !tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<4>
+
+  // Use concat_shape to build resolvable shape operands that are not direct
+  // const_shape producers. This exercises the adaptive pooling fallback path
+  // where only N and C are inferred, while H and W remain dynamic.
+  // CHECK: -> tensor<3x?x?x7xf32>
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad {acc_type = f32} : (tensor<3x5x6x7xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @conv2d_padded
 func.func @conv2d_padded(%input: tensor<2x8x9x3xf32>, %weights: tensor<5x3x6x3xf32>, %bias: tensor<5xf32>, %input_zp: tensor<1xf32>, %weight_zp: tensor<1xf32>) -> () {
   // CHECK: -> tensor<2x9x11x5xf32>
@@ -1876,5 +1959,29 @@ func.func @test_tconv2d_bias_broadcast(%input: tensor<2x6x7x3xf32>, %weight: ten
 func.func @test_avg_pool2d_unranked_input(%input: tensor<*xi32>, %zp: tensor<1xi32>) {
   // CHECK: -> tensor<?x?x?x?xi32>
   %0 = tosa.avg_pool2d %input, %zp, %zp { acc_type = i32, kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1> } : (tensor<*xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/181449
+// Ensure tosa-infer-shapes does not crash when a tosa.while_loop carries a
+// value with a sparse tensor encoding (a block argument without a defining op).
+
+// CHECK-LABEL: @while_with_sparse_tensor_encoding
+func.func @while_with_sparse_tensor_encoding() {
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = sparse_tensor.convert %0 : tensor<1xi32> to tensor<1xi32, #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>>
+  // CHECK: tosa.while_loop
+  %2 = tosa.while_loop (%arg0 = %1) : (tensor<1xi32, #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>>) -> tensor<1xi32> {
+    %3 = "tosa.const"() <{values = dense<3> : tensor<1xi32>}> : () -> tensor<1xi32>
+    %4 = sparse_tensor.convert %arg0 : tensor<1xi32, #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>> to tensor<1xi32>
+    %5 = tosa.greater_equal %3, %4 : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
+    tosa.yield %5 : tensor<1xi1>
+  } do {
+    ^bb0(%arg0: tensor<1xi32, #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>>):
+    %3 = "tosa.const"() <{values = dense<1> : tensor<1xi32>}> : () -> tensor<1xi32>
+    tosa.yield %3 : tensor<1xi32>
+  }
   return
 }

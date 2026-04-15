@@ -132,6 +132,15 @@ void SPIRVTargetLowering::getTgtMemIntrinsic(
   }
 }
 
+TargetLowering::ConstraintType
+SPIRVTargetLowering::getConstraintType(StringRef Constraint) const {
+  // SPIR-V represents inline assembly via OpAsmINTEL where constraints are
+  // passed through as literals defined by client API. Return C_RegisterClass
+  // for any constraint since SPIR-V does not distinguish between register,
+  // immediate, or memory operands at this level.
+  return C_RegisterClass;
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                   StringRef Constraint,
@@ -403,7 +412,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   GR.setCurrentFunc(MF);
   for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
     MachineBasicBlock *MBB = &*I;
-    SmallPtrSet<MachineInstr *, 8> ToMove;
     for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI++;
@@ -523,16 +531,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
             MI.removeOperand(i);
         }
       } break;
-      case SPIRV::OpPhi: {
-        // Phi refers to a type definition that goes after the Phi
-        // instruction, so that the virtual register definition of the type
-        // doesn't dominate all uses. Let's place the type definition
-        // instruction at the end of the predecessor.
-        MachineBasicBlock *Curr = MI.getParent();
-        SPIRVTypeInst Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
-        if (Type->getParent() == Curr && !Curr->pred_empty())
-          ToMove.insert(const_cast<MachineInstr *>(&*Type));
-      } break;
       case SPIRV::OpExtInst: {
         // prefetch
         if (!MI.getOperand(2).isImm() || !MI.getOperand(3).isImm() ||
@@ -578,11 +576,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         }
       } break;
       }
-    }
-    for (MachineInstr *MI : ToMove) {
-      MachineBasicBlock *Curr = MI->getParent();
-      MachineBasicBlock *Pred = *Curr->pred_begin();
-      Pred->insert(Pred->getFirstTerminator(), Curr->remove_instr(MI));
     }
   }
   ProcessedMF.insert(&MF);

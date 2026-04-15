@@ -387,9 +387,26 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   std::optional<APInt> constTripCount = forOp.getStaticTripCount();
   if (constTripCount) {
     // Constant loop bounds computation.
-    int64_t lbCst = getConstantIntValue(forOp.getLowerBound()).value();
-    int64_t ubCst = getConstantIntValue(forOp.getUpperBound()).value();
-    int64_t stepCst = getConstantIntValue(forOp.getStep()).value();
+    bool isUnsignedLoop = forOp.getUnsignedCmp();
+    // For unsigned loops, bounds must be zero-extended: narrow integer types
+    // (e.g. i1, i2, i3) may have bit patterns that are negative in a signed
+    // context (e.g., i1 value 1 has getSExtValue() == -1, getZExtValue() == 1).
+    // Zero-extension is only safe when the unsigned value fits in int64_t, i.e.
+    // the type's bitwidth is < 64. Bail out for 64-bit unsigned loops.
+    if (isUnsignedLoop) {
+      if (auto intTy = dyn_cast<IntegerType>(forOp.getUpperBound().getType()))
+        if (intTy.getWidth() >= 64)
+          return failure();
+    }
+    auto getLoopBound = [&](Value v) -> int64_t {
+      auto apInt = getConstantAPIntValue(v);
+      assert(apInt && "expected constant loop bound");
+      return isUnsignedLoop ? static_cast<int64_t>(apInt->first.getZExtValue())
+                            : apInt->first.getSExtValue();
+    };
+    int64_t lbCst = getLoopBound(forOp.getLowerBound());
+    int64_t ubCst = getLoopBound(forOp.getUpperBound());
+    int64_t stepCst = getLoopBound(step);
     if (unrollFactor == 1) {
       if (constTripCount->isOne() &&
           failed(forOp.promoteIfSingleIteration(rewriter)))
@@ -412,9 +429,16 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     else
       upperBoundUnrolled = forOp.getUpperBound();
 
-    // Create constant for 'stepUnrolled'.
+    // Create constant for 'stepUnrolled'. When the main loop has zero
+    // iterations (tripCountEvenMultiple == 0), keep the original step.
+    // stepCst * unrollFactor may produce a value that, when truncated to the
+    // bound type's bitwidth during IntegerAttr construction, wraps to zero; a
+    // zero step causes constantTripCount to return nullopt instead of 0, which
+    // prevents the zero-trip main loop from being elided.
+    bool mainLoopHasNoIter = (tripCountEvenMultiple == 0);
+    bool stepUnchanged = (stepCst == stepUnrolledCst);
     stepUnrolled =
-        stepCst == stepUnrolledCst
+        (mainLoopHasNoIter || stepUnchanged)
             ? step
             : arith::ConstantOp::create(boundsBuilder, loc,
                                         boundsBuilder.getIntegerAttr(
@@ -549,6 +573,8 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
     return failure();
   }
   uint64_t tripCountValue = tripCount->getZExtValue();
+  if (tripCountValue == 0)
+    return success();
   if (unrollJamFactor > tripCountValue) {
     LDBG() << "unroll and jam factor is greater than trip count, set factor to "
               "trip "
@@ -957,7 +983,8 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   Value upperBound = getProductOfIntsOrIndexes(rewriter, loc, upperBounds);
   outermost.setUpperBound(upperBound);
 
-  rewriter.setInsertionPointToStart(innermost.getBody());
+  // Insert delinearization at the start of the outermost loop body.
+  rewriter.setInsertionPointToStart(outermost.getBody());
   auto [delinearizeIvs, preservedUsers] = delinearizeInductionVariable(
       rewriter, loc, outermost.getInductionVar(), upperBounds);
   rewriter.replaceAllUsesExcept(outermost.getInductionVar(), delinearizeIvs[0],
@@ -1347,6 +1374,15 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   getPerfectlyNestedLoopsImpl(forOps, rootForOp, sizes.size());
   if (forOps.size() < sizes.size())
     sizes = sizes.take_front(forOps.size());
+
+  // The strip-mining transformation splices loop bodies into a new inner loop
+  // without threading iter_args.  If any of the collected loops carries
+  // iter_args, the splice would produce invalid IR (yielded values from the
+  // inner scope used in the outer terminator).  Skip the transformation in
+  // that case.
+  if (llvm::any_of(forOps,
+                   [](scf::ForOp op) { return !op.getInitArgs().empty(); }))
+    return {};
 
   // Compute the tile sizes such that i-th outer loop executes size[i]
   // iterations.  Given that the loop current executes

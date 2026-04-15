@@ -495,6 +495,9 @@ public:
   /// The list of files to embed into the compiled module file.
   std::vector<std::string> ModulesEmbedFiles;
 
+  /// The time in seconds to wait on an implicit module lock before timing out.
+  unsigned ImplicitModulesLockTimeoutSeconds = 90;
+
   /// The list of AST files to merge.
   std::vector<std::string> ASTMergeFiles;
 
@@ -540,6 +543,21 @@ public:
   /// minimization hints.
   std::string DumpMinimizationHintsPath;
 
+  /// List of SSAF extractors to enable.
+  std::vector<std::string> SSAFExtractSummaries;
+
+  /// The TU summary output file with the file extension representing the file
+  /// format.
+  std::string SSAFTUSummaryFile;
+
+  /// Show available SSAF summary extractors.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SSAFShowExtractors : 1;
+
+  /// Show available SSAF serialization formats.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SSAFShowFormats : 1;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
@@ -557,7 +575,8 @@ public:
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
         ClangIRDisableCIRVerifier(false), ClangIREnableIdiomRecognizer(false),
-        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
+        TimeTraceGranularity(500), TimeTraceVerbose(false),
+        SSAFShowExtractors(false), SSAFShowFormats(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

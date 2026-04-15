@@ -220,9 +220,9 @@ define amdgpu_kernel void @extract_vector_elt_v8i8(<8 x i8> %foo) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s1, s0, 16
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
@@ -317,9 +317,9 @@ define amdgpu_kernel void @extract_vector_elt_v32i8(<32 x i8> %foo) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s1, s0, 16
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
