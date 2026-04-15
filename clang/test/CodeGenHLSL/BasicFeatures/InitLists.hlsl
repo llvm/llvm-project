@@ -1171,8 +1171,8 @@ void case27(CustomResource a) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z5]], align 1
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[Z]], align 1
 // CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
-// CHECK-NEXT:    [[W14:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W14]], align 1
+// CHECK-NEXT:    [[W6:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W6]], align 1
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[W]], align 1
 // CHECK-NEXT:    ret void
 //
@@ -1203,8 +1203,8 @@ void case28(TwoFloats TF) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[INTS]], align 4
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds i32, ptr [[INTS]], i32 1
-// CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[REF_TMP]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX17]], align 4
+// CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[ARRAYINIT_ELEMENT]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -1238,8 +1238,8 @@ void case29(FourFloats FF) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z7]], align 1
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[Z]], align 1
 // CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
-// CHECK-NEXT:    [[W18:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W18]], align 1
+// CHECK-NEXT:    [[W8:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W8]], align 1
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[W]], align 1
 // CHECK-NEXT:    ret void
 //
