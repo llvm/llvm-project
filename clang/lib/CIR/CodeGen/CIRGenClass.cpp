@@ -285,7 +285,8 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
 
   emitAggExpr(baseInit->getInit(), aggSlot);
 
-  assert(!cir::MissingFeatures::requiresCleanups());
+  if (cgm.getLangOpts().Exceptions && !baseClassDecl->hasTrivialDestructor())
+    cgm.errorNYI(baseInit->getSourceRange(), "call base destructor");
 }
 
 /// This routine generates necessary code to initialize base classes and
@@ -618,8 +619,8 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   // Ensure that we destroy this object if an exception is thrown later in the
   // constructor.
   QualType::DestructionKind dtorKind = fieldType.isDestructedType();
-  (void)dtorKind;
-  assert(!cir::MissingFeatures::requiresCleanups());
+  if (needsEHCleanup(dtorKind))
+    cgm.errorNYI(init->getSourceRange(), "call field destructor");
 }
 
 Address CIRGenFunction::emitCXXMemberDataPointerAddress(
