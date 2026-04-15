@@ -194,7 +194,7 @@ struct basic_string {
 using string = basic_string<char>;
 
 template<typename T>
-struct [[gsl::Owner]] unique_ptr {
+struct unique_ptr {
   unique_ptr();
   explicit unique_ptr(T*);
   unique_ptr(unique_ptr<T>&&);

@@ -5969,7 +5969,6 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // context seems wrong. Investigate more.
     ActOnFinishFunctionBody(Function, Body.get(), /*IsInstantiation=*/true);
 
-
     inferLifetimeBoundAttribute(Function);
 
     checkReferenceToTULocalFromOtherTU(Function, PointOfInstantiation);
