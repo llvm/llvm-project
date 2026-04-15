@@ -43,7 +43,7 @@ void t4(void) {
 // PR3417
 void t5(int i) {
   // CHECK-LABEL: define{{.*}} void @t5
-  // CHECK:         call ptr asm "nop", "=r,0,~{dirflag},~{fpsr},~{flags}"(ptr @t5)
+  // CHECK:         call i32 asm "nop", "=r,0,~{dirflag},~{fpsr},~{flags}"(ptr @t5)
   asm ("nop" : "=r" (i) : "0" (t5));
 }
 
@@ -120,7 +120,7 @@ struct large {
 };
 
 unsigned long t14(int x, struct large *P) {
-  // CHECK-LABEL: define{{.*}} i64 @t14
+  // CHECK-LABEL: define{{.*}} i32 @t14
   // CHECK:         call i32 asm "xyz ", "=r,*m,0,~{dirflag},~{fpsr},~{flags}"
   // CHECK-SAME:      (ptr elementtype(%struct.large) %{{.*}}, i32 %{{.*}})
   __asm__ ("xyz " : "=r" (x) : "m" (*P), "0" (x));
@@ -226,8 +226,8 @@ unsigned char t22(unsigned char a, unsigned char b) {
 
 void *t23(char c) {
   // CHECK-LABEL: define{{.*}} ptr @t23
-  // CHECK:         [[C:%[a-z0-9.]+]] = zext i8 {{.*}} to i64
-  // CHECK-NEXT:    call ptr asm "foobar", "={ax},0,~{dirflag},~{fpsr},~{flags}"(i64 [[C]])
+  // CHECK:         [[C:%[a-z0-9.]+]] = zext i8 {{.*}} to i32
+  // CHECK-NEXT:    call ptr asm "foobar", "={ax},0,~{dirflag},~{fpsr},~{flags}"(i32 [[C]])
   void *addr;
 
   __asm__ ("foobar" : "=a" (addr) : "0" (c));
