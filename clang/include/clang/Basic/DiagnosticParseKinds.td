@@ -1893,8 +1893,6 @@ def err_hlsl_rootsig_non_zero_flag : Error<"flag value is neither a literal 0 no
 // C++ Profiles framework (P3589R2)
 def err_profiles_expected_profile_name : Error<
   "expected profile name">;
-def err_profiles_expected_lparen : Error<
-  "expected '(' in '%0' attribute">;
 def err_profiles_expected_rparen : Error<
   "expected ')' in '%0' attribute">;
 def err_profiles_invalid_argument_token : Error<
