@@ -38,6 +38,7 @@ public:
     AGVK_TotalNumVGPRs,
     AGVK_AlignTo,
     AGVK_Occupancy,
+    AGVK_InstPrefSize,
     AGVK_Lit,
     AGVK_Lit64,
   };
@@ -69,6 +70,7 @@ private:
   bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateInstPrefSize(MCValue &Res, const MCAssembler *Asm) const;
 
 public:
   static const AMDGPUMCExpr *
@@ -96,6 +98,12 @@ public:
   createAlignTo(const MCExpr *Value, const MCExpr *Align, MCContext &Ctx) {
     return create(VariantKind::AGVK_AlignTo, {Value, Align}, Ctx);
   }
+
+  /// Create an expression for instruction prefetch size computation:
+  /// min(divideCeil(CodeSizeBytes, 128), (1 << FieldWidth) - 1)
+  static const AMDGPUMCExpr *createInstPrefSize(const MCExpr *CodeSizeBytes,
+                                                unsigned FieldWidth,
+                                                MCContext &Ctx);
 
   static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,
                                        MCContext &Ctx);
