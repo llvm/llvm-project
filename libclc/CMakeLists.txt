@@ -265,4 +265,6 @@ add_libclc_library(libclc-${LIBCLC_TARGET}
   PARENT_TARGET libclc-opencl-builtins
 )
 
-add_subdirectory(test)
+if(LLVM_INCLUDE_TESTS)
+  add_subdirectory(test)
+endif()
