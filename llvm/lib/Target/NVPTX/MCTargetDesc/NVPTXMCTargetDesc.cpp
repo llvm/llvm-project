@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXMCTargetDesc.h"
+#include "NVPTXAsmStreamer.h"
 #include "NVPTXInstPrinter.h"
 #include "NVPTXMCAsmInfo.h"
 #include "NVPTXTargetStreamer.h"
@@ -19,6 +20,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 
 using namespace llvm;
@@ -32,6 +34,11 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "NVPTXGenRegisterInfo.inc"
+
+// Temporary option to assist with the migration to new NVPTXAsmStreamer.
+static cl::opt<bool> UsePTXAsmStreamer(
+    "use-ptx-asm-streamer", cl::init(false), cl::Hidden,
+    cl::desc("Use NVPTXAsmStreamer in printer instead of MCAsmStreamer."));
 
 static MCInstrInfo *createNVPTXMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
@@ -67,6 +74,19 @@ static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
   return new NVPTXAsmTargetStreamer(S, OS);
 }
 
+static MCStreamer *createNVPTXAsmStreamer(
+    MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+    std::unique_ptr<MCInstPrinter> IP, std::unique_ptr<MCCodeEmitter> CE,
+    std::unique_ptr<MCAsmBackend> TAB) {
+
+  if (UsePTXAsmStreamer)
+    return new NVPTXAsmStreamer(Ctx, std::move(OS), std::move(IP),
+                                std::move(CE), std::move(TAB));
+
+  return llvm::createAsmStreamer(Ctx, std::move(OS), std::move(IP),
+                                 std::move(CE), std::move(TAB));
+}
+
 static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
   return new NVPTXTargetStreamer(S);
 }
@@ -89,6 +109,9 @@ LLVMInitializeNVPTXTargetMC() {
 
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createNVPTXMCInstPrinter);
+
+    // Register the asm streamer.
+    TargetRegistry::RegisterAsmStreamer(*T, createNVPTXAsmStreamer);
 
     // Register the MCTargetStreamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createTargetAsmStreamer);

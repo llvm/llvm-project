@@ -1,6 +1,7 @@
 ; Test to verify functionality of NVPTXAsmPrinter for PTX module directives and header.
 
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_100 -mattr=+ptx87 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_100 -mattr=+ptx87 -use-ptx-asm-streamer | FileCheck %s
 ; RUN: %if ptxas-sm_100 && ptxas-isa-8.7 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100 -mattr=+ptx87 | %ptxas-verify -arch=sm_100 %}
 
 ; CHECK:      //
