@@ -202,10 +202,12 @@
 
 ;; Run in-process ThinLTO again, but with importing disabled by setting the
 ;; instruction limit to 0. Ensure that the existing declarations of B::bar
-;; and B0::bar are sufficient to allow for the promotion and cloning.
+;; and B0::bar are sufficient to allow for the promotion and cloning with
+;; -memprof-require-definition-for-promotion=false.
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
 ; RUN:	-import-instr-limit=0 \
 ; RUN:	-enable-memprof-indirect-call-support=true \
+; RUN:  -memprof-require-definition-for-promotion=false \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
 ; RUN:  -r=%t/foo.o,_ZN2B03barEj.abc,plx \
@@ -237,10 +239,10 @@
 ; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefix=IR --check-prefix=IR-NOIMPORT
 
 ;; Run it gain but with -memprof-require-definition-for-promotion, and confirm
-;; that no promotions occur.
+;; that no promotions occur with the default
+;; -memprof-require-definition-for-promotion=true.
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
 ; RUN:	-import-instr-limit=0 \
-; RUN:	-memprof-require-definition-for-promotion \
 ; RUN:	-icp-allow-decls=false \
 ; RUN:	-enable-memprof-indirect-call-support=true \
 ; RUN:  -supports-hot-cold-new \

@@ -222,7 +222,7 @@ cl::opt<bool> SupportsHotColdNew(
     cl::desc("Linking with hot/cold operator new interfaces"));
 
 static cl::opt<bool> MemProfRequireDefinitionForPromotion(
-    "memprof-require-definition-for-promotion", cl::init(false), cl::Hidden,
+    "memprof-require-definition-for-promotion", cl::init(true), cl::Hidden,
     cl::desc(
         "Require target function definition when promoting indirect calls"));
 
