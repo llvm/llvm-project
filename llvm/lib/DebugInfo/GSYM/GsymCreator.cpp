@@ -33,8 +33,8 @@ uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   // If we inline the insertString() function call into the constructor, the
   // call order is undefined due to parameter lists not having any ordering
   // requirements.
-  const uint32_t Dir = insertString(directory);
-  const uint32_t Base = insertString(filename);
+  const gsym_strp_t Dir = insertString(directory);
+  const gsym_strp_t Base = insertString(filename);
   return insertFileEntry(FileEntry(Dir, Base));
 }
 
@@ -56,11 +56,11 @@ uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
     return 0;
   const FileEntry SrcFE = SrcGC.Files[FileIdx];
   // Copy the strings for the file and then add the newly converted file entry.
-  uint32_t Dir =
+  gsym_strp_t Dir =
       SrcFE.Dir == 0
           ? 0
           : StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
-  uint32_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
+  gsym_strp_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
   FileEntry DstFE(Dir, Base);
   return insertFileEntry(DstFE);
 }
@@ -74,133 +74,8 @@ llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
   if (EC)
     return llvm::errorCodeToError(EC);
   FileWriter O(OutStrm, ByteOrder);
+  O.setStringOffsetSize(getStringOffsetSize());
   return encode(O);
-}
-
-llvm::Error GsymCreator::encode(FileWriter &O) const {
-  std::lock_guard<std::mutex> Guard(Mutex);
-  if (Funcs.empty())
-    return createStringError(std::errc::invalid_argument,
-                             "no functions to encode");
-  if (!Finalized)
-    return createStringError(std::errc::invalid_argument,
-                             "GsymCreator wasn't finalized prior to encoding");
-
-  if (Funcs.size() > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument,
-                             "too many FunctionInfos");
-
-  std::optional<uint64_t> BaseAddress = getBaseAddress();
-  // Base address should be valid if we have any functions.
-  if (!BaseAddress)
-    return createStringError(std::errc::invalid_argument,
-                             "invalid base address");
-  Header Hdr;
-  Hdr.Magic = GSYM_MAGIC;
-  Hdr.Version = GSYM_VERSION;
-  Hdr.AddrOffSize = getAddressOffsetSize();
-  Hdr.UUIDSize = static_cast<uint8_t>(UUID.size());
-  Hdr.BaseAddress = *BaseAddress;
-  Hdr.NumAddresses = static_cast<uint32_t>(Funcs.size());
-  Hdr.StrtabOffset = 0; // We will fix this up later.
-  Hdr.StrtabSize = 0;   // We will fix this up later.
-  memset(Hdr.UUID, 0, sizeof(Hdr.UUID));
-  if (UUID.size() > sizeof(Hdr.UUID))
-    return createStringError(std::errc::invalid_argument,
-                             "invalid UUID size %u", (uint32_t)UUID.size());
-  // Copy the UUID value if we have one.
-  if (UUID.size() > 0)
-    memcpy(Hdr.UUID, UUID.data(), UUID.size());
-  // Write out the header.
-  llvm::Error Err = Hdr.encode(O);
-  if (Err)
-    return Err;
-
-  const uint64_t MaxAddressOffset = getMaxAddressOffset();
-  // Write out the address offsets.
-  O.alignTo(Hdr.AddrOffSize);
-  for (const auto &FuncInfo : Funcs) {
-    uint64_t AddrOffset = FuncInfo.startAddress() - Hdr.BaseAddress;
-    // Make sure we calculated the address offsets byte size correctly by
-    // verifying the current address offset is within ranges. We have seen bugs
-    // introduced when the code changes that can cause problems here so it is
-    // good to catch this during testing.
-    assert(AddrOffset <= MaxAddressOffset);
-    (void)MaxAddressOffset;
-    switch (Hdr.AddrOffSize) {
-    case 1:
-      O.writeU8(static_cast<uint8_t>(AddrOffset));
-      break;
-    case 2:
-      O.writeU16(static_cast<uint16_t>(AddrOffset));
-      break;
-    case 4:
-      O.writeU32(static_cast<uint32_t>(AddrOffset));
-      break;
-    case 8:
-      O.writeU64(AddrOffset);
-      break;
-    }
-  }
-
-  // Write out all zeros for the AddrInfoOffsets.
-  O.alignTo(4);
-  const uint64_t AddrInfoOffsetsOffset = O.tell();
-  for (size_t i = 0, n = Funcs.size(); i < n; ++i)
-    O.writeU32(0);
-
-  // Write out the file table
-  O.alignTo(4);
-  assert(!Files.empty());
-  assert(Files[0].Dir == 0);
-  assert(Files[0].Base == 0);
-  size_t NumFiles = Files.size();
-  if (NumFiles > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument, "too many files");
-  O.writeU32(static_cast<uint32_t>(NumFiles));
-  for (auto File : Files) {
-    O.writeU32(File.Dir);
-    O.writeU32(File.Base);
-  }
-
-  // Write out the string table.
-  const uint64_t StrtabOffset = O.tell();
-  StrTab.write(O.get_stream());
-  const uint64_t StrtabSize = O.tell() - StrtabOffset;
-  std::vector<uint32_t> AddrInfoOffsets;
-
-  // Verify that the size of the string table does not exceed 32-bit max.
-  // This means the offsets in the string table will not exceed 32-bit max.
-  if (StrtabSize > UINT32_MAX) {
-    return createStringError(std::errc::invalid_argument,
-                             "string table size exceeded 32-bit max");
-  }
-
-  // Write out the address infos for each function info.
-  for (const auto &FuncInfo : Funcs) {
-    if (Expected<uint64_t> OffsetOrErr = FuncInfo.encode(O)) {
-      // Verify that the address info offsets do not exceed 32-bit max.
-      uint64_t Offset = OffsetOrErr.get();
-      if (Offset > UINT32_MAX) {
-        return createStringError(std::errc::invalid_argument,
-                                 "address info offset exceeded 32-bit max");
-      }
-
-      AddrInfoOffsets.push_back(Offset);
-    } else
-      return OffsetOrErr.takeError();
-  }
-  // Fixup the string table offset and size in the header
-  O.fixup32((uint32_t)StrtabOffset, offsetof(Header, StrtabOffset));
-  O.fixup32((uint32_t)StrtabSize, offsetof(Header, StrtabSize));
-
-  // Fixup all address info offsets
-  uint64_t Offset = 0;
-  for (auto AddrInfoOffset : AddrInfoOffsets) {
-    O.fixup32(AddrInfoOffset, AddrInfoOffsetsOffset + Offset);
-    Offset += 4;
-  }
-  return ErrorSuccess();
 }
 
 llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
@@ -367,14 +242,15 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
   return Error::success();
 }
 
-uint32_t GsymCreator::copyString(const GsymCreator &SrcGC, uint32_t StrOff) {
+gsym_strp_t GsymCreator::copyString(const GsymCreator &SrcGC,
+                                    gsym_strp_t StrOff) {
   // String offset at zero is always the empty string, no copying needed.
   if (StrOff == 0)
     return 0;
   return StrTab.add(SrcGC.StringOffsetMap.find(StrOff)->second);
 }
 
-uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
+gsym_strp_t GsymCreator::insertString(StringRef S, bool Copy) {
   if (S.empty())
     return 0;
 
@@ -392,7 +268,7 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
       CHStr = CachedHashStringRef{StringStorage.insert(S).first->getKey(),
                                   CHStr.hash()};
   }
-  const uint32_t StrOff = StrTab.add(CHStr);
+  const gsym_strp_t StrOff = StrTab.add(CHStr);
   // Save a mapping of string offsets to the cached string reference in case
   // we need to segment the GSYM file and copy string from one string table to
   // another.
@@ -400,7 +276,7 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   return StrOff;
 }
 
-StringRef GsymCreator::getString(uint32_t Offset) {
+StringRef GsymCreator::getString(gsym_strp_t Offset) {
   auto I = StringOffsetMap.find(Offset);
   assert(I != StringOffsetMap.end() &&
          "GsymCreator::getString expects a valid offset as parameter.");
@@ -493,19 +369,67 @@ uint8_t GsymCreator::getAddressOffsetSize() const {
   return 1;
 }
 
-uint64_t GsymCreator::calculateHeaderAndTableSize() const {
-  uint64_t Size = sizeof(Header);
-  const size_t NumFuncs = Funcs.size();
-  // Add size of address offset table
-  Size += NumFuncs * getAddressOffsetSize();
-  // Add size of address info offsets which are 32 bit integers in version 1.
-  Size += NumFuncs * sizeof(uint32_t);
-  // Add file table size
-  Size += Files.size() * sizeof(FileEntry);
-  // Add string table size
-  Size += StrTab.getSize();
+llvm::Error
+GsymCreator::validateForEncoding(std::optional<uint64_t> &BaseAddr) const {
+  if (Funcs.empty())
+    return createStringError(std::errc::invalid_argument,
+                             "no functions to encode");
+  if (!Finalized)
+    return createStringError(std::errc::invalid_argument,
+                             "GsymCreator wasn't finalized prior to encoding");
+  if (Funcs.size() > UINT32_MAX)
+    return createStringError(std::errc::invalid_argument,
+                             "too many FunctionInfos");
+  BaseAddr = getBaseAddress();
+  if (!BaseAddr)
+    return createStringError(std::errc::invalid_argument,
+                             "invalid base address");
+  return Error::success();
+}
 
-  return Size;
+void GsymCreator::encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
+                                    uint64_t BaseAddr) const {
+  const uint64_t MaxAddressOffset = getMaxAddressOffset();
+  O.alignTo(AddrOffSize);
+  for (const auto &FI : Funcs) {
+    uint64_t AddrOffset = FI.startAddress() - BaseAddr;
+    // Make sure we calculated the address offsets byte size correctly by
+    // verifying the current address offset is within ranges. We have seen bugs
+    // introduced when the code changes that can cause problems here so it is
+    // good to catch this during testing.
+    assert(AddrOffset <= MaxAddressOffset);
+    (void)MaxAddressOffset;
+    switch (AddrOffSize) {
+    case 1:
+      O.writeU8(static_cast<uint8_t>(AddrOffset));
+      break;
+    case 2:
+      O.writeU16(static_cast<uint16_t>(AddrOffset));
+      break;
+    case 4:
+      O.writeU32(static_cast<uint32_t>(AddrOffset));
+      break;
+    case 8:
+      O.writeU64(AddrOffset);
+      break;
+    default:
+      llvm_unreachable("unsupported address offset size");
+    }
+  }
+}
+
+llvm::Error GsymCreator::encodeFileTable(FileWriter &O) const {
+  assert(!Files.empty());
+  assert(Files[0].Dir == 0);
+  assert(Files[0].Base == 0);
+  if (Files.size() > UINT32_MAX)
+    return createStringError(std::errc::invalid_argument, "too many files");
+  O.writeU32(static_cast<uint32_t>(Files.size()));
+  for (const auto &File : Files) {
+    O.writeStringOffset(File.Dir);
+    O.writeStringOffset(File.Base);
+  }
+  return Error::success();
 }
 
 // This function takes a InlineInfo class that was copy constructed from an
@@ -549,7 +473,7 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
   }
   std::lock_guard<std::mutex> Guard(Mutex);
   Funcs.emplace_back(DstFI);
-  return Funcs.back().cacheEncoding();
+  return Funcs.back().cacheEncoding(*this);
 }
 
 llvm::Error GsymCreator::saveSegments(StringRef Path,
@@ -595,7 +519,7 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
   if (FuncIdx >= Funcs.size())
     return std::unique_ptr<GsymCreator>();
 
-  std::unique_ptr<GsymCreator> GC(new GsymCreator(/*Quiet=*/true));
+  std::unique_ptr<GsymCreator> GC = createNew(/*Quiet=*/true);
 
   // Tell the creator that this is a segment.
   GC->setIsSegment();
