@@ -812,9 +812,32 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         {ISD::CTPOP, MVT::v4i16, 2},
         {ISD::CTPOP, MVT::v8i8,  1},
         {ISD::CTPOP, MVT::i32,   5},
+        // SVE types (For targets that override NEON for fixed length vectors)
+        {ISD::CTPOP, MVT::nxv2i64, 2},
+        {ISD::CTPOP, MVT::nxv4i32, 2},
+        {ISD::CTPOP, MVT::nxv8i16, 1},
+        {ISD::CTPOP, MVT::nxv16i8, 1},
+        {ISD::CTPOP, MVT::nxv2i32, 2},
+        {ISD::CTPOP, MVT::nxv4i16, 2},
+        {ISD::CTPOP, MVT::nxv8i8, 1},
     };
     auto LT = getTypeLegalizationCost(RetTy);
     MVT MTy = LT.second;
+
+    // When SVE is available, fixed-length vector ctpop is lowered using SVE
+    // (useSVEForFixedLengthVectorVT with OverrideNEON=true), so look up the
+    // scalable equivalent type for accurate costing.
+    if (ST->isSVEorStreamingSVEAvailable() && MTy.isFixedLengthVector()) {
+      EVT ScalableVT = MVT::getScalableVectorVT(
+          MTy.getVectorElementType(),
+          MTy.is128BitVector()
+              ? 128 / MTy.getVectorElementType().getSizeInBits()
+              : 64 / MTy.getVectorElementType().getSizeInBits());
+      if (const auto *Entry = CostTableLookup(CtpopCostTbl, ISD::CTPOP,
+                                              ScalableVT.getSimpleVT()))
+        return LT.first * Entry->Cost;
+    }
+
     if (const auto *Entry = CostTableLookup(CtpopCostTbl, ISD::CTPOP, MTy)) {
       // Extra cost of +1 when illegal vector types are legalized by promoting
       // the integer type.
