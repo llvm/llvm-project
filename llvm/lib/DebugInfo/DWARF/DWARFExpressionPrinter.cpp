@@ -150,8 +150,7 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
       } else if (Size == DWARFExpression::Operation::SizeBlock) {
         uint64_t Offset = Op->getRawOperand(Operand);
         for (unsigned i = 0; i < Op->getRawOperand(Operand - 1); ++i)
-          OS << formatv(" {0:x2}",
-                        static_cast<uint8_t>(Expr->getData()[Offset++]));
+          OS << formatv(" {0:x2}", Expr->getData()[Offset++]);
       } else {
         if (Signed)
           OS << formatv(" {0:+d}", (int64_t)Op->getRawOperand(Operand));
@@ -176,8 +175,7 @@ void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
     if (!printOp(&Op, OS, DumpOpts, E, U) && !DumpOpts.PrintRegisterOnly) {
       uint64_t FailOffset = Op.getEndOffset();
       while (FailOffset < E->getData().size())
-        OS << formatv(" {0:x-2}",
-                      static_cast<uint8_t>(E->getData()[FailOffset++]));
+        OS << formatv(" {0:x-2}", E->getData()[FailOffset++]);
       return;
     }
     if (!DumpOpts.PrintRegisterOnly) {
