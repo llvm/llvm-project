@@ -48,9 +48,11 @@ class SIShrinkInstructions {
   bool shrinkMadFma(MachineInstr &MI) const;
   ChangeKind shrinkScalarLogicOp(MachineInstr &MI) const;
   bool tryReplaceDeadSDST(MachineInstr &MI) const;
-  bool instReadsReg(const MachineInstr *MI, Register Reg,
+  bool instAccessReg(MachineInstr::filtered_const_mop_range &&R, Register Reg,
+                     unsigned SubReg) const;
+  bool instReadsReg(const MachineInstr *MI, unsigned Reg,
                     unsigned SubReg) const;
-  bool instModifiesReg(const MachineInstr *MI, Register Reg,
+  bool instModifiesReg(const MachineInstr *MI, unsigned Reg,
                        unsigned SubReg) const;
   TargetInstrInfo::RegSubRegPair getSubRegForIndex(Register Reg, unsigned Sub,
                                                    unsigned I) const;
@@ -615,14 +617,12 @@ ChangeKind SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
   return ChangeKind::None;
 }
 
-// This is the same as MachineInstr::readsRegister except
+// This is the same as MachineInstr::readsRegister/modifiesRegister except
 // it takes subregs into account.
-bool SIShrinkInstructions::instReadsReg(const MachineInstr *MI, Register Reg,
-                                        unsigned SubReg) const {
-  for (const MachineOperand &MO : MI->all_uses()) {
-    if (!MO.isReg())
-      continue;
-
+bool SIShrinkInstructions::instAccessReg(
+    MachineInstr::filtered_const_mop_range &&R, Register Reg,
+    unsigned SubReg) const {
+  for (const MachineOperand &MO : R) {
     if (Reg.isPhysical() && MO.getReg().isPhysical()) {
       if (TRI->regsOverlap(Reg, MO.getReg()))
         return true;
@@ -636,25 +636,14 @@ bool SIShrinkInstructions::instReadsReg(const MachineInstr *MI, Register Reg,
   return false;
 }
 
-// This is the same as MachineInstr::modifiesRegister except
-// it takes subregs into account.
-bool SIShrinkInstructions::instModifiesReg(const MachineInstr *MI, Register Reg,
-                                           unsigned SubReg) const {
-  for (const MachineOperand &MO : MI->all_defs()) {
-    if (!MO.isReg())
-      continue;
+bool SIShrinkInstructions::instReadsReg(const MachineInstr *MI, unsigned Reg,
+                                        unsigned SubReg) const {
+  return instAccessReg(MI->all_uses(), Reg, SubReg);
+}
 
-    if (Reg.isPhysical() && MO.getReg().isPhysical()) {
-      if (TRI->regsOverlap(Reg, MO.getReg()))
-        return true;
-    } else if (MO.getReg() == Reg && Reg.isVirtual()) {
-      LaneBitmask Overlap = TRI->getSubRegIndexLaneMask(SubReg) &
-                            TRI->getSubRegIndexLaneMask(MO.getSubReg());
-      if (Overlap.any())
-        return true;
-    }
-  }
-  return false;
+bool SIShrinkInstructions::instModifiesReg(const MachineInstr *MI, unsigned Reg,
+                                           unsigned SubReg) const {
+  return instAccessReg(MI->all_defs(), Reg, SubReg);
 }
 
 TargetInstrInfo::RegSubRegPair
