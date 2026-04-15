@@ -1299,6 +1299,13 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
+// Get the symbol vectors of the expression where symbols are grouped together
+// if they are part of the same component expression.
+//
+// Example: a%b + c%d
+// Will be grouped as: [(a, b), (c, d)]
+std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr);
+
 bool IsCUDADeviceSymbol(const Symbol &sym);
 bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
@@ -1347,6 +1354,10 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   }
   return symbols.size();
 }
+
+// Get the number of unique symbols with CUDA device attribute.
+int GetNbOfUniqueCUDADeviceSymbols(
+    const std::vector<SymbolVector> &symbolVectors);
 
 // Get the number of distinct symbols with CUDA managed or unified
 // attribute in the expression.

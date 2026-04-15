@@ -673,3 +673,29 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub37()
 ! CHECK: cuf.data_transfer
+
+subroutine sub38()
+  type :: bar
+    integer, device, allocatable :: m(:)
+  end type
+  type(bar), unified :: a
+  type(bar), managed :: ma
+  integer :: lm(5)
+
+
+  lm(1:5) = a%m(1:5)
+  lm(1:5) = ma%m(1:5)
+end subroutine
+
+subroutine sub39()
+  type :: foo
+    integer, device, allocatable :: m(:)
+  end type
+  type :: bar
+    type(foo) :: f
+  end type
+  type(bar) :: a
+  integer :: lm(5)
+
+  lm(1:5) = a%f%m(1:5)
+end subroutine
