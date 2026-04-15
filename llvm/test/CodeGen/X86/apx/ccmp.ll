@@ -1817,9 +1817,9 @@ if.end:                                           ; preds = %entry, %if.then
 }
 
 ; Fast-math patterns with CCMP instructions.
-; Fast-math canonicalization can introduce FREEZE nodes around SETCC operations,
-; and these tests verify that CCMP pattern matching works through those FREEZE
-; nodes.
+; Fast-math canonicalization can introduce FREEZE nodes around SETCC operations.
+; With SETCC in isGuaranteedNotToBeUndefOrPoisonForTargetNode, these FREEZE
+; nodes are eliminated early, allowing CCMP pattern matching to work naturally.
 define i32 @test_or_fp_int(double %a, double %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: test_or_fp_int:
 ; CHECK:       # %bb.0:
@@ -1845,7 +1845,6 @@ define i32 @test_or_fp_int(double %a, double %b, i32 %c, i32 %d) {
 ; SETZUCC-NEXT:    setzube %cl # encoding: [0x62,0xf4,0x7f,0x18,0x46,0xc1]
 ; SETZUCC-NEXT:    orb %al, %cl # encoding: [0x08,0xc1]
 ; SETZUCC-NEXT:    movzbl %cl, %eax # encoding: [0x0f,0xb6,0xc1]
-; SETZUCC-NEXT:    andl $1, %eax # encoding: [0x83,0xe0,0x01]
 ; SETZUCC-NEXT:    retq # encoding: [0xc3]
   %cmp = icmp ne i32 %c, %d
   %cmp1 = fcmp fast ole double %a, %b

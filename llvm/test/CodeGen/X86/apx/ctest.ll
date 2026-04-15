@@ -1428,9 +1428,9 @@ bb:
 }
 
 ; Fast-math patterns with CTEST instructions.
-; Fast-math canonicalization can introduce FREEZE nodes around SETCC operations,
-; and these tests verify that CTEST pattern matching works through those FREEZE
-; nodes.
+; Fast-math canonicalization can introduce FREEZE nodes around SETCC operations.
+; With SETCC in isGuaranteedNotToBeUndefOrPoisonForTargetNode, these FREEZE
+; nodes are eliminated early, allowing CTEST pattern matching to work naturally.
 define i32 @test_and_fp_int(double %a, i32 %b) {
 ; CHECK-LABEL: test_and_fp_int:
 ; CHECK:       # %bb.0:
