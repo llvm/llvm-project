@@ -12260,7 +12260,7 @@ SDValue TargetLowering::expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) cons
 }
 
 SDValue TargetLowering::expandVecReduceSeqDot(SDNode *Node,
-                                               SelectionDAG &DAG) const {
+                                              SelectionDAG &DAG) const {
   SDLoc dl(Node);
   SDValue AccOp = Node->getOperand(0);
   SDValue VecA = Node->getOperand(1);
@@ -12271,7 +12271,8 @@ SDValue TargetLowering::expandVecReduceSeqDot(SDNode *Node,
   EVT EltVT = VT.getVectorElementType();
 
   if (VT.isScalableVector())
-    report_fatal_error("Expanding reductions for scalable vectors is undefined.");
+    report_fatal_error(
+        "Expanding reductions for scalable vectors is undefined.");
 
   unsigned NumElts = VT.getVectorNumElements();
   SmallVector<SDValue, 8> OpsA, OpsB;
@@ -12287,7 +12288,7 @@ SDValue TargetLowering::expandVecReduceSeqDot(SDNode *Node,
 }
 
 SDValue TargetLowering::expandVecReduceDot(SDNode *Node,
-                                            SelectionDAG &DAG) const {
+                                           SelectionDAG &DAG) const {
   SDLoc dl(Node);
   SDValue VecA = Node->getOperand(0);
   SDValue VecB = Node->getOperand(1);
