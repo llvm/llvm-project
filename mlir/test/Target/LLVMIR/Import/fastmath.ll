@@ -21,9 +21,9 @@ define void @fastmath_inst(float %arg1, float %arg2, i1 %arg3) {
 
 ; CHECK-LABEL: @fastmath_cast
 define void @fastmath_cast(float %arg1) {
-  ; CHECK: llvm.fpext %{{.*}} : f32 to f64
+  ; CHECK: llvm.fpext %{{.*}} {fastmathFlags = #llvm.fastmath<nnan>} : f32 to f64
   %1 = fpext nnan float %arg1 to double
-  ; CHECK: llvm.fptrunc %{{.*}} : f32 to f16
+  ; CHECK: llvm.fptrunc %{{.*}} {fastmathFlags = #llvm.fastmath<fast>} : f32 to f16
   %2 = fptrunc fast float %arg1 to half
   ret void
 }

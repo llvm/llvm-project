@@ -2156,8 +2156,8 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
 // CHECK: select contract i1
   %26 = llvm.select %25, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
 
-// CHECK: {{.*}} = fpext float {{.*}} to double
-// CHECK: {{.*}} = fptrunc float {{.*}} to half
+// CHECK: {{.*}} = fpext nnan float {{.*}} to double
+// CHECK: {{.*}} = fptrunc fast float {{.*}} to half
   %27 = llvm.fpext %arg0 {fastmathFlags = #llvm.fastmath<nnan>} : f32 to f64
   %28 = llvm.fptrunc %arg0 {fastmathFlags = #llvm.fastmath<fast>} : f32 to f16
   llvm.return
