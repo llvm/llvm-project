@@ -5831,6 +5831,15 @@ defm amdgpu_expand_waitcnt_profiling : BoolMOption<"amdgpu-expand-waitcnt-profil
   "emits waitcnt(N-1), waitcnt(N-2), ..., waitcnt(target). (AMDGPU only)">,
   NegFlag<SetFalse, [], [ClangOption]>>;
 
+def mamdgpu_fp32_recip_newton_raphson : Flag<["-"], "mamdgpu-fp32-recip-newton-raphson">,
+  Group<m_Group>,
+  HelpText<"Use Newton-Raphson refinement for FP32 1.0f/x reciprocal when the denominator "
+  "is a normal float or NaN, falling back to the full division sequence for "
+  "denormals/inf/zero. (AMDGPU only)">;
+def mno_amdgpu_fp32_recip_newton_raphson : Flag<["-"], "mno-amdgpu-fp32-recip-newton-raphson">,
+  Group<m_Group>,
+  HelpText<"Disable Newton-Raphson refinement for FP32 reciprocal (AMDGPU only)">;
+
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 6. (AMDGPU only)">,
   Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,

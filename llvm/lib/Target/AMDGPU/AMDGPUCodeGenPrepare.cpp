@@ -94,6 +94,12 @@ static cl::opt<bool> DisableFDivExpand(
   cl::ReallyHidden,
   cl::init(false));
 
+static cl::opt<bool> EnableFP32ReciprocalNewtonRaphson(
+    "amdgpu-enable-fp32-recip-newton-raphson", cl::Hidden, cl::init(false),
+    cl::desc("Use Newton-Raphson refinement for 1.0f/x when the denominator "
+             "is a normal float, falling back to the full division sequence "
+             "for denormals/inf/nan/zero."));
+
 class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
 public:
@@ -247,6 +253,16 @@ public:
   bool tryReplaceWithWorkitemId(Instruction &I, unsigned Wave) const;
 
   bool tryNarrowMathIfNoOverflow(Instruction *I);
+
+  // When a division has 1.0f as nominator, expand it
+  // to use a single iteration Newton-Raphson (NR) refinement
+  // algorithm instead of a full division. This is only
+  // safe for normal single precision floating point numbers
+  // and for NaNs. Codegen in the function introduces an if-then-else
+  // structure that checks if the denominator is normal or NaN and
+  // executes NR if that is true; otherwise, it executes a full
+  // division.
+  bool expandReciprocalNewtonRaphson(BinaryOperator &FDiv);
 
 public:
   bool visitFDiv(BinaryOperator &I);
@@ -855,6 +871,131 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithFDivFast(
   return Builder.CreateIntrinsic(Intrinsic::amdgcn_fdiv_fast, {Num, Den});
 }
 
+bool AMDGPUCodeGenPrepareImpl::expandReciprocalNewtonRaphson(
+    BinaryOperator &FDiv) {
+  if (!EnableFP32ReciprocalNewtonRaphson)
+    return false;
+
+  Type *Ty = FDiv.getType();
+  if (Ty->getScalarType() != Type::getFloatTy(FDiv.getContext()))
+    return false;
+
+  Value *Num = FDiv.getOperand(0);
+  Value *Den = FDiv.getOperand(1);
+
+  const APFloat *NumVal;
+  if (!match(Num, m_APFloat(NumVal)) ||
+      (!NumVal->isExactlyValue(1.0) && !NumVal->isExactlyValue(-1.0)))
+    return false;
+
+  bool IsNegative = NumVal->isExactlyValue(-1.0);
+
+  // Skip fdivs that were created in the slow path.
+  if (FDiv.getMetadata("amdgpu.no.rcp.transform"))
+    return false;
+
+  const FastMathFlags FMF = FDiv.getFastMathFlags();
+  const DebugLoc DL = FDiv.getDebugLoc();
+
+  // For vector types, scalarize into per-element scalar fdivs, then expand
+  // each one. The pass iterates in reverse so newly created instructions
+  // before the current one would be missed; expand them explicitly here.
+  if (Ty->isVectorTy()) {
+    IRBuilder<> Builder(&FDiv);
+    Builder.setFastMathFlags(FMF);
+    Builder.SetCurrentDebugLocation(DL);
+    SmallVector<Value *, 4> NumVals, DenVals;
+    extractValues(Builder, NumVals, Num);
+    extractValues(Builder, DenVals, Den);
+
+    SmallVector<Value *, 4> ResultVals(NumVals.size());
+    SmallVector<BinaryOperator *, 4> ScalarDivs;
+    for (int I = 0, E = NumVals.size(); I != E; ++I) {
+      Value *EltDiv = Builder.CreateFDiv(NumVals[I], DenVals[I]);
+      ScalarDivs.push_back(cast<BinaryOperator>(EltDiv));
+      ResultVals[I] = EltDiv;
+    }
+
+    Value *Result = insertValues(Builder, Ty, ResultVals);
+    FDiv.replaceAllUsesWith(Result);
+    FDiv.eraseFromParent();
+    for (BinaryOperator *SD : ScalarDivs)
+      expandReciprocalNewtonRaphson(*SD);
+    return true;
+  }
+
+  // -1.0 / x -> 1.0 / (fneg x)
+  // Negate the denominator so the NR path computes rcp(-x) = -1/x directly.
+  IRBuilder<> Builder(&FDiv);
+  Builder.setFastMathFlags(FMF);
+  Builder.SetCurrentDebugLocation(DL);
+  if (IsNegative)
+    Den = Builder.CreateFNeg(Den);
+
+  // 2^126: largest FP32 magnitude whose reciprocal (2^-126) is still normal.
+  constexpr float MaxNormalWithNormalRcp = 0x1.0p126f;
+  // Scale factor for large normals whose reciprocal would be subnormal.
+  constexpr float LargeNormalScaleFactor = 0x1.0p-32f;
+  // Smallest positive normal FP32 value (FLT_MIN).
+  constexpr float SmallestNormal = 0x1.0p-126f;
+  // Scale factor for subnormals to bring them into normal range before rcp.
+  constexpr float SubnormalScaleFactor = 0x1.0p32f;
+
+  // Code generation scheme (branchless):
+  //   y = rcp(x)
+  //   [optional scaling for IEEE denormals]
+  //   NR fixup: y = y - y * (x*y - 1)
+  //   y = div_fixup(y, x, 1.0)
+  //
+  // The NR step improves accuracy for finite nonzero values. For special
+  // inputs (zero, inf, NaN) div_fixup replaces the NR result with the correct
+  // special value.
+  //
+  // In IEEE denormal mode, we scale the denominator before rcp and scale the
+  // result after NR to handle subnormals and large normals whose reciprocal
+  // would be subnormal. In FTZ mode no scaling is needed.
+
+  // Emit NR fixup: given the rcp approximation Y0 and the (possibly scaled)
+  // denominator DForRcp, compute one NR iteration.
+  auto EmitNRFixup = [&](IRBuilder<> &B, Value *Y0, Value *DForRcp) -> Value * {
+    Value *Err = B.CreateIntrinsic(Intrinsic::fma, {Ty},
+                                   {DForRcp, Y0, ConstantFP::get(Ty, -1.0)});
+    Value *NegErr = B.CreateFNeg(Err);
+    return B.CreateIntrinsic(Intrinsic::fma, {Ty}, {Y0, NegErr, Y0});
+  };
+
+  Value *DForRcp = Den;
+  Value *Scale = nullptr;
+  if (!HasFP32DenormalFlush) {
+    Value *AbsD = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Den);
+    Value *IsLarge = Builder.CreateFCmpOGT(
+        AbsD, ConstantFP::get(Ty, MaxNormalWithNormalRcp));
+    Scale = Builder.CreateSelect(IsLarge,
+                                 ConstantFP::get(Ty, LargeNormalScaleFactor),
+                                 ConstantFP::get(Ty, 1.0));
+    Value *IsSubnormal =
+        Builder.CreateFCmpOLT(AbsD, ConstantFP::get(Ty, SmallestNormal));
+    Scale = Builder.CreateSelect(
+        IsSubnormal, ConstantFP::get(Ty, SubnormalScaleFactor), Scale);
+    DForRcp = Builder.CreateFMul(Den, Scale);
+  }
+
+  Value *Y0 = Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rcp, DForRcp);
+  Value *Y1 = EmitNRFixup(Builder, Y0, DForRcp);
+
+  Value *NRResult = Y1;
+  if (!HasFP32DenormalFlush)
+    NRResult = Builder.CreateFMul(Y1, Scale);
+
+  Value *Result =
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_div_fixup, {Ty},
+                              {NRResult, Den, ConstantFP::get(Ty, 1.0)});
+
+  FDiv.replaceAllUsesWith(Result);
+  FDiv.eraseFromParent();
+  return true;
+}
+
 Value *AMDGPUCodeGenPrepareImpl::visitFDivElement(
     IRBuilder<> &Builder, Value *Num, Value *Den, FastMathFlags DivFMF,
     FastMathFlags SqrtFMF, Value *RsqOp, const Instruction *FDivInst,
@@ -902,6 +1043,9 @@ Value *AMDGPUCodeGenPrepareImpl::visitFDivElement(
 bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   if (DisableFDivExpand)
     return false;
+
+  if (expandReciprocalNewtonRaphson(FDiv))
+    return true;
 
   Type *Ty = FDiv.getType()->getScalarType();
   const bool IsFloat = Ty->isFloatTy();

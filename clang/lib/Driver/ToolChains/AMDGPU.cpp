@@ -865,6 +865,11 @@ void AMDGPUToolChain::addClangTargetOptions(
       !DriverArgs.hasArg(options::OPT_disable_llvm_optzns))
     CC1Args.push_back("-disable-llvm-optzns");
 
+  if (DriverArgs.hasFlag(options::OPT_mamdgpu_fp32_recip_newton_raphson,
+                         options::OPT_mno_amdgpu_fp32_recip_newton_raphson,
+                         false))
+    CC1Args.append({"-mllvm", "-amdgpu-enable-fp32-recip-newton-raphson"});
+
   if (DeviceOffloadingKind == Action::OFK_None)
     addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args);
 }
