@@ -26,6 +26,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -8436,15 +8437,32 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
 
 // Transform 'fptrunc(x) cmp C' to 'x cmp ext(C)' if possible.
 // Patterns include:
-//    fptrunc(x) <  C  -->  x <  ext(C)
-//    fptrunc(x) <= C  -->  x <= ext(C)
-//    fptrunc(x) >  C  -->  x >  ext(C)
-//    fptrunc(x) >= C  -->  x >= ext(C)
+//    fptrunc(x) <  C       -->  x <  ext(C)
+//    fptrunc(x) <= C       -->  x <= ext(C)
+//    fptrunc(x) >  C       -->  x >  ext(C)
+//    fptrunc(x) >= C       -->  x >= ext(C)
+//    fptrunc(x) ord/uno C  -->  x ord/uno 0
 // where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
 // due to precision loss.
 static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
                                     const Constant &C) {
   FCmpInst::Predicate Pred = I.getPredicate();
+  Type *DestType = FPTrunc.getOperand(0)->getType();
+
+  const APFloat *CValue;
+  // TODO: support vec
+  if (!match(&C, m_APFloat(CValue)))
+    return nullptr;
+
+  // Handle ord/uno
+  if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
+    assert(!CValue->isNaN() &&
+           "X ord/uno NaN should be folded away by simplifyFCmpInst()");
+    return new FCmpInst(Pred, FPTrunc.getOperand(0),
+                        ConstantFP::getZero(DestType), "", &I);
+  }
+
+  // Handle <, >, <=, >=
   bool RoundDown = false;
 
   if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
@@ -8454,10 +8472,6 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
            Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)
     RoundDown = false;
   else
-    return nullptr;
-
-  const APFloat *CValue;
-  if (!match(&C, m_APFloat(CValue)))
     return nullptr;
 
   if (CValue->isNaN() || CValue->isInfinity())
@@ -8478,7 +8492,6 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
 
   APFloat NextCValue = NextValue(*CValue, RoundDown);
 
-  Type *DestType = FPTrunc.getOperand(0)->getType();
   const fltSemantics &DestFltSema =
       DestType->getScalarType()->getFltSemantics();
 
@@ -9123,6 +9136,12 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // fcmp X, (fadd Y, 0.0) --> fcmp X, Y
   if (match(Op1, m_FAdd(m_Value(Y), m_AnyZeroFP())))
     return new FCmpInst(Pred, Op0, Y, "", &I);
+
+  // fcmp ord/uno (fptrunc X), (fptrunc Y) -> fcmp ord/uno X, Y
+  if ((Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) &&
+      match(Op0, m_FPTrunc(m_Value(X))) && match(Op1, m_FPTrunc(m_Value(Y))) &&
+      X->getType() == Y->getType())
+    return new FCmpInst(Pred, X, Y, "", &I);
 
   if (match(Op0, m_FPExt(m_Value(X)))) {
     // fcmp (fpext X), (fpext Y) -> fcmp X, Y

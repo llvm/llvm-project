@@ -3925,7 +3925,8 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
 bool Process::PrivateStateThread::StartupThread() {
   llvm::Expected<HostThread> private_state_thread =
       ThreadLauncher::LaunchThread(
-          m_thread_name, [this] { return m_process.RunPrivateStateThread(); },
+          m_thread_name,
+          [this] { return m_process.RunPrivateStateThread(m_is_override); },
           8 * 1024 * 1024);
   if (!private_state_thread) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Host), private_state_thread.takeError(),
@@ -3983,7 +3984,8 @@ bool Process::StartPrivateStateThread(
     // place already, so do that first:
     *backup_ptr = m_current_private_state_thread_sp;
     m_current_private_state_thread_sp.reset(new PrivateStateThread(
-        *this, GetPublicState(), GetPrivateState(), thread_name));
+        *this, GetPublicState(), GetPrivateState(), thread_name,
+        /*is_override=*/true));
   } else
     m_current_private_state_thread_sp->SetThreadName(thread_name);
 
@@ -4198,7 +4200,15 @@ Status Process::HaltPrivate() {
   return error;
 }
 
-thread_result_t Process::RunPrivateStateThread() {
+thread_local bool PrivateStateThreadGuard::g_is_private_state_thread = false;
+
+thread_result_t Process::RunPrivateStateThread(bool is_override) {
+  // Override PSTs exist solely to service RunThreadPlan expression evaluation.
+  // They must see parent frames, not provider-augmented frames.
+  std::optional<PrivateStateThreadGuard> pst_guard;
+  if (is_override)
+    pst_guard.emplace();
+
   bool control_only = true;
 
   Log *log = GetLog(LLDBLog::Process);
@@ -5386,6 +5396,13 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // still succeed.
     bool miss_first_event = true;
 #endif
+
+    // If we spawned an override PST, mark the current (original) PST so
+    // GetStackFrameList returns parent frames during event processing.
+    std::optional<PrivateStateThreadGuard> private_state_thread_guard;
+    if (backup_private_state_thread)
+      private_state_thread_guard.emplace();
+
     while (true) {
       // We usually want to resume the process if we get to the top of the
       // loop. The only exception is if we get two running events with no
@@ -5727,6 +5744,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           continue;
       }
     } // END WAIT LOOP
+
+    private_state_thread_guard.reset();
 
     // If we had to start up a temporary private state thread to run this
     // thread plan, shut it down now.

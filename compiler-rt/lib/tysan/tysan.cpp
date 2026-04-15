@@ -15,7 +15,6 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
-#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -39,30 +38,6 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 tysan_copy_types(const void *daddr, const void *saddr, uptr size) {
   if (tysan_inited)
     internal_memmove(shadow_for(daddr), shadow_for(saddr), size * sizeof(uptr));
-}
-
-static void getStackTrace(bool fullStacktrace, uptr pc, uptr bp,
-                          BufferedStackTrace *ST) {
-  uptr top = 0;
-  uptr bottom = 0;
-  if (fullStacktrace)
-    GetThreadStackTopAndBottom(false, &top, &bottom);
-  bool request_fast = StackTrace::WillUseFastUnwind(true);
-  ST->Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
-}
-
-namespace __tysan {
-void OnStackUnwind(const SignalContext &sig, const void *,
-                   BufferedStackTrace *stack) {
-  getStackTrace(true, StackTrace::GetNextInstructionPc(sig.pc), sig.bp, stack);
-}
-} // namespace __tysan
-
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_print_stack_trace() {
-  GET_CURRENT_PC_BP;
-  UNINITIALIZED BufferedStackTrace stack;
-  getStackTrace(true, pc, bp, &stack);
-  stack.Print();
 }
 
 static const char *getDisplayName(const char *Name) {
@@ -266,8 +241,14 @@ static void reportError(void *Addr, int Size, tysan_type_descriptor *TD,
     Printf("\n");
 
   if (pc) {
+    uptr top = 0;
+    uptr bottom = 0;
+    if (flags().print_stacktrace)
+      GetThreadStackTopAndBottom(false, &top, &bottom);
+
+    bool request_fast = StackTrace::WillUseFastUnwind(true);
     BufferedStackTrace ST;
-    getStackTrace(flags().print_stacktrace, pc, bp, &ST);
+    ST.Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
     ST.Print();
   } else {
     Printf("\n");
@@ -284,33 +265,33 @@ static void SetShadowType(tysan_type_descriptor *td,
                           tysan_type_descriptor **shadowData,
                           uint64_t AccessSize) {
   *shadowData = td;
-  uint64_t shadowDataInt = (uint64_t)shadowData;
+  uptr shadowDataInt = (uptr)shadowData;
 
   for (uint64_t i = 1; i < AccessSize; ++i) {
-    int64_t dataOffset = i << PtrShift();
-    int64_t *badShadowData = (int64_t *)(shadowDataInt + dataOffset);
-    int64_t badTD = int64_t(i) * -1;
+    uptr dataOffset = i << PtrShift();
+    sptr *badShadowData = (sptr *)(shadowDataInt + dataOffset);
+    sptr badTD = sptr(i) * -1;
     *badShadowData = badTD;
   }
 }
 
 ALWAYS_INLINE
-static bool GetNotAllBadTD(uint64_t ShadowDataInt, uint64_t AccessSize) {
+static bool GetNotAllBadTD(uptr ShadowDataInt, uint64_t AccessSize) {
   bool notAllBadTD = false;
   for (uint64_t i = 1; i < AccessSize; ++i) {
-    int64_t **unkShadowData = (int64_t **)(ShadowDataInt + (i << PtrShift()));
-    int64_t *ILdTD = *unkShadowData;
+    sptr **unkShadowData = (sptr **)(ShadowDataInt + (i << PtrShift()));
+    sptr *ILdTD = *unkShadowData;
     notAllBadTD = notAllBadTD || (ILdTD != nullptr);
   }
   return notAllBadTD;
 }
 
 ALWAYS_INLINE
-static bool GetNotAllUnkTD(uint64_t ShadowDataInt, uint64_t AccessSize) {
+static bool GetNotAllUnkTD(uptr ShadowDataInt, uint64_t AccessSize) {
   bool notAllBadTD = false;
   for (uint64_t i = 1; i < AccessSize; ++i) {
-    int64_t *badShadowData = (int64_t *)(ShadowDataInt + (i << PtrShift()));
-    int64_t ILdTD = *badShadowData;
+    sptr *badShadowData = (sptr *)(ShadowDataInt + (i << PtrShift()));
+    sptr ILdTD = *badShadowData;
     notAllBadTD = notAllBadTD || (ILdTD >= 0);
   }
   return notAllBadTD;
@@ -326,9 +307,8 @@ __tysan_instrument_mem_inst(char *dest, char *src, uint64_t size,
     return;
   }
 
-  uint64_t srcInt = (uint64_t)src;
-  uint64_t srcShadowInt = ((srcInt & AppMask()) << PtrShift()) + ShadowAddr();
-  uint64_t *srcShadow = (uint64_t *)srcShadowInt;
+  uptr srcShadowInt = ((((uptr)src) & AppMask()) << PtrShift()) + ShadowAddr();
+  void *srcShadow = (void *)srcShadowInt;
 
   if (needsMemMove) {
     internal_memmove((char *)destShadowDataPtr, srcShadow, size << PtrShift());
@@ -408,7 +388,7 @@ __tysan_instrument_with_shadow_update(void *ptr, tysan_type_descriptor *td,
       if (shadowIsNull) {
         // We're about to set the type. Make sure that all bytes in the value
         // are also of unknown type.
-        bool isAllUnknownTD = GetNotAllUnkTD((uint64_t)shadowData, accessSize);
+        bool isAllUnknownTD = GetNotAllUnkTD((uptr)shadowData, accessSize);
         if (isAllUnknownTD) {
           GET_CALLER_PC_BP_SP;
           __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
@@ -421,7 +401,7 @@ __tysan_instrument_with_shadow_update(void *ptr, tysan_type_descriptor *td,
     } else {
       // We appear to have the right type. Make sure that all other bytes in
       // the type are still marked as interior bytes. If not, call the runtime.
-      bool isNotAllBadTD = GetNotAllBadTD((uint64_t)shadowData, accessSize);
+      bool isNotAllBadTD = GetNotAllBadTD((uptr)shadowData, accessSize);
       if (isNotAllBadTD) {
         GET_CALLER_PC_BP_SP;
         __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
@@ -484,8 +464,6 @@ static void InitializeFlags() {
     ReportUnrecognizedFlags();
   if (common_flags()->help)
     parser.PrintFlagDescriptions();
-
-  __sanitizer_set_report_path(common_flags()->log_path);
 }
 
 static void TySanInitializePlatformEarly() {
@@ -510,13 +488,9 @@ static void TySanInitializePlatformEarly() {
 namespace __tysan {
 bool tysan_inited = false;
 bool tysan_init_is_running;
-void InitializeDeadlySignals();
 } // namespace __tysan
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
-  SanitizerToolName = "TypeSanitizer";
-  CacheBinaryName();
-
   CHECK(!tysan_init_is_running);
   if (tysan_inited)
     return;
@@ -526,7 +500,6 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
   TySanInitializePlatformEarly();
 
   InitializeInterceptors();
-  InitializeDeadlySignals();
 
   if (!MmapFixedNoReserve(ShadowAddr(), AppAddr() - ShadowAddr()))
     Die();

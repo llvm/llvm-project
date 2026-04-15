@@ -156,3 +156,23 @@ pncvth.b s7, s8
 # CHECK-S-OBJ-NOALIAS: unzip16hp s9, s10, zero
 # CHECK-S-OBJ: pncvth.h s9, s10
 pncvth.h s9, s10
+
+# CHECK-S-OBJ-NOALIAS: pli.b s10, 17
+# CHECK-S-OBJ: pli.b s10, 17
+li s10, 0x1111111111111111
+
+# CHECK-S-OBJ-NOALIAS: pli.h s11, 1
+# CHECK-S-OBJ: pli.h s11, 1
+li s11, 0x0001000100010001
+
+# CHECK-S-OBJ-NOALIAS: pli.w t3, 1
+# CHECK-S-OBJ: pli.w t3, 1
+li t3, 0x0000000100000001
+
+# CHECK-S-OBJ-NOALIAS: plui.h t4, -512
+# CHECK-S-OBJ: plui.h t4, -512
+li t4, 0x8000800080008000
+
+# CHECK-S-OBJ-NOALIAS: plui.w t5, -512
+# CHECK-S-OBJ: plui.w t5, -512
+li t5, 0x8000000080000000
