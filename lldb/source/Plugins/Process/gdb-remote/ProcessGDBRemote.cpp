@@ -6048,21 +6048,28 @@ CommandObject *ProcessGDBRemote::GetPluginCommandObject() {
 void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(
     bool enable, bool is_expression_fork) {
   Log *log = GetLog(GDBRLog::Process);
-  bool is_expr = !enable && is_expression_fork;
 
-  GetBreakpointSiteList().ForEach([this, enable, is_expr,
+  // Resolve the expression-return sentinel address (_start) once. This is
+  // the same address ThreadPlanCallFunction uses as the return trap.
+  lldb::addr_t entry_addr = LLDB_INVALID_ADDRESS;
+  if (!enable && is_expression_fork) {
+    if (auto entry = GetTarget().GetEntryPointAddress())
+      entry_addr = entry->GetLoadAddress(&GetTarget());
+  }
+
+  GetBreakpointSiteList().ForEach([this, enable, entry_addr,
                                    log](BreakpointSite *bp_site) {
     if (bp_site->IsEnabled() &&
         (bp_site->GetType() == BreakpointSite::eSoftware ||
          bp_site->GetType() == BreakpointSite::eExternal)) {
-      // During expression evaluation, retain internal breakpoints (e.g. the
-      // _start return trap) in the forked child so it dies deterministically
-      // on SIGTRAP rather than executing _start with a corrupted stack.
-      if (is_expr && bp_site->IsInternal()) {
+      // During expression evaluation, retain the expression-return trap
+      // at _start in the forked child so it dies deterministically on
+      // SIGTRAP rather than executing _start with a corrupted stack.
+      if (entry_addr != LLDB_INVALID_ADDRESS &&
+          bp_site->GetLoadAddress() == entry_addr) {
         LLDB_LOG(log,
-                 "DidForkSwitchSoftwareBreakpoints: retaining internal "
-                 "breakpoint at {0:x} in forked child during expression "
-                 "evaluation",
+                 "DidForkSwitchSoftwareBreakpoints: retaining expression-"
+                 "return trap at {0:x} in forked child",
                  bp_site->GetLoadAddress());
         return;
       }
