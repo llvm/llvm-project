@@ -690,6 +690,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
+  // TODO: Remove these get/setTemporaryLayout calls after we deprecate the old
+  // XeGPUSubgroupDistribute pass.
   auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
   auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
   // Reduction result should have the same layout as the accumulator.
