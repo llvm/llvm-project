@@ -2906,7 +2906,7 @@ llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
 
   if (inputList.size() == 2) {
     if (blockSize != BlockSizeAttr::getBlockSizeValue(BlockSize::BLOCK_SIZE_32))
-        return emitOpError("expect block size to be 32, got ") << blockSize;
+      return emitOpError("expect block size to be 32, got ") << blockSize;
     if (llvm::any_of(inputList, [](Value v) {
           const auto input = cast<ShapedType>(v.getType());
           return input.hasRank() && input.getRank() == 0;
@@ -4217,7 +4217,7 @@ LogicalResult Conv2DBlockScaledOp::verify() {
 
   const uint32_t blockSize = BlockSizeAttr::getBlockSizeValue(getBlockSize());
   if (blockSize != BlockSizeAttr::getBlockSizeValue(BlockSize::BLOCK_SIZE_32))
-      return emitOpError("expect block size to be 32, got ") << blockSize;
+    return emitOpError("expect block size to be 32, got ") << blockSize;
   // Verify IC is a multiple of block size
   if (ShapedType::isStatic(IC) && IC % blockSize != 0)
     return emitOpError("expect IC to be a multiple of block size, got IC=")
