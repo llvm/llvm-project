@@ -579,9 +579,8 @@ public:
 
   std::optional<GlobalValue::GUID> getGUID(const Value *V) const {
     const auto It = ValueToGUIDMap.find(V);
-    if (It == ValueToGUIDMap.end()) {
+    if (It == ValueToGUIDMap.end())
       return std::nullopt;
-    }
 
     return It->getSecond();
   }

@@ -606,6 +606,8 @@ private:
   // rather not expose it publicly, as no-one else should call it.
   friend class AssignGUIDPass;
 
+  MDNode *getGUIDMetadata() const;
+
 public:
   /// Return a 64-bit global unique ID constructed from the name of a global
   /// symbol. Since this call doesn't supply the linkage or defining filename,

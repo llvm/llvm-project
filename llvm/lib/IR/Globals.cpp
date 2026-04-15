@@ -82,7 +82,7 @@ GlobalValue::getGUIDAssumingExternalLinkage(StringRef GlobalIdentifier) {
 }
 
 void GlobalValue::assignGUID() {
-  if (getMetadata(LLVMContext::MD_unique_id) != nullptr)
+  if (getGUIDMetadata() != nullptr)
     return;
 
   const GUID G =
@@ -102,7 +102,7 @@ GlobalValue::GUID GlobalValue::getGUID() const {
 
 std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
   // First check the metadata.
-  auto *MD = getMetadata(LLVMContext::MD_unique_id);
+  auto *MD = getGUIDMetadata();
   if (MD != nullptr)
     return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
                                  ->getValue()
@@ -125,6 +125,14 @@ std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
   const Module &M = *getParent();
 
   return M.getGUID(this);
+}
+
+MDNode *GlobalValue::getGUIDMetadata() const {
+   if (auto *Inst = dyn_cast<Instruction>(this))
+     return Inst->getMetadata(LLVMContext::MD_unique_id);
+   if (auto *GO = dyn_cast<GlobalObject>(this))
+     return GO->getMetadata(LLVMContext::MD_unique_id);
+   return nullptr;
 }
 
 void GlobalValue::removeFromParent() {

@@ -1193,6 +1193,7 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
       Prevailing.insert(Sym.getIRName());
   }
 
+  // Track the GUIDs stored in the bitcode GUID table.
   StringMap<GlobalValue::GUID> IRSpecifiedGUIDs;
   if (Error Err = BM.readSummary(
           ThinLTO.CombinedIndex, BMID,
@@ -1214,6 +1215,9 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     assert(!Res.empty());
     const SymbolResolution &R = Res.consume_front();
     auto GUIDIter = IRSpecifiedGUIDs.find(Sym.getIRName());
+    // The bitcode GUID table might not be present if this is an old bitcode
+    // file. For backwards-compatibility, just compute the GUID now in that
+    // case.
     auto GUID =
         GUIDIter == IRSpecifiedGUIDs.end()
             ? GlobalValue::getGUIDAssumingExternalLinkage(

@@ -4622,6 +4622,8 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
 }
 
 static GlobalValue::GUID getOrComputeGUID(const GlobalValue &V) {
+  // The GUID might not be assigned if this module originates from an old
+  // bitcode file without GUID metadata.
   auto MaybeGUID = V.getGUIDIfAssigned();
   return MaybeGUID ? *MaybeGUID
                    : GlobalValue::getGUIDAssumingExternalLinkage(V.getName());
@@ -4946,12 +4948,9 @@ void ModuleBitcodeWriterBase::writeGUIDList() {
   std::vector<GlobalValue::GUID> GUIDs(Max, 0);
   for (const GlobalValue &GV : M.global_values()) {
     GlobalValue::GUID GUID;
-    if (auto MaybeGUID = GV.getGUIDIfAssigned(); MaybeGUID) {
+    if (auto MaybeGUID = GV.getGUIDIfAssigned(); MaybeGUID)
       GUID = *MaybeGUID;
-    } else {
-      GUID = 0;
-    }
-    if (GUID == 0)
+    else
       continue;
 
     const auto ValueID = VE.getValueID(&GV);

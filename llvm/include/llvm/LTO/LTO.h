@@ -554,6 +554,8 @@ private:
   // been added and the client has called run(). During run() we apply
   // internalization decisions either directly to the module (for regular LTO)
   // or to the combined index (for ThinLTO).
+  // FIXME: Make this GlobalResolution a class, it has been becoming more than
+  // just a data bag.
   struct GlobalResolution {
     /// The unmangled name of the global.
     std::string IRName;
@@ -590,10 +592,10 @@ private:
     /// LTO backend.
     unsigned Partition = Unknown;
 
-    // FIXME: make private, and also make GlobalResolution a class, it has been
-    // becoming more than just a data bag.
+  private:
     GlobalValue::GUID GUID = 0;
 
+  public:
     void setGUID(GlobalValue::GUID G) {
       assert(G);
       assert(!GUID || GUID == G);
