@@ -2458,11 +2458,16 @@ struct ExtractToShapeCast final : OpRewritePattern<vector::ExtractOp> {
 /// of the extracted sub-vector are all size 1. In that case the extracted
 /// value is fully determined by the inserted value.
 ///
-/// Example:
+/// Examples:
 ///   %ins = vector.insert %s, %v [3, 0] : f32 into vector<16x1xf32>
 ///   %ext = vector.extract %ins [3] : vector<1xf32> from vector<16x1xf32>
 /// folds to:
 ///   %ext = vector.broadcast %s : f32 to vector<1xf32>
+///
+///   %ins = vector.insert %s, %v [0, 0] : vector<1xf32> into vector<16x1x1xf32>
+//    %ext = vector.extract %ins [0] : vector<1x1xf32> from vector<16x1x1xf32>
+/// folds to:
+///   %ext = vector.shape_cast %arg0 : vector<1xf32> to vector<1x1xf32>
 struct FoldExtractFromInsertUnitDim final
     : OpRewritePattern<vector::ExtractOp> {
   using Base::Base;
@@ -2492,10 +2497,18 @@ struct FoldExtractFromInsertUnitDim final
       if (srcVecType.getDimSize(i) != 1)
         return failure();
 
-    // The inserted value fully determines the extracted sub-vector; broadcast
-    // it to the extracted type.
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-        extractOp, extractOp.getResult().getType(), insertOp.getValueToStore());
+    Value inserted = insertOp.getValueToStore();
+    Type extractedType = extractOp.getResult().getType();
+    if (isa<VectorType>(inserted.getType())) {
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(extractOp, extractedType,
+                                                       inserted);
+    } else {
+      // The inserted value fully determines the extracted sub-vector; broadcast
+      // it to the extracted type.
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+          extractOp, extractOp.getResult().getType(),
+          insertOp.getValueToStore());
+    }
     return success();
   }
 };
