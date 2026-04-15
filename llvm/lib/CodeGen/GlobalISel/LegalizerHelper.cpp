@@ -3541,6 +3541,31 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_VECREDUCE_FDOT: {
+    // (dst: sN, vecA: <k x sN>, vecB: <k x sN>) — widen both vectors and dst.
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    LLT WideVecTy = MRI.getType(MI.getOperand(1).getReg()).changeElementType(WideTy);
+    widenScalarSrc(MI, WideVecTy, 1, TargetOpcode::G_FPEXT);
+    widenScalarSrc(MI, WideVecTy, 2, TargetOpcode::G_FPEXT);
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_VECREDUCE_SEQ_FDOT: {
+    // (dst: sN, acc: sN, vecA: <k x sN>, vecB: <k x sN>) — widen all FP operands.
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    LLT WideVecTy = MRI.getType(MI.getOperand(2).getReg()).changeElementType(WideTy);
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);    // acc
+    widenScalarSrc(MI, WideVecTy, 2, TargetOpcode::G_FPEXT); // vecA
+    widenScalarSrc(MI, WideVecTy, 3, TargetOpcode::G_FPEXT); // vecB
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_VSCALE: {
     MachineOperand &SrcMO = MI.getOperand(1);
     LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
@@ -4921,21 +4946,6 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerTRUNC(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
-  case TargetOpcode::G_VECREDUCE_SEQ_FDOT: {
-    // G_VECREDUCE_SEQ_FDOT(dst, acc, vecA, vecB) ->
-    //   G_FMUL(vecA, vecB), G_VECREDUCE_SEQ_FADD(acc, products)
-    Register DstReg = MI.getOperand(0).getReg();
-    Register AccReg = MI.getOperand(1).getReg();
-    Register VecA = MI.getOperand(2).getReg();
-    Register VecB = MI.getOperand(3).getReg();
-    LLT VecTy = MRI.getType(VecA);
-    unsigned Flags = MI.getFlags();
-    auto Products = MIRBuilder.buildFMul(VecTy, VecA, VecB, Flags);
-    MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_SEQ_FADD, {DstReg},
-                          {AccReg, Products.getReg(0)}, Flags);
-    MI.eraseFromParent();
-    return Legalized;
-  }
   case G_VAARG:
     return lowerVAArg(MI);
   case G_ATOMICRMW_SUB: {
@@ -5732,6 +5742,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorReductions(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_VECREDUCE_SEQ_FADD:
   case TargetOpcode::G_VECREDUCE_SEQ_FMUL:
+  case TargetOpcode::G_VECREDUCE_SEQ_FDOT:
     return fewerElementsVectorSeqReductions(MI, TypeIdx, NarrowTy);
   case G_SHUFFLE_VECTOR:
     return fewerElementsVectorShuffle(MI, TypeIdx, NarrowTy);
@@ -5926,6 +5937,64 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
 
 LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
     MachineInstr &MI, unsigned int TypeIdx, LLT NarrowTy) {
+  if (MI.getOpcode() == TargetOpcode::G_VECREDUCE_FDOT) {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    Register DstReg = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    Register VecAReg = MI.getOperand(1).getReg();
+    Register VecBReg = MI.getOperand(2).getReg();
+    LLT VecTy = MRI.getType(VecAReg);
+
+    if (NarrowTy.isVector() &&
+        VecTy.getNumElements() % NarrowTy.getNumElements() != 0)
+      return UnableToLegalize;
+
+    const unsigned NumParts =
+        NarrowTy.isVector() ? VecTy.getNumElements() / NarrowTy.getNumElements()
+                            : VecTy.getNumElements();
+
+    SmallVector<Register> SplitA, SplitB;
+    extractParts(VecAReg, NarrowTy, NumParts, SplitA, MIRBuilder, MRI);
+    extractParts(VecBReg, NarrowTy, NumParts, SplitB, MIRBuilder, MRI);
+
+    SmallVector<Register> Partials;
+    for (unsigned I = 0; I < NumParts; I++) {
+      if (NarrowTy.isScalar())
+        Partials.push_back(
+            MIRBuilder.buildFMul(DstTy, SplitA[I], SplitB[I], MI.getFlags())
+                .getReg(0));
+      else
+        Partials.push_back(
+            MIRBuilder
+                .buildInstr(TargetOpcode::G_VECREDUCE_FDOT, {DstTy},
+                            {SplitA[I], SplitB[I]}, MI.getFlags())
+                .getReg(0));
+    }
+
+    if (isPowerOf2_32(NumParts)) {
+      while (Partials.size() > 1) {
+        SmallVector<Register> Next;
+        for (unsigned I = 0; I + 1 < Partials.size(); I += 2)
+          Next.push_back(
+              MIRBuilder
+                  .buildFAdd(DstTy, Partials[I], Partials[I + 1], MI.getFlags())
+                  .getReg(0));
+        Partials = Next;
+      }
+    } else {
+      for (unsigned I = 1; I < NumParts; I++)
+        Partials[0] = MIRBuilder
+                          .buildFAdd(DstTy, Partials[0], Partials[I],
+                                     MI.getFlags())
+                          .getReg(0);
+    }
+    MIRBuilder.buildCopy(DstReg, Partials[0]);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
   auto &RdxMI = cast<GVecReduce>(MI);
 
   if (TypeIdx != 1)
@@ -6014,6 +6083,33 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::fewerElementsVectorSeqReductions(MachineInstr &MI,
                                                   unsigned int TypeIdx,
                                                   LLT NarrowTy) {
+  if (MI.getOpcode() == TargetOpcode::G_VECREDUCE_SEQ_FDOT) {
+    Register DstReg = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    Register AccReg = MI.getOperand(1).getReg();
+    Register VecAReg = MI.getOperand(2).getReg();
+    Register VecBReg = MI.getOperand(3).getReg();
+    LLT VecTy = MRI.getType(VecAReg);
+
+    if (!NarrowTy.isScalar() || TypeIdx != 2 || DstTy != MRI.getType(AccReg) ||
+        DstTy != NarrowTy)
+      return UnableToLegalize;
+
+    const unsigned NumParts = VecTy.getNumElements();
+    SmallVector<Register> SplitA, SplitB;
+    extractParts(VecAReg, NarrowTy, NumParts, SplitA, MIRBuilder, MRI);
+    extractParts(VecBReg, NarrowTy, NumParts, SplitB, MIRBuilder, MRI);
+
+    Register Acc = AccReg;
+    for (unsigned I = 0; I < NumParts; I++) {
+      auto Mul = MIRBuilder.buildFMul(DstTy, SplitA[I], SplitB[I], MI.getFlags());
+      Acc = MIRBuilder.buildFAdd(DstTy, Acc, Mul, MI.getFlags()).getReg(0);
+    }
+    MIRBuilder.buildCopy(DstReg, Acc);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
   auto [DstReg, DstTy, ScalarReg, ScalarTy, SrcReg, SrcTy] =
       MI.getFirst3RegLLTs();
   if (!NarrowTy.isScalar() || TypeIdx != 2 || DstTy != ScalarTy ||
@@ -6689,6 +6785,8 @@ MachineInstrBuilder LegalizerHelper::getNeutralElementForVecReduce(
     return MIRBuilder.buildFConstant(Ty, -0.0);
   case TargetOpcode::G_VECREDUCE_FMUL:
     return MIRBuilder.buildFConstant(Ty, 1.0);
+  case TargetOpcode::G_VECREDUCE_FDOT:
+    return MIRBuilder.buildFConstant(Ty, 0.0);
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:
     assert(false && "getNeutralElementForVecReduce unimplemented for "
@@ -6924,6 +7022,37 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     Observer.changingInstr(MI);
     moreElementsVectorSrc(MI, NewTy, 1);
     moreElementsVectorDst(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_VECREDUCE_FDOT:
+  case TargetOpcode::G_VECREDUCE_SEQ_FDOT: {
+    bool IsSeq = MI.getOpcode() == TargetOpcode::G_VECREDUCE_SEQ_FDOT;
+    unsigned VecAIdx = IsSeq ? 2 : 1;
+    unsigned VecBIdx = IsSeq ? 3 : 2;
+    if (TypeIdx != (IsSeq ? 2u : 1u))
+      return UnableToLegalize;
+
+    LLT OrigTy = MRI.getType(MI.getOperand(VecAIdx).getReg());
+    auto NeutralElement = getNeutralElementForVecReduce(
+        TargetOpcode::G_VECREDUCE_FDOT, MIRBuilder, MoreTy.getElementType());
+    LLT IdxTy(TLI.getVectorIdxLLT(MIRBuilder.getDataLayout()));
+
+    auto PadWithZero = [&](unsigned OpIdx) -> Register {
+      MachineOperand &MO = MI.getOperand(OpIdx);
+      auto NewVec = MIRBuilder.buildPadVectorWithUndefElements(MoreTy, MO);
+      for (size_t I = OrigTy.getNumElements(), E = MoreTy.getNumElements();
+           I != E; I++) {
+        auto Idx = MIRBuilder.buildConstant(IdxTy, I);
+        NewVec = MIRBuilder.buildInsertVectorElement(MoreTy, NewVec,
+                                                     NeutralElement, Idx);
+      }
+      return NewVec.getReg(0);
+    };
+
+    Observer.changingInstr(MI);
+    MI.getOperand(VecAIdx).setReg(PadWithZero(VecAIdx));
+    MI.getOperand(VecBIdx).setReg(PadWithZero(VecBIdx));
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -10484,20 +10613,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
-  // G_VECREDUCE_FDOT(dst, vecA, vecB) -> G_FMUL(vecA, vecB), G_VECREDUCE_FADD(products)
-  if (MI.getOpcode() == TargetOpcode::G_VECREDUCE_FDOT) {
-    Register DstReg = MI.getOperand(0).getReg();
-    Register VecA = MI.getOperand(1).getReg();
-    Register VecB = MI.getOperand(2).getReg();
-    LLT VecTy = MRI.getType(VecA);
-    unsigned Flags = MI.getFlags();
-    auto Products = MIRBuilder.buildFMul(VecTy, VecA, VecB, Flags);
-    MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_FADD, {DstReg},
-                          {Products.getReg(0)}, Flags);
-    MI.eraseFromParent();
-    return Legalized;
-  }
-
   Register SrcReg = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(SrcReg);
   LLT DstTy = MRI.getType(SrcReg);
