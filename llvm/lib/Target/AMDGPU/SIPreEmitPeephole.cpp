@@ -401,6 +401,30 @@ bool SIPreEmitPeephole::getBlockDestinations(
   return true;
 }
 
+static bool isAsyncLoadToLDS(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_SADDR:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B32:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B32_SADDR:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B64:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B128:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B128_SADDR:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B8:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B8_SADDR:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B32:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B32_SADDR:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B64:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B64_SADDR:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B128:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B128_SADDR:
+    return true;
+  default:
+    return false;
+  }
+}
+
 namespace {
 class BranchWeightCostModel {
   const SIInstrInfo &TII;
@@ -428,14 +452,13 @@ public:
     if (TII.isWaitcnt(MI.getOpcode()))
       return false;
 
-    // Async loads to LDS use the issue cost (1 cycle) instead of the
+    // gfx1250 async loads to LDS: use issue cost (1 cycle) instead of the
     // scheduling model's resource latency so the cost model can remove the
-    // execz branch when the block is cheap enough. Only loads are
-    // overridden; async stores risk writing zeros to global memory for
-    // OOB LDS source addresses. Async loads have a vdst operand (LDS
-    // destination); stores do not.
-    if (SIInstrInfo::usesASYNC_CNT(MI) &&
-        TII.getNamedOperand(MI, AMDGPU::OpName::vdst))
+    // execz branch when the block is cheap enough. The HW drops async
+    // loads when the LDS destination address is OOB, so executing at
+    // EXEC=0 is safe. Async stores are NOT overridden: the HW reads
+    // zeros from OOB LDS sources and writes them to global memory.
+    if (isAsyncLoadToLDS(MI.getOpcode()))
       ThenCyclesCost += 1;
     else
       ThenCyclesCost += SchedModel.computeInstrLatency(&MI);
