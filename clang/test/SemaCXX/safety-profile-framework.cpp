@@ -67,8 +67,9 @@ void suppressed_func();
 // Suppress on statements
 // ===================================================================
 void test_stmt_suppress() {
-  [[profiles::suppress(test::type_cast)]] int x = 0;
-  [[profiles::suppress(test::type_cast)]] { int y = 0; }
+  [[profiles::suppress(test::type_cast)]] int *x = reinterpret_cast<int*>(0);
+  [[profiles::suppress(test::type_cast)]] { int *y = reinterpret_cast<int*>(0); }
+  int *z = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }
 
 // ===================================================================
