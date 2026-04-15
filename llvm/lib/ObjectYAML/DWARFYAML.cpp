@@ -304,13 +304,17 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
     IO.mapOptional("DirectoryEntryFormatCount",
                    LineTable.DirectoryEntryFormatCount,
                    LineTable.DirectoryEntryFormat.size());
+    IO.mapRequired("Directories", LineTable.Directories);
+    IO.mapOptional("DirectoriesCount", LineTable.DirectoriesCount,
+                   LineTable.Directories.size());
 
     IO.mapRequired("FileNameEntryFormat", LineTable.FileNameEntryFormat);
     IO.mapOptional("FileNameEntryFormatCount",
                    LineTable.FileNameEntryFormatCount,
                    LineTable.FileNameEntryFormat.size());
-
-    // TODO: Add support for directory and file entries.
+    IO.mapRequired("FileNames", LineTable.FileNames);
+    IO.mapOptional("FileNamesCount", LineTable.FileNamesCount,
+                   LineTable.FileNames.size());
   } else {
     IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
     IO.mapOptional("Files", LineTable.Files);
