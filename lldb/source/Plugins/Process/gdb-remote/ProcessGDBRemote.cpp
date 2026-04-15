@@ -6017,9 +6017,10 @@ CommandObject *ProcessGDBRemote::GetPluginCommandObject() {
   return m_command_sp.get();
 }
 
-void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(bool enable) {
+void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(
+    bool enable, bool is_expression_fork) {
   Log *log = GetLog(GDBRLog::Process);
-  bool is_expr = !enable && GetModIDRef().IsRunningExpression();
+  bool is_expr = !enable && is_expression_fork;
 
   GetBreakpointSiteList().ForEach([this, enable, is_expr,
                                    log](BreakpointSite *bp_site) {
@@ -6065,14 +6066,15 @@ void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
   }
 }
 
-void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
+void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                               bool is_expression_fork) {
   Log *log = GetLog(GDBRLog::Process);
 
   // During expression evaluation, force follow-parent. The expression is
   // running on the parent's thread and following the child would cause the
   // expression thread to vanish (the child has different thread IDs).
   FollowForkMode follow_fork_mode = GetFollowForkMode();
-  if (follow_fork_mode == eFollowChild && GetModIDRef().IsRunningExpression()) {
+  if (follow_fork_mode == eFollowChild && is_expression_fork) {
     LLDB_LOG(log, "ProcessGDBRemote::DidFork() overriding follow-fork-mode "
                   "to parent during expression evaluation");
     follow_fork_mode = eFollowParent;
@@ -6109,7 +6111,7 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 
   // Disable all software breakpoints in the forked process.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
-    DidForkSwitchSoftwareBreakpoints(false);
+    DidForkSwitchSoftwareBreakpoints(false, is_expression_fork);
 
   // Remove hardware breakpoints / watchpoints from parent process if we're
   // following child.
@@ -6140,7 +6142,8 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   }
 }
 
-void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
+void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                                bool is_expression_fork) {
   Log *log = GetLog(GDBRLog::Process);
 
   LLDB_LOG(
@@ -6151,7 +6154,7 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 
   // See comment in DidFork(): force follow-parent during expression evaluation.
   FollowForkMode follow_fork_mode = GetFollowForkMode();
-  if (follow_fork_mode == eFollowChild && GetModIDRef().IsRunningExpression()) {
+  if (follow_fork_mode == eFollowChild && is_expression_fork) {
     LLDB_LOG(log, "ProcessGDBRemote::DidVFork() overriding follow-fork-mode "
                   "to parent during expression evaluation");
     follow_fork_mode = eFollowParent;
@@ -6159,7 +6162,7 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 
   // Disable all software breakpoints for the duration of vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
-    DidForkSwitchSoftwareBreakpoints(false);
+    DidForkSwitchSoftwareBreakpoints(false, is_expression_fork);
 
   lldb::pid_t detach_pid;
   lldb::tid_t detach_tid;

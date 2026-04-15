@@ -1466,6 +1466,7 @@ protected:
   bool m_performed_action = false;
 };
 
+
 // StopInfoFork
 
 class StopInfoFork : public StopInfo {
@@ -1481,10 +1482,15 @@ public:
     // reaches RunThreadPlan as a real stop (not auto-restarted by
     // DoOnRemoval). RunThreadPlan decides whether to stop or continue
     // based on the stop-on-fork option.
+    //
+    // We check per-thread (not just process-wide IsRunningExpression)
+    // because other threads may fork concurrently after the
+    // try-all-threads timeout releases them.
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
       ProcessSP process_sp = thread_sp->GetProcess();
-      if (process_sp && process_sp->GetModIDRef().IsRunningExpression())
+      if (process_sp && process_sp->GetModIDRef().IsRunningExpression() &&
+          thread_sp->IsRunningCallFunctionPlan())
         return true;
     }
     return false;
@@ -1509,8 +1515,13 @@ protected:
       return;
     m_performed_action = true;
     ThreadSP thread_sp(m_thread_wp.lock());
-    if (thread_sp)
-      thread_sp->GetProcess()->DidFork(m_child_pid, m_child_tid);
+    if (thread_sp) {
+      bool is_expression_fork =
+          thread_sp->GetProcess()->GetModIDRef().IsRunningExpression() &&
+          thread_sp->IsRunningCallFunctionPlan();
+      thread_sp->GetProcess()->DidFork(m_child_pid, m_child_tid,
+                                       is_expression_fork);
+    }
   }
 
   bool m_performed_action = false;
@@ -1534,7 +1545,8 @@ public:
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
       ProcessSP process_sp = thread_sp->GetProcess();
-      if (process_sp && process_sp->GetModIDRef().IsRunningExpression())
+      if (process_sp && process_sp->GetModIDRef().IsRunningExpression() &&
+          thread_sp->IsRunningCallFunctionPlan())
         return true;
     }
     return false;
@@ -1558,8 +1570,13 @@ protected:
       return;
     m_performed_action = true;
     ThreadSP thread_sp(m_thread_wp.lock());
-    if (thread_sp)
-      thread_sp->GetProcess()->DidVFork(m_child_pid, m_child_tid);
+    if (thread_sp) {
+      bool is_expression_fork =
+          thread_sp->GetProcess()->GetModIDRef().IsRunningExpression() &&
+          thread_sp->IsRunningCallFunctionPlan();
+      thread_sp->GetProcess()->DidVFork(m_child_pid, m_child_tid,
+                                        is_expression_fork);
+    }
   }
 
   bool m_performed_action = false;
@@ -1581,7 +1598,8 @@ public:
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
       ProcessSP process_sp = thread_sp->GetProcess();
-      if (process_sp && process_sp->GetModIDRef().IsRunningExpression())
+      if (process_sp && process_sp->GetModIDRef().IsRunningExpression() &&
+          thread_sp->IsRunningCallFunctionPlan())
         return true;
     }
     return false;
