@@ -48,11 +48,9 @@ class SIShrinkInstructions {
   bool shrinkMadFma(MachineInstr &MI) const;
   ChangeKind shrinkScalarLogicOp(MachineInstr &MI) const;
   bool tryReplaceDeadSDST(MachineInstr &MI) const;
-  bool instAccessReg(iterator_range<MachineInstr::const_mop_iterator> &&R,
-                     Register Reg, unsigned SubReg) const;
-  bool instReadsReg(const MachineInstr *MI, unsigned Reg,
+  bool instReadsReg(const MachineInstr *MI, Register Reg,
                     unsigned SubReg) const;
-  bool instModifiesReg(const MachineInstr *MI, unsigned Reg,
+  bool instModifiesReg(const MachineInstr *MI, Register Reg,
                        unsigned SubReg) const;
   TargetInstrInfo::RegSubRegPair getSubRegForIndex(Register Reg, unsigned Sub,
                                                    unsigned I) const;
@@ -617,12 +615,11 @@ ChangeKind SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
   return ChangeKind::None;
 }
 
-// This is the same as MachineInstr::readsRegister/modifiesRegister except
+// This is the same as MachineInstr::readsRegister except
 // it takes subregs into account.
-bool SIShrinkInstructions::instAccessReg(
-    iterator_range<MachineInstr::const_mop_iterator> &&R, Register Reg,
-    unsigned SubReg) const {
-  for (const MachineOperand &MO : R) {
+bool SIShrinkInstructions::instReadsReg(const MachineInstr *MI, Register Reg,
+                                        unsigned SubReg) const {
+  for (const MachineOperand &MO : MI->all_uses()) {
     if (!MO.isReg())
       continue;
 
@@ -639,14 +636,25 @@ bool SIShrinkInstructions::instAccessReg(
   return false;
 }
 
-bool SIShrinkInstructions::instReadsReg(const MachineInstr *MI, unsigned Reg,
-                                        unsigned SubReg) const {
-  return instAccessReg(MI->uses(), Reg, SubReg);
-}
-
-bool SIShrinkInstructions::instModifiesReg(const MachineInstr *MI, unsigned Reg,
+// This is the same as MachineInstr::modifiesRegister except
+// it takes subregs into account.
+bool SIShrinkInstructions::instModifiesReg(const MachineInstr *MI, Register Reg,
                                            unsigned SubReg) const {
-  return instAccessReg(MI->defs(), Reg, SubReg);
+  for (const MachineOperand &MO : MI->all_defs()) {
+    if (!MO.isReg())
+      continue;
+
+    if (Reg.isPhysical() && MO.getReg().isPhysical()) {
+      if (TRI->regsOverlap(Reg, MO.getReg()))
+        return true;
+    } else if (MO.getReg() == Reg && Reg.isVirtual()) {
+      LaneBitmask Overlap = TRI->getSubRegIndexLaneMask(SubReg) &
+                            TRI->getSubRegIndexLaneMask(MO.getSubReg());
+      if (Overlap.any())
+        return true;
+    }
+  }
+  return false;
 }
 
 TargetInstrInfo::RegSubRegPair
