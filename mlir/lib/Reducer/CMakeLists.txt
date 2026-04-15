@@ -9,9 +9,11 @@ add_mlir_library(MLIRReduce
    MLIRPass
    MLIRRewrite
    MLIRTransformUtils
+   MLIRControlFlowDialect
 
    DEPENDS
    MLIRReducerIncGen
+   MLIRDialectReductionPatternInterfaceIncGen
 )
 
 mlir_check_all_link_libraries(MLIRReduce)

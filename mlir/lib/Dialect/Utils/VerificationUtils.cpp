@@ -20,3 +20,32 @@ LogicalResult mlir::verifyDynamicDimensionCount(Operation *op, ShapedType type,
   }
   return success();
 }
+
+LogicalResult mlir::verifyRanksMatch(Operation *op, ShapedType lhs,
+                                     ShapedType rhs, StringRef lhsName,
+                                     StringRef rhsName) {
+  if (!lhs.hasRank() || !rhs.hasRank())
+    return success(); // Unranked types are considered compatible
+
+  int64_t rank1 = lhs.getRank();
+  int64_t rank2 = rhs.getRank();
+  if (rank1 != rank2) {
+    return op->emitOpError()
+           << lhsName << " rank (" << rank1 << ") does not match " << rhsName
+           << " rank (" << rank2 << ")";
+  }
+  return success();
+}
+
+LogicalResult mlir::verifyElementTypesMatch(Operation *op, ShapedType lhs,
+                                            ShapedType rhs, StringRef lhsName,
+                                            StringRef rhsName) {
+  Type lhsElementType = lhs.getElementType();
+  Type rhsElementType = rhs.getElementType();
+  if (lhsElementType != rhsElementType) {
+    return op->emitOpError() << lhsName << " element type (" << lhsElementType
+                             << ") does not match " << rhsName
+                             << " element type (" << rhsElementType << ")";
+  }
+  return success();
+}

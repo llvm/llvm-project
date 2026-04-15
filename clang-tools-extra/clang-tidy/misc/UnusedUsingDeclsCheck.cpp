@@ -20,13 +20,13 @@ namespace clang::tidy::misc {
 namespace {
 
 AST_MATCHER_P(DeducedTemplateSpecializationType, refsToTemplatedDecl,
-              clang::ast_matchers::internal::Matcher<NamedDecl>, DeclMatcher) {
+              ast_matchers::internal::Matcher<NamedDecl>, DeclMatcher) {
   if (const auto *TD = Node.getTemplateName().getAsTemplateDecl())
     return DeclMatcher.matches(*TD, Finder, Builder);
   return false;
 }
 
-AST_MATCHER_P(Type, asTagDecl, clang::ast_matchers::internal::Matcher<TagDecl>,
+AST_MATCHER_P(Type, asTagDecl, ast_matchers::internal::Matcher<TagDecl>,
               DeclMatcher) {
   if (const TagDecl *ND = Node.getAsTagDecl())
     return DeclMatcher.matches(*ND, Finder, Builder);
@@ -97,6 +97,12 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     // moment because of false positives caused by ADL and different function
     // scopes.
     if (isa<FunctionDecl>(Using->getDeclContext()))
+      return;
+
+    // Ignore exported using-decls.
+    if (Using->hasOwningModule() &&
+        Using->getModuleOwnershipKind() <=
+            Decl::ModuleOwnershipKind::VisibleWhenImported)
       return;
 
     UsingDeclContext Context(Using);

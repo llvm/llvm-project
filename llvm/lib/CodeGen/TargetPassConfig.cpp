@@ -110,9 +110,6 @@ static cl::opt<bool> EnableImplicitNullChecks(
     "enable-implicit-null-checks",
     cl::desc("Fold null checks into faulting memory operations"),
     cl::init(false), cl::Hidden);
-static cl::opt<bool> DisableMergeICmps("disable-mergeicmps",
-    cl::desc("Disable MergeICmps Pass"),
-    cl::init(false), cl::Hidden);
 static cl::opt<bool>
     PrintISelInput("print-isel-input", cl::Hidden,
                    cl::desc("Print LLVM IR input to isel pass"));
@@ -266,9 +263,9 @@ static cl::opt<bool> DisableSelectOptimize(
     cl::desc("Disable the select-optimization pass from running"));
 
 /// Enable garbage-collecting empty basic blocks.
-static cl::opt<bool>
-    GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
-                  cl::desc("Enable garbage-collecting empty basic blocks"));
+static cl::opt<bool> EnableGCEmptyBlocks(
+    "enable-gc-empty-basic-blocks", cl::init(false), cl::Hidden,
+    cl::desc("Enable garbage-collecting empty basic blocks"));
 
 static cl::opt<bool>
     SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
@@ -510,7 +507,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(DisableExpandReductions)
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
-  SET_OPTION(GCEmptyBlocks)
+  SET_OPTION(EnableGCEmptyBlocks)
 
 #define SET_BOOLEAN_OPTION(Option) Opt.Option = Option;
 
@@ -520,7 +517,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(EnableImplicitNullChecks)
   SET_BOOLEAN_OPTION(EnableMachineOutliner)
   SET_BOOLEAN_OPTION(MISchedPostRA)
-  SET_BOOLEAN_OPTION(DisableMergeICmps)
   SET_BOOLEAN_OPTION(DisableLSR)
   SET_BOOLEAN_OPTION(DisableConstantHoisting)
   SET_BOOLEAN_OPTION(DisableCGP)
@@ -609,6 +605,8 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
   // Register all target independent codegen passes to activate their PassIDs,
   // including this pass itself.
   initializeCodeGen(PR);
+
+  initializeLibcallLoweringInfoWrapperPass(PR);
 
   // Also register alias analysis passes required by codegen passes.
   initializeBasicAAWrapperPassPass(PR);
@@ -861,14 +859,6 @@ void TargetPassConfig::addIRPasses() {
       if (EnableLoopTermFold)
         addPass(createLoopTermFoldPass());
     }
-
-    // The MergeICmpsPass tries to create memcmp calls by grouping sequences of
-    // loads and compares. ExpandMemCmpPass then tries to expand those calls
-    // into optimally-sized loads and compares. The transforms are enabled by a
-    // target lowering hook.
-    if (!DisableMergeICmps)
-      addPass(createMergeICmpsLegacyPass());
-    addPass(createExpandMemCmpLegacyPass());
   }
 
   // Run GC lowering passes for builtin collectors
@@ -980,10 +970,7 @@ void TargetPassConfig::addISelPrepare() {
   if (requiresCodeGenSCCOrder())
     addPass(new DummyCGSCCPass);
 
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createObjCARCContractPass());
-
-  addPass(createCallBrPass());
+  addPass(createInlineAsmPreparePass());
 
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
@@ -1093,6 +1080,10 @@ bool TargetPassConfig::addISelPasses() {
     addPass(createLowerEmuTLSPass());
 
   PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  // ObjCARCContract operates on ObjC intrinsics and must run before
+  // PreISelIntrinsicLowering.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createObjCARCContractPass());
   addPass(createPreISelIntrinsicLoweringPass());
   addPass(createExpandIRInstsPass(getOptLevel()));
   addIRPasses();
@@ -1249,7 +1240,7 @@ void TargetPassConfig::addMachinePasses() {
       addPass(createMachineOutlinerPass(EnableMachineOutliner));
   }
 
-  if (GCEmptyBlocks)
+  if (EnableGCEmptyBlocks)
     addPass(llvm::createGCEmptyBasicBlocksLegacyPass());
 
   if (EnableFSDiscriminator)

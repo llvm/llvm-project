@@ -564,7 +564,7 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
             FileSpec(shell_command.GetWorkingDirectory()),
             &shell_command.m_opaque_ptr->m_status,
             &shell_command.m_opaque_ptr->m_signo,
-            &shell_command.m_opaque_ptr->m_output,
+            &shell_command.m_opaque_ptr->m_output, nullptr,
             shell_command.m_opaque_ptr->m_timeout);
       });
 }

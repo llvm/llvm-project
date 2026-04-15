@@ -567,7 +567,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   }
 
   // Some accesses go beyond the end of the global, don't bother.
-  if (Offset > DL.getTypeAllocSize(GV->getValueType()))
+  if (Offset > GV->getGlobalSize(DL))
     return nullptr;
 
   LLVM_DEBUG(dbgs() << "PERFORMING GLOBAL SRA ON: " << *GV << "\n");
@@ -1229,8 +1229,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         DIGlobalVariable *DGV = GVe->getVariable();
         DIExpression *E = GVe->getExpression();
         const DataLayout &DL = GV->getDataLayout();
-        unsigned SizeInOctets =
-            DL.getTypeAllocSizeInBits(NewGV->getValueType()) / 8;
+        unsigned SizeInOctets = NewGV->getGlobalSize(DL);
 
         // It is expected that the address of global optimized variable is on
         // top of the stack. After optimization, value of that variable will
@@ -1585,8 +1584,8 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // shared memory (AS 3).
     auto *SOVConstant = dyn_cast<Constant>(StoredOnceValue);
     if (SOVConstant && isa<UndefValue>(GV->getInitializer()) &&
-        DL.getTypeAllocSize(SOVConstant->getType()) ==
-            DL.getTypeAllocSize(GV->getValueType()) &&
+        DL.getTypeAllocSize(SOVConstant->getType()).getFixedValue() ==
+            GV->getGlobalSize(DL) &&
         CanHaveNonUndefGlobalInitializer) {
       if (SOVConstant->getType() == GV->getValueType()) {
         // Change the initializer in place.
@@ -2062,16 +2061,16 @@ OptimizeGlobalVars(Module &M,
     if (!GV.hasName() && !GV.isDeclaration() && !GV.hasLocalLinkage())
       GV.setLinkage(GlobalValue::InternalLinkage);
     // Simplify the initializer.
-    if (GV.hasInitializer())
-      if (auto *C = dyn_cast<Constant>(GV.getInitializer())) {
-        auto &DL = M.getDataLayout();
-        // TLI is not used in the case of a Constant, so use default nullptr
-        // for that optional parameter, since we don't have a Function to
-        // provide GetTLI anyway.
-        Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
-        if (New != C)
-          GV.setInitializer(New);
-      }
+    if (GV.hasInitializer()) {
+      const Constant *C = GV.getInitializer();
+      auto &DL = M.getDataLayout();
+      // TLI is not used in the case of a Constant, so use default nullptr
+      // for that optional parameter, since we don't have a Function to
+      // provide GetTLI anyway.
+      Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
+      if (New != C)
+        GV.setInitializer(New);
+    }
 
     if (deleteIfDead(GV, NotDiscardableComdats)) {
       Changed = true;

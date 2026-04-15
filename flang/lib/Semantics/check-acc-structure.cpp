@@ -668,11 +668,6 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim = std::get<parser::Verbatim>(x.t);
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
-  if (loopNestLevel == 0) {
-    context_.Say(
-        verbatim.source, "The CACHE directive must be inside a loop"_err_en_US);
-  }
-
   // Check cache directive array section constraints
   const auto &objectListWithModifier =
       std::get<parser::AccObjectListWithModifier>(x.t);
@@ -688,17 +683,12 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
                 if (const auto *arrayElem =
                         std::get_if<common::Indirection<parser::ArrayElement>>(
                             &dataRef->u)) {
-                  for (const auto &subscript : arrayElem->value().subscripts) {
+                  for (const auto &subscript :
+                      arrayElem->value().Subscripts()) {
                     if (const auto *triplet =
                             std::get_if<parser::SubscriptTriplet>(
                                 &subscript.u)) {
-                      const auto &lower{std::get<0>(triplet->t)};
-                      const auto &upper{std::get<1>(triplet->t)};
                       const auto &stride{std::get<2>(triplet->t)};
-                      if (!lower && !upper) {
-                        context_.Say(designator.source,
-                            "The CACHE directive requires at least one of the bounds in the array section subscript triplet to be specified"_err_en_US);
-                      }
                       if (stride) {
                         if (auto strideVal{GetIntValue(*stride)}) {
                           if (*strideVal != 1) {

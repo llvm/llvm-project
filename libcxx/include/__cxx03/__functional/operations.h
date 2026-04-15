@@ -67,7 +67,7 @@ struct _LIBCPP_TEMPLATE_VIS modulus : __binary_function<_Tp, _Tp, _Tp> {
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(modulus);
 
-template <class _Tp = void>
+template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS negate : __unary_function<_Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
   _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x) const { return -__x; }
@@ -90,7 +90,7 @@ struct _LIBCPP_TEMPLATE_VIS bit_or : __binary_function<_Tp, _Tp, _Tp> {
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_or);
 
-template <class _Tp = void>
+template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS bit_xor : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
   _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x ^ __y; }

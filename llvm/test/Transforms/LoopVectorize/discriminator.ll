@@ -15,11 +15,11 @@
 ;  6     a[i] += b[i];
 ;  7 }
 
-@a = local_unnamed_addr global ptr null, align 8
-@b = local_unnamed_addr global ptr null, align 8
+@a = global ptr null, align 8
+@b = global ptr null, align 8
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
+define void @_Z3foov() #0 !dbg !6 {
   %1 = load ptr, ptr @b, align 8, !dbg !8, !tbaa !9
   %2 = load ptr, ptr @a, align 8, !dbg !13, !tbaa !9
   br label %3, !dbg !14

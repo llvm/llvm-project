@@ -66,8 +66,9 @@ protected:
       report_fatal_error("SelectionDAG allocation failed");
 
     OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, /*LibInfo*/ nullptr, /*AA*/ nullptr,
-              /*AC*/ nullptr, /*MDT*/ nullptr, /*MSDT*/ nullptr, MMI, nullptr);
+    DAG->init(*MF, ORE, /*LibInfo=*/nullptr, /*LibcallsInfo=*/nullptr,
+              /*AA=*/nullptr,
+              /*AC=*/nullptr, /*MDT=*/nullptr, /*MSDT=*/nullptr, MMI, nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {

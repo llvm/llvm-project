@@ -308,9 +308,7 @@ class SelectOptimize : public FunctionPass {
 public:
   static char ID;
 
-  SelectOptimize() : FunctionPass(ID) {
-    initializeSelectOptimizePass(*PassRegistry::getPassRegistry());
-  }
+  SelectOptimize() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
@@ -661,7 +659,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // These are the new basic blocks for the conditional branch.
     // At least one will become an actual new basic block.
     BasicBlock *TrueBlock = nullptr, *FalseBlock = nullptr;
-    BranchInst *TrueBranch = nullptr, *FalseBranch = nullptr;
+    UncondBrInst *TrueBranch = nullptr, *FalseBranch = nullptr;
     // Checks if select-like instruction would materialise on the given branch
     auto HasSelectLike = [](SelectGroup &SG, bool IsTrue) {
       for (auto &SL : SG.Selects) {
@@ -673,7 +671,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     if (!TrueSlicesInterleaved.empty() || HasSelectLike(ASI, true)) {
       TrueBlock = BasicBlock::Create(EndBlock->getContext(), "select.true.sink",
                                      EndBlock->getParent(), EndBlock);
-      TrueBranch = BranchInst::Create(EndBlock, TrueBlock);
+      TrueBranch = UncondBrInst::Create(EndBlock, TrueBlock);
       TrueBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *TrueInst : TrueSlicesInterleaved)
         TrueInst->moveBefore(TrueBranch->getIterator());
@@ -682,7 +680,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       FalseBlock =
           BasicBlock::Create(EndBlock->getContext(), "select.false.sink",
                              EndBlock->getParent(), EndBlock);
-      FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
+      FalseBranch = UncondBrInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *FalseInst : FalseSlicesInterleaved)
         FalseInst->moveBefore(FalseBranch->getIterator());
@@ -695,7 +693,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
 
       FalseBlock = BasicBlock::Create(StartBlock->getContext(), "select.false",
                                       EndBlock->getParent(), EndBlock);
-      auto *FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
+      auto *FalseBranch = UncondBrInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(SI.getI()->getDebugLoc());
     }
 

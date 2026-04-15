@@ -74,6 +74,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_LIBS_DIR=" + rebase_path("$root_out_dir/lib", dir),
     "LLVM_LINK_LLVM_DYLIB=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
+    "LLVM_IR2VEC_TEST_PYTHON_BINDINGS=0",
     "LLVM_NATIVE_ARCH=$native_target",
     "LLVM_TOOL_LLVM_DRIVER_BUILD=0",  # FIXME: Add actual support for this.
     "LLVM_USE_INTEL_JITEVENTS=0",
@@ -262,11 +263,11 @@ group("test") {
     # lit tests run.
     "//llvm/lib/LineEditor",
     "//llvm/lib/Testing/Support",
-    "//llvm/tools/bugpoint",
     "//llvm/tools/dsymutil",
     "//llvm/tools/llc",
     "//llvm/tools/lli",
     "//llvm/tools/lli/ChildTarget:lli-child-target",
+    "//llvm/tools/llubi",
     "//llvm/tools/llvm-ar:symlinks",
     "//llvm/tools/llvm-as",
     "//llvm/tools/llvm-bcanalyzer",
@@ -353,12 +354,6 @@ group("test") {
     # its tests, but nothing in the tree depends on them.
     "//third-party/unittest/UnitTestMain:gtest_main",
   ]
-  if (host_os != "win") {
-    # loadable_modules don't work on Windows.
-    # FIXME: In the CMake build, ENABLE_SHARED makes them work somehow
-    # (but they're off by default there too).
-    deps += [ "//llvm/tools/bugpoint-passes" ]
-  }
 
   # FIXME: llvm_build_examples
   testonly = true

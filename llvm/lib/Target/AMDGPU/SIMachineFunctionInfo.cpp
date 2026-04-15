@@ -37,7 +37,7 @@ static cl::opt<bool, true> MFMAVGPRFormOpt(
     "amdgpu-mfma-vgpr-form",
     cl::desc("Whether to force use VGPR for Opc and Dest of MFMA. If "
              "unspecified, default to compiler heuristics"),
-    cl::location(SIMachineFunctionInfo::MFMAVGPRForm), cl::init(false),
+    cl::location(SIMachineFunctionInfo::MFMAVGPRForm), cl::init(true),
     cl::Hidden);
 
 const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
@@ -49,12 +49,12 @@ bool SIMachineFunctionInfo::MFMAVGPRForm = false;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
-    : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
-      UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
-      WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
-      PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
-      WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
-      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
+    : AMDGPUMachineFunctionInfo(F, *STI), Mode(F, *STI),
+      GWSResourcePSV(getTM(STI)), UserSGPRInfo(F, *STI), WorkGroupIDX(false),
+      WorkGroupIDY(false), WorkGroupIDZ(false), WorkGroupInfo(false),
+      LDSKernelId(false), PrivateSegmentWaveByteOffset(false),
+      WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
+      ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
       IsWholeWaveFunction(F.getCallingConv() ==
                           CallingConv::AMDGPU_Gfx_WholeWave) {
   const GCNSubtarget &ST = *STI;
@@ -93,37 +93,27 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     MinNumAGPRs = MinNumAGPRAttr;
   }
 
-  if (AMDGPU::isChainCC(CC)) {
-    // Chain functions don't receive an SP from their caller, but are free to
-    // set one up. For now, we can use s32 to match what amdgpu_gfx functions
-    // would use if called, but this can be revisited.
-    // FIXME: Only reserve this if we actually need it.
-    StackPtrOffsetReg = AMDGPU::SGPR32;
-
-    ScratchRSrcReg = AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51;
-
-    ArgInfo.PrivateSegmentBuffer =
-        ArgDescriptor::createRegister(ScratchRSrcReg);
-
-    ImplicitArgPtr = false;
-  } else if (!isEntryFunction()) {
+  if (!isEntryFunction()) {
     if (CC != CallingConv::AMDGPU_Gfx &&
         CC != CallingConv::AMDGPU_Gfx_WholeWave)
-      ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
+      ArgInfo = AMDGPUFunctionArgInfo::FixedABIFunctionInfo;
 
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 
-    if (!ST.enableFlatScratch()) {
+    if (!ST.hasFlatScratchEnabled()) {
       // Non-entry functions have no special inputs for now, other registers
       // required for scratch access.
-      ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+      ScratchRSrcReg = AMDGPU::isChainCC(CC)
+                           ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
+                           : ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
 
       ArgInfo.PrivateSegmentBuffer =
         ArgDescriptor::createRegister(ScratchRSrcReg);
     }
 
-    if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr"))
+    if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr") &&
+        !AMDGPU::isChainCC(CC))
       ImplicitArgPtr = true;
   } else {
     ImplicitArgPtr = false;
@@ -169,7 +159,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (WorkItemIDZ)
       WorkItemIDY = true;
 
-    if (!ST.flatScratchIsArchitected()) {
+    if (!ST.hasArchitectedFlatScratch()) {
       PrivateSegmentWaveByteOffset = true;
 
       // HS and GS always have the scratch wave offset in SGPR5 on GFX9.
@@ -692,7 +682,7 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
     if (Arg.isMasked())
       SA.Mask = Arg.getMask();
 
-    A = SA;
+    A = std::move(SA);
     return true;
   };
 
@@ -744,9 +734,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
       MaxKernArgAlign(MFI.getMaxKernArgAlign()), LDSSize(MFI.getLDSSize()),
       GDSSize(MFI.getGDSSize()), DynLDSAlign(MFI.getDynLDSAlign()),
-      IsEntryFunction(MFI.isEntryFunction()),
-      NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
-      MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
+      IsEntryFunction(MFI.isEntryFunction()), MemoryBound(MFI.isMemoryBound()),
+      WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
       NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
@@ -803,7 +792,6 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   HighBitsOf32BitAddress = YamlMFI.HighBitsOf32BitAddress;
   Occupancy = YamlMFI.Occupancy;
   IsEntryFunction = YamlMFI.IsEntryFunction;
-  NoSignedZerosFPMath = YamlMFI.NoSignedZerosFPMath;
   MemoryBound = YamlMFI.MemoryBound;
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;

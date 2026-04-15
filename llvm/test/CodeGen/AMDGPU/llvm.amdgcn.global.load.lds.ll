@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck %s --check-prefix=GFX90A
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s --check-prefix=GFX942
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s --check-prefix=GFX10
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s --check-prefix=GFX900-GISEL
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s --check-prefix=GFX900-GISEL
 
 declare void @llvm.amdgcn.global.load.lds(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr, i32 %size, i32 %offset, i32 %aux)
 

@@ -22,6 +22,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 namespace flangomp {
 #define GEN_PASS_DEF_DOCONCURRENTCONVERSIONPASS
@@ -483,6 +484,8 @@ private:
     }
 
     loopNestClauseOps.loopInclusive = rewriter.getUnitAttr();
+    loopNestClauseOps.collapseNumLoops =
+        rewriter.getI64IntegerAttr(loopNestClauseOps.loopLowerBounds.size());
   }
 
   std::pair<mlir::omp::LoopNestOp, mlir::omp::WsloopOp>
@@ -581,12 +584,43 @@ private:
     llvm::SmallVector<mlir::Value> boundsOps;
     genBoundsOps(builder, liveIn, rawAddr, boundsOps);
 
+    auto asRecordType = [&](mlir::Type eleType) {
+      return mlir::dyn_cast<fir::RecordType>(
+          fir::getDerivedType(fir::unwrapRefType(eleType)));
+    };
+
+    fir::RecordType recordType = asRecordType(eleType);
+
+    bool requiresImplcitMapper = [&]() {
+      if (!recordType)
+        return false;
+
+      for (auto [fieldName, fieldType] : recordType.getTypeList()) {
+        if (fir::isAllocatableType(fieldType))
+          return true;
+
+        if (asRecordType(fieldType))
+          TODO(liveIn.getLoc(), "Nested record types are not supported yet.");
+      }
+
+      return false;
+    }();
+
+    mlir::FlatSymbolRefAttr mapperId;
+    if (requiresImplcitMapper) {
+      std::string mapperIdName =
+          recordType.getName().str() + llvm::omp::OmpDefaultMapperName;
+      // TODO Add a mangler callback once nested record types are supported.
+      mapperId = Fortran::utils::openmp::getOrGenImplicitDefaultDeclareMapper(
+          builder, liveIn.getLoc(), recordType, mapperIdName);
+    }
+
     return Fortran::utils::openmp::createMapInfoOp(
         builder, liveIn.getLoc(), rawAddr,
         /*varPtrPtr=*/{}, name.str(), boundsOps,
         /*members=*/{},
         /*membersIndex=*/mlir::ArrayAttr{}, mapFlag, captureKind,
-        rawAddr.getType());
+        rawAddr.getType(), /*partialMap=*/false, mapperId);
   }
 
   mlir::omp::TargetOp

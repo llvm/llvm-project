@@ -42,8 +42,8 @@ module @add attributes {gpu.container_module} {
   attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Addresses, Int64, Kernel], []>, api=OpenCL, #spirv.resource_limits<>>} {
     gpu.func @test_kernel(%arg0: memref<3x3xi64>, %arg1: memref<3x3xi64>, %arg2: memref<3x3xi64>) kernel
     attributes {gpu.known_block_size = array<i32: 1, 1, 1>, gpu.known_grid_size = array<i32: 3, 3, 1>, spirv.entry_point_abi = #spirv.entry_point_abi<>} {
-      %0 = gpu.block_id  x
-      %1 = gpu.block_id  y
+      %0 = gpu.block_id x
+      %1 = gpu.block_id y
       %2 = memref.load %arg0[%0, %1] : memref<3x3xi64>
       %3 = memref.load %arg1[%0, %1] : memref<3x3xi64>
       %4 = arith.addi %2, %3 : i64

@@ -110,9 +110,7 @@ public:
 
   BasicBlockSectionsProfileReaderWrapperPass *BBSectionsProfileReader = nullptr;
 
-  BasicBlockSections() : MachineFunctionPass(ID) {
-    initializeBasicBlockSectionsPass(*PassRegistry::getPassRegistry());
-  }
+  BasicBlockSections() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Basic Block Sections Analysis";
@@ -472,13 +470,6 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   auto R1 = handleBBSections(MF);
   // Handle basic block address map after basic block sections are finalized.
   auto R2 = handleBBAddrMap(MF);
-
-  // We renumber blocks, so update the dominator tree we want to preserve.
-  if (auto *WP = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
-    WP->getDomTree().updateBlockNumbers();
-  if (auto *WP = getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>())
-    WP->getPostDomTree().updateBlockNumbers();
-
   return R1 || R2;
 }
 

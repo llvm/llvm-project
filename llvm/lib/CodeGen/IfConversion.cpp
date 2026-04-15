@@ -210,9 +210,7 @@ namespace {
     static char ID;
 
     IfConverter(std::function<bool(const MachineFunction &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
-      initializeIfConverterPass(*PassRegistry::getPassRegistry());
-    }
+        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
@@ -1490,7 +1488,7 @@ static void InsertUncondBranch(MachineBasicBlock &MBB, MachineBasicBlock &ToMBB,
   TII->insertBranch(MBB, &ToMBB, nullptr, NoCond, dl);
 }
 
-/// Behaves like LiveRegUnits::StepForward() but also adds implicit uses to all
+/// Behaves like LivePhysRegs::stepForward() but also adds implicit uses to all
 /// values defined in MI which are also live/used by MI.
 static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
   const TargetRegisterInfo *TRI = MI.getMF()->getSubtarget().getRegisterInfo();

@@ -103,6 +103,7 @@ def err_deleted_non_function : Error<
   "only functions can have deleted definitions">;
 def err_module_not_found : Error<"module '%0' not found">, DefaultFatal;
 def err_module_not_built : Error<"could not build module '%0'">, DefaultFatal;
+def err_module_not_written : Error<"could not write module file for '%0' to '%1': %2">, DefaultFatal;
 def err_module_build_disabled: Error<
   "module '%0' is needed but has not been provided, and implicit use of module "
   "files is disabled">, DefaultFatal;
@@ -286,6 +287,8 @@ def err_seh___except_filter : Error<
   "%0 only allowed in __except filter expression">;
 def err_seh___finally_block : Error<
   "%0 only allowed in __finally block">;
+def err_seh_object_unwinding : Error<
+  "'__try' is not permitted in functions that require object unwinding">;
 
 // Sema && AST
 def note_invalid_subexpr_in_const_expr : Note<
@@ -311,6 +314,10 @@ def err_ms_asm_bitfield_unsupported : Error<
 def warn_stack_clash_protection_inline_asm : Warning<
   "unable to protect inline asm that clobbers stack pointer against stack "
   "clash">, InGroup<DiagGroup<"stack-protector">>;
+
+def warn_stack_protection_ignore_attribute : Warning<
+  "'stack_protector_ignore' attribute ignored due to "
+  "'-fstack-protector-all' option">, InGroup<IgnoredAttributes>;
 
 def warn_slh_does_not_support_asm_goto : Warning<
   "speculative load hardening does not protect functions with asm goto">,
@@ -371,6 +378,11 @@ def err_ppc_impossible_musttail: Error<
   "long calls cannot be tail called on PPC|"
   "indirect calls cannot be tail called on PPC|"
   "external calls cannot be tail called on PPC}0"
+  >;
+def err_mips_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "the MIPS16 ABI does not support tail calls|"
+  "calls outside the current linkage unit cannot be tail called on MIPS}0"
   >;
 def err_aix_musttail_unsupported: Error<
   "'musttail' attribute is not supported on AIX">;

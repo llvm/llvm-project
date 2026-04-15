@@ -17,6 +17,7 @@
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
+#include "mlir/Dialect/OpenMP/OpenMPOffloadUtils.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -36,6 +37,16 @@
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.h.inc"
+
+/// Operations implementing LoopWrapperInterface.
+#define OMP_LOOP_WRAPPER_OPS                                                   \
+  mlir::omp::WorkshareLoopWrapperOp, mlir::omp::LoopOp, mlir::omp::WsloopOp,   \
+      mlir::omp::SimdOp, mlir::omp::DistributeOp, mlir::omp::TaskloopOp
+
+/// Operations implementing OutlineableOpenMPOpInterface.
+#define OMP_OUTLINEABLE_OPS                                                    \
+  mlir::omp::ParallelOp, mlir::omp::TeamsOp, mlir::omp::TaskOp,                \
+      mlir::omp::TargetOp
 
 namespace mlir::omp {
 /// Find the omp.new_cli, generator, and consumer of a canonical loop info.

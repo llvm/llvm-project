@@ -214,6 +214,12 @@ def G_CTTZ_ZERO_UNDEF : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_CTLS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 def G_CTPOP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
@@ -1436,6 +1442,8 @@ def G_ATOMICRMW_FMAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMIN : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMAXIMUM : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMINIMUM : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMAXIMUMNUM : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMINIMUMNUM : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UINC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UDEC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_USUB_COND : G_ATOMICRMW_OP;

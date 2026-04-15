@@ -109,8 +109,13 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
   endforeach()
 
   add_executable(${target_name} ${objects})
-  target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
+  if(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+      target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
+                      "-nostdlib" "-emit-llvm")
+  else()  
+      target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
                       "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
+  endif()
 endfunction(add_bitcode_entrypoint_library)
 
 # A rule to build a library from a collection of entrypoint objects.

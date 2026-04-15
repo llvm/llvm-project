@@ -4,8 +4,7 @@
 // RUN:         readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: true \
 // RUN:     }}'
 
-#undef NULL
-#define NULL 0L
+#include <stddef.h>
 
 void functionTakingBool(bool);
 void functionTakingInt(int);

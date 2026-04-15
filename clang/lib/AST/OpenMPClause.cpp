@@ -109,6 +109,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPDynGroupprivateClause *>(C);
   case OMPC_message:
     return static_cast<const OMPMessageClause *>(C);
+  case OMPC_transparent:
+    return static_cast<const OMPTransparentClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_safelen:
@@ -1441,7 +1443,9 @@ OMPUseDevicePtrClause *OMPUseDevicePtrClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<Expr *> PrivateVars, ArrayRef<Expr *> Inits,
     ArrayRef<ValueDecl *> Declarations,
-    MappableExprComponentListsRef ComponentLists) {
+    MappableExprComponentListsRef ComponentLists,
+    OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+    SourceLocation FallbackModifierLoc) {
   OMPMappableExprListSizeTy Sizes;
   Sizes.NumVars = Vars.size();
   Sizes.NumUniqueDeclarations = getUniqueDeclarationsTotalNumber(Declarations);
@@ -1465,7 +1469,8 @@ OMPUseDevicePtrClause *OMPUseDevicePtrClause::Create(
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
 
-  OMPUseDevicePtrClause *Clause = new (Mem) OMPUseDevicePtrClause(Locs, Sizes);
+  OMPUseDevicePtrClause *Clause = new (Mem)
+      OMPUseDevicePtrClause(Locs, Sizes, FallbackModifier, FallbackModifierLoc);
 
   Clause->setVarRefs(Vars);
   Clause->setPrivateCopies(PrivateVars);
@@ -2051,6 +2056,15 @@ void OMPClausePrinter::VisitOMPThreadsetClause(OMPThreadsetClause *Node) {
      << ")";
 }
 
+void OMPClausePrinter::VisitOMPTransparentClause(OMPTransparentClause *Node) {
+  OS << "transparent(";
+  if (Node->getImpexType())
+    Node->getImpexType()->printPretty(OS, nullptr, Policy, 0);
+  else
+    OS << "omp_impex";
+  OS << ")";
+}
+
 void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {
   OS << "proc_bind("
      << getOpenMPSimpleClauseTypeName(OMPC_proc_bind,
@@ -2277,8 +2291,20 @@ void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
 
 void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
   if (!Node->varlist_empty()) {
-    OS << "num_teams";
-    VisitOMPClauseList(Node, '(');
+    OS << "num_teams(";
+    // Handle lower-bound:upper-bound syntax when there are exactly 2
+    // expressions
+    if (Node->varlist_size() == 2) {
+      llvm::interleave(
+          Node->varlist(), OS,
+          [&](const auto *Expr) { Expr->printPretty(OS, nullptr, Policy, 0); },
+          ":");
+    } else {
+      // For single expression or other cases, use comma-separated list
+      llvm::interleaveComma(Node->varlist(), OS, [&](const auto *Expr) {
+        Expr->printPretty(OS, nullptr, Policy, 0);
+      });
+    }
     OS << ")";
   }
 }
@@ -2753,7 +2779,15 @@ void OMPClausePrinter::VisitOMPDefaultmapClause(OMPDefaultmapClause *Node) {
 void OMPClausePrinter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "use_device_ptr";
-    VisitOMPClauseList(Node, '(');
+    if (Node->getFallbackModifier() != OMPC_USE_DEVICE_PTR_FALLBACK_unknown) {
+      OS << "("
+         << getOpenMPSimpleClauseTypeName(OMPC_use_device_ptr,
+                                          Node->getFallbackModifier())
+         << ":";
+      VisitOMPClauseList(Node, ' ');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
     OS << ")";
   }
 }

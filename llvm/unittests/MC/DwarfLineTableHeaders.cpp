@@ -93,7 +93,7 @@ public:
     MCStreamer *TheStreamer = C.Streamer.get();
     MCAssembler &Assembler =
         static_cast<MCObjectStreamer *>(TheStreamer)->getAssembler();
-    TheStreamer->initSections(false, *STI);
+    TheStreamer->initSections(*STI);
 
     // Create a mock function
     MCSection *Section = C.MOFI->getTextSection();

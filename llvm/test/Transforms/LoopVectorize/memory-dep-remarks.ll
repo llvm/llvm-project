@@ -83,7 +83,7 @@ exit:
 ; }
 
 ; CHECK-NOT: remark: source.c:{{0-9]+}}:{{[0-9]+}}:
-define dso_local void @test_forward(i64 %n, ptr nocapture %A, ptr nocapture %B) !dbg !70 {
+define void @test_forward(i64 %n, ptr nocapture %A, ptr nocapture %B) !dbg !70 {
 entry:
   %cmp11 = icmp sgt i64 %n, 1
   br i1 %cmp11, label %loop, label %exit, !dbg !81
@@ -118,7 +118,7 @@ loop:
 
 ; CHECK-NOT: remark: source.c:{{0-9]+}}:{{[0-9]+}}:
 
-define dso_local void @test_backwardVectorizable(i64 %n, ptr nocapture %A) !dbg !93 {
+define void @test_backwardVectorizable(i64 %n, ptr nocapture %A) !dbg !93 {
 entry:
   %cmp8 = icmp sgt i64 %n, 4
   br i1 %cmp8, label %loop, label %exit

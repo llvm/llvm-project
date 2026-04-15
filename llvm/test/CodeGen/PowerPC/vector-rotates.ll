@@ -134,11 +134,32 @@ entry:
   ret <4 x i32> %d
 }
 
+; Test int_ppc_altivec_vrlw intrinsic (from vec_rl() builtin)
+define <4 x i32> @rotl_v4i32_intrinsic(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-P8-LABEL: rotl_v4i32_intrinsic:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    vrlw v2, v2, v3
+; CHECK-P8-NEXT:    blr
+;
+; CHECK-P7-LABEL: rotl_v4i32_intrinsic:
+; CHECK-P7:       # %bb.0:
+; CHECK-P7-NEXT:    vrlw v2, v2, v3
+; CHECK-P7-NEXT:    blr
+;
+; CHECK-FUTURE-LABEL: rotl_v4i32_intrinsic:
+; CHECK-FUTURE:       # %bb.0:
+; CHECK-FUTURE-NEXT:    xvrlw vs34, vs34, vs35
+; CHECK-FUTURE-NEXT:    blr
+  %res = call <4 x i32> @llvm.ppc.altivec.vrlw(<4 x i32> %a, <4 x i32> %b)
+  ret <4 x i32> %res
+}
+declare <4 x i32> @llvm.ppc.altivec.vrlw(<4 x i32>, <4 x i32>)
+
 define <2 x i64> @rotl_v2i64(<2 x i64> %a) {
 ; CHECK-P8-LABEL: rotl_v2i64:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI4_0@toc@l
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, .LCPI5_0@toc@l
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd vs35, vs0
 ; CHECK-P8-NEXT:    vrld v2, v2, v3
@@ -160,8 +181,8 @@ define <2 x i64> @rotl_v2i64(<2 x i64> %a) {
 ;
 ; CHECK-FUTURE-LABEL: rotl_v2i64:
 ; CHECK-FUTURE:       # %bb.0: # %entry
-; CHECK-FUTURE-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
-; CHECK-FUTURE-NEXT:    addi r3, r3, .LCPI4_0@toc@l
+; CHECK-FUTURE-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
+; CHECK-FUTURE-NEXT:    addi r3, r3, .LCPI5_0@toc@l
 ; CHECK-FUTURE-NEXT:    lxv vs35, 0(r3)
 ; CHECK-FUTURE-NEXT:    vrld v2, v2, v3
 ; CHECK-FUTURE-NEXT:    blr

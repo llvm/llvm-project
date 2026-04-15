@@ -554,6 +554,40 @@ void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
+                                  Register Src, MachineRegisterInfo &MRI) {
+  if (!MRI.hasOneUse(Sub))
+    return false;
+  if (getIConstantVRegValWithLookThrough(Src, MRI))
+    return false;
+  MachineInstr *M1 = getDefIgnoringCopies(Mul1, MRI);
+  if (M1->getOpcode() != AArch64::G_MUL &&
+      M1->getOpcode() != AArch64::G_SMULL &&
+      M1->getOpcode() != AArch64::G_UMULL)
+    return false;
+  MachineInstr *M2 = getDefIgnoringCopies(Mul2, MRI);
+  if (M2->getOpcode() != AArch64::G_MUL &&
+      M2->getOpcode() != AArch64::G_SMULL &&
+      M2->getOpcode() != AArch64::G_UMULL)
+    return false;
+  return true;
+}
+
+static void applySubAddMulReassoc(MachineInstr &MI, MachineInstr &Sub,
+                                  MachineRegisterInfo &MRI, MachineIRBuilder &B,
+                                  GISelChangeObserver &Observer) {
+  Register Src = MI.getOperand(1).getReg();
+  Register Tmp = MI.getOperand(2).getReg();
+  Register Mul1 = Sub.getOperand(1).getReg();
+  Register Mul2 = Sub.getOperand(2).getReg();
+  Observer.changingInstr(MI);
+  B.buildInstr(AArch64::G_SUB, {Tmp}, {Src, Mul1});
+  MI.getOperand(1).setReg(Tmp);
+  MI.getOperand(2).setReg(Mul2);
+  Sub.eraseFromParent();
+  Observer.changingInstr(MI);
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
   const CombinerHelper Helper;
@@ -562,8 +596,8 @@ protected:
 
 public:
   AArch64PostLegalizerCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
@@ -583,12 +617,12 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64PostLegalizerCombinerImpl::AArch64PostLegalizerCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI, MachineDominatorTree *MDT,
     const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+    : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -682,8 +716,8 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
   // Legalizer performs DCE, so a full DCE pass is unnecessary.
   CInfo.EnableFullDCE = false;
-  AArch64PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo,
-                                        RuleConfig, ST, MDT, LI);
+  AArch64PostLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, ST,
+                                        MDT, LI);
   bool Changed = Impl.combineMachineInstrs();
 
   auto MIB = CSEMIRBuilder(MF);

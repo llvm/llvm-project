@@ -69,7 +69,8 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
     Reader->addInMemoryBuffer(sr, std::move(MemBufs[ti]));
   }
   Reader->setDeserializationListener(deserialListener);
-  switch (Reader->ReadAST(pchFile, serialization::MK_PCH, SourceLocation(),
+  switch (Reader->ReadAST(ModuleFileName::makeExplicit(pchFile),
+                          serialization::MK_PCH, SourceLocation(),
                           ASTReader::ARR_None)) {
   case ASTReader::Success:
     // Set the predefines buffer as suggested by the PCH reader.

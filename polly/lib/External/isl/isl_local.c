@@ -319,6 +319,40 @@ __isl_give isl_local *isl_local_move_vars(__isl_take isl_local *local,
 	return isl_local_alloc_from_mat(mat);
 }
 
+/* Does "local" depend on the specified variables?
+ *
+ * If the specified variables are local variables themselves,
+ * then only later local variables could possibly depend on them.
+ */
+isl_bool isl_local_involves_vars(__isl_keep isl_local *local,
+	unsigned first, unsigned n)
+{
+	isl_mat *mat = local;
+	int i, first_div;
+	isl_size v_div, n_div;
+
+	v_div = isl_local_var_offset(local, isl_dim_div);
+	n_div = isl_local_dim(local, isl_dim_div);
+	if (v_div < 0 || n_div < 0 ||
+	    isl_local_check_range(local, isl_dim_all, first, n) < 0)
+		return isl_bool_error;
+
+	first_div = (first >= v_div) ? first - v_div + 1 : 0;
+	for (i = first_div; i < n_div; ++i) {
+		isl_bool unknown;
+
+		unknown = isl_local_div_is_marked_unknown(local, i);
+		if (unknown < 0)
+			return isl_bool_error;
+		if (unknown)
+			continue;
+		if (isl_seq_any_non_zero(mat->row[i] + 1 + 1 + first, n))
+			return isl_bool_true;
+	}
+
+	return isl_bool_false;
+}
+
 /* Extend a vector "v" representing an integer point
  * in the domain space of "local"
  * to one that also includes values for the local variables.

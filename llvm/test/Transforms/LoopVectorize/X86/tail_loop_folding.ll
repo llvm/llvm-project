@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local void @tail_folding_enabled(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) local_unnamed_addr #0 {
+define void @tail_folding_enabled(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL: @tail_folding_enabled(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -54,7 +54,7 @@ for.body:
 
 ; Marking function as optsize turns tail folding on, as if explicit tail folding
 ; flag was enabled.
-define dso_local void @tail_folding_disabled(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) local_unnamed_addr #0 {
+define void @tail_folding_disabled(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL: @tail_folding_disabled(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -139,11 +139,11 @@ define i32 @reduction_i32(ptr nocapture readonly %A, ptr nocapture readonly %B, 
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[TMP7]], <8 x i1> [[TMP4]], <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_LOAD3]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP10]] = add <8 x i32> [[TMP9]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select <8 x i1> [[TMP4]], <8 x i32> [[TMP10]], <8 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP11:%.*]] = select <8 x i1> [[TMP4]], <8 x i32> [[TMP10]], <8 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP11]])
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:

@@ -1,25 +1,26 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 ! OpenMP Version 4.5
 ! 2.7.1 Loop Construct
-! The DO loop iteration variable must be of type integer.
+! The DO loop iteration variable must be of integer type.
 
 program omp_do
   real i, j, k
   !$omp do
-  !ERROR: The DO loop iteration variable must be of the type integer.
+  !ERROR: The DO loop iteration variable must be of integer type
   do i = 1, 10
-    !ERROR: The DO loop iteration variable must be of the type integer.
+    !ERROR: The DO loop iteration variable must be of integer type
     do j = 1, 10
       print *, "it", i, j
     end do
   end do
   !$omp end do
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
+  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do collapse(3)
-  !ERROR: The DO loop iteration variable must be of the type integer.
+  !ERROR: The DO loop iteration variable must be of integer type
   do i = 1, 10
-    !ERROR: The DO loop iteration variable must be of the type integer.
+    !ERROR: The DO loop iteration variable must be of integer type
     do j = 1, 10
       print *, "it", i, j
     end do
@@ -27,9 +28,9 @@ program omp_do
   !$omp end do
 
   !$omp do collapse(2)
-  !ERROR: The DO loop iteration variable must be of the type integer.
+  !ERROR: The DO loop iteration variable must be of integer type
   do i = 1, 10
-    !ERROR: The DO loop iteration variable must be of the type integer.
+    !ERROR: The DO loop iteration variable must be of integer type
     do j = 1, 10
       print *, "it", i, j
     end do

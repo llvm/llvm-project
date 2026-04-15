@@ -1092,12 +1092,12 @@ define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD1]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
+; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP8]], <4 x i1> [[TMP6]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP10]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP6]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
 ; CHECK-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP5]], <4 x float> [[TMP9]], <4 x float> [[PREDPHI]]
 ; CHECK-NEXT:    [[PREDPHI3]] = select <4 x i1> [[TMP3]], <4 x float> [[PREDPHI2]], <4 x float> [[VEC_PHI]]
@@ -1135,6 +1135,8 @@ define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD4]], splat (float 1.000000e+00)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = xor <4 x i1> [[TMP7]], splat (i1 true)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP8]], splat (i1 true)
+; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = select <4 x i1> [[TMP5]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[TMP10]], <4 x i1> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD2]], splat (float 2.000000e+00)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD3]]
@@ -1143,10 +1145,8 @@ define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = fadd fast <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP5]], <4 x i1> [[TMP19]], <4 x i1> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[TMP21]], <4 x i1> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP19]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = select <4 x i1> [[TMP21]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP20]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP13]]
 ; CHECK-INTERLEAVED-NEXT:    [[PREDPHI5:%.*]] = select <4 x i1> [[TMP15]], <4 x float> [[TMP17]], <4 x float> [[PREDPHI]]
 ; CHECK-INTERLEAVED-NEXT:    [[PREDPHI6]] = select <4 x i1> [[TMP5]], <4 x float> [[PREDPHI5]], <4 x float> [[VEC_PHI]]
@@ -2264,11 +2264,14 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE6:.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP48:%.*]], %[[PRED_LOAD_CONTINUE6]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [0 x [[STRUCT_E:%.*]]], ptr [[B]], i32 0, i32 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP2]], i32 2
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP3]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [0 x [[STRUCT_E:%.*]]], ptr [[B]], i32 0, i32 [[INDEX]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP3]], i32 1
@@ -2284,7 +2287,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i1> [[TMP19]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> poison, i32 [[TMP23]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
@@ -2342,15 +2345,22 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE15:.*]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP94:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP98:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
-; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i32 0
+; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP1]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP15]], i32 [[TMP2]], i32 2
+; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> [[TMP17]], i32 [[TMP3]], i32 3
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 5
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 6
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 7
-; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [0 x [[STRUCT_E:%.*]]], ptr [[B]], i32 0, i32 [[TMP0]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i32 0
+; CHECK-INTERLEAVED-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP5]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP6]], i32 2
+; CHECK-INTERLEAVED-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP7]], i32 3
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [0 x [[STRUCT_E:%.*]]], ptr [[B]], i32 0, i32 [[INDEX]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP1]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP2]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP3]], i32 1
@@ -2379,7 +2389,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP41:%.*]] = extractelement <4 x i1> [[TMP39]], i32 0
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP41]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_IF]]:
-; CHECK-INTERLEAVED-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP0]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP44:%.*]] = load i32, ptr [[TMP43]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP45:%.*]] = insertelement <4 x i32> poison, i32 [[TMP44]], i32 0
 ; CHECK-INTERLEAVED-NEXT:    br label %[[PRED_LOAD_CONTINUE]]

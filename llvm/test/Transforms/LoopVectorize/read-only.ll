@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK-LABEL: @read_only_func(
 ;CHECK: load <4 x i32>
 ;CHECK: ret i32
-define i32 @read_only_func(ptr nocapture %A, ptr nocapture %B, i32 %n) nounwind uwtable readonly ssp {
+define i32 @read_only_func(ptr nocapture %A, ptr nocapture %B, i32 %n) readonly {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
@@ -35,7 +35,7 @@ define i32 @read_only_func(ptr nocapture %A, ptr nocapture %B, i32 %n) nounwind 
 ;CHECK-LABEL: @read_only_func_volatile(
 ;CHECK-NOT: load <4 x i32>
 ;CHECK: ret i32
-define i32 @read_only_func_volatile(ptr nocapture %A, ptr nocapture %B, i32 %n) nounwind uwtable readonly ssp {
+define i32 @read_only_func_volatile(ptr nocapture %A, ptr nocapture %B, i32 %n) readonly {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 

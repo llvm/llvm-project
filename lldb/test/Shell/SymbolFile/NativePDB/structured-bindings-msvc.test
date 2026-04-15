@@ -1,0 +1,43 @@
+# REQUIRES: lld, msvc, target-windows
+
+# Test that LLDB can show variables introduced in C++ 17 structured bindings
+# when compiled with MSVC.
+
+# RUN: split-file %s %t
+
+# RUN: %build --compiler=msvc --arch=64 --std=c++17 --nodefaultlib -o %t.exe -- %t/main.cpp
+# RUN: lldb-test symbols %t.exe | FileCheck %s --check-prefix=SYMBOLS
+# RUN: %lldb -f %t.exe -s %t/commands.input | FileCheck %s --check-prefix=LLDB
+
+#--- main.cpp
+
+struct Foo { int a; int b; };
+
+int main() {
+    Foo f{1, 2};
+
+    auto&[a, b] = f;
+    return a + b; // break here
+}
+
+#--- commands.input
+
+br set -p "break here"
+r
+v f
+v a
+v b
+q
+
+# SYMBOLS:      Function{{.*}}, demangled = main, type =
+# SYMBOLS-NEXT: Block{{.*}}, ranges = 
+# SYMBOLS-NEXT:   Variable{{.*}}, name = "f", type = {{.*}} (Foo), scope = local, location =
+# SYMBOLS-NEXT:   Variable{{.*}}, name = "b", type = {{.*}} (int), scope = local, location = DW_OP_breg{{.*}}, DW_OP_deref, DW_OP_plus_uconst 0x{{[0-9]+}}
+# SYMBOLS-NEXT:   Variable{{.*}}, name = "a", type = {{.*}} (int), scope = local, location = DW_OP_breg{{.*}}, DW_OP_deref, DW_OP_plus_uconst 0x0
+
+# LLDB:      (lldb) v f
+# LLDB-NEXT: (Foo) f = (a = 1, b = 2)
+# LLDB-NEXT: (lldb) v a
+# LLDB-NEXT: (int) a = 1
+# LLDB-NEXT: (lldb) v b
+# LLDB-NEXT: (int) b = 2

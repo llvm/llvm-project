@@ -70,8 +70,9 @@ public:
   uint32_t getOffsetOfType(TypeIndex Index);
 
   std::optional<CVType> tryGetType(TypeIndex Index);
-
+  llvm::Expected<CVType> getTypeOrError(TypeIndex Index);
   CVType getType(TypeIndex Index) override;
+
   StringRef getTypeName(TypeIndex Index) override;
   bool contains(TypeIndex Index) override;
   uint32_t size() override;

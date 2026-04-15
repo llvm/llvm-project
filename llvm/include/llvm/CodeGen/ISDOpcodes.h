@@ -648,11 +648,12 @@ enum NodeType {
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
 
-  /// VECTOR_SPLICE_LEFT(VEC1, VEC2, IMM) - Shifts CONCAT_VECTORS(VEC1, VEC2)
-  /// left by IMM elements and returns the lower half.
+  /// VECTOR_SPLICE_LEFT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
+  /// left by OFFSET elements and returns the lower half.
   VECTOR_SPLICE_LEFT,
-  /// VECTOR_SPLICE_RIGHT(VEC1, VEC2, IMM) - Shifts CONCAT_VECTORS(VEC1, VEC2)
-  /// right by IMM elements and returns the upper half.
+  /// VECTOR_SPLICE_RIGHT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1,
+  /// VEC2)
+  /// right by OFFSET elements and returns the upper half.
   VECTOR_SPLICE_RIGHT,
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
@@ -1012,6 +1013,12 @@ enum NodeType {
   FP_TO_BF16,
   STRICT_BF16_TO_FP,
   STRICT_FP_TO_BF16,
+
+  /// CONVERT_FROM_ARBITRARY_FP - This operator converts from an arbitrary
+  /// floating-point represented as an integer to a native FP type.
+  /// The first operand is the integer containing the source FP bits.
+  /// The second operand is a constant indicating the source FP semantics.
+  CONVERT_FROM_ARBITRARY_FP,
 
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into
@@ -1404,6 +1411,8 @@ enum NodeType {
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_FMAXIMUM,
   ATOMIC_LOAD_FMINIMUM,
+  ATOMIC_LOAD_FMAXIMUMNUM,
+  ATOMIC_LOAD_FMINIMUMNUM,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
   ATOMIC_LOAD_USUB_COND,
@@ -1439,6 +1448,10 @@ enum NodeType {
   /// Its purpose is the extension of the operand's lifetime mainly for
   /// debugging purposes.
   FAKE_USE,
+
+  /// COND_LOOP is a conditional branch to self, used for implementing efficient
+  /// conditional traps.
+  COND_LOOP,
 
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
@@ -1566,6 +1579,13 @@ enum NodeType {
   /// Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
+  /// Returns the number of number of trailing (least significant) zero elements
+  /// in a vector. Has a single mask vector operand. The result is poison if the
+  /// return type isn't wide enough to hold the maximum number of elements in
+  /// the input vector.
+  CTTZ_ELTS,
+  CTTZ_ELTS_ZERO_POISON,
+
   /// Finds the index of the last active mask element
   /// Operands: Mask
   VECTOR_FIND_LAST_ACTIVE,
@@ -1620,6 +1640,11 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
+
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns the
+/// corresponding opcode with the opposite signedness:
+/// ISD::SMIN <-> ISD::UMIN, ISD::SMAX <-> ISD::UMAX.
+LLVM_ABI NodeType getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc);
 
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.

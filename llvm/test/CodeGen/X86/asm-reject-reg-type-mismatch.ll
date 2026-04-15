@@ -19,3 +19,11 @@ define void @f_constraint_i128(ptr %0) {
   tail call void asm sideeffect "", "f"(i128 %2)
   ret void
 }
+
+; CHECK: error: couldn't allocate output register for constraint 'r'
+define void @r_constraint_v4i128(ptr %0) {
+  %2 = alloca <4 x i128>, align 64
+  %3 = tail call <4 x i128> asm sideeffect "", "=r"()
+  store <4 x i128> %3, ptr %0, align 64
+  ret void
+}

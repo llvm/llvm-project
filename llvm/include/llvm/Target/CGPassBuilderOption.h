@@ -62,11 +62,10 @@ struct CGPassBuilderOption {
   bool EnableLoopTermFold = false;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
-  bool GCEmptyBlocks = false;
+  bool EnableGCEmptyBlocks = false;
 
   bool DisableLSR = false;
   bool DisableCGP = false;
-  bool DisableMergeICmps = false;
   bool DisablePartialLibcallInlining = false;
   bool DisableConstantHoisting = false;
   bool DisableSelectOptimize = true;

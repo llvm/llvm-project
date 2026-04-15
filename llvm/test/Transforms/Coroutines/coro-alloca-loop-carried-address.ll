@@ -11,10 +11,10 @@ define void @foo() presplitcoroutine {
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 40)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @foo.resume, ptr [[VFRAME]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[FOO_FRAME:%.*]], ptr [[VFRAME]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 8
 ; CHECK-NEXT:    store ptr @foo.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[STACKVAR0_RELOAD_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME]], ptr [[VFRAME]], i32 0, i32 2
-; CHECK-NEXT:    [[STACKVAR1_RELOAD_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME]], ptr [[VFRAME]], i32 0, i32 3
+; CHECK-NEXT:    [[STACKVAR0_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 16
+; CHECK-NEXT:    [[STACKVAR1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 24
 ; CHECK-NEXT:    [[STACKVAR0_INT:%.*]] = ptrtoint ptr [[STACKVAR0_RELOAD_ADDR]] to i64
 ; CHECK-NEXT:    store i64 [[STACKVAR0_INT]], ptr @escape_hatch0, align 4
 ; CHECK-NEXT:    [[STACKVAR1_INT:%.*]] = ptrtoint ptr [[STACKVAR1_RELOAD_ADDR]] to i64
@@ -23,7 +23,7 @@ define void @foo() presplitcoroutine {
 ; CHECK:       loop:
 ; CHECK-NEXT:    store i64 1234, ptr [[STACKVAR0_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[FOO_FRAME]], ptr [[VFRAME]], i32 0, i32 4
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 32
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[AFTERCOROEND:%.*]]
 ; CHECK:       AfterCoroEnd:

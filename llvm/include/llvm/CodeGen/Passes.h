@@ -454,8 +454,8 @@ LLVM_ABI extern char &FinalizeISelID;
 /// UnpackMachineBundles - This pass unpack machine instruction bundles.
 LLVM_ABI extern char &UnpackMachineBundlesID;
 
-LLVM_ABI FunctionPass *
-createUnpackMachineBundles(std::function<bool(const MachineFunction &)> Ftor);
+LLVM_ABI FunctionPass *createUnpackMachineBundlesLegacy(
+    std::function<bool(const MachineFunction &)> Ftor);
 
 /// StackMapLiveness - This pass analyses the register live-out set of
 /// stackmap/patchpoint intrinsics and attaches the calculated information to
@@ -492,6 +492,8 @@ LLVM_ABI FunctionPass *createInterleavedLoadCombinePass();
 /// TLS variables for the emulated TLS model.
 ///
 LLVM_ABI ModulePass *createLowerEmuTLSPass();
+
+LLVM_ABI ModulePass *createLibcallLoweringInfoWrapper();
 
 /// This pass lowers the \@llvm.load.relative and \@llvm.objc.* intrinsics to
 /// instructions.  This is unsafe to do earlier because a pass may combine the
@@ -548,11 +550,8 @@ LLVM_ABI FunctionPass *createExpandReductionsPass();
 // the corresponding function in a vector library (e.g., SVML, libmvec).
 LLVM_ABI FunctionPass *createReplaceWithVeclibLegacyPass();
 
-// Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandIRInstsPass();
-
-// This pass expands memcmp() to load/stores.
-LLVM_ABI FunctionPass *createExpandMemCmpLegacyPass();
+// Expands large div/rem and floating-point instructions.
+LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
 LLVM_ABI FunctionPass *createBreakFalseDeps();
@@ -565,9 +564,6 @@ LLVM_ABI FunctionPass *createCFIFixup();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
 LLVM_ABI FunctionPass *createCFIInstrInserter();
-
-// Expands floating point instructions.
-FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
@@ -623,7 +619,7 @@ LLVM_ABI ModulePass *createJMCInstrumenterPass();
 /// This pass converts conditional moves to conditional jumps when profitable.
 LLVM_ABI FunctionPass *createSelectOptimizePass();
 
-LLVM_ABI FunctionPass *createCallBrPass();
+LLVM_ABI FunctionPass *createInlineAsmPreparePass();
 
 /// Creates Windows Secure Hot Patch pass. \see WindowsSecureHotPatching.cpp
 LLVM_ABI ModulePass *createWindowsSecureHotPatchingPass();

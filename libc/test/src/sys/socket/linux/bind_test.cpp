@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_socket_macros.h"
+#include "hdr/types/struct_sockaddr_un.h"
 #include "src/sys/socket/bind.h"
 #include "src/sys/socket/socket.h"
 
@@ -15,8 +17,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcBindTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

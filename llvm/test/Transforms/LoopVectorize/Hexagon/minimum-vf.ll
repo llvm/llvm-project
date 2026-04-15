@@ -9,7 +9,7 @@ target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i
 
 %s.0 = type { ptr, i32, i32, i32, i32 }
 
-@g0 = external dso_local local_unnamed_addr global ptr, align 4
+@g0 = external global ptr, align 4
 
 declare void @llvm.lifetime.start.p0(ptr nocapture) #0
 declare void @llvm.lifetime.end.p0(ptr nocapture) #0

@@ -384,14 +384,6 @@ def SGPR_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
   let HasSGPR = 1;
 }
 
-def SGPR_HI16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
-                              (add (sequence "SGPR%u_HI16", 0, 105))> {
-  let isAllocatable = 0;
-  let Size = 16;
-  let GeneratePressureSet = 0;
-  let HasSGPR = 1;
-}
-
 // SGPR 32-bit registers
 def SGPR_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
                             (add (sequence "SGPR%u", 0, 105))> {
@@ -1428,6 +1420,8 @@ def VSrc_v2b32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2INT32">;
 def VSrc_v2f32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2FP32">;
 
 def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16">;
+
+def VSrc_v2f16_splat : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2FP16_SPLAT">;
 
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR

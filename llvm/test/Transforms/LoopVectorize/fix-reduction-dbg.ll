@@ -28,7 +28,7 @@
 ;   return ret;
 ; }
 
-define dso_local i32 @"foo"(i32 %count, ptr nocapture readonly %bar) local_unnamed_addr !dbg !8 {
+define i32 @"foo"(i32 %count, ptr nocapture readonly %bar) !dbg !8 {
 entry:
   %cmp8 = icmp sgt i32 %count, 0, !dbg !10
   br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup, !dbg !10

@@ -13,6 +13,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllTranslations.h"
@@ -30,6 +31,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -105,7 +107,8 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
   std::string layoutString = targetInfo->getDataLayoutString();
 
   // Registered dialects may not be loaded yet, ensure they are.
-  context->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect>();
+  context->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
+                       mlir::omp::OpenMPDialect>();
 
   mlir::DataLayoutSpecInterface dlSpec =
       mlir::translateDataLayout(llvm::DataLayout(layoutString), context);
@@ -167,6 +170,7 @@ void registerToLLVMTranslation() {
         registry.insert<mlir::DLTIDialect, mlir::func::FuncDialect>();
         mlir::registerAllToLLVMIRTranslations(registry);
         cir::direct::registerCIRDialectTranslation(registry);
+        cir::omp::registerOpenMPExtensions(registry);
       });
 }
 

@@ -27,13 +27,13 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    orq %rdx, %rax
-; CHECK-NEXT:    movl %ecx, %r8d
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    movq %rdi, %r8
+; CHECK-NEXT:    orq %rdx, %r8
 ; CHECK-NEXT:    movq %rsi, %r9
-; CHECK-NEXT:    orq %r8, %r9
+; CHECK-NEXT:    orq %rax, %r9
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    orq %r9, %rax
+; CHECK-NEXT:    orq %r9, %r8
 ; CHECK-NEXT:    je .LBB0_10
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_1: # %itofp-if-end
@@ -181,18 +181,18 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    adcq $0, %rsi
 ; CHECK-NEXT:    adcq $0, %rdx
 ; CHECK-NEXT:    adcq $0, %rcx
-; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    shldq $62, %rdi, %rdx
+; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    shrdq $2, %rsi, %rdx
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    btq $55, %rdi
 ; CHECK-NEXT:    jae .LBB0_9
 ; CHECK-NEXT:    jmp .LBB0_7
 ; CHECK-NEXT:  .LBB0_7: # %itofp-if-then20
-; CHECK-NEXT:    shldq $61, %rdi, %rsi
-; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    shrdq $3, %rsi, %rdi
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:    movl %r11d, %r10d
 ; CHECK-NEXT:    jmp .LBB0_9
 ; CHECK-NEXT:  .LBB0_8: # %itofp-if-else

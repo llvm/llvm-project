@@ -154,7 +154,7 @@ struct DepCollectorASTListener : public ASTReaderListener {
   bool needsSystemInputFileVisitation() override {
     return DepCollector.needSystemDependencies();
   }
-  void visitModuleFile(StringRef Filename,
+  void visitModuleFile(ModuleFileName Filename,
                        serialization::ModuleKind Kind) override {
     DepCollector.maybeAddDependency(Filename, /*FromModule*/ true,
                                     /*IsSystem*/ false, /*IsModuleFile*/ true,

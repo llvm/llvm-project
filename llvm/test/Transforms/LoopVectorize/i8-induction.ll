@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @a = common global i8 0, align 1
 @b = common global i8 0, align 1
 
-define void @f() nounwind uwtable ssp {
+define void @f() {
 ; Check that the induction phis and adds have debug location.
 ;
 ; DEBUGLOC-LABEL: vector.body:

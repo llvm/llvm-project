@@ -34,7 +34,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-D_DEBUG")
 endif()
 
-
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 
@@ -216,7 +215,7 @@ foreach(opt IN LISTS global_config)
   message(STATUS "${opt_name}: ${opt_value}")
   set(${opt_name} ${opt_value})
 endforeach()
-generate_config_doc(${main_config_file} ${LIBC_SOURCE_DIR}/docs/configure.rst)
+generate_config_doc(${main_config_file} ${LIBC_BUILD_DIR}/docs/configure.rst)
 
 # Load each target specific config.
 foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
@@ -234,6 +233,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   cmake_path(NORMAL_PATH LIBC_TARGET_SUBDIR)
 endif()
 
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND (LIBC_ENABLE_USE_BY_CLANG OR LIBC_TARGET_OS_IS_GPU))
   set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
@@ -260,6 +260,7 @@ else()
   endif()
 endif()
 
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LIBC_TARGET_TRIPLE)
   set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_TRIPLE})
 elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
@@ -350,6 +351,7 @@ include(LLVMLibCRules)
 set(TARGET_LLVMLIBC_ENTRYPOINTS "")
 set(TARGET_LIBC_ENTRYPOINTS "")
 set(TARGET_LIBM_ENTRYPOINTS "")
+set(TARGET_LIBMVEC_ENTRYPOINTS "")
 set(TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS "")
 
 # Check entrypoints.txt
@@ -380,6 +382,7 @@ foreach(removed_entrypoint IN LISTS TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS)
   list(REMOVE_ITEM TARGET_LLVMLIBC_ENTRYPOINTS ${removed_entrypoint})
   list(REMOVE_ITEM TARGET_LIBC_ENTRYPOINTS ${removed_entrypoint})
   list(REMOVE_ITEM TARGET_LIBM_ENTRYPOINTS ${removed_entrypoint})
+  list(REMOVE_ITEM TARGET_LIBMVEC_ENTRYPOINTS ${removed_entrypoint})
 endforeach()
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")
@@ -401,6 +404,7 @@ else()
 endif()
 
 add_subdirectory(include)
+add_subdirectory(shared)
 add_subdirectory(config)
 add_subdirectory(hdr)
 add_subdirectory(src)

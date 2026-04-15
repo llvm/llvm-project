@@ -59,6 +59,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUFrameLowering.cpp
   AMDGPUGlobalISelDivergenceLowering.cpp
   AMDGPUGlobalISelUtils.cpp
+  AMDGPUHazardLatency.cpp
   AMDGPUHSAMetadataStreamer.cpp
   AMDGPUInsertDelayAlu.cpp
   AMDGPUInstCombineIntrinsic.cpp
@@ -80,11 +81,12 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUPrepareAGPRAlloc.cpp
   AMDGPULowerExecSync.cpp
   AMDGPUSwLowerLDS.cpp
-  AMDGPUMachineFunction.cpp
+  AMDGPUMachineFunctionInfo.cpp
   AMDGPUMachineModuleInfo.cpp
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
   AMDGPUMemoryUtils.cpp
+  AMDGPUCoExecSchedStrategy.cpp
   AMDGPUIGroupLP.cpp
   AMDGPULowerVGPREncoding.cpp
   AMDGPUMCResourceInfo.cpp
@@ -170,6 +172,7 @@ add_llvm_target(AMDGPUCodeGen
   SILowerWWMCopies.cpp
   SILowerSGPRSpills.cpp
   SIMachineFunctionInfo.cpp
+  SISpillUtils.cpp
   SIMachineScheduler.cpp
   SIMemoryLegalizer.cpp
   SIModeRegister.cpp

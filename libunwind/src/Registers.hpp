@@ -20,9 +20,8 @@
 #include "libunwind_ext.h"
 #include "shadow_stack_unwind.h"
 
-#if __has_include(<sys/auxv.h>)
+#if defined(_LIBUNWIND_HAVE_GETAUXVAL) || defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
 #include <sys/auxv.h>
-#define HAVE_SYS_AUXV_H
 #endif
 
 namespace libunwind {
@@ -1893,7 +1892,7 @@ public:
     uint64_t value = _registers.__pc;
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
     // Note the value of the PC was signed to its address in the register state
-    // but everyone else expects it to be sign by the SP, so convert on return.
+    // but everyone else expects it to be signed by the SP, so convert on return.
     value = (uint64_t)ptrauth_auth_and_resign((void *)_registers.__pc,
                                               ptrauth_key_return_address,
                                               &_registers.__pc,
@@ -1941,15 +1940,25 @@ private:
       _LIBUNWIND_ABORT("SME ZA disable failed");
   }
 
+#if defined(_LIBUNWIND_HAVE_GETAUXVAL)
   static bool checkHasSME() {
-#if defined(HAVE_SYS_AUXV_H)
     constexpr int hwcap2_sme = (1 << 23);
     unsigned long hwcap2 = getauxval(AT_HWCAP2);
     return (hwcap2 & hwcap2_sme) != 0;
-#endif
+  }
+#elif defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
+  static bool checkHasSME() {
+    constexpr int hwcap2_sme = (1 << 23);
+    unsigned long hwcap2 = 0;
+    elf_aux_info(AT_HWCAP2, &hwcap2, sizeof(hwcap2));
+    return (hwcap2 & hwcap2_sme) != 0;
+  }
+#else
+  static bool checkHasSME() {
     // TODO: Support other platforms.
     return false;
   }
+#endif
 
   struct GPRs {
     uint64_t __x[29] = {};        // x0-x28
@@ -3715,21 +3724,21 @@ inline void Registers_sparc::setRegister(int regNum, uint32_t value) {
 inline bool Registers_sparc::validFloatRegister(int) const { return false; }
 
 inline double Registers_sparc::getFloatRegister(int) const {
-  _LIBUNWIND_ABORT("no Sparc float registers");
+  _LIBUNWIND_ABORT("no sparc float registers");
 }
 
 inline void Registers_sparc::setFloatRegister(int, double) {
-  _LIBUNWIND_ABORT("no Sparc float registers");
+  _LIBUNWIND_ABORT("no sparc float registers");
 }
 
 inline bool Registers_sparc::validVectorRegister(int) const { return false; }
 
 inline v128 Registers_sparc::getVectorRegister(int) const {
-  _LIBUNWIND_ABORT("no Sparc vector registers");
+  _LIBUNWIND_ABORT("no sparc vector registers");
 }
 
 inline void Registers_sparc::setVectorRegister(int, v128) {
-  _LIBUNWIND_ABORT("no Sparc vector registers");
+  _LIBUNWIND_ABORT("no sparc vector registers");
 }
 
 inline const char *Registers_sparc::getRegisterName(int regNum) {

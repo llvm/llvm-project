@@ -127,12 +127,24 @@ BraceInsertionHints getBraceInsertionsHints(const Stmt *const S,
   if (StartLoc.isInvalid())
     return {};
 
+  const Stmt *InnerS = S;
+  while (const auto *AS = dyn_cast<AttributedStmt>(InnerS))
+    InnerS = AS->getSubStmt();
+
+  SourceLocation InsertLoc = StartLoc;
+  if (S != InnerS) {
+    if (std::optional<Token> Tok = utils::lexer::getPreviousToken(
+            InnerS->getBeginLoc(), SM, LangOpts, /*SkipComments=*/true)) {
+      InsertLoc = Tok->getLocation();
+    }
+  }
+
   // Convert StartLoc to file location, if it's on the same macro expansion
   // level as the start of the statement. We also need file locations for
   // Lexer::getLocForEndOfToken working properly.
-  StartLoc = Lexer::makeFileCharRange(
-                 CharSourceRange::getCharRange(StartLoc, S->getBeginLoc()), SM,
-                 LangOpts)
+  StartLoc = Lexer::makeFileCharRange(CharSourceRange::getCharRange(
+                                          InsertLoc, InnerS->getBeginLoc()),
+                                      SM, LangOpts)
                  .getBegin();
   if (StartLoc.isInvalid())
     return {};
