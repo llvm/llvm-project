@@ -163,11 +163,11 @@ static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
             MCInstBuilder(I->Opcode)
                 .addReg(DstReg)
                 .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
-                .addImm(I->Op2));
+                .addImm(*I->Op2));
       else
         Insts.emplace_back(
             MCInstBuilder(I->Opcode).addReg(DstReg).addReg(DstReg).addImm(
-                I->Op2));
+                *I->Op2));
       break;
     case AArch64::EORXrs:
     case AArch64::EONXrs:
@@ -177,23 +177,23 @@ static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
                              .addReg(DstReg)
                              .addReg(DstReg)
                              .addReg(DstReg)
-                             .addImm(I->Op2));
+                             .addImm(*I->Op2));
       break;
     case AArch64::MOVNWi:
     case AArch64::MOVNXi:
     case AArch64::MOVZWi:
     case AArch64::MOVZXi:
       Insts.emplace_back(
-          MCInstBuilder(I->Opcode).addReg(DstReg).addImm(I->Op1).addImm(
-              I->Op2));
+          MCInstBuilder(I->Opcode).addReg(DstReg).addImm(*I->Op1).addImm(
+              *I->Op2));
       break;
     case AArch64::MOVKWi:
     case AArch64::MOVKXi:
       Insts.emplace_back(MCInstBuilder(I->Opcode)
                              .addReg(DstReg)
                              .addReg(DstReg)
-                             .addImm(I->Op1)
-                             .addImm(I->Op2));
+                             .addImm(*I->Op1)
+                             .addImm(*I->Op2));
       break;
     default:
       llvm_unreachable("Unhandled! Please refer to expandMOVImm in llvm");
