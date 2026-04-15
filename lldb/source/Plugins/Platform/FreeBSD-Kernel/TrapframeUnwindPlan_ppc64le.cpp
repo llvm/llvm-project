@@ -66,8 +66,8 @@ static_assert(offsetof(struct trapframe, ctr) == (size_t)kOffCTR,
               "ctr offset mismatch");
 #endif
 
-lldb::UnwindPlanSP
-PlatformFreeBSDKernel::GetTrapframeUnwindPlan_ppc64le(ConstString name) {
+lldb::UnwindPlanSP PlatformFreeBSDKernel::GetTrapframeUnwindPlan_ppc64le(
+    [[maybe_unused]] ConstString name) {
   // CFA = r1 (SP) + 48.  All register offsets are relative to CFA
   // (= base of struct trapframe), matching kgdb's `base = SP + 48`.
 
@@ -75,8 +75,8 @@ PlatformFreeBSDKernel::GetTrapframeUnwindPlan_ppc64le(ConstString name) {
   regs.reserve(37);
 
   // r0–r31 from tf_fixreg[].
-  for (int i = 0; i <= 31; i++)
-    regs.push_back({(uint32_t)i, kOffFixreg + i * 8});
+  for (uint32_t i = 0; i <= 31; i++)
+    regs.push_back({i, kOffFixreg + i * 8});
 
   // Special registers.
   regs.push_back({kDwarfLR, kOffLR});

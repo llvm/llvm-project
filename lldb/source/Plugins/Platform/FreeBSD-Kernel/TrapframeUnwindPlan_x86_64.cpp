@@ -104,8 +104,8 @@ static_assert(offsetof(struct trapframe, tf_ss) == (size_t)kTfSS,
               "tf_ss offset mismatch");
 #endif
 
-lldb::UnwindPlanSP
-PlatformFreeBSDKernel::GetTrapframeUnwindPlan_x86_64(ConstString name) {
+lldb::UnwindPlanSP PlatformFreeBSDKernel::GetTrapframeUnwindPlan_x86_64(
+    [[maybe_unused]] ConstString name) {
   return BuildTrapframeUnwindPlan(
       "FreeBSD amd64 trapframe", kDwarfRSP, 0,
       {

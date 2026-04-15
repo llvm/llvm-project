@@ -83,19 +83,6 @@ std::vector<ArchSpec> PlatformFreeBSDKernel::GetSupportedArchitectures(
   return m_supported_architectures;
 }
 
-bool PlatformFreeBSDKernel::IsCompatibleArchitecture(
-    const ArchSpec &arch, const ArchSpec &process_host_arch,
-    ArchSpec::MatchType match, ArchSpec *compatible_arch_ptr) {
-  for (const auto &supported : m_supported_architectures) {
-    if (arch.IsCompatibleMatch(supported)) {
-      if (compatible_arch_ptr)
-        *compatible_arch_ptr = supported;
-      return true;
-    }
-  }
-  return false;
-}
-
 lldb::UnwindPlanSP
 PlatformFreeBSDKernel::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
                                                 ConstString name) {
@@ -129,11 +116,6 @@ void PlatformFreeBSDKernel::CalculateTrapHandlerSymbolNames() {
 }
 
 void PlatformFreeBSDKernel::PopulateTrapHandlerNames(Target &target) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  if (m_trap_handlers_calculated)
-    return;
-  m_trap_handlers_calculated = true;
-
   ModuleSP kernel_module = target.GetExecutableModule();
   if (!kernel_module)
     return;
@@ -145,16 +127,6 @@ void PlatformFreeBSDKernel::PopulateTrapHandlerNames(Target &target) {
   // https://cgit.freebsd.org/ports/tree/devel/gdb/files/kgdb/<arch>-kern.c
   switch (arch) {
   case llvm::Triple::aarch64:
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    m_trap_handlers.push_back(ConstString("fork_trampoline"));
-    break;
-  default:
-    break;
-  }
-
-  switch (arch) {
-  case llvm::Triple::aarch64:
     // From aarch64_fbsd_trapframe_sniffer in kgdb.
     m_trap_handlers.push_back(ConstString("handle_el1h_sync"));
     m_trap_handlers.push_back(ConstString("handle_el1h_irq"));
@@ -162,7 +134,7 @@ void PlatformFreeBSDKernel::PopulateTrapHandlerNames(Target &target) {
     m_trap_handlers.push_back(ConstString("handle_el0_irq"));
     m_trap_handlers.push_back(ConstString("handle_el0_error"));
     m_trap_handlers.push_back(ConstString("fork_trampoline"));
-    break;
+    return;
 
   case llvm::Triple::arm:
     // From arm_fbsd_trapframe_sniffer in kgdb.
@@ -173,7 +145,7 @@ void PlatformFreeBSDKernel::PopulateTrapHandlerNames(Target &target) {
     m_trap_handlers.push_back(ConstString("irq_entry"));
     m_trap_handlers.push_back(ConstString("swi_entry"));
     m_trap_handlers.push_back(ConstString("swi_exit"));
-    break;
+    return;
 
   case llvm::Triple::ppc64le:
     // From ppcfbsd_trapframe_sniffer in kgdb.
@@ -186,7 +158,7 @@ void PlatformFreeBSDKernel::PopulateTrapHandlerNames(Target &target) {
     // From riscv_fbsd_trapframe_sniffer in kgdb.
     m_trap_handlers.push_back(ConstString("cpu_exception_handler_user"));
     m_trap_handlers.push_back(ConstString("cpu_exception_handler_supervisor"));
-    break;
+    return;
 
   case llvm::Triple::x86:
     // Fixed names from i386fbsd_trapframe_sniffer in kgdb.
@@ -204,33 +176,22 @@ void PlatformFreeBSDKernel::PopulateTrapHandlerNames(Target &target) {
     break;
 
   default:
-    break;
+    assert(false && "Unexpected architecture for PlatformFreeBSDKernel plugin");
+    return;
   }
 
   // x86 / x86_64: scan symtab for IDTVEC stubs matching kgdb heuristic:
   //   name[0] == 'X' && name[1] != '_'
-  if (arch != llvm::Triple::x86_64 && arch != llvm::Triple::x86)
-    return;
-
   Symtab *symtab = kernel_module->GetSymtab();
   if (!symtab)
     return;
 
-  std::set<llvm::StringRef> existing;
-  for (const auto &cs : m_trap_handlers)
-    existing.insert(cs.GetStringRef());
-
-  const uint32_t num_syms = symtab->GetNumSymbols();
-  for (uint32_t i = 0; i < num_syms; i++) {
-    const Symbol *sym = symtab->SymbolAtIndex(i);
-    if (!sym || sym->GetType() != eSymbolTypeCode)
-      continue;
-    const char *name = sym->GetName().GetCString();
-    if (!name || name[0] != 'X' || name[1] == '\0' || name[1] == '_')
-      continue;
-    if (existing.insert(llvm::StringRef(name)).second)
-      m_trap_handlers.push_back(ConstString(name));
-  }
+  RegularExpression x_stub_regex("^X[^_]");
+  std::vector<uint32_t> indexes;
+  symtab->AppendSymbolIndexesMatchingRegExAndType(x_stub_regex, eSymbolTypeCode,
+                                                  indexes);
+  for (uint32_t idx : indexes)
+    m_trap_handlers.push_back(symtab->SymbolAtIndex(idx)->GetName());
 }
 
 lldb::UnwindPlanSP PlatformFreeBSDKernel::BuildTrapframeUnwindPlan(

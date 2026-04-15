@@ -42,8 +42,8 @@ static_assert(offsetof(struct trapframe, tf_x[0]) == (size_t)kTfX0Base,
               "tf_x[0] offset mismatch");
 #endif
 
-lldb::UnwindPlanSP
-PlatformFreeBSDKernel::GetTrapframeUnwindPlan_arm64(ConstString name) {
+lldb::UnwindPlanSP PlatformFreeBSDKernel::GetTrapframeUnwindPlan_arm64(
+    [[maybe_unused]] ConstString name) {
   std::vector<std::pair<uint32_t, int32_t>> regs;
   regs.reserve(33);
 
@@ -52,8 +52,8 @@ PlatformFreeBSDKernel::GetTrapframeUnwindPlan_arm64(ConstString name) {
   regs.push_back({kDwarfPC, kTfELR});
   regs.push_back({kDwarfCPSR, kTfSPSR});
 
-  for (int i = 0; i <= 29; i++)
-    regs.push_back({(uint32_t)i, kTfX0Base + i * 8});
+  for (uint32_t i = 0; i <= 29; i++)
+    regs.push_back({i, kTfX0Base + i * 8});
 
   return BuildTrapframeUnwindPlan("FreeBSD aarch64 trapframe", kDwarfSP, 0,
                                   regs);

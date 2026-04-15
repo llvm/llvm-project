@@ -14,7 +14,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
-#include <mutex>
 #include <utility>
 #include <vector>
 
@@ -54,11 +53,6 @@ public:
     return Status::FromErrorString("kernel platform cannot launch processes");
   }
 
-  bool IsCompatibleArchitecture(const ArchSpec &arch,
-                                const ArchSpec &process_host_arch,
-                                ArchSpec::MatchType match,
-                                ArchSpec *compatible_arch_ptr) override;
-
   bool CanDebugProcess() override { return false; }
 
   lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
@@ -89,9 +83,6 @@ private:
   lldb::UnwindPlanSP GetTrapframeUnwindPlan_ppc64le(ConstString name);
   lldb::UnwindPlanSP GetTrapframeUnwindPlan_riscv64(ConstString name);
   lldb::UnwindPlanSP GetTrapframeUnwindPlan_x86_64(ConstString name);
-
-  std::mutex m_mutex;
-  bool m_trap_handlers_calculated = false;
 
   std::vector<ArchSpec> m_supported_architectures;
 };
