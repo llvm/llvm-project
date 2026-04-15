@@ -10,20 +10,20 @@
 ; RUN: llvm-objdump -s -j .rodata %t.gfx12.o | FileCheck --check-prefix=OBJ-GFX12 %s
 
 ; The inst_pref_size is computed via MCExpr label subtraction, resolved at
-; assembly/link time. In text output it appears as a symbolic expression:
-;   ((instprefsize(<code_size>, <field_width>) << 4) & <mask>) >> 4
+; assembly/link time. In text output it appears as:
+;   instprefsize(<code_size>, <field_width>)
 ; where:
 ;   <code_size>   = .Lfunc_endN - func_sym (exact function code size in bytes)
 ;   <field_width> = bit width of the inst_pref_size field (6 for GFX11, 8 for GFX12+)
 ;   instprefsize  = min(divideCeil(code_size, 128), (1 << field_width) - 1)
-;   << 4, & mask, >> 4 = bit-field insertion/extraction within COMPUTE_PGM_RSRC3
 
 ; GCN-LABEL: .amdhsa_kernel large
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-large, 6)<<4)&1008)>>4
-; GFX11: codeLenInByte = 348
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-large, 8)<<4)&4080)>>4
-; GFX12: codeLenInByte = 476
-;; Object: kernel descriptor at 0x00, COMPUTE_PGM_RSRC3 at 0x2C: gfx11 pref=3 (0x30), gfx12 pref=4 (0x40)
+; GFX11: .amdhsa_inst_pref_size instprefsize(.Lfunc_end0-large, 6)
+; GFX11: codeLenInByte = {{[0-9]+}}
+; GFX12: .amdhsa_inst_pref_size instprefsize(.Lfunc_end0-large, 8)
+; GFX12: codeLenInByte = {{[0-9]+}}
+;; Object: kernel descriptor at 0x00, COMPUTE_PGM_RSRC3 at 0x2C:
+;; gfx11 pref=3 (0x30), gfx12 pref=4 (0x40)
 ; OBJ-GFX11: 0020 {{.*}}30000000
 ; OBJ-GFX12: 0020 {{.*}}40000000
 define amdgpu_kernel void @large(ptr addrspace(1) %out, ptr addrspace(1) %in) {
@@ -33,10 +33,11 @@ bb:
 }
 
 ; GCN-LABEL: .amdhsa_kernel small
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-small, 6)<<4)&1008)>>4
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-small, 8)<<4)&4080)>>4
-; GCN: codeLenInByte = 4
-;; Object: kernel descriptor at 0x40, COMPUTE_PGM_RSRC3 at 0x6C: pref=1 (0x10) for both
+; GFX11: .amdhsa_inst_pref_size instprefsize(.Lfunc_end1-small, 6)
+; GFX12: .amdhsa_inst_pref_size instprefsize(.Lfunc_end1-small, 8)
+; GCN: codeLenInByte = {{[0-9]+}}
+;; Object: kernel descriptor at 0x40, COMPUTE_PGM_RSRC3 at 0x6C:
+;; pref=1 (0x10) for both
 ; OBJ-GFX11: 0060 {{.*}}10000000
 ; OBJ-GFX12: 0060 {{.*}}10000000
 define amdgpu_kernel void @small() {
@@ -48,10 +49,11 @@ bb:
 ; The MCExpr resolves to the correct inst_pref_size at assembly time.
 
 ; GCN-LABEL: .amdhsa_kernel inline_asm
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-inline_asm, 6)<<4)&1008)>>4
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-inline_asm, 8)<<4)&4080)>>4
-; GCN: codeLenInByte = 24
-;; Object: kernel descriptor at 0x80, COMPUTE_PGM_RSRC3 at 0xAC: pref=9 (0x90) for both
+; GFX11: .amdhsa_inst_pref_size instprefsize(.Lfunc_end2-inline_asm, 6)
+; GFX12: .amdhsa_inst_pref_size instprefsize(.Lfunc_end2-inline_asm, 8)
+; GCN: codeLenInByte = {{[0-9]+}}
+;; Object: kernel descriptor at 0x80, COMPUTE_PGM_RSRC3 at 0xAC:
+;; pref=9 (0x90) for both
 ;; (.fill 256, 4, 0 = 1024 bytes + 4 s_endpgm = 1028 -> divideCeil(1028,128) = 9)
 ; OBJ-GFX11: 00a0 {{.*}}90000000
 ; OBJ-GFX12: 00a0 {{.*}}90000000

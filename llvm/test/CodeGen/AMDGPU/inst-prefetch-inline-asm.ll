@@ -12,11 +12,12 @@
 ;; pref_size = divideCeil(1028, 128) = 9
 
 ; ASM-LABEL: .amdhsa_kernel test_fill
-; ASM: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-test_fill, 6)<<4)&1008)>>4
+; ASM: .amdhsa_inst_pref_size instprefsize(.Lfunc_end0-test_fill, 6)
 ; SYM:      Name: test_fill
 ; SYM-NEXT: Value:
 ; SYM-NEXT: Size: 1028
-;; Object: kernel descriptor at 0x00, COMPUTE_PGM_RSRC3 at 0x2C: pref_size=9 -> 9<<4 = 0x90
+;; Object: kernel descriptor at 0x00, COMPUTE_PGM_RSRC3 at 0x2C:
+;; pref_size=9 -> 9<<4 = 0x90
 ; OBJ: 0020 {{.*}}90000000
 
 define amdgpu_kernel void @test_fill() {
@@ -28,11 +29,12 @@ define amdgpu_kernel void @test_fill() {
 ;; pref_size = 9
 
 ; ASM-LABEL: .amdhsa_kernel test_space
-; ASM: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-test_space, 6)<<4)&1008)>>4
+; ASM: .amdhsa_inst_pref_size instprefsize(.Lfunc_end1-test_space, 6)
 ; SYM:      Name: test_space
 ; SYM-NEXT: Value:
 ; SYM-NEXT: Size: 1028
-;; Object: kernel descriptor at 0x40, COMPUTE_PGM_RSRC3 at 0x6C: pref_size=9 -> 9<<4 = 0x90
+;; Object: kernel descriptor at 0x40, COMPUTE_PGM_RSRC3 at 0x6C:
+;; pref_size=9 -> 9<<4 = 0x90
 ; OBJ: 0060 {{.*}}90000000
 
 define amdgpu_kernel void @test_space() {
@@ -44,11 +46,12 @@ define amdgpu_kernel void @test_space() {
 ;; pref_size = divideCeil(132, 128) = 2
 
 ; ASM-LABEL: .amdhsa_kernel test_instructions
-; ASM: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-test_instructions, 6)<<4)&1008)>>4
+; ASM: .amdhsa_inst_pref_size instprefsize(.Lfunc_end2-test_instructions, 6)
 ; SYM:      Name: test_instructions
 ; SYM-NEXT: Value:
 ; SYM-NEXT: Size: 132
-;; Object: kernel descriptor at 0x80, COMPUTE_PGM_RSRC3 at 0xAC: pref_size=2 -> 2<<4 = 0x20
+;; Object: kernel descriptor at 0x80, COMPUTE_PGM_RSRC3 at 0xAC:
+;; pref_size=2 -> 2<<4 = 0x20
 ; OBJ: 00a0 {{.*}}20000000
 
 define amdgpu_kernel void @test_instructions() {
@@ -60,11 +63,12 @@ define amdgpu_kernel void @test_instructions() {
 ;; pref_size = 1
 
 ; ASM-LABEL: .amdhsa_kernel test_comments
-; ASM: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end3-test_comments, 6)<<4)&1008)>>4
+; ASM: .amdhsa_inst_pref_size instprefsize(.Lfunc_end3-test_comments, 6)
 ; SYM:      Name: test_comments
 ; SYM-NEXT: Value:
 ; SYM-NEXT: Size: 4
-;; Object: kernel descriptor at 0xC0, COMPUTE_PGM_RSRC3 at 0xEC: pref_size=1 -> 1<<4 = 0x10
+;; Object: kernel descriptor at 0xC0, COMPUTE_PGM_RSRC3 at 0xEC:
+;; pref_size=1 -> 1<<4 = 0x10
 ; OBJ: 00e0 {{.*}}10000000
 
 define amdgpu_kernel void @test_comments() {
@@ -76,11 +80,12 @@ define amdgpu_kernel void @test_comments() {
 ;; pref_size = 1
 
 ; ASM-LABEL: .amdhsa_kernel test_empty_asm
-; ASM: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end4-test_empty_asm, 6)<<4)&1008)>>4
+; ASM: .amdhsa_inst_pref_size instprefsize(.Lfunc_end4-test_empty_asm, 6)
 ; SYM:      Name: test_empty_asm
 ; SYM-NEXT: Value:
 ; SYM-NEXT: Size: 4
-;; Object: kernel descriptor at 0x100, COMPUTE_PGM_RSRC3 at 0x12C: pref_size=1 -> 1<<4 = 0x10
+;; Object: kernel descriptor at 0x100, COMPUTE_PGM_RSRC3 at 0x12C:
+;; pref_size=1 -> 1<<4 = 0x10
 ; OBJ: 0120 {{.*}}10000000
 
 define amdgpu_kernel void @test_empty_asm() {

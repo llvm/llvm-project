@@ -255,29 +255,37 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   MCContext &Ctx = MF->getContext();
 
+  AMDGPU::MCKernelDescriptor KD =
+      getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo);
+
   // Compute inst_pref_size using MCExpr label subtraction for exact code
-  // size. (Lfunc_end - func_sym) gives the exact function code size in bytes.
+  // size. At this point .Lfunc_end has been emitted (by the base AsmPrinter)
+  // right after the function code, so (Lfunc_end - func_sym) gives the
+  // exact function code size in bytes.
+  // We store it as a separate KD field rather than OR'ing into
+  // compute_pgm_rsrc3, because the label subtraction MCExpr is unresolvable
+  // in text mode and would prevent printing of other fields (e.g.
+  // named_barrier_count) that share the same register.
   if (isGFX11Plus(STM)) {
     const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
         MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
         MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
 
-    uint32_t Field, Shift, Width;
+    uint32_t Width;
     if (isGFX11(STM)) {
-      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
-      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
+      KD.inst_pref_size_mask = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
+      KD.inst_pref_size_shift =
+          amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
       Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
     } else {
-      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
-      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
+      KD.inst_pref_size_mask =
+          amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
+      KD.inst_pref_size_shift =
+          amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
       Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
     }
-    const MCExpr *InstPrefSizeExpr =
+    KD.inst_pref_size =
         AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Width, Ctx);
-
-    CurrentProgramInfo.ComputePGMRSrc3 =
-        setBits(CurrentProgramInfo.ComputePGMRSrc3, InstPrefSizeExpr, Field,
-                Shift, Ctx);
   }
 
   auto &Streamer = getTargetStreamer()->getStreamer();
@@ -296,8 +304,7 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   SmallString<128> KernelName;
   getNameWithPrefix(KernelName, &MF->getFunction());
   getTargetStreamer()->EmitAmdhsaKernelDescriptor(
-      STM, KernelName, getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo),
-      CurrentProgramInfo.NumVGPRsForWavesPerEU,
+      STM, KernelName, KD, CurrentProgramInfo.NumVGPRsForWavesPerEU,
       MCBinaryExpr::createSub(
           CurrentProgramInfo.NumSGPRsForWavesPerEU,
           AMDGPUMCExpr::createExtraSGPRs(

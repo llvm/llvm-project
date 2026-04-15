@@ -34,6 +34,14 @@ struct MCKernelDescriptor {
   const MCExpr *kernel_code_properties = nullptr;
   const MCExpr *kernarg_preload = nullptr;
 
+  /// Instruction prefetch size, kept separate from compute_pgm_rsrc3 to avoid
+  /// contaminating the register MCExpr with an unresolvable label subtraction
+  /// (which would prevent text-mode printing of other fields in the register).
+  /// The ELF streamer OR's this into compute_pgm_rsrc3 when emitting bytes.
+  const MCExpr *inst_pref_size = nullptr;
+  uint32_t inst_pref_size_shift = 0;
+  uint32_t inst_pref_size_mask = 0;
+
   static MCKernelDescriptor
   getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI, MCContext &Ctx);
   // MCExpr for:
