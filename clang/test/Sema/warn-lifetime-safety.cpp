@@ -925,6 +925,7 @@ void lifetimebound_return_reference() {
 struct LifetimeBoundCtor {
   LifetimeBoundCtor();
   LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]);
+  LifetimeBoundCtor(const MyObj& obj, int); // not lifetimebound ctor.
   LifetimeBoundCtor(int* p [[clang::lifetimebound]]);
   LifetimeBoundCtor(std::string_view sv [[clang::lifetimebound]]);
 };
@@ -970,8 +971,18 @@ void lifetimebound_make_unique() {
   {
     MyObj obj;
     ptr = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{object whose reference is captured does not live long enough}}
-  } // tu-note {{destroyed here}}
-  (void)ptr; // tu-note {{later used here}}
+  }                                                 // tu-note {{destroyed here}}
+  (void)ptr;                                        // tu-note {{later used here}}
+}
+
+void non_lifetimebound_make_unique() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  {
+    MyObj obj;
+    // No error as the ctor is not lifetimebound.
+    ptr = std::make_unique<LifetimeBoundCtor>(obj, 0);
+  }
+  (void)ptr;
 }
 
 void lifetimebound_make_unique_temp() {
@@ -996,8 +1007,8 @@ void lifetimebound_make_unique_string_view_local() {
     std::string s;
     std::string_view sv(s);
     ptr = std::make_unique<LifetimeBoundCtor>(sv); // tu-warning {{object whose reference is captured does not live long enough}}
-  } // tu-note {{destroyed here}}
-  (void)ptr; // tu-note {{later used here}}
+  }                                                // tu-note {{destroyed here}}
+  (void)ptr;                                       // tu-note {{later used here}}
 }
 
 struct MultiLifetimeBoundCtor {

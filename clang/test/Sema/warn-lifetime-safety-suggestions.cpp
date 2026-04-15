@@ -10,8 +10,6 @@ View definition_before_header(View a);
 #ifndef TEST_HEADER_H
 #define TEST_HEADER_H
 
-#include "Inputs/lifetime-analysis.h"
-
 struct View;
 
 struct [[gsl::Owner]] MyObj {
@@ -69,6 +67,7 @@ struct ReturnThisPointer {
 //--- test_source.cpp
 
 #include "test_header.h"
+#include "Inputs/lifetime-analysis.h"
 
 View definition_before_header(View a) {
   return a;                               // expected-note {{param returned here}}
