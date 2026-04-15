@@ -2,8 +2,8 @@
 // RUN: %libomptarget-compilexx-generic
 // RUN: rm -rf %t.testdir
 // RUN: mkdir -p %t.testdir
-// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_OUTPUT=1 LIBOMPTARGET_RECORD_MEMSIZE=16384 LIBOMPTARGET_RECORD_DIR=%t.testdir %libomptarget-run-generic 2>&1 | %fcheck-generic
-// RUN: ls %t.testdir/*.json | head -n 1 | xargs -I {} %omp-kernel-replay --verify {}
+// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_MEMSIZE=16384 LIBOMPTARGET_RECORD_DIR=%t.testdir %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: ls -t %t.testdir/*.json | sed -n '1p' | grep . | xargs -I {} %omp-kernel-replay --verify {}
 // clang-format on
 
 // REQUIRES: gpu
