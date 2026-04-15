@@ -20,3 +20,6 @@ breaks build of llvm
 ubsan issues
 Reapply "[compiler-rt] Enable minimal ubsan for GPU targets (#188289)"
 ---
+breaks flang tests in smoke
+[Flang] [OpenMP] [MLIR] Add lowering support for OMP ALLOCATE dire
+---
