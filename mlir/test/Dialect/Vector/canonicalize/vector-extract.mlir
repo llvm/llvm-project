@@ -112,3 +112,17 @@ func.func @extract_from_insert_exact_match(%s: f32) -> f32 {
   %ext = vector.extract %ins [2, 0] : f32 from vector<4x1xf32>
   return %ext : f32
 }
+
+// -----
+
+// First matches FoldExtractFromInsertUnitDim, then BroadcastToShapeCast.
+
+// CHECK-LABEL: func.func @extract_from_insert_vector_to_vector_broadcast
+// CHECK-SAME:    %[[SRC:.*]]: vector<1xf32>
+// CHECK:         vector.shape_cast %[[SRC]] : vector<1xf32> to vector<1x1xf32>
+func.func @extract_from_insert_vector_to_vector_broadcast(%src: vector<1xf32>) -> vector<1x1xf32> {
+  %poison = ub.poison : vector<16x1x1xf32>
+  %vec1 = vector.insert %src, %poison [0, 0] : vector<1xf32> into vector<16x1x1xf32>
+  %vec2 = vector.extract %vec1[0] : vector<1x1xf32> from vector<16x1x1xf32>
+  return %vec2 : vector<1x1xf32>
+}
