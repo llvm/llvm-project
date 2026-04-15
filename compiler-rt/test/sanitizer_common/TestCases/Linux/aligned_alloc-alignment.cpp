@@ -14,7 +14,7 @@
 
 // REQUIRES: stable-runtime
 
-// UNSUPPORTED: android, tysan, ubsan
+// UNSUPPORTED: android, ubsan
 
 #include <assert.h>
 #include <errno.h>

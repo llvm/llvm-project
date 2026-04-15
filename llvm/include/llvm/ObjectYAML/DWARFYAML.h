@@ -151,6 +151,11 @@ struct File {
   uint64_t Length;
 };
 
+struct LnctForm {
+  dwarf::LineNumberEntryFormat ContentType;
+  dwarf::Form Form;
+};
+
 struct LineTableOpcode {
   dwarf::LineNumberOps Opcode;
   std::optional<uint64_t> ExtLen;
@@ -176,8 +181,17 @@ struct LineTable {
   uint8_t LineRange;
   std::optional<uint8_t> OpcodeBase;
   std::optional<std::vector<uint8_t>> StandardOpcodeLengths;
+
+  // For DWARF<=v4
   std::vector<StringRef> IncludeDirs;
   std::vector<File> Files;
+
+  // For DWARF>=v5
+  uint8_t DirectoryEntryFormatCount;
+  std::vector<LnctForm> DirectoryEntryFormat;
+  uint8_t FileNameEntryFormatCount;
+  std::vector<LnctForm> FileNameEntryFormat;
+
   std::vector<LineTableOpcode> Opcodes;
 };
 
@@ -289,6 +303,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Unit)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::FormValue)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Entry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::File)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LnctForm)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LineTable)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LineTableOpcode)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::SegAddrPair)
@@ -381,6 +396,10 @@ template <> struct MappingTraits<DWARFYAML::File> {
   LLVM_ABI static void mapping(IO &IO, DWARFYAML::File &File);
 };
 
+template <> struct MappingTraits<DWARFYAML::LnctForm> {
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::LnctForm &);
+};
+
 template <> struct MappingTraits<DWARFYAML::LineTableOpcode> {
   LLVM_ABI static void mapping(IO &IO,
                                DWARFYAML::LineTableOpcode &LineTableOpcode);
@@ -460,6 +479,16 @@ template <> struct ScalarEnumerationTraits<dwarf::LineNumberOps> {
 
 template <> struct ScalarEnumerationTraits<dwarf::LineNumberExtendedOps> {
   static void enumeration(IO &io, dwarf::LineNumberExtendedOps &value) {
+#include "llvm/BinaryFormat/Dwarf.def"
+    io.enumFallback<Hex16>(value);
+  }
+};
+
+#define HANDLE_DW_LNCT(unused, name)                                           \
+  io.enumCase(value, "DW_LNCT_" #name, dwarf::DW_LNCT_##name);
+
+template <> struct ScalarEnumerationTraits<dwarf::LineNumberEntryFormat> {
+  static void enumeration(IO &io, dwarf::LineNumberEntryFormat &value) {
 #include "llvm/BinaryFormat/Dwarf.def"
     io.enumFallback<Hex16>(value);
   }
