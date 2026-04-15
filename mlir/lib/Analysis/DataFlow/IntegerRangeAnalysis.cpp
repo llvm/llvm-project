@@ -153,7 +153,7 @@ void IntegerRangeAnalysis::visitRegionSuccessors(
     return;
   }
 
-  // For loops: replicate upstream logic with a visit cap.
+  // For loops: replicate base class implementation with a visit cap.
   const auto *predecessors =
       getOrCreateFor<PredecessorState>(point, point);
   assert(predecessors->allPredecessorsKnown() &&
