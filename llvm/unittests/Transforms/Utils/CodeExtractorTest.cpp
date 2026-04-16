@@ -175,8 +175,12 @@ TEST(CodeExtractor, InputOutputReturnMonitoring) {
                                           getBlockByName(Func, "body1"),
                                           getBlockByName(Func, "body2")};
 
-  CodeExtractor CE(Candidates, nullptr, false, nullptr, nullptr, nullptr, false,
-                   false, nullptr, "", false, false);
+  CodeExtractor CE(Candidates, /* DT */ nullptr, /* AggregateArgs */ false,
+                   /* BFI */ nullptr, /* BPI */ nullptr, /* AC */ nullptr,
+                   /* AllowVarargs */ false, /* AllowAlloca */ false,
+                   /* AllocaBlock */ nullptr, /* Suffix */ "",
+                   /* ArgsInZeroAddressSpace */ false,
+                   /* VoidReturnWithSingleOutput */ false);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
