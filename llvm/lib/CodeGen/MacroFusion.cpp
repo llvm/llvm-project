@@ -77,8 +77,9 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
 
   auto &Clusters = DAG.getClusters();
 
-  FirstSU.ParentClusterIdx = Clusters.size();
-  SecondSU.ParentClusterIdx = Clusters.size();
+  unsigned ClusterIdx = Clusters.size();
+  FirstSU.ParentClusterIdx = ClusterIdx;
+  SecondSU.ParentClusterIdx = ClusterIdx;
 
   SmallPtrSet<SUnit *, 8> Cluster{{&FirstSU, &SecondSU}};
   Clusters.push_back(Cluster);
