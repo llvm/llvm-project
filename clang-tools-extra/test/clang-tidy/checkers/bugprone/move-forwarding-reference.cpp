@@ -123,13 +123,3 @@ template <typename T, typename U> void f13(U&& SomeU) {
 template <typename T, typename U> void f14(U&& SomeU) {
   [=] () { T SomeT(std::move(SomeU)); };
 }
-
-#if 0
-// FIXME: we currently ignore that case.
-//
-// Handle the case of captured variables where no copy already
-// happened.
-template <typename T, typename U> void f15(U&& SomeU) {
-  [&SomeU] () { T SomeT(std::move(SomeU)); };
-}
-#endif

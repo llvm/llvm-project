@@ -96,7 +96,6 @@ void MoveForwardingReferenceCheck::registerMatchers(MatchFinder *Finder) {
           argumentCountIs(1),
           hasArgument(0, ignoringParenImpCasts(declRefExpr(
                              to(ForwardingReferenceParmMatcher),
-                             // FIXME: allow capture by reference
                              unless(refersToEnclosingVariableOrCapture())))))
           .bind("call-move"),
       this);
