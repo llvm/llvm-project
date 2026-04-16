@@ -696,18 +696,45 @@ handler table is stored at the address pointed to by ``r14``.
 Thread pointer
 ~~~~~~~~~~~~~~
 
-The ``movq %fs:0, %rX`` pattern (used for TLS access) is rewritten to load the
-virtual thread pointer from the context register (``r15``) at offset 16 (see
-`Context Register`_).
+Thread pointer accesses via the ``%fs`` segment (used for TLS) are rewritten to
+use the virtual thread pointer from the context register (``r15``) at offset 16
+(see `Context Register`_). The rewrite handles any load or store instruction
+with an ``%fs``-segment memory operand. ``Op`` represents any such instruction.
 
-+-----------------------+---------------------------+
-|       Original        |         Rewritten         |
-+-----------------------+---------------------------+
-| .. code-block::       | .. code-block::           |
-|                       |                           |
-|    movq %fs:0, %rX    |    movq 16(%r15), %rX     |
-|                       |                           |
-+-----------------------+---------------------------+
++--------------------------------------+----------------------------------------+
+|              Original                |              Rewritten                 |
++--------------------------------------+----------------------------------------+
+| .. code-block::                      | .. code-block::                        |
+|                                      |                                        |
+|    Op %fs:0, %rD                     |    Op 16(%r15), %rD                    |
+|                                      |                                        |
++--------------------------------------+----------------------------------------+
+| .. code-block::                      | .. code-block::                        |
+|                                      |                                        |
+|    Op %fs:(%rX), %rD                 |    movq 16(%r15), %rD                  |
+|                                      |    Op (%rD, %rX), %rD                  |
+|                                      |                                        |
++--------------------------------------+----------------------------------------+
+| .. code-block::                      | .. code-block::                        |
+|                                      |                                        |
+|    Op %rS, %fs:(%rX)                 |    movq 16(%r15), %r11                 |
+|                                      |    Op %rS, (%r11, %rX)                 |
+|                                      |                                        |
++--------------------------------------+----------------------------------------+
+| .. code-block::                      | .. code-block::                        |
+|                                      |                                        |
+|    Op %fs:N(%rX, %rY, S), %rD        |    movq 16(%r15), %r11                 |
+|                                      |    leaq (%r11, %rX), %r11              |
+|                                      |    Op N(%r11, %rY, S), %rD             |
+|                                      |                                        |
++--------------------------------------+----------------------------------------+
+| .. code-block::                      | .. code-block::                        |
+|                                      |                                        |
+|    Op %rS, %fs:N(%rX, %rY, S)        |    movq 16(%r15), %r11                 |
+|                                      |    leaq (%r11, %rX), %r11              |
+|                                      |    Op %rS, N(%r11, %rY, S)             |
+|                                      |                                        |
++--------------------------------------+----------------------------------------+
 
 References
 ++++++++++

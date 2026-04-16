@@ -41,13 +41,12 @@ private:
   void doRewriteInst(const MCInst &Inst, MCStreamer &Out,
                      const MCSubtargetInfo &STI);
 
-  void expandSyscall(const MCInst &Inst, MCStreamer &Out,
-                     const MCSubtargetInfo &STI);
+  void rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
+                      const MCSubtargetInfo &STI);
 
-  void expandTPRead(const MCInst &Inst, MCStreamer &Out,
-                    const MCSubtargetInfo &STI);
-
-  void emitLFICall(MCStreamer &Out, const MCSubtargetInfo &STI);
+  bool isFSAccess(const MCInst &Inst);
+  void rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
+                       const MCSubtargetInfo &STI);
 };
 
 } // namespace X86

@@ -35,14 +35,19 @@ static bool isSyscall(const MCInst &Inst) {
   return Inst.getOpcode() == X86::SYSCALL;
 }
 
-static bool isTPRead(const MCInst &Inst) {
-  // Match movq %fs:0, %rX
-  return Inst.getOpcode() == X86::MOV64rm &&
-         Inst.getOperand(1).getReg() == X86::NoRegister &&
-         Inst.getOperand(2).isImm() && Inst.getOperand(2).getImm() == 1 &&
-         Inst.getOperand(3).getReg() == X86::NoRegister &&
-         Inst.getOperand(4).isImm() && Inst.getOperand(4).getImm() == 0 &&
-         Inst.getOperand(5).getReg() == X86::FS;
+// Find the index of the first memory operand with %fs segment override.
+// Returns -1 if not found.
+static int findFSMemOperand(const MCInst &Inst, const MCInstrInfo &InstInfo) {
+  const MCInstrDesc &Desc = InstInfo.get(Inst.getOpcode());
+  for (unsigned I = 0, E = Desc.getNumOperands(); I < E; ++I) {
+    if (Desc.operands()[I].OperandType == MCOI::OPERAND_MEMORY) {
+      if (I + 4 < Inst.getNumOperands() && Inst.getOperand(I + 4).isReg() &&
+          Inst.getOperand(I + 4).getReg() == X86::FS)
+        return I;
+      I += 4;
+    }
+  }
+  return -1;
 }
 
 // syscall
@@ -50,8 +55,7 @@ static bool isTPRead(const MCInst &Inst) {
 // leaq .Ltmp(%rip), %r11
 // jmpq *(%r14)
 // .Ltmp:
-void X86::X86MCLFIRewriter::emitLFICall(MCStreamer &Out,
-                                        const MCSubtargetInfo &STI) {
+static void emitLFICall(MCStreamer &Out, const MCSubtargetInfo &STI) {
   MCSymbol *Symbol = Out.getContext().createTempSymbol();
 
   // leaq .Ltmp(%rip), %r11
@@ -79,27 +83,102 @@ void X86::X86MCLFIRewriter::emitLFICall(MCStreamer &Out,
   Out.emitLabel(Symbol);
 }
 
-void X86::X86MCLFIRewriter::expandSyscall(const MCInst &Inst, MCStreamer &Out,
-                                          const MCSubtargetInfo &STI) {
+void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
+                                           const MCSubtargetInfo &STI) {
   emitLFICall(Out, STI);
 }
 
-// movq %fs:0, %rX
-// ->
-// movq TPOffset(%r15), %rX
-void X86::X86MCLFIRewriter::expandTPRead(const MCInst &Inst, MCStreamer &Out,
-                                         const MCSubtargetInfo &STI) {
-  MCRegister DestReg = Inst.getOperand(0).getReg();
-
+// Emit: movq TPOffset(%r15), %Reg
+static void emitTPLoad(MCRegister Reg, MCStreamer &Out,
+                       const MCSubtargetInfo &STI) {
   MCInst Mov;
   Mov.setOpcode(X86::MOV64rm);
-  Mov.addOperand(MCOperand::createReg(DestReg));
-  Mov.addOperand(MCOperand::createReg(LFITPReg));        // Base
-  Mov.addOperand(MCOperand::createImm(1));               // Scale
-  Mov.addOperand(MCOperand::createReg(X86::NoRegister)); // Index
-  Mov.addOperand(MCOperand::createImm(TPOffset));        // Displacement
-  Mov.addOperand(MCOperand::createReg(X86::NoRegister)); // Segment
+  Mov.addOperand(MCOperand::createReg(Reg));
+  Mov.addOperand(MCOperand::createReg(LFITPReg));
+  Mov.addOperand(MCOperand::createImm(1));
+  Mov.addOperand(MCOperand::createReg(X86::NoRegister));
+  Mov.addOperand(MCOperand::createImm(TPOffset));
+  Mov.addOperand(MCOperand::createReg(X86::NoRegister));
   Out.emitInstruction(Mov, STI);
+}
+
+bool X86::X86MCLFIRewriter::isFSAccess(const MCInst &Inst) {
+  return (mayLoad(Inst) || mayStore(Inst)) &&
+         findFSMemOperand(Inst, *InstInfo) >= 0;
+}
+
+// Rewrite %fs-segment memory accesses to use the virtual thread pointer stored
+// at TPOffset(%r15). The actual memory access is currently unsandboxed because
+// load/store sandboxing is not yet supported. Example rewrites:
+//
+// movq %fs:0, %rax
+// ->
+// movq 16(%r15), %rax
+//
+// movq %fs:(%rdi), %rax
+// ->
+// movq 16(%r15), %rax
+// movq (%rax, %rdi), %rax
+//
+// movq 8(%rdi, %rsi, 2), %rax
+// ->
+// movq 16(%r15), %rax
+// leaq (%rax, %rdi), %rax
+// movq 8(%rax, %rsi, 2), %rax
+void X86::X86MCLFIRewriter::rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
+                                            const MCSubtargetInfo &STI) {
+  int MemIdx = findFSMemOperand(Inst, *InstInfo);
+  assert(MemIdx >= 0);
+
+  MCRegister BaseReg = Inst.getOperand(MemIdx).getReg();
+  MCRegister IndexReg = Inst.getOperand(MemIdx + 2).getReg();
+  bool HasBase = BaseReg != X86::NoRegister;
+  bool HasIndex = IndexReg != X86::NoRegister;
+  bool HasDisp = !Inst.getOperand(MemIdx + 3).isImm() ||
+                 Inst.getOperand(MemIdx + 3).getImm() != 0;
+
+  // %fs:0 -> TPOffset(%r15)
+  if (!HasBase && !HasIndex && !HasDisp) {
+    MCInst Modified(Inst);
+    Modified.getOperand(MemIdx).setReg(LFITPReg);
+    Modified.getOperand(MemIdx + 3).setImm(TPOffset);
+    Modified.getOperand(MemIdx + 4).setReg(X86::NoRegister);
+    return Out.emitInstruction(Modified, STI);
+  }
+
+  // Use the dest register as TP temporary when it is available and not used in
+  // the addressing mode, otherwise use %r11.
+  MCRegister TPDest = LFIScratchReg;
+  if (MemIdx > 0 && Inst.getOperand(0).isReg()) {
+    const MCInstrDesc &Desc = InstInfo->get(Inst.getOpcode());
+    MCRegister DestReg = Inst.getOperand(0).getReg();
+    if (Desc.getOperandConstraint(0, MCOI::TIED_TO) == -1 &&
+        X86MCRegisterClasses[X86::GR64RegClassID].contains(DestReg) &&
+        (!HasBase || DestReg != BaseReg) && (!HasIndex || DestReg != IndexReg))
+      TPDest = DestReg;
+  }
+
+  emitTPLoad(TPDest, Out, STI);
+
+  // Both slots occupied: fold base into TPDest via lea.
+  if (HasBase && HasIndex) {
+    MCInst Lea;
+    Lea.setOpcode(X86::LEA64r);
+    Lea.addOperand(MCOperand::createReg(TPDest));
+    Lea.addOperand(MCOperand::createReg(TPDest));
+    Lea.addOperand(MCOperand::createImm(1));
+    Lea.addOperand(MCOperand::createReg(BaseReg));
+    Lea.addOperand(MCOperand::createImm(0));
+    Lea.addOperand(MCOperand::createReg(X86::NoRegister));
+    Out.emitInstruction(Lea, STI);
+  }
+
+  MCInst Modified(Inst);
+  Modified.getOperand(MemIdx).setReg(TPDest);
+  if (HasBase && !HasIndex)
+    Modified.getOperand(MemIdx + 2).setReg(BaseReg);
+  Modified.getOperand(MemIdx + 4).setReg(X86::NoRegister);
+  Out.emitInstruction(Modified, STI);
 }
 
 void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
@@ -108,10 +187,10 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
     return error(Inst, "illegal modification of reserved LFI register");
 
   if (isSyscall(Inst))
-    return expandSyscall(Inst, Out, STI);
+    return rewriteSyscall(Inst, Out, STI);
 
-  if (isTPRead(Inst))
-    return expandTPRead(Inst, Out, STI);
+  if (isFSAccess(Inst))
+    return rewriteFSAccess(Inst, Out, STI);
 
   // Pass through all other instructions unchanged.
   Out.emitInstruction(Inst, STI);
