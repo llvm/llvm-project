@@ -3222,6 +3222,14 @@ def int_amdgcn_s_prefetch_data :
     "", [SDNPMemOperand]
   >;
 
+def int_amdgcn_s_prefetch_inst :
+  Intrinsic<[],
+  [LLVMQualPointerType<4>, // Pointer to constant memory
+   llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chunks, units of 128 bytes)
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+    "", [SDNPMemOperand]
+  >;
+
 // llvm.amdgcn.ds.bpermute.fi.b32 <index> <src>
 def int_amdgcn_ds_bpermute_fi_b32 :
   ClangBuiltin<"__builtin_amdgcn_ds_bpermute_fi_b32">,
