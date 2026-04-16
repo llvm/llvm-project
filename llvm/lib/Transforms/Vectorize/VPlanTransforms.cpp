@@ -6025,41 +6025,40 @@ struct VPPartialReductionChain {
 };
 
 static VPSingleDefRecipe *
-optimizeExtendsForPartialReduction(VPSingleDefRecipe *ExtendedOp,
+optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op,
                                    VPTypeAnalysis &TypeInfo) {
   // reduce.add(mul(ext(A), C))
   // -> reduce.add(mul(ext(A), ext(trunc(C))))
   const APInt *Const;
-  if (match(ExtendedOp, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
-    auto *ExtA = cast<VPWidenCastRecipe>(ExtendedOp->getOperand(0));
+  if (match(Op, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
+    auto *ExtA = cast<VPWidenCastRecipe>(Op->getOperand(0));
     Instruction::CastOps ExtOpc = ExtA->getOpcode();
     Type *NarrowTy = TypeInfo.inferScalarType(ExtA->getOperand(0));
-    if (!ExtendedOp->hasOneUse() ||
+    if (!Op->hasOneUse() ||
         !llvm::canConstantBeExtended(
             Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc)))
-      return ExtendedOp;
+      return Op;
 
-    VPBuilder Builder(ExtendedOp);
+    VPBuilder Builder(Op);
     auto *Trunc = Builder.createWidenCast(Instruction::CastOps::Trunc,
-                                          ExtendedOp->getOperand(1), NarrowTy);
+                                          Op->getOperand(1), NarrowTy);
     Type *WideTy = TypeInfo.inferScalarType(ExtA);
-    ExtendedOp->setOperand(1, Builder.createWidenCast(ExtOpc, Trunc, WideTy));
-    return ExtendedOp;
+    Op->setOperand(1, Builder.createWidenCast(ExtOpc, Trunc, WideTy));
+    return Op;
   }
 
   // reduce.add(abs(sub(ext(A), ext(B))))
   // -> reduce.add(ext(absolute-difference(A, B)))
   VPValue *X, *Y;
-  if (match(ExtendedOp,
-            m_WidenIntrinsic<Intrinsic::abs>(m_Sub(
-                m_ZExtOrSExt(m_VPValue(X)), m_ZExtOrSExt(m_VPValue(Y)))))) {
-    auto *Sub = ExtendedOp->getOperand(0)->getDefiningRecipe();
+  if (match(Op, m_WidenIntrinsic<Intrinsic::abs>(m_Sub(
+                    m_ZExtOrSExt(m_VPValue(X)), m_ZExtOrSExt(m_VPValue(Y)))))) {
+    auto *Sub = Op->getOperand(0)->getDefiningRecipe();
     auto *Ext = cast<VPWidenCastRecipe>(Sub->getOperand(0));
     assert(Ext->getOpcode() ==
                cast<VPWidenCastRecipe>(Sub->getOperand(1))->getOpcode() &&
            "Expected both the LHS and RHS extends to be the same");
     bool IsSigned = Ext->getOpcode() == Instruction::SExt;
-    VPBuilder Builder(ExtendedOp);
+    VPBuilder Builder(Op);
     Type *SrcTy = TypeInfo.inferScalarType(X);
     auto *FreezeX = Builder.insert(new VPWidenRecipe(Instruction::Freeze, {X}));
     auto *FreezeY = Builder.insert(new VPWidenRecipe(Instruction::Freeze, {Y}));
@@ -6072,22 +6071,22 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *ExtendedOp,
     auto *AbsDiff =
         Builder.insert(new VPWidenRecipe(Instruction::Sub, {Max, Min}));
     return Builder.createWidenCast(Instruction::CastOps::ZExt, AbsDiff,
-                                   TypeInfo.inferScalarType(ExtendedOp));
+                                   TypeInfo.inferScalarType(Op));
   }
 
   // reduce.add(ext(mul(ext(A), ext(B))))
   // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
   // TODO: Support this optimization for float types.
-  if (match(ExtendedOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
-                                           m_ZExtOrSExt(m_VPValue()))))) {
-    auto *Ext = cast<VPWidenCastRecipe>(ExtendedOp);
+  if (match(Op, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                   m_ZExtOrSExt(m_VPValue()))))) {
+    auto *Ext = cast<VPWidenCastRecipe>(Op);
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
     auto *MulLHS = cast<VPWidenCastRecipe>(Mul->getOperand(0));
     auto *MulRHS = cast<VPWidenCastRecipe>(Mul->getOperand(1));
     if (!Mul->hasOneUse() ||
         (Ext->getOpcode() != MulLHS->getOpcode() && MulLHS != MulRHS) ||
         MulLHS->getOpcode() != MulRHS->getOpcode())
-      return ExtendedOp;
+      return Op;
     VPBuilder Builder(Mul);
     Mul->setOperand(0, Builder.createWidenCast(MulLHS->getOpcode(),
                                                MulLHS->getOperand(0),
@@ -6100,7 +6099,7 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *ExtendedOp,
     return Mul;
   }
 
-  return ExtendedOp;
+  return Op;
 }
 
 // Helper to transform a partial reduction chain into a partial reduction
