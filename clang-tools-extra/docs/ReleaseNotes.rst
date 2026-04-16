@@ -473,8 +473,12 @@ Changes in existing checks
   it easier to see which specific enumerators need explicit initialization.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check by fixing incorrect
-  naming style application to C++17 structured bindings.
+  <clang-tidy/checks/readability/identifier-naming>` check:
+
+  - Fixed incorrect naming style application to C++17 structured bindings.
+
+  - Fixed a false positive where function templates could be diagnosed as generic 
+    identifiers when `DefaultCase` was enabled.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
