@@ -8690,7 +8690,8 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
     mlir::Type sourceType = fir::unwrapRefType(sourceBase.getType());
     mlir::Type moldType = fir::unwrapRefType(fir::getBase(args[1]).getType());
     if (fir::isa_ref_type(sourceBase.getType()) &&
-        (fir::isa_trivial(sourceType) || mlir::isa<fir::RecordType>(sourceType)) &&
+        (fir::isa_trivial(sourceType) ||
+         mlir::isa<fir::RecordType>(sourceType)) &&
         fir::isa_trivial(moldType)) {
       auto sourceSizeAndAlign = fir::getTypeSizeAndAlignment(
           loc, sourceType, builder.getDataLayout(), builder.getKindMap());
