@@ -2912,9 +2912,9 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   SmallPtrSet<VPBlockBase *, 16> Reachable(
       llvm::from_range, vp_depth_first_shallow(Plan.getEntry()));
 
-  // Detach all unreachable blocks from their successors, removing incoming
-  // values from phi recipes.
-  SmallVector<VPBasicBlock *> DeadBlocks;
+  // Detach all unreachable blocks from their successors, removing their recipes
+  // and incoming values from phi recipes.
+  VPSymbolicValue Tmp;
   for (VPBlockBase *B : AllBlocks) {
     if (Reachable.contains(B))
       continue;
@@ -2924,18 +2924,15 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
           cast<VPPhiAccessors>(&R)->removeIncomingValueFor(B);
       VPBlockUtils::disconnectBlocks(B, Succ);
     }
-    append_range(DeadBlocks, VPBlockUtils::blocksOnly<VPBasicBlock>(
-                                 vp_depth_first_deep(B)));
-  }
-
-  // Erase recipes in dead blocks.
-  VPSymbolicValue Tmp;
-  for (VPBasicBlock *DeadBB : DeadBlocks)
-    for (VPRecipeBase &R : make_early_inc_range(*DeadBB)) {
-      for (VPValue *Def : R.definedValues())
-        Def->replaceAllUsesWith(&Tmp);
-      R.eraseFromParent();
+    for (VPBasicBlock *DeadBB :
+         VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_deep(B))) {
+      for (VPRecipeBase &R : make_early_inc_range(*DeadBB)) {
+        for (VPValue *Def : R.definedValues())
+          Def->replaceAllUsesWith(&Tmp);
+        R.eraseFromParent();
+      }
     }
+  }
 }
 
 void VPlanTransforms::optimize(VPlan &Plan) {
