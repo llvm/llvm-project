@@ -46,10 +46,6 @@ AST_MATCHER_P(Expr, hasParentIgnoringParenImpCasts,
   return InnerMatcher.matches(*E, Finder, Builder);
 }
 
-} // namespace
-
-namespace {
-
 /// Contains information about a use-after-move.
 struct UseAfterMove {
   // The DeclRefExpr that constituted the use of the object.
@@ -414,7 +410,7 @@ void UseAfterMoveFinder::getDeclRefs(
         const auto *Member = Match.getNodeAs<MemberExpr>("member-expr");
         const auto *Operator = Match.getNodeAs<CXXOperatorCallExpr>("operator");
         // Non-moved member as the move only implies a base class.
-        if (Member && MovedAs &&
+        if (Member && MovedAs && !isa<CXXMethodDecl>(Member->getMemberDecl()) &&
             !MovedAs->hasMemberName(Member->getMemberDecl()->getIdentifier())) {
           continue;
         }
