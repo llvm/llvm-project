@@ -42,12 +42,12 @@ void DominanceInfoBase<IsPostDom>::invalidate() {
 
 template <bool IsPostDom>
 void DominanceInfoBase<IsPostDom>::invalidate(Region *region) {
-  SmallVector<Region*> regions = {region};
+  SmallVector<Region *> regions = {region};
   region->walk([&](Operation *op) {
-    for (Region &r : op->getRegions()) 
+    for (Region &r : op->getRegions())
       regions.push_back(&r);
   });
-  for (Region* region : regions) {
+  for (Region *region : regions) {
     auto it = dominanceInfos.find(region);
     if (it != dominanceInfos.end()) {
       delete it->second.getPointer();
