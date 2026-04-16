@@ -2892,7 +2892,6 @@ for.exit:                        ; preds = %for.body
   ret i32 %add
 }
 
-declare float @llvm.fmuladd.f32(float, float, float)
 
 !6 = distinct !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}

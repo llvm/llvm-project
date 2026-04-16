@@ -266,4 +266,3 @@ exit:
   ret float %pow
 }
 
-declare float @llvm.pow.f32(float, float)

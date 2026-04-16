@@ -144,7 +144,6 @@ exit:
   ret void
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #1
 
 define void @test_pr54227(ptr noalias %a, ptr noalias %b) {
 ; CHECK-LABEL: @test_pr54227(
