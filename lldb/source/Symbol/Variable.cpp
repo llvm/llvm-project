@@ -66,6 +66,9 @@ lldb::LanguageType Variable::GetLanguage() const {
   if (lang != lldb::eLanguageTypeUnknown)
     return lang;
 
+  if (!m_owner_scope)
+    return lldb::eLanguageTypeUnknown;
+
   if (auto *func = m_owner_scope->CalculateSymbolContextFunction()) {
     if ((lang = func->GetLanguage()) != lldb::eLanguageTypeUnknown)
       return lang;
@@ -90,9 +93,6 @@ ConstString Variable::GetUnqualifiedName() const { return m_name; }
 bool Variable::NameMatches(ConstString name) const {
   if (m_name == name)
     return true;
-  SymbolContext variable_sc;
-  m_owner_scope->CalculateSymbolContext(&variable_sc);
-
   return m_mangled.NameMatches(name);
 }
 bool Variable::NameMatches(const RegularExpression &regex) const {
@@ -294,6 +294,10 @@ bool Variable::IsInScope(StackFrame *frame) {
   case eValueTypeVariableArgument:
   case eValueTypeVariableLocal:
     if (frame) {
+      // Synthetic variables without an owner scope have no scope
+      // boundaries and are always considered in-scope.
+      if (!m_owner_scope)
+        return true;
       // We don't have a location list, we just need to see if the block that
       // this variable was defined in is currently
       Block *deepest_frame_block =

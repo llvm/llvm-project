@@ -599,3 +599,75 @@ class ValueProvidingFrameProvider(ScriptedFrameProvider):
             # Pass through input frames (shifted by 1)
             return index - 1
         return None
+
+
+class SyntheticValueFrame(ScriptedFrame):
+    """Scripted frame providing synthetic values with no VariableSP backing."""
+
+    def __init__(self, thread, idx, pc, function_name):
+        args = lldb.SBStructuredData()
+        super().__init__(thread, args)
+        self.idx = idx
+        self.pc = pc
+        self.function_name = function_name
+
+    def get_id(self):
+        return self.idx
+
+    def get_pc(self):
+        return self.pc
+
+    def get_function_name(self):
+        return self.function_name
+
+    def is_artificial(self):
+        return False
+
+    def is_hidden(self):
+        return False
+
+    def get_register_context(self):
+        return None
+
+    def get_variables(self):
+        out = lldb.SBValueList()
+        target = self.thread.GetProcess().GetTarget()
+        uint_type = target.GetBasicType(lldb.eBasicTypeUnsignedInt)
+        data = lldb.SBData.CreateDataFromUInt32Array(
+            target.GetByteOrder(), target.GetAddressByteSize(), [42]
+        )
+        out.Append(target.CreateValueFromData("synth_local_a", data, uint_type))
+        data2 = lldb.SBData.CreateDataFromUInt32Array(
+            target.GetByteOrder(), target.GetAddressByteSize(), [100]
+        )
+        out.Append(target.CreateValueFromData("synth_local_b", data2, uint_type))
+        return out
+
+    def get_value_for_variable_expression(self, expr, options, error):
+        variables = self.get_variables()
+        for i in range(variables.GetSize()):
+            v = variables.GetValueAtIndex(i)
+            if v.name == expr:
+                return v
+        error.SetErrorString(f"variable '{expr}' not found")
+        return None
+
+
+class SyntheticValueFrameProvider(ScriptedFrameProvider):
+    """Provider that injects a frame with only synthetic (no VariableSP) values."""
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+
+    @staticmethod
+    def get_description():
+        return "Frame with synthetic-only values"
+
+    def get_frame_at_index(self, index):
+        if index == 0:
+            return SyntheticValueFrame(
+                self.thread, 0, 0xF00, "synthetic_value_frame"
+            )
+        elif index - 1 < len(self.input_frames):
+            return index - 1
+        return None

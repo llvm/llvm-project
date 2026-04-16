@@ -13,11 +13,13 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -282,37 +284,63 @@ ScriptedFrame::GetInScopeVariableList(bool get_file_globals,
 }
 
 void ScriptedFrame::PopulateVariableListFromInterface() {
-  // Fetch values from the interface.
-  ValueObjectListSP value_list_sp = GetInterface()->GetVariables();
-  if (!value_list_sp)
+  // m_value_object_list_sp serves as the single sentinel for both caches.
+  // m_variable_list_sp is always (re)built when m_value_object_list_sp is set.
+  if (m_value_object_list_sp)
     return;
 
-  // Convert what we can into a variable.
+  m_value_object_list_sp = GetInterface()->GetVariables();
+  if (!m_value_object_list_sp) {
+    // Use an empty list as sentinel so we don't re-invoke GetVariables().
+    m_value_object_list_sp = std::make_shared<ValueObjectList>();
+    return;
+  }
+
   m_variable_list_sp = std::make_shared<VariableList>();
-  for (uint32_t i = 0, e = value_list_sp->GetSize(); i < e; ++i) {
-    ValueObjectSP v = value_list_sp->GetValueObjectAtIndex(i);
+  for (uint32_t i = 0, e = m_value_object_list_sp->GetSize(); i < e; ++i) {
+    ValueObjectSP v = m_value_object_list_sp->GetValueObjectAtIndex(i);
     if (!v)
       continue;
 
     VariableSP var = v->GetVariable();
-    // TODO: We could in theory ask the scripted frame to *produce* a
-    //       variable for this value object.
-    if (!var)
-      continue;
+    if (!var) {
+      const char *name = v->GetName().AsCString(nullptr);
+      if (!name)
+        continue; // Skip nameless values — they can't be looked up later.
 
+      // Create a lightweight stub Variable for values without debug-info
+      // backing (e.g. created via CreateValueFromData/Address). This lets
+      // them participate in the standard variable enumeration and filtering
+      // pipeline (scope, IsInScope, regex, etc.). The actual value is
+      // served by GetValueObjectForFrameVariable() which looks up by name
+      // in m_value_object_list_sp.
+      var = std::make_shared<Variable>(
+          /*uid=*/i,
+          /*name=*/name,
+          /*mangled=*/nullptr,
+          /*symfile_type_sp=*/nullptr,
+          /*scope=*/eValueTypeVariableLocal,
+          /*owner_scope=*/nullptr,
+          /*scope_range=*/Variable::RangeList(),
+          /*decl=*/nullptr,
+          /*location=*/DWARFExpressionList(),
+          /*external=*/false,
+          /*artificial=*/true,
+          /*location_is_constant_data=*/false);
+    }
     m_variable_list_sp->AddVariable(var);
   }
 }
 
 lldb::ValueObjectSP ScriptedFrame::GetValueObjectForFrameVariable(
     const lldb::VariableSP &variable_sp, lldb::DynamicValueType use_dynamic) {
-  // Fetch values from the interface.
-  ValueObjectListSP values = m_scripted_frame_interface_sp->GetVariables();
-  if (!values)
-    return {};
+  if (!m_value_object_list_sp)
+    PopulateVariableListFromInterface();
 
-  return values->FindValueObjectByValueName(
-      variable_sp->GetName().AsCString(nullptr));
+  const char *name = variable_sp->GetName().AsCString(nullptr);
+  if (!name)
+    return {};
+  return m_value_object_list_sp->FindValueObjectByValueName(name);
 }
 
 lldb::ValueObjectSP ScriptedFrame::GetValueForVariableExpressionPath(

@@ -835,6 +835,91 @@ class ScriptedFrameProviderTestCase(TestBase):
         varp1 = frame0.GetValueForVariablePath("variable_in_main + 1")
         self.assertEqual(varp1.unsigned, 124)
 
+    def test_get_synthetic_values(self):
+        """Test that GetVariables returns SBValues without VariableSP backing.
+
+        Verifies that synthetic values created via CreateValueFromData (which
+        produce ValueObjectConstResult, not ValueObjectVariable) are visible
+        through all variable enumeration paths: SB API with DAP-style options,
+        CLI frame variable, and regex matching.
+        """
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self,
+            "Breakpoint for variable tests",
+            lldb.SBFileSpec(self.source),
+            only_one_thread=False,
+        )
+
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        error = lldb.SBError()
+        target.RegisterScriptedFrameProvider(
+            "test_frame_providers.SyntheticValueFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+
+        frame0 = thread.GetFrameAtIndex(0)
+        self.assertIsNotNone(frame0)
+        self.assertEqual(frame0.GetFunctionName(), "synthetic_value_frame")
+
+        # SB API: DAP Locals path (args=true, locals=true, statics=false, in_scope=true)
+        locals_vars = frame0.GetVariables(True, True, False, True)
+        self.assertEqual(
+            locals_vars.GetSize(),
+            2,
+            "DAP-Locals-style GetVariables should return synthetic locals",
+        )
+        names = {
+            locals_vars.GetValueAtIndex(i).name
+            for i in range(locals_vars.GetSize())
+        }
+        self.assertIn("synth_local_a", names)
+        self.assertIn("synth_local_b", names)
+        self.assertEqual(
+            locals_vars.GetFirstValueByName("synth_local_a").GetValueAsUnsigned(),
+            42,
+        )
+        self.assertEqual(
+            locals_vars.GetFirstValueByName("synth_local_b").GetValueAsUnsigned(),
+            100,
+        )
+
+        # SB API: DAP Globals path (args=false, locals=false, statics=true, in_scope=true)
+        globals_vars = frame0.GetVariables(False, False, True, True)
+        self.assertEqual(
+            globals_vars.GetSize(),
+            0,
+            "DAP-Globals-style GetVariables should exclude synthetic locals",
+        )
+
+        # Named lookup via GetValueForVariablePath
+        val = frame0.GetValueForVariablePath("synth_local_a")
+        self.assertTrue(val.IsValid())
+        self.assertEqual(val.GetValueAsUnsigned(), 42)
+
+        # CLI: frame variable (no args) lists synthetic locals
+        self.runCmd("frame select 0")
+        self.expect(
+            "frame variable", substrs=["synth_local_a", "synth_local_b"]
+        )
+
+        # CLI: frame variable -r regex finds synthetic locals
+        self.expect(
+            "frame variable -r synth_local",
+            substrs=["synth_local_a", "synth_local_b"],
+        )
+
+        # CLI: frame variable --no-locals excludes synthetic locals
+        self.expect(
+            "frame variable -l",
+            matching=False,
+            substrs=["synth_local_a", "synth_local_b"],
+        )
+
     def test_frame_validity_after_step(self):
         """Test that SBFrame references from ScriptedFrameProvider remain valid after stepping.
 
