@@ -21,6 +21,9 @@
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_gmf_only_no_leak.cpp -fmodule-file=GmfOnlyMod=%t/mod_gmf_only_enforce.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/mod_different_desig.cppm -o %t/mod_different_desig.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_two_modules.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -fmodule-file=DiffDesigMod=%t/mod_different_desig.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/mod_noflag_enforce.cppm -verify
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/mod_bare.cppm -o %t/mod_bare.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/import_noflag_require.cpp -fmodule-file=BareMod=%t/mod_bare.pcm -verify
 
 // ===================================================================
 // Module with enforced profiles
@@ -189,3 +192,30 @@ export void diff_func();
 // expected-no-diagnostics
 import TestMod;
 import DiffDesigMod;
+
+// ===================================================================
+// Without -fprofiles, [[profiles::enforce]] on a module-declaration
+// must emit warn_attribute_ignored instead of being silently accepted.
+// ===================================================================
+//--- mod_noflag_enforce.cppm
+export module NoFlagMod [[profiles::enforce(test::type_cast)]]; // expected-warning {{'profiles::enforce' attribute ignored}}
+
+export void f();
+
+// ===================================================================
+// A plain module with no profile attrs, built without -fprofiles, to
+// serve as an import target for the require-without-flag test below.
+// ===================================================================
+//--- mod_bare.cppm
+// expected-no-diagnostics
+export module BareMod;
+
+export void bare_fn();
+
+// ===================================================================
+// Without -fprofiles, [[profiles::require]] on an import must emit
+// warn_attribute_ignored and must NOT produce the spurious
+// err_profiles_require_not_enforced diagnostic.
+// ===================================================================
+//--- import_noflag_require.cpp
+import BareMod [[profiles::require(test::type_cast)]]; // expected-warning {{'profiles::require' attribute ignored}}

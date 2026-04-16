@@ -467,7 +467,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                             ? Mod
                             : nullptr;
     for (const auto &AL : Attrs)
-      if (AL.getKind() == ParsedAttr::AT_ProfilesEnforce)
+      if (AL.getKind() == ParsedAttr::AT_ProfilesEnforce &&
+          AL.diagnoseLangOpts(*this))
         processProfilesEnforceAttr(AL, ExportMod, nullptr, nullptr);
   }
 
@@ -1629,23 +1630,26 @@ void Sema::ActOnModuleImportAttrs(Decl *D,
   Module *ImportedMod = ID ? ID->getImportedModule() : nullptr;
 
   for (const auto &AL : Attrs) {
-    if (AL.getKind() == ParsedAttr::AT_ProfilesRequire) {
-      if (!ImportedMod) {
-        Diag(AL.getLoc(), diag::err_profiles_require_not_on_import);
-        continue;
-      }
+    if (AL.getKind() != ParsedAttr::AT_ProfilesRequire)
+      continue;
+    if (!AL.diagnoseLangOpts(*this))
+      continue;
 
-      const auto &Args = AL.getProfileRequireArgs();
-      StringRef Desig = Args.Designator.Spelling;
-
-      bool Found = llvm::any_of(
-          ImportedMod->EnforcedProfileDesignators,
-          [&](const Module::EnforcedProfile &EP) {
-            return EP.Designator == Desig;
-          });
-
-      if (!Found)
-        Diag(AL.getLoc(), diag::err_profiles_require_not_enforced) << Desig;
+    if (!ImportedMod) {
+      Diag(AL.getLoc(), diag::err_profiles_require_not_on_import);
+      continue;
     }
+
+    const auto &Args = AL.getProfileRequireArgs();
+    StringRef Desig = Args.Designator.Spelling;
+
+    bool Found = llvm::any_of(
+        ImportedMod->EnforcedProfileDesignators,
+        [&](const Module::EnforcedProfile &EP) {
+          return EP.Designator == Desig;
+        });
+
+    if (!Found)
+      Diag(AL.getLoc(), diag::err_profiles_require_not_enforced) << Desig;
   }
 }
