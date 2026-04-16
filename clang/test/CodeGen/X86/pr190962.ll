@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: %clang -O1 -mapx-features=ndd --target=x86_64-pc-windows-gnu -S %s -o /dev/null
 
 ;; Check no crash when building below IR with Clang.
