@@ -89,6 +89,7 @@ end subroutine
 subroutine test_actual_arg_intent_in(x)
   real, intent(in) :: x(:)
 ! CHECK: hlfir.copy_in
+! CHECK-SAME: to
 ! CHECK: fir.call @_QPbar
 ! Note: no-op hlfir.copy_out has comma separated list of args.
 ! The actual working hlfir.copy_out has "to" in it.
