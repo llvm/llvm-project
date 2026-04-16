@@ -18,12 +18,12 @@
 #include "lldb/Utility/UUID.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/HTTP/HTTPClient.h"
+#include "llvm/HTTP/StreamedHTTPResponseHandler.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/HTTP/HTTPClient.h"
-#include "llvm/Support/HTTP/StreamedHTTPResponseHandler.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 

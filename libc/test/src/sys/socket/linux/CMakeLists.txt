@@ -35,20 +35,24 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  connect_test
+  connect_accept_test
   SUITE
     libc_sys_socket_unittests
   SRCS
-    connect_test.cpp
+    connect_accept_test.cpp
   DEPENDS
     libc.include.sys_socket
     libc.hdr.sys_socket_macros
+    libc.hdr.types.size_t
     libc.hdr.types.struct_sockaddr_un
     libc.src.errno.errno
-    libc.src.sys.socket.socket
+    libc.src.sys.socket.accept
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
     libc.src.sys.socket.listen
+    libc.src.sys.socket.socket
+    libc.src.string.strlen
+    libc.src.string.strncpy
     libc.src.stdio.remove
     libc.src.unistd.close
     libc.test.UnitTest.ErrnoCheckingTest
@@ -71,6 +75,26 @@ add_libc_unittest(
     libc.src.sys.socket.listen
     libc.src.stdio.remove
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  socketopt_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    socketopt_test.cpp
+  DEPENDS
+    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.socklen_t
+    libc.src.errno.errno
+    libc.src.sys.socket.getsockopt
+    libc.src.sys.socket.setsockopt
+    libc.src.sys.socket.socket
+    libc.src.unistd.close
+    libc.src.unistd.pipe
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

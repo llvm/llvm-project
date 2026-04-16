@@ -241,7 +241,7 @@ def CIR_CastOp : CIR_Op<"cast", [
 
     Example:
 
-    ```mlir
+    ```
     %4 = cir.cast int_to_bool %3 : i32 -> !cir.bool
     ...
     %x = cir.cast array_to_ptrdecay %0 
@@ -313,7 +313,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
 
     Examples:
 
-    ```mlir
+    ```
     %0 = cir.dyn_cast ptr %p : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
     %1 = cir.dyn_cast ptr relative_layout %p : !cir.ptr<!rec_Base>
               -> !cir.ptr<!rec_Derived>
@@ -375,7 +375,7 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
     and an integer stride, similar to a single-index `getelementptr` in LLVM IR.
     It moves the pointer by `stride * sizeof(element_type)` bytes.
 
-    ```mlir
+    ```
     %3 = cir.const 0 : i32
     %3 = cir.ptr_stride %1, %2 : (!cir.ptr<i32>, i32) -> !cir.ptr<i32>
     ```
@@ -412,7 +412,7 @@ def CIR_ConstantOp : CIR_Op<"const", [
     The `cir.const` operation turns a literal into an SSA value. The data is
     attached to the operation as an attribute.
 
-    ```mlir
+    ```
       %0 = cir.const #cir.int<4> : !u32i
       %1 = cir.const #cir.fp<1.500000e+00> : !cir.float
       %2 = cir.const #cir.ptr<null> : !cir.ptr<!void>
@@ -581,7 +581,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
 
     Example:
 
-    ```mlir
+    ```
     // int count;
     %0 = cir.alloca i32, !cir.ptr<i32>, ["count"] {alignment = 4 : i64}
 
@@ -666,7 +666,7 @@ def CIR_LoadOp : CIR_Op<"load", [
 
     Example:
 
-    ```mlir
+    ```
 
     // Read from local variable, address in %0.
     %1 = cir.load %0 : !cir.ptr<i32>, i32
@@ -725,7 +725,7 @@ def CIR_VecMaskedLoadOp : CIR_Op<"vec.masked_load", [
 
     Example:
 
-    ```mlir
+    ```
     %v = cir.masked_load align(16) %ptr, %mask, %passthru
          : !cir.ptr<i32>, <4xi1>, <4xi32> -> <4xi32>
     ```
@@ -770,7 +770,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 
     Example:
 
-    ```mlir
+    ```
     // Store a function argument to local storage, address in %0.
     cir.store %arg0, %0 : i32, !cir.ptr<i32>
 
@@ -820,7 +820,7 @@ def CIR_ReturnOp : CIR_Op<"return", [
     The operand type must match the signature of the function that contains
     the operation.
 
-    ```mlir
+    ```
       func @foo() -> i32 {
         ...
         cir.return %0 : i32
@@ -864,7 +864,7 @@ def CIR_IfOp : CIR_Op<"if", [
 
     Examples:
 
-    ```mlir
+    ```
     cir.if %cond  {
       ...
     } else {
@@ -925,7 +925,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 
     Example:
 
-    ```mlir
+    ```
     cir.for cond {
       cir.condition(%val) // Branches to `step` region or exits.
     } body {
@@ -980,7 +980,7 @@ def CIR_YieldOp : CIR_Op<"yield", [
     `cir.return` terminated.
 
     Examples:
-    ```mlir
+    ```
     cir.if %4 {
       ...
       cir.yield
@@ -1081,7 +1081,7 @@ def CIR_ResumeOp : CIR_Op<"resume", [
     caller after cleanup code has been executed.
 
     Examples:
-    ```mlir
+    ```
     // Before CFG flattening (in try unwind region)
     cir.try {
       cir.yield
@@ -1117,7 +1117,7 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
     This operation is used only after the CFG flatterning pass.
 
     Examples:
-    ```mlir
+    ```
     cir.resume.flat %exception_ptr, %type_id
     ```
   }];
@@ -1152,7 +1152,7 @@ def CIR_ScopeOp : CIR_Op<"scope", [
     coming out of C++ full-expressions) via `cir.yield`:
 
 
-    ```mlir
+    ```
     %rvalue = cir.scope {
       ...
       cir.yield %value
@@ -1259,7 +1259,7 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
 
     Examples:
 
-    ```mlir
+    ```
     // Cleanup that runs on both normal and exception paths
     cir.cleanup.scope {
       cir.call @mayThrow() : () -> ()
@@ -1298,6 +1298,7 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$cleanupBuilder)>
   ];
 
+  let hasCanonicalizeMethod = 1;
   let hasLLVMLowering = false;
 }
 
@@ -1322,7 +1323,7 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
 
     Example:
 
-    ```mlir
+    ```
     !s32i = !cir.int<s, 32>
 
     #cmpinfo_partial_ltn1eq0gt1unn127 =
@@ -1689,7 +1690,7 @@ def CIR_BrOp : CIR_Op<"br",[
 
     Example:
 
-    ```mlir
+    ```
       ...
         cir.br ^bb3
       ^bb3:
@@ -1744,7 +1745,7 @@ def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
     }
   ```
 
-  ```mlir
+  ```
     cir.scope {  // REGION #1
       %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
       %3 = cir.cast int_to_bool %2 : !s32i -> !cir.bool
@@ -1839,7 +1840,7 @@ def CIR_IncOp : CIR_UnaryOpWithOverflowFlag<"inc", CIR_AnyType> {
 
     Example:
 
-    ```mlir
+    ```
     %1 = cir.inc %0 : !s32i
     %3 = cir.inc nsw %2 : !s32i
     ```
@@ -1863,7 +1864,7 @@ def CIR_DecOp : CIR_UnaryOpWithOverflowFlag<"dec", CIR_AnyType> {
 
     Example:
 
-    ```mlir
+    ```
     %1 = cir.dec %0 : !s32i
     %3 = cir.dec nsw %2 : !s32i
     ```
@@ -1888,7 +1889,7 @@ def CIR_MinusOp : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyType> {
 
     Example:
 
-    ```mlir
+    ```
     %1 = cir.minus %0 : !s32i
     %3 = cir.minus nsw %2 : !s32i
     %5 = cir.minus %4 : !cir.float
@@ -1911,7 +1912,7 @@ def CIR_NotOp : CIR_UnaryOp<"not", CIR_AnyType, [Involution]> {
 
     Example:
 
-    ```mlir
+    ```
     %1 = cir.not %0 : !s32i
     %3 = cir.not %2 : !cir.bool
     ```
@@ -1936,7 +1937,7 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
 
     Example:
 
-    ```mlir
+    ```
       ...
         cir.brcond %a, ^bb3, ^bb4
       ^bb3:
@@ -1991,7 +1992,7 @@ def CIR_IndirectBrOp : CIR_Op<"indirect_br", [
 
     Example:
 
-    ```mlir
+    ```
       %0 = cir.block_address <@A, "A"> : !cir.ptr<!void>
       cir.indirectbr %0 poison : <!void>, [
       ^bb1
@@ -2077,7 +2078,7 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 
     Example:
 
-    ```mlir
+    ```
     cir.while {
       cir.break
     ^bb2:
@@ -2105,7 +2106,7 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
 
     Example:
 
-    ```mlir
+    ```
     cir.do {
       cir.break
     ^bb2:
@@ -2135,7 +2136,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
 
     Example:
 
-    ```mlir
+    ```
     cir.for cond {
       cir.condition(%val)
     } body {
@@ -2220,7 +2221,7 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
     For floating-point comparisons, the predicate follows C semantics (e.g.
     NaN comparisons return false for all predicates except `ne`).
 
-    ```mlir
+    ```
     %0 = cir.cmp gt %1, %2 : !s32i
     %1 = cir.cmp eq %a, %b : !cir.ptr<!u8i>
     ```
@@ -2297,7 +2298,7 @@ def CIR_AddOverflowOp : CIR_BinOpOverflow<"add.overflow", [Commutative]> {
 
     Example:
 
-    ```mlir
+    ```
     %result, %overflow = cir.add.overflow %a, %b : !u32i -> !u32i
     %result, %overflow = cir.add.overflow %a, %b : !cir.int<s, 33> -> !s32i
     ```
@@ -2312,7 +2313,7 @@ def CIR_SubOverflowOp : CIR_BinOpOverflow<"sub.overflow"> {
 
     Example:
 
-    ```mlir
+    ```
     %result, %overflow = cir.sub.overflow %a, %b : !u32i -> !u32i
     ```
   }];
@@ -2326,7 +2327,7 @@ def CIR_MulOverflowOp : CIR_BinOpOverflow<"mul.overflow", [Commutative]> {
 
     Example:
 
-    ```mlir
+    ```
     %result, %overflow = cir.mul.overflow %a, %b : !u32i -> !u32i
     ```
   }];
@@ -2398,7 +2399,7 @@ def CIR_AddOp : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyArithType> {
     
     Example:
 
-    ```mlir
+    ```
     %0 = cir.add %a, %b : !s32i
     %1 = cir.add nsw %a, %b : !s32i
     %2 = cir.add nuw %a, %b : !u32i
@@ -2426,7 +2427,7 @@ def CIR_SubOp : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyArithType> {
     
     Example:
 
-    ```mlir
+    ```
     %0 = cir.sub %a, %b : !s32i
     %1 = cir.sub nsw %a, %b : !s32i
     %2 = cir.sub sat %a, %b : !s32i
@@ -2451,7 +2452,7 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyArithType> {
 
     Example:
 
-    ```mlir
+    ```
     %0 = cir.mul %a, %b : !s32i
     %1 = cir.mul nsw %a, %b : !s32i
     %2 = cir.mul nuw %a, %b : !u32i
@@ -2486,7 +2487,7 @@ def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyArithType> {
 
     Example:
 
-    ```mlir
+    ```
     %0 = cir.div %a, %b : !s32i
     %1 = cir.div %a, %b : !u32i
     %2 = cir.div %a, %b : !cir.float
@@ -2507,7 +2508,7 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyArithType> {
     
     Example:
 
-    ```mlir
+    ```
     %0 = cir.rem %a, %b : !s32i
     %1 = cir.rem %a, %b : !u32i
     %2 = cir.rem %a, %b : !cir.float
@@ -2529,7 +2530,7 @@ def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType, [
     
     Example:
 
-    ```mlir
+    ```
     %0 = cir.and %a, %b : !s32i
     %1 = cir.and %a, %b : !cir.bool
     ```
@@ -2550,7 +2551,7 @@ def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType, [
     
     Example:
 
-    ```mlir
+    ```
     %0 = cir.or %a, %b : !s32i
     %1 = cir.or %a, %b : !cir.bool
     ```
@@ -2569,7 +2570,7 @@ def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType, [Commutative]> {
 
     Example:
 
-    ```mlir
+    ```
     %0 = cir.xor %a, %b : !s32i
     %1 = cir.xor %a, %b : !cir.bool
     ```
@@ -2591,7 +2592,7 @@ def CIR_MaxOp : CIR_BinaryOp<"max", CIR_AnyIntOrVecOfIntType, [
 
     Example:
 
-    ```mlir
+    ```
     %0 = cir.max %a, %b : !s32i
     %1 = cir.max %a, %b : !u32i
     %2 = cir.max %a, %b : !cir.vector<4 x !s32i>
@@ -2614,7 +2615,7 @@ def CIR_MinOp : CIR_BinaryOp<"min", CIR_AnyIntOrVecOfIntType, [
 
     Example:
 
-    ```mlir
+    ```
     %0 = cir.min %a, %b : !s32i
     %1 = cir.min %a, %b : !u32i
     %2 = cir.min %a, %b : !cir.vector<4 x !s32i>
@@ -2637,7 +2638,7 @@ def CIR_ShiftOp : CIR_Op<"shift", [Pure]> {
     the shift target is shifted by the corresponding shift amount in
     the shift amount vector.
 
-    ```mlir
+    ```
     %res = cir.shift(left, %lhs : !u64i, %amount : !s32i) -> !u64i
     %new_vec = cir.shift(left, %lhs : !cir.vector<2 x !s32i>, %rhs :
         !cir.vector<2 x !s32i>) -> !cir.vector<2 x !s32i>
@@ -2686,7 +2687,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 
     Example:
 
-    ```mlir
+    ```
     %0 = cir.const #cir.bool<true> : !cir.bool
     %1 = cir.const #cir.int<42> : !s32i
     %2 = cir.const #cir.int<72> : !s32i
@@ -2737,7 +2738,7 @@ def CIR_TernaryOp : CIR_Op<"ternary", [
 
     Example:
 
-    ```mlir
+    ```
     // cond = a && b;
 
     %x = cir.ternary (%cond, true_region {
@@ -2954,7 +2955,7 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
     local variables with non-constant initializers).
 
     Example:
-    ```mlir
+    ```
     %x = cir.get_global @gv : !cir.ptr<i32>
     ...
     %y = cir.get_global thread_local @tls_gv : !cir.ptr<i32>
@@ -2994,7 +2995,7 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
     The return type is always `!cir.vptr`.
 
     Example:
-    ```mlir
+    ```
     cir.global linkonce_odr @_ZTV1B = ...
     ...
     %3 = cir.vtable.address_point(@_ZTV1B,
@@ -3033,7 +3034,7 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
     The return type is always `!cir.ptr<!cir.vptr>`.
 
     Example:
-    ```mlir
+    ```
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
     %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
     ```
@@ -3072,7 +3073,7 @@ def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
     The return type is a pointer-to-pointer to the function type.
 
     Example:
-    ```mlir
+    ```
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
     %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
     %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
@@ -3117,7 +3118,7 @@ def CIR_VTableGetTypeInfoOp : CIR_Op<"vtable.get_type_info", [
     The return type is a loadable pointer to a `type_info` struct.
 
     Example:
-    ```mlir
+    ```
     %5 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
     %6 = cir.load align(8) %5 : !cir.ptr<!cir.vptr>, !cir.vptr
     %7 = cir.vtable.get_type_info %6 : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
@@ -3170,7 +3171,7 @@ def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
     The return type is always a `!cir.ptr<!cir.ptr<void>>`.
 
     Example:
-    ```mlir
+    ```
     cir.global linkonce_odr @_ZTV1B = ...
     ...
     %3 = cir.base_class_addr(%1 : !cir.ptr<!rec_D> nonnull) [0]
@@ -3180,7 +3181,7 @@ def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
     cir.call @_ZN1BC2Ev(%3, %4)
     ```
     Or:
-    ```mlir
+    ```
     %7 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 1
              -> !cir.ptr<!cir.ptr<!void>>
     ```
@@ -3219,7 +3220,7 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
 
     A unit attribute `volatile` can be used to indicate a volatile store of the
     bitfield.
-      ```mlir
+      ```
         cir.set_bitfield(#bfi, %0 : !cir.ptr<!u32i>, %1 : !s32i) {is_volatile}
                                                                        -> !s32i
       ```
@@ -3242,7 +3243,7 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
     }
     ```
 
-    ```mlir
+    ```
     // 'e' is in the storage with the index 1
     !record_type = !cir.record<struct "S" packed padded {!u64i, !u16i,
                                !cir.array<!u8i x 2>} #cir.record.decl.ast>
@@ -3311,7 +3312,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
     A unit attribute `volatile` can be used to indicate a volatile load of the
     bitfield.
-    ```mlir
+    ```
       cir.get_bitfield(#bfi, %0 {is_volatile} : !cir.ptr<!u64i>) -> !s32i
     ```
 
@@ -3333,7 +3334,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
     }
     ```
 
-    ```mlir
+    ```
     // 'e' is in the storage with the index 1
     !cir.record<struct "S" packed padded {!u64i, !u16i, !cir.array<!u8i x 2>}>
     #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
@@ -3395,7 +3396,7 @@ def CIR_GetMemberOp : CIR_Op<"get_member", [Pure]> {
     and its field index.
 
     Example:
-    ```mlir
+    ```
     // Suppose we have a record with multiple members.
     !s32i = !cir.int<s, 32>
     !s8i = !cir.int<s, 8>
@@ -3456,7 +3457,7 @@ def CIR_ExtractMemberOp : CIR_Op<"extract_member", [Pure]> {
 
     Example:
 
-    ```mlir
+    ```
     // Suppose we have a record with multiple members.
     !s32i = !cir.int<s, 32>
     !s8i = !cir.int<s, 32>
@@ -3510,7 +3511,7 @@ def CIR_InsertMemberOp : CIR_Op<"insert_member", [
 
     Example:
 
-    ```mlir
+    ```
     // Suppose we have a record with multiple members.
     !s32i = !cir.int<s, 32>
     !s8i = !cir.int<s, 32>
@@ -3558,7 +3559,7 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
     It expects a pointer to the `base` array and the `index` of the element.
 
     Example:
-    ```mlir
+    ```
     // Suppose we have a array.
     !s32i = !cir.int<s, 32>
     !arr_ty = !cir.array<!s32i x 4>
@@ -3658,7 +3659,7 @@ def CIR_FuncOp : CIR_Op<"func", [
 
     Example:
 
-    ```mlir
+    ```
     // External function definitions.
     cir.func @abort()
 
@@ -3920,6 +3921,7 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
       UnitAttr:$nothrow,
+      UnitAttr:$musttail,
       DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
       OptionalAttr<DictArrayAttr>:$res_attrs
@@ -3943,7 +3945,7 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 
     Example:
 
-    ```mlir
+    ```
     %0 = cir.call @foo()
     ```
   }];
@@ -3979,7 +3981,7 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
 
     Example:
 
-    ```mlir
+    ```
     // Before CFG flattening
     cir.try {
       %call = cir.call @division(%a, %b) : () -> !s32i
@@ -4102,7 +4104,7 @@ def CIR_AwaitOp : CIR_Op<"await",[
     - `yield`: user written `co_yield` expressions.
     - `final`: compiler generated final suspend via implicit `co_await`.
 
-    ```mlir
+    ```
       cir.scope {
         ... // auto &&x = CommonExpr();
         cir.await(user, ready : {
@@ -4175,7 +4177,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
 
     Examples:
 
-    ```mlir
+    ```
       // Copying contents from one record to another:
       cir.copy %0 to %1 : !cir.ptr<!record_ty>
 
@@ -4243,7 +4245,7 @@ def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
 
     Examples:
 
-    ```mlir
+    ```
       // Copying 2 bytes from one array to a record:
       %2 = cir.const #cir.int<2> : !u32i
       cir.libc.memcpy %2 bytes from %arr to %record : !cir.ptr<!arr> -> !cir.ptr<!record>
@@ -4273,7 +4275,7 @@ def CIR_MemMoveOp : CIR_MemOp<"libc.memmove"> {
 
     Examples:
 
-    ```mlir
+    ```
       // Copying 2 bytes from one array to a record:
       %2 = cir.const #cir.int<2> : !u32i
       cir.libc.memmove %2 bytes from %arr to %record : !cir.ptr<!void>, !u64i
@@ -4305,7 +4307,7 @@ def CIR_MemSetOp : CIR_Op<"libc.memset"> {
 
     Examples:
 
-    ```mlir
+    ```
       // Set 2 bytes in a record to 0:
       %len = cir.const #cir.int<2> : !u32i
       %zero = cir.const #cir.int<0> : !u8i
@@ -4347,7 +4349,7 @@ def CIR_ReturnAddrOp : CIR_Op<"return_address"> {
 
     Examples:
 
-    ```mlir
+    ```
     %p = return_address(%level) : !cir.ptr<!void>
     ```
   }];
@@ -4379,7 +4381,7 @@ def CIR_FrameAddrOp : CIR_Op<"frame_address"> {
 
     Examples:
 
-    ```mlir
+    ```
     %p = frame_address(%level) : !cir.ptr<!u8i>
     ```
   }];
@@ -4403,7 +4405,7 @@ def CIR_AddrOfReturnAddrOp : CIR_Op<"address_of_return_address"> {
 
     Examples:
 
-    ```mlir
+    ```
     %addr = address_of_return_address() : !cir.ptr<!u8i>
     ```
   }];
@@ -4425,7 +4427,7 @@ def CIR_StackSaveOp : CIR_Op<"stacksave"> {
 
     This operation corresponds to LLVM intrinsic `stacksave`.
 
-    ```mlir
+    ```
     %0 = cir.stacksave : <!u8i>
     ```
   }];
@@ -4443,7 +4445,7 @@ def CIR_StackRestoreOp : CIR_Op<"stackrestore"> {
 
     This operation corresponds to LLVM intrinsic `stackrestore`.
 
-    ```mlir
+    ```
     %0 = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"] {alignment = 8 : i64}
     %1 = cir.stacksave : <!u8i>
     cir.store %1, %0 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
@@ -4490,7 +4492,7 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
     __asm__("baz $42 %[val]" : [val] "=r" (x), "+&r"(x) : "[val]"(y));
     ```
 
-    ```mlir
+    ```
     !rec_22anon2E022 = !cir.record<struct "anon.0" {!cir.int<s, 32>, !cir.int<s, 32>}>
     !rec_22anon2E122 = !cir.record<struct "anon.1" {!cir.int<s, 32>, !cir.int<s, 32>}>
     ...
@@ -4601,7 +4603,7 @@ def CIR_ArrayCtor : CIR_Op<"array.ctor", [
 
     Examples:
 
-    ```mlir
+    ```
     // Fixed size without partial destructor:
     cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
@@ -4697,7 +4699,7 @@ def CIR_ArrayDtor : CIR_Op<"array.dtor", [
 
     Examples:
 
-    ```mlir
+    ```
     // Fixed-size (stack array, global):
     cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
@@ -4838,7 +4840,7 @@ def CIR_GetMethodOp : CIR_Op<"get_method"> {
 
     The code above will generate CIR similar to:
 
-    ```mlir
+    ```
     %callee, %this = cir.get_method %method, %object
     cir.call %callee(%this, %arg)
     ```
@@ -4904,7 +4906,7 @@ def CIR_VecInsertOp : CIR_Op<"vec.insert", [
     The `cir.vec.insert` operation produces a new vector by replacing
     the element of the input vector at `index` with `value`.
 
-    ```mlir
+    ```
     %value = cir.const #cir.int<5> : !s32i
     %index = cir.const #cir.int<2> : !s32i
     %vec_tmp = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
@@ -4940,7 +4942,7 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
     The `cir.vec.extract` operation extracts the element at the given index
     from a vector object.
 
-    ```mlir
+    ```
     %tmp = cir.load %vec : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
     %idx = cir.const #cir.int<1> : !s32i
     %element = cir.vec.extract %tmp[%idx : !s32i] : !cir.vector<4 x !s32i>
@@ -4969,7 +4971,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
     whose element type is the signed integral type that is the same size as the
     element type of the operands. The values in the result are 0 or -1.
 
-    ```mlir
+    ```
     %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
     %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
     ```
@@ -5018,7 +5020,7 @@ def CIR_VecShuffleOp : CIR_Op<"vec.shuffle", [
     not have to match the size of the individual input vectors or of the
     concatenated vector.
 
-    ```mlir
+    ```
     %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<2 x !s32i>)
         [#cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<2 x !s32i>
     ```
@@ -5059,7 +5061,7 @@ def CIR_VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic", [
     result vector is constructed by taking the elements from the first input
     vector from the indices indicated by the elements of the second vector.
 
-    ```mlir
+    ```
     %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<4 x !s32i>, %indices
         : !cir.vector<4 x !s32i>
     ```
@@ -5134,7 +5136,7 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
     analysis passes can benefit from knowing that all elements of the vector
     have the same value.
 
-    ```mlir
+    ```
     %value = cir.const #cir.int<3> : !s32i
     %value_vec = cir.vec.splat %value : !s32i, !cir.vector<4 x !s32i>
     ```
@@ -5175,7 +5177,7 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [Pure]> {
     Base& b = d;
     ```
     will generate
-    ```mlir
+    ```
     %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
     ```
   }];
@@ -5224,7 +5226,7 @@ def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr", [Pure]> {
     ```
 
     leads to
-    ```mlir
+    ```
       %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
       %3 = cir.base_class_addr %2 : !cir.ptr<!rec_B> [0] -> !cir.ptr<!rec_A>
     ```
@@ -5317,7 +5319,7 @@ def CIR_BaseMethodOp : CIR_Op<"base_method", [Pure]> {
 
     Example:
 
-    ```mlir
+    ```
     %1 = cir.base_method %0 [16] : !cir.method<!cir.func<(!s32i)> in !rec_Derived> -> !cir.method<!cir.func<(!s32i)> in !rec_Base>
     ```
   }];
@@ -5351,7 +5353,7 @@ def CIR_DerivedMethodOp : CIR_Op<"derived_method", [Pure]> {
 
     Example:
 
-    ```mlir
+    ```
     %1 = cir.derived_method %0 [16] : !cir.method<!cir.func<(!s32i)> in !rec_Base> -> !cir.method<!cir.func<(!s32i)> in !rec_Derived>
     ```
   }];
@@ -5379,7 +5381,7 @@ def CIR_ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
     The `cir.complex.create` operation takes two operands that represent the
     real and imaginary part of a complex number, and yields the complex number.
 
-    ```mlir
+    ```
     %0 = cir.const #cir.fp<1.000000e+00> : !cir.double
     %1 = cir.const #cir.fp<2.000000e+00> : !cir.double
     %2 = cir.complex.create %0, %1 : !cir.double -> !cir.complex<!cir.double>
@@ -5427,7 +5429,7 @@ def CIR_ComplexRealOp : CIR_ComplexPartOp<"complex.real"> {
 
     Example:
 
-    ```mlir
+    ```
     %real = cir.complex.real %complex : !cir.complex<!cir.float> -> !cir.float
     %real = cir.complex.real %scalar : !cir.float -> !cir.float
     ```
@@ -5443,7 +5445,7 @@ def CIR_ComplexImagOp : CIR_ComplexPartOp<"complex.imag"> {
 
     Example:
 
-    ```mlir
+    ```
     %imag = cir.complex.imag %complex : !cir.complex<!cir.float> -> !cir.float
     %imag = cir.complex.imag %scalar : !cir.float -> !cir.float
     ```
@@ -5475,7 +5477,7 @@ def CIR_ComplexRealPtrOp : CIR_ComplexPartPtrOp<"complex.real_ptr"> {
 
     Example:
 
-    ```mlir
+    ```
     %1 = cir.complex.real_ptr %0 : !cir.ptr<!cir.complex<!cir.double>>
       -> !cir.ptr<!cir.double>
     ```
@@ -5491,7 +5493,7 @@ def CIR_ComplexImagPtrOp : CIR_ComplexPartPtrOp<"complex.imag_ptr"> {
 
     Example:
 
-    ```mlir
+    ```
     %1 = cir.complex.imag_ptr %0 : !cir.ptr<!cir.complex<!cir.double>>
       -> !cir.ptr<!cir.double>
     ```
@@ -5520,7 +5522,7 @@ def CIR_ComplexAddOp : CIR_ComplexBinOp<"complex.add"> {
 
     Example:
 
-    ```mlir
+    ```
     %2 = cir.complex.add %0, %1 : !cir.complex<!cir.float>
     ```
   }];
@@ -5534,7 +5536,7 @@ def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
 
     Example:
 
-    ```mlir
+    ```
     %2 = cir.complex.sub %0, %1 : !cir.complex<!cir.float>
     ```
   }];
@@ -5585,7 +5587,7 @@ def CIR_ComplexMulOp : CIR_ComplexRangeBinOp<"complex.mul"> {
 
     Example:
 
-    ```mlir
+    ```
     %2 = cir.complex.mul %0, %1 range(basic) : !cir.complex<!cir.float>
     %2 = cir.complex.mul %0, %1 range(full) : !cir.complex<!cir.float>
     ```
@@ -5613,7 +5615,7 @@ def CIR_ComplexDivOp : CIR_ComplexRangeBinOp<"complex.div"> {
 
     Example:
 
-    ```mlir
+    ```
     %2 = cir.complex.div %0, %1 range(basic) : !cir.complex<!cir.float>
     %2 = cir.complex.div %0, %1 range(full) : !cir.complex<!cir.float>
     ```
@@ -5660,7 +5662,7 @@ def CIR_BitClrsbOp : CIR_BitOpBase<"clrsb", CIR_SIntOfWidths<[32, 64]>> {
 
     Examples:
 
-    ```mlir
+    ```
     // %0 = 0b1101_1110_1010_1101_1011_1110_1110_1111
     %0 = cir.const #cir.int<3735928559> : !s32i
     // %1 will be 1 because there is 1 bit following the most significant bit
@@ -5692,7 +5694,7 @@ def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
 
     Example:
 
-    ```mlir
+    ```
     // %0 = 0b0000_0000_0000_0000_0000_0000_0000_1000
     %0 = cir.const #cir.int<8> : !u32i
     // %1 will be 28
@@ -5717,7 +5719,7 @@ def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
 
     Example:
 
-    ```mlir
+    ```
     // %0 = 0b1000
     %0 = cir.const #cir.int<8> : !u32i
     // %1 will be 3
@@ -5737,7 +5739,7 @@ def CIR_BitFfsOp : CIR_BitOpBase<"ffs", CIR_SIntOfWidths<[32, 64]>> {
 
     Example:
 
-    ```mlir
+    ```
     !s32i = !cir.int<s, 32>
 
     // %0 = 0x0010_1000
@@ -5758,7 +5760,7 @@ def CIR_BitParityOp : CIR_BitOpBase<"parity", CIR_UIntOfWidths<[32, 64]>> {
 
     Example:
 
-    ```mlir
+    ```
     // %0 = 0x0110_1000
     %0 = cir.const #cir.int<104> : !u32i
     // %1 will be 1 since there are three 1-bits in %0
@@ -5778,7 +5780,7 @@ def CIR_BitPopcountOp : CIR_BitOpBase<"popcount",
 
     Example:
 
-    ```mlir
+    ```
     // %0 = 0x0110_1000
     %0 = cir.const #cir.int<104> : !u32i
     // %1 will be 3 since there are 3 1-bits in %0
@@ -5797,7 +5799,7 @@ def CIR_BitReverseOp : CIR_BitOpBase<"bitreverse",
 
     Example:
 
-    ```mlir
+    ```
     %1 = cir.bitreverse %0: !u32i
     ```
   }];
@@ -5818,7 +5820,7 @@ def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
 
     Example:
 
-    ```mlir
+    ```
     // %0 = 0x12345678
     %0 = cir.const #cir.int<305419896> : !u32i
 
@@ -5845,7 +5847,7 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
 
     Example:
 
-    ```mlir
+    ```
     %r = cir.rotate left %0, %1 : !u32i
     %r = cir.rotate right %0, %1 : !u32i
     ```
@@ -5986,7 +5988,7 @@ def CIR_AssumeAlignedOp : CIR_Op<"assume_aligned", [
 
     Example:
 
-    ```mlir
+    ```
     // Assume that %0 is a CIR pointer value of type !cir.ptr<!s32i>
     %1 = cir.assume_aligned %0 alignment 16 : !cir.ptr<!s32i>
 
@@ -6080,7 +6082,7 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
     have no effect on the behavior of the program but can change its
     performance characteristics.
 
-    ```mlir
+    ```
     cir.prefetch(%0 : !cir.ptr<!void>) locality(1) write
     ```
 
@@ -6170,7 +6172,7 @@ def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
 
     Example:
 
-    ```mlir
+    ```
     %size = cir.objsize min %ptr : !cir.ptr<i32> -> i64
     %dsize = cir.objsize max dynamic %ptr : !cir.ptr<i32> -> i64
     %nsize = cir.objsize min nullunknown %ptr : !cir.ptr<i32> -> i64
@@ -6217,7 +6219,7 @@ def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
 
     Example:
 
-    ```mlir
+    ```
     %7 = cir.ptr_diff %0, %1 : !cir.ptr<!u64i> -> !u64i
     ```
   }];
@@ -6461,7 +6463,7 @@ def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
 
     Example:
 
-    ```mlir
+    ```
       %0 = cir.const #cir.int<-42> : s32i
       %1 = cir.abs %0 min_is_poison : s32i
       %2 = cir.abs %3 : !cir.vector<!s32i x 4>
@@ -6488,7 +6490,7 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
 
     Example:
 
-    ```mlir
+    ```
     // $x : !cir.double
     %y = cir.floor %x : !cir.double
     ```
@@ -6667,7 +6669,7 @@ def CIR_VAStartOp : CIR_VAOp<"va_start"> {
 
     Example:
 
-    ```mlir
+    ```
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
     %p = cir.cast array_to_ptrdecay %args
           : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>)
@@ -6697,7 +6699,7 @@ def CIR_VAEndOp : CIR_VAOp<"va_end"> {
     storage.
 
     Example:
-    ```mlir
+    ```
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
     %p = cir.cast array_to_ptrdecay %args
           : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
@@ -6718,7 +6720,7 @@ def CIR_VACopyOp : CIR_Op<"va_copy"> {
 
     Example:
 
-    ```mlir
+    ```
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
     %p = cir.cast array_to_ptrdecay %args
           : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
@@ -6757,7 +6759,7 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
     target representation.
 
     Example:
-    ```mlir
+    ```
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
     %p = cir.cast array_to_ptrdecay %args
             : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
@@ -6798,7 +6800,7 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
 
     Example:
 
-    ```mlir
+    ```
     // re-throw;
     cir.throw
 
@@ -6853,7 +6855,7 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 
     Example:
 
-    ```mlir
+    ```
     // if (b == 0) {
     //   ...
     //   throw "...";
@@ -6899,7 +6901,7 @@ def CIR_TryOp : CIR_Op<"try",[
 
     Example:
 
-    ```mlir
+    ```
     cir.try {
       cir.call exception @function() : () -> ()
       cir.yield
@@ -6978,7 +6980,7 @@ def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
 
     Example:
 
-    ```mlir
+    ```
     %exception = cir.catch_param : !cir.ptr<!void>
     ```
   }];
@@ -7019,7 +7021,7 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
 
     Example:
 
-    ```mlir
+    ```
     %exception_ptr, %type_id = cir.eh.inflight_exception
     %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
     %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
@@ -7051,7 +7053,7 @@ def CIR_EhTypeIdOp : CIR_Op<"eh.typeid",
     a type.
 
     Example:
-    ```mlir
+    ```
     %type_id = cir.eh.typeid @_ZTIi
     ```
   }];
@@ -7077,7 +7079,7 @@ def CIR_EhSetjmpOp : CIR_Op<"eh.setjmp"> {
     non-zero value.
 
     Examples:
-    ```mlir
+    ```
       %0 = cir.eh.setjmp %arg0 : (!cir.ptr<!cir.void>) -> !s32i
     ```
   }];
@@ -7102,7 +7104,7 @@ def CIR_EhLongjmpOp : CIR_Op<"eh.longjmp"> {
     the information saved in `env` by setjmp().
 
     Examples:
-    ```mlir
+    ```
       cir.eh.longjmp %arg0 : !cir.ptr<!cir.void>
     ```
   }];
@@ -7135,7 +7137,7 @@ def CIR_EhInitiateOp : CIR_Op<"eh.initiate"> {
 
     Example:
 
-    ```mlir
+    ```
     ^unwind:
       %eh_token = cir.eh.initiate : !cir.eh_token
       cir.br ^dispatch(%eh_token : !cir.eh_token)
@@ -7180,7 +7182,7 @@ def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
 
     Example:
 
-    ```mlir
+    ```
     ^terminate_unwind:
       %eh_token = cir.eh.initiate : !cir.eh_token
       cir.eh.terminate %eh_token : !cir.eh_token
@@ -7222,7 +7224,7 @@ def CIR_EhDispatchOp : CIR_Op<"eh.dispatch", [
 
     Example:
 
-    ```mlir
+    ```
     cir.eh.dispatch %eh_token : !cir.eh_token [
       catch (#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^catch_int,
       catch (#cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>) : ^catch_str,
@@ -7275,7 +7277,7 @@ def CIR_BeginCleanupOp : CIR_Op<"begin_cleanup"> {
 
     Example:
 
-    ```mlir
+    ```
     ^cleanup(%eh_token : !cir.eh_token):
       %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token
                                                    -> !cir.cleanup_token
@@ -7310,7 +7312,7 @@ def CIR_EndCleanupOp : CIR_Op<"end_cleanup"> {
 
     Example:
 
-    ```mlir
+    ```
     ^cleanup(%eh_token : !cir.eh_token):
       %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token
                                                    -> !cir.cleanup_token
@@ -7354,7 +7356,7 @@ def CIR_BeginCatchOp : CIR_Op<"begin_catch"> {
 
     Example:
 
-    ```mlir
+    ```
     // High-level form (inside cir.try catch handler region):
     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
       %catch_token, %exn_ptr = cir.begin_catch %eh_token
@@ -7410,7 +7412,7 @@ def CIR_EndCatchOp : CIR_Op<"end_catch"> {
 
     Example:
 
-    ```mlir
+    ```
     // High-level form (inside cir.try catch handler region):
     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
       %catch_token, %exn_ptr = cir.begin_catch %eh_token
@@ -7541,7 +7543,7 @@ def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
 
     Example:
 
-    ```mlir
+    ```
     %res = cir.atomic.xchg seq_cst %ptr, %val : !cir.ptr<!u64i> -> !u64i
     ```
   }];
@@ -7604,7 +7606,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
 
     Example:
 
-    ```mlir
+    ```
     %old, %success = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire)
         syncscope(system) %ptr, %expected, %desired
         : (!cir.ptr<!u64i>, !u64i, !u64i) -> (!u64i, !cir.bool)
@@ -7644,7 +7646,7 @@ def CIR_AtomicTestAndSetOp : CIR_Op<"atomic.test_and_set"> {
     indicating whether the previous value of the integer was the "set" value.
 
     Example:
-    ```mlir
+    ```
       %res = cir.atomic.test_and_set seq_cst %ptr : !cir.ptr<!s8i> -> !cir.bool
     ```
   }];
@@ -7675,7 +7677,7 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
     integer. The operation atomically sets the integer to zero.
 
     Example:
-    ```mlir
+    ```
       cir.atomic.clear seq_cst %ptr : !cir.ptr<!s8i>
     ```
   }];
@@ -7708,7 +7710,7 @@ def CIR_AtomicFenceOp : CIR_Op<"atomic.fence"> {
       - `__c11_atomic_signal_fence`
 
     Example:
-    ```mlir
+    ```
       cir.atomic.fence syncscope(system) seq_cst
       cir.atomic.fence syncscope(single_thread) seq_cst
     ```
@@ -7740,7 +7742,7 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
     jump target (e.g., with `goto *addr;`).
 
     Example:
-    ```mlir
+    ```
     %1 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
                                                           {alignment = 8 : i64}
     %addr = cir.block_address <@c, "label1"> : !cir.ptr<!cir.void>
@@ -7782,7 +7784,7 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
 
     Example:
 
-    ```mlir
+    ```
     cir.cpuid %cpui_info, %function_id, %sub_function_id : (!cir.ptr<!s32i>,
         !s32i, !s32i)
     ```
@@ -7815,7 +7817,7 @@ def CIR_MemChrOp : CIR_Op<"libc.memchr"> {
 
     Examples:
 
-    ```mlir
+    ```
     %p = cir.libc.memchr(%src, %pattern, %len)
     ```
   }];

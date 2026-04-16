@@ -114,6 +114,17 @@ static LogicalResult checkConstantOperandMatMul(Operation *op,
   return success();
 }
 
+static LogicalResult
+checkConstantOperandRowGatherBlockScaled(Operation *op, const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) &&
+      isa<tosa::RowGatherBlockScaledOp>(op)) {
+    auto rowGatherOp = cast<tosa::RowGatherBlockScaledOp>(op);
+    const unsigned rowCountIndex = rowGatherOp.getValues().size() + 1;
+    return checkConstantOperands(op, {rowCountIndex});
+  }
+  return success();
+}
+
 static LogicalResult checkConstantOperandAvgPool2d(Operation *op,
                                                    const TargetEnv &env) {
   if (!env.allows(Extension::dynamic) && isa<tosa::AvgPool2dOp>(op)) {
@@ -176,6 +187,7 @@ public:
     return success();
   }
 
+  LogicalResult applyFunctionSignatureCheck(func::FuncOp op);
   LogicalResult applyLevelCheck(Operation *op);
   LogicalResult applyAttributeCheck(Operation *op);
 
@@ -198,6 +210,7 @@ private:
     constCheckers.emplace_back(
         checkConstantOperandConvOps<tosa::TransposeConv2DOp>);
     constCheckers.emplace_back(checkConstantOperandMatMul);
+    constCheckers.emplace_back(checkConstantOperandRowGatherBlockScaled);
     constCheckers.emplace_back(checkConstantOperandAvgPool2d);
     constCheckers.emplace_back(checkConstantOperandAvgPool2dAdaptive);
     constCheckers.emplace_back(checkConstantOperandNegate);
@@ -359,9 +372,8 @@ private:
 
   template <typename T>
   static constexpr bool IsSupportedAdaptivePoolOp =
-      std::is_same_v<T, tosa::AvgPool2dAdaptiveOp>
-      // || std::is_same_v<T, tosa::MaxPool2dAdaptiveOp>
-      ;
+      std::is_same_v<T, tosa::AvgPool2dAdaptiveOp> ||
+      std::is_same_v<T, tosa::MaxPool2dAdaptiveOp>;
 
   template <typename T, typename std::enable_if<IsSupportedAdaptivePoolOp<T>,
                                                 int>::type = 0>
@@ -781,6 +793,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Concat);
   CHECK_RANKS_AND_SIZES(Pad);
   CHECK_RANKS_AND_SIZES(Reshape);
+  CHECK_RANKS_AND_SIZES(ReshapeBlockScaled);
   CHECK_RANKS_AND_SIZES(Reverse);
   CHECK_RANKS_AND_SIZES(Slice);
   CHECK_RANKS_AND_SIZES(Tile);
@@ -817,6 +830,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(MatMul);
   CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
+  CHECK_SIZES(MaxPool2dAdaptive);
   CHECK_SIZES(RFFT2d);
   // Scatter/Gather Operators
   CHECK_SIZES(Gather);
@@ -918,6 +932,7 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
       failed(levelCheckConv<tosa::DepthwiseConv2DOp>(op)) ||
       failed(levelCheckFFT<tosa::FFT2dOp>(op)) ||
       failed(levelCheckPool<tosa::MaxPool2dOp>(op)) ||
+      failed(levelCheckAdaptivePool<tosa::MaxPool2dAdaptiveOp>(op)) ||
       failed(levelCheckFFT<tosa::RFFT2dOp>(op)) ||
       failed(levelCheckTransposeConv2d(op)) || failed(levelCheckResize(op)) ||
       failed(levelCheckConv2DBlockScaled(op))) {
@@ -1427,6 +1442,19 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   return success();
 }
 
+LogicalResult TosaValidation::applyFunctionSignatureCheck(func::FuncOp op) {
+  const auto isShapeType = [](Type type) { return isa<tosa::shapeType>(type); };
+  if (llvm::any_of(op.getArgumentTypes(), isShapeType))
+    return op.emitOpError()
+           << "Function argument types must be a tensor type to be TOSA "
+              "compliant, got !tosa.shape type";
+  if (llvm::any_of(op.getResultTypes(), isShapeType))
+    return op.emitOpError()
+           << "Function return types must be a tensor type to be TOSA "
+              "compliant, got !tosa.shape type";
+  return success();
+}
+
 bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
@@ -1471,6 +1499,12 @@ void TosaValidation::runOnOperation() {
   if (failed(maybeTargetEnv))
     return signalPassFailure();
   targetEnv = *maybeTargetEnv;
+
+  const auto functions = modOp.getOps<func::FuncOp>();
+  if (llvm::any_of(functions, [&](func::FuncOp func) {
+        return failed(applyFunctionSignatureCheck(func));
+      }))
+    return signalPassFailure();
 
   modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)

@@ -83,6 +83,8 @@ public:
   bool VisitCXXThisExpr(const CXXThisExpr *ThisE);
   bool VisitLambdaExpr(const LambdaExpr *Lambda);
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *POE);
+  bool VisitCoawaitExpr(const CoawaitExpr *E);
+  bool VisitCoyieldExpr(const CoyieldExpr *E);
 };
 
 /// VisitExpr - Visit all of the children of this expression.
@@ -178,6 +180,23 @@ bool CheckDefaultArgumentVisitor::VisitLambdaExpr(const LambdaExpr *Lambda) {
   }
   return Invalid;
 }
+
+bool CheckDefaultArgumentVisitor::VisitCoawaitExpr(const CoawaitExpr *E) {
+  // [expr.await] An await-expression shall not appear in a default argument.
+  // Note that this is generally diagnosed by isValidCoroutineContext,
+  // however isValidCoroutineContext misses default argument in nested
+  // function declarations.
+  S.Diag(E->getBeginLoc(), diag::err_coroutine_outside_function)
+      << "co_await" << E->getSourceRange();
+  return true;
+}
+
+bool CheckDefaultArgumentVisitor::VisitCoyieldExpr(const CoyieldExpr *E) {
+  S.Diag(E->getBeginLoc(), diag::err_coroutine_outside_function)
+      << "co_yield" << E->getSourceRange();
+  return true;
+}
+
 } // namespace
 
 void
@@ -18319,14 +18338,25 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
       DiagnoseUnexpandedParameterPack(SS, UPPC_FriendDeclaration))
     return nullptr;
 
+  bool isTemplateId = D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId;
+
+  if (D.isFunctionDefinition() && SS.isNotEmpty() && !isTemplateId) {
+    auto Kind = SS.getScopeRep().getKind();
+    bool IsNamespaceOrGlobal = Kind == NestedNameSpecifier::Kind::Global ||
+                               Kind == NestedNameSpecifier::Kind::Namespace;
+    if (IsNamespaceOrGlobal) {
+      Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def)
+          << SS.getScopeRep() << FixItHint::CreateRemoval(SS.getRange());
+      SS.clear();
+    }
+  }
+
   // The context we found the declaration in, or in which we should
   // create the declaration.
   DeclContext *DC;
   Scope *DCScope = S;
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
                         RedeclarationKind::ForExternalRedeclaration);
-
-  bool isTemplateId = D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId;
 
   // There are five cases here.
   //   - There's no scope specifier and we're in a local class. Only look

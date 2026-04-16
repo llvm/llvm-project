@@ -1165,7 +1165,7 @@ define double @test_cond_intrinsics(ptr %A, i1 %c) {
 entry:
   br label %loop.header
 
-loop.header:                                 ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 %c, label %then, label %loop.latch
 
@@ -1304,7 +1304,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 entry:
   br label %loop.header
 
-loop.header:                                    ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %gep.A = getelementptr i8, ptr %A, i64 %iv
   %l.1 = load i8, ptr %gep.A, align 1

@@ -10,6 +10,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  accept
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.accept
+)
+
+add_entrypoint_object(
   bind
   ALIAS
   DEPENDS
@@ -21,6 +28,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.connect
+)
+
+add_entrypoint_object(
+  getsockopt
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getsockopt
 )
 
 add_entrypoint_object(
@@ -49,6 +63,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sendto
+)
+
+add_entrypoint_object(
+  setsockopt
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setsockopt
 )
 
 add_entrypoint_object(

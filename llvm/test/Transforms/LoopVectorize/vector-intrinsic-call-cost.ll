@@ -16,10 +16,10 @@ define void @test_fshl(i32 %width, ptr %dst, ptr %src) {
 entry:
   br label %for.body9.us.us
 
-for.cond6.for.cond.cleanup8_crit_edge.us.us:      ; preds = %for.body9.us.us
+for.cond6.for.cond.cleanup8_crit_edge.us.us:
   ret void
 
-for.body9.us.us:                                  ; preds = %for.body9.us.us, %entry
+for.body9.us.us:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body9.us.us ]
   %gep = getelementptr inbounds i16, ptr %src, i32 %iv
   %l = load i16, ptr %gep

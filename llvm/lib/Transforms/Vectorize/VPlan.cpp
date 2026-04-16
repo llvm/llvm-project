@@ -1008,10 +1008,12 @@ void VPlan::execute(VPTransformState *State) {
         State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
     auto Blocks = OrigLoop->getBlocksVector();
     Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
+    while (!OrigLoop->isInnermost())
+      State->LI->erase(*OrigLoop->begin());
+    State->LI->erase(OrigLoop);
     for (auto *BB : Blocks)
       State->LI->removeBlock(BB);
     DeleteDeadBlocks(Blocks, &State->CFG.DTU);
-    State->LI->erase(OrigLoop);
   }
 
   State->CFG.DTU.flush();
@@ -1611,6 +1613,21 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   }
 
   return "<badref>";
+}
+
+VPInstruction *VPBuilder::createAnyOfReduction(VPValue *ChainOp,
+                                               VPValue *TrueVal,
+                                               VPValue *FalseVal, DebugLoc DL) {
+  assert(VPTypeAnalysis(*getInsertBlock()->getPlan())
+             .inferScalarType(ChainOp)
+             ->isIntegerTy(1) &&
+         "ChainOp must be i1 for AnyOf reduction");
+  VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                  FastMathFlags());
+  auto *OrReduce =
+      createNaryOp(VPInstruction::ComputeReductionResult, {ChainOp}, Flags, DL);
+  auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
+  return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
 }
 
 bool LoopVectorizationPlanner::getDecisionAndClampRange(

@@ -278,7 +278,7 @@ then.1:
   %or.cond = select i1 %c.4, i1 %c.3, i1 false
   br i1 %or.cond, label %then.2, label %else.1
 
-else.1:                             ; preds = %then.1
+else.1:
   store i64 0, ptr %dst.3, align 8
   br label %then.2
 
@@ -408,28 +408,28 @@ define void @loop_with_freeze_and_conditional_srem(ptr %dst, ptr %keyinfo, ptr %
 entry:
   br label %loop
 
-loop:                                             ; preds = %loop.latch, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %loaded = load i32, ptr %invariant.ptr, align 4
   %frozen = freeze i32 %loaded
   %cmp = icmp eq i32 %frozen, 0
   br i1 %cmp, label %if.zero, label %if.nonzero
 
-if.zero:                                          ; preds = %loop
+if.zero:
   store i32 0, ptr %keyinfo, align 4
   br label %loop.latch
 
-if.nonzero:                                       ; preds = %loop
+if.nonzero:
   %rem = srem i32 1, %divisor
   store i32 %rem, ptr %dst, align 4
   br label %loop.latch
 
-loop.latch:                                       ; preds = %if.nonzero, %if.zero
+loop.latch:
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv, 32
   br i1 %exitcond, label %exit, label %loop
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 

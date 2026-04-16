@@ -2149,6 +2149,84 @@ static SDValue lowerVECTOR_SHUFFLE_VPICKOD(const SDLoc &DL, ArrayRef<int> Mask,
   return DAG.getNode(LoongArchISD::VPICKOD, DL, VT, V2, V1);
 }
 
+/// Lower VECTOR_SHUFFLE into VEXTRINS (if possible).
+///
+/// VEXTRINS copies one element of a vector into any place of the result
+/// vector and makes no change to the rest elements of the result vector.
+///
+/// It is possible to lower into VEXTRINS when the mask takes the form:
+///   <0, 1, 2, ..., n+i, ..., n-1>  or  <n, n+1, n+2, ..., i, ..., 2n-1> or
+///   <0, 1, 2, ..., i, ..., n-1>  or  <n, n+1, n+2, ..., n+i, ..., 2n-1>
+/// where n is the number of elements in the vector and i is in [0, n).
+/// For example:
+///   <0, 1, 2, 3, 4, 5, 6, 8> , <2, 9, 10, 11, 12, 13, 14, 15> ,
+///   <0, 1, 2, 6, 4, 5, 6, 7> , <8, 9, 10, 11, 12, 9, 14, 15>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue
+lowerVECTOR_SHUFFLE_VEXTRINS(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                             SDValue V1, SDValue V2, SelectionDAG &DAG,
+                             const LoongArchSubtarget &Subtarget) {
+  unsigned NumElts = VT.getVectorNumElements();
+  MVT EltVT = VT.getVectorElementType();
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  if (Mask.size() != NumElts)
+    return SDValue();
+
+  auto tryLowerToExtrAndIns = [&](unsigned Base) -> SDValue {
+    int DiffCount = 0;
+    int DiffPos = -1;
+    for (unsigned i = 0; i < NumElts; ++i) {
+      if (Mask[i] == -1)
+        continue;
+      if (Mask[i] != int(Base + i)) {
+        ++DiffCount;
+        DiffPos = int(i);
+        if (DiffCount > 1)
+          return SDValue();
+      }
+    }
+
+    // Need exactly one differing element to lower into VEXTRINS.
+    if (DiffCount != 1)
+      return SDValue();
+
+    // DiffMask must be in [0, 2N).
+    int DiffMask = Mask[DiffPos];
+    if (DiffMask < 0 || DiffMask >= int(2 * NumElts))
+      return SDValue();
+
+    // Determine source vector and source index.
+    SDValue SrcVec;
+    unsigned SrcIdx;
+    if (unsigned(DiffMask) < NumElts) {
+      SrcVec = V1;
+      SrcIdx = unsigned(DiffMask);
+    } else {
+      SrcVec = V2;
+      SrcIdx = unsigned(DiffMask) - NumElts;
+    }
+
+    // Replace with EXTRACT_VECTOR_ELT + INSERT_VECTOR_ELT, it will match the
+    // patterns of VEXTRINS in tablegen.
+    SDValue Extracted = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, DL, EltVT.isFloatingPoint() ? EltVT : GRLenVT,
+        SrcVec, DAG.getConstant(SrcIdx, DL, GRLenVT));
+    SDValue Result =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, (Base == 0) ? V1 : V2,
+                    Extracted, DAG.getConstant(DiffPos, DL, GRLenVT));
+
+    return Result;
+  };
+
+  // Try [0, n-1) insertion then [n, 2n-1) insertion.
+  if (SDValue Result = tryLowerToExtrAndIns(0))
+    return Result;
+  return tryLowerToExtrAndIns(NumElts);
+}
+
 /// Lower VECTOR_SHUFFLE into VSHUF.
 ///
 /// This mostly consists of converting the shuffle mask into a BUILD_VECTOR and
@@ -2231,6 +2309,9 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if ((VT.SimpleTy == MVT::v2i64 || VT.SimpleTy == MVT::v2f64) &&
       (Result =
            lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget)))
+    return Result;
+  if ((Result =
+           lowerVECTOR_SHUFFLE_VEXTRINS(DL, Mask, VT, V1, V2, DAG, Subtarget)))
     return Result;
   if ((Result = lowerVECTOR_SHUFFLEAsZeroOrAnyExtend(DL, Mask, VT, V1, V2, DAG,
                                                      Zeroable)))
@@ -8360,7 +8441,6 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
-  auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
 
   switch (CallConv) {
   default:
@@ -8425,8 +8505,6 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
       continue;
     }
     InVals.push_back(ArgValue);
-    if (Ins[InsIdx].Flags.isByVal())
-      LoongArchFI->addIncomingByValArgs(ArgValue);
   }
 
   if (IsVarArg) {
@@ -8435,6 +8513,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     const TargetRegisterClass *RC = &LoongArch::GPRRegClass;
     MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineRegisterInfo &RegInfo = MF.getRegInfo();
+    auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
 
     // Offset of the first variable argument from stack pointer, and size of
     // the vararg save area. For now, the varargs save area is either zero or
@@ -8483,8 +8562,6 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     }
     LoongArchFI->setVarArgsSaveSize(VarArgsSaveSize);
   }
-
-  LoongArchFI->setArgumentStackSize(CCInfo.getStackSize());
 
   // All stores are grouped in one node to allow the matching between
   // the size of Ins and InVals. This only happens for vararg functions.
@@ -8542,11 +8619,9 @@ bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
   auto &Outs = CLI.Outs;
   auto &Caller = MF.getFunction();
   auto CallerCC = Caller.getCallingConv();
-  auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
 
-  // If the stack arguments for this call do not fit into our own save area then
-  // the call cannot be made tail.
-  if (CCInfo.getStackSize() > LoongArchFI->getArgumentStackSize())
+  // Do not tail call opt if the stack is used to pass parameters.
+  if (CCInfo.getStackSize() != 0)
     return false;
 
   // Do not tail call opt if any parameters need to be passed indirectly.
@@ -8558,19 +8633,13 @@ bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
   // semantics.
   auto IsCallerStructRet = Caller.hasStructRetAttr();
   auto IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
-  if (IsCallerStructRet != IsCalleeStructRet)
+  if (IsCallerStructRet || IsCalleeStructRet)
     return false;
 
-  // Do not tail call opt if caller's and callee's byval arguments do not match.
-  for (unsigned i = 0, j = 0; i < Outs.size(); ++i) {
-    if (!Outs[i].Flags.isByVal())
-      continue;
-    if (j >= LoongArchFI->getIncomingByValArgsSize())
+  // Do not tail call opt if either the callee or caller has a byval argument.
+  for (auto &Arg : Outs)
+    if (Arg.Flags.isByVal())
       return false;
-    if (LoongArchFI->getIncomingByValArgs(j).getValueType() != Outs[i].ArgVT)
-      return false;
-    ++j;
-  }
 
   // The callee has to preserve all registers the caller needs to preserve.
   const LoongArchRegisterInfo *TRI = Subtarget.getRegisterInfo();
@@ -8580,14 +8649,6 @@ bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
     if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
       return false;
   }
-
-  // If the callee takes no arguments then go on to check the results of the
-  // call.
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-  if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals))
-    return false;
-
   return true;
 }
 
@@ -8615,7 +8676,6 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool &IsTailCall = CLI.IsTailCall;
 
   MachineFunction &MF = DAG.getMachineFunction();
-  auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
 
   // Analyze the operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign> ArgLocs;
@@ -8641,7 +8701,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Create local copies for byval args.
   SmallVector<SDValue> ByValArgs;
-  for (unsigned i = 0, j = 0, e = Outs.size(); i != e; ++i) {
+  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
     if (!Flags.isByVal())
       continue;
@@ -8649,38 +8709,21 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue Arg = OutVals[i];
     unsigned Size = Flags.getByValSize();
     Align Alignment = Flags.getNonZeroByValAlign();
-    SDValue SizeNode = DAG.getConstant(Size, DL, GRLenVT);
-    SDValue Dst;
 
-    if (IsTailCall) {
-      SDValue CallerArg = LoongArchFI->getIncomingByValArgs(j++);
-      if (isa<GlobalAddressSDNode>(Arg) || isa<ExternalSymbolSDNode>(Arg) ||
-          isa<FrameIndexSDNode>(Arg))
-        Dst = CallerArg;
-    } else {
-      int FI =
-          MF.getFrameInfo().CreateStackObject(Size, Alignment, /*isSS=*/false);
-      Dst = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
-    }
-    if (Dst) {
-      Chain =
-          DAG.getMemcpy(Chain, DL, Dst, Arg, SizeNode, Alignment,
-                        /*IsVolatile=*/false,
-                        /*AlwaysInline=*/false, /*CI=*/nullptr, std::nullopt,
-                        MachinePointerInfo(), MachinePointerInfo());
-      ByValArgs.push_back(Dst);
-    }
+    int FI =
+        MF.getFrameInfo().CreateStackObject(Size, Alignment, /*isSS=*/false);
+    SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+    SDValue SizeNode = DAG.getConstant(Size, DL, GRLenVT);
+
+    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
+                          /*IsVolatile=*/false,
+                          /*AlwaysInline=*/false, /*CI=*/nullptr, std::nullopt,
+                          MachinePointerInfo(), MachinePointerInfo());
+    ByValArgs.push_back(FIPtr);
   }
 
   if (!IsTailCall)
     Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
-
-  // During a tail call, stores to the argument area must happen after all of
-  // the function's incoming arguments have been loaded because they may alias.
-  // This is done by folding in a TokenFactor from LowerFormalArguments, but
-  // there's no point in doing so repeatedly so this tracks whether that's
-  // happened yet.
-  bool AfterFormalArgLoads = false;
 
   // Copy argument values to their designated locations.
   SmallVector<std::pair<Register, SDValue>> RegsToPass;
@@ -8776,44 +8819,27 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
 
     // Use local copy if it is a byval arg.
-    if (Flags.isByVal()) {
-      if (!IsTailCall || (isa<GlobalAddressSDNode>(ArgValue) ||
-                          isa<ExternalSymbolSDNode>(ArgValue) ||
-                          isa<FrameIndexSDNode>(ArgValue)))
-        ArgValue = ByValArgs[j++];
-    }
+    if (Flags.isByVal())
+      ArgValue = ByValArgs[j++];
 
     if (VA.isRegLoc()) {
       // Queue up the argument copies and emit them at the end.
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
-      SDValue DstAddr;
-      MachinePointerInfo DstInfo;
-      int32_t Offset = VA.getLocMemOffset();
+      assert(!IsTailCall && "Tail call not allowed if stack is used "
+                            "for passing parameters");
 
       // Work out the address of the stack slot.
       if (!StackPtr.getNode())
         StackPtr = DAG.getCopyFromReg(Chain, DL, LoongArch::R3, PtrVT);
-
-      if (IsTailCall) {
-        unsigned OpSize = divideCeil(VA.getValVT().getSizeInBits(), 8);
-        int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
-        DstAddr = DAG.getFrameIndex(FI, PtrVT);
-        DstInfo = MachinePointerInfo::getFixedStack(MF, FI);
-        if (!AfterFormalArgLoads) {
-          Chain = DAG.getStackArgumentTokenFactor(Chain);
-          AfterFormalArgLoads = true;
-        }
-      } else {
-        SDValue PtrOff = DAG.getIntPtrConstant(Offset, DL);
-        DstAddr = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
-        DstInfo = MachinePointerInfo::getStack(MF, Offset);
-      }
+      SDValue Address =
+          DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,
+                      DAG.getIntPtrConstant(VA.getLocMemOffset(), DL));
 
       // Emit the store.
       MemOpChains.push_back(
-          DAG.getStore(Chain, DL, ArgValue, DstAddr, DstInfo));
+          DAG.getStore(Chain, DL, ArgValue, Address, MachinePointerInfo()));
     }
   }
 

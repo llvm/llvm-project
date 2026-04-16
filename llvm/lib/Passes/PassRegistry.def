@@ -412,6 +412,7 @@ FUNCTION_PASS("atomic-expand", AtomicExpandPass(*TM))
 FUNCTION_PASS("bdce", BDCEPass())
 FUNCTION_PASS("break-crit-edges", BreakCriticalEdgesPass())
 FUNCTION_PASS("callsite-splitting", CallSiteSplittingPass())
+FUNCTION_PASS("cfguard", CFGuardPass())
 FUNCTION_PASS("chr", ControlHeightReductionPass())
 FUNCTION_PASS("codegenprepare", CodeGenPreparePass(*TM))
 FUNCTION_PASS("complex-deinterleaving", ComplexDeinterleavingPass(*TM))
@@ -440,7 +441,6 @@ FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flatten-cfg", FlattenCFGPass())
 FUNCTION_PASS("float2int", Float2IntPass())
 FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass())
-FUNCTION_PASS("func-properties-stats", FunctionPropertiesStatisticsPass())
 FUNCTION_PASS("gc-lowering", GCLoweringPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
@@ -451,7 +451,6 @@ FUNCTION_PASS("infer-address-spaces", InferAddressSpacesPass())
 FUNCTION_PASS("infer-alignment", InferAlignmentPass())
 FUNCTION_PASS("inject-tli-mappings", InjectTLIMappings())
 FUNCTION_PASS("inline-asm-prepare", InlineAsmPreparePass())
-FUNCTION_PASS("instcount", InstCountPass())
 FUNCTION_PASS("instnamer", InstructionNamerPass())
 FUNCTION_PASS("instsimplify", InstSimplifyPass())
 FUNCTION_PASS("interleaved-access", InterleavedAccessPass(*TM))
@@ -543,6 +542,7 @@ FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass(TM))
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("stack-protector", StackProtectorPass(*TM))
+FUNCTION_PASS("strip-convergence-intrinsics", StripConvergenceIntrinsicsPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
@@ -574,10 +574,6 @@ FUNCTION_PASS("wasm-eh-prepare", WasmEHPreparePass())
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
 FUNCTION_PASS_WITH_PARAMS(
-    "cfguard", "CFGuardPass",
-    [](CFGuardPass::Mechanism M) { return CFGuardPass(M); },
-    parseCFGuardPassOptions, "check;dispatch")
-FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },
     parseEarlyCSEPassOptions, "memssa")
@@ -589,6 +585,13 @@ FUNCTION_PASS_WITH_PARAMS(
     "ee-instrument", "EntryExitInstrumenterPass",
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },
     parseEntryExitInstrumenterPassOptions, "post-inline")
+FUNCTION_PASS_WITH_PARAMS(
+    "func-properties-stats", 
+    "FunctionPropertiesStatisticsPass",
+    [](bool IsPreOptimizations) { 
+      return FunctionPropertiesStatisticsPass(IsPreOptimizations); 
+    },
+    parseFunctionPropertiesStatisticsOptions, "pre-opt")
 FUNCTION_PASS_WITH_PARAMS(
     "function-simplification", "",
     [this](OptimizationLevel OL) {
@@ -612,6 +615,12 @@ FUNCTION_PASS_WITH_PARAMS(
     [](InstCombineOptions Opts) { return InstCombinePass(Opts); },
     parseInstCombineOptions,
     "no-verify-fixpoint;verify-fixpoint;max-iterations=N")
+FUNCTION_PASS_WITH_PARAMS(
+    "instcount", "InstCountPass",
+    [](bool IsPreOptimizations) { 
+      return InstCountPass(IsPreOptimizations); 
+    },
+    parseInstCountOptions, "pre-opt")
 FUNCTION_PASS_WITH_PARAMS(
     "lint", "LintPass",
     [](bool AbortOnError) { return LintPass(AbortOnError); }, parseLintOptions,

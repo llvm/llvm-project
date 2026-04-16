@@ -242,6 +242,7 @@ Changes to the LLVM tools
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
   prefixes, making it an alias of the existing `-check-prefixes` option.
 * Add `-mtune` option to `llc`.
+* Add `-mtune` option to `opt`.
 
 Changes to LLDB
 ---------------
@@ -278,6 +279,9 @@ Changes to LLDB
   `plugin.process.freebsd-kernel-core.read-only` must be set to `false`. This setting is available when
   using `/dev/mem` or a kernel dump. However, since `kvm_write()` does not support writing to kernel dumps,
   writes to a kernel dump will still fail when the setting is false.
+* Added a command `process plugin refresh-threads`, enabling on-demand thread-list reconstruction from `/dev/mem`
+  so users can resync live kernel thread state without restarting LLDB. Note that this has no impact on full dump
+  and minidump files.
 
 ### Linux
 
@@ -294,6 +298,9 @@ Changes to LLDB
   an affected version in a way that is compatible with these systems, the issue
   contains details of backports that could be done to fix the affected versions.
 
+### Windows
+
+* Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
 
 Changes to BOLT
 ---------------

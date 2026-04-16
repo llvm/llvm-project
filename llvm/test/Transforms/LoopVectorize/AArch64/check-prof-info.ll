@@ -100,7 +100,7 @@ define void @foo_i32(i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [1024 x i32], ptr @b, i64 0, i64 %iv
   %load = load i32, ptr %arrayidx, align 4
@@ -110,7 +110,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !prof !0
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 }
 
@@ -324,7 +324,7 @@ define void @foo_i32_no_bw(i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [1024 x i32], ptr @b, i64 0, i64 %iv
   %load = load i32, ptr %arrayidx, align 4
@@ -334,7 +334,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 }
 

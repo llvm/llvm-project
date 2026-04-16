@@ -605,7 +605,7 @@ namespace Destructors {
 
   struct A { int n; };
   constexpr void double_destroy() {
-    A a;
+    A a; // both-note {{declared here}}
     a.~A();
     a.~A(); // both-note {{destruction of object outside its lifetime}}
   }
