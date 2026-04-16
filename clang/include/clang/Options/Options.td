@@ -2211,7 +2211,7 @@ def fdiagnostics_parseable_fixits : Flag<["-"], "fdiagnostics-parseable-fixits">
     HelpText<"Print fix-its in machine parseable form">,
     MarshallingInfoFlag<DiagnosticOpts<"ShowParseableFixits">>;
 def fdiagnostics_print_source_range_info : Flag<["-"], "fdiagnostics-print-source-range-info">,
-    Group<f_clang_Group>,  Visibility<[ClangOption, CC1Option]>,
+    Group<f_clang_Group>,  Visibility<[ClangOption, CLOption, CC1Option]>,
     HelpText<"Print source range spans in numeric form">,
     MarshallingInfoFlag<DiagnosticOpts<"ShowSourceRanges">>;
 defm diagnostics_show_hotness : BoolFOption<"diagnostics-show-hotness",
