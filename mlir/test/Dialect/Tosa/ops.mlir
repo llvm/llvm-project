@@ -253,6 +253,53 @@ func.func @test_max_pool2d_f16(%arg0: tensor<1x32x32x8xf16>) -> tensor<1x32x32x8
   return %0 : tensor<1x32x32x8xf16>
 }
 
+// CHECK-LABEL: max_pool2d_adaptive_f32
+func.func @test_max_pool2d_adaptive_f32(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad : (tensor<1x32x32x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+// CHECK-LABEL: max_pool2d_adaptive_bf16
+func.func @test_max_pool2d_adaptive_bf16(%arg0: tensor<1x32x32x8xbf16>) -> tensor<1x32x32x8xbf16> {
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad : (tensor<1x32x32x8xbf16>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xbf16>
+  return %0 : tensor<1x32x32x8xbf16>
+}
+
+// -----
+// CHECK-LABEL: max_pool2d_adaptive_f16
+func.func @test_max_pool2d_adaptive_f16(%arg0: tensor<1x32x32x8xf16>) -> tensor<1x32x32x8xf16> {
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad : (tensor<1x32x32x8xf16>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf16>
+  return %0 : tensor<1x32x32x8xf16>
+}
+
+// CHECK-LABEL: dynamic_max_pool2d_adaptive_f16
+func.func @test_dynamic_max_pool2d_adaptive_f16(%arg0: tensor<1x?x?x8xf16>) -> tensor<1x?x?x8xf16> {
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad : (tensor<1x?x?x8xf16>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x?x?x8xf16>
+  return %0 : tensor<1x?x?x8xf16>
+}
+
+// CHECK-LABEL: unranked_max_pool2d_adaptive_f16
+func.func @test_unranked_max_pool2d_adaptive_f16(%arg0: tensor<*xf16>) -> tensor<*xf16> {
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad : (tensor<*xf16>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<*xf16>
+  return %0 : tensor<*xf16>
+}
+
 // -----
 // CHECK-LABEL: rfft2d
 func.func @test_rfft2d(%arg0: tensor<13x8x16xf32>) -> (tensor<13x8x9xf32>, tensor<13x8x9xf32>) {
@@ -782,6 +829,54 @@ func.func @test_reshape_unranked_output(%arg0: tensor<13x21x3xf32>) -> tensor<*x
   %1 = tosa.const_shape {values = dense<[21, 13, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
   %0 = tosa.reshape %arg0, %1 : (tensor<13x21x3xf32>, !tosa.shape<3>) -> tensor<*xf32>
   return %0 : tensor<*xf32>
+}
+
+// -----
+// CHECK-LABEL: reshape_non_block_scaled
+func.func @test_reshape_non_block_scaled(%arg0: tensor<13x21x3xf32>) -> tensor<1x819xf32> {
+  %1 = tosa.const_shape {values = dense<[1, 819]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %0 = tosa.reshape_block_scaled %arg0, %1 {block_size = #tosa.block_size<BLOCK_SIZE_1> : i32} : (tensor<13x21x3xf32>, !tosa.shape<2>) -> tensor<1x819xf32>
+  return %0 : tensor<1x819xf32>
+}
+
+// -----
+// CHECK-LABEL: reshape_non_block_scaled_unranked_input
+func.func @test_reshape_non_block_scaled_unranked_input(%arg0: tensor<*xf32>) -> tensor<1x819xf32> {
+  %1 = tosa.const_shape {values = dense<[1, 819]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %0 = tosa.reshape_block_scaled %arg0, %1 {block_size = #tosa.block_size<BLOCK_SIZE_1> : i32} : (tensor<*xf32>, !tosa.shape<2>) -> tensor<1x819xf32>
+  return %0 : tensor<1x819xf32>
+}
+
+// -----
+// CHECK-LABEL: reshape_non_block_scaled_unranked_output
+func.func @test_reshape_non_block_scaled_unranked_output(%arg0: tensor<13x21x3xf32>) -> tensor<*xf32> {
+  %1 = tosa.const_shape {values = dense<[21, 13, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %0 = tosa.reshape_block_scaled %arg0, %1 {block_size = #tosa.block_size<BLOCK_SIZE_1> : i32} : (tensor<13x21x3xf32>, !tosa.shape<3>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
+}
+
+// -----
+// CHECK-LABEL: reshape_block_scaled
+func.func @test_reshape_block_scaled(%arg0: tensor<4x32xf4E2M1FN>, %arg1: tensor<4x1xf8E8M0FNU>) -> (tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) {
+  %1 = tosa.const_shape {values = dense<[2, 64]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %0:2 = tosa.reshape_block_scaled %arg0, %arg1, %1 {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>, !tosa.shape<2>) -> (tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>)
+  return %0#0, %0#1 : tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>
+}
+
+// -----
+// CHECK-LABEL: reshape_block_scaled_unranked_input
+func.func @test_reshape_block_scaled_unranked_input(%arg0: tensor<*xf4E2M1FN>, %arg1: tensor<*xf8E8M0FNU>) -> (tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) {
+  %1 = tosa.const_shape {values = dense<[2, 64]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %0:2 = tosa.reshape_block_scaled %arg0, %arg1, %1 {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>, !tosa.shape<2>) -> (tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>)
+  return %0#0, %0#1 : tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>
+}
+
+// -----
+// CHECK-LABEL: reshape_block_scaled_unranked_output
+func.func @test_reshape_block_scaled_unranked_output(%arg0: tensor<4x32xf4E2M1FN>, %arg1: tensor<4x1xf8E8M0FNU>) -> (tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>) {
+  %1 = tosa.const_shape {values = dense<[2, 64]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %0:2 = tosa.reshape_block_scaled %arg0, %arg1, %1 {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>, !tosa.shape<2>) -> (tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>)
+  return %0#0, %0#1 : tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>
 }
 
 // -----

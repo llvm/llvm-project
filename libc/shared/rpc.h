@@ -417,7 +417,7 @@ private:
     if (owns_buffer && T)
       out = process.invert_outbox(lane_mask, index, out);
     process.unlock(lane_mask, index);
-    if constexpr (!T)
+    if constexpr (T)
       process.finish(lane_mask);
   }
 

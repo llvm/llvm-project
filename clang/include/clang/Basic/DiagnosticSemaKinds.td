@@ -11179,6 +11179,8 @@ def err_omp_bind_required_on_loop : Error<
   "construct">;
 def err_omp_loop_reduction_clause : Error<
   "'reduction' clause not allowed with '#pragma omp loop bind(teams)'">;
+def err_omp_split_counts_not_one_omp_fill : Error<
+  "exactly one 'omp_fill' must appear in the 'counts' clause">;
 def warn_break_binds_to_switch : Warning<
   "'break' is bound to loop, GCC binds it to switch">,
   InGroup<GccCompat>;
@@ -13711,6 +13713,9 @@ def err_hlsl_samplecmp_requires_float
             "a floating point type">;
 def err_hlsl_gathercmp_invalid_component
     : Error<"gatherCmp%select{Red|Green|Blue|Alpha}0 operations on the Vulkan target are not supported; only GatherCmp and GatherCmpRed are allowed">;
+
+def err_hlsl_resource_member_array_access_not_constant
+    : Error<"index for struct array inside cbuffer that contains resources must be a constant integer expression">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
