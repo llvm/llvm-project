@@ -12,6 +12,14 @@
 // CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE2:1]], i32 [[MIN_THREADS2:1]], i32 [[MAX_THREADS2:30]], i32 [[MIN_TEAMS2:40]], i32 [[MAX_TEAMS2:40]], i32 0, i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
+// Multi-dim thread_limit: first dim constant (10), second dim constant (5).
+// MaxThreads uses the first dim combined value: min(target=20, teams_x=10) = 10.
+// CHECK:      @[[EXEC_MODE3:.*]] = weak protected constant i8 1
+// CHECK:      @llvm.compiler.used{{.*}} = appending global [1 x ptr] [ptr @[[EXEC_MODE3]]], section "llvm.metadata"
+// CHECK:      @[[KERNEL3_ENV:.*_kernel_environment]] = weak_odr protected constant %struct.KernelEnvironmentTy {
+// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE3:1]], i32 [[MIN_THREADS3:1]], i32 [[MAX_THREADS3:10]], i32 0, i32 0, i32 0, i32 0 },
+// CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
+
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
   llvm.func @main(%num_teams : !llvm.ptr) {
     // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr %[[NUM_TEAMS_ARG:.*]], ptr %[[KERNEL_ARGS:.*]]) #[[ATTRS1:[0-9]+]]
@@ -33,6 +41,18 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     omp.target thread_limit(%target_threads2 : i32) {
       %num_teams2 = llvm.mlir.constant(40) : i32
       omp.teams num_teams(to %num_teams2 : i32) {
+        omp.terminator
+      }
+      omp.terminator
+    }
+
+    // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr %[[KERNEL_ARGS:.*]]) #[[ATTRS1]]
+    // CHECK: %{{.*}} = call i32 @__kmpc_target_init(ptr @[[KERNEL3_ENV]], ptr %[[KERNEL_ARGS]])
+    %target_threads3 = llvm.mlir.constant(20) : i32
+    omp.target thread_limit(%target_threads3 : i32) {
+      %teams_threads_x = llvm.mlir.constant(10) : i32
+      %teams_threads_y = llvm.mlir.constant(5) : i32
+      omp.teams thread_limit(%teams_threads_x, %teams_threads_y : i32, i32) {
         omp.terminator
       }
       omp.terminator
