@@ -439,7 +439,7 @@ func.func @non_int_memory_space() {
 // (reduction along %arg4) and fuse.
 
 // PRODUCER-CONSUMER-LABEL: func @slice_compute_check
-func.func @slice_compute_check(%arg0: memref<1x8x26xi32, strided<[?, ?, ?], offset: ?>>, %arg1: memref<1x8x26xi32, strided<[?, ?, ?], offset: ?>>, %arg2: memref<1x8x26xi32, strided<[?, ?, ?], offset: ?>>) {
+func.func @slice_compute_check(%arg0: memref<1x8x26xi32, strided<[?, ?, ?]>>, %arg1: memref<1x8x26xi32, strided<[?, ?, ?]>>, %arg2: memref<1x8x26xi32, strided<[?, ?, ?]>>) {
   %alloc_14 = memref.alloc() : memref<1x8x26xi32>
   %alloc_15 = memref.alloc() : memref<1x26xi32>
   affine.for %arg3 = 0 to 1 {
@@ -690,8 +690,8 @@ module {
       }
     }
     %alloc_3 = memref.alloc() {alignment = 64 : i64} : memref<3x10x7x6xf32>
-    %subview = memref.subview %alloc_3[0, 2, 1, 0] [3, 7, 5, 6] [1, 1, 1, 1] : memref<3x10x7x6xf32> to memref<3x7x5x6xf32, strided<[420, 42, 6, 1], offset: 90>>
-    memref.copy %alloc, %subview : memref<3x7x5x6xf32> to memref<3x7x5x6xf32, strided<[420, 42, 6, 1], offset: 90>>
+    %subview = memref.subview %alloc_3[0, 2, 1, 0] [3, 7, 5, 6] [1, 1, 1, 1] : memref<3x10x7x6xf32> to memref<3x7x5x6xf32, strided<[420, 42, 6, 1]>>
+    memref.copy %alloc, %subview : memref<3x7x5x6xf32> to memref<3x7x5x6xf32, strided<[420, 42, 6, 1]>>
     %alloc_4 = memref.alloc() {alignment = 64 : i64} : memref<3x10x3x6x1xf32>
     affine.for %arg0 = 0 to 3 {
       affine.for %arg1 = 0 to 10 {

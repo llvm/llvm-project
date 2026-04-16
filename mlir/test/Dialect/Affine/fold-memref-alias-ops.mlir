@@ -6,12 +6,12 @@
 
 // CHECK-LABEL: func @fold_static_stride_subview_with_affine_load_store
 func.func @fold_static_stride_subview_with_affine_load_store(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
-  %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] : memref<12x32xf32> to memref<4x4xf32, strided<[64, 3], offset: ?>>
-  %1 = affine.load %0[%arg3, %arg4] : memref<4x4xf32, strided<[64, 3], offset: ?>>
+  %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] : memref<12x32xf32> to memref<4x4xf32, strided<[64, 3]>>
+  %1 = affine.load %0[%arg3, %arg4] : memref<4x4xf32, strided<[64, 3]>>
   // CHECK-NEXT: affine.apply
   // CHECK-NEXT: affine.apply
   // CHECK-NEXT: affine.load
-  affine.store %1, %0[%arg3, %arg4] : memref<4x4xf32, strided<[64, 3], offset: ?>>
+  affine.store %1, %0[%arg3, %arg4] : memref<4x4xf32, strided<[64, 3]>>
   // CHECK-NEXT: affine.apply
   // CHECK-NEXT: affine.apply
   // CHECK-NEXT: affine.store
@@ -93,14 +93,14 @@ func.func @fold_static_stride_subview_with_affine_load_store_expand_shape_3d(%ar
 // CHECK-LABEL: fold_memref_alias_expand_shape_subview_load_store_dynamic_dim
 // CHECK-SAME: (%[[ARG0:.*]]: memref<2048x16xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index)
 func.func @fold_memref_alias_expand_shape_subview_load_store_dynamic_dim(%alloc: memref<2048x16xf32>, %c10: index, %c5: index, %c0: index, %sz0: index) {
-  %subview = memref.subview %alloc[%c5, 0] [%c10, 16] [1, 1] : memref<2048x16xf32> to memref<?x16xf32, strided<[16, 1], offset: ?>>
-  %expand_shape = memref.expand_shape %subview [[0], [1, 2, 3]] output_shape [%sz0, 1, 8, 2] : memref<?x16xf32, strided<[16, 1], offset: ?>> into memref<?x1x8x2xf32, strided<[16, 16, 2, 1], offset: ?>>
-  %dim = memref.dim %expand_shape, %c0 : memref<?x1x8x2xf32, strided<[16, 16, 2, 1], offset: ?>>
+  %subview = memref.subview %alloc[%c5, 0] [%c10, 16] [1, 1] : memref<2048x16xf32> to memref<?x16xf32, strided<[16, 1]>>
+  %expand_shape = memref.expand_shape %subview [[0], [1, 2, 3]] output_shape [%sz0, 1, 8, 2] : memref<?x16xf32, strided<[16, 1]>> into memref<?x1x8x2xf32, strided<[16, 16, 2, 1]>>
+  %dim = memref.dim %expand_shape, %c0 : memref<?x1x8x2xf32, strided<[16, 16, 2, 1]>>
 
   affine.for %arg6 = 0 to %dim step 64 {
     affine.for %arg7 = 0 to 16 step 16 {
-      %dummy_load = affine.load %expand_shape[%arg6, 0, %arg7, %arg7] : memref<?x1x8x2xf32, strided<[16, 16, 2, 1], offset: ?>>
-      affine.store %dummy_load, %subview[%arg6, %arg7] : memref<?x16xf32, strided<[16, 1], offset: ?>>
+      %dummy_load = affine.load %expand_shape[%arg6, 0, %arg7, %arg7] : memref<?x1x8x2xf32, strided<[16, 16, 2, 1]>>
+      affine.store %dummy_load, %subview[%arg6, %arg7] : memref<?x16xf32, strided<[16, 1]>>
     }
   }
   return
@@ -108,7 +108,7 @@ func.func @fold_memref_alias_expand_shape_subview_load_store_dynamic_dim(%alloc:
 // CHECK-NEXT:   %[[C0:.*]] = arith.constant 0
 // CHECK-NEXT:   memref.subview
 // CHECK-NEXT:   %[[EXPAND_SHAPE:.*]] = memref.expand_shape
-// CHECK-NEXT:   %[[DIM:.*]] = memref.dim %[[EXPAND_SHAPE]], %[[ARG3]] : memref<?x1x8x2xf32, strided<[16, 16, 2, 1], offset: ?>>
+// CHECK-NEXT:   %[[DIM:.*]] = memref.dim %[[EXPAND_SHAPE]], %[[ARG3]] : memref<?x1x8x2xf32, strided<[16, 16, 2, 1]>>
 // CHECK-NEXT:   affine.for %[[ARG5:.*]] = 0 to %[[DIM]] step 64 {
 // CHECK-NEXT:   affine.for %[[ARG6:.*]] = 0 to 16 step 16 {
 // CHECK-NEXT:   %[[VAL0:.*]] = affine.linearize_index disjoint [%[[C0]], %[[ARG6]], %[[ARG6]]] by (1, 8, 2)

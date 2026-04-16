@@ -146,7 +146,6 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
     return MemRefType();
 
   ArrayRef<int64_t> aShape = aT.getShape(), bShape = bT.getShape();
-  int64_t resOffset;
   SmallVector<int64_t, 4> resShape(aT.getRank(), 0),
       resStrides(bT.getRank(), 0);
   for (int64_t idx = 0, e = aT.getRank(); idx < e; ++idx) {
@@ -155,10 +154,9 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
     resStrides[idx] =
         (aStrides[idx] == bStrides[idx]) ? aStrides[idx] : ShapedType::kDynamic;
   }
-  resOffset = (aOffset == bOffset) ? aOffset : ShapedType::kDynamic;
   return MemRefType::get(
       resShape, aT.getElementType(),
-      StridedLayoutAttr::get(aT.getContext(), resOffset, resStrides));
+      StridedLayoutAttr::get(aT.getContext(), resStrides));
 }
 
 /// Casts the given memref to a compatible memref type. If the source memref has

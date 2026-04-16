@@ -17,13 +17,13 @@ func.func @make_alloca_loop_independent(%lb: index, %ub: index, %step: index) {
     %alloc = memref.alloca(%i) : memref<?xf32>
 
     // memref.subview has special handling.
-    // CHECK: %[[subview2:.*]] = memref.subview %[[subview]][1] [5] [1] : memref<?xf32, strided<[1]>> to memref<5xf32, strided<[1], offset: 1>>
-    %view = memref.subview %alloc[1][5][1] : memref<?xf32> to memref<5xf32, strided<[1], offset: 1>>
+    // CHECK: %[[subview2:.*]] = memref.subview %[[subview]][1] [5] [1] : memref<?xf32, strided<[1]>> to memref<5xf32, strided<[1]>>
+    %view = memref.subview %alloc[1][5][1] : memref<?xf32> to memref<5xf32, strided<[1]>>
 
     // This op takes a memref but does not produce one. The new alloc is used
     // directly.
     // CHECK: "test.some_use"(%[[subview2]])
-    "test.some_use"(%view) : (memref<5xf32, strided<[1], offset: 1>>) -> ()
+    "test.some_use"(%view) : (memref<5xf32, strided<[1]>>) -> ()
 
     // This op produces a memref, so the new alloc cannot be used directly.
     // It is wrapped in a unrealized_conversion_cast.

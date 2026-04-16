@@ -123,7 +123,7 @@ func.func @memref_rank(%m: memref<5xf32>) -> index {
 //  CHECK-SAME:     %[[m:.*]]: memref<?xf32>, %[[sz:.*]]: index
 //       CHECK:   return %[[sz]]
 func.func @memref_subview(%m: memref<?xf32>, %sz: index) -> index {
-  %0 = memref.subview %m[2][%sz][1] : memref<?xf32> to memref<?xf32, strided<[1], offset: 2>>
-  %1 = "test.reify_bound"(%0) {dim = 0} : (memref<?xf32, strided<[1], offset: 2>>) -> (index)
+  %0 = memref.subview %m[2][%sz][1] : memref<?xf32> to memref<?xf32, strided<[1]>>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (memref<?xf32, strided<[1]>>) -> (index)
   return %1 : index
 }

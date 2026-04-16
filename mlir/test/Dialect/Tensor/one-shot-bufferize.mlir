@@ -9,10 +9,10 @@
 // RUN: mlir-opt %s -one-shot-bufferize="unknown-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
 
 // CHECK-LABEL: func private @insert_slice_fun
-//  CHECK-SAME:   %[[A0:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
-//  CHECK-SAME:   %[[A1:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
-//  CHECK-SAME:   %[[t0:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>,
-//  CHECK-SAME:   %[[t1:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[A0:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>,
+//  CHECK-SAME:   %[[A1:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>,
+//  CHECK-SAME:   %[[t0:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?]>>,
+//  CHECK-SAME:   %[[t1:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?]>>
 func.func private @insert_slice_fun(
     %A0 : tensor<?xf32> {bufferization.writable = false},
     %A1 : tensor<?xf32> {bufferization.writable = true},
@@ -55,8 +55,8 @@ func.func private @insert_slice_fun(
 // -----
 
 // CHECK-LABEL: func @insert_slice_fun
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
-//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>
+//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?]>>
 func.func @insert_slice_fun(
     %A : tensor<?xf32> {bufferization.writable = true},
     %t : tensor<4xf32> {bufferization.writable = false})
@@ -81,8 +81,8 @@ func.func @insert_slice_fun(
 // -----
 
 // CHECK-LABEL: func @insert_slice_fun
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
-//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>
+//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?]>>
 func.func @insert_slice_fun(
     %A : tensor<?xf32> {bufferization.writable = true},
     %t : tensor<4xf32> {bufferization.writable = false})
@@ -107,8 +107,8 @@ func.func @insert_slice_fun(
 // -----
 
 // CHECK-LABEL: func @insert_slice_fun_not_inplace
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
-//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>
+//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?]>>
 func.func @insert_slice_fun_not_inplace(
     %A : tensor<?xf32> {bufferization.writable = false},
     %t : tensor<4xf32> {bufferization.writable = false})
@@ -131,7 +131,7 @@ func.func @insert_slice_fun_not_inplace(
 
 // CHECK-LABEL: func @tensor_cast_not_in_place(
 //  CHECK-SAME:     %[[A:.*]]: memref<?xf32{{.*}}>, %[[B:.*]]: memref<?xf32{{.*}}>
-//       CHECK:   %[[casted:.*]] = memref.cast %[[A]] : memref<?xf32, strided<[?], offset: ?>> to memref<4xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[casted:.*]] = memref.cast %[[A]] : memref<?xf32, strided<[?]>> to memref<4xf32, strided<[?]>>
 //       CHECK:   %[[alloc:.*]] = memref.alloc
 //       CHECK:   memref.copy %[[casted]], %[[alloc]]
 //       CHECK:   %[[subview:.*]] = memref.subview %[[A]][{{.*}}] [4] [1] : {{.*}} to memref<4xf32
@@ -201,8 +201,8 @@ func.func @rank_reducing_parallel_insert_slice(%in: tensor<100xf32>, %out: tenso
   %result = scf.forall (%thread_idx) in (%num_threads) shared_outs (%o = %out) -> tensor<200x100xf32> {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       scf.forall.in_parallel {
-        // CHECK: memref.subview %{{.*}}[%{{.*}}] [1] [1] : memref<100xf32, strided<[?], offset: ?>> to memref<1xf32, strided<[?], offset: ?>>
-        // CHECK: memref.subview %{{.*}}[1, %{{.*}}] [1, 1] [1, 1] : memref<200x100xf32, strided<[?, ?], offset: ?>> to memref<1xf32, strided<[?], offset: ?>>
+        // CHECK: memref.subview %{{.*}}[%{{.*}}] [1] [1] : memref<100xf32, strided<[?]>> to memref<1xf32, strided<[?]>>
+        // CHECK: memref.subview %{{.*}}[1, %{{.*}}] [1, 1] [1, 1] : memref<200x100xf32, strided<[?, ?]>> to memref<1xf32, strided<[?]>>
         tensor.parallel_insert_slice %1 into %o[1, %thread_idx][1, 1][1, 1] :
           tensor<1xf32> into tensor<200x100xf32>
       }
@@ -245,7 +245,7 @@ func.func @insert_equivalent_tensor(%t: tensor<10xf32>) -> tensor<10xf32> {
 // -----
 
 // CHECK-LABEL: func @pad_memory_space(
-//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided<[?]>>
 func.func @pad_memory_space(%t: tensor<?xf32>, %h1: index, %f: f32, %pos: index) -> f32
 {
   // CHECK: %[[alloc_tensor:.*]] = memref.alloc{{.*}} : memref<?xf32, 3>
@@ -257,7 +257,7 @@ func.func @pad_memory_space(%t: tensor<?xf32>, %h1: index, %f: f32, %pos: index)
   // CHECK:     outs(%[[padded_alloc]] : memref<15xf32, 3>)
   // CHECK:   linalg.yield %{{.*}}
   // CHECK: }
-  // CHECK: %[[subview:.*]] = memref.subview {{.*}} : memref<15xf32, 3> to memref<?xf32, strided<[1], offset: 2>, 3>
+  // CHECK: %[[subview:.*]] = memref.subview {{.*}} : memref<15xf32, 3> to memref<?xf32, strided<[1]>, 3>
   // CHECK: memref.copy %[[alloc_tensor]], %[[subview]]
   %1 = tensor.pad %0 low[2] high[%h1] {
   ^bb0(%arg0: index):
@@ -332,9 +332,9 @@ func.func @dim_not_reading(%t: tensor<?xf32>, %f: f32, %pos: index)
 
 //       CHECK: #[[$map:.*]] = affine_map<(d0) -> (d0 + 5)>
 // CHECK-LABEL: func.func private @cast_retains_buffer_layout(
-//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, #[[$map]]>, %[[sz:.*]]: index) -> memref<?xf32, strided<[1], offset: 7>> {
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, #[[$map]]>, %[[sz:.*]]: index) -> memref<?xf32, strided<[1]>> {
 //       CHECK:   %[[casted:.*]] = memref.cast %[[t]] : memref<?xf32, #[[$map]]> to memref<10xf32, #[[$map]]>
-//       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, #[[$map]]> to memref<?xf32, strided<[1], offset: 7>>
+//       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, #[[$map]]> to memref<?xf32, strided<[1]>>
 //       CHECK:   return %[[slice]]
 func.func private @cast_retains_buffer_layout(
     %t: tensor<?xf32>
@@ -354,13 +354,13 @@ func.func private @cast_retains_buffer_layout(
 // -----
 
 // CHECK-LABEL: func private @cast_retains_buffer_layout_strided(
-//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided<[1], offset: 5>>, %[[sz:.*]]: index) -> memref<?xf32, strided<[1], offset: 7>> {
-//       CHECK:   %[[casted:.*]] = memref.cast %[[t]] : memref<?xf32, strided<[1], offset: 5>> to memref<10xf32, strided<[1], offset: 5>>
-//       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, strided<[1], offset: 5>> to memref<?xf32, strided<[1], offset: 7>>
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided<[1]>>, %[[sz:.*]]: index) -> memref<?xf32, strided<[1]>> {
+//       CHECK:   %[[casted:.*]] = memref.cast %[[t]] : memref<?xf32, strided<[1]>> to memref<10xf32, strided<[1]>>
+//       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, strided<[1]>> to memref<?xf32, strided<[1]>>
 //       CHECK:   return %[[slice]]
 func.func private @cast_retains_buffer_layout_strided(
     %t: tensor<?xf32>
-        {bufferization.buffer_layout = strided<[1], offset: 5>},
+        {bufferization.buffer_layout = strided<[1]>},
     %sz: index)
   -> (tensor<10xf32>, tensor<?xf32>)
 {
@@ -448,19 +448,19 @@ func.func @tensor_reshape_aliasing(%arg0: index, %arg1: index) -> tensor<?x?xf32
 // -----
 
 // CHECK-LABEL: @reshape_with_non_identity_layout(
-// CHECK-SAME:    %[[INPUT:[a-zA-Z0-9]*]]: memref<2x2xf32, strided<[?, ?], offset: ?>, 3>,
-// CHECK-SAME:    %[[LAYOUT:[a-zA-Z0-9]*]]: memref<2xi32, strided<[?], offset: ?>>,
-func.func @reshape_with_non_identity_layout(%arg0: memref<2x2xf32, strided<[?, ?], offset: ?>, 3>, %arg1: tensor<2xi32>, %idx: index) -> f32 {
-  %t = bufferization.to_tensor %arg0 restrict : memref<2x2xf32, strided<[?, ?], offset: ?>, 3> to tensor<2x2xf32>
+// CHECK-SAME:    %[[INPUT:[a-zA-Z0-9]*]]: memref<2x2xf32, strided<[?, ?]>, 3>,
+// CHECK-SAME:    %[[LAYOUT:[a-zA-Z0-9]*]]: memref<2xi32, strided<[?]>>,
+func.func @reshape_with_non_identity_layout(%arg0: memref<2x2xf32, strided<[?, ?]>, 3>, %arg1: tensor<2xi32>, %idx: index) -> f32 {
+  %t = bufferization.to_tensor %arg0 restrict : memref<2x2xf32, strided<[?, ?]>, 3> to tensor<2x2xf32>
 
-  // CHECK: %[[SUBVIEW:.+]] = memref.subview %[[INPUT]][1, 0] [1, 2] [1, 1] : memref<2x2xf32, strided<[?, ?], offset: ?>, 3> to memref<2xf32, strided<[?], offset: ?>, 3>
+  // CHECK: %[[SUBVIEW:.+]] = memref.subview %[[INPUT]][1, 0] [1, 2] [1, 1] : memref<2x2xf32, strided<[?, ?]>, 3> to memref<2xf32, strided<[?]>, 3>
   %extracted_slice = tensor.extract_slice %t[1, 0] [1, 2] [1, 1] : tensor<2x2xf32> to tensor<2xf32>
 
   // To satisify the constraints of memref.reshape, the subview must be
   // reallocated a buffer with an identity layout.
   // CHECK: %[[ALLOC:.+]] = memref.alloc() {{.*}} : memref<2xf32, 3>
   // CHECK: memref.copy %[[SUBVIEW]], %[[ALLOC]]
-  // CHECK: %[[RESHAPED:.+]] = memref.reshape %[[ALLOC]](%[[LAYOUT]]) : (memref<2xf32, 3>, memref<2xi32, strided<[?], offset: ?>>) -> memref<1x2xf32, 3>
+  // CHECK: %[[RESHAPED:.+]] = memref.reshape %[[ALLOC]](%[[LAYOUT]]) : (memref<2xf32, 3>, memref<2xi32, strided<[?]>>) -> memref<1x2xf32, 3>
   %reshape = tensor.reshape %extracted_slice(%arg1) : (tensor<2xf32>, tensor<2xi32>) -> tensor<1x2xf32>
 
   %r = tensor.extract %reshape[%idx, %idx] : tensor<1x2xf32>
@@ -494,7 +494,7 @@ func.func @collapse_shape_regression(
 // -----
 
 // CHECK-LABEL: func private @mult_return_callee(
-//  CHECK-SAME:   %[[T:.*]]: memref<?xf32, strided<[?], offset: ?>>, %[[COND:.*]]: i1,
+//  CHECK-SAME:   %[[T:.*]]: memref<?xf32, strided<[?]>>, %[[COND:.*]]: i1,
 //  CHECK-SAME:   %[[A:.*]]: index, %[[B:.*]]: index) -> index {
 //       CHECK:   cf.cond_br %[[COND]], ^bb1, ^bb2
 //       CHECK: ^bb1:
@@ -511,11 +511,11 @@ func.func private @mult_return_callee(%t: tensor<?xf32>,  %cond:i1, %a: index, %
 }
 
 // CHECK-LABEL: func @mult_return(
-//  CHECK-SAME:   %[[T:.*]]: memref<?xf32, strided<[?], offset: ?>>, %[[COND:.*]]: i1,
-//  CHECK-SAME:   %[[A:.*]]: index, %[[B:.*]]: index) -> (memref<?xf32, strided<[?], offset: ?>>, index) {
+//  CHECK-SAME:   %[[T:.*]]: memref<?xf32, strided<[?]>>, %[[COND:.*]]: i1,
+//  CHECK-SAME:   %[[A:.*]]: index, %[[B:.*]]: index) -> (memref<?xf32, strided<[?]>>, index) {
 func.func @mult_return(%t: tensor<?xf32>,  %cond:i1, %a: index, %b: index) -> (tensor<10xf32>, index) {
-  // CHECK: %[[RET:.*]] = call @mult_return_callee(%[[T]], %[[COND]], %[[A]], %[[B]]) : (memref<?xf32, strided<[?], offset: ?>>, i1, index, index) -> index
-  // CHECK: return %[[T]], %[[RET]] : memref<?xf32, strided<[?], offset: ?>>, index
+  // CHECK: %[[RET:.*]] = call @mult_return_callee(%[[T]], %[[COND]], %[[A]], %[[B]]) : (memref<?xf32, strided<[?]>>, i1, index, index) -> index
+  // CHECK: return %[[T]], %[[RET]] : memref<?xf32, strided<[?]>>, index
   %t_res, %v = func.call @mult_return_callee(%t, %cond, %a, %b) : (tensor<?xf32>, i1, index, index) -> (tensor<10xf32>, index) 
   return %t_res, %v : tensor<10xf32>, index
 }

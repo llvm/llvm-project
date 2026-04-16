@@ -644,11 +644,9 @@ def testArrayAttr():
 @run
 def testStridedLayoutAttr():
     with Context():
-        attr = StridedLayoutAttr.get(42, [5, 7, 13])
-        # CHECK: strided<[5, 7, 13], offset: 42>
+        attr = StridedLayoutAttr.get([5, 7, 13])
+        # CHECK: strided<[5, 7, 13]>
         print(attr)
-        # CHECK: 42
-        print(attr.offset)
         # CHECK: 3
         print(len(attr.strides))
         # CHECK: 5
@@ -660,10 +658,8 @@ def testStridedLayoutAttr():
 
         attr = StridedLayoutAttr.get_fully_dynamic(3)
         dynamic = ShapedType.get_dynamic_stride_or_offset()
-        # CHECK: strided<[?, ?, ?], offset: ?>
+        # CHECK: strided<[?, ?, ?]>
         print(attr)
-        # CHECK: offset is dynamic: True
-        print(f"offset is dynamic: {attr.offset == dynamic}")
         # CHECK: rank: 3
         print(f"rank: {len(attr.strides)}")
         # CHECK: strides are dynamic: [True, True, True]

@@ -296,7 +296,7 @@ func.func @regression_multiple_insertion_points(%t1: tensor<?x?xf32>) -> tensor<
 // -----
 
 // CHECK-LABEL: func @materialize_in_destination(
-//  CHECK-SAME:     %[[m:.*]]: memref<5xf32, strided<[?], offset: ?>>,
+//  CHECK-SAME:     %[[m:.*]]: memref<5xf32, strided<[?]>>,
 //       CHECK:   linalg.fill {{.*}} outs(%[[m]]
 //       CHECK:   return %[[m]]
 func.func @materialize_in_destination(%t: tensor<5xf32>, %f: f32) -> tensor<5xf32> {
@@ -322,7 +322,7 @@ func.func @materialize_in_destination_buffer(%m: memref<5xf32>, %f: f32) {
 // -----
 
 // CHECK-LABEL: func @linalg_copy(
-//  CHECK-SAME:     %[[m:.*]]: memref<5xf32, strided<[?], offset: ?>>,
+//  CHECK-SAME:     %[[m:.*]]: memref<5xf32, strided<[?]>>,
 //       CHECK:   linalg.fill {{.*}} outs(%[[m]]
 //       CHECK:   return %[[m]]
 func.func @linalg_copy(%t: tensor<5xf32>, %f: f32) -> tensor<5xf32> {

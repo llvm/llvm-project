@@ -15,17 +15,17 @@ module {
 // CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.number_of_entries %[[VAL_0]] : tensor<?x?xf64, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?xf64, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_4]] : tensor<?x?xf64, #sparse{{[0-9]*}}>
-// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
-// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<?x?xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?]>>
+// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<?x?xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?]>>
 // CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xf64, #sparse{{[0-9]*}}> to memref<?xf64>
 // CHECK:           %[[VAL_11:.*]] = gpu.wait async
-// CHECK:           %[[VAL_12:.*]] = memref.dim %[[VAL_8]], %[[VAL_3]] : memref<?xindex, strided<[?], offset: ?>>
+// CHECK:           %[[VAL_12:.*]] = memref.dim %[[VAL_8]], %[[VAL_3]] : memref<?xindex, strided<[?]>>
 // CHECK:           %[[VAL_13:.*]], %[[VAL_14:.*]] = gpu.alloc async {{\[}}%[[VAL_11]]] (%[[VAL_12]]) : memref<?xindex>
-// CHECK:           %[[VAL_15:.*]] = gpu.memcpy async {{\[}}%[[VAL_14]]] %[[VAL_13]], %[[VAL_8]] : memref<?xindex>, memref<?xindex, strided<[?], offset: ?>>
+// CHECK:           %[[VAL_15:.*]] = gpu.memcpy async {{\[}}%[[VAL_14]]] %[[VAL_13]], %[[VAL_8]] : memref<?xindex>, memref<?xindex, strided<[?]>>
 // CHECK:           %[[VAL_16:.*]] = gpu.wait async
-// CHECK:           %[[VAL_17:.*]] = memref.dim %[[VAL_9]], %[[VAL_3]] : memref<?xindex, strided<[?], offset: ?>>
+// CHECK:           %[[VAL_17:.*]] = memref.dim %[[VAL_9]], %[[VAL_3]] : memref<?xindex, strided<[?]>>
 // CHECK:           %[[VAL_18:.*]], %[[VAL_19:.*]] = gpu.alloc async {{\[}}%[[VAL_16]]] (%[[VAL_17]]) : memref<?xindex>
-// CHECK:           %[[VAL_20:.*]] = gpu.memcpy async {{\[}}%[[VAL_19]]] %[[VAL_18]], %[[VAL_9]] : memref<?xindex>, memref<?xindex, strided<[?], offset: ?>>
+// CHECK:           %[[VAL_20:.*]] = gpu.memcpy async {{\[}}%[[VAL_19]]] %[[VAL_18]], %[[VAL_9]] : memref<?xindex>, memref<?xindex, strided<[?]>>
 // CHECK:           %[[VAL_21:.*]] = gpu.wait async
 // CHECK:           %[[VAL_22:.*]] = memref.dim %[[VAL_10]], %[[VAL_3]] : memref<?xf64>
 // CHECK:           %[[VAL_23:.*]], %[[VAL_24:.*]] = gpu.alloc async {{\[}}%[[VAL_21]]] (%[[VAL_22]]) : memref<?xf64>

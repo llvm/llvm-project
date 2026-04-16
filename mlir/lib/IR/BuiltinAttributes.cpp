@@ -220,31 +220,37 @@ void StridedLayoutAttr::print(llvm::raw_ostream &os) const {
 
   os << "strided<[";
   llvm::interleaveComma(getStrides(), os, printIntOrQuestion);
-  os << "]";
-
-  if (getOffset() != 0) {
-    os << ", offset: ";
-    printIntOrQuestion(getOffset());
-  }
-  os << ">";
+  os << "]>";
 }
 
-/// Returns true if this layout is static, i.e. the strides and offset all have
-/// a known value > 0.
+/// Returns true if this layout is static, i.e. all strides have a known
+/// value > 0.
 bool StridedLayoutAttr::hasStaticLayout() const {
-  return ShapedType::isStatic(getOffset()) &&
-         ShapedType::isStaticShape(getStrides());
+  return ShapedType::isStaticShape(getStrides());
 }
 
-/// Returns the strided layout as an affine map.
+/// Returns the strided layout as an affine map. The type does not carry an
+/// offset, so the affine map omits the offset term entirely; the runtime
+/// offset, if any, lives on the producing op.
 AffineMap StridedLayoutAttr::getAffineMap() const {
-  return makeStridedLinearLayoutMap(getStrides(), getOffset(), getContext());
+  ArrayRef<int64_t> strides = getStrides();
+  MLIRContext *context = getContext();
+  AffineExpr expr = getAffineConstantExpr(0, context);
+  unsigned nSymbols = 0;
+  for (const auto &en : llvm::enumerate(strides)) {
+    AffineExpr d = getAffineDimExpr(en.index(), context);
+    AffineExpr stride = ShapedType::isStatic(en.value())
+                            ? getAffineConstantExpr(en.value(), context)
+                            : getAffineSymbolExpr(nSymbols++, context);
+    expr = expr + d * stride;
+  }
+  return AffineMap::get(/*dimCount=*/strides.size(), nSymbols, expr);
 }
 
 /// Checks that the type-agnostic strided layout invariants are satisfied.
 LogicalResult
 StridedLayoutAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                          int64_t offset, ArrayRef<int64_t> strides) {
+                          ArrayRef<int64_t> strides) {
   return success();
 }
 
@@ -263,7 +269,11 @@ StridedLayoutAttr::getStridesAndOffset(ArrayRef<int64_t>,
                                        SmallVectorImpl<int64_t> &strides,
                                        int64_t &offset) const {
   llvm::append_range(strides, getStrides());
-  offset = getOffset();
+  // The type no longer pins a static offset. Report zero for back-compat with
+  // identity-layout memrefs (which also report zero), so subview/cast offset
+  // checks remain consistent across both layout forms. The runtime offset, if
+  // any, lives on the producing op.
+  offset = 0;
   return success();
 }
 

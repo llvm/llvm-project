@@ -842,11 +842,10 @@ bufferization::getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
 
   // Case 2: Ranked memref type.
   auto rankedTensorType = llvm::cast<RankedTensorType>(tensorType);
-  int64_t dynamicOffset = ShapedType::kDynamic;
   SmallVector<int64_t> dynamicStrides(rankedTensorType.getRank(),
                                       ShapedType::kDynamic);
-  auto stridedLayout = StridedLayoutAttr::get(tensorType.getContext(),
-                                              dynamicOffset, dynamicStrides);
+  auto stridedLayout =
+      StridedLayoutAttr::get(tensorType.getContext(), dynamicStrides);
   return MemRefType::get(rankedTensorType.getShape(),
                          rankedTensorType.getElementType(), stridedLayout,
                          memorySpace);

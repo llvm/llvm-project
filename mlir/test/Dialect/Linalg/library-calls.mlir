@@ -36,8 +36,8 @@ func.func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>)
     iterator_types = ["parallel"]
 }
 
-// CHECK: func.func private @linalg_copy_view32xf16as1_view32xf16as6(memref<32xf16, strided<[?], offset: ?>, 1>, memref<32xf16, strided<[?], offset: ?>, 6>) attributes {llvm.emit_c_interface}
-// CHECK: func.func private @linalg_copy_view32xf16as6_view32xf16as1(memref<32xf16, strided<[?], offset: ?>, 6>, memref<32xf16, strided<[?], offset: ?>, 1>) attributes {llvm.emit_c_interface}
+// CHECK: func.func private @linalg_copy_view32xf16as1_view32xf16as6(memref<32xf16, strided<[?]>, 1>, memref<32xf16, strided<[?]>, 6>) attributes {llvm.emit_c_interface}
+// CHECK: func.func private @linalg_copy_view32xf16as6_view32xf16as1(memref<32xf16, strided<[?]>, 6>, memref<32xf16, strided<[?]>, 1>) attributes {llvm.emit_c_interface}
 
 module {
   func.func @helper(%arg7: memref<32xf16, 1>, %arg8: memref<32xf16, 1>, %arg9: memref<32xf16, 1>) {

@@ -88,11 +88,10 @@ struct CastOpInterface
     // strides from unranked memrefs, so cast the source to a type with fully
     // dynamic layout, from which we can then extract the offset and strides.
     // (Rank was already verified.)
-    int64_t dynamicOffset = ShapedType::kDynamic;
     SmallVector<int64_t> dynamicShape(resultType.getRank(),
                                       ShapedType::kDynamic);
-    auto stridedLayout = StridedLayoutAttr::get(builder.getContext(),
-                                                dynamicOffset, dynamicShape);
+    auto stridedLayout =
+        StridedLayoutAttr::get(builder.getContext(), dynamicShape);
     auto dynStridesType =
         MemRefType::get(dynamicShape, resultType.getElementType(),
                         stridedLayout, resultType.getMemorySpace());

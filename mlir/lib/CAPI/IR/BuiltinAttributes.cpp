@@ -1038,19 +1038,14 @@ bool mlirAttributeIsAStridedLayout(MlirAttribute attr) {
   return llvm::isa<StridedLayoutAttr>(unwrap(attr));
 }
 
-MlirAttribute mlirStridedLayoutAttrGet(MlirContext ctx, int64_t offset,
-                                       intptr_t numStrides,
+MlirAttribute mlirStridedLayoutAttrGet(MlirContext ctx, intptr_t numStrides,
                                        const int64_t *strides) {
-  return wrap(StridedLayoutAttr::get(unwrap(ctx), offset,
+  return wrap(StridedLayoutAttr::get(unwrap(ctx),
                                      ArrayRef<int64_t>(strides, numStrides)));
 }
 
 MlirStringRef mlirStridedLayoutAttrGetName(void) {
   return wrap(StridedLayoutAttr::name);
-}
-
-int64_t mlirStridedLayoutAttrGetOffset(MlirAttribute attr) {
-  return llvm::cast<StridedLayoutAttr>(unwrap(attr)).getOffset();
 }
 
 intptr_t mlirStridedLayoutAttrGetNumStrides(MlirAttribute attr) {

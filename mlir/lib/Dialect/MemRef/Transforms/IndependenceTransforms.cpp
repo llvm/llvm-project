@@ -85,7 +85,7 @@ propagateSubViewOp(RewriterBase &rewriter,
 ///
 /// Example:
 /// %from = memref.alloca(%sz) : memref<?xf32>
-/// %to = memref.subview ... : ... to memref<?xf32, strided<[1], offset: ?>>
+/// %to = memref.subview ... : ... to memref<?xf32, strided<[1]>>
 /// memref.store %cst, %from[%c0] : memref<?xf32>
 ///
 /// In the above example, all uses of %from are replaced with %to. This can be

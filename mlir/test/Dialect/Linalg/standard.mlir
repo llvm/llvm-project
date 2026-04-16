@@ -1,26 +1,26 @@
 // RUN: mlir-opt %s -convert-linalg-to-std --split-input-file -verify-diagnostics | FileCheck %s
 
-func.func @dot(%arg0: memref<?xf32, strided<[1], offset: ?>>,
-          %arg1: memref<?xf32, strided<[1], offset: ?>>,
+func.func @dot(%arg0: memref<?xf32, strided<[1]>>,
+          %arg1: memref<?xf32, strided<[1]>>,
           %arg2: memref<f32>) {
-  linalg.dot ins(%arg0, %arg1: memref<?xf32, strided<[1], offset: ?>>,
-                               memref<?xf32, strided<[1], offset: ?>>)
+  linalg.dot ins(%arg0, %arg1: memref<?xf32, strided<[1]>>,
+                               memref<?xf32, strided<[1]>>)
              outs(%arg2: memref<f32>)
   return
 }
 // CHECK-LABEL: func @dot(
-//  CHECK-SAME: %[[arg0:[a-zA-z0-9]*]]: memref<?xf32, strided<[1], offset: ?>>,
-//  CHECK-SAME: %[[arg1:[a-zA-z0-9]*]]: memref<?xf32, strided<[1], offset: ?>>,
+//  CHECK-SAME: %[[arg0:[a-zA-z0-9]*]]: memref<?xf32, strided<[1]>>,
+//  CHECK-SAME: %[[arg1:[a-zA-z0-9]*]]: memref<?xf32, strided<[1]>>,
 //  CHECK-SAME: %[[arg2:[a-zA-z0-9]*]]: memref<f32>) {
 //       CHECK:   %[[o0:.*]] = memref.cast %[[arg0]] :
-//  CHECK-SAME:     memref<?xf32, strided<[1], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:     memref<?xf32, strided<[1]>> to memref<?xf32, strided<[?]>>
 //       CHECK:   %[[o1:.*]] = memref.cast %[[arg1]] :
-//  CHECK-SAME:     memref<?xf32, strided<[1], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:     memref<?xf32, strided<[1]>> to memref<?xf32, strided<[?]>>
 //       CHECK:   %[[o2:.*]] = memref.cast %[[arg2]] :
-//  CHECK-SAME:     memref<f32> to memref<f32, strided<[], offset: ?>>
+//  CHECK-SAME:     memref<f32> to memref<f32, strided<[]>>
 //       CHECK:   call @linalg_dot_viewsxf32_viewsxf32_viewf32(
 //  CHECK-SAME:     %[[o0]], %[[o1]], %[[o2]]) :
-//  CHECK-SAME:   memref<?xf32, strided<[?], offset: ?>>, memref<?xf32, strided<[?], offset: ?>>, memref<f32, strided<[], offset: ?>>
+//  CHECK-SAME:   memref<?xf32, strided<[?]>>, memref<?xf32, strided<[?]>>, memref<f32, strided<[]>>
 
 // -----
 

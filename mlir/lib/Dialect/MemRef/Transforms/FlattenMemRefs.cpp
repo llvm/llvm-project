@@ -276,7 +276,7 @@ struct AllocLikeFlattenPattern : public OpRewritePattern<AllocLikeOp> {
 
     auto flatMemrefType =
         MemRefType::get({flatDimSize}, memrefType.getElementType(),
-                        StridedLayoutAttr::get(rewriter.getContext(), 0, {1}),
+                        StridedLayoutAttr::get(rewriter.getContext(), {1}),
                         memrefType.getMemorySpace());
 
     // Collect the flat dynamic-size operand (empty for fully-static case).

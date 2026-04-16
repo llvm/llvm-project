@@ -8,12 +8,12 @@
 module @subview attributes {gpu.container_module} {
   gpu.module @kernel {
     gpu.func @subview(%src: memref<256xf32>, %dst: memref<256xf32>) kernel {
-      %src_subview = memref.subview %src[5] [251] [1] : memref<256xf32> to memref<251xf32, strided<[1], offset: 5>>
-      %dst_subview = memref.subview %dst[10] [246] [1] : memref<256xf32> to memref<246xf32, strided<[1], offset: 10>>
+      %src_subview = memref.subview %src[5] [251] [1] : memref<256xf32> to memref<251xf32, strided<[1]>>
+      %dst_subview = memref.subview %dst[10] [246] [1] : memref<256xf32> to memref<246xf32, strided<[1]>>
       %lane_id = gpu.lane_id
       %mask = arith.constant 1 : i1
-      %loaded = xegpu.load %src_subview[%lane_id], %mask : memref<251xf32, strided<[1], offset: 5>>, index, i1 -> f32
-      xegpu.store %loaded, %dst_subview[%lane_id], %mask : f32, memref<246xf32, strided<[1], offset: 10>>, index, i1
+      %loaded = xegpu.load %src_subview[%lane_id], %mask : memref<251xf32, strided<[1]>>, index, i1 -> f32
+      xegpu.store %loaded, %dst_subview[%lane_id], %mask : f32, memref<246xf32, strided<[1]>>, index, i1
       gpu.return
     }
   }

@@ -27,13 +27,9 @@ namespace mlir {
 
 using namespace mlir;
 
-static MemRefType inferCastResultType(Value source, OpFoldResult offset) {
+static MemRefType inferCastResultType(Value source) {
   auto sourceType = cast<BaseMemRefType>(source.getType());
-  SmallVector<int64_t> staticOffsets;
-  SmallVector<Value> dynamicOffsets;
-  dispatchIndexOpFoldResults(offset, dynamicOffsets, staticOffsets);
-  auto stridedLayout =
-      StridedLayoutAttr::get(source.getContext(), staticOffsets.front(), {});
+  auto stridedLayout = StridedLayoutAttr::get(source.getContext(), {});
   return MemRefType::get({}, sourceType.getElementType(), stridedLayout,
                          sourceType.getMemorySpace());
 }
@@ -107,7 +103,7 @@ static Value getFlatMemref(OpBuilder &rewriter, Location loc, Value source,
   SmallVector<OpFoldResult> offsetsTemp = getAsOpFoldResult(offsets);
   auto &&[base, offset, ignore] =
       getFlatOffsetAndStrides(rewriter, loc, source, offsetsTemp);
-  MemRefType retType = inferCastResultType(base, offset);
+  MemRefType retType = inferCastResultType(base);
   return memref::ReinterpretCastOp::create(rewriter, loc, retType, base, offset,
                                            ArrayRef<OpFoldResult>(),
                                            ArrayRef<OpFoldResult>());

@@ -117,9 +117,9 @@ gpu.module @test {
 gpu.func @load_gather_from_dyn_memref_subview(%dyn: memref<?xf16>, %offset: vector<1xindex>, %mask: vector<1xi1>, %dst: memref<1xf16>) {
   %c0 = arith.constant 0 : index
   %id = gpu.subgroup_id : index
-  %src = memref.subview %dyn[%id][16][1] : memref<?xf16> to memref<16xf16, strided<[1], offset: ?>>
+  %src = memref.subview %dyn[%id][16][1] : memref<?xf16> to memref<16xf16, strided<[1]>>
 
-  // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]], %[[STRIDES:.*]] = memref.extract_strided_metadata %{{.*}} : memref<16xf16, strided<[1], offset: ?>> -> memref<f16>, index, index, index
+  // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]], %[[STRIDES:.*]] = memref.extract_strided_metadata %{{.*}} : memref<16xf16, strided<[1]>> -> memref<f16>, index, index, index
   // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
   // CHECK: %[[CAST1:.*]] = arith.index_castui %[[INTPTR]] : index to i64
   // CHECK: %[[CAST2:.*]] = arith.index_castui %[[OFFSET]] : index to i64
@@ -130,7 +130,7 @@ gpu.func @load_gather_from_dyn_memref_subview(%dyn: memref<?xf16>, %offset: vect
   // CHECK: %{{.*}} = llvm.inttoptr %[[ADD2]] : i64 to !llvm.ptr<1>
 
   %0 = xegpu.load %src[%offset], %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
-      : memref<16xf16, strided<[1], offset: ?>>, vector<1xindex>, vector<1xi1> -> vector<1xf16>
+      : memref<16xf16, strided<[1]>>, vector<1xindex>, vector<1xi1> -> vector<1xf16>
   vector.store %0, %dst[%c0] : memref<1xf16>, vector<1xf16>
   gpu.return
 }

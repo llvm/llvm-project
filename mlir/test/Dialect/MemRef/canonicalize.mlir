@@ -34,12 +34,12 @@ func.func @collapse_expand_rank0_cancel(%arg0 : memref<1x1xi8>) -> memref<1x1xi8
 //       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][0, 1, 0, 0] [1, 1, 16, 32] [1, 1, 1, 1] : memref<4x6x16x32xi8> to memref<16x32xi8, strided{{.*}}>
 //       CHECK:   return %[[S]] : memref<16x32xi8, strided{{.*}}>
 func.func @subview_of_size_memcast(%arg : memref<4x6x16x32xi8>) ->
-  memref<16x32xi8, strided<[32, 1], offset: 512>>{
+  memref<16x32xi8, strided<[32, 1]>>{
   %0 = memref.cast %arg : memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
   %1 = memref.subview %0[0, 1, 0, 0] [1, 1, 16, 32] [1, 1, 1, 1] :
     memref<?x?x16x32xi8> to
-    memref<16x32xi8, strided<[32, 1], offset: 512>>
-  return %1 : memref<16x32xi8, strided<[32, 1], offset: 512>>
+    memref<16x32xi8, strided<[32, 1]>>
+  return %1 : memref<16x32xi8, strided<[32, 1]>>
 }
 
 // -----
@@ -47,14 +47,14 @@ func.func @subview_of_size_memcast(%arg : memref<4x6x16x32xi8>) ->
 //       CHECK: func @subview_of_strides_memcast
 //  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: memref<1x1x?xf32, strided{{.*}}>
 //       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][0, 0, 0] [1, 1, 4]
-//  CHECK-SAME:                    to memref<1x4xf32, strided<[35, 1], offset: ?>>
+//  CHECK-SAME:                    to memref<1x4xf32, strided<[35, 1]>>
 //       CHECK:   %[[M:.+]] = memref.cast %[[S]]
-//  CHECK-SAME:                    to memref<1x4xf32, strided<[?, ?], offset: ?>>
+//  CHECK-SAME:                    to memref<1x4xf32, strided<[?, ?]>>
 //       CHECK:   return %[[M]]
-func.func @subview_of_strides_memcast(%arg : memref<1x1x?xf32, strided<[35, 7, 1], offset: ?>>) -> memref<1x4xf32, strided<[?, ?], offset: ?>> {
-  %0 = memref.cast %arg : memref<1x1x?xf32, strided<[35, 7, 1], offset: ?>> to memref<1x1x?xf32, strided<[?, ?, ?], offset: ?>>
-  %1 = memref.subview %0[0, 0, 0] [1, 1, 4] [1, 1, 1] : memref<1x1x?xf32, strided<[?, ?, ?], offset: ?>> to memref<1x4xf32, strided<[?, ?], offset: ?>>
-  return %1 : memref<1x4xf32, strided<[?, ?], offset: ?>>
+func.func @subview_of_strides_memcast(%arg : memref<1x1x?xf32, strided<[35, 7, 1]>>) -> memref<1x4xf32, strided<[?, ?]>> {
+  %0 = memref.cast %arg : memref<1x1x?xf32, strided<[35, 7, 1]>> to memref<1x1x?xf32, strided<[?, ?, ?]>>
+  %1 = memref.subview %0[0, 0, 0] [1, 1, 4] [1, 1, 1] : memref<1x1x?xf32, strided<[?, ?, ?]>> to memref<1x4xf32, strided<[?, ?]>>
+  return %1 : memref<1x4xf32, strided<[?, ?]>>
 }
 
 // -----
@@ -71,26 +71,26 @@ func.func @subview_of_static_full_size(%arg0 : memref<4x6x16x32xi8>) -> memref<4
 // -----
 
 // CHECK-LABEL: func @negative_subview_of_static_full_size
-//  CHECK-SAME:   %[[ARG0:.+]]: memref<16x4xf32,  strided<[4, 1], offset: ?>>
+//  CHECK-SAME:   %[[ARG0:.+]]: memref<16x4xf32,  strided<[4, 1]>>
 //  CHECK-SAME:   %[[IDX:.+]]: index
 //       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][%[[IDX]], 0] [16, 4] [1, 1]
-//  CHECK-SAME:                    to memref<16x4xf32,  strided<[4, 1], offset: ?>>
-//       CHECK:    return %[[S]] : memref<16x4xf32,  strided<[4, 1], offset: ?>>
-func.func @negative_subview_of_static_full_size(%arg0:  memref<16x4xf32,  strided<[4, 1], offset: ?>>, %idx: index) -> memref<16x4xf32,  strided<[4, 1], offset: ?>> {
-  %0 = memref.subview %arg0[%idx, 0][16, 4][1, 1] : memref<16x4xf32,  strided<[4, 1], offset: ?>> to memref<16x4xf32,  strided<[4, 1], offset: ?>>
-  return %0 : memref<16x4xf32,  strided<[4, 1], offset: ?>>
+//  CHECK-SAME:                    to memref<16x4xf32,  strided<[4, 1]>>
+//       CHECK:    return %[[S]] : memref<16x4xf32,  strided<[4, 1]>>
+func.func @negative_subview_of_static_full_size(%arg0:  memref<16x4xf32,  strided<[4, 1]>>, %idx: index) -> memref<16x4xf32,  strided<[4, 1]>> {
+  %0 = memref.subview %arg0[%idx, 0][16, 4][1, 1] : memref<16x4xf32,  strided<[4, 1]>> to memref<16x4xf32,  strided<[4, 1]>>
+  return %0 : memref<16x4xf32,  strided<[4, 1]>>
 }
 
 // -----
 
 func.func @subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
-    %arg2 : index) -> memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+    %arg2 : index) -> memref<?x?x?xf32, strided<[?, ?, ?]>>
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
-  return %0 : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?x?xf32, strided<[?, ?, ?]>>
+  return %0 : memref<?x?x?xf32, strided<[?, ?, ?]>>
 }
 // CHECK-LABEL: func @subview_canonicalize
 //  CHECK-SAME:   %[[ARG0:.+]]: memref<?x?x?xf32>
@@ -103,13 +103,13 @@ func.func @subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
 // -----
 
 func.func @rank_reducing_subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
-  %arg2 : index) -> memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %arg2 : index) -> memref<?x?xf32, strided<[?, ?]>>
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %0 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?xf32, strided<[?, ?]>>
+  return %0 : memref<?x?xf32, strided<[?, ?]>>
 }
 // CHECK-LABEL: func @rank_reducing_subview_canonicalize
 //  CHECK-SAME:   %[[ARG0:.+]]: memref<?x?x?xf32>
@@ -122,62 +122,62 @@ func.func @rank_reducing_subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 :
 // -----
 
 func.func @multiple_reducing_dims(%arg0 : memref<1x384x384xf32>,
-    %arg1 : index, %arg2 : index, %arg3 : index) -> memref<?xf32, strided<[1], offset: ?>>
+    %arg1 : index, %arg2 : index, %arg3 : index) -> memref<?xf32, strided<[1]>>
 {
   %c1 = arith.constant 1 : index
-  %0 = memref.subview %arg0[0, %arg1, %arg2] [1, %c1, %arg3] [1, 1, 1] : memref<1x384x384xf32> to memref<?x?xf32, strided<[384, 1], offset: ?>>
-  %1 = memref.subview %0[0, 0] [1, %arg3] [1, 1] : memref<?x?xf32, strided<[384, 1], offset: ?>> to memref<?xf32, strided<[1], offset: ?>>
-  return %1 : memref<?xf32, strided<[1], offset: ?>>
+  %0 = memref.subview %arg0[0, %arg1, %arg2] [1, %c1, %arg3] [1, 1, 1] : memref<1x384x384xf32> to memref<?x?xf32, strided<[384, 1]>>
+  %1 = memref.subview %0[0, 0] [1, %arg3] [1, 1] : memref<?x?xf32, strided<[384, 1]>> to memref<?xf32, strided<[1]>>
+  return %1 : memref<?xf32, strided<[1]>>
 }
 //       CHECK: func @multiple_reducing_dims
 //       CHECK:   %[[REDUCED1:.+]] = memref.subview %{{.+}}[0, %{{.+}}, %{{.+}}] [1, 1, %{{.+}}] [1, 1, 1]
-//  CHECK-SAME:       : memref<1x384x384xf32> to memref<1x?xf32, strided<[384, 1], offset: ?>>
+//  CHECK-SAME:       : memref<1x384x384xf32> to memref<1x?xf32, strided<[384, 1]>>
 //       CHECK:   %[[REDUCED2:.+]] = memref.subview %[[REDUCED1]][0, 0] [1, %{{.+}}] [1, 1]
-//  CHECK-SAME:       : memref<1x?xf32, strided<[384, 1], offset: ?>> to memref<?xf32, strided<[1], offset: ?>>
+//  CHECK-SAME:       : memref<1x?xf32, strided<[384, 1]>> to memref<?xf32, strided<[1]>>
 
 // -----
 
 func.func @multiple_reducing_dims_dynamic(%arg0 : memref<?x?x?xf32>,
-    %arg1 : index, %arg2 : index, %arg3 : index) -> memref<?xf32, strided<[1], offset: ?>>
+    %arg1 : index, %arg2 : index, %arg3 : index) -> memref<?xf32, strided<[1]>>
 {
   %c1 = arith.constant 1 : index
-  %0 = memref.subview %arg0[0, %arg1, %arg2] [1, %c1, %arg3] [1, 1, 1] : memref<?x?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
-  %1 = memref.subview %0[0, 0] [1, %arg3] [1, 1] : memref<?x?xf32, strided<[?, 1], offset: ?>> to memref<?xf32, strided<[1], offset: ?>>
-  return %1 : memref<?xf32, strided<[1], offset: ?>>
+  %0 = memref.subview %arg0[0, %arg1, %arg2] [1, %c1, %arg3] [1, 1, 1] : memref<?x?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
+  %1 = memref.subview %0[0, 0] [1, %arg3] [1, 1] : memref<?x?xf32, strided<[?, 1]>> to memref<?xf32, strided<[1]>>
+  return %1 : memref<?xf32, strided<[1]>>
 }
 //       CHECK: func @multiple_reducing_dims_dynamic
 //       CHECK:   %[[REDUCED1:.+]] = memref.subview %{{.+}}[0, %{{.+}}, %{{.+}}] [1, 1, %{{.+}}] [1, 1, 1]
-//  CHECK-SAME:       : memref<?x?x?xf32> to memref<1x?xf32, strided<[?, 1], offset: ?>>
+//  CHECK-SAME:       : memref<?x?x?xf32> to memref<1x?xf32, strided<[?, 1]>>
 //       CHECK:   %[[REDUCED2:.+]] = memref.subview %[[REDUCED1]][0, 0] [1, %{{.+}}] [1, 1]
-//  CHECK-SAME:       : memref<1x?xf32, strided<[?, 1], offset: ?>> to memref<?xf32, strided<[1], offset: ?>>
+//  CHECK-SAME:       : memref<1x?xf32, strided<[?, 1]>> to memref<?xf32, strided<[1]>>
 
 // -----
 
-func.func @multiple_reducing_dims_all_dynamic(%arg0 : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>,
-    %arg1 : index, %arg2 : index, %arg3 : index) -> memref<?xf32, strided<[?], offset: ?>>
+func.func @multiple_reducing_dims_all_dynamic(%arg0 : memref<?x?x?xf32, strided<[?, ?, ?]>>,
+    %arg1 : index, %arg2 : index, %arg3 : index) -> memref<?xf32, strided<[?]>>
 {
   %c1 = arith.constant 1 : index
   %0 = memref.subview %arg0[0, %arg1, %arg2] [1, %c1, %arg3] [1, 1, 1]
-      : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  %1 = memref.subview %0[0, 0] [1, %arg3] [1, 1] : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
-  return %1 : memref<?xf32, strided<[?], offset: ?>>
+      : memref<?x?x?xf32, strided<[?, ?, ?]>> to memref<?x?xf32, strided<[?, ?]>>
+  %1 = memref.subview %0[0, 0] [1, %arg3] [1, 1] : memref<?x?xf32, strided<[?, ?]>> to memref<?xf32, strided<[?]>>
+  return %1 : memref<?xf32, strided<[?]>>
 }
 //       CHECK: func @multiple_reducing_dims_all_dynamic
 //       CHECK:   %[[REDUCED1:.+]] = memref.subview %{{.+}}[0, %{{.+}}, %{{.+}}] [1, 1, %{{.+}}] [1, 1, 1]
-//  CHECK-SAME:       : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> to memref<1x?xf32, strided<[?, ?], offset: ?>>
+//  CHECK-SAME:       : memref<?x?x?xf32, strided<[?, ?, ?]>> to memref<1x?xf32, strided<[?, ?]>>
 //       CHECK:   %[[REDUCED2:.+]] = memref.subview %[[REDUCED1]][0, 0] [1, %{{.+}}] [1, 1]
-//  CHECK-SAME:       : memref<1x?xf32, strided<[?, ?], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:       : memref<1x?xf32, strided<[?, ?]>> to memref<?xf32, strided<[?]>>
 
 // -----
 
-func.func @subview_negative_stride1(%arg0 : memref<?xf32>) -> memref<?xf32, strided<[?], offset: ?>>
+func.func @subview_negative_stride1(%arg0 : memref<?xf32>) -> memref<?xf32, strided<[?]>>
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant -1 : index
   %1 = memref.dim %arg0, %c0 : memref<?xf32>
   %2 = arith.addi %1, %c1 : index
-  %3 = memref.subview %arg0[%2] [%1] [%c1] : memref<?xf32> to memref<?xf32, strided<[?], offset: ?>>
-  return %3 : memref<?xf32, strided<[?], offset: ?>>
+  %3 = memref.subview %arg0[%2] [%1] [%c1] : memref<?xf32> to memref<?xf32, strided<[?]>>
+  return %3 : memref<?xf32, strided<[?]>>
 }
 //       CHECK: func @subview_negative_stride1
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>)
@@ -185,36 +185,36 @@ func.func @subview_negative_stride1(%arg0 : memref<?xf32>) -> memref<?xf32, stri
 //       CHECK:   %[[C2:.*]] = arith.constant -1
 //       CHECK:   %[[DIM1:.*]] = memref.dim %[[ARG0]], %[[C1]] : memref<?xf32>
 //       CHECK:   %[[DIM2:.*]] = arith.addi %[[DIM1]], %[[C2]] : index
-//       CHECK:   %[[RES1:.*]] = memref.subview %[[ARG0]][%[[DIM2]]] [%[[DIM1]]] [-1] : memref<?xf32> to memref<?xf32, strided<[-1], offset: ?>>
-//       CHECK:   %[[RES2:.*]] = memref.cast %[[RES1]] : memref<?xf32, strided<[-1], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
-//       CHECK:   return %[[RES2]] : memref<?xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[RES1:.*]] = memref.subview %[[ARG0]][%[[DIM2]]] [%[[DIM1]]] [-1] : memref<?xf32> to memref<?xf32, strided<[-1]>>
+//       CHECK:   %[[RES2:.*]] = memref.cast %[[RES1]] : memref<?xf32, strided<[-1]>> to memref<?xf32, strided<[?]>>
+//       CHECK:   return %[[RES2]] : memref<?xf32, strided<[?]>>
 
 // -----
 
-func.func @subview_negative_stride2(%arg0 : memref<7xf32>) -> memref<?xf32, strided<[?], offset: ?>>
+func.func @subview_negative_stride2(%arg0 : memref<7xf32>) -> memref<?xf32, strided<[?]>>
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant -1 : index
   %1 = memref.dim %arg0, %c0 : memref<7xf32>
   %2 = arith.addi %1, %c1 : index
-  %3 = memref.subview %arg0[%2] [%1] [%c1] : memref<7xf32> to memref<?xf32, strided<[?], offset: ?>>
-  return %3 : memref<?xf32, strided<[?], offset: ?>>
+  %3 = memref.subview %arg0[%2] [%1] [%c1] : memref<7xf32> to memref<?xf32, strided<[?]>>
+  return %3 : memref<?xf32, strided<[?]>>
 }
 //       CHECK: func @subview_negative_stride2
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<7xf32>)
-//       CHECK:   %[[RES1:.*]] = memref.subview %[[ARG0]][6] [7] [-1] : memref<7xf32> to memref<7xf32, strided<[-1], offset: 6>>
-//       CHECK:   %[[RES2:.*]] = memref.cast %[[RES1]] : memref<7xf32, strided<[-1], offset: 6>> to memref<?xf32, strided<[?], offset: ?>>
-//       CHECK:   return %[[RES2]] : memref<?xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[RES1:.*]] = memref.subview %[[ARG0]][6] [7] [-1] : memref<7xf32> to memref<7xf32, strided<[-1]>>
+//       CHECK:   %[[RES2:.*]] = memref.cast %[[RES1]] : memref<7xf32, strided<[-1]>> to memref<?xf32, strided<[?]>>
+//       CHECK:   return %[[RES2]] : memref<?xf32, strided<[?]>>
 
 // -----
 
 // CHECK-LABEL: func @no_fold_subview_negative_size
 //  CHECK:        %[[SUBVIEW:.+]] = memref.subview
 //  CHECK:        return %[[SUBVIEW]]
-func.func @no_fold_subview_negative_size(%input: memref<4x1024xf32>) -> memref<?x256xf32, strided<[1024, 1], offset: 2304>> {
+func.func @no_fold_subview_negative_size(%input: memref<4x1024xf32>) -> memref<?x256xf32, strided<[1024, 1]>> {
   %cst = arith.constant -13 : index
-  %0 = memref.subview %input[2, 256] [%cst, 256] [1, 1] : memref<4x1024xf32> to memref<?x256xf32, strided<[1024, 1], offset: 2304>>
-  return %0 : memref<?x256xf32, strided<[1024, 1], offset: 2304>>
+  %0 = memref.subview %input[2, 256] [%cst, 256] [1, 1] : memref<4x1024xf32> to memref<?x256xf32, strided<[1024, 1]>>
+  return %0 : memref<?x256xf32, strided<[1024, 1]>>
 }
 
 // -----
@@ -222,11 +222,11 @@ func.func @no_fold_subview_negative_size(%input: memref<4x1024xf32>) -> memref<?
 // CHECK-LABEL: func @no_fold_subview_zero_stride
 //  CHECK:        %[[SUBVIEW:.+]] = memref.subview
 //  CHECK:        return %[[SUBVIEW]]
-func.func @no_fold_subview_zero_stride(%arg0 : memref<10xf32>) -> memref<1xf32, strided<[?], offset: 1>> {
+func.func @no_fold_subview_zero_stride(%arg0 : memref<10xf32>) -> memref<1xf32, strided<[?]>> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %1 = memref.subview %arg0[1] [1] [%c0] : memref<10xf32> to memref<1xf32, strided<[?], offset: 1>>
-  return %1 : memref<1xf32, strided<[?], offset: 1>>
+  %1 = memref.subview %arg0[1] [1] [%c0] : memref<10xf32> to memref<1xf32, strided<[?]>>
+  return %1 : memref<1xf32, strided<[?]>>
 }
 
 // -----
@@ -393,25 +393,25 @@ func.func @alloc_alignment_const_fold() -> memref<?xf32> {
 
 // CHECK-LABEL: func @alloc_const_fold_with_symbols1(
 //  CHECK: %[[c1:.+]] = arith.constant 1 : index
-//  CHECK: %[[mem1:.+]] = memref.alloc({{.*}})[%[[c1]], %[[c1]]] : memref<?xi32, strided{{.*}}>
+//  CHECK: %[[mem1:.+]] = memref.alloc({{.*}})[%[[c1]]] : memref<?xi32, strided{{.*}}>
 //  CHECK: return %[[mem1]] : memref<?xi32, strided{{.*}}>
-func.func @alloc_const_fold_with_symbols1(%arg0 : index) -> memref<?xi32, strided<[?], offset: ?>> {
+func.func @alloc_const_fold_with_symbols1(%arg0 : index) -> memref<?xi32, strided<[?]>> {
   %c1 = arith.constant 1 : index
-  %0 = memref.alloc(%arg0)[%c1, %c1] : memref<?xi32, strided<[?], offset: ?>>
-  return %0 : memref<?xi32, strided<[?], offset: ?>>
+  %0 = memref.alloc(%arg0)[%c1] : memref<?xi32, strided<[?]>>
+  return %0 : memref<?xi32, strided<[?]>>
 }
 
 // -----
 
 // CHECK-LABEL: func @alloc_const_fold_with_symbols2(
 //  CHECK: %[[c1:.+]] = arith.constant 1 : index
-//  CHECK: %[[mem1:.+]] = memref.alloc()[%[[c1]], %[[c1]]] : memref<1xi32, strided{{.*}}>
+//  CHECK: %[[mem1:.+]] = memref.alloc()[%[[c1]]] : memref<1xi32, strided{{.*}}>
 //  CHECK: %[[mem2:.+]] = memref.cast %[[mem1]] : memref<1xi32, strided{{.*}}> to memref<?xi32, strided{{.*}}>
 //  CHECK: return %[[mem2]] : memref<?xi32, strided{{.*}}>
-func.func @alloc_const_fold_with_symbols2() -> memref<?xi32, strided<[?], offset: ?>> {
+func.func @alloc_const_fold_with_symbols2() -> memref<?xi32, strided<[?]>> {
   %c1 = arith.constant 1 : index
-  %0 = memref.alloc(%c1)[%c1, %c1] : memref<?xi32, strided<[?], offset: ?>>
-  return %0 : memref<?xi32, strided<[?], offset: ?>>
+  %0 = memref.alloc(%c1)[%c1] : memref<?xi32, strided<[?]>>
+  return %0 : memref<?xi32, strided<[?]>>
 }
 
 // -----
@@ -472,15 +472,15 @@ func.func @compose_collapse_of_expand_partially_dynamic(%arg0: memref<?xf16>, %a
 // -----
 
 func.func @do_not_compose_collapse_of_expand_non_identity_layout(
-    %arg0: memref<?x?xf32, strided<[?, 1], offset: 0>>, %sz0: index, %sz1: index)
-    -> memref<?xf32, strided<[?], offset: 0>> {
+    %arg0: memref<?x?xf32, strided<[?, 1]>>, %sz0: index, %sz1: index)
+    -> memref<?xf32, strided<[?]>> {
   %1 = memref.expand_shape %arg0 [[0, 1], [2]] output_shape [%sz0, 4, %sz1] :
-    memref<?x?xf32, strided<[?, 1], offset: 0>> into
-    memref<?x4x?xf32, strided<[?, ?, 1], offset: 0>>
+    memref<?x?xf32, strided<[?, 1]>> into
+    memref<?x4x?xf32, strided<[?, ?, 1]>>
   %2 = memref.collapse_shape %1 [[0, 1, 2]] :
-    memref<?x4x?xf32, strided<[?, ?, 1], offset: 0>> into
-    memref<?xf32, strided<[?], offset: 0>>
-  return %2 : memref<?xf32, strided<[?], offset: 0>>
+    memref<?x4x?xf32, strided<[?, ?, 1]>> into
+    memref<?xf32, strided<[?]>>
+  return %2 : memref<?xf32, strided<[?]>>
 }
 // CHECK-LABEL: func @do_not_compose_collapse_of_expand_non_identity_layout
 // CHECK: expand
@@ -680,10 +680,10 @@ func.func @not_fold_memref_expand_static_to_dynamic_cast_if_really_dynamic(%arg0
 // CHECK:           return %[[EXPAND_SHAPE_0]] : memref<8x1x4xf32>
 // CHECK:         }
 func.func @fold_memref_expand_static_to_dynamic_layout(%arg0 : memref<8x4xf32>) -> memref<8x1x4xf32> {
-  %0 = memref.cast %arg0 : memref<8x4xf32> to memref<8x4xf32, strided<[?, ?], offset: ?>>
+  %0 = memref.cast %arg0 : memref<8x4xf32> to memref<8x4xf32, strided<[?, ?]>>
   %1 = memref.expand_shape %0 [[0, 1], [2]] output_shape [8, 1, 4]
-      : memref<8x4xf32, strided<[?, ?], offset: ?>> into memref<8x1x4xf32, strided<[?,?,?], offset: ?>>
-  %2 = memref.cast %1 : memref<8x1x4xf32, strided<[?,?,?], offset: ?>> to memref<8x1x4xf32>
+      : memref<8x4xf32, strided<[?, ?]>> into memref<8x1x4xf32, strided<[?,?,?]>>
+  %2 = memref.cast %1 : memref<8x1x4xf32, strided<[?,?,?]>> to memref<8x1x4xf32>
   return %2 : memref<8x1x4xf32>
 }
 
@@ -734,18 +734,18 @@ func.func @collapse_after_memref_cast_type_change_dynamic(%arg0: memref<1x1x1x?x
 // -----
 
 func.func @reduced_memref(%arg0: memref<2x5x7x1xf32>, %arg1 :index)
-    -> memref<1x4x1xf32, strided<[35, 7, 1], offset: ?>> {
+    -> memref<1x4x1xf32, strided<[35, 7, 1]>> {
   %c0 = arith.constant 0 : index
   %c5 = arith.constant 5 : index
   %c4 = arith.constant 4 : index
   %c2 = arith.constant 2 : index
   %c1 = arith.constant 1 : index
   %0 = memref.subview %arg0[%arg1, %arg1, %arg1, 0] [%c1, %c4, %c1, 1] [1, 1, 1, 1]
-      : memref<2x5x7x1xf32> to memref<?x?x?xf32, strided<[35, 7, 1], offset: ?>>
+      : memref<2x5x7x1xf32> to memref<?x?x?xf32, strided<[35, 7, 1]>>
   %1 = memref.cast %0
-      : memref<?x?x?xf32, strided<[35, 7, 1], offset: ?>> to
-        memref<1x4x1xf32, strided<[35, 7, 1], offset: ?>>
-  return %1 : memref<1x4x1xf32, strided<[35, 7, 1], offset: ?>>
+      : memref<?x?x?xf32, strided<[35, 7, 1]>> to
+        memref<1x4x1xf32, strided<[35, 7, 1]>>
+  return %1 : memref<1x4x1xf32, strided<[35, 7, 1]>>
 }
 
 // CHECK-LABEL: func @reduced_memref
@@ -778,9 +778,9 @@ func.func @fold_no_op_subview(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, st
 
 // -----
 
-func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> memref<20x41xf32, strided<[42, 1], offset: 1>> {
-  %0 = memref.subview %arg0[0, 1] [20, 41] [1, 1] : memref<20x42xf32> to memref<20x41xf32, strided<[42, 1], offset: 1>>
-  return %0 : memref<20x41xf32, strided<[42, 1], offset: 1>>
+func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> memref<20x41xf32, strided<[42, 1]>> {
+  %0 = memref.subview %arg0[0, 1] [20, 41] [1, 1] : memref<20x42xf32> to memref<20x41xf32, strided<[42, 1]>>
+  return %0 : memref<20x41xf32, strided<[42, 1]>>
 }
 // CHECK-LABEL: func @no_fold_subview_with_non_zero_offset(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
@@ -799,11 +799,11 @@ func.func @no_fold_subview_with_non_unit_stride(%arg0 : memref<20x42xf32>) -> me
 // -----
 
 // CHECK-LABEL: func @no_fold_invalid_dynamic_slice
-//       CHECK:   memref.subview %arg0[2] [%{{.*}}] [1] : memref<10xf32> to memref<?xf32, strided<[1], offset: 2>>
-func.func @no_fold_invalid_dynamic_slice(%arg0: memref<10xf32>) -> memref<?xf32, strided<[1], offset: 2>> {
+//       CHECK:   memref.subview %arg0[2] [%{{.*}}] [1] : memref<10xf32> to memref<?xf32, strided<[1]>>
+func.func @no_fold_invalid_dynamic_slice(%arg0: memref<10xf32>) -> memref<?xf32, strided<[1]>> {
   %c11 = arith.constant 11 : index
-  %0 = memref.subview %arg0 [2][%c11][1] : memref<10xf32> to memref<?xf32, strided<[1], offset: 2>>
-  func.return %0 : memref<?xf32, strided<[1], offset: 2>>
+  %0 = memref.subview %arg0 [2][%c11][1] : memref<10xf32> to memref<?xf32, strided<[1]>>
+  func.return %0 : memref<?xf32, strided<[1]>>
 }
 
 // -----
@@ -834,9 +834,9 @@ func.func @atomicrmw_cast_fold(%arg0 : f32, %arg1 : memref<4xf32>, %c : index) {
 // -----
 
 func.func @copy_of_cast(%m1: memref<?xf32>, %m2: memref<*xf32>) {
-  %casted1 = memref.cast %m1 : memref<?xf32> to memref<?xf32, strided<[?], offset: ?>>
-  %casted2 = memref.cast %m2 : memref<*xf32> to memref<?xf32, strided<[?], offset: ?>>
-  memref.copy %casted1, %casted2 : memref<?xf32, strided<[?], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
+  %casted1 = memref.cast %m1 : memref<?xf32> to memref<?xf32, strided<[?]>>
+  %casted2 = memref.cast %m2 : memref<*xf32> to memref<?xf32, strided<[?]>>
+  memref.copy %casted1, %casted2 : memref<?xf32, strided<[?]>> to memref<?xf32, strided<[?]>>
   return
 }
 
@@ -1036,7 +1036,7 @@ func.func @scope_merge_without_terminator() {
 // static information.
 //
 // CHECK-LABEL: func @extract_strided_metadata_of_cast
-//  CHECK-SAME: %[[ARG:.*]]: memref<3x?xi32, strided<[4, ?], offset: ?>>)
+//  CHECK-SAME: %[[ARG:.*]]: memref<3x?xi32, strided<[4, ?]>>)
 //
 //   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
 //   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
@@ -1044,18 +1044,18 @@ func.func @scope_merge_without_terminator() {
 //
 //       CHECK: return %[[BASE]], %[[DYN_OFFSET]], %[[C3]], %[[DYN_SIZES]]#1, %[[C4]], %[[DYN_STRIDES]]#1
 func.func @extract_strided_metadata_of_cast(
-  %arg : memref<3x?xi32, strided<[4, ?], offset:?>>)
+  %arg : memref<3x?xi32, strided<[4, ?]>>)
   -> (memref<i32>, index,
       index, index,
       index, index) {
 
   %cast =
     memref.cast %arg :
-      memref<3x?xi32, strided<[4, ?], offset: ?>> to
-      memref<?x?xi32, strided<[?, ?], offset: ?>>
+      memref<3x?xi32, strided<[4, ?]>> to
+      memref<?x?xi32, strided<[?, ?]>>
 
   %base, %base_offset, %sizes:2, %strides:2 =
-    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?], offset: ?>>
+    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?]>>
     -> memref<i32>, index,
        index, index,
        index, index
@@ -1078,7 +1078,7 @@ func.func @extract_strided_metadata_of_cast(
 // in the destination type.
 //
 // CHECK-LABEL: func @extract_strided_metadata_of_cast_w_csts
-//  CHECK-SAME: %[[ARG:.*]]: memref<?x?xi32, strided<[?, ?], offset: ?>>)
+//  CHECK-SAME: %[[ARG:.*]]: memref<?x?xi32, strided<[?, ?]>>)
 //
 //   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
 //   CHECK-DAG: %[[C18:.*]] = arith.constant 18 : index
@@ -1087,18 +1087,18 @@ func.func @extract_strided_metadata_of_cast(
 //
 //       CHECK: return %[[BASE]], %[[C25]], %[[C4]], %[[DYN_SIZES]]#1, %[[DYN_STRIDES]]#0, %[[C18]]
 func.func @extract_strided_metadata_of_cast_w_csts(
-  %arg : memref<?x?xi32, strided<[?, ?], offset:?>>)
+  %arg : memref<?x?xi32, strided<[?, ?]>>)
   -> (memref<i32>, index,
       index, index,
       index, index) {
 
   %cast =
     memref.cast %arg :
-      memref<?x?xi32, strided<[?, ?], offset: ?>> to
-      memref<4x?xi32, strided<[?, 18], offset: 25>>
+      memref<?x?xi32, strided<[?, ?]>> to
+      memref<4x?xi32, strided<[?, 18]>>
 
   %base, %base_offset, %sizes:2, %strides:2 =
-    memref.extract_strided_metadata %cast:memref<4x?xi32, strided<[?, 18], offset: 25>>
+    memref.extract_strided_metadata %cast:memref<4x?xi32, strided<[?, 18]>>
     -> memref<i32>, index,
        index, index,
        index, index
@@ -1134,10 +1134,10 @@ func.func @extract_strided_metadata_of_cast_unranked(
   %cast =
     memref.cast %arg :
       memref<*xi32> to
-      memref<?x?xi32, strided<[?, ?], offset: ?>>
+      memref<?x?xi32, strided<[?, ?]>>
 
   %base, %base_offset, %sizes:2, %strides:2 =
-    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?], offset: ?>>
+    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?]>>
     -> memref<i32>, index,
        index, index,
        index, index
@@ -1167,12 +1167,12 @@ func.func @reinterpret_noop(%arg : memref<2x3x4xf32>) -> memref<2x3x4xf32> {
 //       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [0], sizes: [100, 100], strides: [100, 1]
 //       CHECK: %[[CAST:.*]] = memref.cast %[[RES]]
 //       CHECK: return %[[CAST]]
-func.func @reinterpret_constant_fold(%arg0: memref<f32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+func.func @reinterpret_constant_fold(%arg0: memref<f32>) -> memref<?x?xf32, strided<[?, ?]>> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c100 = arith.constant 100 : index
-  %reinterpret_cast = memref.reinterpret_cast %arg0 to offset: [%c0], sizes: [%c100, %c100], strides: [%c100, %c1] : memref<f32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %reinterpret_cast : memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %reinterpret_cast = memref.reinterpret_cast %arg0 to offset: [%c0], sizes: [%c100, %c100], strides: [%c100, %c1] : memref<f32> to memref<?x?xf32, strided<[?, ?]>>
+  return %reinterpret_cast : memref<?x?xf32, strided<[?, ?]>>
 }
 
 // -----
@@ -1220,10 +1220,10 @@ func.func @reinterpret_of_subview(%arg : memref<?xi8>, %size1: index, %size2: in
 //  CHECK-SAME: (%[[ARG:.*]]: memref<8x2xf32>)
 //       CHECK: %[[CAST:.*]] = memref.cast %[[ARG]] : memref<8x2xf32> to memref<?x?xf32,
 //       CHECK: return %[[CAST]]
-func.func @reinterpret_of_extract_strided_metadata_w_type_mistach(%arg0 : memref<8x2xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+func.func @reinterpret_of_extract_strided_metadata_w_type_mistach(%arg0 : memref<8x2xf32>) -> memref<?x?xf32, strided<[?, ?]>> {
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<8x2xf32> -> memref<f32>, index, index, index, index, index
-  %m2 = memref.reinterpret_cast %base to offset: [%offset], sizes: [%sizes#0, %sizes#1], strides: [%strides#0, %strides#1] : memref<f32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %m2 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %m2 = memref.reinterpret_cast %base to offset: [%offset], sizes: [%sizes#0, %sizes#1], strides: [%strides#0, %strides#1] : memref<f32> to memref<?x?xf32, strided<[?, ?]>>
+  return %m2 : memref<?x?xf32, strided<[?, ?]>>
 }
 
 // -----
@@ -1237,11 +1237,11 @@ func.func @reinterpret_of_extract_strided_metadata_w_type_mistach(%arg0 : memref
 //  CHECK-SAME: (%[[ARG:.*]]: memref<8x2xf32>)
 //       CHECK: %[[CAST:.*]] = memref.cast %[[ARG]] : memref<8x2xf32> to memref<?x?xf32,
 //       CHECK: return %[[CAST]]
-func.func @reinterpret_of_extract_strided_metadata_w_constants(%arg0 : memref<8x2xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+func.func @reinterpret_of_extract_strided_metadata_w_constants(%arg0 : memref<8x2xf32>) -> memref<?x?xf32, strided<[?, ?]>> {
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<8x2xf32> -> memref<f32>, index, index, index, index, index
   %c8 = arith.constant 8: index
-  %m2 = memref.reinterpret_cast %base to offset: [0], sizes: [%c8, 2], strides: [2, %strides#1] : memref<f32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %m2 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %m2 = memref.reinterpret_cast %base to offset: [0], sizes: [%c8, 2], strides: [2, %strides#1] : memref<f32> to memref<?x?xf32, strided<[?, ?]>>
+  return %m2 : memref<?x?xf32, strided<[?, ?]>>
 }
 // -----
 
@@ -1250,10 +1250,10 @@ func.func @reinterpret_of_extract_strided_metadata_w_constants(%arg0 : memref<8x
 // CHECK-LABEL: func @reinterpret_of_extract_strided_metadata_same_type
 //  CHECK-SAME: (%[[ARG:.*]]: memref<?x?xf32
 //       CHECK: return %[[ARG]]
-func.func @reinterpret_of_extract_strided_metadata_same_type(%arg0 : memref<?x?xf32, strided<[?,?], offset: ?>>) -> memref<?x?xf32, strided<[?,?], offset: ?>> {
-  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<?x?xf32, strided<[?,?], offset: ?>> -> memref<f32>, index, index, index, index, index
-  %m2 = memref.reinterpret_cast %base to offset: [%offset], sizes: [%sizes#0, %sizes#1], strides: [%strides#0, %strides#1] : memref<f32> to memref<?x?xf32, strided<[?,?], offset:?>>
-  return %m2 : memref<?x?xf32, strided<[?,?], offset:?>>
+func.func @reinterpret_of_extract_strided_metadata_same_type(%arg0 : memref<?x?xf32, strided<[?,?]>>) -> memref<?x?xf32, strided<[?,?]>> {
+  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<?x?xf32, strided<[?,?]>> -> memref<f32>, index, index, index, index, index
+  %m2 = memref.reinterpret_cast %base to offset: [%offset], sizes: [%sizes#0, %sizes#1], strides: [%strides#0, %strides#1] : memref<f32> to memref<?x?xf32, strided<[?,?]>>
+  return %m2 : memref<?x?xf32, strided<[?,?]>>
 }
 
 // -----
@@ -1265,10 +1265,10 @@ func.func @reinterpret_of_extract_strided_metadata_same_type(%arg0 : memref<?x?x
 //       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [0], sizes: [4, 2, 2], strides: [1, 1, 1]
 //       CHECK: %[[CAST:.*]] = memref.cast %[[RES]]
 //       CHECK: return %[[CAST]]
-func.func @reinterpret_of_extract_strided_metadata_w_different_stride(%arg0 : memref<8x2xf32>) -> memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> {
+func.func @reinterpret_of_extract_strided_metadata_w_different_stride(%arg0 : memref<8x2xf32>) -> memref<?x?x?xf32, strided<[?, ?, ?]>> {
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<8x2xf32> -> memref<f32>, index, index, index, index, index
-  %m2 = memref.reinterpret_cast %base to offset: [%offset], sizes: [4, 2, 2], strides: [1, 1, %strides#1] : memref<f32> to memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
-  return %m2 : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  %m2 = memref.reinterpret_cast %base to offset: [%offset], sizes: [4, 2, 2], strides: [1, 1, %strides#1] : memref<f32> to memref<?x?x?xf32, strided<[?, ?, ?]>>
+  return %m2 : memref<?x?x?xf32, strided<[?, ?, ?]>>
 }
 // -----
 
@@ -1279,10 +1279,10 @@ func.func @reinterpret_of_extract_strided_metadata_w_different_stride(%arg0 : me
 //       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [1], sizes: [8, 2], strides: [2, 1]
 //       CHECK: %[[CAST:.*]] = memref.cast %[[RES]]
 //       CHECK: return %[[CAST]]
-func.func @reinterpret_of_extract_strided_metadata_w_different_offset(%arg0 : memref<8x2xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+func.func @reinterpret_of_extract_strided_metadata_w_different_offset(%arg0 : memref<8x2xf32>) -> memref<?x?xf32, strided<[?, ?]>> {
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<8x2xf32> -> memref<f32>, index, index, index, index, index
-  %m2 = memref.reinterpret_cast %base to offset: [1], sizes: [%sizes#0, %sizes#1], strides: [%strides#0, %strides#1] : memref<f32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %m2 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %m2 = memref.reinterpret_cast %base to offset: [1], sizes: [%sizes#0, %sizes#1], strides: [%strides#0, %strides#1] : memref<f32> to memref<?x?xf32, strided<[?, ?]>>
+  return %m2 : memref<?x?xf32, strided<[?, ?]>>
 }
 
 // -----
@@ -1294,14 +1294,14 @@ func.func @reinterpret_of_extract_strided_metadata_w_different_offset(%arg0 : me
 //  CHECK-SAME: (%[[ARG:.*]]: memref<2x3xf32>)
 //       CHECK: %[[SZ:.*]] = arith.constant -1 : index
 //       CHECK: memref.reinterpret_cast %[[ARG]] to offset: [0], sizes: [1, %[[SZ]]], strides: [-1, 1]
-func.func @reinterpret_cast_with_negative_size(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+func.func @reinterpret_cast_with_negative_size(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?]>> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %sz = arith.constant -1 : index
   %output = memref.reinterpret_cast %arg0 to
             offset: [%c0], sizes: [%c1, %sz], strides: [%sz, %c1]
-            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %output : memref<?x?xf32, strided<[?, ?], offset: ?>>
+            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?]>>
+  return %output : memref<?x?xf32, strided<[?, ?]>>
 }
 
 // -----
@@ -1313,14 +1313,14 @@ func.func @reinterpret_cast_with_negative_size(%arg0: memref<2x3xf32>) -> memref
 //  CHECK-SAME: (%[[ARG:.*]]: memref<2x3xf32>)
 //       CHECK: %[[NEG:.*]] = arith.constant -1 : index
 //       CHECK: memref.reinterpret_cast %[[ARG]] to offset: [%[[NEG]]], sizes: [1, 2], strides: [2, 1]
-func.func @reinterpret_cast_with_negative_offset(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+func.func @reinterpret_cast_with_negative_offset(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?]>> {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %neg = arith.constant -1 : index
   %output = memref.reinterpret_cast %arg0 to
             offset: [%neg], sizes: [%c1, %c2], strides: [%c2, %c1]
-            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %output : memref<?x?xf32, strided<[?, ?], offset: ?>>
+            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?]>>
+  return %output : memref<?x?xf32, strided<[?, ?]>>
 }
 
 // -----
@@ -1330,14 +1330,14 @@ func.func @reinterpret_cast_with_negative_offset(%arg0: memref<2x3xf32>) -> memr
 //  CHECK-SAME: (%[[ARG:.*]]: memref<2x3xf32>)
 //       CHECK: %[[NEG:.*]] = arith.constant -1 : index
 //       CHECK: memref.reinterpret_cast %[[ARG]] to offset: [%[[NEG]]], sizes: [1, %[[NEG]]], strides: [2, 1]
-func.func @reinterpret_cast_with_negative_size_and_offset(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+func.func @reinterpret_cast_with_negative_size_and_offset(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?]>> {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %neg = arith.constant -1 : index
   %output = memref.reinterpret_cast %arg0 to
             offset: [%neg], sizes: [%c1, %neg], strides: [%c2, %c1]
-            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %output : memref<?x?xf32, strided<[?, ?], offset: ?>>
+            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?]>>
+  return %output : memref<?x?xf32, strided<[?, ?]>>
 }
 
 // -----
@@ -1348,12 +1348,12 @@ func.func @reinterpret_cast_with_negative_size_and_offset(%arg0: memref<2x3xf32>
 //  CHECK-SAME: (%[[ARG:.*]]: memref<2x3xf32>)
 //       CHECK: %[[NEG:.*]] = arith.constant -1 : index
 //       CHECK: memref.reinterpret_cast %[[ARG]] to offset: [%[[NEG]]], sizes: [%[[NEG]], %[[NEG]]], strides: [2, 1]
-func.func @reinterpret_cast_no_fold_with_all_negative_size_and_offset(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+func.func @reinterpret_cast_no_fold_with_all_negative_size_and_offset(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?]>> {
   %neg = arith.constant -1 : index
   %output = memref.reinterpret_cast %arg0 to
             offset: [%neg], sizes: [%neg, %neg], strides: [2, 1]
-            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %output : memref<?x?xf32, strided<[?, ?], offset: ?>>
+            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?]>>
+  return %output : memref<?x?xf32, strided<[?, ?]>>
 }
 
 // -----
@@ -1366,25 +1366,25 @@ func.func @reinterpret_cast_no_fold_with_all_negative_size_and_offset(%arg0: mem
 //   CHECK-NOT: arith.constant
 //       CHECK: %[[RC:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [0], sizes: [1, 2], strides: [-1, 1]
 //       CHECK: memref.cast %[[RC]]
-func.func @reinterpret_cast_fold_negative_stride(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+func.func @reinterpret_cast_fold_negative_stride(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?]>> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %neg = arith.constant -1 : index
   %output = memref.reinterpret_cast %arg0 to
             offset: [%c0], sizes: [%c1, %c2], strides: [%neg, %c1]
-            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %output : memref<?x?xf32, strided<[?, ?], offset: ?>>
+            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?]>>
+  return %output : memref<?x?xf32, strided<[?, ?]>>
 }
 
 // -----
 
 func.func @canonicalize_rank_reduced_subview(%arg0 : memref<8x?xf32>,
-    %arg1 : index) -> memref<?xf32, strided<[?], offset: ?>> {
+    %arg1 : index) -> memref<?xf32, strided<[?]>> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %0 = memref.subview %arg0[%c0, %c0] [1, %arg1] [%c1, %c1] : memref<8x?xf32> to memref<?xf32, strided<[?], offset: ?>>
-  return %0 :  memref<?xf32, strided<[?], offset: ?>>
+  %0 = memref.subview %arg0[%c0, %c0] [1, %arg1] [%c1, %c1] : memref<8x?xf32> to memref<?xf32, strided<[?]>>
+  return %0 :  memref<?xf32, strided<[?]>>
 }
 //      CHECK: func @canonicalize_rank_reduced_subview
 // CHECK-SAME:     %[[ARG0:.+]]: memref<8x?xf32>
@@ -1493,20 +1493,20 @@ func.func @expand_collapse_dynamic_do_not_fold_to_cast(%m: memref<1x?x1x32xsi8, 
 // -----
 
 // CHECK-LABEL: func @fold_trivial_subviews(
-//  CHECK-SAME:     %[[m:.*]]: memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:     %[[m:.*]]: memref<?xf32, strided<[?]>>
 //       CHECK:   %[[subview:.*]] = memref.subview %[[m]][5]
 //       CHECK:   return %[[subview]]
-func.func @fold_trivial_subviews(%m: memref<?xf32, strided<[?], offset: ?>>,
+func.func @fold_trivial_subviews(%m: memref<?xf32, strided<[?]>>,
                                  %sz: index)
-    -> memref<?xf32, strided<[?], offset: ?>>
+    -> memref<?xf32, strided<[?]>>
 {
   %0 = memref.subview %m[5] [%sz] [1]
-      : memref<?xf32, strided<[?], offset: ?>>
-        to memref<?xf32, strided<[?], offset: ?>>
+      : memref<?xf32, strided<[?]>>
+        to memref<?xf32, strided<[?]>>
   %1 = memref.subview %0[0] [%sz] [1]
-      : memref<?xf32, strided<[?], offset: ?>>
-        to memref<?xf32, strided<[?], offset: ?>>
-  return %1 : memref<?xf32, strided<[?], offset: ?>>
+      : memref<?xf32, strided<[?]>>
+        to memref<?xf32, strided<[?]>>
+  return %1 : memref<?xf32, strided<[?]>>
 }
 
 // -----
@@ -1579,14 +1579,14 @@ func.func private @ub_negative_alloc_size() -> memref<?x?x?xi1> {
 // CHECK-LABEL: func @subview_rank_reduction(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<1x384x384xf32>, %[[arg1:.*]]: index
 func.func @subview_rank_reduction(%arg0: memref<1x384x384xf32>, %idx: index)
-    -> memref<?x?xf32, strided<[384, 1], offset: ?>> {
+    -> memref<?x?xf32, strided<[384, 1]>> {
   %c1 = arith.constant 1 : index
-  // CHECK: %[[subview:.*]] = memref.subview %[[arg0]][0, %[[arg1]], %[[arg1]]] [1, 1, %[[arg1]]] [1, 1, 1] : memref<1x384x384xf32> to memref<1x?xf32, strided<[384, 1], offset: ?>>
-  // CHECK: %[[cast:.*]] = memref.cast %[[subview]] : memref<1x?xf32, strided<[384, 1], offset: ?>> to memref<?x?xf32, strided<[384, 1], offset: ?>>
+  // CHECK: %[[subview:.*]] = memref.subview %[[arg0]][0, %[[arg1]], %[[arg1]]] [1, 1, %[[arg1]]] [1, 1, 1] : memref<1x384x384xf32> to memref<1x?xf32, strided<[384, 1]>>
+  // CHECK: %[[cast:.*]] = memref.cast %[[subview]] : memref<1x?xf32, strided<[384, 1]>> to memref<?x?xf32, strided<[384, 1]>>
   %0 = memref.subview %arg0[0, %idx, %idx] [1, %c1, %idx] [1, 1, 1]
-      : memref<1x384x384xf32> to memref<?x?xf32, strided<[384, 1], offset: ?>>
+      : memref<1x384x384xf32> to memref<?x?xf32, strided<[384, 1]>>
   // CHECK: return %[[cast]]
-  return %0 : memref<?x?xf32, strided<[384, 1], offset: ?>>
+  return %0 : memref<?x?xf32, strided<[384, 1]>>
 }
 
 // -----
@@ -1745,10 +1745,10 @@ func.func @non_replace_view_negative_static_dims(%src: memref<?xi8>, %offset : i
 // CHECK-NOT: memref.dim
 // CHECK: return %[[ARG1]]
 func.func @no_crash_dim_of_ambiguous_subview(
-    %arg0: memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>, %arg1: index) -> index {
+    %arg0: memref<?x?x?xf32, strided<[?, ?, ?]>>, %arg1: index) -> index {
   %c1 = arith.constant 1 : index
   %subview = memref.subview %arg0[0, 0, 0] [1, %arg1, 1] [1, 1, 1]
-      : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> to memref<1x?xf32, strided<[?, ?], offset: ?>>
-  %dim = memref.dim %subview, %c1 : memref<1x?xf32, strided<[?, ?], offset: ?>>
+      : memref<?x?x?xf32, strided<[?, ?, ?]>> to memref<1x?xf32, strided<[?, ?]>>
+  %dim = memref.dim %subview, %c1 : memref<1x?xf32, strided<[?, ?]>>
   return %dim : index
 }

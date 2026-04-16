@@ -26,7 +26,7 @@ def testSubViewAccessors():
       %3 = arith.constant 3 : index
       %4 = arith.constant 4 : index
       %5 = arith.constant 5 : index
-      memref.subview %arg0[%0, %1][%2, %3][%4, %5] : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+      memref.subview %arg0[%0, %1][%2, %3][%4, %5] : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?]>>
       return
     }
   """,
@@ -103,7 +103,7 @@ def testSubViewOpInferReturnTypeSemantics():
 
             y = memref.subview(x, [1, 1], [3, 3], [1, 1])
             assert y.owner.verify()
-            # CHECK: %{{.*}} = memref.subview %[[ALLOC]][1, 1] [3, 3] [1, 1] : memref<10x10xi32> to memref<3x3xi32, strided<[10, 1], offset: 11>>
+            # CHECK: %{{.*}} = memref.subview %[[ALLOC]][1, 1] [3, 3] [1, 1] : memref<10x10xi32> to memref<3x3xi32, strided<[10, 1]>>
             print(y.owner)
 
             z = memref.subview(
@@ -112,7 +112,7 @@ def testSubViewOpInferReturnTypeSemantics():
                 [3, 3],
                 [1, 1],
             )
-            # CHECK: %{{.*}} =  memref.subview %[[ALLOC]][1, 1] [3, 3] [1, 1] : memref<10x10xi32> to memref<3x3xi32, strided<[10, 1], offset: 11>>
+            # CHECK: %{{.*}} =  memref.subview %[[ALLOC]][1, 1] [3, 3] [1, 1] : memref<10x10xi32> to memref<3x3xi32, strided<[10, 1]>>
             print(z.owner)
 
             z = memref.subview(
@@ -121,7 +121,7 @@ def testSubViewOpInferReturnTypeSemantics():
                 [3, 3],
                 [1, 1],
             )
-            # CHECK: %{{.*}} =  memref.subview %[[ALLOC]][3, 4] [3, 3] [1, 1] : memref<10x10xi32> to memref<3x3xi32, strided<[10, 1], offset: 34>>
+            # CHECK: %{{.*}} =  memref.subview %[[ALLOC]][3, 4] [3, 3] [1, 1] : memref<10x10xi32> to memref<3x3xi32, strided<[10, 1]>>
             print(z.owner)
 
             s = arith.addi(arith.constant(T.index(), 3), arith.constant(T.index(), 4))
@@ -131,7 +131,7 @@ def testSubViewOpInferReturnTypeSemantics():
                 [3, 3],
                 [1, 1],
             )
-            # CHECK: {{.*}} = memref.subview %[[ALLOC]][%0, 0] [3, 3] [1, 1] : memref<10x10xi32> to memref<3x3xi32, strided<[10, 1], offset: ?>>
+            # CHECK: {{.*}} = memref.subview %[[ALLOC]][%0, 0] [3, 3] [1, 1] : memref<10x10xi32> to memref<3x3xi32, strided<[10, 1]>>
             print(z)
 
             try:
@@ -167,7 +167,7 @@ def testSubViewOpInferReturnTypeSemantics():
                 [],
                 [arith.constant(T.index(), 42)],
             )
-            # CHECK: %[[DYNAMICALLOC:.*]] = memref.alloc()[%c42] : memref<10x10xi32, strided<[10, 1], offset: ?>>
+            # CHECK: %[[DYNAMICALLOC:.*]] = memref.alloc()[%c42] : memref<10x10xi32, strided<[10, 1]>>
             print(x.owner)
             y = memref.subview(
                 x,
@@ -176,7 +176,7 @@ def testSubViewOpInferReturnTypeSemantics():
                 [1, 1],
                 result_type=T.memref(3, 3, T.i32(), layout=layout),
             )
-            # CHECK: %{{.*}} = memref.subview %[[DYNAMICALLOC]][1, 1] [3, 3] [1, 1] : memref<10x10xi32, strided<[10, 1], offset: ?>> to memref<3x3xi32, strided<[10, 1], offset: ?>>
+            # CHECK: %{{.*}} = memref.subview %[[DYNAMICALLOC]][1, 1] [3, 3] [1, 1] : memref<10x10xi32, strided<[10, 1]>> to memref<3x3xi32, strided<[10, 1]>>
             print(y.owner)
 
 

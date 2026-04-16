@@ -305,8 +305,8 @@ dynamic offset and strides:
 
 ```mlir
 %0 = "my_dialect.unbufferizable_op(%t) : (tensor<?x?xf32>) -> (tensor<?x?xf32>)
-%0_m = bufferization.to_buffer %0 : memref<?x?xf32, strided<[?, ?], offset: ?>>
-%1 = memref.load %0_m[%idx1, %idx2] : memref<?x?xf32, strided<[?, ?], offset: ?>>
+%0_m = bufferization.to_buffer %0 : memref<?x?xf32, strided<[?, ?]>>
+%1 = memref.load %0_m[%idx1, %idx2] : memref<?x?xf32, strided<[?, ?]>>
 ```
 
 All users of `%0` have fully dynamic layout maps. This ensures that the

@@ -27,10 +27,10 @@ func.func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>
 //      CHECK:       %[[VC:.*]] = memref.view %[[tmpC]][%[[C0]]][] : memref<1024xi8> to memref<16x16xf32>
 //      CHECK:       %[[svCC:.+]] = memref.subview %[[VC]]
 
-//      CHECK:       linalg.copy ins(%[[svA]] : memref<?x?xf32, strided<[?, 1], offset: ?>>) outs(%[[svAA]] : memref<?x?xf32, strided<[16, 1]>>)
-//      CHECK:       linalg.copy ins(%[[svC]] : memref<?x?xf32, strided<[?, 1], offset: ?>>) outs(%[[svCC]] : memref<?x?xf32, strided<[16, 1]>>)
+//      CHECK:       linalg.copy ins(%[[svA]] : memref<?x?xf32, strided<[?, 1]>>) outs(%[[svAA]] : memref<?x?xf32, strided<[16, 1]>>)
+//      CHECK:       linalg.copy ins(%[[svC]] : memref<?x?xf32, strided<[?, 1]>>) outs(%[[svCC]] : memref<?x?xf32, strided<[16, 1]>>)
 //      CHECK:       linalg.matmul ins(%[[VA]], %[[svB]]{{.*}} outs(%[[VC]]
-//      CHECK:       linalg.copy ins(%[[svCC]] : memref<?x?xf32, strided<[16, 1]>>) outs(%[[svC]] : memref<?x?xf32, strided<[?, 1], offset: ?>>)
+//      CHECK:       linalg.copy ins(%[[svCC]] : memref<?x?xf32, strided<[16, 1]>>) outs(%[[svC]] : memref<?x?xf32, strided<[?, 1]>>)
 //      CHECK:       memref.dealloc %[[tmpA]]
 //      CHECK:       memref.dealloc %[[tmpC]]
 
@@ -55,13 +55,13 @@ func.func @matmul_f32(%A: memref<512x256xf32>, %B: memref<256x512xf32>, %C: memr
         %i0 = affine.min affine_map<(d0)[s0] -> (-d0 + 512, s0)>(%arg4)[%s0]
         %i1 = affine.min affine_map<(d0)[s0] -> (-d0 + 512, s0)>(%arg5)[%s1]
         %i2 = affine.min affine_map<(d0)[s0] -> (-d0 + 256, s0)>(%arg6)[%s2]
-        %0 = memref.subview %A[%arg4, %arg6][%i0, %i2][1, 1] : memref<512x256xf32> to memref<?x?xf32, strided<[256, 1], offset: ?>>
-        %1 = memref.subview %B[%arg6, %arg5][%i2, %i1][1, 1] : memref<256x512xf32> to memref<?x?xf32, strided<[512, 1], offset: ?>>
-        %2 = memref.subview %C[%arg4, %arg5][%i0, %i1][1, 1] : memref<256x256xf32> to memref<?x?xf32, strided<[256, 1], offset: ?>>
+        %0 = memref.subview %A[%arg4, %arg6][%i0, %i2][1, 1] : memref<512x256xf32> to memref<?x?xf32, strided<[256, 1]>>
+        %1 = memref.subview %B[%arg6, %arg5][%i2, %i1][1, 1] : memref<256x512xf32> to memref<?x?xf32, strided<[512, 1]>>
+        %2 = memref.subview %C[%arg4, %arg5][%i0, %i1][1, 1] : memref<256x256xf32> to memref<?x?xf32, strided<[256, 1]>>
         linalg.matmul
-          ins(%0, %1: memref<?x?xf32, strided<[256, 1], offset: ?>>,
-                      memref<?x?xf32, strided<[512, 1], offset: ?>>)
-          outs(%2: memref<?x?xf32, strided<[256, 1], offset: ?>>)
+          ins(%0, %1: memref<?x?xf32, strided<[256, 1]>>,
+                      memref<?x?xf32, strided<[512, 1]>>)
+          outs(%2: memref<?x?xf32, strided<[256, 1]>>)
       }
     }
   }

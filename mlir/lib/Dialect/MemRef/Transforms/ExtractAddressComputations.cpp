@@ -205,7 +205,7 @@ getGenericOpViewSizeForEachDim(RewriterBase &rewriter,
 /// =>
 /// %new_base = subview %base[%off0,.., %offN][1,..,1][1,..,1]
 /// %ld = memref.load %new_base[0,..,0] :
-///    memref<1x..x1xTy, strided<[1,..,1], offset: ?>>
+///    memref<1x..x1xTy, strided<[1,..,1]>>
 ///
 /// `getSrcMemRef` returns the source memref for the given load-like operation.
 ///

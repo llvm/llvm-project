@@ -6,9 +6,9 @@ func.func @dealloc_deallocated_in_retained(%arg0: memref<2xi32>, %arg1: i1, %arg
   %2:2 = bufferization.dealloc (%arg0 : memref<2xi32>) if (%arg1) retain (%arg0, %arg2 : memref<2xi32>, memref<2xi32>)
   // multiple must-alias
   %3 = memref.subview %arg0[0][1][1] : memref<2xi32> to memref<i32>
-  %4 = memref.subview %arg0[1][1][1] : memref<2xi32> to memref<1xi32, strided<[1], offset: 1>>
+  %4 = memref.subview %arg0[1][1][1] : memref<2xi32> to memref<1xi32, strided<[1]>>
   %alloc = memref.alloc() : memref<2xi32>
-  %5:3 = bufferization.dealloc (%arg0, %4 : memref<2xi32>, memref<1xi32, strided<[1], offset: 1>>) if (%arg1, %arg3) retain (%arg0, %alloc, %3 : memref<2xi32>, memref<2xi32>, memref<i32>)
+  %5:3 = bufferization.dealloc (%arg0, %4 : memref<2xi32>, memref<1xi32, strided<[1]>>) if (%arg1, %arg3) retain (%arg0, %alloc, %3 : memref<2xi32>, memref<2xi32>, memref<i32>)
   return %0, %1, %2#0, %2#1, %5#0, %5#1, %5#2 : i1, i1, i1, i1, i1, i1, i1
 }
 
@@ -37,9 +37,9 @@ func.func @dealloc_deallocated_in_retained_extract_base_memref(%arg0: memref<2xi
   %2:2 = bufferization.dealloc (%base_buffer : memref<i32>) if (%arg1) retain (%arg0, %arg2 : memref<2xi32>, memref<2xi32>)
   // multiple must-alias
   %3 = memref.subview %arg0[0][1][1] : memref<2xi32> to memref<i32>
-  %4 = memref.subview %arg0[1][1][1] : memref<2xi32> to memref<1xi32, strided<[1], offset: 1>>
+  %4 = memref.subview %arg0[1][1][1] : memref<2xi32> to memref<1xi32, strided<[1]>>
   %alloc = memref.alloc() : memref<2xi32>
-  %5:3 = bufferization.dealloc (%base_buffer, %4 : memref<i32>, memref<1xi32, strided<[1], offset: 1>>) if (%arg1, %arg3) retain (%arg0, %alloc, %3 : memref<2xi32>, memref<2xi32>, memref<i32>)
+  %5:3 = bufferization.dealloc (%base_buffer, %4 : memref<i32>, memref<1xi32, strided<[1]>>) if (%arg1, %arg3) retain (%arg0, %alloc, %3 : memref<2xi32>, memref<2xi32>, memref<i32>)
   return %0, %1, %2#0, %2#1, %5#0, %5#1, %5#2 : i1, i1, i1, i1, i1, i1, i1
 }
 

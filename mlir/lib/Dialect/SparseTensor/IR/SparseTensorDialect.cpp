@@ -1626,10 +1626,10 @@ static LogicalResult inferSparseBufferType(ValueRange ops, DictionaryAttr attr,
   SmallVector<int64_t> bufShape = stt.getBatchLvlShape();
   bufShape.push_back(ShapedType::kDynamic);
 
-  auto layout = withStride ? StridedLayoutAttr::StridedLayoutAttr::get(
-                                 stt.getContext(), ShapedType::kDynamic,
-                                 {ShapedType::kDynamic})
-                           : StridedLayoutAttr();
+  auto layout = withStride
+                    ? StridedLayoutAttr::get(stt.getContext(),
+                                             {ShapedType::kDynamic})
+                    : StridedLayoutAttr();
   ret.emplace_back(MemRefType::get(bufShape, elemTp, layout));
   return success();
 }

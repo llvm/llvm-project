@@ -125,10 +125,10 @@ static bool isScalarSlice(memref::ReinterpretCastOp rc) {
 ///   %view = memref.reinterpret_cast %base
 ///     to offset: [%off], sizes: [1, ..., 1], strides: [N, ..., 1]
 ///       : memref<1x...xNxf32>
-///         to memref<1x...x1xf32, strided<[N, ..., 1], offset: ?>>
+///         to memref<1x...x1xf32, strided<[N, ..., 1]>>
 ///   memref.copy %src, %view
 ///     : memref<1x...x1xf32>
-///       to memref<1x...x1xf32, strided<[N, ..., 1], offset: ?>>
+///       to memref<1x...x1xf32, strided<[N, ..., 1]>>
 ///
 /// AFTER
 ///   %c0 = arith.constant 0 : index
@@ -139,10 +139,10 @@ static bool isScalarSlice(memref::ReinterpretCastOp rc) {
 ///   %view = memref.reinterpret_cast %base
 ///     to offset: [%off], sizes: [1, ..., 1], strides: [1, ..., N]
 ///       : memref<Nx...x1xf32>
-///         to memref<1x...x1xf32, strided<[1, ..., N], offset: ?>>
+///         to memref<1x...x1xf32, strided<[1, ..., N]>>
 ///   memref.copy %src, %view
 ///     : memref<1x...x1xf32>
-///       to memref<1x...x1xf32, strided<[1, ..., N], offset: ?>>
+///       to memref<1x...x1xf32, strided<[1, ..., N]>>
 ///
 /// AFTER
 ///   %c0 = arith.constant 0 : index

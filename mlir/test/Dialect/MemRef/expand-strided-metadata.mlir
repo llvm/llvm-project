@@ -1,8 +1,8 @@
 // RUN: mlir-opt --expand-strided-metadata -split-input-file %s -o - | FileCheck %s
 
 // CHECK-LABEL: func @extract_strided_metadata_constants
-//  CHECK-SAME: (%[[ARG:.*]]: memref<5x4xf32, strided<[4, 1], offset: 2>>)
-func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4, 1], offset: 2>>)
+//  CHECK-SAME: (%[[ARG:.*]]: memref<5x4xf32, strided<[4, 1]>>)
+func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4, 1]>>)
     -> (memref<f32>, index, index, index, index, index) {
   //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
   //   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
@@ -11,7 +11,7 @@ func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4,
 
   //       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
   %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %base :
-    memref<5x4xf32, strided<[4,1], offset:2>>
+    memref<5x4xf32, strided<[4,1]>>
     -> memref<f32>, index, index, index, index, index
 
   // CHECK: %[[BASE]], %[[C2]], %[[C5]], %[[C4]], %[[C4]], %[[C1]]
@@ -41,7 +41,7 @@ func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4,
 // CHECK-DAG: #[[$STRIDE_MAP:.*]] = affine_map<()[s0, s1] -> (s0 * s1)>
 // CHECK-DAG: #[[$OFFSET_MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5, s6] -> (s0 + s1 * s2 + s3 * s4 + s5 * s6)>
 // CHECK-LABEL: func @simplify_subview_all_dynamic
-//  CHECK-SAME: (%[[ARG:.*]]: memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>, %[[DYN_OFFSET0:.*]]: index, %[[DYN_OFFSET1:.*]]: index, %[[DYN_OFFSET2:.*]]: index, %[[DYN_SIZE0:.*]]: index, %[[DYN_SIZE1:.*]]: index, %[[DYN_SIZE2:.*]]: index, %[[DYN_STRIDE0:.*]]: index, %[[DYN_STRIDE1:.*]]: index, %[[DYN_STRIDE2:.*]]: index)
+//  CHECK-SAME: (%[[ARG:.*]]: memref<?x?x?xf32, strided<[?, ?, ?]>>, %[[DYN_OFFSET0:.*]]: index, %[[DYN_OFFSET1:.*]]: index, %[[DYN_OFFSET2:.*]]: index, %[[DYN_SIZE0:.*]]: index, %[[DYN_SIZE1:.*]]: index, %[[DYN_SIZE2:.*]]: index, %[[DYN_STRIDE0:.*]]: index, %[[DYN_STRIDE1:.*]]: index, %[[DYN_STRIDE2:.*]]: index)
 //
 //   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[ARG]]
 //
@@ -55,19 +55,19 @@ func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4,
 //
 //       CHECK: return %[[RES]]
 func.func @simplify_subview_all_dynamic(
-    %base: memref<?x?x?xf32, strided<[?,?,?], offset:?>>,
+    %base: memref<?x?x?xf32, strided<[?,?,?]>>,
     %offset0: index, %offset1: index, %offset2: index,
     %size0: index, %size1: index, %size2: index,
     %stride0: index, %stride1: index, %stride2: index)
-    -> memref<?x?x?xf32, strided<[?,?,?], offset:?>> {
+    -> memref<?x?x?xf32, strided<[?,?,?]>> {
 
   %subview = memref.subview %base[%offset0, %offset1, %offset2]
                                  [%size0, %size1, %size2]
                                  [%stride0, %stride1, %stride2] :
-    memref<?x?x?xf32, strided<[?,?,?], offset: ?>> to
-      memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+    memref<?x?x?xf32, strided<[?,?,?]>> to
+      memref<?x?x?xf32, strided<[?, ?, ?]>>
 
-  return %subview : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  return %subview : memref<?x?x?xf32, strided<[?, ?, ?]>>
 }
 
 // -----
@@ -103,10 +103,10 @@ func.func @extract_strided_metadata_of_subview(%base: memref<5x4xf32>)
     -> (memref<f32>, index, index, index, index, index) {
 
   %subview = memref.subview %base[0, 2][2, 2][1, 1] :
-    memref<5x4xf32> to memref<2x2xf32, strided<[4, 1], offset: 2>>
+    memref<5x4xf32> to memref<2x2xf32, strided<[4, 1]>>
 
   %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %subview :
-    memref<2x2xf32, strided<[4,1], offset:2>>
+    memref<2x2xf32, strided<[4,1]>>
     -> memref<f32>, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
@@ -148,10 +148,10 @@ func.func @extract_strided_metadata_of_subview_with_dynamic_size(
     -> (memref<f32>, index, index, index, index, index, index, index) {
 
   %subview = memref.subview %base[3, 4, 2][%size, 6, 3][1, 1, 1] :
-    memref<8x16x24xf32> to memref<?x6x3xf32, strided<[384, 24, 1], offset: 1250>>
+    memref<8x16x24xf32> to memref<?x6x3xf32, strided<[384, 24, 1]>>
 
   %base_buffer, %offset, %sizes:3, %strides:3 = memref.extract_strided_metadata %subview :
-    memref<?x6x3xf32, strided<[384, 24, 1], offset: 1250>>
+    memref<?x6x3xf32, strided<[384, 24, 1]>>
     -> memref<f32>, index, index, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %sizes#2, %strides#0, %strides#1, %strides#2 :
@@ -194,10 +194,10 @@ func.func @extract_strided_metadata_of_rank_reduced_subview(%base: memref<8x16x2
     -> (memref<f32>, index, index, index, index, index) {
 
   %subview = memref.subview %base[3, 4, 2][1, 6, 3][1, 1, 1] :
-    memref<8x16x24xf32> to memref<6x3xf32, strided<[24, 1], offset: 1250>>
+    memref<8x16x24xf32> to memref<6x3xf32, strided<[24, 1]>>
 
   %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %subview :
-    memref<6x3xf32, strided<[24, 1], offset: 1250>>
+    memref<6x3xf32, strided<[24, 1]>>
     -> memref<f32>, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
@@ -244,10 +244,10 @@ func.func @extract_strided_metadata_of_rank_reduced_subview_w_variable_strides(
     -> (memref<f32>, index, index, index, index, index) {
 
   %subview = memref.subview %base[3, 4, 2][1, 6, 3][1, %stride, 1] :
-    memref<8x16x24xf32> to memref<6x3xf32, strided<[?, 1], offset: 1250>>
+    memref<8x16x24xf32> to memref<6x3xf32, strided<[?, 1]>>
 
   %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %subview :
-    memref<6x3xf32, strided<[?, 1], offset: 1250>>
+    memref<6x3xf32, strided<[?, 1]>>
     -> memref<f32>, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
@@ -288,10 +288,10 @@ func.func @extract_strided_metadata_of_subview_w_variable_offset(
     -> (memref<f32>, index, index, index, index, index) {
 
   %subview = memref.subview %arg0[%arg1, %arg2] [64, 64] [1, 1] :
-    memref<384x128xf32> to memref<64x64xf32, strided<[128, 1], offset: ?>>
+    memref<384x128xf32> to memref<64x64xf32, strided<[128, 1]>>
 
   %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %subview :
-  memref<64x64xf32, strided<[128, 1], offset: ?>> -> memref<f32>, index, index, index, index, index
+  memref<64x64xf32, strided<[128, 1]>> -> memref<f32>, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
     memref<f32>, index, index, index, index, index
@@ -318,7 +318,7 @@ func.func @extract_strided_metadata_of_subview_w_variable_offset(
 // CHECK-DAG: #[[$STRIDE_MAP:.*]] = affine_map<()[s0, s1] -> (s0 * s1)>
 // CHECK-DAG: #[[$OFFSET_MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5, s6] -> (s0 + s1 * s2 + s3 * s4 + s5 * s6)>
 // CHECK-LABEL: func @extract_strided_metadata_of_subview_all_dynamic
-//  CHECK-SAME: (%[[ARG:.*]]: memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>, %[[DYN_OFFSET0:.*]]: index, %[[DYN_OFFSET1:.*]]: index, %[[DYN_OFFSET2:.*]]: index, %[[DYN_SIZE0:.*]]: index, %[[DYN_SIZE1:.*]]: index, %[[DYN_SIZE2:.*]]: index, %[[DYN_STRIDE0:.*]]: index, %[[DYN_STRIDE1:.*]]: index, %[[DYN_STRIDE2:.*]]: index)
+//  CHECK-SAME: (%[[ARG:.*]]: memref<?x?x?xf32, strided<[?, ?, ?]>>, %[[DYN_OFFSET0:.*]]: index, %[[DYN_OFFSET1:.*]]: index, %[[DYN_OFFSET2:.*]]: index, %[[DYN_SIZE0:.*]]: index, %[[DYN_SIZE1:.*]]: index, %[[DYN_SIZE2:.*]]: index, %[[DYN_STRIDE0:.*]]: index, %[[DYN_STRIDE1:.*]]: index, %[[DYN_STRIDE2:.*]]: index)
 //
 //   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[ARG]]
 //
@@ -330,7 +330,7 @@ func.func @extract_strided_metadata_of_subview_w_variable_offset(
 //
 //       CHECK: return %[[BASE]], %[[FINAL_OFFSET]], %[[DYN_SIZE0]], %[[DYN_SIZE1]], %[[DYN_SIZE2]], %[[FINAL_STRIDE0]], %[[FINAL_STRIDE1]], %[[FINAL_STRIDE2]]
 func.func @extract_strided_metadata_of_subview_all_dynamic(
-    %base: memref<?x?x?xf32, strided<[?,?,?], offset:?>>,
+    %base: memref<?x?x?xf32, strided<[?,?,?]>>,
     %offset0: index, %offset1: index, %offset2: index,
     %size0: index, %size1: index, %size2: index,
     %stride0: index, %stride1: index, %stride2: index)
@@ -339,11 +339,11 @@ func.func @extract_strided_metadata_of_subview_all_dynamic(
   %subview = memref.subview %base[%offset0, %offset1, %offset2]
                                  [%size0, %size1, %size2]
                                  [%stride0, %stride1, %stride2] :
-    memref<?x?x?xf32, strided<[?,?,?], offset: ?>> to
-      memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+    memref<?x?x?xf32, strided<[?,?,?]>> to
+      memref<?x?x?xf32, strided<[?, ?, ?]>>
 
   %base_buffer, %offset, %sizes:3, %strides:3 = memref.extract_strided_metadata %subview :
-    memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+    memref<?x?x?xf32, strided<[?, ?, ?]>>
     -> memref<f32>, index, index, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %sizes#2, %strides#0, %strides#1, %strides#2 :
@@ -394,7 +394,7 @@ func.func @extract_strided_metadata_of_subview_all_dynamic(
 //  CHECK-SAME: (%[[ARG:.*]]: memref<?x?xf32,
 //  CHECK-SAME: %[[SIZE0:.*]]: index,  %[[SIZE1:.*]]: index)
 //
-//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<?x?xf32, strided<[?, ?], offset: ?>> -> memref<f32>, index, index, index, index, index
+//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<?x?xf32, strided<[?, ?]>> -> memref<f32>, index, index, index, index, index
 //
 //   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.apply #[[$DIM0_STRIDE_MAP]]()[%[[STRIDES]]#0]
 //   CHECK-DAG: %[[DYN_STRIDE1:.*]] = affine.apply #[[$DIM1_STRIDE_MAP]]()[%[[STRIDES]]#0]
@@ -407,16 +407,16 @@ func.func @extract_strided_metadata_of_subview_all_dynamic(
 //
 //   CHECK: return %[[REINTERPRET_CAST]]
 func.func @simplify_expand_shape(
-    %base: memref<?x?xf32, strided<[?,?], offset:?>>,
+    %base: memref<?x?xf32, strided<[?,?]>>,
     %sz0: index, %sz1: index)
-    -> memref<?x7x8x9x10x2x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?], offset: ?>> {
+    -> memref<?x7x8x9x10x2x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?]>> {
 
   %expand_shape = memref.expand_shape %base [[0, 1, 2, 3],[4, 5, 6, 7]] output_shape [%sz0, 7, 8, 9, 10, 2, %sz1, 3] :
-    memref<?x?xf32, strided<[?,?], offset: ?>> into
-      memref<?x7x8x9x10x2x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?], offset: ?>>
+    memref<?x?xf32, strided<[?,?]>> into
+      memref<?x7x8x9x10x2x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?]>>
 
   return %expand_shape :
-    memref<?x7x8x9x10x2x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?], offset: ?>>
+    memref<?x7x8x9x10x2x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?]>>
 }
 
 // -----
@@ -540,7 +540,7 @@ func.func @extract_strided_metadata_of_expand_shape_all_static(
 //   CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
 //   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
 //
-//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<?x?xf32, strided<[?, ?], offset: ?>> -> memref<f32>, index, index, index, index, index
+//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<?x?xf32, strided<[?, ?]>> -> memref<f32>, index, index, index, index, index
 //
 //   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.apply #[[$DIM0_STRIDE_MAP]]()[%[[SIZE1]], %[[STRIDES]]#0]
 //   CHECK-DAG: %[[DYN_STRIDE1:.*]] = affine.apply #[[$DIM1_STRIDE_MAP]]()[%[[STRIDES]]#0]
@@ -551,18 +551,18 @@ func.func @extract_strided_metadata_of_expand_shape_all_static(
 
 //   CHECK: return %[[BASE]], %[[OFFSET]], %[[SIZE0]], %[[SIZE1]], %[[C8]], %[[C9]], %[[C10]], %[[SIZE2]], %[[SIZE3]], %[[C3]], %[[DYN_STRIDE0]], %[[DYN_STRIDE1]], %[[DYN_STRIDE2]], %[[STRIDES]]#0, %[[DYN_STRIDE4]], %[[DYN_STRIDE5]], %[[DYN_STRIDE6]], %[[STRIDES]]#1 : memref<f32>, index, index, index, index, index, index, index, index, index, index, index, index, index
 func.func @extract_strided_metadata_of_expand_shape_all_dynamic(
-    %base: memref<?x?xf32, strided<[?,?], offset:?>>,
+    %base: memref<?x?xf32, strided<[?,?]>>,
     %sz0: index, %sz1: index, %sz2: index, %sz3: index)
     -> (memref<f32>, index,
        index, index, index, index, index, index, index, index,
        index, index, index, index, index, index, index, index) {
 
   %expand_shape = memref.expand_shape %base[[0, 1, 2, 3],[4, 5, 6, 7]] output_shape [%sz0, %sz1, 8, 9, 10, %sz2, %sz3, 3] :
-    memref<?x?xf32, strided<[?,?], offset: ?>> into
-      memref<?x?x8x9x10x?x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?], offset: ?>>
+    memref<?x?xf32, strided<[?,?]>> into
+      memref<?x?x8x9x10x?x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?]>>
 
   %base_buffer, %offset, %sizes:8, %strides:8 = memref.extract_strided_metadata %expand_shape :
-    memref<?x?x8x9x10x?x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?], offset: ?>>
+    memref<?x?x8x9x10x?x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?]>>
     -> memref<f32>, index,
        index, index, index, index, index, index, index, index,
        index, index, index, index, index, index, index, index
@@ -586,24 +586,24 @@ func.func @extract_strided_metadata_of_expand_shape_all_dynamic(
 // of the expand_shape is empty, the handling of such shape hits a corner
 // case.
 // CHECK-LABEL: func @extract_strided_metadata_of_expand_shape_all_static_0_rank
-//  CHECK-SAME: (%[[ARG:.*]]: memref<i16, strided<[], offset: ?>>)
+//  CHECK-SAME: (%[[ARG:.*]]: memref<i16, strided<[]>>)
 //
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 //
-//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]] = memref.extract_strided_metadata %[[ARG]] : memref<i16, strided<[], offset: ?>> -> memref<i16>, index
+//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]] = memref.extract_strided_metadata %[[ARG]] : memref<i16, strided<[]>> -> memref<i16>, index
 //
 //   CHECK: return %[[BASE]], %[[OFFSET]], %[[C1]], %[[C1]], %[[C1]], %[[C1]], %[[C1]], %[[C1]], %[[C1]], %[[C1]], %[[C1]], %[[C1]] : memref<i16>, index, index, index, index, index, index, index, index, index, index, index
 func.func @extract_strided_metadata_of_expand_shape_all_static_0_rank(
-    %arg : memref<i16, strided<[], offset: ?>>)
+    %arg : memref<i16, strided<[]>>)
     -> (memref<i16>, index,
        index, index, index, index, index,
        index, index, index, index, index) {
 
   %expand_shape = memref.expand_shape %arg[] output_shape [1, 1, 1, 1, 1] :
-    memref<i16, strided<[], offset: ?>> into memref<1x1x1x1x1xi16, strided<[1,1,1,1,1], offset: ?>>
+    memref<i16, strided<[]>> into memref<1x1x1x1x1xi16, strided<[1,1,1,1,1]>>
 
   %base, %offset, %sizes:5, %strides:5 = memref.extract_strided_metadata %expand_shape :
-    memref<1x1x1x1x1xi16, strided<[1,1,1,1,1], offset: ?>>
+    memref<1x1x1x1x1xi16, strided<[1,1,1,1,1]>>
     -> memref<i16>, index,
        index, index, index, index, index,
        index, index, index, index, index
@@ -958,18 +958,18 @@ func.func @simplify_collapse_with_dim_of_size1(%arg0: memref<3x1xf32, strided<[2
 // CHECK-LABEL: func @simplify_collapse_with_dim_of_size1_and_non_1_stride(
 //  CHECK-SAME: %[[ARG:.*]]: memref<1x1xi32, strided<[2, 1]
 //
-//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<1x1xi32, strided<[2, 1], offset: ?>>
+//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<1x1xi32, strided<[2, 1]>>
 //
 //       CHECK: %[[COLLAPSE_VIEW:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[OFFSET]]], sizes: [1], strides: [2]
 func.func @simplify_collapse_with_dim_of_size1_and_non_1_stride
-    (%arg0: memref<1x1xi32, strided<[2, 1], offset: ?>>)
-    -> memref<1xi32, strided<[2], offset: ?>> {
+    (%arg0: memref<1x1xi32, strided<[2, 1]>>)
+    -> memref<1xi32, strided<[2]>> {
 
   %collapse_shape = memref.collapse_shape %arg0 [[0, 1]] :
-    memref<1x1xi32, strided<[2, 1], offset: ?>>
-    into memref<1xi32, strided<[2], offset: ?>>
+    memref<1x1xi32, strided<[2, 1]>>
+    into memref<1xi32, strided<[2]>>
 
-  return %collapse_shape : memref<1xi32, strided<[2], offset: ?>>
+  return %collapse_shape : memref<1xi32, strided<[2]>>
 }
 
 // -----
@@ -999,18 +999,18 @@ func.func @simplify_collapse_with_dim_of_size1_and_non_1_stride
 // CHECK-LABEL: func @simplify_collapse_with_dim_of_size1_and_resulting_dyn_stride(
 //  CHECK-SAME: %[[ARG:.*]]: memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2]
 //
-//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:5, %[[STRIDES:.*]]:5 = memref.extract_strided_metadata %[[ARG]] : memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2], offset: ?>>
+//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:5, %[[STRIDES:.*]]:5 = memref.extract_strided_metadata %[[ARG]] : memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2]>>
 //
 //       CHECK: %[[COLLAPSE_VIEW:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[OFFSET]]], sizes: [6, 1], strides: [%[[STRIDES]]#1, %[[STRIDES]]#2]
 func.func @simplify_collapse_with_dim_of_size1_and_resulting_dyn_stride
-    (%arg0: memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2], offset: ?>>)
-    -> memref<6x1xi32, strided<[?, ?], offset: ?>> {
+    (%arg0: memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2]>>)
+    -> memref<6x1xi32, strided<[?, ?]>> {
 
   %collapse_shape = memref.collapse_shape %arg0 [[0, 1], [2, 3, 4]] :
-    memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2], offset: ?>>
-    into memref<6x1xi32, strided<[?, ?], offset: ?>>
+    memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2]>>
+    into memref<6x1xi32, strided<[?, ?]>>
 
-  return %collapse_shape : memref<6x1xi32, strided<[?, ?], offset: ?>>
+  return %collapse_shape : memref<6x1xi32, strided<[?, ?]>>
 }
 
 // -----
@@ -1128,13 +1128,13 @@ func.func @extract_strided_metadata_of_extract_strided_metadata(%arg : memref<i3
 // should come straight from the inputs of the reinterpret_cast.
 //
 // CHECK-LABEL: func @extract_strided_metadata_of_reinterpret_cast
-//  CHECK-SAME: %[[ARG:.*]]: memref<?x?xi32, strided<[?, ?], offset: ?>>, %[[DYN_OFFSET:.*]]: index, %[[DYN_SIZE0:.*]]: index, %[[DYN_SIZE1:.*]]: index, %[[DYN_STRIDE0:.*]]: index, %[[DYN_STRIDE1:.*]]: index)
+//  CHECK-SAME: %[[ARG:.*]]: memref<?x?xi32, strided<[?, ?]>>, %[[DYN_OFFSET:.*]]: index, %[[DYN_SIZE0:.*]]: index, %[[DYN_SIZE1:.*]]: index, %[[DYN_STRIDE0:.*]]: index, %[[DYN_STRIDE1:.*]]: index)
 //
 //       CHECK: %[[BASE:.*]], %{{.*}}, %{{.*}}:2, %{{.*}}:2 = memref.extract_strided_metadata %[[ARG]]
 //
 //       CHECK: return %[[BASE]], %[[DYN_OFFSET]], %[[DYN_SIZE0]], %[[DYN_SIZE1]], %[[DYN_STRIDE0]], %[[DYN_STRIDE1]]
 func.func @extract_strided_metadata_of_reinterpret_cast(
-  %arg : memref<?x?xi32, strided<[?, ?], offset:?>>,
+  %arg : memref<?x?xi32, strided<[?, ?]>>,
   %offset: index,
   %size0 : index, %size1 : index,
   %stride0 : index, %stride1 : index)
@@ -1147,11 +1147,11 @@ func.func @extract_strided_metadata_of_reinterpret_cast(
       offset: [%offset],
       sizes: [%size0, %size1],
       strides: [%stride0, %stride1] :
-      memref<?x?xi32, strided<[?, ?], offset: ?>> to
-      memref<?x?xi32, strided<[?, ?], offset: ?>>
+      memref<?x?xi32, strided<[?, ?]>> to
+      memref<?x?xi32, strided<[?, ?]>>
 
   %base, %base_offset, %sizes:2, %strides:2 =
-    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?], offset: ?>>
+    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?]>>
     -> memref<i32>, index,
        index, index,
        index, index
@@ -1193,10 +1193,10 @@ func.func @extract_strided_metadata_of_reinterpret_cast_unranked(
       sizes: [%size0, %size1],
       strides: [%stride0, %stride1] :
       memref<*xi32> to
-      memref<?x?xi32, strided<[?, ?], offset: ?>>
+      memref<?x?xi32, strided<[?, ?]>>
 
   %base, %base_offset, %sizes:2, %strides:2 =
-    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?], offset: ?>>
+    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?]>>
     -> memref<i32>, index,
        index, index,
        index, index
@@ -1215,13 +1215,13 @@ func.func @extract_strided_metadata_of_reinterpret_cast_unranked(
 // we handle 0-D properly.
 //
 // CHECK-LABEL: func @extract_strided_metadata_of_reinterpret_cast_rank0
-//  CHECK-SAME: %[[ARG:.*]]: memref<i32, strided<[], offset: ?>>, %[[DYN_OFFSET:.*]]: index, %[[DYN_SIZE0:.*]]: index, %[[DYN_SIZE1:.*]]: index, %[[DYN_STRIDE0:.*]]: index, %[[DYN_STRIDE1:.*]]: index)
+//  CHECK-SAME: %[[ARG:.*]]: memref<i32, strided<[]>>, %[[DYN_OFFSET:.*]]: index, %[[DYN_SIZE0:.*]]: index, %[[DYN_SIZE1:.*]]: index, %[[DYN_STRIDE0:.*]]: index, %[[DYN_STRIDE1:.*]]: index)
 //
 //       CHECK: %[[BASE:.*]], %[[BASE_OFFSET:.*]] = memref.extract_strided_metadata %[[ARG]]
 //
 //       CHECK: return %[[BASE]], %[[DYN_OFFSET]], %[[DYN_SIZE0]], %[[DYN_SIZE1]], %[[DYN_STRIDE0]], %[[DYN_STRIDE1]]
 func.func @extract_strided_metadata_of_reinterpret_cast_rank0(
-  %arg : memref<i32, strided<[], offset:?>>,
+  %arg : memref<i32, strided<[]>>,
   %offset: index,
   %size0 : index, %size1 : index,
   %stride0 : index, %stride1 : index)
@@ -1234,11 +1234,11 @@ func.func @extract_strided_metadata_of_reinterpret_cast_rank0(
       offset: [%offset],
       sizes: [%size0, %size1],
       strides: [%stride0, %stride1] :
-      memref<i32, strided<[], offset: ?>> to
-      memref<?x?xi32, strided<[?, ?], offset: ?>>
+      memref<i32, strided<[]>> to
+      memref<?x?xi32, strided<[?, ?]>>
 
   %base, %base_offset, %sizes:2, %strides:2 =
-    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?], offset: ?>>
+    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?]>>
     -> memref<i32>, index,
        index, index,
        index, index
@@ -1291,15 +1291,15 @@ func.func @extract_strided_metadata_of_get_global()
 // CHECK-LABEL: func @extract_strided_metadata_of_get_global_with_strides()
 //       CHECK:   %[[GET_GLOBAL:.+]] = memref.get_global @const_i32
 //       CHECK:   memref.extract_strided_metadata %[[GET_GLOBAL]]
-memref.global "private" constant @const_i32 : memref<512x384xi32, strided<[420, 1], offset: 0>> = dense<42>
+memref.global "private" constant @const_i32 : memref<512x384xi32, strided<[420, 1]>> = dense<42>
 
 func.func @extract_strided_metadata_of_get_global_with_strides()
     -> (memref<i32>, index, index, index, index, index) {
 
-  %A = memref.get_global @const_i32 : memref<512x384xi32, strided<[420, 1], offset: 0>>
+  %A = memref.get_global @const_i32 : memref<512x384xi32, strided<[420, 1]>>
 
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %A :
-    memref<512x384xi32, strided<[420, 1], offset: 0>>
+    memref<512x384xi32, strided<[420, 1]>>
     -> memref<i32>, index, index, index, index, index
 
   return %base, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
@@ -1315,15 +1315,15 @@ func.func @extract_strided_metadata_of_get_global_with_strides()
 // CHECK-LABEL: func @extract_strided_metadata_of_get_global_with_offset()
 //       CHECK:   %[[GET_GLOBAL:.+]] = memref.get_global @const_i32
 //       CHECK:   memref.extract_strided_metadata %[[GET_GLOBAL]]
-memref.global "private" constant @const_i32 : memref<512x384xi32, strided<[384, 1], offset: 20>> = dense<42>
+memref.global "private" constant @const_i32 : memref<512x384xi32, strided<[384, 1]>> = dense<42>
 
 func.func @extract_strided_metadata_of_get_global_with_offset()
     -> (memref<i32>, index, index, index, index, index) {
 
-  %A = memref.get_global @const_i32 : memref<512x384xi32, strided<[384, 1], offset: 20>>
+  %A = memref.get_global @const_i32 : memref<512x384xi32, strided<[384, 1]>>
 
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %A :
-    memref<512x384xi32, strided<[384, 1], offset: 20>>
+    memref<512x384xi32, strided<[384, 1]>>
     -> memref<i32>, index, index, index, index, index
 
   return %base, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :

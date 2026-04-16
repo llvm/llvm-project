@@ -623,9 +623,9 @@ module attributes {transform.with_named_sequence} {
 !vecA = vector<1x1x2xbf16>
 !vecB = vector<1x2x16xbf16>
 !vecC = vector<1x16xf32>
-!memrefA = memref<1x1x2xbf16, strided<[2048, 32, 1], offset: ?>>
-!memrefB = memref<1x2x32xbf16, strided<[2048, 64, 1], offset: ?>>
-!memrefC = memref<1x32xf32, strided<[64, 1], offset: ?>>
+!memrefA = memref<1x1x2xbf16, strided<[2048, 32, 1]>>
+!memrefB = memref<1x2x32xbf16, strided<[2048, 64, 1]>>
+!memrefC = memref<1x32xf32, strided<[64, 1]>>
 #map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
@@ -793,9 +793,9 @@ module attributes {transform.with_named_sequence} {
 !vecA = vector<1x1x4xi8>
 !vecB = vector<1x4x16xi8>
 !vecC = vector<1x16xi32>
-!memrefA = memref<1x2x4xi8, strided<[16384, 256, 1], offset: ?>>
-!memrefB = memref<1x4x32xi8, strided<[32768, 128, 1], offset: ?>>
-!memrefC = memref<2x32xi32, strided<[128, 1], offset: ?>>
+!memrefA = memref<1x2x4xi8, strided<[16384, 256, 1]>>
+!memrefB = memref<1x4x32xi8, strided<[32768, 128, 1]>>
+!memrefC = memref<2x32xi32, strided<[128, 1]>>
 
 #map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>

@@ -1538,7 +1538,7 @@ def OpenACC_FirstprivateRecipeOp
       %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
       %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
       %subview = memref.subview %original[%lb_outer, %lb_inner][%extent_outer, %extent_inner][1, 1]
-        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1], offset: ?>>
+        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1]>>
       // Copy subview to privatized...
       acc.terminator
     }
@@ -1656,13 +1656,13 @@ def OpenACC_ReductionRecipeOp
 
       // Create subviews to access only the slice portions
       %lhs_slice = memref.subview %lhs[%lb_outer, %lb_inner][%extent_outer, %extent_inner][1, 1]
-        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1], offset: ?>>
+        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1]>>
       %rhs_slice = memref.subview %rhs[%lb_outer, %lb_inner][%extent_outer, %extent_inner][1, 1]
-        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1], offset: ?>>
+        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1]>>
 
       // Combine only the slice portions
-      linalg.add ins(%lhs_slice, %rhs_slice : memref<?x?xf32, strided<[20, 1], offset: ?>>, memref<?x?xf32, strided<[20, 1], offset: ?>>)
-                 outs(%lhs_slice : memref<?x?xf32, strided<[20, 1], offset: ?>>)
+      linalg.add ins(%lhs_slice, %rhs_slice : memref<?x?xf32, strided<[20, 1]>>, memref<?x?xf32, strided<[20, 1]>>)
+                 outs(%lhs_slice : memref<?x?xf32, strided<[20, 1]>>)
       acc.yield %lhs : memref<10x20xf32>
     }
 

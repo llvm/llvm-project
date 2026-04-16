@@ -14,7 +14,7 @@ func.func @store_1D_vector(%vec: vector<8xf32>,
 // CHECK:       %[[ELEM_BYTES:.*]] = arith.constant 4 : index
 // CHECK:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], %[[OFFSET]], 0]
 // CHECK:       %[[BASE_BUFFER:.+]], %[[OFFSET1:.+]], %[[SIZES:.+]], %[[STRIDES:.+]] = memref.extract_strided_metadata %[[COLLAPSED]]
-// CHECK-SAME:    : memref<32xf32, strided<[1], offset: ?>> -> memref<f32>, index, index, index
+// CHECK-SAME:    : memref<32xf32, strided<[1]>> -> memref<f32>, index, index, index
 // CHECK:       %[[INTPTR:.+]] = memref.extract_aligned_pointer_as_index %[[BASE_BUFFER]]
 // CHECK-SAME:    : memref<f32> -> index
 // CHECK:       %[[MUL:.+]] = arith.muli %[[OFFSET1]], %[[ELEM_BYTES]] : index

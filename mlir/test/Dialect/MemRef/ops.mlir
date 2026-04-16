@@ -120,31 +120,31 @@ func.func @dma_ops() {
 
 // CHECK-LABEL: func @memref_reinterpret_cast
 func.func @memref_reinterpret_cast(%in: memref<?xf32>)
-    -> memref<10x?xf32, strided<[?, 1], offset: ?>> {
+    -> memref<10x?xf32, strided<[?, 1]>> {
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %out = memref.reinterpret_cast %in to
            offset: [%c0], sizes: [10, %c10], strides: [%c10, 1]
-           : memref<?xf32> to memref<10x?xf32, strided<[?, 1], offset: ?>>
-  return %out : memref<10x?xf32, strided<[?, 1], offset: ?>>
+           : memref<?xf32> to memref<10x?xf32, strided<[?, 1]>>
+  return %out : memref<10x?xf32, strided<[?, 1]>>
 }
 
 // CHECK-LABEL: func @memref_reinterpret_cast_static_to_dynamic_sizes
 func.func @memref_reinterpret_cast_static_to_dynamic_sizes(%in: memref<?xf32>)
-    -> memref<10x?xf32, strided<[?, 1], offset: ?>> {
+    -> memref<10x?xf32, strided<[?, 1]>> {
   %out = memref.reinterpret_cast %in to
            offset: [1], sizes: [10, 10], strides: [1, 1]
-           : memref<?xf32> to memref<10x?xf32, strided<[?, 1], offset: ?>>
-  return %out : memref<10x?xf32, strided<[?, 1], offset: ?>>
+           : memref<?xf32> to memref<10x?xf32, strided<[?, 1]>>
+  return %out : memref<10x?xf32, strided<[?, 1]>>
 }
 
 // CHECK-LABEL: func @memref_reinterpret_cast_dynamic_offset
 func.func @memref_reinterpret_cast_dynamic_offset(%in: memref<?xf32>, %offset: index)
-    -> memref<10x?xf32, strided<[?, 1], offset: ?>> {
+    -> memref<10x?xf32, strided<[?, 1]>> {
   %out = memref.reinterpret_cast %in to
            offset: [%offset], sizes: [10, 10], strides: [1, 1]
-           : memref<?xf32> to memref<10x?xf32, strided<[?, 1], offset: ?>>
-  return %out : memref<10x?xf32, strided<[?, 1], offset: ?>>
+           : memref<?xf32> to memref<10x?xf32, strided<[?, 1]>>
+  return %out : memref<10x?xf32, strided<[?, 1]>>
 }
 
 // CHECK-LABEL: func @memref_reshape(
@@ -211,18 +211,18 @@ func.func @memref_alloca_scope() {
 }
 
 // CHECK-LABEL: func @memref_cast(%arg0
-func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64x16x4xf32, strided<[64, 4, 1], offset: 0>>, %arg3 : memref<4x1x8xf32, strided<[32, 16, 1]>>, %arg4 : memref<4x?x8xf32, strided<[32, 8, 1]>>) {
+func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64x16x4xf32, strided<[64, 4, 1]>>, %arg3 : memref<4x1x8xf32, strided<[32, 16, 1]>>, %arg4 : memref<4x?x8xf32, strided<[32, 8, 1]>>) {
   // CHECK: memref.cast %{{.*}} : memref<4xf32> to memref<?xf32>
   %0 = memref.cast %arg0 : memref<4xf32> to memref<?xf32>
 
   // CHECK: memref.cast %{{.*}} : memref<?xf32> to memref<4xf32>
   %1 = memref.cast %arg1 : memref<?xf32> to memref<4xf32>
 
-  // CHECK: memref.cast %{{.*}} : memref<64x16x4xf32, strided<[64, 4, 1]>> to memref<64x16x4xf32, strided<[?, ?, ?], offset: ?>>
-  %2 = memref.cast %arg2 : memref<64x16x4xf32, strided<[64, 4, 1], offset: 0>> to memref<64x16x4xf32, strided<[?, ?, ?], offset: ?>>
+  // CHECK: memref.cast %{{.*}} : memref<64x16x4xf32, strided<[64, 4, 1]>> to memref<64x16x4xf32, strided<[?, ?, ?]>>
+  %2 = memref.cast %arg2 : memref<64x16x4xf32, strided<[64, 4, 1]>> to memref<64x16x4xf32, strided<[?, ?, ?]>>
 
-  // CHECK: memref.cast {{%.*}} : memref<64x16x4xf32, strided<[?, ?, ?], offset: ?>> to memref<64x16x4xf32, strided<[64, 4, 1]>>
-  %3 = memref.cast %2 : memref<64x16x4xf32, strided<[?, ?, ?], offset: ?>> to memref<64x16x4xf32, strided<[64, 4, 1], offset: 0>>
+  // CHECK: memref.cast {{%.*}} : memref<64x16x4xf32, strided<[?, ?, ?]>> to memref<64x16x4xf32, strided<[64, 4, 1]>>
+  %3 = memref.cast %2 : memref<64x16x4xf32, strided<[?, ?, ?]>> to memref<64x16x4xf32, strided<[64, 4, 1]>>
 
   // CHECK: memref.cast %{{.*}} : memref<4xf32> to memref<*xf32>
   %4 = memref.cast %1 : memref<4xf32> to memref<*xf32>
@@ -322,13 +322,13 @@ func.func @expand_collapse_shape_static(
     %arg0: memref<3x4x5xf32>,
     %arg1: tensor<3x4x5xf32>,
     %arg2: tensor<3x?x5xf32>,
-    %arg3: memref<30x20xf32, strided<[4000, 2], offset: 100>>,
-    %arg4: memref<1x5xf32, strided<[5, 1], offset: ?>>,
+    %arg3: memref<30x20xf32, strided<[4000, 2]>>,
+    %arg4: memref<1x5xf32, strided<[5, 1]>>,
     %arg5: memref<f32>,
-    %arg6: memref<3x4x5xf32, strided<[240, 60, 10], offset: 0>>,
-    %arg7: memref<1x2049xi64, strided<[?, ?], offset: ?>>,
-    %arg8: memref<1x1x1024xi8, strided<[40960, 4096, 1], offset: 0>>,
-    %arg9: memref<24x1x1x1024xi8, strided<[40960, 40960, 4096, 1], offset: 0>>) {
+    %arg6: memref<3x4x5xf32, strided<[240, 60, 10]>>,
+    %arg7: memref<1x2049xi64, strided<[?, ?]>>,
+    %arg8: memref<1x1x1024xi8, strided<[40960, 4096, 1]>>,
+    %arg9: memref<24x1x1x1024xi8, strided<[40960, 40960, 4096, 1]>>) {
   // Reshapes that collapse and expand back a contiguous buffer.
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<3x4x5xf32> into memref<12x5xf32>
@@ -368,42 +368,42 @@ func.func @expand_collapse_shape_static(
 // Reshapes with a custom layout map.
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0], [1, 2]] output_shape [30, 4, 5]
   %l0 = memref.expand_shape %arg3 [[0], [1, 2]] output_shape [30, 4, 5] :
-      memref<30x20xf32, strided<[4000, 2], offset: 100>>
-      into memref<30x4x5xf32, strided<[4000, 10, 2], offset: 100>>
+      memref<30x20xf32, strided<[4000, 2]>>
+      into memref<30x4x5xf32, strided<[4000, 10, 2]>>
 
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1], [2]] output_shape [2, 15, 20]
   %l1 = memref.expand_shape %arg3 [[0, 1], [2]] output_shape [2, 15, 20] :
-      memref<30x20xf32, strided<[4000, 2], offset: 100>>
-      into memref<2x15x20xf32, strided<[60000, 4000, 2], offset: 100>>
+      memref<30x20xf32, strided<[4000, 2]>>
+      into memref<2x15x20xf32, strided<[60000, 4000, 2]>>
 
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0], [1, 2]] output_shape [1, 1, 5]
   %r4 = memref.expand_shape %arg4 [[0], [1, 2]] output_shape [1, 1, 5] :
-      memref<1x5xf32, strided<[5, 1], offset: ?>> into
-      memref<1x1x5xf32, strided<[5, 5, 1], offset: ?>>
+      memref<1x5xf32, strided<[5, 1]>> into
+      memref<1x1x5xf32, strided<[5, 5, 1]>>
 
   // Note: Only the collapsed two shapes are contiguous in the follow test case.
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
   %r6 = memref.collapse_shape %arg6 [[0, 1], [2]] :
-      memref<3x4x5xf32, strided<[240, 60, 10], offset: 0>> into
-      memref<12x5xf32, strided<[60, 10], offset: 0>>
+      memref<3x4x5xf32, strided<[240, 60, 10]>> into
+      memref<12x5xf32, strided<[60, 10]>>
 
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1]]
   %r7 = memref.collapse_shape %arg7 [[0, 1]] :
-      memref<1x2049xi64, strided<[?, ?], offset: ?>> into
-      memref<2049xi64, strided<[?], offset: ?>>
+      memref<1x2049xi64, strided<[?, ?]>> into
+      memref<2049xi64, strided<[?]>>
 
-    // %arg8: memref<1x1x1024xi8, strided<[40960, 4096, 1], offset: 0>>,
-    // %arg9: memref<24x1x1x1024xi8, strided<[40960, 40960, 4096, 1], offset: 0>>) {
+    // %arg8: memref<1x1x1024xi8, strided<[40960, 4096, 1]>>,
+    // %arg9: memref<24x1x1x1024xi8, strided<[40960, 40960, 4096, 1]>>) {
 
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1, 2]]
   %r8 = memref.collapse_shape %arg8 [[0, 1, 2]] :
-      memref<1x1x1024xi8, strided<[40960, 4096, 1], offset: 0>> into
-      memref<1024xi8, strided<[1], offset: 0>>
+      memref<1x1x1024xi8, strided<[40960, 4096, 1]>> into
+      memref<1024xi8, strided<[1]>>
 
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0], [1, 2, 3]]
   %r9 = memref.collapse_shape %arg9 [[0], [1, 2, 3]] :
-      memref<24x1x1x1024xi8, strided<[40960, 40960, 4096, 1], offset: 0>> into
-      memref<24x1024xi8, strided<[40960, 1], offset: 0>>
+      memref<24x1x1x1024xi8, strided<[40960, 40960, 4096, 1]>> into
+      memref<24x1024xi8, strided<[40960, 1]>>
 
   // Reshapes that expand and collapse back a contiguous buffer with some 1's.
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1], [2], [3, 4]] output_shape [1, 3, 4, 1, 5]
@@ -440,15 +440,15 @@ func.func @expand_collapse_shape_static(
 
 // CHECK-LABEL: func @expand_collapse_shape_dynamic
 func.func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
-         %arg1: memref<?x?x?xf32, strided<[?, ?, 1], offset: 0>>,
-         %arg2: memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>,
-         %arg3: memref<?x42xf32, strided<[42, 1], offset: 0>>,
+         %arg1: memref<?x?x?xf32, strided<[?, ?, 1]>>,
+         %arg2: memref<?x?x?xf32, strided<[?, ?, 1]>>,
+         %arg3: memref<?x42xf32, strided<[42, 1]>>,
          %arg4: index,
          %arg5: index,
          %arg6: index,
          %arg7: memref<4x?x4xf32>,
-         %arg8: memref<1x1x18x?xf32, strided<[?, ?, ?, 1], offset: ?>>,
-         %arg9: memref<3x3x1x96xf32, strided<[288, 96, 96, 1], offset: 864>>) {
+         %arg8: memref<1x1x18x?xf32, strided<[?, ?, ?, 1]>>,
+         %arg9: memref<3x3x1x96xf32, strided<[288, 96, 96, 1]>>) {
 
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?x?xf32> into memref<?x?xf32>
@@ -463,31 +463,31 @@ func.func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?x?xf32, strided<[?, ?, 1]>> into memref<?x?xf32, strided<[?, 1]>>
   %1 = memref.collapse_shape %arg1 [[0, 1], [2]] :
-    memref<?x?x?xf32, strided<[?, ?, 1], offset: 0>> into
-    memref<?x?xf32, strided<[?, 1], offset: 0>>
+    memref<?x?x?xf32, strided<[?, ?, 1]>> into
+    memref<?x?xf32, strided<[?, 1]>>
 
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1], [2]] output_shape [%arg4, 4, %arg5]
 //  CHECK-SAME:     memref<?x?xf32, strided<[?, 1]>> into memref<?x4x?xf32, strided<[?, ?, 1]>>
   %r1 = memref.expand_shape %1 [[0, 1], [2]] output_shape [%arg4, 4, %arg5] :
-    memref<?x?xf32, strided<[?, 1], offset: 0>> into
-    memref<?x4x?xf32, strided<[?, ?, 1], offset: 0>>
+    memref<?x?xf32, strided<[?, 1]>> into
+    memref<?x4x?xf32, strided<[?, ?, 1]>>
 
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
-//  CHECK-SAME:     memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>> into memref<?x?xf32, strided<[?, 1], offset: ?>>
+//  CHECK-SAME:     memref<?x?x?xf32, strided<[?, ?, 1]>> into memref<?x?xf32, strided<[?, 1]>>
   %2 = memref.collapse_shape %arg2 [[0, 1], [2]] :
-    memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>> into
-    memref<?x?xf32, strided<[?, 1], offset: ?>>
+    memref<?x?x?xf32, strided<[?, ?, 1]>> into
+    memref<?x?xf32, strided<[?, 1]>>
 
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1], [2]] output_shape [%arg4, 4, %arg5]
-//  CHECK-SAME:     memref<?x?xf32, strided<[?, 1], offset: ?>> into memref<?x4x?xf32, strided<[?, ?, 1], offset: ?>>
+//  CHECK-SAME:     memref<?x?xf32, strided<[?, 1]>> into memref<?x4x?xf32, strided<[?, ?, 1]>>
   %r2 = memref.expand_shape %2 [[0, 1], [2]] output_shape [%arg4, 4, %arg5] :
-    memref<?x?xf32, strided<[?, 1], offset: ?>> into
-    memref<?x4x?xf32, strided<[?, ?, 1], offset: ?>>
+    memref<?x?xf32, strided<[?, 1]>> into
+    memref<?x4x?xf32, strided<[?, ?, 1]>>
 
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1]]
 //  CHECK-SAME:     memref<?x42xf32, strided<[42, 1]>> into memref<?xf32, strided<[1]>>
   %3 = memref.collapse_shape %arg3 [[0, 1]] :
-    memref<?x42xf32, strided<[42, 1], offset: 0>> into
+    memref<?x42xf32, strided<[42, 1]>> into
     memref<?xf32, strided<[1]>>
 
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1]] output_shape [%arg6, 42]
@@ -500,14 +500,14 @@ func.func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
         : memref<4x?x4xf32> into memref<2x2x?x2x2xf32>
 
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2], [3]]
-//  CHECK-SAME:     memref<1x1x18x?xf32, strided<[?, ?, ?, 1], offset: ?>> into memref<1x18x?xf32, strided<[?, ?, 1], offset: ?>>
-  %5 = memref.collapse_shape %arg8 [[0, 1], [2], [3]] : memref<1x1x18x?xf32, strided<[?, ?, ?, 1], offset: ?>> into memref<1x18x?xf32, strided<[?, ?, 1], offset: ?>>
+//  CHECK-SAME:     memref<1x1x18x?xf32, strided<[?, ?, ?, 1]>> into memref<1x18x?xf32, strided<[?, ?, 1]>>
+  %5 = memref.collapse_shape %arg8 [[0, 1], [2], [3]] : memref<1x1x18x?xf32, strided<[?, ?, ?, 1]>> into memref<1x18x?xf32, strided<[?, ?, 1]>>
 
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0], [1, 2, 3]]
-//  CHECK-SAME:     memref<3x3x1x96xf32, strided<[288, 96, 96, 1], offset: 864>> into memref<3x288xf32, strided<[288, 1], offset: 864>>
+//  CHECK-SAME:     memref<3x3x1x96xf32, strided<[288, 96, 96, 1]>> into memref<3x288xf32, strided<[288, 1]>>
   %6 = memref.collapse_shape %arg9 [[0], [1, 2, 3]] :
-    memref<3x3x1x96xf32, strided<[288, 96, 96, 1], offset: 864>> into
-    memref<3x288xf32, strided<[288, 1], offset: 864>>
+    memref<3x3x1x96xf32, strided<[288, 96, 96, 1]>> into
+    memref<3x288xf32, strided<[288, 1]>>
   return
 }
 
@@ -535,24 +535,24 @@ func.func @collapse_shape_to_dynamic
 
 // CHECK-LABEL: func @expand_collapse_shape_transposed_layout
 func.func @expand_collapse_shape_transposed_layout(
-    %m0: memref<?x?xf32, strided<[1, 10], offset: 0>>,
-    %m1: memref<4x5x6xf32, strided<[1, ?, 1000], offset: 0>>,
+    %m0: memref<?x?xf32, strided<[1, 10]>>,
+    %m1: memref<4x5x6xf32, strided<[1, ?, 1000]>>,
     %sz0: index,
     %sz1: index) {
 
   %r0 = memref.expand_shape %m0 [[0], [1, 2]] output_shape [%sz0, %sz1, 5] :
-    memref<?x?xf32, strided<[1, 10], offset: 0>> into
-    memref<?x?x5xf32, strided<[1, 50, 10], offset: 0>>
+    memref<?x?xf32, strided<[1, 10]>> into
+    memref<?x?x5xf32, strided<[1, 50, 10]>>
   %rr0 = memref.collapse_shape %r0 [[0], [1, 2]] :
-    memref<?x?x5xf32, strided<[1, 50, 10], offset: 0>> into
-    memref<?x?xf32, strided<[1, 10], offset: 0>>
+    memref<?x?x5xf32, strided<[1, 50, 10]>> into
+    memref<?x?xf32, strided<[1, 10]>>
 
   %r1 = memref.expand_shape %m1 [[0, 1], [2], [3, 4]] output_shape [2, 2, 5, 2, 3] :
-    memref<4x5x6xf32, strided<[1, ?, 1000], offset: 0>> into
-    memref<2x2x5x2x3xf32, strided<[2, 1, ?, 3000, 1000], offset: 0>>
+    memref<4x5x6xf32, strided<[1, ?, 1000]>> into
+    memref<2x2x5x2x3xf32, strided<[2, 1, ?, 3000, 1000]>>
   %rr1 = memref.collapse_shape %r1 [[0, 1], [2], [3, 4]] :
-    memref<2x2x5x2x3xf32, strided<[2, 1, ?, 3000, 1000], offset: 0>> into
-    memref<4x5x6xf32, strided<[1, ?, 1000], offset: 0>>
+    memref<2x2x5x2x3xf32, strided<[2, 1, ?, 3000, 1000]>> into
+    memref<4x5x6xf32, strided<[1, ?, 1000]>>
   return
 }
 
@@ -594,7 +594,7 @@ func.func @generic_atomic_rmw(%I: memref<1x2xf32>, %i : index, %j : index) {
 // -----
 
 func.func @extract_strided_metadata(%memref : memref<10x?xf32>)
-  -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+  -> memref<?x?xf32, strided<[?, ?]>> {
 
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %memref
     : memref<10x?xf32> -> memref<f32>, index, index, index, index, index
@@ -603,9 +603,9 @@ func.func @extract_strided_metadata(%memref : memref<10x?xf32>)
       offset: [%offset],
       sizes: [%sizes#0, %sizes#1],
       strides: [%strides#0, %strides#1]
-    : memref<f32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+    : memref<f32> to memref<?x?xf32, strided<[?, ?]>>
 
-  return %m2: memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return %m2: memref<?x?xf32, strided<[?, ?]>>
 }
 
 // -----

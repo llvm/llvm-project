@@ -515,10 +515,10 @@ func.func @transfer_read_with_tensor(%arg: tensor<f32>) -> vector<1xf32> {
 // -----
 
 // CHECK-LABEL: transfer_write_scalable
-func.func @transfer_write_scalable(%arg0: memref<?xf32, strided<[?], offset: ?>>, %arg1: f32) {
+func.func @transfer_write_scalable(%arg0: memref<?xf32, strided<[?]>>, %arg1: f32) {
   %0 = llvm.mlir.constant(0 : i32) : i32
   %c0 = arith.constant 0 : index
-  %dim = memref.dim %arg0, %c0 : memref<?xf32, strided<[?], offset: ?>>
+  %dim = memref.dim %arg0, %c0 : memref<?xf32, strided<[?]>>
   %1 = llvm.intr.stepvector : vector<[16]xi32>
   %2 = arith.index_cast %dim : index to i32
   %3 = llvm.mlir.undef : vector<[16]xi32>
@@ -528,11 +528,11 @@ func.func @transfer_write_scalable(%arg0: memref<?xf32, strided<[?], offset: ?>>
   %7 = llvm.mlir.undef : vector<[16]xf32>
   %8 = llvm.insertelement %arg1, %7[%0 : i32] : vector<[16]xf32>
   %9 = llvm.shufflevector %8, %7 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<[16]xf32>
-  vector.transfer_write %9, %arg0[%c0], %6 {in_bounds = [true]} : vector<[16]xf32>, memref<?xf32, strided<[?], offset: ?>>
+  vector.transfer_write %9, %arg0[%c0], %6 {in_bounds = [true]} : vector<[16]xf32>, memref<?xf32, strided<[?]>>
   return
 }
 
-// CHECK-SAME:      %[[ARG_0:.*]]: memref<?xf32, strided<[?], offset: ?>>,
+// CHECK-SAME:      %[[ARG_0:.*]]: memref<?xf32, strided<[?]>>,
 // CHECK-DAG:       %[[C_0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[C_16:.*]] = arith.constant 16 : index
 // CHECK-DAG:       %[[STEP:.*]] = arith.constant 1 : index
@@ -543,7 +543,7 @@ func.func @transfer_write_scalable(%arg0: memref<?xf32, strided<[?], offset: ?>>
 // CHECK:             %[[MASK_VAL:.*]] = vector.extract %[[MASK_VEC]][%[[IDX]]] : i1 from vector<[16]xi1>
 // CHECK:             scf.if %[[MASK_VAL]] {
 // CHECK:               %[[VAL_TO_STORE:.*]] = vector.extract %{{.*}}[%[[IDX]]] : f32 from vector<[16]xf32>
-// CHECK:               memref.store %[[VAL_TO_STORE]], %[[ARG_0]][%[[IDX]]] : memref<?xf32, strided<[?], offset: ?>>
+// CHECK:               memref.store %[[VAL_TO_STORE]], %[[ARG_0]][%[[IDX]]] : memref<?xf32, strided<[?]>>
 // CHECK:             } else {
 // CHECK:             }
 // CHECK:           }

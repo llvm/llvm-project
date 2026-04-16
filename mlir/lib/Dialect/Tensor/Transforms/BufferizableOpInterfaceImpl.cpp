@@ -189,15 +189,15 @@ struct CollapseShapeOpInterface
         resultType = MemRefType::get({}, tensorResultType.getElementType(),
                                      layout, bufferType.getMemorySpace());
       } else {
-        // Source memref has a layout map: result type has the same offset as
-        // the source type.
+        // Source memref has a layout map: result keeps a strided layout but
+        // carries no static offset (offsets live on ops, not the type).
         SmallVector<int64_t> strides;
         int64_t offset;
         if (failed(bufferType.getStridesAndOffset(strides, offset)))
           return failure();
         resultType = MemRefType::get(
             {}, tensorResultType.getElementType(),
-            StridedLayoutAttr::get(op->getContext(), offset, {}),
+            StridedLayoutAttr::get(op->getContext(), {}),
             bufferType.getMemorySpace());
       }
 

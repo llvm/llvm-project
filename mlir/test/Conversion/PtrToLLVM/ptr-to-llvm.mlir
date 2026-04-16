@@ -207,11 +207,11 @@ func.func @test_memref_mixed(%arg0: memref<10x?x30xf32, #ptr.generic_space>) -> 
 // CHECK:           %[[VAL_11:.*]] = llvm.insertvalue %[[VAL_10]], %[[VAL_9]][0] : !llvm.struct<(ptr)>
 // CHECK:           llvm.return %[[VAL_7]] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:         }
-func.func @test_memref_strided(%arg0: memref<10x20xf32, strided<[40, 2], offset: 5>, #ptr.generic_space>) -> memref<10x20xf32, strided<[40, 2], offset: 5>, #ptr.generic_space> {
-  %0 = ptr.to_ptr %arg0 : memref<10x20xf32, strided<[40, 2], offset: 5>, #ptr.generic_space> -> <#ptr.generic_space>
-  %1 = ptr.get_metadata %arg0 : memref<10x20xf32, strided<[40, 2], offset: 5>, #ptr.generic_space>
-  %2 = ptr.from_ptr %0 metadata %1 : <#ptr.generic_space> -> memref<10x20xf32, strided<[40, 2], offset: 5>, #ptr.generic_space>
-  return %2 : memref<10x20xf32, strided<[40, 2], offset: 5>, #ptr.generic_space>
+func.func @test_memref_strided(%arg0: memref<10x20xf32, strided<[40, 2]>, #ptr.generic_space>) -> memref<10x20xf32, strided<[40, 2]>, #ptr.generic_space> {
+  %0 = ptr.to_ptr %arg0 : memref<10x20xf32, strided<[40, 2]>, #ptr.generic_space> -> <#ptr.generic_space>
+  %1 = ptr.get_metadata %arg0 : memref<10x20xf32, strided<[40, 2]>, #ptr.generic_space>
+  %2 = ptr.from_ptr %0 metadata %1 : <#ptr.generic_space> -> memref<10x20xf32, strided<[40, 2]>, #ptr.generic_space>
+  return %2 : memref<10x20xf32, strided<[40, 2]>, #ptr.generic_space>
 }
 
 // Tests a comprehensive scenario with fully dynamic memref, including pointer arithmetic
@@ -259,13 +259,13 @@ func.func @test_memref_strided(%arg0: memref<10x20xf32, strided<[40, 2], offset:
 // CHECK:           %[[VAL_39:.*]] = llvm.insertvalue %[[VAL_38]], %[[VAL_37]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           llvm.return %[[VAL_39]] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:         }
-func.func @test_comprehensive_dynamic(%arg0: memref<?x?xf32, strided<[?, ?], offset: ?>, #ptr.generic_space>) -> memref<?x?xf32, strided<[?, ?], offset: ?>, #ptr.generic_space> {
-  %0 = ptr.to_ptr %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>, #ptr.generic_space> -> <#ptr.generic_space>
-  %1 = ptr.get_metadata %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>, #ptr.generic_space>
+func.func @test_comprehensive_dynamic(%arg0: memref<?x?xf32, strided<[?, ?]>, #ptr.generic_space>) -> memref<?x?xf32, strided<[?, ?]>, #ptr.generic_space> {
+  %0 = ptr.to_ptr %arg0 : memref<?x?xf32, strided<[?, ?]>, #ptr.generic_space> -> <#ptr.generic_space>
+  %1 = ptr.get_metadata %arg0 : memref<?x?xf32, strided<[?, ?]>, #ptr.generic_space>
   %2 = ptr.type_offset f32 : index
   %3 = ptr.ptr_add inbounds %0, %2 : !ptr.ptr<#ptr.generic_space>, index
-  %4 = ptr.from_ptr %3 metadata %1 : <#ptr.generic_space> -> memref<?x?xf32, strided<[?, ?], offset: ?>, #ptr.generic_space>
-  return %4 : memref<?x?xf32, strided<[?, ?], offset: ?>, #ptr.generic_space>
+  %4 = ptr.from_ptr %3 metadata %1 : <#ptr.generic_space> -> memref<?x?xf32, strided<[?, ?]>, #ptr.generic_space>
+  return %4 : memref<?x?xf32, strided<[?, ?]>, #ptr.generic_space>
 }
 
 // Tests a round-trip conversion of a 0D (scalar) memref

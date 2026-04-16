@@ -608,7 +608,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:            %[[D1:.+]] = vector.transfer_read %[[ALLOC_0]][%[[C0]], %[[C0]]], %[[CST]] {in_bounds = [true, true]}
 // CHECK-SAME:         : memref<32x128xf32>, vector<32x128xf32>
 // CHECK:            "some_use"(%[[D0]], %[[D1]], %[[CAST]]) : (vector<32x64xf32>, vector<32x128xf32>, memref<32x128xf32,
-// CHECK-SAME:         strided<[128, 1], offset: ?>>) -> ()
+// CHECK-SAME:         strided<[128, 1]>>) -> ()
 // CHECK:          }
 // CHECK:          memref.dealloc %[[ALLOC]] : memref<32x64xf32>
 // CHECK:          return
@@ -619,11 +619,11 @@ func.func @hoist_vector_transfer_read() {
   %cst_2 = arith.constant 0.000000e+00 : f32
   %memref0 = memref.alloc() : memref<32x64xf32>
   %memref2 = memref.alloc() : memref<32x128xf32>
-  %subview2 = memref.subview %memref2[%c0, %c0] [32, 128] [1, 1]: memref<32x128xf32> to memref<32x128xf32, strided<[128, 1], offset: ?>>
+  %subview2 = memref.subview %memref2[%c0, %c0] [32, 128] [1, 1]: memref<32x128xf32> to memref<32x128xf32, strided<[128, 1]>>
   scf.for %arg0 = %c0 to %c1024 step %c128 {
     %2 = vector.transfer_read %memref2[%c0, %c0], %cst_2 {in_bounds = [true, true]} : memref<32x128xf32>, vector<32x128xf32>
     %3 = vector.transfer_read %memref0[%c0, %c0], %cst_2 {in_bounds = [true, true]} : memref<32x64xf32>, vector<32x64xf32>
-    "some_use"(%3, %2, %subview2) : (vector<32x64xf32>, vector<32x128xf32>, memref<32x128xf32, strided<[128, 1], offset: ?>>) -> ()
+    "some_use"(%3, %2, %subview2) : (vector<32x64xf32>, vector<32x128xf32>, memref<32x128xf32, strided<[128, 1]>>) -> ()
   }
   memref.dealloc %memref0 : memref<32x64xf32>
   return
@@ -813,7 +813,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:    scf.for {{.*}} {
 //       CHECK:      vector.transfer_write {{.*}} : vector<4xi32>, memref<4xi32>
 //       CHECK-NEXT:      vector.transfer_read {{.*}} : memref<1x4x1xi32>, vector<1x4x1xi32>
-//       CHECK-NEXT:      vector.transfer_write {{.*}} : vector<1x4x1xi32>, memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
+//       CHECK-NEXT:      vector.transfer_write {{.*}} : vector<1x4x1xi32>, memref<1x4x1xi32, strided<[20, 1, 1]>>
 //       CHECK-NEXT:    }
 
 func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1xi32>, %vec: vector<4xi32>) {
@@ -823,11 +823,11 @@ func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1x
   %c20 = arith.constant 20 : index
   %alloca = memref.alloca() {alignment = 64 : i64} : memref<1x4x1xi32>
   scf.for %arg0 = %c0 to %c20 step %c4 {
-    %subview = memref.subview %in_0[0, %arg0, 0] [1, 4, 1] [1, 1, 1] : memref<1x20x1xi32> to memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
+    %subview = memref.subview %in_0[0, %arg0, 0] [1, 4, 1] [1, 1, 1] : memref<1x20x1xi32> to memref<1x4x1xi32, strided<[20, 1, 1]>>
     %collapse_shape = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x4x1xi32> into memref<4xi32>
     vector.transfer_write %vec, %collapse_shape[%c0] {in_bounds = [true]} : vector<4xi32>, memref<4xi32>
     %read = vector.transfer_read %alloca[%c0, %c0, %c0], %c0_i32 {in_bounds = [true, true, true]} : memref<1x4x1xi32>, vector<1x4x1xi32>
-    vector.transfer_write %read, %subview[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
+    vector.transfer_write %read, %subview[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32, strided<[20, 1, 1]>>
   }
   return
 }

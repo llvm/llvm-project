@@ -3,10 +3,10 @@
 
 // CHECK-NO-FUNC-LABEL: func @br(
 //  CHECK-NO-FUNC-SAME:     %[[t:.*]]: tensor<5xf32>)
-//       CHECK-NO-FUNC:   %[[m:.*]] = bufferization.to_buffer %[[t]] : tensor<5xf32> to memref<5xf32, strided<[?], offset: ?>>
-//       CHECK-NO-FUNC:   %[[r:.*]] = scf.execute_region -> memref<5xf32, strided<[?], offset: ?>> {
+//       CHECK-NO-FUNC:   %[[m:.*]] = bufferization.to_buffer %[[t]] : tensor<5xf32> to memref<5xf32, strided<[?]>>
+//       CHECK-NO-FUNC:   %[[r:.*]] = scf.execute_region -> memref<5xf32, strided<[?]>> {
 //       CHECK-NO-FUNC:     cf.br ^[[block:.*]](%[[m]]
-//       CHECK-NO-FUNC:   ^[[block]](%[[arg1:.*]]: memref<5xf32, strided<[?], offset: ?>>):
+//       CHECK-NO-FUNC:   ^[[block]](%[[arg1:.*]]: memref<5xf32, strided<[?]>>):
 //       CHECK-NO-FUNC:     scf.yield %[[arg1]]
 //       CHECK-NO-FUNC:   }
 //       CHECK-NO-FUNC:   return
@@ -23,14 +23,14 @@ func.func @br(%t: tensor<5xf32>) {
 
 // CHECK-NO-FUNC-LABEL: func @cond_br(
 //  CHECK-NO-FUNC-SAME:     %[[t1:.*]]: tensor<5xf32>,
-//       CHECK-NO-FUNC:   %[[m1:.*]] = bufferization.to_buffer %[[t1]] : tensor<5xf32> to memref<5xf32, strided<[?], offset: ?>>
+//       CHECK-NO-FUNC:   %[[m1:.*]] = bufferization.to_buffer %[[t1]] : tensor<5xf32> to memref<5xf32, strided<[?]>>
 //       CHECK-NO-FUNC:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
-//       CHECK-NO-FUNC:   %[[r:.*]] = scf.execute_region -> memref<5xf32, strided<[?], offset: ?>> {
+//       CHECK-NO-FUNC:   %[[r:.*]] = scf.execute_region -> memref<5xf32, strided<[?]>> {
 //       CHECK-NO-FUNC:     cf.cond_br %{{.*}}, ^[[block1:.*]](%[[m1]] : {{.*}}), ^[[block2:.*]](%[[alloc]] : {{.*}})
-//       CHECK-NO-FUNC:   ^[[block1]](%[[arg1:.*]]: memref<5xf32, strided<[?], offset: ?>>):
+//       CHECK-NO-FUNC:   ^[[block1]](%[[arg1:.*]]: memref<5xf32, strided<[?]>>):
 //       CHECK-NO-FUNC:     scf.yield %[[arg1]]
 //       CHECK-NO-FUNC:   ^[[block2]](%[[arg2:.*]]: memref<5xf32>):
-//       CHECK-NO-FUNC:     %[[cast:.*]] = memref.cast %[[arg2]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>
+//       CHECK-NO-FUNC:     %[[cast:.*]] = memref.cast %[[arg2]] : memref<5xf32> to memref<5xf32, strided<[?]>
 //       CHECK-NO-FUNC:     cf.br ^[[block1]](%[[cast]] : {{.*}})
 //       CHECK-NO-FUNC:   }
 //       CHECK-NO-FUNC:   return

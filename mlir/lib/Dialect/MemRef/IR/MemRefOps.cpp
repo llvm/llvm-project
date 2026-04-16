@@ -2045,8 +2045,8 @@ void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
   dispatchIndexOpFoldResults(offset, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-  auto stridedLayout = StridedLayoutAttr::get(
-      b.getContext(), staticOffsets.front(), staticStrides);
+  auto stridedLayout =
+      StridedLayoutAttr::get(b.getContext(), staticStrides);
   auto resultType = MemRefType::get(staticSizes, sourceType.getElementType(),
                                     stridedLayout, sourceType.getMemorySpace());
   build(b, result, resultType, source, offset, sizes, strides, attrs);
@@ -2102,23 +2102,15 @@ LogicalResult ReinterpretCastOp::verify() {
              << " instead of " << resultSize << " in dim = " << idx;
   }
 
-  // Match offset and strides in static_offset and static_strides attributes. If
-  // result memref type has no affine map specified, this will assume an
-  // identity layout.
+  // Match strides in static_strides attribute. The result type no longer
+  // carries an offset, so the static_offsets attribute is the sole carrier of
+  // offset information for this op and is not cross-checked here.
   int64_t resultOffset;
   SmallVector<int64_t, 4> resultStrides;
   if (failed(resultType.getStridesAndOffset(resultStrides, resultOffset)))
     return emitError("expected result type to have strided layout but found ")
            << resultType;
-
-  // Match offset in result memref type and in static_offsets attribute.
-  int64_t expectedOffset = getStaticOffsets().front();
-  if (ShapedType::isStatic(resultOffset) && resultOffset != expectedOffset)
-    return emitError("expected result type with offset = ")
-           << (ShapedType::isDynamic(expectedOffset)
-                   ? std::string("dynamic")
-                   : std::to_string(expectedOffset))
-           << " instead of " << resultOffset;
+  (void)resultOffset;
 
   // Match strides in result memref type and in static_strides attribute.
   for (auto [idx, resultStride, expectedStride] :
@@ -2532,7 +2524,7 @@ computeExpandedLayoutMap(MemRefType srcType, ArrayRef<int64_t> resultShape,
   }
   auto resultStrides = llvm::to_vector<8>(llvm::reverse(reverseResultStrides));
   resultStrides.resize(resultShape.size(), 1);
-  return StridedLayoutAttr::get(srcType.getContext(), srcOffset, resultStrides);
+  return StridedLayoutAttr::get(srcType.getContext(), resultStrides);
 }
 
 FailureOr<MemRefType> ExpandShapeOp::computeExpandedType(
@@ -2828,7 +2820,7 @@ computeCollapsedLayoutMap(MemRefType srcType,
         return failure();
     }
   }
-  return StridedLayoutAttr::get(srcType.getContext(), srcOffset, resultStrides);
+  return StridedLayoutAttr::get(srcType.getContext(), resultStrides);
 }
 
 bool CollapseShapeOp::isGuaranteedCollapsible(
@@ -3081,19 +3073,9 @@ MemRefType SubViewOp::inferResultType(MemRefType sourceMemRefType,
   assert(staticSizes.size() == rank && "staticSizes length mismatch");
   assert(staticStrides.size() == rank && "staticStrides length mismatch");
 
-  // Extract source offset and strides.
+  // Extract source strides (offset is no longer carried by the type).
   auto [sourceStrides, sourceOffset] = sourceMemRefType.getStridesAndOffset();
-
-  // Compute target offset whose value is:
-  //   `sourceOffset + sum_i(staticOffset_i * sourceStrides_i)`.
-  int64_t targetOffset = sourceOffset;
-  for (auto it : llvm::zip(staticOffsets, sourceStrides)) {
-    auto staticOffset = std::get<0>(it), sourceStride = std::get<1>(it);
-    targetOffset = (SaturatedInteger::wrap(targetOffset) +
-                    SaturatedInteger::wrap(staticOffset) *
-                        SaturatedInteger::wrap(sourceStride))
-                       .asInteger();
-  }
+  (void)sourceOffset;
 
   // Compute target stride whose value is:
   //   `sourceStrides_i * staticStrides_i`.
@@ -3107,10 +3089,10 @@ MemRefType SubViewOp::inferResultType(MemRefType sourceMemRefType,
   }
 
   // The type is now known.
-  return MemRefType::get(staticSizes, sourceMemRefType.getElementType(),
-                         StridedLayoutAttr::get(sourceMemRefType.getContext(),
-                                                targetOffset, targetStrides),
-                         sourceMemRefType.getMemorySpace());
+  return MemRefType::get(
+      staticSizes, sourceMemRefType.getElementType(),
+      StridedLayoutAttr::get(sourceMemRefType.getContext(), targetStrides),
+      sourceMemRefType.getMemorySpace());
 }
 
 MemRefType SubViewOp::inferResultType(MemRefType sourceMemRefType,
@@ -3158,7 +3140,6 @@ MemRefType SubViewOp::inferRankReducedResultType(
   }
   return MemRefType::get(resultShape, inferredType.getElementType(),
                          StridedLayoutAttr::get(inferredLayout.getContext(),
-                                                inferredLayout.getOffset(),
                                                 rankReducedStrides),
                          inferredType.getMemorySpace());
 }
@@ -3476,10 +3457,10 @@ static MemRefType getCanonicalSubViewResultType(
     strides.push_back(stride);
   }
 
-  return MemRefType::get(shape, nonRankReducedType.getElementType(),
-                         StridedLayoutAttr::get(sourceType.getContext(),
-                                                layout.getOffset(), strides),
-                         nonRankReducedType.getMemorySpace());
+  return MemRefType::get(
+      shape, nonRankReducedType.getElementType(),
+      StridedLayoutAttr::get(sourceType.getContext(), strides),
+      nonRankReducedType.getMemorySpace());
 }
 
 Value mlir::memref::createCanonicalRankReducingSubViewOp(
@@ -3556,13 +3537,13 @@ namespace {
 /// ```
 ///   %0 = memref.cast %V : memref<16x16xf32> to memref<?x?xf32>
 ///   %1 = memref.subview %0[0, 0][3, 4][1, 1] :
-///     memref<?x?xf32> to memref<3x4xf32, strided<[?, 1], offset: ?>>
+///     memref<?x?xf32> to memref<3x4xf32, strided<[?, 1]>>
 /// ```
 /// is rewritten into:
 /// ```
 ///   %0 = memref.subview %V: memref<16x16xf32> to memref<3x4xf32, #[[map0]]>
-///   %1 = memref.cast %0: memref<3x4xf32, strided<[16, 1], offset: 0>> to
-///     memref<3x4xf32, strided<[?, 1], offset: ?>>
+///   %1 = memref.cast %0: memref<3x4xf32, strided<[16, 1]>> to
+///     memref<3x4xf32, strided<[?, 1]>>
 /// ```
 class SubViewOpMemRefCastFolder final : public OpRewritePattern<SubViewOp> {
 public:
@@ -3658,10 +3639,10 @@ struct SubViewReturnTypeCanonicalizer {
       targetShape.push_back(nonReducedType.getDimSize(i));
     }
 
-    return MemRefType::get(targetShape, nonReducedType.getElementType(),
-                           StridedLayoutAttr::get(nonReducedType.getContext(),
-                                                  offset, targetStrides),
-                           nonReducedType.getMemorySpace());
+    return MemRefType::get(
+        targetShape, nonReducedType.getElementType(),
+        StridedLayoutAttr::get(nonReducedType.getContext(), targetStrides),
+        nonReducedType.getMemorySpace());
   }
 };
 
@@ -3789,6 +3770,7 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
                                            AffineMap permutationMap) {
   auto originalSizes = memRefType.getShape();
   auto [originalStrides, offset] = memRefType.getStridesAndOffset();
+  (void)offset;
   assert(originalStrides.size() == static_cast<unsigned>(memRefType.getRank()));
 
   // Compute permuted sizes and strides.
@@ -3797,8 +3779,7 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
 
   return MemRefType::Builder(memRefType)
       .setShape(sizes)
-      .setLayout(
-          StridedLayoutAttr::get(memRefType.getContext(), offset, strides));
+      .setLayout(StridedLayoutAttr::get(memRefType.getContext(), strides));
 }
 
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,

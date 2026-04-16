@@ -802,18 +802,17 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     even elements of the dense consecutive storage along the innermost
     dimension.
 
-    The strided layout supports an optional _offset_ that indicates the
-    distance, in the number of elements, between the beginning of the memref
-    and the first accessed element. When omitted, the offset is considered to
-    be zero. That is, `memref<2, strided<[2], offset: 0>>` and
-    `memref<2, strided<[2]>>` are strictly the same type.
+    The strided layout does not carry an offset. The offset between the
+    base pointer of the underlying buffer and the first accessed element is
+    a runtime concept exposed by ops such as `memref.subview`,
+    `memref.reinterpret_cast`, and `memref.extract_strided_metadata`.
 
-    Both offsets and strides may be _dynamic_, that is, unknown at compile time.
-    This is represented by using a question mark (`?`) instead of the value in
-    the textual form of the IR.
+    Strides may be _dynamic_, that is, unknown at compile time. This is
+    represented by using a question mark (`?`) instead of the value in the
+    textual form of the IR.
 
     The strided layout converts into the following canonical one-dimensional
-    affine form through explicit linearization:
+    affine form through explicit linearization, with a symbolic offset:
 
     ```mlir
     affine_map<(d0, ... dN)[offset, stride0, ... strideN] ->

@@ -25,11 +25,11 @@ func.func @cast_to_ranked(%m: memref<*xf32>) -> memref<f32> {
   return %0 : memref<f32>
 }
 
-func.func @cast_to_static_strides(%m: memref<?xf32, strided<[?], offset: ?>>)
-    -> memref<?xf32, strided<[9], offset: 5>> {
-  %0 = memref.cast %m : memref<?xf32, strided<[?], offset: ?>>
-                     to memref<?xf32, strided<[9], offset: 5>>
-  return %0 : memref<?xf32, strided<[9], offset: 5>>
+func.func @cast_to_static_strides(%m: memref<?xf32, strided<[?]>>)
+    -> memref<?xf32, strided<[9]>> {
+  %0 = memref.cast %m : memref<?xf32, strided<[?]>>
+                     to memref<?xf32, strided<[9]>>
+  return %0 : memref<?xf32, strided<[9]>>
 }
 
 func.func @valid_cast(%m: memref<*xf32>) -> memref<?xf32> {
@@ -57,19 +57,19 @@ func.func @main() {
   func.call @cast_to_ranked(%3) : (memref<*xf32>) -> (memref<f32>)
 
   // CHECK-NEXT: ERROR: Runtime op verification failed
-  // CHECK-NEXT: memref.cast %{{.*}} : memref<?xf32, strided<[?], offset: ?>>
+  // CHECK-NEXT: memref.cast %{{.*}} : memref<?xf32, strided<[?]>>
   // CHECK-NEXT: ^ offset mismatch
   // CHECK-NEXT: Location: loc({{.*}})
 
   // CHECK-NEXT: ERROR: Runtime op verification failed
-  // CHECK-NEXT: memref.cast %{{.*}} : memref<?xf32, strided<[?], offset: ?>>
+  // CHECK-NEXT: memref.cast %{{.*}} : memref<?xf32, strided<[?]>>
   // CHECK-NEXT: ^ stride mismatch of dim 0
   // CHECK-NEXT: Location: loc({{.*}})
   %4 = memref.cast %alloc
-      : memref<5xf32> to memref<?xf32, strided<[?], offset: ?>>
+      : memref<5xf32> to memref<?xf32, strided<[?]>>
   func.call @cast_to_static_strides(%4)
-      : (memref<?xf32, strided<[?], offset: ?>>)
-     -> (memref<?xf32, strided<[9], offset: 5>>)
+      : (memref<?xf32, strided<[?]>>)
+     -> (memref<?xf32, strided<[9]>>)
 
   // A last cast that actually succeeds.
   // CHECK-NOT: ERROR: Runtime op verification failed

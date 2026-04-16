@@ -53,20 +53,20 @@ func.func @canonicalize_buffer_cast_of_tensor_load_different_address_space(%arg0
 // If the memrefs are definitely cast-compatible, canonicalize to
 //            cast.
 // CHECK-LABEL: func @canonicalize_buffer_cast_of_tensor_load(
-//  CHECK-SAME:   %[[M:.*]]: memref<?xf32, strided<[1], offset: 3>>)
-//  CHECK-SAME:     -> memref<?xf32, strided<[1], offset: ?>> {
+//  CHECK-SAME:   %[[M:.*]]: memref<?xf32, strided<[1]>>)
+//  CHECK-SAME:     -> memref<?xf32, strided<[1]>> {
 //   CHECK-NOT: bufferization.to_tensor
 //   CHECK-NOT: bufferization.to_buffer
 //       CHECK: %[[R:.*]] = memref.cast %[[M]]
-//  CHECK-SAME:   memref<?xf32, strided<[1], offset: 3>> to memref<?xf32, strided<[1], offset: ?>>
+//  CHECK-SAME:   memref<?xf32, strided<[1]>> to memref<?xf32, strided<[1]>>
 //       CHECK: return %[[R]]
 func.func @canonicalize_buffer_cast_of_tensor_load(
-  %arg0: memref<?xf32, strided<[1], offset: 3>>)
-  -> memref<?xf32, strided<[1], offset: ?>>
+  %arg0: memref<?xf32, strided<[1]>>)
+  -> memref<?xf32, strided<[1]>>
 {
-  %0 = bufferization.to_tensor %arg0 : memref<?xf32, strided<[1], offset: 3>> to tensor<?xf32>
-  %1 = bufferization.to_buffer %0 : tensor<?xf32> to memref<?xf32, strided<[1], offset: ?>>
-  return %1 : memref<?xf32, strided<[1], offset: ?>>
+  %0 = bufferization.to_tensor %arg0 : memref<?xf32, strided<[1]>> to tensor<?xf32>
+  %1 = bufferization.to_buffer %0 : tensor<?xf32> to memref<?xf32, strided<[1]>>
+  return %1 : memref<?xf32, strided<[1]>>
 }
 
 // -----
@@ -75,21 +75,21 @@ func.func @canonicalize_buffer_cast_of_tensor_load(
 //            copy.
 // CHECK-LABEL: func @canonicalize_buffer_cast_of_tensor_load_to_copy(
 func.func @canonicalize_buffer_cast_of_tensor_load_to_copy(
-  %arg0: memref<?xf32, strided<[1], offset: ?>>)
-  -> memref<?xf32, strided<[1], offset: 3>> {
-  %0 = bufferization.to_tensor %arg0 : memref<?xf32, strided<[1], offset: ?>> to tensor<?xf32>
-  %1 = bufferization.to_buffer %0 : tensor<?xf32> to memref<?xf32, strided<[1], offset: 3>>
-  return %1 : memref<?xf32, strided<[1], offset: 3>>
+  %arg0: memref<?xf32, strided<[1]>>)
+  -> memref<?xf32, strided<[1]>> {
+  %0 = bufferization.to_tensor %arg0 : memref<?xf32, strided<[1]>> to tensor<?xf32>
+  %1 = bufferization.to_buffer %0 : tensor<?xf32> to memref<?xf32, strided<[1]>>
+  return %1 : memref<?xf32, strided<[1]>>
 }
-// CHECK-SAME:   %[[M:.*]]: memref<?xf32, strided<[1], offset: ?>>)
-// CHECK-SAME:     -> memref<?xf32, strided<[1], offset: 3>> {
+// CHECK-SAME:   %[[M:.*]]: memref<?xf32, strided<[1]>>)
+// CHECK-SAME:     -> memref<?xf32, strided<[1]>> {
 //  CHECK-NOT: bufferization.to_tensor
 //  CHECK-NOT: bufferization.to_buffer
 //      CHECK: %[[C0:.*]] = arith.constant 0 : index
-//      CHECK: %[[DIM:.*]] = memref.dim %[[M]], %[[C0]] : memref<?xf32, strided<[1], offset: ?>>
-//      CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]]) : memref<?xf32, strided<[1], offset: 3>>
+//      CHECK: %[[DIM:.*]] = memref.dim %[[M]], %[[C0]] : memref<?xf32, strided<[1]>>
+//      CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]]) : memref<?xf32, strided<[1]>>
 //      CHECK: memref.copy %[[M]], %[[ALLOC]]
-// CHECK-SAME:   memref<?xf32, strided<[1], offset: ?>> to memref<?xf32, strided<[1], offset: 3>>
+// CHECK-SAME:   memref<?xf32, strided<[1]>> to memref<?xf32, strided<[1]>>
 //      CHECK: return %[[ALLOC]]
 
 // -----
@@ -281,16 +281,16 @@ func.func @tensor_cast_to_unranked_buffer(%arg0 : tensor<4x6x16x32xi8>) ->
 // CHECK-LABEL: func @tensor_cast_to_buffer
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<4x6x16x32xi8>
 func.func @tensor_cast_to_buffer_layout_and_memspace(%arg0 : tensor<4x6x16x32xi8>) ->
-  memref<?x?x16x32xi8, strided<[?, ?, ?, 1], offset: ?>, 1> {
+  memref<?x?x16x32xi8, strided<[?, ?, ?, 1]>, 1> {
   %0 = tensor.cast %arg0 : tensor<4x6x16x32xi8> to tensor<?x?x16x32xi8>
-  %1 = bufferization.to_buffer %0 : tensor<?x?x16x32xi8> to memref<?x?x16x32xi8, strided<[?, ?, ?, 1], offset: ?>, 1>
-  return %1 : memref<?x?x16x32xi8, strided<[?, ?, ?, 1], offset: ?>, 1>
+  %1 = bufferization.to_buffer %0 : tensor<?x?x16x32xi8> to memref<?x?x16x32xi8, strided<[?, ?, ?, 1]>, 1>
+  return %1 : memref<?x?x16x32xi8, strided<[?, ?, ?, 1]>, 1>
 }
 // CHECK:   %[[M:.+]] = bufferization.to_buffer %[[ARG0]] : tensor<4x6x16x32xi8>
 // CHECK:   %[[M1:.+]] = memref.cast %[[M]]
-// CHECK-SAME: memref<4x6x16x32xi8, strided<[?, ?, ?, 1], offset: ?>, 1>
-// CHECK-SAME: to memref<?x?x16x32xi8, strided<[?, ?, ?, 1], offset: ?>, 1>
-// CHECK:   return %[[M1]] : memref<?x?x16x32xi8, strided<[?, ?, ?, 1], offset: ?>, 1>
+// CHECK-SAME: memref<4x6x16x32xi8, strided<[?, ?, ?, 1]>, 1>
+// CHECK-SAME: to memref<?x?x16x32xi8, strided<[?, ?, ?, 1]>, 1>
+// CHECK:   return %[[M1]] : memref<?x?x16x32xi8, strided<[?, ?, ?, 1]>, 1>
 
 // -----
 

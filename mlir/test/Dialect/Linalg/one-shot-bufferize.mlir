@@ -11,7 +11,7 @@
 // TODO: Some test cases from this file should be moved to other dialects.
 
 // CHECK-LABEL: func private @fill_inplace(
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>
 // CHECK-NO-LAYOUT-MAP-LABEL: func private @fill_inplace(%{{.*}}: memref<?xf32>) {
 func.func private @fill_inplace(
     %A : tensor<?xf32> {bufferization.writable = true})
@@ -22,7 +22,7 @@ func.func private @fill_inplace(
 
   /// Inplaceable, no alloc
   // CHECK-NOT: alloc
-  //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[A]] : memref<?xf32, strided<[?], offset: ?>>)
+  //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[A]] : memref<?xf32, strided<[?]>>)
   %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK: return
@@ -34,7 +34,7 @@ func.func private @fill_inplace(
 
 /// No bufferization.writable flag, must allocate.
 // CHECK-LABEL: func @not_inplace(
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>) -> memref<?xf32> {
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>) -> memref<?xf32> {
 // CHECK-NO-LAYOUT-MAP-LABEL: func @not_inplace(%{{.*}}: memref<?xf32>) -> memref<?xf32>
 func.func @not_inplace(
     %A : tensor<?xf32> {bufferization.writable = false})
@@ -43,7 +43,7 @@ func.func @not_inplace(
   //     CHECK: %[[F0:.*]] = arith.constant 0.000000e+00 : f32
   %f0 = arith.constant 0.0 : f32
 
-  //     CHECK: %[[D0:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, strided<[?], offset: ?>>
+  //     CHECK: %[[D0:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, strided<[?]>>
   //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) {alignment = 64 : i64} : memref<?xf32>
   //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[ALLOC]] : memref<?xf32>)
   %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
@@ -57,7 +57,7 @@ func.func @not_inplace(
 
 
 // CHECK-LABEL: func private @not_inplace
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?x?xf32, strided<[?, ?], offset: ?>>) {
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?x?xf32, strided<[?, ?]>>) {
 // CHECK-NO-LAYOUT-MAP-LABEL: func private @not_inplace(%{{.*}}: memref<?x?xf32>) {
 func.func private @not_inplace(
     %A : tensor<?x?xf32> {bufferization.writable = true})
@@ -115,7 +115,7 @@ func.func @vec_inplace(
 // -----
 
 // CHECK-LABEL: func @vec_not_inplace
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>
 func.func @vec_not_inplace(
     %A : tensor<?xf32> {bufferization.writable = true}, %vec : vector<4xf32>)
   -> (tensor<?xf32>, tensor<?xf32>)

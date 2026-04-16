@@ -1031,8 +1031,7 @@ def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
     Syntax:
 
     ```
-    strided-layout-attribute ::= `strided` `<` `[` stride-list `]`
-                                 (`,` `offset` `:` dimension)? `>`
+    strided-layout-attribute ::= `strided` `<` `[` stride-list `]` `>`
     stride-list ::= /*empty*/
                   | dimension (`,` dimension)*
     dimension ::= decimal-literal | `?`
@@ -1043,22 +1042,22 @@ def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
     each dimension. A stride is the number of elements in the linear storage
     one must step over to reflect an increment in the given dimension. For
     example, a `MxN` row-major contiguous shaped type would have the strides
-    `[N, 1]`. The layout attribute also contains the _offset_ from the base
-    pointer of the shaped type to the first effectively accessed element,
-    expressed in terms of the number of contiguously stored elements.
+    `[N, 1]`.
 
-    Strides must be positive and the offset must be non-negative. Both the
-    strides and the offset may be _dynamic_, i.e. their value may not be known
-    at compile time. This is expressed as a `?` in the assembly syntax and as
-    `ShapedType::kDynamic` in the code. Stride and offset values
-    must satisfy the constraints above at runtime, the behavior is undefined
-    otherwise.
+    Strides must be positive. They may be _dynamic_, i.e. their value may not
+    be known at compile time. This is expressed as a `?` in the assembly syntax
+    and as `ShapedType::kDynamic` in the code. Stride values must satisfy the
+    constraints above at runtime, the behavior is undefined otherwise.
+
+    The offset of a strided memref is not represented in the type. Operations
+    that need to express an offset (`memref.subview`, `memref.reinterpret_cast`,
+    `memref.extract_strided_metadata`) carry it as an explicit operand or
+    result.
 
     See [Dialects/Builtin.md#memreftype](MemRef type) for more information.
   }];
 
   let parameters = (ins
-    "int64_t":$offset,
     ArrayRefParameter<
       "int64_t",
       "array of strides (64-bit integer)"
@@ -1070,8 +1069,8 @@ def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
     /// Print the attribute to the given output stream.
     void print(raw_ostream &os) const;
 
-    /// Returns true if this layout is static, i.e. the strides and offset all
-    /// have a known value > 0.
+    /// Returns true if this layout is static, i.e. all strides have a known
+    /// value > 0.
     bool hasStaticLayout() const;
   }];
 }

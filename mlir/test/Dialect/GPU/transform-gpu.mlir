@@ -662,7 +662,7 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
 //       CHECK:     %[[BIDX:.*]] = gpu.block_id x
 //       CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]]()[%[[BIDX]]]
     %0 = affine.apply #map(%arg1)
-    %subview = memref.subview %arg0[%0] [128] [1] : memref<128xf32> to memref<128xf32, strided<[1], offset: ?>>
+    %subview = memref.subview %arg0[%0] [128] [1] : memref<128xf32> to memref<128xf32, strided<[1]>>
     scf.forall (%arg2) in (4) {
 //       CHECK:     %[[TIDX:.*]] = gpu.thread_id x
 //       CHECK:     %[[TIDY:.*]] = gpu.thread_id y
@@ -671,11 +671,11 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
 //   CHECK-NOT:     scf.if
 //       CHECK:       memref.subview %{{.*}}[%[[THX]]]
       %1 = affine.apply #map1(%arg2)
-      %subview_0 = memref.subview %subview[%1] [32] [1] : memref<128xf32, strided<[1], offset: ?>> to memref<32xf32, strided<[1], offset: ?>>
-      vector.transfer_write %cst, %subview_0[%c0] {in_bounds = [true]} : vector<32xf32>, memref<32xf32, strided<[1], offset: ?>>
-      memref.copy %subview_0, %subview_0 : memref<32xf32, strided<[1], offset: ?>> to memref<32xf32, strided<[1], offset: ?>>
+      %subview_0 = memref.subview %subview[%1] [32] [1] : memref<128xf32, strided<[1]>> to memref<32xf32, strided<[1]>>
+      vector.transfer_write %cst, %subview_0[%c0] {in_bounds = [true]} : vector<32xf32>, memref<32xf32, strided<[1]>>
+      memref.copy %subview_0, %subview_0 : memref<32xf32, strided<[1]>> to memref<32xf32, strided<[1]>>
     } {mapping = [#gpu.warp<linear_dim_0>]}
-    memref.copy %subview, %subview : memref<128xf32, strided<[1], offset: ?>> to memref<128xf32, strided<[1], offset: ?>>
+    memref.copy %subview, %subview : memref<128xf32, strided<[1]>> to memref<128xf32, strided<[1]>>
   } {mapping = [#gpu.block<x>]}
   return %arg0 : memref<128xf32>
 }
@@ -713,7 +713,7 @@ func.func @simple_fill(%arg0: memref<128x256xf32>) -> memref<128x256xf32> {
     //   CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]]()[%[[BIDX]]]
     %0 = affine.apply #map(%arg1)
     %subview = memref.subview %arg0[%0, 0] [128, 256] [1, 1]
-      : memref<128x256xf32> to memref<128x256xf32, strided<[256, 1], offset: ?>>
+      : memref<128x256xf32> to memref<128x256xf32, strided<[256, 1]>>
 
     // %arg2 and %arg3 map to lanes [0, 6) and are turned into epxressions
     // involving threadIdx.x/y by the map_nested_forall_to_threads
@@ -730,9 +730,9 @@ func.func @simple_fill(%arg0: memref<128x256xf32>) -> memref<128x256xf32> {
       %1 = affine.apply #map1(%arg2)
       %2 = affine.apply #map1(%arg3)
       %subview_0 = memref.subview %subview[%1, %2] [16, 32] [1, 1] 
-        : memref<128x256xf32, strided<[256, 1], offset: ?>> to memref<16x32xf32, strided<[256, 1], offset: ?>>
+        : memref<128x256xf32, strided<[256, 1]>> to memref<16x32xf32, strided<[256, 1]>>
       vector.transfer_write %cst, %subview_0[%c0, %c0] {in_bounds = [true, true]} 
-        : vector<16x32xf32>, memref<16x32xf32, strided<[256, 1], offset: ?>>
+        : vector<16x32xf32>, memref<16x32xf32, strided<[256, 1]>>
 
     // This could be obtained e.g. if a previous transformation mapped this loop
     // to lanes. This can aslo be written by hand as valid IR.
@@ -780,7 +780,7 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
 //       CHECK:     %[[BIDX:.*]] = gpu.block_id x
 //       CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]]()[%[[BIDX]]]
     %0 = affine.apply #map(%arg1)
-    %subview = memref.subview %arg0[%0] [128] [1] : memref<128xf32> to memref<128xf32, strided<[1], offset: ?>>
+    %subview = memref.subview %arg0[%0] [128] [1] : memref<128xf32> to memref<128xf32, strided<[1]>>
 
     // %arg2 and %arg3 map to lanes [0, 6) and are turned into epxressions
     // involving threadIdx.x/y by the map_nested_forall_to_threads
@@ -809,15 +809,15 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
       //       CHECK:       memref.subview %{{.*}}[%[[W0]]] [%[[W1]]]
       %1 = affine.apply #map1(%arg2)
       %2 = affine.apply #map1(%arg3)
-      %subview_0 = memref.subview %subview[%1] [%2] [1] : memref<128xf32, strided<[1], offset: ?>> to memref<?xf32, strided<[1], offset: ?>>
-      vector.transfer_write %cst, %subview_0[%c0] {in_bounds = [true]} : vector<32xf32>, memref<?xf32, strided<[1], offset: ?>>
+      %subview_0 = memref.subview %subview[%1] [%2] [1] : memref<128xf32, strided<[1]>> to memref<?xf32, strided<[1]>>
+      vector.transfer_write %cst, %subview_0[%c0] {in_bounds = [true]} : vector<32xf32>, memref<?xf32, strided<[1]>>
 
     // This could be obtained e.g. if a previous transformation mapped this loop
     // to lanes. This can aslo be written by hand as valid IR.
     // This additionally uses the hex mask: 0x 10 1111 0001
     } {mapping = [#gpu.warp<linear_dim_0>, #gpu.warp<linear_dim_1>, #gpu.mask<0x2f1>]}
 
-    memref.copy %subview, %subview : memref<128xf32, strided<[1], offset: ?>> to memref<128xf32, strided<[1], offset: ?>>
+    memref.copy %subview, %subview : memref<128xf32, strided<[1]>> to memref<128xf32, strided<[1]>>
   } {mapping = [#gpu.block<x>]}
   return %arg0 : memref<128xf32>
 }

@@ -25,7 +25,7 @@ TEST(MemRefLayout, numContigDim) {
   const int64_t _ = ShapedType::kDynamic;
   const FloatType f32 = b.getF32Type();
   auto strided = [&ctx](ArrayRef<int64_t> s) {
-    return StridedLayoutAttr::get(&ctx, 0, s);
+    return StridedLayoutAttr::get(&ctx, s);
   };
 
   // Special case for identity maps and no explicit `strided` attribute - the
@@ -94,7 +94,7 @@ TEST(MemRefLayout, contigTrailingDim) {
   const int64_t _ = ShapedType::kDynamic;
   const FloatType f32 = b.getF32Type();
   auto strided = [&ctx](ArrayRef<int64_t> s) {
-    return StridedLayoutAttr::get(&ctx, 0, s);
+    return StridedLayoutAttr::get(&ctx, s);
   };
 
   // A not-entirely-continuous, not-entirely-discontinuous memref.

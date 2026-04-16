@@ -8,8 +8,8 @@
 // Note: This bufferization is not very efficient yet, but it works.
 
 // CHECK-LABEL: func private @callee(
-//  CHECK-SAME:              %[[arg0:.*]]: memref<5xf32, strided<[?], offset: ?>>,
-//  CHECK-SAME:              %[[arg1:.*]]: memref<5xf32, strided<[?], offset: ?>>) {
+//  CHECK-SAME:              %[[arg0:.*]]: memref<5xf32, strided<[?]>>,
+//  CHECK-SAME:              %[[arg1:.*]]: memref<5xf32, strided<[?]>>) {
 // This alloc is not needed, but it is inserted due to the out-of-place
 // bufferization of the tensor.insert. With a better layering of the out param
 // promotion pass, this alloc could be avoided.
@@ -30,7 +30,7 @@
 //       CHECK-NO-LAYOUT:   memref.copy %[[alloc]], %[[arg1]]
 
 // CHECK-BASELINE-LABEL: func private @callee(
-//  CHECK-BASELINE-SAME:     %[[arg0:.*]]: memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32> {
+//  CHECK-BASELINE-SAME:     %[[arg0:.*]]: memref<5xf32, strided<[?]>>) -> memref<5xf32> {
 //       CHECK-BASELINE:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
 //       CHECK-BASELINE:   memref.copy %[[arg0]], %[[alloc]]
 //       CHECK-BASELINE:   memref.store {{.*}}, %[[alloc]]
@@ -45,9 +45,9 @@ func.func private @callee(%t: tensor<5xf32>) -> (tensor<5xf32>, tensor<5xf32>) {
   return %t, %1 : tensor<5xf32>, tensor<5xf32>
 }
 
-// CHECK: func @main(%[[arg0:.*]]: memref<5xf32, strided<[?], offset: ?>>) -> (f32, f32) {
+// CHECK: func @main(%[[arg0:.*]]: memref<5xf32, strided<[?]>>) -> (f32, f32) {
 // CHECK:   %[[alloc:.*]] = memref.alloc() : memref<5xf32>
-// CHECK:   %[[casted:.*]] = memref.cast %[[alloc]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
+// CHECK:   %[[casted:.*]] = memref.cast %[[alloc]] : memref<5xf32> to memref<5xf32, strided<[?]>>
 // CHECK:   call @callee(%[[arg0]], %[[casted]])
 // CHECK:   %[[l1:.*]] = memref.load %[[arg0]]
 // CHECK:   %[[l2:.*]] = memref.load %[[casted]]
@@ -70,9 +70,9 @@ func.func @main(%t: tensor<5xf32>) -> (f32, f32) {
 
 // CHECK-LABEL: func private @callee(
 //  CHECK-SAME:     %{{.*}}: index,
-//  CHECK-SAME:     %[[r:.*]]: memref<2x5xf32, strided<[?, ?], offset: ?>>) {
+//  CHECK-SAME:     %[[r:.*]]: memref<2x5xf32, strided<[?, ?]>>) {
 //       CHECK:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10x20xf32>
-//       CHECK:   %[[subview:.*]] = memref.subview %[[alloc]]{{.*}} : memref<10x20xf32> to memref<2x5xf32, strided<[20, 1], offset: ?>>
+//       CHECK:   %[[subview:.*]] = memref.subview %[[alloc]]{{.*}} : memref<10x20xf32> to memref<2x5xf32, strided<[20, 1]>>
 //       CHECK:   %[[casted:.*]] = memref.cast %[[subview]]
 //       CHECK:   memref.copy %[[casted]], %[[r]]
 
@@ -89,7 +89,7 @@ func.func @main(%t: tensor<5xf32>) -> (f32, f32) {
 //       CHECK-NO-LAYOUT:   memref.copy %[[alloc2]], %[[r]]
 
 // CHECK-BASELINE-LABEL: func private @callee(
-//  CHECK-BASELINE-SAME:     %{{.*}}: index) -> memref<2x5xf32, strided<[20, 1], offset: ?>> {
+//  CHECK-BASELINE-SAME:     %{{.*}}: index) -> memref<2x5xf32, strided<[20, 1]>> {
 //       CHECK-BASELINE:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10x20xf32>
 //       CHECK-BASELINE:   %[[subview:.*]] = memref.subview %[[alloc]]
 //       CHECK-BASELINE:   return %[[subview]]
@@ -101,7 +101,7 @@ func.func private @callee(%idx: index) -> tensor<2x5xf32> {
 
 // CHECK: func @main(
 // CHECK:   %[[alloc:.*]] = memref.alloc() : memref<2x5xf32>
-// CHECK:   %[[casted:.*]] = memref.cast %[[alloc]] : memref<2x5xf32> to memref<2x5xf32, strided<[?, ?], offset: ?>>
+// CHECK:   %[[casted:.*]] = memref.cast %[[alloc]] : memref<2x5xf32> to memref<2x5xf32, strided<[?, ?]>>
 // CHECK:   call @callee(%{{.*}}, %[[casted]])
 // CHECK:   memref.load %[[casted]]
 

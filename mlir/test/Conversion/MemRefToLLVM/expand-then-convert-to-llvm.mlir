@@ -51,8 +51,8 @@
 // CHECK:         %[[ARG0f:[a-zA-Z0-9]*]]: index,
 // CHECK:         %[[ARG1f:[a-zA-Z0-9]*]]: index,
 // CHECK:         %[[ARG2f:.*]]: index)
-func.func @subview(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : index, %arg1 : index, %arg2 : index)
--> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+func.func @subview(%0 : memref<64x4xf32, strided<[4, 1]>>, %arg0 : index, %arg1 : index, %arg2 : index)
+-> memref<?x?xf32, strided<[?, ?]>> {
   // CHECK-DAG: %[[MEMREF:.*]] = builtin.unrealized_conversion_cast %[[MEM]]
   // CHECK-DAG: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[ARG0f]]
   // CHECK-DAG: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[ARG1f]]
@@ -76,9 +76,9 @@ func.func @subview(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : in
   // CHECK: %[[DESC6:.*]] = llvm.insertvalue %[[ARG1]], %[[DESC5]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 
   %1 = memref.subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
-    memref<64x4xf32, strided<[4, 1], offset: 0>>
-  to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %1 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+    memref<64x4xf32, strided<[4, 1]>>
+  to memref<?x?xf32, strided<[?, ?]>>
+  return %1 : memref<?x?xf32, strided<[?, ?]>>
 }
 
 // -----
@@ -88,7 +88,7 @@ func.func @subview(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : in
 // CHECK:         %[[ARG0f:[a-zA-Z0-9]*]]: index,
 // CHECK:         %[[ARG1f:[a-zA-Z0-9]*]]: index,
 // CHECK:         %[[ARG2f:.*]]: index)
-func.func @subview_non_zero_addrspace(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>, 3>, %arg0 : index, %arg1 : index, %arg2 : index) -> memref<?x?xf32, strided<[?, ?], offset: ?>, 3> {
+func.func @subview_non_zero_addrspace(%0 : memref<64x4xf32, strided<[4, 1]>, 3>, %arg0 : index, %arg1 : index, %arg2 : index) -> memref<?x?xf32, strided<[?, ?]>, 3> {
   // CHECK-DAG: %[[MEMREF:.*]] = builtin.unrealized_conversion_cast %[[MEM]]
   // CHECK-DAG: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[ARG0f]]
   // CHECK-DAG: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[ARG1f]]
@@ -112,9 +112,9 @@ func.func @subview_non_zero_addrspace(%0 : memref<64x4xf32, strided<[4, 1], offs
   // CHECK: %[[DESC6:.*]] = llvm.insertvalue %[[ARG1]], %[[DESC5]][4, 1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
 
   %1 = memref.subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
-    memref<64x4xf32, strided<[4, 1], offset: 0>, 3>
-    to memref<?x?xf32, strided<[?, ?], offset: ?>, 3>
-  return %1 : memref<?x?xf32, strided<[?, ?], offset: ?>, 3>
+    memref<64x4xf32, strided<[4, 1]>, 3>
+    to memref<?x?xf32, strided<[?, ?]>, 3>
+  return %1 : memref<?x?xf32, strided<[?, ?]>, 3>
 }
 
 // -----
@@ -124,7 +124,7 @@ func.func @subview_non_zero_addrspace(%0 : memref<64x4xf32, strided<[4, 1], offs
 // CHECK-SAME:         %[[ARG0f:[a-zA-Z0-9]*]]: index
 // CHECK-SAME:         %[[ARG1f:[a-zA-Z0-9]*]]: index
 // CHECK-SAME:         %[[ARG2f:[a-zA-Z0-9]*]]: index
-func.func @subview_const_size(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : index, %arg1 : index, %arg2 : index) -> memref<4x2xf32, strided<[?, ?], offset: ?>> {
+func.func @subview_const_size(%0 : memref<64x4xf32, strided<[4, 1]>>, %arg0 : index, %arg1 : index, %arg2 : index) -> memref<4x2xf32, strided<[?, ?]>> {
   // CHECK-DAG: %[[MEMREF:.*]] = builtin.unrealized_conversion_cast %[[MEM]]
   // CHECK-DAG: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[ARG0f]]
   // CHECK-DAG: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[ARG1f]]
@@ -149,9 +149,9 @@ func.func @subview_const_size(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>,
   // CHECK: %[[DESC6:.*]] = llvm.insertvalue %[[ARG1]], %[[DESC5]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 
   %1 = memref.subview %0[%arg0, %arg1][4, 2][%arg0, %arg1] :
-    memref<64x4xf32, strided<[4, 1], offset: 0>>
-    to memref<4x2xf32, strided<[?, ?], offset: ?>>
-  return %1 : memref<4x2xf32, strided<[?, ?], offset: ?>>
+    memref<64x4xf32, strided<[4, 1]>>
+    to memref<4x2xf32, strided<[?, ?]>>
+  return %1 : memref<4x2xf32, strided<[?, ?]>>
 }
 
 // -----
@@ -161,7 +161,7 @@ func.func @subview_const_size(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>,
 // CHECK-SAME:         %[[ARG0f:[a-zA-Z0-9]*]]: index
 // CHECK-SAME:         %[[ARG1f:[a-zA-Z0-9]*]]: index
 // CHECK-SAME:         %[[ARG2f:[a-zA-Z0-9]*]]: index
-func.func @subview_const_stride(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : index, %arg1 : index, %arg2 : index) -> memref<?x?xf32, strided<[4, 2], offset: ?>> {
+func.func @subview_const_stride(%0 : memref<64x4xf32, strided<[4, 1]>>, %arg0 : index, %arg1 : index, %arg2 : index) -> memref<?x?xf32, strided<[4, 2]>> {
   // CHECK-DAG: %[[MEMREF:.*]] = builtin.unrealized_conversion_cast %[[MEM]]
   // CHECK-DAG: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[ARG0f]]
   // CHECK-DAG: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[ARG1f]]
@@ -184,16 +184,16 @@ func.func @subview_const_stride(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>
   // CHECK: %[[DESC6:.*]] = llvm.insertvalue %[[CST_STRIDE1]], %[[DESC5]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 
   %1 = memref.subview %0[%arg0, %arg1][%arg0, %arg1][1, 2] :
-    memref<64x4xf32, strided<[4, 1], offset: 0>>
-    to memref<?x?xf32, strided<[4, 2], offset: ?>>
-  return %1 : memref<?x?xf32, strided<[4, 2], offset: ?>>
+    memref<64x4xf32, strided<[4, 1]>>
+    to memref<?x?xf32, strided<[4, 2]>>
+  return %1 : memref<?x?xf32, strided<[4, 2]>>
 }
 
 // -----
 
 // CHECK-LABEL: func @subview_const_stride_and_offset(
 // CHECK-SAME:         %[[MEM:.*]]: memref<{{.*}}>
-func.func @subview_const_stride_and_offset(%0 : memref<64x8xf32, strided<[8, 1], offset: 0>>) -> memref<62x3xf32, strided<[8, 1], offset: 2>> {
+func.func @subview_const_stride_and_offset(%0 : memref<64x8xf32, strided<[8, 1]>>) -> memref<62x3xf32, strided<[8, 1]>> {
   // The last "insertvalue" that populates the memref descriptor from the function arguments.
   // CHECK: %[[MEMREF:.*]] = builtin.unrealized_conversion_cast %[[MEM]]
 
@@ -214,9 +214,9 @@ func.func @subview_const_stride_and_offset(%0 : memref<64x8xf32, strided<[8, 1],
   // CHECK: %[[DESC6:.*]] = llvm.insertvalue %[[CST_STRIDE1]], %[[DESC5]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 
   %1 = memref.subview %0[0, 2][62, 3][1, 1] :
-    memref<64x8xf32, strided<[8, 1], offset: 0>>
-    to memref<62x3xf32, strided<[8, 1], offset: 2>>
-  return %1 : memref<62x3xf32, strided<[8, 1], offset: 2>>
+    memref<64x8xf32, strided<[8, 1]>>
+    to memref<62x3xf32, strided<[8, 1]>>
+  return %1 : memref<62x3xf32, strided<[8, 1]>>
 }
 
 // -----
@@ -226,7 +226,7 @@ func.func @subview_const_stride_and_offset(%0 : memref<64x8xf32, strided<[8, 1],
 // CHECK:         %[[ARG0f:[a-zA-Z0-9]*]]: index,
 // CHECK:         %[[ARG1f:[a-zA-Z0-9]*]]: index,
 // CHECK:         %[[ARG2f:.*]]: index)
-func.func @subview_mixed_static_dynamic(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : index, %arg1 : index, %arg2 : index) -> memref<62x?xf32, strided<[?, 1], offset: ?>> {
+func.func @subview_mixed_static_dynamic(%0 : memref<64x4xf32, strided<[4, 1]>>, %arg0 : index, %arg1 : index, %arg2 : index) -> memref<62x?xf32, strided<[?, 1]>> {
   // CHECK-DAG: %[[MEMREF:.*]] = builtin.unrealized_conversion_cast %[[MEM]]
   // CHECK-DAG: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[ARG0f]]
   // CHECK-DAG: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[ARG1f]]
@@ -255,16 +255,16 @@ func.func @subview_mixed_static_dynamic(%0 : memref<64x4xf32, strided<[4, 1], of
   // CHECK: %[[DESC6:.*]] = llvm.insertvalue %[[CST_STRIDE1]], %[[DESC5]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 
   %1 = memref.subview %0[%arg1, 2][62, %arg2][%arg0, 1] :
-    memref<64x4xf32, strided<[4, 1], offset: 0>>
-    to memref<62x?xf32, strided<[?, 1], offset: ?>>
-  return %1 : memref<62x?xf32, strided<[?, 1], offset: ?>>
+    memref<64x4xf32, strided<[4, 1]>>
+    to memref<62x?xf32, strided<[?, 1]>>
+  return %1 : memref<62x?xf32, strided<[?, 1]>>
 }
 
 // -----
 
 // CHECK-LABEL: func @subview_leading_operands(
 // CHECK:         %[[MEM:.*]]: memref<{{.*}}>,
-func.func @subview_leading_operands(%0 : memref<5x3xf32>, %1: memref<5x?xf32>) -> memref<3x3xf32, strided<[3, 1], offset: 6>> {
+func.func @subview_leading_operands(%0 : memref<5x3xf32>, %1: memref<5x?xf32>) -> memref<3x3xf32, strided<[3, 1]>> {
   // CHECK: %[[MEMREF:.*]] = builtin.unrealized_conversion_cast %[[MEM]]
   // Alloc ptr
   // CHECK: %[[BASE:.*]] = llvm.extractvalue %[[MEMREF]][0] : !llvm.struct<(ptr, ptr, i64
@@ -284,16 +284,16 @@ func.func @subview_leading_operands(%0 : memref<5x3xf32>, %1: memref<5x?xf32>) -
   // CHECK: %[[DESC5:.*]] = llvm.insertvalue %[[C3]], %[[DESC4]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: %[[CST_STRIDE1:.*]] = llvm.mlir.constant(1 : index) : i64
   // CHECK: %[[DESC6:.*]] = llvm.insertvalue %[[CST_STRIDE1]], %[[DESC5]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-  %2 = memref.subview %0[2, 0][3, 3][1, 1]: memref<5x3xf32> to memref<3x3xf32, strided<[3, 1], offset: 6>>
+  %2 = memref.subview %0[2, 0][3, 3][1, 1]: memref<5x3xf32> to memref<3x3xf32, strided<[3, 1]>>
 
-  return %2 : memref<3x3xf32, strided<[3, 1], offset: 6>>
+  return %2 : memref<3x3xf32, strided<[3, 1]>>
 }
 
 // -----
 
 // CHECK-LABEL: func @subview_leading_operands_dynamic(
 // CHECK:         %[[MEM:[a-zA-Z0-9]*]]: memref
-func.func @subview_leading_operands_dynamic(%0 : memref<5x?xf32>) -> memref<3x?xf32, strided<[?, 1], offset: ?>> {
+func.func @subview_leading_operands_dynamic(%0 : memref<5x?xf32>) -> memref<3x?xf32, strided<[?, 1]>> {
   // CHECK: %[[MEMREF:.*]] = builtin.unrealized_conversion_cast %[[MEM]]
   // CHECK: %[[SIZE1:.*]] = llvm.extractvalue %[[MEMREF]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: %[[BASE:.*]] = llvm.extractvalue %[[MEMREF]][0] : !llvm.struct<(ptr, ptr, i64
@@ -322,15 +322,15 @@ func.func @subview_leading_operands_dynamic(%0 : memref<5x?xf32>) -> memref<3x?x
 
   %c0 = arith.constant 1 : index
   %d0 = memref.dim %0, %c0 : memref<5x?xf32>
-  %1 = memref.subview %0[2, 0][3, %d0][1, 1]: memref<5x?xf32> to memref<3x?xf32, strided<[?, 1], offset: ?>>
-  return %1 : memref<3x?xf32, strided<[?, 1], offset: ?>>
+  %1 = memref.subview %0[2, 0][3, %d0][1, 1]: memref<5x?xf32> to memref<3x?xf32, strided<[?, 1]>>
+  return %1 : memref<3x?xf32, strided<[?, 1]>>
 }
 
 // -----
 
 // CHECK-LABEL: func @subview_rank_reducing_leading_operands(
 // CHECK:         %[[MEM:.*]]: memref
-func.func @subview_rank_reducing_leading_operands(%0 : memref<5x3xf32>) -> memref<3xf32, strided<[1], offset: 3>> {
+func.func @subview_rank_reducing_leading_operands(%0 : memref<5x3xf32>) -> memref<3xf32, strided<[1]>> {
   // CHECK: %[[MEMREF:.*]] = builtin.unrealized_conversion_cast %[[MEM]]
   // CHECK: %[[BASE:.*]] = llvm.extractvalue %[[MEMREF]][0] : !llvm.struct<(ptr, ptr, i64
   // CHECK: %[[BASE_ALIGNED:.*]] = llvm.extractvalue %[[MEMREF]][1] : !llvm.struct<(ptr, ptr, i64
@@ -346,16 +346,16 @@ func.func @subview_rank_reducing_leading_operands(%0 : memref<5x3xf32>) -> memre
   // CHECK: %[[CST_STRIDE0:.*]] = llvm.mlir.constant(1 : index) : i64
   // CHECK: %[[DESC4:.*]] = llvm.insertvalue %[[CST_STRIDE0]], %[[DESC3]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
 
-  %1 = memref.subview %0[1, 0][1, 3][1, 1]: memref<5x3xf32> to memref<3xf32, strided<[1], offset: 3>>
+  %1 = memref.subview %0[1, 0][1, 3][1, 1]: memref<5x3xf32> to memref<3xf32, strided<[1]>>
 
-  return %1 : memref<3xf32, strided<[1], offset: 3>>
+  return %1 : memref<3xf32, strided<[1]>>
 }
 
 // -----
 
 // CHECK-LABEL: func @subview_negative_stride
 // CHECK-SAME: (%[[MEM:.*]]: memref<7xf32>)
-func.func @subview_negative_stride(%arg0 : memref<7xf32>) -> memref<7xf32, strided<[-1], offset: 6>> {
+func.func @subview_negative_stride(%arg0 : memref<7xf32>) -> memref<7xf32, strided<[-1]>> {
   // CHECK: %[[MEMREF:.*]] = builtin.unrealized_conversion_cast %[[MEM]]
   // CHECK: %[[BASE:.*]] = llvm.extractvalue %[[MEMREF]][0] : !llvm.struct<(ptr, ptr, i64
   // CHECK: %[[BASE_ALIGNED:.*]] = llvm.extractvalue %[[MEMREF]][1] : !llvm.struct<(ptr, ptr, i64
@@ -368,11 +368,11 @@ func.func @subview_negative_stride(%arg0 : memref<7xf32>) -> memref<7xf32, strid
   // CHECK: %[[DESC3:.*]] = llvm.insertvalue %[[CST_SIZE0]], %[[DESC2]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[CST_STRIDE0:.*]] = llvm.mlir.constant(-1 : index) : i64
   // CHECK: %[[DESC4:.*]] = llvm.insertvalue %[[CST_STRIDE0]], %[[DESC3]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  // CHECK: %[[RES:.*]] = builtin.unrealized_conversion_cast %[[DESC4]] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> to memref<7xf32, strided<[-1], offset: 6>>
-  // CHECK: return %[[RES]] : memref<7xf32, strided<[-1], offset: 6>>
+  // CHECK: %[[RES:.*]] = builtin.unrealized_conversion_cast %[[DESC4]] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> to memref<7xf32, strided<[-1]>>
+  // CHECK: return %[[RES]] : memref<7xf32, strided<[-1]>>
 
-  %0 = memref.subview %arg0[6] [7] [-1] : memref<7xf32> to memref<7xf32, strided<[-1], offset: 6>>
-  return %0 : memref<7xf32, strided<[-1], offset: 6>>
+  %0 = memref.subview %arg0[6] [7] [-1] : memref<7xf32> to memref<7xf32, strided<[-1]>>
+  return %0 : memref<7xf32, strided<[-1]>>
 }
 
 // -----
@@ -410,16 +410,16 @@ func.func @collapse_shape_static(%arg0: memref<1x3x4x1x5xf32>) -> memref<3x4x5xf
 // -----
 
 func.func @collapse_shape_dynamic_with_non_identity_layout(
-        %arg0 : memref<4x?x?xf32, strided<[?, 4, 1], offset: ?>>) ->
-        memref<4x?xf32, strided<[?, ?], offset: ?>> {
+        %arg0 : memref<4x?x?xf32, strided<[?, 4, 1]>>) ->
+        memref<4x?xf32, strided<[?, ?]>> {
   %0 = memref.collapse_shape %arg0 [[0], [1, 2]]:
-    memref<4x?x?xf32, strided<[?, 4, 1], offset: ?>> into
-    memref<4x?xf32, strided<[?, ?], offset: ?>>
-  return %0 : memref<4x?xf32, strided<[?, ?], offset: ?>>
+    memref<4x?x?xf32, strided<[?, 4, 1]>> into
+    memref<4x?xf32, strided<[?, ?]>>
+  return %0 : memref<4x?xf32, strided<[?, ?]>>
 }
 // CHECK-LABEL:   func.func @collapse_shape_dynamic_with_non_identity_layout(
-// CHECK-SAME:                                                               %[[ARG:.*]]: memref<4x?x?xf32, strided<[?, 4, 1], offset: ?>>) -> memref<4x?xf32, strided<[?, ?], offset: ?>> {
-// CHECK:           %[[MEM:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<4x?x?xf32, strided<[?, 4, 1], offset: ?>> to !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
+// CHECK-SAME:                                                               %[[ARG:.*]]: memref<4x?x?xf32, strided<[?, 4, 1]>>) -> memref<4x?xf32, strided<[?, ?]>> {
+// CHECK:           %[[MEM:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<4x?x?xf32, strided<[?, 4, 1]>> to !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
 // CHECK:           %[[BASE_BUFFER:.*]] = llvm.extractvalue %[[MEM]][0] : !llvm.struct<(ptr, ptr, i64,
 // CHECK:           %[[ALIGNED_BUFFER:.*]] = llvm.extractvalue %[[MEM]][1] : !llvm.struct<(ptr, ptr, i64,
 // CHECK:           %[[OFFSET:.*]] = llvm.extractvalue %[[MEM]][2] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
@@ -439,12 +439,12 @@ func.func @collapse_shape_dynamic_with_non_identity_layout(
 // CHECK:           %[[DESC5:.*]] = llvm.insertvalue %[[FINAL_SIZE1]], %[[DESC4]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[C1:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK:           %[[DESC6:.*]] = llvm.insertvalue %[[C1]], %[[DESC5]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK:           %[[RES:.*]] = builtin.unrealized_conversion_cast %[[DESC6]] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> to memref<4x?xf32, strided<[?, ?], offset: ?>>
-// CHECK:           return %[[RES]] : memref<4x?xf32, strided<[?, ?], offset: ?>>
+// CHECK:           %[[RES:.*]] = builtin.unrealized_conversion_cast %[[DESC6]] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> to memref<4x?xf32, strided<[?, ?]>>
+// CHECK:           return %[[RES]] : memref<4x?xf32, strided<[?, ?]>>
 // CHECK:         }
 // CHECK32-LABEL:   func.func @collapse_shape_dynamic_with_non_identity_layout(
-// CHECK32-SAME:                                                               %[[ARG:.*]]: memref<4x?x?xf32, strided<[?, 4, 1], offset: ?>>) -> memref<4x?xf32, strided<[?, ?], offset: ?>> {
-// CHECK32:           %[[MEM:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<4x?x?xf32, strided<[?, 4, 1], offset: ?>> to !llvm.struct<(ptr, ptr, i32, array<3 x i32>, array<3 x i32>)>
+// CHECK32-SAME:                                                               %[[ARG:.*]]: memref<4x?x?xf32, strided<[?, 4, 1]>>) -> memref<4x?xf32, strided<[?, ?]>> {
+// CHECK32:           %[[MEM:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<4x?x?xf32, strided<[?, 4, 1]>> to !llvm.struct<(ptr, ptr, i32, array<3 x i32>, array<3 x i32>)>
 // CHECK32:           %[[BASE_BUFFER:.*]] = llvm.extractvalue %[[MEM]][0] : !llvm.struct<(ptr, ptr, i32,
 // CHECK32:           %[[ALIGNED_BUFFER:.*]] = llvm.extractvalue %[[MEM]][1] : !llvm.struct<(ptr, ptr, i32,
 // CHECK32:           %[[OFFSET:.*]] = llvm.extractvalue %[[MEM]][2] : !llvm.struct<(ptr, ptr, i32, array<3 x i32>, array<3 x i32>)>
@@ -464,8 +464,8 @@ func.func @collapse_shape_dynamic_with_non_identity_layout(
 // CHECK32:           %[[DESC5:.*]] = llvm.insertvalue %[[FINAL_SIZE1_CAST]], %[[DESC4]][3, 1] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)>
 // CHECK32:           %[[C1_I32:.*]] = llvm.mlir.constant(1 : index) : i32
 // CHECK32:           %[[DESC6:.*]] = llvm.insertvalue %[[C1_I32]], %[[DESC5]][4, 1] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)>
-// CHECK32:           %[[RES:.*]] = builtin.unrealized_conversion_cast %[[DESC6]] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)> to memref<4x?xf32, strided<[?, ?], offset: ?>>
-// CHECK32:           return %[[RES]] : memref<4x?xf32, strided<[?, ?], offset: ?>>
+// CHECK32:           %[[RES:.*]] = builtin.unrealized_conversion_cast %[[DESC6]] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)> to memref<4x?xf32, strided<[?, ?]>>
+// CHECK32:           return %[[RES]] : memref<4x?xf32, strided<[?, ?]>>
 // CHECK32:         }
 
 // -----
@@ -623,18 +623,18 @@ func.func @expand_shape_dynamic(%arg0 : memref<1x?xf32>, %sz0: index) -> memref<
 // -----
 
 func.func @expand_shape_dynamic_with_non_identity_layout(
-            %arg0 : memref<1x?xf32, strided<[?, ?], offset: ?>>, %sz0: index) ->
-            memref<1x2x?xf32, strided<[?, ?, ?], offset: ?>> {
+            %arg0 : memref<1x?xf32, strided<[?, ?]>>, %sz0: index) ->
+            memref<1x2x?xf32, strided<[?, ?, ?]>> {
   %0 = memref.expand_shape %arg0 [[0], [1, 2]] output_shape [1, 2, %sz0] :
-    memref<1x?xf32, strided<[?, ?], offset: ?>> into
-    memref<1x2x?xf32, strided<[?, ?, ?], offset: ?>>
-  return %0 : memref<1x2x?xf32, strided<[?, ?, ?], offset: ?>>
+    memref<1x?xf32, strided<[?, ?]>> into
+    memref<1x2x?xf32, strided<[?, ?, ?]>>
+  return %0 : memref<1x2x?xf32, strided<[?, ?, ?]>>
 }
 // CHECK-LABEL:   func.func @expand_shape_dynamic_with_non_identity_layout(
-// CHECK-SAME:      %[[ARG0:.*]]: memref<1x?xf32, strided<[?, ?], offset: ?>>,
-// CHECK-SAME:      %[[ARG1:.*]]: index) -> memref<1x2x?xf32, strided<[?, ?, ?], offset: ?>> {
+// CHECK-SAME:      %[[ARG0:.*]]: memref<1x?xf32, strided<[?, ?]>>,
+// CHECK-SAME:      %[[ARG1:.*]]: index) -> memref<1x2x?xf32, strided<[?, ?, ?]>> {
 // CHECK:           %[[UNREALIZED_CONVERSION_CAST_0:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i64
-// CHECK:           %[[UNREALIZED_CONVERSION_CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<1x?xf32, strided<[?, ?], offset: ?>> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[UNREALIZED_CONVERSION_CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<1x?xf32, strided<[?, ?]>> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[EXTRACTVALUE_0:.*]] = llvm.extractvalue %[[UNREALIZED_CONVERSION_CAST_1]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[EXTRACTVALUE_1:.*]] = llvm.extractvalue %[[UNREALIZED_CONVERSION_CAST_1]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[MLIR_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
@@ -659,17 +659,17 @@ func.func @expand_shape_dynamic_with_non_identity_layout(
 // CHECK:           %[[INSERTVALUE_8:.*]] = llvm.insertvalue %[[UNREALIZED_CONVERSION_CAST_3]], %[[INSERTVALUE_7]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
 // CHECK:           %[[INSERTVALUE_9:.*]] = llvm.insertvalue %[[UNREALIZED_CONVERSION_CAST_0]], %[[INSERTVALUE_8]][3, 2] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
 // CHECK:           %[[INSERTVALUE_10:.*]] = llvm.insertvalue %[[EXTRACTVALUE_4]], %[[INSERTVALUE_9]][4, 2] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
-// CHECK:           %[[UNREALIZED_CONVERSION_CAST_4:.*]] = builtin.unrealized_conversion_cast %[[INSERTVALUE_10]] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)> to memref<1x2x?xf32, strided<[?, ?, ?], offset: ?>>
-// CHECK:           return %[[UNREALIZED_CONVERSION_CAST_4]] : memref<1x2x?xf32, strided<[?, ?, ?], offset: ?>>
+// CHECK:           %[[UNREALIZED_CONVERSION_CAST_4:.*]] = builtin.unrealized_conversion_cast %[[INSERTVALUE_10]] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)> to memref<1x2x?xf32, strided<[?, ?, ?]>>
+// CHECK:           return %[[UNREALIZED_CONVERSION_CAST_4]] : memref<1x2x?xf32, strided<[?, ?, ?]>>
 // CHECK:         }
 
 // -----
 
 // CHECK-LABEL: func @collapse_static_shape_with_non_identity_layout
-func.func @collapse_static_shape_with_non_identity_layout(%arg: memref<1x1x8x8xf32, strided<[64, 64, 8, 1], offset: ?>>) -> memref<64xf32, strided<[1], offset: ?>> {
+func.func @collapse_static_shape_with_non_identity_layout(%arg: memref<1x1x8x8xf32, strided<[64, 64, 8, 1]>>) -> memref<64xf32, strided<[1]>> {
 // CHECK-NOT: memref.collapse_shape
-  %1 = memref.collapse_shape %arg [[0, 1, 2, 3]] : memref<1x1x8x8xf32, strided<[64, 64, 8, 1], offset: ?>> into memref<64xf32, strided<[1], offset: ?>>
-  return %1 : memref<64xf32, strided<[1], offset: ?>>
+  %1 = memref.collapse_shape %arg [[0, 1, 2, 3]] : memref<1x1x8x8xf32, strided<[64, 64, 8, 1]>> into memref<64xf32, strided<[1]>>
+  return %1 : memref<64xf32, strided<[1]>>
 }
 
 // -----
@@ -680,8 +680,8 @@ func.func @collapse_static_shape_with_non_identity_layout(%arg: memref<1x1x8x8xf
 // will be able to do their job easily.
 
 // CHECK-LABEL: func @load_and_assume(
-// CHECK-SAME: %[[ARG0:.*]]: memref<?x?xf32, strided<[?, ?], offset: ?>>,
-// CHECK: %[[DESC:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<?x?xf32, strided<[?, ?], offset: ?>> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-SAME: %[[ARG0:.*]]: memref<?x?xf32, strided<[?, ?]>>,
+// CHECK: %[[DESC:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<?x?xf32, strided<[?, ?]>> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[ALIGNED_PTR:.*]] = llvm.extractvalue %[[DESC]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[OFFSET:.*]] = llvm.extractvalue %[[DESC]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[BUFF_ADDR:.*]] = llvm.getelementptr %[[ALIGNED_PTR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
@@ -690,10 +690,10 @@ func.func @collapse_static_shape_with_non_identity_layout(%arg: memref<1x1x8x8xf
 // CHECK: %[[VAL:.*]] = llvm.load %[[LD_ADDR]] : !llvm.ptr -> f32
 // CHECK: return %[[VAL]] : f32
 func.func @load_and_assume(
-    %arg0: memref<?x?xf32, strided<[?, ?], offset: ?>>,
+    %arg0: memref<?x?xf32, strided<[?, ?]>>,
     %i0: index, %i1: index)
     -> f32 {
-  %arg0_align = memref.assume_alignment %arg0, 16 : memref<?x?xf32, strided<[?, ?], offset: ?>>
-  %2 = memref.load %arg0_align[%i0, %i1] : memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %arg0_align = memref.assume_alignment %arg0, 16 : memref<?x?xf32, strided<[?, ?]>>
+  %2 = memref.load %arg0_align[%i0, %i1] : memref<?x?xf32, strided<[?, ?]>>
   func.return %2 : f32
 }

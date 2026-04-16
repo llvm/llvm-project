@@ -14,12 +14,12 @@
 ///----------------------------------------------------------------------------------------
 
 func.func @transfer_read_dims_match_contiguous(
-    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x2xi8> {
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>) -> vector<5x4x3x2xi8> {
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
   %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
-    memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
+    memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>, vector<5x4x3x2xi8>
   return %res : vector<5x4x3x2xi8>
 }
 
@@ -34,12 +34,12 @@ func.func @transfer_read_dims_match_contiguous(
 //       CHECK-128B:   memref.collapse_shape
 
 func.func @transfer_read_dims_match_contiguous_scalable(
-    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x[2]xi8> {
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>) -> vector<5x4x3x[2]xi8> {
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
   %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
-    memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<5x4x3x[2]xi8>
+    memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>, vector<5x4x3x[2]xi8>
   return %res : vector<5x4x3x[2]xi8>
 }
 
@@ -77,12 +77,12 @@ func.func @transfer_read_dims_match_contiguous_empty_stride(
 // contiguous subset of the memref, so "flattenable"
 
 func.func @transfer_read_dims_mismatch_contiguous(
-    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<2x3x2xi8> {
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>) -> vector<2x3x2xi8> {
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
   %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
-    memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<2x3x2xi8>
+    memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>, vector<2x3x2xi8>
   return %res : vector<2x3x2xi8>
 }
 
@@ -94,7 +94,7 @@ func.func @transfer_read_dims_mismatch_contiguous(
 // CHECK-SAME{LITERAL}: [[0], [1, 2, 3]]
 // CHECK-SAME:          : memref<5x4x3x2xi8, {{.+}}> into memref<5x24xi8, {{.+}}>
 // CHECK:         %[[VEC_1D:.+]] = vector.transfer_read %[[COLLAPSED_MEM]][%[[C0]], %[[C0]]], %[[C0_I8]] {in_bounds = [true]}
-// CHECK-SAME:      : memref<5x24xi8, strided<[24, 1], offset: ?>>, vector<12xi8>
+// CHECK-SAME:      : memref<5x24xi8, strided<[24, 1]>>, vector<12xi8>
 // CHECK:         %[[VEC:.+]] = vector.shape_cast %[[VEC_1D]] : vector<12xi8> to vector<2x3x2xi8>
 // CHECK:         return %[[VEC]] : vector<2x3x2xi8>
 
@@ -107,26 +107,26 @@ func.func @transfer_read_dims_mismatch_contiguous(
 // at the leading unit dimensions of the vector.
 
 func.func @transfer_read_dims_mismatch_contiguous_unit_dims(
-    %mem : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>) -> vector<1x1x4x3x2xi8> {
+    %mem : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1]>>) -> vector<1x1x4x3x2xi8> {
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
   %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0, %c0], %cst :
-    memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>, vector<1x1x4x3x2xi8>
+    memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1]>>, vector<1x1x4x3x2xi8>
   return %res : vector<1x1x4x3x2xi8>
 }
 
 // CHECK-LABEL: func.func @transfer_read_dims_mismatch_contiguous_unit_dims(
-// CHECK-SAME:    %[[MEM:.+]]: memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>)
+// CHECK-SAME:    %[[MEM:.+]]: memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1]>>)
 // CHECK-SAME:    -> vector<1x1x4x3x2xi8>
 // CHECK-DAG:   %[[C0_I8:.+]] = arith.constant 0 : i8
 // CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 // CHECK:       %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}: [[0], [1], [2, 3, 4]]
-// CHECK-SAME:    : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>
-// CHECK-SAME:      into memref<6x5x24xi8, strided<[120, 24, 1], offset: ?>>
+// CHECK-SAME:    : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1]>>
+// CHECK-SAME:      into memref<6x5x24xi8, strided<[120, 24, 1]>>
 // CHECK:       %[[VEC_1D:.+]] = vector.transfer_read %[[COLLAPSED]][%[[C0]], %[[C0]], %[[C0]]], %[[C0_I8]]
-// CHECK-SAME:    {in_bounds = [true]} : memref<6x5x24xi8, strided<[120, 24, 1], offset: ?>>, vector<24xi8>
+// CHECK-SAME:    {in_bounds = [true]} : memref<6x5x24xi8, strided<[120, 24, 1]>>, vector<24xi8>
 // CHECK:       %[[VEC:.+]] = vector.shape_cast %[[VEC_1D]] : vector<24xi8> to vector<1x1x4x3x2xi8>
 // CHECK:       return %[[VEC]] : vector<1x1x4x3x2xi8>
 
@@ -141,23 +141,23 @@ func.func @transfer_read_dims_mismatch_contiguous_unit_dims(
 // the memref.
 
 func.func @transfer_read_non_contiguous_unit_dims(
-    %mem : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>) -> vector<1x1x3x2xi8> {
+    %mem : memref<5x4x3x2xi8, strided<[48, 6, 2, 1]>>) -> vector<1x1x3x2xi8> {
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
   %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
-    memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>, vector<1x1x3x2xi8>
+    memref<5x4x3x2xi8, strided<[48, 6, 2, 1]>>, vector<1x1x3x2xi8>
   return %res : vector<1x1x3x2xi8>
 }
 
 // CHECK-LABEL:   func.func @transfer_read_non_contiguous_unit_dims(
-// CHECK-SAME:      %[[MEM:.*]]: memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>) -> vector<1x1x3x2xi8> {
+// CHECK-SAME:      %[[MEM:.*]]: memref<5x4x3x2xi8, strided<[48, 6, 2, 1]>>) -> vector<1x1x3x2xi8> {
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : i8
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}: [[0], [1], [2, 3]]
-// CHECK-SAME:        : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>> into memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>
-// CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_3]][%[[VAL_2]], %[[VAL_2]], %[[VAL_2]]], %[[VAL_1]] {in_bounds = [true]} : memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>, vector<6xi8>
+// CHECK-SAME:        : memref<5x4x3x2xi8, strided<[48, 6, 2, 1]>> into memref<5x4x6xi8, strided<[48, 6, 1]>>
+// CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_3]][%[[VAL_2]], %[[VAL_2]], %[[VAL_2]]], %[[VAL_1]] {in_bounds = [true]} : memref<5x4x6xi8, strided<[48, 6, 1]>>, vector<6xi8>
 // CHECK:           %[[VAL_5:.*]] = vector.shape_cast %[[VAL_4]] : vector<6xi8> to vector<1x1x3x2xi8>
 // CHECK:           return %[[VAL_5]] : vector<1x1x3x2xi8>
 
@@ -202,7 +202,7 @@ func.func @transfer_read_dims_mismatch_non_zero_indices(
 // the output vector is to be read _is_ contiguous. Hence the flattening works fine.
 
 func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
-    %mem : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>,
+    %mem : memref<1x3x3x2xf32, strided<[40, 10, 2, 1]>>,
     %idx_1 : index,
     %idx_2 : index) -> vector<2x2xf32> {
 
@@ -210,7 +210,7 @@ func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
   %cst_1 = arith.constant 0.000000e+00 : f32
   %res = vector.transfer_read %mem[%c0, %idx_1, %idx_2, %c0], %cst_1 {
     in_bounds = [true, true]
-  } : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>, vector<2x2xf32>
+  } : memref<1x3x3x2xf32, strided<[40, 10, 2, 1]>>, vector<2x2xf32>
   return %res : vector<2x2xf32>
 }
 
@@ -218,7 +218,7 @@ func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
 
 // CHECK-LABEL:  func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
 // CHECK:         %[[COLLAPSE:.+]] = memref.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]]
-// CHECK-SAME:      : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>> into memref<1x3x6xf32, strided<[40, 10, 1], offset: ?>>
+// CHECK-SAME:      : memref<1x3x3x2xf32, strided<[40, 10, 2, 1]>> into memref<1x3x6xf32, strided<[40, 10, 1]>>
 // CHECK:         %[[APPLY:.*]] = affine.apply #[[$MAP]]()
 
 // CHECK-128B-LABEL: func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
@@ -230,7 +230,7 @@ func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
 // or not. Indeed, those dynamic shapes are not candidates for flattening anyway.
 
 func.func @transfer_read_leading_dynamic_dims(
-    %mem : memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>,
+    %mem : memref<?x?x8x4xi8, strided<[?, 32, 4, 1]>>,
     %idx_1 : index,
     %idx_2 : index) -> vector<8x4xi8> {
 
@@ -238,7 +238,7 @@ func.func @transfer_read_leading_dynamic_dims(
   %c0 = arith.constant 0 : index
   %res = vector.transfer_read %mem[%idx_1, %idx_2, %c0, %c0], %c0_i8 {
     in_bounds = [true, true]
-  } : memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>, vector<8x4xi8>
+  } : memref<?x?x8x4xi8, strided<[?, 32, 4, 1]>>, vector<8x4xi8>
   return %res : vector<8x4xi8>
 }
 
@@ -367,12 +367,12 @@ func.func @transfer_read_0d(
 // Strides make the input memref non-contiguous, hence non-flattenable.
 
 func.func @transfer_read_non_contiguous_src(
-    %mem : memref<5x4x3x2xi8, strided<[24, 8, 2, 1], offset: ?>>) -> vector<5x4x3x2xi8> {
+    %mem : memref<5x4x3x2xi8, strided<[24, 8, 2, 1]>>) -> vector<5x4x3x2xi8> {
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
   %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
-    memref<5x4x3x2xi8, strided<[24, 8, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
+    memref<5x4x3x2xi8, strided<[24, 8, 2, 1]>>, vector<5x4x3x2xi8>
   return %res : vector<5x4x3x2xi8>
 }
 
@@ -416,12 +416,12 @@ func.func @transfer_read_multi_dim_unit_vector(
 ///----------------------------------------------------------------------------------------
 
 func.func @transfer_write_dims_match_contiguous(
-    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>,
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>,
     %vec : vector<5x4x3x2xi8>) {
 
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] :
-    vector<5x4x3x2xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
+    vector<5x4x3x2xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>
   return
 }
 
@@ -436,12 +436,12 @@ func.func @transfer_write_dims_match_contiguous(
 //       CHECK-128B:   memref.collapse_shape
 
 func.func @transfer_write_dims_match_contiguous_scalable(
-    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>,
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>,
     %vec : vector<5x4x3x[2]xi8>) {
 
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] :
-    vector<5x4x3x[2]xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
+    vector<5x4x3x[2]xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>
   return
 }
 
@@ -479,12 +479,12 @@ func.func @transfer_write_dims_match_contiguous_empty_stride(
 // contiguous subset of the memref, so "flattenable".
 
 func.func @transfer_write_dims_mismatch_contiguous(
-    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>,
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>,
     %vec : vector<2x2xi8>) {
 
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] :
-    vector<2x2xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
+    vector<2x2xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1]>>
   return
 }
 
@@ -508,27 +508,27 @@ func.func @transfer_write_dims_mismatch_contiguous(
 // at the leading unit dimensions of the vector.
 
 func.func @transfer_write_dims_mismatch_contiguous_unit_dims(
-    %mem : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>,
+    %mem : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1]>>,
     %vec : vector<1x1x4x3x2xi8>) {
 
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0, %c0] :
-    vector<1x1x4x3x2xi8>, memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>
+    vector<1x1x4x3x2xi8>, memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1]>>
 
   return
 }
 
 // CHECK-LABEL:  func.func @transfer_write_dims_mismatch_contiguous_unit_dims(
-// CHECK-SAME:   %[[MEM:.+]]: memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>
+// CHECK-SAME:   %[[MEM:.+]]: memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1]>>
 // CHECK-SAME:   %[[VEC:.+]]: vector<1x1x4x3x2xi8>
 // CHECK:          %[[C0:.+]] = arith.constant 0 : index
 // CHECK:          %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}: [[0], [1], [2, 3, 4]]
-// CHECK-SAME:       : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>
-// CHECK-SAME:         into memref<6x5x24xi8, strided<[120, 24, 1], offset: ?>>
+// CHECK-SAME:       : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1]>>
+// CHECK-SAME:         into memref<6x5x24xi8, strided<[120, 24, 1]>>
 // CHECK:          %[[VEC_1D:.+]] = vector.shape_cast %[[VEC]] : vector<1x1x4x3x2xi8> to vector<24xi8>
 // CHECK:          vector.transfer_write %[[VEC_1D]], %[[COLLAPSED]][%[[C0]], %[[C0]], %[[C0]]]
-// CHECK-SAME:       {in_bounds = [true]} : vector<24xi8>, memref<6x5x24xi8, strided<[120, 24, 1], offset: ?>>
+// CHECK-SAME:       {in_bounds = [true]} : vector<24xi8>, memref<6x5x24xi8, strided<[120, 24, 1]>>
 
 // CHECK-128B-LABEL: func @transfer_write_dims_mismatch_contiguous_unit_dims(
 //       CHECK-128B:   memref.collapse_shape
@@ -541,25 +541,25 @@ func.func @transfer_write_dims_mismatch_contiguous_unit_dims(
 // the memref.
 
 func.func @transfer_write_non_contiguous_unit_dims(
-    %mem : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>,
+    %mem : memref<5x4x3x2xi8, strided<[48, 6, 2, 1]>>,
     %vec : vector<1x1x3x2xi8>) {
 
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] :
-    vector<1x1x3x2xi8>, memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>
+    vector<1x1x3x2xi8>, memref<5x4x3x2xi8, strided<[48, 6, 2, 1]>>
   return
 }
 
 // CHECK-LABEL:   func.func @transfer_write_non_contiguous_unit_dims
-// CHECK-SAME:      %[[MEM:.*]]: memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>,
+// CHECK-SAME:      %[[MEM:.*]]: memref<5x4x3x2xi8, strided<[48, 6, 2, 1]>>,
 // CHECK-SAME:      %[[VEC:.*]]: vector<1x1x3x2xi8>) {
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[COLLAPSED:.*]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}: [[0], [1], [2, 3]]
-// CHECK-SAME:        : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>> into memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>
+// CHECK-SAME:        : memref<5x4x3x2xi8, strided<[48, 6, 2, 1]>> into memref<5x4x6xi8, strided<[48, 6, 1]>>
 // CHECK:           %[[VEC_1D:.*]] = vector.shape_cast %[[VEC]] : vector<1x1x3x2xi8> to vector<6xi8>
 // CHECK:           vector.transfer_write %[[VEC_1D]], %[[COLLAPSED]][%[[C0]], %[[C0]], %[[C0]]]
-// CHECK-SAME:        {in_bounds = [true]} : vector<6xi8>, memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>
+// CHECK-SAME:        {in_bounds = [true]} : vector<6xi8>, memref<5x4x6xi8, strided<[48, 6, 1]>>
 
 // CHECK-128B-LABEL: func @transfer_write_non_contiguous_unit_dims(
 //       CHECK-128B:   memref.collapse_shape
@@ -603,12 +603,12 @@ func.func @transfer_write_dims_mismatch_non_zero_indices(
 
 func.func @transfer_write_dims_mismatch_non_contiguous_non_zero_indices(
     %vec : vector<2x2xf32>,
-    %mem : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>,
+    %mem : memref<1x3x3x2xf32, strided<[40, 10, 2, 1]>>,
     %idx_1 : index,
     %idx_2 : index) {
 
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %mem[%c0, %idx_1, %idx_2, %c0] {in_bounds = [true, true]} : vector<2x2xf32>, memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>
+  vector.transfer_write %vec, %mem[%c0, %idx_1, %idx_2, %c0] {in_bounds = [true, true]} : vector<2x2xf32>, memref<1x3x3x2xf32, strided<[40, 10, 2, 1]>>
   return
 }
 
@@ -616,7 +616,7 @@ func.func @transfer_write_dims_mismatch_non_contiguous_non_zero_indices(
 
 // CHECK-LABEL:  func.func @transfer_write_dims_mismatch_non_contiguous_non_zero_indices(
 // CHECK-DAG:      %[[APPLY:.*]] = affine.apply #[[$MAP]]()
-// CHECK-DAG:      %[[COLLAPSE:.+]] = memref.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]] : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>> into memref<1x3x6xf32, strided<[40, 10, 1], offset: ?>>
+// CHECK-DAG:      %[[COLLAPSE:.+]] = memref.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]] : memref<1x3x3x2xf32, strided<[40, 10, 2, 1]>> into memref<1x3x6xf32, strided<[40, 10, 1]>>
 
 // CHECK-128B-LABEL: func @transfer_write_dims_mismatch_non_contiguous_non_zero_indices(
 //       CHECK-128B:   memref.collapse_shape
@@ -628,13 +628,13 @@ func.func @transfer_write_dims_mismatch_non_contiguous_non_zero_indices(
 
 func.func @transfer_write_leading_dynamic_dims(
     %vec : vector<8x4xi8>,
-    %mem : memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>,
+    %mem : memref<?x?x8x4xi8, strided<[?, 32, 4, 1]>>,
     %idx_1 : index,
     %idx_2 : index) {
 
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %mem[%idx_1, %idx_2, %c0, %c0] {in_bounds = [true, true]} :
-    vector<8x4xi8>, memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>
+    vector<8x4xi8>, memref<?x?x8x4xi8, strided<[?, 32, 4, 1]>>
   return
 }
 
@@ -756,12 +756,12 @@ func.func @transfer_write_0d(
 // The strides make the input memref non-contiguous, hence non-flattenable.
 
 func.func @transfer_write_non_contiguous_src(
-    %mem : memref<5x4x3x2xi8, strided<[24, 8, 2, 1], offset: ?>>,
+    %mem : memref<5x4x3x2xi8, strided<[24, 8, 2, 1]>>,
     %vec : vector<5x4x3x2xi8>) {
 
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %mem[%c0, %c0, %c0, %c0] :
-   vector<5x4x3x2xi8>, memref<5x4x3x2xi8, strided<[24, 8, 2, 1], offset: ?>>
+   vector<5x4x3x2xi8>, memref<5x4x3x2xi8, strided<[24, 8, 2, 1]>>
   return
 }
 
@@ -776,11 +776,11 @@ func.func @transfer_write_non_contiguous_src(
 // -----
 
 func.func @negative_out_of_bound_transfer_read(
-    %mem : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x2xi8> {
+    %mem : memref<?x4x3x2xi8, strided<[24, 6, 2, 1]>>) -> vector<5x4x3x2xi8> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
   %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst {in_bounds = [false, true, true, true]} :
-    memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
+    memref<?x4x3x2xi8, strided<[24, 6, 2, 1]>>, vector<5x4x3x2xi8>
   return %res : vector<5x4x3x2xi8>
 }
 // CHECK-LABEL: func.func @negative_out_of_bound_transfer_read
@@ -794,10 +794,10 @@ func.func @negative_out_of_bound_transfer_read(
 // -----
 
 func.func @negative_out_of_bound_transfer_write(
-    %mem : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, %vec : vector<1x1x3x2xi8>) {
+    %mem : memref<?x4x3x2xi8, strided<[24, 6, 2, 1]>>, %vec : vector<1x1x3x2xi8>) {
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] {in_bounds = [false, true, true, true]} :
-    vector<1x1x3x2xi8>, memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
+    vector<1x1x3x2xi8>, memref<?x4x3x2xi8, strided<[24, 6, 2, 1]>>
   return
 }
 // CHECK-LABEL: func.func @negative_out_of_bound_transfer_write

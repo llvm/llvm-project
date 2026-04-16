@@ -535,12 +535,12 @@ def MemRef_CastOp : MemRef_Op<"cast", [
     // The same holds true for offsets and strides.
 
     // Assert that the input dynamic shape matches the destination static stride.
-    %4 = memref.cast %1 : memref<12x4xf32, strided<[?, ?], offset: ?>> to
-                          memref<12x4xf32, strided<[4, 1], offset: 5>>
+    %4 = memref.cast %1 : memref<12x4xf32, strided<[?, ?]>> to
+                          memref<12x4xf32, strided<[4, 1]>>
     // Erase static offset and stride information, replacing it with
     // dynamic information.
-    %5 = memref.cast %1 : memref<12x4xf32, strided<[4, 1], offset: 5>> to
-                          memref<12x4xf32, strided<[?, ?], offset: ?>>
+    %5 = memref.cast %1 : memref<12x4xf32, strided<[4, 1]>> to
+                          memref<12x4xf32, strided<[?, ?]>>
     ```
 
     b. Either or both memref types are unranked with the same element type, and
@@ -1041,7 +1041,7 @@ def MemRef_ExtractStridedMetadataOp : MemRef_Op<"extract_strided_metadata", [
           offset: [%offset],
           sizes: [%sizes#0, %sizes#1],
           strides: [%strides#0, %strides#1]
-        : memref<f32> to memref<?x?xf32, strided<[?, ?], offset:?>>
+        : memref<f32> to memref<?x?xf32, strided<[?, ?]>>
     ```
   }];
 
@@ -1510,15 +1510,15 @@ def MemRef_ReinterpretCastOp
       offset: [9],
       sizes: [4, 4],
       strides: [16, 2]
-    : memref<8x8xf32, strided<[8, 1], offset: 0>> to
-      memref<4x4xf32, strided<[16, 2], offset: 9>>
+    : memref<8x8xf32, strided<[8, 1]>> to
+      memref<4x4xf32, strided<[16, 2]>>
 
     %result2 = memref.reinterpret_cast %result1 to
       offset: [0],
       sizes: [2, 2],
       strides: [4, 2]
-    : memref<4x4xf32, strided<[16, 2], offset: 9>> to
-      memref<2x2xf32, strided<[4, 2], offset: 0>>
+    : memref<4x4xf32, strided<[16, 2]>> to
+      memref<2x2xf32, strided<[4, 2]>>
     ```
 
     The underlying memory of `%arg0` consists of a linear sequence of integers
@@ -1573,13 +1573,13 @@ def MemRef_ReinterpretCastOp
       offset: [0],
       sizes: [%size0, 10],
       strides: [1, %stride1]
-    : memref<?x?xf32> to memref<?x10xf32, strided<[1, ?], offset: 0>>
+    : memref<?x?xf32> to memref<?x10xf32, strided<[1, ?]>>
 
     memref.reinterpret_cast %unranked to
       offset: [%offset],
       sizes: [%size0, %size1],
       strides: [%stride0, %stride1]
-    : memref<*xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+    : memref<*xf32> to memref<?x?xf32, strided<[?, ?]>>
     ```
 
     This operation creates a new memref descriptor using the base of the
@@ -1590,7 +1590,7 @@ def MemRef_ReinterpretCastOp
       offset: [%offset],
       sizes: [%sizes],
       strides: [%strides] :
-      memref<*xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+      memref<*xf32> to memref<?x?xf32, strided<[?, ?]>>
     ```
     means that `%dst`'s descriptor will be:
     ```mlir
@@ -2181,12 +2181,12 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
 
     ```mlir
     %result1 = memref.subview %arg0[1, 1][4, 4][2, 2]
-    : memref<8x8xf32, strided<[8, 1], offset: 0>> to
-      memref<4x4xf32, strided<[16, 2], offset: 9>>
+    : memref<8x8xf32, strided<[8, 1]>> to
+      memref<4x4xf32, strided<[16, 2]>>
 
     %result2 = memref.subview %result1[1, 1][2, 2][2, 2]
-    : memref<4x4xf32, strided<[16, 2], offset: 9>> to
-      memref<2x2xf32, strided<[32, 4], offset: 27>>
+    : memref<4x4xf32, strided<[16, 2]>> to
+      memref<2x2xf32, strided<[32, 4]>>
     ```
 
     The underlying memory of `%arg0` consists of a linear sequence of integers
@@ -2234,8 +2234,8 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     // Subview of static memref with strided layout at static offsets, sizes
     // and strides.
     %1 = memref.subview %0[4, 2][8, 2][3, 2]
-        : memref<64x4xf32, strided<[7, 9], offset: 91>> to
-          memref<8x2xf32, strided<[21, 18], offset: 137>>
+        : memref<64x4xf32, strided<[7, 9]>> to
+          memref<8x2xf32, strided<[21, 18]>>
     ```
 
     Example 3:
@@ -2244,7 +2244,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     // Subview of static memref with identity layout at dynamic offsets, sizes
     // and strides.
     %1 = memref.subview %0[%off0, %off1][%sz0, %sz1][%str0, %str1]
-        : memref<64x4xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+        : memref<64x4xf32> to memref<?x?xf32, strided<[?, ?]>>
     ```
 
     Example 4:
@@ -2253,8 +2253,8 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     // Subview of dynamic memref with strided layout at dynamic offsets and
     // strides, but static sizes.
     %1 = memref.subview %0[%off0, %off1][4, 4][%str0, %str1]
-        : memref<?x?xf32, strided<[?, ?], offset: ?>> to
-          memref<4x4xf32, strided<[?, ?], offset: ?>>
+        : memref<?x?xf32, strided<[?, ?]>> to
+          memref<4x4xf32, strided<[?, ?]>>
     ```
 
     Example 5:
@@ -2264,7 +2264,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     %1 = memref.subview %0[0, 0, 0][1, 16, 4][1, 1, 1]
         : memref<8x16x4xf32> to memref<16x4xf32>
     %3 = memref.subview %2[3, 4, 2][1, 6, 3][1, 1, 1]
-        : memref<8x16x4xf32> to memref<6x3xf32, strided<[4, 1], offset: 210>>
+        : memref<8x16x4xf32> to memref<6x3xf32, strided<[4, 1]>>
     ```
 
     Example 6:

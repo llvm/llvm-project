@@ -82,7 +82,7 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
     if (!stridedLayout)
       return failure();
     MemRefLayoutAttrInterface newLayout =
-        StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides());
+        StridedLayoutAttr::get(ctx, stridedLayout.getStrides());
     // Special case: if resetting the offset causes the strided layout to become
     // the identity layout, then reset to the identity layout.
     // TODO: this'll get a lot simpler when we have the contiguous layout.
