@@ -12,7 +12,7 @@ int main() {
   // DUMP: [alloc] {{.*}} 10{{$}}
   // DUMP: in main{{.*}}malloc_bisect.c
   char *volatile p = (char *)malloc(10);
-  if (__hwasan_get_tag_from_pointer(p) & (1 << 8))
+  if (__hwasan_get_tag_from_pointer(p) & (1 << 7))
     abort();
   free(p);
   __hwasan_disable_allocator_tagging();
