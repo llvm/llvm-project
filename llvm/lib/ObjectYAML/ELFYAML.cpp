@@ -1142,6 +1142,7 @@ void MappingTraits<ELFYAML::ProgramHeader>::mapping(
   IO.mapOptional("FileSize", Phdr.FileSize);
   IO.mapOptional("MemSize", Phdr.MemSize);
   IO.mapOptional("Offset", Phdr.Offset);
+  IO.mapOptional("Content", Phdr.Content);
 }
 
 std::string MappingTraits<ELFYAML::ProgramHeader>::validate(
@@ -1150,6 +1151,8 @@ std::string MappingTraits<ELFYAML::ProgramHeader>::validate(
     return "the \"LastSec\" key can't be used without the \"FirstSec\" key";
   if (FileHdr.FirstSec && !FileHdr.LastSec)
     return "the \"FirstSec\" key can't be used without the \"LastSec\" key";
+  if (FileHdr.Content && (FileHdr.FirstSec || FileHdr.LastSec))
+    return "\"Content\" can't be used with \"FirstSec\" or \"LastSec\"";
   return "";
 }
 

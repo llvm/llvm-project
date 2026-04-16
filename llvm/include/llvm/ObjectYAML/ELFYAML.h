@@ -734,6 +734,9 @@ struct ProgramHeader {
   std::optional<StringRef> FirstSec;
   std::optional<StringRef> LastSec;
 
+  // Raw content for segments not backed by sections (e.g., core files).
+  std::optional<yaml::BinaryRef> Content;
+
   // This vector contains all chunks from [FirstSec, LastSec].
   std::vector<Chunk *> Chunks;
 };

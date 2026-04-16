@@ -285,6 +285,8 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     Y->Header.Flags = ELFYAML::ELF_EF(Obj.getHeader().e_flags);
   Y->Header.Entry = Obj.getHeader().e_entry;
 
+  const bool HasSectionHeaders = Obj.getHeader().e_shoff != 0;
+
   // Dump sections
   auto SectionsOrErr = Obj.sections();
   if (!SectionsOrErr)
@@ -304,8 +306,20 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   // header table is larger than or equal to SHN_LORESERVE (0xff00). In this
   // case the real number of entries is held in the sh_size member of the
   // initial entry. We have a section header table when `e_shoff` is not 0.
-  if (Obj.getHeader().e_shoff != 0 && Obj.getHeader().e_shnum == 0)
+  if (HasSectionHeaders && Obj.getHeader().e_shnum == 0)
     Y->Header.EShNum = 0;
+
+  // For files without a section header table (e.g., core files), preserve the
+  // ELF header fields that differ from the defaults yaml2obj would produce.
+  // yaml2obj defaults e_shentsize to sizeof(Elf_Shdr), so we must always set
+  // it explicitly when there are no section headers.
+  if (!HasSectionHeaders) {
+    Y->Header.EShEntSize = Obj.getHeader().e_shentsize;
+    if (Obj.getHeader().e_shnum != 0)
+      Y->Header.EShNum = Obj.getHeader().e_shnum;
+    if (Obj.getHeader().e_shstrndx != 0)
+      Y->Header.EShStrNdx = Obj.getHeader().e_shstrndx;
+  }
 
   // Dump symbols. We need to do this early because other sections might want
   // to access the deduplicated symbol names that we also create here.
@@ -377,36 +391,50 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     return PhdrsOrErr.takeError();
   Y->ProgramHeaders = std::move(*PhdrsOrErr);
 
-  dumpSectionOffsets<ELFT>(Obj.getHeader(), Y->ProgramHeaders, Chunks,
-                           Sections);
+  if (!Chunks.empty())
+    dumpSectionOffsets<ELFT>(Obj.getHeader(), Y->ProgramHeaders, Chunks,
+                             Sections);
 
   // Dump DWARF sections.
-  Y->DWARF = dumpDWARFSections(Chunks);
+  if (!Chunks.empty())
+    Y->DWARF = dumpDWARFSections(Chunks);
 
   // We emit the "SectionHeaderTable" key when the order of sections in the
   // sections header table doesn't match the file order.
-  const bool SectionsSorted =
-      llvm::is_sorted(Chunks, [&](const std::unique_ptr<ELFYAML::Chunk> &A,
-                                  const std::unique_ptr<ELFYAML::Chunk> &B) {
-        return cast<ELFYAML::Section>(A.get())->OriginalSecNdx <
-               cast<ELFYAML::Section>(B.get())->OriginalSecNdx;
-      });
-  if (!SectionsSorted) {
-    std::unique_ptr<ELFYAML::SectionHeaderTable> SHT =
-        std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/false);
-    SHT->Sections.emplace();
-    for (ELFYAML::Section *S : OriginalOrder)
-      SHT->Sections->push_back({S->Name});
-    Chunks.push_back(std::move(SHT));
+  if (!Chunks.empty()) {
+    const bool SectionsSorted =
+        llvm::is_sorted(Chunks, [&](const std::unique_ptr<ELFYAML::Chunk> &A,
+                                    const std::unique_ptr<ELFYAML::Chunk> &B) {
+          return cast<ELFYAML::Section>(A.get())->OriginalSecNdx <
+                 cast<ELFYAML::Section>(B.get())->OriginalSecNdx;
+        });
+    if (!SectionsSorted) {
+      std::unique_ptr<ELFYAML::SectionHeaderTable> SHT =
+          std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/false);
+      SHT->Sections.emplace();
+      for (ELFYAML::Section *S : OriginalOrder)
+        SHT->Sections->push_back({S->Name});
+      Chunks.push_back(std::move(SHT));
+    }
+
+    llvm::erase_if(
+        Chunks, [this, &Y](const std::unique_ptr<ELFYAML::Chunk> &C) {
+          if (isa<ELFYAML::SectionHeaderTable>(*C))
+            return false;
+
+          const ELFYAML::Section &S = cast<ELFYAML::Section>(*C);
+          return !shouldPrintSection(S, Sections[S.OriginalSecNdx], Y->DWARF);
+        });
   }
 
-  llvm::erase_if(Chunks, [this, &Y](const std::unique_ptr<ELFYAML::Chunk> &C) {
-    if (isa<ELFYAML::SectionHeaderTable>(*C))
-      return false;
-
-    const ELFYAML::Section &S = cast<ELFYAML::Section>(*C);
-    return !shouldPrintSection(S, Sections[S.OriginalSecNdx], Y->DWARF);
-  });
+  // For files without section headers, add a SectionHeaderTable with
+  // NoHeaders: true so that yaml2obj does not generate section headers.
+  if (!HasSectionHeaders) {
+    std::unique_ptr<ELFYAML::SectionHeaderTable> SHT =
+        std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/false);
+    SHT->NoHeaders = true;
+    Chunks.push_back(std::move(SHT));
+  }
 
   // The section header string table by default is assumed to be called
   // ".shstrtab" and be in its own unique section. However, it's possible for it
@@ -502,6 +530,23 @@ ELFDumper<ELFT>::dumpProgramHeaders(
         PH.LastSec = S.Name;
         PH.Chunks.push_back(C.get());
       }
+    }
+
+    // If no sections matched this segment and it has file data, dump the raw
+    // content. This handles core files and other ELF files where segments
+    // are not backed by section headers.
+    if (!PH.FirstSec && Phdr.p_filesz > 0) {
+      ArrayRef<uint8_t> Content(Obj.base() + Phdr.p_offset, Phdr.p_filesz);
+      PH.Content = yaml::BinaryRef(Content);
+      // Set MemSize explicitly only when it differs from FileSize.
+      if (Phdr.p_memsz != Phdr.p_filesz)
+        PH.MemSize = Phdr.p_memsz;
+      // Set FileSize explicitly only when it differs from content size.
+      // yaml2obj will derive it from Content by default.
+    } else if (!PH.FirstSec && Phdr.p_filesz == 0 && Phdr.p_memsz > 0) {
+      // Memory-only segment with no file content (e.g., BSS-like).
+      PH.FileSize = static_cast<llvm::yaml::Hex64>(0);
+      PH.MemSize = Phdr.p_memsz;
     }
 
     Ret.push_back(PH);
