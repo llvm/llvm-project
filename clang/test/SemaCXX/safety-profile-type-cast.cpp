@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -std=c++20 %s
-// RUN: %clang_cc1 -fsyntax-only -verify=no-profiles -std=c++20 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=no-profiles -std=c++23 %s
 // no-profiles-warning@+1 {{'profiles::enforce' attribute ignored}}
 [[profiles::enforce(test::type_cast)]];
 // no-profiles-warning@+1 {{'profiles::enforce' attribute ignored}}
@@ -494,6 +494,47 @@ auto get_wrong_profile_lambda() {
 void test_wrong_profile_lambda() {
   auto l = get_wrong_profile_lambda();
   l(0); // expected-note {{in instantiation of function template specialization 'get_wrong_profile_lambda()::(lambda)::operator()<int>' requested here}}
+}
+
+// Direct suppress on a non-generic lambda's declarator applies to its body.
+// The attribute precedes the parameter list so it appertains to the call
+// operator declaration (P2173; C++23 standard).
+void test_nongeneric_lambda_direct_suppress() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  auto l = [] [[profiles::suppress(test::type_cast)]] () {
+    int *p = reinterpret_cast<int*>(0);
+  };
+  l();
+}
+
+// Direct suppress of a non-matching profile on a non-generic lambda does not
+// suppress the violation.
+void test_nongeneric_lambda_direct_suppress_mismatch() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  auto l = [] [[profiles::suppress(test::other)]] () {
+    int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  };
+  l();
+}
+
+// Rule-based direct suppress on a non-generic lambda applies when the rule
+// matches.
+void test_nongeneric_lambda_direct_suppress_rule() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  auto l = [] [[profiles::suppress(test::type_cast, rule: "reinterpret_cast")]] () {
+    int *p = reinterpret_cast<int*>(0);
+  };
+  l();
+}
+
+// Rule-based direct suppress on a non-generic lambda does not suppress a
+// non-matching rule.
+void test_nongeneric_lambda_direct_suppress_wrong_rule() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  auto l = [] [[profiles::suppress(test::type_cast, rule: "static_cast")]] () {
+    int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  };
+  l();
 }
 
 // Suppress on an inline member function definition applies to the body.

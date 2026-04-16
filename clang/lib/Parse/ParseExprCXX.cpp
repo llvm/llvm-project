@@ -1482,7 +1482,12 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     return ExprError();
   }
 
-  StmtResult Stmt(ParseCompoundStatementBody());
+  StmtResult Stmt;
+  {
+    Sema::ProfileSuppressScope ProfileSuppressGuard(
+        Actions, Actions.getCurLambda()->CallOperator);
+    Stmt = ParseCompoundStatementBody();
+  }
   BodyScope.Exit();
   TemplateParamScope.Exit();
   LambdaScope.Exit();
