@@ -372,6 +372,16 @@
 // CHECK-TYSAN-DARWIN-CXX: libclang_rt.tysan_osx_dynamic.dylib
 // CHECK-TYSAN-DARWIN-CXX-NOT: -lc++abi
 
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=hexagon-unknown-linux-musl -fuse-ld=ld \
+// RUN:     -fsanitize=type \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-TYSAN-HEXAGON
+//
+// CHECK-TYSAN-HEXAGON: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.lld)?(.exe)?}}"
+// CHECK-TYSAN-HEXAGON: "--whole-archive" "{{.*}}libclang_rt.tysan{{[^.]*}}.a" "--no-whole-archive"
+
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \
 // RUN:     -fsanitize=thread \
