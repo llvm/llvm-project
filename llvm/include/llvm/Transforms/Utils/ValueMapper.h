@@ -113,6 +113,12 @@ enum RemapFlags {
   /// don't use this flag. It's used when remapping is known to be un-necessary
   /// to save some compile-time.
   RF_DoNotRemapAtoms = 16,
+
+  /// Ignore metadata that references globals. In ThinLTO this is used because
+  /// metadata references to functions are not tracked and may cause referenced
+  /// functions to be incorrectly imported. Currently all metadata references
+  /// to functions are droppable.
+  RF_IgnoreMetadataReferencesToGlobals = 32,
 };
 
 inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {

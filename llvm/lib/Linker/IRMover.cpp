@@ -446,7 +446,10 @@ public:
         AddLazyFor(std::move(AddLazyFor)), TypeMap(Set),
         GValMaterializer(*this), LValMaterializer(*this), SharedMDs(SharedMDs),
         IsPerformingImport(IsPerformingImport),
-        Mapper(ValueMap, RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals,
+        Mapper(ValueMap, RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals |
+                             (IsPerformingImport
+                                  ? RF_IgnoreMetadataReferencesToGlobals
+                                  : RF_None),
                &TypeMap, &GValMaterializer),
         IndirectSymbolMCID(Mapper.registerAlternateMappingContext(
             IndirectSymbolValueMap, &LValMaterializer)) {

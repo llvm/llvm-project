@@ -993,6 +993,12 @@ void Mapper::remapInstruction(Instruction *I) {
   if (auto *CB = dyn_cast<CallBase>(I)) {
     if (CB->getMetadata(LLVMContext::MD_callee_type) && !CB->isIndirectCall())
       CB->setMetadata(LLVMContext::MD_callee_type, nullptr);
+    // inline_history metadata can contain references to other functions that
+    // we don't want to map (e.g. ThinLTO doesn't track metadata references to
+    // functions).
+    if ((Flags & RF_IgnoreMetadataReferencesToGlobals) &&
+        CB->getMetadata(LLVMContext::MD_inline_history))
+      CB->setMetadata(LLVMContext::MD_inline_history, nullptr);
   }
 
   // Remap phi nodes' incoming blocks.
