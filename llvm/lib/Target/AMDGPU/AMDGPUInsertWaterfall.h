@@ -1,4 +1,4 @@
-//===- SIInsertWaterfall.h --------------------------------------*- C++ -*-===//
+//===- AMDGPUInsertWaterfall.h ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_SIINSERTWATERFALL_H
-#define LLVM_LIB_TARGET_AMDGPU_SIINSERTWATERFALL_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUINSERTWATERFALL_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSERTWATERFALL_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class SIInsertWaterfallPass : public PassInfoMixin<SIInsertWaterfallPass> {
+class AMDGPUInsertWaterfallPass
+    : public PassInfoMixin<AMDGPUInsertWaterfallPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_SIINSERTWATERFALL_H
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUINSERTWATERFALL_H

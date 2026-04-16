@@ -1,4 +1,4 @@
-//===- SIInsertWaterfall.cpp - insert waterall loops at intrinsic markers -===//
+//===- AMDGPUInsertWaterfall.cpp - insert waterfall loops at intrinsic markers -===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,7 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "SIInsertWaterfall.h"
+#include "AMDGPUInsertWaterfall.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -23,7 +23,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "si-insert-waterfall"
+#define DEBUG_TYPE "amdgpu-insert-waterfall"
 
 namespace {
 
@@ -272,7 +272,7 @@ static void replaceRegIncSubReg(const MachineRegisterInfo *MRI,
     O.substVirtReg(To->getReg(), To->getSubReg(), *TRI);
 }
 
-class SIInsertWaterfall : public MachineFunctionPass {
+class AMDGPUInsertWaterfall : public MachineFunctionPass {
 private:
   struct WaterfallWorkitem {
     const SIInstrInfo *TII;
@@ -435,8 +435,8 @@ private:
 public:
   static char ID;
 
-  SIInsertWaterfall() : MachineFunctionPass(ID) {
-    initializeSIInsertWaterfallPass(*PassRegistry::getPassRegistry());
+  AMDGPUInsertWaterfall() : MachineFunctionPass(ID) {
+    initializeAMDGPUInsertWaterfallPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -453,27 +453,27 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS(SIInsertWaterfall, DEBUG_TYPE, "SI Insert waterfalls", false,
-                false)
+INITIALIZE_PASS(AMDGPUInsertWaterfall, DEBUG_TYPE, "AMDGPU Insert waterfalls",
+                false, false)
 
-char SIInsertWaterfall::ID = 0;
+char AMDGPUInsertWaterfall::ID = 0;
 
-char &llvm::SIInsertWaterfallID = SIInsertWaterfall::ID;
+char &llvm::AMDGPUInsertWaterfallID = AMDGPUInsertWaterfall::ID;
 
-FunctionPass *llvm::createSIInsertWaterfallPass() {
-  return new SIInsertWaterfall;
+FunctionPass *llvm::createAMDGPUInsertWaterfallPass() {
+  return new AMDGPUInsertWaterfall;
 }
 
 PreservedAnalyses
-SIInsertWaterfallPass::run(MachineFunction &MF,
-                           MachineFunctionAnalysisManager &MFAM) {
-  SIInsertWaterfall Impl;
+AMDGPUInsertWaterfallPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  AMDGPUInsertWaterfall Impl;
   if (!Impl.runOnMachineFunction(MF))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
 
-bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
+bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   // In some cases, the waterfall is actually redundant
   // If all the readfirstlane intrinsics are actually for uniform values and
   // the token used in the begin/end isn't used in anything else the waterfall
@@ -576,7 +576,7 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   return LoopRemoved;
 }
 
-bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
+bool AMDGPUInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
   bool Changed = false;
   MachineFunction &MF = *MBB.getParent();
   MachineBasicBlock *CurrMBB = &MBB;
@@ -837,12 +837,12 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-Register SIInsertWaterfall::getToken(MachineInstr *MI) {
+Register AMDGPUInsertWaterfall::getToken(MachineInstr *MI) {
   auto CandTokMO = TII->getNamedOperand(*MI, AMDGPU::OpName::tok);
   return CandTokMO->isReg() ? CandTokMO->getReg() : AMDGPU::NoRegister;
 }
 
-bool SIInsertWaterfall::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUInsertWaterfall::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   ST = &MF.getSubtarget<GCNSubtarget>();

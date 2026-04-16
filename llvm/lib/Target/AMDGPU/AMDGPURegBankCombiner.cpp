@@ -98,7 +98,7 @@ public:
 
   // Combine support to remove amdgcn_waterfall_readfirstlane or
   // amdgcn_waterfall_begin intrinsics if the index is determined to be
-  // uniform. The SIInsertWaterfall pass can handle their removal and in some
+  // uniform. The AMDGPUInsertWaterfall pass can handle their removal and in some
   // cases remove the waterfall altogether
   bool matchRmUniformWF(MachineInstr &MI,
                         RmUniformWFMatchInfo &MatchInfo) const;
