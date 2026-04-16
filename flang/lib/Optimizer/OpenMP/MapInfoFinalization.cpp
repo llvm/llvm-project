@@ -981,6 +981,9 @@ class MapInfoFinalizationPass
         auto mapClauseOwner =
             llvm::dyn_cast<mlir::omp::MapClauseOwningOpInterface>(*target);
 
+        if (!llvm::is_contained(mapClauseOwner.getMapVars(), op.getResult()))
+          return mlir::WalkResult::advance();
+
         int64_t mapVarIdx = mapClauseOwner.getOperandIndexForMap(op);
         assert(mapVarIdx >= 0 &&
                mapVarIdx <
