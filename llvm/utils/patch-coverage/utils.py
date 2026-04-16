@@ -125,3 +125,19 @@ def resolve_projects(projects, build_dir):
         return get_projects_from_cache(cache_file)
 
     return ""
+
+
+def group_contiguous_lines(lines):
+    groups = []
+    current = [lines[0]]
+
+    for i in range(1, len(lines)):
+        if lines[i] == lines[i - 1] + 1:
+            current.append(lines[i])
+        else:
+            groups.append(current)
+            current = [lines[i]]
+
+    groups.append(current)
+    return groups
+
