@@ -72,24 +72,12 @@ def get_ops_of_type(
     return ops
 
 
-# String aliases for the typed enum values exposed from C++. Accepting
-# strings is convenient for callers; internally we always hold the enum.
-_ON_EXPLICIT_MAP = {
-    "use_explicit": OnExplicitAction.USE_EXPLICIT,
-    "use_traceback": OnExplicitAction.USE_TRACEBACK,
-}
-_CURRENT_LOC_MAP = {
-    "fallback": CurrentLocAction.FALLBACK,
-    "nameloc_wrap": CurrentLocAction.NAMELOC_WRAP,
-}
-
-
 @contextmanager
 def loc_tracebacks(
     *,
     max_depth: int | None = None,
-    on_explicit: str | OnExplicitAction = "use_explicit",
-    current_loc: str | CurrentLocAction = "fallback",
+    on_explicit: OnExplicitAction = OnExplicitAction.USE_EXPLICIT,
+    current_loc: CurrentLocAction = CurrentLocAction.FALLBACK,
 ) -> Generator[None, None, None]:
     """Enables automatic traceback-based locations for MLIR operations.
 
@@ -100,31 +88,15 @@ def loc_tracebacks(
       max_depth: Maximum number of frames to include in the location.
         If None, the default limit is used.
       on_explicit: Policy when an explicit loc= is passed to an op constructor.
-        OnExplicitAction.USE_EXPLICIT / "use_explicit" (default) — use loc=
-          as base, skip traceback.
-        OnExplicitAction.USE_TRACEBACK / "use_traceback" — discard loc=,
-          generate traceback instead.
+        OnExplicitAction.USE_EXPLICIT (default) — use loc= as base, skip
+          traceback.
+        OnExplicitAction.USE_TRACEBACK — discard loc=, generate traceback.
       current_loc: Policy for composing Location.current with the result.
-        CurrentLocAction.FALLBACK / "fallback" (default) — use
-          Location.current only as fallback.
-        CurrentLocAction.NAMELOC_WRAP / "nameloc_wrap" — extract NameLoc
-          names from Location.current, wrap the computed location with them.
+        CurrentLocAction.FALLBACK (default) — use Location.current only as
+          fallback.
+        CurrentLocAction.NAMELOC_WRAP — extract NameLoc names from
+          Location.current and wrap the computed location with them.
     """
-    if isinstance(on_explicit, str):
-        if on_explicit not in _ON_EXPLICIT_MAP:
-            raise ValueError(
-                f"on_explicit must be one of {list(_ON_EXPLICIT_MAP)}, "
-                f"got {on_explicit!r}"
-            )
-        on_explicit = _ON_EXPLICIT_MAP[on_explicit]
-    if isinstance(current_loc, str):
-        if current_loc not in _CURRENT_LOC_MAP:
-            raise ValueError(
-                f"current_loc must be one of {list(_CURRENT_LOC_MAP)}, "
-                f"got {current_loc!r}"
-            )
-        current_loc = _CURRENT_LOC_MAP[current_loc]
-
     old_enabled = _globals.loc_tracebacks_enabled()
     old_limit = _globals.loc_tracebacks_frame_limit()
     old_on_explicit = _globals.traceback_action_on_explicit_loc()
