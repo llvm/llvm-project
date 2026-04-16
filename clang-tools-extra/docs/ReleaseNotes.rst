@@ -217,6 +217,11 @@ New check aliases
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
   name is kept as an alias.
 
+- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
+  to :doc:`bugprone-signed-bitwise
+  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
+  name is kept as an alias.
+
 - Renamed :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` to
   :doc:`performance-prefer-single-char-overloads
@@ -268,6 +273,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing a false
+  positive when converting a ``bool`` to a signed integer type.
+
 - Improved :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
   by fixing a false positive when ``operator[]`` is used in a dependent context.
@@ -282,6 +291,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
   string constructor calls when the string class constructor has a default
   allocator argument.
+
+- Improved :doc:`bugprone-throwing-static-initialization
+  <clang-tidy/checks/bugprone/throwing-static-initialization>` check by adding
+  the `AllowedTypes` option. With this option it is possible to exclude
+  static declarations with specific types from the check.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
@@ -509,6 +523,11 @@ Changes in existing checks
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
+
+- Improved :doc:`readability-redundant-member-init
+  <clang-tidy/checks/readability/redundant-member-init>` check by adding an
+  `IgnoreMacros` option to suppress warnings when the initializer involves
+  macros that may expand differently in other configurations.
 
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a

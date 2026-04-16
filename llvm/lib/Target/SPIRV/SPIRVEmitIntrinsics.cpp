@@ -53,6 +53,7 @@
 // TODO: consider removing spv.track.constant in favor of spv.assign.type.
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static cl::opt<bool>
     SpirvEmitOpNames("spirv-emit-op-names",
@@ -240,6 +241,7 @@ class SPIRVEmitIntrinsics
 
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
+  void simplifyNullAddrSpaceCasts();
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
                         bool IsPostprocessing);
@@ -375,37 +377,22 @@ public:
 };
 
 bool isConvergenceIntrinsic(const Instruction *I) {
-  const auto *II = dyn_cast<IntrinsicInst>(I);
-  if (!II)
-    return false;
-
-  return II->getIntrinsicID() == Intrinsic::experimental_convergence_entry ||
-         II->getIntrinsicID() == Intrinsic::experimental_convergence_loop ||
-         II->getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
+  return match(I, m_AnyIntrinsic<Intrinsic::experimental_convergence_entry,
+                                 Intrinsic::experimental_convergence_loop,
+                                 Intrinsic::experimental_convergence_anchor>());
 }
 
 bool expectIgnoredInIRTranslation(const Instruction *I) {
-  const auto *II = dyn_cast<IntrinsicInst>(I);
-  if (!II)
-    return false;
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::invariant_start:
-  case Intrinsic::spv_resource_handlefrombinding:
-  case Intrinsic::spv_resource_getpointer:
-    return true;
-  default:
-    return false;
-  }
+  return match(I, m_AnyIntrinsic<Intrinsic::invariant_start,
+                                 Intrinsic::spv_resource_handlefrombinding,
+                                 Intrinsic::spv_resource_getpointer>());
 }
 
 // Returns the source pointer from `I` ignoring intermediate ptrcast.
 Value *getPointerRoot(Value *I) {
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    if (II->getIntrinsicID() == Intrinsic::spv_ptrcast) {
-      Value *V = II->getArgOperand(0);
-      return getPointerRoot(V);
-    }
-  }
+  Value *V;
+  if (match(I, m_Intrinsic<Intrinsic::spv_ptrcast>(m_Value(V))))
+    return getPointerRoot(V);
   return I;
 }
 
@@ -417,8 +404,7 @@ INITIALIZE_PASS(SPIRVEmitIntrinsics, "spirv-emit-intrinsics",
                 "SPIRV emit intrinsics", false, false)
 
 static inline bool isAssignTypeInstr(const Instruction *I) {
-  return isa<IntrinsicInst>(I) &&
-         cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::spv_assign_type;
+  return match(I, m_Intrinsic<Intrinsic::spv_assign_type>());
 }
 
 static bool isMemInstrToReplace(Instruction *I) {
@@ -450,14 +436,9 @@ static void setInsertPointAfterDef(IRBuilder<> &B, Instruction *I) {
 }
 
 static bool requireAssignType(Instruction *I) {
-  if (const auto *Intr = dyn_cast<IntrinsicInst>(I)) {
-    switch (Intr->getIntrinsicID()) {
-    case Intrinsic::invariant_start:
-    case Intrinsic::invariant_end:
-      return false;
-    }
-  }
-  return true;
+  return !match(
+      I,
+      m_AnyIntrinsic<Intrinsic::invariant_start, Intrinsic::invariant_end>());
 }
 
 static inline void reportFatalOnTokenType(const Instruction *I) {
@@ -1553,6 +1534,20 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
   }
 }
 
+// Simplify addrspacecast(null) instructions to ConstantPointerNull of the
+// target type. Casting null always yields null, and this avoids SPIR-V
+// lowering issues where the null gets typed as an integer instead of a
+// pointer.
+void SPIRVEmitIntrinsics::simplifyNullAddrSpaceCasts() {
+  for (Instruction &I : make_early_inc_range(instructions(CurrF)))
+    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+      if (isa<ConstantPointerNull>(ASC->getPointerOperand())) {
+        ASC->replaceAllUsesWith(
+            ConstantPointerNull::get(cast<PointerType>(ASC->getType())));
+        ASC->eraseFromParent();
+      }
+}
+
 void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
   std::queue<Instruction *> Worklist;
   for (auto &I : instructions(CurrF))
@@ -1588,7 +1583,15 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
           for (unsigned i = 0; i < COp->getNumElements(); ++i)
             Args.push_back(COp->getElementAsConstant(i));
         else
-          llvm::append_range(Args, AggrConst->operands());
+          for (Value *Op : AggrConst->operands()) {
+            // Simplify addrspacecast(null) to null in the target address space
+            // so that null pointers get the correct pointer type when lowered.
+            if (auto *CE = dyn_cast<ConstantExpr>(Op);
+                CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
+                isa<ConstantPointerNull>(CE->getOperand(0)))
+              Op = ConstantPointerNull::get(cast<PointerType>(CE->getType()));
+            Args.push_back(Op);
+          }
         if (!BPrepared) {
           IsPhi ? B.SetInsertPointPastAllocas(I->getParent()->getParent())
                 : B.SetInsertPoint(I);
@@ -1640,21 +1643,8 @@ static void createSaturatedConversionDecoration(Instruction *I,
 }
 
 static void addSaturatedDecorationToIntrinsic(Instruction *I, IRBuilder<> &B) {
-  if (auto *CI = dyn_cast<CallInst>(I)) {
-    if (Function *Fu = CI->getCalledFunction()) {
-      if (Fu->isIntrinsic()) {
-        unsigned const int IntrinsicId = Fu->getIntrinsicID();
-        switch (IntrinsicId) {
-        case Intrinsic::fptosi_sat:
-        case Intrinsic::fptoui_sat:
-          createSaturatedConversionDecoration(I, B);
-          break;
-        default:
-          break;
-        }
-      }
-    }
-  }
+  if (match(I, m_AnyIntrinsic<Intrinsic::fptosi_sat, Intrinsic::fptoui_sat>()))
+    createSaturatedConversionDecoration(I, B);
 }
 
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
@@ -1745,12 +1735,7 @@ Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
 }
 
 static bool isFirstIndexZero(const GetElementPtrInst *GEP) {
-  if (GEP->getNumIndices() == 0)
-    return false;
-  if (const auto *CI = dyn_cast<ConstantInt>(GEP->getOperand(1))) {
-    return CI->getZExtValue() == 0;
-  }
-  return false;
+  return GEP->getNumIndices() > 0 && match(GEP->getOperand(1), m_Zero());
 }
 
 Instruction *SPIRVEmitIntrinsics::visitIntrinsicInst(IntrinsicInst &I) {
@@ -2496,19 +2481,14 @@ bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
   // Add aliasing decorations to internal load and store intrinsics
   // and atomic instructions, skipping atomic store as it won't have ID to
   // attach the decoration.
-  CallInst *CI = dyn_cast<CallInst>(Inst);
+  if (match(Inst, m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>()))
+    return true;
+  auto *CI = dyn_cast<CallInst>(Inst);
   if (!CI)
     return false;
   if (Function *Fun = CI->getCalledFunction()) {
-    if (Fun->isIntrinsic()) {
-      switch (Fun->getIntrinsicID()) {
-      case Intrinsic::spv_load:
-      case Intrinsic::spv_store:
-        return true;
-      default:
-        return false;
-      }
-    }
+    if (Fun->isIntrinsic())
+      return false;
     std::string Name = getOclOrSpirvBuiltinDemangledName(Fun->getName());
     const std::string Prefix = "__spirv_Atomic";
     const bool IsAtomic = Name.find(Prefix) == 0;
@@ -3074,8 +3054,7 @@ SPIRVEmitIntrinsics::simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP) {
   Type *SrcTy = GEP->getSourceElementType();
   SmallVector<Value *, 8> Indices(GEP->indices());
   ArrayType *ArrTy = dyn_cast<ArrayType>(SrcTy);
-  if (ArrTy && ArrTy->getNumElements() == 0 &&
-      PatternMatch::match(Indices[0], PatternMatch::m_Zero())) {
+  if (ArrTy && ArrTy->getNumElements() == 0 && match(Indices[0], m_Zero())) {
     Indices.erase(Indices.begin());
     SrcTy = ArrTy->getElementType();
     return GetElementPtrInst::Create(SrcTy, GEP->getPointerOperand(), Indices,
@@ -3216,6 +3195,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     processGlobalValue(GV, B);
 
   preprocessUndefs(B);
+  simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
 
   for (BasicBlock &BB : Func)

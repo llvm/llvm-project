@@ -905,8 +905,8 @@ std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
 // This is the version used during InlineSpiller::spillAroundUses
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
-    VirtRegMap *VRM) const {
+    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
+    LiveIntervals *LIS, VirtRegMap *VRM) const {
 
   std::optional<unsigned> LoadOpc = getFoldedOpcode(MF, MI, Ops, STI);
   if (!LoadOpc)
@@ -952,7 +952,7 @@ static unsigned getLoadPredicatedOpcode(unsigned Opcode) {
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    LiveIntervals *LIS) const {
+    MachineInstr *&CopyMI, LiveIntervals *LIS) const {
   // For now, only handle RISCV::PseudoCCMOVGPR.
   if (MI.getOpcode() != RISCV::PseudoCCMOVGPR)
     return nullptr;
@@ -1533,8 +1533,12 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
                           .addMBB(&DestBB, RISCVII::MO_CALL);
 
   RS->enterBasicBlockEnd(MBB);
+  // When cf-protection-branch is enabled, we must use t2 (x7) for software
+  // guarded branches to hold the landing pad label.
+  bool HasCFBranch =
+      MF->getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
   const TargetRegisterClass *RC = &RISCV::GPRRegClass;
-  if (STI.hasStdExtZicfilp())
+  if (HasCFBranch)
     RC = &RISCV::GPRX7RegClass;
   Register TmpGPR =
       RS->scavengeRegisterBackwards(*RC, MI.getIterator(),
@@ -1547,8 +1551,8 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
     // Pick s11(or s1 for rve) because it doesn't make a difference.
     TmpGPR = STI.hasStdExtE() ? RISCV::X9 : RISCV::X27;
-    // Force t2 if Zicfilp is on
-    if (STI.hasStdExtZicfilp())
+    // Force t2 if cf-protection-branch is enabled
+    if (HasCFBranch)
       TmpGPR = RISCV::X7;
 
     int FrameIndex = RVFI->getBranchRelaxationScratchFrameIndex();
@@ -3085,10 +3089,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = Imm != 0 && isInt<6>(Imm);
           break;
         case RISCVOp::OPERAND_VTYPEI10:
-          Ok = isUInt<10>(Imm);
+          Ok = isUInt<10>(Imm) && RISCVVType::isValidVType(Imm);
           break;
         case RISCVOp::OPERAND_VTYPEI11:
-          Ok = isUInt<11>(Imm);
+          Ok = isUInt<11>(Imm) && RISCVVType::isValidVType(Imm);
           break;
         case RISCVOp::OPERAND_SIMM12_LSB00000:
           Ok = isShiftedInt<7, 5>(Imm);

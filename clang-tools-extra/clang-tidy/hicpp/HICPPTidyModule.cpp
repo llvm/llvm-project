@@ -8,6 +8,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
+#include "../bugprone/SignedBitwiseCheck.h"
 #include "../bugprone/StdExceptionBaseclassCheck.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
 #include "../bugprone/UnhandledCodePathsCheck.h"
@@ -38,7 +39,6 @@
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamedParameterCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "SignedBitwiseCheck.h"
 
 namespace clang::tidy {
 namespace hicpp {
@@ -61,7 +61,8 @@ public:
         "hicpp-ignored-remove-result");
     CheckFactories.registerCheck<bugprone::UnhandledCodePathsCheck>(
         "hicpp-multiway-paths-covered");
-    CheckFactories.registerCheck<SignedBitwiseCheck>("hicpp-signed-bitwise");
+    CheckFactories.registerCheck<bugprone::SignedBitwiseCheck>(
+        "hicpp-signed-bitwise");
     CheckFactories.registerCheck<google::ExplicitConstructorCheck>(
         "hicpp-explicit-conversions");
     CheckFactories.registerCheck<readability::FunctionSizeCheck>(

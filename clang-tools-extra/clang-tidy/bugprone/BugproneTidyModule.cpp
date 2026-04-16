@@ -72,6 +72,7 @@
 #include "ReturnConstRefFromParameterCheck.h"
 #include "SharedPtrArrayMismatchCheck.h"
 #include "SignalHandlerCheck.h"
+#include "SignedBitwiseCheck.h"
 #include "SignedCharMisuseCheck.h"
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
@@ -248,6 +249,7 @@ public:
     CheckFactories.registerCheck<SharedPtrArrayMismatchCheck>(
         "bugprone-shared-ptr-array-mismatch");
     CheckFactories.registerCheck<SignalHandlerCheck>("bugprone-signal-handler");
+    CheckFactories.registerCheck<SignedBitwiseCheck>("bugprone-signed-bitwise");
     CheckFactories.registerCheck<SignedCharMisuseCheck>(
         "bugprone-signed-char-misuse");
     CheckFactories.registerCheck<SizeofContainerCheck>(

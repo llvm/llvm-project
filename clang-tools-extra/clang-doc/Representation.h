@@ -52,7 +52,6 @@ private:
 ConcurrentStringPool &getGlobalStringPool();
 
 extern thread_local llvm::BumpPtrAllocator TransientArena;
-extern thread_local llvm::BumpPtrAllocator PersistentArena;
 
 inline StringRef internString(const Twine &T) {
   if (T.isTriviallyEmpty())
@@ -73,8 +72,8 @@ inline StringRef internString(const Twine &T) {
 }
 
 template <typename T>
-llvm::ArrayRef<T> allocateArray(llvm::SmallVectorImpl<T> &V,
-                                llvm::BumpPtrAllocator &Alloc) {
+inline llvm::ArrayRef<T> allocateArray(llvm::ArrayRef<T> V,
+                                       llvm::BumpPtrAllocator &Alloc) {
   if (V.empty())
     return llvm::ArrayRef<T>();
   T *Allocated = (T *)Alloc.Allocate<T>(V.size());
@@ -82,31 +81,9 @@ llvm::ArrayRef<T> allocateArray(llvm::SmallVectorImpl<T> &V,
   return llvm::ArrayRef<T>(Allocated, V.size());
 }
 
-template <typename T>
-llvm::ArrayRef<T> allocateArray(llvm::ArrayRef<T> V,
-                                llvm::BumpPtrAllocator &Alloc) {
-  if (V.empty())
-    return llvm::ArrayRef<T>();
-  T *Allocated = (T *)Alloc.Allocate<T>(V.size());
-  std::uninitialized_copy(V.begin(), V.end(), Allocated);
-  return llvm::ArrayRef<T>(Allocated, V.size());
-}
-
-template <typename T>
-llvm::ArrayRef<T> deepCopyArray(llvm::ArrayRef<T> V,
-                                llvm::BumpPtrAllocator &Alloc) {
-  if (V.empty())
-    return llvm::ArrayRef<T>();
-  T *Allocated = (T *)Alloc.Allocate<T>(V.size());
-  for (size_t Idx = 0; Idx < V.size(); ++Idx) {
-    new (Allocated + Idx) T(V[Idx], Alloc);
-  }
-  return llvm::ArrayRef<T>(Allocated, V.size());
-}
-
 // An abstraction for owned pointers. Initially mapped to OwnedPtr,
 // to be eventually transitioned to bare pointers in an arena.
-template <typename T> using OwnedPtr = T *;
+template <typename T> using OwnedPtr = std::unique_ptr<T>;
 
 // An abstraction for vectors that are populated and read sequentially.
 // To be eventually transitioned to llvm::ArrayRef for arena storage.
@@ -114,7 +91,7 @@ template <typename T> using OwningArray = std::vector<T>;
 
 // An abstraction for lists that are dynamically managed (inserted/removed).
 // To be eventually transitioned to llvm::simple_ilist.
-template <typename T> using OwningVec = llvm::simple_ilist<T>;
+template <typename T> using OwningVec = std::vector<T>;
 
 // An abstraction for dynamic lists of owned pointers.
 // To be eventually transitioned to llvm::simple_ilist<T*> or similar.
@@ -128,10 +105,9 @@ template <typename T> using OwningPtrArray = std::vector<OwnedPtr<T>>;
 // allocation mechanism.
 template <typename T, typename... Args>
 OwnedPtr<T> allocatePtr(Args &&...args) {
-  return new (TransientArena.Allocate<T>()) T(std::forward<Args>(args)...);
+  return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
-// An overload to explicitly allocate on an arena, returning a bare pointer.
 template <typename T, typename... Args>
 T *allocatePtr(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
   return new (Alloc.Allocate<T>()) T(std::forward<Args>(args)...);
@@ -139,7 +115,7 @@ T *allocatePtr(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
 
 // A helper function to access the underlying pointer from an owned pointer,
 // abstracting away the pointer dereferencing mechanism.
-template <typename T> T *getPtr(const OwnedPtr<T> &O) { return O; }
+template <typename T> T *getPtr(const OwnedPtr<T> &O) { return O.get(); }
 
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
@@ -193,7 +169,6 @@ struct CommentInfo : public llvm::ilist_node<CommentInfo> {
   CommentInfo() = default;
   CommentInfo(const CommentInfo &Other) = default;
   CommentInfo &operator=(const CommentInfo &Other) = default;
-  CommentInfo(const CommentInfo &Other, llvm::BumpPtrAllocator &Arena);
   CommentInfo(CommentInfo &&Other) = default;
   CommentInfo &operator=(CommentInfo &&Other) = default;
 
@@ -317,7 +292,7 @@ struct ScopeChildren {
   //
   // Namespaces are not syntactically valid as children of records, but making
   // this general for all possible container types reduces code complexity.
-  OwningVec<Reference> Namespaces;
+  llvm::simple_ilist<Reference> Namespaces;
   OwningVec<Reference> Records;
   OwningVec<FunctionInfo> Functions;
   OwningVec<EnumInfo> Enums;
@@ -363,15 +338,11 @@ struct TemplateParamInfo {
 };
 
 struct TemplateSpecializationInfo {
-  TemplateSpecializationInfo() = default;
-  TemplateSpecializationInfo(const TemplateSpecializationInfo &Other,
-                             llvm::BumpPtrAllocator &Arena);
-
   // Indicates the declaration that this specializes.
   SymbolID SpecializationOf;
 
   // Template parameters applying to the specialized record/function.
-  llvm::ArrayRef<TemplateParamInfo> Params;
+  OwningVec<TemplateParamInfo> Params;
 };
 
 struct ConstraintInfo {
@@ -386,15 +357,12 @@ struct ConstraintInfo {
 // Records the template information for a struct or function that is a template
 // or an explicit template specialization.
 struct TemplateInfo {
-  TemplateInfo() = default;
-  TemplateInfo(const TemplateInfo &Other, llvm::BumpPtrAllocator &Arena);
-
   // May be empty for non-partial specializations.
-  llvm::ArrayRef<TemplateParamInfo> Params;
+  OwningVec<TemplateParamInfo> Params;
 
   // Set when this is a specialization of another record/function.
   std::optional<TemplateSpecializationInfo> Specialization;
-  llvm::ArrayRef<ConstraintInfo> Constraints;
+  OwningVec<ConstraintInfo> Constraints;
 };
 
 // Info for field types.
@@ -420,17 +388,14 @@ struct FieldTypeInfo : public TypeInfo {
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
-  MemberTypeInfo(const MemberTypeInfo &Other, llvm::BumpPtrAllocator &Arena);
   MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access,
                  bool IsStatic = false)
       : FieldTypeInfo(TI, Name), Access(Access), IsStatic(IsStatic) {}
 
   bool operator==(const MemberTypeInfo &Other) const {
-    if (std::tie(Type, Name, Access, IsStatic) !=
-        std::tie(Other.Type, Other.Name, Other.Access, Other.IsStatic))
-      return false;
-    return std::equal(Description.begin(), Description.end(),
-                      Other.Description.begin(), Other.Description.end());
+    return std::tie(Type, Name, Access, IsStatic, Description) ==
+           std::tie(Other.Type, Other.Name, Other.Access, Other.IsStatic,
+                    Other.Description);
   }
 
   OwningVec<CommentInfo> Description;
@@ -477,9 +442,9 @@ struct Info {
        StringRef Name = StringRef(), StringRef Path = StringRef())
       : Path(internString(Path)), Name(internString(Name)), USR(USR), IT(IT) {}
 
-  Info(const Info &Other, llvm::BumpPtrAllocator &Arena);
   Info(const Info &Other) = delete;
   Info(Info &&Other) = default;
+  virtual ~Info() = default;
 
   Info &operator=(Info &&Other) = default;
 
@@ -506,7 +471,7 @@ struct Info {
   StringRef DocumentationFileName;
 
   // List of parent namespaces for this decl.
-  llvm::ArrayRef<Reference> Namespace;
+  llvm::SmallVector<Reference, 4> Namespace;
 
   // Unique identifier for the decl described by this Info.
   SymbolID USR = SymbolID();
@@ -519,6 +484,8 @@ struct Info {
 
   // Comment description of this decl.
   OwningVec<CommentInfo> Description;
+
+  SmallVector<Context, 4> Contexts;
 };
 
 inline Context::Context(const Info &I)
@@ -540,8 +507,6 @@ struct SymbolInfo : public Info {
              StringRef Name = StringRef(), StringRef Path = StringRef())
       : Info(IT, USR, Name, Path) {}
 
-  SymbolInfo(const SymbolInfo &Other, llvm::BumpPtrAllocator &Arena);
-
   void merge(SymbolInfo &&I);
 
   bool operator<(const SymbolInfo &Other) const {
@@ -549,9 +514,8 @@ struct SymbolInfo : public Info {
     // generated in the order of the source code.
     // If the declaration location is the same, or not present
     // we sort by defined location otherwise fallback to the extracted name
-    if (Loc.size() > 0 && Other.Loc.size() > 0 &&
-        Loc.front() != Other.Loc.front())
-      return Loc.front() < Other.Loc.front();
+    if (Loc.size() > 0 && Other.Loc.size() > 0 && Loc[0] != Other.Loc[0])
+      return Loc[0] < Other.Loc[0];
 
     if (DefLoc && Other.DefLoc && *DefLoc != *Other.DefLoc)
       return *DefLoc < *Other.DefLoc;
@@ -560,7 +524,7 @@ struct SymbolInfo : public Info {
   }
 
   std::optional<Location> DefLoc;     // Location where this decl is defined.
-  OwningVec<Location> Loc;            // Locations where this decl is declared.
+  llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
   StringRef MangledName;
   bool IsStatic = false;
 };
@@ -571,7 +535,6 @@ struct FriendInfo : public SymbolInfo, public llvm::ilist_node<FriendInfo> {
   FriendInfo(const InfoType IT, const SymbolID &USR,
              const StringRef Name = StringRef())
       : SymbolInfo(IT, USR, Name) {}
-  FriendInfo(const FriendInfo &Other, llvm::BumpPtrAllocator &Arena);
   bool mergeable(const FriendInfo &Other);
   void merge(FriendInfo &&Other);
 
@@ -601,7 +564,7 @@ struct FunctionInfo : public SymbolInfo, public llvm::ilist_node<FunctionInfo> {
 
   Reference Parent;
   TypeInfo ReturnType;
-  llvm::ArrayRef<FieldTypeInfo> Params;
+  llvm::SmallVector<FieldTypeInfo, 4> Params;
   StringRef Prototype;
 
   // When present, this function is a template or specialization.
@@ -623,8 +586,6 @@ struct RecordInfo : public SymbolInfo {
   RecordInfo(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
              StringRef Path = StringRef());
 
-  RecordInfo(const RecordInfo &Other, llvm::BumpPtrAllocator &Arena);
-
   void merge(RecordInfo &&I);
 
   // Type of this record (struct, class, union, interface).
@@ -639,18 +600,18 @@ struct RecordInfo : public SymbolInfo {
   // When present, this record is a template or specialization.
   std::optional<TemplateInfo> Template;
 
-  llvm::ArrayRef<MemberTypeInfo> Members; // List of info about record members.
-  llvm::ArrayRef<Reference> Parents;      // List of base/parent records
-                                          // (does not include virtual
-                                          // parents).
-  llvm::ArrayRef<Reference>
+  llvm::SmallVector<MemberTypeInfo, 4>
+      Members;                             // List of info about record members.
+  llvm::SmallVector<Reference, 4> Parents; // List of base/parent records
+                                           // (does not include virtual
+                                           // parents).
+  llvm::SmallVector<Reference, 4>
       VirtualParents; // List of virtual base/parent records.
 
-  llvm::ArrayRef<BaseRecordInfo>
-      Bases; // List of base/parent records; this includes
-             // inherited methods and attributes
+  OwningVec<BaseRecordInfo> Bases; // List of base/parent records; this includes
+                                   // inherited methods and attributes
 
-  llvm::ArrayRef<FriendInfo> Friends;
+  OwningVec<FriendInfo> Friends;
 
   ScopeChildren Children;
 };
@@ -677,10 +638,8 @@ struct TypedefInfo : public SymbolInfo, public llvm::ilist_node<TypedefInfo> {
   bool IsUsing = false;
 };
 
-struct BaseRecordInfo : public RecordInfo,
-                        public llvm::ilist_node<BaseRecordInfo> {
+struct BaseRecordInfo : public RecordInfo {
   BaseRecordInfo();
-  BaseRecordInfo(const BaseRecordInfo &Other, llvm::BumpPtrAllocator &Arena);
   BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path, bool IsVirtual,
                  AccessSpecifier Access, bool IsParent);
 
@@ -699,8 +658,6 @@ struct EnumValueInfo {
                          StringRef ValueExpr = StringRef())
       : Name(internString(Name)), Value(internString(Value)),
         ValueExpr(internString(ValueExpr)) {}
-
-  EnumValueInfo(const EnumValueInfo &Other, llvm::BumpPtrAllocator &Arena);
 
   bool operator==(const EnumValueInfo &Other) const {
     return std::tie(Name, Value, ValueExpr) ==
@@ -738,7 +695,7 @@ struct EnumInfo : public SymbolInfo, public llvm::ilist_node<EnumInfo> {
   // this will be "short".
   std::optional<TypeInfo> BaseType;
 
-  llvm::ArrayRef<EnumValueInfo> Members; // List of enum members.
+  llvm::SmallVector<EnumValueInfo, 4> Members; // List of enum members.
 };
 
 struct ConceptInfo : public SymbolInfo, public llvm::ilist_node<ConceptInfo> {
@@ -747,7 +704,7 @@ struct ConceptInfo : public SymbolInfo, public llvm::ilist_node<ConceptInfo> {
 
   void merge(ConceptInfo &&I);
 
-  bool IsType = false;
+  bool IsType;
   TemplateInfo Template;
   StringRef ConstraintExpression;
 };
@@ -766,7 +723,7 @@ struct Index : public Reference {
   std::optional<StringRef> JumpToSection;
   llvm::StringMap<Index> Children;
 
-  std::vector<const Index *> getSortedChildren() const;
+  OwningVec<const Index *> getSortedChildren() const;
   void sort();
 };
 
@@ -776,12 +733,6 @@ struct Index : public Reference {
 // This assumes that all infos in the vector are of the same type, and will fail
 // if they are different.
 llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values);
-
-// Merges a single new Info into an existing Reduced Info (allocating it if
-// needed).
-llvm::Error mergeSingleInfo(doc::OwnedPtr<doc::Info> &Reduced,
-                            doc::OwnedPtr<doc::Info> &&NewInfo,
-                            llvm::BumpPtrAllocator &Arena);
 
 struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
@@ -822,26 +773,28 @@ struct ClangDocContext {
 // Ensure arena allocated types remain safe to allocate in the arena.
 // Only trivially destructible types are safe, so enforce that at compile-time.
 static_assert(std::is_trivially_destructible_v<CommentInfo>);
-static_assert(std::is_trivially_destructible_v<ConceptInfo>);
 static_assert(std::is_trivially_destructible_v<ConstraintInfo>);
-static_assert(std::is_trivially_destructible_v<EnumInfo>);
 static_assert(std::is_trivially_destructible_v<FieldTypeInfo>);
-static_assert(std::is_trivially_destructible_v<FriendInfo>);
-static_assert(std::is_trivially_destructible_v<FunctionInfo>);
-static_assert(std::is_trivially_destructible_v<Info>);
 static_assert(std::is_trivially_destructible_v<Location>);
-static_assert(std::is_trivially_destructible_v<MemberTypeInfo>);
-static_assert(std::is_trivially_destructible_v<NamespaceInfo>);
-static_assert(std::is_trivially_destructible_v<RecordInfo>);
 static_assert(std::is_trivially_destructible_v<Reference>);
-static_assert(std::is_trivially_destructible_v<ScopeChildren>);
-static_assert(std::is_trivially_destructible_v<SymbolInfo>);
-static_assert(std::is_trivially_destructible_v<TemplateInfo>);
 static_assert(std::is_trivially_destructible_v<TemplateParamInfo>);
-static_assert(std::is_trivially_destructible_v<TemplateSpecializationInfo>);
 static_assert(std::is_trivially_destructible_v<TypeInfo>);
-static_assert(std::is_trivially_destructible_v<TypedefInfo>);
-static_assert(std::is_trivially_destructible_v<VarInfo>);
+
+// FIXME: These types need to be trivially destructible for arena allocation.
+static_assert(!std::is_trivially_destructible_v<ConceptInfo>);
+static_assert(!std::is_trivially_destructible_v<EnumInfo>);
+static_assert(!std::is_trivially_destructible_v<FriendInfo>);
+static_assert(!std::is_trivially_destructible_v<FunctionInfo>);
+static_assert(!std::is_trivially_destructible_v<Info>);
+static_assert(!std::is_trivially_destructible_v<MemberTypeInfo>);
+static_assert(!std::is_trivially_destructible_v<NamespaceInfo>);
+static_assert(!std::is_trivially_destructible_v<RecordInfo>);
+static_assert(!std::is_trivially_destructible_v<ScopeChildren>);
+static_assert(!std::is_trivially_destructible_v<SymbolInfo>);
+static_assert(!std::is_trivially_destructible_v<TemplateInfo>);
+static_assert(!std::is_trivially_destructible_v<TemplateSpecializationInfo>);
+static_assert(!std::is_trivially_destructible_v<TypedefInfo>);
+static_assert(!std::is_trivially_destructible_v<VarInfo>);
 
 } // namespace doc
 } // namespace clang

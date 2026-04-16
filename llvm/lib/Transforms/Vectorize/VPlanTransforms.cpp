@@ -80,12 +80,11 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/, *VPI,
-              Ingredient.getDebugLoc());
+              false /*Consecutive*/, *VPI, Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
-              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/, *VPI,
+              nullptr /*Mask*/, false /*Consecutive*/, *VPI,
               Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands(), *VPI,
@@ -1685,7 +1684,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // Fold the increment Y into the phi's start value, replace Def with IVInc,
   // and if Inc exists, replace it with X.
   if (match(Def, m_Add(m_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) &&
-      isa<VPIRValue>(Y) && !isa<VPConstantInt>(Y) &&
+      isa<VPIRValue>(Y) &&
       match(X, m_VPPhi(m_ZeroInt(), m_Specific(Def->getOperand(0))))) {
     auto *Phi = cast<VPPhi>(X);
     auto *IVInc = Def->getOperand(0);
@@ -1810,8 +1809,6 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
       if (WidenStoreR && vputils::isSingleScalar(WidenStoreR->getAddr()) &&
           !WidenStoreR->isConsecutive()) {
-        assert(!WidenStoreR->isReverse() &&
-               "Not consecutive memory recipes shouldn't be reversed");
         VPValue *Mask = WidenStoreR->getMask();
 
         // Only convert the scatter to a scalar store if it is unmasked.
@@ -3086,20 +3083,32 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return EVLEndPtr;
   };
 
+  auto GetVPReverse = [&CurRecipe, &EVL, &TypeInfo, Plan,
+                       DL](VPValue *V) -> VPWidenIntrinsicRecipe * {
+    if (!V)
+      return nullptr;
+    auto *Reverse = new VPWidenIntrinsicRecipe(
+        Intrinsic::experimental_vp_reverse, {V, Plan->getTrue(), &EVL},
+        TypeInfo.inferScalarType(V), {}, {}, DL);
+    Reverse->insertBefore(&CurRecipe);
+    return Reverse;
+  };
+
   if (match(&CurRecipe,
-            m_MaskedLoad(m_VPValue(Addr), m_RemoveMask(HeaderMask, Mask))) &&
-      !cast<VPWidenLoadRecipe>(CurRecipe).isReverse())
+            m_MaskedLoad(m_VPValue(Addr), m_RemoveMask(HeaderMask, Mask))))
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe), Addr,
                                     EVL, Mask);
 
   VPValue *ReversedVal;
   if (match(&CurRecipe, m_Reverse(m_VPValue(ReversedVal))) &&
       match(ReversedVal,
-            m_MaskedLoad(m_VPValue(EndPtr), m_RemoveMask(HeaderMask, Mask))) &&
-      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
-      cast<VPWidenLoadRecipe>(ReversedVal)->isReverse()) {
+            m_MaskedLoad(m_VPValue(EndPtr),
+                         m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
+    Mask = GetVPReverse(Mask);
+    Addr = AdjustEndPtr(EndPtr);
     auto *LoadR = new VPWidenLoadEVLRecipe(
-        *cast<VPWidenLoadRecipe>(ReversedVal), AdjustEndPtr(EndPtr), EVL, Mask);
+        *cast<VPWidenLoadRecipe>(ReversedVal), Addr, EVL, Mask);
     LoadR->insertBefore(&CurRecipe);
     return new VPWidenIntrinsicRecipe(
         Intrinsic::experimental_vp_reverse, {LoadR, Plan->getTrue(), &EVL},
@@ -3108,24 +3117,19 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 
   VPValue *StoredVal;
   if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(StoredVal),
-                                      m_RemoveMask(HeaderMask, Mask))) &&
-      !cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
+                                      m_RemoveMask(HeaderMask, Mask))))
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
                                      StoredVal, EVL, Mask);
 
   if (match(&CurRecipe,
             m_MaskedStore(m_VPValue(EndPtr), m_Reverse(m_VPValue(ReversedVal)),
-                          m_RemoveMask(HeaderMask, Mask))) &&
-      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
-      cast<VPWidenStoreRecipe>(CurRecipe).isReverse()) {
-    auto *NewReverse = new VPWidenIntrinsicRecipe(
-        Intrinsic::experimental_vp_reverse,
-        {ReversedVal, Plan->getTrue(), &EVL},
-        TypeInfo.inferScalarType(ReversedVal), {}, {}, DL);
-    NewReverse->insertBefore(&CurRecipe);
-    return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe),
-                                     AdjustEndPtr(EndPtr), NewReverse, EVL,
-                                     Mask);
+                          m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
+    Mask = GetVPReverse(Mask);
+    Addr = AdjustEndPtr(EndPtr);
+    StoredVal = GetVPReverse(ReversedVal);
+    return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
+                                     StoredVal, EVL, Mask);
   }
 
   if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
@@ -3287,6 +3291,17 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   if (!HeaderMask)
     return;
+
+  // Ensure that any reduction that uses a select to mask off tail lanes does so
+  // in the vector loop, not the middle block, since EVL tail folding can have
+  // tail elements in the penultimate iteration.
+  assert(all_of(*Plan.getMiddleBlock(), [&Plan, HeaderMask](VPRecipeBase &R) {
+    if (match(&R, m_ComputeReductionResult(m_Select(m_Specific(HeaderMask),
+                                                    m_VPValue(), m_VPValue()))))
+      return R.getOperand(0)->getDefiningRecipe()->getRegion() ==
+             Plan.getVectorLoopRegion();
+    return true;
+  }));
 
   // Replace header masks with a mask equivalent to predicating by EVL:
   //
@@ -3672,7 +3687,7 @@ void VPlanTransforms::createInterleaveGroups(
     VPlan &Plan,
     const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
         &InterleaveGroups,
-    VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed) {
+    VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed) {
   if (InterleaveGroups.empty())
     return;
 
@@ -3699,7 +3714,7 @@ void VPlanTransforms::createInterleaveGroups(
     }
 
     bool NeedsMaskForGaps =
-        (IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed) ||
+        (IG->requiresScalarEpilogue() && !EpilogueAllowed) ||
         (!StoredValues.empty() && !IG->isFull());
 
     Instruction *IRInsertPos = IG->getInsertPos();
@@ -5387,9 +5402,9 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
     // Narrow interleave group to wide load, as transformed VPlan will only
     // process one original iteration.
     auto *LI = cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos());
-    auto *L = new VPWidenLoadRecipe(
-        *LI, LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-        /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
+    auto *L = new VPWidenLoadRecipe(*LI, LoadGroup->getAddr(),
+                                    LoadGroup->getMask(), /*Consecutive=*/true,
+                                    {}, LoadGroup->getDebugLoc());
     L->insertBefore(LoadGroup);
     NarrowedOps.insert(L);
     return L;
@@ -5544,9 +5559,9 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
         narrowInterleaveGroupOp(StoreGroup->getStoredValues()[0], NarrowedOps);
     auto *SI =
         cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos());
-    auto *S = new VPWidenStoreRecipe(
-        *SI, StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
-        /*Reverse=*/false, {}, StoreGroup->getDebugLoc());
+    auto *S = new VPWidenStoreRecipe(*SI, StoreGroup->getAddr(), Res, nullptr,
+                                     /*Consecutive=*/true, {},
+                                     StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
   }
@@ -5948,13 +5963,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, SelectCond);
       AnyOfPhi->setOperand(1, OrVal);
 
-      VPIRFlags OrFlags(RecurKind::Or, /*IsOrdered=*/false,
-                        /*IsInLoop=*/false, FastMathFlags());
-      auto *OrReduce = MiddleBuilder.createNaryOp(
-          VPInstruction::ComputeReductionResult, {OrVal}, OrFlags, ExitDL);
-      NewRdxResult = MiddleBuilder.createNaryOp(
-          VPInstruction::ComputeAnyOfResult,
-          {StartVPV, VectorRegionExitingVal, OrReduce}, {}, ExitDL);
+      NewRdxResult = MiddleBuilder.createAnyOfReduction(
+          OrVal, VectorRegionExitingVal, StartVPV, ExitDL);
 
       // Initialize the IV reduction phi with the neutral element, not the
       // original start value, to ensure correct min/max reduction results.
@@ -6029,6 +6039,34 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
     Type *WideTy = TypeInfo.inferScalarType(ExtA);
     BinOp->setOperand(1, Builder.createWidenCast(ExtOpc, Trunc, WideTy));
     return BinOp;
+  }
+
+  // reduce.add(abs(sub(ext(A), ext(B))))
+  // -> reduce.add(ext(absolute-difference(A, B)))
+  VPValue *X, *Y;
+  if (match(BinOp,
+            m_WidenIntrinsic<Intrinsic::abs>(m_Sub(
+                m_ZExtOrSExt(m_VPValue(X)), m_ZExtOrSExt(m_VPValue(Y)))))) {
+    auto *Sub = BinOp->getOperand(0)->getDefiningRecipe();
+    auto *Ext = cast<VPWidenCastRecipe>(Sub->getOperand(0));
+    assert(Ext->getOpcode() ==
+               cast<VPWidenCastRecipe>(Sub->getOperand(1))->getOpcode() &&
+           "Expected both the LHS and RHS extends to be the same");
+    bool IsSigned = Ext->getOpcode() == Instruction::SExt;
+    VPBuilder Builder(BinOp);
+    Type *SrcTy = TypeInfo.inferScalarType(X);
+    auto *FreezeX = Builder.insert(new VPWidenRecipe(Instruction::Freeze, {X}));
+    auto *FreezeY = Builder.insert(new VPWidenRecipe(Instruction::Freeze, {Y}));
+    auto *Max = Builder.insert(
+        new VPWidenIntrinsicRecipe(IsSigned ? Intrinsic::smax : Intrinsic::umax,
+                                   {FreezeX, FreezeY}, SrcTy));
+    auto *Min = Builder.insert(
+        new VPWidenIntrinsicRecipe(IsSigned ? Intrinsic::smin : Intrinsic::umin,
+                                   {FreezeX, FreezeY}, SrcTy));
+    auto *AbsDiff =
+        Builder.insert(new VPWidenRecipe(Instruction::Sub, {Max, Min}));
+    return Builder.createWidenCast(Instruction::CastOps::ZExt, AbsDiff,
+                                   TypeInfo.inferScalarType(BinOp));
   }
 
   // reduce.add(ext(mul(ext(A), ext(B))))
@@ -6209,6 +6247,7 @@ static ExtendKind getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
 ///  - UpdateR(PrevValue, neg(BinOp(ext(...), Constant)))
 ///  - UpdateR(PrevValue, ext(mul(ext(...), ext(...))))
 ///  - UpdateR(PrevValue, ext(mul(ext(...), Constant)))
+///  - UpdateR(PrevValue, abs(sub(ext(...), ext(...)))
 ///
 /// Note: The second operand of UpdateR corresponds to \p Op in the examples.
 static std::optional<ExtendedReductionOperand>
@@ -6216,6 +6255,33 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op,
                               VPTypeAnalysis &TypeInfo) {
   assert(is_contained(UpdateR->operands(), Op) &&
          "Op should be operand of UpdateR");
+
+  // Try matching an absolute difference operand of the form
+  // `abs(sub(ext(A), ext(B)))`. This will be later transformed into
+  // `ext(absolute-difference(A, B))`. This allows us to perform the absolute
+  // difference on a wider type and get the extend for "free" from the partial
+  // reduction.
+  VPValue *X, *Y;
+  if (Op->hasOneUse() &&
+      match(Op, m_WidenIntrinsic<Intrinsic::abs>(
+                    m_OneUse(m_Sub(m_WidenAnyExtend(m_VPValue(X)),
+                                   m_WidenAnyExtend(m_VPValue(Y))))))) {
+    auto *Abs = cast<VPWidenIntrinsicRecipe>(Op);
+    auto *Sub = cast<VPWidenRecipe>(Abs->getOperand(0));
+    auto *LHSExt = cast<VPWidenCastRecipe>(Sub->getOperand(0));
+    auto *RHSExt = cast<VPWidenCastRecipe>(Sub->getOperand(1));
+    Type *LHSInputType = TypeInfo.inferScalarType(X);
+    Type *RHSInputType = TypeInfo.inferScalarType(Y);
+    if (LHSInputType != RHSInputType ||
+        LHSExt->getOpcode() != RHSExt->getOpcode())
+      return std::nullopt;
+    // Note: This is essentially the same as matching ext(...) as we will
+    // rewrite this operand to ext(absolute-difference(A, B)).
+    return ExtendedReductionOperand{
+        Sub,
+        /*ExtendA=*/{LHSInputType, getPartialReductionExtendKind(LHSExt)},
+        /*ExtendB=*/{}};
+  }
 
   std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
   if (match(Op, m_WidenAnyExtend(m_VPValue()))) {
@@ -6475,4 +6541,58 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   for (auto &[Phi, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains)
       transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi);
+}
+
+void VPlanTransforms::makeMemOpWideningDecisions(
+    VPlan &Plan, VFRange &Range, VPRecipeBuilder &RecipeBuilder) {
+  // Collect all loads/stores first. We will start with ones having simpler
+  // decisions followed by more complex ones that are potentially
+  // guided/dependent on the simpler ones.
+  SmallVector<VPInstruction *> MemOps;
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (VPI && VPI->getUnderlyingValue() &&
+          is_contained({Instruction::Load, Instruction::Store},
+                       VPI->getOpcode()))
+        MemOps.push_back(VPI);
+    }
+  }
+
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  VPBuilder FinalRedStoresBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+
+  for (VPInstruction *VPI : MemOps) {
+    auto ReplaceWith = [&](VPRecipeBase *New) {
+      RecipeBuilder.setRecipe(cast<Instruction>(VPI->getUnderlyingValue()),
+                              New);
+      New->insertBefore(VPI);
+      if (VPI->getOpcode() == Instruction::Load)
+        VPI->replaceAllUsesWith(New->getVPSingleValue());
+      VPI->eraseFromParent();
+    };
+
+    // Note: we must do that for scalar VPlan as well.
+    if (RecipeBuilder.replaceWithFinalIfReductionStore(VPI,
+                                                       FinalRedStoresBuilder))
+      continue;
+
+    // Filter out scalar VPlan for the remaining memory operations.
+    if (LoopVectorizationPlanner::getDecisionAndClampRange(
+            [](ElementCount VF) { return VF.isScalar(); }, Range))
+      continue;
+
+    if (VPHistogramRecipe *Histogram = RecipeBuilder.widenIfHistogram(VPI)) {
+      ReplaceWith(Histogram);
+      continue;
+    }
+
+    VPRecipeBase *Recipe = RecipeBuilder.tryToWidenMemory(VPI, Range);
+    if (!Recipe)
+      Recipe = RecipeBuilder.handleReplication(VPI, Range);
+
+    ReplaceWith(Recipe);
+  }
 }

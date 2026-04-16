@@ -821,6 +821,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
             .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
             .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
             .Case("windows", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI)
+            .Case("xbox", COFF::IMAGE_SUBSYSTEM_XBOX)
             .Default(COFF::IMAGE_SUBSYSTEM_UNKNOWN);
     if (*COFFConfig.Subsystem == COFF::IMAGE_SUBSYSTEM_UNKNOWN)
       return createStringError(errc::invalid_argument,
