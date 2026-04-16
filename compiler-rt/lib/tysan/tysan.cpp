@@ -266,12 +266,6 @@ static void reportError(void *Addr, int Size, tysan_type_descriptor *TD,
     Printf("\n");
 
   if (pc) {
-    uptr top = 0;
-    uptr bottom = 0;
-    if (flags().print_stacktrace)
-      GetThreadStackTopAndBottom(false, &top, &bottom);
-
-    bool request_fast = StackTrace::WillUseFastUnwind(true);
     BufferedStackTrace ST;
     getStackTrace(flags().print_stacktrace, pc, bp, &ST);
     ST.Print();
