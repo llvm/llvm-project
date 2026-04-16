@@ -795,8 +795,7 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   }
 
   int nbLhs{evaluate::GetNbOfCUDADeviceSymbols(assign->lhs)};
-  int nbRhs{evaluate::GetNbOfUniqueCUDADeviceSymbols(
-      evaluate::GetSymbolVectors(assign->rhs))};
+  int nbRhs{evaluate::GetNbOfCUDADeviceSymbols(assign->rhs)};
   int nbRhsManaged{evaluate::GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs)};
 
   // device to host transfer with more than one device object on the rhs is not
