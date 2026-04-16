@@ -245,6 +245,7 @@ enum RegBankLLTMappingApplyID {
   // to move to SGPR.
   SgprB32_ReadFirstLane,
   SgprB64_ReadFirstLane,
+  SgprV4S32_ReadFirstLane,
 
   // Src only modifiers: extends
   Sgpr32AExt,
@@ -293,7 +294,9 @@ enum LoweringMethodID {
   ApplyINTRIN_IMAGE,
   SplitBitCount64To32,
   ExtrVecEltToSel,
-  ExtrVecEltTo32
+  ExtrVecEltTo32,
+  InsVecEltToSel,
+  InsVecEltTo32
 };
 
 enum FastRulesTypes {
