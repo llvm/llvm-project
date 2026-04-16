@@ -812,9 +812,9 @@ func.func @extract_strided_metadata_of_alloc_with_cst_offset(%arg : index)
 func.func @extract_strided_metadata_of_alloc_with_cst_offset_in_type(%arg : index)
     -> (memref<i16>, index, index, index) {
 
-  %A = memref.alloc() : memref<4xi16, strided<[1], offset : 10>>
+  %A = memref.alloc() : memref<4xi16, strided<[1]>>
   %base, %offset, %size, %stride = memref.extract_strided_metadata %A :
-    memref<4xi16, strided<[1], offset : 10>>
+    memref<4xi16, strided<[1]>>
     -> memref<i16>, index, index, index
 
   return %base, %offset, %size, %stride :

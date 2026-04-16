@@ -42,12 +42,12 @@ func.func @f(%0: index) {
 // CHECK: MemRefType offset: 0 strides: ?, 5, 1
   %24 = memref.alloc(%0)[%0] : memref<3x?x5xf32, affine_map<(i, j, k)[M]->(M * i + 32 * j + 16 * k + M)>>
 // CHECK: MemRefType offset: ? strides: ?, 32, 16
-  %b24 = memref.alloc(%0)[%0, %0] : memref<3x?x5xf32, strided<[?, 32, 16]>>
-// CHECK: MemRefType offset: ? strides: ?, 32, 16
+  %b24 = memref.alloc(%0)[%0] : memref<3x?x5xf32, strided<[?, 32, 16]>>
+// CHECK: MemRefType offset: 0 strides: ?, 32, 16
   %25 = memref.alloc(%0, %0)[%0, %0] : memref<?x?x16xf32, affine_map<(i, j, k)[M, N]->(M * i + N * j + k + 1)>>
 // CHECK: MemRefType offset: 1 strides: ?, ?, 1
   %b25 = memref.alloc(%0, %0)[%0, %0] : memref<?x?x16xf32, strided<[?, ?, 1]>>
-// CHECK: MemRefType offset: 1 strides: ?, ?, 1
+// CHECK: MemRefType offset: 0 strides: ?, ?, 1
   %26 = memref.alloc(%0)[] : memref<?xf32, affine_map<(i)[M]->(i)>>
 // CHECK: MemRefType offset: 0 strides: 1
   %27 = memref.alloc()[%0] : memref<5xf32, affine_map<(i)[M]->(M)>>

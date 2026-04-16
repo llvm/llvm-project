@@ -691,17 +691,10 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
           return nullptr;
 
         // The strided layout no longer carries offset information; runtime
-        // offsets live on the producing op. Emit an explicit strided layout
-        // for the (rank-1) linearized form so downstream patterns that key
-        // on layout presence keep working; rank-0 stays identity.
-        SmallVector<int64_t> linearizedShape =
-            getLinearizedShape(ty, width, loadStoreWidth);
-        StridedLayoutAttr layoutAttr;
-        if (!linearizedShape.empty())
-          layoutAttr =
-              StridedLayoutAttr::get(ty.getContext(), ArrayRef<int64_t>{1});
-
-        return MemRefType::get(linearizedShape, newElemTy, layoutAttr,
+        // offsets live on the producing op. The linearized memref keeps its
+        // identity layout.
+        return MemRefType::get(getLinearizedShape(ty, width, loadStoreWidth),
+                               newElemTy, MemRefLayoutAttrInterface(),
                                ty.getMemorySpace());
       });
 }
