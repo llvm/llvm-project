@@ -4611,7 +4611,7 @@ struct AAIsDeadFunction : public AAIsDead {
 
     // We cache the *first* dead instruction in the block.
     // If such an instruction exists and precedes I, then I is dead.
-    // Previously, we used to a do a backwards linear scan from I to
+    // Previously, we used to do a backwards linear scan from I to
     // the beginning of the block, checking KnownDeadEnds and ToBeExploredFrom
     // at each step. By caching we trade complexity for storage.
 
@@ -4888,8 +4888,16 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
     } else if (AliveSuccessors.empty() ||
                (I->isTerminator() &&
                 AliveSuccessors.size() < I->getNumSuccessors())) {
-      if (KnownDeadEnds.insert(I))
+      if (KnownDeadEnds.insert(I)) {
         Change = ChangeStatus::CHANGED;
+        // Invalidate the cached first-dead-instruction for this block,
+        // since the newly added dead end may precede the previously
+        // cached entry (or the block may have had no cached dead end).
+        // A stale cache could be observed if identifyAliveSuccessors
+        // triggers a call chain (via getAAFor) that queries
+        // isAssumedDead on this instance before the bulk clear below.
+        FirstDeadInstCache.erase(I->getParent());
+      }
     }
 
     LLVM_DEBUG(dbgs() << "[AAIsDead] #AliveSuccessors: "
