@@ -1029,5 +1029,17 @@ namespace NoTrivialCtor {
 
   constexpr auto r = test(); // both-error {{must be initialized by a constant expression}} \
                              // both-note {{in call to}}
+
+  /// Should still work if the LHS is not a record type.
+  enum byte {};
+  constexpr byte operator|=(byte a, byte b) {
+    return byte{};
+  }
+  constexpr int foo() {
+    byte b{};
+    b |= byte{};
+    return 10;
+  }
+  static_assert(foo() == 10);
 }
 #endif

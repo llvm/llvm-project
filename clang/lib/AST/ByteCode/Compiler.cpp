@@ -5609,8 +5609,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     // first arg). We fix this by using a Flip op later.
     assert(Args.size() == 2);
     const CXXRecordDecl *LHSRecord = Args[0]->getType()->getAsCXXRecordDecl();
-    assert(LHSRecord);
-    ActivateLHS = LHSRecord->hasTrivialDefaultConstructor();
+    ActivateLHS = LHSRecord && LHSRecord->hasTrivialDefaultConstructor();
     IsAssignmentOperatorCall = true;
     std::reverse(Args.begin(), Args.end());
   }
