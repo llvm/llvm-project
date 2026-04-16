@@ -1379,15 +1379,11 @@ void PerfScriptReader::warnIfBranchTargetMismatch() {
   }
 
   emitWarningSummary(MismatchedBranches, TotalSamples,
-                     "of branches do not match the binary, likely due to "
-                     "problematic raw samples or mismatch in binary.");
+                     "of branch samples do not match the binary.");
   emitWarningSummary(MismatchedTargets, TotalSamples,
-                     "of branch targets do not match the binary, likely due to "
-                     "problematic raw samples or mismatch in binary.");
-  emitWarningSummary(
-      MismatchedIndirectTargets, TotalSamples,
-      "of indirect branch targets do not match the binary, likely due to "
-      "problematic raw samples or mismatch in binary.");
+                     "of branch targets do not match the binary.");
+  emitWarningSummary(MismatchedIndirectTargets, TotalSamples,
+                     "of indirect branch targets do not match the binary.");
 }
 
 void PerfScriptReader::parsePerfTraces() {
