@@ -25,7 +25,7 @@ using namespace llvm;
 
 void DWARFGdbIndex::dumpCUList(raw_ostream &OS) const {
   OS << formatv("\n  CU list offset = {0:x}, has {1} entries:", CuListOffset,
-                (uint64_t)CuList.size())
+                CuList.size())
      << '\n';
   uint32_t I = 0;
   for (const CompUnitEntry &CU : CuList)
