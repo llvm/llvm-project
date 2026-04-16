@@ -24,13 +24,13 @@ using namespace llvm;
 // https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
 
 void DWARFGdbIndex::dumpCUList(raw_ostream &OS) const {
-  OS << format("\n  CU list offset = 0x%x, has %" PRId64 " entries:",
-               CuListOffset, (uint64_t)CuList.size())
+  OS << formatv("\n  CU list offset = {0:x}, has {1} entries:", CuListOffset,
+                CuList.size())
      << '\n';
   uint32_t I = 0;
   for (const CompUnitEntry &CU : CuList)
-    OS << format("    %d: Offset = 0x%llx, Length = 0x%llx\n", I++, CU.Offset,
-                 CU.Length);
+    OS << formatv("    {0}: Offset = {1:x}, Length = {2:x}\n", I++, CU.Offset,
+                  CU.Length);
 }
 
 void DWARFGdbIndex::dumpTUList(raw_ostream &OS) const {
@@ -44,20 +44,19 @@ void DWARFGdbIndex::dumpTUList(raw_ostream &OS) const {
 }
 
 void DWARFGdbIndex::dumpAddressArea(raw_ostream &OS) const {
-  OS << format("\n  Address area offset = 0x%x, has %" PRId64 " entries:",
-               AddressAreaOffset, (uint64_t)AddressArea.size())
+  OS << formatv("\n  Address area offset = {0:x}, has {1} entries:",
+                AddressAreaOffset, AddressArea.size())
      << '\n';
   for (const AddressEntry &Addr : AddressArea)
-    OS << format(
-        "    Low/High address = [0x%llx, 0x%llx) (Size: 0x%llx), CU id = %d\n",
-        Addr.LowAddress, Addr.HighAddress, Addr.HighAddress - Addr.LowAddress,
-        Addr.CuIndex);
+    OS << formatv("    Low/High address = [{0:x}, {1:x}) (Size: {2:x}), CU "
+                  "id = {3}\n",
+                  Addr.LowAddress, Addr.HighAddress,
+                  Addr.HighAddress - Addr.LowAddress, Addr.CuIndex);
 }
 
 void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
-  OS << format("\n  Symbol table offset = 0x%x, size = %" PRId64
-               ", filled slots:",
-               SymbolTableOffset, (uint64_t)SymbolTable.size())
+  OS << formatv("\n  Symbol table offset = {0:x}, size = {1}, filled slots:",
+                SymbolTableOffset, SymbolTable.size())
      << '\n';
 
   const auto FindCuVectorId = [&](uint32_t VecOffset) {
@@ -79,26 +78,26 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
     if (!E.NameOffset && !E.VecOffset)
       continue;
 
-    OS << format("    %d: Name offset = 0x%x, CU vector offset = 0x%x\n", I,
-                 E.NameOffset, E.VecOffset);
+    OS << formatv("    {0}: Name offset = {1:x}, CU vector offset = {2:x}\n", I,
+                  E.NameOffset, E.VecOffset);
 
     StringRef Name = ConstantPoolStrings.substr(
         ConstantPoolOffset - StringPoolOffset + E.NameOffset);
 
     const uint32_t CuVectorId = FindCuVectorId(E.VecOffset);
-    OS << format("      String name: %s, CU vector index: %d\n", Name.data(),
-                 CuVectorId);
+    OS << formatv("      String name: {0}, CU vector index: {1}\n", Name.data(),
+                  CuVectorId);
   }
 }
 
 void DWARFGdbIndex::dumpConstantPool(raw_ostream &OS) const {
-  OS << format("\n  Constant pool offset = 0x%x, has %" PRId64 " CU vectors:",
-               ConstantPoolOffset, (uint64_t)ConstantPoolVectors.size());
+  OS << formatv("\n  Constant pool offset = {0:x}, has {1} CU vectors:",
+                ConstantPoolOffset, ConstantPoolVectors.size());
   uint32_t I = 0;
   for (const auto &V : ConstantPoolVectors) {
-    OS << format("\n    %d(0x%x): ", I++, V.first);
+    OS << formatv("\n    {0}({1:x}): ", I++, V.first);
     for (uint32_t Val : V.second)
-      OS << format("0x%x ", Val);
+      OS << formatv("{0:x} ", Val);
   }
   OS << '\n';
 }

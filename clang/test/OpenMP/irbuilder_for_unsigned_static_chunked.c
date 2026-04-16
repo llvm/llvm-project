@@ -50,25 +50,25 @@ extern "C" void workshareloop_unsigned_static_chunked(float *a, float *b, float 
 // CHECK:       omp_loop.preheader:
 // CHECK-NEXT:    store i32 0, ptr [[P_LOWERBOUND]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[DOTCOUNT]], 1
-// CHECK-NEXT:    [[COUNTCOND:%.*]] = icmp eq i32 [[DOTCOUNT]], 0
-// CHECK-NEXT:    [[UPPERSEL:%.*]] = select i1 [[COUNTCOND]], i32 0, i32 [[TMP3]]
-// CHECK-NEXT:    store i32 [[UPPERSEL]], ptr [[P_UPPERBOUND]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[DOTCOUNT]], 0
+// CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 0, i32 [[TMP3]]
+// CHECK-NEXT:    store i32 [[TMP5]], ptr [[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    store i32 1, ptr [[P_STRIDE]], align 4
-// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
-// CHECK-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 33, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 5)
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
+// CHECK-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 33, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 5)
 // CHECK-NEXT:    [[OMP_FIRSTCHUNK_LB:%.*]] = load i32, ptr [[P_LOWERBOUND]], align 4
 // CHECK-NEXT:    [[OMP_FIRSTCHUNK_UB:%.*]] = load i32, ptr [[P_UPPERBOUND]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[OMP_FIRSTCHUNK_UB]], 1
-// CHECK-NEXT:    [[OMP_CHUNK_RANGE:%.*]] = sub i32 [[TMP4]], [[OMP_FIRSTCHUNK_LB]]
+// CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[OMP_FIRSTCHUNK_UB]], 1
+// CHECK-NEXT:    [[OMP_CHUNK_RANGE:%.*]] = sub i32 [[TMP6]], [[OMP_FIRSTCHUNK_LB]]
 // CHECK-NEXT:    [[OMP_DISPATCH_STRIDE:%.*]] = load i32, ptr [[P_STRIDE]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = sub nuw i32 [[DOTCOUNT]], [[OMP_FIRSTCHUNK_LB]]
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp ule i32 [[DOTCOUNT]], [[OMP_FIRSTCHUNK_LB]]
-// CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP5]], 1
-// CHECK-NEXT:    [[TMP8:%.*]] = udiv i32 [[TMP7]], [[OMP_DISPATCH_STRIDE]]
-// CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP8]], 1
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp ule i32 [[TMP5]], [[OMP_DISPATCH_STRIDE]]
-// CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 1, i32 [[TMP9]]
-// CHECK-NEXT:    [[OMP_DISPATCH_TRIPCOUNT:%.*]] = select i1 [[TMP6]], i32 0, i32 [[TMP11]]
+// CHECK-NEXT:    [[TMP7:%.*]] = sub nuw i32 [[DOTCOUNT]], [[OMP_FIRSTCHUNK_LB]]
+// CHECK-NEXT:    [[TMP8:%.*]] = icmp ule i32 [[DOTCOUNT]], [[OMP_FIRSTCHUNK_LB]]
+// CHECK-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP7]], 1
+// CHECK-NEXT:    [[TMP10:%.*]] = udiv i32 [[TMP9]], [[OMP_DISPATCH_STRIDE]]
+// CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], 1
+// CHECK-NEXT:    [[TMP12:%.*]] = icmp ule i32 [[TMP7]], [[OMP_DISPATCH_STRIDE]]
+// CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i32 1, i32 [[TMP11]]
+// CHECK-NEXT:    [[OMP_DISPATCH_TRIPCOUNT:%.*]] = select i1 [[TMP8]], i32 0, i32 [[TMP13]]
 // CHECK-NEXT:    br label [[OMP_DISPATCH_PREHEADER:%.*]]
 // CHECK:       omp_dispatch.preheader:
 // CHECK-NEXT:    br label [[OMP_DISPATCH_HEADER:%.*]]
@@ -79,24 +79,24 @@ extern "C" void workshareloop_unsigned_static_chunked(float *a, float *b, float 
 // CHECK-NEXT:    [[OMP_DISPATCH_CMP:%.*]] = icmp ult i32 [[OMP_DISPATCH_IV]], [[OMP_DISPATCH_TRIPCOUNT]]
 // CHECK-NEXT:    br i1 [[OMP_DISPATCH_CMP]], label [[OMP_DISPATCH_BODY:%.*]], label [[OMP_DISPATCH_EXIT:%.*]]
 // CHECK:       omp_dispatch.body:
-// CHECK-NEXT:    [[TMP12:%.*]] = mul i32 [[OMP_DISPATCH_IV]], [[OMP_DISPATCH_STRIDE]]
-// CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[OMP_FIRSTCHUNK_LB]]
+// CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[OMP_DISPATCH_IV]], [[OMP_DISPATCH_STRIDE]]
+// CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], [[OMP_FIRSTCHUNK_LB]]
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER9:%.*]]
 // CHECK:       omp_dispatch.inc:
 // CHECK-NEXT:    [[OMP_DISPATCH_NEXT]] = add nuw i32 [[OMP_DISPATCH_IV]], 1
 // CHECK-NEXT:    br label [[OMP_DISPATCH_HEADER]]
 // CHECK:       omp_dispatch.exit:
 // CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
-// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM10:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM10]])
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM10:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM10]])
 // CHECK-NEXT:    br label [[OMP_DISPATCH_AFTER:%.*]]
 // CHECK:       omp_dispatch.after:
 // CHECK-NEXT:    br label [[OMP_LOOP_AFTER:%.*]]
 // CHECK:       omp_loop.preheader9:
-// CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[OMP_CHUNK_RANGE]]
-// CHECK-NEXT:    [[OMP_CHUNK_IS_LAST:%.*]] = icmp uge i32 [[TMP14]], [[DOTCOUNT]]
-// CHECK-NEXT:    [[TMP15:%.*]] = sub i32 [[DOTCOUNT]], [[TMP13]]
-// CHECK-NEXT:    [[OMP_CHUNK_TRIPCOUNT:%.*]] = select i1 [[OMP_CHUNK_IS_LAST]], i32 [[TMP15]], i32 [[OMP_CHUNK_RANGE]]
+// CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[TMP15]], [[OMP_CHUNK_RANGE]]
+// CHECK-NEXT:    [[OMP_CHUNK_IS_LAST:%.*]] = icmp uge i32 [[TMP16]], [[DOTCOUNT]]
+// CHECK-NEXT:    [[TMP17:%.*]] = sub i32 [[DOTCOUNT]], [[TMP15]]
+// CHECK-NEXT:    [[OMP_CHUNK_TRIPCOUNT:%.*]] = select i1 [[OMP_CHUNK_IS_LAST]], i32 [[TMP17]], i32 [[OMP_CHUNK_RANGE]]
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER:%.*]]
 // CHECK:       omp_loop.header:
 // CHECK-NEXT:    [[OMP_LOOP_IV:%.*]] = phi i32 [ 0, [[OMP_LOOP_PREHEADER9]] ], [ [[OMP_LOOP_NEXT:%.*]], [[OMP_LOOP_INC:%.*]] ]
@@ -105,34 +105,34 @@ extern "C" void workshareloop_unsigned_static_chunked(float *a, float *b, float 
 // CHECK-NEXT:    [[OMP_LOOP_CMP:%.*]] = icmp ult i32 [[OMP_LOOP_IV]], [[OMP_CHUNK_TRIPCOUNT]]
 // CHECK-NEXT:    br i1 [[OMP_LOOP_CMP]], label [[OMP_LOOP_BODY:%.*]], label [[OMP_LOOP_EXIT:%.*]]
 // CHECK:       omp_loop.body:
-// CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[OMP_LOOP_IV]], [[TMP13]]
-// CHECK-NEXT:    call void @__captured_stmt.1(ptr [[I]], i32 [[TMP16]], ptr [[AGG_CAPTURED1]])
-// CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[I]], align 4
-// CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[TMP18]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP17]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP19:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-// CHECK-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[C_ADDR]], align 8
-// CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[I]], align 4
-// CHECK-NEXT:    [[IDXPROM2:%.*]] = zext i32 [[TMP21]] to i64
-// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP20]], i64 [[IDXPROM2]]
-// CHECK-NEXT:    [[TMP22:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
-// CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP19]], [[TMP22]]
-// CHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[I]], align 4
-// CHECK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP24]] to i64
-// CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP23]], i64 [[IDXPROM4]]
-// CHECK-NEXT:    [[TMP25:%.*]] = load float, ptr [[ARRAYIDX5]], align 4
-// CHECK-NEXT:    [[MUL6:%.*]] = fmul float [[MUL]], [[TMP25]]
-// CHECK-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[I]], align 4
-// CHECK-NEXT:    [[IDXPROM7:%.*]] = zext i32 [[TMP27]] to i64
-// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP26]], i64 [[IDXPROM7]]
-// CHECK-NEXT:    store float [[MUL6]], ptr [[ARRAYIDX8]], align 4
+// CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[OMP_LOOP_IV]], [[TMP15]]
+// CHECK-NEXT:    call void @__captured_stmt.1(ptr [[I]], i32 [[TMP18]], ptr [[AGG_CAPTURED1]]), !llvm.access.group [[ACC_GRP2:![0-9]+]]
+// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[TMP20]] to i64
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP19]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[TMP21:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[IDXPROM2:%.*]] = zext i32 [[TMP23]] to i64
+// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP22]], i64 [[IDXPROM2]]
+// CHECK-NEXT:    [[TMP24:%.*]] = load float, ptr [[ARRAYIDX3]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP21]], [[TMP24]]
+// CHECK-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP26]] to i64
+// CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP25]], i64 [[IDXPROM4]]
+// CHECK-NEXT:    [[TMP27:%.*]] = load float, ptr [[ARRAYIDX5]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[MUL6:%.*]] = fmul float [[MUL]], [[TMP27]]
+// CHECK-NEXT:    [[TMP28:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK-NEXT:    [[IDXPROM7:%.*]] = zext i32 [[TMP29]] to i64
+// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP28]], i64 [[IDXPROM7]]
+// CHECK-NEXT:    store float [[MUL6]], ptr [[ARRAYIDX8]], align 4, !llvm.access.group [[ACC_GRP2]]
 // CHECK-NEXT:    br label [[OMP_LOOP_INC]]
 // CHECK:       omp_loop.inc:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1
-// CHECK-NEXT:    br label [[OMP_LOOP_HEADER]]
+// CHECK-NEXT:    br label [[OMP_LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 // CHECK:       omp_loop.exit:
 // CHECK-NEXT:    br label [[OMP_DISPATCH_INC]]
 // CHECK:       omp_loop.after:
@@ -151,7 +151,7 @@ extern "C" void workshareloop_unsigned_static_chunked(float *a, float *b, float 
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !nonnull [[META5:![0-9]+]], !align [[META6:![0-9]+]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTSTART]], align 4
 // CHECK-NEXT:    store i32 32000000, ptr [[DOTSTOP]], align 4
@@ -174,7 +174,7 @@ extern "C" void workshareloop_unsigned_static_chunked(float *a, float *b, float 
 // CHECK-NEXT:    br label [[COND_END]]
 // CHECK:       cond.end:
 // CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[DIV]], [[COND_TRUE]] ], [ 0, [[COND_FALSE]] ]
-// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[DISTANCE_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[DISTANCE_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store i32 [[COND]], ptr [[TMP10]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -194,7 +194,7 @@ extern "C" void workshareloop_unsigned_static_chunked(float *a, float *b, float 
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LOGICAL_ADDR]], align 4
 // CHECK-NEXT:    [[MUL:%.*]] = mul i32 7, [[TMP3]]
 // CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP2]], [[MUL]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store i32 [[ADD]], ptr [[TMP4]], align 4
 // CHECK-NEXT:    ret void
 //
