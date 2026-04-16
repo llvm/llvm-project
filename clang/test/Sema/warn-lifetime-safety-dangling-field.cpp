@@ -196,3 +196,16 @@ struct DerivedWithCtor : BaseWithPointer {
   }
 };
 } // namespace DanglingPointerFieldInBaseClass
+
+namespace callable_wrappers {
+
+struct HasCallback {
+  std::function<void()> callback; // expected-note {{this field dangles}}
+
+  void set_callback() {
+    int local;
+    callback = [&local]() { (void)local; }; // expected-warning {{address of stack memory escapes to a field}}
+  }
+};
+
+} // namespace callable_wrappers
