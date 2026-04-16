@@ -394,9 +394,13 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   for (auto &region : op->getRegions())
     simplifyRegion(knownValues, region);
 
-  /// Erase any operations that were marked as dead during simplification.
-  for (auto *op : opsToErase)
+  /// Erase any operations that were marked as dead during simplification, and
+  /// remove their associated dominator trees.
+  for (auto *op : opsToErase) {
+    for (Region &region : op->getRegions())
+      domInfo->invalidate(&region);
     rewriter.eraseOp(op);
+  }
   if (changed)
     *changed = !opsToErase.empty();
 
