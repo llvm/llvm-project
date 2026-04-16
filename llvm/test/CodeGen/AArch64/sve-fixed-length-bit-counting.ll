@@ -273,7 +273,7 @@ define void @ctlz_v64i32(ptr %a)  vscale_range(16,0) #0 {
   ret void
 }
 
-define <1 x i64> @ctlz_v1i64(<1 x i64> %op) vscale_range(2,0) #0 {
+define <1 x i64> @ctlz_v1i64(<1 x i64> %op) #0 {
 ; CHECK-LABEL: ctlz_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
@@ -285,7 +285,7 @@ define <1 x i64> @ctlz_v1i64(<1 x i64> %op) vscale_range(2,0) #0 {
   ret <1 x i64> %res
 }
 
-define <2 x i64> @ctlz_v2i64(<2 x i64> %op) vscale_range(2,0) #0 {
+define <2 x i64> @ctlz_v2i64(<2 x i64> %op) #0 {
 ; CHECK-LABEL: ctlz_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
@@ -1029,7 +1029,7 @@ define void @cttz_v64i32(ptr %a) vscale_range(16,0) #0 {
   ret void
 }
 
-define <1 x i64> @cttz_v1i64(<1 x i64> %op) vscale_range(2,0) #0 {
+define <1 x i64> @cttz_v1i64(<1 x i64> %op) #0 {
 ; CHECK-LABEL: cttz_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
@@ -1042,7 +1042,7 @@ define <1 x i64> @cttz_v1i64(<1 x i64> %op) vscale_range(2,0) #0 {
   ret <1 x i64> %res
 }
 
-define <2 x i64> @cttz_v2i64(<2 x i64> %op) vscale_range(2,0) #0 {
+define <2 x i64> @cttz_v2i64(<2 x i64> %op) #0 {
 ; CHECK-LABEL: cttz_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
