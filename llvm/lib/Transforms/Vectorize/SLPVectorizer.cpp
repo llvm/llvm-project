@@ -273,15 +273,18 @@ static bool isValidElementType(Type *Ty) {
          !Ty->isPPC_FP128Ty();
 }
 
-/// Returns the type of the given value/instruction \p V. If it is store,
-/// returns the type of its value operand, for Cmp - the types of the compare
-/// operands and for insertelement - the type os the inserted operand.
-/// Otherwise, just the type of the value is returned.
-static Type *getValueType(Value *V) {
+/// Returns the "element type" of the given value/instruction \p V.
+/// For stores, returns the stored value type; for insertelement (when ReVec is
+/// off), the inserted operand type. For compares, the default is to return the
+/// result type (i1); when \p LookThroughCmp is true, returns the type of the
+/// compared operands instead, which is needed for vector width calculations
+/// (the width is determined by the operand type, not the i1 result).
+static Type *getValueType(Value *V, bool LookThroughCmp = false) {
   if (auto *SI = dyn_cast<StoreInst>(V))
     return SI->getValueOperand()->getType();
-  if (auto *CI = dyn_cast<CmpInst>(V))
-    return CI->getOperand(0)->getType();
+  if (LookThroughCmp)
+    if (auto *CI = dyn_cast<CmpInst>(V))
+      return CI->getOperand(0)->getType();
   if (!SLPReVec)
     if (auto *IE = dyn_cast<InsertElementInst>(V))
       return IE->getOperand(1)->getType();
@@ -4345,7 +4348,8 @@ private:
     bool
     hasNonWholeRegisterOrNonPowerOf2Vec(const TargetTransformInfo &TTI) const {
       bool IsNonPowerOf2 = !hasFullVectorsOrPowerOf2(
-          TTI, getValueType(Scalars.front()), Scalars.size());
+          TTI, getValueType(Scalars.front(), /*LookThroughCmp=*/true),
+          Scalars.size());
       assert((!IsNonPowerOf2 || ReuseShuffleIndices.empty()) &&
              "Reshuffling not supported with non-power-of-2 vectors yet.");
       return IsNonPowerOf2;
@@ -4508,10 +4512,11 @@ private:
           std::make_pair(UserTreeIdx.UserTE, UserTreeIdx.EdgeIdx), Last);
     // FIXME: Remove once support for ReuseShuffleIndices has been implemented
     // for non-power-of-two vectors.
-    assert(
-        (hasFullVectorsOrPowerOf2(*TTI, getValueType(VL.front()), VL.size()) ||
-         ReuseShuffleIndices.empty()) &&
-        "Reshuffling scalars not yet supported for nodes with padding");
+    assert((hasFullVectorsOrPowerOf2(
+                *TTI, getValueType(VL.front(), /*LookThroughCmp=*/true),
+                VL.size()) ||
+            ReuseShuffleIndices.empty()) &&
+           "Reshuffling scalars not yet supported for nodes with padding");
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
                                      ReuseShuffleIndices.end());
     if (ReorderIndices.empty()) {
@@ -10988,7 +10993,8 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
   // Easy case: VL has unique values and a "natural" size
   size_t NumUniqueScalarValues = UniqueValues.size();
   bool IsFullVectors = hasFullVectorsOrPowerOf2(
-      TTI, getValueType(UniqueValues.front()), NumUniqueScalarValues);
+      TTI, getValueType(UniqueValues.front(), /*LookThroughCmp=*/true),
+      NumUniqueScalarValues);
   if (NumUniqueScalarValues == VL.size() &&
       (VectorizeNonPowerOf2 || IsFullVectors)) {
     ReuseShuffleIndices.clear();
@@ -10998,7 +11004,8 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
   // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
   if ((UserTreeIdx.UserTE &&
        UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(TTI)) ||
-      !hasFullVectorsOrPowerOf2(TTI, getValueType(VL.front()), VL.size())) {
+      !hasFullVectorsOrPowerOf2(
+          TTI, getValueType(VL.front(), /*LookThroughCmp=*/true), VL.size())) {
     LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
                          "for nodes with padding.\n");
     ReuseShuffleIndices.clear();
@@ -15725,8 +15732,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return 0;
     if (isa<InsertElementInst>(VL[0]))
       return InstructionCost::getInvalid();
-    if (isa<CmpInst>(VL.front()))
-      ScalarTy = VL.front()->getType();
     return SpillsReloads +
            processBuildVector<ShuffleCostEstimator, InstructionCost>(
                E, ScalarTy, *TTI, VectorizedVals, *this, CheckedExtracts);
@@ -16190,6 +16195,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   case Instruction::FCmp:
   case Instruction::ICmp:
+    // Override ScalarTy/VecTy with the compared operand type (not i1). The
+    // cost of a compare instruction is determined by the operand width, and
+    // getCmpSelInstrCost expects the compared type as its first type arg.
+    OrigScalarTy = ScalarTy = getValueType(VL0, /*LookThroughCmp=*/true);
+    VecTy = getWidenedType(ScalarTy, VL.size());
+    [[fallthrough]];
   case Instruction::Select: {
     CmpPredicate VecPred, SwappedVecPred;
     auto MatchCmp = m_Cmp(VecPred, m_Value(), m_Value());
@@ -16221,9 +16232,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                        ? CmpInst::BAD_FCMP_PREDICATE
                                        : CmpInst::BAD_ICMP_PREDICATE;
 
+      // For selects, the "condition type" arg is the condition operand's
+      // type; for standalone compares, it is the result type (i1).
       InstructionCost ScalarCost = TTI->getCmpSelInstrCost(
-          E->getOpcode(), OrigScalarTy, Builder.getInt1Ty(), CurrentPred,
-          CostKind,
+          E->getOpcode(), OrigScalarTy,
+          ShuffleOrOp == Instruction::Select ? VL0->getOperand(0)->getType()
+                                             : VL0->getType(),
+          CurrentPred, CostKind,
           getOperandInfo(
               VI->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
           getOperandInfo(
@@ -16236,7 +16251,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return ScalarCost;
     };
     auto GetVectorCost = [&](InstructionCost CommonCost) {
-      auto *MaskTy = getWidenedType(Builder.getInt1Ty(), VL.size());
+      // For selects, the condition type may differ from the result type
+      // (e.g. condition is <N x i1> while result is <N x i32>). For
+      // compares, the result type IS the mask (i1/vNi1). Construct the
+      // right type so getCmpSelInstrCost sees the actual mask/result width.
+      auto *MaskTy = getWidenedType(ShuffleOrOp == Instruction::Select
+                                        ? VL0->getOperand(0)->getType()
+                                        : VL0->getType(),
+                                    VL.size());
 
       InstructionCost VecCost = TTI->getCmpSelInstrCost(
           E->getOpcode(), VecTy, MaskTy, VecPred, CostKind,
@@ -16245,10 +16267,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           getOperandInfo(
               E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
           VL0);
-      if (auto *SI = dyn_cast<SelectInst>(VL0)) {
-        auto *CondType =
-            getWidenedType(SI->getCondition()->getType(), VL.size());
-        unsigned CondNumElements = CondType->getNumElements();
+      if (isa<SelectInst>(VL0)) {
+        unsigned CondNumElements = getNumElements(MaskTy);
         unsigned VecTyNumElements = getNumElements(VecTy);
         assert(VecTyNumElements >= CondNumElements &&
                VecTyNumElements % CondNumElements == 0 &&
@@ -16257,7 +16277,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           // When the return type is i1 but the source is fixed vector type, we
           // need to duplicate the condition value.
           VecCost += ::getShuffleCost(
-              *TTI, TTI::SK_PermuteSingleSrc, CondType,
+              *TTI, TTI::SK_PermuteSingleSrc, MaskTy,
               createReplicatedMask(VecTyNumElements / CondNumElements,
                                    CondNumElements));
         }
@@ -17893,8 +17913,6 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     auto It = MinBWs.find(TE);
     if (It != MinBWs.end())
       ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
-    if (isa<CmpInst>(TE->Scalars.front()))
-      ScalarTy = TE->Scalars.front()->getType();
     auto *VecTy = getWidenedType(ScalarTy, Sz);
     const unsigned EntryVF = TE->getVectorFactor();
     auto *FinalVecTy = getWidenedType(ScalarTy, EntryVF);
@@ -21253,9 +21271,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   IRBuilderBase::InsertPointGuard Guard(Builder);
 
   Value *V = E->Scalars.front();
-  Type *ScalarTy = V->getType();
-  if (!isa<CmpInst>(V))
-    ScalarTy = getValueType(V);
+  Type *ScalarTy = getValueType(V);
   auto It = MinBWs.find(E);
   if (It != MinBWs.end()) {
     auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy);
@@ -26279,7 +26295,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     }
   }
 
-  Type *ScalarTy = getValueType(VL[0]);
+  Type *ScalarTy = getValueType(VL[0], /*LookThroughCmp=*/true);
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
   unsigned MaxVF = std::max<unsigned>(
@@ -29181,7 +29197,8 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
 
   SmallVector<Value *> Vals;
   for (Instruction *V : CmpInsts)
-    if (!R.isDeleted(V) && isValidElementType(getValueType(V)))
+    if (!R.isDeleted(V) &&
+        isValidElementType(getValueType(V, /*LookThroughCmp=*/true)))
       Vals.push_back(V);
   if (Vals.size() <= 1)
     return Changed;
