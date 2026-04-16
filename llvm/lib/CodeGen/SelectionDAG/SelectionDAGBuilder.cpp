@@ -3809,11 +3809,11 @@ void SelectionDAGBuilder::visitICmp(const ICmpInst &I) {
 
   SDNodeFlags Flags;
   Flags.setSameSign(I.hasSameSign());
-  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
 
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Opcode));
+  setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Opcode,
+                            /*Chain=*/{}, /*IsSignaling=*/false, Flags));
 }
 
 void SelectionDAGBuilder::visitFCmp(const FCmpInst &I) {
@@ -3829,7 +3829,6 @@ void SelectionDAGBuilder::visitFCmp(const FCmpInst &I) {
 
   SDNodeFlags Flags;
   Flags.copyFMF(*FPMO);
-  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
 
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
