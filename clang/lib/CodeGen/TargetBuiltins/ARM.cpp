@@ -7154,19 +7154,19 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitFP8NeonFDOTCall(Intrinsic::aarch64_neon_fp8_fdot4_lane,
                                ExtendLaneArg, FloatTy, Ops, E, "fdot4_lane");
 
-  case NEON::BI__builtin_neon_vfdot_f32:
-  case NEON::BI__builtin_neon_vfdotq_f32: {
+  case NEON::BI__builtin_neon_vdot_f32:
+  case NEON::BI__builtin_neon_vdotq_f32: {
     llvm::Type *InputTy =
         llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
     llvm::Type *Tys[2] = {Ty, InputTy};
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_fdot, Tys),
-                        Ops, "vfdot");
+                        Ops, "vdot");
   }
 
-  case NEON::BI__builtin_neon_vfdot_lane_f32:
-  case NEON::BI__builtin_neon_vfdot_laneq_f32:
-  case NEON::BI__builtin_neon_vfdotq_lane_f32:
-  case NEON::BI__builtin_neon_vfdotq_laneq_f32: {
+  case NEON::BI__builtin_neon_vdot_lane_f32:
+  case NEON::BI__builtin_neon_vdot_laneq_f32:
+  case NEON::BI__builtin_neon_vdotq_lane_f32:
+  case NEON::BI__builtin_neon_vdotq_laneq_f32: {
     llvm::FixedVectorType *InputTy =
         llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
     llvm::FixedVectorType *LaneTy = llvm::FixedVectorType::get(
@@ -7179,7 +7179,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Type *Tys[2] = {Ty, InputTy};
     Ops.pop_back();
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_fdot, Tys),
-                        Ops, "vfdot");
+                        Ops, "vdot");
   }
 
   case NEON::BI__builtin_neon_vmlalbq_f16_mf8_fpm:
