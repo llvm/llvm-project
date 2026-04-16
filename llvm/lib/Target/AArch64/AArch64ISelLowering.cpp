@@ -20942,29 +20942,11 @@ static SDValue performReinterpretCastCombine(SDNode *N) {
   return SDValue();
 }
 
-// and(splat(1), sext(setcc_merge_zero)) -> zext(setcc_merge_zero)
-SDValue performSVEAndSplatSetCCMergeZeroCombine(SDNode *N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-  SDValue SplatOp = N->getOperand(0);
-  SDValue NonSplatOp = N->getOperand(1);
-  if (NonSplatOp.getOpcode() == ISD::SPLAT_VECTOR)
-    std::swap(SplatOp, NonSplatOp);
-  SDValue Compare = NonSplatOp.getOperand(0);
-  if (SplatOp.getOpcode() != ISD::SPLAT_VECTOR ||
-      NonSplatOp.getOpcode() != ISD::SIGN_EXTEND ||
-      Compare.getOpcode() != AArch64ISD::SETCC_MERGE_ZERO)
-    return SDValue();
-  return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), Compare);
-}
-
 static SDValue performSVEAndCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
-
-  if (SDValue R = performSVEAndSplatSetCCMergeZeroCombine(N, DAG))
-    return R;
 
   // Zero/any extend of an unsigned unpack
   if (Opc == AArch64ISD::UUNPKHI || Opc == AArch64ISD::UUNPKLO) {
