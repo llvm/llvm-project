@@ -436,10 +436,9 @@ bool LoongArchDAGToDAGISel::selectVSplatImmNeg(SDValue N,
 
   if (selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
       ImmValue.getBitWidth() == EltTy.getSizeInBits()) {
-    int64_t NegImm = -ImmValue.getSExtValue();
-    if (isUInt<ImmBitSize>(NegImm)) {
-      SplatVal = CurDAG->getSignedTargetConstant(NegImm, SDLoc(N),
-                                                 Subtarget->getGRLenVT());
+    if ((-ImmValue).isIntN(ImmBitSize)) {
+      SplatVal = CurDAG->getTargetConstant(-ImmValue.getSExtValue(), SDLoc(N),
+                                           Subtarget->getGRLenVT());
       return true;
     }
   }
