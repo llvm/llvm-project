@@ -874,8 +874,7 @@ class ScriptedFrameProviderTestCase(TestBase):
             "DAP-Locals-style GetVariables should return synthetic locals",
         )
         names = {
-            locals_vars.GetValueAtIndex(i).name
-            for i in range(locals_vars.GetSize())
+            locals_vars.GetValueAtIndex(i).name for i in range(locals_vars.GetSize())
         }
         self.assertIn("synth_local_a", names)
         self.assertIn("synth_local_b", names)
@@ -903,9 +902,7 @@ class ScriptedFrameProviderTestCase(TestBase):
 
         # CLI: frame variable (no args) lists synthetic locals
         self.runCmd("frame select 0")
-        self.expect(
-            "frame variable", substrs=["synth_local_a", "synth_local_b"]
-        )
+        self.expect("frame variable", substrs=["synth_local_a", "synth_local_b"])
 
         # CLI: frame variable -r regex finds synthetic locals
         self.expect(

@@ -665,9 +665,7 @@ class SyntheticValueFrameProvider(ScriptedFrameProvider):
 
     def get_frame_at_index(self, index):
         if index == 0:
-            return SyntheticValueFrame(
-                self.thread, 0, 0xF00, "synthetic_value_frame"
-            )
+            return SyntheticValueFrame(self.thread, 0, 0xF00, "synthetic_value_frame")
         elif index - 1 < len(self.input_frames):
             return index - 1
         return None
