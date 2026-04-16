@@ -3685,7 +3685,7 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
                           [&](Value value) {
                             p.printOperand(value);
                             p << " : " << value.getType();
-                            if (*attrIt)
+                            if (mlir::isa<mlir::UnitAttr>(*attrIt))
                               p << " (maybe_memory)";
                             attrIt++;
                           });
@@ -3805,7 +3805,7 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
         size++;
 
         if (parser.parseOptionalLParen().failed()) {
-          operandAttrs.push_back(mlir::Attribute());
+          operandAttrs.push_back(mlir::DictionaryAttr::get(ctxt));
           return mlir::success();
         }
 
@@ -3848,11 +3848,11 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
   if (parser.parseOptionalKeyword("side_effects").succeeded())
     result.attributes.set("side_effects", UnitAttr::get(ctxt));
 
-  if (parser.parseOptionalArrow().succeeded() &&
-      parser.parseType(resType).failed())
+  if (parser.parseOptionalAttrDict(result.attributes).failed())
     return mlir::failure();
 
-  if (parser.parseOptionalAttrDict(result.attributes).failed())
+  if (parser.parseOptionalArrow().succeeded() &&
+      parser.parseType(resType).failed())
     return mlir::failure();
 
   result.attributes.set("asm_flavor", AsmFlavorAttr::get(ctxt, *flavor));
