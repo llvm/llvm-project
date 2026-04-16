@@ -682,8 +682,9 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vpadal_v:
   case NEON::BI__builtin_neon_vpadalq_v:
     cgf.cgm.errorNYI(expr->getSourceRange(),
-                     std::string("unimplemented AArch64 builtin call: ") +
-                         ctx.BuiltinInfo.getName(builtinID));
+                     std::string("Reached code-path for ARM builtin call ") +
+                         ctx.BuiltinInfo.getName(builtinID) +
+                         "(ARM builtins are not supported ATM)");
     return mlir::Value{};
   case NEON::BI__builtin_neon_vpaddl_v:
   case NEON::BI__builtin_neon_vpaddlq_v: {
@@ -2484,11 +2485,25 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       intrName = "aarch64.neon.fabd";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vpadal_v:
-  case NEON::BI__builtin_neon_vpadalq_v:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case NEON::BI__builtin_neon_vpadalq_v: {
+    intrName = usgn ? "aarch64.neon.uaddlp" : "aarch64.neon.saddlp";
+    mlir::Type resElemTy = ty.getElementType();
+    uint64_t resLanes = ty.getSize();
+    mlir::Value src = builder.createBitcast(
+        loc, ops[1],
+        cir::VectorType::get(
+            cir::IntType::get(
+                builder.getContext(),
+                mlir::dyn_cast<cir::IntType>(resElemTy).getWidth() / 2,
+                /* is_signed */ !usgn),
+            resLanes * 2));
+    llvm::SmallVector<mlir::Value> vsrc{src};
+    mlir::Type mTy = ty;
+    mlir::Value pw =
+        emitNeonCall(cgm, builder, {src.getType()}, vsrc, intrName, mTy, loc);
+    mlir::Value accum = ops[0] = builder.createBitcast(loc, ops[0], ty);
+    return cir::AddOp::create(builder, loc, ty, pw, accum);
+  }
   case NEON::BI__builtin_neon_vpmin_v:
   case NEON::BI__builtin_neon_vpminq_v:
     intrName = usgn ? "aarch64.neon.uminp" : "aarch64.neon.sminp";
