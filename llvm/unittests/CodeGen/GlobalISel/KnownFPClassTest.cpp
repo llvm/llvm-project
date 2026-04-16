@@ -1643,3 +1643,33 @@ TEST_F(AArch64GISelMITest, TestFPClassFMASelfSquare) {
   EXPECT_EQ(fcNan | fcPosInf | fcPosNormal, Known.KnownFPClasses);
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
+
+// Regression test for crash when shuffling from large vector to small vector.
+// This was causing an assertion failure in getShuffleDemandedElts because
+// the destination width was incorrectly used instead of source width.
+TEST_F(AArch64GISelMITest, TestFPClassShuffleVecLargeToSmall) {
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %vec:_(<64 x s32>) = G_LOAD %ptr(p0) :: (load (<64 x s32>))
+    %undef:_(<64 x s32>) = G_IMPLICIT_DEF
+    %shuf:_(<8 x s32>) = G_SHUFFLE_VECTOR %vec(<64 x s32>), %undef, shufflemask(0, 8, 16, 24, 32, 40, 48, 56)
+    %copy_shuf:_(<8 x s32>) = COPY %shuf
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+
+  // This should not crash
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  // We don't know anything about the FP classes since vec is a load
+  EXPECT_EQ(fcAllFlags, Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
+}

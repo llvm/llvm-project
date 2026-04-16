@@ -1790,7 +1790,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       assert(DemandedElts == APInt(1, 1));
       DemandedLHS = DemandedRHS = DemandedElts;
     } else {
-      if (!llvm::getShuffleDemandedElts(DstTy.getNumElements(), Shuf.getMask(),
+      unsigned SrcNumElts = MRI.getType(Shuf.getSrc1Reg()).getNumElements();
+      if (!llvm::getShuffleDemandedElts(SrcNumElts, Shuf.getMask(),
                                         DemandedElts, DemandedLHS,
                                         DemandedRHS)) {
         Known.resetAll();
