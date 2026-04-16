@@ -4002,20 +4002,18 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define void @sink_splat_vp_fma(ptr noalias nocapture %a, ptr nocapture readonly %b, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_fma:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a3, 1
-; CHECK-NEXT:    add a3, a1, a3
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    add a2, a1, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:  .LBB79_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v9, (a1)
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v9, v0.t
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vfmacc.vf v9, fa0, v8
+; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    bne a1, a3, .LBB79_1
+; CHECK-NEXT:    bne a1, a2, .LBB79_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -4042,20 +4040,18 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define void @sink_splat_vp_fma_commute(ptr noalias nocapture %a, ptr nocapture readonly %b, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_fma_commute:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a3, 1
-; CHECK-NEXT:    add a3, a1, a3
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    add a2, a1, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:  .LBB80_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v9, (a1)
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v9, v0.t
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vfmacc.vf v9, fa0, v8
+; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    bne a1, a3, .LBB80_1
+; CHECK-NEXT:    bne a1, a2, .LBB80_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -5570,20 +5566,16 @@ for.cond.cleanup:
 define void @sink_splat_vp_fmuladd(ptr %a, ptr %b, float %x, <4 x i1> %m, i32 %vl) {
 ; CHECK-LABEL: sink_splat_vp_fmuladd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a3, 1
-; CHECK-NEXT:    slli a4, a2, 32
-; CHECK-NEXT:    add a2, a1, a3
-; CHECK-NEXT:    srli a3, a4, 32
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    add a2, a1, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:  .LBB123_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v9, (a1)
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v9, v0.t
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vfmacc.vf v9, fa0, v8
+; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    bne a1, a2, .LBB123_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -5612,20 +5604,16 @@ for.cond.cleanup:
 define void @sink_splat_vp_fmuladd_commute(ptr %a, ptr %b, float %x, <4 x i1> %m, i32 %vl) {
 ; CHECK-LABEL: sink_splat_vp_fmuladd_commute:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a3, 1
-; CHECK-NEXT:    slli a4, a2, 32
-; CHECK-NEXT:    add a2, a1, a3
-; CHECK-NEXT:    srli a3, a4, 32
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    add a2, a1, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:  .LBB124_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v9, (a1)
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v9, v0.t
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vfmacc.vf v9, fa0, v8
+; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    bne a1, a2, .LBB124_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
