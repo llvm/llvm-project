@@ -1513,7 +1513,7 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
       name && name->symbol) {
     if (Symbol * copy{currScope().CopySymbol(*name->symbol)}) {
       name->symbol = copy;
-      if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
+      if (auto *object{copy->GetUltimate().detailsIf<ObjectEntityDetails>()}) {
         object->set_cudaDataAttr(common::CUDADataAttr::Device);
       }
     }
