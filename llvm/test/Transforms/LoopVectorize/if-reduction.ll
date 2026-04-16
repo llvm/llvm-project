@@ -1303,12 +1303,40 @@ define float @fcmp_fadd_fsub(ptr nocapture %a, i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
-; CHECK-NEXT:    [[SUM_010:%.*]] = phi float [ 0.000000e+00, %[[FOR_BODY_PREHEADER]] ], [ [[SUM_1:%.*]], %[[FOR_INC]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI1:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp uge <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP3]]
+; CHECK-NEXT:    [[PREDPHI1]] = select <4 x i1> [[TMP1]], <4 x float> [[PREDPHI]], <4 x float> [[TMP4]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[PREDPHI1]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
+; CHECK:       [[FOR_BODY1]]:
+; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-NEXT:    [[SUM_010:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SUM_1:%.*]], %[[FOR_INC]] ]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV1]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[TMP12]], 1.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP1]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
@@ -1322,11 +1350,11 @@ define float @fcmp_fadd_fsub(ptr nocapture %a, i32 %n) {
 ; CHECK-NEXT:    br label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[SUM_1]] = phi float [ [[ADD]], %[[IF_THEN]] ], [ [[SUB]], %[[IF_THEN10]] ], [ [[SUM_010]], %[[IF_ELSE]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT:.*]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP25:![0-9]+]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
-; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi float [ [[SUM_1]], %[[FOR_INC]] ]
+; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi float [ [[SUM_1]], %[[FOR_INC]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[FOR_END]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[SUM_1_LCSSA]], %[[FOR_END_LOOPEXIT]] ]
@@ -1548,7 +1576,7 @@ define i64 @fcmp_0_add_select2(ptr noalias %x, i64 %N) {
 ; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i64> [[TMP4]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP5]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
@@ -1567,7 +1595,7 @@ define i64 @fcmp_0_add_select2(ptr noalias %x, i64 %N) {
 ; CHECK-NEXT:    [[SUM_2]] = select i1 [[CMP_2]], i64 [[ADD]], i64 [[SUM_1]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-NEXT:    [[SUM_2_LCSSA:%.*]] = phi i64 [ [[SUM_2]], %[[FOR_BODY]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[FOR_END]]
@@ -1628,7 +1656,7 @@ define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
@@ -1645,7 +1673,7 @@ define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[SUM_2]] = select i1 [[CMP_2]], i32 [[SUB]], i32 [[SUM_1]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = sub nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[ZEXT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-NEXT:    [[SUM_2_LCSSA:%.*]] = phi i32 [ [[SUM_2]], %[[FOR_BODY]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[FOR_END]]
@@ -1702,7 +1730,7 @@ define i32 @fcmp_0_mult_select1(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[ZEXT]], [[N_VEC]]
@@ -1721,7 +1749,7 @@ define i32 @fcmp_0_mult_select1(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[SUM_2]] = select i1 [[CMP_2]], i32 [[MULT]], i32 [[SUM_1]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[ZEXT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP31:![0-9]+]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-NEXT:    [[SUM_2_LCSSA:%.*]] = phi i32 [ [[SUM_2]], %[[FOR_BODY]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[FOR_END]]
@@ -1785,4 +1813,6 @@ for.end:
 ; CHECK: [[LOOP27]] = distinct !{[[LOOP27]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP28]] = distinct !{[[LOOP28]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP29]] = distinct !{[[LOOP29]], [[META2]], [[META1]]}
+; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[META1]], [[META2]]}
+; CHECK: [[LOOP31]] = distinct !{[[LOOP31]], [[META2]], [[META1]]}
 ;.

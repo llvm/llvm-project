@@ -1007,7 +1007,7 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
     return InstDesc(Kind == RecurKind::FMul, I,
                     I->hasAllowReassoc() ? nullptr : I);
   case Instruction::FSub:
-    return InstDesc(Kind == RecurKind::FSub, I,
+    return InstDesc(Kind == RecurKind::FSub || Kind == RecurKind::FAdd, I,
                     I->hasAllowReassoc() ? nullptr : I);
   case Instruction::FAdd:
     return InstDesc(Kind == RecurKind::FAdd, I,
