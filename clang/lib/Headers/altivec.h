@@ -19314,6 +19314,64 @@ vec_sra(vector signed __int128 __a, vector unsigned __int128 __b) {
 #endif /* __SIZEOF_INT128__ */
 #endif /* __POWER10_VECTOR__ */
 
+#ifdef __FUTURE_VECTOR__
+
+/* vec_uncompress* - Deeply Compressed Weights builtins */
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_uncompresshn(vector unsigned char __a, vector unsigned char __b) {
+  return __builtin_altivec_vucmprhn(__a, __b);
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_uncompressln(vector unsigned char __a, vector unsigned char __b) {
+  return __builtin_altivec_vucmprln(__a, __b);
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_uncompresshb(vector unsigned char __a, vector unsigned char __b) {
+  return __builtin_altivec_vucmprhb(__a, __b);
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_uncompresslb(vector unsigned char __a, vector unsigned char __b) {
+  return __builtin_altivec_vucmprlb(__a, __b);
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_uncompresshh(vector unsigned char __a, vector unsigned char __b) {
+  return __builtin_altivec_vucmprhh(__a, __b);
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_uncompresslh(vector unsigned char __a, vector unsigned char __b) {
+  return __builtin_altivec_vucmprlh(__a, __b);
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_unpack_hsn_to_byte(vector unsigned char __a) {
+  return __builtin_altivec_vupkhsntob(__a);
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_unpack_lsn_to_byte(vector unsigned char __a) {
+  return __builtin_altivec_vupklsntob(__a);
+}
+
+#define vec_unpack_int4_to_bf16(__a, __imm)                                    \
+  __builtin_altivec_vupkint4tobf16((__a), (__imm))
+
+#define vec_unpack_int8_to_bf16(__a, __imm)                                    \
+  __builtin_altivec_vupkint8tobf16((__a), (__imm))
+
+#define vec_unpack_int4_to_fp32(__a, __imm)                                    \
+  __builtin_altivec_vupkint4tofp32((__a), (__imm))
+
+#define vec_unpack_int8_to_fp32(__a, __imm)                                    \
+  __builtin_altivec_vupkint8tofp32((__a), (__imm))
+
+#endif /* __FUTURE_VECTOR__ */
+
 #ifdef __POWER8_VECTOR__
 #define __bcdadd(__a, __b, __ps) __builtin_ppc_bcdadd((__a), (__b), (__ps))
 #define __bcdsub(__a, __b, __ps) __builtin_ppc_bcdsub((__a), (__b), (__ps))
