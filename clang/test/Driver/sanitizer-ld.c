@@ -115,7 +115,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_freebsd_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-FREEBSD
 //
-// CHECK-ASAN-FREEBSD: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-FREEBSD: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-FREEBSD-NOT: "-lc"
 // CHECK-ASAN-FREEBSD: freebsd{{/|\\+}}libclang_rt.asan_static.a"
 // CHECK-ASAN-FREEBSD: freebsd{{/|\\+}}libclang_rt.asan.a"
@@ -130,7 +130,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_freebsd_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-FREEBSD-LDL
 //
-// CHECK-ASAN-FREEBSD-LDL: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-FREEBSD-LDL: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-FREEBSD-LDL-NOT: "-ldl"
 // CHECK-ASAN-FREEBSD-LDL: "--whole-archive" "{{.*}}libclang_rt.asan_static.a" "--no-whole-archive"
 // CHECK-ASAN-FREEBSD-LDL: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
