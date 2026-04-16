@@ -121,12 +121,6 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
     }
   }
 done:
-  // For alias templates, get the underlying declaration.
-  if (const auto *ADecl = dyn_cast<TypeAliasTemplateDecl>(D)) {
-    D = ADecl->getTemplatedDecl();
-    Result = D->getAvailability(Message);
-  }
-
   // Forward class declarations get their attributes from their definition.
   if (const auto *IDecl = dyn_cast<ObjCInterfaceDecl>(D)) {
     if (IDecl->getDefinition()) {
