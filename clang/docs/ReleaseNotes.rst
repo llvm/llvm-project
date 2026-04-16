@@ -127,6 +127,9 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P3074R7: Trivial unions <https://wg21.link/P3074R7>`_
+  (``__cpp_trivial_union``).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
