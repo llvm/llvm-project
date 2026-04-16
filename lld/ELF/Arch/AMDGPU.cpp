@@ -151,7 +151,6 @@ uint32_t AMDGPU::calcEFlags() const {
 void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   switch (rel.type) {
   case R_AMDGPU_ABS32:
-  case R_AMDGPU_ABS32_LO:
   case R_AMDGPU_GOTPCREL:
   case R_AMDGPU_GOTPCREL32_LO:
   case R_AMDGPU_REL32:
@@ -162,7 +161,6 @@ void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_AMDGPU_REL64:
     write64le(loc, val);
     break;
-  case R_AMDGPU_ABS32_HI:
   case R_AMDGPU_GOTPCREL32_HI:
   case R_AMDGPU_REL32_HI:
     write32le(loc, val >> 32);
@@ -182,8 +180,6 @@ RelExpr AMDGPU::getRelExpr(RelType type, const Symbol &s,
                            const uint8_t *loc) const {
   switch (type) {
   case R_AMDGPU_ABS32:
-  case R_AMDGPU_ABS32_LO:
-  case R_AMDGPU_ABS32_HI:
   case R_AMDGPU_ABS64:
     return R_ABS;
   case R_AMDGPU_REL32:
@@ -213,16 +209,6 @@ int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_AMDGPU_NONE:
     return 0;
-  case R_AMDGPU_ABS32:
-  case R_AMDGPU_ABS32_LO:
-  case R_AMDGPU_ABS32_HI:
-  case R_AMDGPU_REL32:
-  case R_AMDGPU_REL32_LO:
-  case R_AMDGPU_REL32_HI:
-  case R_AMDGPU_GOTPCREL:
-  case R_AMDGPU_GOTPCREL32_LO:
-  case R_AMDGPU_GOTPCREL32_HI:
-    return SignExtend64<32>(read32(ctx, buf));
   case R_AMDGPU_ABS64:
   case R_AMDGPU_RELATIVE64:
     return read64(ctx, buf);
