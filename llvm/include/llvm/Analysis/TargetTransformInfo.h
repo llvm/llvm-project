@@ -754,7 +754,7 @@ public:
   // vectorization should be considered.
   LLVM_ABI unsigned getEpilogueVectorizationMinVF() const;
 
-  /// Query the target whether it would be prefered to create a tail-folded
+  /// Query the target whether it would be preferred to create a tail-folded
   /// vector loop, which can avoid the need to emit a scalar epilogue loop.
   LLVM_ABI bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const;
 

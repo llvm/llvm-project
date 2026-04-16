@@ -1310,7 +1310,7 @@ public:
     return false;
   }
 
-  /// Returns true if an epilogue is allowed (e.g.., not prevented by
+  /// Returns true if an epilogue is allowed (e.g., not prevented by
   /// optsize or a loop hint annotation).
   bool isEpilogueAllowed() const {
     return EpilogueLoweringStatus == CM_EpilogueAllowed;
