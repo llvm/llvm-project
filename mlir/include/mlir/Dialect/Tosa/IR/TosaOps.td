@@ -2307,6 +2307,45 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: reshape_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_ReshapeBlockScaledOp
+    : Tosa_InferTensorTypeOp<"reshape_block_scaled", [Pure]> {
+  let summary = "Reshape with support for block scaled tensors.";
+
+  let description = [{
+    Returns a tensor-list with the same type/values as the input, with a new
+    shape specified by the shape argument. Reshape may operate on block-scaled
+    tensors (values tensor followed by scale tensor) of rank 1 or higher; or a
+    single non-block-scaled tensor of any rank. No data conversion happens during
+    a reshape operation. Reshape must retain the relationship between values
+    and their scale in a block for block-scaled content.
+  }];
+
+  let hasVerifier = 1;
+
+  let arguments = (ins Variadic<Tosa_Tensor>:$input,
+      Tosa_Shape:$new_value_shape, Tosa_BlockSizeAttr:$block_size);
+
+  let results = (outs Variadic<Tosa_Tensor>:$output);
+
+  list<Availability> availability = [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+                                     // NOTE: Validation of extensions is
+                                     // disabled for this op
+                                     Extension<[]>,
+  ];
+
+  let extraClassDeclaration = [{
+    /// Returns true when two result types are compatible for this op;
+    /// Method used by InferTypeOpInterface.
+    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
+  }];
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: reverse
 //===----------------------------------------------------------------------===//
 def Tosa_ReverseOp: Tosa_Op<"reverse", [
