@@ -1,4 +1,4 @@
-/*===---- __clang_spirv_math.h - Device-side HIP math support --------------===
+/*===---- __clang_spirv_math.h - Device-side SPIRV math support ------------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 #define __CLANG_SPIRV_MATH_H__
 
 #if !defined(__SPIRV__) && !defined(__OPENMP_SPIRV__)
-#error "This file is for SPIRV and OpenMP AMDGCN device compilation only."
+#error "This file is for SPIRV and OpenMP SPIRV device compilation only."
 #endif
 
 // The __CLANG_GPU_DISABLE_MATH_WRAPPERS macro provides a way to let standard
