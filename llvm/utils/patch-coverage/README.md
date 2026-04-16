@@ -56,6 +56,12 @@ ninja -C build
 ```bash
 pip install -r llvm/utils/patch-coverage/requirements.txt
 ```
+or
+```bash
+python3 -m venv .venv                                                                                                                                                                      
+source .venv/bin/activate
+pip install unidiff
+```
 
 ### 3. Add tool to PATH
 
@@ -80,7 +86,7 @@ git patch-coverage -b <build-dir> <binary> <test-path>
 ### Example
 
 ```bash
-git patch-coverage -b build -n 3 bin/opt llvm/test
+git patch-coverage -b build -n 3 opt llvm/test
 ```
 
 ## Arguments
@@ -89,7 +95,7 @@ git patch-coverage -b build -n 3 bin/opt llvm/test
 
 | Argument          | Description                                          |
 | ----------------- | ---------------------------------------------------- |
-| `<binary>`        | LLVM binary to analyze (e.g., `bin/opt`)             |
+| `<binary>`        | LLVM binary to analyze (e.g., `opt`)             |
 
 
 ### Optional
@@ -97,19 +103,20 @@ git patch-coverage -b build -n 3 bin/opt llvm/test
 | Argument                       | Description                                                 |
 | ------------------------------ | ----------------------------------------------------------- |
 | `-n, --num-commits`            | Number of recent commits to analyze (default: 1)            |
+| `--projects`                   | LLVM projects to enable (e.g. clang;mlir (default: None)    |
 | `-i, --instrumented-build-dir` | Use pre-built instrumented directory (Deafult: `build_inst`)|               
 | `-b, --build-dir`              | Path to LLVM build directory (default: `build`)             |
 | `<test-path>`                  | One or more test suite paths (default: `build/test`)        |
 
 
+
 ## How It Works
 
-To be written
 
 
 ## Output
 
-### `<build>/patch_coverage.log`
+### `<build_inst>/patch_coverage.log`
 
 ```
 Modified File: llvm/lib/IR/Example.cpp
@@ -128,10 +135,12 @@ Modified File: llvm/lib/IR/Example.cpp
 
 ### No coverage generated
 
-* Ensure instrumented build succeeded
-* Check `.profraw` files in build directory
+* Ensure instrumented build succeeded and tests run
+* Check `.profraw` files in `build_inst` directory
 
 ### Rebuild skipped unexpectedly
 
-* Delete `.last_patch_hash` to force rebuild
+* Delete `binary` to force rebuild
 
+### For any other doubt
+* Check `<build_inst>/patch_coverage.log`. It has full logging of tool

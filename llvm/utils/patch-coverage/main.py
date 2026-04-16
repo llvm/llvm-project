@@ -46,7 +46,7 @@ def parse_args():
         "-i",
         "--instrumented-build-dir",
         dest="inst_build_dir",
-        default="build_instrumented",
+        default="build_inst",
     )
 
     parser.add_argument(
