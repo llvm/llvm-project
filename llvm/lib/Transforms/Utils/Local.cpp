@@ -508,6 +508,13 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
       // llvm.fcmps uses the fp.except operand bundle for exception behavior.
       return II->getExceptionBehavior() != fp::ebStrict;
     }
+
+    // New FP intrinsics (llvm.fadd, llvm.fsub, etc.) with non-default FP
+    // environment bundles have inaccessibleMemOnly effects for ordering.
+    // An unused call may still be removed unless it has strict exception
+    // behavior (ebStrict means the exception must actually be observed).
+    if (IntrinsicInst::isFloatingPointOperation(II->getIntrinsicID()))
+      return II->getExceptionBehavior() != fp::ebStrict;
   }
 
   if (auto *Call = dyn_cast<CallBase>(I)) {

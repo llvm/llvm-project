@@ -42,7 +42,6 @@ entry:
 define float @f_unused_dynamic_ignore() #0 {
 ; CHECK-LABEL: @f_unused_dynamic_ignore(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fdiv.f32(float 1.000000e+00, float 3.000000e+00) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
 entry:
@@ -54,7 +53,6 @@ entry:
 define float @f_unused_maytrap() #0 {
 ; CHECK-LABEL: @f_unused_maytrap(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fdiv.f32(float 1.000000e+00, float 3.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
 entry:

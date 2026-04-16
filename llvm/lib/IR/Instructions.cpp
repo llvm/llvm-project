@@ -771,23 +771,33 @@ CallBase::getOutputDenormMode(const fltSemantics *FPSem) const {
 
 MemoryEffects CallBase::getFloatingPointMemoryEffects() const {
   if (Intrinsic::ID IntrID = getIntrinsicID())
-    if (const BasicBlock *BB = getParent())
-      if (const Function *F = BB->getParent())
-        if (F->hasFnAttribute(Attribute::StrictFP))
-          if (IntrinsicInst::isFloatingPointOperation(IntrID)) {
-            if (getExceptionBehavior() == fp::ebIgnore) {
-              // Exceptions are ignored. If the rounding mode is also explicit
-              // (non-dynamic), there is no FP environment access at all.
-              if (getRoundingMode() != RoundingMode::Dynamic)
-                return MemoryEffects::none();
-              // Dynamic rounding mode: the operation reads the current rounding
-              // mode from the FP environment (e.g. MXCSR). Use
-              // inaccessibleMemOnly (not just Ref) so that EarlyCSE
-              // conservatively treats these as writes and prevents CSE across
-              // arbitrary function calls that might change the rounding mode.
-            }
-            return MemoryEffects::inaccessibleMemOnly();
-          }
+    if (IntrinsicInst::isFloatingPointOperation(IntrID)) {
+      // FP environment interaction is triggered by either:
+      //  (1) The call has explicit fp.control/fp.except operand bundles, or
+      //  (2) The enclosing function has strictfp (implies dynamic rounding +
+      //      strict exceptions for all FP ops without explicit bundles).
+      bool HasFPBundles =
+          getOperandBundle(LLVMContext::OB_fp_control).has_value() ||
+          getOperandBundle(LLVMContext::OB_fp_except).has_value();
+      bool StrictFPFunction = false;
+      if (const BasicBlock *BB = getParent())
+        if (const Function *F = BB->getParent())
+          StrictFPFunction = F->hasFnAttribute(Attribute::StrictFP);
+      if (HasFPBundles || StrictFPFunction) {
+        if (getExceptionBehavior() == fp::ebIgnore) {
+          // Exceptions are ignored. If the rounding mode is also explicit
+          // (non-dynamic), there is no FP environment access at all.
+          if (getRoundingMode() != RoundingMode::Dynamic)
+            return MemoryEffects::none();
+          // Dynamic rounding mode: the operation reads the current rounding
+          // mode from the FP environment (e.g. MXCSR). Use
+          // inaccessibleMemOnly (not just Ref) so that EarlyCSE
+          // conservatively treats these as writes and prevents CSE across
+          // arbitrary function calls that might change the rounding mode.
+        }
+        return MemoryEffects::inaccessibleMemOnly();
+      }
+    }
   return MemoryEffects::none();
 }
 
