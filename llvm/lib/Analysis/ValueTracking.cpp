@@ -5459,7 +5459,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::powi: {
-      if ((InterestedClasses & fcNegative) == fcNone)
+      if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
         break;
 
       const Value *Exp = II->getArgOperand(1);
@@ -5469,11 +5469,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownBits(Exp, isa<VectorType>(ExpTy) ? DemandedElts : APInt(1, 1),
                        ExponentKnownBits, Q, Depth + 1);
 
-      KnownFPClass KnownSrc;
-      if (ExponentKnownBits.isZero() || !ExponentKnownBits.isEven()) {
-        computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
-                            KnownSrc, Q, Depth + 1);
+      FPClassTest InterestedSrcs = fcNone;
+      if (InterestedClasses & fcNan)
+        InterestedSrcs |= fcNan;
+      if (!ExponentKnownBits.isZero()) {
+        if (InterestedClasses & fcInf)
+          InterestedSrcs |= fcFinite | fcInf;
+        if ((InterestedClasses & fcNegative) && !ExponentKnownBits.isEven())
+          InterestedSrcs |= fcNegative;
       }
+
+      KnownFPClass KnownSrc;
+      if (InterestedSrcs != fcNone)
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
+                            KnownSrc, Q, Depth + 1);
 
       Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
       break;
@@ -10451,9 +10460,37 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     if (auto *Range = IIQ.getMetadata(I, LLVMContext::MD_range))
       CR = CR.intersectWith(getConstantRangeFromMetadata(*Range));
 
-    if (const auto *CB = dyn_cast<CallBase>(V))
+    Value *FrexpSrc;
+    if (const auto *CB = dyn_cast<CallBase>(V)) {
       if (std::optional<ConstantRange> Range = CB->getRange())
         CR = CR.intersectWith(*Range);
+    } else if (match(I, m_ExtractValue<1>(m_Intrinsic<Intrinsic::frexp>(
+                            m_Value(FrexpSrc))))) {
+      const fltSemantics &FltSem =
+          FrexpSrc->getType()->getScalarType()->getFltSemantics();
+      // It should be possible to implement this for any type, but this logic
+      // only computes the range assuming standard subnormal handling.
+      if (APFloat::isIEEELikeFP(FltSem)) {
+        const DataLayout &DL = I->getFunction()->getDataLayout();
+        SimplifyQuery SQ(DL, nullptr, DT, AC, CtxI, UseInstrInfo);
+
+        KnownFPClass KnownSrc =
+            computeKnownFPClass(FrexpSrc, fcSubnormal, SQ, Depth + 1);
+
+        // Exponent result is (src == 0) ? 0 : ilogb(src) + 1, and unspecified
+        // for inf/nan.
+        int MinExp = APFloat::semanticsMinExponent(FltSem) + 1;
+
+        // Offset to find the true minimum exponent value for a denormal.
+        if (!KnownSrc.isKnownNeverSubnormal())
+          MinExp -= (APFloat::semanticsPrecision(FltSem) - 1);
+
+        int MaxExp = APFloat::semanticsMaxExponent(FltSem) + 1;
+        CR = ConstantRange::getNonEmpty(
+            APInt(BitWidth, MinExp, /*isSigned=*/true),
+            APInt(BitWidth, MaxExp + 1, /*isSigned=*/true));
+      }
+    }
   }
 
   if (CtxI && AC) {

@@ -32,10 +32,12 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "CIRGenFunctionInfo.h"
 #include "TargetInfo.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -161,6 +163,17 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     theModule->setLoc(mlir::FileLineColLoc::get(&mlirContext, path,
                                                 /*line=*/0,
                                                 /*column=*/0));
+  }
+
+  // Set CUDA GPU binary handle.
+  if (langOpts.CUDA) {
+    llvm::StringRef cudaBinaryName = codeGenOpts.CudaGpuBinaryFileName;
+    if (!cudaBinaryName.empty()) {
+      theModule->setAttr(cir::CIRDialect::getCUDABinaryHandleAttrName(),
+                         cir::CUDABinaryHandleAttr::get(
+                             &mlirContext, mlir::StringAttr::get(
+                                               &mlirContext, cudaBinaryName)));
+    }
   }
 }
 
@@ -669,7 +682,20 @@ void CIRGenModule::setCommonAttributes(GlobalDecl gd, mlir::Operation *gv) {
   if (isa_and_nonnull<NamedDecl>(d))
     setGVProperties(gv, dyn_cast<NamedDecl>(d));
   assert(!cir::MissingFeatures::defaultVisibility());
-  assert(!cir::MissingFeatures::opGlobalUsedOrCompilerUsed());
+
+  if (auto gvi = mlir::dyn_cast<cir::CIRGlobalValueInterface>(gv)) {
+    if (d && d->hasAttr<UsedAttr>())
+      addUsedOrCompilerUsedGlobal(gvi);
+
+    if (const auto *vd = dyn_cast_if_present<VarDecl>(d);
+        vd && ((codeGenOpts.KeepPersistentStorageVariables &&
+                (vd->getStorageDuration() == SD_Static ||
+                 vd->getStorageDuration() == SD_Thread)) ||
+               (codeGenOpts.KeepStaticConsts &&
+                vd->getStorageDuration() == SD_Static &&
+                vd->getType().isConstQualified())))
+      addUsedOrCompilerUsedGlobal(gvi);
+  }
 }
 
 void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
@@ -680,11 +706,12 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
     if (auto gvi = mlir::dyn_cast<cir::CIRGlobalValueInterface>(op)) {
       if (const auto *sa = d->getAttr<SectionAttr>())
         gvi.setSection(builder.getStringAttr(sa->getName()));
+      if (d->hasAttr<RetainAttr>())
+        addUsedGlobal(gvi);
     }
   }
 
   assert(!cir::MissingFeatures::opGlobalPragmaClangSection());
-  assert(!cir::MissingFeatures::opGlobalUsedOrCompilerUsed());
   assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
 
   getTargetCIRGenInfo().setTargetAttributes(gd.getDecl(), op, *this);
@@ -1093,6 +1120,61 @@ cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
   cir::PointerType ptrTy =
       builder.getPointerTo(globalOp.getSymType(), globalOp.getAddrSpaceAttr());
   return builder.getGlobalViewAttr(ptrTy, globalOp);
+}
+
+void CIRGenModule::addUsedGlobal(cir::CIRGlobalValueInterface gv) {
+  assert((mlir::isa<cir::FuncOp>(gv.getOperation()) ||
+          !gv.isDeclarationForLinker()) &&
+         "Only globals with definition can force usage.");
+  llvmUsed.emplace_back(gv);
+}
+
+void CIRGenModule::addCompilerUsedGlobal(cir::CIRGlobalValueInterface gv) {
+  assert(!gv.isDeclarationForLinker() &&
+         "Only globals with definition can force usage.");
+  llvmCompilerUsed.emplace_back(gv);
+}
+
+void CIRGenModule::addUsedOrCompilerUsedGlobal(
+    cir::CIRGlobalValueInterface gv) {
+  assert((mlir::isa<cir::FuncOp>(gv.getOperation()) ||
+          !gv.isDeclarationForLinker()) &&
+         "Only globals with definition can force usage.");
+  if (getTriple().isOSBinFormatELF())
+    llvmCompilerUsed.emplace_back(gv);
+  else
+    llvmUsed.emplace_back(gv);
+}
+
+static void emitUsed(CIRGenModule &cgm, StringRef name,
+                     std::vector<cir::CIRGlobalValueInterface> &list) {
+  if (list.empty())
+    return;
+
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::Location loc = builder.getUnknownLoc();
+  llvm::SmallVector<mlir::Attribute> usedArray;
+  usedArray.resize(list.size());
+  for (auto [i, op] : llvm::enumerate(list)) {
+    usedArray[i] = cir::GlobalViewAttr::get(
+        cgm.voidPtrTy, mlir::FlatSymbolRefAttr::get(op.getNameAttr()));
+  }
+
+  cir::ArrayType arrayTy = cir::ArrayType::get(cgm.voidPtrTy, usedArray.size());
+
+  cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
+      arrayTy, mlir::ArrayAttr::get(&cgm.getMLIRContext(), usedArray));
+
+  cir::GlobalOp gv = CIRGenModule::createGlobalOp(cgm, loc, name, arrayTy,
+                                                  /*isConstant=*/false);
+  gv.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
+  gv.setInitialValueAttr(initAttr);
+  gv.setSectionAttr(builder.getStringAttr("llvm.metadata"));
+}
+
+void CIRGenModule::emitLLVMUsed() {
+  emitUsed(*this, "llvm.used", llvmUsed);
+  emitUsed(*this, "llvm.compiler.used", llvmCompilerUsed);
 }
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
@@ -3108,6 +3190,32 @@ void CIRGenModule::release() {
   if (getTriple().isAMDGPU() ||
       (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD))
     emitAMDGPUMetadata();
+
+  if (getLangOpts().HIP) {
+    // Emit a unique ID so that host and device binaries from the same
+    // compilation unit can be associated.
+    std::string cuidName =
+        ("__hip_cuid_" + getASTContext().getCUIDHash()).str();
+    auto int8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
+    auto loc = builder.getUnknownLoc();
+    mlir::ptr::MemorySpaceAttrInterface addrSpace =
+        cir::LangAddressSpaceAttr::get(&getMLIRContext(),
+                                       getGlobalVarAddressSpace(nullptr));
+
+    auto gv = createGlobalOp(*this, loc, cuidName, int8Ty,
+                             /*isConstant=*/false, addrSpace);
+    gv.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
+    // Initialize with zero
+    auto zeroAttr = cir::IntAttr::get(int8Ty, 0);
+    gv.setInitialValueAttr(zeroAttr);
+    // External linkage requires public visibility
+    mlir::SymbolTable::setSymbolVisibility(
+        gv, mlir::SymbolTable::Visibility::Public);
+
+    addCompilerUsedGlobal(gv);
+  }
+
+  emitLLVMUsed();
 
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());

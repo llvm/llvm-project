@@ -128,7 +128,7 @@ TYPED_TEST_P(RoundTripTest, RoundTripsSingleValue) {
   auto &R = this->Rec;
   ASSERT_FALSE(errorToBool(R->apply(*this->Writer)));
 
-  DataExtractor DE(this->Data, sys::IsLittleEndianHost, 8);
+  DataExtractor DE(this->Data, sys::IsLittleEndianHost);
   uint64_t OffsetPtr = 0;
   auto HeaderOrErr = readBinaryFormatHeader(DE, OffsetPtr);
   if (!HeaderOrErr)
@@ -167,7 +167,7 @@ TYPED_TEST_P(RoundTripTestV5, RoundTripsSingleValue) {
   auto &R = this->Rec;
   ASSERT_FALSE(errorToBool(R->apply(*this->Writer)));
 
-  DataExtractor DE(this->Data, sys::IsLittleEndianHost, 8);
+  DataExtractor DE(this->Data, sys::IsLittleEndianHost);
   uint64_t OffsetPtr = 0;
   auto HeaderOrErr = readBinaryFormatHeader(DE, OffsetPtr);
   if (!HeaderOrErr)
