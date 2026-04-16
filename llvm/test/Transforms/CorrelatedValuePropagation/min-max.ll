@@ -355,3 +355,58 @@ define i8 @test_umax_nneg(i8 %a, i8 %b) {
   %ret = call i8 @llvm.umax.i8(i8 %nneg_a, i8 %nneg_b)
   ret i8 %ret
 }
+
+define i8 @test_umin_ptr_address(ptr %p) {
+; CHECK-LABEL: @test_umin_ptr_address(
+; CHECK-NEXT:    [[PI:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[PI_SHR:%.*]] = lshr i64 [[PI]], 32
+; CHECK-NEXT:    [[PI_HI:%.*]] = trunc nuw nsw i64 [[PI_SHR]] to i8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[P]], inttoptr (i64 176093659136 to ptr)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 [[PI_HI]]
+;
+  %pi = ptrtoint ptr %p to i64
+  %pi.shr = lshr i64 %pi, 32
+  %pi.hi = trunc nuw i64 %pi.shr to i8
+  %umin = call i8 @llvm.umin.i8(i8 %pi.hi, i8 41)
+  %cmp = icmp ult ptr %p, inttoptr (i64 176093659136 to ptr)
+  call void @llvm.assume(i1 %cmp)
+  ret i8 %umin
+}
+
+define i8 @test_umax_ptr_address(ptr %p) {
+; CHECK-LABEL: @test_umax_ptr_address(
+; CHECK-NEXT:    [[PI:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[PI_SHR:%.*]] = lshr i64 [[PI]], 32
+; CHECK-NEXT:    [[PI_HI:%.*]] = trunc nuw i64 [[PI_SHR]] to i8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[P]], inttoptr (i64 180388626431 to ptr)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 [[PI_HI]]
+;
+  %pi = ptrtoint ptr %p to i64
+  %pi.shr = lshr i64 %pi, 32
+  %pi.hi = trunc nuw i64 %pi.shr to i8
+  %umin = call i8 @llvm.umax.i8(i8 %pi.hi, i8 41)
+  %cmp = icmp ugt ptr %p, inttoptr (i64 180388626431 to ptr)
+  call void @llvm.assume(i1 %cmp)
+  ret i8 %umin
+}
+
+define i8 @test_umin_ptr_address_negative(ptr %p) {
+; CHECK-LABEL: @test_umin_ptr_address_negative(
+; CHECK-NEXT:    [[PI:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[PI_SHR:%.*]] = lshr i64 [[PI]], 32
+; CHECK-NEXT:    [[PI_HI:%.*]] = trunc nuw i64 [[PI_SHR]] to i8
+; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[PI_HI]], i8 41)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[P]], inttoptr (i64 176093659136 to ptr)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 [[UMIN]]
+;
+  %pi = ptrtoint ptr %p to i64
+  %pi.shr = lshr i64 %pi, 32
+  %pi.hi = trunc nuw i64 %pi.shr to i8
+  %umin = call i8 @llvm.umin.i8(i8 %pi.hi, i8 41)
+  %cmp = icmp ne ptr %p, inttoptr (i64 176093659136 to ptr)
+  call void @llvm.assume(i1 %cmp)
+  ret i8 %umin
+}
