@@ -166,19 +166,31 @@ void foo() {
 }
 #endif
 
+int other_func(int i, ...);
 #172 "system_header.h" 3
 #define SYS_HEADER_MACRO_1 0o02
 #define SYS_HEADER_MACRO_2 02
+#define SYS_HEADER_MACRO_FN1(...)  other_func(0o02, __VA_ARGS__)
+#define SYS_HEADER_MACRO_FN2(...)  other_func(2, __VA_ARGS__)
 #174 "n3353.c" 1
 
 #define USER_HEADER_MACRO_1 0o02
 #define USER_HEADER_MACRO_2 02
+#define USER_HEADER_MACRO_FN1(...)  other_func(0o02, __VA_ARGS__)
+#define USER_HEADER_MACRO_FN2(...)  other_func(2, __VA_ARGS__)
 
 void test_macro_behavior(void) {
   // No diagnostic because these expanded from a macro defined in a system
   // header.
   int i = SYS_HEADER_MACRO_1;
   int j = SYS_HEADER_MACRO_2;
+  int k = SYS_HEADER_MACRO_FN1(12);
+
+  // This one diagnoses because the literal is not in the system header.
+  int l = SYS_HEADER_MACRO_FN2(0o02); /* ext-warning {{octal integer literals are a C2y extension}}
+                                         cpp-warning {{octal integer literals are a Clang extension}}
+                                         compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                                       */
 
   // Diagnose other macro expansions though.
   int a = USER_HEADER_MACRO_1; /* ext-warning {{octal integer literals are a C2y extension}}
@@ -186,6 +198,14 @@ void test_macro_behavior(void) {
                                   compat-warning {{octal integer literals are incompatible with standards before C2y}}
                                 */
   int b = USER_HEADER_MACRO_2; // c2y-warning {{octal literals without a '0o' prefix are deprecated}}
+  int c = USER_HEADER_MACRO_FN1(12); /* ext-warning {{octal integer literals are a C2y extension}}
+                                       cpp-warning {{octal integer literals are a Clang extension}}
+                                       compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                                     */
+  int d = USER_HEADER_MACRO_FN2(0o02); /* ext-warning {{octal integer literals are a C2y extension}}
+                                          cpp-warning {{octal integer literals are a Clang extension}}
+                                          compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                                        */
 }
 
 #line 0123  // expected-warning {{#line directive interprets number as decimal, not octal}}
