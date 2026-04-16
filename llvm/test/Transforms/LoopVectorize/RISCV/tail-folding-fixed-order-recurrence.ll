@@ -6,7 +6,7 @@
 
 ; RUN: opt -passes=loop-vectorize \
 ; RUN: -prefer-inloop-reductions \
-; RUN: -tail-folding-policy=none \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v,+f -S < %s| FileCheck %s --check-prefix=NO-VP
 
 define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {

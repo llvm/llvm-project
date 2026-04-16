@@ -100,7 +100,7 @@ exit.block:                                     ; preds = %vector.body
   ret %"class.std::complex" %.fca.0.1.insert
 }
 
-; Zero initialized reduction with conditional block. The IR is generated with scalar tail folding (-tail-folding-policy=none)
+; Zero initialized reduction with conditional block. The IR is generated with scalar tail folding (-tail-folding-policy=dont-fold-tail)
 ;
 ;   complex<double> x = 0.0 + 0.0i;
 ;   for (int i = 0; i < 100; ++i)

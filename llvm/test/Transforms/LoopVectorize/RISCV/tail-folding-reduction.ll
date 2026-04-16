@@ -4,7 +4,7 @@
 ; RUN: -mtriple=riscv64 -mattr=+v,+f -S < %s| FileCheck %s --check-prefix=IF-EVL
 
 ; RUN: opt -passes=loop-vectorize \
-; RUN: -tail-folding-policy=none \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v,+f -S < %s| FileCheck %s --check-prefix=NO-VP
 
 define i32 @add(ptr %a, i64 %n, i32 %start) {

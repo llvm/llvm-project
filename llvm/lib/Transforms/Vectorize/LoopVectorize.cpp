@@ -218,12 +218,12 @@ static cl::opt<TailFoldingPolicyTy::Option> TailFoldingPolicy(
     "tail-folding-policy", cl::init(TailFoldingPolicyTy::None), cl::Hidden,
     cl::desc("Tail-folding preferences over creating an epilogue loop."),
     cl::values(
-        clEnumValN(TailFoldingPolicyTy::None, "none", "Don't tail-fold loops."),
+        clEnumValN(TailFoldingPolicyTy::None, "dont-fold-tail", "Don't tail-fold loops."),
         clEnumValN(TailFoldingPolicyTy::PreferFoldTail, "prefer-fold-tail",
                    "prefer tail-folding, otherwise create an epilogue when "
                    "appropriate."),
         clEnumValN(TailFoldingPolicyTy::MustFoldTail, "must-fold-tail",
-                   "prefer tail-folding, don't attempt vectorization if "
+                   "always tail-fold, don't attempt vectorization if "
                    "tail-folding fails.")));
 
 static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(

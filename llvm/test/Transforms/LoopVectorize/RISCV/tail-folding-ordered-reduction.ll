@@ -6,7 +6,7 @@
 
 ; RUN: opt -passes=loop-vectorize \
 ; RUN: -force-ordered-reductions=true -hints-allow-reordering=false \
-; RUN: -tail-folding-policy=none \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v,+f -S < %s| FileCheck %s --check-prefix=NO-VP
 
 define float @fadd(ptr noalias nocapture readonly %a, i64 %n) {

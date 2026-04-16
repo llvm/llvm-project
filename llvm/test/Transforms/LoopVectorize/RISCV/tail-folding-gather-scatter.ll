@@ -4,7 +4,7 @@
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s --check-prefix=IF-EVL
 
 ; RUN: opt -passes=loop-vectorize \
-; RUN: -tail-folding-policy=none \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s --check-prefix=NO-VP
 
 define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %index, i64 %n) {

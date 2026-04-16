@@ -9,12 +9,12 @@
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s --check-prefixes=IF-EVL-INLOOP
 
 ; RUN: opt -passes=loop-vectorize \
-; RUN: -tail-folding-policy=none \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s --check-prefixes=NO-VP-OUTLOOP
 
 ; RUN: opt -passes=loop-vectorize \
 ; RUN: -prefer-inloop-reductions \
-; RUN: -tail-folding-policy=none \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s --check-prefixes=NO-VP-INLOOP
 
 define i32 @cond_add(ptr %a, i64 %n, i32 %start) {

@@ -4,7 +4,7 @@
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s
 
 ; RUN: opt -passes=loop-vectorize \
-; RUN: -tail-folding-policy=none \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s
 
 ; No need to emit predicated vector code if the vector instructions with masking are not required.

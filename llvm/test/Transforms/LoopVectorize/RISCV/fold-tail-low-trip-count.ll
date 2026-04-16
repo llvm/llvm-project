@@ -3,7 +3,7 @@
 ; RUN: -tail-folding-policy=prefer-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck --check-prefix=IF-EVL %s
 ; RUN: opt -passes=loop-vectorize \
-; RUN: -tail-folding-policy=none \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck --check-prefix=NO-VP %s
 
 define void @low_trip_count_small(i32 %x, ptr %dst) {

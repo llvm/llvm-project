@@ -37,7 +37,7 @@
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
-; RUN:   -tail-folding-policy=none \
+; RUN:   -tail-folding-policy=dont-fold-tail \
 ; RUN:   -tail-predication=enabled -passes=loop-vectorize \
 ; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \

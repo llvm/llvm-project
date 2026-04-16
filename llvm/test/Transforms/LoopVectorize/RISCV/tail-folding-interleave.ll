@@ -4,7 +4,7 @@
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck --check-prefix=IF-EVL %s
 
 ; RUN: opt -passes=loop-vectorize \
-; RUN: -tail-folding-policy=none \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck --check-prefix=NO-VP %s
 
 define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
