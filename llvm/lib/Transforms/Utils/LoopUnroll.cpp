@@ -345,6 +345,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                    ScalarEvolution *SE, DominatorTree *DT,
                                    AssumptionCache *AC,
                                    const TargetTransformInfo *TTI,
+                                   ArrayRef<BasicBlock *> Blocks,
                                    AAResults *AA) {
   using namespace llvm::PatternMatch;
 
@@ -374,15 +375,15 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
   // At this point, the code is well formed.  Perform constprop, instsimplify,
   // and dce.
-  const DataLayout &DL = L->getHeader()->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
-  for (BasicBlock *BB : L->getBlocks()) {
+  for (BasicBlock *BB : Blocks) {
     // Remove repeated debug instructions after loop unrolling.
     if (BB->getParent()->getSubprogram())
       RemoveRedundantDbgInstrs(BB);
 
     for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
-      if (Value *V = simplifyInstruction(&Inst, {DL, nullptr, DT, AC}))
+      if (Value *V = simplifyInstruction(
+              &Inst, {BB->getDataLayout(), nullptr, DT, AC}))
         if (LI->replacementPreservesLCSSAForm(&Inst, V))
           Inst.replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(&Inst))
@@ -1126,7 +1127,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // At this point, the code is well formed.  We now simplify the unrolled loop,
   // doing constant propagation and dead code elimination as we go.
   simplifyLoopAfterUnroll(L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC,
-                          TTI, AA);
+                          TTI, L->getBlocks(), AA);
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;
