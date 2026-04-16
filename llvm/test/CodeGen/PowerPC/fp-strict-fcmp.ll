@@ -1489,7 +1489,7 @@ define i32 @fcmp_olt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __ltkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
+; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -1510,7 +1510,7 @@ define i32 @fcmp_olt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __ltkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
+; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -1528,10 +1528,9 @@ define i32 @fcmp_ole_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __lekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    extsw r3, r3
-; P8-NEXT:    neg r3, r3
+; P8-NEXT:    addi r4, r3, -1
+; P8-NEXT:    or r3, r4, r3
 ; P8-NEXT:    rldicl r3, r3, 1, 63
-; P8-NEXT:    xori r3, r3, 1
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -1552,10 +1551,9 @@ define i32 @fcmp_ole_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __lekf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    extsw r3, r3
-; NOVSX-NEXT:    neg r3, r3
+; NOVSX-NEXT:    addi r4, r3, -1
+; NOVSX-NEXT:    or r3, r4, r3
 ; NOVSX-NEXT:    rldicl r3, r3, 1, 63
-; NOVSX-NEXT:    xori r3, r3, 1
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -1573,8 +1571,8 @@ define i32 @fcmp_ogt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gtkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    extsw r3, r3
-; P8-NEXT:    neg r3, r3
+; P8-NEXT:    addi r4, r3, -1
+; P8-NEXT:    nor r3, r4, r3
 ; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
@@ -1596,8 +1594,8 @@ define i32 @fcmp_ogt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gtkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    extsw r3, r3
-; NOVSX-NEXT:    neg r3, r3
+; NOVSX-NEXT:    addi r4, r3, -1
+; NOVSX-NEXT:    nor r3, r4, r3
 ; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
@@ -1616,8 +1614,8 @@ define i32 @fcmp_oge_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
-; P8-NEXT:    xori r3, r3, 1
+; P8-NEXT:    not r3, r3
+; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -1638,8 +1636,8 @@ define i32 @fcmp_oge_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gekf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
-; NOVSX-NEXT:    xori r3, r3, 1
+; NOVSX-NEXT:    not r3, r3
+; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -1657,8 +1655,8 @@ define i32 @fcmp_oeq_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __eqkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
-; P8-NEXT:    srwi r3, r3, 5
+; P8-NEXT:    cntlzd r3, r3
+; P8-NEXT:    rldicl r3, r3, 58, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -1679,8 +1677,8 @@ define i32 @fcmp_oeq_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __eqkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    srwi r3, r3, 5
+; NOVSX-NEXT:    cntlzd r3, r3
+; NOVSX-NEXT:    rldicl r3, r3, 58, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -1703,22 +1701,21 @@ define i32 @fcmp_one_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    vmr v30, v2
 ; P8-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    vmr v31, v3
-; P8-NEXT:    bl __unordkf2
-; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
-; P8-NEXT:    vmr v2, v30
-; P8-NEXT:    vmr v3, v31
-; P8-NEXT:    srwi r30, r3, 5
 ; P8-NEXT:    bl __eqkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
+; P8-NEXT:    addic r4, r3, -1
+; P8-NEXT:    vmr v2, v30
+; P8-NEXT:    vmr v3, v31
+; P8-NEXT:    subfe r30, r4, r3
+; P8-NEXT:    bl __unordkf2
+; P8-NEXT:    nop
 ; P8-NEXT:    li r4, 144
+; P8-NEXT:    cntlzd r3, r3
 ; P8-NEXT:    lxvd2x v31, r1, r4 # 16-byte Folded Reload
 ; P8-NEXT:    li r4, 128
-; P8-NEXT:    srwi r3, r3, 5
+; P8-NEXT:    rldicl r3, r3, 58, 63
 ; P8-NEXT:    lxvd2x v30, r1, r4 # 16-byte Folded Reload
-; P8-NEXT:    xori r3, r3, 1
-; P8-NEXT:    and r3, r30, r3
+; P8-NEXT:    and r3, r3, r30
 ; P8-NEXT:    ld r30, 160(r1) # 8-byte Folded Reload
 ; P8-NEXT:    addi r1, r1, 176
 ; P8-NEXT:    ld r0, 16(r1)
@@ -1747,20 +1744,19 @@ define i32 @fcmp_one_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    mr r29, r5
 ; NOVSX-NEXT:    mr r28, r4
 ; NOVSX-NEXT:    mr r27, r3
-; NOVSX-NEXT:    bl __unordkf2
-; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    mr r4, r28
-; NOVSX-NEXT:    mr r5, r29
-; NOVSX-NEXT:    mr r6, r30
-; NOVSX-NEXT:    srwi r26, r3, 5
-; NOVSX-NEXT:    mr r3, r27
 ; NOVSX-NEXT:    bl __eqkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    srwi r3, r3, 5
-; NOVSX-NEXT:    xori r3, r3, 1
-; NOVSX-NEXT:    and r3, r26, r3
+; NOVSX-NEXT:    addic r4, r3, -1
+; NOVSX-NEXT:    mr r5, r29
+; NOVSX-NEXT:    mr r6, r30
+; NOVSX-NEXT:    subfe r26, r4, r3
+; NOVSX-NEXT:    mr r3, r27
+; NOVSX-NEXT:    mr r4, r28
+; NOVSX-NEXT:    bl __unordkf2
+; NOVSX-NEXT:    nop
+; NOVSX-NEXT:    cntlzd r3, r3
+; NOVSX-NEXT:    rldicl r3, r3, 58, 63
+; NOVSX-NEXT:    and r3, r3, r26
 ; NOVSX-NEXT:    addi r1, r1, 80
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -1783,7 +1779,7 @@ define i32 @fcmp_ult_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
+; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -1804,7 +1800,7 @@ define i32 @fcmp_ult_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gekf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
+; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -1822,10 +1818,9 @@ define i32 @fcmp_ule_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gtkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    extsw r3, r3
-; P8-NEXT:    neg r3, r3
+; P8-NEXT:    addi r4, r3, -1
+; P8-NEXT:    or r3, r4, r3
 ; P8-NEXT:    rldicl r3, r3, 1, 63
-; P8-NEXT:    xori r3, r3, 1
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -1845,10 +1840,9 @@ define i32 @fcmp_ule_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gtkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    extsw r3, r3
-; NOVSX-NEXT:    neg r3, r3
+; NOVSX-NEXT:    addi r4, r3, -1
+; NOVSX-NEXT:    or r3, r4, r3
 ; NOVSX-NEXT:    rldicl r3, r3, 1, 63
-; NOVSX-NEXT:    xori r3, r3, 1
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -1866,8 +1860,8 @@ define i32 @fcmp_ugt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __lekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    extsw r3, r3
-; P8-NEXT:    neg r3, r3
+; P8-NEXT:    addi r4, r3, -1
+; P8-NEXT:    nor r3, r4, r3
 ; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
@@ -1889,8 +1883,8 @@ define i32 @fcmp_ugt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __lekf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    extsw r3, r3
-; NOVSX-NEXT:    neg r3, r3
+; NOVSX-NEXT:    addi r4, r3, -1
+; NOVSX-NEXT:    nor r3, r4, r3
 ; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
@@ -1909,8 +1903,8 @@ define i32 @fcmp_uge_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __ltkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
-; P8-NEXT:    xori r3, r3, 1
+; P8-NEXT:    not r3, r3
+; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -1930,8 +1924,8 @@ define i32 @fcmp_uge_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __ltkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
-; NOVSX-NEXT:    xori r3, r3, 1
+; NOVSX-NEXT:    not r3, r3
+; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -1954,22 +1948,21 @@ define i32 @fcmp_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    vmr v30, v2
 ; P8-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    vmr v31, v3
-; P8-NEXT:    bl __eqkf2
-; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
-; P8-NEXT:    vmr v2, v30
-; P8-NEXT:    vmr v3, v31
-; P8-NEXT:    srwi r30, r3, 5
 ; P8-NEXT:    bl __unordkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
+; P8-NEXT:    addic r4, r3, -1
+; P8-NEXT:    vmr v2, v30
+; P8-NEXT:    vmr v3, v31
+; P8-NEXT:    subfe r30, r4, r3
+; P8-NEXT:    bl __eqkf2
+; P8-NEXT:    nop
 ; P8-NEXT:    li r4, 144
+; P8-NEXT:    cntlzd r3, r3
 ; P8-NEXT:    lxvd2x v31, r1, r4 # 16-byte Folded Reload
 ; P8-NEXT:    li r4, 128
-; P8-NEXT:    srwi r3, r3, 5
+; P8-NEXT:    rldicl r3, r3, 58, 63
 ; P8-NEXT:    lxvd2x v30, r1, r4 # 16-byte Folded Reload
-; P8-NEXT:    xori r3, r3, 1
-; P8-NEXT:    or r3, r3, r30
+; P8-NEXT:    or r3, r30, r3
 ; P8-NEXT:    ld r30, 160(r1) # 8-byte Folded Reload
 ; P8-NEXT:    addi r1, r1, 176
 ; P8-NEXT:    ld r0, 16(r1)
@@ -1998,20 +1991,19 @@ define i32 @fcmp_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    mr r29, r5
 ; NOVSX-NEXT:    mr r28, r4
 ; NOVSX-NEXT:    mr r27, r3
-; NOVSX-NEXT:    bl __eqkf2
-; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    mr r4, r28
-; NOVSX-NEXT:    mr r5, r29
-; NOVSX-NEXT:    mr r6, r30
-; NOVSX-NEXT:    srwi r26, r3, 5
-; NOVSX-NEXT:    mr r3, r27
 ; NOVSX-NEXT:    bl __unordkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    srwi r3, r3, 5
-; NOVSX-NEXT:    xori r3, r3, 1
-; NOVSX-NEXT:    or r3, r3, r26
+; NOVSX-NEXT:    addic r4, r3, -1
+; NOVSX-NEXT:    mr r5, r29
+; NOVSX-NEXT:    mr r6, r30
+; NOVSX-NEXT:    subfe r26, r4, r3
+; NOVSX-NEXT:    mr r3, r27
+; NOVSX-NEXT:    mr r4, r28
+; NOVSX-NEXT:    bl __eqkf2
+; NOVSX-NEXT:    nop
+; NOVSX-NEXT:    cntlzd r3, r3
+; NOVSX-NEXT:    rldicl r3, r3, 58, 63
+; NOVSX-NEXT:    or r3, r26, r3
 ; NOVSX-NEXT:    addi r1, r1, 80
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -2034,9 +2026,8 @@ define i32 @fcmp_une_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __nekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
-; P8-NEXT:    srwi r3, r3, 5
-; P8-NEXT:    xori r3, r3, 1
+; P8-NEXT:    addic r4, r3, -1
+; P8-NEXT:    subfe r3, r4, r3
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -2056,9 +2047,8 @@ define i32 @fcmp_une_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __nekf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    srwi r3, r3, 5
-; NOVSX-NEXT:    xori r3, r3, 1
+; NOVSX-NEXT:    addic r4, r3, -1
+; NOVSX-NEXT:    subfe r3, r4, r3
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -2076,7 +2066,7 @@ define i32 @fcmps_olt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __ltkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
+; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -2097,7 +2087,7 @@ define i32 @fcmps_olt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __ltkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
+; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -2115,10 +2105,9 @@ define i32 @fcmps_ole_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __lekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    extsw r3, r3
-; P8-NEXT:    neg r3, r3
+; P8-NEXT:    addi r4, r3, -1
+; P8-NEXT:    or r3, r4, r3
 ; P8-NEXT:    rldicl r3, r3, 1, 63
-; P8-NEXT:    xori r3, r3, 1
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -2139,10 +2128,9 @@ define i32 @fcmps_ole_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __lekf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    extsw r3, r3
-; NOVSX-NEXT:    neg r3, r3
+; NOVSX-NEXT:    addi r4, r3, -1
+; NOVSX-NEXT:    or r3, r4, r3
 ; NOVSX-NEXT:    rldicl r3, r3, 1, 63
-; NOVSX-NEXT:    xori r3, r3, 1
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -2160,8 +2148,8 @@ define i32 @fcmps_ogt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gtkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    extsw r3, r3
-; P8-NEXT:    neg r3, r3
+; P8-NEXT:    addi r4, r3, -1
+; P8-NEXT:    nor r3, r4, r3
 ; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
@@ -2183,8 +2171,8 @@ define i32 @fcmps_ogt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gtkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    extsw r3, r3
-; NOVSX-NEXT:    neg r3, r3
+; NOVSX-NEXT:    addi r4, r3, -1
+; NOVSX-NEXT:    nor r3, r4, r3
 ; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
@@ -2203,8 +2191,8 @@ define i32 @fcmps_oge_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
-; P8-NEXT:    xori r3, r3, 1
+; P8-NEXT:    not r3, r3
+; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -2225,8 +2213,8 @@ define i32 @fcmps_oge_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gekf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
-; NOVSX-NEXT:    xori r3, r3, 1
+; NOVSX-NEXT:    not r3, r3
+; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -2244,8 +2232,8 @@ define i32 @fcmps_oeq_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __eqkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
-; P8-NEXT:    srwi r3, r3, 5
+; P8-NEXT:    cntlzd r3, r3
+; P8-NEXT:    rldicl r3, r3, 58, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -2266,8 +2254,8 @@ define i32 @fcmps_oeq_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __eqkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    srwi r3, r3, 5
+; NOVSX-NEXT:    cntlzd r3, r3
+; NOVSX-NEXT:    rldicl r3, r3, 58, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -2290,22 +2278,21 @@ define i32 @fcmps_one_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    vmr v30, v2
 ; P8-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    vmr v31, v3
-; P8-NEXT:    bl __unordkf2
-; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
-; P8-NEXT:    vmr v2, v30
-; P8-NEXT:    vmr v3, v31
-; P8-NEXT:    srwi r30, r3, 5
 ; P8-NEXT:    bl __eqkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
+; P8-NEXT:    addic r4, r3, -1
+; P8-NEXT:    vmr v2, v30
+; P8-NEXT:    vmr v3, v31
+; P8-NEXT:    subfe r30, r4, r3
+; P8-NEXT:    bl __unordkf2
+; P8-NEXT:    nop
 ; P8-NEXT:    li r4, 144
+; P8-NEXT:    cntlzd r3, r3
 ; P8-NEXT:    lxvd2x v31, r1, r4 # 16-byte Folded Reload
 ; P8-NEXT:    li r4, 128
-; P8-NEXT:    srwi r3, r3, 5
+; P8-NEXT:    rldicl r3, r3, 58, 63
 ; P8-NEXT:    lxvd2x v30, r1, r4 # 16-byte Folded Reload
-; P8-NEXT:    xori r3, r3, 1
-; P8-NEXT:    and r3, r30, r3
+; P8-NEXT:    and r3, r3, r30
 ; P8-NEXT:    ld r30, 160(r1) # 8-byte Folded Reload
 ; P8-NEXT:    addi r1, r1, 176
 ; P8-NEXT:    ld r0, 16(r1)
@@ -2334,20 +2321,19 @@ define i32 @fcmps_one_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    mr r29, r5
 ; NOVSX-NEXT:    mr r28, r4
 ; NOVSX-NEXT:    mr r27, r3
-; NOVSX-NEXT:    bl __unordkf2
-; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    mr r4, r28
-; NOVSX-NEXT:    mr r5, r29
-; NOVSX-NEXT:    mr r6, r30
-; NOVSX-NEXT:    srwi r26, r3, 5
-; NOVSX-NEXT:    mr r3, r27
 ; NOVSX-NEXT:    bl __eqkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    srwi r3, r3, 5
-; NOVSX-NEXT:    xori r3, r3, 1
-; NOVSX-NEXT:    and r3, r26, r3
+; NOVSX-NEXT:    addic r4, r3, -1
+; NOVSX-NEXT:    mr r5, r29
+; NOVSX-NEXT:    mr r6, r30
+; NOVSX-NEXT:    subfe r26, r4, r3
+; NOVSX-NEXT:    mr r3, r27
+; NOVSX-NEXT:    mr r4, r28
+; NOVSX-NEXT:    bl __unordkf2
+; NOVSX-NEXT:    nop
+; NOVSX-NEXT:    cntlzd r3, r3
+; NOVSX-NEXT:    rldicl r3, r3, 58, 63
+; NOVSX-NEXT:    and r3, r3, r26
 ; NOVSX-NEXT:    addi r1, r1, 80
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -2370,7 +2356,7 @@ define i32 @fcmps_ult_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
+; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -2391,7 +2377,7 @@ define i32 @fcmps_ult_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gekf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
+; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -2409,10 +2395,9 @@ define i32 @fcmps_ule_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gtkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    extsw r3, r3
-; P8-NEXT:    neg r3, r3
+; P8-NEXT:    addi r4, r3, -1
+; P8-NEXT:    or r3, r4, r3
 ; P8-NEXT:    rldicl r3, r3, 1, 63
-; P8-NEXT:    xori r3, r3, 1
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -2432,10 +2417,9 @@ define i32 @fcmps_ule_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gtkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    extsw r3, r3
-; NOVSX-NEXT:    neg r3, r3
+; NOVSX-NEXT:    addi r4, r3, -1
+; NOVSX-NEXT:    or r3, r4, r3
 ; NOVSX-NEXT:    rldicl r3, r3, 1, 63
-; NOVSX-NEXT:    xori r3, r3, 1
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -2453,8 +2437,8 @@ define i32 @fcmps_ugt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __lekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    extsw r3, r3
-; P8-NEXT:    neg r3, r3
+; P8-NEXT:    addi r4, r3, -1
+; P8-NEXT:    nor r3, r4, r3
 ; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
@@ -2476,8 +2460,8 @@ define i32 @fcmps_ugt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __lekf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    extsw r3, r3
-; NOVSX-NEXT:    neg r3, r3
+; NOVSX-NEXT:    addi r4, r3, -1
+; NOVSX-NEXT:    nor r3, r4, r3
 ; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
@@ -2496,8 +2480,8 @@ define i32 @fcmps_uge_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __ltkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
-; P8-NEXT:    xori r3, r3, 1
+; P8-NEXT:    not r3, r3
+; P8-NEXT:    rldicl r3, r3, 1, 63
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -2517,8 +2501,8 @@ define i32 @fcmps_uge_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __ltkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
-; NOVSX-NEXT:    xori r3, r3, 1
+; NOVSX-NEXT:    not r3, r3
+; NOVSX-NEXT:    rldicl r3, r3, 1, 63
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
@@ -2541,22 +2525,21 @@ define i32 @fcmps_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    vmr v30, v2
 ; P8-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    vmr v31, v3
-; P8-NEXT:    bl __eqkf2
-; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
-; P8-NEXT:    vmr v2, v30
-; P8-NEXT:    vmr v3, v31
-; P8-NEXT:    srwi r30, r3, 5
 ; P8-NEXT:    bl __unordkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
+; P8-NEXT:    addic r4, r3, -1
+; P8-NEXT:    vmr v2, v30
+; P8-NEXT:    vmr v3, v31
+; P8-NEXT:    subfe r30, r4, r3
+; P8-NEXT:    bl __eqkf2
+; P8-NEXT:    nop
 ; P8-NEXT:    li r4, 144
+; P8-NEXT:    cntlzd r3, r3
 ; P8-NEXT:    lxvd2x v31, r1, r4 # 16-byte Folded Reload
 ; P8-NEXT:    li r4, 128
-; P8-NEXT:    srwi r3, r3, 5
+; P8-NEXT:    rldicl r3, r3, 58, 63
 ; P8-NEXT:    lxvd2x v30, r1, r4 # 16-byte Folded Reload
-; P8-NEXT:    xori r3, r3, 1
-; P8-NEXT:    or r3, r3, r30
+; P8-NEXT:    or r3, r30, r3
 ; P8-NEXT:    ld r30, 160(r1) # 8-byte Folded Reload
 ; P8-NEXT:    addi r1, r1, 176
 ; P8-NEXT:    ld r0, 16(r1)
@@ -2585,20 +2568,19 @@ define i32 @fcmps_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    mr r29, r5
 ; NOVSX-NEXT:    mr r28, r4
 ; NOVSX-NEXT:    mr r27, r3
-; NOVSX-NEXT:    bl __eqkf2
-; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    mr r4, r28
-; NOVSX-NEXT:    mr r5, r29
-; NOVSX-NEXT:    mr r6, r30
-; NOVSX-NEXT:    srwi r26, r3, 5
-; NOVSX-NEXT:    mr r3, r27
 ; NOVSX-NEXT:    bl __unordkf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    srwi r3, r3, 5
-; NOVSX-NEXT:    xori r3, r3, 1
-; NOVSX-NEXT:    or r3, r3, r26
+; NOVSX-NEXT:    addic r4, r3, -1
+; NOVSX-NEXT:    mr r5, r29
+; NOVSX-NEXT:    mr r6, r30
+; NOVSX-NEXT:    subfe r26, r4, r3
+; NOVSX-NEXT:    mr r3, r27
+; NOVSX-NEXT:    mr r4, r28
+; NOVSX-NEXT:    bl __eqkf2
+; NOVSX-NEXT:    nop
+; NOVSX-NEXT:    cntlzd r3, r3
+; NOVSX-NEXT:    rldicl r3, r3, 58, 63
+; NOVSX-NEXT:    or r3, r26, r3
 ; NOVSX-NEXT:    addi r1, r1, 80
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -2621,9 +2603,8 @@ define i32 @fcmps_une_f128(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __nekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    cntlzw r3, r3
-; P8-NEXT:    srwi r3, r3, 5
-; P8-NEXT:    xori r3, r3, 1
+; P8-NEXT:    addic r4, r3, -1
+; P8-NEXT:    subfe r3, r4, r3
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -2643,9 +2624,8 @@ define i32 @fcmps_une_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __nekf2
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    srwi r3, r3, 5
-; NOVSX-NEXT:    xori r3, r3, 1
+; NOVSX-NEXT:    addic r4, r3, -1
+; NOVSX-NEXT:    subfe r3, r4, r3
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0

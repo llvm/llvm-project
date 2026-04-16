@@ -33,7 +33,8 @@ public:
     return MVT::i8;
   }
 
-  MVT::SimpleValueType getCmpLibcallReturnType() const override {
+  MVT::SimpleValueType
+  getCmpLibcallReturnType(const DataLayout &DL) const override {
     return MVT::i8;
   }
 

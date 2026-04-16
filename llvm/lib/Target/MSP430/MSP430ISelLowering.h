@@ -17,6 +17,7 @@
 #include "MSP430.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/DataLayout.h"
 
 namespace llvm {
   class MSP430Subtarget;
@@ -29,7 +30,8 @@ namespace llvm {
       return MVT::i8;
     }
 
-    MVT::SimpleValueType getCmpLibcallReturnType() const override {
+    MVT::SimpleValueType
+    getCmpLibcallReturnType(const DataLayout &DL) const override {
       return MVT::i16;
     }
 

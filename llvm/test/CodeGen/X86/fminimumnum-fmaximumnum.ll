@@ -3170,7 +3170,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    callq __unordtf2@PLT
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    testq %rax, %rax
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    jne .LBB41_2
 ; SSE2-NEXT:  # %bb.1: # %start
@@ -3179,7 +3179,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    callq __unordtf2@PLT
-; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    testq %rax, %rax
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE2-NEXT:    jne .LBB41_4
 ; SSE2-NEXT:  # %bb.3: # %start
@@ -3189,7 +3189,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; SSE2-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
 ; SSE2-NEXT:    callq __gttf2@PLT
 ; SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    testq %rax, %rax
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    jg .LBB41_6
 ; SSE2-NEXT:  # %bb.5: # %start
@@ -3207,7 +3207,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    movaps %xmm2, %xmm0
 ; SSE2-NEXT:    callq __eqtf2@PLT
-; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    testq %rax, %rax
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE2-NEXT:    je .LBB41_10
 ; SSE2-NEXT:  # %bb.9: # %start
@@ -3224,7 +3224,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX-NEXT:    callq __unordtf2@PLT
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX-NEXT:    jne .LBB41_2
 ; AVX-NEXT:  # %bb.1: # %start
@@ -3233,7 +3233,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX-NEXT:    callq __unordtf2@PLT
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    jne .LBB41_4
 ; AVX-NEXT:  # %bb.3: # %start
@@ -3243,7 +3243,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX-NEXT:    vmovaps %xmm1, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    callq __gttf2@PLT
 ; AVX-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    vmovdqa %xmm0, %xmm1
 ; AVX-NEXT:    jg .LBB41_6
 ; AVX-NEXT:  # %bb.5: # %start
@@ -3261,7 +3261,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX-NEXT:    callq __eqtf2@PLT
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    je .LBB41_10
 ; AVX-NEXT:  # %bb.9: # %start
@@ -3278,7 +3278,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX10_2-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX10_2-NEXT:    callq __unordtf2@PLT
 ; AVX10_2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX10_2-NEXT:    testl %eax, %eax
+; AVX10_2-NEXT:    testq %rax, %rax
 ; AVX10_2-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX10_2-NEXT:    jne .LBB41_2
 ; AVX10_2-NEXT:  # %bb.1: # %start
@@ -3287,7 +3287,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX10_2-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX10_2-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX10_2-NEXT:    callq __unordtf2@PLT
-; AVX10_2-NEXT:    testl %eax, %eax
+; AVX10_2-NEXT:    testq %rax, %rax
 ; AVX10_2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX10_2-NEXT:    jne .LBB41_4
 ; AVX10_2-NEXT:  # %bb.3: # %start
@@ -3297,7 +3297,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX10_2-NEXT:    vmovaps %xmm1, (%rsp) # 16-byte Spill
 ; AVX10_2-NEXT:    callq __gttf2@PLT
 ; AVX10_2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; AVX10_2-NEXT:    testl %eax, %eax
+; AVX10_2-NEXT:    testq %rax, %rax
 ; AVX10_2-NEXT:    vmovdqa %xmm0, %xmm1
 ; AVX10_2-NEXT:    jg .LBB41_6
 ; AVX10_2-NEXT:  # %bb.5: # %start
@@ -3315,7 +3315,7 @@ define fp128 @test_fmaximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX10_2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX10_2-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX10_2-NEXT:    callq __eqtf2@PLT
-; AVX10_2-NEXT:    testl %eax, %eax
+; AVX10_2-NEXT:    testq %rax, %rax
 ; AVX10_2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX10_2-NEXT:    je .LBB41_10
 ; AVX10_2-NEXT:  # %bb.9: # %start
@@ -3360,7 +3360,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    callq __unordtf2@PLT
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    testq %rax, %rax
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    jne .LBB42_2
 ; SSE2-NEXT:  # %bb.1: # %start
@@ -3369,7 +3369,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    callq __unordtf2@PLT
-; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    testq %rax, %rax
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE2-NEXT:    jne .LBB42_4
 ; SSE2-NEXT:  # %bb.3: # %start
@@ -3379,7 +3379,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; SSE2-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
 ; SSE2-NEXT:    callq __lttf2@PLT
 ; SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    testq %rax, %rax
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    js .LBB42_6
 ; SSE2-NEXT:  # %bb.5: # %start
@@ -3397,7 +3397,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    movaps %xmm2, %xmm0
 ; SSE2-NEXT:    callq __eqtf2@PLT
-; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    testq %rax, %rax
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE2-NEXT:    je .LBB42_10
 ; SSE2-NEXT:  # %bb.9: # %start
@@ -3414,7 +3414,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX-NEXT:    callq __unordtf2@PLT
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX-NEXT:    jne .LBB42_2
 ; AVX-NEXT:  # %bb.1: # %start
@@ -3423,7 +3423,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX-NEXT:    callq __unordtf2@PLT
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    jne .LBB42_4
 ; AVX-NEXT:  # %bb.3: # %start
@@ -3433,7 +3433,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX-NEXT:    vmovaps %xmm1, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    callq __lttf2@PLT
 ; AVX-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    vmovdqa %xmm0, %xmm1
 ; AVX-NEXT:    js .LBB42_6
 ; AVX-NEXT:  # %bb.5: # %start
@@ -3451,7 +3451,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX-NEXT:    callq __eqtf2@PLT
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    je .LBB42_10
 ; AVX-NEXT:  # %bb.9: # %start
@@ -3468,7 +3468,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX10_2-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX10_2-NEXT:    callq __unordtf2@PLT
 ; AVX10_2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX10_2-NEXT:    testl %eax, %eax
+; AVX10_2-NEXT:    testq %rax, %rax
 ; AVX10_2-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX10_2-NEXT:    jne .LBB42_2
 ; AVX10_2-NEXT:  # %bb.1: # %start
@@ -3477,7 +3477,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX10_2-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX10_2-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX10_2-NEXT:    callq __unordtf2@PLT
-; AVX10_2-NEXT:    testl %eax, %eax
+; AVX10_2-NEXT:    testq %rax, %rax
 ; AVX10_2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX10_2-NEXT:    jne .LBB42_4
 ; AVX10_2-NEXT:  # %bb.3: # %start
@@ -3487,7 +3487,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX10_2-NEXT:    vmovaps %xmm1, (%rsp) # 16-byte Spill
 ; AVX10_2-NEXT:    callq __lttf2@PLT
 ; AVX10_2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; AVX10_2-NEXT:    testl %eax, %eax
+; AVX10_2-NEXT:    testq %rax, %rax
 ; AVX10_2-NEXT:    vmovdqa %xmm0, %xmm1
 ; AVX10_2-NEXT:    js .LBB42_6
 ; AVX10_2-NEXT:  # %bb.5: # %start
@@ -3505,7 +3505,7 @@ define fp128 @test_fminimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; AVX10_2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX10_2-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX10_2-NEXT:    callq __eqtf2@PLT
-; AVX10_2-NEXT:    testl %eax, %eax
+; AVX10_2-NEXT:    testq %rax, %rax
 ; AVX10_2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX10_2-NEXT:    je .LBB42_10
 ; AVX10_2-NEXT:  # %bb.9: # %start

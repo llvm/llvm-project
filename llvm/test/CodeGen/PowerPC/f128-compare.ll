@@ -41,8 +41,8 @@ define dso_local signext i32 @greater_qp() {
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __gtkf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    extsw r3, r3
-; CHECK-P8-NEXT:    neg r3, r3
+; CHECK-P8-NEXT:    addi r4, r3, -1
+; CHECK-P8-NEXT:    nor r3, r4, r3
 ; CHECK-P8-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -89,7 +89,7 @@ define dso_local signext i32 @less_qp() {
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __ltkf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    rlwinm r3, r3, 1, 31, 31
+; CHECK-P8-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
@@ -135,8 +135,8 @@ define dso_local signext i32 @greater_eq_qp() {
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __gekf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    rlwinm r3, r3, 1, 31, 31
-; CHECK-P8-NEXT:    xori r3, r3, 1
+; CHECK-P8-NEXT:    not r3, r3
+; CHECK-P8-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
@@ -182,10 +182,9 @@ define dso_local signext i32 @less_eq_qp() {
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __lekf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    extsw r3, r3
-; CHECK-P8-NEXT:    neg r3, r3
+; CHECK-P8-NEXT:    addi r4, r3, -1
+; CHECK-P8-NEXT:    or r3, r4, r3
 ; CHECK-P8-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-P8-NEXT:    xori r3, r3, 1
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
@@ -231,8 +230,8 @@ define dso_local signext i32 @equal_qp() {
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __eqkf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    cntlzw r3, r3
-; CHECK-P8-NEXT:    srwi r3, r3, 5
+; CHECK-P8-NEXT:    cntlzd r3, r3
+; CHECK-P8-NEXT:    rldicl r3, r3, 58, 63
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
@@ -277,10 +276,9 @@ define dso_local signext i32 @not_greater_qp() {
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __gtkf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    extsw r3, r3
-; CHECK-P8-NEXT:    neg r3, r3
+; CHECK-P8-NEXT:    addi r4, r3, -1
+; CHECK-P8-NEXT:    or r3, r4, r3
 ; CHECK-P8-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-P8-NEXT:    xori r3, r3, 1
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
@@ -326,8 +324,8 @@ define dso_local signext i32 @not_less_qp() {
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __ltkf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    rlwinm r3, r3, 1, 31, 31
-; CHECK-P8-NEXT:    xori r3, r3, 1
+; CHECK-P8-NEXT:    not r3, r3
+; CHECK-P8-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
@@ -374,7 +372,7 @@ define dso_local signext i32 @not_greater_eq_qp() {
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __gekf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    rlwinm r3, r3, 1, 31, 31
+; CHECK-P8-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
@@ -421,8 +419,8 @@ define dso_local signext i32 @not_less_eq_qp() {
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __lekf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    extsw r3, r3
-; CHECK-P8-NEXT:    neg r3, r3
+; CHECK-P8-NEXT:    addi r4, r3, -1
+; CHECK-P8-NEXT:    nor r3, r4, r3
 ; CHECK-P8-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -469,9 +467,8 @@ define dso_local signext i32 @not_equal_qp() {
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __nekf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    cntlzw r3, r3
-; CHECK-P8-NEXT:    srwi r3, r3, 5
-; CHECK-P8-NEXT:    xori r3, r3, 1
+; CHECK-P8-NEXT:    addic r4, r3, -1
+; CHECK-P8-NEXT:    subfe r3, r4, r3
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
@@ -525,7 +522,7 @@ define fp128 @greater_sel_qp() {
 ; CHECK-P8-NEXT:    vmr v3, v30
 ; CHECK-P8-NEXT:    bl __gtkf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    cmpwi r3, 0
+; CHECK-P8-NEXT:    cmpdi r3, 0
 ; CHECK-P8-NEXT:    bgt cr0, .LBB10_2
 ; CHECK-P8-NEXT:  # %bb.1: # %entry
 ; CHECK-P8-NEXT:    vmr v31, v30
@@ -588,7 +585,7 @@ define fp128 @less_sel_qp() {
 ; CHECK-P8-NEXT:    vmr v3, v30
 ; CHECK-P8-NEXT:    bl __ltkf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    cmpwi r3, 0
+; CHECK-P8-NEXT:    cmpdi r3, 0
 ; CHECK-P8-NEXT:    blt cr0, .LBB11_2
 ; CHECK-P8-NEXT:  # %bb.1: # %entry
 ; CHECK-P8-NEXT:    vmr v31, v30
@@ -652,8 +649,8 @@ define fp128 @greater_eq_sel_qp() {
 ; CHECK-P8-NEXT:    vmr v3, v30
 ; CHECK-P8-NEXT:    bl __gekf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    cmpwi r3, -1
-; CHECK-P8-NEXT:    bgt cr0, .LBB12_2
+; CHECK-P8-NEXT:    cmpdi r3, 0
+; CHECK-P8-NEXT:    bge cr0, .LBB12_2
 ; CHECK-P8-NEXT:  # %bb.1: # %entry
 ; CHECK-P8-NEXT:    vmr v31, v30
 ; CHECK-P8-NEXT:  .LBB12_2: # %entry
@@ -716,8 +713,8 @@ define fp128 @less_eq_sel_qp() {
 ; CHECK-P8-NEXT:    vmr v3, v30
 ; CHECK-P8-NEXT:    bl __lekf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    cmpwi r3, 1
-; CHECK-P8-NEXT:    blt cr0, .LBB13_2
+; CHECK-P8-NEXT:    cmpdi r3, 0
+; CHECK-P8-NEXT:    ble cr0, .LBB13_2
 ; CHECK-P8-NEXT:  # %bb.1: # %entry
 ; CHECK-P8-NEXT:    vmr v31, v30
 ; CHECK-P8-NEXT:  .LBB13_2: # %entry
@@ -779,7 +776,7 @@ define fp128 @equal_sel_qp() {
 ; CHECK-P8-NEXT:    vmr v3, v30
 ; CHECK-P8-NEXT:    bl __eqkf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    cmplwi r3, 0
+; CHECK-P8-NEXT:    cmpldi r3, 0
 ; CHECK-P8-NEXT:    beq cr0, .LBB14_2
 ; CHECK-P8-NEXT:  # %bb.1: # %entry
 ; CHECK-P8-NEXT:    vmr v31, v30

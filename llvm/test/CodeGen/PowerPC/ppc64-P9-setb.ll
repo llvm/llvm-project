@@ -1261,11 +1261,11 @@ define i64 @setbf128(fp128 %a, fp128 %b) {
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    vmr v2, v30
 ; CHECK-PWR8-NEXT:    vmr v3, v31
-; CHECK-PWR8-NEXT:    srawi r30, r3, 31
+; CHECK-PWR8-NEXT:    sradi r30, r3, 63
 ; CHECK-PWR8-NEXT:    bl __gtkf2
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    li r4, 64
-; CHECK-PWR8-NEXT:    cmpwi r3, 0
+; CHECK-PWR8-NEXT:    cmpdi r3, 0
 ; CHECK-PWR8-NEXT:    li r3, 1
 ; CHECK-PWR8-NEXT:    lvx v31, r1, r4 # 16-byte Folded Reload
 ; CHECK-PWR8-NEXT:    li r4, 48

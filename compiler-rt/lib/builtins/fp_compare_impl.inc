@@ -8,25 +8,27 @@
 
 #include "fp_lib.h"
 
-// GCC uses long (at least for x86_64) as the return type of the comparison
-// functions. We need to ensure that the return value is sign-extended in the
-// same way as GCC expects (since otherwise GCC-generated __builtin_isinf
+// GCC defaults to a word-sized return value, with a few platforms hooking
+// the override. We need to ensure that the return value is sign-extended in
+// the same way as GCC expects (since otherwise GCC-generated __builtin_isinf
 // returns true for finite 128-bit floating-point numbers).
 #if defined(__aarch64__) || defined(__arm64ec__)
-// AArch64 GCC overrides libgcc_cmp_return to use int instead of long.
+// AArch64 GCC overrides libgcc_cmp_return to use an int.
+typedef int CMP_RESULT;
+#elif defined(__i386__) || defined(__x86_64__)
+// x86 targets always use an i32 for smaller encoding. Note that as of 2026-04
+// this does not match libgcc, but the needed comparisons to 0 are compatible
+// across sizes.
 typedef int CMP_RESULT;
 #elif defined(__wasm__)
 // Both wasm32 and wasm64 use i32
 typedef int CMP_RESULT;
-#elif __SIZEOF_POINTER__ == 8 && __SIZEOF_LONG__ == 4
-// LLP64 ABIs use long long instead of long.
-typedef long long CMP_RESULT;
 #elif __AVR__
 // AVR uses a single byte for the return value.
 typedef char CMP_RESULT;
 #else
-// Otherwise the comparison functions return long.
-typedef long CMP_RESULT;
+// By default, use a signed word.
+typedef sword CMP_RESULT;
 #endif
 
 #if !defined(__clang__) && defined(__GNUC__)

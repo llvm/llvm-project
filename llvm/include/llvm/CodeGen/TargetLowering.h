@@ -996,8 +996,13 @@ public:
   /// Return the ValueType for comparison libcalls. Comparison libcalls include
   /// floating point comparison calls, and Ordered/Unordered check calls on
   /// floating point numbers.
-  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
-    return MVT::i32; // return the default value
+  ///
+  /// This should match `CMP_RESULT` in `compiler-rt` and `CMPtype` in
+  /// `libgcc`. The default return is word-sized. Consider overriding on
+  /// targets that have a cheaper comparison at other sizes.
+  virtual MVT::SimpleValueType
+  getCmpLibcallReturnType(const DataLayout &DL) const {
+    return getPointerTy(DL).SimpleTy;
   }
 
   /// For targets without i1 registers, this gives the nature of the high-bits

@@ -266,8 +266,8 @@ define zeroext i1 @iszeroq(fp128 %x) {
 ; P8-NEXT:    xxswapd 35, 0
 ; P8-NEXT:    bl __eqkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    cntlzw 3, 3
-; P8-NEXT:    srwi 3, 3, 5
+; P8-NEXT:    cntlzd 3, 3
+; P8-NEXT:    rldicl 3, 3, 58, 63
 ; P8-NEXT:    addi 1, 1, 32
 ; P8-NEXT:    ld 0, 16(1)
 ; P8-NEXT:    mtlr 0

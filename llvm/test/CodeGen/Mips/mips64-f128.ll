@@ -2358,7 +2358,7 @@ define i32 @cmp_ge(fp128 %a, fp128 %b) {
 ; C_CC_FMT-NEXT:  .Ltmp43:
 ; C_CC_FMT-NEXT:    jalr $25
 ; C_CC_FMT-NEXT:    nop
-; C_CC_FMT-NEXT:    addiu $1, $zero, -1
+; C_CC_FMT-NEXT:    daddiu $1, $zero, -1
 ; C_CC_FMT-NEXT:    slt $2, $1, $2
 ; C_CC_FMT-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; C_CC_FMT-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
@@ -2381,7 +2381,7 @@ define i32 @cmp_ge(fp128 %a, fp128 %b) {
 ; CMP_CC_FMT-NEXT:    .reloc .Ltmp43, R_MIPS_JALR, __getf2
 ; CMP_CC_FMT-NEXT:  .Ltmp43:
 ; CMP_CC_FMT-NEXT:    jalrc $25
-; CMP_CC_FMT-NEXT:    addiu $1, $zero, -1
+; CMP_CC_FMT-NEXT:    daddiu $1, $zero, -1
 ; CMP_CC_FMT-NEXT:    slt $2, $1, $2
 ; CMP_CC_FMT-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; CMP_CC_FMT-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
@@ -2874,13 +2874,12 @@ define fp128 @selectCC_LD(fp128 %a, fp128 %b, fp128 %c, fp128 %d) {
 ; CMP_CC_FMT-NEXT:    .reloc .Ltmp50, R_MIPS_JALR, __gttf2
 ; CMP_CC_FMT-NEXT:  .Ltmp50:
 ; CMP_CC_FMT-NEXT:    jalrc $25
-; CMP_CC_FMT-NEXT:    slt $1, $zero, $2
-; CMP_CC_FMT-NEXT:    sll $1, $1, 0
-; CMP_CC_FMT-NEXT:    seleqz $2, $17, $1
-; CMP_CC_FMT-NEXT:    selnez $3, $19, $1
+; CMP_CC_FMT-NEXT:    slti $1, $2, 1
+; CMP_CC_FMT-NEXT:    selnez $2, $17, $1
+; CMP_CC_FMT-NEXT:    seleqz $3, $19, $1
 ; CMP_CC_FMT-NEXT:    or $2, $3, $2
-; CMP_CC_FMT-NEXT:    seleqz $3, $16, $1
-; CMP_CC_FMT-NEXT:    selnez $1, $18, $1
+; CMP_CC_FMT-NEXT:    selnez $3, $16, $1
+; CMP_CC_FMT-NEXT:    seleqz $1, $18, $1
 ; CMP_CC_FMT-NEXT:    or $4, $1, $3
 ; CMP_CC_FMT-NEXT:    ld $16, 0($sp) # 8-byte Folded Reload
 ; CMP_CC_FMT-NEXT:    ld $17, 8($sp) # 8-byte Folded Reload

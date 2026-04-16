@@ -29,7 +29,8 @@ public:
   MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override;
   MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const override;
 
-  MVT::SimpleValueType getCmpLibcallReturnType() const override {
+  MVT::SimpleValueType
+  getCmpLibcallReturnType(const DataLayout &DL) const override {
     // i32 may be more efficient than the default word size for wasm64 targets
     return MVT::i32;
   }

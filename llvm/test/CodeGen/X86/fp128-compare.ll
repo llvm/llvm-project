@@ -11,7 +11,7 @@ define i32 @TestComp128GT(fp128 %d1, fp128 %d2) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq __gttf2@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    setg %cl
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    popq %rcx
@@ -30,7 +30,7 @@ define i32 @TestComp128GE(fp128 %d1, fp128 %d2) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq __getf2@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    setns %cl
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    popq %rcx
@@ -49,7 +49,7 @@ define i32 @TestComp128LT(fp128 %d1, fp128 %d2) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq __lttf2@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    sets %cl
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    popq %rcx
@@ -71,7 +71,7 @@ define i32 @TestComp128LE(fp128 %d1, fp128 %d2) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq __letf2@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    setle %cl
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    popq %rcx
@@ -90,7 +90,7 @@ define i32 @TestComp128EQ(fp128 %d1, fp128 %d2) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq __eqtf2@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    popq %rcx
@@ -109,7 +109,7 @@ define i32 @TestComp128NE(fp128 %d1, fp128 %d2) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq __netf2@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    setne %cl
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    popq %rcx
@@ -132,12 +132,12 @@ define i32 @TestComp128UEQ(fp128 %d1, fp128 %d2) {
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq __eqtf2@PLT
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    sete %bl
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    callq __unordtf2@PLT
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    orb %bl, %al
 ; CHECK-NEXT:    movzbl %al, %eax
@@ -163,12 +163,12 @@ define i32 @TestComp128ONE(fp128 %d1, fp128 %d2) {
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq __eqtf2@PLT
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    setne %bl
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    callq __unordtf2@PLT
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    andb %bl, %al
 ; CHECK-NEXT:    movzbl %al, %eax
@@ -192,7 +192,7 @@ define fp128 @TestMax(fp128 %x, fp128 %y) {
 ; CHECK-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq __gttf2@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    jg .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload

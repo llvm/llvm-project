@@ -12,8 +12,7 @@ define i32 @test_choice1(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std 0, 128(1)
 ; P8-NEXT:    bl __nekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    # kill: def $r3 killed $r3 killed $x3
-; P8-NEXT:    cmplwi 3, 0
+; P8-NEXT:    cmpldi 3, 0
 ; P8-NEXT:    bne 0, .LBB0_2
 ; P8-NEXT:    b .LBB0_1
 ; P8-NEXT:  .LBB0_1: # %if.true
@@ -82,8 +81,7 @@ define i32 @test_choice2(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std 0, 128(1)
 ; P8-NEXT:    bl __lekf2
 ; P8-NEXT:    nop
-; P8-NEXT:    # kill: def $r3 killed $r3 killed $x3
-; P8-NEXT:    cmpwi 3, 1
+; P8-NEXT:    cmpdi 3, 1
 ; P8-NEXT:    blt 0, .LBB1_2
 ; P8-NEXT:    b .LBB1_1
 ; P8-NEXT:  .LBB1_1: # %if.true
@@ -159,8 +157,7 @@ define i32 @test_choice3(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std 0, 128(1)
 ; P8-NEXT:    bl __ltkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    # kill: def $r3 killed $r3 killed $x3
-; P8-NEXT:    cmpwi 3, -1
+; P8-NEXT:    cmpdi 3, -1
 ; P8-NEXT:    bgt 0, .LBB2_2
 ; P8-NEXT:    b .LBB2_1
 ; P8-NEXT:  .LBB2_1: # %if.true
@@ -229,8 +226,7 @@ define i32 @test_choice4(fp128 %a, fp128 %b) #0 {
 ; P8-NEXT:    std 0, 128(1)
 ; P8-NEXT:    bl __eqkf2
 ; P8-NEXT:    nop
-; P8-NEXT:    # kill: def $r3 killed $r3 killed $x3
-; P8-NEXT:    cmplwi 3, 0
+; P8-NEXT:    cmpldi 3, 0
 ; P8-NEXT:    beq 0, .LBB3_2
 ; P8-NEXT:    b .LBB3_1
 ; P8-NEXT:  .LBB3_1: # %if.true
