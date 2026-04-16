@@ -1271,12 +1271,8 @@ public:
   /// This operation checks if valid bits exclusively set in this APInt or RHS.
   bool isExhaustive(const APInt &RHS) const {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-    if (isSingleWord()) {
-      WordType Mask = BitWidth == APINT_BITS_PER_WORD
-                          ? WORDTYPE_MAX
-                          : llvm::maskTrailingOnes<WordType>(BitWidth);
-      return ((U.VAL | RHS.U.VAL) & Mask) == Mask;
-    }
+    if (isSingleWord())
+      return (U.VAL | RHS.U.VAL) == llvm::maskTrailingOnes<WordType>(BitWidth);
     return isExhaustiveSlowCase(RHS);
   }
 
