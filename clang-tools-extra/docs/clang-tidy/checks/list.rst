@@ -244,7 +244,6 @@ Clang-Tidy Checks
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
-   :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
