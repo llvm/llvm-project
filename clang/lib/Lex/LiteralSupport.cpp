@@ -1431,6 +1431,10 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
       DiagId = diag::ext_octal_literal;
     // If the token location is from a macro expansion where the macro was
     // defined in a system header, suppress the diagnostic.
+    // FIXME: this is actually a more general issue, for example we have a
+    // similar need for binary literals above. It would be best for this to be
+    // handled by the diagnostics engine instead of with ad hoc solutions. This
+    // same concern exists below for issuing the deprecation warning.
     if (!SM.isInSystemMacro(TokLoc))
       Diags.Report(TokLoc, DiagId);
 
