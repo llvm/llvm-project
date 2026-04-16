@@ -2158,8 +2158,8 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
 
 // CHECK: {{.*}} = fpext nnan float {{.*}} to double
 // CHECK: {{.*}} = fptrunc fast float {{.*}} to half
-  %27 = llvm.fpext %arg0 {fastmathFlags = #llvm.fastmath<nnan>} : f32 to f64
-  %28 = llvm.fptrunc %arg0 {fastmathFlags = #llvm.fastmath<fast>} : f32 to f16
+  %27 = llvm.fpext %arg0 fastmath<nnan> : f32 to f64
+  %28 = llvm.fptrunc %arg0 fastmath<fast> : f32 to f16
   llvm.return
 }
 

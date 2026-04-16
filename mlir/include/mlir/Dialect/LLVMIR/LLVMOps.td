@@ -597,7 +597,8 @@ class LLVM_CastOpWithFastMathFlag<string mnemonic, string instName, Type type,
     DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   let results = (outs resultType:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "$arg attr-dict `:` type($arg) `to` type($res)";
+  let assemblyFormat = "$arg (`fastmath` `` $fastmathFlags^)? "
+                       "attr-dict `:` type($arg) `to` type($res)";
   string llvmInstName = instName;
   string mlirBuilder = [{
     auto op = $_qualCppClassName::create($_builder,
