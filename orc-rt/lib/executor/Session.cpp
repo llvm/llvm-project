@@ -53,8 +53,8 @@ Session::Session(ExecutorProcessInfo EPI,
                  std::unique_ptr<TaskDispatcher> Dispatcher,
                  ErrorReporterFn ReportError)
     : EPI(std::move(EPI)), Dispatcher(std::move(Dispatcher)),
-      ReportError(std::move(ReportError)), Notifiers(addNotificationService()) {
-}
+      ReportError(std::move(ReportError)),
+      Notifiers(createService<NotificationService>()) {}
 
 Session::~Session() { waitForShutdown(); }
 
@@ -229,13 +229,6 @@ void Session::addOnShutdown(OnShutdownFn OnShutdown) {
   }
   // We've already shutdown. Run in-place.
   OnShutdown();
-}
-
-Session::NotificationService &Session::addNotificationService() {
-  auto NS = std::make_unique<NotificationService>();
-  auto &TmpNS = *NS;
-  Services.push_back(std::move(NS));
-  return TmpNS;
 }
 
 void Session::appendService(std::unique_ptr<Service> Srv) {
