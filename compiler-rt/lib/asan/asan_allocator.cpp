@@ -34,6 +34,13 @@
 #include "sanitizer_common/sanitizer_quarantine.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#if SANITIZER_WINDOWS64
+namespace __sanitizer {
+extern bool win64_memcpy_memmove_are_disjoint;
+}
+using __sanitizer::win64_memcpy_memmove_are_disjoint;
+#endif
+
 namespace __asan {
 
 // Valid redzone sizes are 16, 32, 64, ... 2048, so we encode them in 3 bits.
@@ -803,12 +810,21 @@ struct Allocator {
       u8 chunk_state = atomic_load(&m->chunk_state, memory_order_acquire);
       if (chunk_state != CHUNK_ALLOCATED)
         ReportInvalidFree(old_ptr, chunk_state, stack);
+      CHECK_NE(REAL(memcpy), nullptr);
       uptr memcpy_size = Min(new_size, m->UsedSize());
       // If realloc() races with free(), we may start copying freed memory.
       // However, we will report racy double-free later anyway.
-      // Avoid intercepted CRT memcpy/memmove (see
-      // sanitizer_allocator_combined.h)
-      internal_memcpy(new_ptr, old_ptr, memcpy_size);
+#if SANITIZER_WINDOWS64
+      // When memcpy/memmove are aliased in the CRT, REAL(memcpy) may
+      // re-enter the interceptor after thunk + runtime patching.
+      // Use internal_memcpy to avoid false positives in that case.
+      if (win64_memcpy_memmove_are_disjoint)
+        REAL(memcpy)(new_ptr, old_ptr, memcpy_size);
+      else
+        internal_memcpy(new_ptr, old_ptr, memcpy_size);
+#else
+      REAL(memcpy)(new_ptr, old_ptr, memcpy_size);
+#endif
       Deallocate(old_ptr, 0, 0, stack, FROM_MALLOC);
     }
     return new_ptr;
