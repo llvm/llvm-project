@@ -45,7 +45,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
-#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -1102,10 +1101,6 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
       return false; // No other 'aarch64.sve.*'.
     }
 
-    if (Name.starts_with("stshh.atomic.store")) {
-      NewFn = nullptr;
-      return true;
-    }
   }
   return false; // No other 'arm.*', 'aarch64.*'.
 }
@@ -4591,31 +4586,6 @@ static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
 
     return Builder.CreateIntrinsic(NewID, Args, /*FMFSource=*/nullptr,
                                    CI->getName());
-  } else if (Name.starts_with("stshh.atomic.store")) {
-    uint64_t OrderArg = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-    uint64_t SizeArg = cast<ConstantInt>(CI->getArgOperand(4))->getZExtValue();
-
-    AtomicOrdering Order;
-    switch (AtomicOrderingCABI(OrderArg)) {
-    case AtomicOrderingCABI::relaxed:
-      Order = AtomicOrdering::Monotonic;
-      break;
-    case AtomicOrderingCABI::release:
-      Order = AtomicOrdering::Release;
-      break;
-    case AtomicOrderingCABI::seq_cst:
-      Order = AtomicOrdering::SequentiallyConsistent;
-      break;
-    default:
-      reportFatalUsageErrorWithCI("Intrinsic has invalid atomic ordering", CI);
-    }
-
-    Type *StoreTy = Builder.getIntNTy(SizeArg);
-    Value *StoreVal = Builder.CreateTrunc(CI->getArgOperand(1), StoreTy);
-    auto *SI = Builder.CreateAlignedStore(StoreVal, CI->getArgOperand(0),
-                                          Align(SizeArg / 8));
-    SI->setAtomic(Order);
-    return nullptr;
   }
 
   llvm_unreachable("Unhandled Intrinsic!");
