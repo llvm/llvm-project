@@ -141,28 +141,6 @@ bool BlockTensorDescAttr::hasDefaultsOnly() {
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_ScatterTensorDescAttr
-//===----------------------------------------------------------------------===//
-ScatterTensorDescAttr
-ScatterTensorDescAttr::get(mlir::MLIRContext *context,
-                           xegpu::MemorySpace memory_space, int chunk_size) {
-  auto scopeAttr = MemorySpaceAttr::get(context, memory_space);
-  auto chunkSizeAttr =
-      IntegerAttr::get(IntegerType::get(context, 64), chunk_size);
-  return Base::get(context, scopeAttr, chunkSizeAttr);
-}
-
-LogicalResult ScatterTensorDescAttr::verify(
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    MemorySpaceAttr memory_space, IntegerAttr chunk_size) {
-  int64_t chunkSize = chunk_size.getInt();
-  if (chunkSize <= 0)
-    return emitError() << "invalid chunk size";
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // XeGPU_LayoutAttr
 //===----------------------------------------------------------------------===//
 LogicalResult
@@ -1254,7 +1232,7 @@ mlir::Type TensorDescType::parse(AsmParser &parser) {
         layout = attr;
         continue;
       }
-      if (mlir::isa<BlockTensorDescAttr, ScatterTensorDescAttr>(attr)) {
+      if (mlir::isa<BlockTensorDescAttr>(attr)) {
         encoding = attr;
         continue;
       }
@@ -1309,15 +1287,6 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
   return Base::get(context, shape, elementType, attr, layout);
 }
 
-TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
-                                   mlir::Type elementType, int chunk_size,
-                                   MemorySpace memory_space,
-                                   mlir::Attribute layout) {
-  auto *context = elementType.getContext();
-  auto attr = ScatterTensorDescAttr::get(context, memory_space, chunk_size);
-  return Base::get(context, shape, elementType, attr, layout);
-}
-
 LogicalResult
 TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
                        llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
@@ -1339,30 +1308,6 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "unsupported element type " << elementType
                        << ": expected integer or float";
 
-  // for gather and scatter ops, Low-precision types are packed in 32-bit
-  // units.
-  unsigned bitWidth = elementType.getIntOrFloatBitWidth();
-  int chunkAlignmentFactor =
-      bitWidth < xegpu::uArch::generalPackedFormatBitSize
-          ? xegpu::uArch::generalPackedFormatBitSize / bitWidth
-          : 1;
-  auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
-  if (scatterAttr) {
-    int64_t chunkSize = scatterAttr.getChunkSizeAsInt();
-    if (rank == 1 && chunkSize != 1)
-      return emitError() << "expected non-contiguous elements for 1D tensor";
-
-    // If chunk size > 1, the second dimension of the tensor shape must be
-    // equal to chunk size and it must be a multiple of the
-    // chunkAlignmentFactor.
-    if (chunkSize > 1) {
-      if (shape.back() != chunkSize)
-        return emitError() << "expected last dim of tensor to match chunk size";
-      if (shape.back() % chunkAlignmentFactor != 0)
-        return emitError() << "expected last dim of tensor to be a multiple of "
-                           << chunkAlignmentFactor;
-    }
-  }
   if (auto layoutAttr =
           mlir::dyn_cast_if_present<DistributeLayoutAttr>(layout)) {
     if (rank != (size_t)layoutAttr.getRank())

@@ -1,4 +1,4 @@
-//===- unittests/Serialization/NoComments.cpp - CI tests -----===//
+//===- unittests/Serialization/Comments.cpp - CI tests -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,7 @@ using namespace clang;
 
 namespace {
 
-class NoComments : public ::testing::Test {
+class Comments : public ::testing::Test {
   void SetUp() override {
     ASSERT_FALSE(
         sys::fs::createUniqueDirectory("modules-no-comments-test", TestDir));
@@ -54,7 +54,7 @@ public:
   }
 };
 
-TEST_F(NoComments, NonModulesTest) {
+TEST_F(Comments, NonModulesTest) {
   std::unique_ptr<ASTUnit> AST = tooling::buildASTFromCodeWithArgs(
       R"cpp(
 /// Any comments
@@ -76,7 +76,7 @@ void foo() {}
               "/// Any comments");
 }
 
-TEST_F(NoComments, ModulesTest) {
+TEST_F(Comments, ModulesTest) {
   addFile("Comments.cppm", R"cpp(
 export module Comments;
 
@@ -124,7 +124,7 @@ import Comments;
   EXPECT_TRUE(foo);
 
   const RawComment *RC = getCompletionComment(Ctx, foo);
-  EXPECT_FALSE(RC);
+  EXPECT_TRUE(RC);
 }
 
 } // anonymous namespace

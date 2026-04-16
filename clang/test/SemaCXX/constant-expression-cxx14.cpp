@@ -842,7 +842,8 @@ namespace StmtExpr {
   static_assert(f(1) == 1, ""); // expected-error {{constant expression}} expected-note {{in call}}
 
   constexpr int g() {
-    return ({ int n; n; }); // expected-note {{read of uninitialized object}}
+    return ({ int n; n; }); // expected-note {{read of uninitialized object}} \
+                            // expected-note {{declared here}}
   }
   static_assert(g() == 0, ""); // expected-error {{constant expression}} expected-note {{in call}}
 
@@ -881,7 +882,7 @@ namespace Lifetime {
   constexpr int &get(int &&r) { return r; }
   // cxx23-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
   constexpr int f() {
-    int &r = get(123);
+    int &r = get(123); // cxx14_20-note {{temporary created here}}
     return r;
     // cxx14_20-note@-1 {{read of object outside its lifetime}}
   }
@@ -890,7 +891,7 @@ namespace Lifetime {
   constexpr int g() {
     int *p = 0;
     {
-      int n = 0;
+      int n = 0; // expected-note {{declared here}}
       p = &n;
       n = 42;
     }
@@ -903,9 +904,9 @@ namespace Lifetime {
     int *p[4] = {};
     int &&r = 1;
     p[0] = &r;
-    while (int a = 1) {
+    while (int a = 1) { // expected-note {{declared here}}
       p[1] = &a;
-      for (int b = 1; int c = 1; ) {
+      for (int b = 1; int c = 1; ) { // expected-note 2{{declared here}}
         p[2] = &b, p[3] = &c;
         break;
       }
@@ -923,7 +924,7 @@ namespace Lifetime {
     int *p = 0;
     for (int i = 0; i != 2; ++i) {
       int *q = p;
-      int n = 0;
+      int n = 0; // expected-note {{declared here}}
       p = &n;
       if (i)
         // This modifies the 'n' from the previous iteration of the loop outside
@@ -955,7 +956,7 @@ namespace PR17615 {
   struct A {
     int &&r;
     constexpr A(int &&r) : r(static_cast<int &&>(r)) {}
-    constexpr A() : A(0) {
+    constexpr A() : A(0) { // expected-note {{temporary created here}}
       (void)+r; // expected-note {{outside its lifetime}}
     }
   };
@@ -1124,7 +1125,9 @@ struct A {
   };
   constexpr A() {}
 };
-static_assert(A().x == 3, ""); // cxx14-error{{not an integral constant expression}} cxx14-note{{in call to 'A()'}}
+static_assert(A().x == 3, ""); // cxx14-error{{not an integral constant expression}} \
+                               // cxx14-note{{in call to 'A()'}} \
+                               // cxx14-note {{temporary created here}}
 
 // Reference another indirect field, with different 'this'.
 struct B {
@@ -1239,7 +1242,9 @@ namespace ObjectsUnderConstruction {
   static_assert(aggr2.x == 1 && aggr2.y == 1, "");
 
   // The lifetime of 'n' begins at the initialization, not before.
-  constexpr int n = ++const_cast<int&>(n); // expected-error {{constant expression}} expected-note {{increment of object outside its lifetime}}
+  constexpr int n = ++const_cast<int&>(n); // expected-error {{constant expression}} \
+                                           // expected-note {{increment of object outside its lifetime}} \
+                                           // expected-note {{declared here}}
 }
 
 namespace PR39728 {

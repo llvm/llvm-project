@@ -1401,6 +1401,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS64, S32}, {{UniInVgprS64}, {Vgpr32}}})
       .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}}});
 
+  addRulesForGOpcs({G_AMDGPU_S_BUFFER_PREFETCH})
+      .Any({{}, {{}, {SgprV4S32_ReadFirstLane, Imm, SgprB32_ReadFirstLane}}});
+
   addRulesForGOpcs({G_FPEXT})
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}})
       .Any({{UniS64, S32}, {{UniInVgprS64}, {Vgpr32}}})
@@ -1511,19 +1514,34 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{Sgpr32}, {IntrId}});
 
   // Intrinsics with no register operands.
-  addRulesForIOpcs({amdgcn_endpgm,           amdgcn_init_exec,
-                    amdgcn_s_barrier,        amdgcn_s_barrier_leave,
-                    amdgcn_s_barrier_signal, amdgcn_s_barrier_wait,
-                    amdgcn_s_monitor_sleep,  amdgcn_s_nop,
-                    amdgcn_s_sethalt,        amdgcn_s_setprio,
-                    amdgcn_s_setprio_inc_wg, amdgcn_s_sleep,
-                    amdgcn_s_ttracedata_imm, amdgcn_s_wait_asynccnt,
-                    amdgcn_s_wait_bvhcnt,    amdgcn_s_wait_dscnt,
-                    amdgcn_s_wait_event,     amdgcn_s_wait_event_export_ready,
-                    amdgcn_s_wait_expcnt,    amdgcn_s_wait_kmcnt,
-                    amdgcn_s_wait_loadcnt,   amdgcn_s_wait_samplecnt,
-                    amdgcn_s_wait_storecnt,  amdgcn_s_wait_tensorcnt,
-                    amdgcn_s_waitcnt,        amdgcn_wave_barrier})
+  addRulesForIOpcs({amdgcn_asyncmark,
+                    amdgcn_endpgm,
+                    amdgcn_init_exec,
+                    amdgcn_s_barrier,
+                    amdgcn_s_barrier_leave,
+                    amdgcn_s_barrier_signal,
+                    amdgcn_s_barrier_wait,
+                    amdgcn_s_monitor_sleep,
+                    amdgcn_s_nop,
+                    amdgcn_s_sethalt,
+                    amdgcn_s_setprio,
+                    amdgcn_s_setprio_inc_wg,
+                    amdgcn_s_sleep,
+                    amdgcn_s_ttracedata_imm,
+                    amdgcn_s_wait_asynccnt,
+                    amdgcn_s_wait_bvhcnt,
+                    amdgcn_s_wait_dscnt,
+                    amdgcn_s_wait_event,
+                    amdgcn_s_wait_event_export_ready,
+                    amdgcn_s_wait_expcnt,
+                    amdgcn_s_wait_kmcnt,
+                    amdgcn_s_wait_loadcnt,
+                    amdgcn_s_wait_samplecnt,
+                    amdgcn_s_wait_storecnt,
+                    amdgcn_s_wait_tensorcnt,
+                    amdgcn_s_waitcnt,
+                    amdgcn_wait_asyncmark,
+                    amdgcn_wave_barrier})
       .Any({{}, {{}, {}}});
 
   addRulesForIOpcs({amdgcn_init_exec_from_input})
@@ -1713,6 +1731,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_global_load_lds})
       .Any({{}, {{}, {IntrId, VgprP1, SgprB32_M0}}});
 
+  addRulesForIOpcs({amdgcn_global_load_async_to_lds_b8,
+                    amdgcn_global_load_async_to_lds_b32,
+                    amdgcn_global_load_async_to_lds_b64,
+                    amdgcn_global_load_async_to_lds_b128})
+      .Any({{}, {{}, {IntrId, VgprP1, VgprP3}}});
+
   addRulesForIOpcs({amdgcn_wwm, amdgcn_strict_wwm, amdgcn_wqm, amdgcn_softwqm,
                     amdgcn_strict_wqm},
                    StandardB)
@@ -1755,6 +1779,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_trig_preop}, Standard)
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr32}})
       .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_exp2}, Standard)
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
+      .Uni(S16, {{Sgpr16}, {IntrId, Sgpr16}}, hasPST)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}}, !hasPST)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
+      .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}}, hasPST)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST);
 
   addRulesForIOpcs({amdgcn_ds_add_gs_reg_rtn, amdgcn_ds_sub_gs_reg_rtn},
                    Standard)
