@@ -1,7 +1,6 @@
 add_custom_target(check-libc)
 add_custom_target(libc-unit-tests)
 add_custom_target(libc-hermetic-tests)
-add_dependencies(check-libc libc-unit-tests libc-hermetic-tests)
 
 if (TARGET check-hdrgen)
   add_dependencies(check-libc check-hdrgen)
@@ -35,8 +34,16 @@ configure_lit_site_cfg(
 add_lit_testsuite(check-libc-lit
   "Running libc tests via lit"
   ${LIBC_BUILD_DIR}/test
-  DEPENDS libc-unit-tests-build libc-hermetic-tests-build libc-integration-tests-build libc_include_tests-build
 )
+
+if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
+  add_dependencies(check-libc libc-unit-tests)
+  add_dependencies(check-libc-lit libc-unit-tests-build)
+endif()
+if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
+  add_dependencies(check-libc libc-hermetic-tests)
+  add_dependencies(check-libc-lit libc-hermetic-tests-build)
+endif()
 
 add_subdirectory(UnitTest)
 
