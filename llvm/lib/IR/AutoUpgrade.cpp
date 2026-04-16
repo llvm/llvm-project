@@ -1100,7 +1100,6 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
 
       return false; // No other 'aarch64.sve.*'.
     }
-
   }
   return false; // No other 'arm.*', 'aarch64.*'.
 }
