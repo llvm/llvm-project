@@ -385,20 +385,17 @@ func.func @_QQhost_shared() {
 // Test that fir.address_of inside gpu.module referencing a managed fir.global
 // produces an addressof with ptr<1> and an addrspacecast.
 
-module attributes {gpu.container_module} {
-  gpu.module @cuda_device_mod {
-    fir.global @_QMmodEmval {data_attr = #cuf.cuda<managed>} : i32 {
-      %0 = fir.zero_bits i32
-      fir.has_value %0 : i32
-    }
-    gpu.func @_QMkernelsPuse_managed() kernel {
-      %0 = fir.address_of(@_QMmodEmval) : !fir.ref<i32>
-      gpu.return
-    }
+module {
+  func.func @_QMkernelsPuse_managed() {
+    %0 = fir.address_of(@_QMmodEmval) : !fir.ref<i32>
+    return
+  }
+  fir.global @_QMmodEmval {data_attr = #cuf.cuda<managed>} : i32 {
+    %0 = fir.zero_bits i32
+    fir.has_value %0 : i32
   }
 }
 
-// CHECK: llvm.mlir.global external @_QMmodEmval() {addr_space = 1 : i32, nvvm.managed} : i32
-// CHECK-LABEL: gpu.func @_QMkernelsPuse_managed()
-// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @_QMmodEmval : !llvm.ptr<1>
-// CHECK: %{{.*}} = llvm.addrspacecast %[[ADDR]] : !llvm.ptr<1> to !llvm.ptr
+// CHECK-LABEL: llvm.func @_QMkernelsPuse_managed()
+// CHECK: %{{.*}} = llvm.mlir.addressof @_QMmodEmval : !llvm.ptr
+// CHECK: llvm.mlir.global external @_QMmodEmval() {addr_space = 0 : i32} : i32

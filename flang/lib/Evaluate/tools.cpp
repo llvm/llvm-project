@@ -1130,6 +1130,40 @@ template semantics::UnorderedSymbolSet CollectCudaSymbols(
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
 
+std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
+  SymbolVector symbols{GetSymbolVector(expr)};
+  std::reverse(symbols.begin(), symbols.end());
+
+  std::vector<SymbolVector> symbolVectors;
+
+  SymbolVector crtSymbols;
+  for (const Symbol &sym : symbols) {
+    bool isComponent{sym.owner().IsDerivedType()};
+    if (isComponent) {
+      crtSymbols.push_back(sym);
+    } else {
+      crtSymbols.push_back(sym);
+      symbolVectors.push_back(crtSymbols);
+      crtSymbols.clear();
+    }
+  }
+  return symbolVectors;
+}
+
+int GetNbOfUniqueCUDADeviceSymbols(
+    const std::vector<SymbolVector> &symbolVectors) {
+  semantics::UnorderedSymbolSet symbols;
+  for (const auto &symbolVector : symbolVectors) {
+    for (const auto &sym : symbolVector) {
+      if (IsCUDADeviceSymbol(*sym)) {
+        symbols.insert(sym);
+        break;
+      }
+    }
+  }
+  return symbols.size();
+}
+
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   semantics::UnorderedSymbolSet hostSymbols;
   semantics::UnorderedSymbolSet deviceSymbols;

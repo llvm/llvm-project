@@ -1,5 +1,5 @@
 static_library("HTTP") {
-  output_name = "LLVMSupportHTTP"
+  output_name = "LLVMHTTP"
   deps = [
     "//llvm/lib/Support",
     "//llvm/utils/gn/build/libs/curl",

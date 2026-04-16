@@ -17,10 +17,12 @@
 #include <optional>
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -3443,6 +3445,9 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::ConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
   target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+  mlir::configureOpenMPToLLVMConversionLegality(target, converter);
+  target.addLegalDialect<mlir::omp::OpenMPDialect>();
+  mlir::populateOpenMPToLLVMConversionPatterns(converter, patterns);
   target.addIllegalDialect<mlir::BuiltinDialect, cir::CIRDialect,
                            mlir::func::FuncDialect>();
 

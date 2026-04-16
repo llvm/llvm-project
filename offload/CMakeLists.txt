@@ -16,6 +16,10 @@ if(LIBOMPTARGET_NO_SANITIZER_AMDGPU)
   set(SANITIZER_AMDGPU FALSE)
 endif()
 
+# The minimum versions required for dependencies.
+set(OFFLOAD_MIN_CUDA_VERSION 11.8.0)
+set(OFFLOAD_MIN_CUDA_VERSION_CODE 11080)
+
 # Check that the library can actually be built.
 if(APPLE OR WIN32 OR WASM)
   message(WARNING "libomptarget cannot be built on Windows and MacOS X!")

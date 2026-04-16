@@ -5,7 +5,11 @@ target_sources(omptarget.rtl.cuda PRIVATE src/rtl.cpp)
 #workaround strange -O3 issue for cuda src.rtk,coo ASAN
 set_source_files_properties(src/rtl.cpp PROPERTIES COMPILE_FLAGS "-O0")
 
-find_package(CUDAToolkit QUIET)
+# Define the minimum CUDA version required by offload.
+target_compile_definitions(omptarget.rtl.cuda PRIVATE OFFLOAD_MIN_CUDA_VERSION=${OFFLOAD_MIN_CUDA_VERSION_CODE})
+
+find_package(CUDAToolkit QUIET ${OFFLOAD_MIN_CUDA_VERSION})
+
 if(CUDAToolkit_FOUND AND NOT "cuda" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building CUDA plugin linked against libcuda")
   target_link_libraries(omptarget.rtl.cuda PRIVATE CUDA::cuda_driver)
