@@ -223,8 +223,8 @@ static mlir::Value emitNeonCall(CIRGenModule &cgm, CIRGenBuilderTy &builder,
       isConstrainedFPIntrinsic, shift, rightshift);
 }
 
-static cir::VectorType getVPaddlInputVectorType(cir::VectorType resType,
-                                                bool usgn) {
+static cir::VectorType getNeonPairwiseWidenInputType(cir::VectorType resType,
+                                                     bool usgn) {
   mlir::Type elemTy = resType.getElementType();
   uint64_t resLanes = resType.getSize();
   auto intTy = mlir::dyn_cast<cir::IntType>(elemTy);
@@ -236,9 +236,9 @@ static cir::VectorType getVPaddlInputVectorType(cir::VectorType resType,
 
   unsigned argWidth = resWidth / 2;
   unsigned argLanes = resLanes * 2;
-  mlir::Type argElemTy =
-      cir::IntType::get(resType.getContext(), argWidth, /* is_signed*/ !usgn);
-  cir::VectorType result = cir::VectorType::get(argElemTy, argLanes);
+  cir::VectorType result = cir::VectorType::get(
+      cir::IntType::get(resType.getContext(), argWidth, /* is_signed */ !usgn),
+      argLanes);
   return result;
 }
 
@@ -692,7 +692,7 @@ static mlir::Value emitCommonNeonBuiltinExpr(
         getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
             usgn ? llvmIntrinsic : altLLVMIntrinsic));
     ops[0] = cgf.getBuilder().createBitcast(
-        ops[0], getVPaddlInputVectorType(vTy, usgn));
+        ops[0], getNeonPairwiseWidenInputType(vTy, usgn));
     return emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
                         /*argTypes=*/{ops[0].getType()}, ops, llvmIntrName,
                         /*funcResTy=*/vTy, loc);
@@ -2487,16 +2487,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vpadal_v:
   case NEON::BI__builtin_neon_vpadalq_v: {
     intrName = usgn ? "aarch64.neon.uaddlp" : "aarch64.neon.saddlp";
-    mlir::Type resElemTy = ty.getElementType();
-    uint64_t resLanes = ty.getSize();
     mlir::Value src = builder.createBitcast(
-        loc, ops[1],
-        cir::VectorType::get(
-            cir::IntType::get(
-                builder.getContext(),
-                mlir::dyn_cast<cir::IntType>(resElemTy).getWidth() / 2,
-                /* is_signed */ !usgn),
-            resLanes * 2));
+        loc, ops[1], getNeonPairwiseWidenInputType(ty, usgn));
     llvm::SmallVector<mlir::Value> vsrc{src};
     mlir::Type mTy = ty;
     mlir::Value pw =
