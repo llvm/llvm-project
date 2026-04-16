@@ -755,16 +755,13 @@ bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
 
 bool APInt::isExhaustiveSlowCase(const APInt &RHS) const {
   const unsigned Last = getNumWords() - 1;
-  const WordType *LHSWords = getRawData();
-  const WordType *RHSWords = RHS.getRawData();
-
   for (unsigned I = 0; I != Last; ++I)
-    if ((LHSWords[I] | RHSWords[I]) != WORDTYPE_MAX)
+    if ((U.pVal[I] | RHS.U.pVal[I]) != WORDTYPE_MAX)
       return false;
 
   unsigned TailBits = BitWidth - Last * APINT_BITS_PER_WORD;
   WordType TailMask = llvm::maskTrailingOnes<WordType>(TailBits);
-  return ((LHSWords[Last] | RHSWords[Last]) & TailMask) == TailMask;
+  return ((U.pVal[Last] | RHS.U.pVal[Last]) & TailMask) == TailMask;
 }
 
 APInt APInt::byteSwap() const {
