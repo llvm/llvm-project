@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_DARWIN_FUTEX_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_DARWIN_FUTEX_UTILS_H
 
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/error_or.h"
@@ -22,15 +23,24 @@ namespace LIBC_NAMESPACE_DECL {
 
 using FutexWordType = uint32_t;
 
+// errno from libSystem
+extern int *__error(void);
+
+class FutexErrnoProtect {
+  int backup;
+
+public:
+  LIBC_INLINE FutexErrnoProtect() : backup(*__error()) {}
+  LIBC_INLINE ~FutexErrnoProtect() { *__error() = backup; }
+};
+
 struct Futex : public cpp::Atomic<FutexWordType> {
   using cpp::Atomic<FutexWordType>::Atomic;
   using Timeout = internal::AbsTimeout;
 
   LIBC_INLINE long wait(FutexWordType val, cpp::optional<Timeout> timeout,
                         bool is_shared) {
-    // TODO(bojle): consider using OS_SYNC_WAIT_ON_ADDRESS_SHARED to sync
-    // betweeen processes. Catch: it is recommended to only be used by shared
-    // processes, not threads of a same process.
+    FutexErrnoProtect protect;
     os_sync_wait_on_address_flags_t flags = OS_SYNC_WAIT_ON_ADDRESS_NONE;
     if (is_shared)
       flags = OS_SYNC_WAIT_ON_ADDRESS_SHARED;
@@ -51,30 +61,37 @@ struct Futex : public cpp::Atomic<FutexWordType> {
                                       static_cast<uint64_t>(val),
                                       sizeof(FutexWordType), flags);
       }
-      if ((ret < 0) && (errno == ETIMEDOUT))
+      if ((ret < 0) && (*__error() == ETIMEDOUT))
         return -ETIMEDOUT;
       // case when os_sync returns early with an error. retry.
-      if ((ret < 0) && ((errno == EINTR) || (errno == EFAULT)))
+      if ((ret < 0) && ((*__error() == EINTR) || (*__error() == EFAULT)))
         continue;
       return ret;
     }
   }
 
   LIBC_INLINE long notify_one(bool is_shared) {
+    FutexErrnoProtect protect;
     os_sync_wake_by_address_flags_t flags = OS_SYNC_WAKE_BY_ADDRESS_NONE;
     if (is_shared)
       flags = OS_SYNC_WAKE_BY_ADDRESS_SHARED;
-
-    return os_sync_wake_by_address_any(reinterpret_cast<void *>(this),
-                                       sizeof(FutexWordType), flags);
+    int res = os_sync_wake_by_address_any(reinterpret_cast<void *>(this),
+                                          sizeof(FutexWordType), flags);
+    if (res < 0)
+      return -*__error();
+    return res;
   }
 
   LIBC_INLINE long notify_all(bool is_shared) {
+    FutexErrnoProtect protect;
     os_sync_wake_by_address_flags_t flags = OS_SYNC_WAKE_BY_ADDRESS_NONE;
     if (is_shared)
       flags = OS_SYNC_WAKE_BY_ADDRESS_SHARED;
-    return os_sync_wake_by_address_all(reinterpret_cast<void *>(this),
-                                       sizeof(FutexWordType), flags);
+    int res = os_sync_wake_by_address_all(reinterpret_cast<void *>(this),
+                                          sizeof(FutexWordType), flags);
+    if (res < 0)
+      return -*__error();
+    return res;
   }
 
   LIBC_INLINE ErrorOr<int> requeue_to(Futex & /*other*/,
