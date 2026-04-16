@@ -1002,10 +1002,6 @@ def Arith_AddFOp : Arith_FloatBinaryOpWithRoundingMode<"addf", [Commutative]> {
     scalar type, a vector whose element type is a floating point type, or a
     floating point tensor.
 
-    If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or, if no rounding mode is provided, according to
-    the default LLVM floating-point environment.
-
     Example:
 
     ```mlir
@@ -1036,10 +1032,6 @@ def Arith_SubFOp : Arith_FloatBinaryOpWithRoundingMode<"subf"> {
     these is required to be the same type. This type may be a floating point
     scalar type, a vector whose element type is a floating point type, or a
     floating point tensor.
-
-    If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or, if no rounding mode is provided, according to
-    the default LLVM floating-point environment.
 
     Example:
 
@@ -1192,10 +1184,6 @@ def Arith_MulFOp : Arith_FloatBinaryOpWithRoundingMode<"mulf", [Commutative]> {
     scalar type, a vector whose element type is a floating point type, or a
     floating point tensor.
 
-    If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or, if no rounding mode is provided, according to
-    the default LLVM floating-point environment.
-
     Example:
 
     ```mlir
@@ -1227,10 +1215,6 @@ def Arith_DivFOp : Arith_FloatBinaryOpWithRoundingMode<"divf"> {
     these is required to be the same type. This type may be a floating point
     scalar type, a vector whose element type is a floating point type, or a
     floating point tensor.
-
-    If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or, if no rounding mode is provided, according to
-    the default LLVM floating-point environment.
 
     Example:
 
@@ -1492,10 +1476,6 @@ def Arith_TruncFOp :
     Truncate a floating-point value to a smaller floating-point-typed value.
     The destination type must be strictly narrower than the source type.
     When operating on vectors, casts elementwise.
-
-    If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or, if no rounding mode is provided, according to
-    the default LLVM floating-point environment.
   }];
   let builders = [
     OpBuilder<(ins "Type":$out, "Value":$in), [{
@@ -1535,10 +1515,6 @@ def Arith_ConvertFOp :
 
     The source and destination element types must be different and must have
     the same bitwidth. When operating on vectors, casts elementwise.
-
-    If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or, if no rounding mode is provided, according to
-    the default LLVM floating-point environment.
   }];
 
   let hasFolder = 1;
@@ -1627,9 +1603,7 @@ def Arith_UIToFPOp :
   let summary = "cast from unsigned integer type to floating-point";
   let description = [{
     Cast from a value interpreted as unsigned integer to the corresponding
-    floating-point value. If the value cannot be exactly represented, it is
-    rounded using the default rounding mode. When operating on vectors, casts
-    elementwise.
+    floating-point value. When operating on vectors, casts elementwise.
 
     When the `nneg` flag is present, the operand is assumed to have
     the most significant bit set to 0. In this case, zero extension is
@@ -1664,9 +1638,7 @@ def Arith_SIToFPOp : Arith_IToFCastOp<"sitofp"> {
   let summary = "cast from integer type to floating-point";
   let description = [{
     Cast from a value interpreted as a signed integer to the corresponding
-    floating-point value. If the value cannot be exactly represented, it is
-    rounded using the default rounding mode. When operating on vectors, casts
-    elementwise.
+    floating-point value. When operating on vectors, casts elementwise.
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
