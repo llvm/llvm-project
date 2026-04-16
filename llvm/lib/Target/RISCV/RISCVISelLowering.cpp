@@ -878,8 +878,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,    ISD::VP_SMIN,
         ISD::VP_SMAX,        ISD::VP_UMIN,        ISD::VP_UMAX,
         ISD::VP_ABS, ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
-        ISD::VP_SADDSAT,     ISD::VP_UADDSAT,     ISD::VP_SSUBSAT,
-        ISD::VP_USUBSAT,     ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
+        ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
 
     static const unsigned FloatingPointVPOps[] = {
         ISD::VP_FADD,        ISD::VP_FSUB,        ISD::VP_FMUL,
@@ -7557,10 +7556,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(UMAX)       // VP_UMAX
   VP_CASE(SETCC)      // VP_SETCC
   VP_CASE(BITREVERSE) // VP_BITREVERSE
-  VP_CASE(SADDSAT)    // VP_SADDSAT
-  VP_CASE(UADDSAT)    // VP_UADDSAT
-  VP_CASE(SSUBSAT)    // VP_SSUBSAT
-  VP_CASE(USUBSAT)    // VP_USUBSAT
   VP_CASE(BSWAP)      // VP_BSWAP
   case ISD::CTLZ_ZERO_UNDEF:
     return RISCVISD::CTLZ_VL;
@@ -8948,10 +8943,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_UDIV:
   case ISD::VP_SREM:
   case ISD::VP_UREM:
-  case ISD::VP_UADDSAT:
-  case ISD::VP_USUBSAT:
-  case ISD::VP_SADDSAT:
-  case ISD::VP_SSUBSAT:
     return lowerVPOp(Op, DAG);
   case ISD::VP_AND:
   case ISD::VP_OR:
