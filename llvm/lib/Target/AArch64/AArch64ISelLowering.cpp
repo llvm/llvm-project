@@ -2164,11 +2164,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(Op, MVT::f32, Promote);
   }
 
-  // LegalizeDAG currently can't expand fp16 LDEXP/FREXP on targets where i16
-  // isn't legal.
-  for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+  // LegalizeDAG currently can't expand fp16/bf16 LDEXP/FREXP on targets where
+  // i16 isn't legal.
+  for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP}) {
     if (isOperationExpand(Op, MVT::f16))
       setOperationAction(Op, MVT::f16, Promote);
+    if (isOperationExpand(Op, MVT::bf16))
+      setOperationAction(Op, MVT::bf16, Promote);
+  }
 }
 
 const AArch64TargetMachine &AArch64TargetLowering::getTM() const {
