@@ -3224,7 +3224,7 @@ def int_amdgcn_s_prefetch_data :
 
 def int_amdgcn_s_prefetch_inst :
   Intrinsic<[],
-  [LLVMQualPointerType<4>, // Pointer to constant memory
+  [llvm_anyptr_ty, // Pointer to instruction memory
    llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chunks, units of 128 bytes)
     [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
     "", [SDNPMemOperand]
