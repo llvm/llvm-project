@@ -3275,7 +3275,8 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
           : Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
       D);
 
-  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, D);
+  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, D,
+                                                  /*WalkLexicalParents=*/true);
 
   // CWG2760
   // Default member initializers used to initialize a base or member subobject

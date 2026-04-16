@@ -598,3 +598,69 @@ struct StaticInlineDataMemberWrongProfile {
   [[profiles::suppress(test::other)]]
   static inline int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 };
+
+// Suppress on a nested (non-template) class must reach its late-parsed inline
+// method bodies, NSDMIs, and default arguments even though the nested class's
+// body is parsed before the outer class's members are late-parsed.
+struct NestedSuppressInnerOuter {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  struct [[profiles::suppress(test::type_cast)]] Inner {
+    void f() {
+      int *p = reinterpret_cast<int*>(0);
+    }
+    int *p = reinterpret_cast<int*>(0);
+    void g(int *q = reinterpret_cast<int*>(0));
+  };
+};
+
+// Non-matching profile on the nested class does not suppress the violation.
+struct NestedSuppressWrongProfile {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  struct [[profiles::suppress(test::other)]] Inner {
+    void f() {
+      int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+    }
+    int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+    void g(int *q = reinterpret_cast<int*>(0)); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  };
+};
+
+// Suppress on the outer class extends to inline bodies / NSDMIs / default
+// args of a nested non-template class.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] OuterSuppressNested {
+  struct Inner {
+    void f() {
+      int *p = reinterpret_cast<int*>(0);
+    }
+    int *p = reinterpret_cast<int*>(0);
+    void g(int *q = reinterpret_cast<int*>(0));
+  };
+};
+
+// Suppress on an enclosing namespace reaches a nested non-template class.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+namespace [[profiles::suppress(test::type_cast)]] nested_suppress_ns {
+  struct Inner {
+    void f() {
+      int *p = reinterpret_cast<int*>(0);
+    }
+    int *p = reinterpret_cast<int*>(0);
+    void g(int *q = reinterpret_cast<int*>(0));
+  };
+}
+
+// Deeply nested: suppress on the middle class reaches the innermost class's
+// inline body.
+struct DeepOuter {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  struct [[profiles::suppress(test::type_cast)]] DeepMiddle {
+    struct DeepInner {
+      void f() {
+        int *p = reinterpret_cast<int*>(0);
+      }
+      int *p = reinterpret_cast<int*>(0);
+      void g(int *q = reinterpret_cast<int*>(0));
+    };
+  };
+};
