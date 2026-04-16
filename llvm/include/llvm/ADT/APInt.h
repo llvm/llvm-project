@@ -1273,8 +1273,8 @@ public:
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
     if (isSingleWord()) {
       WordType Mask = BitWidth == APINT_BITS_PER_WORD
-                    ? WORDTYPE_MAX
-                    : llvm::maskTrailingOnes<WordType>(BitWidth);
+                          ? WORDTYPE_MAX
+                          : llvm::maskTrailingOnes<WordType>(BitWidth);
       return ((U.VAL | RHS.U.VAL) & Mask) == Mask;
     }
     return isExhaustiveSlowCase(RHS);

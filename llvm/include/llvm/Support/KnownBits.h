@@ -51,9 +51,7 @@ public:
   bool hasConflict() const { return Zero.intersects(One); }
 
   /// Returns true if we know the value of all bits.
-  bool isConstant() const {
-    return Zero.isExhaustive(One);
-  }
+  bool isConstant() const { return Zero.isExhaustive(One); }
 
   /// Returns the value when all bits have a known value. This just returns One
   /// with a protective assertion.
