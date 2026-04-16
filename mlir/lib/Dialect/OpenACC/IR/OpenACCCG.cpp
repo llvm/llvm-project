@@ -17,6 +17,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
@@ -25,6 +26,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 using namespace mlir;
 using namespace acc;
@@ -113,9 +115,9 @@ static void updateComputeRegionInputOperandSegments(ComputeRegionOp op,
                                                     size_t numInput) {
   const size_t numLaunch = op.getLaunchArgs().size();
   op->setAttr(ComputeRegionOp::getOperandSegmentSizeAttr(),
-              rewriter.getDenseI32ArrayAttr(
-                  {static_cast<int32_t>(numLaunch),
-                   static_cast<int32_t>(numInput), op.getStream() ? 1 : 0}));
+              rewriter.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunch),
+                                             static_cast<int32_t>(numInput),
+                                             op.getStream() ? 1 : 0}));
 }
 
 struct ComputeRegionRemoveDuplicateArgs
@@ -478,7 +480,31 @@ ComputeRegionOp::getKnownConstantLaunchArg(GPUParallelDimAttr parDim) {
 
 BlockArgument ComputeRegionOp::appendInputArg(Value value) {
   getInputArgsMutable().append(value);
-  return getBody()->addArgument(value.getType(), getLoc());
+  BlockArgument arg = getBody()->addArgument(value.getType(), getLoc());
+  OpBuilder b(getContext());
+  updateComputeRegionInputOperandSegments(*this, b, getInputArgs().size());
+  return arg;
+}
+
+std::optional<BlockArgument>
+ComputeRegionOp::captureInsOperandReplacingUsesInRegion(Value value) {
+  Region &region = getRegion();
+  auto usedInRegion = [&](Value v) {
+    for (OpOperand &use : v.getUses()) {
+      Region *useRegion = use.getOwner()->getParentRegion();
+      if (useRegion && region.isAncestor(useRegion))
+        return true;
+    }
+    return false;
+  };
+  if (!usedInRegion(value))
+    return std::nullopt;
+  BlockArgument arg = appendInputArg(value);
+  value.replaceUsesWithIf(arg, [&](OpOperand &operand) {
+    Region *useRegion = operand.getOwner()->getParentRegion();
+    return useRegion && region.isAncestor(useRegion);
+  });
+  return arg;
 }
 
 bool ComputeRegionOp::isEffectivelySerial() {
@@ -553,8 +579,8 @@ std::optional<BlockArgument> ComputeRegionOp::getBlockArg(Value value) {
   return std::nullopt;
 }
 
-void ComputeRegionOp::getCanonicalizationPatterns(
-    RewritePatternSet &results, MLIRContext *context) {
+void ComputeRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
   results.add<ComputeRegionRemoveDuplicateArgs, ComputeRegionRemoveUnusedArgs>(
       context);
 }
