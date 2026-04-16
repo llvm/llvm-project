@@ -23,4 +23,5 @@ add_clang_library(clangCIRFrontendAction
   clangCodeGen
   MLIRCIR
   MLIRIR
+  MLIRBytecodeWriter
   )

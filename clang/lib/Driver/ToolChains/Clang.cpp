@@ -5305,6 +5305,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       rewriteKind = RK_Fragile;
     } else if (JA.getType() == types::TY_CIR) {
       CmdArgs.push_back("-emit-cir");
+    } else if (JA.getType() == types::TY_CIR_BC) {
+      CmdArgs.push_back("-emit-cir-bc");
     } else if (JA.getType() == types::TY_Image && IsAMDSPIRVForHIPDevice) {
       CmdArgs.push_back("-emit-obj");
     } else {
