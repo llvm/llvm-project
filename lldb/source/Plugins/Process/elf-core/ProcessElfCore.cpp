@@ -991,7 +991,8 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
                                       strnlen(prpsinfo.pr_psargs,
                                               sizeof(prpsinfo.pr_psargs)))
                           .str();
-      // pr_psargs's char array used to represent arguments is only 80 character long
+      // pr_psargs's char array used to represent arguments is only 80 character
+      // long
       // (\0 included), hence 79.
       m_process_args = CoreArgs(core_arg, core_arg.size() == 79);
       break;
