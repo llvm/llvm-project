@@ -8,25 +8,25 @@ define i32 @foo(ptr nocapture readonly %p) {
 ; CHECK-SAME: ptr readonly captures(none) [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TBL:%.*]] = alloca <2 x ptr>, align 16
-; CHECK-NEXT:    store <2 x ptr> <ptr blockaddress(@foo, %[[INDIRECT:.*]]), ptr blockaddress(@foo, %[[END:.*]])>, ptr [[TBL]], align 16
+; CHECK-NEXT:    store <2 x ptr> <ptr blockaddress(@foo, %[[INDIRECT:.*]]), ptr blockaddress(@foo, %[[EXIT:.*]])>, ptr [[TBL]], align 16
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[CUR:%.*]] = phi ptr [ [[P]], %[[ENTRY]] ], [ [[NEXT:%.*]], %[[FOR_COND]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[CUR]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], 7
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[CUR]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[VAL]], 7
 ; CHECK-NEXT:    [[NEXT]] = getelementptr inbounds i8, ptr [[CUR]], i64 1
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[INDIRECT_PREHEADER:.*]], label %[[FOR_COND]]
 ; CHECK:       [[INDIRECT_PREHEADER]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[NEXT]], align 1
-; CHECK-NEXT:    [[IDX:%.*]] = sext i8 [[TMP1]] to i64
+; CHECK-NEXT:    [[RAW:%.*]] = load i8, ptr [[NEXT]], align 1
+; CHECK-NEXT:    [[IDX:%.*]] = sext i8 [[RAW]] to i64
 ; CHECK-NEXT:    [[SLOT:%.*]] = getelementptr inbounds <2 x ptr>, ptr [[TBL]], i64 0, i64 [[IDX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SLOT]], align 8
+; CHECK-NEXT:    [[DEST:%.*]] = load ptr, ptr [[SLOT]], align 8
 ; CHECK-NEXT:    br label %[[INDIRECT]]
 ; CHECK:       [[INDIRECT]]:
-; CHECK-NEXT:    indirectbr ptr [[TMP2]], [label %[[INDIRECT]], label %[[END]]]
+; CHECK-NEXT:    indirectbr ptr [[DEST]], [label %[[INDIRECT]], label %[[EXIT]]]
 ; CHECK:       [[INDIRECT2:.*:]]
-; CHECK-NEXT:    indirectbr ptr [[TMP2]], [label %[[INDIRECT]], label %[[END]]]
-; CHECK:       [[END]]:
+; CHECK-NEXT:    indirectbr ptr [[DEST]], [label %[[INDIRECT]], label %[[EXIT]]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

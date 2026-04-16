@@ -363,14 +363,15 @@ private:
 
   bool reportInvalidCandidate(Statistic &Stat) const {
     using namespace ore;
-    assert(L && "Fusion candidate has null loop!");
-    if (!Preheader)
-      return false;
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "InvalidCandidate",
+                                        L->getStartLoc(), L->getHeader())
+             << "Loop is not a candidate for fusion");
+
 #if LLVM_ENABLE_STATS
     ++Stat;
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, Stat.getName(),
-                                        L->getStartLoc(), Preheader)
-             << "[" << Preheader->getParent()->getName() << "]: "
+                                        L->getStartLoc(), L->getHeader())
+             << "[" << L->getHeader()->getParent()->getName() << "]: "
              << "Loop is not a candidate for fusion: " << Stat.getDesc());
 #endif
     return false;
@@ -575,14 +576,6 @@ private:
   /// Flow Equivalent sets, sorted by dominance.
   void collectFusionCandidates(const LoopVector &LV) {
     for (Loop *L : LV) {
-      // Skip loops that do not have the structure required for fusion (e.g.
-      // loops with indirectbr may lack a preheader). Creating a FusionCandidate
-      // for such loops can lead to reportInvalidCandidate being called with
-      // a null Preheader.
-      if (!L->getLoopPreheader() || !L->getHeader() || !L->getExitingBlock() ||
-          !L->getExitBlock() || !L->getLoopLatch())
-        continue;
-
       TTI::PeelingPreferences PP =
           gatherPeelingPreferences(L, SE, TTI, std::nullopt, std::nullopt);
       FusionCandidate CurrCand(L, DT, &PDT, ORE, PP);
