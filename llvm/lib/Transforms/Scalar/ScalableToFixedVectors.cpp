@@ -279,7 +279,7 @@ bool ScalableToFixedVectorsPass::isSupported(const Value *V) const {
   } else if (auto *SV = getSplatValue(V)) {
     return isa<Constant>(SV);
   } else if (auto *I = dyn_cast<Instruction>(V)) {
-    return I->getType()->isScalableTy() && I->isBinaryOp();
+    return I->getType()->isScalableTy() && (I->isBinaryOp() || I->isCast());
   }
   return false;
 }
@@ -310,10 +310,17 @@ void ScalableToFixedVectorsPass::convertToFixed(IRBuilder<> &Builder,
     return Op;
   };
 
+  auto GetFixedType = [&]() -> Type * {
+    return llvm::FixedVectorType::get(I->getType()->getScalarType(), VL);
+  };
+
   Value *Fixed = nullptr;
   if (const auto *BOp = dyn_cast<BinaryOperator>(I)) {
     Fixed = Builder.CreateBinOp(BOp->getOpcode(), TransformOp(I->getOperand(0)),
                                 TransformOp(I->getOperand(1)));
+  } else if (const auto *COp = dyn_cast<CastInst>(I)) {
+    Fixed = Builder.CreateCast(COp->getOpcode(), TransformOp(I->getOperand(0)),
+                               GetFixedType());
   } else if (const auto *VPI = dyn_cast<VPIntrinsic>(I)) {
     assert(VL == getMinimumVLOfInst(I) &&
            "Can't reduce VP intrinsics with changed VL");
@@ -324,10 +331,8 @@ void ScalableToFixedVectorsPass::convertToFixed(IRBuilder<> &Builder,
                                          VPI->getParamAlign(1));
       break;
     case Intrinsic::vp_load:
-      Type *FixedType =
-          llvm::FixedVectorType::get(I->getType()->getScalarType(), VL);
       Fixed = Builder.CreateAlignedLoad(
-          FixedType, TransformOp(I->getOperand(0)), VPI->getParamAlign(0));
+          GetFixedType(), TransformOp(I->getOperand(0)), VPI->getParamAlign(0));
       break;
     }
   }
