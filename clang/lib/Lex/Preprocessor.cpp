@@ -1380,7 +1380,6 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
       isNextPPTokenHeaderNameOrOneOf(tok::identifier, tok::colon, tok::less)) {
     Result.setKind(tok::kw_import);
     ModuleImportLoc = Result.getLocation();
-    IsAtImport = false;
     return true;
   }
 
