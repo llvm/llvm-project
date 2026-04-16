@@ -1,3 +1,4 @@
+// REQUIRES: asserts
 // DEFINE: %{filecheck} = FileCheck %s --match-full-lines --check-prefix
 // DEFINE: %{codegen} = %clang -c %s -o %t.o -mllvm -debug-only=codegenaction 2>&1
 
