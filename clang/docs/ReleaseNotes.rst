@@ -388,6 +388,7 @@ Improvements to Clang's diagnostics
 - Improved error recovery for missing semicolons after class members. Clang now avoids
   skipping subsequent valid declarations when their previous decl is missing semicolon.
 
+- Removed the body of lambdas from some diagnostic messages.
 
 Improvements to Clang's time-trace
 ----------------------------------
