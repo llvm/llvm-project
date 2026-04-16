@@ -332,6 +332,21 @@ void IoChecker::Enter(const parser::InputItem &spec) {
   CheckForDefinableVariable(*var, "Input");
   if (auto expr{AnalyzeExpr(context_, *var)}) {
     auto at{var->GetSource()};
+    if (flags_.test(Flag::StarFmt)) {
+      if (auto type{expr->GetType()}; type &&
+          type->category() == TypeCategory::Derived &&
+          !type->IsUnlimitedPolymorphic()) {
+        const auto &derived{type->GetDerivedTypeSpec()};
+        if (const auto *details{
+                derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
+          if (details->isEnumerationType()) {
+            context_.Say(at,
+                "Enumeration type may not appear in list-directed input"_err_en_US);
+            return;
+          }
+        }
+      }
+    }
     CheckForAssumedRank(UnwrapWholeSymbolDataRef(*expr), at);
     CheckForBadIoType(*expr,
         flags_.test(Flag::FmtOrNml) ? common::DefinedIo::ReadFormatted
@@ -665,6 +680,21 @@ void IoChecker::Enter(const parser::OutputItem &item) {
             "Output item must not be a procedure"_err_en_US); // C1233
       } else {
         auto at{parser::FindSourceLocation(item)};
+        if (flags_.test(Flag::StarFmt)) {
+          if (auto type{expr->GetType()}; type &&
+              type->category() == TypeCategory::Derived &&
+              !type->IsUnlimitedPolymorphic()) {
+            const auto &derived{type->GetDerivedTypeSpec()};
+            if (const auto *details{
+                    derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
+              if (details->isEnumerationType()) {
+                context_.Say(at,
+                    "Enumeration type may not appear in list-directed output"_err_en_US);
+                return;
+              }
+            }
+          }
+        }
         CheckForAssumedRank(UnwrapWholeSymbolDataRef(*expr), at);
         CheckForBadIoType(*expr,
             flags_.test(Flag::FmtOrNml) ? common::DefinedIo::WriteFormatted
@@ -1224,6 +1254,17 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
         where, "I/O list item may not be unlimited polymorphic"_err_en_US);
   } else if (type.category() == TypeCategory::Derived) {
     const auto &derived{type.GetDerivedTypeSpec()};
+    if (const auto *details{
+            derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
+      if (details->isEnumerationType()) {
+        if (which == common::DefinedIo::ReadUnformatted ||
+            which == common::DefinedIo::WriteUnformatted) {
+          return &context_.Say(where,
+              "Enumeration type may not be used in unformatted I/O"_err_en_US);
+        }
+        return nullptr; // formatted I/O is allowed
+      }
+    }
     const Scope &scope{context_.FindScope(where)};
     if (const Symbol *
         bad{FindUnsafeIoDirectComponent(which, derived, scope)}) {
@@ -1289,6 +1330,38 @@ void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
     const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
     for (const Symbol &object : details.objects()) {
       context_.CheckIndexVarRedefine(namelistLocation, object);
+      if (auto type{evaluate::DynamicType::From(object)};
+          type && type->category() == TypeCategory::Derived) {
+        const auto &derived{type->GetDerivedTypeSpec()};
+        if (const auto *dtDetails{
+                derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
+          if (dtDetails->isEnumerationType()) {
+            context_.Say(namelistLocation,
+                "Enumeration type '%s' may not be a namelist group object"_err_en_US,
+                derived.name());
+            continue;
+          }
+        }
+        // Check direct components for enumeration types
+        if (derived.GetScope()) {
+          DirectComponentIterator directs{derived};
+          for (const Symbol &component : directs) {
+            if (auto compType{evaluate::DynamicType::From(component)};
+                compType && compType->category() == TypeCategory::Derived) {
+              const auto &compDerived{compType->GetDerivedTypeSpec()};
+              if (const auto *compDetails{compDerived.typeSymbol()
+                          .detailsIf<DerivedTypeDetails>()}) {
+                if (compDetails->isEnumerationType()) {
+                  context_.Say(namelistLocation,
+                      "Namelist group object '%s' has a direct component '%s' of enumeration type"_err_en_US,
+                      object.name(), component.name());
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
       if (auto *msg{CheckForBadIoType(object, which, namelistLocation)}) {
         evaluate::AttachDeclaration(*msg, namelist);
       } else if (which == common::DefinedIo::ReadFormatted) {

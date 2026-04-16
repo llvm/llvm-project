@@ -52,6 +52,8 @@ private:
   std::string containsBuf_;
   // Tracks nested DEC structures and fields of that type
   UnorderedSymbolSet emittedDECStructures_, emittedDECFields_;
+  // Tracks enumerator PARAMETER symbols emitted within ENUMERATION TYPE blocks
+  UnorderedSymbolSet emittedEnumerators_;
   UnorderedSymbolSet usedNonIntrinsicModules_;
   // Modules already re-exported by a plain USE for an operator-less declare
   // reduction, so the USE is written once even when several such reductions
@@ -83,6 +85,7 @@ private:
   void PutProcEntity(llvm::raw_ostream &, const Symbol &);
   void PutDerivedType(const Symbol &, const Scope * = nullptr);
   void PutDECStructure(const Symbol &, const Scope * = nullptr);
+  void PutEnumerationType(const Symbol &);
   void PutTypeParam(llvm::raw_ostream &, const Symbol &);
   void PutUserReduction(llvm::raw_ostream &, const Symbol &);
   void PutSubprogram(const Symbol &);

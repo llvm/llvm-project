@@ -1007,6 +1007,11 @@ std::string DeclTypeSpec::AsFortran() const {
       return "RECORD" + derivedTypeSpec().typeSymbol().name().ToString();
     } else if (derivedTypeSpec().IsVectorType()) {
       return derivedTypeSpec().VectorTypeAsFortran();
+    } else if (derivedTypeSpec()
+                   .typeSymbol()
+                   .get<DerivedTypeDetails>()
+                   .isEnumerationType()) {
+      return "TYPE(" + derivedTypeSpec().typeSymbol().name().ToString() + ')';
     } else {
       return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
     }
