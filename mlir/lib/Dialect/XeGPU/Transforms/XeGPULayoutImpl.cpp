@@ -306,6 +306,18 @@ void xegpu::removeLayoutAttrs(Operation *op) {
   });
 }
 
+void xegpu::removeTemporaryLayoutAttrs(Operation *op) {
+  op->walk([&](Operation *nestOp) {
+    SmallVector<StringAttr> attrsToRemove;
+    for (auto namedAttr : nestOp->getDiscardableAttrs()) {
+      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
+        attrsToRemove.push_back(namedAttr.getName());
+    }
+    for (auto attrName : attrsToRemove)
+      nestOp->removeDiscardableAttr(attrName);
+  });
+}
+
 /// Infers the source layout attribute for a broadcast operation given the
 /// result layout attribute, result shape, source shape.
 xegpu::DistributeLayoutAttr

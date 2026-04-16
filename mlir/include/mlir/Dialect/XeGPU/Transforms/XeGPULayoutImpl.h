@@ -61,6 +61,11 @@ void removeLayoutAttr(const T &operandOrResult);
 /// applied recursively to the contained operations
 void removeLayoutAttrs(Operation *op);
 
+/// Removes the temporary layout attributes for each OpOperand and OpResult of
+/// the given operation. Recursive for contained operations if the given
+/// operation contains regions.
+void removeTemporaryLayoutAttrs(Operation *op);
+
 /// Updates the NamedAttribute sequence by dropping sg-layout and
 /// sg-data information from any DistributeLayoutAttr found.
 SmallVector<NamedAttribute>
