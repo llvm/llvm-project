@@ -3992,11 +3992,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     VectorType *NewVecTy = cast<VectorType>(Cast->getDestTy());
     ElementCount NewVecCnt = NewVecTy->getElementCount();
 
-    // Right now we only support cases where
-    // the NewVec is longer, because for cases where
-    // it's shorter, we have to be sure that EVL can be
-    // exactly divided, otherwise it might page fault / yield
-    // incorrect results.
+    // Right now we only support cases where the NewVec is longer, because for
+    // cases where it's shorter, we have to be sure that EVL can be exactly
+    // divided, otherwise it might yield incorrect results or even page faults
+    // (if we round-up during the division).
     if (OrigVecCnt.isScalable() == NewVecCnt.isScalable() &&
         NewVecCnt.hasKnownScalarFactor(OrigVecCnt)) {
       unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
