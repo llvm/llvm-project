@@ -4,9 +4,6 @@ add_entrypoint_object(
     getcontext.cpp
   HDRS
     ../getcontext.h
-  COMPILE_OPTIONS
-    -O3
-    -fno-omit-frame-pointer
   DEPENDS
     libc.include.llvm-libc-types.ucontext_t
     libc.include.sys_syscall
@@ -21,9 +18,6 @@ add_entrypoint_object(
     setcontext.cpp
   HDRS
     ../setcontext.h
-  COMPILE_OPTIONS
-    -O3
-    -fno-omit-frame-pointer
   DEPENDS
     libc.include.llvm-libc-types.ucontext_t
     libc.include.sys_syscall

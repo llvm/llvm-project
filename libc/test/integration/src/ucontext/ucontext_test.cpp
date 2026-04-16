@@ -108,18 +108,20 @@ void test_rbx_rdx() {
   ASSERT_EQ(rdx_val, (long)0xDDDDDDDDDDDDDDDD);
 }
 
-void test_r8_r10() {
+void test_r8_r11() {
   ucontext_t ctx;
   static volatile int jumped = 0;
 
   register long r8_val asm("r8") = 0x0808080808080808;
   register long r9_val asm("r9") = 0x0909090909090909;
   register long r10_val asm("r10") = 0x1010101010101010;
+  register long r11_val asm("r11") = 0x1111111111111111;
 
   register void *rdi_val asm("rdi") = &ctx;
 
   asm volatile("call *%[getcontext_ptr]"
-               : "+r"(rdi_val), "+r"(r8_val), "+r"(r9_val), "+r"(r10_val)
+               : "+r"(rdi_val), "+r"(r8_val), "+r"(r9_val), "+r"(r10_val),
+                 "+r"(r11_val)
                : [getcontext_ptr] "r"((void *)LIBC_NAMESPACE::getcontext)
                : "memory", "rax", "rcx", "rdx", "rsi");
 
@@ -128,8 +130,9 @@ void test_r8_r10() {
 
     asm volatile("movq $0, %%r8\n\t"
                  "movq $0, %%r9\n\t"
-                 "movq $0, %%r10\n\t" ::
-                     : "r8", "r9", "r10");
+                 "movq $0, %%r10\n\t"
+                 "movq $0, %%r11\n\t" ::
+                     : "r8", "r9", "r10", "r11");
 
     register const ucontext_t *rdi_set asm("rdi") = &ctx;
     asm volatile("call *%[setcontext_ptr]" ::"r"(rdi_set),
@@ -142,12 +145,13 @@ void test_r8_r10() {
   ASSERT_EQ(r8_val, (long)0x0808080808080808);
   ASSERT_EQ(r9_val, (long)0x0909090909090909);
   ASSERT_EQ(r10_val, (long)0x1010101010101010);
+  ASSERT_EQ(r11_val, (long)0x1111111111111111);
 }
 
 TEST_MAIN() {
   basic_stub_test();
   register_preservation_test();
   test_rbx_rdx();
-  test_r8_r10();
+  test_r8_r11();
   return 0;
 }

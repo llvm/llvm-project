@@ -20,6 +20,7 @@
 namespace LIBC_NAMESPACE {
 
 static bool is_signal_set(const sigset_t *set, int signum) {
+  // TODO: Replace this with sigismember once it is implemented.
   // NSIG is 64, sigset_t is an array of unsigned long.
   // Signum is 1-indexed.
   int word = (signum - 1) / (sizeof(unsigned long) * 8);
@@ -27,8 +28,8 @@ static bool is_signal_set(const sigset_t *set, int signum) {
   return (set->__signals[word] & (1UL << bit)) != 0;
 }
 
-volatile int jumped = 0;
 TEST(LlvmLibcUcontextTest, BasicStubTest) {
+  static volatile int jumped = 0;
   ucontext_t ctx;
   ASSERT_EQ(getcontext(&ctx), 0);
   if (!jumped) {

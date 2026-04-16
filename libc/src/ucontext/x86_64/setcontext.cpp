@@ -12,6 +12,7 @@
 #include "src/__support/macros/config.h"
 
 #include "hdr/types/size_t.h"
+#include "include/llvm-libc-macros/signal-macros.h"
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -27,7 +28,7 @@ __attribute__((naked)) LLVM_LIBC_FUNCTION(int, setcontext,
       leaq %c[sigmask](%%rdi), %%rsi # set = &ucp->uc_sigmask
       xorq %%rdx, %%rdx # oldset = NULL
       movq $%c[sigset_size], %%r10 # sigsetsize = sizeof(sigset_t)
-      movq $2, %%rdi # how = SIG_SETMASK
+      movq $%c[sig_setmask], %%rdi # how = SIG_SETMASK
       movq $%c[syscall_num], %%rax
       syscall
       popq %%rdi # Restore ucp
@@ -50,19 +51,18 @@ __attribute__((naked)) LLVM_LIBC_FUNCTION(int, setcontext,
       mov %c[rax](%%rdi), %%rax
       mov %c[rcx](%%rdi), %%rcx
 
-      # Restore stack pointer and instruction pointer
+      # Restore stack pointer
       mov %c[rsp](%%rdi), %%rsp
-      # Note: r11 is a scratch register in the x86_64 ABI and is not preserved.
-      # It is used here as a temporary for rip.
-      mov %c[rip](%%rdi), %%r11
+      # Push saved RIP onto the new stack to use ret later
+      pushq %c[rip](%%rdi)
       
       # Restore RSI and RDI last
       mov %c[rsi](%%rdi), %%rsi
       mov %c[rdi](%%rdi), %%rdi
 
-      jmpq *%%r11 # Jump to the saved instruction pointer
+      retq
       )" ::[sigset_size] "i"(sizeof(sigset_t)),
-      [syscall_num] "i"(SYS_rt_sigprocmask),
+      [syscall_num] "i"(SYS_rt_sigprocmask), [sig_setmask] "i"(SIG_SETMASK),
       [r8] "i"(__builtin_offsetof(ucontext_t, uc_mcontext.gregs[REG_R8])),
       [r9] "i"(__builtin_offsetof(ucontext_t, uc_mcontext.gregs[REG_R9])),
       [r10] "i"(__builtin_offsetof(ucontext_t, uc_mcontext.gregs[REG_R10])),

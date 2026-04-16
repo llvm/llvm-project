@@ -12,6 +12,7 @@
 #include "src/__support/macros/config.h"
 
 #include "hdr/types/size_t.h"
+#include "include/llvm-libc-macros/signal-macros.h"
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -59,7 +60,7 @@ __attribute__((naked)) LLVM_LIBC_FUNCTION(int, getcontext, (ucontext_t * ucp)) {
       # rt_sigprocmask(SIG_BLOCK, NULL, &ucp->uc_sigmask, sizeof(sigset_t))
       leaq %c[sigmask](%%rdi), %%rdx # oldset = &ucp->uc_sigmask
       xorq %%rsi, %%rsi # set = NULL
-      movq $0, %%rdi # SIG_BLOCK (captured mask in oldset)
+      movq $%c[sig_block], %%rdi # SIG_BLOCK (captured mask in oldset)
       movq $%c[sigset_size], %%r10
       movq $%c[syscall_num], %%rax
       syscall
@@ -70,7 +71,7 @@ __attribute__((naked)) LLVM_LIBC_FUNCTION(int, getcontext, (ucontext_t * ucp)) {
       retq
       )" ::[ret_size] "i"(sizeof(void *)),
       [sigset_size] "i"(sizeof(sigset_t)),
-      [syscall_num] "i"(SYS_rt_sigprocmask),
+      [syscall_num] "i"(SYS_rt_sigprocmask), [sig_block] "i"(SIG_BLOCK),
       [r8] "i"(__builtin_offsetof(ucontext_t, uc_mcontext.gregs[REG_R8])),
       [r9] "i"(__builtin_offsetof(ucontext_t, uc_mcontext.gregs[REG_R9])),
       [r10] "i"(__builtin_offsetof(ucontext_t, uc_mcontext.gregs[REG_R10])),
@@ -91,7 +92,7 @@ __attribute__((naked)) LLVM_LIBC_FUNCTION(int, getcontext, (ucontext_t * ucp)) {
       [fpregs_mem] "i"(__builtin_offsetof(ucontext_t, __fpregs_mem)),
       [fpregs_ptr] "i"(__builtin_offsetof(ucontext_t, uc_mcontext.fpregs)),
       [sigmask] "i"(__builtin_offsetof(ucontext_t, uc_sigmask))
-      : "memory", "rcx", "r11");
+      : "memory", "rcx", "r11", "rdi", "rsi", "rax", "r10");
 }
 
 } // namespace LIBC_NAMESPACE_DECL
