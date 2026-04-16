@@ -30,9 +30,11 @@ std::error_code errorFunc() {
 
 void warning() {
   std::remove(nullptr, nullptr, 1);
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
-  // CHECK-MESSAGES: [[@LINE-2]]:3: note: cast the expression to void to silence this warning
-  // CHECK-MESSAGES-NOCAST: [[@LINE-3]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
+  // CHECK-MESSAGES: warning: 'hicpp-ignored-remove-result' check is deprecated and will be removed in a future release; consider using 'bugprone-unused-return-value' instead [clang-tidy-config]
+  // CHECK-MESSAGES-NOCAST: warning: 'hicpp-ignored-remove-result' check is deprecated and will be removed in a future release; consider using 'bugprone-unused-return-value' instead [clang-tidy-config]
+  // CHECK-MESSAGES: [[@LINE-3]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
+  // CHECK-MESSAGES: [[@LINE-4]]:3: note: cast the expression to void to silence this warning
+  // CHECK-MESSAGES-NOCAST: [[@LINE-5]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 
   std::remove_if(nullptr, nullptr, nullptr);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors

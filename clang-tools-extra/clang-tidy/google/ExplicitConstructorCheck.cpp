@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExplicitConstructorCheck.h"
+#include "../utils/CheckUtils.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -15,6 +16,23 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::google {
+
+namespace {
+
+constexpr llvm::StringLiteral DeprecatedCheckName =
+    "hicpp-explicit-conversions";
+constexpr llvm::StringLiteral CanonicalCheckName =
+    "google-explicit-constructor";
+
+} // namespace
+
+ExplicitConstructorCheck::ExplicitConstructorCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context) {
+  if (Name == DeprecatedCheckName)
+    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
+                                    CanonicalCheckName);
+}
 
 void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

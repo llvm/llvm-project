@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BracesAroundStatementsCheck.h"
+#include "../utils/CheckUtils.h"
 #include "../utils/BracesAroundStatement.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
@@ -16,6 +17,15 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
+
+namespace {
+
+constexpr llvm::StringLiteral DeprecatedCheckName =
+    "hicpp-braces-around-statements";
+constexpr llvm::StringLiteral CanonicalCheckName =
+    "readability-braces-around-statements";
+
+} // namespace
 
 static tok::TokenKind getTokenKind(SourceLocation Loc, const SourceManager &SM,
                                    const LangOptions &LangOpts) {
@@ -52,7 +62,11 @@ BracesAroundStatementsCheck::BracesAroundStatementsCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       // Always add braces by default.
-      ShortStatementLines(Options.get("ShortStatementLines", 0U)) {}
+      ShortStatementLines(Options.get("ShortStatementLines", 0U)) {
+  if (Name == DeprecatedCheckName)
+    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
+                                    CanonicalCheckName);
+}
 
 void BracesAroundStatementsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

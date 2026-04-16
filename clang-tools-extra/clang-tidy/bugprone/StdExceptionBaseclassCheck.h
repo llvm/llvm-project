@@ -20,8 +20,7 @@ namespace clang::tidy::bugprone {
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/std-exception-baseclass.html
 class StdExceptionBaseclassCheck : public ClangTidyCheck {
 public:
-  StdExceptionBaseclassCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  StdExceptionBaseclassCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }

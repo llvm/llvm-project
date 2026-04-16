@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeprecatedHeadersCheck.h"
+#include "../utils/CheckUtils.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -20,6 +21,9 @@ using IncludeMarker =
     clang::tidy::modernize::DeprecatedHeadersCheck::IncludeMarker;
 namespace clang::tidy::modernize {
 namespace {
+
+constexpr llvm::StringLiteral DeprecatedCheckName = "hicpp-deprecated-headers";
+constexpr llvm::StringLiteral CanonicalCheckName = "modernize-deprecated-headers";
 
 class IncludeModernizePPCallbacks : public PPCallbacks {
 public:
@@ -77,7 +81,11 @@ public:
 DeprecatedHeadersCheck::DeprecatedHeadersCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CheckHeaderFile(Options.get("CheckHeaderFile", false)) {}
+      CheckHeaderFile(Options.get("CheckHeaderFile", false)) {
+  if (Name == DeprecatedCheckName)
+    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
+                                    CanonicalCheckName);
+}
 
 void DeprecatedHeadersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckHeaderFile", CheckHeaderFile);
