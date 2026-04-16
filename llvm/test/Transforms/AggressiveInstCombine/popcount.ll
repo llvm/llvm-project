@@ -1199,6 +1199,8 @@ define i56 @popcnt1_negative_i56(i56 noundef %uWord) {
   %shr19 = lshr i56 %add17, 32
   %add20 = add i56 %shr19, %and18
   ret i56 %add20
+}
+
 define i32 @popcnt2_32(i32 noundef %0)  {
 ; CHECK-LABEL: define i32 @popcnt2_32(
 ; CHECK-SAME: i32 noundef [[TMP0:%.*]])  {

@@ -483,6 +483,7 @@ static bool tryToRecognizePopCount1(Instruction &I) {
 // x = x + (x >> 16);
 // return x & 0x0000003F;
 // }
+
 static bool tryToRecognizePopCount2n3(Instruction &I) {
   if (I.getOpcode() != Instruction::And)
     return false;
@@ -492,6 +493,7 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
     return false;
 
   unsigned Len = Ty->getScalarSizeInBits();
+
   if (Len > 64 || Len <= 8 || Len % 8 != 0)
     return false;
 
