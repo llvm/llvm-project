@@ -9,6 +9,7 @@
 #include "mod-file.h"
 #include "resolve-names.h"
 #include "flang/Common/restorer.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parsing.h"
@@ -608,6 +609,10 @@ void ModFileWriter::PutDerivedType(
     PutDECStructure(typeSymbol, scope);
     return;
   }
+  if (details.isEnumerationType()) {
+    PutEnumerationType(typeSymbol);
+    return;
+  }
   PutAttrs(decls_ << "type", typeSymbol.attrs());
   if (const DerivedTypeSpec * extends{typeSymbol.GetParentTypeSpec()}) {
     decls_ << ",extends(" << extends->name() << ')';
@@ -678,6 +683,82 @@ void ModFileWriter::PutDECStructure(
   decls_ << '\n';
   PutComponents(typeSymbol);
   decls_ << "end structure\n";
+}
+
+void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
+  auto &details{typeSymbol.get<DerivedTypeDetails>()};
+  PutAttrs(decls_ << "enumeration type", typeSymbol.attrs());
+  decls_ << "::" << typeSymbol.name() << '\n';
+  // Collect enumerator PARAMETER symbols from the enclosing scope that have
+  // this enumeration type, sorted by ordinal value. Only the first
+  // enumeratorCount PARAMETERs (by ordinal) are true enumerators created by
+  // the ENUMERATOR statement; any additional PARAMETERs of this type are
+  // user-declared and should not be included here.
+  struct EnumeratorInfo {
+    SourceName name;
+    const Symbol *sym{nullptr};
+    int ordinal{0};
+  };
+  // GetSymbols() returns symbols in source-position order. The real
+  // enumerators are created inside the ENUMERATION TYPE block and appear
+  // before any user-declared PARAMETERs of the same type. For each ordinal
+  // 1..N, take only the first PARAMETER seen (by source order) — that is
+  // the real enumerator.
+  int count{details.enumeratorCount()};
+  std::vector<EnumeratorInfo> enumerators(count); // indexed by ordinal-1
+  std::vector<bool> filled(count, false);
+  for (const auto &ref : typeSymbol.owner().GetSymbols()) {
+    if (ref->attrs().test(Attr::PARAMETER)) {
+      if (const auto *obj{ref->detailsIf<ObjectEntityDetails>()}) {
+        if (obj->type() &&
+            obj->type()->category() == DeclTypeSpec::TypeDerived &&
+            &obj->type()->derivedTypeSpec().typeSymbol() == &typeSymbol) {
+          int ordinal{0};
+          if (const auto &init{obj->init()}) {
+            // The init may be a bare StructureConstructor or a
+            // Constant<SomeDerived> (after folding). Use
+            // GetScalarConstantValue which handles both.
+            if (auto ctor{
+                    evaluate::GetScalarConstantValue<evaluate::SomeDerived>(
+                        *init)}) {
+              for (const auto &[compRef, val] : *ctor) {
+                if (auto intVal{evaluate::ToInt64(val.value())}) {
+                  ordinal = static_cast<int>(*intVal);
+                }
+              }
+            }
+          }
+          if (ordinal >= 1 && ordinal <= count && !filled[ordinal - 1]) {
+            enumerators[ordinal - 1] = {ref->name(), &*ref, ordinal};
+            filled[ordinal - 1] = true;
+            emittedEnumerators_.insert(*ref);
+          }
+        }
+      }
+    }
+  }
+  if (!enumerators.empty()) {
+    decls_ << "enumerator::";
+    bool first{true};
+    for (const auto &e : enumerators) {
+      if (!first) {
+        decls_ << ',';
+      }
+      decls_ << e.name;
+      first = false;
+    }
+    decls_ << '\n';
+  }
+  decls_ << "end enumeration type\n";
+  // Emit access overrides for individual enumerators, matching the
+  // pattern used elsewhere in mod file output (e.g., namelists, generics).
+  if (!isSubmodule_) {
+    for (const auto &e : enumerators) {
+      if (e.sym->attrs().test(Attr::PRIVATE)) {
+        decls_ << "private::" << e.name << '\n';
+      }
+    }
+  }
 }
 
 // Attributes that may be in a subprogram prefix
@@ -1021,6 +1102,11 @@ void ModFileWriter::PutObjectEntity(
       if (emittedDECFields_.find(symbol) != emittedDECFields_.end()) {
         return; // symbol was emitted on STRUCTURE statement
       }
+    }
+    // Enumerator PARAMETERs are emitted as part of the ENUMERATION TYPE
+    // block — suppress standalone emission to avoid duplicates on USE.
+    if (emittedEnumerators_.find(symbol) != emittedEnumerators_.end()) {
+      return;
     }
   }
   PutEntity(

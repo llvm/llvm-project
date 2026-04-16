@@ -53,6 +53,7 @@ enum Stat {
   StatMoveAllocSameAllocatable =
       FORTRAN_RUNTIME_STAT_MOVE_ALLOC_SAME_ALLOCATABLE,
   StatBadPointerDeallocation = FORTRAN_RUNTIME_STAT_BAD_POINTER_DEALLOCATION,
+  StatEnumBoundary = FORTRAN_RUNTIME_STAT_ENUM_BOUNDARY,
 
   // Dummy status for work queue continuation, declared here to perhaps
   // avoid collisions

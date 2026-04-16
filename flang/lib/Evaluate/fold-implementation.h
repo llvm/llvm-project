@@ -1290,7 +1290,80 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
       return Folder<T>{context}.UNPACK(std::move(funcRef));
     }
     // TODO: extends_type_of, same_type_as
-    if constexpr (!std::is_same_v<T, SomeDerived>) {
+    if constexpr (std::is_same_v<T, SomeDerived>) {
+      // Fold enumeration type intrinsics: HUGE(enum), NEXT(enum),
+      // PREVIOUS(enum)
+      if (name == "huge") {
+        // HUGE was eagerly folded — the first arg is the constant result
+        if (args.size() >= 1 && args[0]) {
+          if (auto *expr{UnwrapExpr<Expr<SomeDerived>>(args[0])}) {
+            return std::move(*expr);
+          }
+        }
+      } else if (name == "next" || name == "previous") {
+        // Don't fold if STAT is present — STAT assignment is a side effect
+        if (args.size() >= 2 && args[1]) {
+          return Expr<T>{std::move(funcRef)};
+        }
+        if (args.size() >= 1 && args[0]) {
+          if (auto *expr{UnwrapExpr<Expr<SomeDerived>>(args[0])}) {
+            if (auto type{expr->GetType()}) {
+              if (const auto *derived{GetDerivedTypeSpec(*type)}) {
+                if (derived->IsEnumerationType()) {
+                  if (const auto *scope{derived->GetScope()}) {
+                    auto ordIter{
+                        scope->find(semantics::SourceName{"__ordinal", 9})};
+                    if (ordIter != scope->end()) {
+                      const semantics::Symbol &ordSym{*ordIter->second};
+                      int count{derived->typeSymbol()
+                              .GetUltimate()
+                              .get<semantics::DerivedTypeDetails>()
+                              .enumeratorCount()};
+                      // Extract ordinal from constant value
+                      if (auto *constant{
+                              UnwrapConstantValue<SomeDerived>(*expr)}) {
+                        if (auto sc{constant->GetScalarValue()}) {
+                          if (auto ordExpr{sc->Find(ordSym)}) {
+                            if (auto ordVal{ToInt64(*ordExpr)}) {
+                              bool isNext{name == "next"};
+                              bool atBoundary{
+                                  isNext ? *ordVal >= count : *ordVal <= 1};
+                              if (atBoundary) {
+                                // At boundary without STAT — error
+                                // termination at runtime. Don't fold;
+                                // emit warning.
+                                if (isNext) {
+                                  context.messages().Say(
+                                      "NEXT() of last enumerator without STAT= causes error termination"_warn_en_US);
+                                } else {
+                                  context.messages().Say(
+                                      "PREVIOUS() of first enumerator without STAT= causes error termination"_warn_en_US);
+                                }
+                                return Expr<T>{std::move(funcRef)};
+                              }
+                              int newOrd{isNext
+                                      ? static_cast<int>(*ordVal + 1)
+                                      : static_cast<int>(*ordVal - 1)};
+                              StructureConstructor ctor{*derived};
+                              ctor.Add(ordSym,
+                                  Expr<SomeType>{Expr<SomeInteger>{
+                                      Expr<Type<TypeCategory::Integer, 4>>{
+                                          newOrd}}});
+                              return Expr<SomeDerived>{
+                                  Constant<SomeDerived>{std::move(ctor)}};
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } else {
       return FoldIntrinsicFunction(context, std::move(funcRef));
     }
   }
