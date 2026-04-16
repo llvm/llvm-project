@@ -78,6 +78,15 @@ func.func @test_gather_bool_i32(%arg0: tensor<13x21x3xi1>, %arg1: tensor<13x26xi
 
 // -----
 
+func.func @test_row_gather_block_scaled_i8_i32(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x26xi32>) -> tensor<13x52x3xi8> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.row_gather_block_scaled' op illegal: requires specification version compatible with 1.1 (got 1.0) OR requires specification version compatible with 1.1 (got 1.0) to be specified in the target environment}}
+  %0 = tosa.row_gather_block_scaled %arg0, %arg1, %row_count {block_size = #tosa.block_size<BLOCK_SIZE_1>} : (tensor<13x21x3xi8>, tensor<13x26xi32>, tensor<1xi32>) -> (tensor<13x52x3xi8>)
+  return %0 : tensor<13x52x3xi8>
+}
+
+// -----
+
 func.func @test_scatter_bool_i64(%arg0: tensor<13x52x3xi1>, %arg1: tensor<13x26xi64>, %arg2: tensor<13x26x3xi1>) -> tensor<13x52x3xi1> {
   // expected-error@+1 {{'tosa.scatter' op illegal: requires specification version compatible with 1.1 (got 1.0) and requires any of [int64] profiles/extensions to be specified in the target environment}}
   %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x52x3xi1>, tensor<13x26xi64>, tensor<13x26x3xi1>) -> tensor<13x52x3xi1>

@@ -114,6 +114,17 @@ static LogicalResult checkConstantOperandMatMul(Operation *op,
   return success();
 }
 
+static LogicalResult
+checkConstantOperandRowGatherBlockScaled(Operation *op, const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) &&
+      isa<tosa::RowGatherBlockScaledOp>(op)) {
+    auto rowGatherOp = cast<tosa::RowGatherBlockScaledOp>(op);
+    const unsigned rowCountIndex = rowGatherOp.getValues().size() + 1;
+    return checkConstantOperands(op, {rowCountIndex});
+  }
+  return success();
+}
+
 static LogicalResult checkConstantOperandAvgPool2d(Operation *op,
                                                    const TargetEnv &env) {
   if (!env.allows(Extension::dynamic) && isa<tosa::AvgPool2dOp>(op)) {
@@ -199,6 +210,7 @@ private:
     constCheckers.emplace_back(
         checkConstantOperandConvOps<tosa::TransposeConv2DOp>);
     constCheckers.emplace_back(checkConstantOperandMatMul);
+    constCheckers.emplace_back(checkConstantOperandRowGatherBlockScaled);
     constCheckers.emplace_back(checkConstantOperandAvgPool2d);
     constCheckers.emplace_back(checkConstantOperandAvgPool2dAdaptive);
     constCheckers.emplace_back(checkConstantOperandNegate);
