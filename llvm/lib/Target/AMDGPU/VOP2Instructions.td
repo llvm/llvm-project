@@ -1478,10 +1478,10 @@ def : VOPBinOpClampPat<usubsat, V_SUB_U16_e64, i16>;
 }
 
 let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
-  let SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1 in {
+  let SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1 in {
     defm V_ADD_F64_pseudo : VOP2Inst_VOPD <"v_add_f64_pseudo", VOP_F64_F64_F64, 0x21, "v_add_f64", any_fadd>;
     defm V_MUL_F64_pseudo : VOP2Inst_VOPD <"v_mul_f64_pseudo", VOP_F64_F64_F64, 0x22, "v_mul_f64", fmul>;
-  } // End SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1
+  } // End SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1
   let SchedRW = [Write64Bit] in {
     defm V_LSHLREV_B64_pseudo : VOP2Inst <"v_lshlrev_b64_pseudo", VOP_I64_I32_I64, clshl_rev_64>;
   } // End SchedRW = [Write64Bit]

@@ -1352,8 +1352,14 @@ LogicalResult GlobalPrefetchOp::verify() {
     return this->emitOpError(
         "the number of indices must match the source shape size");
 
-  const TemporalHint temporalHint = getTemporalHint();
+  const LoadTemporalHint temporalHint = getTemporalHint();
+  const Scope scope = getCacheScope();
   const bool isSpeculative = getSpeculative();
+
+  // See GFX1250 SPG for a detail explanation
+  if (isSpeculative && scope == Scope::WGP)
+    return this->emitOpError(
+        "does not support speculative prefetch in WGP scope");
 
   // Note that temporal hints are shared between load, store,
   // prefetch, etc. instructions. However, some instructions
@@ -1361,12 +1367,13 @@ LogicalResult GlobalPrefetchOp::verify() {
   // documentation. In case of global prefetch, non-temporal (NT)
   // and last-use (LU) hints are not used. The extra bits of encoding
   // are used to encode speculative or non-speculative instruction behavior
-  if (llvm::is_contained({TemporalHint::NT, TemporalHint::LU}, temporalHint))
+  if (llvm::is_contained({LoadTemporalHint::NT, LoadTemporalHint::LU},
+                         temporalHint))
     return this->emitOpError("does not support NT and LU modes");
 
-  if (llvm::is_contained(
-          {TemporalHint::NT_RT, TemporalHint::RT_NT, TemporalHint::NT_HT},
-          temporalHint) &&
+  if (llvm::is_contained({LoadTemporalHint::NT_RT, LoadTemporalHint::RT_NT,
+                          LoadTemporalHint::NT_HT},
+                         temporalHint) &&
       !isSpeculative) {
     return this->emitOpError("operates only in the speculative mode");
   }

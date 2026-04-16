@@ -433,7 +433,8 @@ void CSE::runOnOperation() {
   if (!changed)
     return markAllAnalysesPreserved();
 
-  // We currently don't remove region operations, so mark dominance as
-  // preserved.
+  // We only delete redundant operations without moving any operation to a
+  // different block, so the dominance tree structure remains unchanged and
+  // DominanceInfo/PostDominanceInfo can be safely preserved.
   markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
 }

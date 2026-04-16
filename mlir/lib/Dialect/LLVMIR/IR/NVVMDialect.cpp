@@ -302,6 +302,82 @@ LogicalResult MBarrierArriveDropExpectTxOp::verify() {
                                     getRes());
 }
 
+//===----------------------------------------------------------------------===//
+// inferReturnTypes for mbarrier arrive-like ops
+//===----------------------------------------------------------------------===//
+
+/// Only shared_cluster (ptr<7>) produces zero results; all other address
+/// spaces (including generic) return i64.
+static LogicalResult
+inferMBarrierArriveResultTypes(MLIRContext *context, Value addr,
+                               SmallVectorImpl<Type> &inferredReturnTypes) {
+  if (!isPtrInSharedClusterSpace(addr))
+    inferredReturnTypes.push_back(IntegerType::get(context, 64));
+  return success();
+}
+
+LogicalResult
+MBarrierArriveOp::inferReturnTypes(MLIRContext *context,
+                                   std::optional<Location> location,
+                                   MBarrierArriveOp::Adaptor adaptor,
+                                   SmallVectorImpl<Type> &inferredReturnTypes) {
+  return inferMBarrierArriveResultTypes(context, adaptor.getAddr(),
+                                        inferredReturnTypes);
+}
+
+LogicalResult MBarrierArriveDropOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    MBarrierArriveDropOp::Adaptor adaptor,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  return inferMBarrierArriveResultTypes(context, adaptor.getAddr(),
+                                        inferredReturnTypes);
+}
+
+LogicalResult MBarrierArriveExpectTxOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    MBarrierArriveExpectTxOp::Adaptor adaptor,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  // Predicate forces no return value (inline PTX path).
+  // Note: predicate + shared_cluster is rejected by the verifier separately.
+  if (adaptor.getPredicate())
+    return success();
+  return inferMBarrierArriveResultTypes(context, adaptor.getAddr(),
+                                        inferredReturnTypes);
+}
+
+LogicalResult MBarrierArriveDropExpectTxOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    MBarrierArriveDropExpectTxOp::Adaptor adaptor,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  return inferMBarrierArriveResultTypes(context, adaptor.getAddr(),
+                                        inferredReturnTypes);
+}
+
+/// For ops with optional results, allow the user to omit the result even when
+/// inference would produce one. This preserves backward compatibility: the
+/// result can be silently discarded (e.g., for fire-and-forget arrive ops).
+static bool isCompatibleReturnTypesOptionalResult(TypeRange inferred,
+                                                  TypeRange actual) {
+  if (actual.empty())
+    return true;
+  return inferred == actual;
+}
+
+bool MBarrierArriveOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+  return isCompatibleReturnTypesOptionalResult(l, r);
+}
+bool MBarrierArriveDropOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+  return isCompatibleReturnTypesOptionalResult(l, r);
+}
+bool MBarrierArriveExpectTxOp::isCompatibleReturnTypes(TypeRange l,
+                                                       TypeRange r) {
+  return isCompatibleReturnTypesOptionalResult(l, r);
+}
+bool MBarrierArriveDropExpectTxOp::isCompatibleReturnTypes(TypeRange l,
+                                                           TypeRange r) {
+  return isCompatibleReturnTypesOptionalResult(l, r);
+}
+
 LogicalResult MBarrierExpectTxOp::verify() {
   return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
 }
@@ -2271,6 +2347,19 @@ LogicalResult ShflOp::verify() {
   return success();
 }
 
+LogicalResult
+ShflOp::inferReturnTypes(MLIRContext *context, std::optional<Location> location,
+                         ShflOp::Adaptor adaptor,
+                         SmallVectorImpl<Type> &inferredReturnTypes) {
+  Type valType = adaptor.getVal().getType();
+  if (adaptor.getReturnValueAndIsValid())
+    inferredReturnTypes.push_back(LLVM::LLVMStructType::getLiteral(
+        context, {valType, IntegerType::get(context, 1)}));
+  else
+    inferredReturnTypes.push_back(valType);
+  return success();
+}
+
 std::pair<mlir::Type, unsigned> NVVM::inferMMAType(NVVM::MMATypes type,
                                                    NVVM::MMAFrag frag, int nRow,
                                                    int nCol,
@@ -2474,6 +2563,23 @@ LogicalResult NVVM::LdMatrixOp::verify() {
              << numElements << " elements of type i32";
   }
 
+  return success();
+}
+
+LogicalResult LdMatrixOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    LdMatrixOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
+  uint32_t num = adaptor.getNum();
+  uint32_t m = adaptor.getShape().getM();
+  uint32_t n = adaptor.getShape().getN();
+  uint32_t numElements = (m == 16 && n == 16) ? num * 2 : num;
+
+  Type i32 = IntegerType::get(context, 32);
+  if (numElements == 1)
+    inferredReturnTypes.push_back(i32);
+  else
+    inferredReturnTypes.push_back(LLVM::LLVMStructType::getLiteral(
+        context, SmallVector<Type>(numElements, i32)));
   return success();
 }
 
@@ -2825,6 +2931,18 @@ LogicalResult NVVM::BarrierOp::verify() {
   return success();
 }
 
+LogicalResult BarrierOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    BarrierOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
+  if (adaptor.getReductionOp())
+    inferredReturnTypes.push_back(IntegerType::get(context, 32));
+  return success();
+}
+
+bool BarrierOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+  return isCompatibleReturnTypesOptionalResult(l, r);
+}
+
 LogicalResult NVVM::Tcgen05CpOp::verify() {
   auto mc = getMulticast();
 
@@ -2867,6 +2985,18 @@ LogicalResult NVVM::MatchSyncOp::verify() {
   return success();
 }
 
+LogicalResult MatchSyncOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    MatchSyncOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
+  if (adaptor.getKind() == NVVM::MatchSyncKind::all)
+    inferredReturnTypes.push_back(LLVM::LLVMStructType::getLiteral(
+        context,
+        {IntegerType::get(context, 32), IntegerType::get(context, 1)}));
+  else
+    inferredReturnTypes.push_back(IntegerType::get(context, 32));
+  return success();
+}
+
 LogicalResult NVVM::VoteSyncOp::verify() {
   if (getKind() == NVVM::VoteSyncKind::ballot) {
     if (!getType().isInteger(32)) {
@@ -2877,6 +3007,14 @@ LogicalResult NVVM::VoteSyncOp::verify() {
       return emitOpError("vote.sync 'any', 'all' and 'uni' returns an i1");
     }
   }
+  return success();
+}
+
+LogicalResult VoteSyncOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    VoteSyncOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
+  unsigned width = adaptor.getKind() == NVVM::VoteSyncKind::ballot ? 32 : 1;
+  inferredReturnTypes.push_back(IntegerType::get(context, width));
   return success();
 }
 
@@ -2970,6 +3108,18 @@ LogicalResult NVVM::ClusterLaunchControlQueryCancelOp::verify() {
     }
     break;
   }
+  return success();
+}
+
+LogicalResult ClusterLaunchControlQueryCancelOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    ClusterLaunchControlQueryCancelOp::Adaptor adaptor,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  unsigned width =
+      adaptor.getQueryType() == NVVM::ClusterLaunchControlQueryType::IS_CANCELED
+          ? 1
+          : 32;
+  inferredReturnTypes.push_back(IntegerType::get(context, width));
   return success();
 }
 
@@ -6053,9 +6203,9 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "NVVM target attribute must be attached to a GPU module");
   }
 
-  const NVVMCheckSMVersion targetSMVersion =
-      NVVMCheckSMVersion::getTargetSMVersionFromStr(getChip());
-  if (!targetSMVersion.isMinimumSMVersion()) {
+  const unsigned targetFullSmVersion =
+      NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
+  if (!NVVMCheckSMVersion::isMinimumSMVersion(targetFullSmVersion)) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
   }
@@ -6065,7 +6215,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
             if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
               const NVVMCheckSMVersion requirement =
                   reqOp.getRequiredMinSMVersion();
-              if (!requirement.isCompatibleWith(targetSMVersion)) {
+              if (!requirement.isCompatibleWith(targetFullSmVersion)) {
                 op->emitOpError() << "is not supported on " << getChip();
                 return WalkResult::interrupt();
               }

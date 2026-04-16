@@ -1130,6 +1130,40 @@ template semantics::UnorderedSymbolSet CollectCudaSymbols(
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
 
+std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
+  SymbolVector symbols{GetSymbolVector(expr)};
+  std::reverse(symbols.begin(), symbols.end());
+
+  std::vector<SymbolVector> symbolVectors;
+
+  SymbolVector crtSymbols;
+  for (const Symbol &sym : symbols) {
+    bool isComponent{sym.owner().IsDerivedType()};
+    if (isComponent) {
+      crtSymbols.push_back(sym);
+    } else {
+      crtSymbols.push_back(sym);
+      symbolVectors.push_back(crtSymbols);
+      crtSymbols.clear();
+    }
+  }
+  return symbolVectors;
+}
+
+int GetNbOfUniqueCUDADeviceSymbols(
+    const std::vector<SymbolVector> &symbolVectors) {
+  semantics::UnorderedSymbolSet symbols;
+  for (const auto &symbolVector : symbolVectors) {
+    for (const auto &sym : symbolVector) {
+      if (IsCUDADeviceSymbol(*sym)) {
+        symbols.insert(sym);
+        break;
+      }
+    }
+  }
+  return symbols.size();
+}
+
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   semantics::UnorderedSymbolSet hostSymbols;
   semantics::UnorderedSymbolSet deviceSymbols;
@@ -1194,6 +1228,9 @@ struct HasVectorSubscriptHelper
   }
   bool operator()(const ProcedureRef &) const {
     return false; // don't descend into function call arguments
+  }
+  template <typename T> bool operator()(const ConditionalExpr<T> &) const {
+    return false; // not a variable designator
   }
 };
 
@@ -1736,6 +1773,14 @@ struct ArgumentExtractor
     return {operation::OperationCode(x), {AsSomeExpr(x)}};
   }
 
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    // Return the condition and then/else branches as immediate operands;
+    // nested conditionals are not permitted in an OpenMP atomic context.
+    return {Operator::Conditional,
+        {AsSomeExpr(x.condition()), AsSomeExpr(x.thenValue()),
+            AsSomeExpr(x.elseValue())}};
+  }
+
   template <typename... Rs>
   Result Combine(Result &&result, Rs &&...results) const {
     // There shouldn't be any combining needed, since we're stopping the
@@ -1773,6 +1818,8 @@ std::string operation::ToString(operation::Operator op) {
     return "ASSOCIATED";
   case Operator::Call:
     return "function-call";
+  case Operator::Conditional:
+    return "conditional";
   case Operator::Constant:
     return "constant";
   case Operator::Convert:
@@ -1899,6 +1946,13 @@ struct ConvertCollector
     } else {
       return {AsSomeExpr(x.derived()), {}};
     }
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    // ConvertCollector tracks the typed-value conversion chain (for OMP ATOMIC
+    // validation); the condition is a LOGICAL(4) selector, not a value output,
+    // so only the value branches are collected.
+    return Combine((*this)(x.thenValue()), (*this)(x.elseValue()));
   }
 
   template <typename... Rs>

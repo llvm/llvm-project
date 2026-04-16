@@ -1498,9 +1498,11 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   }
 
   // These are never l-values; just use the aggregate emission code.
+  case CK_ToUnion:
+    return emitAggExprToLValue(e);
+
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
-  case CK_ToUnion:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
   case CK_ConstructorConversion:
@@ -1514,6 +1516,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
 
     return {};
   }
+
   case CK_AddressSpaceConversion: {
     LValue lv = emitLValue(e->getSubExpr());
     QualType destTy = getContext().getPointerType(e->getType());
@@ -1558,9 +1561,21 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
       Address v = lv.getAddress();
       if (v.isValid()) {
         mlir::Type ty = convertTypeForMem(e->getType());
-        if (v.getElementType() != ty)
-          cgm.errorNYI(e->getSourceRange(),
-                       "emitCastLValue: NoOp needs bitcast");
+        if (v.getElementType() != ty) {
+          // We have only inspected/reproduced this with complete to incomplete
+          // array types, so we do an NYI for other cases, so we can make sure
+          // we're doing a conversion we want to be making.
+          auto fromTy = dyn_cast<cir::ArrayType>(v.getElementType());
+          auto toTy = dyn_cast<cir::ArrayType>(ty);
+          if (!fromTy || !toTy ||
+              fromTy.getElementType() != toTy.getElementType() ||
+              toTy.getSize() != 0)
+            cgm.errorNYI(e->getSourceRange(),
+                         "emitCastLValue NoOp not array-shrink case");
+
+          lv = makeAddrLValue(v.withElementType(builder, ty), e->getType(),
+                              lv.getBaseInfo());
+        }
       }
     }
     return lv;
@@ -1654,10 +1669,8 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
     return lv;
   }
 
-  if (isa<FunctionDecl>(nd)) {
-    cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: FunctionDecl");
-    return LValue();
-  }
+  if (const auto *fd = dyn_cast<FunctionDecl>(nd))
+    return emitFunctionDeclLValue(*this, e, fd);
 
   llvm_unreachable("Unhandled member declaration!");
 }
@@ -1712,8 +1725,16 @@ static Address createReferenceTemporary(CIRGenFunction &cgf,
         extDeclAlloca = extDeclAddrIter->second.getDefiningOp<cir::AllocaOp>();
     }
     mlir::OpBuilder::InsertPoint ip;
-    if (extDeclAlloca)
+    if (extDeclAlloca) {
       ip = {extDeclAlloca->getBlock(), extDeclAlloca->getIterator()};
+    } else if (cgf.isInConditionalBranch() &&
+               m->getStorageDuration() == SD_FullExpression) {
+      // Place in the function entry block so the alloca dominates both
+      // regions of any enclosing cir.cleanup.scope.  The default path
+      // would use curLexScope which may be a ternary branch.
+      ip = cgf.getBuilder().getBestAllocaInsertPoint(
+          cgf.getCurFunctionEntryBlock());
+    }
     return cgf.createMemTemp(ty, cgf.getLoc(m->getSourceRange()),
                              cgf.getCounterRefTmpAsString(), /*alloca=*/nullptr,
                              ip);
@@ -1897,10 +1918,9 @@ LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {
 LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
   RValue rv = emitCallExpr(e);
 
-  if (!rv.isScalar()) {
-    cgm.errorNYI(e->getSourceRange(), "emitCallExprLValue: non-scalar return");
-    return {};
-  }
+  if (!rv.isScalar())
+    return makeAddrLValue(rv.getAggregateAddress(), e->getType(),
+                          AlignmentSource::Decl);
 
   assert(e->getCallReturnType(getContext())->isReferenceType() &&
          "Can't have a scalar return unless the return type is a "

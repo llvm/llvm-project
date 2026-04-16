@@ -914,10 +914,24 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     if (ArgM->getOption().matches(options::OPT_M) ||
         ArgM->getOption().matches(options::OPT_MD))
       CmdArgs.push_back("-sys-header-deps");
-    if ((isa<PrecompileJobAction>(JA) &&
-         !Args.hasArg(options::OPT_fno_module_file_deps)) ||
-        Args.hasArg(options::OPT_fmodule_file_deps))
-      CmdArgs.push_back("-module-file-deps");
+
+    // Determine module file deps mode.
+    StringRef ModuleFileDepsVal;
+    if (Arg *A = Args.getLastArg(options::OPT_fmodule_file_deps_EQ,
+                                 options::OPT_fmodule_file_deps,
+                                 options::OPT_fno_module_file_deps)) {
+      if (A->getOption().matches(options::OPT_fmodule_file_deps_EQ))
+        ModuleFileDepsVal = A->getValue();
+      else if (A->getOption().matches(options::OPT_fmodule_file_deps))
+        ModuleFileDepsVal = "all";
+      else
+        ModuleFileDepsVal = "none";
+    } else if (isa<PrecompileJobAction>(JA)) {
+      ModuleFileDepsVal = "all";
+    }
+    if (!ModuleFileDepsVal.empty() && ModuleFileDepsVal != "none")
+      CmdArgs.push_back(
+          Args.MakeArgString("-module-file-deps=" + ModuleFileDepsVal));
   }
 
   if (Args.hasArg(options::OPT_MG)) {
@@ -5888,7 +5902,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_fno_zero_initialized_in_bss);
 
   bool OFastEnabled = isOptimizationLevelFast(Args);
-  if (OFastEnabled)
+  if (Args.hasArg(options::OPT_Ofast))
     D.Diag(diag::warn_drv_deprecated_arg_ofast);
   // If -Ofast is the optimization level, then -fstrict-aliasing should be
   // enabled.  This alias option is being used to simplify the hasFlag logic.
@@ -7584,6 +7598,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Unwind v2 (epilog) information for x64 Windows.
   Args.AddLastArg(CmdArgs, options::OPT_winx64_eh_unwindv2);
 
+  // Control Flow Guard mechanism for Windows.
+  Args.AddLastArg(CmdArgs, options::OPT_win_cfg_mechanism);
+
   // C++ "sane" operator new.
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_sane_operator_new,
                      options::OPT_fno_assume_sane_operator_new);
@@ -8724,6 +8741,12 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   else if (HasCFGuardNoChecks)
     CmdArgs.push_back("-cfguard-no-checks");
 
+  // Control Flow Guard mechanism for Windows.
+  if (Args.hasArg(options::OPT__SLASH_d2guardcfgdispatch_))
+    CmdArgs.push_back("-fwin-cfg-mechanism=check");
+  else if (Args.hasArg(options::OPT__SLASH_d2guardcfgdispatch))
+    CmdArgs.push_back("-fwin-cfg-mechanism=dispatch");
+
   for (const auto &FuncOverride :
        Args.getAllArgValues(options::OPT__SLASH_funcoverride)) {
     CmdArgs.push_back(Args.MakeArgString(
@@ -9377,8 +9400,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // compilation job.
   const llvm::DenseSet<unsigned> CompilerOptions{
       OPT_v,
-      OPT_cuda_path_EQ,
-      OPT_rocm_path_EQ,
       OPT_hip_path_EQ,
       OPT_O_Group,
       OPT_g_Group,
@@ -9535,9 +9556,16 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // also `ld.lld`.
   if (Args.hasArg(options::OPT_v) && JA.getType() != types::TY_HIP_FATBIN)
     CmdArgs.push_back("--wrapper-verbose");
-  if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ)) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine("--cuda-path=") + A->getValue()));
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--device-compiler=--cuda-path=") + A->getValue()));
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_rocm_path_EQ)) {
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--device-compiler=--rocm-path=") + A->getValue()));
+  }
 
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);

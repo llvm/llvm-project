@@ -1324,6 +1324,25 @@ public:
   /// Returns true if any host thread is currently inside a provider.
   bool IsAnyProviderActive();
 
+  /// Get the ordered chain of provider descriptors and their frame list IDs.
+  ///
+  /// Each element is a pair of:
+  ///   - \b ScriptedFrameProviderDescriptor: metadata for the provider
+  ///     (class name, description, priority, thread specs).
+  ///   - \b frame_list_id_t: the sequential frame list identifier assigned
+  ///     to that provider in the chain (1 for the first provider, 2 for the
+  ///     second, etc.). ID 0 is reserved for the base unwinder and is never
+  ///     present in this vector.
+  ///
+  /// The vector is ordered by provider chain position (registration order
+  /// adjusted by priority). It persists across \c ClearStackFrames() so that
+  /// provider IDs remain stable for the lifetime of the thread.
+  const std::vector<
+      std::pair<ScriptedFrameProviderDescriptor, lldb::frame_list_id_t>> &
+  GetProviderChainIds() const {
+    return m_provider_chain_ids;
+  }
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
@@ -1457,10 +1476,6 @@ protected:
   /// Map from frame list identifier to frame list weak pointer.
   mutable llvm::DenseMap<lldb::frame_list_id_t, lldb::StackFrameListWP>
       m_frame_lists_by_id;
-
-  /// Counter for assigning unique provider IDs. Starts at 1 since 0 is
-  /// reserved for normal unwinder frames. Persists across ClearStackFrames.
-  lldb::frame_list_id_t m_next_provider_id = 1;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info

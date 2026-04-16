@@ -38,9 +38,9 @@ define amdgpu_gfx void @s_set_rounding(i32 inreg %rounding) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_add_i32 s34, s4, -4
+; GFX10-NEXT:    s_mov_b32 s35, 0xb73e62d9
 ; GFX10-NEXT:    s_min_u32 s36, s4, s34
 ; GFX10-NEXT:    s_mov_b32 s34, 0x1c84a50f
-; GFX10-NEXT:    s_mov_b32 s35, 0xb73e62d9
 ; GFX10-NEXT:    s_lshl_b32 s36, s36, 2
 ; GFX10-NEXT:    s_lshr_b64 s[34:35], s[34:35], s36
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s34
@@ -50,9 +50,9 @@ define amdgpu_gfx void @s_set_rounding(i32 inreg %rounding) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_add_i32 s0, s4, -4
+; GFX11-NEXT:    s_mov_b32 s1, 0xb73e62d9
 ; GFX11-NEXT:    s_min_u32 s2, s4, s0
 ; GFX11-NEXT:    s_mov_b32 s0, 0x1c84a50f
-; GFX11-NEXT:    s_mov_b32 s1, 0xb73e62d9
 ; GFX11-NEXT:    s_lshl_b32 s2, s2, 2
 ; GFX11-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s0
@@ -162,8 +162,8 @@ define void @v_set_rounding(i32 %rounding) {
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_add_i32_e32 v1, vcc, -4, v0
 ; GFX6-NEXT:    v_min_u32_e32 v0, v0, v1
-; GFX6-NEXT:    s_mov_b32 s4, 0x1c84a50f
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX6-NEXT:    s_mov_b32 s4, 0x1c84a50f
 ; GFX6-NEXT:    s_mov_b32 s5, 0xb73e62d9
 ; GFX6-NEXT:    v_lshr_b64 v[0:1], s[4:5], v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s4, v0
@@ -175,8 +175,8 @@ define void @v_set_rounding(i32 %rounding) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v1, vcc, -4, v0
 ; GFX7-NEXT:    v_min_u32_e32 v0, v0, v1
-; GFX7-NEXT:    s_mov_b32 s4, 0x1c84a50f
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX7-NEXT:    s_mov_b32 s4, 0x1c84a50f
 ; GFX7-NEXT:    s_mov_b32 s5, 0xb73e62d9
 ; GFX7-NEXT:    v_lshr_b64 v[0:1], s[4:5], v0
 ; GFX7-NEXT:    v_readfirstlane_b32 s4, v0
@@ -188,8 +188,8 @@ define void @v_set_rounding(i32 %rounding) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v1, vcc, -4, v0
 ; GFX8-NEXT:    v_min_u32_e32 v0, v0, v1
-; GFX8-NEXT:    s_mov_b32 s4, 0x1c84a50f
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX8-NEXT:    s_mov_b32 s4, 0x1c84a50f
 ; GFX8-NEXT:    s_mov_b32 s5, 0xb73e62d9
 ; GFX8-NEXT:    v_lshrrev_b64 v[0:1], v0, s[4:5]
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v0
@@ -201,8 +201,8 @@ define void @v_set_rounding(i32 %rounding) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_add_u32_e32 v1, -4, v0
 ; GFX9-NEXT:    v_min_u32_e32 v0, v0, v1
-; GFX9-NEXT:    s_mov_b32 s4, 0x1c84a50f
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-NEXT:    s_mov_b32 s4, 0x1c84a50f
 ; GFX9-NEXT:    s_mov_b32 s5, 0xb73e62d9
 ; GFX9-NEXT:    v_lshrrev_b64 v[0:1], v0, s[4:5]
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
@@ -1615,12 +1615,11 @@ define amdgpu_kernel void @get_rounding_after_set_rounding_1() {
 ; GFX6-LABEL: get_rounding_after_set_rounding_1:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 4), 0
+; GFX6-NEXT:    s_mov_b32 s1, 0xc96f385
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    s_nop 0
 ; GFX6-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
 ; GFX6-NEXT:    s_lshl_b32 s2, s0, 2
 ; GFX6-NEXT:    s_mov_b32 s0, 0xeb24da71
-; GFX6-NEXT:    s_mov_b32 s1, 0xc96f385
 ; GFX6-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX6-NEXT:    s_and_b32 s0, s0, 15
 ; GFX6-NEXT:    s_add_i32 s1, s0, 4
@@ -1636,12 +1635,11 @@ define amdgpu_kernel void @get_rounding_after_set_rounding_1() {
 ; GFX7-LABEL: get_rounding_after_set_rounding_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 4), 0
+; GFX7-NEXT:    s_mov_b32 s1, 0xc96f385
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    s_nop 0
 ; GFX7-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
 ; GFX7-NEXT:    s_lshl_b32 s2, s0, 2
 ; GFX7-NEXT:    s_mov_b32 s0, 0xeb24da71
-; GFX7-NEXT:    s_mov_b32 s1, 0xc96f385
 ; GFX7-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX7-NEXT:    s_and_b32 s0, s0, 15
 ; GFX7-NEXT:    s_add_i32 s1, s0, 4
@@ -1657,17 +1655,17 @@ define amdgpu_kernel void @get_rounding_after_set_rounding_1() {
 ; GFX8-LABEL: get_rounding_after_set_rounding_1:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 4), 0
+; GFX8-NEXT:    s_mov_b32 s1, 0xc96f385
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX8-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX8-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
 ; GFX8-NEXT:    s_lshl_b32 s2, s0, 2
 ; GFX8-NEXT:    s_mov_b32 s0, 0xeb24da71
-; GFX8-NEXT:    s_mov_b32 s1, 0xc96f385
 ; GFX8-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX8-NEXT:    s_and_b32 s0, s0, 15
 ; GFX8-NEXT:    s_add_i32 s1, s0, 4
 ; GFX8-NEXT:    s_cmp_lt_u32 s0, 4
 ; GFX8-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -1676,17 +1674,17 @@ define amdgpu_kernel void @get_rounding_after_set_rounding_1() {
 ; GFX9-LABEL: get_rounding_after_set_rounding_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 4), 0
+; GFX9-NEXT:    s_mov_b32 s1, 0xc96f385
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
 ; GFX9-NEXT:    s_lshl_b32 s2, s0, 2
 ; GFX9-NEXT:    s_mov_b32 s0, 0xeb24da71
-; GFX9-NEXT:    s_mov_b32 s1, 0xc96f385
 ; GFX9-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX9-NEXT:    s_and_b32 s0, s0, 15
 ; GFX9-NEXT:    s_add_i32 s1, s0, 4
 ; GFX9-NEXT:    s_cmp_lt_u32 s0, 4
 ; GFX9-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -1718,13 +1716,13 @@ define amdgpu_kernel void @get_rounding_after_set_rounding_1() {
 ; GFX11-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 4)
 ; GFX11-NEXT:    s_mov_b32 s1, 0xc96f385
 ; GFX11-NEXT:    s_lshl_b32 s2, s2, 2
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; GFX11-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX11-NEXT:    s_and_b32 s0, s0, 15
 ; GFX11-NEXT:    s_add_i32 s1, s0, 4
 ; GFX11-NEXT:    s_cmp_lt_u32 s0, 4
 ; GFX11-NEXT:    s_cselect_b32 s0, s0, s1
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
