@@ -5736,8 +5736,8 @@ class InitListTransformer {
       if (TmpExpr.isInvalid())
         return false;
       E = TmpExpr.get();
-      E = new (Ctx) OpaqueValueExpr(E->getBeginLoc(), Ty, E->getValueKind(),
-                                    E->getObjectKind(), E);
+      E = new (Ctx) OpaqueValueExpr(E->getBeginLoc(), E->getType(),
+                                    E->getValueKind(), E->getObjectKind(), E);
     }
 
     if (auto *VecTy = Ty->getAs<VectorType>()) {
