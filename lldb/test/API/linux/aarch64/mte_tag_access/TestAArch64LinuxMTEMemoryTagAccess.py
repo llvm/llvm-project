@@ -595,7 +595,6 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
     @expectedFailureAll(oslist=["linux"])
     def test_mte_memory_read_tag_display_repeated(self):
         """Test that the --show-tags option is kept when repeating the memory read command."""
-
         self.setup_mte_test()
 
         self.expect(
