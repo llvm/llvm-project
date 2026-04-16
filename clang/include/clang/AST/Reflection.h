@@ -20,6 +20,7 @@ namespace clang {
 
 // TODO(Reflection): Add support for Template, Namespace and DeclRefExpr.
 enum class ReflectionKind {
+  Null,
   Type
 };
 
@@ -27,6 +28,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ReflectionKind Kind)
   switch(Kind) {
   case ReflectionKind::Type:
     OS << "type";
+  case ReflectionKind::Null:
+    OS << "null";
   }
 
   return OS;

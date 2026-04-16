@@ -20,6 +20,7 @@ consteval void test()
 {
     constexpr auto r = ^^int;
     constexpr auto q = ^^float;
+    constexpr info v{};
 
     static_assert(__is_same(decltype(^^int), info));
     static_assert(__is_same(decltype(^^float), info));
@@ -44,6 +45,7 @@ consteval void test()
     static_assert(__is_scalar(info));
 
     static_assert(f1< ^^int >() == ^^int);
+    static_assert(f1< ^^A >() != ^^int);
     static_assert(f1< ^^float>() != ^^int);
 
     static_assert(f2<r>() == ^^int);

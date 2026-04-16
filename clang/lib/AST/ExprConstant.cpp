@@ -10961,6 +10961,7 @@ public:
   }
 
   bool VisitCXXReflectExpr(const CXXReflectExpr *E);
+  bool ZeroInitialization(const Expr *E);
 };
 
 bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
@@ -10972,6 +10973,12 @@ bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
   }
   llvm_unreachable("invalid reflection");
 }
+
+bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {
+  Result = APValue(ReflectionKind::Type, nullptr);
+  return true;
+}
+
 }  // end anonymous namespace
 
 static bool EvaluateReflection(const Expr *E, APValue &Result, EvalInfo &Info) {
