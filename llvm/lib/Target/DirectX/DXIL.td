@@ -406,6 +406,7 @@ class DXILOp<int opcode, DXILOpClass opclass> {
   // Versioned attributes of operation
   list<Attributes> attributes = [];
 
+  // Emmit dx.precise to prevent optimizations
   bit precise = 0;
 }
 
