@@ -118,9 +118,6 @@ public:
 
   void AppendWarning(llvm::StringRef in_string);
 
-  void AppendWarningWithFormat(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
-
   void AppendError(llvm::StringRef in_string);
 
   void AppendErrorWithFormat(const char *format, ...)
