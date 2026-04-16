@@ -197,14 +197,15 @@ bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
     return true;
   };
 
-  assert(Args.size() == 2 &&
+  assert(Args.size() == 3 &&
          "AMDGPUMCExpr Argument count incorrect for InstPrefSize");
-  uint64_t CodeSizeInBytes = 0, FieldWidth = 0;
+  uint64_t CodeSizeInBytes = 0, FieldWidth = 0, CacheLineSize = 0;
   if (!TryGetMCExprValue(Args[0], CodeSizeInBytes) ||
-      !TryGetMCExprValue(Args[1], FieldWidth))
+      !TryGetMCExprValue(Args[1], FieldWidth) ||
+      !TryGetMCExprValue(Args[2], CacheLineSize))
     return false;
 
-  uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, (uint64_t)128);
+  uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, CacheLineSize);
   uint64_t MaxVal = (1u << FieldWidth) - 1;
   Res = MCValue::get(std::min(CodeSizeInLines, MaxVal));
   return true;
@@ -311,9 +312,12 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createTotalNumVGPR(const MCExpr *NumAGPR,
 
 const AMDGPUMCExpr *
 AMDGPUMCExpr::createInstPrefSize(const MCExpr *CodeSizeBytes,
-                                 unsigned FieldWidth, MCContext &Ctx) {
+                                 unsigned FieldWidth, unsigned CacheLineSize,
+                                 MCContext &Ctx) {
   return create(AGVK_InstPrefSize,
-                {CodeSizeBytes, MCConstantExpr::create(FieldWidth, Ctx)}, Ctx);
+                {CodeSizeBytes, MCConstantExpr::create(FieldWidth, Ctx),
+                 MCConstantExpr::create(CacheLineSize, Ctx)},
+                Ctx);
 }
 
 const AMDGPUMCExpr *AMDGPUMCExpr::createLit(LitModifier Lit, int64_t Value,

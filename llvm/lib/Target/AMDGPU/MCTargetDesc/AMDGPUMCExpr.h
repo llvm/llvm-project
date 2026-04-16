@@ -100,9 +100,10 @@ public:
   }
 
   /// Create an expression for instruction prefetch size computation:
-  /// min(divideCeil(CodeSizeBytes, 128), (1 << FieldWidth) - 1)
+  /// min(divideCeil(CodeSizeBytes, CacheLineSize), (1 << FieldWidth) - 1)
   static const AMDGPUMCExpr *createInstPrefSize(const MCExpr *CodeSizeBytes,
                                                 unsigned FieldWidth,
+                                                unsigned CacheLineSize,
                                                 MCContext &Ctx);
 
   static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,

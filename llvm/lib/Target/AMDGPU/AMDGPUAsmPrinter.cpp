@@ -266,26 +266,16 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   // compute_pgm_rsrc3, because the label subtraction MCExpr is unresolvable
   // in text mode and would prevent printing of other fields (e.g.
   // named_barrier_count) that share the same register.
-  if (isGFX11Plus(STM)) {
+  if (STM.hasInstPrefSize()) {
     const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
         MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
         MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
 
-    uint32_t Width;
-    if (isGFX11(STM)) {
-      KD.inst_pref_size_mask = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
-      KD.inst_pref_size_shift =
-          amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
-      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
-    } else {
-      KD.inst_pref_size_mask =
-          amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
-      KD.inst_pref_size_shift =
-          amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
-      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
-    }
-    KD.inst_pref_size =
-        AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Width, Ctx);
+    uint32_t Width, CacheLineSize;
+    STM.getInstPrefSizeArgs(KD.inst_pref_size_mask, KD.inst_pref_size_shift,
+                            Width, CacheLineSize);
+    KD.inst_pref_size = AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Width,
+                                                         CacheLineSize, Ctx);
   }
 
   auto &Streamer = getTargetStreamer()->getStreamer();
