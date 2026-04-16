@@ -60,10 +60,10 @@ void not_module();
 #include "direct.h" // OK
 #include "indirect.h" // expected-error {{module lib_Private does not directly depend on a module exporting 'indirect.h', which is part of indirectly-used module indirect}}
 #include "impl_dep.h" // OK
-#include "not_module.h" // expected-error {{lib_Private does not depend on a module exporting 'not_module.h'}}
+#include "not_module.h" // expected-error {{module lib_Private does not depend on a module exporting 'not_module.h'}}
 
 //--- lib.h
 #include "direct.h" // OK
-#include "indirect.h"  // OK
-#include "impl_dep.h"  // OK
-#include "not_module.h" // OK
+#include "indirect.h"  // expected-error {{module lib does not directly depend on a module exporting 'indirect.h', which is part of indirectly-used module indirect}}
+#include "impl_dep.h"  // expected-error {{module lib does not depend on a module exporting 'impl_dep.h', which is part of module impl_dep, although its private module does}}
+#include "not_module.h" // expected-error {{module lib does not depend on a module exporting 'not_module.h'}}
