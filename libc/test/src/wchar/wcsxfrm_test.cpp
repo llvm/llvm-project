@@ -9,6 +9,8 @@
 #include "src/wchar/wcsxfrm.h"
 #include "test/UnitTest/Test.h"
 
+// TODO: Remove this once the test framework supports direct wchar_t
+// comparisons in EXPECT_EQ.
 #define EXPECT_WCHAR_EQ(ACTUAL, EXPECTED)                                      \
   EXPECT_EQ(static_cast<int>(ACTUAL), static_cast<int>(EXPECTED))
 
