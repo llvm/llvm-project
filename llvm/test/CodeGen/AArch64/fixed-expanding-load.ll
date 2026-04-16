@@ -12,12 +12,12 @@ define <2 x i64> @test_fixed_expandload(ptr %base, <2 x i64> %passthru, <2 x i1>
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl2
 ; CHECK-EXPAND-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-EXPAND-NEXT:    shl v1.2d, v1.2d, #63
-; CHECK-EXPAND-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.d
-; CHECK-EXPAND-NEXT:    whilelo p1.d, xzr, x8
-; CHECK-EXPAND-NEXT:    ld1d { z1.d }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z1.d, p0, z1.d
-; CHECK-EXPAND-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-EXPAND-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.d
+; CHECK-EXPAND-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-EXPAND-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z1.d, p1, z1.d
+; CHECK-EXPAND-NEXT:    mov z0.d, p1/m, z1.d
 ; CHECK-EXPAND-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-EXPAND-NEXT:    ret
 ;
@@ -27,12 +27,12 @@ define <2 x i64> @test_fixed_expandload(ptr %base, <2 x i64> %passthru, <2 x i1>
 ; CHECK-EXPAND-STREAMING-NEXT:    ptrue p0.d, vl2
 ; CHECK-EXPAND-STREAMING-NEXT:    lsl z1.d, z1.d, #63
 ; CHECK-EXPAND-STREAMING-NEXT:    asr z1.d, z1.d, #63
-; CHECK-EXPAND-STREAMING-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-EXPAND-STREAMING-NEXT:    cntp x8, p0, p0.d
-; CHECK-EXPAND-STREAMING-NEXT:    whilelo p1.d, xzr, x8
-; CHECK-EXPAND-STREAMING-NEXT:    ld1d { z1.d }, p1/z, [x0]
-; CHECK-EXPAND-STREAMING-NEXT:    expand z1.d, p0, z1.d
-; CHECK-EXPAND-STREAMING-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-EXPAND-STREAMING-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-EXPAND-STREAMING-NEXT:    cntp x8, p1, p1.d
+; CHECK-EXPAND-STREAMING-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-EXPAND-STREAMING-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-EXPAND-STREAMING-NEXT:    expand z1.d, p1, z1.d
+; CHECK-EXPAND-STREAMING-NEXT:    mov z0.d, p1/m, z1.d
 ; CHECK-EXPAND-STREAMING-NEXT:    ret
   %res = call <2 x i64> @llvm.masked.expandload(ptr align 1 %base, <2 x i1> %pred, <2 x i64> %passthru)
   ret <2 x i64> %res

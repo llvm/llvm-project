@@ -48,11 +48,11 @@ define <2 x half> @masked_load_v2f16(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-EXPAND-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-EXPAND-NEXT:    mov w8, v1.s[1]
 ; CHECK-EXPAND-NEXT:    mov v0.h[1], w8
-; CHECK-EXPAND-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.h
-; CHECK-EXPAND-NEXT:    whilelo p1.h, xzr, x8
-; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.h, p0, z0.h
+; CHECK-EXPAND-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.h
+; CHECK-EXPAND-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.h, p1, z0.h
 ; CHECK-EXPAND-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-EXPAND-NEXT:    ret
   %a = load <2 x half>, ptr %ap
@@ -94,11 +94,11 @@ define <2 x float> @masked_load_v2f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-EXPAND-NEXT:    ldr d1, [x1]
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl2
 ; CHECK-EXPAND-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
-; CHECK-EXPAND-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.s
-; CHECK-EXPAND-NEXT:    whilelo p1.s, xzr, x8
-; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.s, p0, z0.s
+; CHECK-EXPAND-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.s
+; CHECK-EXPAND-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.s, p1, z0.s
 ; CHECK-EXPAND-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-EXPAND-NEXT:    ret
   %a = load <2 x float>, ptr %ap
@@ -234,9 +234,9 @@ define void @masked_load_v8f32(ptr %ap, ptr %bp, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:  .LBB3_4: // %else2
 ; CHECK-NEXT:    tbnz w8, #2, .LBB3_12
 ; CHECK-NEXT:  // %bb.5: // %else6
@@ -254,9 +254,9 @@ define void @masked_load_v8f32(ptr %ap, ptr %bp, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:  .LBB3_11: // %else26
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
 ; CHECK-NEXT:    mov sp, x29
@@ -267,45 +267,45 @@ define void @masked_load_v8f32(ptr %ap, ptr %bp, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #3, .LBB3_6
 ; CHECK-NEXT:  .LBB3_13: // %cond.load9
 ; CHECK-NEXT:    mov w9, #3 // =0x3
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #4, .LBB3_7
 ; CHECK-NEXT:  .LBB3_14: // %cond.load13
 ; CHECK-NEXT:    mov w9, #4 // =0x4
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #5, .LBB3_8
 ; CHECK-NEXT:  .LBB3_15: // %cond.load17
 ; CHECK-NEXT:    mov w9, #5 // =0x5
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #6, .LBB3_9
 ; CHECK-NEXT:  .LBB3_16: // %cond.load21
 ; CHECK-NEXT:    mov w9, #6 // =0x6
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbnz w8, #7, .LBB3_10
 ; CHECK-NEXT:    b .LBB3_11
 ;
@@ -383,9 +383,9 @@ define void @masked_load_v16f32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z0.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z0.s, p2/m, s2
 ; VBITS_GE_256-NEXT:  .LBB4_4: // %else2
 ; VBITS_GE_256-NEXT:    tbnz w8, #2, .LBB4_20
 ; VBITS_GE_256-NEXT:  // %bb.5: // %else6
@@ -419,9 +419,9 @@ define void @masked_load_v16f32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w8
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0]
-; VBITS_GE_256-NEXT:    mov z1.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z1.s, p2/m, s2
 ; VBITS_GE_256-NEXT:  .LBB4_19: // %else58
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
@@ -434,54 +434,54 @@ define void @masked_load_v16f32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z0.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z0.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #3, .LBB4_6
 ; VBITS_GE_256-NEXT:  .LBB4_21: // %cond.load9
 ; VBITS_GE_256-NEXT:    mov w9, #3 // =0x3
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z0.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z0.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #4, .LBB4_7
 ; VBITS_GE_256-NEXT:  .LBB4_22: // %cond.load13
 ; VBITS_GE_256-NEXT:    mov w9, #4 // =0x4
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z0.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z0.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #5, .LBB4_8
 ; VBITS_GE_256-NEXT:  .LBB4_23: // %cond.load17
 ; VBITS_GE_256-NEXT:    mov w9, #5 // =0x5
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z0.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z0.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #6, .LBB4_9
 ; VBITS_GE_256-NEXT:  .LBB4_24: // %cond.load21
 ; VBITS_GE_256-NEXT:    mov w9, #6 // =0x6
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z0.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z0.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #7, .LBB4_10
 ; VBITS_GE_256-NEXT:  .LBB4_25: // %cond.load25
 ; VBITS_GE_256-NEXT:    mov w9, #7 // =0x7
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z0.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z0.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #8, .LBB4_11
 ; VBITS_GE_256-NEXT:  .LBB4_26: // %cond.load29
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
@@ -493,54 +493,54 @@ define void @masked_load_v16f32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z1.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z1.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #10, .LBB4_13
 ; VBITS_GE_256-NEXT:  .LBB4_28: // %cond.load37
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z1.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z1.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #11, .LBB4_14
 ; VBITS_GE_256-NEXT:  .LBB4_29: // %cond.load41
 ; VBITS_GE_256-NEXT:    mov w9, #3 // =0x3
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z1.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z1.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #12, .LBB4_15
 ; VBITS_GE_256-NEXT:  .LBB4_30: // %cond.load45
 ; VBITS_GE_256-NEXT:    mov w9, #4 // =0x4
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z1.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z1.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #13, .LBB4_16
 ; VBITS_GE_256-NEXT:  .LBB4_31: // %cond.load49
 ; VBITS_GE_256-NEXT:    mov w9, #5 // =0x5
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z1.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z1.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbz w8, #14, .LBB4_17
 ; VBITS_GE_256-NEXT:  .LBB4_32: // %cond.load53
 ; VBITS_GE_256-NEXT:    mov w9, #6 // =0x6
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    mov z3.s, w9
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    ldr s2, [x0], #4
-; VBITS_GE_256-NEXT:    mov z1.s, p1/m, s2
+; VBITS_GE_256-NEXT:    mov z1.s, p2/m, s2
 ; VBITS_GE_256-NEXT:    tbnz w8, #15, .LBB4_18
 ; VBITS_GE_256-NEXT:    b .LBB4_19
 ;
@@ -622,9 +622,9 @@ define void @masked_load_v16f32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:  .LBB4_4: // %else2
 ; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB4_20
 ; VBITS_GE_512-NEXT:  // %bb.5: // %else6
@@ -658,9 +658,9 @@ define void @masked_load_v16f32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w8
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0]
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:  .LBB4_19: // %else58
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
 ; VBITS_GE_512-NEXT:    mov sp, x29
@@ -671,117 +671,117 @@ define void @masked_load_v16f32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #3, .LBB4_6
 ; VBITS_GE_512-NEXT:  .LBB4_21: // %cond.load9
 ; VBITS_GE_512-NEXT:    mov w9, #3 // =0x3
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #4, .LBB4_7
 ; VBITS_GE_512-NEXT:  .LBB4_22: // %cond.load13
 ; VBITS_GE_512-NEXT:    mov w9, #4 // =0x4
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #5, .LBB4_8
 ; VBITS_GE_512-NEXT:  .LBB4_23: // %cond.load17
 ; VBITS_GE_512-NEXT:    mov w9, #5 // =0x5
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #6, .LBB4_9
 ; VBITS_GE_512-NEXT:  .LBB4_24: // %cond.load21
 ; VBITS_GE_512-NEXT:    mov w9, #6 // =0x6
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #7, .LBB4_10
 ; VBITS_GE_512-NEXT:  .LBB4_25: // %cond.load25
 ; VBITS_GE_512-NEXT:    mov w9, #7 // =0x7
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #8, .LBB4_11
 ; VBITS_GE_512-NEXT:  .LBB4_26: // %cond.load29
 ; VBITS_GE_512-NEXT:    mov w9, #8 // =0x8
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #9, .LBB4_12
 ; VBITS_GE_512-NEXT:  .LBB4_27: // %cond.load33
 ; VBITS_GE_512-NEXT:    mov w9, #9 // =0x9
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #10, .LBB4_13
 ; VBITS_GE_512-NEXT:  .LBB4_28: // %cond.load37
 ; VBITS_GE_512-NEXT:    mov w9, #10 // =0xa
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #11, .LBB4_14
 ; VBITS_GE_512-NEXT:  .LBB4_29: // %cond.load41
 ; VBITS_GE_512-NEXT:    mov w9, #11 // =0xb
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #12, .LBB4_15
 ; VBITS_GE_512-NEXT:  .LBB4_30: // %cond.load45
 ; VBITS_GE_512-NEXT:    mov w9, #12 // =0xc
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #13, .LBB4_16
 ; VBITS_GE_512-NEXT:  .LBB4_31: // %cond.load49
 ; VBITS_GE_512-NEXT:    mov w9, #13 // =0xd
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbz w8, #14, .LBB4_17
 ; VBITS_GE_512-NEXT:  .LBB4_32: // %cond.load53
 ; VBITS_GE_512-NEXT:    mov w9, #14 // =0xe
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    ldr s1, [x0], #4
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    tbnz w8, #15, .LBB4_18
 ; VBITS_GE_512-NEXT:    b .LBB4_19
 ;
@@ -1004,9 +1004,9 @@ define void @masked_load_v32f32(ptr %ap, ptr %bp, ptr %c) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:  .LBB5_4: // %else2
 ; CHECK-NEXT:    tbnz w8, #2, .LBB5_36
 ; CHECK-NEXT:  // %bb.5: // %else6
@@ -1072,9 +1072,9 @@ define void @masked_load_v32f32(ptr %ap, ptr %bp, ptr %c) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:  .LBB5_35: // %else122
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
 ; CHECK-NEXT:    mov sp, x29
@@ -1090,261 +1090,261 @@ define void @masked_load_v32f32(ptr %ap, ptr %bp, ptr %c) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #3, .LBB5_6
 ; CHECK-NEXT:  .LBB5_37: // %cond.load9
 ; CHECK-NEXT:    mov w9, #3 // =0x3
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #4, .LBB5_7
 ; CHECK-NEXT:  .LBB5_38: // %cond.load13
 ; CHECK-NEXT:    mov w9, #4 // =0x4
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #5, .LBB5_8
 ; CHECK-NEXT:  .LBB5_39: // %cond.load17
 ; CHECK-NEXT:    mov w9, #5 // =0x5
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #6, .LBB5_9
 ; CHECK-NEXT:  .LBB5_40: // %cond.load21
 ; CHECK-NEXT:    mov w9, #6 // =0x6
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #7, .LBB5_10
 ; CHECK-NEXT:  .LBB5_41: // %cond.load25
 ; CHECK-NEXT:    mov w9, #7 // =0x7
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #8, .LBB5_11
 ; CHECK-NEXT:  .LBB5_42: // %cond.load29
 ; CHECK-NEXT:    mov w9, #8 // =0x8
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #9, .LBB5_12
 ; CHECK-NEXT:  .LBB5_43: // %cond.load33
 ; CHECK-NEXT:    mov w9, #9 // =0x9
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #10, .LBB5_13
 ; CHECK-NEXT:  .LBB5_44: // %cond.load37
 ; CHECK-NEXT:    mov w9, #10 // =0xa
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #11, .LBB5_14
 ; CHECK-NEXT:  .LBB5_45: // %cond.load41
 ; CHECK-NEXT:    mov w9, #11 // =0xb
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #12, .LBB5_15
 ; CHECK-NEXT:  .LBB5_46: // %cond.load45
 ; CHECK-NEXT:    mov w9, #12 // =0xc
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #13, .LBB5_16
 ; CHECK-NEXT:  .LBB5_47: // %cond.load49
 ; CHECK-NEXT:    mov w9, #13 // =0xd
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #14, .LBB5_17
 ; CHECK-NEXT:  .LBB5_48: // %cond.load53
 ; CHECK-NEXT:    mov w9, #14 // =0xe
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #15, .LBB5_18
 ; CHECK-NEXT:  .LBB5_49: // %cond.load57
 ; CHECK-NEXT:    mov w9, #15 // =0xf
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #16, .LBB5_19
 ; CHECK-NEXT:  .LBB5_50: // %cond.load61
 ; CHECK-NEXT:    mov w9, #16 // =0x10
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #17, .LBB5_20
 ; CHECK-NEXT:  .LBB5_51: // %cond.load65
 ; CHECK-NEXT:    mov w9, #17 // =0x11
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #18, .LBB5_21
 ; CHECK-NEXT:  .LBB5_52: // %cond.load69
 ; CHECK-NEXT:    mov w9, #18 // =0x12
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #19, .LBB5_22
 ; CHECK-NEXT:  .LBB5_53: // %cond.load73
 ; CHECK-NEXT:    mov w9, #19 // =0x13
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #20, .LBB5_23
 ; CHECK-NEXT:  .LBB5_54: // %cond.load77
 ; CHECK-NEXT:    mov w9, #20 // =0x14
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #21, .LBB5_24
 ; CHECK-NEXT:  .LBB5_55: // %cond.load81
 ; CHECK-NEXT:    mov w9, #21 // =0x15
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #22, .LBB5_25
 ; CHECK-NEXT:  .LBB5_56: // %cond.load85
 ; CHECK-NEXT:    mov w9, #22 // =0x16
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #23, .LBB5_26
 ; CHECK-NEXT:  .LBB5_57: // %cond.load89
 ; CHECK-NEXT:    mov w9, #23 // =0x17
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #24, .LBB5_27
 ; CHECK-NEXT:  .LBB5_58: // %cond.load93
 ; CHECK-NEXT:    mov w9, #24 // =0x18
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #25, .LBB5_28
 ; CHECK-NEXT:  .LBB5_59: // %cond.load97
 ; CHECK-NEXT:    mov w9, #25 // =0x19
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #26, .LBB5_29
 ; CHECK-NEXT:  .LBB5_60: // %cond.load101
 ; CHECK-NEXT:    mov w9, #26 // =0x1a
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #27, .LBB5_30
 ; CHECK-NEXT:  .LBB5_61: // %cond.load105
 ; CHECK-NEXT:    mov w9, #27 // =0x1b
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #28, .LBB5_31
 ; CHECK-NEXT:  .LBB5_62: // %cond.load109
 ; CHECK-NEXT:    mov w9, #28 // =0x1c
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #29, .LBB5_32
 ; CHECK-NEXT:  .LBB5_63: // %cond.load113
 ; CHECK-NEXT:    mov w9, #29 // =0x1d
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #30, .LBB5_33
 ; CHECK-NEXT:  .LBB5_64: // %cond.load117
 ; CHECK-NEXT:    mov w9, #30 // =0x1e
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbnz w8, #31, .LBB5_34
 ; CHECK-NEXT:    b .LBB5_35
 ;
@@ -1669,9 +1669,9 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:  .LBB6_4: // %else2
 ; CHECK-NEXT:    tbnz w8, #2, .LBB6_68
 ; CHECK-NEXT:  // %bb.5: // %else6
@@ -1801,9 +1801,9 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:  .LBB6_67: // %else250
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
 ; CHECK-NEXT:    mov sp, x29
@@ -1819,549 +1819,549 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #3, .LBB6_6
 ; CHECK-NEXT:  .LBB6_69: // %cond.load9
 ; CHECK-NEXT:    mov w9, #3 // =0x3
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #4, .LBB6_7
 ; CHECK-NEXT:  .LBB6_70: // %cond.load13
 ; CHECK-NEXT:    mov w9, #4 // =0x4
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #5, .LBB6_8
 ; CHECK-NEXT:  .LBB6_71: // %cond.load17
 ; CHECK-NEXT:    mov w9, #5 // =0x5
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #6, .LBB6_9
 ; CHECK-NEXT:  .LBB6_72: // %cond.load21
 ; CHECK-NEXT:    mov w9, #6 // =0x6
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #7, .LBB6_10
 ; CHECK-NEXT:  .LBB6_73: // %cond.load25
 ; CHECK-NEXT:    mov w9, #7 // =0x7
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #8, .LBB6_11
 ; CHECK-NEXT:  .LBB6_74: // %cond.load29
 ; CHECK-NEXT:    mov w9, #8 // =0x8
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #9, .LBB6_12
 ; CHECK-NEXT:  .LBB6_75: // %cond.load33
 ; CHECK-NEXT:    mov w9, #9 // =0x9
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #10, .LBB6_13
 ; CHECK-NEXT:  .LBB6_76: // %cond.load37
 ; CHECK-NEXT:    mov w9, #10 // =0xa
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #11, .LBB6_14
 ; CHECK-NEXT:  .LBB6_77: // %cond.load41
 ; CHECK-NEXT:    mov w9, #11 // =0xb
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #12, .LBB6_15
 ; CHECK-NEXT:  .LBB6_78: // %cond.load45
 ; CHECK-NEXT:    mov w9, #12 // =0xc
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #13, .LBB6_16
 ; CHECK-NEXT:  .LBB6_79: // %cond.load49
 ; CHECK-NEXT:    mov w9, #13 // =0xd
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #14, .LBB6_17
 ; CHECK-NEXT:  .LBB6_80: // %cond.load53
 ; CHECK-NEXT:    mov w9, #14 // =0xe
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #15, .LBB6_18
 ; CHECK-NEXT:  .LBB6_81: // %cond.load57
 ; CHECK-NEXT:    mov w9, #15 // =0xf
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #16, .LBB6_19
 ; CHECK-NEXT:  .LBB6_82: // %cond.load61
 ; CHECK-NEXT:    mov w9, #16 // =0x10
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #17, .LBB6_20
 ; CHECK-NEXT:  .LBB6_83: // %cond.load65
 ; CHECK-NEXT:    mov w9, #17 // =0x11
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #18, .LBB6_21
 ; CHECK-NEXT:  .LBB6_84: // %cond.load69
 ; CHECK-NEXT:    mov w9, #18 // =0x12
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #19, .LBB6_22
 ; CHECK-NEXT:  .LBB6_85: // %cond.load73
 ; CHECK-NEXT:    mov w9, #19 // =0x13
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #20, .LBB6_23
 ; CHECK-NEXT:  .LBB6_86: // %cond.load77
 ; CHECK-NEXT:    mov w9, #20 // =0x14
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #21, .LBB6_24
 ; CHECK-NEXT:  .LBB6_87: // %cond.load81
 ; CHECK-NEXT:    mov w9, #21 // =0x15
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #22, .LBB6_25
 ; CHECK-NEXT:  .LBB6_88: // %cond.load85
 ; CHECK-NEXT:    mov w9, #22 // =0x16
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #23, .LBB6_26
 ; CHECK-NEXT:  .LBB6_89: // %cond.load89
 ; CHECK-NEXT:    mov w9, #23 // =0x17
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #24, .LBB6_27
 ; CHECK-NEXT:  .LBB6_90: // %cond.load93
 ; CHECK-NEXT:    mov w9, #24 // =0x18
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #25, .LBB6_28
 ; CHECK-NEXT:  .LBB6_91: // %cond.load97
 ; CHECK-NEXT:    mov w9, #25 // =0x19
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #26, .LBB6_29
 ; CHECK-NEXT:  .LBB6_92: // %cond.load101
 ; CHECK-NEXT:    mov w9, #26 // =0x1a
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #27, .LBB6_30
 ; CHECK-NEXT:  .LBB6_93: // %cond.load105
 ; CHECK-NEXT:    mov w9, #27 // =0x1b
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #28, .LBB6_31
 ; CHECK-NEXT:  .LBB6_94: // %cond.load109
 ; CHECK-NEXT:    mov w9, #28 // =0x1c
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #29, .LBB6_32
 ; CHECK-NEXT:  .LBB6_95: // %cond.load113
 ; CHECK-NEXT:    mov w9, #29 // =0x1d
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #30, .LBB6_33
 ; CHECK-NEXT:  .LBB6_96: // %cond.load117
 ; CHECK-NEXT:    mov w9, #30 // =0x1e
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #31, .LBB6_34
 ; CHECK-NEXT:  .LBB6_97: // %cond.load121
 ; CHECK-NEXT:    mov w9, #31 // =0x1f
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #32, .LBB6_35
 ; CHECK-NEXT:  .LBB6_98: // %cond.load125
 ; CHECK-NEXT:    mov w9, #32 // =0x20
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #33, .LBB6_36
 ; CHECK-NEXT:  .LBB6_99: // %cond.load129
 ; CHECK-NEXT:    mov w9, #33 // =0x21
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #34, .LBB6_37
 ; CHECK-NEXT:  .LBB6_100: // %cond.load133
 ; CHECK-NEXT:    mov w9, #34 // =0x22
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #35, .LBB6_38
 ; CHECK-NEXT:  .LBB6_101: // %cond.load137
 ; CHECK-NEXT:    mov w9, #35 // =0x23
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #36, .LBB6_39
 ; CHECK-NEXT:  .LBB6_102: // %cond.load141
 ; CHECK-NEXT:    mov w9, #36 // =0x24
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #37, .LBB6_40
 ; CHECK-NEXT:  .LBB6_103: // %cond.load145
 ; CHECK-NEXT:    mov w9, #37 // =0x25
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #38, .LBB6_41
 ; CHECK-NEXT:  .LBB6_104: // %cond.load149
 ; CHECK-NEXT:    mov w9, #38 // =0x26
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #39, .LBB6_42
 ; CHECK-NEXT:  .LBB6_105: // %cond.load153
 ; CHECK-NEXT:    mov w9, #39 // =0x27
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #40, .LBB6_43
 ; CHECK-NEXT:  .LBB6_106: // %cond.load157
 ; CHECK-NEXT:    mov w9, #40 // =0x28
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #41, .LBB6_44
 ; CHECK-NEXT:  .LBB6_107: // %cond.load161
 ; CHECK-NEXT:    mov w9, #41 // =0x29
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #42, .LBB6_45
 ; CHECK-NEXT:  .LBB6_108: // %cond.load165
 ; CHECK-NEXT:    mov w9, #42 // =0x2a
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #43, .LBB6_46
 ; CHECK-NEXT:  .LBB6_109: // %cond.load169
 ; CHECK-NEXT:    mov w9, #43 // =0x2b
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #44, .LBB6_47
 ; CHECK-NEXT:  .LBB6_110: // %cond.load173
 ; CHECK-NEXT:    mov w9, #44 // =0x2c
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #45, .LBB6_48
 ; CHECK-NEXT:  .LBB6_111: // %cond.load177
 ; CHECK-NEXT:    mov w9, #45 // =0x2d
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #46, .LBB6_49
 ; CHECK-NEXT:  .LBB6_112: // %cond.load181
 ; CHECK-NEXT:    mov w9, #46 // =0x2e
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #47, .LBB6_50
 ; CHECK-NEXT:  .LBB6_113: // %cond.load185
 ; CHECK-NEXT:    mov w9, #47 // =0x2f
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #48, .LBB6_51
 ; CHECK-NEXT:  .LBB6_114: // %cond.load189
 ; CHECK-NEXT:    mov w9, #48 // =0x30
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #49, .LBB6_52
 ; CHECK-NEXT:  .LBB6_115: // %cond.load193
 ; CHECK-NEXT:    mov w9, #49 // =0x31
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #50, .LBB6_53
 ; CHECK-NEXT:  .LBB6_116: // %cond.load197
 ; CHECK-NEXT:    mov w9, #50 // =0x32
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #51, .LBB6_54
 ; CHECK-NEXT:  .LBB6_117: // %cond.load201
 ; CHECK-NEXT:    mov w9, #51 // =0x33
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #52, .LBB6_55
 ; CHECK-NEXT:  .LBB6_118: // %cond.load205
 ; CHECK-NEXT:    mov w9, #52 // =0x34
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #53, .LBB6_56
 ; CHECK-NEXT:  .LBB6_119: // %cond.load209
 ; CHECK-NEXT:    mov w9, #53 // =0x35
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #54, .LBB6_57
 ; CHECK-NEXT:  .LBB6_120: // %cond.load213
 ; CHECK-NEXT:    mov w9, #54 // =0x36
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #55, .LBB6_58
 ; CHECK-NEXT:  .LBB6_121: // %cond.load217
 ; CHECK-NEXT:    mov w9, #55 // =0x37
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #56, .LBB6_59
 ; CHECK-NEXT:  .LBB6_122: // %cond.load221
 ; CHECK-NEXT:    mov w9, #56 // =0x38
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #57, .LBB6_60
 ; CHECK-NEXT:  .LBB6_123: // %cond.load225
 ; CHECK-NEXT:    mov w9, #57 // =0x39
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #58, .LBB6_61
 ; CHECK-NEXT:  .LBB6_124: // %cond.load229
 ; CHECK-NEXT:    mov w9, #58 // =0x3a
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #59, .LBB6_62
 ; CHECK-NEXT:  .LBB6_125: // %cond.load233
 ; CHECK-NEXT:    mov w9, #59 // =0x3b
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #60, .LBB6_63
 ; CHECK-NEXT:  .LBB6_126: // %cond.load237
 ; CHECK-NEXT:    mov w9, #60 // =0x3c
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #61, .LBB6_64
 ; CHECK-NEXT:  .LBB6_127: // %cond.load241
 ; CHECK-NEXT:    mov w9, #61 // =0x3d
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #62, .LBB6_65
 ; CHECK-NEXT:  .LBB6_128: // %cond.load245
 ; CHECK-NEXT:    mov w9, #62 // =0x3e
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p1/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbnz x8, #63, .LBB6_66
 ; CHECK-NEXT:    b .LBB6_67
 ;
@@ -2786,8 +2786,8 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.b, #0, #1
 ; VBITS_GE_256-NEXT:    mov z3.b, w8
 ; VBITS_GE_256-NEXT:    ldrb w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.b, p1/z, z2.b, z3.b
-; VBITS_GE_256-NEXT:    mov z1.b, p1/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p2.b, p1/z, z2.b, z3.b
+; VBITS_GE_256-NEXT:    mov z1.b, p2/m, w8
 ; VBITS_GE_256-NEXT:  .LBB7_67: // %else250
 ; VBITS_GE_256-NEXT:    ldp x20, x19, [sp, #112] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
@@ -3694,8 +3694,8 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w8
 ; VBITS_GE_512-NEXT:    ldrb w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.b, p1/z, z1.b, z2.b
-; VBITS_GE_512-NEXT:    mov z0.b, p1/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
+; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB7_67: // %else250
 ; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x2]
@@ -4549,8 +4549,8 @@ define void @masked_load_v32i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.h, #0, #1
 ; VBITS_GE_256-NEXT:    mov z3.h, w8
 ; VBITS_GE_256-NEXT:    ldrh w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.h, p1/z, z2.h, z3.h
-; VBITS_GE_256-NEXT:    mov z1.h, p1/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p2.h, p1/z, z2.h, z3.h
+; VBITS_GE_256-NEXT:    mov z1.h, p2/m, w8
 ; VBITS_GE_256-NEXT:  .LBB8_35: // %else122
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
@@ -5006,8 +5006,8 @@ define void @masked_load_v32i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.h, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.h, w8
 ; VBITS_GE_512-NEXT:    ldrh w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.h, p1/z, z1.h, z2.h
-; VBITS_GE_512-NEXT:    mov z0.h, p1/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p2.h, p1/z, z1.h, z2.h
+; VBITS_GE_512-NEXT:    mov z0.h, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB8_35: // %else122
 ; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x2]
@@ -5414,8 +5414,8 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.s, #0, #1
 ; VBITS_GE_256-NEXT:    mov z3.s, w8
 ; VBITS_GE_256-NEXT:    ldr w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z2.s, z3.s
-; VBITS_GE_256-NEXT:    mov z1.s, p1/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    mov z1.s, p2/m, w8
 ; VBITS_GE_256-NEXT:  .LBB9_19: // %else58
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
@@ -5629,8 +5629,8 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w8
 ; VBITS_GE_512-NEXT:    ldr w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB9_19: // %else58
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
 ; VBITS_GE_512-NEXT:    add sp, sp, #16
@@ -5874,8 +5874,8 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.d, #0, #1
 ; VBITS_GE_256-NEXT:    mov z3.d, x8
 ; VBITS_GE_256-NEXT:    ldr x8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p1/z, z2.d, z3.d
-; VBITS_GE_256-NEXT:    mov z1.d, p1/m, x8
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, x8
 ; VBITS_GE_256-NEXT:  .LBB10_11: // %else26
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
@@ -5986,8 +5986,8 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.d, x8
 ; VBITS_GE_512-NEXT:    ldr x8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, x8
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x8
 ; VBITS_GE_512-NEXT:  .LBB10_11: // %else26
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_512-NEXT:    add sp, sp, #16
@@ -6142,8 +6142,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x8
 ; VBITS_GE_256-NEXT:    ldr x8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p1/z, z2.d, z3.d
-; VBITS_GE_256-NEXT:    mov z1.d, p1/m, x8
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, x8
 ; VBITS_GE_256-NEXT:  .LBB11_9: // %else26
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
@@ -6160,8 +6160,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p2.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
 ; VBITS_GE_256-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_256-NEXT:    cmpeq p2.d, p2/z, z2.d, z3.d
-; VBITS_GE_256-NEXT:    mov z0.d, p2/m, x9
+; VBITS_GE_256-NEXT:    cmpeq p3.d, p2/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    mov z0.d, p3/m, x9
 ; VBITS_GE_256-NEXT:    tbz w8, #2, .LBB11_3
 ; VBITS_GE_256-NEXT:  .LBB11_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -6169,8 +6169,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p2.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
 ; VBITS_GE_256-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_256-NEXT:    cmpeq p2.d, p2/z, z2.d, z3.d
-; VBITS_GE_256-NEXT:    mov z0.d, p2/m, x9
+; VBITS_GE_256-NEXT:    cmpeq p3.d, p2/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    mov z0.d, p3/m, x9
 ; VBITS_GE_256-NEXT:    tbz w8, #3, .LBB11_4
 ; VBITS_GE_256-NEXT:  .LBB11_13: // %cond.load9
 ; VBITS_GE_256-NEXT:    mov w9, #3 // =0x3
@@ -6178,8 +6178,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p2.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
 ; VBITS_GE_256-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_256-NEXT:    cmpeq p2.d, p2/z, z2.d, z3.d
-; VBITS_GE_256-NEXT:    mov z0.d, p2/m, x9
+; VBITS_GE_256-NEXT:    cmpeq p3.d, p2/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    mov z0.d, p3/m, x9
 ; VBITS_GE_256-NEXT:    tbz w8, #4, .LBB11_5
 ; VBITS_GE_256-NEXT:  .LBB11_14: // %cond.load13
 ; VBITS_GE_256-NEXT:    ldr x9, [x0], #8
@@ -6191,8 +6191,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
 ; VBITS_GE_256-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p1/z, z2.d, z3.d
-; VBITS_GE_256-NEXT:    mov z1.d, p1/m, x9
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, x9
 ; VBITS_GE_256-NEXT:    tbz w8, #6, .LBB11_7
 ; VBITS_GE_256-NEXT:  .LBB11_16: // %cond.load21
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -6200,8 +6200,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
 ; VBITS_GE_256-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p1/z, z2.d, z3.d
-; VBITS_GE_256-NEXT:    mov z1.d, p1/m, x9
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, x9
 ; VBITS_GE_256-NEXT:    tbnz w8, #7, .LBB11_8
 ; VBITS_GE_256-NEXT:    b .LBB11_9
 ;
@@ -6255,8 +6255,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x8
 ; VBITS_GE_512-NEXT:    ldr x8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, x8
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x8
 ; VBITS_GE_512-NEXT:  .LBB11_9: // %else26
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_512-NEXT:    add sp, sp, #16
@@ -6272,8 +6272,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
 ; VBITS_GE_512-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, x9
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #2, .LBB11_3
 ; VBITS_GE_512-NEXT:  .LBB11_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -6281,8 +6281,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
 ; VBITS_GE_512-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, x9
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #3, .LBB11_4
 ; VBITS_GE_512-NEXT:  .LBB11_13: // %cond.load9
 ; VBITS_GE_512-NEXT:    mov w9, #3 // =0x3
@@ -6290,8 +6290,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
 ; VBITS_GE_512-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, x9
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #4, .LBB11_5
 ; VBITS_GE_512-NEXT:  .LBB11_14: // %cond.load13
 ; VBITS_GE_512-NEXT:    mov w9, #4 // =0x4
@@ -6299,8 +6299,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
 ; VBITS_GE_512-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, x9
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #5, .LBB11_6
 ; VBITS_GE_512-NEXT:  .LBB11_15: // %cond.load17
 ; VBITS_GE_512-NEXT:    mov w9, #5 // =0x5
@@ -6308,8 +6308,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
 ; VBITS_GE_512-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, x9
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #6, .LBB11_7
 ; VBITS_GE_512-NEXT:  .LBB11_16: // %cond.load21
 ; VBITS_GE_512-NEXT:    mov w9, #6 // =0x6
@@ -6317,8 +6317,8 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
 ; VBITS_GE_512-NEXT:    ldr x9, [x0], #8
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, x9
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB11_8
 ; VBITS_GE_512-NEXT:    b .LBB11_9
 ;
@@ -6430,9 +6430,9 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.d, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x8
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p1/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0]
-; VBITS_GE_256-NEXT:    mov z1.d, p1/m, d2
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, d2
 ; VBITS_GE_256-NEXT:  .LBB12_9: // %else26
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
@@ -6449,27 +6449,27 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.d, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p1/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
-; VBITS_GE_256-NEXT:    mov z0.d, p1/m, d2
+; VBITS_GE_256-NEXT:    mov z0.d, p2/m, d2
 ; VBITS_GE_256-NEXT:    tbz w8, #2, .LBB12_3
 ; VBITS_GE_256-NEXT:  .LBB12_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
 ; VBITS_GE_256-NEXT:    index z2.d, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p1/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
-; VBITS_GE_256-NEXT:    mov z0.d, p1/m, d2
+; VBITS_GE_256-NEXT:    mov z0.d, p2/m, d2
 ; VBITS_GE_256-NEXT:    tbz w8, #3, .LBB12_4
 ; VBITS_GE_256-NEXT:  .LBB12_13: // %cond.load9
 ; VBITS_GE_256-NEXT:    mov w9, #3 // =0x3
 ; VBITS_GE_256-NEXT:    index z2.d, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p1/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
-; VBITS_GE_256-NEXT:    mov z0.d, p1/m, d2
+; VBITS_GE_256-NEXT:    mov z0.d, p2/m, d2
 ; VBITS_GE_256-NEXT:    tbz w8, #4, .LBB12_5
 ; VBITS_GE_256-NEXT:  .LBB12_14: // %cond.load13
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
@@ -6481,18 +6481,18 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z2.d, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p1/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
-; VBITS_GE_256-NEXT:    mov z1.d, p1/m, d2
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, d2
 ; VBITS_GE_256-NEXT:    tbz w8, #6, .LBB12_7
 ; VBITS_GE_256-NEXT:  .LBB12_16: // %cond.load21
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
 ; VBITS_GE_256-NEXT:    index z2.d, #0, #1
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p1/z, z2.d, z3.d
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
-; VBITS_GE_256-NEXT:    mov z1.d, p1/m, d2
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, d2
 ; VBITS_GE_256-NEXT:    tbnz w8, #7, .LBB12_8
 ; VBITS_GE_256-NEXT:    b .LBB12_9
 ;
@@ -6545,9 +6545,9 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x8
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    ldr d1, [x0]
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, d1
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:  .LBB12_9: // %else26
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_512-NEXT:    add sp, sp, #16
@@ -6562,54 +6562,54 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, d1
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbz w8, #2, .LBB12_3
 ; VBITS_GE_512-NEXT:  .LBB12_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, d1
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbz w8, #3, .LBB12_4
 ; VBITS_GE_512-NEXT:  .LBB12_13: // %cond.load9
 ; VBITS_GE_512-NEXT:    mov w9, #3 // =0x3
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, d1
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbz w8, #4, .LBB12_5
 ; VBITS_GE_512-NEXT:  .LBB12_14: // %cond.load13
 ; VBITS_GE_512-NEXT:    mov w9, #4 // =0x4
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, d1
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbz w8, #5, .LBB12_6
 ; VBITS_GE_512-NEXT:  .LBB12_15: // %cond.load17
 ; VBITS_GE_512-NEXT:    mov w9, #5 // =0x5
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, d1
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbz w8, #6, .LBB12_7
 ; VBITS_GE_512-NEXT:  .LBB12_16: // %cond.load21
 ; VBITS_GE_512-NEXT:    mov w9, #6 // =0x6
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
-; VBITS_GE_512-NEXT:    cmpeq p1.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
-; VBITS_GE_512-NEXT:    mov z0.d, p1/m, d1
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB12_8
 ; VBITS_GE_512-NEXT:    b .LBB12_9
 ;
@@ -6878,8 +6878,8 @@ define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.b, w8
 ; VBITS_GE_256-NEXT:    ldrb w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; VBITS_GE_256-NEXT:    mov z0.b, p0/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; VBITS_GE_256-NEXT:    mov z0.b, p1/m, w8
 ; VBITS_GE_256-NEXT:  .LBB13_35: // %else122
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -7345,8 +7345,8 @@ define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w8
 ; VBITS_GE_512-NEXT:    ldrb w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; VBITS_GE_512-NEXT:    mov z0.b, p0/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; VBITS_GE_512-NEXT:    mov z0.b, p1/m, w8
 ; VBITS_GE_512-NEXT:  .LBB13_35: // %else122
 ; VBITS_GE_512-NEXT:    sunpklo z0.h, z0.b
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
@@ -7597,13 +7597,13 @@ define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.b, vl32
 ; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.b
-; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.b
+; CHECK-EXPAND-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #16 // =0x10
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p0, z0.b
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.h, vl16
+; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    sunpklo z0.h, z0.b
@@ -7827,13 +7827,13 @@ define void @masked_load_sext_v16i8i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.b, vl16
 ; CHECK-EXPAND-NEXT:    ldr q0, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.b
-; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.b
+; CHECK-EXPAND-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #8 // =0x8
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p0, z0.b
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl8
+; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-EXPAND-NEXT:    sunpklo z1.h, z1.b
@@ -7976,13 +7976,13 @@ define void @masked_load_sext_v8i8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.b, vl8
 ; CHECK-EXPAND-NEXT:    ldr d0, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.b
-; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.b
+; CHECK-EXPAND-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p0, z0.b
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
+; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
 ; CHECK-EXPAND-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    sunpklo z0.s, z0.h
@@ -8103,8 +8103,8 @@ define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.h, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.h, w8
 ; VBITS_GE_256-NEXT:    ldrh w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; VBITS_GE_256-NEXT:    mov z0.h, p0/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; VBITS_GE_256-NEXT:    mov z0.h, p1/m, w8
 ; VBITS_GE_256-NEXT:  .LBB16_19: // %else58
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -8324,8 +8324,8 @@ define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.h, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.h, w8
 ; VBITS_GE_512-NEXT:    ldrh w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; VBITS_GE_512-NEXT:    mov z0.h, p0/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; VBITS_GE_512-NEXT:    mov z0.h, p1/m, w8
 ; VBITS_GE_512-NEXT:  .LBB16_19: // %else58
 ; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
@@ -8442,13 +8442,13 @@ define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.h, vl16
 ; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.h
-; CHECK-EXPAND-NEXT:    whilelo p1.h, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.h, p0/z, z0.h, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.h
+; CHECK-EXPAND-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #8 // =0x8
-; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.h, p0, z0.h
+; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl8
+; CHECK-EXPAND-NEXT:    expand z0.h, p1, z0.h
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    sunpklo z0.s, z0.h
@@ -8588,13 +8588,13 @@ define void @masked_load_sext_v8i16i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.h, vl8
 ; CHECK-EXPAND-NEXT:    ldr q0, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.h
-; CHECK-EXPAND-NEXT:    whilelo p1.h, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.h, p0/z, z0.h, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.h
+; CHECK-EXPAND-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
-; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.h, p0, z0.h
+; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
+; CHECK-EXPAND-NEXT:    expand z0.h, p1, z0.h
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-EXPAND-NEXT:    sunpklo z1.s, z1.h
@@ -8675,8 +8675,8 @@ define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.s, w8
 ; VBITS_GE_256-NEXT:    ldr w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; VBITS_GE_256-NEXT:    mov z0.s, p0/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; VBITS_GE_256-NEXT:    mov z0.s, p1/m, w8
 ; VBITS_GE_256-NEXT:  .LBB18_11: // %else26
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -8793,8 +8793,8 @@ define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w8
 ; VBITS_GE_512-NEXT:    ldr w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; VBITS_GE_512-NEXT:    mov z0.s, p0/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    mov z0.s, p1/m, w8
 ; VBITS_GE_512-NEXT:  .LBB18_11: // %else26
 ; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
@@ -8847,13 +8847,13 @@ define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl8
 ; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.s
-; CHECK-EXPAND-NEXT:    whilelo p1.s, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.s
+; CHECK-EXPAND-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
-; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.s, p0, z0.s
+; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
+; CHECK-EXPAND-NEXT:    expand z0.s, p1, z0.s
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    sunpklo z0.d, z0.s
@@ -9084,8 +9084,8 @@ define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.b, w8
 ; VBITS_GE_256-NEXT:    ldrb w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; VBITS_GE_256-NEXT:    mov z0.b, p0/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; VBITS_GE_256-NEXT:    mov z0.b, p1/m, w8
 ; VBITS_GE_256-NEXT:  .LBB19_35: // %else122
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -9551,8 +9551,8 @@ define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w8
 ; VBITS_GE_512-NEXT:    ldrb w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; VBITS_GE_512-NEXT:    mov z0.b, p0/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; VBITS_GE_512-NEXT:    mov z0.b, p1/m, w8
 ; VBITS_GE_512-NEXT:  .LBB19_35: // %else122
 ; VBITS_GE_512-NEXT:    uunpklo z0.h, z0.b
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
@@ -9803,13 +9803,13 @@ define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.b, vl32
 ; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.b
-; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.b
+; CHECK-EXPAND-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #16 // =0x10
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p0, z0.b
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.h, vl16
+; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    uunpklo z0.h, z0.b
@@ -10033,13 +10033,13 @@ define void @masked_load_zext_v16i8i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.b, vl16
 ; CHECK-EXPAND-NEXT:    ldr q0, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.b
-; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.b
+; CHECK-EXPAND-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #8 // =0x8
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p0, z0.b
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl8
+; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-EXPAND-NEXT:    uunpklo z1.h, z1.b
@@ -10182,13 +10182,13 @@ define void @masked_load_zext_v8i8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.b, vl8
 ; CHECK-EXPAND-NEXT:    ldr d0, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.b
-; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.b
+; CHECK-EXPAND-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p0, z0.b
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
+; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
 ; CHECK-EXPAND-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    uunpklo z0.s, z0.h
@@ -10309,8 +10309,8 @@ define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.h, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.h, w8
 ; VBITS_GE_256-NEXT:    ldrh w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; VBITS_GE_256-NEXT:    mov z0.h, p0/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; VBITS_GE_256-NEXT:    mov z0.h, p1/m, w8
 ; VBITS_GE_256-NEXT:  .LBB22_19: // %else58
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -10530,8 +10530,8 @@ define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.h, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.h, w8
 ; VBITS_GE_512-NEXT:    ldrh w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; VBITS_GE_512-NEXT:    mov z0.h, p0/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; VBITS_GE_512-NEXT:    mov z0.h, p1/m, w8
 ; VBITS_GE_512-NEXT:  .LBB22_19: // %else58
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
@@ -10648,13 +10648,13 @@ define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.h, vl16
 ; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.h
-; CHECK-EXPAND-NEXT:    whilelo p1.h, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.h, p0/z, z0.h, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.h
+; CHECK-EXPAND-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #8 // =0x8
-; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.h, p0, z0.h
+; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl8
+; CHECK-EXPAND-NEXT:    expand z0.h, p1, z0.h
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    uunpklo z0.s, z0.h
@@ -10794,13 +10794,13 @@ define void @masked_load_zext_v8i16i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.h, vl8
 ; CHECK-EXPAND-NEXT:    ldr q0, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.h
-; CHECK-EXPAND-NEXT:    whilelo p1.h, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.h, p0/z, z0.h, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.h
+; CHECK-EXPAND-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
-; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.h, p0, z0.h
+; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
+; CHECK-EXPAND-NEXT:    expand z0.h, p1, z0.h
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-EXPAND-NEXT:    uunpklo z1.s, z1.h
@@ -10881,8 +10881,8 @@ define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.s, w8
 ; VBITS_GE_256-NEXT:    ldr w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; VBITS_GE_256-NEXT:    mov z0.s, p0/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; VBITS_GE_256-NEXT:    mov z0.s, p1/m, w8
 ; VBITS_GE_256-NEXT:  .LBB24_11: // %else26
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -10999,8 +10999,8 @@ define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w8
 ; VBITS_GE_512-NEXT:    ldr w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; VBITS_GE_512-NEXT:    mov z0.s, p0/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    mov z0.s, p1/m, w8
 ; VBITS_GE_512-NEXT:  .LBB24_11: // %else26
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
@@ -11053,13 +11053,13 @@ define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl8
 ; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.s
-; CHECK-EXPAND-NEXT:    whilelo p1.s, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.s
+; CHECK-EXPAND-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
-; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.s, p0, z0.s
+; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
+; CHECK-EXPAND-NEXT:    expand z0.s, p1, z0.s
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    uunpklo z0.d, z0.s
@@ -11263,8 +11263,8 @@ define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.b, w8
 ; VBITS_GE_256-NEXT:    ldrb w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.b, p1/z, z1.b, z2.b
-; VBITS_GE_256-NEXT:    mov z0.b, p1/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
+; VBITS_GE_256-NEXT:    mov z0.b, p2/m, w8
 ; VBITS_GE_256-NEXT:  .LBB25_35: // %else122
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -11726,8 +11726,8 @@ define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w8
 ; VBITS_GE_512-NEXT:    ldrb w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.b, p1/z, z1.b, z2.b
-; VBITS_GE_512-NEXT:    mov z0.b, p1/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
+; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB25_35: // %else122
 ; VBITS_GE_512-NEXT:    sunpklo z0.h, z0.b
 ; VBITS_GE_512-NEXT:    ldr x8, [sp] // 8-byte Reload
@@ -11989,11 +11989,11 @@ define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    uzp1 z2.b, z1.b, z1.b
 ; CHECK-EXPAND-NEXT:    splice z0.b, p1, { z2.b, z3.b }
 ; CHECK-EXPAND-NEXT:    ptrue p1.b, vl32
-; CHECK-EXPAND-NEXT:    cmpne p1.b, p1/z, z0.b, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.b
-; CHECK-EXPAND-NEXT:    whilelo p2.b, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
+; CHECK-EXPAND-NEXT:    cmpne p2.b, p1/z, z0.b, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.b
+; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.b, p2, z0.b
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    sunpklo z0.h, z0.b
@@ -12283,11 +12283,11 @@ define void @masked_load_sext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-EXPAND-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; CHECK-EXPAND-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-EXPAND-NEXT:    cmpne p1.b, p1/z, z1.b, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.b
-; CHECK-EXPAND-NEXT:    whilelo p2.b, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
+; CHECK-EXPAND-NEXT:    cmpne p2.b, p1/z, z1.b, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.b
+; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.b, p2, z0.b
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-EXPAND-NEXT:    sunpklo z1.h, z1.b
@@ -12488,11 +12488,11 @@ define void @masked_load_sext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    ptrue p1.b, vl8
 ; CHECK-EXPAND-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-EXPAND-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-EXPAND-NEXT:    cmpne p1.b, p1/z, z0.b, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.b
-; CHECK-EXPAND-NEXT:    whilelo p2.b, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
+; CHECK-EXPAND-NEXT:    cmpne p2.b, p1/z, z0.b, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.b
+; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.b, p2, z0.b
 ; CHECK-EXPAND-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    sunpklo z0.s, z0.h
@@ -12589,8 +12589,8 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.h, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.h, w8
 ; VBITS_GE_256-NEXT:    ldrh w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.h, p1/z, z1.h, z2.h
-; VBITS_GE_256-NEXT:    mov z0.h, p1/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p2.h, p1/z, z1.h, z2.h
+; VBITS_GE_256-NEXT:    mov z0.h, p2/m, w8
 ; VBITS_GE_256-NEXT:  .LBB28_19: // %else58
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -12811,8 +12811,8 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.h, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.h, w8
 ; VBITS_GE_512-NEXT:    ldrh w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.h, p1/z, z1.h, z2.h
-; VBITS_GE_512-NEXT:    mov z0.h, p1/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p2.h, p1/z, z1.h, z2.h
+; VBITS_GE_512-NEXT:    mov z0.h, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB28_19: // %else58
 ; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
@@ -12941,11 +12941,11 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; CHECK-EXPAND-NEXT:    mov v1.d[1], v0.d[0]
 ; CHECK-EXPAND-NEXT:    sunpklo z0.h, z1.b
-; CHECK-EXPAND-NEXT:    cmpne p1.h, p1/z, z0.h, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.h
-; CHECK-EXPAND-NEXT:    whilelo p2.h, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.h, p1, z0.h
+; CHECK-EXPAND-NEXT:    cmpne p2.h, p1/z, z0.h, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.h
+; CHECK-EXPAND-NEXT:    whilelo p1.h, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.h, p2, z0.h
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    sunpklo z0.s, z0.h
@@ -13142,11 +13142,11 @@ define void @masked_load_sext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    splice z0.s, p1, { z2.s, z3.s }
 ; CHECK-EXPAND-NEXT:    ptrue p1.h, vl8
 ; CHECK-EXPAND-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-EXPAND-NEXT:    cmpne p1.h, p1/z, z0.h, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.h
-; CHECK-EXPAND-NEXT:    whilelo p2.h, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.h, p1, z0.h
+; CHECK-EXPAND-NEXT:    cmpne p2.h, p1/z, z0.h, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.h
+; CHECK-EXPAND-NEXT:    whilelo p1.h, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.h, p2, z0.h
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-EXPAND-NEXT:    sunpklo z1.s, z1.h
@@ -13236,8 +13236,8 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.s, w8
 ; VBITS_GE_256-NEXT:    ldr w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
-; VBITS_GE_256-NEXT:    mov z0.s, p1/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
+; VBITS_GE_256-NEXT:    mov z0.s, p2/m, w8
 ; VBITS_GE_256-NEXT:  .LBB30_11: // %else26
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -13355,8 +13355,8 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w8
 ; VBITS_GE_512-NEXT:    ldr w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB30_11: // %else26
 ; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
@@ -13419,11 +13419,11 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    uzp1 z2.s, z1.s, z1.s
 ; CHECK-EXPAND-NEXT:    splice z0.s, p1, { z2.s, z3.s }
 ; CHECK-EXPAND-NEXT:    ptrue p1.s, vl8
-; CHECK-EXPAND-NEXT:    cmpne p1.s, p1/z, z0.s, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.s
-; CHECK-EXPAND-NEXT:    whilelo p2.s, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.s, p1, z0.s
+; CHECK-EXPAND-NEXT:    cmpne p2.s, p1/z, z0.s, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.s
+; CHECK-EXPAND-NEXT:    whilelo p1.s, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.s, p2, z0.s
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    sunpklo z0.d, z0.s
@@ -13627,8 +13627,8 @@ define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.b, w8
 ; VBITS_GE_256-NEXT:    ldrb w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.b, p1/z, z1.b, z2.b
-; VBITS_GE_256-NEXT:    mov z0.b, p1/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
+; VBITS_GE_256-NEXT:    mov z0.b, p2/m, w8
 ; VBITS_GE_256-NEXT:  .LBB31_35: // %else122
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -14090,8 +14090,8 @@ define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w8
 ; VBITS_GE_512-NEXT:    ldrb w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.b, p1/z, z1.b, z2.b
-; VBITS_GE_512-NEXT:    mov z0.b, p1/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
+; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB31_35: // %else122
 ; VBITS_GE_512-NEXT:    uunpklo z0.h, z0.b
 ; VBITS_GE_512-NEXT:    ldr x8, [sp] // 8-byte Reload
@@ -14353,11 +14353,11 @@ define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    uzp1 z2.b, z1.b, z1.b
 ; CHECK-EXPAND-NEXT:    splice z0.b, p1, { z2.b, z3.b }
 ; CHECK-EXPAND-NEXT:    ptrue p1.b, vl32
-; CHECK-EXPAND-NEXT:    cmpne p1.b, p1/z, z0.b, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.b
-; CHECK-EXPAND-NEXT:    whilelo p2.b, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
+; CHECK-EXPAND-NEXT:    cmpne p2.b, p1/z, z0.b, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.b
+; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.b, p2, z0.b
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    uunpklo z0.h, z0.b
@@ -14647,11 +14647,11 @@ define void @masked_load_zext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-EXPAND-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; CHECK-EXPAND-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-EXPAND-NEXT:    cmpne p1.b, p1/z, z1.b, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.b
-; CHECK-EXPAND-NEXT:    whilelo p2.b, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
+; CHECK-EXPAND-NEXT:    cmpne p2.b, p1/z, z1.b, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.b
+; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.b, p2, z0.b
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-EXPAND-NEXT:    uunpklo z1.h, z1.b
@@ -14852,11 +14852,11 @@ define void @masked_load_zext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    ptrue p1.b, vl8
 ; CHECK-EXPAND-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-EXPAND-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-EXPAND-NEXT:    cmpne p1.b, p1/z, z0.b, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.b
-; CHECK-EXPAND-NEXT:    whilelo p2.b, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.b, p1, z0.b
+; CHECK-EXPAND-NEXT:    cmpne p2.b, p1/z, z0.b, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.b
+; CHECK-EXPAND-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.b, p2, z0.b
 ; CHECK-EXPAND-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    uunpklo z0.s, z0.h
@@ -14953,8 +14953,8 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.h, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.h, w8
 ; VBITS_GE_256-NEXT:    ldrh w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.h, p1/z, z1.h, z2.h
-; VBITS_GE_256-NEXT:    mov z0.h, p1/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p2.h, p1/z, z1.h, z2.h
+; VBITS_GE_256-NEXT:    mov z0.h, p2/m, w8
 ; VBITS_GE_256-NEXT:  .LBB34_19: // %else58
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -15175,8 +15175,8 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.h, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.h, w8
 ; VBITS_GE_512-NEXT:    ldrh w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.h, p1/z, z1.h, z2.h
-; VBITS_GE_512-NEXT:    mov z0.h, p1/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p2.h, p1/z, z1.h, z2.h
+; VBITS_GE_512-NEXT:    mov z0.h, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB34_19: // %else58
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
@@ -15305,11 +15305,11 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; CHECK-EXPAND-NEXT:    mov v1.d[1], v0.d[0]
 ; CHECK-EXPAND-NEXT:    sunpklo z0.h, z1.b
-; CHECK-EXPAND-NEXT:    cmpne p1.h, p1/z, z0.h, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.h
-; CHECK-EXPAND-NEXT:    whilelo p2.h, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.h, p1, z0.h
+; CHECK-EXPAND-NEXT:    cmpne p2.h, p1/z, z0.h, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.h
+; CHECK-EXPAND-NEXT:    whilelo p1.h, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.h, p2, z0.h
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    uunpklo z0.s, z0.h
@@ -15506,11 +15506,11 @@ define void @masked_load_zext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    splice z0.s, p1, { z2.s, z3.s }
 ; CHECK-EXPAND-NEXT:    ptrue p1.h, vl8
 ; CHECK-EXPAND-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-EXPAND-NEXT:    cmpne p1.h, p1/z, z0.h, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.h
-; CHECK-EXPAND-NEXT:    whilelo p2.h, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.h, p1, z0.h
+; CHECK-EXPAND-NEXT:    cmpne p2.h, p1/z, z0.h, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.h
+; CHECK-EXPAND-NEXT:    whilelo p1.h, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.h, p2, z0.h
 ; CHECK-EXPAND-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-EXPAND-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-EXPAND-NEXT:    uunpklo z1.s, z1.h
@@ -15600,8 +15600,8 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.s, w8
 ; VBITS_GE_256-NEXT:    ldr w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
-; VBITS_GE_256-NEXT:    mov z0.s, p1/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
+; VBITS_GE_256-NEXT:    mov z0.s, p2/m, w8
 ; VBITS_GE_256-NEXT:  .LBB36_11: // %else26
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -15719,8 +15719,8 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w8
 ; VBITS_GE_512-NEXT:    ldr w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p1.s, p1/z, z1.s, z2.s
-; VBITS_GE_512-NEXT:    mov z0.s, p1/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB36_11: // %else26
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
@@ -15783,11 +15783,11 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    uzp1 z2.s, z1.s, z1.s
 ; CHECK-EXPAND-NEXT:    splice z0.s, p1, { z2.s, z3.s }
 ; CHECK-EXPAND-NEXT:    ptrue p1.s, vl8
-; CHECK-EXPAND-NEXT:    cmpne p1.s, p1/z, z0.s, #0
-; CHECK-EXPAND-NEXT:    cntp x9, p1, p1.s
-; CHECK-EXPAND-NEXT:    whilelo p2.s, xzr, x9
-; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p2/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.s, p1, z0.s
+; CHECK-EXPAND-NEXT:    cmpne p2.s, p1/z, z0.s, #0
+; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.s
+; CHECK-EXPAND-NEXT:    whilelo p1.s, xzr, x9
+; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p1/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.s, p2, z0.s
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    uunpklo z0.d, z0.s
@@ -16984,8 +16984,8 @@ define void @masked_load_sext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w8
 ; CHECK-NEXT:  .LBB37_180: // %else506
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -18034,8 +18034,8 @@ define void @masked_load_sext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w8
 ; CHECK-NEXT:  .LBB38_67: // %else250
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -18773,8 +18773,8 @@ define void @masked_load_sext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w8
 ; CHECK-NEXT:  .LBB39_35: // %else122
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -19451,8 +19451,8 @@ define void @masked_load_sext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p1/m, w8
 ; CHECK-NEXT:  .LBB40_67: // %else250
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -20192,8 +20192,8 @@ define void @masked_load_sext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p1/m, w8
 ; CHECK-NEXT:  .LBB41_35: // %else122
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -20678,8 +20678,8 @@ define void @masked_load_sext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    mov z2.s, w8
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; CHECK-NEXT:    mov z0.s, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    mov z0.s, p1/m, w8
 ; CHECK-NEXT:  .LBB42_35: // %else122
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -22126,8 +22126,8 @@ define void @masked_load_zext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w8
 ; CHECK-NEXT:  .LBB43_180: // %else506
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -23176,8 +23176,8 @@ define void @masked_load_zext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w8
 ; CHECK-NEXT:  .LBB44_67: // %else250
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -23915,8 +23915,8 @@ define void @masked_load_zext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w8
 ; CHECK-NEXT:  .LBB45_35: // %else122
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -24593,8 +24593,8 @@ define void @masked_load_zext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p1/m, w8
 ; CHECK-NEXT:  .LBB46_67: // %else250
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -25334,8 +25334,8 @@ define void @masked_load_zext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p1/m, w8
 ; CHECK-NEXT:  .LBB47_35: // %else122
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -25820,8 +25820,8 @@ define void @masked_load_zext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    mov z2.s, w8
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; CHECK-NEXT:    mov z0.s, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    mov z0.s, p1/m, w8
 ; CHECK-NEXT:  .LBB48_35: // %else122
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -26151,8 +26151,8 @@ define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.s, w8
 ; VBITS_GE_256-NEXT:    ldr w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; VBITS_GE_256-NEXT:    mov z0.s, p0/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; VBITS_GE_256-NEXT:    mov z0.s, p1/m, w8
 ; VBITS_GE_256-NEXT:  .LBB49_11: // %else26
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -26269,8 +26269,8 @@ define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w8
 ; VBITS_GE_512-NEXT:    ldr w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; VBITS_GE_512-NEXT:    mov z0.s, p0/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    mov z0.s, p1/m, w8
 ; VBITS_GE_512-NEXT:  .LBB49_11: // %else26
 ; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
@@ -26323,13 +26323,13 @@ define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl8
 ; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.s
-; CHECK-EXPAND-NEXT:    whilelo p1.s, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.s
+; CHECK-EXPAND-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
-; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.s, p0, z0.s
+; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
+; CHECK-EXPAND-NEXT:    expand z0.s, p1, z0.s
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    sunpklo z0.d, z0.s
@@ -26409,8 +26409,8 @@ define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_256-NEXT:    mov z2.s, w8
 ; VBITS_GE_256-NEXT:    ldr w8, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; VBITS_GE_256-NEXT:    mov z0.s, p0/m, w8
+; VBITS_GE_256-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; VBITS_GE_256-NEXT:    mov z0.s, p1/m, w8
 ; VBITS_GE_256-NEXT:  .LBB50_11: // %else26
 ; VBITS_GE_256-NEXT:    movprfx z1, z0
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -26527,8 +26527,8 @@ define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w8
 ; VBITS_GE_512-NEXT:    ldr w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; VBITS_GE_512-NEXT:    mov z0.s, p0/m, w8
+; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    mov z0.s, p1/m, w8
 ; VBITS_GE_512-NEXT:  .LBB50_11: // %else26
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
@@ -26581,13 +26581,13 @@ define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND:       // %bb.0:
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl8
 ; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    cmpgt p0.s, p0/z, z0.s, #0
-; CHECK-EXPAND-NEXT:    cntp x8, p0, p0.s
-; CHECK-EXPAND-NEXT:    whilelo p1.s, xzr, x8
+; CHECK-EXPAND-NEXT:    cmpgt p1.s, p0/z, z0.s, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.s
+; CHECK-EXPAND-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
-; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p1/z, [x0]
-; CHECK-EXPAND-NEXT:    expand z0.s, p0, z0.s
+; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
+; CHECK-EXPAND-NEXT:    expand z0.s, p1, z0.s
 ; CHECK-EXPAND-NEXT:    movprfx z1, z0
 ; CHECK-EXPAND-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-EXPAND-NEXT:    uunpklo z0.d, z0.s

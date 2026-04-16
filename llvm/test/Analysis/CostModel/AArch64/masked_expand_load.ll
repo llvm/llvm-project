@@ -45,8 +45,8 @@ define void @fixed() {
 ; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 2 for: %v2f32 = call <2 x float> @llvm.masked.expandload.v2f32(ptr poison, <2 x i1> poison, <2 x float> poison)
 ; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 2 for: %v4f32 = call <4 x float> @llvm.masked.expandload.v4f32(ptr poison, <4 x i1> poison, <4 x float> poison)
 ; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 2 for: %v2f64 = call <2 x double> @llvm.masked.expandload.v2f64(ptr poison, <2 x i1> poison, <2 x double> poison)
-; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 4 for: %v4i64 = call <4 x i64> @llvm.masked.expandload.v4i64(ptr poison, <4 x i1> poison, <4 x i64> poison)
-; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 8 for: %v32f16 = call <32 x half> @llvm.masked.expandload.v32f16(ptr poison, <32 x i1> poison, <32 x half> poison)
+; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 8 for: %v4i64 = call <4 x i64> @llvm.masked.expandload.v4i64(ptr poison, <4 x i1> poison, <4 x i64> poison)
+; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 16 for: %v32f16 = call <32 x half> @llvm.masked.expandload.v32f16(ptr poison, <32 x i1> poison, <32 x half> poison)
 ; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SVE2p2-SME2p2-LABEL: 'fixed'
@@ -109,7 +109,7 @@ define void @fixed() {
 ; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 2 for: %v4f32 = call <4 x float> @llvm.masked.expandload.v4f32(ptr poison, <4 x i1> poison, <4 x float> poison)
 ; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 2 for: %v2f64 = call <2 x double> @llvm.masked.expandload.v2f64(ptr poison, <2 x i1> poison, <2 x double> poison)
 ; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 2 for: %v4i64 = call <4 x i64> @llvm.masked.expandload.v4i64(ptr poison, <4 x i1> poison, <4 x i64> poison)
-; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 4 for: %v32f16 = call <32 x half> @llvm.masked.expandload.v32f16(ptr poison, <32 x i1> poison, <32 x half> poison)
+; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 8 for: %v32f16 = call <32 x half> @llvm.masked.expandload.v32f16(ptr poison, <32 x i1> poison, <32 x half> poison)
 ; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:
@@ -159,8 +159,8 @@ define void @scalable() {
 ; SVE2p2-SME2p2-NON-STREAMING-NEXT:  Cost Model: Found costs of 2 for: %nxv4f32 = call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x float> poison)
 ; SVE2p2-SME2p2-NON-STREAMING-NEXT:  Cost Model: Found costs of 2 for: %nxv2f64 = call <vscale x 2 x double> @llvm.masked.expandload.nxv2f64(ptr poison, <vscale x 2 x i1> poison, <vscale x 2 x double> poison)
 ; SVE2p2-SME2p2-NON-STREAMING-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.expandload.nxv1i64(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i64> poison)
-; SVE2p2-SME2p2-NON-STREAMING-NEXT:  Cost Model: Found costs of 4 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
-; SVE2p2-SME2p2-NON-STREAMING-NEXT:  Cost Model: Found costs of 8 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.expandload.nxv32f16(ptr poison, <vscale x 32 x i1> poison, <vscale x 32 x half> poison)
+; SVE2p2-SME2p2-NON-STREAMING-NEXT:  Cost Model: Found costs of 8 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
+; SVE2p2-SME2p2-NON-STREAMING-NEXT:  Cost Model: Found costs of 16 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.expandload.nxv32f16(ptr poison, <vscale x 32 x i1> poison, <vscale x 32 x half> poison)
 ; SVE2p2-SME2p2-NON-STREAMING-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SVE2p2-SME2p2-STREAMING-LABEL: 'scalable'
@@ -181,8 +181,8 @@ define void @scalable() {
 ; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 2 for: %nxv4f32 = call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x float> poison)
 ; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 2 for: %nxv2f64 = call <vscale x 2 x double> @llvm.masked.expandload.nxv2f64(ptr poison, <vscale x 2 x i1> poison, <vscale x 2 x double> poison)
 ; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.expandload.nxv1i64(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i64> poison)
-; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 4 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
-; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 8 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.expandload.nxv32f16(ptr poison, <vscale x 32 x i1> poison, <vscale x 32 x half> poison)
+; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 8 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
+; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of 16 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.expandload.nxv32f16(ptr poison, <vscale x 32 x i1> poison, <vscale x 32 x half> poison)
 ; SVE2p2-SME2p2-STREAMING-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SVE2p2-SME2p2-LABEL: 'scalable'
@@ -203,8 +203,8 @@ define void @scalable() {
 ; SVE2p2-SME2p2-NEXT:  Cost Model: Found costs of 2 for: %nxv4f32 = call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x float> poison)
 ; SVE2p2-SME2p2-NEXT:  Cost Model: Found costs of 2 for: %nxv2f64 = call <vscale x 2 x double> @llvm.masked.expandload.nxv2f64(ptr poison, <vscale x 2 x i1> poison, <vscale x 2 x double> poison)
 ; SVE2p2-SME2p2-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.expandload.nxv1i64(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i64> poison)
-; SVE2p2-SME2p2-NEXT:  Cost Model: Found costs of 4 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
-; SVE2p2-SME2p2-NEXT:  Cost Model: Found costs of 8 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.expandload.nxv32f16(ptr poison, <vscale x 32 x i1> poison, <vscale x 32 x half> poison)
+; SVE2p2-SME2p2-NEXT:  Cost Model: Found costs of 8 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
+; SVE2p2-SME2p2-NEXT:  Cost Model: Found costs of 16 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.expandload.nxv32f16(ptr poison, <vscale x 32 x i1> poison, <vscale x 32 x half> poison)
 ; SVE2p2-SME2p2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SVE-ONLY-LABEL: 'scalable'
@@ -247,8 +247,8 @@ define void @scalable() {
 ; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 2 for: %nxv4f32 = call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x float> poison)
 ; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 2 for: %nxv2f64 = call <vscale x 2 x double> @llvm.masked.expandload.nxv2f64(ptr poison, <vscale x 2 x i1> poison, <vscale x 2 x double> poison)
 ; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.expandload.nxv1i64(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i64> poison)
-; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 4 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
-; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 8 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.expandload.nxv32f16(ptr poison, <vscale x 32 x i1> poison, <vscale x 32 x half> poison)
+; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 8 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64(ptr poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
+; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of 16 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.expandload.nxv32f16(ptr poison, <vscale x 32 x i1> poison, <vscale x 32 x half> poison)
 ; SVE2p2-SME2p2-SVE256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:

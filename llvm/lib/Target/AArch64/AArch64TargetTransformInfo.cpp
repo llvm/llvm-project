@@ -4916,12 +4916,13 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
+  InstructionCost MemOpCost = LT.first;
   if (MICA.getID() == Intrinsic::masked_expandload) {
     if (!isLegalMaskedExpandLoad(Src, MICA.getAlignment()))
       return InstructionCost::getInvalid();
 
     // Operation will be split into expand of masked.load
-    return LT.first * 2;
+    MemOpCost *= 2;
   }
 
   // If we need to split the memory operation, we will also need to split the
@@ -4933,9 +4934,9 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // since the number of bits in a P register matches the number of bytes in a
   // Z register.
   if (LT.first > 1 && LT.second.getScalarSizeInBits() > 8)
-    return LT.first * 2;
+    return MemOpCost * 2;
 
-  return LT.first;
+  return MemOpCost;
 }
 
 // This function returns gather/scatter overhead either from

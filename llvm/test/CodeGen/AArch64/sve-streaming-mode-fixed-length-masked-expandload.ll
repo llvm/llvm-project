@@ -43,8 +43,8 @@ define <4 x i8> @masked_load_v4i8(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p1/m, w9
 ; CHECK-NEXT:  .LBB0_4: // %else2
 ; CHECK-NEXT:    tbz w8, #2, .LBB0_6
 ; CHECK-NEXT:  // %bb.5: // %cond.load5
@@ -53,8 +53,8 @@ define <4 x i8> @masked_load_v4i8(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p1/m, w9
 ; CHECK-NEXT:    tbz w8, #3, .LBB0_8
 ; CHECK-NEXT:    b .LBB0_7
 ; CHECK-NEXT:  .LBB0_6: // %else6
@@ -65,8 +65,8 @@ define <4 x i8> @masked_load_v4i8(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p1/m, w8
 ; CHECK-NEXT:  .LBB0_8: // %else10
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
@@ -191,8 +191,8 @@ define <8 x i8> @masked_load_v8i8(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:  .LBB1_4: // %else2
 ; CHECK-NEXT:    tbz w8, #2, .LBB1_10
 ; CHECK-NEXT:  // %bb.5: // %cond.load5
@@ -201,8 +201,8 @@ define <8 x i8> @masked_load_v8i8(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #3, .LBB1_11
 ; CHECK-NEXT:  .LBB1_6: // %else10
 ; CHECK-NEXT:    tbz w8, #4, .LBB1_12
@@ -212,8 +212,8 @@ define <8 x i8> @masked_load_v8i8(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #5, .LBB1_13
 ; CHECK-NEXT:  .LBB1_8: // %else18
 ; CHECK-NEXT:    tbz w8, #6, .LBB1_14
@@ -223,8 +223,8 @@ define <8 x i8> @masked_load_v8i8(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbz w8, #7, .LBB1_16
 ; CHECK-NEXT:    b .LBB1_15
 ; CHECK-NEXT:  .LBB1_10: // %else6
@@ -235,8 +235,8 @@ define <8 x i8> @masked_load_v8i8(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #4, .LBB1_7
 ; CHECK-NEXT:  .LBB1_12: // %else14
 ; CHECK-NEXT:    tbz w8, #5, .LBB1_8
@@ -246,8 +246,8 @@ define <8 x i8> @masked_load_v8i8(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #6, .LBB1_9
 ; CHECK-NEXT:  .LBB1_14: // %else22
 ; CHECK-NEXT:    tbz w8, #7, .LBB1_16
@@ -257,8 +257,8 @@ define <8 x i8> @masked_load_v8i8(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w8
 ; CHECK-NEXT:  .LBB1_16: // %else26
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
@@ -485,8 +485,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:  .LBB2_4: // %else2
 ; CHECK-NEXT:    tbz w8, #2, .LBB2_18
 ; CHECK-NEXT:  // %bb.5: // %cond.load5
@@ -495,8 +495,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #3, .LBB2_19
 ; CHECK-NEXT:  .LBB2_6: // %else10
 ; CHECK-NEXT:    tbz w8, #4, .LBB2_20
@@ -506,8 +506,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #5, .LBB2_21
 ; CHECK-NEXT:  .LBB2_8: // %else18
 ; CHECK-NEXT:    tbz w8, #6, .LBB2_22
@@ -517,8 +517,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #7, .LBB2_23
 ; CHECK-NEXT:  .LBB2_10: // %else26
 ; CHECK-NEXT:    tbz w8, #8, .LBB2_24
@@ -528,8 +528,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #9, .LBB2_25
 ; CHECK-NEXT:  .LBB2_12: // %else34
 ; CHECK-NEXT:    tbz w8, #10, .LBB2_26
@@ -539,8 +539,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #11, .LBB2_27
 ; CHECK-NEXT:  .LBB2_14: // %else42
 ; CHECK-NEXT:    tbz w8, #12, .LBB2_28
@@ -550,8 +550,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #13, .LBB2_29
 ; CHECK-NEXT:  .LBB2_16: // %else50
 ; CHECK-NEXT:    tbz w8, #14, .LBB2_30
@@ -561,8 +561,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbz w8, #15, .LBB2_32
 ; CHECK-NEXT:    b .LBB2_31
 ; CHECK-NEXT:  .LBB2_18: // %else6
@@ -573,8 +573,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #4, .LBB2_7
 ; CHECK-NEXT:  .LBB2_20: // %else14
 ; CHECK-NEXT:    tbz w8, #5, .LBB2_8
@@ -584,8 +584,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #6, .LBB2_9
 ; CHECK-NEXT:  .LBB2_22: // %else22
 ; CHECK-NEXT:    tbz w8, #7, .LBB2_10
@@ -595,8 +595,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #8, .LBB2_11
 ; CHECK-NEXT:  .LBB2_24: // %else30
 ; CHECK-NEXT:    tbz w8, #9, .LBB2_12
@@ -606,8 +606,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #10, .LBB2_13
 ; CHECK-NEXT:  .LBB2_26: // %else38
 ; CHECK-NEXT:    tbz w8, #11, .LBB2_14
@@ -617,8 +617,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #12, .LBB2_15
 ; CHECK-NEXT:  .LBB2_28: // %else46
 ; CHECK-NEXT:    tbz w8, #13, .LBB2_16
@@ -628,8 +628,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #14, .LBB2_17
 ; CHECK-NEXT:  .LBB2_30: // %else54
 ; CHECK-NEXT:    tbz w8, #15, .LBB2_32
@@ -639,8 +639,8 @@ define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w8
 ; CHECK-NEXT:  .LBB2_32: // %else58
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
@@ -1109,8 +1109,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #3, .LBB3_35
 ; CHECK-NEXT:  .LBB3_4: // %else10
 ; CHECK-NEXT:    tbz w8, #4, .LBB3_36
@@ -1120,8 +1120,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #5, .LBB3_37
 ; CHECK-NEXT:  .LBB3_6: // %else18
 ; CHECK-NEXT:    tbz w8, #6, .LBB3_38
@@ -1131,8 +1131,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #7, .LBB3_39
 ; CHECK-NEXT:  .LBB3_8: // %else26
 ; CHECK-NEXT:    tbz w8, #8, .LBB3_40
@@ -1142,8 +1142,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #9, .LBB3_41
 ; CHECK-NEXT:  .LBB3_10: // %else34
 ; CHECK-NEXT:    tbz w8, #10, .LBB3_42
@@ -1153,8 +1153,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #11, .LBB3_43
 ; CHECK-NEXT:  .LBB3_12: // %else42
 ; CHECK-NEXT:    tbz w8, #12, .LBB3_44
@@ -1164,8 +1164,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #13, .LBB3_45
 ; CHECK-NEXT:  .LBB3_14: // %else50
 ; CHECK-NEXT:    tbz w8, #14, .LBB3_46
@@ -1175,8 +1175,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #15, .LBB3_47
 ; CHECK-NEXT:  .LBB3_16: // %else58
 ; CHECK-NEXT:    tbz w8, #16, .LBB3_48
@@ -1193,8 +1193,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #19, .LBB3_51
 ; CHECK-NEXT:  .LBB3_20: // %else74
 ; CHECK-NEXT:    tbz w8, #20, .LBB3_52
@@ -1204,8 +1204,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #21, .LBB3_53
 ; CHECK-NEXT:  .LBB3_22: // %else82
 ; CHECK-NEXT:    tbz w8, #22, .LBB3_54
@@ -1215,8 +1215,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #23, .LBB3_55
 ; CHECK-NEXT:  .LBB3_24: // %else90
 ; CHECK-NEXT:    tbz w8, #24, .LBB3_56
@@ -1226,8 +1226,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #25, .LBB3_57
 ; CHECK-NEXT:  .LBB3_26: // %else98
 ; CHECK-NEXT:    tbz w8, #26, .LBB3_58
@@ -1237,8 +1237,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #27, .LBB3_59
 ; CHECK-NEXT:  .LBB3_28: // %else106
 ; CHECK-NEXT:    tbz w8, #28, .LBB3_60
@@ -1248,8 +1248,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #29, .LBB3_61
 ; CHECK-NEXT:  .LBB3_30: // %else114
 ; CHECK-NEXT:    tbz w8, #30, .LBB3_62
@@ -1259,8 +1259,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbz w8, #31, .LBB3_64
 ; CHECK-NEXT:    b .LBB3_63
 ; CHECK-NEXT:  .LBB3_32: // %else
@@ -1271,8 +1271,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #2, .LBB3_3
 ; CHECK-NEXT:  .LBB3_34: // %else6
 ; CHECK-NEXT:    tbz w8, #3, .LBB3_4
@@ -1282,8 +1282,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #4, .LBB3_5
 ; CHECK-NEXT:  .LBB3_36: // %else14
 ; CHECK-NEXT:    tbz w8, #5, .LBB3_6
@@ -1293,8 +1293,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #6, .LBB3_7
 ; CHECK-NEXT:  .LBB3_38: // %else22
 ; CHECK-NEXT:    tbz w8, #7, .LBB3_8
@@ -1304,8 +1304,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #8, .LBB3_9
 ; CHECK-NEXT:  .LBB3_40: // %else30
 ; CHECK-NEXT:    tbz w8, #9, .LBB3_10
@@ -1315,8 +1315,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #10, .LBB3_11
 ; CHECK-NEXT:  .LBB3_42: // %else38
 ; CHECK-NEXT:    tbz w8, #11, .LBB3_12
@@ -1326,8 +1326,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #12, .LBB3_13
 ; CHECK-NEXT:  .LBB3_44: // %else46
 ; CHECK-NEXT:    tbz w8, #13, .LBB3_14
@@ -1337,8 +1337,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #14, .LBB3_15
 ; CHECK-NEXT:  .LBB3_46: // %else54
 ; CHECK-NEXT:    tbz w8, #15, .LBB3_16
@@ -1348,8 +1348,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #16, .LBB3_17
 ; CHECK-NEXT:  .LBB3_48: // %else62
 ; CHECK-NEXT:    tbz w8, #17, .LBB3_18
@@ -1359,8 +1359,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #18, .LBB3_19
 ; CHECK-NEXT:  .LBB3_50: // %else70
 ; CHECK-NEXT:    tbz w8, #19, .LBB3_20
@@ -1370,8 +1370,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #20, .LBB3_21
 ; CHECK-NEXT:  .LBB3_52: // %else78
 ; CHECK-NEXT:    tbz w8, #21, .LBB3_22
@@ -1381,8 +1381,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #22, .LBB3_23
 ; CHECK-NEXT:  .LBB3_54: // %else86
 ; CHECK-NEXT:    tbz w8, #23, .LBB3_24
@@ -1392,8 +1392,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #24, .LBB3_25
 ; CHECK-NEXT:  .LBB3_56: // %else94
 ; CHECK-NEXT:    tbz w8, #25, .LBB3_26
@@ -1403,8 +1403,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #26, .LBB3_27
 ; CHECK-NEXT:  .LBB3_58: // %else102
 ; CHECK-NEXT:    tbz w8, #27, .LBB3_28
@@ -1414,8 +1414,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #28, .LBB3_29
 ; CHECK-NEXT:  .LBB3_60: // %else110
 ; CHECK-NEXT:    tbz w8, #29, .LBB3_30
@@ -1425,8 +1425,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w9
 ; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w9
 ; CHECK-NEXT:    tbnz w8, #30, .LBB3_31
 ; CHECK-NEXT:  .LBB3_62: // %else118
 ; CHECK-NEXT:    tbz w8, #31, .LBB3_64
@@ -1436,8 +1436,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z1.b, p0/m, w8
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z1.b, p1/m, w8
 ; CHECK-NEXT:  .LBB3_64: // %else122
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -2257,9 +2257,9 @@ define <4 x half> @masked_load_v4f16(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    ldr h1, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p1/m, h1
 ; CHECK-NEXT:  .LBB5_4: // %else2
 ; CHECK-NEXT:    tbz w8, #2, .LBB5_6
 ; CHECK-NEXT:  // %bb.5: // %cond.load5
@@ -2267,9 +2267,9 @@ define <4 x half> @masked_load_v4f16(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    ldr h1, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p1/m, h1
 ; CHECK-NEXT:    tbz w8, #3, .LBB5_8
 ; CHECK-NEXT:    b .LBB5_7
 ; CHECK-NEXT:  .LBB5_6: // %else6
@@ -2279,9 +2279,9 @@ define <4 x half> @masked_load_v4f16(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    ldr h1, [x0]
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p1/m, h1
 ; CHECK-NEXT:  .LBB5_8: // %else10
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
@@ -2406,9 +2406,9 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    ldr h1, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p1/m, h1
 ; CHECK-NEXT:  .LBB6_4: // %else2
 ; CHECK-NEXT:    tbz w8, #2, .LBB6_10
 ; CHECK-NEXT:  // %bb.5: // %cond.load5
@@ -2416,9 +2416,9 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    ldr h1, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p1/m, h1
 ; CHECK-NEXT:    tbnz w8, #3, .LBB6_11
 ; CHECK-NEXT:  .LBB6_6: // %else10
 ; CHECK-NEXT:    tbz w8, #4, .LBB6_12
@@ -2427,9 +2427,9 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    ldr h1, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p1/m, h1
 ; CHECK-NEXT:    tbnz w8, #5, .LBB6_13
 ; CHECK-NEXT:  .LBB6_8: // %else18
 ; CHECK-NEXT:    tbz w8, #6, .LBB6_14
@@ -2438,9 +2438,9 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    ldr h1, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p1/m, h1
 ; CHECK-NEXT:    tbz w8, #7, .LBB6_16
 ; CHECK-NEXT:    b .LBB6_15
 ; CHECK-NEXT:  .LBB6_10: // %else6
@@ -2450,9 +2450,9 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    ldr h1, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p1/m, h1
 ; CHECK-NEXT:    tbnz w8, #4, .LBB6_7
 ; CHECK-NEXT:  .LBB6_12: // %else14
 ; CHECK-NEXT:    tbz w8, #5, .LBB6_8
@@ -2461,9 +2461,9 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    ldr h1, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p1/m, h1
 ; CHECK-NEXT:    tbnz w8, #6, .LBB6_9
 ; CHECK-NEXT:  .LBB6_14: // %else22
 ; CHECK-NEXT:    tbz w8, #7, .LBB6_16
@@ -2472,9 +2472,9 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    ldr h1, [x0]
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p1/m, h1
 ; CHECK-NEXT:  .LBB6_16: // %else26
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
@@ -2696,9 +2696,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h2
+; CHECK-NEXT:    mov z0.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #3, .LBB7_19
 ; CHECK-NEXT:  .LBB7_4: // %else10
 ; CHECK-NEXT:    tbz w8, #4, .LBB7_20
@@ -2707,9 +2707,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h2
+; CHECK-NEXT:    mov z0.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #5, .LBB7_21
 ; CHECK-NEXT:  .LBB7_6: // %else18
 ; CHECK-NEXT:    tbz w8, #6, .LBB7_22
@@ -2718,9 +2718,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h2
+; CHECK-NEXT:    mov z0.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #7, .LBB7_23
 ; CHECK-NEXT:  .LBB7_8: // %else26
 ; CHECK-NEXT:    tbz w8, #8, .LBB7_24
@@ -2736,9 +2736,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z1.h, p0/m, h2
+; CHECK-NEXT:    mov z1.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #11, .LBB7_27
 ; CHECK-NEXT:  .LBB7_12: // %else42
 ; CHECK-NEXT:    tbz w8, #12, .LBB7_28
@@ -2747,9 +2747,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z1.h, p0/m, h2
+; CHECK-NEXT:    mov z1.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #13, .LBB7_29
 ; CHECK-NEXT:  .LBB7_14: // %else50
 ; CHECK-NEXT:    tbz w8, #14, .LBB7_30
@@ -2758,9 +2758,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z1.h, p0/m, h2
+; CHECK-NEXT:    mov z1.h, p1/m, h2
 ; CHECK-NEXT:    tbz w8, #15, .LBB7_32
 ; CHECK-NEXT:    b .LBB7_31
 ; CHECK-NEXT:  .LBB7_16: // %else
@@ -2770,9 +2770,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h2
+; CHECK-NEXT:    mov z0.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #2, .LBB7_3
 ; CHECK-NEXT:  .LBB7_18: // %else6
 ; CHECK-NEXT:    tbz w8, #3, .LBB7_4
@@ -2781,9 +2781,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h2
+; CHECK-NEXT:    mov z0.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #4, .LBB7_5
 ; CHECK-NEXT:  .LBB7_20: // %else14
 ; CHECK-NEXT:    tbz w8, #5, .LBB7_6
@@ -2792,9 +2792,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h2
+; CHECK-NEXT:    mov z0.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #6, .LBB7_7
 ; CHECK-NEXT:  .LBB7_22: // %else22
 ; CHECK-NEXT:    tbz w8, #7, .LBB7_8
@@ -2803,9 +2803,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z0.h, p0/m, h2
+; CHECK-NEXT:    mov z0.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #8, .LBB7_9
 ; CHECK-NEXT:  .LBB7_24: // %else30
 ; CHECK-NEXT:    tbz w8, #9, .LBB7_10
@@ -2814,9 +2814,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z1.h, p0/m, h2
+; CHECK-NEXT:    mov z1.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #10, .LBB7_11
 ; CHECK-NEXT:  .LBB7_26: // %else38
 ; CHECK-NEXT:    tbz w8, #11, .LBB7_12
@@ -2825,9 +2825,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z1.h, p0/m, h2
+; CHECK-NEXT:    mov z1.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #12, .LBB7_13
 ; CHECK-NEXT:  .LBB7_28: // %else46
 ; CHECK-NEXT:    tbz w8, #13, .LBB7_14
@@ -2836,9 +2836,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w9
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0], #2
-; CHECK-NEXT:    mov z1.h, p0/m, h2
+; CHECK-NEXT:    mov z1.h, p1/m, h2
 ; CHECK-NEXT:    tbnz w8, #14, .LBB7_15
 ; CHECK-NEXT:  .LBB7_30: // %else54
 ; CHECK-NEXT:    tbz w8, #15, .LBB7_32
@@ -2847,9 +2847,9 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-NEXT:    index z2.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, w8
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z3.h
 ; CHECK-NEXT:    ldr h2, [x0]
-; CHECK-NEXT:    mov z1.h, p0/m, h2
+; CHECK-NEXT:    mov z1.h, p1/m, h2
 ; CHECK-NEXT:  .LBB7_32: // %else58
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -3216,9 +3216,9 @@ define <2 x float> @masked_load_v2f32(ptr %src, <2 x i1> %mask) {
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov z0.s, p0/m, s1
+; CHECK-NEXT:    mov z0.s, p1/m, s1
 ; CHECK-NEXT:  .LBB8_4: // %else2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
@@ -3295,9 +3295,9 @@ define <4 x float> @masked_load_v4f32(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p0/m, s1
+; CHECK-NEXT:    mov z0.s, p1/m, s1
 ; CHECK-NEXT:  .LBB9_4: // %else2
 ; CHECK-NEXT:    tbz w8, #2, .LBB9_6
 ; CHECK-NEXT:  // %bb.5: // %cond.load5
@@ -3305,9 +3305,9 @@ define <4 x float> @masked_load_v4f32(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w9
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
-; CHECK-NEXT:    mov z0.s, p0/m, s1
+; CHECK-NEXT:    mov z0.s, p1/m, s1
 ; CHECK-NEXT:    tbz w8, #3, .LBB9_8
 ; CHECK-NEXT:    b .LBB9_7
 ; CHECK-NEXT:  .LBB9_6: // %else6
@@ -3317,9 +3317,9 @@ define <4 x float> @masked_load_v4f32(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov z0.s, p0/m, s1
+; CHECK-NEXT:    mov z0.s, p1/m, s1
 ; CHECK-NEXT:  .LBB9_8: // %else10
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
@@ -3439,9 +3439,9 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z2.s, #0, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z3.s, w9
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z3.s
 ; CHECK-NEXT:    ldr s2, [x0], #4
-; CHECK-NEXT:    mov z0.s, p0/m, s2
+; CHECK-NEXT:    mov z0.s, p1/m, s2
 ; CHECK-NEXT:    tbnz w8, #3, .LBB10_11
 ; CHECK-NEXT:  .LBB10_4: // %else10
 ; CHECK-NEXT:    tbz w8, #4, .LBB10_12
@@ -3457,9 +3457,9 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z2.s, #0, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z3.s, w9
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z3.s
 ; CHECK-NEXT:    ldr s2, [x0], #4
-; CHECK-NEXT:    mov z1.s, p0/m, s2
+; CHECK-NEXT:    mov z1.s, p1/m, s2
 ; CHECK-NEXT:    tbz w8, #7, .LBB10_16
 ; CHECK-NEXT:    b .LBB10_15
 ; CHECK-NEXT:  .LBB10_8: // %else
@@ -3469,9 +3469,9 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z2.s, #0, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z3.s, w9
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z3.s
 ; CHECK-NEXT:    ldr s2, [x0], #4
-; CHECK-NEXT:    mov z0.s, p0/m, s2
+; CHECK-NEXT:    mov z0.s, p1/m, s2
 ; CHECK-NEXT:    tbnz w8, #2, .LBB10_3
 ; CHECK-NEXT:  .LBB10_10: // %else6
 ; CHECK-NEXT:    tbz w8, #3, .LBB10_4
@@ -3480,9 +3480,9 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z2.s, #0, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z3.s, w9
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z3.s
 ; CHECK-NEXT:    ldr s2, [x0], #4
-; CHECK-NEXT:    mov z0.s, p0/m, s2
+; CHECK-NEXT:    mov z0.s, p1/m, s2
 ; CHECK-NEXT:    tbnz w8, #4, .LBB10_5
 ; CHECK-NEXT:  .LBB10_12: // %else14
 ; CHECK-NEXT:    tbz w8, #5, .LBB10_6
@@ -3491,9 +3491,9 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z2.s, #0, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z3.s, w9
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z3.s
 ; CHECK-NEXT:    ldr s2, [x0], #4
-; CHECK-NEXT:    mov z1.s, p0/m, s2
+; CHECK-NEXT:    mov z1.s, p1/m, s2
 ; CHECK-NEXT:    tbnz w8, #6, .LBB10_7
 ; CHECK-NEXT:  .LBB10_14: // %else22
 ; CHECK-NEXT:    tbz w8, #7, .LBB10_16
@@ -3502,9 +3502,9 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    index z2.s, #0, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z3.s, w8
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z3.s
 ; CHECK-NEXT:    ldr s2, [x0]
-; CHECK-NEXT:    mov z1.s, p0/m, s2
+; CHECK-NEXT:    mov z1.s, p1/m, s2
 ; CHECK-NEXT:  .LBB10_16: // %else26
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -3711,9 +3711,9 @@ define <2 x double> @masked_load_v2f64(ptr %src, <2 x i1> %mask) {
 ; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, z2.d
 ; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    mov z0.d, p0/m, d1
+; CHECK-NEXT:    mov z0.d, p1/m, d1
 ; CHECK-NEXT:  .LBB11_4: // %else2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
@@ -3797,9 +3797,9 @@ define <4 x double> @masked_load_v4f64(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    index z2.d, #0, #1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z3.d, x9
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z3.d
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z2.d, z3.d
 ; CHECK-NEXT:    ldr d2, [x0], #8
-; CHECK-NEXT:    mov z0.d, p0/m, d2
+; CHECK-NEXT:    mov z0.d, p1/m, d2
 ; CHECK-NEXT:    tbnz w8, #2, .LBB12_3
 ; CHECK-NEXT:  .LBB12_6: // %else6
 ; CHECK-NEXT:    tbz w8, #3, .LBB12_8
@@ -3808,9 +3808,9 @@ define <4 x double> @masked_load_v4f64(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    index z2.d, #0, #1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z3.d, x8
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z3.d
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z2.d, z3.d
 ; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    mov z1.d, p0/m, d2
+; CHECK-NEXT:    mov z1.d, p1/m, d2
 ; CHECK-NEXT:  .LBB12_8: // %else10
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
