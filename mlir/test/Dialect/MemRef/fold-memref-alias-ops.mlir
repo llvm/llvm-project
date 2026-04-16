@@ -508,6 +508,28 @@ func.func @subview_of_subview_rank_reducing(%m: memref<?x?x?xf32>,
 
 // -----
 
+// CHECK-LABEL:   func.func @subview_of_subview_no_unit_stride(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<8x8xf32, strided<[8, 1]>>)
+// CHECK:           %[[SUBVIEW_0:.*]] = memref.subview %[[ARG0]][3, 3] [2, 2] [4, 4] : memref<8x8xf32, strided<[8, 1]>> to memref<2x2xf32, strided<[32, 4], offset: 27>>
+func.func @subview_of_subview_no_unit_stride(%arg0: memref<8x8xf32, strided<[8, 1]>>) -> memref<2x2xf32, strided<[32, 4], offset: 27>> {
+  %subview = memref.subview %arg0[1, 1] [4, 4] [2, 2] : memref<8x8xf32, strided<[8, 1]>> to memref<4x4xf32, strided<[16, 2], offset: 9>>
+  %subview_0 = memref.subview %subview[1, 1] [2, 2] [2, 2] : memref<4x4xf32, strided<[16, 2], offset: 9>> to memref<2x2xf32, strided<[32, 4], offset: 27>>
+  return %subview_0 : memref<2x2xf32, strided<[32, 4], offset: 27>>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @subview_of_subview_rank_reducing_no_unit_stride(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<8x8xf32, strided<[8, 1]>>)
+// CHECK:           %[[SUBVIEW_0:.*]] = memref.subview %[[ARG0]][3, 3] [1, 2] [4, 4] : memref<8x8xf32, strided<[8, 1]>> to memref<2xf32, strided<[4], offset: 27>>
+func.func @subview_of_subview_rank_reducing_no_unit_stride(%arg0: memref<8x8xf32, strided<[8, 1]>>) -> memref<2xf32, strided<[4], offset: 27>> {
+  %subview = memref.subview %arg0[1, 1] [4, 4] [2, 2] : memref<8x8xf32, strided<[8, 1]>> to memref<4x4xf32, strided<[16, 2], offset: 9>>
+  %subview_0 = memref.subview %subview[1, 1] [1, 2] [2, 2] : memref<4x4xf32, strided<[16, 2], offset: 9>> to memref<2xf32, strided<[4], offset: 27>>
+  return %subview_0 : memref<2xf32, strided<[4], offset: 27>>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_load_keep_nontemporal(
 //      CHECK:   memref.load %{{.+}}[%{{.+}}, %{{.+}}] {nontemporal = true}
 func.func @fold_load_keep_nontemporal(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
