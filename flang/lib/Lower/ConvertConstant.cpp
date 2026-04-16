@@ -509,12 +509,44 @@ static mlir::Value genStructureComponentInit(
   return res;
 }
 
+// Extract __ordinal integer value from an enumeration StructureConstructor.
+// Returns std::nullopt if not an enumeration type or ordinal not found.
+static std::optional<int64_t>
+getEnumerationOrdinal(const Fortran::evaluate::StructureConstructor &ctor) {
+  const auto &derivedSpec = ctor.derivedTypeSpec();
+  // Check the type symbol's DerivedTypeDetails for the enumeration flag,
+  // rather than the DerivedTypeSpec::category(), because some DerivedTypeSpec
+  // copies created during name resolution may not have the
+  // EnumerationType category set.
+  const auto *dtDetails =
+      derivedSpec.typeSymbol()
+          .detailsIf<Fortran::semantics::DerivedTypeDetails>();
+  if (!dtDetails || !dtDetails->isEnumerationType())
+    return std::nullopt;
+  if (const auto *scope = derivedSpec.GetScope()) {
+    auto it = scope->find(Fortran::parser::CharBlock{"__ordinal", 9});
+    if (it != scope->end()) {
+      if (auto val = ctor.Find(it->second.get())) {
+        return Fortran::evaluate::ToInt64(*val);
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 // Generate a StructureConstructor inlined (returns raw fir.type<T> value,
 // not the address of a global constant).
 static mlir::Value genInlinedStructureCtorLitImpl(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::evaluate::StructureConstructor &ctor, mlir::Type type) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Enumeration type: produce an i32 constant from the __ordinal value.
+  if (auto ordinal = getEnumerationOrdinal(ctor)) {
+    mlir::Type i32Ty = mlir::IntegerType::get(builder.getContext(), 32);
+    return builder.createIntegerConstant(loc, i32Ty, *ordinal);
+  }
+
   auto recTy = mlir::cast<fir::RecordType>(type);
 
   auto fieldTy = fir::FieldType::get(recTy.getContext());
@@ -801,6 +833,12 @@ fir::ExtendedValue Fortran::lower::ConstantBuilder<T>::gen(
         loc, builder.getCharacterLengthType(), constant.LEN());
     return fir::CharBoxValue{value, len};
   } else if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
+    // Enumeration types: produce i32 constant directly.
+    if (auto ordinal = getEnumerationOrdinal(*opt)) {
+      fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+      mlir::Type i32Ty = mlir::IntegerType::get(builder.getContext(), 32);
+      return builder.createIntegerConstant(loc, i32Ty, *ordinal);
+    }
     mlir::Type eleTy = Fortran::lower::translateDerivedTypeToFIRType(
         converter, opt->GetType().GetDerivedTypeSpec());
     return genScalarLit(converter, loc, *opt, eleTy,

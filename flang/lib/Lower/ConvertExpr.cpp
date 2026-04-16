@@ -951,6 +951,26 @@ public:
     if (inInitializer)
       return Fortran::lower::genInlinedStructureCtorLit(converter, loc, ctor);
     mlir::Type ty = translateSomeExprToFIRType(converter, toEvExpr(ctor));
+
+    // Enumeration types lower to i32 — extract the __ordinal value.
+    if (const auto *dtDetails =
+            ctor.derivedTypeSpec()
+                .typeSymbol()
+                .detailsIf<Fortran::semantics::DerivedTypeDetails>();
+        dtDetails && dtDetails->isEnumerationType()) {
+      if (const auto *scope = ctor.derivedTypeSpec().GetScope()) {
+        auto it = scope->find(Fortran::parser::CharBlock{"__ordinal", 9});
+        if (it != scope->end()) {
+          if (auto val = ctor.Find(it->second.get())) {
+            if (auto ordinal = Fortran::evaluate::ToInt64(*val)) {
+              return builder.createIntegerConstant(loc, ty, *ordinal);
+            }
+          }
+        }
+      }
+      fir::emitFatalError(loc, "failed to extract enumeration ordinal");
+    }
+
     auto recTy = mlir::cast<fir::RecordType>(ty);
     auto fieldTy = fir::FieldType::get(ty.getContext());
     mlir::Value res = builder.createTemporary(loc, recTy);

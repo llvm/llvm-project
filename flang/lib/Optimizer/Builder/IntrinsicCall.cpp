@@ -507,6 +507,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"substring", asAddr},
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}}},
+    {"int", &I::genConversion},
     {"ior", &I::genIor},
     {"iparity",
      &I::genIparity,

@@ -29,6 +29,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Pointer.h"
+#include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -1620,10 +1621,164 @@ private:
   gen(const Fortran::evaluate::FunctionRef<T> &expr) {
     mlir::Type resType =
         Fortran::lower::TypeBuilder<T>::genType(getConverter(), expr);
+
+    // Intercept enumeration-type intrinsics (NEXT, PREVIOUS, HUGE) that return
+    // SomeDerived but lower to i32 operations.
+    if constexpr (std::is_same_v<T, Fortran::evaluate::SomeDerived>) {
+      if (const auto *intrinsic = expr.proc().GetSpecificIntrinsic()) {
+        if (intrinsic->name == "next") {
+          return genEnumerationNext(expr, resType);
+        }
+        if (intrinsic->name == "previous") {
+          return genEnumerationPrevious(expr, resType);
+        }
+        if (intrinsic->name == "huge") {
+          return genEnumerationHuge(expr, resType);
+        }
+      }
+    }
+
     auto result = Fortran::lower::convertCallToHLFIR(
         getLoc(), getConverter(), expr, resType, getSymMap(), getStmtCtx());
     assert(result.has_value());
     return *result;
+  }
+
+  // Helper to extract enumeration type info from a NEXT/PREVIOUS/HUGE
+  // intrinsic's result type.
+  std::pair<const Fortran::semantics::DerivedTypeSpec *, int>
+  getEnumerationTypeInfo(
+      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+          &expr,
+      llvm::StringRef name) {
+    auto resultDynType = expr.proc().GetType();
+    assert(resultDynType && (name + " must have a result type").str().c_str());
+    const auto *derived = Fortran::evaluate::GetDerivedTypeSpec(*resultDynType);
+    assert(derived &&
+           derived->typeSymbol()
+               .detailsIf<Fortran::semantics::DerivedTypeDetails>() &&
+           derived->typeSymbol()
+               .detailsIf<Fortran::semantics::DerivedTypeDetails>()
+               ->isEnumerationType() &&
+           (name + " result must be enumeration type").str().c_str());
+    int count = derived->typeSymbol()
+                    .GetUltimate()
+                    .get<Fortran::semantics::DerivedTypeDetails>()
+                    .enumeratorCount();
+    return {derived, count};
+  }
+
+  // Helper to lower STAT argument handling for NEXT/PREVIOUS.
+  // atBoundary is a boolean indicating whether the boundary condition was hit.
+  void genEnumerationStatHandling(
+      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+          &expr,
+      mlir::Value atBoundary, mlir::Type resType) {
+    mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    if (expr.arguments().size() >= 2 && expr.arguments()[1]) {
+      // STAT is present — assign 0 or FORTRAN_RUNTIME_STAT_ENUM_BOUNDARY (112)
+      const auto *statExpr = expr.arguments()[1]->UnwrapExpr();
+      assert(statExpr && "STAT argument must be an expression");
+      hlfir::Entity statAddr = Fortran::lower::convertExprToHLFIR(
+          loc, converter, *statExpr, getSymMap(), getStmtCtx());
+      mlir::Type statType = statAddr.getFortranElementType();
+      mlir::Value boundaryConst = builder.createIntegerConstant(
+          loc, statType, 112 /* FORTRAN_RUNTIME_STAT_ENUM_BOUNDARY */);
+      mlir::Value zeroConst = builder.createIntegerConstant(loc, statType, 0);
+      mlir::Value statVal = mlir::arith::SelectOp::create(
+          builder, loc, atBoundary, boundaryConst, zeroConst);
+      hlfir::AssignOp::create(builder, loc, statVal, statAddr);
+    } else {
+      // STAT absent — error termination if at boundary
+      auto ifOp = fir::IfOp::create(builder, loc, {}, atBoundary,
+                                    /*withElseRegion=*/false);
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      fir::runtime::genReportFatalUserError(
+          builder, loc,
+          "NEXT or PREVIOUS of enumeration type at boundary without STAT=");
+      builder.setInsertionPointAfter(ifOp);
+    }
+  }
+
+  // Lower NEXT(a [, stat]) for non-constant enumeration arguments.
+  // Produces: min(ordinal + 1, enumeratorCount) with STAT handling.
+  hlfir::EntityWithAttributes genEnumerationNext(
+      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+          &expr,
+      mlir::Type resType) {
+    mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    auto [derived, count] = getEnumerationTypeInfo(expr, "NEXT");
+    (void)derived;
+    // Lower argument A (the enum variable).
+    assert(expr.arguments().size() >= 1 && expr.arguments()[0]);
+    const auto *argExpr = expr.arguments()[0]->UnwrapExpr();
+    assert(argExpr && "NEXT argument must be an expression");
+    hlfir::Entity arg = Fortran::lower::convertExprToHLFIR(
+        loc, converter, *argExpr, getSymMap(), getStmtCtx());
+    mlir::Value ordinal = hlfir::loadTrivialScalar(loc, builder, arg);
+    // Produce: min(ordinal + 1, enumeratorCount)
+    mlir::Value one = builder.createIntegerConstant(loc, resType, 1);
+    mlir::Value incremented =
+        mlir::arith::AddIOp::create(builder, loc, ordinal, one);
+    mlir::Value maxVal = builder.createIntegerConstant(loc, resType, count);
+    mlir::Value cmp = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::sle, incremented, maxVal);
+    mlir::Value result =
+        mlir::arith::SelectOp::create(builder, loc, cmp, incremented, maxVal);
+    // Handle STAT: boundary when ordinal == enumeratorCount
+    mlir::Value atBoundary = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::eq, ordinal, maxVal);
+    genEnumerationStatHandling(expr, atBoundary, resType);
+    return hlfir::EntityWithAttributes{result};
+  }
+
+  // Lower PREVIOUS(a [, stat]) for non-constant enumeration arguments.
+  // Produces: max(ordinal - 1, 1) with STAT handling.
+  hlfir::EntityWithAttributes genEnumerationPrevious(
+      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+          &expr,
+      mlir::Type resType) {
+    mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    auto [derived, count] = getEnumerationTypeInfo(expr, "PREVIOUS");
+    (void)derived;
+    (void)count;
+    // Lower argument A (the enum variable).
+    assert(expr.arguments().size() >= 1 && expr.arguments()[0]);
+    const auto *argExpr = expr.arguments()[0]->UnwrapExpr();
+    assert(argExpr && "PREVIOUS argument must be an expression");
+    hlfir::Entity arg = Fortran::lower::convertExprToHLFIR(
+        loc, converter, *argExpr, getSymMap(), getStmtCtx());
+    mlir::Value ordinal = hlfir::loadTrivialScalar(loc, builder, arg);
+    // Produce: max(ordinal - 1, 1)
+    mlir::Value one = builder.createIntegerConstant(loc, resType, 1);
+    mlir::Value decremented =
+        mlir::arith::SubIOp::create(builder, loc, ordinal, one);
+    mlir::Value cmp = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::sge, decremented, one);
+    mlir::Value result =
+        mlir::arith::SelectOp::create(builder, loc, cmp, decremented, one);
+    // Handle STAT: boundary when ordinal == 1
+    mlir::Value atBoundary = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::eq, ordinal, one);
+    genEnumerationStatHandling(expr, atBoundary, resType);
+    return hlfir::EntityWithAttributes{result};
+  }
+
+  // Lower HUGE(enumVar) for non-constant enumeration arguments.
+  // Should always be folded, but handle as a constant just in case.
+  hlfir::EntityWithAttributes genEnumerationHuge(
+      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+          &expr,
+      mlir::Type resType) {
+    mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    auto [derived, count] = getEnumerationTypeInfo(expr, "HUGE");
+    (void)derived;
+    mlir::Value result = builder.createIntegerConstant(loc, resType, count);
+    return hlfir::EntityWithAttributes{result};
   }
 
   template <typename T>
@@ -2040,6 +2195,32 @@ private:
     mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
     mlir::Type ty = translateSomeExprToFIRType(converter, toEvExpr(ctor));
+
+    // Enumeration types lower to i32 — extract the __ordinal value.
+    // Check via the type symbol's DerivedTypeDetails rather than
+    // DerivedTypeSpec::IsEnumerationType(), which may not be set on
+    // all DerivedTypeSpec instances.
+    if (const auto *dtDetails =
+            ctor.derivedTypeSpec()
+                .typeSymbol()
+                .detailsIf<Fortran::semantics::DerivedTypeDetails>()) {
+      if (dtDetails->isEnumerationType()) {
+        if (const auto *scope = ctor.derivedTypeSpec().GetScope()) {
+          auto it = scope->find(Fortran::parser::CharBlock{"__ordinal", 9});
+          if (it != scope->end()) {
+            if (auto val = ctor.Find(it->second.get())) {
+              if (auto ordinal = Fortran::evaluate::ToInt64(*val)) {
+                mlir::Value result =
+                    builder.createIntegerConstant(loc, ty, *ordinal);
+                return hlfir::EntityWithAttributes{result};
+              }
+            }
+          }
+        }
+        fir::emitFatalError(loc, "failed to extract enumeration ordinal");
+      }
+    }
+
     auto recTy = mlir::cast<fir::RecordType>(ty);
 
     if (recTy.isDependentType())

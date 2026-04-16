@@ -383,6 +383,17 @@ struct TypeBuilderImpl {
     if (tySpec.IsVectorType()) {
       return genVectorType(tySpec);
     }
+    // Check the type symbol's DerivedTypeDetails for the enumeration flag,
+    // because some DerivedTypeSpec instances may not have the
+    // EnumerationType category set (e.g., those created during USE
+    // association or variable declarations).
+    if (const auto *dtDetails =
+            tySpec.typeSymbol()
+                .detailsIf<Fortran::semantics::DerivedTypeDetails>()) {
+      if (dtDetails->isEnumerationType()) {
+        return mlir::IntegerType::get(&converter.getMLIRContext(), 32);
+      }
+    }
 
     const Fortran::semantics::Symbol &typeSymbol = tySpec.typeSymbol();
     const Fortran::semantics::Scope &derivedScope = DEREF(tySpec.GetScope());
