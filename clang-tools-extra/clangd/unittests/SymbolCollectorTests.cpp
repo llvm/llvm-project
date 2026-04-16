@@ -1362,20 +1362,19 @@ TEST_F(SymbolCollectorTest, SymbolTagsWithIndexing) {
 
   runSymbolCollector(Header, /*Main=*/"");
   const Symbol &A = findSymbol(Symbols, "A");
-  EXPECT_THAT(expandTagBitmask(A.Tags),
+  EXPECT_THAT(getSymbolTags(A),
               UnorderedElementsAre(SymbolTag::Abstract, SymbolTag::Declaration,
                                    SymbolTag::Definition));
 
   const Symbol &B = findSymbol(Symbols, "B");
-  EXPECT_THAT(expandTagBitmask(B.Tags),
+  EXPECT_THAT(getSymbolTags(B),
               UnorderedElementsAre(SymbolTag::Final, SymbolTag::Declaration,
                                    SymbolTag::Definition));
   const Symbol &Bf1 = findSymbol(Symbols, "B::f1");
-  EXPECT_THAT(expandTagBitmask(Bf1.Tags),
-              UnorderedElementsAre(SymbolTag::Public, SymbolTag::Final,
-                                   SymbolTag::Virtual, SymbolTag::Declaration,
-                                   SymbolTag::Definition,
-                                   SymbolTag::Implements));
+  EXPECT_THAT(getSymbolTags(Bf1),
+              UnorderedElementsAre(
+                  SymbolTag::Public, SymbolTag::Final, SymbolTag::Declaration,
+                  SymbolTag::Definition, SymbolTag::Implements));
 }
 
 TEST_F(SymbolCollectorTest, ObjCOverrideRelationsSimpleInheritance) {

@@ -1181,10 +1181,12 @@ TEST(DocumentSymbolsTest, SymbolTagsMustContainPublicAbstract) {
                   AllOf(withName("A"),
                         children(AllOf(withName("f1"),
                                        withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
                                                       SymbolTag::Abstract)))),
                   AllOf(withName("B"),
                         children(AllOf(withName("f2"),
                                        withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
                                                       SymbolTag::Abstract))))));
 }
 
@@ -1212,17 +1214,23 @@ TEST(DocumentSymbolsTest, SymbolTagsMustContainPublicVirtualAndOverrides) {
   EXPECT_THAT(
       Symbols,
       UnorderedElementsAre(
-          AllOf(withName("A"),
-                children(
-                    AllOf(withName("f1"), withSymbolTags(SymbolTag::Public,
-                                                         SymbolTag::Virtual)))),
+          AllOf(
+              withName("A"),
+              children(AllOf(
+                  withName("f1"),
+                  withSymbolTags(SymbolTag::Public, SymbolTag::Declaration,
+                                 SymbolTag::Definition, SymbolTag::Virtual)))),
           AllOf(withName("B"),
-                children(AllOf(
-                    withName("f1"),
-                    withSymbolTags(SymbolTag::Public, SymbolTag::Overrides)))),
+                children(AllOf(withName("f1"),
+                               withSymbolTags(SymbolTag::Public,
+                                              SymbolTag::Declaration,
+                                              SymbolTag::Definition,
+                                              SymbolTag::Overrides)))),
           AllOf(withName("C"),
                 children(AllOf(withName("f1"),
                                withSymbolTags(SymbolTag::Public,
+                                              SymbolTag::Declaration,
+                                              SymbolTag::Definition,
                                               SymbolTag::Overrides))))));
 }
 
@@ -1258,18 +1266,25 @@ TEST(DocumentSymbolsTest,
                   AllOf(withName("A"),
                         children(AllOf(withName("f1"),
                                        withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
                                                       SymbolTag::Abstract)))),
                   AllOf(withName("B"),
                         children(AllOf(withName("f1"),
                                        withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
+                                                      SymbolTag::Definition,
                                                       SymbolTag::Implements)))),
                   AllOf(withName("C"),
                         children(AllOf(withName("f1"),
                                        withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
+                                                      SymbolTag::Definition,
                                                       SymbolTag::Overrides)))),
                   AllOf(withName("D"),
                         children(AllOf(withName("f1"),
                                        withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
+                                                      SymbolTag::Definition,
                                                       SymbolTag::Final))))));
 }
 
@@ -1306,9 +1321,12 @@ TEST(DocumentSymbolsTest, SymbolTagsCompilation) {
                              SymbolTag::Definition),
               children(
                   AllOf(withName("~A"),
-                        withSymbolTags(SymbolTag::Public, SymbolTag::Virtual)),
-                  AllOf(withName("f1"),
-                        withSymbolTags(SymbolTag::Public, SymbolTag::Abstract)),
+                        withSymbolTags(SymbolTag::Public, SymbolTag::Virtual,
+                                       SymbolTag::Declaration,
+                                       SymbolTag::Definition)),
+                  AllOf(withName("f1"), withSymbolTags(SymbolTag::Public,
+                                                       SymbolTag::Declaration,
+                                                       SymbolTag::Abstract)),
                   AllOf(withName("f2"), withSymbolTags(SymbolTag::Public,
                                                        SymbolTag::Declaration,
                                                        SymbolTag::ReadOnly)),
@@ -1322,13 +1340,14 @@ TEST(DocumentSymbolsTest, SymbolTagsCompilation) {
           AllOf(withName("A::f2"),
                 withSymbolTags(SymbolTag::Public, SymbolTag::Declaration,
                                SymbolTag::Definition, SymbolTag::ReadOnly)),
-          AllOf(
-              withName("B"),
-              withSymbolTags(SymbolTag::Final, SymbolTag::Declaration,
-                             SymbolTag::Definition),
-              children(AllOf(withName("f1"),
-                             withSymbolTags(SymbolTag::Public, SymbolTag::Final,
-                                            SymbolTag::Implements))))));
+          AllOf(withName("B"),
+                withSymbolTags(SymbolTag::Final, SymbolTag::Declaration,
+                               SymbolTag::Definition),
+                children(AllOf(
+                    withName("f1"),
+                    withSymbolTags(SymbolTag::Public, SymbolTag::Declaration,
+                                   SymbolTag::Definition, SymbolTag::Final,
+                                   SymbolTag::Implements))))));
 }
 
 } // namespace

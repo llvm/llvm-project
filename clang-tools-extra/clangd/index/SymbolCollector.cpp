@@ -1127,9 +1127,6 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
       S.Documentation = Documentation;
     }
   };
-
-  S.Tags = computeSymbolTags(ND);
-
   if (!(S.Flags & Symbol::IndexedForCodeCompletion)) {
     if (Opts.StoreAllDocumentation)
       UpdateDoc();
@@ -1142,6 +1139,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   getSignature(*CCS, &Signature, &SnippetSuffix, SymbolCompletion.Kind,
                SymbolCompletion.CursorKind);
   S.Signature = Signature;
+  S.Tags = computeSymbolTags(ND);
   S.CompletionSnippetSuffix = SnippetSuffix;
   std::string ReturnType = getReturnType(*CCS);
   S.ReturnType = ReturnType;
