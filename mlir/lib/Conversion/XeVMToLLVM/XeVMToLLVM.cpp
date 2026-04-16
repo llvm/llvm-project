@@ -1275,6 +1275,9 @@ class HandleVectorExtractPattern
         // 3. Merge with load as a smaller load
         auto loadOp = cast<LLVM::LoadOp>(srcOp);
         auto loadPtr = loadOp.getAddr();
+        auto loadAddrSpace = loadPtr.getType().getAddressSpace();
+        if (loadAddrSpace != 0)
+          return failure();
         auto loadTy = dyn_cast<VectorType>(loadOp.getType());
         auto elemTy = loadTy.getElementType();
         auto firstIndex = mask[0];
@@ -1283,8 +1286,7 @@ class HandleVectorExtractPattern
         if (firstIndex) {
           auto newPtr = LLVM::GEPOp::create(
               rewriter, loc,
-              LLVM::LLVMPointerType::get(rewriter.getContext(),
-                                         loadPtr.getType().getAddressSpace()),
+              LLVM::LLVMPointerType::get(rewriter.getContext(), loadAddrSpace),
               elemTy, loadPtr, ArrayRef<LLVM::GEPArg>{firstIndex});
           auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, newPtr);
           rewriter.replaceOp(op, newLoad);
