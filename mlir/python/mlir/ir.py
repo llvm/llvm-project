@@ -14,6 +14,8 @@ from ._mlir_libs._mlir import (
     register_type_caster,
     register_value_caster,
     globals as _globals,
+    OnExplicitAction,
+    CurrentLocAction,
 )
 from ._mlir_libs import (
     get_dialect_registry,
@@ -70,17 +72,24 @@ def get_ops_of_type(
     return ops
 
 
-# Enum values matching C++ OnExplicitAction / CurrentLocAction.
-_ON_EXPLICIT_MAP = {"use_explicit": 0, "use_traceback": 1}
-_CURRENT_LOC_MAP = {"fallback": 0, "nameloc_wrap": 1}
+# String aliases for the typed enum values exposed from C++. Accepting
+# strings is convenient for callers; internally we always hold the enum.
+_ON_EXPLICIT_MAP = {
+    "use_explicit": OnExplicitAction.USE_EXPLICIT,
+    "use_traceback": OnExplicitAction.USE_TRACEBACK,
+}
+_CURRENT_LOC_MAP = {
+    "fallback": CurrentLocAction.FALLBACK,
+    "nameloc_wrap": CurrentLocAction.NAMELOC_WRAP,
+}
 
 
 @contextmanager
 def loc_tracebacks(
     *,
     max_depth: int | None = None,
-    on_explicit: str = "use_explicit",
-    current_loc: str = "fallback",
+    on_explicit: str | OnExplicitAction = "use_explicit",
+    current_loc: str | CurrentLocAction = "fallback",
 ) -> Generator[None, None, None]:
     """Enables automatic traceback-based locations for MLIR operations.
 
@@ -91,23 +100,31 @@ def loc_tracebacks(
       max_depth: Maximum number of frames to include in the location.
         If None, the default limit is used.
       on_explicit: Policy when an explicit loc= is passed to an op constructor.
-        "use_explicit" (default) — use loc= as base, skip traceback.
-        "use_traceback" — discard loc=, generate traceback instead.
+        OnExplicitAction.USE_EXPLICIT / "use_explicit" (default) — use loc=
+          as base, skip traceback.
+        OnExplicitAction.USE_TRACEBACK / "use_traceback" — discard loc=,
+          generate traceback instead.
       current_loc: Policy for composing Location.current with the result.
-        "fallback" (default) — use Location.current only as fallback.
-        "nameloc_wrap" — extract NameLoc names from Location.current,
-          wrap the computed location with them.
+        CurrentLocAction.FALLBACK / "fallback" (default) — use
+          Location.current only as fallback.
+        CurrentLocAction.NAMELOC_WRAP / "nameloc_wrap" — extract NameLoc
+          names from Location.current, wrap the computed location with them.
     """
-    if on_explicit not in _ON_EXPLICIT_MAP:
-        raise ValueError(
-            f"on_explicit must be one of {list(_ON_EXPLICIT_MAP)}, "
-            f"got {on_explicit!r}"
-        )
-    if current_loc not in _CURRENT_LOC_MAP:
-        raise ValueError(
-            f"current_loc must be one of {list(_CURRENT_LOC_MAP)}, "
-            f"got {current_loc!r}"
-        )
+    if isinstance(on_explicit, str):
+        if on_explicit not in _ON_EXPLICIT_MAP:
+            raise ValueError(
+                f"on_explicit must be one of {list(_ON_EXPLICIT_MAP)}, "
+                f"got {on_explicit!r}"
+            )
+        on_explicit = _ON_EXPLICIT_MAP[on_explicit]
+    if isinstance(current_loc, str):
+        if current_loc not in _CURRENT_LOC_MAP:
+            raise ValueError(
+                f"current_loc must be one of {list(_CURRENT_LOC_MAP)}, "
+                f"got {current_loc!r}"
+            )
+        current_loc = _CURRENT_LOC_MAP[current_loc]
+
     old_enabled = _globals.loc_tracebacks_enabled()
     old_limit = _globals.loc_tracebacks_frame_limit()
     old_on_explicit = _globals.traceback_action_on_explicit_loc()
@@ -115,12 +132,8 @@ def loc_tracebacks(
     max_depth = old_limit if max_depth is None else max_depth
     try:
         _globals.set_loc_tracebacks_frame_limit(max_depth)
-        _globals.set_traceback_action_on_explicit_loc(
-            _ON_EXPLICIT_MAP[on_explicit]
-        )
-        _globals.set_traceback_action_on_current_loc(
-            _CURRENT_LOC_MAP[current_loc]
-        )
+        _globals.set_traceback_action_on_explicit_loc(on_explicit)
+        _globals.set_traceback_action_on_current_loc(current_loc)
         if not old_enabled:
             _globals.set_loc_tracebacks_enabled(True)
         yield

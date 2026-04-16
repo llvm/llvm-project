@@ -2735,9 +2735,9 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
 }
 
 /// Apply currentLocAction: wrap or fuse Location.current onto baseLoc.
-static MlirLocation applyCurrentLocAction(
-    MlirContext ctx, MlirLocation baseLoc,
-    PyGlobals::TracebackLoc::CurrentLocAction action) {
+static MlirLocation
+applyCurrentLocAction(MlirContext ctx, MlirLocation baseLoc,
+                      PyGlobals::TracebackLoc::CurrentLocAction action) {
   using Action = PyGlobals::TracebackLoc::CurrentLocAction;
   if (action == Action::Fallback)
     return baseLoc;
@@ -2766,7 +2766,8 @@ PyLocation
 maybeGetTracebackLocation(const std::optional<PyLocation> &location) {
   auto &tbl = PyGlobals::get().getTracebackLoc();
 
-  // Tracebacks not enabled — return explicit loc or fall back to Location.current.
+  // Tracebacks not enabled — return explicit loc or fall back to
+  // Location.current.
   if (!tbl.locTracebacksEnabled())
     return location.has_value() ? location.value()
                                 : DefaultingPyLocation::resolve();
@@ -2876,6 +2877,19 @@ void populateRoot(nb::module_ &m) {
   m.attr("T") = nb::type_var("T");
   m.attr("U") = nb::type_var("U");
 
+  // Policies for how loc_tracebacks() composes the three location sources
+  // (explicit loc=, generated traceback, Location.current).
+  nb::enum_<PyGlobals::TracebackLoc::OnExplicitAction>(m, "OnExplicitAction")
+      .value("USE_EXPLICIT",
+             PyGlobals::TracebackLoc::OnExplicitAction::UseExplicit)
+      .value("USE_TRACEBACK",
+             PyGlobals::TracebackLoc::OnExplicitAction::UseTraceback);
+
+  nb::enum_<PyGlobals::TracebackLoc::CurrentLocAction>(m, "CurrentLocAction")
+      .value("FALLBACK", PyGlobals::TracebackLoc::CurrentLocAction::Fallback)
+      .value("NAMELOC_WRAP",
+             PyGlobals::TracebackLoc::CurrentLocAction::NamelocWrap);
+
   nb::class_<PyGlobals>(m, "_Globals")
       .def_prop_rw("dialect_search_modules",
                    &PyGlobals::getDialectSearchPrefixes,
@@ -2923,25 +2937,21 @@ void populateRoot(nb::module_ &m) {
            })
       .def("traceback_action_on_explicit_loc",
            [](PyGlobals &self) {
-             return static_cast<int>(
-                 self.getTracebackLoc().tracebackActionOnExplicitLoc());
+             return self.getTracebackLoc().tracebackActionOnExplicitLoc();
            })
       .def("set_traceback_action_on_explicit_loc",
-           [](PyGlobals &self, int action) {
-             self.getTracebackLoc().setTracebackActionOnExplicitLoc(
-                 static_cast<PyGlobals::TracebackLoc::OnExplicitAction>(
-                     action));
+           [](PyGlobals &self,
+              PyGlobals::TracebackLoc::OnExplicitAction action) {
+             self.getTracebackLoc().setTracebackActionOnExplicitLoc(action);
            })
       .def("traceback_action_on_current_loc",
            [](PyGlobals &self) {
-             return static_cast<int>(
-                 self.getTracebackLoc().tracebackActionOnCurrentLoc());
+             return self.getTracebackLoc().tracebackActionOnCurrentLoc();
            })
       .def("set_traceback_action_on_current_loc",
-           [](PyGlobals &self, int action) {
-             self.getTracebackLoc().setTracebackActionOnCurrentLoc(
-                 static_cast<PyGlobals::TracebackLoc::CurrentLocAction>(
-                     action));
+           [](PyGlobals &self,
+              PyGlobals::TracebackLoc::CurrentLocAction action) {
+             self.getTracebackLoc().setTracebackActionOnCurrentLoc(action);
            });
 
   // Aside from making the globals accessible to python, having python manage

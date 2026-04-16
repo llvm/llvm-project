@@ -145,14 +145,10 @@ def testOnExplicitUseTraceback():
 def testDslProfilingUseCase():
     with Context() as ctx, Location.unknown():
         ctx.allow_unregistered_dialects = True
-        with loc_tracebacks(
-            current_loc="nameloc_wrap", on_explicit="use_traceback"
-        ):
+        with loc_tracebacks(current_loc="nameloc_wrap", on_explicit="use_traceback"):
             task_loc = Location.name("Task", childLoc=Location.unknown())
             with task_loc:
-                op1 = Operation.create(
-                    "custom.op1", loc=Location.file("x.py", 1, 1)
-                )
+                op1 = Operation.create("custom.op1", loc=Location.file("x.py", 1, 1))
                 # fmt: off
                 # CHECK: loc("Task"(callsite(
                 # fmt: on
