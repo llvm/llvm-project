@@ -211,6 +211,11 @@ New check aliases
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
   name is kept as an alias.
 
+- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
+  to :doc:`bugprone-signed-bitwise
+  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
+  name is kept as an alias.
+
 - Renamed :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` to
   :doc:`performance-prefer-single-char-overloads
@@ -280,6 +285,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
   string constructor calls when the string class constructor has a default
   allocator argument.
+
+- Improved :doc:`bugprone-throwing-static-initialization
+  <clang-tidy/checks/bugprone/throwing-static-initialization>` check by adding
+  the `AllowedTypes` option. With this option it is possible to exclude
+  static declarations with specific types from the check.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common

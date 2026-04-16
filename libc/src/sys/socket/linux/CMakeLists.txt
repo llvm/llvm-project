@@ -53,6 +53,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getsockopt
+  SRCS
+    getsockopt.cpp
+  HDRS
+    ../getsockopt.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.socklen_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getsockopt
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   listen
   SRCS
     listen.cpp
@@ -103,6 +117,20 @@ add_entrypoint_object(
     libc.hdr.types.struct_sockaddr
     libc.hdr.types.socklen_t
     libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  setsockopt
+  SRCS
+    setsockopt.cpp
+  HDRS
+    ../setsockopt.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.socklen_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setsockopt
     libc.src.errno.errno
 )
 
