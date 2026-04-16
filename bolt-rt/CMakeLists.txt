@@ -1,10 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
 
-include(CheckCXXCompilerFlag)
-include(CheckIncludeFiles)
-include(CMakeParseArguments)
-include(GNUInstallDirs)
-
 # Is this built via -DLLVM_ENABLE_RUNTIMES="bolt-rt"?.
 if(LLVM_RUNTIMES_BUILD)
   set(LLVM_SUBPROJECT_TITLE "Bolt-RT")
@@ -12,6 +7,11 @@ if(LLVM_RUNTIMES_BUILD)
 elseif(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(bolt-rt)
 endif()
+
+include(CheckCXXCompilerFlag)
+include(CheckIncludeFiles)
+include(CMakeParseArguments)
+include(GNUInstallDirs)
 
 # Use LLVM_RUNTIMES_TARGET when built under runtimes.
 if(LLVM_RUNTIMES_BUILD)
@@ -129,7 +129,7 @@ function(add_bolt_rt_library)
           DESTINATION "${CMAKE_INSTALL_LIBDIR}/${BOLT_RT_LIBRARY_SUBDIR}"
           COMPONENT bolt-rt)
 
-  if(NOT LLVM_ENABLE_IDE)
+  if(LLVM_RUNTIMES_BUILD AND NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-${ARG_TARGET}
                              DEPENDS ${ARG_TARGET}
                              COMPONENT bolt-rt)
