@@ -6016,7 +6016,11 @@ bool DeclarationVisitor::Pre(const parser::CUDAAttributesStmt &x) {
       if (!symbol) {
         symbol = &MakeSymbol(name, ObjectEntityDetails{});
       }
-      SetCUDADataAttr(name.source, *symbol, attr);
+      if (attr == common::CUDADataAttr::Value) {
+        SetExplicitAttr(*symbol, Attr::VALUE);
+      } else {
+        SetCUDADataAttr(name.source, *symbol, attr);
+      }
     }
   }
   return false;
