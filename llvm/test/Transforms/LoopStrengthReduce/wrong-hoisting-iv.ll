@@ -33,19 +33,23 @@ define void @test1() {
 ; CHECK:       bb11:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb12:
+; CHECK-NEXT:    [[VAL13:%.*]] = add i32 [[LSR_IV1]], [[VAL6]]
 ; CHECK-NEXT:    [[VAL14:%.*]] = icmp slt i32 undef, undef
 ; CHECK-NEXT:    br i1 [[VAL14]], label [[BB17:%.*]], label [[BB12_BB15SPLITSPLITSPLITSPLITSPLIT_CRIT_EDGE:%.*]]
 ; CHECK:       bb15splitsplitsplitsplitsplitsplit:
+; CHECK-NEXT:    [[VAL35:%.*]] = phi i32 [ [[VAL36:%.*]], [[BB32]] ]
 ; CHECK-NEXT:    br label [[BB15SPLITSPLITSPLITSPLITSPLIT:%.*]]
 ; CHECK:       bb12.bb15splitsplitsplitsplitsplit_crit_edge:
 ; CHECK-NEXT:    [[LSR_IV1_LCSSA23:%.*]] = phi i32 [ [[LSR_IV1]], [[BB12]] ]
+; CHECK-NEXT:    [[SPLIT27:%.*]] = phi i32 [ [[VAL13]], [[BB12]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[LSR_IV1_LCSSA23]], [[VAL6]]
 ; CHECK-NEXT:    br label [[BB15SPLITSPLITSPLITSPLITSPLIT]]
 ; CHECK:       bb15splitsplitsplitsplitsplit:
-; CHECK-NEXT:    [[VAL16_PH_PH_PH_PH_PH:%.*]] = phi i32 [ [[TMP6]], [[BB12_BB15SPLITSPLITSPLITSPLITSPLIT_CRIT_EDGE]] ], [ [[VAL35:%.*]], [[BB15SPLITSPLITSPLITSPLITSPLITSPLIT:%.*]] ]
+; CHECK-NEXT:    [[VAL16_PH_PH_PH_PH_PH:%.*]] = phi i32 [ [[TMP6]], [[BB12_BB15SPLITSPLITSPLITSPLITSPLIT_CRIT_EDGE]] ], [ [[VAL35]], [[BB15SPLITSPLITSPLITSPLITSPLITSPLIT:%.*]] ]
 ; CHECK-NEXT:    br label [[BB15SPLITSPLITSPLITSPLIT:%.*]]
 ; CHECK:       bb17.bb15splitsplitsplitsplit_crit_edge:
 ; CHECK-NEXT:    [[LSR_IV1_LCSSA18:%.*]] = phi i32 [ [[LSR_IV1]], [[BB17]] ]
+; CHECK-NEXT:    [[SPLIT20:%.*]] = phi i32 [ [[VAL18:%.*]], [[BB17]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i32 [[VAL]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 [[VAL1]], [[VAL2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP8]], 1
@@ -59,6 +63,7 @@ define void @test1() {
 ; CHECK-NEXT:    br label [[BB15SPLITSPLITSPLIT:%.*]]
 ; CHECK:       bb20.bb15splitsplitsplit_crit_edge:
 ; CHECK-NEXT:    [[LSR_IV1_LCSSA13:%.*]] = phi i32 [ [[LSR_IV1]], [[BB20:%.*]] ]
+; CHECK-NEXT:    [[SPLIT14:%.*]] = phi i32 [ [[VAL21:%.*]], [[BB20]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[VAL]], 3
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i32 [[VAL1]], [[VAL2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 3
@@ -72,6 +77,7 @@ define void @test1() {
 ; CHECK-NEXT:    br label [[BB15SPLITSPLIT:%.*]]
 ; CHECK:       bb23.bb15splitsplit_crit_edge:
 ; CHECK-NEXT:    [[LSR_IV1_LCSSA9:%.*]] = phi i32 [ [[LSR_IV1]], [[BB23:%.*]] ]
+; CHECK-NEXT:    [[SPLIT9:%.*]] = phi i32 [ [[VAL24:%.*]], [[BB23]] ]
 ; CHECK-NEXT:    [[TMP21:%.*]] = shl i32 [[VAL]], 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul i32 [[VAL1]], [[VAL2]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl i32 [[TMP22]], 2
@@ -85,6 +91,7 @@ define void @test1() {
 ; CHECK-NEXT:    br label [[BB15SPLIT:%.*]]
 ; CHECK:       bb26.bb15split_crit_edge:
 ; CHECK-NEXT:    [[LSR_IV1_LCSSA6:%.*]] = phi i32 [ [[LSR_IV1]], [[BB26:%.*]] ]
+; CHECK-NEXT:    [[SPLIT5:%.*]] = phi i32 [ [[VAL27:%.*]], [[BB26]] ]
 ; CHECK-NEXT:    [[TMP28:%.*]] = mul i32 [[VAL]], 5
 ; CHECK-NEXT:    [[TMP29:%.*]] = mul i32 [[VAL1]], [[VAL2]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = mul i32 [[TMP29]], 5
@@ -98,6 +105,7 @@ define void @test1() {
 ; CHECK-NEXT:    br label [[BB15:%.*]]
 ; CHECK:       bb29.bb15_crit_edge:
 ; CHECK-NEXT:    [[LSR_IV1_LCSSA4:%.*]] = phi i32 [ [[LSR_IV1]], [[BB29:%.*]] ]
+; CHECK-NEXT:    [[SPLIT:%.*]] = phi i32 [ [[VAL30:%.*]], [[BB29]] ]
 ; CHECK-NEXT:    [[TMP35:%.*]] = mul i32 [[VAL]], 6
 ; CHECK-NEXT:    [[TMP36:%.*]] = mul i32 [[VAL1]], [[VAL2]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = mul i32 [[TMP36]], 6
@@ -111,23 +119,28 @@ define void @test1() {
 ; CHECK-NEXT:    call void @widget() [ "deopt"(i32 [[VAL16]], i32 3, i32 [[VAL]]) ]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb17:
+; CHECK-NEXT:    [[VAL18]] = add i32 [[VAL13]], [[VAL6]]
 ; CHECK-NEXT:    [[VAL19:%.*]] = icmp slt i32 undef, undef
 ; CHECK-NEXT:    br i1 [[VAL19]], label [[BB20]], label [[BB17_BB15SPLITSPLITSPLITSPLIT_CRIT_EDGE]]
 ; CHECK:       bb20:
+; CHECK-NEXT:    [[VAL21]] = add i32 [[VAL18]], [[VAL6]]
 ; CHECK-NEXT:    [[VAL22:%.*]] = icmp slt i32 undef, undef
 ; CHECK-NEXT:    br i1 [[VAL22]], label [[BB23]], label [[BB20_BB15SPLITSPLITSPLIT_CRIT_EDGE]]
 ; CHECK:       bb23:
+; CHECK-NEXT:    [[VAL24]] = add i32 [[VAL21]], [[VAL6]]
 ; CHECK-NEXT:    [[VAL25:%.*]] = icmp slt i32 undef, undef
 ; CHECK-NEXT:    br i1 [[VAL25]], label [[BB26]], label [[BB23_BB15SPLITSPLIT_CRIT_EDGE]]
 ; CHECK:       bb26:
+; CHECK-NEXT:    [[VAL27]] = add i32 [[VAL24]], [[VAL6]]
 ; CHECK-NEXT:    [[VAL28:%.*]] = icmp slt i32 undef, undef
 ; CHECK-NEXT:    br i1 [[VAL28]], label [[BB29]], label [[BB26_BB15SPLIT_CRIT_EDGE]]
 ; CHECK:       bb29:
+; CHECK-NEXT:    [[VAL30]] = add i32 [[VAL27]], [[VAL6]]
 ; CHECK-NEXT:    [[VAL31:%.*]] = icmp slt i32 undef, undef
 ; CHECK-NEXT:    br i1 [[VAL31]], label [[BB32]], label [[BB29_BB15_CRIT_EDGE]]
 ; CHECK:       bb32:
 ; CHECK-NEXT:    [[TMP42:%.*]] = add i32 [[TMP4]], [[LSR_IV1]]
-; CHECK-NEXT:    [[VAL35]] = add i32 [[TMP42]], [[VAL6]]
+; CHECK-NEXT:    [[VAL36]] = add i32 [[TMP42]], [[VAL6]]
 ; CHECK-NEXT:    br i1 false, label [[BB7]], label [[BB15SPLITSPLITSPLITSPLITSPLITSPLIT]]
 ;
 bb:

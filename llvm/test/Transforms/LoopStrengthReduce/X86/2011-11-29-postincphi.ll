@@ -25,7 +25,6 @@ define i64 @sqlite3DropTriggerPtr() nounwind {
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %bb4
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: # %bb8
 ; CHECK-NEXT:    movq %rbx, %rax

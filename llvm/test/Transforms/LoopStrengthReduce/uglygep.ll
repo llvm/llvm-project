@@ -69,11 +69,17 @@ define fastcc void @TransformLine() nounwind {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[LOOP0:%.*]]
 ; CHECK:       loop0:
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[LOOP0]] ], [ -2, [[BB:%.*]] ]
+; CHECK-NEXT:    [[I0:%.*]] = phi i32 [ [[I0_NEXT:%.*]], [[LOOP0]] ], [ 0, [[BB]] ]
+; CHECK-NEXT:    [[I0_NEXT]] = add i32 [[I0]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP0]], label [[BB0:%.*]]
 ; CHECK:       bb0:
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i32 [ [[LSR_IV_NEXT]], [[LOOP0]] ]
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ 0, [[BB0]] ], [ [[I1_NEXT:%.*]], [[BB5:%.*]] ]
+; CHECK-NEXT:    [[T0:%.*]] = add i32 [[I0]], [[I1]]
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[LOOP1_BB6_CRIT_EDGE:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br i1 true, label [[BB6SPLITSPLIT:%.*]], label [[BB5]]
@@ -82,19 +88,25 @@ define fastcc void @TransformLine() nounwind {
 ; CHECK-NEXT:    br i1 true, label [[BB5_BB6SPLIT_CRIT_EDGE:%.*]], label [[LOOP1]]
 ; CHECK:       bb5.bb6split_crit_edge:
 ; CHECK-NEXT:    [[I1_NEXT_LCSSA:%.*]] = phi i32 [ [[I1_NEXT]], [[BB5]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 -1, [[I1_NEXT_LCSSA]]
+; CHECK-NEXT:    [[SPLIT3:%.*]] = phi i32 [ [[T0]], [[BB5]] ]
+; CHECK-NEXT:    [[SPLIT4:%.*]] = phi i32 [ undef, [[BB5]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LSR_IV_NEXT_LCSSA]], [[I1_NEXT_LCSSA]]
 ; CHECK-NEXT:    br label [[BB6SPLIT:%.*]]
 ; CHECK:       bb6splitsplit:
+; CHECK-NEXT:    [[P8_PH_PH:%.*]] = phi i32 [ undef, [[BB2]] ]
+; CHECK-NEXT:    [[P9_PH_PH:%.*]] = phi i32 [ [[I1]], [[BB2]] ]
 ; CHECK-NEXT:    br label [[BB6SPLIT]]
 ; CHECK:       bb6split:
-; CHECK-NEXT:    [[P8_PH:%.*]] = phi i32 [ [[TMP0]], [[BB5_BB6SPLIT_CRIT_EDGE]] ], [ undef, [[BB6SPLITSPLIT]] ]
-; CHECK-NEXT:    [[P9_PH:%.*]] = phi i32 [ undef, [[BB5_BB6SPLIT_CRIT_EDGE]] ], [ [[I1]], [[BB6SPLITSPLIT]] ]
+; CHECK-NEXT:    [[P8_PH:%.*]] = phi i32 [ [[TMP0]], [[BB5_BB6SPLIT_CRIT_EDGE]] ], [ [[P8_PH_PH]], [[BB6SPLITSPLIT]] ]
+; CHECK-NEXT:    [[P9_PH:%.*]] = phi i32 [ [[SPLIT4]], [[BB5_BB6SPLIT_CRIT_EDGE]] ], [ [[P9_PH_PH]], [[BB6SPLITSPLIT]] ]
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       loop1.bb6_crit_edge:
 ; CHECK-NEXT:    [[I1_LCSSA:%.*]] = phi i32 [ [[I1]], [[LOOP1]] ]
+; CHECK-NEXT:    [[SPLIT:%.*]] = phi i32 [ undef, [[LOOP1]] ]
+; CHECK-NEXT:    [[SPLIT1:%.*]] = phi i32 [ [[I1]], [[LOOP1]] ]
 ; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[P8:%.*]] = phi i32 [ undef, [[LOOP1_BB6_CRIT_EDGE]] ], [ [[P8_PH]], [[BB6SPLIT]] ]
+; CHECK-NEXT:    [[P8:%.*]] = phi i32 [ [[SPLIT]], [[LOOP1_BB6_CRIT_EDGE]] ], [ [[P8_PH]], [[BB6SPLIT]] ]
 ; CHECK-NEXT:    [[P9:%.*]] = phi i32 [ [[I1_LCSSA]], [[LOOP1_BB6_CRIT_EDGE]] ], [ [[P9_PH]], [[BB6SPLIT]] ]
 ; CHECK-NEXT:    unreachable
 ;

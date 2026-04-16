@@ -5908,7 +5908,8 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
                 SplitCriticalEdge(BB, Parent,
                                   CriticalEdgeSplittingOptions(&DT, &LI, MSSAU)
                                       .setMergeIdenticalEdges()
-                                      .setKeepOneInputPHIs());
+                                      .setKeepOneInputPHIs()
+                                      .setPreserveLCSSA());
           } else {
             SmallVector<BasicBlock*, 2> NewBBs;
             DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);

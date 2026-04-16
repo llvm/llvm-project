@@ -10,24 +10,32 @@ define dso_local i32 @test1() local_unnamed_addr {
 ; LEGACYPM-NEXT:    br label [[FOR_COND:%.*]]
 ; LEGACYPM:       for.cond:
 ; LEGACYPM-NEXT:    callbr void asm sideeffect "", "!i,!i,~{dirflag},~{fpsr},~{flags}"()
-; LEGACYPM-NEXT:    to label [[ASM_FALLTHROUGH_I_I:%.*]] [label [[COND_TRUE_I:%.*]], label %for.endsplit]
+; LEGACYPM-NEXT:            to label [[ASM_FALLTHROUGH_I_I:%.*]] [label [[COND_TRUE_I:%.*]], label [[FOR_ENDSPLIT:%.*]]]
 ; LEGACYPM:       asm.fallthrough.i.i:
 ; LEGACYPM-NEXT:    unreachable
 ; LEGACYPM:       cond.true.i:
 ; LEGACYPM-NEXT:    br label [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE:%.*]]
 ; LEGACYPM:       do.body.i.i.do.body.i.i_crit_edge:
+; LEGACYPM-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]] ], [ undef, [[COND_TRUE_I]] ]
+; LEGACYPM-NEXT:    [[PGOCOUNT711:%.*]] = phi i64 [ [[TMP0:%.*]], [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]] ], [ 0, [[COND_TRUE_I]] ]
+; LEGACYPM-NEXT:    [[TMP0]] = add nuw nsw i64 [[PGOCOUNT711]], 1
+; LEGACYPM-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 1
 ; LEGACYPM-NEXT:    br i1 true, label [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE:%.*]], label [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]]
 ; LEGACYPM:       do.body.i.i.rdrand_int.exit.i_crit_edge:
+; LEGACYPM-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT]], [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]] ]
+; LEGACYPM-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], undef
 ; LEGACYPM-NEXT:    br i1 true, label [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE_FOR_END_CRIT_EDGE:%.*]], label [[FOR_INC:%.*]]
 ; LEGACYPM:       do.body.i.i.rdrand_int.exit.i_crit_edge.for.end_crit_edge:
-; LEGACYPM-NEXT:    [[LSR_IV_NEXT_LCSSA_LCSSA:%.*]] = phi i64 [ undef, [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE]] ]
+; LEGACYPM-NEXT:    [[LSR_IV_NEXT_LCSSA_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT_LCSSA]], [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE]] ]
+; LEGACYPM-NEXT:    [[SPLIT:%.*]] = phi i64 [ [[TMP1]], [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE]] ]
 ; LEGACYPM-NEXT:    br label [[FOR_END:%.*]]
 ; LEGACYPM:       for.inc:
 ; LEGACYPM-NEXT:    br label [[FOR_COND]]
 ; LEGACYPM:       for.endsplit:
+; LEGACYPM-NEXT:    [[PGOCOUNT_PROMOTED24_PH:%.*]] = phi i64 [ undef, [[FOR_COND]] ]
 ; LEGACYPM-NEXT:    br label [[FOR_END]]
 ; LEGACYPM:       for.end:
-; LEGACYPM-NEXT:    [[PGOCOUNT_PROMOTED24:%.*]] = phi i64 [ [[LSR_IV_NEXT_LCSSA_LCSSA]], [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE_FOR_END_CRIT_EDGE]] ], [ undef, [[FOR_ENDSPLIT:%.*]] ]
+; LEGACYPM-NEXT:    [[PGOCOUNT_PROMOTED24:%.*]] = phi i64 [ [[LSR_IV_NEXT_LCSSA_LCSSA]], [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE_FOR_END_CRIT_EDGE]] ], [ [[PGOCOUNT_PROMOTED24_PH]], [[FOR_ENDSPLIT]] ]
 ; LEGACYPM-NEXT:    ret i32 undef
 ;
 ; NEWPM-LABEL: @test1(
@@ -35,7 +43,7 @@ define dso_local i32 @test1() local_unnamed_addr {
 ; NEWPM-NEXT:    br label [[FOR_COND:%.*]]
 ; NEWPM:       for.cond:
 ; NEWPM-NEXT:    callbr void asm sideeffect "", "!i,!i,~{dirflag},~{fpsr},~{flags}"()
-; NEWPM-NEXT:    to label [[ASM_FALLTHROUGH_I_I:%.*]] [label [[COND_TRUE_I:%.*]], label %for.end]
+; NEWPM-NEXT:            to label [[ASM_FALLTHROUGH_I_I:%.*]] [label [[COND_TRUE_I:%.*]], label [[FOR_END:%.*]]]
 ; NEWPM:       asm.fallthrough.i.i:
 ; NEWPM-NEXT:    unreachable
 ; NEWPM:       cond.true.i:
@@ -44,7 +52,7 @@ define dso_local i32 @test1() local_unnamed_addr {
 ; NEWPM-NEXT:    br i1 true, label [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE:%.*]], label [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]]
 ; NEWPM:       do.body.i.i.rdrand_int.exit.i_crit_edge:
 ; NEWPM-NEXT:    [[TMP0:%.*]] = add i64 1, undef
-; NEWPM-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_INC:%.*]]
+; NEWPM-NEXT:    br i1 true, label [[FOR_END]], label [[FOR_INC:%.*]]
 ; NEWPM:       for.inc:
 ; NEWPM-NEXT:    br label [[FOR_COND]]
 ; NEWPM:       for.end:
