@@ -196,7 +196,7 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
   Operation *nextOp = fromOp->getNextNode();
   auto result =
       memEffectsCache.try_emplace(fromOp, std::make_pair(fromOp, nullptr));
-  if (result.second) {
+  if (!result.second) {
     auto memEffectsCachePair = result.first->second;
     if (memEffectsCachePair.second == nullptr) {
       // No MemoryEffects::Write has been detected until the cached operation.
