@@ -223,7 +223,7 @@ static cl::opt<TailFoldingPolicyTy> TailFoldingPolicy(
                    "always tail-fold, don't attempt vectorization if "
                    "tail-folding fails."),
         clEnumValN(TailFoldingPolicyTy::FoldEpilogueTail, "fold-epilogue-tail",
-                   "prefers tail-folded vector epilogue, falling back on "
+                   "prefer tail-folded vector epilogue, falling back on "
                    "an epilogue if it fails.")));
 
 static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
@@ -7347,9 +7347,9 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
 // for minimum code-size, 2) tail-folding compiler options, 3) loop
 // hints forcing tail-folding, and 4) a TTI hook that analyses whether the loop
 // is suitable for tail-folding.
-// This function determines scalar epilogue lowering for the main vector loop
-// while scalar epilogue lowering for the tail-folded epilogue path is handled
-// separately in isEpilogueTailFoldingAllowed().
+// This function determines epilogue lowering for the main vector loop while
+// epilogue lowering for the tail-folded epilogue path is handled separately in
+// isEpilogueTailFoldingAllowed().
 static EpilogueLowering
 getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
                     bool OptForSize, TargetTransformInfo *TTI,
