@@ -34,10 +34,11 @@ def extract_source_files_from_patch(patch_path):
         known_source_file_extension = (".cpp", ".c")
 
         for file in file_matches:
-            if not file.lower().endswith(known_source_file_extension):
-                continue
             if any(keyword in file.lower() for keyword in ["test", "unittest"]):
                 test_files.append(file)
+                continue
+            if not file.lower().endswith(known_source_file_extension):
+                continue
             else:
                 repo_root = os.path.abspath(os.getcwd())
                 full_path = os.path.join(repo_root, file)
