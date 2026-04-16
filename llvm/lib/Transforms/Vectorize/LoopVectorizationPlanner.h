@@ -146,8 +146,11 @@ public:
     InsertPt = IP->getIterator();
   }
 
-  /// Insert \p R at the current insertion point.
-  void insert(VPRecipeBase *R) { BB->insert(R, InsertPt); }
+  /// Insert \p R at the current insertion point. Returns \p R unchanged.
+  template <typename T> [[maybe_unused]] T *insert(T *R) {
+    BB->insert(R, InsertPt);
+    return R;
+  }
 
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
