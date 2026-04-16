@@ -38,7 +38,7 @@ inline uint24_t getSwappedBytes(uint24_t C) {
 class DataExtractor {
   StringRef Data;
   uint8_t IsLittleEndian;
-  uint8_t AddressSize;
+
 public:
   /// A class representing a position in a DataExtractor, as well as any error
   /// encountered during extraction. It enables one to extract a sequence of
@@ -80,22 +80,26 @@ public:
   /// This constructor allows us to use data that is owned by the
   /// caller. The data must stay around as long as this object is
   /// valid.
-  DataExtractor(StringRef Data, bool IsLittleEndian, uint8_t AddressSize)
-    : Data(Data), IsLittleEndian(IsLittleEndian), AddressSize(AddressSize) {}
-  DataExtractor(ArrayRef<uint8_t> Data, bool IsLittleEndian,
-                uint8_t AddressSize)
+  DataExtractor(StringRef Data, bool IsLittleEndian)
+      : Data(Data), IsLittleEndian(IsLittleEndian) {}
+
+  DataExtractor(ArrayRef<uint8_t> Data, bool IsLittleEndian)
       : Data(StringRef(reinterpret_cast<const char *>(Data.data()),
                        Data.size())),
-        IsLittleEndian(IsLittleEndian), AddressSize(AddressSize) {}
+        IsLittleEndian(IsLittleEndian) {}
+
+  // TODO: Delete.
+  DataExtractor(StringRef Data, bool IsLittleEndian, uint8_t)
+      : DataExtractor(Data, IsLittleEndian) {}
+
+  // TODO: Delete.
+  DataExtractor(ArrayRef<uint8_t> Data, bool IsLittleEndian, uint8_t)
+      : DataExtractor(Data, IsLittleEndian) {}
 
   /// Get the data pointed to by this extractor.
   StringRef getData() const { return Data; }
   /// Get the endianness for this extractor.
   bool isLittleEndian() const { return IsLittleEndian; }
-  /// Get the address size for this extractor.
-  uint8_t getAddressSize() const { return AddressSize; }
-  /// Set the address size for this extractor.
-  void setAddressSize(uint8_t Size) { AddressSize = Size; }
 
   /// Extract a C string from \a *offset_ptr.
   ///
@@ -303,32 +307,6 @@ public:
   ///     The sign extended signed integer value that was extracted,
   ///     or zero on failure.
   LLVM_ABI int64_t getSigned(uint64_t *offset_ptr, uint32_t size) const;
-
-  //------------------------------------------------------------------
-  /// Extract an pointer from \a *offset_ptr.
-  ///
-  /// Extract a single pointer from the data and update the offset
-  /// pointed to by \a offset_ptr. The size of the extracted pointer
-  /// is \a getAddressSize(), so the address size has to be
-  /// set correctly prior to extracting any pointer values.
-  ///
-  /// @param[in,out] offset_ptr
-  ///     A pointer to an offset within the data that will be advanced
-  ///     by the appropriate number of bytes if the value is extracted
-  ///     correctly. If the offset is out of bounds or there are not
-  ///     enough bytes to extract this value, the offset will be left
-  ///     unmodified.
-  ///
-  /// @return
-  ///     The extracted pointer value as a 64 integer.
-  uint64_t getAddress(uint64_t *offset_ptr) const {
-    return getUnsigned(offset_ptr, AddressSize);
-  }
-
-  /// Extract a pointer-sized unsigned integer from the location given by the
-  /// cursor. In case of an extraction error, or if the cursor is already in
-  /// an error state, zero is returned.
-  uint64_t getAddress(Cursor &C) const { return getUnsigned(C, AddressSize); }
 
   /// Extract a uint8_t value from \a *offset_ptr.
   ///
@@ -723,17 +701,6 @@ public:
   ///     length bytes available at that offset, \b false otherwise.
   bool isValidOffsetForDataOfSize(uint64_t offset, uint64_t length) const {
     return offset + length >= offset && isValidOffset(offset + length - 1);
-  }
-
-  /// Test the availability of enough bytes of data for a pointer from
-  /// \a offset. The size of a pointer is \a getAddressSize().
-  ///
-  /// @return
-  ///     \b true if \a offset is a valid offset and there are enough
-  ///     bytes for a pointer available at that offset, \b false
-  ///     otherwise.
-  bool isValidOffsetForAddress(uint64_t offset) const {
-    return isValidOffsetForDataOfSize(offset, AddressSize);
   }
 
   /// Return the number of bytes in the underlying buffer.

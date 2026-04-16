@@ -13,11 +13,11 @@ end
 !CHECK-NOT: %{{.*}} = arith.constant %{{.*}} : index
 !CHECK-NOT: %{{.*}} = arith.constant %{{.*}} : i32
 !CHECK-NOT: %{{.*}} = fir.insert_value %{{.*}}, %{{.*}}, [%{{.*}} : index] : (!fir.array<3xi32>, i32) -> !fir.array<3xi32>
-!CHECK: fir.global @_QMmmECqq(dense<[51, 52, 53]> : tensor<3xi32>) constant : !fir.array<3xi32>
 !CHECK: func.func @_QPss() {
 !CHECK:  %[[a0:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QFssEn"}
 !CHECK:  %[[d0:.*]]:2 = hlfir.declare %[[a0]] {uniq_name = "_QFssEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:  %[[c0:.*]] = arith.constant 53 : i32
 !CHECK:  hlfir.assign %[[c0]] to %[[d0]]#0 : i32, !fir.ref<i32>
 !CHECK:  return
+!CHECK: fir.global @_QMmmECqq(dense<[51, 52, 53]> : tensor<3xi32>) constant : !fir.array<3xi32>
 !CHECK: }

@@ -1008,10 +1008,12 @@ void VPlan::execute(VPTransformState *State) {
         State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
     auto Blocks = OrigLoop->getBlocksVector();
     Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
+    while (!OrigLoop->isInnermost())
+      State->LI->erase(*OrigLoop->begin());
+    State->LI->erase(OrigLoop);
     for (auto *BB : Blocks)
       State->LI->removeBlock(BB);
     DeleteDeadBlocks(Blocks, &State->CFG.DTU);
-    State->LI->erase(OrigLoop);
   }
 
   State->CFG.DTU.flush();

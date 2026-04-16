@@ -650,6 +650,18 @@ LogicalResult tryUpdateDimOrFailure(Operation *op, int64_t &currDim,
   return success();
 }
 
+static void printShapeToDiagnostic(InFlightDiagnostic &diag,
+                                   ArrayRef<int64_t> shape) {
+  auto printDim = [&](int64_t dim) {
+    if (ShapedType::isDynamic(dim))
+      diag << "?";
+    else
+      diag << dim;
+  };
+
+  llvm::interleaveComma(shape, diag, printDim);
+}
+
 LogicalResult verifyConvOutputSize(
     Operation *op, const int64_t inputSize, const int64_t kernelSize,
     const int64_t outputSize, const int64_t padBefore, const int64_t padAfter,
@@ -1998,24 +2010,14 @@ LogicalResult tosa::MatMulOp::inferReturnTypeComponents(
 }
 
 LogicalResult MatMulOp::verify() {
-  auto aType = llvm::dyn_cast<ShapedType>(getA().getType());
-  auto bType = llvm::dyn_cast<ShapedType>(getB().getType());
+  const ShapeAdaptor aShape(getA().getType());
+  const ShapeAdaptor bShape(getB().getType());
+  const Type aElementType = aShape.getElementType();
+  const Type bElementType = bShape.getElementType();
 
-  // Must be shaped tensor types
-  if (!aType)
-    return emitOpError("expect a shaped tensor for input a, got ")
-           << getA().getType();
-
-  if (!bType)
-    return emitOpError("expect a shaped tensor for input b, got ")
-           << getB().getType();
-
-  auto aElementType = aType.getElementType();
-  auto bElementType = bType.getElementType();
-
-  auto aQuantizedEType =
+  const auto aQuantizedEType =
       llvm::dyn_cast<quant::UniformQuantizedType>(aElementType);
-  auto bQuantizedEType =
+  const auto bQuantizedEType =
       llvm::dyn_cast<quant::UniformQuantizedType>(bElementType);
 
   if (aQuantizedEType || bQuantizedEType) {
@@ -2034,21 +2036,19 @@ LogicalResult MatMulOp::verify() {
   }
 
   // check a_zp and b_zp
-  auto aEType = getStorageElementTypeOrSelf(aType);
+  auto aEType = getStorageElementTypeOrSelf(aElementType);
   auto aZpEType = getStorageElementTypeOrSelf(getAZp().getType());
-  if (aEType != aZpEType) {
+  if (aEType != aZpEType)
     return emitOpError("expect input a and a_zp have the same "
                        "element type, got ")
            << aEType << " and " << aZpEType;
-  }
 
-  auto bEType = getStorageElementTypeOrSelf(bType);
-  auto bZpEType = getStorageElementTypeOrSelf(getBZp().getType());
-  if (bEType != bZpEType) {
+  const Type bEType = getStorageElementTypeOrSelf(bElementType);
+  const Type bZpEType = getStorageElementTypeOrSelf(getBZp().getType());
+  if (bEType != bZpEType)
     return emitOpError("expect input b and b_zp have the same "
                        "element type, got ")
            << bEType << " and " << bZpEType;
-  }
 
   FailureOr<int64_t> maybeAZp = getAZeroPoint();
   if (succeeded(maybeAZp) && verifyAZeroPoint(*maybeAZp).failed())
@@ -2057,6 +2057,39 @@ LogicalResult MatMulOp::verify() {
   FailureOr<int64_t> maybeBZp = getBZeroPoint();
   if (succeeded(maybeBZp) && verifyBZeroPoint(*maybeBZp).failed())
     return failure();
+
+  // Verify input/output shapes
+  int64_t N = ShapedType::kDynamic;
+  int64_t H = ShapedType::kDynamic;
+  int64_t W = ShapedType::kDynamic;
+  int64_t C = ShapedType::kDynamic;
+
+  if (aShape.hasRank()) {
+    N = aShape.getDimSize(0);
+    H = aShape.getDimSize(1);
+    C = aShape.getDimSize(2);
+  }
+
+  if (bShape.hasRank()) {
+    if (failed(tryUpdateDimOrFailure(*this, N, bShape.getDimSize(0), "b",
+                                     "batch")) ||
+        failed(tryUpdateDimOrFailure(*this, C, bShape.getDimSize(1), "b",
+                                     "channels")))
+      return failure();
+    W = bShape.getDimSize(2);
+  }
+
+  const SmallVector<int64_t, 3> expectedOutputShape = {N, H, W};
+  const auto outputType = cast<ShapedType>(getResult().getType());
+  if (outputType.hasRank() &&
+      failed(
+          verifyCompatibleShape(outputType.getShape(), expectedOutputShape))) {
+    InFlightDiagnostic opError = emitOpError("expected output shape ");
+    printShapeToDiagnostic(opError, outputType.getShape());
+    opError << " to be compatible with expected output shape ";
+    printShapeToDiagnostic(opError, expectedOutputShape);
+    return opError;
+  }
 
   return success();
 }
@@ -2168,6 +2201,8 @@ LogicalResult MatmulTBlockScaledOp::verify() {
 
   // Verify C is a multiple of block size
   const uint32_t blockSize = BlockSizeAttr::getBlockSizeValue(getBlockSize());
+  if (blockSize != BlockSizeAttr::getBlockSizeValue(BlockSize::BLOCK_SIZE_32))
+    return emitOpError("expect block size to be 32, got ") << blockSize;
   if (ShapedType::isStatic(C) && C % blockSize != 0)
     return emitOpError("expect C to be a multiple of block size, got C=")
            << C << ", block_size=" << blockSize;
@@ -2187,15 +2222,9 @@ LogicalResult MatmulTBlockScaledOp::verify() {
       failed(
           verifyCompatibleShape(outputType.getShape(), expectedOutputShape))) {
     InFlightDiagnostic opError = emitOpError("expected output shape ");
-    auto stringifyDim = [&](int64_t d) {
-      if (ShapedType::isDynamic(d))
-        opError << "?";
-      else
-        opError << d;
-    };
-    llvm::interleaveComma(outputType.getShape(), opError, stringifyDim);
+    printShapeToDiagnostic(opError, outputType.getShape());
     opError << " to be compatible with expected output shape ";
-    llvm::interleaveComma(expectedOutputShape, opError, stringifyDim);
+    printShapeToDiagnostic(opError, expectedOutputShape);
     return opError;
   }
 
@@ -2764,6 +2793,234 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
     if (newShapeDim != ShapedType::kDynamic && newShapeDim < kInferableDimSize)
       return emitOpError() << "new shape has invalid tensor dimension size "
                            << newShapeDim;
+  }
+
+  if (inputType.hasStaticShape()) {
+    int64_t inputElementsNum = inputType.getNumElements();
+    if (outputType.hasStaticShape()) {
+      int64_t outputElementsNum = outputType.getNumElements();
+      if (inputElementsNum != outputElementsNum) {
+        return emitOpError() << "cannot reshape " << inputElementsNum
+                             << " elements into " << outputElementsNum;
+      }
+    }
+
+    int64_t newShapeElementsNum =
+        llvm::accumulate(shapeValues, int64_t(1), [](int64_t acc, int64_t dim) {
+          return (dim > 0) ? acc * dim : acc;
+        });
+    bool isStaticNewShape =
+        llvm::all_of(shapeValues, [](int64_t s) { return s > 0; });
+    if ((isStaticNewShape && inputElementsNum != newShapeElementsNum) ||
+        (!isStaticNewShape && newShapeElementsNum > inputElementsNum)) {
+      return emitOpError() << "cannot reshape " << inputElementsNum
+                           << " elements into " << newShapeElementsNum;
+    }
+  }
+
+  return mlir::success();
+}
+
+bool tosa::ReshapeBlockScaledOp::isCompatibleReturnTypes(TypeRange l,
+                                                         TypeRange r) {
+  if (l.size() != r.size() || l.size() < 1 || l.size() > 2)
+    return false;
+  bool ok = (getElementTypeOrSelf(l[0]) == getElementTypeOrSelf(r[0]));
+  if (l.size() == 2)
+    ok = ok && (getElementTypeOrSelf(l[1]) == getElementTypeOrSelf(r[1]));
+  return ok;
+}
+
+LogicalResult tosa::ReshapeBlockScaledOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    ReshapeBlockScaledOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+
+  const auto numInputs = adaptor.getInput().size();
+  ShapeAdaptor inputShape(adaptor.getInput()[0].getType());
+  Type inputType = getElementTypeOrSelf(adaptor.getInput()[0].getType());
+  llvm::SmallVector<int64_t> newShapeValue;
+  const auto newShape = adaptor.getNewValueShape();
+  if (!tosa::getConstShapeValues(newShape.getDefiningOp(), newShapeValue)) {
+    auto rank = cast<tosa::shapeType>(newShape.getType()).getRank();
+    SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
+    inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
+    if (numInputs == 2)
+      inferredReturnShapes.push_back(ShapedTypeComponents(
+          fallback, getElementTypeOrSelf(adaptor.getInput()[1].getType())));
+    return success();
+  }
+
+  const uint32_t blockSize =
+      BlockSizeAttr::getBlockSizeValue(adaptor.getBlockSize());
+
+  llvm::SmallVector<int64_t> newScaleShapeValue;
+  if (numInputs == 2) {
+    newScaleShapeValue.assign(newShapeValue.begin(), newShapeValue.end());
+    if (ShapedType::isStatic(newScaleShapeValue.back()))
+      newScaleShapeValue.back() /= blockSize;
+  }
+
+  inferredReturnShapes.push_back(
+      ShapedTypeComponents(newShapeValue, inputType));
+  if (numInputs == 2) {
+    // Fix up scale shape - with special case for last dimension
+    for (size_t idx = 0; idx < newShapeValue.size(); idx++) {
+      if (ShapedType::isDynamic(newScaleShapeValue[idx])) {
+        newScaleShapeValue[idx] = newShapeValue[idx];
+        if (idx == (newShapeValue.size() - 1))
+          newScaleShapeValue[idx] /= blockSize;
+      }
+    }
+
+    inferredReturnShapes.push_back(ShapedTypeComponents(
+        newScaleShapeValue,
+        getElementTypeOrSelf(adaptor.getInput()[1].getType())));
+  }
+  return success();
+}
+
+llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
+  const Operation::operand_range inputList = getInput();
+  const Operation::result_range outputList = getResults();
+
+  if (inputList.size() == 0)
+    return emitOpError("requires at least one input");
+
+  if (inputList.size() > 2)
+    return emitOpError("requires at most two inputs");
+
+  if (inputList.size() != outputList.size())
+    return emitOpError("requires number of results to match inputs");
+
+  if (verifySameElementTypes(*this, /* inType = */ inputList[0].getType(),
+                             /* outType = */ outputList[0].getType())
+          .failed()) {
+    return failure();
+  }
+
+  const auto inputType = llvm::cast<ShapedType>(inputList[0].getType());
+  if (!inputType.hasRank())
+    return success();
+  const uint32_t blockSize = BlockSizeAttr::getBlockSizeValue(getBlockSize());
+
+  if (inputList.size() == 2) {
+    if (blockSize != BlockSizeAttr::getBlockSizeValue(BlockSize::BLOCK_SIZE_32))
+      return emitOpError("expect block size to be 32, got ") << blockSize;
+    if (llvm::any_of(inputList, [](Value v) {
+          const auto input = cast<ShapedType>(v.getType());
+          return input.hasRank() && input.getRank() == 0;
+        }))
+      return emitOpError(
+          "requires all input shapes have a rank greater than 0");
+    if (llvm::any_of(outputList, [](Value v) {
+          const auto output = cast<ShapedType>(v.getType());
+          return output.hasRank() && output.getRank() == 0;
+        }))
+      return emitOpError(
+          "requires all result shapes have a rank greater than 0");
+
+    if (verifySameElementTypes(*this, /* inType = */ inputList[1].getType(),
+                               /* outType = */ outputList[1].getType())
+            .failed()) {
+      return failure();
+    }
+
+    const auto inputScaleType = llvm::cast<ShapedType>(inputList[1].getType());
+    if (inputScaleType.hasRank()) {
+      if (inputType.getRank() != inputScaleType.getRank())
+        return emitOpError("input shapes do not have same rank");
+
+      // Check all but the last dimension that the input shape dimensions match
+      for (auto dimIdx = 0; dimIdx < inputType.getRank() - 1; dimIdx++) {
+        const int64_t inputValueDim = inputType.getDimSize(dimIdx);
+        const int64_t inputScaleDim = inputScaleType.getShape()[dimIdx];
+        if (ShapedType::isStatic(inputValueDim) &&
+            ShapedType::isStatic(inputScaleDim) &&
+            inputValueDim != inputScaleDim)
+          return emitOpError("input shapes for data and scale do not match on "
+                             "dimension ")
+                 << dimIdx;
+      }
+
+      // Verify last dimension of input is a multiple of block size
+      const int64_t lastValueDim =
+          inputType.getDimSize(inputType.getRank() - 1);
+      if (ShapedType::isStatic(lastValueDim)) {
+        if (lastValueDim % blockSize != 0)
+          return emitOpError("expect last dimension of input_data (")
+                 << lastValueDim << ") to be divisible by block_size ("
+                 << blockSize << ")";
+
+        const int64_t lastScaleDim =
+            inputScaleType.getDimSize(inputScaleType.getRank() - 1);
+        // Verify last dimension of scale is lastValueDim / block size
+        if (ShapedType::isStatic(lastScaleDim) &&
+            lastScaleDim != lastValueDim / blockSize)
+          return emitOpError("expect last dimension of scale_data (")
+                 << lastScaleDim << ") to be " << lastValueDim << "/"
+                 << blockSize;
+      }
+    }
+  } else {
+    if (blockSize != BlockSizeAttr::getBlockSizeValue(BlockSize::BLOCK_SIZE_1))
+      return emitOpError("expect block size to be 1, got ") << blockSize;
+  }
+
+  // Get the new value shape dimension values
+  SmallVector<int64_t> shapeValues;
+  if (!tosa::getConstShapeValues(getNewValueShape().getDefiningOp(),
+                                 shapeValues)) {
+    // skip following checks if shape is not constant
+    return mlir::success();
+  }
+
+  if (inputList.size() == 2) {
+    if (static_cast<int64_t>(shapeValues.size()) == 0)
+      return emitOpError("requires new shape to have a rank greater than 0");
+
+    const int64_t lastShapeDim = shapeValues.back();
+    if (ShapedType::isStatic(lastShapeDim) && lastShapeDim % blockSize != 0)
+      return emitOpError("expect last dimension of new shape (")
+             << lastShapeDim << ") to be divisible by block_size (" << blockSize
+             << ")";
+  }
+
+  const auto outputType = llvm::cast<ShapedType>(outputList[0].getType());
+  if (!outputType.hasRank())
+    return success();
+
+  if (static_cast<int64_t>(shapeValues.size()) != outputType.getRank())
+    return emitOpError() << "result does not match new shape rank";
+
+  for (auto [newShapeDim, outputShapeDim] :
+       zip(shapeValues, outputType.getShape())) {
+    if (ShapedType::isStatic(newShapeDim) &&
+        ShapedType::isStatic(outputShapeDim) && newShapeDim != outputShapeDim)
+      return emitOpError() << "result shape is inconsistent with new shape";
+  }
+
+  if (outputList.size() == 2) {
+    // Set up scale shape from new shape given
+    SmallVector<int64_t> scaleShapeValues(shapeValues.begin(),
+                                          shapeValues.end());
+    scaleShapeValues.back() /= blockSize;
+
+    const auto outputScaleType =
+        llvm::cast<ShapedType>(outputList[1].getType());
+    if (outputScaleType.hasRank()) {
+      if ((int64_t)scaleShapeValues.size() != outputScaleType.getRank())
+        return emitOpError() << "result scale does not match new shape rank";
+
+      for (auto [newScaleShapeDim, outputScaleShapeDim] :
+           zip(scaleShapeValues, outputScaleType.getShape())) {
+        if (ShapedType::isStatic(newScaleShapeDim) &&
+            ShapedType::isStatic(outputScaleShapeDim) &&
+            newScaleShapeDim != outputScaleShapeDim)
+          return emitOpError()
+                 << "result scale shape is inconsistent with new shape";
+      }
+    }
   }
 
   if (inputType.hasStaticShape()) {
@@ -3958,8 +4215,10 @@ LogicalResult Conv2DBlockScaledOp::verify() {
       return failure();
   }
 
-  // Verify IC is a multiple of block size
   const uint32_t blockSize = BlockSizeAttr::getBlockSizeValue(getBlockSize());
+  if (blockSize != BlockSizeAttr::getBlockSizeValue(BlockSize::BLOCK_SIZE_32))
+    return emitOpError("expect block size to be 32, got ") << blockSize;
+  // Verify IC is a multiple of block size
   if (ShapedType::isStatic(IC) && IC % blockSize != 0)
     return emitOpError("expect IC to be a multiple of block size, got IC=")
            << IC << ", block_size=" << blockSize;
@@ -4550,6 +4809,8 @@ LogicalResult CastFromBlockScaledOp::verify() {
   if (inputDataShape.hasRank()) {
     const unsigned int blockSize =
         BlockSizeAttr::getBlockSizeValue(getBlockSize());
+    if (blockSize != BlockSizeAttr::getBlockSizeValue(BlockSize::BLOCK_SIZE_32))
+      return emitOpError("expect block size to be 32, got ") << blockSize;
     const int64_t inputDataLastDim =
         inputDataShape.getDimSize(inputDataShape.getRank() - 1);
     if (inputDataLastDim % blockSize != 0)
@@ -4623,6 +4884,8 @@ LogicalResult CastToBlockScaledOp::verify() {
 
   const unsigned int blockSize =
       BlockSizeAttr::getBlockSizeValue(getBlockSize());
+  if (blockSize != BlockSizeAttr::getBlockSizeValue(BlockSize::BLOCK_SIZE_32))
+    return emitOpError("expect block size to be 32, got ") << blockSize;
   const ShapeAdaptor inputDataShape = ShapeAdaptor(inputDataType);
   if (inputDataShape.hasRank()) {
     const int64_t inputDataLastDim =

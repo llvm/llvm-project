@@ -159,19 +159,24 @@ loop:
    ret void
  }
 
-; FIXME: NUSW on the wider i32 AddRec does not imply NUSW on a narrower i8 AddRec.
+; NUSW on the wider i32 AddRec does not imply NUSW on a narrower i8 AddRec.
 ; Test for https://github.com/llvm/llvm-project/issues/191382.
 define void @wider_i32_nusw_does_not_imply_narrower_i4_nusw(ptr %dst, i64 %n) {
 ; CHECK-LABEL: 'wider_i32_nusw_does_not_imply_narrower_i4_nusw'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l.dst = load i8, ptr %gep.dst, align 1 ->
+; CHECK-NEXT:            store i8 %xor, ptr %gep.dst, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {1,+,1}<%loop> Added Flags: <nusw>
+; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.dst = getelementptr inbounds nuw i8, ptr %dst, i64 %iv.mod.zext:
