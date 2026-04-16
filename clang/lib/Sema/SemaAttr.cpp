@@ -221,6 +221,9 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
   inferGslPointerAttribute(Record, Record);
 }
 
+// This uses recursion and is only safe for small Stmt (e.g., the body of
+// std::make_unique). Do not use this for other Stmt without addressing the
+// potential for stack exhaustion.
 static const CXXNewExpr *findCXXNewExpr(const Stmt *S) {
   if (!S)
     return nullptr;
