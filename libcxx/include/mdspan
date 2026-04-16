@@ -431,7 +431,7 @@ namespace std {
                 typename MappingType::layout_type>;
 
   template<class MappingType, class AccessorType>
-    mdspan(const typename AccessorType::data_handle_type&, const MappingType&,
+    mdspan(typename AccessorType::data_handle_type, const MappingType&,
            const AccessorType&)
       -> mdspan<typename AccessorType::element_type, typename MappingType::extents_type,
                 typename MappingType::layout_type, AccessorType>;

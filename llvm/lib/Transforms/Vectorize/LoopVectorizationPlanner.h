@@ -146,8 +146,11 @@ public:
     InsertPt = IP->getIterator();
   }
 
-  /// Insert \p R at the current insertion point.
-  void insert(VPRecipeBase *R) { BB->insert(R, InsertPt); }
+  /// Insert \p R at the current insertion point. Returns \p R unchanged.
+  template <typename T> [[maybe_unused]] T *insert(T *R) {
+    BB->insert(R, InsertPt);
+    return R;
+  }
 
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
@@ -681,15 +684,6 @@ private:
   void addReductionResultComputation(VPlanPtr &Plan,
                                      VPRecipeBuilder &RecipeBuilder,
                                      ElementCount MinVF);
-
-#ifndef NDEBUG
-  /// \return The most profitable vectorization factor for the available VPlans
-  /// and the cost of that VF.
-  /// This is now only used to verify the decisions by the new VPlan-based
-  /// cost-model and will be retired once the VPlan-based cost-model is
-  /// stabilized.
-  VectorizationFactor selectVectorizationFactor();
-#endif
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.
