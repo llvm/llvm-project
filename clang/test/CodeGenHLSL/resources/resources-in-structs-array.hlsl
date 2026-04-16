@@ -37,13 +37,25 @@ struct G {
 // CHECK: @gArray.1.multiArray.1.1.Buf = internal global %"class.hlsl::RWBuffer" poison
 // CHECK: @[[gArray1MultiArray11BufStr:.*]] = private unnamed_addr constant [28 x i8] c"gArray.1.multiArray.1.1.Buf\00"
 
-// Make sure they are initialized from binding
+[[vk::binding(10, 2)]]
+G gArray[2] : register(u10, space2);
+
+// Array of structs that contain a resource array
+struct B {
+  RWStructuredBuffer<float> ManyBufs[2];
+};
+
+B bArray[2];
+
+// CHECK: @[[bArray1ManyBufsStr:.*]] = private unnamed_addr constant [18 x i8] c"bArray.1.ManyBufs\00", align 1
+
+// Make sure the global single resources are initialized from binding; resource arrays are initialized on access.
 //
 // CHECK: call void @hlsl::RWBuffer<float>::__createFromBinding({{.*}})(ptr {{.*}} @arrayOfA.0.Buf,
 // CHECK-SAME: i32 noundef 0, i32 noundef 1, i32 noundef 1, i32 noundef 0, ptr noundef @[[arrayOfA0BufStr]])
 // CHECK: call void @hlsl::RWBuffer<float>::__createFromBinding({{.*}})(ptr {{.*}} @arrayOfA.1.Buf,
 // CHECK-SAME: i32 noundef 1, i32 noundef 1, i32 noundef 1, i32 noundef 0, ptr noundef @[[arrayOfA1BufStr]])
-//
+
 // CHECK: call void @hlsl::RWBuffer<float>::__createFromBinding({{.*}})(ptr {{.*}} @gArray.0.multiArray.0.0.Buf,
 // CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 1, i32 noundef 0, ptr noundef @[[gArray0MultiArray00BufStr]])
 // CHECK: call void @hlsl::RWBuffer<float>::__createFromBinding({{.*}})(ptr {{.*}} @gArray.0.multiArray.0.1.Buf,
@@ -61,13 +73,11 @@ struct G {
 // CHECK: call void @hlsl::RWBuffer<float>::__createFromBinding({{.*}})(ptr {{.*}} @gArray.1.multiArray.1.1.Buf,
 // CHECK-SAME: i32 noundef 17, i32 noundef 2, i32 noundef 1, i32 noundef 0, ptr noundef @[[gArray1MultiArray11BufStr]])
 
-[[vk::binding(10, 2)]]
-G gArray[2] : register(u10, space2);
-
 // CHECK: define internal void @main()()
 // CHECK-NEXT: entry:
 [numthreads(1, 1, 1)]
 void main() {
+// CHECK-NEXT: %[[TMP:.*]] = alloca %"class.hlsl::RWStructuredBuffer", align 4
 
 // CHECK-NEXT: %[[PTR1:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @arrayOfA.1.Buf, i32 noundef 0)
 // CHECK-NEXT: store float 1.000000e+00, ptr %[[PTR1]]
@@ -80,4 +90,11 @@ void main() {
 // CHECK-NEXT: %[[PTR3:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @gArray.0.multiArray.0.1.Buf, i32 noundef 0)
 // CHECK-NEXT: store float 3.000000e+00, ptr %[[PTR3]]
   gArray[0].multiArray[0][1].Buf[0] = 3.0f;
+
+// Resource array access - first create the resource from binding, then access the element and store to it.
+// CHECK-NEXT: call void @hlsl::RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter(unsigned int, unsigned int, int, unsigned int, char const*, unsigned int)
+// CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWStructuredBuffer") align 4 %[[TMP]], i32 noundef 2, i32 noundef 0, i32 noundef 2, i32 noundef 1, ptr noundef @bArray.1.ManyBufs.str, i32 noundef 3)
+// CHECK-NEXT: %[[PTR4:.*]] = call {{.*}} ptr @hlsl::RWStructuredBuffer<float>::operator[](unsigned int)(ptr {{.*}} %[[TMP]], i32 noundef 0)
+// CHECK-NEXT: store float 4.000000e+00, ptr %[[PTR4]], align 4
+  bArray[1].ManyBufs[1][0] = 4.0f;
 }
