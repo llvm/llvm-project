@@ -107,6 +107,26 @@ AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
                           AArch64::ADJCALLSTACKUP, AArch64::CATCHRET),
       RI(STI.getTargetTriple(), STI.getHwMode()), Subtarget(STI) {}
 
+/// Return the maximum number of bytes of code the specified instruction may be
+/// after LFI rewriting. If the instruction is not rewritten, std::nullopt is
+/// returned (use default sizing).
+///
+/// NOTE: the size estimates here must be kept in sync with the rewrites in
+/// AArch64MCLFIRewriter.cpp. Sizes may be overestimates of the rewritten
+/// instruction sequences.
+static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AArch64::SVC:
+    // SVC expands to 4 instructions.
+    return 16;
+  default:
+    // Default case: instructions that don't cause expansion.
+    // - TP accesses in LFI are a single load/store, so no expansion.
+    // - All remaining instructions are not rewritten.
+    return std::nullopt;
+  }
+}
+
 /// GetInstSize - Return the number of bytes of code the specified
 /// instruction may be.  This returns the maximum number of bytes.
 unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
@@ -129,6 +149,11 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   //        before the assembly printer.
   unsigned NumBytes = 0;
   const MCInstrDesc &Desc = MI.getDesc();
+
+  // LFI rewriter expansions that supersede normal sizing.
+  if (Subtarget.isLFI())
+    if (auto Size = getLFIInstSizeInBytes(MI))
+      return *Size;
 
   if (!MI.isBundle() && isTailCallReturnInst(MI)) {
     NumBytes = Desc.getSize() ? Desc.getSize() : 4;
