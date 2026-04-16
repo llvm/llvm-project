@@ -4,13 +4,13 @@
 
 #include <arm_sve.h>
 
-void missing_sve2p3_luti6(svint8x2_t table, svuint8_t indices) {
-  svluti6_s8(table, indices); // expected-error {{'svluti6_s8' needs target feature sve,sve2p3}}
+void missing_sve2p3_luti6_x2(svint8x2_t table, svuint8_t indices) {
+  svluti6_s8_x2(table, indices); // expected-error {{'svluti6_s8_x2' needs target feature sve,sve2p3}}
 }
 
 __attribute__((target("sve2p3")))
-svint8_t has_sve2p3_luti6(svint8x2_t table, svuint8_t indices) {
-  return svluti6_s8(table, indices);
+svint8_t has_sve2p3_luti6_x2(svint8x2_t table, svuint8_t indices) {
+  return svluti6_s8_x2(table, indices);
 }
 
 __attribute__((target("sve2p3,bf16")))

@@ -1920,7 +1920,7 @@ let SVETargetGuard = "(sve2|sme2),lut", SMETargetGuard = "sme2,lut" in {
 }
 
 let SVETargetGuard = "sve2p3", SMETargetGuard = InvalidMode in {
-  def SVLUTI6 : SInst<"svluti6[_{d}]", "d2[", "cUcm", MergeNone, "aarch64_sve_luti6", [IsOverloadNone]>;
+  def SVLUTI6 : SInst<"svluti6[_{d}_x2]", "d2[", "cUcm", MergeNone, "aarch64_sve_luti6", [IsOverloadNone]>;
 }
 
 let SVETargetGuard = "sve2p3", SMETargetGuard = "sve2p3|sme2p3" in {

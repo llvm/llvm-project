@@ -15,50 +15,50 @@
 #define SVE_ACLE_FUNC(A1, A2) A1##A2
 #endif
 
-// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svluti6_s8(
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svluti6_s8_x2(
 // CHECK-SAME: <vscale x 16 x i8> [[TABLE_COERCE0:%.*]], <vscale x 16 x i8> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.luti6(<vscale x 16 x i8> [[TABLE_COERCE0]], <vscale x 16 x i8> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z15test_svluti6_s810svint8x2_tu11__SVUint8_t(
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z18test_svluti6_s8_x210svint8x2_tu11__SVUint8_t(
 // CPP-CHECK-SAME: <vscale x 16 x i8> [[TABLE_COERCE0:%.*]], <vscale x 16 x i8> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.luti6(<vscale x 16 x i8> [[TABLE_COERCE0]], <vscale x 16 x i8> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svint8_t test_svluti6_s8(svint8x2_t table, svuint8_t indices) {
-  return SVE_ACLE_FUNC(svluti6, _s8)(table, indices);
+svint8_t test_svluti6_s8_x2(svint8x2_t table, svuint8_t indices) {
+  return SVE_ACLE_FUNC(svluti6, _s8_x2)(table, indices);
 }
 
-// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svluti6_u8(
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svluti6_u8_x2(
 // CHECK-SAME: <vscale x 16 x i8> [[TABLE_COERCE0:%.*]], <vscale x 16 x i8> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.luti6(<vscale x 16 x i8> [[TABLE_COERCE0]], <vscale x 16 x i8> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z15test_svluti6_u811svuint8x2_tu11__SVUint8_t(
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z18test_svluti6_u8_x211svuint8x2_tu11__SVUint8_t(
 // CPP-CHECK-SAME: <vscale x 16 x i8> [[TABLE_COERCE0:%.*]], <vscale x 16 x i8> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.luti6(<vscale x 16 x i8> [[TABLE_COERCE0]], <vscale x 16 x i8> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svuint8_t test_svluti6_u8(svuint8x2_t table, svuint8_t indices) {
-  return SVE_ACLE_FUNC(svluti6, _u8)(table, indices);
+svuint8_t test_svluti6_u8_x2(svuint8x2_t table, svuint8_t indices) {
+  return SVE_ACLE_FUNC(svluti6, _u8_x2)(table, indices);
 }
 
-// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svluti6_mf8(
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svluti6_mf8_x2(
 // CHECK-SAME: <vscale x 16 x i8> [[TABLE_COERCE0:%.*]], <vscale x 16 x i8> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.luti6(<vscale x 16 x i8> [[TABLE_COERCE0]], <vscale x 16 x i8> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z16test_svluti6_mf813svmfloat8x2_tu11__SVUint8_t(
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z19test_svluti6_mf8_x213svmfloat8x2_tu11__SVUint8_t(
 // CPP-CHECK-SAME: <vscale x 16 x i8> [[TABLE_COERCE0:%.*]], <vscale x 16 x i8> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.luti6(<vscale x 16 x i8> [[TABLE_COERCE0]], <vscale x 16 x i8> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svmfloat8_t test_svluti6_mf8(svmfloat8x2_t table, svuint8_t indices) {
-  return SVE_ACLE_FUNC(svluti6, _mf8)(table, indices);
+svmfloat8_t test_svluti6_mf8_x2(svmfloat8x2_t table, svuint8_t indices) {
+  return SVE_ACLE_FUNC(svluti6, _mf8_x2)(table, indices);
 }
