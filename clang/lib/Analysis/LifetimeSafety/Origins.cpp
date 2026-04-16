@@ -107,6 +107,10 @@ bool OriginManager::hasOrigins(QualType QT) const {
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
     return false;
+  // Standard library callable wrappers (e.g., std::function) can propagate the
+  // stored lambda's origins.
+  if (isStdCallableWrapperType(RD))
+    return true;
   // TODO: Limit to lambdas for now. This will be extended to user-defined
   // structs with pointer-like fields.
   if (!RD->isLambda())
