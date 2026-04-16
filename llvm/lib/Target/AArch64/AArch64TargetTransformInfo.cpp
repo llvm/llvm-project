@@ -4904,6 +4904,17 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
+  // If we need to split the memory operation, we will also need to split the
+  // mask. This will likely lead to overestimating the cost in some cases if
+  // multiple memory operations use the same mask, but we often don't have
+  // enough context to figure that out here.
+  //
+  // If the elements being loaded are bytes then the mask will already be split,
+  // since the number of bits in a P register matches the number of bytes in a
+  // Z register.
+  if (LT.first > 1 && LT.second.getScalarSizeInBits() > 8)
+    return LT.first * 2;
+
   return LT.first;
 }
 
