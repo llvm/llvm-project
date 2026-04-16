@@ -181,3 +181,45 @@ class MemoryReadTestCase(TestBase):
             )
         )
         check_file_content([golden_output, golden_output])
+
+    def test_memory_read_repeat(self):
+        self.build_run_stop()
+
+        def expected_bytes(start, end):
+            # Generates ": <2 digit hex> <2 digit hex> <repeats><double space>".
+            return ": " + " ".join([f"{n:02x}" for n in range(start, end)]) + "  "
+
+        # First read gives us the first half of the array.
+        self.expect(
+            "memory read &incrementing_bytes",
+            substrs=[expected_bytes(0x0, 0x10), expected_bytes(0x10, 0x20)],
+        )
+
+        # Repeating the command sets the start address to the end address of the
+        # previous use.
+        self.expect(
+            "memory read",
+            substrs=[expected_bytes(0x20, 0x30), expected_bytes(0x30, 0x40)],
+        )
+
+        # Read first half of array as characters.
+        self.expect(
+            'memory read --format "character" --count 32 &incrementing_bytes',
+            substrs=[
+                r": \0\x01\x02\x03\x04\x05\x06\a\b\t\n\v\f\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\e\x1c\x1d\x1e\x1f",
+            ],
+        )
+
+        # Repeated command should read the second half and retain the character
+        # format.
+        # FIXME: Options are not repeated, see https://github.com/llvm/llvm-project/issues/192057.
+        # self.expect("memory read", substrs=[
+        #    # Note that the second space is actually in the array.
+        #    ":  !\"#$%&'()*+,-./0123456789:;<=>?"
+        #    ])
+        # Due to that bug, only the address is incremented, and the style is
+        # reset to the default.
+        self.expect(
+            "memory read",
+            substrs=[expected_bytes(0x20, 0x30), expected_bytes(0x30, 0x40)],
+        )

@@ -45,9 +45,8 @@ int main(int argc, char *argv[]) {
       LLJITBuilder()
           .setJITTargetMachineBuilder(std::move(JTMB))
           .setObjectLinkingLayerCreator(
-              [&](ExecutionSession &ES) {
-                return std::make_unique<ObjectLinkingLayer>(
-                    ES, ExitOnErr(jitlink::InProcessMemoryManager::Create()));
+              [&](ExecutionSession &ES, jitlink::JITLinkMemoryManager &MemMgr) {
+                return std::make_unique<ObjectLinkingLayer>(ES, MemMgr);
               })
           .create());
 
