@@ -76,43 +76,48 @@ static cl::opt<unsigned>
                           cl::desc("The maximum length of a constant string to "
                                    "inline a memchr call."));
 
-/// Try to fold a phi that merges two 32-bit cttz operations into a single
-/// 64-bit cttz. This pattern arises when a 64-bit cttz is implemented as
-/// two 32-bit cttz operations with a branch on whether the low half is zero:
+/// Try to fold a phi that merges two half-width cttz operations into a single
+/// full-width cttz. This pattern arises when a wide cttz is implemented as
+/// two half-width cttz operations with a branch on whether the low half is
+/// zero:
 ///
 /// GuardBB:
-///   %lo = trunc i64 %val to i32
-///   %cmp = icmp eq i32 %lo, 0
+///   %lo = trunc iN %val to i(N/2)
+///   %cmp = icmp eq i(N/2) %lo, 0
 ///   br i1 %cmp, label %HiBB, label %LoBB
 ///
 /// HiBB:
-///   %shr = lshr i64 %val, 32
-///   %hi = trunc i64 %shr to i32
-///   %cttz_hi = call i32 @llvm.cttz.i32(i32 %hi, i1 false)
-///   %val_is_zero = icmp eq i64 %val, 0
-///   %cttz_hi_plus32 = or i32 %cttz_hi, 32
-///   %hi_result = select i1 %val_is_zero, i32 ZeroResult, i32 %cttz_hi_plus32
+///   %shr = lshr iN %val, N/2
+///   %hi = trunc iN %shr to i(N/2)
+///   %cttz_hi = call i(N/2) @llvm.cttz.i(N/2)(i(N/2) %hi, i1 false)
+///   %val_is_zero = icmp eq iN %val, 0
+///   %cttz_hi_plus = add/or_disjoint i(N/2) %cttz_hi, N/2
+///   %hi_result = select i1 %val_is_zero, i(N/2) ZeroResult, i(N/2)
+///                %cttz_hi_plus
 ///   br label %PhiBB
 ///
 /// LoBB:
-///   %cttz_lo = call i32 @llvm.cttz.i32(i32 %lo, i1 true)
+///   %cttz_lo = call i(N/2) @llvm.cttz.i(N/2)(i(N/2) %lo, i1 true)
 ///   br label %PhiBB
 ///
 /// PhiBB:
-///   %result = phi i32 [%hi_result, %HiBB], [%cttz_lo, %LoBB]
+///   %result = phi i(N/2) [%hi_result, %HiBB], [%cttz_lo, %LoBB]
 /// -->
-///   %cttz64 = call i64 @llvm.cttz.i64(i64 %val, i1 true)
-///   %trunc = trunc i64 %cttz64 to i32
-///   %val_is_zero = icmp eq i64 %val, 0
-///   %result = select i1 %val_is_zero, i32 ZeroResult, i32 %trunc
+///   %cttz_wide = call iN @llvm.cttz.iN(iN %val, i1 true)
+///   %trunc = trunc iN %cttz_wide to i(N/2)
+///   %val_is_zero = icmp eq iN %val, 0
+///   %result = select i1 %val_is_zero, i(N/2) ZeroResult, i(N/2) %trunc
 ///
-/// Alive proof:  https://alive2.llvm.org/ce/z/FHgJpq
-static bool foldSplitWidthCTTZ(Instruction &I, const DominatorTree &DT) {
+/// Alive proof (for i64/i32):  https://alive2.llvm.org/ce/z/FHgJpq
+static bool foldSplitWidthCTTZ(Instruction &I) {
   if (I.getOpcode() != Instruction::PHI || I.getNumOperands() != 2)
     return false;
 
-  if (!I.getType()->isIntegerTy(32))
+  Type *HalfTy = I.getType();
+  if (!HalfTy->isIntegerTy())
     return false;
+  unsigned HalfWidth = HalfTy->getIntegerBitWidth();
+  unsigned FullWidth = HalfWidth * 2;
 
   PHINode &Phi = cast<PHINode>(I);
 
@@ -124,22 +129,21 @@ static bool foldSplitWidthCTTZ(Instruction &I, const DominatorTree &DT) {
     BasicBlock *HiBB = Phi.getIncomingBlock(HiIdx);
     BasicBlock *LoBB = Phi.getIncomingBlock(LoIdx);
 
-    // Match LoVal: cttz.i32(trunc(SrcVal to i32), _)
+    // Match LoVal: cttz.i(N/2)(trunc(SrcVal to i(N/2)), _)
     Value *LoTrunc;
     if (!match(LoVal,
                m_Intrinsic<Intrinsic::cttz>(m_Value(LoTrunc), m_Value())))
       continue;
 
-    // LoTrunc must be a trunc of an i64 value.
+    // LoTrunc must be a trunc of a value with double the width.
     Value *SrcVal = nullptr;
     if (!match(LoTrunc, m_Trunc(m_Value(SrcVal))))
       continue;
-    if (!SrcVal->getType()->isIntegerTy(64))
+    if (!SrcVal->getType()->isIntegerTy(FullWidth))
       continue;
 
-    // Match HiVal: select(icmp eq SrcVal, 0, C,
-    //                     or(cttz.i32(trunc(lshr(SrcVal, 32)), _), 32))
-    // where C is the result when the full value is zero.
+    // Match HiVal: select(icmp eq SrcVal, 0, ZeroResult,
+    //                     add/or_disjoint(cttz(trunc(lshr(SrcVal, N/2))), N/2))
     Value *SelectCond, *SelectTrue, *SelectFalse;
     if (!match(HiVal, m_Select(m_Value(SelectCond), m_Value(SelectTrue),
                                m_Value(SelectFalse))))
@@ -155,52 +159,49 @@ static bool foldSplitWidthCTTZ(Instruction &I, const DominatorTree &DT) {
     if (!match(SelectTrue, m_APInt(ZeroResult)))
       continue;
 
-    // SelectFalse: or(cttz.i32(trunc(lshr(SrcVal, 32)), _), 32)
-    // Also accept add instead of or.
+    // SelectFalse: add/or_disjoint(cttz(trunc(lshr(SrcVal, N/2))), N/2)
     Value *CttzHiCall;
-    if (!match(SelectFalse, m_c_Or(m_Value(CttzHiCall), m_SpecificInt(32))) &&
-        !match(SelectFalse, m_c_Add(m_Value(CttzHiCall), m_SpecificInt(32))))
+    if (!match(SelectFalse,
+               m_c_Add(m_Value(CttzHiCall), m_SpecificInt(HalfWidth))) &&
+        !match(SelectFalse,
+               m_c_DisjointOr(m_Value(CttzHiCall), m_SpecificInt(HalfWidth))))
       continue;
 
-    // CttzHiCall: cttz.i32(trunc(lshr(SrcVal, 32)), _)
+    // CttzHiCall: cttz(trunc(lshr(SrcVal, N/2)), _)
     Value *HiTrunc;
     if (!match(CttzHiCall,
                m_Intrinsic<Intrinsic::cttz>(m_Value(HiTrunc), m_Value())))
       continue;
 
-    if (!match(HiTrunc, m_Trunc(m_LShr(m_Specific(SrcVal), m_SpecificInt(32)))))
+    if (!match(HiTrunc,
+               m_Trunc(m_LShr(m_Specific(SrcVal), m_SpecificInt(HalfWidth)))))
       continue;
 
     // Both HiBB and LoBB share a single predecessor
-    // that branches on whether the low 32 bits are zero.
+    // that branches on whether the low half is zero.
     BasicBlock *GuardBB = LoBB->getSinglePredecessor();
     if (!GuardBB || GuardBB != HiBB->getSinglePredecessor())
       continue;
 
     Instruction *GuardTerm = GuardBB->getTerminator();
-    // Guard: br (icmp eq (trunc SrcVal to i32), 0), HiBB, LoBB
+    // Guard: br (icmp eq (trunc SrcVal to i(N/2)), 0), HiBB, LoBB
     if (!match(GuardTerm,
                m_Br(m_SpecificICmp(CmpInst::ICMP_EQ,
                                    m_Trunc(m_Specific(SrcVal)), m_ZeroInt()),
                     m_SpecificBB(HiBB), m_SpecificBB(LoBB))))
       continue;
 
-    // Verify SrcVal dominates the guard.
-    if (auto *SrcI = dyn_cast<Instruction>(SrcVal))
-      if (!DT.dominates(SrcI, GuardTerm))
-        continue;
-
     // Match successful.
     BasicBlock *PhiBB = Phi.getParent();
     IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
 
-    Value *Cttz64 = Builder.CreateIntrinsic(
+    Value *CttzWide = Builder.CreateIntrinsic(
         Intrinsic::cttz, {SrcVal->getType()}, {SrcVal, Builder.getTrue()});
-    Value *Trunc = Builder.CreateTrunc(Cttz64, Builder.getInt32Ty());
+    Value *Trunc = Builder.CreateTrunc(CttzWide, HalfTy);
     Value *IsZero =
         Builder.CreateICmpEQ(SrcVal, ConstantInt::get(SrcVal->getType(), 0));
     Value *Result = Builder.CreateSelect(
-        IsZero, ConstantInt::get(Builder.getInt32Ty(), *ZeroResult), Trunc);
+        IsZero, ConstantInt::get(HalfTy, *ZeroResult), Trunc);
 
     Phi.replaceAllUsesWith(Result);
     ++NumSplitCTTZFolded;
@@ -210,42 +211,47 @@ static bool foldSplitWidthCTTZ(Instruction &I, const DominatorTree &DT) {
   return false;
 }
 
-/// Try to fold a phi that merges two 32-bit ctlz operations into a single
-/// 64-bit ctlz. This is similar to foldSplitWidthCTTZ, but for leading zeros.
+/// Try to fold a phi that merges two half-width ctlz operations into a single
+/// full-width ctlz. This is similar to foldSplitWidthCTTZ, but for leading
+/// zeros.
 ///
 /// GuardBB:
-///   %shr = lshr i64 %val, 32
-///   %cmp = icmp eq i64 %shr, 0
+///   %shr = lshr iN %val, N/2
+///   %cmp = icmp eq iN %shr, 0
 ///   br i1 %cmp, label %LoBB, label %HiBB
 ///
-/// LoBB (upper is zero: count in lower half + 32):
-///   %lo = trunc i64 %val to i32
-///   %ctlz_lo = call i32 @llvm.ctlz.i32(i32 %lo, i1 true)
-///   %val_is_zero = icmp eq i64 %val, 0
-///   %ctlz_lo_plus32 = or i32 %ctlz_lo, 32
-///   %lo_result = select i1 %val_is_zero, i32 ZeroResult, i32 %ctlz_lo_plus32
+/// LoBB (upper is zero: count in lower half + N/2):
+///   %lo = trunc iN %val to i(N/2)
+///   %ctlz_lo = call i(N/2) @llvm.ctlz.i(N/2)(i(N/2) %lo, i1 true)
+///   %val_is_zero = icmp eq iN %val, 0
+///   %ctlz_lo_plus = add/or_disjoint i(N/2) %ctlz_lo, N/2
+///   %lo_result = select i1 %val_is_zero, i(N/2) ZeroResult, i(N/2)
+///                %ctlz_lo_plus
 ///   br label %PhiBB
 ///
 /// HiBB (upper is non-zero: count in upper half):
-///   %hi = trunc i64 %shr to i32
-///   %ctlz_hi = call i32 @llvm.ctlz.i32(i32 %hi, i1 true)
+///   %hi = trunc iN %shr to i(N/2)
+///   %ctlz_hi = call i(N/2) @llvm.ctlz.i(N/2)(i(N/2) %hi, i1 true)
 ///   br label %PhiBB
 ///
 /// PhiBB:
-///   %result = phi i32 [%lo_result, %LoBB], [%ctlz_hi, %HiBB]
+///   %result = phi i(N/2) [%lo_result, %LoBB], [%ctlz_hi, %HiBB]
 /// -->
-///   %ctlz64 = call i64 @llvm.ctlz.i64(i64 %val, i1 true)
-///   %trunc = trunc i64 %ctlz64 to i32
-///   %val_is_zero = icmp eq i64 %val, 0
-///   %result = select i1 %val_is_zero, i32 ZeroResult, i32 %trunc
+///   %ctlz_wide = call iN @llvm.ctlz.iN(iN %val, i1 true)
+///   %trunc = trunc iN %ctlz_wide to i(N/2)
+///   %val_is_zero = icmp eq iN %val, 0
+///   %result = select i1 %val_is_zero, i(N/2) ZeroResult, i(N/2) %trunc
 ///
-/// Alive proof: https://alive2.llvm.org/ce/z/peel2Y
-static bool foldSplitWidthCTLZ(Instruction &I, const DominatorTree &DT) {
+/// Alive proof (for i64/i32): https://alive2.llvm.org/ce/z/peel2Y
+static bool foldSplitWidthCTLZ(Instruction &I) {
   if (I.getOpcode() != Instruction::PHI || I.getNumOperands() != 2)
     return false;
 
-  if (!I.getType()->isIntegerTy(32))
+  Type *HalfTy = I.getType();
+  if (!HalfTy->isIntegerTy())
     return false;
+  unsigned HalfWidth = HalfTy->getIntegerBitWidth();
+  unsigned FullWidth = HalfWidth * 2;
 
   PHINode &Phi = cast<PHINode>(I);
 
@@ -257,22 +263,23 @@ static bool foldSplitWidthCTLZ(Instruction &I, const DominatorTree &DT) {
     BasicBlock *LoBB = Phi.getIncomingBlock(LoIdx);
     BasicBlock *HiBB = Phi.getIncomingBlock(HiIdx);
 
-    // Match HiVal: ctlz.i32(trunc(lshr(SrcVal, 32) to i32), _)
-    // This is the ctlz on the upper 32 bits (when upper is non-zero).
+    // Match HiVal: ctlz(trunc(lshr(SrcVal, N/2)), _)
+    // This is the ctlz on the upper half (when upper is non-zero).
     Value *HiTrunc;
     if (!match(HiVal,
                m_Intrinsic<Intrinsic::ctlz>(m_Value(HiTrunc), m_Value())))
       continue;
 
-    // HiTrunc must be trunc(lshr(SrcVal, 32)).
+    // HiTrunc must be trunc(lshr(SrcVal, N/2)).
     Value *SrcVal = nullptr;
-    if (!match(HiTrunc, m_Trunc(m_LShr(m_Value(SrcVal), m_SpecificInt(32)))))
+    if (!match(HiTrunc,
+               m_Trunc(m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth)))))
       continue;
-    if (!SrcVal->getType()->isIntegerTy(64))
+    if (!SrcVal->getType()->isIntegerTy(FullWidth))
       continue;
 
     // Match LoVal: select(icmp eq SrcVal, 0, ZeroResult,
-    //                     or/add(ctlz.i32(trunc(SrcVal to i32), _), 32))
+    //                     add/or_disjoint(ctlz(trunc(SrcVal), _), N/2))
     Value *SelectCond, *SelectTrue, *SelectFalse;
     if (!match(LoVal, m_Select(m_Value(SelectCond), m_Value(SelectTrue),
                                m_Value(SelectFalse))))
@@ -288,13 +295,15 @@ static bool foldSplitWidthCTLZ(Instruction &I, const DominatorTree &DT) {
     if (!match(SelectTrue, m_APInt(ZeroResult)))
       continue;
 
-    // SelectFalse: or/add(ctlz.i32(trunc(SrcVal to i32), _), 32)
+    // SelectFalse: add/or_disjoint(ctlz(trunc(SrcVal), _), N/2)
     Value *CtlzLoCall;
-    if (!match(SelectFalse, m_c_Or(m_Value(CtlzLoCall), m_SpecificInt(32))) &&
-        !match(SelectFalse, m_c_Add(m_Value(CtlzLoCall), m_SpecificInt(32))))
+    if (!match(SelectFalse,
+               m_c_Add(m_Value(CtlzLoCall), m_SpecificInt(HalfWidth))) &&
+        !match(SelectFalse,
+               m_c_DisjointOr(m_Value(CtlzLoCall), m_SpecificInt(HalfWidth))))
       continue;
 
-    // CtlzLoCall: ctlz.i32(trunc(SrcVal to i32), _)
+    // CtlzLoCall: ctlz(trunc(SrcVal), _)
     Value *LoTrunc;
     if (!match(CtlzLoCall,
                m_Intrinsic<Intrinsic::ctlz>(m_Value(LoTrunc), m_Value())))
@@ -304,36 +313,31 @@ static bool foldSplitWidthCTLZ(Instruction &I, const DominatorTree &DT) {
       continue;
 
     // Both LoBB and HiBB share a single predecessor that branches on whether
-    // the upper 32 bits are zero.
+    // the upper half is zero.
     BasicBlock *GuardBB = LoBB->getSinglePredecessor();
     if (!GuardBB || GuardBB != HiBB->getSinglePredecessor())
       continue;
 
     Instruction *GuardTerm = GuardBB->getTerminator();
-    // Guard: br (icmp eq (lshr SrcVal, 32), 0), LoBB, HiBB
+    // Guard: br (icmp eq (lshr SrcVal, N/2), 0), LoBB, HiBB
     if (!match(GuardTerm, m_Br(m_SpecificICmp(CmpInst::ICMP_EQ,
                                               m_LShr(m_Specific(SrcVal),
-                                                     m_SpecificInt(32)),
+                                                     m_SpecificInt(HalfWidth)),
                                               m_ZeroInt()),
                                m_SpecificBB(LoBB), m_SpecificBB(HiBB))))
       continue;
-
-    // Verify SrcVal dominates the guard.
-    if (auto *SrcI = dyn_cast<Instruction>(SrcVal))
-      if (!DT.dominates(SrcI, GuardTerm))
-        continue;
 
     // Match successful.
     BasicBlock *PhiBB = Phi.getParent();
     IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
 
-    Value *Ctlz64 = Builder.CreateIntrinsic(
+    Value *CtlzWide = Builder.CreateIntrinsic(
         Intrinsic::ctlz, {SrcVal->getType()}, {SrcVal, Builder.getTrue()});
-    Value *Trunc = Builder.CreateTrunc(Ctlz64, Builder.getInt32Ty());
+    Value *Trunc = Builder.CreateTrunc(CtlzWide, HalfTy);
     Value *IsZero =
         Builder.CreateICmpEQ(SrcVal, ConstantInt::get(SrcVal->getType(), 0));
     Value *Result = Builder.CreateSelect(
-        IsZero, ConstantInt::get(Builder.getInt32Ty(), *ZeroResult), Trunc);
+        IsZero, ConstantInt::get(HalfTy, *ZeroResult), Trunc);
 
     Phi.replaceAllUsesWith(Result);
     ++NumSplitCTLZFolded;
@@ -343,30 +347,32 @@ static bool foldSplitWidthCTLZ(Instruction &I, const DominatorTree &DT) {
   return false;
 }
 
-/// Try to fold a select-based split cttz(32-bit) pattern into a single 64-bit
-/// cttz.
+/// Try to fold a select-based split cttz pattern into a single full-width cttz.
 ///
-///   %lo = trunc i64 %val to i32
-///   %cmp = icmp eq i32 %lo, 0
-///   %shr = lshr i64 %val, 32
-///   %hi = trunc i64 %shr to i32
-///   %cttz_hi = call i32 @llvm.cttz.i32(i32 %hi, ...)
-///   %hi_plus32 = add/or i32 %cttz_hi, 32
-///   %cttz_lo = call i32 @llvm.cttz.i32(i32 %lo, ...)
-///   %result = select i1 %cmp, i32 %hi_plus32, i32 %cttz_lo
+///   %lo = trunc iN %val to i(N/2)
+///   %cmp = icmp eq i(N/2) %lo, 0
+///   %shr = lshr iN %val, N/2
+///   %hi = trunc iN %shr to i(N/2)
+///   %cttz_hi = call i(N/2) @llvm.cttz.i(N/2)(i(N/2) %hi, ...)
+///   %hi_plus = add/or_disjoint i(N/2) %cttz_hi, N/2
+///   %cttz_lo = call i(N/2) @llvm.cttz.i(N/2)(i(N/2) %lo, ...)
+///   %result = select i1 %cmp, i(N/2) %hi_plus, i(N/2) %cttz_lo
 /// -->
-///   %cttz64 = call i64 @llvm.cttz.i64(i64 %val, i1 false)
-///   %result = trunc i64 %cttz64 to i32
-/// Alive prrof:  https://alive2.llvm.org/ce/z/2MkVVM
+///   %cttz_wide = call iN @llvm.cttz.iN(iN %val, i1 false)
+///   %result = trunc iN %cttz_wide to i(N/2)
+/// Alive proof (for i64/i32):  https://alive2.llvm.org/ce/z/2MkVVM
 static bool foldSelectSplitCTTZ(Instruction &I) {
   Value *Cond, *TrueVal, *FalseVal;
   if (!match(&I, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
     return false;
 
-  if (!I.getType()->isIntegerTy(32))
+  Type *HalfTy = I.getType();
+  if (!HalfTy->isIntegerTy())
     return false;
+  unsigned HalfWidth = HalfTy->getIntegerBitWidth();
+  unsigned FullWidth = HalfWidth * 2;
 
-  // select (icmp eq (trunc SrcVal to i32), 0), HiResult, LoResult
+  // select (icmp eq (trunc SrcVal to i(N/2)), 0), HiResult, LoResult
   // Or select (icmp ne ...), LoResult, HiResult
   Value *LoTrunc;
   Value *HiResult, *LoResult;
@@ -382,14 +388,14 @@ static bool foldSelectSplitCTTZ(Instruction &I) {
     return false;
   }
 
-  // LoTrunc: trunc i64 SrcVal to i32
+  // LoTrunc: trunc iN SrcVal to i(N/2)
   Value *SrcVal;
   if (!match(LoTrunc, m_Trunc(m_Value(SrcVal))))
     return false;
-  if (!SrcVal->getType()->isIntegerTy(64))
+  if (!SrcVal->getType()->isIntegerTy(FullWidth))
     return false;
 
-  // LoResult: cttz.i32(trunc(SrcVal), _),  must use same truncated value
+  // LoResult: cttz(trunc(SrcVal), _),  must use same truncated value
   Value *LoCttzArg;
   if (!match(LoResult,
              m_Intrinsic<Intrinsic::cttz>(m_Value(LoCttzArg), m_Value())))
@@ -397,10 +403,12 @@ static bool foldSelectSplitCTTZ(Instruction &I) {
   if (LoCttzArg != LoTrunc)
     return false;
 
-  // HiResult: add/or(cttz.i32(trunc(lshr(SrcVal, 32)), _), 32)
+  // HiResult: add/or_disjoint(cttz(trunc(lshr(SrcVal, N/2)), _), N/2)
   Value *CttzHiCall;
-  if (!match(HiResult, m_c_Add(m_Value(CttzHiCall), m_SpecificInt(32))) &&
-      !match(HiResult, m_c_Or(m_Value(CttzHiCall), m_SpecificInt(32))))
+  if (!match(HiResult,
+             m_c_Add(m_Value(CttzHiCall), m_SpecificInt(HalfWidth))) &&
+      !match(HiResult,
+             m_c_DisjointOr(m_Value(CttzHiCall), m_SpecificInt(HalfWidth))))
     return false;
 
   Value *HiCttzArg;
@@ -408,14 +416,15 @@ static bool foldSelectSplitCTTZ(Instruction &I) {
              m_Intrinsic<Intrinsic::cttz>(m_Value(HiCttzArg), m_Value())))
     return false;
 
-  if (!match(HiCttzArg, m_Trunc(m_LShr(m_Specific(SrcVal), m_SpecificInt(32)))))
+  if (!match(HiCttzArg,
+             m_Trunc(m_LShr(m_Specific(SrcVal), m_SpecificInt(HalfWidth)))))
     return false;
 
   // Match successful.
   IRBuilder<> Builder(&I);
-  Value *Cttz64 = Builder.CreateIntrinsic(Intrinsic::cttz, {SrcVal->getType()},
-                                          {SrcVal, Builder.getFalse()});
-  Value *Trunc = Builder.CreateTrunc(Cttz64, Builder.getInt32Ty());
+  Value *CttzWide = Builder.CreateIntrinsic(
+      Intrinsic::cttz, {SrcVal->getType()}, {SrcVal, Builder.getFalse()});
+  Value *Trunc = Builder.CreateTrunc(CttzWide, HalfTy);
 
   I.replaceAllUsesWith(Trunc);
   ++NumSelectCTTZFolded;
@@ -424,35 +433,38 @@ static bool foldSelectSplitCTTZ(Instruction &I) {
 
 /// Same as foldSelectSplitCTTZ but for leading zeros (ctlz).
 ///
-///   %shr = lshr i64 %val, 32
-///   %hi = trunc i64 %shr to i32
-///   %cmp = icmp eq i32 %hi, 0   (or icmp eq i64 %shr, 0)
-///   %lo = trunc i64 %val to i32
-///   %ctlz_lo = call i32 @llvm.ctlz.i32(i32 %lo, ...)
-///   %lo_plus32 = add/or i32 %ctlz_lo, 32
-///   %ctlz_hi = call i32 @llvm.ctlz.i32(i32 %hi, ...)
-///   %result = select i1 %cmp, i32 %lo_plus32, i32 %ctlz_hi
+///   %shr = lshr iN %val, N/2
+///   %hi = trunc iN %shr to i(N/2)
+///   %cmp = icmp eq i(N/2) %hi, 0   (or icmp eq iN %shr, 0)
+///   %lo = trunc iN %val to i(N/2)
+///   %ctlz_lo = call i(N/2) @llvm.ctlz.i(N/2)(i(N/2) %lo, ...)
+///   %lo_plus = add/or_disjoint i(N/2) %ctlz_lo, N/2
+///   %ctlz_hi = call i(N/2) @llvm.ctlz.i(N/2)(i(N/2) %hi, ...)
+///   %result = select i1 %cmp, i(N/2) %lo_plus, i(N/2) %ctlz_hi
 /// -->
-///   %ctlz64 = call i64 @llvm.ctlz.i64(i64 %val, i1 false)
-///   %result = trunc i64 %ctlz64 to i32
+///   %ctlz_wide = call iN @llvm.ctlz.iN(iN %val, i1 false)
+///   %result = trunc iN %ctlz_wide to i(N/2)
 ///
-/// Alive proof: https://alive2.llvm.org/ce/z/rBJygf
+/// Alive proof (for i64/i32): https://alive2.llvm.org/ce/z/rBJygf
 static bool foldSelectSplitCTLZ(Instruction &I) {
   Value *Cond, *TrueVal, *FalseVal;
   if (!match(&I, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
     return false;
 
-  if (!I.getType()->isIntegerTy(32))
+  Type *HalfTy = I.getType();
+  if (!HalfTy->isIntegerTy())
     return false;
+  unsigned HalfWidth = HalfTy->getIntegerBitWidth();
+  unsigned FullWidth = HalfWidth * 2;
 
   // select (icmp eq HiPart, 0), LoResult, HiResult
-  // HiPart could be (trunc (lshr SrcVal, 32) to i32) or (lshr SrcVal, 32)
+  // HiPart could be (trunc (lshr SrcVal, N/2) to i(N/2)) or (lshr SrcVal, N/2)
   Value *HiPart;
   Value *LoResult, *HiResult;
   if (match(Cond,
             m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(HiPart), m_ZeroInt()))) {
-    LoResult = TrueVal;  // upper is zero
-    HiResult = FalseVal; // upper non-zero
+    LoResult = TrueVal;  // upper is zero: count in lower + N/2
+    HiResult = FalseVal; // upper non-zero: count in upper
   } else if (match(Cond, m_SpecificICmp(CmpInst::ICMP_NE, m_Value(HiPart),
                                         m_ZeroInt()))) {
     LoResult = FalseVal;
@@ -461,33 +473,36 @@ static bool foldSelectSplitCTLZ(Instruction &I) {
     return false;
   }
 
-  // Extract SrcVal from HiPart: either trunc(lshr(SrcVal, 32)) or
-  // lshr(SrcVal, 32)
+  // Extract SrcVal from HiPart: either trunc(lshr(SrcVal, N/2)) or
+  // lshr(SrcVal, N/2)
   Value *SrcVal;
-  if (match(HiPart, m_Trunc(m_LShr(m_Value(SrcVal), m_SpecificInt(32))))) {
-    // HiPart is trunc(lshr(SrcVal, 32))
-  } else if (match(HiPart, m_LShr(m_Value(SrcVal), m_SpecificInt(32)))) {
-    // HiPart is lshr(SrcVal, 32)
+  if (match(HiPart,
+            m_Trunc(m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth))))) {
+    // HiPart is trunc(lshr(SrcVal, N/2))
+  } else if (match(HiPart, m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth)))) {
+    // HiPart is lshr(SrcVal, N/2)
   } else {
     return false;
   }
-  if (!SrcVal->getType()->isIntegerTy(64))
+  if (!SrcVal->getType()->isIntegerTy(FullWidth))
     return false;
 
-  // HiResult: ctlz.i32(trunc(lshr(SrcVal,32)), _)
+  // HiResult: ctlz(trunc(lshr(SrcVal, N/2)), _)
   Value *HiCtlzArg;
   if (!match(HiResult,
              m_Intrinsic<Intrinsic::ctlz>(m_Value(HiCtlzArg), m_Value())))
     return false;
 
-  // HiCtlzArg should be a trunc of lshr(SrcVal, 32)
-  if (!match(HiCtlzArg, m_Trunc(m_LShr(m_Specific(SrcVal), m_SpecificInt(32)))))
+  if (!match(HiCtlzArg,
+             m_Trunc(m_LShr(m_Specific(SrcVal), m_SpecificInt(HalfWidth)))))
     return false;
 
-  // LoResult: add/or(ctlz.i32(trunc(SrcVal), _), 32)
+  // LoResult: add/or_disjoint(ctlz(trunc(SrcVal), _), N/2)
   Value *CtlzLoCall;
-  if (!match(LoResult, m_c_Add(m_Value(CtlzLoCall), m_SpecificInt(32))) &&
-      !match(LoResult, m_c_Or(m_Value(CtlzLoCall), m_SpecificInt(32))))
+  if (!match(LoResult,
+             m_c_Add(m_Value(CtlzLoCall), m_SpecificInt(HalfWidth))) &&
+      !match(LoResult,
+             m_c_DisjointOr(m_Value(CtlzLoCall), m_SpecificInt(HalfWidth))))
     return false;
 
   Value *LoCtlzArg;
@@ -498,11 +513,11 @@ static bool foldSelectSplitCTLZ(Instruction &I) {
   if (!match(LoCtlzArg, m_Trunc(m_Specific(SrcVal))))
     return false;
 
-  // Match successsful.
+  // Match successful.
   IRBuilder<> Builder(&I);
-  Value *Ctlz64 = Builder.CreateIntrinsic(Intrinsic::ctlz, {SrcVal->getType()},
-                                          {SrcVal, Builder.getFalse()});
-  Value *Trunc = Builder.CreateTrunc(Ctlz64, Builder.getInt32Ty());
+  Value *CtlzWide = Builder.CreateIntrinsic(
+      Intrinsic::ctlz, {SrcVal->getType()}, {SrcVal, Builder.getFalse()});
+  Value *Trunc = Builder.CreateTrunc(CtlzWide, HalfTy);
 
   I.replaceAllUsesWith(Trunc);
   ++NumSelectCTLZFolded;
@@ -2464,8 +2479,8 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
     for (Instruction &I : make_early_inc_range(llvm::reverse(BB))) {
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
-      MadeChange |= foldSplitWidthCTTZ(I, DT);
-      MadeChange |= foldSplitWidthCTLZ(I, DT);
+      MadeChange |= foldSplitWidthCTTZ(I);
+      MadeChange |= foldSplitWidthCTLZ(I);
       MadeChange |= foldSelectSplitCTTZ(I);
       MadeChange |= foldSelectSplitCTLZ(I);
       MadeChange |= tryToRecognizePopCount(I);

@@ -164,6 +164,107 @@ entry:
   ret i32 %retval
 }
 
+; i32 split into two i16 ctlz (phi-based).
+define i16 @split_ctlz_phi_i32(i32 noundef %val) {
+; CHECK-LABEL: @split_ctlz_phi_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[VAL:%.*]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SHR]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[CLEANUP:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i16 16, i16 [[TMP1]]
+; CHECK-NEXT:    ret i16 [[TMP3]]
+;
+entry:
+  %shr = lshr i32 %val, 16
+  %cmp = icmp eq i32 %shr, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %conv_lo = trunc i32 %val to i16
+  %0 = call i16 @llvm.ctlz.i16(i16 %conv_lo, i1 true)
+  %1 = icmp eq i32 %val, 0
+  %2 = add i16 %0, 16
+  %add = select i1 %1, i16 16, i16 %2
+  br label %cleanup
+
+if.else:
+  %conv_hi = trunc nuw i32 %shr to i16
+  %3 = call i16 @llvm.ctlz.i16(i16 %conv_hi, i1 true)
+  br label %cleanup
+
+cleanup:
+  %retval.0 = phi i16 [ %add, %if.then ], [ %3, %if.else ]
+  ret i16 %retval.0
+}
+
+; i32 split into two i16 ctlz (select-based).
+define i16 @split_ctlz_select_i32(i32 noundef %val) {
+; CHECK-LABEL: @split_ctlz_select_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i16
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+entry:
+  %shr = lshr i32 %val, 16
+  %conv_hi = trunc nuw i32 %shr to i16
+  %cmp = icmp eq i16 %conv_hi, 0
+  %conv_lo = trunc i32 %val to i16
+  %0 = call i16 @llvm.ctlz.i16(i16 %conv_lo, i1 false)
+  %add = add nuw nsw i16 %0, 16
+  %1 = call i16 @llvm.ctlz.i16(i16 %conv_hi, i1 true)
+  %retval = select i1 %cmp, i16 %add, i16 %1
+  ret i16 %retval
+}
+
+; i128 split into two i64 ctlz (select-based).
+define i64 @split_ctlz_select_i128(i128 noundef %val) {
+; CHECK-LABEL: @split_ctlz_select_i128(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i128 @llvm.ctlz.i128(i128 [[VAL:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i128 [[TMP0]] to i64
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+entry:
+  %shr = lshr i128 %val, 64
+  %conv_hi = trunc nuw i128 %shr to i64
+  %cmp = icmp eq i64 %conv_hi, 0
+  %conv_lo = trunc i128 %val to i64
+  %0 = call i64 @llvm.ctlz.i64(i64 %conv_lo, i1 false)
+  %add = add nuw nsw i64 %0, 64
+  %1 = call i64 @llvm.ctlz.i64(i64 %conv_hi, i1 true)
+  %retval = select i1 %cmp, i64 %add, i64 %1
+  ret i64 %retval
+}
+
+; i16 split into two i8 ctlz (select-based).
+define i8 @split_ctlz_select_i16(i16 noundef %val) {
+; CHECK-LABEL: @split_ctlz_select_i16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.ctlz.i16(i16 [[VAL:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[TMP0]] to i8
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+entry:
+  %shr = lshr i16 %val, 8
+  %conv_hi = trunc nuw i16 %shr to i8
+  %cmp = icmp eq i8 %conv_hi, 0
+  %conv_lo = trunc i16 %val to i8
+  %0 = call i8 @llvm.ctlz.i8(i8 %conv_lo, i1 false)
+  %add = add nuw nsw i8 %0, 8
+  %1 = call i8 @llvm.ctlz.i8(i8 %conv_hi, i1 true)
+  %retval = select i1 %cmp, i8 %add, i8 %1
+  ret i8 %retval
+}
+
 ; Negative test: mismatched source values, should NOT be folded.
 define i32 @split_ctlz_different_sources(i64 noundef %val, i64 noundef %val2) {
 ; CHECK-LABEL: @split_ctlz_different_sources(
@@ -216,5 +317,34 @@ entry:
   ret i32 %retval
 }
 
+; Negative test: plain or (without disjoint flag), should NOT be folded
+; in select-based pattern because or(32, 32)=32 != add(32, 32)=64.
+define i32 @split_ctlz_select_plain_or(i64 noundef %val) {
+; CHECK-LABEL: @split_ctlz_select_plain_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[VAL:%.*]], 32
+; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc nuw i64 [[SHR]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV_HI]], 0
+; CHECK-NEXT:    [[CONV_LO:%.*]] = trunc i64 [[VAL]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_LO]], i1 false)
+; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 true)
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+entry:
+  %shr = lshr i64 %val, 32
+  %conv_hi = trunc nuw i64 %shr to i32
+  %cmp = icmp eq i32 %conv_hi, 0
+  %conv_lo = trunc i64 %val to i32
+  %0 = call i32 @llvm.ctlz.i32(i32 %conv_lo, i1 false)
+  %add = or i32 %0, 32
+  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 true)
+  %retval = select i1 %cmp, i32 %add, i32 %1
+  ret i32 %retval
+}
+
+declare i8 @llvm.ctlz.i8(i8, i1 immarg)
+declare i16 @llvm.ctlz.i16(i16, i1 immarg)
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 declare i64 @llvm.ctlz.i64(i64, i1 immarg)
