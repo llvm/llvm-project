@@ -1967,6 +1967,10 @@ static void addConstantComments(const MachineInstr *MI,
   INSTR_CASE(V, Instr, Z, kz)
 
     // TODO: Add additional instructions when useful.
+    CASE_ARITH_RM(PADDB)
+    CASE_ARITH_RM(PADDW)
+    CASE_ARITH_RM(PADDD)
+    CASE_ARITH_RM(PADDQ)
     CASE_ARITH_RM(PMADDUBSW)
     CASE_ARITH_RM(PMADDWD)
     CASE_ARITH_RM(PMULDQ)
