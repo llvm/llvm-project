@@ -340,26 +340,32 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // https://cgit.freebsd.org/src/tree/sys/sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
 
-    // Iterate through a linked list of all processes. New processes are added
-    // to the head of this list. Which means that earlier PIDs are actually at
-    // the end of the list, so we have to walk it backwards. First collect all
-    // the processes in the list order.
-    std::vector<lldb::addr_t> process_addrs;
-    if (lldb::addr_t allproc_addr = FindSymbol("allproc");
-        allproc_addr != LLDB_INVALID_ADDRESS) {
-      for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
-           proc != 0 && proc != LLDB_INVALID_ADDRESS && error.Success();
-           proc = ReadPointerFromMemory(proc + offset_p_list, error))
-        process_addrs.push_back(proc);
-    }
+    // Iterate through a linked list of all processes then order incrementally
+    // by pid. Though new processes are added to the head of this list, process
+    // ids may be reused as well. So we cannot rely on it being in a particular
+    // order.
+    const lldb::addr_t allproc_addr = FindSymbol("allproc");
+    if (allproc_addr == LLDB_INVALID_ADDRESS)
+      return false;
 
-    // Processes are in the linked list in descending PID order, so we must walk
-    // them in reverse to get ascending PID order.
-    for (auto proc_it = process_addrs.rbegin(); proc_it != process_addrs.rend();
-         ++proc_it) {
-      lldb::addr_t proc = *proc_it;
+    std::vector<std::pair<lldb::addr_t, int32_t>> process_addrs;
+    for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
+         error.Success() && proc != 0 && proc != LLDB_INVALID_ADDRESS;
+         proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
       int32_t pid =
           ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
+      if (error.Fail())
+        return false;
+      process_addrs.emplace_back(proc, pid);
+    }
+
+    if (error.Fail())
+      return false;
+
+    std::sort(process_addrs.begin(), process_addrs.end(),
+              [](const auto &a, const auto &b) { return a.second < b.second; });
+
+    for (auto [proc, pid] : process_addrs) {
       // process' command-line string
       char comm[fbsd_maxcomlen + 1];
       ReadCStringFromMemory(proc + offset_p_comm, comm, sizeof(comm), error);
