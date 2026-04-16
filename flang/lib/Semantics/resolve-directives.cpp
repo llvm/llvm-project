@@ -610,10 +610,7 @@ public:
   void Post(const parser::OpenMPSimpleStandaloneConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPLoopConstruct &);
-  void Post(const parser::OpenMPLoopConstruct &) {
-    ordCollapseLevel++;
-    PopContext();
-  }
+  void Post(const parser::OpenMPLoopConstruct &) { PopContext(); }
   void Post(const parser::OmpBeginLoopDirective &) {
     GetContext().withinConstruct = true;
   }
@@ -1172,8 +1169,6 @@ private:
     sourceLabels_.clear();
     targetLabels_.clear();
   };
-
-  std::int64_t ordCollapseLevel{0};
 
   void AddOmpRequiresToScope(Scope &,
       const WithOmpDeclarative::RequiresClauses *,
@@ -2097,7 +2092,6 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   }
 
   PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
-  ordCollapseLevel = GetNumAffectedLoopsFromLoopConstruct(x) + 1;
   return true;
 }
 
@@ -2172,22 +2166,11 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
       if (iv && iv->symbol)
         ivs.push_back(iv);
     }
-    ordCollapseLevel--;
     for (auto iv : ivs) {
       if (!iv->symbol->test(Symbol::Flag::OmpPreDetermined)) {
         ResolveSeqLoopIndexInParallelOrTaskConstruct(*iv);
       } else {
         // TODO: conflict checks with explicitly determined DSA
-      }
-      if (ordCollapseLevel) {
-        if (const auto *details{iv->symbol->detailsIf<HostAssocDetails>()}) {
-          const Symbol *tpSymbol = &details->symbol();
-          if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
-            context_.Say(iv->source,
-                "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
-                iv->ToString());
-          }
-        }
       }
     }
   }
@@ -2316,7 +2299,7 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
 //     construct with multiple associated do-loops are lastprivate.
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     const parser::OpenMPLoopConstruct &x) {
-  std::int64_t level{GetContext().associatedLoopLevel};
+  int64_t level{GetContext().associatedLoopLevel};
   if (level <= 0) {
     return;
   }
@@ -2341,6 +2324,15 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
         if (const parser::Name *iv{GetLoopIndex(*loop)}) {
           if (!iv->symbol || !IsLocalInsideScope(*iv->symbol, currScope())) {
             if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
+              if (const auto *details{
+                      iv->symbol->detailsIf<HostAssocDetails>()}) {
+                const Symbol *tpSymbol = &details->symbol();
+                if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
+                  context_.Say(iv->source,
+                      "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
+                      iv->ToString());
+                }
+              }
               SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
               iv->symbol = symbol; // adjust the symbol within region
               AddToContextObjectWithDSA(*symbol, ivDSA);
