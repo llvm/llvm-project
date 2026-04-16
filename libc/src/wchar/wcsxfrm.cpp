@@ -8,6 +8,9 @@
 
 #include "src/wchar/wcsxfrm.h"
 
+#include "hdr/types/size_t.h"
+#include "hdr/types/wchar_t.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -3,8 +3,8 @@
 
 #include "src/__support/macros/config.h"
 
-#include <stddef.h>
-#include <wchar.h>
+#include "hdr/types/size_t.h"
+#include "hdr/types/wchar_t.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
