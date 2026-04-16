@@ -875,8 +875,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
         ISD::VP_MERGE,       ISD::VP_SELECT,      ISD::VP_SETCC,
         ISD::VP_SIGN_EXTEND,
-        ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,    ISD::VP_SMIN,
-        ISD::VP_SMAX,        ISD::VP_UMIN,        ISD::VP_UMAX,
+        ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,
         ISD::VP_ABS, ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
         ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
 
@@ -7550,10 +7549,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(FSUB)       // VP_FSUB
   VP_CASE(FMUL)       // VP_FMUL
   VP_CASE(FNEG)       // VP_FNEG
-  VP_CASE(SMIN)       // VP_SMIN
-  VP_CASE(SMAX)       // VP_SMAX
-  VP_CASE(UMIN)       // VP_UMIN
-  VP_CASE(UMAX)       // VP_UMAX
   VP_CASE(SETCC)      // VP_SETCC
   VP_CASE(BITREVERSE) // VP_BITREVERSE
   VP_CASE(BSWAP)      // VP_BSWAP
@@ -8979,10 +8974,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
       return lowerVPSetCCMaskOp(Op, DAG);
     [[fallthrough]];
-  case ISD::VP_SMIN:
-  case ISD::VP_SMAX:
-  case ISD::VP_UMIN:
-  case ISD::VP_UMAX:
   case ISD::VP_BITREVERSE:
   case ISD::VP_BSWAP:
     return lowerVPOp(Op, DAG);
