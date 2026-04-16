@@ -299,7 +299,7 @@ void ScalableToFixedVectorsPass::convertToFixed(IRBuilder<> &Builder,
         return ScaledToFixed[OpI];
       } else {
         assert(
-            !DemandedVLs[OpI] &&
+            !DemandedVLs.count(OpI) &&
             "Expected to find Fixed version of instruction with demanded VL");
         return Op;
       }

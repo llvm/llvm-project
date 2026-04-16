@@ -25,6 +25,23 @@ define void @load_store(ptr %src, ptr %dst) vscale_range(2,4) {
   ret void
 }
 
+; Use instructions as pointers
+define void @pointers(ptr %src, ptr %dst) vscale_range(2,4) {
+; CHECK-LABEL: define void @pointers(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 0
+; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i64 0
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i32>, ptr [[SRC1]], align 16
+; CHECK-NEXT:    store <4 x i32> [[LOAD]], ptr [[DST1]], align 16
+; CHECK-NEXT:    ret void
+;
+  %src1 = getelementptr inbounds nuw i8, ptr %src, i64 0
+  %dst1 = getelementptr inbounds nuw i8, ptr %dst, i64 0
+  %load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %src1, <vscale x 4 x i1> splat (i1 true), i32 4)
+  call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> %load, ptr %dst1, <vscale x 4 x i1> splat (i1 true), i32 4)
+  ret void
+}
+
 ; Simple load-binop-store chain, VL < MinVScaleVL
 define void @load_binop_store(ptr %src0, ptr %src1, ptr %dst) vscale_range(2,4) {
 ; CHECK-LABEL: define void @load_binop_store(
