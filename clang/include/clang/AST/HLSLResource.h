@@ -109,6 +109,21 @@ inline uint32_t getResourceDimensions(llvm::dxil::ResourceDimension Dim) {
   llvm_unreachable("Unhandled llvm::dxil::ResourceDimension enum.");
 }
 
+// Returns true if the second field of the record is a counter resource handle
+inline bool hasCounterHandle(const CXXRecordDecl *RD) {
+  if (RD->field_empty())
+    return false;
+  auto It = std::next(RD->field_begin());
+  if (It == RD->field_end())
+    return false;
+  const FieldDecl *SecondField = *It;
+  if (const auto *ResTy =
+          SecondField->getType()->getAs<HLSLAttributedResourceType>()) {
+    return ResTy->getAttrs().IsCounter;
+  }
+  return false;
+}
+
 // Helper class for building a name of a global resource variable that
 // gets created for a resource embedded in a struct or class. This will
 // also be used from CodeGen to build a name that matches the resource

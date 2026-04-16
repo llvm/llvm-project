@@ -248,6 +248,10 @@ static CXXMethodDecl *lookupResourceInitMethodAndSetupArgs(
   Value *NameStr = buildNameForResource(Name, CGM);
   Value *Space = llvm::ConstantInt::get(CGM.IntTy, Binding.getSpace());
 
+  bool HasCounter = hasCounterHandle(ResourceDecl);
+  assert((!HasCounter || Binding.hasCounterImplicitOrderID()) &&
+         "resources with counter handle must have a binding with counter "
+         "implicit order ID");
   if (Binding.isExplicit()) {
     // explicit binding
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, Binding.getSlot());
@@ -270,7 +274,7 @@ static CXXMethodDecl *lookupResourceInitMethodAndSetupArgs(
   Args.add(RValue::get(Range), AST.IntTy);
   Args.add(RValue::get(Index), AST.UnsignedIntTy);
   Args.add(RValue::get(NameStr), AST.getPointerType(AST.CharTy.withConst()));
-  if (Binding.hasCounterImplicitOrderID()) {
+  if (HasCounter) {
     uint32_t CounterBinding = Binding.getCounterImplicitOrderID();
     auto *CounterOrderID = llvm::ConstantInt::get(CGM.IntTy, CounterBinding);
     Args.add(RValue::get(CounterOrderID), AST.UnsignedIntTy);
@@ -1398,11 +1402,15 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
         CGF.CGM, ResourceTy->getAsCXXRecordDecl(), Range, Index,
         ArrayDecl->getName(), Binding, Args);
 
-    if (!CreateMethod)
+    if (!CreateMethod) {
       // This can happen if someone creates an array of structs that looks like
       // an HLSL resource record array but it does not have the required static
       // create method. No binding will be generated for it.
+      assert(!ResourceTy->getAsCXXRecordDecl()->isImplicit() &&
+             "create method lookup should always succeed for built-in resource "
+             "records");
       return std::nullopt;
+    }
 
     callResourceInitMethod(CGF, CreateMethod, Args, ValueSlot.getAddress());
 
