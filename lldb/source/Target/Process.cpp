@@ -5952,7 +5952,7 @@ void Process::GetStatus(Stream &strm, bool is_verbose) {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
         auto core_args = GetCoreFileArgs();
         if (core_args && is_verbose)
-          core_args->FormatAsMessage(strm);
+          core_args->Format(strm);
       } else
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
     }

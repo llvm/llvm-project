@@ -987,9 +987,13 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       thread_data.name.assign (prpsinfo.pr_fname, strnlen (prpsinfo.pr_fname, sizeof (prpsinfo.pr_fname)));
       SetID(prpsinfo.pr_pid);
       m_executable_name = thread_data.name;
-      m_process_args = Args(llvm::StringRef(
-          prpsinfo.pr_psargs,
-          strnlen(prpsinfo.pr_psargs, sizeof(prpsinfo.pr_psargs))));
+      auto core_arg = llvm::StringRef(prpsinfo.pr_psargs,
+                                      strnlen(prpsinfo.pr_psargs,
+                                              sizeof(prpsinfo.pr_psargs)))
+                          .str();
+      // pr_psargs's char array used to represent arguments is only 80 character long
+      // (\0 included), hence 79.
+      m_process_args = CoreArgs(core_arg, core_arg.size() == 79);
       break;
     }
     case ELF::NT_SIGINFO: {
@@ -1161,12 +1165,10 @@ DataExtractor ProcessElfCore::GetAuxvData() {
           m_auxv.GetAddressByteSize() == GetAddressByteSize()));
   return DataExtractor(m_auxv);
 }
-std::optional<CoreArgs> ProcessElfCore::GetCoreFileArgs() {
+std::optional<Process::CoreArgs> ProcessElfCore::GetCoreFileArgs() {
   if (m_process_args.empty())
     return std::nullopt;
-  std::string cmd;
-  m_process_args.GetCommandString(cmd);
-  return CoreArgs(m_process_args, cmd.size() == 79);
+  return m_process_args;
 }
 
 bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
@@ -1180,6 +1182,6 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
                            add_exe_file_as_first_arg);
   }
   if (!m_process_args.empty())
-    info.SetArguments(m_process_args, true);
+    info.SetArguments(m_process_args.as_args(), true);
   return true;
 }

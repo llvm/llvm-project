@@ -97,7 +97,7 @@ public:
   // Returns AUXV structure found in the core file
   lldb_private::DataExtractor GetAuxvData() override;
 
-  std::optional<lldb_private::CoreArgs> GetCoreFileArgs() override;
+  std::optional<Process::CoreArgs> GetCoreFileArgs() override;
   bool GetProcessInfo(lldb_private::ProcessInstanceInfo &info) override;
 
 protected:
@@ -158,7 +158,7 @@ private:
   std::string m_executable_name;
 
   // Command line args found from the ELF PRPSINFO (pr_psargs)
-  lldb_private::Args m_process_args;
+  Process::CoreArgs m_process_args;
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
       const elf::ELFProgramHeader &segment_header,
