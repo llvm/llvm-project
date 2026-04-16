@@ -24,7 +24,8 @@ int array2[recurse2]; // both-warning {{variable length arrays in C++}} \
                       // ref-warning {{variable length array folded to constant array as an extension}}
 
 constexpr int b = b; // both-error {{must be initialized by a constant expression}} \
-                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}}
+                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                     // both-note {{declared here}}
 
 
 [[clang::require_constant_initialization]] int c = c; // both-error {{variable does not have a constant initializer}} \
@@ -345,6 +346,16 @@ namespace ReadMutableInCopyCtor {
                        // both-note {{in call to 'G(g1)'}}
 }
 
+namespace ReadAnonUnionInCopyCtor {
+  struct G {
+    struct X {};
+    union U { X a; };
+    union {X a; };
+  };
+  constexpr G g1 = {};
+  constexpr G g2 = g1;
+}
+
 namespace GH150709 {
   struct C { };
   struct D : C {
@@ -353,7 +364,7 @@ namespace GH150709 {
   struct E : C { };
   struct F : D { };
   struct G : E { };
-  
+
   constexpr C c1, c2[2];
   constexpr D d1, d2[2];
   constexpr E e1, e2[2];

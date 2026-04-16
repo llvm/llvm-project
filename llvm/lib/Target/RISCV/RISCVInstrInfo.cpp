@@ -3085,10 +3085,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = Imm != 0 && isInt<6>(Imm);
           break;
         case RISCVOp::OPERAND_VTYPEI10:
-          Ok = isUInt<10>(Imm);
+          Ok = isUInt<10>(Imm) && RISCVVType::isValidVType(Imm);
           break;
         case RISCVOp::OPERAND_VTYPEI11:
-          Ok = isUInt<11>(Imm);
+          Ok = isUInt<11>(Imm) && RISCVVType::isValidVType(Imm);
           break;
         case RISCVOp::OPERAND_SIMM12_LSB00000:
           Ok = isShiftedInt<7, 5>(Imm);

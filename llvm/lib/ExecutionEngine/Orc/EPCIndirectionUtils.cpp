@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
 
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <future>
