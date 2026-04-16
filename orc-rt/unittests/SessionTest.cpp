@@ -357,6 +357,30 @@ TEST(SessionTest, MultipleServices) {
   }
 }
 
+TEST(SessionTest, ScheduleShutdownFromOnDetachHandler) {
+  // Check that when we schedule a shutdown from an onDetach handler:
+  // 1. The shutdown is scheduled.
+  // 2. All onDetach handlers run before any onShutdown handlers.
+
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+
+  int OnDetachHandlersRun = 0;
+  bool OnShutdownHandlerRun = false;
+
+  S.addOnDetach([&]() { ++OnDetachHandlersRun; });
+  S.addOnDetach([&]() { S.shutdown(); });
+  S.addOnDetach([&]() { ++OnDetachHandlersRun; });
+  S.addOnShutdown([&]() {
+    EXPECT_EQ(OnDetachHandlersRun, 2);
+    OnShutdownHandlerRun = true;
+  });
+
+  S.detach();
+
+  EXPECT_TRUE(OnShutdownHandlerRun);
+}
+
 TEST(SessionTest, ExpectedShutdownSequenceWithNoActiveManagedCodeCalls) {
   // Check that Session shutdown results in...
   // 1. Services being shut down.
