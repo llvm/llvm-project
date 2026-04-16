@@ -5012,6 +5012,10 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
                         << VF << " For instruction: " << I << '\n');
     }
 
+    // In the scalar loop, we may not always execute the predicated block, if it
+    // is an if-else block. Thus, scale the block's cost by the probability of
+    // executing it. getPredBlockCostDivisor will return 1 for blocks that are
+    // only predicated by the header mask when folding the tail.
     Cost += BlockCost / getPredBlockCostDivisor(CostKind, BB);
   }
 
