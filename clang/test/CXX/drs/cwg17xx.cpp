@@ -223,7 +223,7 @@ using Bind = Instantiate<Internal<Template>::template Bind, Argument>;
 #endif
 } // namespace cwg1794
 
-namespace cwg1780 { // cwg1780: 22
+namespace cwg1780 { // cwg1780: 23
 #if __cplusplus >= 201103L
 
 auto l = []() -> int { return 5; };
