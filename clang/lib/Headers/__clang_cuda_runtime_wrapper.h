@@ -34,7 +34,7 @@
 // Define __CUDACC__ early as libstdc++ standard headers with GNU extensions
 // enabled depend on it to avoid using __float128, which is unsupported in
 // CUDA.
-#define __CUDACC__
+#define __CUDACC__ 1
 
 // Include some standard headers to avoid CUDA headers including them
 // while some required macros (like __THROW) are in a weird state.
@@ -103,7 +103,7 @@
 #if CUDA_VERSION < 9000
 #define __CUDABE__
 #else
-#define __CUDACC__
+#define __CUDACC__ 1
 #define __CUDA_LIBDEVICE__
 #endif
 // Disables definitions of device-side runtime support stubs in
@@ -120,7 +120,7 @@
 #define nv_weak weak
 #undef __CUDABE__
 #undef __CUDA_LIBDEVICE__
-#define __CUDACC__
+#define __CUDACC__ 1
 #include "cuda_runtime.h"
 
 #pragma pop_macro("nv_weak")
@@ -266,7 +266,7 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 // branch of #if/else inside.
 #define __host__
 #undef __CUDABE__
-#define __CUDACC__
+#define __CUDACC__ 1
 #if CUDA_VERSION >= 9000
 // Some atomic functions became compiler builtins in CUDA-9 , so we need their
 // declarations.
@@ -412,7 +412,7 @@ __host__ __device__ void __nv_tex_surf_handler(const char *name, T *ptr,
 
 // Set up compiler macros expected to be seen during compilation.
 #undef __CUDABE__
-#define __CUDACC__
+#define __CUDACC__ 1
 
 extern "C" {
 // Device-side CUDA system calls.

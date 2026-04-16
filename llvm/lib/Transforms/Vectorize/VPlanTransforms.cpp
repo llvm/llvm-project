@@ -1685,7 +1685,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // Fold the increment Y into the phi's start value, replace Def with IVInc,
   // and if Inc exists, replace it with X.
   if (match(Def, m_Add(m_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) &&
-      isa<VPIRValue>(Y) && !isa<VPConstantInt>(Y) &&
+      isa<VPIRValue>(Y) &&
       match(X, m_VPPhi(m_ZeroInt(), m_Specific(Def->getOperand(0))))) {
     auto *Phi = cast<VPPhi>(X);
     auto *IVInc = Def->getOperand(0);
