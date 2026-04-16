@@ -166,3 +166,26 @@ entry:
 
   ret <vscale x 1 x bfloat> %a
 }
+
+define <8 x i64> @test_bf16_i64(<8 x i64> %v, <8 x bfloat> %v2, ptr %p) {
+; CHECK-LABEL: test_bf16_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    vsetvli zero, zero, e16alt, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s fa5, v12
+; CHECK-NEXT:    fmv.w.x fa4, zero
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vadd.vv v12, v16, v16
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    vadd.vv v8, v8, v12
+; CHECK-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fsh fa5, 0(a0)
+; CHECK-NEXT:    ret
+  %vp2 = add <8 x i64> %v, <i64 poison, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14>
+  %sum2 = fadd <8 x bfloat> zeroinitializer, %v2
+  %s0 = extractelement <8 x bfloat> %sum2, i64 0
+  store bfloat %s0, ptr %p
+  ret <8 x i64> %vp2
+}

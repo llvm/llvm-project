@@ -46,6 +46,7 @@
 #include "ToolChains/SPIRV.h"
 #include "ToolChains/SPIRVOpenMP.h"
 #include "ToolChains/SYCL.h"
+#include "ToolChains/Serenity.h"
 #include "ToolChains/Solaris.h"
 #include "ToolChains/TCE.h"
 #include "ToolChains/UEFI.h"
@@ -7071,6 +7072,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::Managarm:
       TC = std::make_unique<toolchains::Managarm>(*this, Target, Args);
       break;
+    case llvm::Triple::Serenity:
+      TC = std::make_unique<toolchains::Serenity>(*this, Target, Args);
+      break;
     case llvm::Triple::Solaris:
       TC = std::make_unique<toolchains::Solaris>(*this, Target, Args);
       break;
@@ -7161,6 +7165,10 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       case llvm::Triple::tcele:
         TC = std::make_unique<toolchains::TCELEToolChain>(*this, Target, Args);
+        break;
+      case llvm::Triple::tcele64:
+        TC =
+            std::make_unique<toolchains::TCELE64ToolChain>(*this, Target, Args);
         break;
       case llvm::Triple::hexagon:
         TC = std::make_unique<toolchains::HexagonToolChain>(*this, Target,

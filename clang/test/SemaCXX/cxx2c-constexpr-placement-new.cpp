@@ -104,7 +104,7 @@ static_assert(blah()); // expected-error {{not an integral constant expression}}
                        // expected-note {{in call to 'blah()'}}
 
 constexpr int *get_indeterminate() {
-  int *evil;
+  int *evil; // expected-note {{declared here}}
   return evil; // expected-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 
