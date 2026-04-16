@@ -298,6 +298,9 @@ Changes to LLDB
   an affected version in a way that is compatible with these systems, the issue
   contains details of backports that could be done to fix the affected versions.
 
+### Windows
+
+* Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
 
 Changes to BOLT
 ---------------

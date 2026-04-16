@@ -7558,8 +7558,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
     // Bail out if dst has been assigned a physical register. Otherwise, we
     // cannot update LiveRegMatrix properly.
-    if (VRM && VRM->getPhys(MI.getOperand(0).getReg()) &&
-        MI.getOperand(0).getReg() != MI.getOperand(1).getReg())
+    Register Dst = MI.getOperand(0).getReg();
+    if (VRM && Dst != MI.getOperand(1).getReg() &&
+        (!Dst.isVirtual() || VRM->getPhys(Dst)))
       return nullptr;
   }
 
@@ -7620,15 +7621,18 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
           MI.getOperand(0).getReg() == SrcReg)
         return NewMI;
 
-      const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-      Register NewSrc = MRI.isSSA() ? MRI.createVirtualRegister(&RC)
-                                    : MI.getOperand(0).getReg();
+      Register NewSrc = MI.getOperand(0).getReg();
+      if (MRI.isSSA()) {
+        const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
+        NewSrc = MRI.createVirtualRegister(&RC);
+      }
 
       CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
                        get(TargetOpcode::COPY))
                    .addDef(NewSrc)
                    .addReg(SrcReg, {}, SrcSub);
       NewMI->getOperand(1).setReg(NewSrc);
+      NewMI->getOperand(1).setSubReg(0);
     }
     return NewMI;
   }
