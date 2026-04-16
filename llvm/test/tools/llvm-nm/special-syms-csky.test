@@ -1,12 +1,11 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-nm %t | count 0
-# RUN: llvm-nm --special-syms %t | FileCheck %s
+# RUN: llvm-nm --special-syms %t | FileCheck %s \
+# RUN:   --implicit-check-not=file_sym --implicit-check-not=.text
 
 ## --special-syms should show mapping symbols but not STT_FILE or STT_SECTION.
 # CHECK:     00000000 t $d.1
 # CHECK:     00000000 t $t.1
-# CHECK-NOT: file_sym
-# CHECK-NOT: .text
 
 !ELF
 FileHeader:
