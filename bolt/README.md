@@ -175,6 +175,61 @@ instrumenting the binary with BOLT and then running it.
 llvm-bolt <executable> -instrument -o <instrumented-executable>
 ```
 
+Instrumentation relies on a runtime library which is compiled as part of
+llvm runtimes, similar to compiler-rt. Thus it can be cross compiled for
+multiple targets as a part of an LLVM build. This enables bolt to
+instrument binaries across architectures.
+
+Cross compiling bolt-rtj
+```
+> ANDROID_NDK_BIN="<android ndk>/toolchains/llvm/prebuilt/linux-x86_64/bin"
+> cmake \
+    -S llvm-project/llvm \
+    -B build \
+    -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;lld;bolt" \
+    -DLLVM_ENABLE_RUNTIMES="bolt-rt" \
+    -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+    -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-gnu;aarch64-unknown-linux-android21" \
+    -DRUNTIMES_x86_64-unknown-linux-gnu_CMAKE_CXX_COMPILER=clang++ \
+    -DRUNTIMES_aarch64-unknown-linux-android21_CMAKE_CXX_COMPILER=$ANDROID_NDK_BIN/clang++
+
+> cmake --build build --target bolt-rt
+```
+
+Or bolt-rt can be cross compiled as a stand alone build.
+```
+> ANDROID_NDK_BIN="<android ndk>/toolchains/llvm/prebuilt/linux-x86_64/bin"
+> cmake \
+    -S llvm-project/bolt-rt\
+    -B build \
+    -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_CXX_COMPILER=$ANDROID_NDK_BIN/clang++ \
+    -DBOLT_RT_TARGET_TRIPLE=aarch64-unknown-linux-android21
+
+> cmake --build build --target libbolt_rt_instr.a
+```
+
+Then a binary can be cross instrumented by specifying a target.
+```
+llvm-bolt \
+  <executable> \
+  -instrument \
+  -target aarch64-unknown-linux-gnu \
+  -o <instrumented executable> 
+```
+
+Or with a direct path to the compiled runtime library.
+```
+llvm-bolt \
+  <executable> \
+  -instrument \
+  -runtime-instrumentation-lib <llvm build>/lib/bolt/aarch64-unknown-linux-android21/libbolt_rt_instr.a \
+  -o <instrumented executable> 
+```
+
 After you run instrumented-executable with the desired workload, its BOLT
 profile should be ready for you in `/tmp/prof.fdata` and you can skip
 **Step 2**.
