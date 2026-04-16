@@ -19,20 +19,6 @@
 
 using namespace llvm;
 
-bool KnownBits::isConstantSlowCase() const {
-  const unsigned Last = Zero.getNumWords() - 1;
-  const uint64_t *Zeros = Zero.getRawData();
-  const uint64_t *Ones = One.getRawData();
-
-  for (unsigned I = 0; I != Last; ++I)
-    if ((Zeros[I] | Ones[I]) != UINT64_MAX)
-      return false;
-
-  unsigned TailBits = getBitWidth() - Last * APInt::APINT_BITS_PER_WORD;
-  uint64_t TailMask = llvm::maskTrailingOnes<uint64_t>(TailBits);
-  return ((Zeros[Last] | Ones[Last]) & TailMask) == TailMask;
-}
-
 KnownBits KnownBits::flipSignBit(const KnownBits &Val) {
   unsigned SignBitPosition = Val.getBitWidth() - 1;
   APInt Zero = Val.Zero;

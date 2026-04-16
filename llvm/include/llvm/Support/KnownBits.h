@@ -52,10 +52,7 @@ public:
 
   /// Returns true if we know the value of all bits.
   bool isConstant() const {
-    if (LLVM_LIKELY(Zero.isSingleWord()))
-      return (Zero.getZExtValue() | One.getZExtValue()) ==
-             llvm::maskTrailingOnes<uint64_t>(getBitWidth());
-    return isConstantSlowCase();
+    return Zero.isExhaustive(One);
   }
 
   /// Returns the value when all bits have a known value. This just returns One
@@ -579,9 +576,6 @@ private:
   // Internal helper for getting the initial KnownBits for an `srem` or `urem`
   // operation with the low-bits set.
   static KnownBits remGetLowBits(const KnownBits &LHS, const KnownBits &RHS);
-
-  /// Multi-word case helper for isConstant().
-  bool isConstantSlowCase() const;
 };
 
 inline KnownBits operator&(KnownBits LHS, const KnownBits &RHS) {
