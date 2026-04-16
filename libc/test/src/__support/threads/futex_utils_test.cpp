@@ -10,7 +10,7 @@
 #include "src/__support/threads/futex_utils.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
+#include "hdr/errno_macros.h"
 
 TEST(LlvmLibcSupportThreadsFutexUtilsTest, RequeueSmokeTest) {
   LIBC_NAMESPACE::Futex source(1);
