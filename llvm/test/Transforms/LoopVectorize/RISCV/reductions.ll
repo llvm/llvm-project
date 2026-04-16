@@ -35,7 +35,7 @@ define i32 @add(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -45,7 +45,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %add
 }
 
@@ -176,7 +176,7 @@ define i32 @or(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %or, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -186,7 +186,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %or
 }
 
@@ -222,7 +222,7 @@ define i32 @and(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %and, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -232,7 +232,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %and
 }
 
@@ -268,7 +268,7 @@ define i32 @xor(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %xor, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -278,7 +278,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %xor
 }
 
@@ -315,7 +315,7 @@ define i32 @smin(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.010 = phi i32 [ 2, %entry ], [ %.sroa.speculated, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -363,7 +363,7 @@ define i32 @umax(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.010 = phi i32 [ 2, %entry ], [ %.sroa.speculated, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -924,7 +924,7 @@ define i32 @mul(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %mul, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -934,7 +934,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %mul
 }
 
