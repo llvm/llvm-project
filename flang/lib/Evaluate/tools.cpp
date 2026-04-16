@@ -1138,11 +1138,8 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
 
   SymbolVector crtSymbols;
   for (const Symbol &sym : symbols) {
-    bool isComponent{sym.owner().IsDerivedType()};
-    if (isComponent) {
-      crtSymbols.push_back(sym);
-    } else {
-      crtSymbols.push_back(sym);
+    crtSymbols.push_back(sym);
+    if (!sym.owner().IsDerivedType()) {
       symbolVectors.push_back(crtSymbols);
       crtSymbols.clear();
     }

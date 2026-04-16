@@ -714,3 +714,13 @@ subroutine sub40()
   real :: res
   res = sub40_call(x, y, 10)
 end subroutine
+
+subroutine sub41()
+  type :: bar
+    integer, device, allocatable :: m(:)
+  end type
+  type(bar), managed :: a
+  integer, managed :: lm(5)
+  
+  lm(1:5) = a%m(1:5)
+end subroutine
