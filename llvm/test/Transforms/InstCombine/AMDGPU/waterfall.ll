@@ -6,7 +6,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index2(<8 x i32> addrspace(4)*
 ; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 [[INDEX:%.*]])
 ; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 [[WF_TOKEN1]], i32 [[INDEX]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <8 x i32>, ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[RSRC:%.*]] = load <8 x i32>, ptr addrspace(4) [[PTR]], align 32
 ; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 15, float [[S:%.*]], <8 x i32> [[RSRC]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    [[R1:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 [[WF_TOKEN1]], <4 x float> [[R]])
@@ -27,7 +27,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index3(<8 x i32> addrspace(4)*
 ; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 [[INDEX:%.*]])
 ; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 [[WF_TOKEN1]], i32 [[INDEX]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <8 x i32>, ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[RSRC:%.*]] = load <8 x i32>, ptr addrspace(4) [[PTR]], align 32
 ; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 15, float [[S:%.*]], <8 x i32> [[RSRC]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    [[R1:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 [[WF_TOKEN1]], <4 x float> [[R]])
@@ -50,7 +50,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index_aba(<8 x i32> addrspace(
 ; CHECK-NEXT:    [[WF_TOKEN2:%.*]] = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 [[WF_TOKEN1]], i32 [[INDEX2:%.*]])
 ; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 [[WF_TOKEN2]], i32 [[INDEX2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <8 x i32>, ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[RSRC:%.*]] = load <8 x i32>, ptr addrspace(4) [[PTR]], align 32
 ; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 15, float [[S:%.*]], <8 x i32> [[RSRC]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    [[R1:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 [[WF_TOKEN2]], <4 x float> [[R]])
