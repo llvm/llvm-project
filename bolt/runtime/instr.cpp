@@ -1500,8 +1500,8 @@ int openProfile() {
     Ptr = strCopy(Ptr, ".fdata", BufSize - (Ptr - Buf + 1));
   }
   *Ptr++ = '\0';
-  uint64_t FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT,
-                       /*mode=*/0666);
+  uint64_t FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC,
+                       /*mode=*/0600);
   if (static_cast<int64_t>(FD) < 0) {
     report("Error while trying to open profile file for writing: ");
     report(Buf);
