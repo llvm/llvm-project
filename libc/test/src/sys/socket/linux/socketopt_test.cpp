@@ -65,12 +65,12 @@ TEST_F(LlvmLibcSocketOptTest, NotASocket) {
 
   int optval = 1;
   socklen_t optlen = sizeof(optval);
-  ASSERT_THAT(
-      LIBC_NAMESPACE::setsockopt(fds[0], SOL_SOCKET, SO_KEEPALIVE, &optval, optlen),
-      Fails(ENOTSOCK));
+  ASSERT_THAT(LIBC_NAMESPACE::setsockopt(fds[0], SOL_SOCKET, SO_KEEPALIVE,
+                                         &optval, optlen),
+              Fails(ENOTSOCK));
 
-  ASSERT_THAT(LIBC_NAMESPACE::getsockopt(fds[0], SOL_SOCKET, SO_KEEPALIVE, &optval,
-                                         &optlen),
+  ASSERT_THAT(LIBC_NAMESPACE::getsockopt(fds[0], SOL_SOCKET, SO_KEEPALIVE,
+                                         &optval, &optlen),
               Fails(ENOTSOCK));
   ASSERT_THAT(LIBC_NAMESPACE::close(fds[0]), Succeeds(0));
 }
