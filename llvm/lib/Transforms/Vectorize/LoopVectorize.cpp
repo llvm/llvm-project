@@ -8046,18 +8046,16 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                    "reduction");
             // For integer sub-reductions, verify start value is zero.
             // For FP sub-reductions, verify start value is negative zero.
-            if (PhiR->getRecurrenceKind() == RecurKind::Sub) {
-              assert(VPlanPatternMatch::match(VPI->getOperand(0),
-                                              VPlanPatternMatch::m_ZeroInt()) &&
-                     "Expected start value for partial sub-reduction to start "
-                     "at zero");
-            } else if (PhiR->getRecurrenceKind() == RecurKind::FSub) {
-              assert(
-                  VPlanPatternMatch::match(VPI->getOperand(0),
-                                           VPlanPatternMatch::m_NegZeroFP()) &&
-                  "Expected start value for partial sub-reduction to start "
-                  "at negative zero");
-            }
+            auto StartValueIsIdentity = [&] {
+              Value *IdentityValue = getRecurrenceIdentity(
+                  PhiR->getRecurrenceKind(), ResumeV->getType(), {});
+              auto *StartValue = dyn_cast<VPIRValue>(VPI->getOperand(0));
+              return StartValue && StartValue->getValue() == IdentityValue;
+            };
+            assert(StartValueIsIdentity() &&
+                   "Expected start value for partial sub-reduction to be zero "
+                   "(or negative zero)");
+
             Sub->setOperand(0, StartVal);
           } else
             VPI->setOperand(0, StartVal);
