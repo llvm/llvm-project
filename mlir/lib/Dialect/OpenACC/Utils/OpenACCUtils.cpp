@@ -37,6 +37,8 @@ mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
     return nullptr;
 
   mlir::Value orig = computeReg.getOperand(barg);
+  if (!orig)
+    return nullptr;
   mlir::Operation *def = orig.getDefiningOp();
   return mlir::isa_and_nonnull<ACC_DATA_ENTRY_OPS>(def) ? def : nullptr;
 }

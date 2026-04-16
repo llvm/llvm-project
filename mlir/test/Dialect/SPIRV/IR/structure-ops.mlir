@@ -589,6 +589,19 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  spirv.SpecConstant @sc = 1.0 : f32
+  // expected-error @+1 {{op with Import linkage type must not have an initializer}}
+  spirv.GlobalVariable @var0 initializer(@sc) {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "importedVar",
+      linkage_type = <Import>
+    >
+  } : !spirv.ptr<f32, Private>
+}
+
+// -----
+
 spirv.module Logical GLSL450 {
   spirv.func @foo() "None" {
     // expected-error @+1 {{op must appear in a module-like op's block}}

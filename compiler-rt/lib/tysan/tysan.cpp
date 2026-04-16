@@ -491,6 +491,9 @@ bool tysan_init_is_running;
 } // namespace __tysan
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
+  SanitizerToolName = "TypeSanitizer";
+  CacheBinaryName();
+
   CHECK(!tysan_init_is_running);
   if (tysan_inited)
     return;

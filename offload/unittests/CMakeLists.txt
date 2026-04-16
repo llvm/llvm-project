@@ -26,7 +26,7 @@ function(add_offload_test_device_code test_filename test_name)
 
   # Try to build with support for NVPTX devices.
   if("cuda" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
-    find_package(CUDAToolkit QUIET)
+    find_package(CUDAToolkit QUIET ${OFFLOAD_MIN_CUDA_VERSION})
     if(CUDAToolkit_FOUND)
       get_filename_component(cuda_path "${CUDAToolkit_BIN_DIR}" DIRECTORY ABSOLUTE)
     endif()

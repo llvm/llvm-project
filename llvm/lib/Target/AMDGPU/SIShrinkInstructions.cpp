@@ -48,8 +48,8 @@ class SIShrinkInstructions {
   bool shrinkMadFma(MachineInstr &MI) const;
   ChangeKind shrinkScalarLogicOp(MachineInstr &MI) const;
   bool tryReplaceDeadSDST(MachineInstr &MI) const;
-  bool instAccessReg(iterator_range<MachineInstr::const_mop_iterator> &&R,
-                     Register Reg, unsigned SubReg) const;
+  bool instAccessReg(MachineInstr::filtered_const_mop_range &&R, Register Reg,
+                     unsigned SubReg) const;
   bool instReadsReg(const MachineInstr *MI, unsigned Reg,
                     unsigned SubReg) const;
   bool instModifiesReg(const MachineInstr *MI, unsigned Reg,
@@ -620,12 +620,9 @@ ChangeKind SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
 // This is the same as MachineInstr::readsRegister/modifiesRegister except
 // it takes subregs into account.
 bool SIShrinkInstructions::instAccessReg(
-    iterator_range<MachineInstr::const_mop_iterator> &&R, Register Reg,
+    MachineInstr::filtered_const_mop_range &&R, Register Reg,
     unsigned SubReg) const {
   for (const MachineOperand &MO : R) {
-    if (!MO.isReg())
-      continue;
-
     if (Reg.isPhysical() && MO.getReg().isPhysical()) {
       if (TRI->regsOverlap(Reg, MO.getReg()))
         return true;
@@ -641,12 +638,12 @@ bool SIShrinkInstructions::instAccessReg(
 
 bool SIShrinkInstructions::instReadsReg(const MachineInstr *MI, unsigned Reg,
                                         unsigned SubReg) const {
-  return instAccessReg(MI->uses(), Reg, SubReg);
+  return instAccessReg(MI->all_uses(), Reg, SubReg);
 }
 
 bool SIShrinkInstructions::instModifiesReg(const MachineInstr *MI, unsigned Reg,
                                            unsigned SubReg) const {
-  return instAccessReg(MI->defs(), Reg, SubReg);
+  return instAccessReg(MI->all_defs(), Reg, SubReg);
 }
 
 TargetInstrInfo::RegSubRegPair

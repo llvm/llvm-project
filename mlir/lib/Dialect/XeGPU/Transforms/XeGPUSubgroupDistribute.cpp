@@ -804,8 +804,8 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
     auto storeScatterOp = dyn_cast_or_null<xegpu::StoreScatterOp>(lastNode);
     if (!storeScatterOp)
       return failure();
-    auto offsets = storeScatterOp.getOffsets();
-    if (!offsets || !isa<VectorType>(offsets.getType()))
+    Value offsets = storeScatterOp.getOffsets();
+    if (!isa<VectorType>(offsets.getType()))
       return rewriter.notifyMatchFailure(
           storeScatterOp, "Store op must have a vector of offsets argument");
     VectorType offsetsTy = cast<VectorType>(offsets.getType());
@@ -1109,12 +1109,12 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
 
     auto loadGatherOp =
         producedByLastLoad->get().getDefiningOp<xegpu::LoadGatherOp>();
-    auto offsets = loadGatherOp.getOffsets();
-    if (!offsets || !isa<VectorType>(offsets.getType()) ||
+    Value offsets = loadGatherOp.getOffsets();
+    if (!isa<VectorType>(offsets.getType()) ||
         !isa<VectorType>(loadGatherOp.getMask().getType()))
       return rewriter.notifyMatchFailure(
           loadGatherOp,
-          "Load op must have a vector arguments for offsets and mask");
+          "Load op must have vector arguments for offsets and mask");
     VectorType offsetsTy = cast<VectorType>(offsets.getType());
     VectorType maskTy = cast<VectorType>(loadGatherOp.getMask().getType());
     VectorType resultVecTy =

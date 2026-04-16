@@ -749,6 +749,61 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     return std::nullopt;
   }
+  case Intrinsic::amdgcn_dispatch_ptr: {
+    if (II.getFunction()->hasFnAttribute("amdgpu-no-dispatch-ptr"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_queue_ptr: {
+    if (II.getFunction()->hasFnAttribute("amdgpu-no-queue-ptr"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_dispatch_id: {
+    if (II.getFunction()->hasFnAttribute("amdgpu-no-dispatch-id"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_workgroup_id_x:
+  case Intrinsic::amdgcn_workgroup_id_y:
+  case Intrinsic::amdgcn_workgroup_id_z: {
+    StringRef Attr =
+        IID == Intrinsic::amdgcn_workgroup_id_x   ? "amdgpu-no-workgroup-id-x"
+        : IID == Intrinsic::amdgcn_workgroup_id_y ? "amdgpu-no-workgroup-id-y"
+                                                  : "amdgpu-no-workgroup-id-z";
+    if (II.getFunction()->hasFnAttribute(Attr))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_workitem_id_x:
+  case Intrinsic::amdgcn_workitem_id_y:
+  case Intrinsic::amdgcn_workitem_id_z: {
+    StringRef Attr =
+        IID == Intrinsic::amdgcn_workitem_id_x   ? "amdgpu-no-workitem-id-x"
+        : IID == Intrinsic::amdgcn_workitem_id_y ? "amdgpu-no-workitem-id-y"
+                                                 : "amdgpu-no-workitem-id-z";
+    if (II.getFunction()->hasFnAttribute(Attr))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_lds_kernel_id: {
+    if (II.getFunction()->hasFnAttribute("amdgpu-no-lds-kernel-id"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_cluster_id_x:
+  case Intrinsic::amdgcn_cluster_id_y:
+  case Intrinsic::amdgcn_cluster_id_z: {
+    if (!ST->hasClusters())
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    StringRef Attr =
+        IID == Intrinsic::amdgcn_cluster_id_x   ? "amdgpu-no-cluster-id-x"
+        : IID == Intrinsic::amdgcn_cluster_id_y ? "amdgpu-no-cluster-id-y"
+                                                : "amdgpu-no-cluster-id-z";
+    if (II.getFunction()->hasFnAttribute(Attr))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))

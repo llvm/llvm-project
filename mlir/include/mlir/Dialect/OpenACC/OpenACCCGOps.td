@@ -297,6 +297,11 @@ def OpenACC_ComputeRegionOp
     region (e.g., `"acc.parallel"`, `"acc.kernels"`). This is intended to
     be solely informational.
 
+    Canonicalization may simplify `ins` captures: duplicate `ins` operands
+    (same SSA value threaded more than once) are merged by reusing the first
+    block argument, and unused `ins` operands (block arguments with no uses)
+    are removed. `launch` operands are never merged or dropped.
+
     Example:
 
     ```mlir
@@ -326,6 +331,8 @@ def OpenACC_ComputeRegionOp
   let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region AnyRegion:$region);
+
+  let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
     /// Look up the par_width op for the given dimension among launch args.
@@ -365,9 +372,17 @@ def OpenACC_ComputeRegionOp
       return &getRegion().back().back();
     }
 
-    /// Map a block argument back to its corresponding operand
-    /// ($launchArgs or $inputArgs).
+    /// Return the `launch` or `ins` operand threaded to `blockArg`, or a null
+    /// `Value` if `blockArg` is not an argument of `getBody()` or its index is
+    /// out of range for this op's `launch` and `ins` operands.
     ::mlir::Value getOperand(::mlir::BlockArgument blockArg);
+
+    /// If `value` is a launch or input operand, return the body block argument
+    /// it is threaded through; otherwise `std::nullopt`. If `value` matches
+    /// more than one `ins` operand, the first match is returned (canonicalization
+    /// may merge duplicate `ins` values). Duplicate `launch` operands are not
+    /// folded.
+    std::optional<::mlir::BlockArgument> getBlockArg(::mlir::Value value);
   }];
 
   let hasVerifier = 1;

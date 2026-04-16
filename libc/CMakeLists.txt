@@ -272,6 +272,8 @@ endif()
 if(LIBC_TARGET_OS_IS_GPU)
   include(prepare_libc_gpu_build)
   set(LIBC_ENABLE_UNITTESTS OFF)
+elseif(LIBC_TARGET_OS_IS_BAREMETAL)
+  set(LIBC_ENABLE_UNITTESTS OFF)
 endif()
 
 include(LLVMLibCCheckMPFR)

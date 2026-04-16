@@ -10,8 +10,8 @@
 target triple = "nvptx64-nvidia-cuda"
 
 ;; Check that the first couple of error messages are correct.
-; ERROR: error: unsupported cmpxchg
-; ERROR: error: unsupported cmpxchg
+; ERROR: error: unsupported atomicrmw xchg: target supports atomics up to 8 bytes, but this atomic accesses 16 bytes
+; ERROR: error: unsupported atomicrmw xchg: target supports atomics up to 8 bytes, but this atomic accesses 16 bytes
 
 define i128 @test_xchg_generic(ptr %addr, i128 %amt) {
 ; CHECK-LABEL: test_xchg_generic(

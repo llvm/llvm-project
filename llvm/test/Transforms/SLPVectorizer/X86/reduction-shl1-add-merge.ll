@@ -6,33 +6,22 @@ define i32 @reduce_add_sub_shl(ptr %p, ptr %q, ptr %out) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GP0:%.*]] = getelementptr i32, ptr [[P]], i64 0
-; CHECK-NEXT:    [[GP4:%.*]] = getelementptr i32, ptr [[P]], i64 4
-; CHECK-NEXT:    [[GP5:%.*]] = getelementptr i32, ptr [[P]], i64 5
-; CHECK-NEXT:    [[GP6:%.*]] = getelementptr i32, ptr [[P]], i64 6
-; CHECK-NEXT:    [[GP7:%.*]] = getelementptr i32, ptr [[P]], i64 7
 ; CHECK-NEXT:    [[GQ0:%.*]] = getelementptr i32, ptr [[Q]], i64 0
-; CHECK-NEXT:    [[LP4:%.*]] = load i32, ptr [[GP4]], align 4
-; CHECK-NEXT:    [[LP5:%.*]] = load i32, ptr [[GP5]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[GP6]], align 4
-; CHECK-NEXT:    [[LP7:%.*]] = load i32, ptr [[GP7]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[GP0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[GP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[GQ0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 0>, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 4, i32 5, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> [[TMP7]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i32> [[TMP0]], [[TMP8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP9]], i32 0
 ; CHECK-NEXT:    store volatile i32 [[TMP3]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP9]], i32 1
 ; CHECK-NEXT:    store volatile i32 [[TMP4]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP9]], i32 2
 ; CHECK-NEXT:    store volatile i32 [[TMP5]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i32> [[TMP9]], i32 3
 ; CHECK-NEXT:    store volatile i32 [[TMP6]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[SHL1:%.*]] = shl i32 [[LP4]], 1
-; CHECK-NEXT:    [[SHL2:%.*]] = shl i32 [[LP5]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = add i32 [[TMP12]], [[TMP11]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[LP7]], [[SHL1]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[OP_RDX4]], [[OP_RDX1]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i32 [[OP_RDX2]], [[SHL2]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP9]])
 ; CHECK-NEXT:    ret i32 [[OP_RDX3]]
 ;
 entry:

@@ -107,6 +107,7 @@ FUNCTION_PASS_WITH_PARAMS(
 #endif
 
 MACHINE_FUNCTION_ANALYSIS("amdgpu-resource-usage", AMDGPUResourceUsageAnalysis(*static_cast<const GCNTargetMachine *>(this)))
+MACHINE_FUNCTION_ANALYSIS("amdgpu-next-use-analysis", AMDGPUNextUseAnalysisPass())
 #undef MACHINE_FUNCTION_ANALYSIS
 
 #ifndef MACHINE_FUNCTION_PASS
@@ -128,6 +129,7 @@ MACHINE_FUNCTION_PASS("amdgpu-nsa-reassign", GCNNSAReassignPass())
 MACHINE_FUNCTION_PASS("amdgpu-wait-sgpr-hazards", AMDGPUWaitSGPRHazardsPass())
 MACHINE_FUNCTION_PASS("gcn-create-vopd", GCNCreateVOPDPass())
 MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
+MACHINE_FUNCTION_PASS("print<amdgpu-next-use-analysis>", AMDGPUNextUseAnalysisPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-fix-vgpr-copies", SIFixVGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-fold-operands", SIFoldOperandsPass());

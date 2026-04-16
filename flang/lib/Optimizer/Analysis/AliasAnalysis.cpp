@@ -724,8 +724,13 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
 /// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
 /// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
-  if (auto call = llvm::dyn_cast<fir::CallOp>(op))
-    return getCallModRef(call, location);
+  if (auto call = llvm::dyn_cast<fir::CallOp>(op)) {
+    ModRefResult result = getCallModRef(call, location);
+    if (result != ModRefResult::getModAndRef())
+      return result;
+    // Proceed to MemoryEffectOpInterface analysis in case one
+    // is attached for fir.call.
+  }
 
   // Build a ModRefResult by merging the behavior of the effects of this
   // operation.

@@ -654,24 +654,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   if (!createNewScope) {
     handleReturnVal();
   } else {
-    mlir::Location scopeLoc =
-        getLoc(rv ? rv->getSourceRange() : s.getSourceRange());
-    // First create cir.scope and later emit it's body. Otherwise all CIRGen
-    // dispatched by `handleReturnVal()` might needs to manipulate blocks and
-    // look into parents, which are all unlinked.
-    mlir::OpBuilder::InsertPoint scopeBody;
-    cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
-                         [&](mlir::OpBuilder &b, mlir::Location loc) {
-                           scopeBody = b.saveInsertionPoint();
-                         });
-    {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.restoreInsertionPoint(scopeBody);
-      CIRGenFunction::LexicalScope lexScope{*this, scopeLoc,
-                                            builder.getInsertionBlock()};
-      FullExprCleanupScope fullExprScope(*this, rv);
-      handleReturnVal();
-    }
+    FullExprCleanupScope fullExprScope(*this, rv);
+    handleReturnVal();
   }
 
   cleanupScope.forceCleanup();
@@ -933,7 +917,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
     // scope, create a block to stage a loop exit along.
     // We probably already do the right thing because of ScopeOp, but make
     // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -1001,7 +985,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
     // loop-exit scope, a block is created to stage the loop exit. We probably
     // already do the right thing because of ScopeOp, but we need more testing
     // to be sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -1069,7 +1053,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
     // scope, create a block to stage a loop exit along.
     // We probably already do the right thing because of ScopeOp, but make
     // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     doWhileOp = builder.createDoWhile(
         getLoc(s.getSourceRange()),
@@ -1120,7 +1104,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
     // scope, create a block to stage a loop exit along.
     // We probably already do the right thing because of ScopeOp, but make
     // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     whileOp = builder.createWhile(
         getLoc(s.getSourceRange()),

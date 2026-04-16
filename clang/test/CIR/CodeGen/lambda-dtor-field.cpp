@@ -19,10 +19,8 @@ void capture_one(S s) {
 
 // CIR-LABEL: @_Z11capture_one1S
 // CIR:         %[[LAM:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
-// CIR:         cir.scope {
-// CIR:           %[[FIELD:.*]] = cir.get_member %[[LAM]][0] {name = "s"}
-// CIR:           cir.call @_ZN1SC1ERKS_(%[[FIELD]],
-// CIR:         }
+// CIR:         %[[FIELD:.*]] = cir.get_member %[[LAM]][0] {name = "s"}
+// CIR:         cir.call @_ZN1SC1ERKS_(%[[FIELD]],
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.yield
 // CIR:         } cleanup all {
@@ -57,17 +55,15 @@ void capture_two(S a, S b) {
 
 // CIR-LABEL: @_Z11capture_two1SS_
 // CIR:         %[[LAM2:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
-// CIR:         cir.scope {
-// CIR:           %[[FA:.*]] = cir.get_member %[[LAM2]][0] {name = "a"}
-// CIR:           cir.call @_ZN1SC1ERKS_(%[[FA]],
-// CIR:           cir.cleanup.scope {
-// CIR:             %[[FB:.*]] = cir.get_member %[[LAM2]][1] {name = "b"}
-// CIR:             cir.call @_ZN1SC1ERKS_(%[[FB]],
-// CIR:             cir.yield
-// CIR:           } cleanup eh {
-// CIR:             cir.call @_ZN1SD1Ev(%[[FA]]){{.*}}
-// CIR:             cir.yield
-// CIR:           }
+// CIR:         %[[FA:.*]] = cir.get_member %[[LAM2]][0] {name = "a"}
+// CIR:         cir.call @_ZN1SC1ERKS_(%[[FA]],
+// CIR:         cir.cleanup.scope {
+// CIR:           %[[FB:.*]] = cir.get_member %[[LAM2]][1] {name = "b"}
+// CIR:           cir.call @_ZN1SC1ERKS_(%[[FB]],
+// CIR:           cir.yield
+// CIR:         } cleanup eh {
+// CIR:           cir.call @_ZN1SD1Ev(%[[FA]]){{.*}}
+// CIR:           cir.yield
 // CIR:         }
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.yield
@@ -112,13 +108,11 @@ void capture_mixed(int n, S s) {
 
 // CIR-LABEL: @_Z13capture_mixedi1S
 // CIR:         %[[LAM3:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
-// CIR:         cir.scope {
-// CIR:           %[[FN:.*]] = cir.get_member %[[LAM3]][0] {name = "n"}
-// CIR:           cir.load
-// CIR:           cir.store
-// CIR:           %[[FS:.*]] = cir.get_member %[[LAM3]][1] {name = "s"}
-// CIR:           cir.call @_ZN1SC1ERKS_(%[[FS]],
-// CIR:         }
+// CIR:         %[[FN:.*]] = cir.get_member %[[LAM3]][0] {name = "n"}
+// CIR:         cir.load
+// CIR:         cir.store
+// CIR:         %[[FS:.*]] = cir.get_member %[[LAM3]][1] {name = "s"}
+// CIR:         cir.call @_ZN1SC1ERKS_(%[[FS]],
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.yield
 // CIR:         } cleanup all {
@@ -164,10 +158,8 @@ void capture_local() {
 // CIR:         %[[LAM4:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
 // CIR:         cir.call @_ZN1SC1Ev(%[[S4]])
 // CIR:         cir.cleanup.scope {
-// CIR:           cir.scope {
-// CIR:             %[[FL:.*]] = cir.get_member %[[LAM4]][0] {name = "s"}
-// CIR:             cir.call @_ZN1SC1ERKS_(%[[FL]],
-// CIR:           }
+// CIR:           %[[FL:.*]] = cir.get_member %[[LAM4]][0] {name = "s"}
+// CIR:           cir.call @_ZN1SC1ERKS_(%[[FL]],
 // CIR:           cir.cleanup.scope {
 // CIR:             cir.yield
 // CIR:           } cleanup all {
@@ -223,27 +215,25 @@ void stmt_expr_return(bool cond) {
 
 // CIR-LABEL: @_Z16stmt_expr_returnb
 // CIR:         %[[LAM5:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
-// CIR:         cir.scope {
-// CIR:           %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
-// CIR:           %[[FA5:.*]] = cir.get_member %[[LAM5]][0] {name = "a"}
-// CIR:           cir.call @_ZN1SC1Ei(%[[FA5]],
-// CIR:           %[[TRUE:.*]] = cir.const #true
-// CIR:           cir.store %[[TRUE]], %[[ACTIVE]]
-// CIR:           cir.cleanup.scope {
-// CIR:             %[[FB5:.*]] = cir.get_member %[[LAM5]][1] {name = "b"}
-// CIR:             cir.if
-// CIR:               cir.return
-// CIR:             cir.call @_ZN1SC1Ei(%[[FB5]],
-// CIR:             %[[FALSE:.*]] = cir.const #false
-// CIR:             cir.store %[[FALSE]], %[[ACTIVE]]
-// CIR:             cir.yield
-// CIR:           } cleanup all {
-// CIR:             %[[FLAG:.*]] = cir.load{{.*}} %[[ACTIVE]]
-// CIR:             cir.if %[[FLAG]] {
-// CIR:               cir.call @_ZN1SD1Ev(%[[FA5]]){{.*}}
-// CIR:             }
-// CIR:             cir.yield
+// CIR:         %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
+// CIR:         %[[FA5:.*]] = cir.get_member %[[LAM5]][0] {name = "a"}
+// CIR:         cir.call @_ZN1SC1Ei(%[[FA5]],
+// CIR:         %[[TRUE:.*]] = cir.const #true
+// CIR:         cir.store %[[TRUE]], %[[ACTIVE]]
+// CIR:         cir.cleanup.scope {
+// CIR:           %[[FB5:.*]] = cir.get_member %[[LAM5]][1] {name = "b"}
+// CIR:           cir.if
+// CIR:             cir.return
+// CIR:           cir.call @_ZN1SC1Ei(%[[FB5]],
+// CIR:           %[[FALSE:.*]] = cir.const #false
+// CIR:           cir.store %[[FALSE]], %[[ACTIVE]]
+// CIR:           cir.yield
+// CIR:         } cleanup all {
+// CIR:           %[[FLAG:.*]] = cir.load{{.*}} %[[ACTIVE]]
+// CIR:           cir.if %[[FLAG]] {
+// CIR:             cir.call @_ZN1SD1Ev(%[[FA5]]){{.*}}
 // CIR:           }
+// CIR:           cir.yield
 // CIR:         }
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.yield
@@ -261,8 +251,8 @@ void stmt_expr_return(bool cond) {
 // LLVM:   ret void
 
 // LLVM-LABEL: define dso_local void @_Z16stmt_expr_returnb({{.*}}) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:   %[[ACTIVE_ALLOCA:.*]] = alloca i8
 // LLVM:   %[[LAM5:.*]] = alloca %[[LAM_TY_5]]
+// LLVM:   %[[ACTIVE_ALLOCA:.*]] = alloca i8
 // LLVM:   %[[FA5:.*]] = getelementptr %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 0
 // LLVM:   call void @_ZN1SC1Ei(ptr {{.*}} %[[FA5]], i32 {{.*}} 0)
 // LLVM:   store i8 1, ptr %[[ACTIVE_ALLOCA]]

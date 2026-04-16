@@ -426,8 +426,9 @@ void gh173847_test() {
 }
 
 int gh173605(int x) {
-  static constexpr int c = c; // expected-error {{constexpr variable 'c' must be initialized by a constant expression}}\
-                              // expected-note {{read of object outside its lifetime is not allowed in a constant expression}}
+  static constexpr int c = c; // expected-error {{constexpr variable 'c' must be initialized by a constant expression}} \
+                              // expected-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                              // expected-note {{declared here}}
   static int justincase = justincase; // expected-error {{initializer element is not a compile-time constant}}
   return x;
 }

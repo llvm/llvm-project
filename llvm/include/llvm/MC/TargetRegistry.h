@@ -466,6 +466,8 @@ public:
                                          StringRef Features) const {
     if (!MCSubtargetInfoCtorFn)
       return nullptr;
+    if (!isValidFeatureListFormat(Features))
+      return nullptr;
     return MCSubtargetInfoCtorFn(TheTriple, CPU, Features);
   }
 
@@ -651,6 +653,20 @@ public:
       return InstrumentManagerCtorFn(STI, MCII);
     return nullptr;
   }
+
+  /// isValidFeatureListFormat - check that FeatureString
+  /// has the format:
+  ///   "+attr1,+attr2,-attr3,...,+attrN"
+  /// A comma separates each feature from the next (all lowercase).
+  /// Each of the remaining features is prefixed with '+' or '-' indicating
+  /// whether that feature should be enabled or disabled contrary to the cpu
+  /// specification.
+  /// The string must match exactly that format otherwise
+  /// MCSubtargetInfo::ApplyFeatureFlag will fail.
+  /// For example feature string "+a,+m,c" is accepted, and results in feature
+  /// list {"+a", "+m", "c"}. Later in ApplyFeatureFlag, it asserts
+  /// that all features must start with '+' or '-' and assert is failed.
+  static bool isValidFeatureListFormat(StringRef FeaturesString);
 
   /// @}
 };

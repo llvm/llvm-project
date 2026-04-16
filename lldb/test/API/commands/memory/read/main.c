@@ -8,5 +8,9 @@ int main(int argc, const char *argv[]) {
   // assume that 0xffffff is invalid instruction in RISC-V and AArch64,
   // so decoding it will fail
   char my_insns[] = {0xff, 0xff, 0xff};
+  // 2 x the default read size of 32 bytes.
+  uint8_t incrementing_bytes[64];
+  for (unsigned i = 0; i < 64; ++i)
+    incrementing_bytes[i] = i;
   return 0; // break here
 }

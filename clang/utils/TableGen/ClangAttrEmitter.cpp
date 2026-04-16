@@ -1469,9 +1469,40 @@ namespace {
   };
 
   class WrappedAttr : public SimpleArgument {
+    std::string AttrType; // C++ class name for the wrapped attr
+
   public:
     WrappedAttr(const Record &Arg, StringRef Attr)
-        : SimpleArgument(Arg, Attr, "Attr *") {}
+        : SimpleArgument(Arg, Attr, "Attr *"),
+          AttrType(Arg.getValueAsString("AttrType")) {}
+
+    void writeAccessors(raw_ostream &OS) const override {
+      // The field is always stored as Attr * regardless of AttrType. This is
+      // required because the generated isEquivalent method calls
+      // equalAttrArgs(getInferredAttr(), Other.getInferredAttr(), Context).
+      // If the field were AttrType * (e.g. AvailabilityAttr *), that call
+      // would instantiate equalAttrArgs<AvailabilityAttr *>, which has no
+      // specialization and returns false. Storing Attr * routes the call
+      // through equalAttrArgs<Attr *>, which handles null and calls
+      // isEquivalent. Typed get<Name>As() / set<Name>As() accessors are
+      // provided for callers that need the specific type.
+      OS << "  Attr *get" << getUpperName() << "() const {\n";
+      OS << "    return " << getLowerName() << ";\n";
+      OS << "  }\n";
+      OS << "  void set" << getUpperName() << "(Attr *V) {\n";
+      OS << "    " << getLowerName() << " = V;\n";
+      OS << "  }";
+      if (!AttrType.empty()) {
+        OS << "\n";
+        OS << "  " << AttrType << " *get" << getUpperName() << "As() const {\n";
+        OS << "    return llvm::cast_or_null<" << AttrType << ">("
+           << getLowerName() << ");\n";
+        OS << "  }\n";
+        OS << "  void set" << getUpperName() << "As(" << AttrType << " *V) {\n";
+        OS << "    " << getLowerName() << " = V;\n";
+        OS << "  }";
+      }
+    }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    Attr *" << getLowerName() << " = Record.readAttr();";
@@ -1481,13 +1512,31 @@ namespace {
       OS << "    AddAttr(SA->get" << getUpperName() << "());";
     }
 
+    std::string getIsOmitted() const override {
+      if (isOptional())
+        return "!get" + getUpperName().str() + "()";
+      return "false";
+    }
+
+    void writeValue(raw_ostream &OS) const override {}
+
     void writeDump(raw_ostream &OS) const override {}
 
     void writeDumpChildren(raw_ostream &OS) const override {
-      OS << "    Visit(SA->get" << getUpperName() << "());\n";
+      if (isOptional()) {
+        OS << "    if (auto *W = SA->get" << getUpperName() << "())\n";
+        OS << "      Visit(W);\n";
+      } else {
+        OS << "    Visit(SA->get" << getUpperName() << "());\n";
+      }
     }
 
-    void writeHasChildren(raw_ostream &OS) const override { OS << "true"; }
+    void writeHasChildren(raw_ostream &OS) const override {
+      if (isOptional())
+        OS << "SA->get" << getUpperName() << "() != nullptr";
+      else
+        OS << "true";
+    }
   };
 
   } // end anonymous namespace

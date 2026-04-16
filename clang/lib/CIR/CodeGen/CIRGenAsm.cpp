@@ -574,7 +574,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
         // We need to add an attribute for every arg since later, during
         // the lowering to LLVM IR the attributes will be assigned to the
         // CallInsn argument by index, i.e. we can't skip null type here
-        operandAttrs.push_back(mlir::Attribute());
+        operandAttrs.push_back(mlir::DictionaryAttr::get(&getMLIRContext()));
       }
     }
     assert(args.size() == operandAttrs.size() &&

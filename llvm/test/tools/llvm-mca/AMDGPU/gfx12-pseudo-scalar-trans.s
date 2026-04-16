@@ -14,12 +14,12 @@ v_s_sqrt_f16 s5, s5
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      10
-# CHECK-NEXT: Total Cycles:      45
+# CHECK-NEXT: Total Cycles:      51
 # CHECK-NEXT: Total uOps:        10
 
 # CHECK:      Dispatch Width:    1
-# CHECK-NEXT: uOps Per Cycle:    0.22
-# CHECK-NEXT: IPC:               0.22
+# CHECK-NEXT: uOps Per Cycle:    0.20
+# CHECK-NEXT: IPC:               0.20
 # CHECK-NEXT: Block RThroughput: 10.0
 
 # CHECK:      Instruction Info:
@@ -31,16 +31,16 @@ v_s_sqrt_f16 s5, s5
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      7     1.00                  U     v_s_exp_f32 s0, s0
-# CHECK-NEXT:  1      7     1.00                  U     v_s_log_f32 s0, s0
-# CHECK-NEXT:  1      7     1.00                  U     v_s_rcp_f32 s1, s1
-# CHECK-NEXT:  1      7     1.00                  U     v_s_rsq_f32 s1, s0
-# CHECK-NEXT:  1      7     1.00                  U     v_s_sqrt_f32 s2, s1
-# CHECK-NEXT:  1      7     1.00                  U     v_s_exp_f16 s3, s1
-# CHECK-NEXT:  1      7     1.00                  U     v_s_log_f16 s4, s1
-# CHECK-NEXT:  1      7     1.00                  U     v_s_rcp_f16 s5, s2
-# CHECK-NEXT:  1      7     1.00                  U     v_s_rsq_f16 s5, s4
-# CHECK-NEXT:  1      7     1.00                  U     v_s_sqrt_f16 s5, s5
+# CHECK-NEXT:  1      8     1.00                  U     v_s_exp_f32 s0, s0
+# CHECK-NEXT:  1      8     1.00                  U     v_s_log_f32 s0, s0
+# CHECK-NEXT:  1      8     1.00                  U     v_s_rcp_f32 s1, s1
+# CHECK-NEXT:  1      8     1.00                  U     v_s_rsq_f32 s1, s0
+# CHECK-NEXT:  1      8     1.00                  U     v_s_sqrt_f32 s2, s1
+# CHECK-NEXT:  1      8     1.00                  U     v_s_exp_f16 s3, s1
+# CHECK-NEXT:  1      8     1.00                  U     v_s_log_f16 s4, s1
+# CHECK-NEXT:  1      8     1.00                  U     v_s_rcp_f16 s5, s2
+# CHECK-NEXT:  1      8     1.00                  U     v_s_rsq_f16 s5, s4
+# CHECK-NEXT:  1      8     1.00                  U     v_s_sqrt_f16 s5, s5
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - HWBranch
@@ -69,19 +69,19 @@ v_s_sqrt_f16 s5, s5
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_sqrt_f16 s5, s5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          01234
+# CHECK-NEXT:                     0123456789          0123456789          0
+# CHECK-NEXT: Index     0123456789          0123456789          0123456789
 
-# CHECK:      [0,0]     DeeeeeeE  .    .    .    .    .    .    .   .   v_s_exp_f32 s0, s0
-# CHECK-NEXT: [0,1]     .    . DeeeeeeE.    .    .    .    .    .   .   v_s_log_f32 s0, s0
-# CHECK-NEXT: [0,2]     .    .  DeeeeeeE    .    .    .    .    .   .   v_s_rcp_f32 s1, s1
-# CHECK-NEXT: [0,3]     .    .    .   DeeeeeeE   .    .    .    .   .   v_s_rsq_f32 s1, s0
-# CHECK-NEXT: [0,4]     .    .    .    .    .DeeeeeeE .    .    .   .   v_s_sqrt_f32 s2, s1
-# CHECK-NEXT: [0,5]     .    .    .    .    . DeeeeeeE.    .    .   .   v_s_exp_f16 s3, s1
-# CHECK-NEXT: [0,6]     .    .    .    .    .  DeeeeeeE    .    .   .   v_s_log_f16 s4, s1
-# CHECK-NEXT: [0,7]     .    .    .    .    .    .  DeeeeeeE    .   .   v_s_rcp_f16 s5, s2
-# CHECK-NEXT: [0,8]     .    .    .    .    .    .    DeeeeeeE  .   .   v_s_rsq_f16 s5, s4
-# CHECK-NEXT: [0,9]     .    .    .    .    .    .    .    . DeeeeeeE   v_s_sqrt_f16 s5, s5
+# CHECK:      [0,0]     DeeeeeeeE .    .    .    .    .    .    .    .    .   v_s_exp_f32 s0, s0
+# CHECK-NEXT: [0,1]     .    .  DeeeeeeeE   .    .    .    .    .    .    .   v_s_log_f32 s0, s0
+# CHECK-NEXT: [0,2]     .    .   DeeeeeeeE  .    .    .    .    .    .    .   v_s_rcp_f32 s1, s1
+# CHECK-NEXT: [0,3]     .    .    .    .DeeeeeeeE.    .    .    .    .    .   v_s_rsq_f32 s1, s0
+# CHECK-NEXT: [0,4]     .    .    .    .    .   DeeeeeeeE  .    .    .    .   v_s_sqrt_f32 s2, s1
+# CHECK-NEXT: [0,5]     .    .    .    .    .    DeeeeeeeE .    .    .    .   v_s_exp_f16 s3, s1
+# CHECK-NEXT: [0,6]     .    .    .    .    .    .DeeeeeeeE.    .    .    .   v_s_log_f16 s4, s1
+# CHECK-NEXT: [0,7]     .    .    .    .    .    .    . DeeeeeeeE    .    .   v_s_rcp_f16 s5, s2
+# CHECK-NEXT: [0,8]     .    .    .    .    .    .    .   DeeeeeeeE  .    .   v_s_rsq_f16 s5, s4
+# CHECK-NEXT: [0,9]     .    .    .    .    .    .    .    .    . DeeeeeeeE   v_s_sqrt_f16 s5, s5
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

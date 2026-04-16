@@ -10,7 +10,7 @@ add_integration_test(
   DEPENDS
     libc.src.__support.CPP.string_view
     libc.src.errno.errno
-    libc.src.stdlib.getenv
+    libc.src.sys.stat.stat
     libc.src.unistd.getcwd
 )
 

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=expected,tu %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -209,3 +210,19 @@ struct HasCallback {
 };
 
 } // namespace callable_wrappers
+
+namespace MakeUnique {
+struct MyObj {};
+
+struct LifetimeBoundCtor {
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]);
+};
+
+struct HasUniquePtrField {
+  std::unique_ptr<LifetimeBoundCtor> field; // tu-note {{this field dangles}}
+
+  void setWithParam(MyObj obj) {
+    field = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{address of stack memory escapes to a field}}
+  }
+};
+} // namespace MakeUnique

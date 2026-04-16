@@ -435,11 +435,6 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
-    if (match(&R,
-              m_ComputeAnyOfResult(m_VPValue(), m_VPValue(), m_VPValue()))) {
-      addUniformForAllParts(cast<VPInstruction>(&R));
-      continue;
-    }
     VPValue *Op0;
     if (match(&R, m_ExtractLane(m_VPValue(Op0), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));

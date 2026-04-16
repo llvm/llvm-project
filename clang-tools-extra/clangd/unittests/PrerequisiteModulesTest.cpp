@@ -28,6 +28,8 @@
 namespace clang::clangd {
 namespace {
 
+MATCHER_P(named, Name, "") { return arg.Name == Name; }
+
 class GlobalScanningCounterProjectModules : public ProjectModules {
 public:
   GlobalScanningCounterProjectModules(
@@ -828,6 +830,56 @@ int use() { return m_value; }
       << "Expected absolute path: " << NewBMPath
       << "\nGot: " << HS2.PrebuiltModuleFiles["M"]
       << "\nRelative path used: " << RelativeBMPath;
+}
+
+TEST_F(PrerequisiteModulesTests, ModuleImportThroughInclude) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  Annotations UseCpp(R"cpp(
+#include "Header.hpp"
+void use() {
+  TypeFrom^Module t1;
+  TypeFromHeader t2;
+}
+)cpp");
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export struct TypeFromModule {};
+)cpp");
+
+  CDB.addFile("Header.hpp", R"cpp(
+import M;
+struct TypeFromHeader {};
+)cpp");
+
+  CDB.addFile("Use.cpp", UseCpp.code());
+
+  ModulesBuilder Builder(CDB);
+
+  auto Inputs = getInputs("Use.cpp", CDB);
+  Inputs.ModulesManager = &Builder;
+  Inputs.Opts.SkipPreambleBuild = true;
+
+  auto CI = buildCompilerInvocation(Inputs, DiagConsumer);
+  ASSERT_TRUE(CI);
+
+  auto Preamble =
+      buildPreamble(getFullPath("Use.cpp"), *CI, Inputs, /*StoreInMemory=*/true,
+                    /*PeambleCallback=*/nullptr);
+  ASSERT_TRUE(Preamble);
+  EXPECT_EQ(Preamble->Preamble.getBounds().Size, 0u);
+
+  auto AST = ParsedAST::build(getFullPath("Use.cpp"), Inputs, std::move(CI), {},
+                              Preamble);
+  ASSERT_TRUE(AST);
+  EXPECT_TRUE(AST->getDiagnostics().empty());
+
+  auto Result = codeComplete(getFullPath("Use.cpp"), UseCpp.point(),
+                             Preamble.get(), Inputs, {});
+  EXPECT_THAT(Result.Completions,
+              testing::UnorderedElementsAre(named("TypeFromModule"),
+                                            named("TypeFromHeader")));
 }
 
 } // namespace

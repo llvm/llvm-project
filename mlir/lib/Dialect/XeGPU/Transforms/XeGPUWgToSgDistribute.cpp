@@ -498,7 +498,7 @@ struct WgToSgVectorBroadcastOp
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
-    if (!xegpu::XeGPUDialect::isEvenlyDistributable(wgShape, layout))
+    if (!layout.isDistributable(SmallVector<int64_t>(wgShape)))
       return failure();
 
     SmallVector<Value> newBroadcastOps;
@@ -951,9 +951,6 @@ struct WgToSgLoadGatherOpWithOffset
   matchAndRewrite(xegpu::LoadGatherOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    if (!op.getOffsets())
-      return failure();
-
     Location loc = op.getLoc();
     VectorType resultType = dyn_cast<VectorType>(op.getResult().getType());
     if (!resultType)
@@ -1004,9 +1001,6 @@ struct WgToSgStoreScatterOpWithOffset
   LogicalResult
   matchAndRewrite(xegpu::StoreScatterOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    if (!op.getOffsets())
-      return failure();
 
     Location loc = op.getLoc();
     VectorType valueType = dyn_cast<VectorType>(op.getValue().getType());

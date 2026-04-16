@@ -6,6 +6,16 @@
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
 spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage], []> {
+  spirv.func @any_vector(%arg0: vector<4xi1>) "None" {
+    // CHECK: {{.*}} = spirv.Any {{.*}} : vector<4xi1>
+    %0 = spirv.Any %arg0 : vector<4xi1>
+    spirv.Return
+  }
+  spirv.func @all_vector(%arg0: vector<4xi1>) "None" {
+    // CHECK: {{.*}} = spirv.All {{.*}} : vector<4xi1>
+    %0 = spirv.All %arg0 : vector<4xi1>
+    spirv.Return
+  }
   spirv.func @iequal_scalar(%arg0: i32, %arg1: i32)  "None" {
     // CHECK: {{.*}} = spirv.IEqual {{.*}}, {{.*}} : i32
     %0 = spirv.IEqual %arg0, %arg1 : i32

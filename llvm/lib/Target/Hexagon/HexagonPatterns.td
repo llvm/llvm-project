@@ -1747,9 +1747,17 @@ def n8_0ImmPred: PatLeaf<(i32 imm), [{
   return -255 <= V && V <= 0;
 }]>;
 
+def mulnsw : PatFrag<(ops node:$lhs, node:$rhs),
+                     (mul node:$lhs, node:$rhs), [{
+  return N->getFlags().hasNoSignedWrap();
+}]>;
+
 // Change the sign of the immediate for Rd=-mpyi(Rs,#u8)
 def: Pat<(mul I32:$Rs, n8_0ImmPred:$n8),
          (M2_mpysin I32:$Rs, (NegImm8 imm:$n8))>;
+
+def: Pat<(v2i32 (mulnsw (sext V2I16:$Rs), (sext V2I16:$Rt))),
+         (M2_vmpy2s_s0 V2I16:$Rs, V2I16:$Rt)>;
 
 def: Pat<(add Sext64:$Rs, I64:$Rt),
          (A2_addsp (LoReg Sext64:$Rs), I64:$Rt)>;

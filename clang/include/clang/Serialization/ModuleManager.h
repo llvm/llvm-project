@@ -129,7 +129,8 @@ class ModuleManager {
   /// Preprocessor's HeaderSearchInfo containing the module map.
   const HeaderSearch &HeaderSearchInfo;
 
-  /// A lookup of in-memory (virtual file) buffers
+  /// A lookup of in-memory (virtual file) buffers.
+  // FIXME: No need to key this by `FileEntry`.
   llvm::DenseMap<const FileEntry *, std::unique_ptr<llvm::MemoryBuffer>>
       InMemoryBuffers;
 
@@ -245,7 +246,8 @@ public:
   ModuleFile *lookup(ModuleFileKey Key) const;
 
   /// Returns the in-memory (virtual file) buffer with the given name
-  std::unique_ptr<llvm::MemoryBuffer> lookupBuffer(StringRef Name);
+  std::unique_ptr<llvm::MemoryBuffer> lookupBuffer(StringRef Name, off_t &Size,
+                                                   time_t &ModTime);
 
   /// Number of modules loaded
   unsigned size() const { return Chain.size(); }

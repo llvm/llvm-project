@@ -54,6 +54,19 @@ add_header_library(
 )
 
 add_header_library(
+  getsockopt
+  HDRS
+    getsockopt.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
   listen
   HDRS
     listen.h
@@ -75,6 +88,19 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.hdr.types.ssize_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  setsockopt
+  HDRS
+    setsockopt.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
     libc.include.sys_syscall
 )
 

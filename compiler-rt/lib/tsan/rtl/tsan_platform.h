@@ -404,7 +404,7 @@ struct MappingRiscv64_39 {
   static const uptr kHeapMemBeg = 0x2c00000000ull;
   static const uptr kHeapMemEnd = 0x2c00000000ull;
   static const uptr kHiAppMemBeg = 0x3c00000000ull;
-  static const uptr kHiAppMemEnd = 0x3fffffffffull;
+  static const uptr kHiAppMemEnd = 0x4000000000ull;
   static const uptr kShadowMsk = 0x3800000000ull;
   static const uptr kShadowXor = 0x0800000000ull;
   static const uptr kShadowAdd = 0x0000000000ull;
@@ -434,7 +434,7 @@ struct MappingRiscv64_48 {
   static const uptr kHeapMemBeg = 0x5a0000000000ull;
   static const uptr kHeapMemEnd = 0x5a0000000000ull;
   static const uptr kHiAppMemBeg = 0x7a0000000000ull;
-  static const uptr kHiAppMemEnd = 0x7fffffffffffull;
+  static const uptr kHiAppMemEnd = 0x800000000000ull;
   static const uptr kShadowMsk = 0x700000000000ull;
   static const uptr kShadowXor = 0x100000000000ull;
   static const uptr kShadowAdd = 0x000000000000ull;

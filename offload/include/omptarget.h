@@ -428,9 +428,12 @@ void __tgt_target_nowait_query(void **AsyncHandle);
 /// device memory.
 int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                                void *DeviceMemory, int64_t DeviceMemorySize,
-                               void **TgtArgs, ptrdiff_t *TgtOffsets,
-                               int32_t NumArgs, int32_t NumTeams,
-                               int32_t ThreadLimit, uint64_t LoopTripCount);
+                               const llvm::offloading::EntryTy *Globals,
+                               int32_t NumGlobals, void **TgtArgs,
+                               ptrdiff_t *TgtOffsets, int32_t NumArgs,
+                               int32_t NumTeams, int32_t ThreadLimit,
+                               uint32_t SharedMemorySize,
+                               uint64_t LoopTripCount);
 
 void __tgt_set_info_flag(uint32_t);
 
@@ -438,7 +441,7 @@ int __tgt_print_device_info(int64_t DeviceId);
 
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                  void *VAddr, bool IsRecord, bool SaveOutput,
-                                 uint64_t &ReqPtrArgOffset);
+                                 bool EmitReport, const char *OutputDirPath);
 
 // Registers a callback for the RPC server. Expects this function type.
 // unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC

@@ -1216,7 +1216,7 @@ namespace shufflevector {
 #if __cplusplus >= 202002L
   constexpr int discarded3() {
     int i = 0;
-    vector4char a;
+    vector4char a; // both-note {{declared here}}
     __builtin_shufflevector((++i, a), a, 0); // both-note {{read of uninitialized object}} \
                                              // both-warning {{expression result unused}}
     return i;

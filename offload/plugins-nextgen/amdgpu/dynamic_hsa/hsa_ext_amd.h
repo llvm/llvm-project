@@ -163,6 +163,20 @@ typedef struct hsa_amd_pointer_info_s {
   size_t sizeInBytes;
 } hsa_amd_pointer_info_t;
 
+typedef enum {
+  MEMORY_TYPE_NONE,
+  MEMORY_TYPE_PINNED,
+} hsa_amd_memory_type_t;
+
+typedef struct hsa_amd_vmem_alloc_handle_s {
+  uint64_t handle;
+} hsa_amd_vmem_alloc_handle_t;
+
+typedef struct hsa_amd_memory_access_desc_s {
+  hsa_access_permission_t permissions;
+  hsa_agent_t agent_handle;
+} hsa_amd_memory_access_desc_t;
+
 hsa_status_t hsa_amd_pointer_info(const void* ptr,
                                           hsa_amd_pointer_info_t* info,
                                           void* (*alloc)(size_t),
@@ -180,6 +194,29 @@ hsa_amd_profiling_get_dispatch_time(hsa_agent_t agent, hsa_signal_t signal,
 
 hsa_status_t hsa_amd_profiling_set_profiler_enabled(hsa_queue_t *queue,
                                                     int enable);
+
+hsa_status_t hsa_amd_vmem_address_reserve(void **va, size_t size,
+                                          uint64_t address, uint64_t flags);
+
+hsa_status_t hsa_amd_vmem_address_free(void *va, size_t size);
+
+hsa_status_t
+hsa_amd_vmem_handle_create(hsa_amd_memory_pool_t pool, size_t size,
+                           hsa_amd_memory_type_t type, uint64_t flags,
+                           hsa_amd_vmem_alloc_handle_t *memory_handle);
+
+hsa_status_t
+hsa_amd_vmem_handle_release(hsa_amd_vmem_alloc_handle_t memory_handle);
+
+hsa_status_t hsa_amd_vmem_map(void *va, size_t size, size_t in_offset,
+                              hsa_amd_vmem_alloc_handle_t memory_handle,
+                              uint64_t flags);
+
+hsa_status_t hsa_amd_vmem_unmap(void *va, size_t size);
+
+hsa_status_t hsa_amd_vmem_set_access(void *va, size_t size,
+                                     const hsa_amd_memory_access_desc_t *desc,
+                                     size_t desc_cnt);
 
 #ifdef __cplusplus
 }

@@ -25,29 +25,27 @@ void init_vec_using_initalizer_list() {
 }
 
 // CIR: %[[VEC_ADDR:.*]] = cir.alloca !rec_Vector, !cir.ptr<!rec_Vector>, ["vec", init]
-// CIR: cir.scope {
-// CIR:   %[[AGG_ADDR:.*]] = cir.alloca !rec_std3A3Ainitializer_list3Cint3E, !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>, ["agg.tmp0"]
-// CIR:   %[[INIT_LIST_ADDR:.*]] = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["ref.tmp0"]
-// CIR:   %[[INIT_LIST_PTR:.*]] = cir.cast array_to_ptrdecay %[[INIT_LIST_ADDR]] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
-// CIR:   %[[CONST_S32_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:   cir.store {{.*}} %[[CONST_S32_0]], %[[INIT_LIST_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[CONST_S64_1:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:   %[[ELEM_1_PTR:.*]] = cir.ptr_stride %[[INIT_LIST_PTR]], %[[CONST_S64_1]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
-// CIR:   %[[CONST_S32_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:   cir.store {{.*}} %[[CONST_S32_1]], %[[ELEM_1_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[CONST_S64_2:.*]] = cir.const #cir.int<2> : !s64i
-// CIR:   %[[ELEM_2_PTR:.*]] = cir.ptr_stride %[[INIT_LIST_PTR]], %[[CONST_S64_2]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
-// CIR:   %[[CONST_S32_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR:   cir.store {{.*}} %[[CONST_S32_2]], %[[ELEM_2_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[DATA_PTR:.*]] = cir.get_member %[[AGG_ADDR]][0] {name = "data"} : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E> -> !cir.ptr<!cir.ptr<!s32i>>
-// CIR:   %[[DATA_ARR_PTR:.*]] = cir.cast bitcast %[[DATA_PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!cir.ptr<!cir.array<!s32i x 3>>>
-// CIR:   cir.store {{.*}} %[[INIT_LIST_ADDR]], %[[DATA_ARR_PTR]] : !cir.ptr<!cir.array<!s32i x 3>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 3>>>
-// CIR:   %[[CONST_U64_3:.*]] = cir.const #cir.int<3> : !u64i
-// CIR:   %[[SIZE_PTR:.*]] = cir.get_member %[[AGG_ADDR]][1] {name = "size"} : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E> -> !cir.ptr<!u64i>
-// CIR:   cir.store {{.*}} %[[CONST_U64_3]], %[[SIZE_PTR]] : !u64i, !cir.ptr<!u64i>
-// CIR:   %[[TMP_AGG:.*]] = cir.load {{.*}} %[[AGG_ADDR]] : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>, !rec_std3A3Ainitializer_list3Cint3E
-// CIR:   cir.call @_ZN6VectorC1ESt16initializer_listIiE(%[[VEC_ADDR]], %[[TMP_AGG]]) : (!cir.ptr<!rec_Vector> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !rec_std3A3Ainitializer_list3Cint3E) -> ()
-// CIR: }
+// CIR: %[[AGG_ADDR:.*]] = cir.alloca !rec_std3A3Ainitializer_list3Cint3E, !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>, ["agg.tmp0"]
+// CIR: %[[INIT_LIST_ADDR:.*]] = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["ref.tmp0"]
+// CIR: %[[INIT_LIST_PTR:.*]] = cir.cast array_to_ptrdecay %[[INIT_LIST_ADDR]] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
+// CIR: %[[CONST_S32_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: cir.store {{.*}} %[[CONST_S32_0]], %[[INIT_LIST_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[CONST_S64_1:.*]] = cir.const #cir.int<1> : !s64i
+// CIR: %[[ELEM_1_PTR:.*]] = cir.ptr_stride %[[INIT_LIST_PTR]], %[[CONST_S64_1]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
+// CIR: %[[CONST_S32_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.store {{.*}} %[[CONST_S32_1]], %[[ELEM_1_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[CONST_S64_2:.*]] = cir.const #cir.int<2> : !s64i
+// CIR: %[[ELEM_2_PTR:.*]] = cir.ptr_stride %[[INIT_LIST_PTR]], %[[CONST_S64_2]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
+// CIR: %[[CONST_S32_2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: cir.store {{.*}} %[[CONST_S32_2]], %[[ELEM_2_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[DATA_PTR:.*]] = cir.get_member %[[AGG_ADDR]][0] {name = "data"} : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E> -> !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[DATA_ARR_PTR:.*]] = cir.cast bitcast %[[DATA_PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!cir.ptr<!cir.array<!s32i x 3>>>
+// CIR: cir.store {{.*}} %[[INIT_LIST_ADDR]], %[[DATA_ARR_PTR]] : !cir.ptr<!cir.array<!s32i x 3>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 3>>>
+// CIR: %[[CONST_U64_3:.*]] = cir.const #cir.int<3> : !u64i
+// CIR: %[[SIZE_PTR:.*]] = cir.get_member %[[AGG_ADDR]][1] {name = "size"} : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E> -> !cir.ptr<!u64i>
+// CIR: cir.store {{.*}} %[[CONST_U64_3]], %[[SIZE_PTR]] : !u64i, !cir.ptr<!u64i>
+// CIR: %[[TMP_AGG:.*]] = cir.load {{.*}} %[[AGG_ADDR]] : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>, !rec_std3A3Ainitializer_list3Cint3E
+// CIR: cir.call @_ZN6VectorC1ESt16initializer_listIiE(%[[VEC_ADDR]], %[[TMP_AGG]]) : (!cir.ptr<!rec_Vector> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !rec_std3A3Ainitializer_list3Cint3E) -> ()
 // CIR: cir.cleanup.scope {
 // CIR:   cir.yield
 // CIR: } cleanup normal {
@@ -55,11 +53,9 @@ void init_vec_using_initalizer_list() {
 // CIR:   cir.yield
 // CIR: }
 
-// LLVM: %[[AGG_ADDR:.*]] = alloca %"class.std::initializer_list<int>", i64 1, align 8
-// LLVM: %[[INIT_LIST_ADDR:.*]] = alloca [3 x i32], i64 1, align 4
-// LLVM: %[[VEC_ADDR:.*]] = alloca %struct.Vector, i64 1, align 1
-// LLVM: br label %[[SCOPE_START:.*]]
-// LLVM: [[SCOPE_START]]:
+// LLVM:   %[[VEC_ADDR:.*]] = alloca %struct.Vector, i64 1, align 1
+// LLVM:   %[[AGG_ADDR:.*]] = alloca %"class.std::initializer_list<int>", i64 1, align 8
+// LLVM:   %[[INIT_LIST_ADDR:.*]] = alloca [3 x i32], i64 1, align 4
 // LLVM:   %[[INIT_LIST_PTR:.*]] = getelementptr i32, ptr %[[INIT_LIST_ADDR]], i32 0
 // LLVM:   store i32 0, ptr %[[INIT_LIST_PTR]], align 4
 // LLVM:   %[[ELEM_1_PTR:.*]] = getelementptr i32, ptr %[[INIT_LIST_PTR]], i64 1
@@ -76,8 +72,6 @@ void init_vec_using_initalizer_list() {
 // LLVM: [[SCOPE_CONT]]:
 // LLVM:   br label %[[CLEANUP_START:.*]]
 // LLVM: [[CLEANUP_START]]:
-// LLVM:   br label %[[CLEANUO_BODY:.*]]
-// LLVM: [[CLEANUO_BODY:]]:
 // LLVM:   call void @_ZN6VectorD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[VEC_ADDR]])
 // LLVM:   br label %[[CLEANUP_CONT:.*]]
 // LLVM: [[CLEANUP_CONT]]:

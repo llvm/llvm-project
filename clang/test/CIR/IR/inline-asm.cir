@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 !u32i = !cir.int<u, 32>
@@ -108,5 +108,19 @@ cir.func @f7(%arg0: !u32i) -> !u32i {
    cir.store align(4) %2, %0 : !u32i, !cir.ptr<!u32i>
    %3 = cir.load align(4) %0 : !cir.ptr<!u32i>, !u32i
    cir.return %3 : !u32i
+}
+
+cir.func @f8() -> !s32i {
+  // CHECK: %[[RES:.*]] = cir.asm(x86_att,
+  // CHECK:   out = [],
+  // CHECK:   in = [],
+  // CHECK:   in_out = [],
+  // CHECK:   {"movl $$7, $0" "=r,~{dirflag},~{fpsr},~{flags}"}) side_effects {test.attr = 7 : i32} -> !s32i
+  %0 = cir.asm(x86_att,
+    out = [],
+    in = [],
+    in_out = [],
+    {"movl $$7, $0" "=r,~{dirflag},~{fpsr},~{flags}"}) side_effects {test.attr = 7 : i32} -> !s32i
+  cir.return %0 : !s32i
 }
 }

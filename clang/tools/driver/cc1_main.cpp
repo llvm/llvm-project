@@ -293,14 +293,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     return 1;
 
   // Execute the frontend actions.
-  {
-    llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-    bool TimePasses = Clang->getCodeGenOpts().TimePasses;
-    if (TimePasses)
-      Clang->createFrontendTimer();
-    llvm::TimeRegion Timer(TimePasses ? &Clang->getFrontendTimer() : nullptr);
-    Success = ExecuteCompilerInvocation(Clang.get());
-  }
+  Success = ExecuteCompilerInvocation(Clang.get());
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.

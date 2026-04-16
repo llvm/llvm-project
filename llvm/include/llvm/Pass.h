@@ -335,17 +335,6 @@ protected:
   bool skipFunction(const Function &F) const;
 };
 
-/// If the user specifies the -time-passes argument on an LLVM tool command line
-/// then the value of this boolean will be true, otherwise false.
-/// This is the storage for the -time-passes option.
-LLVM_ABI extern bool TimePassesIsEnabled;
-/// If TimePassesPerRun is true, there would be one line of report for
-/// each pass invocation.
-/// If TimePassesPerRun is false, there would be only one line of
-/// report for each pass (even there are more than one pass objects).
-/// (For new pass manager only)
-LLVM_ABI extern bool TimePassesPerRun;
-
 } // end namespace llvm
 
 // Include support files that contain important APIs commonly used by Passes,

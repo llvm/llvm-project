@@ -68,6 +68,7 @@ public:
   }
 
   bool shouldVisitLambdaBody() const { return false; }
+  bool shouldVisitTemplateInstantiations() const { return true; }
 
   const llvm::SmallVector<QualType> &getCollectedTypes() const {
     return CollectedTypes;

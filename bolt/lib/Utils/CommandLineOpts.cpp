@@ -221,6 +221,12 @@ cl::opt<bool>
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
 
+cl::opt<bool> LargeCodeModel(
+    "large-code-model",
+    cl::desc("use large code model for exception handling encodings. "
+             "Auto-detected by the presence of .ltext sections otherwise."),
+    cl::cat(BoltCategory));
+
 cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
                    cl::cat(BoltCategory));
 

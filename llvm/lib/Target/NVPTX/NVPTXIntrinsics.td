@@ -5631,6 +5631,17 @@ defset list<WMMA_INSTR> STMATRIXs = {
   } // transposed
 } // defset
 
+// movmatrix
+let isConvergent = true in {
+def MOVMATRIX_SYNC_ALIGNED_M8N8_TRANS_B16
+  : BasicNVPTXInst<(outs B32:$dst),
+              (ins B32:$src),
+              "movmatrix.sync.aligned.m8n8.trans.b16",
+              [(set B32:$dst,
+                (int_nvvm_movmatrix_sync_aligned_m8n8_trans_b16 B32:$src))]>,
+    Requires<[hasSM<75>, hasPTX<78>]>;
+} // isConvergent = true
+
 // Constructing non-flat DAGs is still a pain. I can't !subst a dag node with a
 // dag, so the ptx.version must be appended *after* foreach replaces 'ins' with
 // the instruction record.
