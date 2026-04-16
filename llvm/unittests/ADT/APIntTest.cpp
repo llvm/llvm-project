@@ -3980,4 +3980,43 @@ TEST(APIntTest, clmulh) {
                 .getSExtValue(),
             21845);
 }
+
+TEST(APIntTest, roundToDouble) {
+  EXPECT_EQ(APInt(0, 0, false).roundToDouble(false), 0.0);
+
+  // Single-word, positive
+  EXPECT_EQ(APInt(64, 0, false).roundToDouble(false), 0.0);
+  EXPECT_EQ(APInt(64, 1, false).roundToDouble(false), 1.0);
+  EXPECT_EQ(APInt(64, 2, false).roundToDouble(false), 2.0);
+  EXPECT_EQ(APInt(64, 1ULL << 63, false).roundToDouble(false),
+            9223372036854775808.0);
+
+  // Single-word, negative
+  EXPECT_EQ(APInt(64, 0, true).roundToDouble(true), 0.0);
+  EXPECT_EQ(APInt(64, -1, true).roundToDouble(true), -1.0);
+  EXPECT_EQ(APInt(64, -2, true).roundToDouble(true), -2.0);
+  EXPECT_EQ(APInt(64, 1ULL << 63, true).roundToDouble(true),
+            -9223372036854775808.0);
+
+  // Multi-word, positive, active bits in first word
+  EXPECT_EQ(APInt(65, 0, false).roundToDouble(false), 0.0);
+  EXPECT_EQ(APInt(65, 1, false).roundToDouble(false), 1.0);
+  EXPECT_EQ(APInt(65, 2, false).roundToDouble(false), 2.0);
+  EXPECT_EQ(APInt(65, 1ULL << 63, false).roundToDouble(true),
+            9223372036854775808.0);
+
+  // Multi-word, positive, active bits outside first word
+  EXPECT_EQ(
+      APInt(65, "18446744073709551616" /* 2^64 */, 10).roundToDouble(false),
+      18446744073709551616.0);
+
+  // Multi-word, negative
+  EXPECT_EQ(APInt(65, 0, true).roundToDouble(true), 0.0);
+
+  EXPECT_EQ(APInt(65, -1, true).roundToDouble(true), -1.0);
+  EXPECT_EQ(APInt(65, -2, true).roundToDouble(true), -2.0);
+  EXPECT_EQ(
+      APInt(65, "18446744073709551616" /* 2^64 */, 10).roundToDouble(true),
+      -18446744073709551616.0);
+}
 } // end anonymous namespace

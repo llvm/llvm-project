@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
@@ -890,7 +891,8 @@ APInt llvm::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
   return isNeg ? -Tmp : Tmp;
 }
 
-/// This function converts this APInt to a double.
+/// Converts this APInt to a double with rounding towards zero.
+///
 /// The layout for double is as following (IEEE Standard 754):
 ///  --------------------------------------
 /// |  Sign    Exponent    Fraction    Bias |
@@ -898,58 +900,16 @@ APInt llvm::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
 /// |  1[63]   11[62-52]   52[51-00]   1023 |
 ///  --------------------------------------
 double APInt::roundToDouble(bool isSigned) const {
-  // Handle the simple case where the value is contained in one uint64_t.
-  // It is wrong to optimize getWord(0) to VAL; there might be more than one word.
-  if (isSingleWord() || getActiveBits() <= APINT_BITS_PER_WORD) {
-    if (isSigned) {
-      int64_t sext = SignExtend64(getWord(0), BitWidth);
-      return double(sext);
-    }
-    return double(getWord(0));
-  }
+  // Early exit for zero-length values; APFloat::convertFromAPInt only
+  // applies to values with at least one word.
+  if (BitWidth == 0)
+    return 0.0;
 
-  // Determine if the value is negative.
-  bool isNeg = isSigned ? (*this)[BitWidth-1] : false;
+  APFloat f(APFloat::IEEEdouble());
+  f.convertFromAPInt(*this, isSigned,
+                     llvm::APFloatBase::roundingMode::TowardZero);
 
-  // Construct the absolute value if we're negative.
-  APInt Tmp(isNeg ? -(*this) : (*this));
-
-  // Figure out how many bits we're using.
-  unsigned n = Tmp.getActiveBits();
-
-  // The exponent (without bias normalization) is just the number of bits
-  // we are using. Note that the sign bit is gone since we constructed the
-  // absolute value.
-  uint64_t exp = n;
-
-  // Return infinity for exponent overflow
-  if (exp > 1023) {
-    if (!isSigned || !isNeg)
-      return std::numeric_limits<double>::infinity();
-    else
-      return -std::numeric_limits<double>::infinity();
-  }
-  exp += 1023; // Increment for 1023 bias
-
-  // Number of bits in mantissa is 52. To obtain the mantissa value, we must
-  // extract the high 52 bits from the correct words in pVal.
-  uint64_t mantissa;
-  unsigned hiWord = whichWord(n-1);
-  if (hiWord == 0) {
-    mantissa = Tmp.U.pVal[0];
-    if (n > 52)
-      mantissa >>= n - 52; // shift down, we want the top 52 bits.
-  } else {
-    assert(hiWord > 0 && "huh?");
-    uint64_t hibits = Tmp.U.pVal[hiWord] << (52 - n % APINT_BITS_PER_WORD);
-    uint64_t lobits = Tmp.U.pVal[hiWord-1] >> (11 + n % APINT_BITS_PER_WORD);
-    mantissa = hibits | lobits;
-  }
-
-  // The leading bit of mantissa is implicit, so get rid of it.
-  uint64_t sign = isNeg ? (1ULL << (APINT_BITS_PER_WORD - 1)) : 0;
-  uint64_t I = sign | (exp << 52) | mantissa;
-  return bit_cast<double>(I);
+  return f.convertToDouble();
 }
 
 // Truncate to new width.
