@@ -17,7 +17,7 @@
 class ProcessFreeBSDKernelCore : public lldb_private::PostMortemProcess {
 public:
   ProcessFreeBSDKernelCore(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                           kvm_t *kvm, const lldb_private::FileSpec &core_file);
+                           const lldb_private::FileSpec &core_file);
 
   ~ProcessFreeBSDKernelCore();
 
