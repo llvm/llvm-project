@@ -38,8 +38,9 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
       cxxRecordDecl(
           unless(matchers::matchesAnyListedRegexName(IgnoredContainers)),
           isSameOrDerivedFrom(
-              namedDecl(
-                  has(cxxMethodDecl(isPublic(), hasName("data")).bind("data")))
+              namedDecl(anyOf(has(cxxMethodDecl(isPublic(), hasName("c_str"))
+                                      .bind("c_str")),
+                              has(cxxMethodDecl(isPublic(), hasName("data")))))
                   .bind("container")))
           .bind("record");
 
@@ -85,6 +86,46 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+static bool isContainerConst(const Expr *ContainerExpr) {
+  QualType ContainerType = ContainerExpr->getType();
+  if (ContainerType->isPointerType())
+    ContainerType = ContainerType->getPointeeType();
+  return ContainerType.isConstQualified();
+}
+
+static bool isConstPointer(const QualType Type) {
+  if (!Type->isPointerType())
+    return false;
+  return Type->getPointeeType().isConstQualified();
+}
+
+static bool shouldUseCStr(const MatchFinder::MatchResult &Result) {
+  const auto *CStrDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("c_str");
+  const auto *UO = Result.Nodes.getNodeAs<UnaryOperator>(AddressOfName);
+  const auto *CE = Result.Nodes.getNodeAs<Expr>(ContainerExprName);
+
+  if (!CStrDecl)
+    return false;
+
+  auto Parents = Result.Context->getParents(*UO);
+  if (Parents.empty())
+    return isContainerConst(CE);
+
+  if (const auto *VD = Parents[0].get<VarDecl>()) {
+    if (isConstPointer(VD->getType()))
+      return true;
+  } else if (const auto *Cast = Parents[0].get<CastExpr>()) {
+    if (isConstPointer(Cast->getType()))
+      return true;
+  } else if (const auto *RetStmt = Parents[0].get<ReturnStmt>()) {
+    const Expr *RetValue = RetStmt->getRetValue();
+    if (isConstPointer(RetValue->getType()))
+      return true;
+  }
+
+  return isContainerConst(CE);
+}
+
 void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *UO = Result.Nodes.getNodeAs<UnaryOperator>(AddressOfName);
   const auto *CE = Result.Nodes.getNodeAs<Expr>(ContainerExprName);
@@ -99,6 +140,8 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   else if (ACE)
     CE = ACE;
 
+  const auto UseCStr = shouldUseCStr(Result);
+
   const SourceRange SrcRange = CE->getSourceRange();
 
   std::string ReplacementText{
@@ -112,16 +155,14 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   if (NeedsParens)
     ReplacementText = "(" + ReplacementText + ")";
 
-  if (CE->getType()->isPointerType())
-    ReplacementText += "->data()";
-  else
-    ReplacementText += ".data()";
+  ReplacementText += CE->getType()->isPointerType() ? "->" : ".";
+  ReplacementText += UseCStr ? "c_str()" : "data()";
 
   const FixItHint Hint =
       FixItHint::CreateReplacement(UO->getSourceRange(), ReplacementText);
   diag(UO->getBeginLoc(),
-       "'data' should be used for accessing the data pointer instead of taking "
-       "the address of the 0-th element")
-      << Hint;
+       "'%select{data|c_str}0' should be used for accessing the data pointer "
+       "instead of taking the address of the 0-th element")
+      << UseCStr << Hint;
 }
 } // namespace clang::tidy::readability

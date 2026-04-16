@@ -13,7 +13,7 @@
 
 namespace clang::tidy::readability {
 /// Checks whether a call to `operator[]` and `&` can be replaced with a call to
-/// `data()`.
+/// `data()` or (for consts, when available) `c_str()`.
 ///
 /// This only replaces the case where the offset being accessed through the
 /// subscript operation is a known constant 0.  This avoids a potential invalid
