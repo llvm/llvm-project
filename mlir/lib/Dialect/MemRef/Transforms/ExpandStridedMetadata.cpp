@@ -114,14 +114,7 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   // Compute the offset.
   OpFoldResult finalOffset =
       makeComposedFoldedAffineApply(rewriter, origLoc, expr, values);
-#ifndef NDEBUG
-  // Assert that the computed offset matches the offset of the result type of
-  // the subview op (if both are static).
-  std::optional<int64_t> computedOffset = getConstantIntValue(finalOffset);
-  if (computedOffset && ShapedType::isStatic(resultOffset))
-    assert(*computedOffset == resultOffset &&
-           "mismatch between computed offset and result type offset");
-#endif // NDEBUG
+  (void)resultOffset;
 
   // The final result is  <baseBuffer, offset, sizes, strides>.
   // Thus we need 1 + 1 + subview.getRank() + subview.getRank(), to hold all

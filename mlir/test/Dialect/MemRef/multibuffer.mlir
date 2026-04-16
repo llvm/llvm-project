@@ -16,9 +16,9 @@ func.func @multi_buffer(%a: memref<1024x1024xf32>) {
 // CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]])
 // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0, 0] [1, 4, 128] [1, 1, 1] : memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1]>>
    %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
-    memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
-// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, #{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
-   memref.copy %1, %0 : memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>> to memref<4x128xf32>
+    memref<1024x1024xf32> to memref<4x128xf32, strided<[1024, 1]>>
+// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, strided{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
+   memref.copy %1, %0 : memref<4x128xf32, strided<[1024, 1]>> to memref<4x128xf32>
 // CHECK: "some_use"(%[[SV]]) : (memref<4x128xf32, strided{{.*}}>) -> ()
     "some_use"(%0) : (memref<4x128xf32>) -> ()
 // CHECK: "some_use"(%[[SV]]) : (memref<4x128xf32, strided{{.*}}>) -> ()
@@ -41,9 +41,9 @@ func.func @multi_buffer_affine(%a: memref<1024x1024xf32>) {
 // CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]])
 // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0, 0] [1, 4, 128] [1, 1, 1] : memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1]>>
    %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
-    memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
-// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, #{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
-   memref.copy %1, %0 : memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>> to memref<4x128xf32>
+    memref<1024x1024xf32> to memref<4x128xf32, strided<[1024, 1]>>
+// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, strided{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
+   memref.copy %1, %0 : memref<4x128xf32, strided<[1024, 1]>> to memref<4x128xf32>
 // CHECK: "some_use"(%[[SV]]) : (memref<4x128xf32, strided{{.*}}>) -> ()
     "some_use"(%0) : (memref<4x128xf32>) -> ()
 // CHECK: "some_use"(%[[SV]]) : (memref<4x128xf32, strided{{.*}}>) -> ()
@@ -70,14 +70,14 @@ func.func @multi_buffer_subview_use(%a: memref<1024x1024xf32>) {
 // CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]])
 // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0, 0] [1, 4, 128] [1, 1, 1] : memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1]>>
    %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
-    memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
-// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, #{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
-   memref.copy %1, %0 : memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>> to memref<4x128xf32>
+    memref<1024x1024xf32> to memref<4x128xf32, strided<[1024, 1]>>
+// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, strided{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
+   memref.copy %1, %0 : memref<4x128xf32, strided<[1024, 1]>> to memref<4x128xf32>
 // CHECK: %[[SV1:.*]] = memref.subview %[[SV]][0, 1] [4, 127] [1, 1] : memref<4x128xf32, strided<[128, 1]>> to memref<4x127xf32, strided<[128, 1]>>
    %s = memref.subview %0[0, 1] [4, 127] [1, 1] :
-      memref<4x128xf32> to memref<4x127xf32, affine_map<(d0, d1) -> (d0 * 128 + d1 + 1)>>
+      memref<4x128xf32> to memref<4x127xf32, strided<[128, 1]>>
 // CHECK: "some_use"(%[[SV1]]) : (memref<4x127xf32, strided<[128, 1]>>) -> ()
-   "some_use"(%s) : (memref<4x127xf32, affine_map<(d0, d1) -> (d0 * 128 + d1 + 1)>>) -> ()
+   "some_use"(%s) : (memref<4x127xf32, strided<[128, 1]>>) -> ()
 // CHECK: "some_use"(%[[SV]]) : (memref<4x128xf32, strided<[128, 1]>>) -> ()
    "some_use"(%0) : (memref<4x128xf32>) -> ()
   }
@@ -97,8 +97,8 @@ func.func @multi_buffer_negative(%a: memref<1024x1024xf32>) {
   scf.for %arg2 = %c0 to %c1024 step %c3 {
    "blocking_use"(%0) : (memref<4x128xf32>) -> ()
    %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
-    memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
-   memref.copy %1, %0 : memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>> to memref<4x128xf32>
+    memref<1024x1024xf32> to memref<4x128xf32, strided<[1024, 1]>>
+   memref.copy %1, %0 : memref<4x128xf32, strided<[1024, 1]>> to memref<4x128xf32>
    "some_use"(%0) : (memref<4x128xf32>) -> ()
   }
   return
@@ -122,9 +122,9 @@ func.func @multi_buffer_expand_shape(%a: memref<1024x1024xf32>) {
 // CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]])
 // CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][%[[I]], 0, 0] [1, 4, 128] [1, 1, 1] : memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1]>>
     %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
-        memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
-// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, #{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
-    memref.copy %1, %0 : memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>> to memref<4x128xf32>
+        memref<1024x1024xf32> to memref<4x128xf32, strided<[1024, 1]>>
+// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, strided{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
+    memref.copy %1, %0 : memref<4x128xf32, strided<[1024, 1]>> to memref<4x128xf32>
 // CHECK: %[[EXPANDED:.*]] = memref.expand_shape %[[SV]] {{\[\[}}0, 1], [2, 3]] output_shape [2, 2, 64, 2] : memref<4x128xf32, strided<[128, 1]>> into memref<2x2x64x2xf32, strided<[256, 128, 2, 1]>>
     %expanded = memref.expand_shape %0 [[0, 1], [2, 3]] output_shape [2, 2, 64, 2]
         : memref<4x128xf32> into memref<2x2x64x2xf32>
@@ -152,9 +152,9 @@ func.func @multi_buffer_collapse_shape(%a: memref<1024x1024xf32>) {
 // CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]])
 // CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][%[[I]], 0, 0] [1, 4, 128] [1, 1, 1] : memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1]>>
     %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
-        memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
-// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, #{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
-    memref.copy %1, %0 : memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>> to memref<4x128xf32>
+        memref<1024x1024xf32> to memref<4x128xf32, strided<[1024, 1]>>
+// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, strided{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
+    memref.copy %1, %0 : memref<4x128xf32, strided<[1024, 1]>> to memref<4x128xf32>
 // CHECK: %[[COLLAPSED:.*]] = memref.collapse_shape %[[SV]] {{\[\[}}0, 1]] : memref<4x128xf32, strided<[128, 1]>> into memref<512xf32, strided<[1]>>
     %collapsed = memref.collapse_shape %0 [[0, 1]]
         : memref<4x128xf32> into memref<512xf32>
@@ -182,9 +182,9 @@ func.func @multi_buffer_cast(%a: memref<1024x1024xf32>) {
 // CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]])
 // CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][%[[I]], 0, 0] [1, 4, 128] [1, 1, 1] : memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1]>>
     %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
-        memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
-// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, #{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
-    memref.copy %1, %0 : memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>> to memref<4x128xf32>
+        memref<1024x1024xf32> to memref<4x128xf32, strided<[1024, 1]>>
+// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, strided{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
+    memref.copy %1, %0 : memref<4x128xf32, strided<[1024, 1]>> to memref<4x128xf32>
 // CHECK: %[[CAST:.*]] = memref.cast %[[SV]] : memref<4x128xf32, strided<[128, 1]>> to memref<?x128xf32>
     %casted = memref.cast %0 : memref<4x128xf32> to memref<?x128xf32>
 // CHECK: "some_use"(%[[CAST]]) : (memref<?x128xf32>) -> ()
@@ -211,9 +211,9 @@ func.func @multi_buffer_chained_view_ops(%a: memref<1024x1024xf32>) {
 // CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]])
 // CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][%[[I]], 0, 0] [1, 4, 128] [1, 1, 1] : memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1]>>
     %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
-        memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
-// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, #{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
-    memref.copy %1, %0 : memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>> to memref<4x128xf32>
+        memref<1024x1024xf32> to memref<4x128xf32, strided<[1024, 1]>>
+// CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4x128xf32, strided{{.*}}> to memref<4x128xf32, strided<[128, 1]>>
+    memref.copy %1, %0 : memref<4x128xf32, strided<[1024, 1]>> to memref<4x128xf32>
 // CHECK: %[[EXPANDED:.*]] = memref.expand_shape %[[SV]] {{\[\[}}0, 1], [2, 3]] output_shape [2, 2, 64, 2] : memref<4x128xf32, strided<[128, 1]>> into memref<2x2x64x2xf32, strided<[256, 128, 2, 1]>>
     %expanded = memref.expand_shape %0 [[0, 1], [2, 3]] output_shape [2, 2, 64, 2]
         : memref<4x128xf32> into memref<2x2x64x2xf32>

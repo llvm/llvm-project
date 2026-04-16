@@ -142,7 +142,7 @@ func.func @transpose_bad_rank(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(o
 // -----
 
 func.func @transpose_wrong_type(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
-  // expected-error @+1 {{result type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' is not equivalent to the canonical transposed input type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 + s0 + d1 * s1)>>'}}
+  // expected-error @+1 {{result type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' is not equivalent to the canonical transposed input type 'memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 + d1 * s0)>>'}}
   memref.transpose %v (i, j) -> (j, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
@@ -178,16 +178,6 @@ func.func @memref_reinterpret_cast_incompatible_memory_space(%in: memref<*xf32>)
 
 // -----
 
-func.func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
-  // expected-error @+1 {{expected result type with offset = 1 instead of 2}}
-  %out = memref.reinterpret_cast %in to
-           offset: [1], sizes: [10], strides: [1]
-         : memref<?xf32> to memref<10xf32, strided<[1]>>
-  return
-}
-
-// -----
-
 func.func @memref_reinterpret_cast_size_mismatch(%in: memref<*xf32>) {
   // expected-error @+1 {{expected result type with size = 10 instead of 1 in dim = 0}}
   %out = memref.reinterpret_cast %in to
@@ -203,24 +193,6 @@ func.func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
   %out = memref.reinterpret_cast %in to
            offset: [2], sizes: [10], strides: [2]
          : memref<?xf32> to memref<10xf32, strided<[1]>>
-  return
-}
-
-// -----
-
-func.func @memref_reinterpret_cast_no_map_but_offset(%in: memref<?xf32>) {
-  // expected-error @+1 {{expected result type with offset = 2 instead of 0}}
-  %out = memref.reinterpret_cast %in to offset: [2], sizes: [10], strides: [1]
-         : memref<?xf32> to memref<10xf32>
-  return
-}
-
-// -----
-
-func.func @memref_reinterpret_cast_offset_mismatch_dynamic(%in: memref<?xf32>, %offset : index) {
-  // expected-error @+1 {{expected result type with offset = dynamic instead of 0}}
-  %out = memref.reinterpret_cast %in to offset: [%offset], sizes: [10], strides: [1]
-         : memref<?xf32> to memref<10xf32>
   return
 }
 
@@ -797,51 +769,9 @@ func.func @invalid_rank_reducing_subview(%arg0 : memref<?x?xf32>, %arg1 : index,
 
 // -----
 
-#map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1)>
-
-func.func @subview_bad_offset_1(%arg0: memref<16x16xf32>) {
-  %c0 = arith.constant 0 : index
-  %c8 = arith.constant 8 : index
-  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, strided<[16, 1]>>' or a rank-reduced version}}
-  %s2 = memref.subview %arg0[%c8, %c8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
-  return
-}
-
-// -----
-
-#map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1 + 136)>
-
-func.func @subview_bad_offset_2(%arg0: memref<16x16xf32>) {
-  %c0 = arith.constant 0 : index
-  %c8 = arith.constant 8 : index
-  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, strided<[16, 1]>>' or a rank-reduced version}}
-  %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
-  return
-}
-
-// -----
-
-func.func @subview_bad_offset_3(%arg0: memref<16x16xf32>) {
-  %c0 = arith.constant 0 : index
-  %c8 = arith.constant 8 : index
-  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, strided<[16, 1]>>' or a rank-reduced version}}
-  %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, strided<[16, 1]>>
-  return
-}
-
-// -----
-
 func.func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, strided<[64, 16, 1]>>) {
   // expected-error@+1{{operand type 'memref<12x4x16xf32, strided<[64, 16, 1]>>' and result type 'memref<12x4x16xf32, strided<[128, 32, 2]>>' are cast incompatible}}
   %0 = memref.cast %arg0 : memref<12x4x16xf32, strided<[64, 16, 1]>> to memref<12x4x16xf32, strided<[128, 32, 2]>>
-  return
-}
-
-// -----
-
-func.func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, strided<[64, 16, 1]>>) {
-  // expected-error@+1{{operand type 'memref<12x4x16xf32, strided<[64, 16, 1]>>' and result type 'memref<12x4x16xf32, strided<[64, 16, 1]>>' are cast incompatible}}
-  %0 = memref.cast %arg0 : memref<12x4x16xf32, strided<[64, 16, 1]>> to memref<12x4x16xf32, strided<[64, 16, 1]>>
   return
 }
 

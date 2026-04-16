@@ -2860,7 +2860,11 @@ MemRefType CollapseShapeOp::computeCollapsedType(
       computeCollapsedLayoutMap(srcType, reassociation);
   assert(succeeded(computedLayout) &&
          "invalid source layout map or collapsing non-contiguous dims");
-  return MemRefType::get(resultShape, srcType.getElementType(), *computedLayout,
+  // strided<[]> is degenerate and equivalent to the identity layout.
+  MemRefLayoutAttrInterface layout = *computedLayout;
+  if (computedLayout->getStrides().empty())
+    layout = MemRefLayoutAttrInterface();
+  return MemRefType::get(resultShape, srcType.getElementType(), layout,
                          srcType.getMemorySpace());
 }
 
@@ -2916,7 +2920,27 @@ LogicalResult CollapseShapeOp::verify() {
                         *computedLayout, srcType.getMemorySpace());
   }
 
-  if (expectedResultType != resultType)
+  // For rank-0 results the strided layout degenerates to strided<[]> which
+  // is equivalent to the identity layout. Treat the two forms as equal.
+  auto layoutsEquivalent = [](MemRefType a, MemRefType b) {
+    if (a == b)
+      return true;
+    if (a.getRank() != 0 || b.getRank() != 0)
+      return false;
+    if (a.getElementType() != b.getElementType())
+      return false;
+    if (a.getMemorySpace() != b.getMemorySpace())
+      return false;
+    auto isIdentityOrEmptyStrided = [](MemRefLayoutAttrInterface l) {
+      if (!l || l.isIdentity())
+        return true;
+      auto strided = dyn_cast<StridedLayoutAttr>(l);
+      return strided && strided.getStrides().empty();
+    };
+    return isIdentityOrEmptyStrided(a.getLayout()) &&
+           isIdentityOrEmptyStrided(b.getLayout());
+  };
+  if (!layoutsEquivalent(expectedResultType, resultType))
     return emitOpError("expected collapsed type to be ")
            << expectedResultType << " but found " << resultType;
 
