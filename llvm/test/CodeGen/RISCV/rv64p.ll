@@ -176,8 +176,7 @@ define void @pli_b_store_i32(ptr %p) {
 define void @pli_b_store_i16(ptr %p) {
 ; CHECK-LABEL: pli_b_store_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 8
-; CHECK-NEXT:    addi a1, a1, 385
+; CHECK-NEXT:    pli.b a1, -127
 ; CHECK-NEXT:    sh a1, 0(a0)
 ; CHECK-NEXT:    ret
   store i16 u0x8181, ptr %p
