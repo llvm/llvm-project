@@ -4476,10 +4476,8 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
 
-          // TTI::getExtendedReductionCost for in-loop reductions
-          // only supports integer types.
-          if (RedTy->isFloatingPointTy())
-            return false;
+          assert(!RedTy->isFloatingPointTy() &&
+                 "getExtendedReductionCost only supports integer types");
           ExtRedCost = Ctx.TTI.getExtendedReductionCost(
               Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
               Red->getFastMathFlags(), CostKind);
@@ -4490,8 +4488,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 
   VPValue *A;
   // Match reduce(ext)).
-  if (match(VecOp, m_Isa<VPWidenCastRecipe>(m_CombineOr(
-                       m_ZExtOrSExt(m_VPValue(A)), m_FPExt(m_VPValue(A))))) &&
+  if (match(VecOp, m_Isa<VPWidenCastRecipe>(m_ZExtOrSExt(m_VPValue(A)))) &&
       IsExtendedRedValidAndClampRange(
           RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
           cast<VPWidenCastRecipe>(VecOp)->getOpcode(),
@@ -4567,23 +4564,6 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   VPValue *A, *B;
   VPValue *Tmp = nullptr;
 
-  // Try to match reduce.fadd(fmul(fpext(...), fpext(...))).
-  if (match(VecOp, m_FMul(m_FPExt(m_VPValue()), m_FPExt(m_VPValue())))) {
-    assert(Opcode == Instruction::FAdd &&
-           "MulAccumulateReduction from an FMul must accumulate into an FAdd "
-           "instruction");
-    auto *FMul = dyn_cast<VPWidenRecipe>(VecOp);
-    if (!FMul)
-      return nullptr;
-
-    auto *RecipeA = dyn_cast<VPWidenCastRecipe>(FMul->getOperand(0));
-    auto *RecipeB = dyn_cast<VPWidenCastRecipe>(FMul->getOperand(1));
-
-    if (RecipeA && RecipeB &&
-        IsMulAccValidAndClampRange(FMul, RecipeA, RecipeB, nullptr)) {
-      return new VPExpressionRecipe(RecipeA, RecipeB, FMul, Red);
-    }
-  }
   if (RedTy->isFloatingPointTy())
     return nullptr;
 
@@ -6165,7 +6145,7 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
     return new VPExpressionRecipe(ExtA, ExtB, Mul, Sub, Red);
   }
 
-  return nullptr;
+  llvm_unreachable("Unsupported expression");
 }
 
 // Helper to transform a partial reduction chain into a partial reduction
@@ -6236,10 +6216,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   WidenRecipe->replaceAllUsesWith(PartialRed);
 
   // For cost-model purposes, see if we can fold this into a VPExpression.
-  if (VPExpressionRecipe *E = createPartialReductionExpression(PartialRed)) {
-    E->insertBefore(WidenRecipe);
-    PartialRed->replaceAllUsesWith(E);
-  }
+  VPExpressionRecipe *E = createPartialReductionExpression(PartialRed);
+  E->insertBefore(WidenRecipe);
+  PartialRed->replaceAllUsesWith(E);
 
   // We only need to update the PHI node once, which is when we find the
   // last reduction in the chain.
@@ -6384,7 +6363,8 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op,
     return std::nullopt;
 
   VPWidenRecipe *BinOp = dyn_cast<VPWidenRecipe>(Op);
-  if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))
+  if (!BinOp ||
+      !is_contained({Instruction::Mul, Instruction::FMul}, BinOp->getOpcode()))
     return std::nullopt;
 
   // The rest of the matching assumes `Op` is a (possibly extended/negated)
