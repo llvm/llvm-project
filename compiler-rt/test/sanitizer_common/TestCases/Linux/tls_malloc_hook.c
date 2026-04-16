@@ -7,7 +7,7 @@
 // REQUIRES: glibc
 
 // No allocator and hooks.
-// XFAIL: ubsan
+// XFAIL: tysan, ubsan
 
 #ifndef BUILD_SO
 #  include <assert.h>
