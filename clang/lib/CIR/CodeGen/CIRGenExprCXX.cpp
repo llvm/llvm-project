@@ -900,8 +900,8 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
         allocAlign);
     for (unsigned i = 0, n = e->getNumPlacementArgs(); i != n; ++i) {
       const CallArg &arg = newArgs[i + numNonPlacementArgs];
-      cleanup->setPlacementArg(i, arg.getRValue(cgf, cgf.getLoc(e->getSourceRange())),
-                               arg.ty);
+      cleanup->setPlacementArg(
+          i, arg.getRValue(cgf, cgf.getLoc(e->getSourceRange())), arg.ty);
     }
 
     return;
@@ -916,9 +916,7 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
   struct ConditionalCleanupTraits {
     typedef DominatingValue<RValue>::saved_type ValueTy;
     typedef DominatingValue<RValue>::saved_type RValueTy;
-    static RValue get(CIRGenFunction &cgf, ValueTy v) {
-      return v.restore(cgf);
-    }
+    static RValue get(CIRGenFunction &cgf, ValueTy v) { return v.restore(cgf); }
   };
   typedef CallDeleteDuringNew<ConditionalCleanupTraits> ConditionalCleanup;
 

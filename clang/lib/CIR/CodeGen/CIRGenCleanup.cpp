@@ -140,8 +140,7 @@ DominatingCIRValue::saved_type DominatingCIRValue::save(CIRGenFunction &cgf,
   return saved_type(alloca.emitRawPointer(), true);
 }
 
-mlir::Value DominatingCIRValue::restore(CIRGenFunction &cgf,
-                                        saved_type value) {
+mlir::Value DominatingCIRValue::restore(CIRGenFunction &cgf, saved_type value) {
   // If the value says it wasn't saved, trust that it's still dominating.
   if (!value.getInt())
     return value.getPointer();
