@@ -184,9 +184,10 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
   auto NI = allocatePtr<NamespaceInfo>();
   NI->Name = "GlobalNamespace";
   for (int i = 0; i < NumRecords; ++i) {
-    NI->Children.Records.emplace_back(SymbolID{(uint8_t)(i & 0xFF)},
-                                      "Record" + std::to_string(i),
-                                      InfoType::IT_record);
+    Reference *R = new (TransientArena.Allocate<Reference>())
+        Reference(SymbolID{(uint8_t)(i & 0xFF)}, "Record" + std::to_string(i),
+                  InfoType::IT_record);
+    NI->Children.Records.push_back(*R);
   }
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
