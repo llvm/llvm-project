@@ -1060,8 +1060,6 @@ def warn_defined_in_object_type_macro : Warning<
 def warn_defined_in_function_type_macro : Extension<
   "macro expansion producing 'defined' has undefined behavior">,
   InGroup<ExpansionToDefined>;
-def err_defined_in_macro : Error<
-  "macro expansion producing 'defined' is not allowed">;
 
 let CategoryName = "Nullability Issue" in {
 
