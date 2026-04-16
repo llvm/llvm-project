@@ -42,12 +42,25 @@ body:             |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0:
   ; CHECK:   [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
-  ; CHECK-NEXT:   DBG_VALUE_LIST <{{.*}}>, !DIExpression(DIOpArg(0, i32), DIOpConstant(i8 0), DIOpByteOffset(i32)), [[DEF]], 0, {{.*}}
 
   bb.0:
     renamable $sgpr10 = IMPLICIT_DEF
     SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    ; Test the path we expect to work (Arg followed immediately by Deref)
+    ; CHECK:   DBG_VALUE_LIST <{{.*}}>, !DIExpression(DIOpArg(0, i32), DIOpConstant(i8 0), DIOpByteOffset(i32)), [[DEF]], 0, {{.*}}
     DBG_VALUE_LIST !1, !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i32)), %stack.0, 0, debug-location !9
+    S_NOP 0
+    ; Test that we replace unhandled stack indexes with $noreg
+    ; CHECK:   DBG_VALUE_LIST <{{.*}}>, !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpRead(), DIOpDeref(i32)), $noreg, 0, {{.*}}
+    DBG_VALUE_LIST !1, !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpRead(), DIOpDeref(i32)), %stack.0, 0, debug-location !9
+    S_NOP 0
+    ; Test that we replace unhandled stack indexes with $noreg even if they are not referenced by a DIOpArg
+    ; CHECK:   DBG_VALUE_LIST <{{.*}}>, !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpRead(), DIOpDeref(i32)), $noreg, $noreg, 0, {{.*}}
+    DBG_VALUE_LIST !1, !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpRead(), DIOpDeref(i32)), %stack.0, %stack.0, 0, debug-location !9
+    S_NOP 0
+    ; Test that we handle multiple such unhandled stack indexes
+    ; CHECK:   DBG_VALUE_LIST <{{.*}}>, !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpRead(), DIOpDeref(i32), DIOpArg(1, ptr addrspace(5)), DIOpRead(), DIOpDeref(i32)), $noreg, $noreg, 0, {{.*}}
+    DBG_VALUE_LIST !1, !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpRead(), DIOpDeref(i32), DIOpArg(1, ptr addrspace(5)), DIOpRead(), DIOpDeref(i32)), %stack.0, %stack.0, 0, debug-location !9
 
   bb.1:
     renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32

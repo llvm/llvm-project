@@ -4594,6 +4594,8 @@ public:
                   [](auto &&E) { return std::holds_alternative<T>(E); });
   }
 
+  LLVMContext &getContext() const { return C; }
+
   /// Update the expression to reflect the removal of one level of indirection
   /// from the value acting as the referrer.
   ///

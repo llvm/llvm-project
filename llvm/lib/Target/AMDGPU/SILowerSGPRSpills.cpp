@@ -85,8 +85,6 @@ public:
   void determineRegsForWWMAllocation(MachineFunction &MF, BitVector &RegMask);
   void updateDbgValueInst(MachineInstr &MI, const BitVector &SpillFIs);
   void updateDbgValueInsts(MIVector &Insts, const BitVector &SpillFIs);
-  void updateDbgValueArg(MachineInstr &MI, uint32_t FIOpndIdx,
-                         const SIRegisterInfo::SpilledReg &vgpr);
 };
 
 class SILowerSGPRSpillsLegacy : public MachineFunctionPass {
@@ -427,42 +425,6 @@ bool SILowerSGPRSpillsLegacy::runOnMachineFunction(MachineFunction &MF) {
   return SILowerSGPRSpills(LIS, Indexes, MDT, MCI).run(MF);
 }
 
-// Replace an FI argument in DBG_VALUE or DBG_VALUE_LIST
-// with corresponding VGPR lane. The argument if identified by FIOpndIdx.
-void SILowerSGPRSpills::updateDbgValueArg(MachineInstr &MI,
-                                          uint32_t FIOpndIdx,
-                                          const SIRegisterInfo::SpilledReg &vgpr) {
-  const DIExpression *Expr = MI.getDebugExpression();
-  DIExprBuilder EBuilder(*Expr);
-  assert(Expr->holdsNewElements());
-
-  // Find corresponding DIOpArg in the DIExpression.
-  for (auto &&I = EBuilder.begin(); I != EBuilder.end(); ) {
-    if (auto *Arg = std::get_if<DIOp::Arg>(&*I++)) {
-      // We expect DIOpArg be followed by DIOpDeref
-      if (Arg->getIndex() == FIOpndIdx &&
-          I != EBuilder.end() && std::get_if<DIOp::Deref>(&*I)) {
-        // Change the type of DIOpArg and replace the following DIOpDeref
-        // with DIOpConstant + DIOpByteOfset.
-        IntegerType *TypeInt8  = IntegerType::get(Expr->getContext(), 8);
-        IntegerType *TypeInt32 = IntegerType::get(Expr->getContext(), 32);
-        Arg->setResultType(TypeInt32);
-        ConstantData *C = ConstantInt::get(TypeInt8, vgpr.Lane * 8, true);
-        EBuilder.insert(EBuilder.erase(I),
-                        {DIOp::Constant(C), DIOp::ByteOffset(TypeInt32)});
-        // Replace stack (frame index) argument of MI with VGPR
-        if (MI.isDebugValueList())
-          FIOpndIdx += 2;
-        MI.getOperand(FIOpndIdx).ChangeToRegister(vgpr.VGPR, false);
-        MI.getDebugExpressionOp().setMetadata(EBuilder.intoExpression());
-      }
-      else {
-        MI.eraseFromParent();
-      }
-    }
-  }
-}
-
 // Replace frame index in a DBG_VALUE or DBG_VALUE_LIST instruction with VGPR lane.
 void SILowerSGPRSpills::updateDbgValueInst(MachineInstr &MI,
                                            const BitVector &SpillFIs) {
@@ -470,44 +432,54 @@ void SILowerSGPRSpills::updateDbgValueInst(MachineInstr &MI,
   const MachineFunction *MF = MI.getParent()->getParent();
   auto *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
   const auto &FrInfo = MF->getFrameInfo();
-  ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills;
 
-  auto WasOpndSpilled = [&](const MachineOperand &Opnd, bool IsValueList) {
-    int FrObjIdx = (IsValueList ? Opnd.getIndex() : 0);
-    return (Opnd.isFI() && !FrInfo.isFixedObjectIndex(FrObjIdx) &&
+  auto WasOpndSpilled = [&](const MachineOperand &Opnd) {
+    return (Opnd.isFI() && !FrInfo.isFixedObjectIndex(Opnd.getIndex()) &&
             SpillFIs[Opnd.getIndex()]);
   };
-  
+
   if (MI.getDebugExpression()->holdsOldElements()) {
-    // For old-style DIExpressions, just replace the frame index
-    // argument with empty register.
+    // For old-style DIExpressions, just do nothing and we will drop all
+    // spilled FIs below.
     // FIXME: We should instead, update it with the
     // correct register value. It should be worked out later.
-    auto &FIOpnd = MI.getOperand(MI.isDebugValueList() ? 2 : 0);
-    if (WasOpndSpilled(FIOpnd, true)) {
-      FIOpnd.ChangeToRegister(Register(), false /*isDef*/);
-    }
-  } else if (MI.isDebugValueList()) {
-    // Walk over DIOpArg nodes in the DIExpression and check
-    // if corresponding DBG_VALUE_LIST arguments have been spilled to VGPR lanes.
-    for (DIOp::Variant Elem : *MI.getDebugExpression()->getNewElementsRef()) {
-      if (auto *Arg = std::get_if<DIOp::Arg>(&Elem)) {
-        auto &FIOpnd = MI.getOperand(Arg->getIndex() + 2);
-        if (WasOpndSpilled(FIOpnd, true)) {
-          VGPRSpills = FuncInfo->getSGPRSpillToVirtualVGPRLanes(FIOpnd.getIndex());
-          updateDbgValueArg(MI, Arg->getIndex(), VGPRSpills[0]);
+  } else {
+    DIExprBuilder Builder(*MI.getDebugExpression());
+    IntegerType *TypeInt8 = IntegerType::get(Builder.getContext(), 8);
+    IntegerType *TypeInt32 = IntegerType::get(Builder.getContext(), 32);
+    for (auto &&I = Builder.begin(); I != Builder.end();) {
+      if (auto *Arg = std::get_if<DIOp::Arg>(&*I++)) {
+        MachineOperand &MO = MI.getDebugOperand(Arg->getIndex());
+        if (!WasOpndSpilled(MO))
+          continue;
+        ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills =
+            FuncInfo->getSGPRSpillToVirtualVGPRLanes(MO.getIndex());
+        // FIXME: This is a very narrow pattern to match, we could handle much
+        // more, both intervening ops and multi-lane spills
+        if (I != Builder.end() && std::get_if<DIOp::Deref>(&*I) &&
+            VGPRSpills.size() == 1) {
+          const SIRegisterInfo::SpilledReg &VGPRSpill = VGPRSpills.front();
+          // Change the type of DIOpArg and replace the following DIOpDeref
+          // with DIOpConstant + DIOpByteOfset.
+          Arg->setResultType(TypeInt32);
+          ConstantData *C =
+              ConstantInt::get(TypeInt8, VGPRSpill.Lane * 8, true);
+          const std::initializer_list<DIOp::Variant> Ops = {
+              DIOp::Constant(C), DIOp::ByteOffset(TypeInt32)};
+          I = Builder.insert(Builder.erase(I), Ops) + Ops.size();
+          // Replace stack (frame index) argument of MI with VGPR
+          MO.ChangeToRegister(VGPRSpill.VGPR, false);
+        } else {
+          MO.ChangeToRegister(Register(), /*isDef=*/false);
         }
       }
     }
-  } else {
-    assert(MI.isNonListDebugValue());
-    // Check if the 1st argument of DBG_VALUE is a frame index (FI)
-    // which have been spilled to a VGPR lane.
-    auto &FIOpnd = MI.getOperand(0);
-    if (WasOpndSpilled(FIOpnd, false)) {
-      VGPRSpills = FuncInfo->getSGPRSpillToVirtualVGPRLanes(FIOpnd.getIndex());
-      updateDbgValueArg(MI, 0, VGPRSpills[0]);
-    }
+    MI.getDebugExpressionOp().setMetadata(Builder.intoExpression());
+  }
+  // Any spilled FIs we haven't handled by this point should just be dropped.
+  for (MachineOperand &Op : MI.debug_operands()) {
+    if (WasOpndSpilled(Op))
+      Op.ChangeToRegister(Register(), /*isDef=*/false);
   }
 }
 
