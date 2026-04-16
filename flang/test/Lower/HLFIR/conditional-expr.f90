@@ -1,5 +1,5 @@
 ! Test lowering of conditional expressions (Fortran 2023)
-! RUN: %flang_fc1 -emit-hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -funsigned -o - %s 2>&1 | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtest_scalar_integer(
 ! CHECK-SAME:    %[[FLAG:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "flag"},
@@ -57,6 +57,18 @@ subroutine test_scalar_logical(flag, x, y)
   ! CHECK:   fir.result {{.*}} : !fir.logical<4>
   ! CHECK: } else {
   ! CHECK:   fir.result {{.*}} : !fir.logical<4>
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_scalar_unsigned(
+subroutine test_scalar_unsigned(flag, x, y)
+  logical :: flag
+  unsigned :: x, y, result
+  result = (flag ? x : y)
+  ! CHECK: %[[RESULT:.*]] = fir.if {{.*}} -> (ui32) {
+  ! CHECK:   fir.result {{.*}} : ui32
+  ! CHECK: } else {
+  ! CHECK:   fir.result {{.*}} : ui32
   ! CHECK: }
 end subroutine
 
