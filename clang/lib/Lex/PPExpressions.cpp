@@ -204,7 +204,9 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     // in a different way, and compilers seem to agree on how to behave here.
     // So warn by default on object-type macros, but only warn in -pedantic
     // mode on function-type macros.
-    if (IsFunctionTypeMacro)
+    if (PP.getLangOpts().CPlusPlus26)
+      PP.Diag(beginLoc, diag::err_defined_in_macro);
+    else if (IsFunctionTypeMacro)
       PP.Diag(beginLoc, diag::warn_defined_in_function_type_macro);
     else
       PP.Diag(beginLoc, diag::warn_defined_in_object_type_macro);
