@@ -421,12 +421,27 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
                     "DWARF output");
       ImplicitSections.insert(StringRef(SecName).copy(StringAlloc));
     }
+  // Check if there are any real sections (not just SectionHeaderTable or the
+  // implicit SHT_NULL section at index 0).
+  bool HasRealSections = llvm::any_of(Doc.Chunks, [](const auto &C) {
+    if (isa<ELFYAML::SectionHeaderTable>(C.get()))
+      return false;
+    if (auto *Sec = dyn_cast<ELFYAML::Section>(C.get()))
+      return !Sec->IsImplicit;
+    return true;
+  });
+
   // Don't create implicit string table sections when there are no section
-  // headers (e.g., core files). The .strtab is only needed for symbols.
-  if (!SecHdrTable || !SecHdrTable->NoHeaders.value_or(false)) {
+  // headers and no real sections (e.g., core files with only program header
+  // content). When there are real sections, .strtab is still needed even
+  // with NoHeaders.
+  bool SuppressImplicitSections =
+      SecHdrTable && SecHdrTable->NoHeaders.value_or(false) && !HasRealSections;
+  if (!SuppressImplicitSections) {
     // TODO: Only create the .strtab here if any symbols have been requested.
     ImplicitSections.insert(".strtab");
-    ImplicitSections.insert(SectionHeaderStringTableName);
+    if (!SecHdrTable || !SecHdrTable->NoHeaders.value_or(false))
+      ImplicitSections.insert(SectionHeaderStringTableName);
   }
 
   // Insert placeholders for implicit sections that are not

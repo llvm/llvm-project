@@ -309,16 +309,15 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   if (HasSectionHeaders && Obj.getHeader().e_shnum == 0)
     Y->Header.EShNum = 0;
 
-  // For files without a section header table (e.g., core files), preserve the
-  // ELF header fields that differ from the defaults yaml2obj would produce.
-  // yaml2obj defaults e_shentsize to sizeof(Elf_Shdr), so we must always set
-  // it explicitly when there are no section headers.
-  if (!HasSectionHeaders) {
-    Y->Header.EShEntSize = Obj.getHeader().e_shentsize;
+  // For core files without a section header table, preserve the ELF header
+  // fields that differ from the defaults yaml2obj would produce.
+  if (!HasSectionHeaders && Obj.getHeader().e_type == ELF::ET_CORE) {
+    // yaml2obj defaults e_shentsize to sizeof(Elf_Shdr), so only set it when
+    // the value differs from that default.
+    if (Obj.getHeader().e_shentsize != sizeof(Elf_Shdr))
+      Y->Header.EShEntSize = Obj.getHeader().e_shentsize;
     if (Obj.getHeader().e_shnum != 0)
       Y->Header.EShNum = Obj.getHeader().e_shnum;
-    if (Obj.getHeader().e_shstrndx != 0)
-      Y->Header.EShStrNdx = Obj.getHeader().e_shstrndx;
   }
 
   // Dump symbols. We need to do this early because other sections might want
@@ -427,9 +426,9 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
         });
   }
 
-  // For files without section headers, add a SectionHeaderTable with
+  // For core files without section headers, add a SectionHeaderTable with
   // NoHeaders: true so that yaml2obj does not generate section headers.
-  if (!HasSectionHeaders) {
+  if (!HasSectionHeaders && Obj.getHeader().e_type == ELF::ET_CORE) {
     std::unique_ptr<ELFYAML::SectionHeaderTable> SHT =
         std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/false);
     SHT->NoHeaders = true;
