@@ -1213,16 +1213,16 @@ private:
   // Return the weighted, shortest distance through a loop (header to latch).
   // If ParentLoop is provided, use it to adjust the loop depth.
   MBBDistPair calcWeightedDistanceThroughLoop(
-      MachineLoop *CurLoop, const MachineLoop *ParentLoop = nullptr) const {
-    const MachineBasicBlock *Hdr = CurLoop->getHeader();
+      const MachineBasicBlock *CurMBB, MachineLoop *CurLoop,
+      const MachineLoop *ParentLoop = nullptr) const {
     if (CurLoop->getNumBlocks() != 1)
-      return calcWeightedDistanceThroughLoopViaMBB(Hdr, CurLoop);
+      return calcWeightedDistanceThroughLoopViaMBB(CurMBB, CurLoop);
 
-    unsigned LoopDepth = MLI->getLoopDepth(Hdr);
+    unsigned LoopDepth = MLI->getLoopDepth(CurMBB);
     if (ParentLoop)
       LoopDepth -= ParentLoop->getLoopDepth();
 
-    return {NextUseDistance::fromSize(getSize(Hdr), LoopDepth),
+    return {NextUseDistance::fromSize(getSize(CurMBB), LoopDepth),
             CurLoop->getLoopLatch()};
   }
 
@@ -1236,13 +1236,14 @@ private:
 
   // Return the weighted, shortest distance through the CurLoop which is a
   // sub-loop of UseLoop.
-  MBBDistPair calcDistanceThroughSubLoopUse(MachineLoop *CurLoop,
+  MBBDistPair calcDistanceThroughSubLoopUse(const MachineBasicBlock *CurMBB,
+                                            MachineLoop *CurLoop,
                                             MachineLoop *UseLoop) const {
     // All the sub-loops of the UseLoop will be executed before the use.
     // Hence, we should take this into consideration in distance calculation.
     MachineLoop *UseLoopSubLoop = findChildLoop(UseLoop, CurLoop);
     assert(UseLoopSubLoop && "CurLoop should be nested in UseLoop");
-    return calcWeightedDistanceThroughLoop(UseLoopSubLoop, UseLoop);
+    return calcWeightedDistanceThroughLoop(CurMBB, UseLoopSubLoop, UseLoop);
   }
 
   // Similar to calcDistanceThroughSubLoopUse, adding the distance to 'UseMI'.
@@ -1250,8 +1251,8 @@ private:
       const MachineBasicBlock *CurMBB, MachineLoop *CurLoop,
       const MachineInstr *UseMI, const MachineBasicBlock *UseMBB,
       MachineLoop *UseLoop) const {
-    return appendDistanceToUse(calcDistanceThroughSubLoopUse(CurLoop, UseLoop),
-                               UseMI, UseMBB);
+    return appendDistanceToUse(
+        calcDistanceThroughSubLoopUse(CurMBB, CurLoop, UseLoop), UseMI, UseMBB);
   }
 
   // Return the weighted distance through a loop to an outside use loop.
@@ -1278,7 +1279,7 @@ private:
     // are in the same loop nest.
 
     if (MLI->getLoopDepth(CurMBB) <= MLI->getLoopDepth(UseMBB))
-      return calcWeightedDistanceThroughLoop(CurLoop);
+      return calcWeightedDistanceThroughLoop(CurMBB, CurLoop);
 
     assert(CurLoop != OutermostLoop && "The loop cannot be the outermost.");
     const unsigned UseLoopDepth = MLI->getLoopDepth(UseMBB);
@@ -1289,7 +1290,7 @@ private:
       if (CurLoop == OutermostLoop)
         break;
     }
-    return calcWeightedDistanceThroughLoop(CurLoop);
+    return calcWeightedDistanceThroughLoop(CurMBB, CurLoop);
   }
 
   // Similar to calcDistanceThroughLoopToOutsideLoopUse but adds the distance to
@@ -1360,7 +1361,8 @@ private:
            "Unexpected loop configuration");
 
     InstrIdTy UseHeadLen = getHeadLen(UseMI);
-    MBBDistPair InnerLoopLD = calcDistanceThroughSubLoopUse(CurLoop, UseLoop);
+    MBBDistPair InnerLoopLD =
+        calcDistanceThroughSubLoopUse(CurMBB, CurLoop, UseLoop);
     MBBDistPair LD = calcShortestDistanceToLatch(InnerLoopLD.MBB, UseLoop);
     return {InstrInvariant,
             InnerLoopLD.Distance + LD.Distance + getSize(LD.MBB) + UseHeadLen};
