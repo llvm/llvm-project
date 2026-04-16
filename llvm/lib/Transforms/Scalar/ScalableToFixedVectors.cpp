@@ -326,14 +326,15 @@ void ScalableToFixedVectorsPass::convertToFixed(IRBuilder<> &Builder,
   }
   assert(Fixed && "Failed to create FixedOp");
 
-  Instruction *FI = cast<Instruction>(Fixed);
-  FI->copyMetadata(*I);
-  FI->copyIRFlags(I);
-  FI->setDebugLoc(I->getDebugLoc());
-  FI->takeName(I);
-  ScaledToFixed[I] = FI;
+  if (Instruction *FI = dyn_cast<Instruction>(Fixed)) {
+    FI->copyMetadata(*I);
+    FI->copyIRFlags(I);
+    FI->setDebugLoc(I->getDebugLoc());
+    FI->takeName(I);
+  }
+  ScaledToFixed[I] = Fixed;
   LLVM_DEBUG(dbgs() << "Converted scalable:\n"
                     << *I << "\nto fixed:\n"
-                    << *FI << "\n");
+                    << *Fixed << "\n");
   ++NumScalableInstructionsConvertedToFixed;
 }

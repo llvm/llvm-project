@@ -62,7 +62,7 @@ private:
   /// downstream users.
   MapVector<Instruction *, unsigned> DemandedVLs;
   /// Maps the original instructions to their fixed vector type version
-  MapVector<Instruction *, Instruction *> ScaledToFixed;
+  MapVector<Instruction *, Value *> ScaledToFixed;
   SetVector<Instruction *> Worklist;
 
   /// \returns all operands that are of scalable vector type
