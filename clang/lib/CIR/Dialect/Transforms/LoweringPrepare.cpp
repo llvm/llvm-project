@@ -12,6 +12,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -28,10 +29,13 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 #include <memory>
+#include <optional>
 
 using namespace mlir;
 using namespace cir;
@@ -122,6 +126,7 @@ struct LoweringPreparePass
   /// Build the CUDA module constructor that registers the fat binary
   /// with the CUDA runtime.
   void buildCUDAModuleCtor();
+  std::optional<FuncOp> buildCUDAModuleDtor();
 
   /// Handle static local variable initialization with guard variables.
   void handleStaticLocal(cir::GlobalOp globalOp, cir::GetGlobalOp getGlobalOp);
@@ -1815,6 +1820,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToStart(mlirModule.getBody());
 
+  Type voidTy = builder.getVoidTy();
   PointerType voidPtrTy = builder.getVoidPtrTy();
   PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
   IntType intTy = builder.getSIntNTy(32);
@@ -1880,8 +1886,123 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   gpuBinHandle.setInitialValueAttr(builder.getConstNullPtrAttr(voidPtrPtrTy));
   gpuBinHandle.setPrivate();
 
-  // TODO: ctor/dtor/register_globals
-  assert(!cir::MissingFeatures::globalRegistration());
+  // Declare this function:
+  //    void **__{cuda|hip}RegisterFatBinary(void *);
+
+  std::string regFuncName =
+      addUnderscoredPrefix(cudaPrefix, "RegisterFatBinary");
+  FuncType regFuncType = FuncType::get({voidPtrTy}, voidPtrPtrTy);
+  cir::FuncOp regFunc =
+      buildRuntimeFunction(builder, regFuncName, loc, regFuncType);
+
+  std::string moduleCtorName = addUnderscoredPrefix(cudaPrefix, "_module_ctor");
+  cir::FuncOp moduleCtor = buildRuntimeFunction(
+      builder, moduleCtorName, loc, FuncType::get({}, voidTy),
+      GlobalLinkageKind::InternalLinkage);
+
+  globalCtorList.emplace_back(moduleCtorName,
+                              cir::GlobalCtorAttr::getDefaultPriority());
+  builder.setInsertionPointToStart(moduleCtor.addEntryBlock());
+  assert(!cir::MissingFeatures::opGlobalCtorPriority());
+  if (isHIP) {
+    llvm_unreachable("HIP Module Constructor Support");
+  } else if (!astCtx->getLangOpts().GPURelocatableDeviceCode) {
+
+    // --- Create CUDA CTOR-DTOR ---
+    // Register binary with CUDA runtime. This is substantially different in
+    // default mode vs. separate compilation.
+    // Corresponding code:
+    //     gpuBinaryHandle = __cudaRegisterFatBinary(&fatbinWrapper);
+    mlir::Value wrapper = builder.createGetGlobal(fatbinWrapper);
+    mlir::Value fatbinVoidPtr = builder.createBitcast(wrapper, voidPtrTy);
+    cir::CallOp gpuBinaryHandleCall =
+        builder.createCallOp(loc, regFunc, fatbinVoidPtr);
+    mlir::Value gpuBinaryHandle = gpuBinaryHandleCall.getResult();
+    // Store the value back to the global `__cuda_gpubin_handle`.
+    mlir::Value gpuBinaryHandleGlobal = builder.createGetGlobal(gpuBinHandle);
+    builder.createStore(loc, gpuBinaryHandle, gpuBinaryHandleGlobal);
+
+    // TODO: Generate __cuda_register_globals and emit a call.
+    assert(!cir::MissingFeatures::globalRegistration());
+
+    // From CUDA 10.1 onwards, we must call this function to end registration:
+    //      void __cudaRegisterFatBinaryEnd(void **fatbinHandle);
+    // This is CUDA-specific, so no need to use `addUnderscoredPrefix`.
+    if (clang::CudaFeatureEnabled(
+            astCtx->getTargetInfo().getSDKVersion(),
+            clang::CudaFeature::CUDA_USES_FATBIN_REGISTER_END)) {
+      cir::CIRBaseBuilderTy globalBuilder(getContext());
+      globalBuilder.setInsertionPointToStart(mlirModule.getBody());
+      FuncOp endFunc =
+          buildRuntimeFunction(globalBuilder, "__cudaRegisterFatBinaryEnd", loc,
+                               FuncType::get({voidPtrPtrTy}, voidTy));
+      builder.createCallOp(loc, endFunc, gpuBinaryHandle);
+    }
+  } else
+    llvm_unreachable("GPU RDC NYI");
+
+  // Create destructor and register it with atexit() the way NVCC does it. Doing
+  // it during regular destructor phase worked in CUDA before 9.2 but results in
+  // double-free in 9.2.
+  if (std::optional<FuncOp> dtor = buildCUDAModuleDtor()) {
+
+    // extern "C" int atexit(void (*f)(void));
+    cir::CIRBaseBuilderTy globalBuilder(getContext());
+    globalBuilder.setInsertionPointToStart(mlirModule.getBody());
+    FuncOp atexit = buildRuntimeFunction(
+        globalBuilder, "atexit", loc,
+        FuncType::get(PointerType::get(dtor->getFunctionType()), intTy));
+    mlir::Value dtorFunc = GetGlobalOp::create(
+        builder, loc, PointerType::get(dtor->getFunctionType()),
+        mlir::FlatSymbolRefAttr::get(dtor->getSymNameAttr()));
+    builder.createCallOp(loc, atexit, dtorFunc);
+  }
+  cir::ReturnOp::create(builder, loc);
+}
+
+std::optional<FuncOp> LoweringPreparePass::buildCUDAModuleDtor() {
+  if (!mlirModule->getAttr(CIRDialect::getCUDABinaryHandleAttrName()))
+    return {};
+
+  llvm::StringRef prefix = getCUDAPrefix(astCtx);
+
+  VoidType voidTy = VoidType::get(&getContext());
+  PointerType voidPtrPtrTy = PointerType::get(PointerType::get(voidTy));
+
+  mlir::Location loc = mlirModule.getLoc();
+
+  cir::CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  // define: void __cudaUnregisterFatBinary(void ** handle);
+  std::string unregisterFuncName =
+      addUnderscoredPrefix(prefix, "UnregisterFatBinary");
+  FuncOp unregisterFunc = buildRuntimeFunction(
+      builder, unregisterFuncName, loc, FuncType::get({voidPtrPtrTy}, voidTy));
+
+  // void __cuda_module_dtor();
+  // Despite the name, OG doesn't treat it as a destructor, so it shouldn't be
+  // put into globalDtorList. If it were a real dtor, then it would cause
+  // double free above CUDA 9.2. The way to use it is to manually call
+  // atexit() at end of module ctor.
+  std::string dtorName = addUnderscoredPrefix(prefix, "_module_dtor");
+  FuncOp dtor =
+      buildRuntimeFunction(builder, dtorName, loc, FuncType::get({}, voidTy),
+                           GlobalLinkageKind::InternalLinkage);
+
+  builder.setInsertionPointToStart(dtor.addEntryBlock());
+
+  // For dtor, we only need to call:
+  //    __cudaUnregisterFatBinary(__cuda_gpubin_handle);
+
+  std::string gpubinName = addUnderscoredPrefix(prefix, "_gpubin_handle");
+  GlobalOp gpubinGlobal = cast<GlobalOp>(mlirModule.lookupSymbol(gpubinName));
+  mlir::Value gpubinAddress = builder.createGetGlobal(gpubinGlobal);
+  mlir::Value gpubin = builder.createLoad(loc, gpubinAddress);
+  builder.createCallOp(loc, unregisterFunc, gpubin);
+  ReturnOp::create(builder, loc);
+
+  return dtor;
 }
 
 void LoweringPreparePass::runOnOperation() {
