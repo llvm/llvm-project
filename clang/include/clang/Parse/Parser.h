@@ -815,6 +815,11 @@ private:
   /// to the semicolon, consumes that extra token.
   bool ExpectAndConsumeSemi(unsigned DiagID, StringRef TokenUsed = "");
 
+  /// Returns true if the current token is likely the start of a new
+  /// declaration (e.g., it starts a new line and is a declaration specifier).
+  /// This is a heuristic used for error recovery.
+  bool isLikelyAtStartOfNewDeclaration();
+
   /// Consume any extra semi-colons until the end of the line.
   void ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST T = TST_unspecified);
 
