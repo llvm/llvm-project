@@ -607,16 +607,28 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
 
   NewList = NewList->peelOuterOrigin();
 
+  if (!NewList)
+    return;
+
   if (auto *CE = NE->getConstructExpr(); CE) {
-    if (OriginList *ArgList = getOriginsList(*CE); ArgList && NewList)
+    if (OriginList *ArgList = getOriginsList(*CE); ArgList)
       flow(NewList, ArgList, true);
   } else if (const Expr *E = NE->getInitializer(); E) {
     if (const auto *ILE = dyn_cast<InitListExpr>(E); NE->isArray() && ILE) {
-      if (OriginList *InitList = getOriginsList(*ILE); InitList && NewList)
+      if (OriginList *InitList = getOriginsList(*ILE); InitList)
         flow(NewList, InitList, true);
-    } else if (OriginList *ArgList = getOriginsList(*E); ArgList && NewList) {
+    } else if (OriginList *ArgList = getOriginsList(*E); ArgList) {
       flow(NewList, ArgList, true);
     }
+  }
+}
+
+void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
+  OriginList *List = getOriginsList(*DE->getArgument())->peelOuterOrigin();
+  while (List) {
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<DestroyOriginFact>(List->getOuterOriginID(), DE));
+    List = List->peelOuterOrigin();
   }
 }
 

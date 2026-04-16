@@ -98,6 +98,8 @@ public:
           checkInvalidation(IOF);
         else if (const auto *OEF = F->getAs<OriginEscapesFact>())
           checkAnnotations(OEF);
+        else if (const auto *DOF = F->getAs<DestroyOriginFact>())
+          checkDestroyed(DOF);
     issuePendingWarnings();
     suggestAnnotations();
     reportNoescapeViolations();
@@ -219,6 +221,32 @@ public:
     }
   }
 
+  void checkDestroyed(const DestroyOriginFact *DOF) {
+    OriginID DestroyedOrigin = DOF->getDestroyedOrigin();
+    LoanSet DirectlyDestroyedLoans =
+        LoanPropagation.getLoans(DestroyedOrigin, DOF);
+    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(DOF);
+    for (auto &[OID, LiveInfo] : Origins) {
+      LoanSet HeldLoans = LoanPropagation.getLoans(OID, DOF);
+      for (LoanID DestroyedLoanID : HeldLoans) {
+        if (!DirectlyDestroyedLoans.contains(DestroyedLoanID))
+          continue;
+
+        bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
+        bool LastDomination =
+            FinalWarningsMap.lookup(DestroyedLoanID).CausingFactDominatesExpiry;
+        if (!LastDomination) {
+          FinalWarningsMap[DestroyedLoanID] = {
+              /*ExpiryLoc=*/{},
+              /*CausingFact=*/LiveInfo.CausingFact,
+              /*MovedExpr=*/nullptr,
+              /*InvalidatedByExpr=*/DOF->getDestroyExpr(),
+              /*CausingFactDominatesExpiry=*/CurDomination};
+        }
+      }
+    }
+  }
+
   void issuePendingWarnings() {
     if (!SemaHelper)
       return;
@@ -269,7 +297,8 @@ public:
   }
 
   /// Returns the declaration of a function that is visible across translation
-  /// units, if such a declaration exists and is different from the definition.
+  /// units, if such a declaration exists and is different from the
+  /// definition.
   static const FunctionDecl *getCrossTUDecl(const FunctionDecl &FD,
                                             SourceManager &SM) {
     if (!FD.isExternallyVisible())
