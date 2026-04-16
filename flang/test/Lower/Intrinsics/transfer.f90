@@ -107,3 +107,47 @@ subroutine trans_test(store, word)
     integer :: mold(4)
     result = transfer(src, mold)
   end subroutine
+
+  ! Allocatable mold: must use runtime.
+  subroutine trans_test_alloc_mold(src, result)
+    ! CHECK-LABEL: func @_QPtrans_test_alloc_mold(
+    ! CHECK:         fir.call @_FortranATransfer(
+    ! CHECK:         return
+    ! CHECK:       }
+    real :: src
+    integer, allocatable :: mold(:)
+    integer, allocatable :: result(:)
+    result = transfer(src, mold)
+  end subroutine
+
+  ! POINTER source: descriptor is unpacked before reaching genTransfer,
+  ! so the inline optimization applies.
+  subroutine trans_test_pointer_source(store, src)
+    ! CHECK-LABEL: func @_QPtrans_test_pointer_source(
+    ! CHECK:         fir.load {{.*}} : !fir.ref<!fir.box<!fir.ptr<f32>>>
+    ! CHECK:         fir.box_addr
+    ! CHECK:         %[[VAL:.*]] = fir.load {{.*}} : !fir.ptr<f32>
+    ! CHECK:         arith.bitcast %[[VAL]] : f32 to i32
+    ! CHECK-NOT:     fir.call @_FortranATransfer
+    ! CHECK:         return
+    ! CHECK:       }
+    integer :: store
+    real, pointer :: src
+    store = transfer(src, store)
+  end subroutine
+
+  ! ALLOCATABLE source: descriptor is unpacked before reaching genTransfer,
+  ! so the inline optimization applies.
+  subroutine trans_test_alloc_source(store, src)
+    ! CHECK-LABEL: func @_QPtrans_test_alloc_source(
+    ! CHECK:         fir.load {{.*}} : !fir.ref<!fir.box<!fir.heap<f32>>>
+    ! CHECK:         fir.box_addr
+    ! CHECK:         %[[VAL:.*]] = fir.load {{.*}} : !fir.heap<f32>
+    ! CHECK:         arith.bitcast %[[VAL]] : f32 to i32
+    ! CHECK-NOT:     fir.call @_FortranATransfer
+    ! CHECK:         return
+    ! CHECK:       }
+    integer :: store
+    real, allocatable :: src
+    store = transfer(src, store)
+  end subroutine
