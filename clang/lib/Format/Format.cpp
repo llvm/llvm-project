@@ -17,6 +17,7 @@
 #include "IntegerLiteralSeparatorFixer.h"
 #include "NamespaceEndCommentsFixer.h"
 #include "NumericLiteralCaseFixer.h"
+#include "TemplateTypeParameterKeywordFixer.h"
 #include "ObjCPropertyAttributeOrderFixer.h"
 #include "QualifierAlignmentFixer.h"
 #include "SortJavaScriptImports.h"
@@ -487,6 +488,16 @@ template <> struct ScalarEnumerationTraits<FormatStyle::JavaScriptQuoteStyle> {
     IO.enumCase(Value, "Leave", FormatStyle::JSQS_Leave);
     IO.enumCase(Value, "Single", FormatStyle::JSQS_Single);
     IO.enumCase(Value, "Double", FormatStyle::JSQS_Double);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::TemplateTypeParameterKeywordOption> {
+  static void enumeration(IO &IO,
+                          FormatStyle::TemplateTypeParameterKeywordOption &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::TTPS_Leave);
+    IO.enumCase(Value, "UseTypename", FormatStyle::TTPS_UseTypename);
+    IO.enumCase(Value, "UseClass", FormatStyle::TTPS_UseClass);
   }
 };
 
@@ -1429,6 +1440,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("TableGenBreakInsideDAGArg",
                    Style.TableGenBreakInsideDAGArg);
     IO.mapOptional("TabWidth", Style.TabWidth);
+    IO.mapOptional("TemplateTypeParameterKeyword",
+                   Style.TemplateTypeParameterKeyword);
     IO.mapOptional("TemplateNames", Style.TemplateNames);
     IO.mapOptional("TypeNames", Style.TypeNames);
     IO.mapOptional("TypenameMacros", Style.TypenameMacros);
@@ -1886,6 +1899,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                                   /*HexDigit=*/FormatStyle::NLCS_Leave,
                                   /*Prefix=*/FormatStyle::NLCS_Leave,
                                   /*Suffix=*/FormatStyle::NLCS_Leave};
+  LLVMStyle.TemplateTypeParameterKeyword = FormatStyle::TTPS_Leave;
   LLVMStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   LLVMStyle.ObjCBlockIndentWidth = 2;
   LLVMStyle.ObjCBreakBeforeNestedBlockParam = true;
@@ -4185,6 +4199,12 @@ reformat(const FormatStyle &Style, StringRef Code,
   });
 
   if (Style.isCpp()) {
+    if (Style.TemplateTypeParameterKeyword != FormatStyle::TTPS_Leave) {
+      Passes.emplace_back([&](const Environment &Env) {
+        return TemplateTypeParameterKeywordFixer(Env, Expanded).process();
+      });
+    }
+
     if (Style.QualifierAlignment != FormatStyle::QAS_Leave)
       addQualifierAlignmentFixerPasses(Expanded, Passes);
 

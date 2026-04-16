@@ -21925,6 +21925,99 @@ TEST_F(FormatTest, SpaceAfterTemplateKeyword) {
   verifyFormat("template<int> void foo();", Style);
 }
 
+TEST_F(FormatTest, TemplateTypeParameterKeyword) {
+  {
+    FormatStyle S = getLLVMStyle();
+    S.TemplateTypeParameterKeyword = FormatStyle::TTPS_Leave;
+    verifyFormat("template <class T> void f();", S);
+    verifyFormat("template <typename T> void f();", S);
+    verifyFormat("template <class A, class B> void g();", S);
+    verifyFormat("template <typename A, typename B> void g();", S);
+    verifyFormat("template <class A, class B, typename C, class D> void h();",
+                 S);
+    verifyFormat("template <typename A, typename B, class C, typename D> "
+                 "void h();",
+                 S);
+    verifyFormat("template <class A, int N, class B> void j();", S);
+    verifyFormat("template <typename A, int N, typename B> void j();", S);
+    verifyFormat("template <template <class U> class C> struct S;", S);
+    verifyFormat("template <template <typename U> typename C> struct S;", S);
+    verifyFormat("void h() {\n  []<class T>(T t) {}();\n}", S);
+    verifyFormat("void h() {\n  []<typename T>(T t) {}();\n}", S);
+    verifyFormat("template <class C::M *p> void nttp();", S);
+    verifyFormat("template <typename C::type V> void nttp();", S);
+    verifyFormat("template <template <typename T::type> class U> void f();", S);
+    verifyFormat("template <template <typename T::type> typename U> void f();",
+                 S);
+  }
+  {
+    FormatStyle S = getLLVMStyle();
+    S.TemplateTypeParameterKeyword = FormatStyle::TTPS_UseTypename;
+    verifyFormat("template <typename T> void f();",
+                 "template <class T> void f();", S);
+    verifyFormat("template <typename A, typename B> void g();",
+                 "template <class A, class B> void g();", S);
+    verifyFormat("template <typename A, typename B, typename C, typename D> "
+                 "void h();",
+                 "template <class A, class B, class C, class D> void h();", S);
+    verifyFormat("template <typename A, int N, typename B> void j();",
+                 "template <class A, int N, class B> void j();", S);
+    verifyFormat("template <template <typename U> typename C> struct S;",
+                 "template <template <class U> class C> struct S;", S);
+    verifyFormat("void h() {\n  []<typename T>(T t) {}();\n}",
+                 "void h() {\n  []<class T>(T t) {}();\n}", S);
+    verifyFormat("template <class C::M *p> void nttp();",
+                 "template <class C::M *p> void nttp();", S);
+    verifyFormat("template <typename C::type V> void nttp();",
+                 "template <typename C::type V> void nttp();", S);
+    verifyFormat("template <template <typename T::type> typename U> void f();",
+                 "template <template <typename T::type> class U> void f();", S);
+  }
+  {
+    FormatStyle S = getLLVMStyle();
+    S.TemplateTypeParameterKeyword = FormatStyle::TTPS_UseClass;
+    verifyFormat("template <class T> void f();",
+                 "template <typename T> void f();", S);
+    verifyFormat("template <class A, class B> void g();",
+                 "template <typename A, typename B> void g();", S);
+    verifyFormat("template <class A, class B, class C, class D> void h();",
+                 "template <typename A, typename B, typename C, typename D> "
+                 "void h();",
+                 S);
+    verifyFormat("template <class A, int N, class B> void j();",
+                 "template <typename A, int N, typename B> void j();", S);
+    verifyFormat("template <template <class U> class C> struct S;",
+                 "template <template <typename U> typename C> struct S;", S);
+    verifyFormat("void h() {\n  []<class T>(T t) {}();\n}",
+                 "void h() {\n  []<typename T>(T t) {}();\n}", S);
+    verifyFormat("template <class C::M *p> void nttp();",
+                 "template <class C::M *p> void nttp();", S);
+    verifyFormat("template <typename C::type V> void nttp();",
+                 "template <typename C::type V> void nttp();", S);
+    verifyFormat("template <template <typename T::type> class U> void f();",
+                 "template <template <typename T::type> typename U> void f();",
+                 S);
+  }
+
+  // Verify that before C++14, the fixer doesn't produce template <template <class> typename C>.
+  {
+    FormatStyle S = getLLVMStyle();
+    S.Standard = FormatStyle::LS_Cpp14;
+    S.TemplateTypeParameterKeyword = FormatStyle::TTPS_UseTypename;
+    verifyFormat("template <template <typename U> class C> struct S;",
+                 "template <template <class U> class C> struct S;", S);
+    verifyFormat("template <template <typename U> class C> struct S;",
+                 "template <template <class U> typename C> struct S;", S);
+  }
+  {
+    FormatStyle S = getLLVMStyle();
+    S.Standard = FormatStyle::LS_Cpp17;
+    S.TemplateTypeParameterKeyword = FormatStyle::TTPS_UseTypename;
+    verifyFormat("template <template <typename U> typename C> struct S;",
+                 "template <template <class U> class C> struct S;", S);
+  }
+}
+
 TEST_F(FormatTest, TripleAngleBrackets) {
   verifyFormat("f<<<1, 1>>>();");
   verifyFormat("f<<<1, 1, 1, s>>>();");

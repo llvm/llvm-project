@@ -18,6 +18,7 @@ add_clang_library(clangFormat
   ObjCPropertyAttributeOrderFixer.cpp
   QualifierAlignmentFixer.cpp
   SortJavaScriptImports.cpp
+  TemplateTypeParameterKeywordFixer.cpp
   TokenAnalyzer.cpp
   TokenAnnotator.cpp
   UnwrappedLineFormatter.cpp

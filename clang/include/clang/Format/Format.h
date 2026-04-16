@@ -4085,6 +4085,40 @@ struct FormatStyle {
   /// \version 22
   NumericLiteralCaseStyle NumericLiteralCase;
 
+  /// Whether to rewrite ``typename`` / ``class`` in template parameter lists.
+  ///
+  /// \code
+  ///   Leave:        template <class T, typename U> void f();     // unchanged
+  ///   UseTypename:  template <typename T, typename U> void f();
+  ///   UseClass:     template <class T, class U> void f();
+  /// \endcode
+  ///
+  /// This applies to template declarations such as ``template <class T>``,
+  /// ``template <template <class U> class C>``, and generic lambdas like
+  /// ``[]<class T>() {}``.
+  ///
+  /// \note
+  ///   The fixer only replaces a ``class`` or ``typename`` token when it can
+  ///   determine that the token introduces a template parameter name (not an
+  ///   elaborated type specifier such as ``template <class C::M *p>``).
+  ///
+  ///   For a template template parameter, ``typename`` is only valid in C++17
+  ///   and later. In earlier standards, ``UseTypename`` still emits ``class``
+  ///   for the template template parameter introducer.
+  /// \endnote
+  ///
+  /// \version 23
+  enum TemplateTypeParameterKeywordOption : int8_t {
+    /// Leave the source spelling unchanged.
+    TTPS_Leave,
+    /// Use ``typename``.
+    TTPS_UseTypename,
+    /// Use ``class``.
+    TTPS_UseClass,
+  };
+  /// \see TemplateTypeParameterKeywordOption
+  TemplateTypeParameterKeywordOption TemplateTypeParameterKeyword;
+
   /// Controls bin-packing Objective-C protocol conformance list
   /// items into as few lines as possible when they go over ``ColumnLimit``.
   ///
@@ -6034,6 +6068,7 @@ struct FormatStyle {
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&
            NumericLiteralCase == R.NumericLiteralCase &&
+           TemplateTypeParameterKeyword == R.TemplateTypeParameterKeyword &&
            ObjCBinPackProtocolList == R.ObjCBinPackProtocolList &&
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCBreakBeforeNestedBlockParam ==
