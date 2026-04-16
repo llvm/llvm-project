@@ -79,8 +79,7 @@ struct Futex : public cpp::Atomic<FutexWordType> {
 
   LIBC_INLINE ErrorOr<int> requeue_to(Futex & /*other*/,
                                       cpp::optional<FutexWordType> /*oldval*/,
-                                      int /*wake_limit*/,
-                                      int /*requeue_limit*/,
+                                      int /*wake_limit*/, int /*requeue_limit*/,
                                       bool /*is_shared*/ = false) {
     return cpp::unexpected(ENOSYS);
   }
