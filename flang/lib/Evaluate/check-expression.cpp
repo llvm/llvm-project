@@ -1653,7 +1653,7 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // If the actual argument's base object has INTENT(IN) in the caller's
     // context, copy-out would violate the read-only semantics of INTENT(IN).
     if (const Expr<SomeType> *expr{actual->UnwrapExpr()}) {
-      if (const Symbol * symbol{GetFirstSymbol(*expr)}) {
+      if (const Symbol *symbol{GetFirstSymbol(*expr)}) {
         if (semantics::IsIntentIn(*symbol)) {
           return false;
         }
