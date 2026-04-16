@@ -724,8 +724,9 @@ static char *getBinaryPath() {
       char *C = strCopy(FindBuf, DirPath, NameMax);
       C = strCopy(C, d->d_name, NameMax - (C - FindBuf));
       *C = '\0';
-      uint32_t Ret = __readlink(FindBuf, TargetPath, sizeof(TargetPath));
-      assert(Ret != -1 && Ret != BufSize, "readlink error");
+      uint64_t Ret = __readlink(FindBuf, TargetPath, sizeof(TargetPath));
+      assert(static_cast<int64_t>(Ret) >= 0 && Ret < sizeof(TargetPath),
+             "readlink error");
       TargetPath[Ret] = '\0';
       __close(FDdir);
       return TargetPath;
