@@ -27,7 +27,6 @@ class JSONGenerator : public Generator {
   void serializeCommonChildren(
       const ScopeChildren &Children, json::Object &Obj,
       std::optional<ReferenceFunc> MDReferenceLambda = std::nullopt);
-  void serializeContexts(Info *I, llvm::StringMap<OwnedPtr<Info>> &Infos);
   void serializeInfo(const ConstraintInfo &I, Object &Obj);
   void serializeInfo(const TemplateInfo &Template, Object &Obj);
   void serializeInfo(const ConceptInfo &I, Object &Obj);
@@ -62,12 +61,10 @@ class JSONGenerator : public Generator {
     };
   }
 
-  llvm::DenseMap<const Info *, SmallVector<Context, 4>> ContextsMap;
-  const ClangDocContext *CDCtx;
-  bool Markdown;
-
 public:
   static const char *Format;
+  const ClangDocContext *CDCtx;
+  bool Markdown;
 
   Error generateDocumentation(StringRef RootDir,
                               llvm::StringMap<OwnedPtr<doc::Info>> Infos,
@@ -323,20 +320,13 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
 
 /// Creates Contexts for namespaces and records to allow for navigation.
 void JSONGenerator::generateContext(const Info &I, Object &Obj) {
-  Obj["Contexts"] = json::Array();
-  Obj["HasContexts"] = true;
-
-  auto It = ContextsMap.find(&I);
-  if (It == ContextsMap.end() || It->second.empty())
-    return;
-
-  auto &ContextArrayRef = *Obj["Contexts"].getAsArray();
-  const auto &Contexts = It->second;
-  ContextArrayRef.reserve(Contexts.size());
+  json::Value ContextArray = json::Array();
+  auto &ContextArrayRef = *ContextArray.getAsArray();
+  ContextArrayRef.reserve(I.Contexts.size());
 
   std::string CurrentRelativePath;
   bool PreviousRecord = false;
-  for (const auto &Current : Contexts) {
+  for (const auto &Current : I.Contexts) {
     json::Value ContextVal = Object();
     Object &Context = *ContextVal.getAsObject();
     serializeReference(Current, Context);
@@ -382,9 +372,11 @@ void JSONGenerator::generateContext(const Info &I, Object &Obj) {
   }
 
   ContextArrayRef.back().getAsObject()->insert({"End", true});
+  Obj["Contexts"] = ContextArray;
+  Obj["HasContexts"] = true;
 }
 
-static void serializeDescription(const OwningVec<CommentInfo> &Description,
+static void serializeDescription(llvm::ArrayRef<CommentInfo> Description,
                                  json::Object &Obj, StringRef Key = "") {
   if (Description.empty())
     return;
@@ -437,8 +429,7 @@ void JSONGenerator::serializeCommonAttributes(const Info &I,
       Obj["Location"] = serializeLocation(Symbol->DefLoc.value());
   }
 
-  auto It = ContextsMap.find(&I);
-  if (It != ContextsMap.end() && !It->second.empty())
+  if (!I.Contexts.empty())
     generateContext(I, Obj);
 }
 
@@ -835,9 +826,9 @@ SmallString<16> JSONGenerator::determineFileName(Info *I,
 
 /// \param CDCtxIndex Passed by copy since clang-doc's context is passed to the
 /// generator as `const`
-static std::vector<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
+static OwningVec<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
   CDCtxIndex.sort();
-  std::vector<Index> Processed;
+  OwningVec<Index> Processed;
   Processed.reserve(CDCtxIndex.Children.size());
   for (const auto *Idx : CDCtxIndex.getSortedChildren()) {
     Index NewIdx = *Idx;
@@ -857,7 +848,7 @@ Error JSONGenerator::serializeAllFiles(const ClangDocContext &CDCtx,
                                        StringRef RootDir) {
   json::Value ObjVal = Object();
   Object &Obj = *ObjVal.getAsObject();
-  std::vector<Index> IndexCopy = preprocessCDCtxIndex(CDCtx.Idx);
+  OwningVec<Index> IndexCopy = preprocessCDCtxIndex(CDCtx.Idx);
   serializeArray(IndexCopy, Obj, "Index", serializeReferenceLambda());
   SmallString<128> Path;
   sys::path::append(Path, RootDir, "json", "all_files.json");
@@ -920,12 +911,10 @@ Error JSONGenerator::serializeIndex(StringRef RootDir) {
   return Error::success();
 }
 
-void JSONGenerator::serializeContexts(Info *I,
-                                      StringMap<OwnedPtr<Info>> &Infos) {
+static void serializeContexts(Info *I, StringMap<OwnedPtr<Info>> &Infos) {
   if (I->USR == GlobalNamespaceID)
     return;
   auto ParentUSR = I->ParentUSR;
-  auto &LocalContexts = ContextsMap[I];
 
   while (true) {
     // Infos may not have the ParentUSR, if its been filtered (public or path),
@@ -939,12 +928,12 @@ void JSONGenerator::serializeContexts(Info *I,
       Context GlobalRef(ParentInfo->USR, "Global Namespace",
                         InfoType::IT_namespace, "GlobalNamespace", "",
                         SmallString<16>("index"));
-      LocalContexts.push_back(GlobalRef);
-      break;
+      I->Contexts.push_back(GlobalRef);
+      return;
     }
 
     Context ParentRef(*ParentInfo);
-    LocalContexts.push_back(ParentRef);
+    I->Contexts.push_back(ParentRef);
     ParentUSR = ParentInfo->ParentUSR;
   }
 }
