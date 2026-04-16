@@ -1395,8 +1395,8 @@ public:
 
   static Destroyer destroyCXXObject;
 
-  void pushEHDestroy(QualType::DestructionKind dtorKind, Address addr,
-                     QualType type);
+  void pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind, Address addr,
+                             QualType type);
 
   void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
                    QualType type);

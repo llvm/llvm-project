@@ -1071,12 +1071,12 @@ void CIRGenFunction::pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
       destroyer);
 }
 
-/// pushEHDestroy - Push the standard destructor for the given type as
-/// an EH-only cleanup.
-void CIRGenFunction::pushEHDestroy(QualType::DestructionKind dtorKind,
-                                   Address addr, QualType type) {
-  assert(dtorKind && "cannot push destructor for trivial type");
-  assert(needsEHCleanup(dtorKind));
+/// pushEHDestroyIfNeeded - Push the standard destructor for the given type as
+/// an EH-only cleanup. If EH cleanup is not needed, just return.
+void CIRGenFunction::pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind,
+                                           Address addr, QualType type) {
+  if (!needsEHCleanup(dtorKind))
+    return;
 
   assert(!cir::MissingFeatures::useEHCleanupForArray());
   pushDestroy(EHCleanup, addr, type, getDestroyer(dtorKind));
