@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the QueueImpl class, which implements
+/// sycl::queue functionality.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_QUEUE_IMPL
 #define _LIBSYCL_QUEUE_IMPL
