@@ -137,6 +137,22 @@ define void @pli_b_store_i32(ptr %p) {
   ret void
 }
 
+define i64 @plui_h_i64() {
+; CHECK-LABEL: plui_h_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    plui.h a0, -9
+; CHECK-NEXT:    ret
+  ret i64 u0xfdc0fdc0fdc0fdc0
+}
+
+define i64 @plui_w_i64() {
+; CHECK-LABEL: plui_w_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    plui.w a0, 473
+; CHECK-NEXT:    ret
+  ret i64 u0x7640000076400000
+}
+
 define i64 @pack_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: pack_i64:
 ; CHECK:       # %bb.0:

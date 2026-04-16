@@ -534,6 +534,11 @@ struct VPlanTransforms {
   /// are only valid for a subset of VFs in Range, Range.End is updated.
   static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
                                       VFRange &Range);
+
+  /// Convert load/store VPInstructions in \p Plan into widened or replicate
+  /// recipes. Non load/store input instructions are left unchanged.
+  static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
+                                         VPRecipeBuilder &RecipeBuilder);
 };
 
 } // namespace llvm

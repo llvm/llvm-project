@@ -1231,10 +1231,11 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   if (MaxTripCount && UP.Count > MaxTripCount)
     UP.Count = MaxTripCount;
 
-  LLVM_DEBUG(dbgs().indent(2)
-             << "Runtime unrolling with count: " << UP.Count << "\n");
   if (UP.Count < 2)
     UP.Count = 0;
+  else
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Runtime unrolling with count: " << UP.Count << "\n");
   return;
 }
 

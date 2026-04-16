@@ -39,8 +39,8 @@ define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
-; CHECK-NEXT:    cntp x0, p0, p0.s
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    cntp x0, p1, p1.s
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.nxv4i32(<vscale x 4 x i32> %a, i1 0)
   ret i32 %res
@@ -53,8 +53,8 @@ define i64 @vscale_4096(<vscale x 16 x i8> %a) #1 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
-; CHECK-NEXT:    cntp x0, p0, p0.b
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    cntp x0, p1, p1.b
 ; CHECK-NEXT:    ret
   %res = call i64 @llvm.experimental.cttz.elts.i64.nxv16i8(<vscale x 16 x i8> %a, i1 0)
   ret i64 %res
@@ -65,8 +65,8 @@ define i64 @vscale_4096_poison(<vscale x 16 x i8> %a) #1 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
-; CHECK-NEXT:    cntp x0, p0, p0.b
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    cntp x0, p1, p1.b
 ; CHECK-NEXT:    ret
   %res = call i64 @llvm.experimental.cttz.elts.i64.nxv16i8(<vscale x 16 x i8> %a, i1 1)
   ret i64 %res
@@ -240,10 +240,10 @@ define i32 @ctz_nxv16i1_poison(<vscale x 16 x i1> %a) {
 define i32 @ctz_and_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: ctz_and_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, z1.b
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x0, p0, p0.b
+; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
+; CHECK-NEXT:    cntp x0, p1, p1.b
 ; CHECK-NEXT:    ret
   %cmp = icmp ne <vscale x 16 x i8> %a, %b
   %select = select <vscale x 16 x i1> %pg, <vscale x 16 x i1> %cmp, <vscale x 16 x i1> zeroinitializer
@@ -285,8 +285,8 @@ define i32 @ctz_v16i1(<16 x i1> %a) {
 ; NONSTREAMING-NEXT:    shl v0.16b, v0.16b, #7
 ; NONSTREAMING-NEXT:    ptrue p0.b, vl16
 ; NONSTREAMING-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; NONSTREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; NONSTREAMING-NEXT:    cntp x0, p0, p0.b
+; NONSTREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; NONSTREAMING-NEXT:    cntp x0, p1, p1.b
 ; NONSTREAMING-NEXT:    ret
 ;
 ; STREAMING-LABEL: ctz_v16i1:
@@ -295,8 +295,8 @@ define i32 @ctz_v16i1(<16 x i1> %a) {
 ; STREAMING-NEXT:    ptrue p0.b, vl16
 ; STREAMING-NEXT:    asr z0.b, z0.b, #7
 ; STREAMING-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; STREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; STREAMING-NEXT:    cntp x0, p0, p0.b
+; STREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; STREAMING-NEXT:    cntp x0, p1, p1.b
 ; STREAMING-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v16i1(<16 x i1> %a, i1 0)
   ret i32 %res
@@ -308,8 +308,8 @@ define i32 @ctz_v16i1_poison(<16 x i1> %a) {
 ; NONSTREAMING-NEXT:    shl v0.16b, v0.16b, #7
 ; NONSTREAMING-NEXT:    ptrue p0.b, vl16
 ; NONSTREAMING-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; NONSTREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; NONSTREAMING-NEXT:    cntp x0, p0, p0.b
+; NONSTREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; NONSTREAMING-NEXT:    cntp x0, p1, p1.b
 ; NONSTREAMING-NEXT:    ret
 ;
 ; STREAMING-LABEL: ctz_v16i1_poison:
@@ -318,8 +318,8 @@ define i32 @ctz_v16i1_poison(<16 x i1> %a) {
 ; STREAMING-NEXT:    ptrue p0.b, vl16
 ; STREAMING-NEXT:    asr z0.b, z0.b, #7
 ; STREAMING-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; STREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; STREAMING-NEXT:    cntp x0, p0, p0.b
+; STREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; STREAMING-NEXT:    cntp x0, p1, p1.b
 ; STREAMING-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v16i1(<16 x i1> %a, i1 1)
   ret i32 %res
@@ -331,8 +331,8 @@ define i64 @add_i64_ctz_v16i1_poison(<16 x i1> %a, i64 %b) {
 ; NONSTREAMING-NEXT:    shl v0.16b, v0.16b, #7
 ; NONSTREAMING-NEXT:    ptrue p0.b, vl16
 ; NONSTREAMING-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; NONSTREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; NONSTREAMING-NEXT:    incp x0, p0.b
+; NONSTREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; NONSTREAMING-NEXT:    incp x0, p1.b
 ; NONSTREAMING-NEXT:    ret
 ;
 ; STREAMING-LABEL: add_i64_ctz_v16i1_poison:
@@ -341,8 +341,8 @@ define i64 @add_i64_ctz_v16i1_poison(<16 x i1> %a, i64 %b) {
 ; STREAMING-NEXT:    ptrue p0.b, vl16
 ; STREAMING-NEXT:    asr z0.b, z0.b, #7
 ; STREAMING-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; STREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; STREAMING-NEXT:    incp x0, p0.b
+; STREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; STREAMING-NEXT:    incp x0, p1.b
 ; STREAMING-NEXT:    ret
   %res = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> %a, i1 1)
   %add = add i64 %res, %b
@@ -355,8 +355,8 @@ define i32 @ctz_v8i1(<8 x i1> %a) {
 ; NONSTREAMING-NEXT:    shl v0.8b, v0.8b, #7
 ; NONSTREAMING-NEXT:    ptrue p0.b, vl8
 ; NONSTREAMING-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; NONSTREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; NONSTREAMING-NEXT:    cntp x0, p0, p0.b
+; NONSTREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; NONSTREAMING-NEXT:    cntp x0, p1, p1.b
 ; NONSTREAMING-NEXT:    ret
 ;
 ; STREAMING-LABEL: ctz_v8i1:
@@ -365,8 +365,8 @@ define i32 @ctz_v8i1(<8 x i1> %a) {
 ; STREAMING-NEXT:    ptrue p0.b, vl8
 ; STREAMING-NEXT:    asr z0.b, z0.b, #7
 ; STREAMING-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; STREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; STREAMING-NEXT:    cntp x0, p0, p0.b
+; STREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; STREAMING-NEXT:    cntp x0, p1, p1.b
 ; STREAMING-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v8i1(<8 x i1> %a, i1 0)
   ret i32 %res
@@ -378,8 +378,8 @@ define i32 @ctz_v8i1_poison(<8 x i1> %a) {
 ; NONSTREAMING-NEXT:    shl v0.8b, v0.8b, #7
 ; NONSTREAMING-NEXT:    ptrue p0.b, vl8
 ; NONSTREAMING-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; NONSTREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; NONSTREAMING-NEXT:    cntp x0, p0, p0.b
+; NONSTREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; NONSTREAMING-NEXT:    cntp x0, p1, p1.b
 ; NONSTREAMING-NEXT:    ret
 ;
 ; STREAMING-LABEL: ctz_v8i1_poison:
@@ -388,8 +388,8 @@ define i32 @ctz_v8i1_poison(<8 x i1> %a) {
 ; STREAMING-NEXT:    ptrue p0.b, vl8
 ; STREAMING-NEXT:    asr z0.b, z0.b, #7
 ; STREAMING-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; STREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; STREAMING-NEXT:    cntp x0, p0, p0.b
+; STREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; STREAMING-NEXT:    cntp x0, p1, p1.b
 ; STREAMING-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v8i1(<8 x i1> %a, i1 1)
   ret i32 %res
@@ -401,8 +401,8 @@ define i32 @ctz_v4i1(<4 x i1> %a) {
 ; NONSTREAMING-NEXT:    shl v0.4h, v0.4h, #15
 ; NONSTREAMING-NEXT:    ptrue p0.h, vl4
 ; NONSTREAMING-NEXT:    cmpne p1.h, p0/z, z0.h, #0
-; NONSTREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; NONSTREAMING-NEXT:    cntp x0, p0, p0.h
+; NONSTREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; NONSTREAMING-NEXT:    cntp x0, p1, p1.h
 ; NONSTREAMING-NEXT:    ret
 ;
 ; STREAMING-LABEL: ctz_v4i1:
@@ -411,8 +411,8 @@ define i32 @ctz_v4i1(<4 x i1> %a) {
 ; STREAMING-NEXT:    ptrue p0.h, vl4
 ; STREAMING-NEXT:    asr z0.h, z0.h, #15
 ; STREAMING-NEXT:    cmpne p1.h, p0/z, z0.h, #0
-; STREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; STREAMING-NEXT:    cntp x0, p0, p0.h
+; STREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; STREAMING-NEXT:    cntp x0, p1, p1.h
 ; STREAMING-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> %a, i1 0)
   ret i32 %res
@@ -424,8 +424,8 @@ define i32 @ctz_v4i1_poison(<4 x i1> %a) {
 ; NONSTREAMING-NEXT:    shl v0.4h, v0.4h, #15
 ; NONSTREAMING-NEXT:    ptrue p0.h, vl4
 ; NONSTREAMING-NEXT:    cmpne p1.h, p0/z, z0.h, #0
-; NONSTREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; NONSTREAMING-NEXT:    cntp x0, p0, p0.h
+; NONSTREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; NONSTREAMING-NEXT:    cntp x0, p1, p1.h
 ; NONSTREAMING-NEXT:    ret
 ;
 ; STREAMING-LABEL: ctz_v4i1_poison:
@@ -434,8 +434,8 @@ define i32 @ctz_v4i1_poison(<4 x i1> %a) {
 ; STREAMING-NEXT:    ptrue p0.h, vl4
 ; STREAMING-NEXT:    asr z0.h, z0.h, #15
 ; STREAMING-NEXT:    cmpne p1.h, p0/z, z0.h, #0
-; STREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; STREAMING-NEXT:    cntp x0, p0, p0.h
+; STREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; STREAMING-NEXT:    cntp x0, p1, p1.h
 ; STREAMING-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> %a, i1 1)
   ret i32 %res
@@ -447,8 +447,8 @@ define i32 @ctz_v2i1(<2 x i1> %a) {
 ; NONSTREAMING-NEXT:    shl v0.2s, v0.2s, #31
 ; NONSTREAMING-NEXT:    ptrue p0.s, vl2
 ; NONSTREAMING-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; NONSTREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; NONSTREAMING-NEXT:    cntp x0, p0, p0.s
+; NONSTREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; NONSTREAMING-NEXT:    cntp x0, p1, p1.s
 ; NONSTREAMING-NEXT:    ret
 ;
 ; STREAMING-LABEL: ctz_v2i1:
@@ -457,8 +457,8 @@ define i32 @ctz_v2i1(<2 x i1> %a) {
 ; STREAMING-NEXT:    ptrue p0.s, vl2
 ; STREAMING-NEXT:    asr z0.s, z0.s, #31
 ; STREAMING-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; STREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; STREAMING-NEXT:    cntp x0, p0, p0.s
+; STREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; STREAMING-NEXT:    cntp x0, p1, p1.s
 ; STREAMING-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v2i1(<2 x i1> %a, i1 0)
   ret i32 %res
@@ -470,8 +470,8 @@ define i32 @ctz_v2i1_poison(<2 x i1> %a) {
 ; NONSTREAMING-NEXT:    shl v0.2s, v0.2s, #31
 ; NONSTREAMING-NEXT:    ptrue p0.s, vl2
 ; NONSTREAMING-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; NONSTREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; NONSTREAMING-NEXT:    cntp x0, p0, p0.s
+; NONSTREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; NONSTREAMING-NEXT:    cntp x0, p1, p1.s
 ; NONSTREAMING-NEXT:    ret
 ;
 ; STREAMING-LABEL: ctz_v2i1_poison:
@@ -480,8 +480,8 @@ define i32 @ctz_v2i1_poison(<2 x i1> %a) {
 ; STREAMING-NEXT:    ptrue p0.s, vl2
 ; STREAMING-NEXT:    asr z0.s, z0.s, #31
 ; STREAMING-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; STREAMING-NEXT:    brkb p0.b, p0/z, p1.b
-; STREAMING-NEXT:    cntp x0, p0, p0.s
+; STREAMING-NEXT:    brkb p1.b, p0/z, p1.b
+; STREAMING-NEXT:    cntp x0, p1, p1.s
 ; STREAMING-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v2i1(<2 x i1> %a, i1 1)
   ret i32 %res

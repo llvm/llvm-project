@@ -330,10 +330,6 @@ static cl::opt<bool> EnableIndVarRegisterHeur(
     "enable-ind-var-reg-heur", cl::init(true), cl::Hidden,
     cl::desc("Count the induction variable only once when interleaving"));
 
-static cl::opt<bool> EnableCondStoresVectorization(
-    "enable-cond-stores-vec", cl::init(true), cl::Hidden,
-    cl::desc("Enable if predication of stores during vectorization."));
-
 static cl::opt<unsigned> MaxNestedScalarReductionIC(
     "max-nested-scalar-reduction-interleave", cl::init(2), cl::Hidden,
     cl::desc("The maximum interleave count to use when interleaving a scalar "
@@ -1454,8 +1450,6 @@ public:
   /// vector widths. The cost that is returned is *not* normalized by
   /// the factor width.
   InstructionCost expectedCost(ElementCount VF);
-
-  bool hasPredStores() const { return NumPredStores > 0; }
 
   /// Returns true if epilogue vectorization is considered profitable, and
   /// false otherwise.
@@ -4108,147 +4102,6 @@ static bool hasReplicatorRegion(VPlan &Plan) {
                 [](auto *VPRB) { return VPRB->isReplicator(); });
 }
 
-#ifndef NDEBUG
-VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
-  InstructionCost ExpectedCost = CM.expectedCost(ElementCount::getFixed(1));
-  LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ExpectedCost << ".\n");
-  assert(ExpectedCost.isValid() && "Unexpected invalid cost for scalar loop");
-  assert(
-      any_of(VPlans,
-             [](std::unique_ptr<VPlan> &P) { return P->hasScalarVFOnly(); }) &&
-      "Expected Scalar VF to be a candidate");
-
-  const VectorizationFactor ScalarCost(ElementCount::getFixed(1), ExpectedCost,
-                                       ExpectedCost);
-  VectorizationFactor ChosenFactor = ScalarCost;
-
-  bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
-  if (ForceVectorization &&
-      (VPlans.size() > 1 || !VPlans[0]->hasScalarVFOnly())) {
-    // Ignore scalar width, because the user explicitly wants vectorization.
-    // Initialize cost to max so that VF = 2 is, at least, chosen during cost
-    // evaluation.
-    ChosenFactor.Cost = InstructionCost::getMax();
-  }
-
-  for (auto &P : VPlans) {
-    ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
-                               P->vectorFactors().end());
-
-    SmallVector<VPRegisterUsage, 8> RUs;
-    if (any_of(VFs, [this](ElementCount VF) {
-          return CM.shouldConsiderRegPressureForVF(VF);
-        }))
-      RUs = calculateRegisterUsageForPlan(*P, VFs, TTI, CM.ValuesToIgnore);
-
-    for (unsigned I = 0; I < VFs.size(); I++) {
-      ElementCount VF = VFs[I];
-      // The cost for scalar VF=1 is already calculated, so ignore it.
-      if (VF.isScalar())
-        continue;
-
-      InstructionCost C = CM.expectedCost(VF);
-
-      // Add on other costs that are modelled in VPlan, but not in the legacy
-      // cost model.
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, *P, CM, CM.CostKind, CM.PSE,
-                            OrigLoop);
-      VPRegionBlock *VectorRegion = P->getVectorLoopRegion();
-      assert(VectorRegion && "Expected to have a vector region!");
-      for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-               vp_depth_first_shallow(VectorRegion->getEntry()))) {
-        for (VPRecipeBase &R : *VPBB) {
-          auto *VPI = dyn_cast<VPInstruction>(&R);
-          if (!VPI)
-            continue;
-          switch (VPI->getOpcode()) {
-          // Selects are only modelled in the legacy cost model for safe
-          // divisors.
-          case Instruction::Select: {
-            if (auto *WR =
-                    dyn_cast_or_null<VPWidenRecipe>(VPI->getSingleUser())) {
-              switch (WR->getOpcode()) {
-              case Instruction::UDiv:
-              case Instruction::SDiv:
-              case Instruction::URem:
-              case Instruction::SRem:
-                continue;
-              default:
-                break;
-              }
-            }
-            C += VPI->cost(VF, CostCtx);
-            break;
-          }
-          case VPInstruction::ActiveLaneMask: {
-            unsigned Multiplier =
-                cast<VPConstantInt>(VPI->getOperand(2))->getZExtValue();
-            C += VPI->cost(VF * Multiplier, CostCtx);
-            break;
-          }
-          case VPInstruction::ExplicitVectorLength:
-          case VPInstruction::AnyOf:
-            C += VPI->cost(VF, CostCtx);
-            break;
-          default:
-            break;
-          }
-        }
-      }
-
-      // Add the cost of any spills due to excess register usage
-      if (CM.shouldConsiderRegPressureForVF(VF))
-        C += RUs[I].spillCost(CostCtx, ForceTargetNumVectorRegs);
-
-      VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
-      unsigned Width =
-          estimateElementCount(Candidate.Width, CM.getVScaleForTuning());
-      LLVM_DEBUG(dbgs() << "LV: Vector loop of width " << VF
-                        << " costs: " << (Candidate.Cost / Width));
-      if (VF.isScalable())
-        LLVM_DEBUG(dbgs() << " (assuming a minimum vscale of "
-                          << CM.getVScaleForTuning().value_or(1) << ")");
-      LLVM_DEBUG(dbgs() << ".\n");
-
-      if (!ForceVectorization && !willGenerateVectors(*P, VF, TTI)) {
-        LLVM_DEBUG(
-            dbgs()
-            << "LV: Not considering vector loop of width " << VF
-            << " because it will not generate any vector instructions.\n");
-        continue;
-      }
-
-      if (CM.OptForSize && !ForceVectorization && hasReplicatorRegion(*P)) {
-        LLVM_DEBUG(
-            dbgs()
-            << "LV: Not considering vector loop of width " << VF
-            << " because it would cause replicated blocks to be generated,"
-            << " which isn't allowed when optimizing for size.\n");
-        continue;
-      }
-
-      if (isMoreProfitable(Candidate, ChosenFactor, P->hasScalarTail()))
-        ChosenFactor = Candidate;
-    }
-  }
-
-  if (!EnableCondStoresVectorization && CM.hasPredStores()) {
-    reportVectorizationFailure(
-        "There are conditional stores.",
-        "store that is conditionally executed prevents vectorization",
-        "ConditionalStore", ORE, OrigLoop);
-    ChosenFactor = ScalarCost;
-  }
-
-  LLVM_DEBUG(if (ForceVectorization && !ChosenFactor.Width.isScalar() &&
-                 !isMoreProfitable(ChosenFactor, ScalarCost,
-                                   !CM.foldTailByMasking())) dbgs()
-             << "LV: Vectorization seems to be not beneficial, "
-             << "but was forced by a user.\n");
-  return ChosenFactor;
-}
-#endif
-
 /// Returns true if the VPlan contains a VPReductionPHIRecipe with
 /// FindLast recurrence kind.
 static bool hasFindLastReductionPhi(VPlan &Plan) {
@@ -6848,11 +6701,6 @@ InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
   return Cost;
 }
 
-bool VPCostContext::isLegacyUniformAfterVectorization(Instruction *I,
-                                                      ElementCount VF) const {
-  return CM.isUniformAfterVectorization(I, VF);
-}
-
 bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
   return CM.ValuesToIgnore.contains(UI) ||
          (IsVector && CM.VecValuesToIgnore.contains(UI)) ||
@@ -6982,8 +6830,10 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     return Cost;
 
   // Pre-compute costs for instructions that are forced-scalar or profitable to
-  // scalarize. Their costs will be computed separately in the legacy cost
-  // model.
+  // scalarize. For most such instructions, their scalarization costs are
+  // accounted for here using the legacy cost model. However, some opcodes
+  // are excluded from these precomputed scalarization costs and are instead
+  // modeled later by the VPlan cost model (see UseVPlanCostModel below).
   for (Instruction *ForcedScalar : CM.ForcedScalars[VF]) {
     if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
       continue;
@@ -6995,8 +6845,21 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     });
     Cost += ForcedCost;
   }
+
+  auto UseVPlanCostModel = [](Instruction *I) -> bool {
+    switch (I->getOpcode()) {
+    case Instruction::SDiv:
+    case Instruction::UDiv:
+    case Instruction::SRem:
+    case Instruction::URem:
+      return true;
+    default:
+      return false;
+    }
+  };
   for (const auto &[Scalarized, ScalarCost] : CM.InstsToScalarize[VF]) {
-    if (CostCtx.skipCostComputation(Scalarized, VF.isVector()))
+    if (UseVPlanCostModel(Scalarized) ||
+        CostCtx.skipCostComputation(Scalarized, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(Scalarized);
     LLVM_DEBUG({
@@ -7034,162 +6897,6 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
 #endif
   return Cost;
 }
-
-#ifndef NDEBUG
-/// Return true if the original loop \ TheLoop contains any instructions that do
-/// not have corresponding recipes in \p Plan and are not marked to be ignored
-/// in \p CostCtx. This means the VPlan contains simplification that the legacy
-/// cost-model did not account for.
-static bool planContainsAdditionalSimplifications(VPlan &Plan,
-                                                  VPCostContext &CostCtx,
-                                                  Loop *TheLoop,
-                                                  ElementCount VF) {
-  using namespace VPlanPatternMatch;
-  // First collect all instructions for the recipes in Plan.
-  auto GetInstructionForCost = [](const VPRecipeBase *R) -> Instruction * {
-    if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
-      return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
-    if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
-      return &WidenMem->getIngredient();
-    return nullptr;
-  };
-
-  // Check if a select for a safe divisor was hoisted to the pre-header. If so,
-  // the select doesn't need to be considered for the vector loop cost; go with
-  // the more accurate VPlan-based cost model.
-  for (VPRecipeBase &R : *Plan.getVectorPreheader()) {
-    auto *VPI = dyn_cast<VPInstruction>(&R);
-    if (!VPI || VPI->getOpcode() != Instruction::Select)
-      continue;
-
-    if (auto *WR = dyn_cast_or_null<VPWidenRecipe>(VPI->getSingleUser())) {
-      switch (WR->getOpcode()) {
-      case Instruction::UDiv:
-      case Instruction::SDiv:
-      case Instruction::URem:
-      case Instruction::SRem:
-        return true;
-      default:
-        break;
-      }
-    }
-  }
-
-  DenseSet<Instruction *> SeenInstrs;
-  auto Iter = vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry());
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
-    for (VPRecipeBase &R : *VPBB) {
-      if (auto *IR = dyn_cast<VPInterleaveRecipe>(&R)) {
-        auto *IG = IR->getInterleaveGroup();
-        unsigned NumMembers = IG->getNumMembers();
-        for (unsigned I = 0; I != NumMembers; ++I) {
-          if (Instruction *M = IG->getMember(I))
-            SeenInstrs.insert(M);
-        }
-        continue;
-      }
-      // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
-      // cost model won't cost it whilst the legacy will.
-      if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
-        if (none_of(FOR->users(),
-                    match_fn(m_VPInstruction<
-                             VPInstruction::FirstOrderRecurrenceSplice>())))
-          return true;
-      }
-      // The VPlan-based cost model is more accurate for partial reductions and
-      // comparing against the legacy cost isn't desirable.
-      if (auto *VPR = dyn_cast<VPReductionRecipe>(&R))
-        if (VPR->isPartialReduction())
-          return true;
-
-      // The VPlan-based cost model can analyze if recipes are scalar
-      // recursively, but the legacy cost model cannot.
-      if (auto *WidenMemR = dyn_cast<VPWidenMemoryRecipe>(&R)) {
-        auto *AddrI = dyn_cast<Instruction>(
-            getLoadStorePointerOperand(&WidenMemR->getIngredient()));
-        if (AddrI && vputils::isSingleScalar(WidenMemR->getAddr()) !=
-                         CostCtx.isLegacyUniformAfterVectorization(AddrI, VF))
-          return true;
-
-        if (WidenMemR->isReverse()) {
-          // If the stored value of a reverse store is invariant, LICM will
-          // hoist the reverse operation to the preheader. In this case, the
-          // result of the VPlan-based cost model will diverge from that of
-          // the legacy model.
-          if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(WidenMemR))
-            if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
-              return true;
-
-          if (auto *StoreR = dyn_cast<VPWidenStoreEVLRecipe>(WidenMemR))
-            if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
-              return true;
-        }
-      }
-
-      // The legacy cost model costs non-header phis with a scalar VF as a phi,
-      // but scalar unrolled VPlans will have VPBlendRecipes which emit selects.
-      if (isa<VPBlendRecipe>(&R) &&
-          vputils::onlyFirstLaneUsed(R.getVPSingleValue()))
-        return true;
-
-      // The legacy cost model won't calculate the cost of the LogicalAnd which
-      // will be replaced with vp_merge.
-      if (match(&R, m_Intrinsic<Intrinsic::vp_merge>()))
-        return true;
-
-      /// If a VPlan transform folded a recipe to one producing a single-scalar,
-      /// but the original instruction wasn't uniform-after-vectorization in the
-      /// legacy cost model, the legacy cost overestimates the actual cost.
-      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
-        if (RepR->isSingleScalar() &&
-            !CostCtx.isLegacyUniformAfterVectorization(
-                RepR->getUnderlyingInstr(), VF))
-          return true;
-      }
-      if (Instruction *UI = GetInstructionForCost(&R)) {
-        // If we adjusted the predicate of the recipe, the cost in the legacy
-        // cost model may be different.
-        CmpPredicate Pred;
-        if (match(&R, m_Cmp(Pred, m_VPValue(), m_VPValue())) &&
-            cast<VPRecipeWithIRFlags>(R).getPredicate() !=
-                cast<CmpInst>(UI)->getPredicate())
-          return true;
-
-        // Recipes with underlying instructions being moved out of the loop
-        // region by LICM may cause discrepancies between the legacy cost model
-        // and the VPlan-based cost model.
-        if (!VPBB->getEnclosingLoopRegion())
-          return true;
-
-        SeenInstrs.insert(UI);
-      }
-    }
-  }
-
-  // If a reverse recipe has been sunk to the middle block (e.g., for a load
-  // whose result is only used as a live-out), VPlan avoids the per-iteration
-  // reverse shuffle cost that the legacy model accounts for.
-  if (any_of(*Plan.getMiddleBlock(), [](const VPRecipeBase &R) {
-        return match(&R, m_VPInstruction<VPInstruction::Reverse>());
-      }))
-    return true;
-
-  // Return true if the loop contains any instructions that are not also part of
-  // the VPlan or are skipped for VPlan-based cost computations. This indicates
-  // that the VPlan contains extra simplifications.
-  return any_of(TheLoop->blocks(), [&SeenInstrs, &CostCtx,
-                                    TheLoop](BasicBlock *BB) {
-    return any_of(*BB, [&SeenInstrs, &CostCtx, TheLoop, BB](Instruction &I) {
-      // Skip induction phis when checking for simplifications, as they may not
-      // be lowered directly be lowered to a corresponding PHI recipe.
-      if (isa<PHINode>(&I) && BB == TheLoop->getHeader() &&
-          CostCtx.CM.Legal->isInductionPhi(cast<PHINode>(&I)))
-        return false;
-      return !SeenInstrs.contains(&I) && !CostCtx.skipCostComputation(&I, true);
-    });
-  });
-}
-#endif
 
 std::pair<VectorizationFactor, VPlan *>
 LoopVectorizationPlanner::computeBestVF() {
@@ -7293,46 +7000,8 @@ LoopVectorizationPlanner::computeBestVF() {
 
   VPlan &BestPlan = *PlanForBestVF;
 
-#ifndef NDEBUG
-  // Select the optimal vectorization factor according to the legacy cost-model.
-  // This is now only used to verify the decisions by the new VPlan-based
-  // cost-model and will be retired once the VPlan-based cost-model is
-  // stabilized.
-  VectorizationFactor LegacyVF = selectVectorizationFactor();
-
-  // Pre-compute the cost and use it to check if BestPlan contains any
-  // simplifications not accounted for in the legacy cost model. If that's the
-  // case, don't trigger the assertion, as the extra simplifications may cause a
-  // different VF to be picked by the VPlan-based cost model.
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, BestPlan, CM, CM.CostKind, CM.PSE,
-                        OrigLoop);
-  precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
-  // Verify that the VPlan-based and legacy cost models agree, except for
-  // * VPlans with early exits,
-  // * VPlans with additional VPlan simplifications,
-  // * EVL-based VPlans with gather/scatters (the VPlan-based cost model uses
-  //   vp_scatter/vp_gather).
-  // The legacy cost model doesn't properly model costs for such loops.
-  bool UsesEVLGatherScatter =
-      any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
-                 BestPlan.getVectorLoopRegion()->getEntry())),
-             [](VPBasicBlock *VPBB) {
-               return any_of(*VPBB, [](VPRecipeBase &R) {
-                 return isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(&R) &&
-                        !cast<VPWidenMemoryRecipe>(&R)->isConsecutive();
-               });
-             });
-  assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
-          !Legal->getLAI()->getSymbolicStrides().empty() ||
-          UsesEVLGatherScatter ||
-          planContainsAdditionalSimplifications(BestPlan, CostCtx, OrigLoop,
-                                                BestFactor.Width) ||
-          planContainsAdditionalSimplifications(
-              getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
-         " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
-#endif
 
   LLVM_DEBUG(dbgs() << "LV: Selecting VF: " << BestFactor.Width << ".\n");
   return {BestFactor, &BestPlan};
@@ -7615,6 +7284,7 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
                                                 : GEPNoWrapFlags::none(),
                                             VPI->getDebugLoc());
     }
+    Builder.setInsertPoint(VPI);
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
@@ -7827,8 +7497,16 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   };
 }
 
-VPHistogramRecipe *VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
-                                                        VPInstruction *VPI) {
+VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
+  if (VPI->getOpcode() != Instruction::Store)
+    return nullptr;
+
+  auto HistInfo =
+      Legal->getHistogramInfo(cast<StoreInst>(VPI->getUnderlyingInstr()));
+  if (!HistInfo)
+    return nullptr;
+
+  const HistogramInfo *HI = *HistInfo;
   // FIXME: Support other operations.
   unsigned Opcode = HI->Update->getOpcode();
   assert((Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
@@ -7846,6 +7524,25 @@ VPHistogramRecipe *VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
     HGramOps.push_back(VPI->getMask());
 
   return new VPHistogramRecipe(Opcode, HGramOps, VPI->getDebugLoc());
+}
+
+bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
+    VPInstruction *VPI, VPBuilder &FinalRedStoresBuilder) {
+  StoreInst *SI;
+  if ((SI = dyn_cast<StoreInst>(VPI->getUnderlyingInstr())) &&
+      Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
+    // Only create recipe for the final invariant store of the reduction.
+    if (Legal->isInvariantStoreOfReduction(SI)) {
+      auto *Recipe = new VPReplicateRecipe(
+          SI, VPI->operandsWithoutMask(), true /* IsUniform */,
+          nullptr /*Mask*/, *VPI, *VPI, VPI->getDebugLoc());
+      FinalRedStoresBuilder.insert(Recipe);
+    }
+    VPI->eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
@@ -7934,13 +7631,9 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
     return tryToWidenCall(VPI, Range);
 
   Instruction *Instr = R->getUnderlyingInstr();
-  if (VPI->getOpcode() == Instruction::Store)
-    if (auto HistInfo = Legal->getHistogramInfo(cast<StoreInst>(Instr)))
-      return tryToWidenHistogram(*HistInfo, VPI);
-
-  if (VPI->getOpcode() == Instruction::Load ||
-      VPI->getOpcode() == Instruction::Store)
-    return tryToWidenMemory(VPI, Range);
+  assert(!is_contained({Instruction::Load, Instruction::Store},
+                       VPI->getOpcode()) &&
+         "Should have been handled prior to this!");
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -8128,8 +7821,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       HeaderVPBB);
 
-  VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
-
   // Collect blocks that need predication for in-loop reduction recipes.
   DenseSet<BasicBlock *> BlocksNeedingPredication;
   for (BasicBlock *BB : OrigLoop->blocks())
@@ -8139,13 +7830,23 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::createInLoopReductionRecipes(*Plan, BlocksNeedingPredication,
                                                 Range.Start);
 
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
+                        OrigLoop);
+
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::makeMemOpWideningDecisions, *Plan,
+                           Range, RecipeBuilder);
+
   // Now process all other blocks and instructions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Convert input VPInstructions to widened recipes.
     for (VPRecipeBase &R : make_early_inc_range(
              make_range(VPBB->getFirstNonPhi(), VPBB->end()))) {
-      // Skip recipes that do not need transforming.
-      if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe>(&R))
+      // Skip recipes that do not need transforming or have already been
+      // transformed.
+      if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
+              VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
+              VPVectorPointerRecipe, VPVectorEndPointerRecipe,
+              VPHistogramRecipe>(&R))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
       if (!VPI->getUnderlyingValue())
@@ -8156,23 +7857,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       // to construct recipes below to not use the underlying instruction.
       Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
       Builder.setInsertPoint(VPI);
-
-      // The stores with invariant address inside the loop will be deleted, and
-      // in the exit block, a uniform store recipe will be created for the final
-      // invariant store of the reduction.
-      StoreInst *SI;
-      if ((SI = dyn_cast<StoreInst>(Instr)) &&
-          Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
-        // Only create recipe for the final invariant store of the reduction.
-        if (Legal->isInvariantStoreOfReduction(SI)) {
-          auto *Recipe = new VPReplicateRecipe(
-              SI, VPI->operandsWithoutMask(), true /* IsUniform */,
-              nullptr /*Mask*/, *VPI, *VPI, VPI->getDebugLoc());
-          Recipe->insertBefore(*MiddleVPBB, MBIP);
-        }
-        R.eraseFromParent();
-        continue;
-      }
 
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenNonPhiRecipe(VPI, Range);
@@ -8240,8 +7924,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
-                          OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan, CostCtx,
                    Range);
     RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
