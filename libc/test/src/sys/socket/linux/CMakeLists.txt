@@ -94,6 +94,7 @@ add_libc_unittest(
     libc.src.sys.socket.setsockopt
     libc.src.sys.socket.socket
     libc.src.unistd.close
+    libc.src.unistd.pipe
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

@@ -12,6 +12,7 @@
 #include "src/sys/socket/socket.h"
 
 #include "src/unistd/close.h"
+#include "src/unistd/pipe.h"
 
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -55,6 +56,23 @@ TEST_F(LlvmLibcSocketOptTest, BasicSocketOpt) {
       Fails(ENOPROTOOPT));
 
   ASSERT_THAT(LIBC_NAMESPACE::close(sock), Succeeds(0));
+}
+
+TEST_F(LlvmLibcSocketOptTest, NotASocket) {
+  int fds[2];
+  ASSERT_THAT(LIBC_NAMESPACE::pipe(fds), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fds[1]), Succeeds(0));
+
+  int optval = 1;
+  socklen_t optlen = sizeof(optval);
+  ASSERT_THAT(
+      LIBC_NAMESPACE::setsockopt(fds[0], SOL_SOCKET, SO_KEEPALIVE, &optval, optlen),
+      Fails(ENOTSOCK));
+
+  ASSERT_THAT(LIBC_NAMESPACE::getsockopt(fds[0], SOL_SOCKET, SO_KEEPALIVE, &optval,
+                                         &optlen),
+              Fails(ENOTSOCK));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fds[0]), Succeeds(0));
 }
 
 TEST_F(LlvmLibcSocketOptTest, InvalidSocket) {
