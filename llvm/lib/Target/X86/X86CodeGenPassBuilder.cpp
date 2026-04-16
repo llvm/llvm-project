@@ -46,6 +46,7 @@ public:
   void addPreISel(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
   void addILPOpts(PassManagerWrapper &PMW) const;
+  void addPreRegBankSelect(PassManagerWrapper &PMW) const;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
   void addPreRegAlloc(PassManagerWrapper &PMW) const;
   // TODO(boomanaiden154): We need to add addPostFastRegAllocRewrite here once
@@ -56,12 +57,9 @@ public:
   void addPreEmitPass2(PassManagerWrapper &PMW) const;
   // TODO(boomanaiden154): We need to add addRegAssignAndRewriteOptimized here
   // once it is available to support AMX.
-  void addAsmPrinterBegin(PassManagerWrapper &PMW,
-                          CreateMCStreamer CreateStreamer) const;
-  void addAsmPrinter(PassManagerWrapper &PMW,
-                     CreateMCStreamer CreateStreamer) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW,
-                        CreateMCStreamer CreateStreamer) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
+  void addAsmPrinter(PassManagerWrapper &PMW) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
 };
 
 void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -87,9 +85,7 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   // Add Control Flow Guard checks.
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSWindows())
-    addFunctionPass(CFGuardPass(TT.isX86_64() ? CFGuardPass::Mechanism::Dispatch
-                                              : CFGuardPass::Mechanism::Check),
-                    PMW);
+    addFunctionPass(CFGuardPass(), PMW);
 
   if (TM.Options.JMCInstrument) {
     flushFPMsToMPM(PMW);
@@ -127,6 +123,10 @@ void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
     // ported to the new pass manager.
   }
   addMachineFunctionPass(X86CmovConversionPass(), PMW);
+}
+
+void X86CodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(X86PostLegalizerCombinerPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addMachineSSAOptimization(
@@ -255,20 +255,16 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   }
 }
 
-void X86CodeGenPassBuilder::addAsmPrinterBegin(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
-  addModulePass(X86AsmPrinterBeginPass(TM, CreateStreamer), PMW,
-                /*Force=*/true);
+void X86CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) const {
+  addModulePass(X86AsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
-void X86CodeGenPassBuilder::addAsmPrinter(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
-  addMachineFunctionPass(X86AsmPrinterPass(TM, CreateStreamer), PMW);
+void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(X86AsmPrinterPass(), PMW);
 }
 
-void X86CodeGenPassBuilder::addAsmPrinterEnd(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
-  addModulePass(X86AsmPrinterEndPass(TM, CreateStreamer), PMW, /*Force=*/true);
+void X86CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
+  addModulePass(X86AsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 } // namespace
@@ -288,9 +284,10 @@ void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 }
 
 Error X86TargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opt, MCContext &Ctx,
+    ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+    const CGPassBuilderOption &Opt, MCContext &Ctx,
     PassInstrumentationCallbacks *PIC) {
   auto CGPB = X86CodeGenPassBuilder(*this, Opt, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
+  return CGPB.buildPipeline(MPM, MAM, Out, DwoOut, FileType, Ctx);
 }

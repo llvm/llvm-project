@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
+// RUN: FileCheck --check-prefixes=CIR-BEFORE-LPP --input-file=%t-before.cir %s
 // RUN: FileCheck --input-file=%t.cir %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
@@ -722,3 +723,482 @@ void t_new_var_size_nontrivial(size_t n) {
 // OGCG:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[ADD_OVERFLOW]], 0
 // OGCG:   %[[ALLOC_SIZE:.*]] = select i1 %[[ANY_OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
 // OGCG:   %[[PTR:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} %[[ALLOC_SIZE]])
+
+class F {
+public:
+  F();
+};
+
+void test_array_new_with_ctor_init() {
+  auto p = new F[3];
+}
+
+// CIR-BEFORE-LPP: cir.func {{.*}} @_Z29test_array_new_with_ctor_initv
+// CIR-BEFORE-LPP:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!rec_F>, !cir.ptr<!cir.ptr<!rec_F>>, ["p", init]
+// CIR-BEFORE-LPP:    %[[THREE:.*]] = cir.const #cir.int<3> : !u64i
+// CIR-BEFORE-LPP:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[THREE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
+// CIR-BEFORE-LPP:    %[[BEGIN:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_F>
+// CIR-BEFORE-LPP:    %[[ARRAY_PTR:.*]] = cir.cast bitcast %[[BEGIN]] : !cir.ptr<!rec_F> -> !cir.ptr<!cir.array<!rec_F x 3>>
+// CIR-BEFORE-LPP:    cir.array.ctor %[[ARRAY_PTR]] : !cir.ptr<!cir.array<!rec_F x 3>> {
+// CIR-BEFORE-LPP:    ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_F>):
+// CIR-BEFORE-LPP:      cir.call @_ZN1FC1Ev(%[[ARG]]) : (!cir.ptr<!rec_F> {{.*}}) -> ()
+// CIR-BEFORE-LPP:    }
+// CIR-BEFORE-LPP:    cir.store{{.*}} %[[BEGIN]], %[[P_ADDR]] : !cir.ptr<!rec_F>, !cir.ptr<!cir.ptr<!rec_F>>
+// CIR-BEFORE-LPP:    cir.return
+
+// CHECK:  cir.func {{.*}} @_Z29test_array_new_with_ctor_initv
+// CHECK:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!rec_F>, !cir.ptr<!cir.ptr<!rec_F>>, ["p", init]
+// CHECK:    %[[THREE:.*]] = cir.const #cir.int<3> : !u64i
+// CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[THREE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
+// CHECK:    %[[BEGIN:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_F>
+// CHECK:    %[[ARRAY_PTR:.*]] = cir.cast bitcast %[[BEGIN]] : !cir.ptr<!rec_F> -> !cir.ptr<!cir.array<!rec_F x 3>>
+// CHECK:    %[[THREE_2:.*]] = cir.const #cir.int<3> : !u64i
+// CHECK:    %[[ARRAY_BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARRAY_PTR]] : !cir.ptr<!cir.array<!rec_F x 3>> -> !cir.ptr<!rec_F>
+// CHECK:    %[[ARRAY_END:.*]] = cir.ptr_stride %[[ARRAY_BEGIN]], %[[THREE_2]] : (!cir.ptr<!rec_F>, !u64i) -> !cir.ptr<!rec_F>
+// CHECK:    %[[IDX_ADDR:.*]] = cir.alloca !cir.ptr<!rec_F>, !cir.ptr<!cir.ptr<!rec_F>>, ["__array_idx"] {alignment = 1 : i64}
+// CHECK:    cir.store %[[ARRAY_BEGIN]], %[[IDX_ADDR]] : !cir.ptr<!rec_F>, !cir.ptr<!cir.ptr<!rec_F>>
+// CHECK:    cir.do {
+// CHECK:      %[[CUR:.*]] = cir.load %[[IDX_ADDR]] : !cir.ptr<!cir.ptr<!rec_F>>, !cir.ptr<!rec_F>
+// CHECK:      cir.call @_ZN1FC1Ev(%[[CUR]]) : (!cir.ptr<!rec_F> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
+// CHECK:      %[[ONE:.*]] = cir.const #cir.int<1> : !u64i
+// CHECK:      %[[NEXT:.*]] = cir.ptr_stride %[[CUR]], %[[ONE]] : (!cir.ptr<!rec_F>, !u64i) -> !cir.ptr<!rec_F>
+// CHECK:      cir.store %[[NEXT]], %[[IDX_ADDR]] : !cir.ptr<!rec_F>, !cir.ptr<!cir.ptr<!rec_F>>
+// CHECK:      cir.yield
+// CHECK:    } while {
+// CHECK:      %[[CUR2:.*]] = cir.load %[[IDX_ADDR]] : !cir.ptr<!cir.ptr<!rec_F>>, !cir.ptr<!rec_F>
+// CHECK:      %[[CMP:.*]] = cir.cmp ne %[[CUR2]], %[[ARRAY_END]] : !cir.ptr<!rec_F>
+// CHECK:      cir.condition(%[[CMP]])
+// CHECK:    }
+// CHECK:    cir.store{{.*}} %[[BEGIN]], %[[P_ADDR]]
+// CHECK:    cir.return
+
+// LLVM: define{{.*}} void @_Z29test_array_new_with_ctor_initv
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[RAW_PTR:.*]] = call noundef ptr @_Znam(i64 noundef 3)
+// LLVM:   %[[BEGIN:.*]] = getelementptr %class.F, ptr %[[RAW_PTR]], i32 0
+// LLVM:   %[[ARRAY_END:.*]] = getelementptr %class.F, ptr %[[BEGIN]], i64 3
+// LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, i64 1, align 1
+// LLVM:   store ptr %[[BEGIN]], ptr %[[IDX_ADDR]], align 8
+// LLVM:   br label
+// LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR2]], %[[ARRAY_END]]
+// LLVM:   br i1 %[[CMP]], label
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
+// LLVM:   call void @_ZN1FC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
+// LLVM:   %[[NEXT:.*]] = getelementptr %class.F, ptr %[[CUR]], i64 1
+// LLVM:   store ptr %[[NEXT]], ptr %[[IDX_ADDR]], align 8
+// LLVM:   br label
+// LLVM:   store ptr %[[RAW_PTR]], ptr %[[P_ADDR]], align 8
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_Z29test_array_new_with_ctor_initv
+// OGCG:   %[[P_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   %[[RAW_PTR:.*]] = call{{.*}} ptr @_Znam(i64 noundef 3)
+// OGCG:   %[[ARRAY_END:.*]] = getelementptr inbounds %class.F, ptr %[[RAW_PTR]], i64 3
+// OGCG:   br label
+// OGCG:   %[[CUR:.*]] = phi ptr [ %[[RAW_PTR]], {{.*}} ], [ %[[NEXT:.*]], {{.*}} ]
+// OGCG:   call void @_ZN1FC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
+// OGCG:   %[[NEXT]] = getelementptr inbounds %class.F, ptr %[[CUR]], i64 1
+// OGCG:   %[[DONE:.*]] = icmp eq ptr %[[NEXT]], %[[ARRAY_END]]
+// OGCG:   br i1 %[[DONE]], label
+// OGCG:   store ptr %[[RAW_PTR]], ptr %[[P_ADDR]], align 8
+// OGCG:   ret void
+//
+
+void test_array_new_var_sized_with_ctor_init(int size) {
+  auto p = new F[size];
+}
+
+// CIR-BEFORE-LPP: cir.func{{.*}} @_Z39test_array_new_var_sized_with_ctor_initi
+// CIR-BEFORE-LPP:    %[[N64:.*]] = cir.cast integral{{.*}} : !s32i -> !u64i
+// CIR-BEFORE-LPP:    %[[RAW:.*]] = cir.call @_Znam(%[[N64]])
+// CIR-BEFORE-LPP:    cir.cast bitcast %[[RAW]] : !cir.ptr<!void> -> !cir.ptr<!rec_F>
+// CIR-BEFORE-LPP:    cir.array.ctor %{{.*}}, %[[N64]] : !cir.ptr<!rec_F>, !u64i {
+// CIR-BEFORE-LPP:    ^bb0({{.*}}: !cir.ptr<!rec_F>):
+// CIR-BEFORE-LPP:      cir.call @_ZN1FC1Ev({{.*}}) : (!cir.ptr<!rec_F>
+
+// CHECK:  cir.func{{.*}} @_Z39test_array_new_var_sized_with_ctor_initi
+// CHECK:    %[[N64:.*]] = cir.cast integral{{.*}} : !s32i -> !u64i
+// CHECK:    %[[RAW:.*]] = cir.call @_Znam(%[[N64]])
+// CHECK:    %[[BEGIN:.*]] = cir.cast bitcast %[[RAW]] : !cir.ptr<!void> -> !cir.ptr<!rec_F>
+// CHECK:    %[[END:.*]] = cir.ptr_stride %{{.*}}, %[[N64]] : (!cir.ptr<!rec_F>, !u64i) -> !cir.ptr<!rec_F>
+// CHECK:    cir.cmp ne %[[N64]], %{{.*}} : !u64i
+// CHECK:    cir.if
+// CHECK:      cir.call @_ZN1FC1Ev(
+// CHECK:    cir.store{{.*}} %[[BEGIN]],
+// CHECK:    cir.return
+
+// LLVM: define{{.*}} void @_Z39test_array_new_var_sized_with_ctor_initi
+// LLVM:   %[[N:.*]] = load i32, ptr %{{.+}}
+// LLVM:   %[[N64:.*]] = sext i32 %[[N]] to i64
+// LLVM:   %[[RAW:.*]] = call noundef ptr @_Znam(i64 {{.*}} %[[N64]])
+// LLVM:   %[[CMP:.*]] = icmp ne i64 %[[N64]], 0
+// LLVM:   br i1 %[[CMP]]
+
+// OGCG: define{{.*}} void @_Z39test_array_new_var_sized_with_ctor_initi
+// OGCG:   %[[N:.*]] = load i32, ptr %{{.+}}
+// OGCG:   %[[N64:.*]] = sext i32 %[[N]] to i64
+// OGCG:   %[[RAW:.*]] = call{{.*}} ptr @_Znam(i64 {{.*}} %[[N64]])
+// OGCG:   %[[CMP:.*]] = icmp eq i64 %[[N64]], 0
+// OGCG:   br i1 %[[CMP]]
+
+// Non-trivial member => non-trivial implicit OuterZero default constructor.
+// Value-initialization `new OuterZero[3]()` needs zero-init before each ctor
+// (CXXConstructExpr::requiresZeroInitialization).
+class InnerZero {
+public:
+  InnerZero();
+};
+inline InnerZero::InnerZero() {}
+
+class OuterZero {
+public:
+  InnerZero i;
+  OuterZero() = default;
+};
+
+void test_const_array_new_value_init() {
+  auto p = new OuterZero[3]();
+}
+
+// CIR-BEFORE-LPP: cir.func{{.*}} @_Z31test_const_array_new_value_initv
+// CIR-BEFORE-LPP:   cir.array.ctor %{{.*}} : !cir.ptr<!cir.array<!rec_OuterZero x 3>> {
+// CIR-BEFORE-LPP:   ^bb0(%[[EL:.*]]: !cir.ptr<!rec_OuterZero>):
+// CIR-BEFORE-LPP:     cir.const #cir.zero : !rec_OuterZero
+// CIR-BEFORE-LPP:     cir.store{{.*}} %{{.*}}, %[[EL]] : !rec_OuterZero, !cir.ptr<!rec_OuterZero>
+// CIR-BEFORE-LPP:     cir.call @_ZN9OuterZeroC1Ev(%[[EL]])
+// CIR-BEFORE-LPP:   }
+
+// CHECK: cir.func{{.*}} @_Z31test_const_array_new_value_initv
+// CHECK:   cir.do {
+// CHECK:     %[[CUR:.*]] = cir.load{{.*}} : !cir.ptr<!cir.ptr<!rec_OuterZero>>, !cir.ptr<!rec_OuterZero>
+// CHECK:     %[[ZERO:.*]] = cir.const #cir.zero : !rec_OuterZero
+// CHECK:     cir.store{{.*}} %[[ZERO]], %[[CUR]] : !rec_OuterZero, !cir.ptr<!rec_OuterZero>
+// CHECK:     cir.call @_ZN9OuterZeroC1Ev(%[[CUR]])
+// CHECK:     cir.ptr_stride
+// CHECK:     cir.store{{.*}} : !cir.ptr<!rec_OuterZero>, !cir.ptr<!cir.ptr<!rec_OuterZero>>
+// CHECK:     cir.yield
+// CHECK:   } while {
+// CHECK:     cir.load{{.*}} : !cir.ptr<!cir.ptr<!rec_OuterZero>>, !cir.ptr<!rec_OuterZero>
+// CHECK:     cir.cmp ne
+// CHECK:     cir.condition
+// CHECK:   }
+
+// CIR emits a per-element store of zeroinitializer inside the do-while loop
+// rather than a bulk llvm.memset over the whole allocation.
+//
+// LLVM: define{{.*}} void @_Z31test_const_array_new_value_initv
+// LLVM:   %[[RAW:.*]] = call noundef ptr @_Znam(i64 noundef 3)
+// LLVM:   %[[BEGIN:.*]] = getelementptr %class.OuterZero, ptr %[[RAW]], i32 0
+// LLVM:   %[[END:.*]] = getelementptr %class.OuterZero, ptr %[[BEGIN]], i64 3
+// LLVM:   store ptr %[[BEGIN]], ptr %[[IDX:.*]], align 8
+// LLVM:   br label %[[BODY:.*]]
+// LLVM: [[COND:.*]]:
+// LLVM:   %[[CUR_C:.*]] = load ptr, ptr %[[IDX]], align 8
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR_C]], %[[END]]
+// LLVM:   br i1 %[[CMP]], label %[[BODY]], label %[[EXIT:.*]]
+// LLVM: [[BODY]]:
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[IDX]], align 8
+// LLVM:   store %class.OuterZero zeroinitializer, ptr %[[CUR]], align 1
+// LLVM:   call void @_ZN9OuterZeroC1Ev(ptr {{.*}} %[[CUR]])
+// LLVM:   %[[NEXT:.*]] = getelementptr %class.OuterZero, ptr %[[CUR]], i64 1
+// LLVM:   store ptr %[[NEXT]], ptr %[[IDX]], align 8
+// LLVM:   br label %[[COND]]
+// LLVM: [[EXIT]]:
+// LLVM:   store ptr %[[RAW]], ptr %{{.*}}, align 8
+// LLVM:   ret void
+
+// OGCG uses per-element llvm.memset inside the loop.
+//
+// OGCG: define{{.*}} void @_Z31test_const_array_new_value_initv
+// OGCG:   %[[RAW:.*]] = call{{.*}} ptr @_Znam(i64 noundef 3)
+// OGCG:   %[[END:.*]] = getelementptr inbounds %class.OuterZero, ptr %[[RAW]], i64 3
+// OGCG:   br label %[[LOOP:.*]]
+// OGCG: [[LOOP]]:
+// OGCG:   %[[CUR:.*]] = phi ptr [ %[[RAW]], %{{.*}} ], [ %[[NEXT:.*]], %[[LOOP]] ]
+// OGCG:   call void @llvm.memset.p0.i64(ptr align 1 %[[CUR]], i8 0, i64 1, i1 false)
+// OGCG:   call void @_ZN9OuterZeroC1Ev(ptr {{.*}} %[[CUR]])
+// OGCG:   %[[NEXT]] = getelementptr inbounds %class.OuterZero, ptr %[[CUR]], i64 1
+// OGCG:   %[[DONE:.*]] = icmp eq ptr %[[NEXT]], %[[END]]
+// OGCG:   br i1 %[[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+// OGCG: [[EXIT]]:
+// OGCG:   store ptr %[[RAW]], ptr %{{.*}}, align 8
+// OGCG:   ret void
+
+void test_var_array_new_value_init(int n) {
+  auto p = new OuterZero[n]();
+}
+
+// --- Per-element zero-init before ctor (dynamic array new + value-init):
+// OG emits @llvm.memset of i64 1 then C1Ev inside its arrayctor.loop. CIR
+// stores #cir.zero per element in the cir.array.ctor region, then the same
+// ctor call. There must be no bulk clear of the whole allocation before the
+// lowered loop (no libc.memset / memset scaled by element count in the
+// lowering-prepare input).
+
+// CIR-BEFORE-LPP-LABEL: cir.func{{.*}} @_Z29test_var_array_new_value_initi
+// CIR-BEFORE-LPP:         %[[N:.*]] = cir.cast integral{{.*}} : !s32i -> !u64i
+// CIR-BEFORE-LPP-NEXT:    %{{.*}} = cir.call @_Znam(%[[N]]){{.*}}
+// CIR-BEFORE-LPP-NEXT:    cir.cast bitcast %{{.*}} : !cir.ptr<!void> -> !cir.ptr<!rec_OuterZero>
+// CIR-BEFORE-LPP-NEXT:    cir.cast bitcast %{{.*}} : !cir.ptr<!rec_OuterZero> -> !cir.ptr<!cir.array<!rec_OuterZero x 0>>
+// CIR-BEFORE-LPP-NEXT:    cir.cast bitcast %{{.*}} : !cir.ptr<!cir.array<!rec_OuterZero x 0>> -> !cir.ptr<!rec_OuterZero>
+// CIR-BEFORE-LPP-NEXT:    cir.array.ctor %{{.*}}, %[[N]] : !cir.ptr<!rec_OuterZero>, !u64i {
+// CIR-BEFORE-LPP-NEXT:  ^bb0(%[[EL:.*]]: !cir.ptr<!rec_OuterZero>):
+// CIR-BEFORE-LPP-NEXT:    cir.const #cir.zero : !rec_OuterZero
+// CIR-BEFORE-LPP-NEXT:    cir.store{{.*}} %{{.*}}, %[[EL]] : !rec_OuterZero, !cir.ptr<!rec_OuterZero>
+// CIR-BEFORE-LPP-NEXT:    cir.call @_ZN9OuterZeroC1Ev(%[[EL]]) : (!cir.ptr<!rec_OuterZero> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
+// CIR-BEFORE-LPP-NEXT:  }
+
+// CHECK-LABEL: cir.func{{.*}} @_Z29test_var_array_new_value_initi
+// CHECK:       cir.do {
+// CHECK:         cir.load{{.*}} : !cir.ptr<!cir.ptr<!rec_OuterZero>>, !cir.ptr<!rec_OuterZero>
+// CHECK:         cir.const #cir.zero : !rec_OuterZero
+// CHECK:         cir.store{{.*}} : !rec_OuterZero, !cir.ptr<!rec_OuterZero>
+// CHECK:         cir.call @_ZN9OuterZeroC1Ev(
+// CHECK:         cir.ptr_stride
+// CHECK:         cir.store{{.*}} : !cir.ptr<!rec_OuterZero>, !cir.ptr<!cir.ptr<!rec_OuterZero>>
+// CHECK:         cir.yield
+// CHECK:       } while {
+// CHECK:         cir.load{{.*}} : !cir.ptr<!cir.ptr<!rec_OuterZero>>, !cir.ptr<!rec_OuterZero>
+// CHECK:         cir.cmp ne
+// CHECK:         cir.condition
+// CHECK:       }
+// CHECK:       cir.return
+
+// LLVM-LABEL: define{{.*}} void @_Z29test_var_array_new_value_initi
+// LLVM-NOT: call void @llvm.memset.p0.i64
+// LLVM: store %class.OuterZero zeroinitializer, ptr %[[CUR:.*]], align 1
+// LLVM-NEXT: call void @_ZN9OuterZeroC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
+
+// OGCG-LABEL: define{{.*}} void @_Z29test_var_array_new_value_initi
+// OGCG: call void @llvm.memset.p0.i64(ptr align 1 %[[CUR:.*]], i8 0, i64 1, i1 false)
+// OGCG-NEXT: call void @_ZN9OuterZeroC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
+
+void test_multidim_array_new_with_ctor() {
+  auto p = new F[2][3];
+}
+
+// CIR-BEFORE-LPP: cir.func{{.*}} @_Z33test_multidim_array_new_with_ctorv
+// CIR-BEFORE-LPP:   %[[SIX:.*]] = cir.const #cir.int<6> : !u64i
+// CIR-BEFORE-LPP:   %[[RAW:.*]] = cir.call @_Znam(%[[SIX]])
+// CIR-BEFORE-LPP:   %[[PTR3:.*]] = cir.cast bitcast %[[RAW]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!rec_F x 3>>
+// CIR-BEFORE-LPP:   cir.cast bitcast %[[PTR3]] : !cir.ptr<!cir.array<!rec_F x 3>> -> !cir.ptr<!cir.array<!cir.array<!rec_F x 3> x 2>>
+// CIR-BEFORE-LPP:   %[[FLAT:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.array<!cir.array<!rec_F x 3> x 2>> -> !cir.ptr<!cir.array<!rec_F x 6>>
+// CIR-BEFORE-LPP:   cir.array.ctor %[[FLAT]] : !cir.ptr<!cir.array<!rec_F x 6>> {
+// CIR-BEFORE-LPP:   ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_F>):
+// CIR-BEFORE-LPP:     cir.call @_ZN1FC1Ev(%[[ARG]])
+// CIR-BEFORE-LPP:   }
+// CIR-BEFORE-LPP:   cir.store{{.*}} %[[PTR3]],
+
+// CHECK: cir.func{{.*}} @_Z33test_multidim_array_new_with_ctorv
+// CHECK:   %[[SIX:.*]] = cir.const #cir.int<6> : !u64i
+// CHECK:   %[[RAW:.*]] = cir.call @_Znam(%[[SIX]])
+// CHECK:   cir.cast bitcast %[[RAW]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!rec_F x 3>>
+// CHECK:   %[[FLAT:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.array<!cir.array<!rec_F x 3> x 2>> -> !cir.ptr<!cir.array<!rec_F x 6>>
+// CHECK:   cir.cast array_to_ptrdecay %[[FLAT]] : !cir.ptr<!cir.array<!rec_F x 6>> -> !cir.ptr<!rec_F>
+// CHECK:   cir.do {
+// CHECK:     cir.call @_ZN1FC1Ev(
+// CHECK:     cir.ptr_stride
+// CHECK:     cir.yield
+// CHECK:   } while {
+// CHECK:     cir.cmp ne
+// CHECK:     cir.condition
+// CHECK:   }
+
+// LLVM: define{{.*}} void @_Z33test_multidim_array_new_with_ctorv
+// LLVM:   %[[RAW:.*]] = call noundef ptr @_Znam(i64 noundef 6)
+// LLVM:   %[[BEGIN:.*]] = getelementptr %class.F, ptr %[[RAW]], i32 0
+// LLVM:   %[[END:.*]] = getelementptr %class.F, ptr %[[BEGIN]], i64 6
+// LLVM:   store ptr %[[BEGIN]], ptr %[[IDX:.*]], align 8
+// LLVM:   br label %[[BODY:.*]]
+// LLVM: [[COND:.*]]:
+// LLVM:   %[[CUR_C:.*]] = load ptr, ptr %[[IDX]], align 8
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR_C]], %[[END]]
+// LLVM:   br i1 %[[CMP]], label %[[BODY]], label %[[EXIT:.*]]
+// LLVM: [[BODY]]:
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[IDX]], align 8
+// LLVM:   call void @_ZN1FC1Ev(ptr {{.*}} %[[CUR]])
+// LLVM:   %[[NEXT:.*]] = getelementptr %class.F, ptr %[[CUR]], i64 1
+// LLVM:   store ptr %[[NEXT]], ptr %[[IDX]], align 8
+// LLVM:   br label %[[COND]]
+// LLVM: [[EXIT]]:
+// LLVM:   store ptr %[[RAW]], ptr %{{.*}}, align 8
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_Z33test_multidim_array_new_with_ctorv
+// OGCG:   %[[RAW:.*]] = call{{.*}} ptr @_Znam(i64 noundef 6)
+// OGCG:   %[[END:.*]] = getelementptr inbounds %class.F, ptr %[[RAW]], i64 6
+// OGCG:   br label %[[LOOP:.*]]
+// OGCG: [[LOOP]]:
+// OGCG:   %[[CUR:.*]] = phi ptr [ %[[RAW]], %{{.*}} ], [ %[[NEXT:.*]], %[[LOOP]] ]
+// OGCG:   call void @_ZN1FC1Ev(ptr {{.*}} %[[CUR]])
+// OGCG:   %[[NEXT]] = getelementptr inbounds %class.F, ptr %[[CUR]], i64 1
+// OGCG:   %[[DONE:.*]] = icmp eq ptr %[[NEXT]], %[[END]]
+// OGCG:   br i1 %[[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+// OGCG: [[EXIT]]:
+// OGCG:   store ptr %[[RAW]], ptr %{{.*}}, align 8
+// OGCG:   ret void
+
+void test_multidim_var_array_new_with_ctor(int n) {
+  auto p = new F[n][3];
+}
+
+// CIR-BEFORE-LPP-LABEL: cir.func{{.*}} @_Z37test_multidim_var_array_new_with_ctori
+// CIR-BEFORE-LPP:    %[[N64:.*]] = cir.cast integral %{{.*}} : !s32i -> !u64i
+// CIR-BEFORE-LPP:    %[[THREE:.*]] = cir.const #cir.int<3> : !u64i
+// CIR-BEFORE-LPP:    %[[TOTAL:.*]], %{{.*}} = cir.mul.overflow %[[N64]], %[[THREE]] : !u64i
+// CIR-BEFORE-LPP:    cir.select
+// CIR-BEFORE-LPP:    cir.call @_Znam
+// CIR-BEFORE-LPP:    cir.cast bitcast %{{.*}} : !cir.ptr<!void> -> !cir.ptr<!cir.array<!rec_F x 3>>
+// CIR-BEFORE-LPP:    cir.cast bitcast %{{.*}} : !cir.ptr<!cir.array<!rec_F x 3>> -> !cir.ptr<!cir.array<!cir.array<!rec_F x 3> x 0>>
+// CIR-BEFORE-LPP:    %[[ELPTR:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.array<!cir.array<!rec_F x 3> x 0>> -> !cir.ptr<!rec_F>
+// CIR-BEFORE-LPP:    cir.array.ctor %[[ELPTR]], %[[TOTAL]] : !cir.ptr<!rec_F>, !u64i {
+// CIR-BEFORE-LPP:    ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_F>):
+// CIR-BEFORE-LPP:      cir.call @_ZN1FC1Ev(%[[ARG]])
+// CIR-BEFORE-LPP:    }
+
+// CHECK-LABEL: cir.func{{.*}} @_Z37test_multidim_var_array_new_with_ctori
+// CHECK:    %[[N64:.*]] = cir.cast integral %{{.*}} : !s32i -> !u64i
+// CHECK:    %[[TOTAL:.*]], %{{.*}} = cir.mul.overflow %[[N64]], %{{.*}} : !u64i
+// CHECK:    cir.call @_Znam
+// CHECK:    cir.ptr_stride %{{.*}}, %[[TOTAL]] : (!cir.ptr<!rec_F>, !u64i) -> !cir.ptr<!rec_F>
+// CHECK:    cir.cmp ne %[[TOTAL]], %{{.*}} : !u64i
+// CHECK:    cir.if %{{.*}} {
+// CHECK:      cir.do {
+// CHECK:        cir.call @_ZN1FC1Ev(
+// CHECK:        cir.ptr_stride
+// CHECK:        cir.yield
+// CHECK:      } while {
+// CHECK:        cir.cmp ne
+// CHECK:        cir.condition
+// CHECK:      }
+// CHECK:    }
+
+// LLVM-LABEL: define{{.*}} void @_Z37test_multidim_var_array_new_with_ctori
+// LLVM:   %[[N:.*]] = load i32, ptr %{{.*}}
+// LLVM:   %[[N64:.*]] = sext i32 %[[N]] to i64
+// LLVM:   %[[MUL:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N64]], i64 3)
+// LLVM:   %[[TOTAL:.*]] = extractvalue { i64, i1 } %[[MUL]], 0
+// LLVM:   %[[RAW:.*]] = call noundef ptr @_Znam(i64 noundef %{{.*}})
+// LLVM:   %[[END:.*]] = getelementptr %class.F, ptr %[[RAW]], i64 %[[TOTAL]]
+// LLVM:   %[[CMP:.*]] = icmp ne i64 %[[TOTAL]], 0
+// LLVM:   br i1 %[[CMP]]
+// LLVM:   call void @_ZN1FC1Ev(
+// LLVM:   getelementptr %class.F, ptr %{{.*}}, i64 1
+
+// OGCG-LABEL: define{{.*}} void @_Z37test_multidim_var_array_new_with_ctori
+// OGCG:   %[[N:.*]] = load i32, ptr %{{.*}}
+// OGCG:   %[[N64:.*]] = sext i32 %[[N]] to i64
+// OGCG:   call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N64]], i64 3)
+// OGCG:   %[[TOTAL:.*]] = extractvalue { i64, i1 } %{{.*}}, 0
+// OGCG:   %[[RAW:.*]] = call{{.*}} ptr @_Znam(i64 noundef %{{.*}})
+// OGCG:   %[[END:.*]] = getelementptr inbounds %class.F, ptr %[[RAW]], i64 %[[TOTAL]]
+// OGCG:   call void @_ZN1FC1Ev(
+// OGCG:   getelementptr inbounds %class.F, ptr %{{.*}}, i64 1
+// OGCG:   icmp eq ptr %{{.*}}, %[[END]]
+
+class G {
+public:
+  G();
+  G(int);
+};
+
+void test_array_new_with_ctor_partial_init_list() {
+  auto p = new G[8] {1, 2};
+}
+
+// CIR-BEFORE-LPP: cir.func {{.*}} @_Z42test_array_new_with_ctor_partial_init_listv
+// CIR-BEFORE-LPP:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!rec_G>, !cir.ptr<!cir.ptr<!rec_G>>, ["p", init]
+// CIR-BEFORE-LPP:    %[[EIGHT:.*]] = cir.const #cir.int<8> : !u64i
+// CIR-BEFORE-LPP:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[EIGHT]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
+// CIR-BEFORE-LPP:    %[[BEGIN:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_G>
+// CIR-BEFORE-LPP:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-BEFORE-LPP:    cir.call @_ZN1GC1Ei(%[[BEGIN]], %[[ONE]]) : (!cir.ptr<!rec_G> {{.*}}, !s32i {llvm.noundef}) -> ()
+// CIR-BEFORE-LPP:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-BEFORE-LPP:    %[[SECOND:.*]] = cir.ptr_stride %[[BEGIN]], %[[ONE]] : (!cir.ptr<!rec_G>, !s32i) -> !cir.ptr<!rec_G>
+// CIR-BEFORE-LPP:    %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CIR-BEFORE-LPP:    cir.call @_ZN1GC1Ei(%[[SECOND]], %[[TWO]]) : (!cir.ptr<!rec_G> {{.*}}, !s32i {llvm.noundef}) -> ()
+// CIR-BEFORE-LPP:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-BEFORE-LPP:    %[[THIRD:.*]] = cir.ptr_stride %[[SECOND]], %[[ONE]] : (!cir.ptr<!rec_G>, !s32i) -> !cir.ptr<!rec_G>
+// CIR-BEFORE-LPP:    %[[TAIL_ARRAY:.*]] = cir.cast bitcast %[[THIRD]] : !cir.ptr<!rec_G> -> !cir.ptr<!cir.array<!rec_G x 6>>
+// CIR-BEFORE-LPP:    cir.array.ctor %[[TAIL_ARRAY]] : !cir.ptr<!cir.array<!rec_G x 6>> {
+// CIR-BEFORE-LPP:    ^bb0(%[[ELEM:.*]]: !cir.ptr<!rec_G>):
+// CIR-BEFORE-LPP:      cir.call @_ZN1GC1Ev(%[[ELEM]]) : (!cir.ptr<!rec_G> {{.*}}) -> ()
+// CIR-BEFORE-LPP:    }
+// CIR-BEFORE-LPP:    cir.store{{.*}} %[[BEGIN]], %[[P_ADDR]]
+// CIR-BEFORE-LPP:    cir.return
+
+// CHECK:  cir.func {{.*}} @_Z42test_array_new_with_ctor_partial_init_listv
+// CHECK:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!rec_G>, !cir.ptr<!cir.ptr<!rec_G>>, ["p", init]
+// CHECK:    %[[EIGHT:.*]] = cir.const #cir.int<8> : !u64i
+// CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[EIGHT]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
+// CHECK:    %[[BEGIN:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_G>
+// CHECK:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    cir.call @_ZN1GC1Ei(%[[BEGIN]], %[[ONE]]) : (!cir.ptr<!rec_G> {{.*}}, !s32i {llvm.noundef}) -> ()
+// CHECK:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[SECOND:.*]] = cir.ptr_stride %[[BEGIN]], %[[ONE]] : (!cir.ptr<!rec_G>, !s32i) -> !cir.ptr<!rec_G>
+// CHECK:    %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK:    cir.call @_ZN1GC1Ei(%[[SECOND]], %[[TWO]]) : (!cir.ptr<!rec_G> {{.*}}, !s32i {llvm.noundef}) -> ()
+// CHECK:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[THIRD:.*]] = cir.ptr_stride %[[SECOND]], %[[ONE]] : (!cir.ptr<!rec_G>, !s32i) -> !cir.ptr<!rec_G>
+// CHECK:    %[[TAIL_ARRAY:.*]] = cir.cast bitcast %[[THIRD]] : !cir.ptr<!rec_G> -> !cir.ptr<!cir.array<!rec_G x 6>>
+// CHECK:    %[[SIX:.*]] = cir.const #cir.int<6> : !u64i
+// CHECK:    %[[ARRAY_BEGIN:.*]] = cir.cast array_to_ptrdecay %[[TAIL_ARRAY]] : !cir.ptr<!cir.array<!rec_G x 6>> -> !cir.ptr<!rec_G>
+// CHECK:    %[[ARRAY_END:.*]] = cir.ptr_stride %[[ARRAY_BEGIN]], %[[SIX]] : (!cir.ptr<!rec_G>, !u64i) -> !cir.ptr<!rec_G>
+// CHECK:    %[[IDX_ADDR:.*]] = cir.alloca !cir.ptr<!rec_G>, !cir.ptr<!cir.ptr<!rec_G>>, ["__array_idx"] {alignment = 1 : i64}
+// CHECK:    cir.store %[[ARRAY_BEGIN]], %[[IDX_ADDR]] : !cir.ptr<!rec_G>, !cir.ptr<!cir.ptr<!rec_G>>
+// CHECK:    cir.do {
+// CHECK:      %[[CUR:.*]] = cir.load %[[IDX_ADDR]] : !cir.ptr<!cir.ptr<!rec_G>>, !cir.ptr<!rec_G>
+// CHECK:      cir.call @_ZN1GC1Ev(%[[CUR]]) : (!cir.ptr<!rec_G> {{.*}}) -> ()
+// CHECK:      %[[ONE_U64:.*]] = cir.const #cir.int<1> : !u64i
+// CHECK:      %[[NEXT:.*]] = cir.ptr_stride %[[CUR]], %[[ONE_U64]] : (!cir.ptr<!rec_G>, !u64i) -> !cir.ptr<!rec_G>
+// CHECK:      cir.store %[[NEXT]], %[[IDX_ADDR]] : !cir.ptr<!rec_G>, !cir.ptr<!cir.ptr<!rec_G>>
+// CHECK:      cir.yield
+// CHECK:    } while {
+// CHECK:      %[[CUR2:.*]] = cir.load %[[IDX_ADDR]] : !cir.ptr<!cir.ptr<!rec_G>>, !cir.ptr<!rec_G>
+// CHECK:      %[[CMP:.*]] = cir.cmp ne %[[CUR2]], %[[ARRAY_END]] : !cir.ptr<!rec_G>
+// CHECK:      cir.condition(%[[CMP]])
+// CHECK:    }
+// CHECK:    cir.store{{.*}} %[[BEGIN]], %[[P_ADDR]]
+// CHECK:    cir.return
+
+// LLVM: define{{.*}} void @_Z42test_array_new_with_ctor_partial_init_listv
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[RAW_PTR:.*]] = call noundef ptr @_Znam(i64 noundef 8)
+// LLVM:   call void @_ZN1GC1Ei(ptr noundef nonnull align 1 dereferenceable(1) %[[RAW_PTR]], i32 noundef 1)
+// LLVM:   %[[SECOND:.*]] = getelementptr %class.G, ptr %[[RAW_PTR]], i64 1
+// LLVM:   call void @_ZN1GC1Ei(ptr noundef nonnull align 1 dereferenceable(1) %[[SECOND]], i32 noundef 2)
+// LLVM:   %[[THIRD:.*]] = getelementptr %class.G, ptr %[[SECOND]], i64 1
+// LLVM:   %[[ARRAY_BEGIN:.*]] = getelementptr %class.G, ptr %[[THIRD]], i32 0
+// LLVM:   %[[ARRAY_END:.*]] = getelementptr %class.G, ptr %[[ARRAY_BEGIN]], i64 6
+// LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, i64 1, align 1
+// LLVM:   store ptr %[[ARRAY_BEGIN]], ptr %[[IDX_ADDR]], align 8
+// LLVM:   br label
+// LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR2]], %[[ARRAY_END]]
+// LLVM:   br i1 %[[CMP]], label
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
+// LLVM:   call void @_ZN1GC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
+// LLVM:   %[[NEXT:.*]] = getelementptr %class.G, ptr %[[CUR]], i64 1
+// LLVM:   store ptr %[[NEXT]], ptr %[[IDX_ADDR]], align 8
+// LLVM:   br label
+// LLVM:   store ptr %[[RAW_PTR]], ptr %[[P_ADDR]], align 8
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_Z42test_array_new_with_ctor_partial_init_listv
+// OGCG:   %[[P_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   %[[RAW_PTR:.*]] = call{{.*}} ptr @_Znam(i64 noundef 8)
+// OGCG:   call void @_ZN1GC1Ei(ptr noundef nonnull align 1 dereferenceable(1) %[[RAW_PTR]], i32 noundef 1)
+// OGCG:   %[[SECOND:.*]] = getelementptr inbounds %class.G, ptr %[[RAW_PTR]], i64 1
+// OGCG:   call void @_ZN1GC1Ei(ptr noundef nonnull align 1 dereferenceable(1) %[[SECOND]], i32 noundef 2)
+// OGCG:   %[[THIRD:.*]] = getelementptr inbounds %class.G, ptr %[[SECOND]], i64 1
+// OGCG:   %[[ARRAY_END:.*]] = getelementptr inbounds %class.G, ptr %[[THIRD]], i64 6
+// OGCG:   br label
+// OGCG:   %[[CUR:.*]] = phi ptr [ %[[THIRD]], {{.*}} ], [ %[[NEXT:.*]], {{.*}} ]
+// OGCG:   call void @_ZN1GC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
+// OGCG:   %[[NEXT]] = getelementptr inbounds %class.G, ptr %[[CUR]], i64 1
+// OGCG:   %[[DONE:.*]] = icmp eq ptr %[[NEXT]], %[[ARRAY_END]]
+// OGCG:   br i1 %[[DONE]], label
+// OGCG:   store ptr %[[RAW_PTR]], ptr %[[P_ADDR]], align 8
+// OGCG:   ret void
+//

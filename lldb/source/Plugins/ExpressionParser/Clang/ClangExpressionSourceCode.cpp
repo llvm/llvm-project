@@ -160,13 +160,13 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
     switch (entry.GetType()) {
     case DebugMacroEntry::DEFINE:
       if (state.IsValidEntry(entry.GetLineNumber()))
-        stream.Printf("#define %s\n", entry.GetMacroString().AsCString());
+        stream.Format("#define {0}\n", entry.GetMacroString());
       else
         return;
       break;
     case DebugMacroEntry::UNDEF:
       if (state.IsValidEntry(entry.GetLineNumber()))
-        stream.Printf("#undef %s\n", entry.GetMacroString().AsCString());
+        stream.Format("#undef {0}\n", entry.GetMacroString());
       else
         return;
       break;
@@ -346,7 +346,7 @@ void ClangExpressionSourceCode::AddLocalVariableDecls(StreamString &stream,
       continue;
     }
 
-    // We can check for .block_descriptor w/o checking for langauge since this
+    // We can check for .block_descriptor w/o checking for language since this
     // is not a valid identifier in either C or C++.
     if (!var_name || var_name == ".block_descriptor")
       continue;
@@ -359,7 +359,7 @@ void ClangExpressionSourceCode::AddLocalVariableDecls(StreamString &stream,
     if ((var_name == "self" || var_name == "_cmd") && is_objc)
       continue;
 
-    stream.Printf("using $__lldb_local_vars::%s;\n", var_name.AsCString());
+    stream.Format("using $__lldb_local_vars::{0};\n", var_name);
   }
 }
 

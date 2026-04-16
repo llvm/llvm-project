@@ -19,7 +19,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;  }
 ;}
 
-@a = common local_unnamed_addr global [18 x i8] zeroinitializer, align 16
+@a = common global [18 x i8] zeroinitializer, align 16
 
 define void @maxvf3() {
 ; CHECK-LABEL: @maxvf3(
@@ -34,8 +34,7 @@ define void @maxvf3() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[INDEX]]
 ; CHECK-NEXT:    store i8 69, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
@@ -48,16 +47,14 @@ define void @maxvf3() {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw <2 x i32> splat (i32 3), [[VEC_IND]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[TMP9]]
 ; CHECK-NEXT:    store i8 7, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
-; CHECK-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP7]], i32 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[TMP12]]

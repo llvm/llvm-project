@@ -11,6 +11,8 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/IOSandbox.h"
 
 using namespace clang;
 using namespace dependencies;
@@ -82,8 +84,6 @@ class InProcessModuleCache : public ModuleCache {
 public:
   InProcessModuleCache(ModuleCacheEntries &Entries) : Entries(Entries) {}
 
-  void prepareForGetLock(StringRef Filename) override {}
-
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
     auto &Entry = [&]() -> ModuleCacheEntry & {
       std::lock_guard<std::mutex> Lock(Entries.Mutex);
@@ -130,6 +130,26 @@ public:
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
+  }
+
+  std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer,
+                        off_t &Size, time_t &ModTime) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    // FIXME: This could use an in-memory cache to avoid IO, and only write to
+    // disk at the end of the scan.
+    return writeImpl(Path, Buffer, Size, ModTime);
+  }
+
+  Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    // FIXME: This only needs to go to disk once per build, not in every
+    // compilation. Introduce in-memory cache.
+    return readImpl(FileName, Size, ModTime);
   }
 };
 } // namespace

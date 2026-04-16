@@ -446,3 +446,6 @@ void strcpyDouble(void) {
   const double test_buf[] = {'4', '2'};
   __builtin_strcpy(buf, test_buf + 1); // all-error {{incompatible pointer types}}
 }
+
+int *iptr;
+void ignoredConditional(void) { *iptr = (((_Complex double)1.0 ? 2 : 3), a); } // all-warning {{left operand of comma operator has no effect}}

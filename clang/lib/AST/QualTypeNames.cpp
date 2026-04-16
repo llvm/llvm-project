@@ -369,11 +369,6 @@ NestedNameSpecifier createNestedNameSpecifier(const ASTContext &Ctx,
 /// versions of any template parameters.
 QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
                                bool WithGlobalNsPrefix) {
-  // Use the underlying deduced type for AutoType
-  if (const auto *AT = dyn_cast<AutoType>(QT.getTypePtr()))
-    if (AT->isDeduced())
-      QT = AT->getDeducedType();
-
   // In case of myType* we need to strip the pointer first, fully
   // qualify and attach the pointer once again.
   if (isa<PointerType>(QT.getTypePtr())) {

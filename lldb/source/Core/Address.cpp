@@ -225,7 +225,7 @@ static size_t ReadCStringFromMemory(ExecutionContextScope *exe_scope,
 
     if (len < k_buf_len)
       break;
-    curr_address.SetOffset(curr_address.GetOffset() + bytes_read);
+    curr_address.Slide(bytes_read);
   }
   strm->PutChar('"');
   return total_len;
@@ -503,8 +503,8 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               const Symbol *symbol =
                   symtab->FindSymbolContainingFileAddress(file_Addr);
               if (symbol) {
-                const char *symbol_name = symbol->GetName().AsCString();
-                if (symbol_name) {
+                llvm::StringRef symbol_name = symbol->GetName().GetStringRef();
+                if (!symbol_name.empty()) {
                   s->PutCStringColorHighlighted(symbol_name, settings);
                   addr_t delta =
                       file_Addr - symbol->GetAddressRef().GetFileAddress();
@@ -552,7 +552,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                 s->PutCString("{ ");
 #endif
                 Address cstr_addr(*this);
-                cstr_addr.SetOffset(cstr_addr.GetOffset() + pointer_size);
+                cstr_addr.Slide(pointer_size);
                 func_sc.DumpStopContext(s, exe_scope, so_addr, true, true,
                                         false, true, true);
                 if (ReadAddress(exe_scope, cstr_addr, pointer_size, so_addr)) {
@@ -578,8 +578,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
 
         case eSectionTypeDataObjCCFStrings: {
           Address cfstring_data_addr(*this);
-          cfstring_data_addr.SetOffset(cfstring_data_addr.GetOffset() +
-                                       (2 * pointer_size));
+          cfstring_data_addr.Slide(2 * pointer_size);
           if (ReadAddress(exe_scope, cfstring_data_addr, pointer_size,
                           so_addr)) {
 #if VERBOSE_OUTPUT
@@ -748,7 +747,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               DumpAddressRange(s->AsRawOstream(), range->GetRangeBase(),
                                range->GetRangeEnd(), addr_size);
             s->PutCString(", location = ");
-            var_sp->DumpLocations(s, all_ranges ? LLDB_INVALID_ADDRESS : *this);
+            var_sp->DumpLocations(s, all_ranges ? Address() : *this);
             s->PutCString(", decl = ");
             var_sp->GetDeclaration().DumpStopContext(s, false);
             s->EOL();

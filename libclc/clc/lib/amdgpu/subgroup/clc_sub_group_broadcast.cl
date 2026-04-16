@@ -73,9 +73,9 @@ __clc_sub_group_broadcast(float x, uint sub_group_local_id) {
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST double
 __clc_sub_group_broadcast(double x, uint sub_group_local_id) {
-  uint bitcast = __builtin_astype(x, double);
+  ulong bitcast = __clc_as_ulong(x);
   ulong broadcast = __clc_sub_group_broadcast(bitcast, sub_group_local_id);
-  return __builtin_astype(broadcast, double);
+  return __clc_as_double(broadcast);
 }
 
 #define __CLC_BODY "clc/subgroup/clc_subgroup_broadcast_scalarize.inc"

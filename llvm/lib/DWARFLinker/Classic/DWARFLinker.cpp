@@ -765,7 +765,18 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
     if (dwarf::toAddress(OrigUnit.getUnitDIE().find(dwarf::DW_AT_high_pc))
             .value_or(UINT64_MAX) <= LowPc)
       return Flags;
-    Unit.addLabelLowPc(*LowPc, MyInfo.AddrAdjust);
+    // For assembly language files, try to preserve DWARF info by using
+    // function ranges when available, falling back to labels otherwise.
+    if (Unit.getLanguage() == dwarf::DW_LANG_Mips_Assembler ||
+        Unit.getLanguage() == dwarf::DW_LANG_Assembly) {
+      if (auto Range = RelocMgr.getAssemblyRangeForAddress(*LowPc)) {
+        Unit.addFunctionRange(Range->LowPC, Range->HighPC, MyInfo.AddrAdjust);
+      } else {
+        Unit.addLabelLowPc(*LowPc, MyInfo.AddrAdjust);
+      }
+    } else {
+      Unit.addLabelLowPc(*LowPc, MyInfo.AddrAdjust);
+    }
     return Flags | TF_Keep;
   }
 

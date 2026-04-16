@@ -109,7 +109,7 @@ define void @trunc_minimal_bitwidths_shufflevector (ptr %p, i32 %arg1, i64 %len)
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
   %0 = load i8, ptr %arrayidx
@@ -122,7 +122,7 @@ for.body:                                         ; preds = %entry
   %exitcond = icmp eq i64 %indvars.iv.next, %len
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                                 ; preds = %for.body
+for.exit:
   ret void
 }
 !0 = !{!0, !1, !2}

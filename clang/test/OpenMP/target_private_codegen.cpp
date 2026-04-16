@@ -88,22 +88,16 @@ int foo(int n) {
   }
   // make sure that private variables are generated in all cases and that we use those instances for operations inside the
   // target region
-  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], i{{[0-9]+}} noundef [[VLA3:%.+]], ptr {{[^,]+}})
-  // TCHECK:  [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
-  // TCHECK:  [[VLA_ADDR2:%.+]] = alloca i{{[0-9]+}},
-  // TCHECK:  [[VLA_ADDR4:%.+]] = alloca i{{[0-9]+}},
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(ptr noalias noundef %__context)
   // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
   // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[B:%.+]] = alloca [10 x float],
   // TCHECK:  [[SSTACK:%.+]] = alloca ptr,
   // TCHECK:  [[C:%.+]] = alloca [5 x [10 x double]],
   // TCHECK:  [[D:%.+]] = alloca [[TT]],
-  // TCHECK:  store i{{[0-9]+}} [[VLA]], ptr [[VLA_ADDR]],
-  // TCHECK:  store i{{[0-9]+}} [[VLA1]], ptr [[VLA_ADDR2]],
-  // TCHECK:  store i{{[0-9]+}} [[VLA3]], ptr [[VLA_ADDR4]],
-  // TCHECK:  [[VLA_ADDR_REF:%.+]] = load i{{[0-9]+}}, ptr [[VLA_ADDR]],
-  // TCHECK:  [[VLA_ADDR_REF2:%.+]] = load i{{[0-9]+}}, ptr [[VLA_ADDR2]],
-  // TCHECK:  [[VLA_ADDR_REF4:%.+]] = load i{{[0-9]+}}, ptr [[VLA_ADDR4]],
+  // TCHECK:  [[VLA_ADDR_REF:%.+]] = load i{{[0-9]+}}, ptr {{%.+}},
+  // TCHECK:  [[VLA_ADDR_REF2:%.+]] = load i{{[0-9]+}}, ptr {{%.+}},
+  // TCHECK:  [[VLA_ADDR_REF4:%.+]] = load i{{[0-9]+}}, ptr {{%.+}},
   // TCHECK:  [[RET_STACK:%.+]] = call ptr @llvm.stacksave.p0()
   // TCHECK:  store ptr [[RET_STACK]], ptr [[SSTACK]],
   // TCHECK:  [[VLA5:%.+]] = alloca float, i{{[0-9]+}} [[VLA_ADDR_REF]],
@@ -212,19 +206,14 @@ struct S1 {
     return c[1][1] + (int)b;
   }
 
-  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr noundef [[TH:%.+]], i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], ptr {{[^,]+}})
-  // TCHECK: [[TH_ADDR:%.+]] = alloca ptr,
-  // TCHECK: [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
-  // TCHECK: [[VLA_ADDR2:%.+]] = alloca i{{[0-9]+}},
+  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr noalias noundef %__context)
   // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
   // TCHECK: [[B:%.+]] = alloca i{{[0-9]+}},
   // TCHECK: [[SSTACK:%.+]] = alloca ptr,
-  // TCHECK: store ptr [[TH]], ptr [[TH_ADDR]],
-  // TCHECK: store i{{[0-9]+}} [[VLA]], ptr [[VLA_ADDR]],
-  // TCHECK: store i{{[0-9]+}} [[VLA1]], ptr [[VLA_ADDR2]],
-  // TCHECK: [[TH_ADDR_REF:%.+]] = load ptr, ptr [[TH_ADDR]],
-  // TCHECK: [[VLA_ADDR_REF:%.+]] = load i{{[0-9]+}}, ptr [[VLA_ADDR]],
-  // TCHECK: [[VLA_ADDR_REF2:%.+]] = load i{{[0-9]+}}, ptr [[VLA_ADDR2]],
+  // TCHECK: getelementptr inbounds i{{[0-9]+}}, ptr {{%.+}}, i32 0
+  // TCHECK: [[TH_ADDR_REF:%.+]] = load ptr, ptr {{%.+}},
+  // TCHECK: [[VLA_ADDR_REF:%.+]] = load i{{[0-9]+}}, ptr {{%.+}},
+  // TCHECK: [[VLA_ADDR_REF2:%.+]] = load i{{[0-9]+}}, ptr {{%.+}},
   // TCHECK: [[RET_STACK:%.+]] = call ptr @llvm.stacksave.p0()
   // TCHECK: store ptr [[RET_STACK:%.+]], ptr [[SSTACK]],
 

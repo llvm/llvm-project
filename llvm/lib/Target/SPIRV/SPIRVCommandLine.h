@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_COMMANDLINE_H
-#define LLVM_LIB_TARGET_SPIRV_COMMANDLINE_H
+#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVCOMMANDLINE_H
+#define LLVM_LIB_TARGET_SPIRV_SPIRVCOMMANDLINE_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/Support/CommandLine.h"
@@ -49,4 +49,4 @@ private:
 };
 
 } // namespace llvm
-#endif // LLVM_LIB_TARGET_SPIRV_COMMANDLINE_H
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVCOMMANDLINE_H

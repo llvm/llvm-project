@@ -125,6 +125,8 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
   m_debugger.RefreshIOHandler();
 }
 
+void Statusline::ClearExecutionContext() { m_exe_ctx_ref.ClearFrame(); }
+
 void Statusline::Redraw(std::optional<ExecutionContextRef> exe_ctx_ref) {
   // Update the cached execution context.
   if (exe_ctx_ref)

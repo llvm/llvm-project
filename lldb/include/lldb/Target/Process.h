@@ -1332,16 +1332,47 @@ public:
     return StructuredData::ObjectSP();
   }
 
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return the full list of loaded shared libraries without needing any input.
+  /// Retrieve a StructuredData dictionary about all of the binaries
+  /// loaded in the process at this time.
+  /// A Darwin target specific behavior, only supported by debugserver,
+  /// response will include load address, filepath, uuid, and may also
+  /// include the fully parsed mach header and load commands.
+  ///
+  /// \param [in] information_level
+  ///     How much information about each binary should be returned;
+  ///     there may be performance reasons to retrieve a minimal set
+  ///     of information about all binaries, and then retrieve the
+  ///     full information for a subset of the whole group.
+  ///
+  /// \return
+  ///     A StructuredData object with the information that could be
+  ///     retrieved.
   virtual lldb_private::StructuredData::ObjectSP
-  GetLoadedDynamicLibrariesInfos() {
+  GetLoadedDynamicLibrariesInfos(lldb::BinaryInformationLevel info_level) {
     return StructuredData::ObjectSP();
   }
 
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return information about binaries given their load addresses.
+  /// Retrieve a StructuredData dictionary about the binaries at
+  /// the provided load addresses.
+  /// A Darwin target specific behavior, only supported by debugserver,
+  /// response will include load address, filepath, uuid, fully parsed
+  /// mach header and load commands.
+  ///
+  /// \param [in] information_level
+  ///     How much information about each binary should be returned;
+  ///     there may be performance reasons to retrieve a minimal set
+  ///     of information about all binaries, and then retrieve the
+  ///     full information for a subset of the whole group.
+  ///
+  /// \param [in] load_addresses
+  ///     The virtual address of the start of binaries to fetch
+  ///     information.
+  ///
+  /// \return
+  ///     A StructuredData object with the information that could be
+  ///     retrieved..
   virtual lldb_private::StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level,
       const std::vector<lldb::addr_t> &load_addresses) {
     return StructuredData::ObjectSP();
   }
@@ -1695,10 +1726,21 @@ public:
                                          size_t byte_size, uint64_t fail_value,
                                          Status &error);
 
+  /// Use Process::ReadMemoryRanges to efficiently read multiple unsigned
+  /// integers from memory at once.
+  llvm::SmallVector<std::optional<uint64_t>>
+  ReadUnsignedIntegersFromMemory(llvm::ArrayRef<lldb::addr_t> addresses,
+                                 unsigned byte_size);
+
   int64_t ReadSignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size,
                                       int64_t fail_value, Status &error);
 
   lldb::addr_t ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error);
+
+  /// Use Process::ReadMemoryRanges to efficiently read multiple pointers from
+  /// memory at once.
+  llvm::SmallVector<std::optional<lldb::addr_t>>
+  ReadPointersFromMemory(llvm::ArrayRef<lldb::addr_t> ptr_locs);
 
   bool WritePointerToMemory(lldb::addr_t vm_addr, lldb::addr_t ptr_value,
                             Status &error);
@@ -3052,11 +3094,12 @@ protected:
   };
 
   bool PrivateStateThreadIsRunning() const {
-    if (!m_current_private_state_thread ||
-        !m_current_private_state_thread->IsRunning())
+    if (!m_current_private_state_thread_sp ||
+        !m_current_private_state_thread_sp->IsRunning())
       return false;
 
-    lldb::StateType state = m_current_private_state_thread->GetPrivateState();
+    lldb::StateType state =
+        m_current_private_state_thread_sp->GetPrivateState();
     return state != lldb::eStateInvalid && state != lldb::eStateDetached &&
            state != lldb::eStateExited;
   }
@@ -3185,14 +3228,11 @@ protected:
   /// private state thread that we spin up when we need to run an expression on
   /// the private state thread.
   struct PrivateStateThread {
-    PrivateStateThread(
-        Process &process, lldb::StateType public_state,
-        lldb::StateType private_state,
-        bool is_secondary_thread, // FIXME: Can I get rid of this?
-        llvm::StringRef thread_name)
+    PrivateStateThread(Process &process, lldb::StateType public_state,
+                       lldb::StateType private_state,
+                       llvm::StringRef thread_name, bool is_override = false)
         : m_process(process), m_public_state(public_state),
-          m_private_state(private_state),
-          m_is_secondary_thread(is_secondary_thread),
+          m_private_state(private_state), m_is_override(is_override),
           m_thread_name(thread_name) {}
     // This returns false if we couldn't start up the thread.  If that happens,
     // you won't be doing any debugging today.
@@ -3210,6 +3250,8 @@ protected:
     }
 
     bool IsRunning() { return m_is_running; }
+
+    bool IsOverride() const { return m_is_override; }
 
     void SetThreadName(llvm::StringRef new_name) { m_thread_name = new_name; }
 
@@ -3280,67 +3322,63 @@ protected:
     ProcessRunLock m_public_run_lock;
     ProcessRunLock m_private_run_lock;
     bool m_is_running = false;
-    /// If we need to run an expression modally in the private state thread, we
-    /// have to spin up a secondary private state thread to manage the events
-    /// that drive that interaction.  This will be true if this is a modal
-    /// private state thread.
-    bool m_is_secondary_thread;
+    bool m_is_override = false;
     ///< This will be the thread name given to the Private State HostThread when
     ///< it gets spun up.
     std::string m_thread_name;
   };
 
   bool SetPrivateRunLockToStopped() {
-    assert(m_current_private_state_thread);
-    if (m_current_private_state_thread)
-      return m_current_private_state_thread->SetPrivateRunLockToStopped();
+    assert(m_current_private_state_thread_sp);
+    if (m_current_private_state_thread_sp)
+      return m_current_private_state_thread_sp->SetPrivateRunLockToStopped();
     return false;
   }
   bool SetPrivateRunLockToRunning() {
-    assert(m_current_private_state_thread);
-    if (m_current_private_state_thread)
-      return m_current_private_state_thread->SetPrivateRunLockToStopped();
+    assert(m_current_private_state_thread_sp);
+    if (m_current_private_state_thread_sp)
+      return m_current_private_state_thread_sp->SetPrivateRunLockToRunning();
     return false;
   }
   bool SetPublicRunLockToStopped() {
-    assert(m_current_private_state_thread);
-    if (m_current_private_state_thread)
-      return m_current_private_state_thread->SetPublicRunLockToStopped();
+    assert(m_current_private_state_thread_sp);
+    if (m_current_private_state_thread_sp)
+      return m_current_private_state_thread_sp->SetPublicRunLockToStopped();
     return false;
   }
   bool SetPublicRunLockToRunning() {
-    assert(m_current_private_state_thread);
-    if (m_current_private_state_thread)
-      return m_current_private_state_thread->SetPublicRunLockToRunning();
+    assert(m_current_private_state_thread_sp);
+    if (m_current_private_state_thread_sp)
+      return m_current_private_state_thread_sp->SetPublicRunLockToRunning();
     return false;
   }
 
   std::recursive_mutex &GetPrivateStateMutex() {
-    assert(m_current_private_state_thread);
-    return m_current_private_state_thread->GetPrivateStateMutex();
+    assert(m_current_private_state_thread_sp);
+    return m_current_private_state_thread_sp->GetPrivateStateMutex();
   }
 
   lldb::StateType GetPublicState() const {
-    if (!m_current_private_state_thread)
+    if (!m_current_private_state_thread_sp)
       return lldb::eStateUnloaded;
-    return m_current_private_state_thread->GetPublicState();
+    return m_current_private_state_thread_sp->GetPublicState();
   }
 
   lldb::StateType GetPrivateState() const {
-    if (!m_current_private_state_thread)
+    if (!m_current_private_state_thread_sp)
       return lldb::eStateUnloaded;
-    return m_current_private_state_thread->GetPrivateState();
+    return m_current_private_state_thread_sp->GetPrivateState();
   }
 
   lldb::StateType GetPrivateStateNoLock() const {
-    if (!m_current_private_state_thread)
+    if (!m_current_private_state_thread_sp)
       return lldb::eStateUnloaded;
-    return m_current_private_state_thread->GetPrivateStateNoLock();
+    return m_current_private_state_thread_sp->GetPrivateStateNoLock();
   }
 
   void SetPrivateStateNoLock(lldb::StateType new_state) {
-    assert(m_current_private_state_thread);
-    m_current_private_state_thread->SetPrivateStateNoLock(new_state);
+    assert(m_current_private_state_thread_sp);
+    m_current_private_state_thread_sp->SetPrivateStateNoLock(new_state);
   }
 
   // Member variables
@@ -3355,12 +3393,12 @@ protected:
                                                    // private state thread.
   lldb::ListenerSP m_private_state_listener_sp; // This is the listener for the
                                                 // private state thread.
-  ///< This is filled on construction with the "main" private state which will
-  ///< be exposed to clients of this process.  It won't have a running private
-  ///< state thread until you call StartupThread.  This needs to be a pointer
-  ///< so I can transparently swap it out for the modal one, but there will
-  ///< always be a private state thread in this slot.
-  PrivateStateThread *m_current_private_state_thread;
+  /// This is filled on construction with the "main" private state which will
+  /// be exposed to clients of this process.  It won't have a running private
+  /// state thread until you call StartupThread.  This needs to be a pointer
+  /// so I can transparently swap it out for the modal one, but there will
+  /// always be a private state thread in this slot.
+  std::shared_ptr<PrivateStateThread> m_current_private_state_thread_sp;
 
   ProcessModID m_mod_id; ///< Tracks the state of the process over stops and
                          ///other alterations.
@@ -3507,10 +3545,15 @@ protected:
   void SetPrivateState(lldb::StateType state);
 
   // Starts the private state thread and assigns it to
-  // m_current_private_state_thread.  Clients who are making a secondary thread
-  // for now have to manage backing that up by hand.
-  bool StartPrivateStateThread(lldb::StateType state, bool run_lock_is_running,
-                               bool is_secondary_thread = false);
+  // m_current_private_state_thread_sp.  If backup_ptr is non-null, this is
+  // a "secondary" thread, and the current thread will be backed up into
+  // backup_ptr before being replaced by the new thread. Pass a non-null
+  // backup_ptr in the case where you have to temporarily spin up a secondary
+  // state thread to handle events from a hand-called function on the primary
+  // private state thread.
+  bool StartPrivateStateThread(
+      lldb::StateType state, bool run_lock_is_running,
+      std::shared_ptr<PrivateStateThread> *backup_ptr = nullptr);
 
   void StopPrivateStateThread();
 
@@ -3519,12 +3562,10 @@ protected:
   void ResumePrivateStateThread();
 
 private:
-  // The starts up the private state thread that will watch for events from the
-  // debugee. Pass true for is_secondary_thread in the case where you have to
-  // temporarily spin up a secondary state thread to handle events from a hand-
-  // called function on the primary private state thread.
+  // Starts up the private state thread that will watch for events from the
+  // debugee.
 
-  lldb::thread_result_t RunPrivateStateThread();
+  lldb::thread_result_t RunPrivateStateThread(bool is_override);
 
 protected:
   void HandlePrivateEvent(lldb::EventSP &event_sp);
@@ -3618,6 +3659,28 @@ public:
     if (m_process)
       m_process->SetRunningUtilityFunction(false);
   }
+};
+
+/// RAII guard that marks the current thread as a private state thread.
+///
+/// When RunThreadPlan detects it is running on the private state thread, it
+/// spins up an override thread and reassigns m_current_private_state_thread_sp
+/// to it. The original PST continues processing events via DoOnRemoval
+/// callbacks, but CurrentThreadIsPrivateStateThread() no longer recognizes it.
+/// This guard sets a thread_local flag so that GetStackFrameList can identify
+/// the original PST and return parent frames instead of provider-augmented
+/// frames.
+struct PrivateStateThreadGuard {
+  PrivateStateThreadGuard() { g_is_private_state_thread = true; }
+  ~PrivateStateThreadGuard() { g_is_private_state_thread = false; }
+  static bool IsPrivateStateThread() { return g_is_private_state_thread; }
+
+  // Non-copyable, non-movable.
+  PrivateStateThreadGuard(const PrivateStateThreadGuard &) = delete;
+  PrivateStateThreadGuard &operator=(const PrivateStateThreadGuard &) = delete;
+
+private:
+  static thread_local bool g_is_private_state_thread;
 };
 
 } // namespace lldb_private

@@ -90,10 +90,10 @@ struct VectorizerParams {
 ///
 class MemoryDepChecker {
 public:
-  typedef PointerIntPair<Value *, 1, bool> MemAccessInfo;
-  typedef SmallVector<MemAccessInfo, 8> MemAccessInfoList;
+  using MemAccessInfo =
+      PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>;
   /// Set of potential dependent memory accesses.
-  typedef EquivalenceClasses<MemAccessInfo> DepCandidates;
+  using DepCandidates = EquivalenceClasses<MemAccessInfo>;
 
   /// Type to keep track of the status of the dependence check. The order of
   /// the elements is important and has to be from most permissive to least
@@ -121,6 +121,11 @@ public:
       // the loop, like A[B[i]]. We cannot determine direction or distance in
       // those cases, and also are unable to generate any runtime checks.
       IndirectUnsafe,
+      // Both accesses to the same loop-invariant address and at least one is a
+      // write. Vectorization is unsafe because different vector lanes would
+      // read/write the same memory location, and the ordering of accesses
+      // across lanes matters.
+      InvariantUnsafe,
 
       // Lexically forward.
       //
@@ -203,7 +208,7 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   LLVM_ABI bool areDepsSafe(const DepCandidates &AccessSets,
-                            const MemAccessInfoList &CheckDeps);
+                            ArrayRef<MemAccessInfo> CheckDeps);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -482,9 +487,8 @@ struct RuntimeCheckingPtrGroup {
 };
 
 /// A memcheck which made up of a pair of grouped pointers.
-typedef std::pair<const RuntimeCheckingPtrGroup *,
-                  const RuntimeCheckingPtrGroup *>
-    RuntimePointerCheck;
+using RuntimePointerCheck =
+    std::pair<const RuntimeCheckingPtrGroup *, const RuntimeCheckingPtrGroup *>;
 
 struct PointerDiffInfo {
   const SCEV *SrcStart;
@@ -995,7 +999,7 @@ class LoopAccessAnalysis
   LLVM_ABI static AnalysisKey Key;
 
 public:
-  typedef LoopAccessInfoManager Result;
+  using Result = LoopAccessInfoManager;
 
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &AM);
 };

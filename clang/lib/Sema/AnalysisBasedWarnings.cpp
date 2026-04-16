@@ -55,6 +55,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -2141,6 +2142,39 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
+  void handleGuardedByAnyReadNotHeld(const NamedDecl *D,
+                                     ProtectedOperationKind POK,
+                                     ArrayRef<StringRef> LockNames,
+                                     SourceLocation Loc) override {
+    bool IsDeref;
+    switch (POK) {
+    case POK_VarAccess:
+    case POK_PassByRef:
+    case POK_ReturnByRef:
+    case POK_PassPointer:
+    case POK_ReturnPointer:
+      IsDeref = false;
+      break;
+    case POK_VarDereference:
+    case POK_PtPassByRef:
+    case POK_PtReturnByRef:
+    case POK_PtPassPointer:
+    case POK_PtReturnPointer:
+      IsDeref = true;
+      break;
+    case POK_FunctionCall:
+      llvm_unreachable("POK_FunctionCall not applicable here");
+    }
+    std::string Quoted;
+    llvm::raw_string_ostream OS(Quoted);
+    llvm::ListSeparator LS;
+    for (StringRef Name : LockNames)
+      OS << LS << "'" << Name << "'";
+    PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_requires_any_of_locks)
+                                         << D << IsDeref << Quoted);
+    Warnings.emplace_back(std::move(Warning), getNotes());
+  }
+
   void handleMutexNotHeld(StringRef Kind, const NamedDecl *D,
                           ProtectedOperationKind POK, Name LockName,
                           LockKind LK, SourceLocation Loc,
@@ -2888,9 +2922,11 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     if (!FD)
       continue;
     AnalysisDeclContext AC(nullptr, FD);
-    AC.getCFGBuildOptions().PruneTriviallyFalseEdges = false;
+    AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
     AC.getCFGBuildOptions().AddLifetime = true;
     AC.getCFGBuildOptions().AddParameterLifetimes = true;
+    AC.getCFGBuildOptions().AddInitializers = true;
+    AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
     if (AC.getCFG())
       runLifetimeSafetyAnalysis(AC, &SemaHelper, LSStats, S.CollectStats);

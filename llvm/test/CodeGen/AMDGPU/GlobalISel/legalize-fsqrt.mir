@@ -120,8 +120,9 @@ body: |
     ; GCN-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 -128
     ; GCN-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[C4]], [[C1]]
     ; GCN-NEXT: [[FLDEXP1:%[0-9]+]]:_(s64) = ninf G_FLDEXP [[FMA6]], [[SELECT1]](s32)
-    ; GCN-NEXT: [[IS_FPCLASS:%[0-9]+]]:_(s1) = G_IS_FPCLASS [[FLDEXP]](s64), 608
-    ; GCN-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = ninf G_SELECT [[IS_FPCLASS]](s1), [[FLDEXP]], [[FLDEXP1]]
+    ; GCN-NEXT: [[C5:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
+    ; GCN-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[FLDEXP]](s64), [[C5]]
+    ; GCN-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = ninf G_SELECT [[FCMP1]](s1), [[FLDEXP]], [[FLDEXP1]]
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[SELECT2]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = ninf G_FSQRT %0

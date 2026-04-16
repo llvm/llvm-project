@@ -166,7 +166,7 @@ define void @derived_type() !dbg !3 {
 ; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
 ; CHECK-DAG: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "size">
 ; CHECK-DAG: #[[GV:.+]] = #llvm.di_global_variable<{{.*}}name = "gv"{{.*}}>
-; CHECK-DAG: #[[COMP1:.+]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", line = 10, baseType = #[[INT]], sizeInBits = 128, alignInBits = 32>
+; CHECK-DAG: #[[COMP1:.+]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", file = #[[FILE]], line = 10, baseType = #[[INT]], sizeInBits = 128, alignInBits = 32>
 ; CHECK-DAG: #[[COMP2:.+]] = #llvm.di_composite_type<{{.*}}, file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT]]>
 ; CHECK-DAG: #[[COMP3:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<count = 4 : i64>>
 ; CHECK-DAG: #[[COMP4:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
@@ -190,7 +190,7 @@ define void @composite_type() !dbg !3 {
 !4 = !DISubroutineType(types: !5)
 !5 = !{!7, !8, !9, !10, !18, !22, !24}
 !6 = !DIBasicType(name: "int")
-!7 = !DICompositeType(tag: DW_TAG_array_type, name: "array1", line: 10, size: 128, align: 32, baseType: !6)
+!7 = !DICompositeType(tag: DW_TAG_array_type, name: "array1", file: !2, line: 10, size: 128, align: 32, baseType: !6)
 !8 = !DICompositeType(tag: DW_TAG_array_type, name: "array2", file: !2, scope: !2, baseType: !6)
 !9 = !DICompositeType(tag: DW_TAG_array_type, name: "array3", flags: DIFlagVector, elements: !13, baseType: !6)
 !10 = !DICompositeType(tag: DW_TAG_array_type, name: "array4", flags: DIFlagVector, elements: !14, baseType: !6)
@@ -218,7 +218,7 @@ define void @composite_type() !dbg !3 {
 ; // -----
 
 ; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None, nameTableKind = None, splitDebugFilename = "test.dwo">
+; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], isDebugInfoForProfiling = true, nameTableKind = None, splitDebugFilename = "test.dwo">
 ; Verify an empty subroutine types list is supported.
 ; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
 ; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #[[CU]], scope = #[[FILE]], name = "subprogram", linkageName = "subprogram", file = #[[FILE]], line = 42, scopeLine = 42, subprogramFlags = Definition, type = #[[SP_TYPE]]>
@@ -230,7 +230,7 @@ define void @subprogram() !dbg !3 {
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, nameTableKind: None, splitDebugFilename: "test.dwo")
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, nameTableKind: None, debugInfoForProfiling: true, splitDebugFilename: "test.dwo")
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "subprogram", linkageName: "subprogram", scope: !2, file: !2, line: 42, scopeLine: 42, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(cc: DW_CC_normal, types: !5)
@@ -819,7 +819,30 @@ define void @imp_fn() !dbg !12 {
 ; CHECK-DAG: #[[M:.+]] = #llvm.di_module<{{.*}}name = "mod1"{{.*}}>
 ; CHECK-DAG:  #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct{{.*}}<>, isRecSelf = true>
 ; CHECK-DAG: #[[IE:.+]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[SP_REC]], entity = #[[M]]{{.*}}>
-; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = #[[IE]]>
+; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = [#[[IE]]]>
+
+; // -----
+
+; CHECK-DAG: #[[M:.+]] = #llvm.di_module<{{.*}}name = "mod1"{{.*}}>
+; CHECK-DAG: #[[IE:.+]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module{{.*}}entity = #[[M]]{{.*}}>
+; CHECK-DAG: #llvm.di_compile_unit<{{.*}}importedEntities = #[[IE]]>
+
+define void @compile_unit_imports() !dbg !4 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, imports: !5)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!3 = !DISubroutineType(types: !8)
+!4 = distinct !DISubprogram(name: "compile_unit_imports", linkageName: "compile_unit_imports", scope: !2, file: !2, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !1)
+!5 = !{!6}
+!6 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !2, entity: !7)
+!7 = !DIModule(scope: !2, name: "mod1", line: 5)
+!8 = !{}
 
 ; // -----
 
@@ -895,3 +918,32 @@ define void @test() !dbg !3 {
 ; CHECK: #[[EXP1:.+]] =  #llvm.di_global_variable_expression<var = #[[VAR1]], expr = <>>
 ; CHECK: #[[EXP2:.+]] =  #llvm.di_global_variable_expression<var = #[[VAR2]], expr = <>>
 ; CHECK: llvm.mlir.global external @data() {{{.*}}dbg_exprs = [#[[EXP1]], #[[EXP2]]]} : i64
+
+; // -----
+
+; CU references itself through an imported entity (recId / isRecSelf cycle).
+
+; CHECK-DAG: #[[CU_SELF:.+]] = #llvm.di_compile_unit<recId = [[REC_ID:.+]], isRecSelf = true>
+; CHECK-DAG: #llvm.di_imported_entity<{{.*}}tag = DW_TAG_imported_declaration{{.*}}scope = #[[CU_SELF]]{{.*}}>
+; CHECK-DAG: #llvm.di_compile_unit<recId = [[REC_ID]], {{.*}}importedEntities{{.*}}>
+
+@g = external global i32, !dbg !0
+
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!17}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(name: "g", scope: !2, file: !12, line: 7, type: !13, isLocal: false, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !3, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !4, imports: !5, splitDebugInlining: false, nameTableKind: None)
+!3 = !DIFile(filename: "cu.cpp", directory: "/build")
+!4 = !{}
+!5 = !{!6}
+!6 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !2, entity: !7, file: !11, line: 10)
+!7 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "S", scope: !9, file: !8, line: 5, size: 32, flags: DIFlagTypePassByValue, elements: !4)
+!8 = !DIFile(filename: "hdr.hpp", directory: "/build")
+!9 = !DINamespace(name: "ns", scope: !10)
+!10 = !DINamespace(name: "outer", scope: null)
+!11 = !DIFile(filename: "import.hpp", directory: "/build")
+!12 = !DIFile(filename: "cu.hpp", directory: "/build")
+!13 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!17 = !{i32 2, !"Debug Info Version", i32 3}

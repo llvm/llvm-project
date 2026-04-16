@@ -2081,9 +2081,8 @@ LLVM_C_ABI unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy,
       macro(SelectInst)                     \
       macro(ShuffleVectorInst)              \
       macro(StoreInst)                      \
-      macro(BranchInst)                     \
-        macro(UncondBrInst)                 \
-        macro(CondBrInst)                   \
+      macro(UncondBrInst)                   \
+      macro(CondBrInst)                     \
       macro(IndirectBrInst)                 \
       macro(InvokeInst)                     \
       macro(ReturnInst)                     \
@@ -2229,6 +2228,10 @@ LLVM_C_ABI LLVMBool LLVMIsPoison(LLVMValueRef Val);
 #define LLVM_DECLARE_VALUE_CAST(name)                                          \
   LLVM_C_ABI LLVMValueRef LLVMIsA##name(LLVMValueRef Val);
 LLVM_FOR_EACH_VALUE_SUBCLASS(LLVM_DECLARE_VALUE_CAST)
+
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMIsABranchInst(LLVMValueRef Val),
+    "Use LLVMIsAUncondBrInst/LLVMIsACondBrInst instead");
 
 LLVM_C_ABI LLVMValueRef LLVMIsAMDNode(LLVMValueRef Val);
 LLVM_C_ABI LLVMValueRef LLVMIsAValueAsMetadata(LLVMValueRef Val);
@@ -3144,25 +3147,25 @@ LLVM_C_ABI unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
 LLVM_C_ABI unsigned LLVMGetIntrinsicID(LLVMValueRef Fn);
 
 /**
- * Get or insert the declaration of an intrinsic.  For overloaded intrinsics,
- * parameter types must be provided to uniquely identify an overload.
+ * Get or insert the declaration of an intrinsic. For overloaded intrinsics,
+ * overload types must be provided to uniquely identify an overload.
  *
  * @see llvm::Intrinsic::getOrInsertDeclaration()
  */
 LLVM_C_ABI LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
                                                     unsigned ID,
-                                                    LLVMTypeRef *ParamTypes,
-                                                    size_t ParamCount);
+                                                    LLVMTypeRef *OverloadTypes,
+                                                    size_t OverloadCount);
 
 /**
- * Retrieves the type of an intrinsic.  For overloaded intrinsics, parameter
+ * Retrieves the type of an intrinsic. For overloaded intrinsics, overload
  * types must be provided to uniquely identify an overload.
  *
  * @see llvm::Intrinsic::getType()
  */
 LLVM_C_ABI LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
-                                            LLVMTypeRef *ParamTypes,
-                                            size_t ParamCount);
+                                            LLVMTypeRef *OverloadTypes,
+                                            size_t OverloadCount);
 
 /**
  * Retrieves the name of an intrinsic.
@@ -3173,13 +3176,13 @@ LLVM_C_ABI const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
 
 /** Deprecated: Use LLVMIntrinsicCopyOverloadedName2 instead. */
 LLVM_C_ABI char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
-                                                 LLVMTypeRef *ParamTypes,
-                                                 size_t ParamCount,
+                                                 LLVMTypeRef *OverloadTypes,
+                                                 size_t OverloadCount,
                                                  size_t *NameLength);
 
 /**
  * Copies the name of an overloaded intrinsic identified by a given list of
- * parameter types.
+ * overload types.
  *
  * Unlike LLVMIntrinsicGetName, the caller is responsible for freeing the
  * returned string.
@@ -3190,8 +3193,8 @@ LLVM_C_ABI char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
  */
 LLVM_C_ABI char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod,
                                                   unsigned ID,
-                                                  LLVMTypeRef *ParamTypes,
-                                                  size_t ParamCount,
+                                                  LLVMTypeRef *OverloadTypes,
+                                                  size_t OverloadCount,
                                                   size_t *NameLength);
 
 /**

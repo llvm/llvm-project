@@ -502,6 +502,41 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     1 value is returned, packed into an LLVM IR struct type. Function calls and
     returns are updated accordingly. Block argument types are updated to use
     LLVM IR types.
+
+    #### Function discardable attributes
+
+    Discardable attributes on `func.func` are lowered as follows.
+
+    - **LLVM `llvm.func` properties.**  Each inherent attribute defined on
+      `llvm.func` (ODS properties such as `target_cpu`, `linkage`,
+      `vscale_range`, `passthrough`, and so on) must be attached to `func.func`
+      using the `llvm.` prefix (for example `llvm.target_cpu`,
+      `llvm.vscale_range`). The pass strips that prefix, validates the attribute
+      value the same way as for `llvm.func`, and fills the corresponding fields
+      on the generated `llvm.func`. Values that fail validation make conversion
+      fail.
+
+    - **Unprefixed legacy names.**  A discardable attribute whose name equals
+      the bare ODS property name (without `llvm.`) is **not** forwarded: it is
+      dropped. Only the explicit `llvm.*` spelling is lowered into `llvm.func`
+      properties so that front ends cannot accidentally rely on ambiguous
+      short names.
+
+    - **Opaque pass-through.**  Any other discardable attribute is copied onto
+      the `llvm.func` unchanged, so arbitrary metadata can survive the
+      conversion. That includes names that start with `llvm.` but are **not**
+      inherent `llvm.func` properties (for example dialect-specific markers): they
+      are not interpreted as properties and are forwarded as discardable
+      attributes on the result.
+
+    - **`func.varargs`.**  This attribute is interpreted when converting the
+      function type (variadic LLVM signature). It is not an LLVM IR dialect
+      property and is handled separately from the `llvm.*` property mapping
+      above.
+
+    - **`llvm.readnone`.**  If present, the pass also sets `memory_effects` on
+      the `llvm.func` to read-none semantics, in addition to any other attribute
+      handling.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
@@ -1653,6 +1688,10 @@ def ConvertXeGPUToXeVMPass : Pass<"convert-xegpu-to-xevm"> {
                            "memref::MemRefDialect", "arith::ArithDialect",
                            "LLVM::LLVMDialect", "index::IndexDialect",
                            "gpu::GPUDialect", "scf::SCFDialect"];
+  let options = [Option<"use64bitIndex", "use-64bit-index", "bool",
+                        /*default=*/"true",
+                        "Use 64-bit integers to convert index types">,
+  ];
 }
 
 #endif // MLIR_CONVERSION_PASSES
