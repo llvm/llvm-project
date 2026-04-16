@@ -9,15 +9,6 @@ class TestCase(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    def test_before(self):
-        self.build()
-        _, _, self.thread, _ = lldbutil.run_to_source_breakpoint(
-            self, "break before", lldb.SBFileSpec("main.swift")
-        )
-        self._do_test("view._count", 41, is_graph_update=False)
-
-    @skipUnlessDarwin
-    @swiftTest
     def test_body(self):
         self.build()
         _, _, self.thread, _ = lldbutil.run_to_source_breakpoint(
@@ -27,24 +18,28 @@ class TestCase(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    def test_after(self):
+    def test_appear(self):
         self.build()
         log = self.getBuildArtifact("types.log")
         self.expect(f"log enable lldb types -v -f {log}")
         _, _, self.thread, _ = lldbutil.run_to_source_breakpoint(
-            self, "break after", lldb.SBFileSpec("main.swift")
+            self, "break appear", lldb.SBFileSpec("main.swift")
         )
-        self._do_test("self._count", 15, is_graph_update=False)
+        self._do_test("self._count", 41, is_graph_update=False)
 
     @skipUnlessDarwin
     @swiftTest
-    def test_final(self):
+    def test_change(self):
         self.build()
         log = self.getBuildArtifact("types.log")
         self.expect(f"log enable lldb types -v -f {log}")
-        _, _, self.thread, _ = lldbutil.run_to_source_breakpoint(
-            self, "break final", lldb.SBFileSpec("main.swift")
+        _, process, self.thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "break change", lldb.SBFileSpec("main.swift")
         )
+        # Assignment in onAppear
+        self._do_test("self._count", 23, is_graph_update=False)
+        process.Continue()
+        # Callback in onChange
         self._do_test("self._count", 23, is_graph_update=False)
 
     def _do_test(self, var_name: str, value: int, *, is_graph_update: bool):
