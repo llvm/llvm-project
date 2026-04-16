@@ -42,6 +42,7 @@ struct DXILOperationDesc {
   int OpCode;         // ID of DXIL operation
   StringRef OpClass;  // name of the opcode class
   StringRef Doc;      // the documentation description of this instruction
+  bool CanUsePrecise; // Can this operation be maker with dx.precise
   // Vector of operand type records - return type is at index 0
   SmallVector<const Record *> OpTypes;
   SmallVector<const Record *> OverloadRecs;
@@ -107,6 +108,7 @@ static StringRef GetIntrinsicName(const RecordVal *RV) {
 DXILOperationDesc::DXILOperationDesc(const Record *R) {
   OpName = R->getNameInitAsString();
   OpCode = R->getValueAsInt("OpCode");
+  CanUsePrecise = R->getValueAsBit("precise");
 
   Doc = R->getValueAsString("Doc");
   SmallVector<const Record *> ParamTypeRecs;
@@ -507,7 +509,7 @@ static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadMaskString(Op.OverloadRecs) << ", "
        << getStageMaskString(Op.StageRecs) << ", " << Op.OverloadParamIndex
-       << " }";
+       << ", " << (Op.CanUsePrecise ? "true" : "false") << " }";
     Prefix = ",\n";
   }
   OS << "  };\n";

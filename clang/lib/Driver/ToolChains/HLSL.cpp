@@ -512,6 +512,9 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       // Translate -Gis into -ffp_model_EQ=strict
       DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_ffp_model_EQ),
                           "strict");
+
+      DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_mllvm),
+                          StringRef("-enable-precise"));
       A->claim();
       continue;
     }

@@ -22,6 +22,12 @@ using namespace llvm::dxil;
 constexpr StringLiteral DXILOpNamePrefix = "dx.op.";
 
 namespace {
+
+static cl::opt<bool>
+    OpPreciseEnabled("enable-precise",
+                     cl::desc("Enables emission of dx.precise"),
+                     cl::init(false));
+
 enum OverloadKind : uint16_t {
   UNDEFINED = 0,
   VOID = 1,
@@ -155,6 +161,7 @@ struct OpCodeProperty {
   llvm::SmallVector<OpStage> Stages;
   int OverloadParamIndex; // parameter index which control the overload.
                           // When < 0, should be only 1 overload type.
+  bool Precise;
 };
 
 // Include getOpCodeClassName getOpCodeProperty, getOpCodeName and
@@ -484,6 +491,35 @@ static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
   return;
 }
 
+static bool isOverloadTyFloat(uint16_t ValidTyMask) {
+  if (ValidTyMask == OverloadKind::UNDEFINED)
+    return false;
+  return (ValidTyMask &
+          ((uint16_t)OverloadKind::HALF | (uint16_t)OverloadKind::FLOAT |
+           (uint16_t)OverloadKind::DOUBLE)) != 0;
+}
+
+static void setDXILMetadata(CallInst *CI, const OpCodeProperty *Prop) {
+  if (OpPreciseEnabled) {
+    bool AllOverloadAreFloat = false;
+    for (const OpOverload &Overload : Prop->Overloads)
+      AllOverloadAreFloat =
+          AllOverloadAreFloat || isOverloadTyFloat(Overload.ValidTys);
+
+    if (AllOverloadAreFloat && Prop->Precise) {
+      const StringRef Key = "dx.precise";
+      Module *M = CI->getModule();
+
+      LLVMContext &Ctx = M->getContext();
+      MDNode *One =
+          llvm::MDNode::get(Ctx, ConstantAsMetadata::get(ConstantInt::get(
+                                     llvm::Type::getInt32Ty(Ctx), 1)));
+
+      CI->setMetadata(Key, One);
+    }
+  }
+}
+
 namespace llvm {
 namespace dxil {
 
@@ -583,6 +619,7 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
   // We then need to attach available function attributes
   setDXILAttributes(CI, OpCode, DXILVersion);
 
+  setDXILMetadata(CI, Prop);
   return CI;
 }
 

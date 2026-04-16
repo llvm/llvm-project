@@ -405,6 +405,8 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 
   // Versioned attributes of operation
   list<Attributes> attributes = [];
+
+  bit precise = 0;
 }
 
 // Concrete definitions of DXIL Operations
@@ -419,6 +421,7 @@ def Abs : DXILOp<6, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Saturate : DXILOp<7, unary> {
@@ -430,6 +433,7 @@ def Saturate : DXILOp<7, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def IsNaN : DXILOp<8, isSpecialFloat> {
@@ -478,6 +482,7 @@ def Cos : DXILOp<12, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Sin : DXILOp<13, unary> {
@@ -488,6 +493,7 @@ def Sin : DXILOp<13, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Tan : DXILOp<14, unary> {
@@ -498,6 +504,7 @@ def Tan : DXILOp<14, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def ACos : DXILOp<15, unary> {
@@ -508,6 +515,7 @@ def ACos : DXILOp<15, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def ASin : DXILOp<16, unary> {
@@ -518,6 +526,7 @@ def ASin : DXILOp<16, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def ATan : DXILOp<17, unary> {
@@ -528,6 +537,7 @@ def ATan : DXILOp<17, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def HCos : DXILOp<18, unary> {
@@ -538,6 +548,7 @@ def HCos : DXILOp<18, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def HSin : DXILOp<19, unary> {
@@ -548,6 +559,7 @@ def HSin : DXILOp<19, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def HTan : DXILOp<20, unary> {
@@ -558,6 +570,7 @@ def HTan : DXILOp<20, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Exp2 : DXILOp<21, unary> {
@@ -569,6 +582,7 @@ def Exp2 : DXILOp<21, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Frac : DXILOp<22, unary> {
@@ -580,6 +594,7 @@ def Frac : DXILOp<22, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Log2 : DXILOp<23, unary> {
@@ -590,6 +605,7 @@ def Log2 : DXILOp<23, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Sqrt : DXILOp<24, unary> {
@@ -601,6 +617,7 @@ def Sqrt : DXILOp<24, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def RSqrt : DXILOp<25, unary> {
@@ -612,6 +629,7 @@ def RSqrt : DXILOp<25, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Round : DXILOp<26, unary> {
@@ -623,6 +641,7 @@ def Round : DXILOp<26, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Floor : DXILOp<27, unary> {
@@ -634,6 +653,7 @@ def Floor : DXILOp<27, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Ceil : DXILOp<28, unary> {
@@ -645,6 +665,7 @@ def Ceil : DXILOp<28, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Trunc : DXILOp<29, unary> {
@@ -655,6 +676,7 @@ def Trunc : DXILOp<29, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Rbits : DXILOp<30, unary> {
@@ -717,6 +739,7 @@ def FMax : DXILOp<35, binary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def FMin : DXILOp<36, binary> {
@@ -727,6 +750,7 @@ def FMin : DXILOp<36, binary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def SMax : DXILOp<37, binary> {
@@ -788,6 +812,7 @@ def FMad : DXILOp<46, tertiary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Fma : DXILOp<47, tertiary> {
@@ -798,6 +823,7 @@ def Fma : DXILOp<47, tertiary> {
   let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def IMad : DXILOp<48, tertiary> {
@@ -831,6 +857,7 @@ def Dot2 : DXILOp<54, dot2> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Dot3 : DXILOp<55, dot3> {
@@ -842,6 +869,7 @@ def Dot3 : DXILOp<55, dot3> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def Dot4 : DXILOp<56, dot4> {
@@ -853,6 +881,7 @@ def Dot4 : DXILOp<56, dot4> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let precise = 1;
 }
 
 def CreateHandle : DXILOp<57, createHandle> {
@@ -1107,6 +1136,7 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let overloads = [Overloads<
       DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let precise = 1;
 }
 
 def WaveActiveOp : DXILOp<119, waveActiveOp> {
@@ -1261,6 +1291,7 @@ def LegacyF32ToF16 : DXILOp<130, legacyF32ToF16> {
   let arguments = [FloatTy];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let precise = 1;
 }
 
 def LegacyF16ToF32 : DXILOp<131, legacyF16ToF32> {
@@ -1270,6 +1301,7 @@ def LegacyF16ToF32 : DXILOp<131, legacyF16ToF32> {
   let arguments = [Int32Ty];
   let result = FloatTy;
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let precise = 1;
 }
 
 def WaveAllBitCount : DXILOp<135, waveAllOp> {
@@ -1325,6 +1357,7 @@ def Dot2AddHalf : DXILOp<162, dot2AddHalf> {
   let overloads = [Overloads<DXIL1_4, [FloatTy]>];
   let stages = [Stages<DXIL1_4, [all_stages]>];
   let attributes = [Attributes<DXIL1_4, [ReadNone]>];
+  let precise = 1;
 }
 
 def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
