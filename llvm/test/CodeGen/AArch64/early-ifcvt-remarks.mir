@@ -2,10 +2,43 @@
 # RUN:   -enable-early-ifcvt-data-dependent \
 # RUN:   -pass-remarks-analysis='early-ifcvt' -o /dev/null %s 2>&1 | FileCheck %s
 
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
+# RUN:   -enable-early-ifcvt-cascade -enable-early-ifcvt-data-dependent \
+# RUN:   -pass-remarks='early-ifcvt' -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=CASCADE-SUCCESS \
+# RUN:     --implicit-check-not="performing cascade if-conversion"
+
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
+# RUN:   -enable-early-ifcvt-cascade -enable-early-ifcvt-data-dependent \
+# RUN:   -pass-remarks-missed='early-ifcvt' -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=CASCADE-MISSED
+
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
+# RUN:   -enable-early-ifcvt-cascade \
+# RUN:   -pass-remarks='early-ifcvt' -o /dev/null %s 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CASCADE-NO-DD --implicit-check-not="cascade if-conversion"
+
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
+# RUN:   -enable-early-ifcvt-cascade -enable-early-ifcvt-data-dependent \
+# RUN:   -early-ifcvt-limit=3 -pass-remarks='early-ifcvt' \
+# RUN:   -pass-remarks-missed='early-ifcvt' -o /dev/null %s 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CASCADE-OVER-LIMIT \
+# RUN:     --implicit-check-not="performing cascade if-conversion"
+
 # Test that we emit an analysis remark when the branch condition is data-dependent
 # (derived from a memory load).
 
 # CHECK: remark: <unknown>:0:0: branch condition is data-dependent (from memory load), using higher CritLimit of {{[0-9]+}} cycles
+
+# Test cascade conversion success remark.
+# CASCADE-SUCCESS: remark: <unknown>:0:0: performing cascade if-conversion on 3 blocks: critical path extension is {{[0-9]+}} cycle
+
+# CASCADE-MISSED: remark: <unknown>:0:0: did not if-convert cascade with 5 blocks: critical path extension of 21 cycles exceeds the threshold of 20 cycles.
+# CASCADE-MISSED: remark: <unknown>:0:0: did not if-convert cascade with 3 blocks: critical path extension of 30 cycles exceeds the threshold of 12 cycles.
+
+# CASCADE-NO-DD: remark: <unknown>:0:0: performing if-conversion on branch: {{.*}} staying under the threshold of 8 cycles.
+
+# CASCADE-OVER-LIMIT: remark: <unknown>:0:0: did not if-convert cascade with 3 blocks: the speculated blocks would hold 10 instructions, exceeding the limit of 3.
+# CASCADE-OVER-LIMIT: remark: <unknown>:0:0: did not if-convert cascade with 5 blocks: the speculated blocks would hold 14 instructions, exceeding the limit of 3.
+# CASCADE-OVER-LIMIT: remark: <unknown>:0:0: did not if-convert cascade with 3 blocks: the speculated blocks would hold 11 instructions, exceeding the limit of 3.
 
 --- |
   define i32 @data_dependent_branch(ptr %p, i32 %x, i32 %y) {
@@ -15,6 +48,9 @@
     ret i64 0
   }
   define i64 @cascade_increasing_cond_depth(ptr %p) {
+    ret i64 0
+  }
+  define i64 @cascade_mixed_reg_classes(ptr %p) {
     ret i64 0
   }
 ...
@@ -201,4 +237,65 @@ body:             |
     %90:gpr64 = PHI %40, %bb.1, %41, %bb.2, %42, %bb.3, %43, %bb.4, %44, %bb.5, %45, %bb.6
     $x0 = COPY %90
     RET_ReallyLR implicit $x0
+...
+---
+name:            cascade_mixed_reg_classes
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $x0, $d0, $d1, $d2, $d3
+
+    %0:gpr64common = COPY $x0
+    %5:fpr64 = COPY $d0
+    %6:fpr64 = COPY $d1
+    %7:fpr64 = COPY $d2
+    %8:fpr64 = COPY $d3
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.5(0x40000000)
+
+    %10:gpr32 = LDRWui %0, 0 :: (load (s32))
+    %11:gpr32 = MADDWrrr %10, %10, $wzr
+    %12:gpr32 = MADDWrrr %11, %11, $wzr
+    %20:gpr32 = ADDWrr %12, %12
+    %21:gpr32 = ADDWrr %20, %20
+    %40:gpr64 = MOVi64imm 100
+    %30:gpr32 = SUBSWrr %12, %12, implicit-def $nzcv
+    Bcc 10, %bb.5, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+    successors: %bb.3(0x40000000), %bb.5(0x40000000)
+
+    %41:gpr64 = MOVi64imm 200
+    %31:gpr32 = SUBSWrr %20, %20, implicit-def $nzcv
+    Bcc 10, %bb.5, implicit $nzcv
+    B %bb.3
+
+  bb.3:
+    successors: %bb.4(0x40000000), %bb.5(0x40000000)
+
+    %42:gpr64 = MOVi64imm 300
+    %32:gpr32 = SUBSWrr %21, %21, implicit-def $nzcv
+    Bcc 10, %bb.5, implicit $nzcv
+    B %bb.4
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+
+    %43:gpr64 = MOVi64imm 400
+
+  bb.5:
+    %90:gpr64 = PHI %40, %bb.1, %41, %bb.2, %42, %bb.3, %43, %bb.4
+    %91:fpr64 = PHI %5, %bb.1, %6, %bb.2, %7, %bb.3, %8, %bb.4
+    %60:fpr64 = FMULDrr %91, %91, implicit $fpcr
+    %61:fpr64 = FMULDrr %60, %60, implicit $fpcr
+    %62:fpr64 = FMULDrr %61, %61, implicit $fpcr
+    %63:fpr64 = FMULDrr %62, %62, implicit $fpcr
+    %64:fpr64 = FMULDrr %63, %63, implicit $fpcr
+    $x0 = COPY %90
+    $d0 = COPY %64
+    RET_ReallyLR implicit $x0, implicit $d0
 ...
