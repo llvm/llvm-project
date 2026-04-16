@@ -495,3 +495,86 @@ void test_wrong_profile_lambda() {
   auto l = get_wrong_profile_lambda();
   l(0); // expected-note {{in instantiation of function template specialization 'get_wrong_profile_lambda()::(lambda)::operator()<int>' requested here}}
 }
+
+// Suppress on an inline member function definition applies to the body.
+struct InlineMethodSuppress {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  void f() {
+    int *p = reinterpret_cast<int*>(0);
+  }
+};
+
+// Suppress on an inline member function with a non-matching profile does not
+// suppress the violation.
+struct InlineMethodWrongProfile {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::other)]]
+  void f() {
+    int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  }
+};
+
+// Suppress on an inline constructor applies to the member initializer list.
+struct InlineCtorMemInitSuppress {
+  int *p;
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  InlineCtorMemInitSuppress() : p(reinterpret_cast<int*>(0)) {}
+};
+
+// Suppress on an inline destructor applies to the destructor body.
+struct InlineDtorSuppress {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  ~InlineDtorSuppress() {
+    int *p = reinterpret_cast<int*>(0);
+  }
+};
+
+// Suppress on an inline conversion operator applies to its body.
+struct InlineConversionSuppress {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  operator int *() {
+    return reinterpret_cast<int*>(0);
+  }
+};
+
+// Suppress on an inline operator overload applies to its body.
+struct InlineOperatorSuppress {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  int *operator+() {
+    return reinterpret_cast<int*>(0);
+  }
+};
+
+// Suppress on a late-parsed default argument of an inline member function.
+struct InlineDefaultArgSuppress {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  void f(int *p = reinterpret_cast<int*>(0));
+};
+
+// Without per-method suppress, the violation still fires in an inline body.
+struct InlineMethodNoSuppress {
+  void f() {
+    int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  }
+};
+
+// Per-method suppress on a member function template with a non-dependent
+// violation in the body: exercises getAsFunction() on a FunctionTemplateDecl.
+struct InlineMemberTemplateSuppress {
+  template <typename T>
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  void f() {
+    int *p = reinterpret_cast<int*>(0);
+  }
+};
+void instantiate_inline_member_template_suppress() {
+  InlineMemberTemplateSuppress s;
+  s.f<int>();
+}
