@@ -173,6 +173,16 @@ define void @pli_b_store_i32(ptr %p) {
   ret void
 }
 
+define void @pli_b_store_i16(ptr %p) {
+; CHECK-LABEL: pli_b_store_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, -127
+; CHECK-NEXT:    sh a1, 0(a0)
+; CHECK-NEXT:    ret
+  store i16 u0x8181, ptr %p
+  ret void
+}
+
 define i64 @plui_h_i64() {
 ; CHECK-LABEL: plui_h_i64:
 ; CHECK:       # %bb.0:
