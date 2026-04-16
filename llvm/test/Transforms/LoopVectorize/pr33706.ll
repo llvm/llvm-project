@@ -63,15 +63,15 @@ bb:
   %tmp6 = icmp ugt i32 %arg2, 65536
   br i1 %tmp6, label %bb7, label %bb9
 
-bb7:                                              ; preds = %bb
+bb7:
   %tmp8 = load i32, ptr @global, align 4
   br label %bb27
 
-bb9:                                              ; preds = %bb
+bb9:
   %tmp10 = udiv i32 65536, %arg2
   br label %bb11
 
-bb11:                                             ; preds = %bb11, %bb9
+bb11:
   %tmp12 = phi i32 [ %tmp20, %bb11 ], [ %tmp5, %bb9 ]
   %tmp13 = phi ptr [ %tmp18, %bb11 ], [ %tmp4, %bb9 ]
   %tmp14 = phi i32 [ %tmp16, %bb11 ], [ %tmp10, %bb9 ]
@@ -85,7 +85,7 @@ bb11:                                             ; preds = %bb11, %bb9
   %tmp21 = icmp eq i32 %tmp16, 0
   br i1 %tmp21, label %bb22, label %bb11
 
-bb22:                                             ; preds = %bb11
+bb22:
   %tmp23 = phi ptr [ %tmp18, %bb11 ]
   %tmp24 = phi i32 [ %tmp19, %bb11 ]
   %tmp25 = phi i32 [ %tmp20, %bb11 ]
@@ -93,7 +93,7 @@ bb22:                                             ; preds = %bb11
   store i32 %tmp26, ptr @global, align 4
   br label %bb27
 
-bb27:                                             ; preds = %bb22, %bb7
+bb27:
   %tmp28 = phi i32 [ %tmp26, %bb22 ], [ %tmp8, %bb7 ]
   %tmp29 = phi ptr [ %tmp23, %bb22 ], [ %tmp4, %bb7 ]
   %tmp30 = phi i32 [ %tmp25, %bb22 ], [ %tmp5, %bb7 ]

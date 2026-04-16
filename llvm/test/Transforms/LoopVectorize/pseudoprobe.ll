@@ -47,7 +47,7 @@ entry:
   call void @llvm.pseudoprobe(i64 3666282617048535130, i64 1, i32 0, i64 -1)
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -59,7 +59,7 @@ for.body:                                         ; preds = %for.body, %entry
   call void @llvm.pseudoprobe(i64 3666282617048535130, i64 2, i32 0, i64 -1)
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   call void @llvm.pseudoprobe(i64 3666282617048535130, i64 3, i32 0, i64 -1)
   ret i32 0
 }
