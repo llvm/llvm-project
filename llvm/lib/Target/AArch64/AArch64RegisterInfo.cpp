@@ -1158,8 +1158,10 @@ static bool HandleDestructivePredicateHint(
 
   Hints.append(Order.begin(), Order.end());
   llvm::stable_sort(Hints, [&](Register A, Register B) {
-    return A != B && B == Op1Reg &&
-           (!CSRs.contains(A) || !MRI.def_empty(A) || Matrix->isPhysRegUsed(A));
+    return ((A == Op1Reg) || !(!CSRs.contains(A) || !MRI.def_empty(A) ||
+                               Matrix->isPhysRegUsed(A))) <
+           ((B == Op1Reg) || !(!CSRs.contains(B) || !MRI.def_empty(B) ||
+                               Matrix->isPhysRegUsed(B)));
   });
   return true;
 }
