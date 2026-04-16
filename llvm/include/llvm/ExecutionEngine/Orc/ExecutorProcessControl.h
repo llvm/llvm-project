@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
@@ -33,6 +32,7 @@ namespace llvm::orc {
 
 class DylibManager;
 class ExecutionSession;
+class MemoryAccess;
 
 /// ExecutorProcessControl supports interaction with a JIT target process.
 class LLVM_ABI ExecutorProcessControl {
