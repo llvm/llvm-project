@@ -428,16 +428,15 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
     auto *PredBBTerminator = PredBB->getTerminator();
     LLVM_DEBUG(dbgs() << "LV: draw edge from " << PredBB->getName() << '\n');
 
-    auto *TermBr = dyn_cast<BranchInst>(PredBBTerminator);
     if (isa<UnreachableInst>(PredBBTerminator)) {
       assert(PredVPSuccessors.size() == 1 &&
              "Predecessor ending w/o branch must have single successor.");
       DebugLoc DL = PredBBTerminator->getDebugLoc();
       PredBBTerminator->eraseFromParent();
-      auto *Br = BranchInst::Create(NewBB, PredBB);
+      auto *Br = UncondBrInst::Create(NewBB, PredBB);
       Br->setDebugLoc(DL);
-    } else if (TermBr && !TermBr->isConditional()) {
-      TermBr->setSuccessor(0, NewBB);
+    } else if (auto *UBI = dyn_cast<UncondBrInst>(PredBBTerminator)) {
+      UBI->setSuccessor(NewBB);
     } else {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
@@ -447,10 +446,11 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
       // TODO: Remove exception by modeling the terminator of entry block using
       // BranchOnCond.
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-      assert((TermBr && (!TermBr->getSuccessor(idx) ||
-                         (isa<VPIRBasicBlock>(this) &&
-                          (TermBr->getSuccessor(idx) == NewBB ||
-                           PredVPBlock == getPlan()->getEntry())))) &&
+      auto *TermBr = cast<CondBrInst>(PredBBTerminator);
+      assert((!TermBr->getSuccessor(idx) ||
+              (isa<VPIRBasicBlock>(this) &&
+               (TermBr->getSuccessor(idx) == NewBB ||
+                PredVPBlock == getPlan()->getEntry()))) &&
              "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
     }
@@ -475,9 +475,9 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
     Br->setOperand(0, nullptr);
     IRBB->getTerminator()->eraseFromParent();
   } else {
-    assert(
-        (getNumSuccessors() == 0 || isa<BranchInst>(IRBB->getTerminator())) &&
-        "other blocks must be terminated by a branch");
+    assert((getNumSuccessors() == 0 ||
+            isa<UncondBrInst, CondBrInst>(IRBB->getTerminator())) &&
+           "other blocks must be terminated by a branch");
   }
 
   connectToPredecessors(*State);
@@ -570,6 +570,11 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   auto *SplitBlock = getPlan()->createVPBasicBlock(getName() + ".split");
   VPBlockUtils::insertBlockAfter(SplitBlock, this);
 
+  // If this is the exiting block, make the split the new exiting block.
+  auto *ParentRegion = getParent();
+  if (ParentRegion && ParentRegion->getExiting() == this)
+    ParentRegion->setExiting(SplitBlock);
+
   // Finally, move the recipes starting at SplitAt to new block.
   for (VPRecipeBase &ToMove :
        make_early_inc_range(make_range(SplitAt, this->end())))
@@ -659,7 +664,7 @@ void VPBlockBase::print(raw_ostream &O) const {
 }
 
 void VPBlockBase::printSuccessors(raw_ostream &O, const Twine &Indent) const {
-  if (getSuccessors().empty()) {
+  if (!hasSuccessors()) {
     O << Indent << "No successors\n";
   } else {
     O << Indent << "Successor(s): ";
@@ -684,14 +689,8 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
-
-// Clone the CFG for all nodes reachable from \p Entry, this includes cloning
-// the blocks and their recipes. Operands of cloned recipes will NOT be updated.
-// Remapping of operands must be done separately. Returns a pair with the new
-// entry and exiting blocks of the cloned region. If \p Entry isn't part of a
-// region, return nullptr for the exiting block.
-static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
+std::pair<VPBlockBase *, VPBlockBase *>
+VPBlockUtils::cloneFrom(VPBlockBase *Entry) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
   VPBlockBase *Exiting = nullptr;
   bool InRegion = Entry->getParent();
@@ -742,7 +741,7 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
-  const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
+  const auto &[NewEntry, NewExiting] = VPBlockUtils::cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
   VPRegionBlock *NewRegion =
       isReplicator()
@@ -809,8 +808,8 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
       Cost += Block->cost(VF, Ctx);
     InstructionCost BackedgeCost =
         ForceTargetInstructionCost.getNumOccurrences()
-            ? InstructionCost(ForceTargetInstructionCost.getNumOccurrences())
-            : Ctx.TTI.getCFInstrCost(Instruction::Br, Ctx.CostKind);
+            ? InstructionCost(ForceTargetInstructionCost)
+            : Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind);
     LLVM_DEBUG(dbgs() << "Cost of " << BackedgeCost << " for VF " << VF
                       << ": vector loop backedge\n");
     Cost += BackedgeCost;
@@ -931,7 +930,7 @@ void VPlan::execute(VPTransformState *State) {
 
   // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
   BasicBlock *VectorPreHeader = State->CFG.PrevBB;
-  cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
+  cast<UncondBrInst>(VectorPreHeader->getTerminator())->setSuccessor(nullptr);
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
@@ -960,6 +959,39 @@ void VPlan::execute(VPTransformState *State) {
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
 
+  if (hasEarlyExit()) {
+    // Fix up LoopInfo for extra dispatch blocks when vectorizing loops with
+    // early exits. For dispatch blocks, we need to find the smallest common
+    // loop of all successors that are in a loop. Note: we only need to update
+    // loop info for blocks after the middle block, but there is no easy way to
+    // get those at this point.
+    for (VPBlockBase *VPB : reverse(RPOT)) {
+      auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+      if (!VPBB || isa<VPIRBasicBlock>(VPBB))
+        continue;
+      BasicBlock *BB = State->CFG.VPBB2IRBB[VPBB];
+      Loop *L = State->LI->getLoopFor(BB);
+      if (!L || any_of(successors(BB),
+                       [L](BasicBlock *Succ) { return L->contains(Succ); }))
+        continue;
+      // Find the innermost loop containing all successors that are in a loop.
+      // Successors not in any loop don't constrain the target loop.
+      Loop *Target = nullptr;
+      for (BasicBlock *Succ : successors(BB)) {
+        Loop *SuccLoop = State->LI->getLoopFor(Succ);
+        if (!SuccLoop)
+          continue;
+        if (!Target)
+          Target = SuccLoop;
+        else
+          Target = State->LI->getSmallestCommonLoop(Target, SuccLoop);
+      }
+      State->LI->removeBlock(BB);
+      if (Target)
+        Target->addBasicBlockToLoop(BB, *State->LI);
+    }
+  }
+
   // If the original loop is unreachable, delete it and all its blocks.
   if (!ScalarPhVPBB->hasPredecessors()) {
     // DeleteDeadBlocks will remove single-entry phis. Remove them from the exit
@@ -976,10 +1008,12 @@ void VPlan::execute(VPTransformState *State) {
         State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
     auto Blocks = OrigLoop->getBlocksVector();
     Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
+    while (!OrigLoop->isInnermost())
+      State->LI->erase(*OrigLoop->begin());
+    State->LI->erase(OrigLoop);
     for (auto *BB : Blocks)
       State->LI->removeBlock(BB);
     DeleteDeadBlocks(Blocks, &State->CFG.DTU);
-    State->LI->erase(OrigLoop);
   }
 
   State->CFG.DTU.flush();
@@ -1181,7 +1215,7 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 VPlan *VPlan::duplicate() {
   unsigned NumBlocksBeforeCloning = CreatedBlocks.size();
   // Clone blocks.
-  const auto &[NewEntry, __] = cloneFrom(Entry);
+  const auto &[NewEntry, __] = VPBlockUtils::cloneFrom(Entry);
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
   VPIRBasicBlock *NewScalarHeader = nullptr;
@@ -1199,19 +1233,31 @@ VPlan *VPlan::duplicate() {
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
-  Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
-  Old2NewVPValues[&VF] = &NewPlan->VF;
-  Old2NewVPValues[&UF] = &NewPlan->UF;
-  Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
-  if (BackedgeTakenCount) {
-    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
-    Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
-  }
+
   if (auto *TripCountIRV = dyn_cast_or_null<VPIRValue>(TripCount))
     Old2NewVPValues[TripCountIRV] = NewPlan->getOrAddLiveIn(TripCountIRV);
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
+  assert(none_of(Old2NewVPValues.keys(), IsaPred<VPSymbolicValue>) &&
+         "All VPSymbolicValues must be handled below");
+
+  if (BackedgeTakenCount)
+    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
+
+  // Map and propagate materialized state for symbolic values.
+  for (auto [OldSV, NewSV] :
+       {std::pair{&VectorTripCount, &NewPlan->VectorTripCount},
+        {&VF, &NewPlan->VF},
+        {&UF, &NewPlan->UF},
+        {&VFxUF, &NewPlan->VFxUF},
+        {BackedgeTakenCount, NewPlan->BackedgeTakenCount}}) {
+    if (!OldSV)
+      continue;
+    Old2NewVPValues[OldSV] = NewSV;
+    if (OldSV->isMaterialized())
+      NewSV->markMaterialized();
+  }
   remapOperands(Entry, NewEntry, Old2NewVPValues);
 
   // Initialize remaining fields of cloned VPlan.
@@ -1402,11 +1448,14 @@ bool VPValue::isDefinedOutsideLoopRegions() const {
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
+  if (auto *SV = dyn_cast<VPSymbolicValue>(this))
+    SV->markMaterialized();
 }
 
 void VPValue::replaceUsesWithIf(
     VPValue *New,
     llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+  assertNotMaterialized();
   // Note that this early exit is required for correctness; the implementation
   // below relies on the number of users for this VPValue to decrease, which
   // isn't the case if this == New.
@@ -1564,6 +1613,21 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   }
 
   return "<badref>";
+}
+
+VPInstruction *VPBuilder::createAnyOfReduction(VPValue *ChainOp,
+                                               VPValue *TrueVal,
+                                               VPValue *FalseVal, DebugLoc DL) {
+  assert(VPTypeAnalysis(*getInsertBlock()->getPlan())
+             .inferScalarType(ChainOp)
+             ->isIntegerTy(1) &&
+         "ChainOp must be i1 for AnyOf reduction");
+  VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                  FastMathFlags());
+  auto *OrReduce =
+      createNaryOp(VPInstruction::ComputeReductionResult, {ChainOp}, Flags, DL);
+  auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
+  return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
 }
 
 bool LoopVectorizationPlanner::getDecisionAndClampRange(

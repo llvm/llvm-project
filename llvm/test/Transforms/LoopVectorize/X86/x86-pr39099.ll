@@ -31,7 +31,7 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 ;CHECK-NEXT:  br i1 %[[M]], label %pred.store.if, label %pred.store.continue
 ;CHECK-NOT:   %{{.+}} = load <16 x i8>, ptr %{{.*}}, align 1
 
-define dso_local void @masked_strided(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr {
+define void @masked_strided(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) {
 entry:
   %conv = zext i8 %guard to i32
   br label %for.body

@@ -128,11 +128,11 @@ protected:
 
   /// This string, if specified, is used to separate instructions from each
   /// other when on the same line.  Defaults to ';'
-  const char *SeparatorString;
+  const char *SeparatorString = ";";
 
   /// This indicates the comment string used by the assembler.  Defaults to
   /// "#"
-  StringRef CommentString;
+  StringRef CommentString = "#";
 
   /// This indicates whether to allow additional "comment strings" to be lexed
   /// as a comment. Setting this attribute to true, will ensure that C-style
@@ -143,7 +143,7 @@ protected:
   bool AllowAdditionalComments = true;
 
   /// This is appended to emitted labels.  Defaults to ":"
-  const char *LabelSuffix;
+  const char *LabelSuffix = ":";
 
   /// Use .set instead of = to equate a symbol to an expression.
   bool UsesSetToEquateSymbol = false;
@@ -154,25 +154,24 @@ protected:
   // Do we need to create a local symbol for .size?
   bool NeedsLocalForSize = false;
 
-  /// This prefix is used for globals like constant pool entries that are
-  /// completely private to the .s file and should not have names in the .o
-  /// file.  Defaults to "L"
-  StringRef PrivateGlobalPrefix;
+  /// For internal use by compiler and assembler, not meant to be visible
+  /// externally. They are usually not emitted to the symbol table in the
+  /// object file.
+  StringRef InternalSymbolPrefix = "L";
 
-  /// This prefix is used for labels for basic blocks. Defaults to the same as
-  /// PrivateGlobalPrefix.
-  StringRef PrivateLabelPrefix;
+  /// This prefix is used for labels for basic blocks. Defaults to "L"
+  StringRef PrivateLabelPrefix = "L";
 
   /// This prefix is used for symbols that should be passed through the
   /// assembler but be removed by the linker.  This is 'l' on Darwin, currently
   /// used for some ObjC metadata.  The default of "" meast that for this system
   /// a plain private symbol should be used.  Defaults to "".
-  StringRef LinkerPrivateGlobalPrefix;
+  StringRef LinkerPrivateGlobalPrefix = "";
 
   /// If these are nonempty, they contain a directive to emit before and after
-  /// an inline assembly statement.  Defaults to "#APP\n", "#NO_APP\n"
-  const char *InlineAsmStart;
-  const char *InlineAsmEnd;
+  /// an inline assembly statement.  Defaults to "APP", "NO_APP"
+  const char *InlineAsmStart = "APP";
+  const char *InlineAsmEnd = "NO_APP";
 
   /// Which dialect of an assembler variant to use.  Defaults to 0
   unsigned AssemblerDialect = 0;
@@ -223,17 +222,17 @@ protected:
   /// non-zero if supported by the directive) bytes emitted to the current
   /// section. Common cases are "\t.zero\t" and "\t.space\t". Defaults to
   /// "\t.zero\t"
-  const char *ZeroDirective;
+  const char *ZeroDirective = "\t.zero\t";
 
   /// This directive allows emission of an ascii string with the standard C
   /// escape characters embedded into it.  If a target doesn't support this, it
   /// can be set to null. Defaults to "\t.ascii\t"
-  const char *AsciiDirective;
+  const char *AsciiDirective = "\t.ascii\t";
 
   /// If not null, this allows for special handling of zero terminated strings
   /// on this target.  This is commonly supported as ".asciz".  If a target
   /// doesn't support this, it can be set to null.  Defaults to "\t.asciz\t"
-  const char *AscizDirective;
+  const char *AscizDirective = "\t.asciz\t";
 
   /// Form used for character literals in the assembly syntax.  Useful for
   /// producing strings as byte lists.  If a target does not use or support
@@ -244,10 +243,10 @@ protected:
   /// current section.  If a data directive is set to null, smaller data
   /// directives will be used to emit the large sizes.  Defaults to "\t.byte\t",
   /// "\t.short\t", "\t.long\t", "\t.quad\t"
-  const char *Data8bitsDirective;
-  const char *Data16bitsDirective;
-  const char *Data32bitsDirective;
-  const char *Data64bitsDirective;
+  const char *Data8bitsDirective = "\t.byte\t";
+  const char *Data16bitsDirective = "\t.short\t";
+  const char *Data32bitsDirective = "\t.long\t";
+  const char *Data64bitsDirective = "\t.quad\t";
 
   /// True if data directives support signed values
   bool SupportsSignedData = true;
@@ -280,7 +279,7 @@ protected:
 
   /// This is the directive used to declare a global entity. Defaults to
   /// ".globl".
-  const char *GlobalDirective;
+  const char *GlobalDirective = "\t.globl\t";
 
   /// True if the expression
   ///   .long f - g
@@ -321,7 +320,7 @@ protected:
   bool HasNoDeadStrip = false;
 
   /// Used to declare a global as being a weak symbol. Defaults to ".weak".
-  const char *WeakDirective;
+  const char *WeakDirective = "\t.weak\t";
 
   /// This directive, if non-null, is used to declare a global as being a weak
   /// undefined symbol.  Defaults to nullptr.
@@ -385,7 +384,7 @@ protected:
   bool DwarfRegNumForCFI = false;
 
   /// True if target uses @ (expr@specifier) for relocation specifiers.
-  bool UseAtForSpecifier = true;
+  bool UseAtForSpecifier = false;
 
   /// (ARM-specific) Uses parens for relocation specifier in data
   /// directives, e.g. .word foo(got).
@@ -412,13 +411,13 @@ protected:
   /// constructors) when failing to parse a valid piece of assembly (inline
   /// or otherwise) is considered a bug. It may then be overridden after
   /// construction (see CodeGenTargetMachineImpl::initAsmInfo()).
-  bool UseIntegratedAssembler;
+  bool UseIntegratedAssembler = true;
 
   /// Use AsmParser to parse inlineAsm when UseIntegratedAssembler is not set.
-  bool ParseInlineAsmUsingAsmParser;
+  bool ParseInlineAsmUsingAsmParser = false;
 
   /// Preserve Comments in assembly
-  bool PreserveAsmComments;
+  bool PreserveAsmComments = true;
 
   /// The column (zero-based) at which asm comments should be printed.
   unsigned CommentColumn = 40;
@@ -434,6 +433,8 @@ protected:
   llvm::StringMap<uint32_t> NameToAtSpecifier;
   void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
+  const MCTargetOptions *TargetOptions = nullptr;
+
 public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
@@ -441,6 +442,9 @@ public:
   // Explicitly non-copyable.
   MCAsmInfo(MCAsmInfo const &) = delete;
   MCAsmInfo &operator=(MCAsmInfo const &) = delete;
+
+  const MCTargetOptions *getTargetOptions() const { return TargetOptions; }
+  void setTargetOptions(const MCTargetOptions &TO) { TargetOptions = &TO; }
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
@@ -545,7 +549,7 @@ public:
   bool usesSetToEquateSymbol() const { return UsesSetToEquateSymbol; }
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
-  StringRef getPrivateGlobalPrefix() const { return PrivateGlobalPrefix; }
+  StringRef getInternalSymbolPrefix() const { return InternalSymbolPrefix; }
   StringRef getPrivateLabelPrefix() const { return PrivateLabelPrefix; }
 
   bool hasLinkerPrivateGlobalPrefix() const {
@@ -555,12 +559,17 @@ public:
   StringRef getLinkerPrivateGlobalPrefix() const {
     if (hasLinkerPrivateGlobalPrefix())
       return LinkerPrivateGlobalPrefix;
-    return getPrivateGlobalPrefix();
+    return getInternalSymbolPrefix();
   }
 
   const char *getInlineAsmStart() const { return InlineAsmStart; }
   const char *getInlineAsmEnd() const { return InlineAsmEnd; }
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
+  // Return the assembler dialect that output printing should use. Used by
+  // createMCInstPrinter.
+  unsigned getOutputAssemblerDialect() const {
+    return TargetOptions->OutputAsmVariant.value_or(AssemblerDialect);
+  }
   bool doesAllowAtInName() const { return AllowAtInName; }
   void setAllowAtInName(bool V) { AllowAtInName = V; }
   bool doesAllowQuestionAtStartOfIdentifier() const {

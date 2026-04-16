@@ -149,7 +149,7 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-GI-NEXT:    mov w8, #37 // =0x25
 ; CHECK-GI-NEXT:    and x9, x2, #0x1fffffffff
 ; CHECK-GI-NEXT:    udiv x10, x9, x8
-; CHECK-GI-NEXT:    msub x8, x10, x8, x9
+; CHECK-GI-NEXT:    umsubl x8, w10, w8, x9
 ; CHECK-GI-NEXT:    mov w9, #36 // =0x24
 ; CHECK-GI-NEXT:    ubfx x10, x1, #1, #36
 ; CHECK-GI-NEXT:    sub x9, x9, x8
@@ -364,7 +364,7 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-GI-NEXT:    and x9, x2, #0x1fffffffff
 ; CHECK-GI-NEXT:    and x11, x1, #0x1fffffffff
 ; CHECK-GI-NEXT:    udiv x10, x9, x8
-; CHECK-GI-NEXT:    msub x8, x10, x8, x9
+; CHECK-GI-NEXT:    umsubl x8, w10, w8, x9
 ; CHECK-GI-NEXT:    mov w9, #36 // =0x24
 ; CHECK-GI-NEXT:    lsl x10, x0, #1
 ; CHECK-GI-NEXT:    sub x9, x9, x8

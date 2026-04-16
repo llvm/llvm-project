@@ -92,6 +92,11 @@ static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
   if (auto attr = op->getAttr(kInPlaceOperandsAttrName)) {
     inPlaceVector = SmallVector<StringRef>(llvm::to_vector<4>(
         cast<ArrayAttr>(attr).getAsValueRange<StringAttr>()));
+    // The existing attribute may have fewer entries than the current operand
+    // count (e.g., when user-provided annotations are inconsistent with the
+    // op's actual operand count). Resize to avoid an out-of-bounds access.
+    if (inPlaceVector.size() < op->getNumOperands())
+      inPlaceVector.resize(op->getNumOperands(), "none");
   } else {
     inPlaceVector = SmallVector<StringRef>(op->getNumOperands(), "none");
     for (OpOperand &opOperand : op->getOpOperands())
@@ -727,7 +732,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
       }
 
       // No conflict if the operands are non-conflicting subsets.
-      if (areNonConflictingSubsets(uRead, uConflictingWrite, state)) {
+      if (state.areNonConflictingSubsetsCached(uRead, uConflictingWrite)) {
         LDBG() << "  no conflict: non-conflicting subsets";
         continue;
       }
@@ -966,9 +971,19 @@ OneShotAnalysisState::findDefinitionsCached(OpOperand *opOperand) {
   return cachedDefinitions[value];
 }
 
+bool OneShotAnalysisState::areNonConflictingSubsetsCached(
+    OpOperand *uRead, OpOperand *uConflictingWrite) {
+  auto key = std::make_pair(uRead, uConflictingWrite);
+  auto [it, inserted] = nonConflictingSubsetCache.try_emplace(key, false);
+  if (inserted)
+    it->second = areNonConflictingSubsets(uRead, uConflictingWrite, *this);
+  return it->second;
+}
+
 void OneShotAnalysisState::resetCache() {
   AnalysisState::resetCache();
   cachedDefinitions.clear();
+  nonConflictingSubsetCache.clear();
 }
 
 /// Determine if `operand` can be bufferized in-place.

@@ -15,16 +15,15 @@
 ;  6     a[i] += b[i];
 ;  7 }
 
-@a = local_unnamed_addr global ptr null, align 8
-@b = local_unnamed_addr global ptr null, align 8
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+@a = global ptr null, align 8
+@b = global ptr null, align 8
 
-define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
+define void @_Z3foov() #0 !dbg !6 {
   %1 = load ptr, ptr @b, align 8, !dbg !8, !tbaa !9
   %2 = load ptr, ptr @a, align 8, !dbg !13, !tbaa !9
   br label %3, !dbg !14
 
-; <label>:3:                                      ; preds = %3, %0
+; <label>:3:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %3 ]
   %4 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv, !dbg !8
   %5 = load i32, ptr %4, align 4, !dbg !8, !tbaa !15
@@ -39,7 +38,7 @@ define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
   %exitcond = icmp eq i64 %indvars.iv.next, 4096, !dbg !19
   br i1 %exitcond, label %9, label %3, !dbg !14, !llvm.loop !20
 
-; <label>:9:                                      ; preds = %3
+; <label>:9:
   ret void, !dbg !21
 }
 

@@ -12,6 +12,7 @@
 #include "mlir/IR/Attributes.h"
 
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
 
 /// Include the generated interface declarations.

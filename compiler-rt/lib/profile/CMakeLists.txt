@@ -74,6 +74,7 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformLinux.c
   InstrProfilingPlatformOther.c
   InstrProfilingPlatformWindows.c
+  InstrProfilingPlatformGPU.c
   )
 
 if (NOT COMPILER_RT_PROFILE_BAREMETAL)
@@ -154,6 +155,18 @@ if(COMPILER_RT_PROFILE_BAREMETAL)
      -DCOMPILER_RT_PROFILE_BAREMETAL=1)
 endif()
 
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding EXTRA_FLAGS)
+  append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib EXTRA_FLAGS)
+  append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto EXTRA_FLAGS)
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
+                   "SHELL:-Xclang -mcode-object-version=none" EXTRA_FLAGS)
+  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
+    list(APPEND EXTRA_FLAGS --cuda-feature=+ptx63)
+  endif()
+endif()
+
 if(MSVC)
   # profile historically has only been supported with the static runtime
   # on windows
@@ -163,7 +176,7 @@ endif()
 # We don't use the C++ Standard Library here, so avoid including it by mistake.
 append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ EXTRA_FLAGS)
 # XRay uses C++ standard library headers.
-string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-?-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # This appears to be a C-only warning banning the use of locals in aggregate
 # initializers. All other compilers accept this, though.

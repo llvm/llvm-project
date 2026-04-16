@@ -31,3 +31,6 @@
 // CHECK-BINDINGS-SRC: "spirv64" - "clang", inputs: ["{{.*}}foo.c"], output: "[[TMP1_BINDINGS_SRC_BC:.+]]"
 // CHECK-BINDINGS-SRC: "spirv64" - "clang", inputs: ["{{.*}}bar.c"], output: "[[TMP2_BINDINGS_SRC_BC:.+]]"
 // CHECK-BINDINGS-SRC: "spirv64" - "SPIR-V::Linker", inputs: ["[[TMP1_BINDINGS_SRC_BC]]", "[[TMP2_BINDINGS_SRC_BC]]"], output: "{{.*}}.bc"
+
+// RUN: %clang -### --target=spirv64 -emit-llvm %t/a.bc %t/b.bc -Wl,-O1 2>&1 | FileCheck --check-prefix=CHECK-WARN %s
+// CHECK-WARN: warning: spirv64: '-Wl,-O1' input unused when '-emit-llvm' is present

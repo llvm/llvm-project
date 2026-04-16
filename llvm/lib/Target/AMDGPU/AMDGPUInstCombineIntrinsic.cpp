@@ -722,6 +722,33 @@ std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
+  case Intrinsic::amdgcn_implicitarg_ptr: {
+    if (II.getFunction()->hasFnAttribute("amdgpu-no-implicitarg-ptr"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    uint64_t ImplicitArgBytes = ST->getImplicitArgNumBytes(*II.getFunction());
+
+    uint64_t CurrentOrNullBytes =
+        II.getAttributes().getRetDereferenceableOrNullBytes();
+    if (CurrentOrNullBytes != 0) {
+      // Refine "dereferenceable (A) meets dereferenceable_or_null(B)"
+      // into dereferenceable(max(A, B))
+      uint64_t NewBytes = std::max(CurrentOrNullBytes, ImplicitArgBytes);
+      II.addRetAttr(
+          Attribute::getWithDereferenceableBytes(II.getContext(), NewBytes));
+      II.removeRetAttr(Attribute::DereferenceableOrNull);
+      return &II;
+    }
+
+    uint64_t CurrentBytes = II.getAttributes().getRetDereferenceableBytes();
+    uint64_t NewBytes = std::max(CurrentBytes, ImplicitArgBytes);
+    if (NewBytes != CurrentBytes) {
+      II.addRetAttr(
+          Attribute::getWithDereferenceableBytes(II.getContext(), NewBytes));
+      return &II;
+    }
+
+    return std::nullopt;
+  }
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
@@ -1395,11 +1422,31 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
-  case Intrinsic::amdgcn_mbcnt_hi: {
+  case Intrinsic::amdgcn_mbcnt_hi:
     // exec_hi is all 0, so this is just a copy.
     if (ST->isWave32())
       return IC.replaceInstUsesWith(II, II.getArgOperand(1));
-    break;
+    [[fallthrough]];
+  case Intrinsic::amdgcn_mbcnt_lo: {
+    ConstantRange AccRange = computeConstantRange(II.getArgOperand(1),
+                                                  /*ForSigned=*/false);
+    if (AccRange.isFullSet())
+      return nullptr;
+
+    // TODO: Can raise lower bound by inspecting first argument.
+    ConstantRange MbcntRange(APInt(32, 0), APInt(32, 32 + 1));
+    ConstantRange ComputedRange = AccRange.add(MbcntRange);
+    if (ComputedRange.isFullSet())
+      return nullptr;
+
+    if (std::optional<ConstantRange> ExistingRange = II.getRange()) {
+      ComputedRange = ComputedRange.intersectWith(*ExistingRange);
+      if (ComputedRange == *ExistingRange)
+        return nullptr;
+    }
+
+    II.addRangeRetAttr(ComputedRange);
+    return nullptr;
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Arg = II.getArgOperand(0);
@@ -1447,6 +1494,29 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // amdgcn.kill(i1 1) is a no-op
     return IC.eraseInstFromFunction(II);
+  }
+  case Intrinsic::amdgcn_s_sendmsg:
+  case Intrinsic::amdgcn_s_sendmsghalt: {
+    // The second operand is copied to m0, but is only actually used for
+    // certain message types. For message types that are known to not use m0,
+    // fold it to poison.
+    using namespace AMDGPU::SendMsg;
+
+    Value *M0Val = II.getArgOperand(1);
+    if (isa<PoisonValue>(M0Val))
+      break;
+
+    auto *MsgImm = cast<ConstantInt>(II.getArgOperand(0));
+    uint16_t MsgId, OpId, StreamId;
+    decodeMsg(MsgImm->getZExtValue(), MsgId, OpId, StreamId, *ST);
+
+    if (!msgDoesNotUseM0(MsgId, *ST))
+      break;
+
+    // Drop UB-implying attributes since we're replacing with poison.
+    II.dropUBImplyingAttrsAndMetadata();
+    IC.replaceOperand(II, 1, PoisonValue::get(M0Val->getType()));
+    return nullptr;
   }
   case Intrinsic::amdgcn_update_dpp: {
     Value *Old = II.getArgOperand(0);
@@ -1544,6 +1614,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     if (isa<UndefValue>(Segment))
       return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
+
+    // Sign bit is not used.
+    Value *StrippedSign = InstCombiner::stripSignOnlyFPOps(Src);
+    if (StrippedSign != Src)
+      return IC.replaceOperand(II, 0, StrippedSign);
 
     if (II.isStrictFP())
       break;
@@ -1820,27 +1895,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
-  }
-  case Intrinsic::amdgcn_tensor_load_to_lds:
-  case Intrinsic::amdgcn_tensor_store_from_lds: {
-    Value *D2 = II.getArgOperand(2);
-    Value *D3 = II.getArgOperand(3);
-    // We know that not passing the second and third tensor DMA groups is
-    // equivalent to passing zeroes for those registers, so we rewrite to the
-    // shorter form here. Undef or poison are replaced by 0.
-    auto Pred = m_CombineOr(m_Zero(), m_Undef());
-    if (!match(D2, Pred) || !match(D3, Pred))
-      return std::nullopt;
-
-    auto ShortIntrinsic = IID == Intrinsic::amdgcn_tensor_load_to_lds
-                              ? Intrinsic::amdgcn_tensor_load_to_lds_d2
-                              : Intrinsic::amdgcn_tensor_store_from_lds_d2;
-    CallInst *NewII = IC.Builder.CreateIntrinsic(
-        ShortIntrinsic,
-        {II.getArgOperand(0), II.getArgOperand(1), II.getArgOperand(4)});
-    NewII->takeName(&II);
-    NewII->copyMetadata(II);
-    return IC.eraseInstFromFunction(II);
   }
   case Intrinsic::amdgcn_wave_shuffle: {
     if (!ST->hasDPP())

@@ -219,6 +219,18 @@ private:
   /// header.
   llvm::DenseMap<const DirectoryEntry *, Module *> UmbrellaDirs;
 
+  /// Mapping from (header, (sub)module) pairs to the source location where
+  /// the header was added to the module (the header directive location).
+  /// TODO: Consider moving this into Module::Header and serializing it into
+  /// PCMs so that locations are available for headers deserialized from
+  /// modules. Need to evaluate size/perf overhead of adding a SourceLocation
+  /// to the serialization format for this diagnostic.
+  llvm::DenseMap<std::pair<const FileEntry *, const Module *>, SourceLocation>
+      HeaderOwnerLocs;
+
+  /// Headers for which we've already diagnosed duplicate ownership.
+  llvm::DenseSet<const FileEntry *> DiagnosedDuplicateHeaders;
+
   /// A generation counter that is used to test whether modules of the
   /// same name may shadow or are illegal redefinitions.
   ///
@@ -355,6 +367,11 @@ private:
   /// associated with a specific module (e.g. in /usr/include).
   HeadersMap::iterator findKnownHeader(FileEntryRef File);
 
+  /// Warn if a header is owned by multiple top-level modules.
+  void diagnoseDuplicateHeaderOwnership(SourceLocation FilenameLoc,
+                                        StringRef Filename, FileEntryRef File,
+                                        HeadersMap::iterator Known);
+
   /// Searches for a module whose umbrella directory contains \p File.
   ///
   /// \param File The header to search for.
@@ -434,6 +451,18 @@ public:
   /// that no module owns this header file.
   KnownHeader findModuleForHeader(FileEntryRef File, bool AllowTextual = false,
                                   bool AllowExcluded = false);
+
+  /// Find the FileEntry for an umbrella header in a module as if it was written
+  /// in the module map as a header decl.
+  ///
+  /// \param M The module in which we're resolving the header directive.
+  /// \param NameAsWritten The name of the header as written in the module map.
+  /// \param[out] RelativePathName Filled in with the relative path name from
+  ///             the module to the resolved header.
+  /// \return The resolved file, if any.
+  OptionalFileEntryRef
+  findUmbrellaHeaderForModule(Module *M, std::string NameAsWritten,
+                              SmallVectorImpl<char> &RelativePathName);
 
   /// Retrieve all the modules that contain the given header file. Note that
   /// this does not implicitly load module maps, except for builtin headers,
@@ -700,22 +729,27 @@ public:
   void
   setUmbrellaHeaderAsWritten(Module *Mod, FileEntryRef UmbrellaHeader,
                              const Twine &NameAsWritten,
-                             const Twine &PathRelativeToRootModuleDirectory);
+                             const Twine &PathRelativeToRootModuleDirectory,
+                             SourceLocation Loc = SourceLocation());
 
   /// Sets the umbrella directory of the given module to the given directory.
   void setUmbrellaDirAsWritten(Module *Mod, DirectoryEntryRef UmbrellaDir,
                                const Twine &NameAsWritten,
-                               const Twine &PathRelativeToRootModuleDirectory);
+                               const Twine &PathRelativeToRootModuleDirectory,
+                               SourceLocation Loc = SourceLocation());
 
   /// Adds this header to the given module.
   /// \param Role The role of the header wrt the module.
-  void addHeader(Module *Mod, Module::Header Header,
-                 ModuleHeaderRole Role, bool Imported = false);
+  void addHeader(Module *Mod, Module::Header Header, ModuleHeaderRole Role,
+                 bool Imported = false, SourceLocation Loc = SourceLocation());
 
   /// Parse a module map without creating `clang::Module` instances.
   bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
-                          DirectoryEntryRef Dir, FileID ID = FileID(),
+                          bool ImplicitlyDiscovered, DirectoryEntryRef Dir,
+                          FileID ID = FileID(),
                           SourceLocation ExternModuleLoc = SourceLocation());
+
+  void loadAllParsedModules();
 
   /// Load the given module map file, and record any modules we
   /// encounter.
@@ -724,6 +758,9 @@ public:
   ///
   /// \param IsSystem Whether this module map file is in a system header
   /// directory, and therefore should be considered a system module.
+  ///
+  /// \param ImplicitlyDiscovered Whether this module map file was found via
+  ///        module map search.
   ///
   /// \param HomeDir The directory in which relative paths within this module
   ///        map file will be resolved.
@@ -739,9 +776,19 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool
   parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
+                            bool ImplicitlyDiscovered,
                             DirectoryEntryRef HomeDir, FileID ID = FileID(),
                             unsigned *Offset = nullptr,
                             SourceLocation ExternModuleLoc = SourceLocation());
+
+  /// Get the ModuleMapFile for a FileEntry previously parsed with
+  /// parseModuleMapFile.
+  const modulemap::ModuleMapFile *getParsedModuleMap(FileEntryRef File) const {
+    auto It = ParsedModuleMap.find(File);
+    if (It == ParsedModuleMap.end())
+      return nullptr;
+    return It->second;
+  }
 
   /// Dump the contents of the module map, for debugging purposes.
   void dump();

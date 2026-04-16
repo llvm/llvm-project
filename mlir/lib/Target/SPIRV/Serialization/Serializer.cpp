@@ -339,6 +339,9 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
   case spirv::Decoration::Index:
+  case spirv::Decoration::Offset:
+  case spirv::Decoration::XfbBuffer:
+  case spirv::Decoration::XfbStride:
     if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
       args.push_back(intAttr.getValue().getZExtValue());
       break;
@@ -723,6 +726,11 @@ LogicalResult Serializer::prepareBasicType(
     typeEnum = spirv::Opcode::OpTypeRuntimeArray;
     operands.push_back(elementTypeID);
     return processTypeDecoration(loc, runtimeArrayType, resultID);
+  }
+
+  if (isa<spirv::SamplerType>(type)) {
+    typeEnum = spirv::Opcode::OpTypeSampler;
+    return success();
   }
 
   if (auto sampledImageType = dyn_cast<spirv::SampledImageType>(type)) {

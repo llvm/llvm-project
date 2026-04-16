@@ -294,5 +294,34 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
     return;
   }
 
-  errorNYI(varDecl->getSourceRange(), "global with reference type");
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  auto *block = builder.createBlock(&addr.getCtorRegion());
+  CIRGenFunction::LexicalScope scope{*curCGF, addr.getLoc(),
+                                     builder.getInsertionBlock()};
+  scope.setAsGlobalInit();
+  builder.setInsertionPointToStart(block);
+  mlir::Value getGlobal = builder.createGetGlobal(addr);
+
+  Address declAddr(getGlobal, getASTContext().getDeclAlign(varDecl));
+  assert(performInit && "cannot have a constant initializer which needs "
+                        "destruction for reference");
+  RValue rv = cgf.emitReferenceBindingToExpr(varDecl->getInit());
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    mlir::Operation *rvalDefOp = rv.getValue().getDefiningOp();
+    if (rvalDefOp && rvalDefOp->getBlock()) {
+      mlir::Block *rvalSrcBlock = rvalDefOp->getBlock();
+
+      if (!rvalSrcBlock->empty() && isa<cir::YieldOp>(rvalSrcBlock->back())) {
+        mlir::Operation &front = rvalSrcBlock->front();
+        getGlobal.getDefiningOp()->moveBefore(&front);
+        builder.setInsertionPoint(cast<cir::YieldOp>(rvalSrcBlock->back()));
+      }
+    }
+    cgf.emitStoreOfScalar(rv.getValue(), declAddr, /*isVolatile=*/false, ty,
+                          LValueBaseInfo{});
+  }
+
+  builder.setInsertionPointToEnd(block);
+  cir::YieldOp::create(builder, addr->getLoc());
 }

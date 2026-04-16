@@ -12,6 +12,8 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -50,7 +52,7 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
   HeaderData.OffsetEntryCount = Data.getU32(OffsetPtr);
 
   // Perform basic validation of the remaining header fields.
-  if (HeaderData.Version != 5)
+  if (HeaderData.Version < 5 || HeaderData.Version > 6)
     return createStringError(errc::invalid_argument,
                        "unrecognised %s table version %" PRIu16
                        " in table at offset 0x%" PRIx64,
@@ -78,25 +80,26 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
 void DWARFListTableHeader::dump(DataExtractor Data, raw_ostream &OS,
                                 DIDumpOptions DumpOpts) const {
   if (DumpOpts.Verbose)
-    OS << format("0x%8.8" PRIx64 ": ", HeaderOffset);
+    OS << formatv("{0:x8}: ", HeaderOffset);
   int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(Format);
-  OS << format("%s list header: length = 0x%0*" PRIx64, ListTypeString.data(),
-               OffsetDumpWidth, HeaderData.Length)
+  OS << formatv("{0} list header: length = 0x{1:x-}", ListTypeString.data(),
+                fmt_align(HeaderData.Length, AlignStyle::Right, OffsetDumpWidth,
+                          '0'))
      << ", format = " << dwarf::FormatString(Format)
-     << format(", version = 0x%4.4" PRIx16 ", addr_size = 0x%2.2" PRIx8
-               ", seg_size = 0x%2.2" PRIx8
-               ", offset_entry_count = 0x%8.8" PRIx32 "\n",
-               HeaderData.Version, HeaderData.AddrSize, HeaderData.SegSize,
-               HeaderData.OffsetEntryCount);
+     << formatv(", version = {0:x4}, addr_size = {1:x2}"
+                ", seg_size = {2:x2}"
+                ", offset_entry_count = {3:x8}\n",
+                HeaderData.Version, HeaderData.AddrSize, HeaderData.SegSize,
+                HeaderData.OffsetEntryCount);
 
   if (HeaderData.OffsetEntryCount > 0) {
     OS << "offsets: [";
     for (uint32_t I = 0; I < HeaderData.OffsetEntryCount; ++I) {
       auto Off = *getOffsetEntry(Data, I);
-      OS << format("\n0x%0*" PRIx64, OffsetDumpWidth, Off);
+      OS << formatv("\n0x{0:x-}",
+                    fmt_align(Off, AlignStyle::Right, OffsetDumpWidth, '0'));
       if (DumpOpts.Verbose)
-        OS << format(" => 0x%08" PRIx64,
-                     Off + HeaderOffset + getHeaderSize(Format));
+        OS << formatv(" => {0:x8}", Off + HeaderOffset + getHeaderSize(Format));
     }
     OS << "\n]\n";
   }

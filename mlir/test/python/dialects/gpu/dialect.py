@@ -29,7 +29,7 @@ def testMMAElementWiseAttr():
     module = Module.create()
     with InsertionPoint(module.body):
         gpu.BlockDimOp(gpu.Dimension.y)
-    # CHECK: %block_dim_y = gpu.block_dim  y
+    # CHECK: %block_dim_y = gpu.block_dim y
     print(module)
     pass
 
@@ -146,18 +146,18 @@ def testGPUFuncOp():
 
     # CHECK: gpu.module @gpu_module
     # CHECK: gpu.func @kernel0() kernel {
-    # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
+    # CHECK:   %[[VAL_0:.*]] = gpu.global_id x
     # CHECK:   gpu.return
     # CHECK: }
     # CHECK: gpu.func @kernel1() kernel attributes
     # CHECK-SAME: known_block_size = array<i32: 1, 2, 3>
     # CHECK-SAME: known_grid_size = array<i32: 4, 5, 6>
-    # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
+    # CHECK:   %[[VAL_0:.*]] = gpu.global_id x
     # CHECK:   gpu.return
     # CHECK: }
     # CHECK:   gpu.func @non_kernel_func(
     # CHECK-SAME:      %[[ARG0:.*]]: index {gpu.some_attribute = "foo"}) {
-    # CHECK:           %[[GLOBAL_ID_0:.*]] = gpu.global_id  x
+    # CHECK:           %[[GLOBAL_ID_0:.*]] = gpu.global_id x
     # CHECK:           gpu.return
     # CHECK:         }
 

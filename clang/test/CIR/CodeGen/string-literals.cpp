@@ -5,16 +5,26 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
+void f(char* fmt, ...);
+void g() {
+  f("test\0");
+}
+
+// CIR: cir.global {{.*}} @".str" = #cir.const_array<"test" : !cir.array<!s8i x 4>, trailing_zeros> : !cir.array<!s8i x 6>
+
+// LLVM: @.str = {{.*}} [6 x i8] c"test\00\00"
+
+// OGCG: @.str = {{.*}} [6 x i8] c"test\00\00"
 
 char const *array[] {
     "my", "hands", "are", "typing", "words"
 };
 
-// CIR: cir.global "private" constant cir_private dso_local @"[[STR:.+]]" = #cir.const_array<"my\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>
-// CIR: cir.global "private" constant cir_private dso_local @"[[STR1:.+]]" = #cir.const_array<"hands\00" : !cir.array<!s8i x 6>> : !cir.array<!s8i x 6>
-// CIR: cir.global "private" constant cir_private dso_local @"[[STR2:.+]]" = #cir.const_array<"are\00" : !cir.array<!s8i x 4>> : !cir.array<!s8i x 4>
-// CIR: cir.global "private" constant cir_private dso_local @"[[STR3:.+]]" = #cir.const_array<"typing\00" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7>
-// CIR: cir.global "private" constant cir_private dso_local @"[[STR4:.+]]" = #cir.const_array<"words\00" : !cir.array<!s8i x 6>> : !cir.array<!s8i x 6>
+// CIR: cir.global "private" constant cir_private dso_local @"[[STR:.+]]" = #cir.const_array<"my" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3>
+// CIR: cir.global "private" constant cir_private dso_local @"[[STR1:.+]]" = #cir.const_array<"hands" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6>
+// CIR: cir.global "private" constant cir_private dso_local @"[[STR2:.+]]" = #cir.const_array<"are" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 4>
+// CIR: cir.global "private" constant cir_private dso_local @"[[STR3:.+]]" = #cir.const_array<"typing" : !cir.array<!s8i x 6>, trailing_zeros> : !cir.array<!s8i x 7>
+// CIR: cir.global "private" constant cir_private dso_local @"[[STR4:.+]]" = #cir.const_array<"words" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6>
 // CIR: cir.global external @array = #cir.const_array<[#cir.global_view<@"[[STR]]"> : !cir.ptr<!s8i>, #cir.global_view<@"[[STR1]]"> : !cir.ptr<!s8i>, #cir.global_view<@"[[STR2]]"> : !cir.ptr<!s8i>, #cir.global_view<@"[[STR3]]"> : !cir.ptr<!s8i>, #cir.global_view<@"[[STR4]]"> : !cir.ptr<!s8i>]> : !cir.array<!cir.ptr<!s8i> x 5>
 
 // LLVM: @[[STR:.+]] = private constant [3 x i8] c"my\00"
@@ -31,7 +41,7 @@ char const *array[] {
 // OGCG: @[[STR4:.+]] = private unnamed_addr constant [6 x i8] c"words\00"
 // OGCG: @array = global [5 x ptr] [ptr @[[STR]], ptr @[[STR1]], ptr @[[STR2]], ptr @[[STR3]], ptr @[[STR4]]]
 
-// CIR: cir.global "private" constant cir_private dso_local @[[STR5_GLOBAL:.*]] = #cir.const_array<"abcd\00" : !cir.array<!s8i x 5>> : !cir.array<!s8i x 5>
+// CIR: cir.global "private" constant cir_private dso_local @[[STR5_GLOBAL:.*]] = #cir.const_array<"abcd" : !cir.array<!s8i x 4>, trailing_zeros> : !cir.array<!s8i x 5>
 
 // LLVM: @[[STR5_GLOBAL:.*]] = private constant [5 x i8] c"abcd\00"
 

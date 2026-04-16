@@ -81,7 +81,7 @@ define <2 x i64> @kb52l_128_mask26x26_add_intrin(<2 x i64> %x, <2 x i64> %y, <2 
   ret <2 x i64> %r
 }
 
-; Low-52, 50-bit × 2-bit masked inputs, add with accumulator.
+; Low-52, 50-bit x 2-bit masked inputs, add with accumulator.
 define <4 x i64> @kb52l_256_mask50x3_add_intrin(<4 x i64> %x, <4 x i64> %y, <4 x i64> %acc) {
 ; AVX512VL-LABEL: kb52l_256_mask50x3_add_intrin:
 ; AVX512VL:       # %bb.0:

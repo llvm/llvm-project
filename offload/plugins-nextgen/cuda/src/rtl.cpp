@@ -34,6 +34,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 
+// This macro should be defined by the build system.
+#ifndef OFFLOAD_MIN_CUDA_VERSION
+#error "Missing OFFLOAD_MIN_CUDA_VERSION macro"
+#endif
+
 using namespace llvm::offload::debug;
 using namespace error;
 
@@ -46,38 +51,6 @@ namespace plugin {
 struct CUDAKernelTy;
 struct CUDADeviceTy;
 struct CUDAPluginTy;
-
-#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11000))
-/// Forward declarations for all Virtual Memory Management
-/// related data structures and functions. This is necessary
-/// for older cuda versions.
-typedef void *CUmemGenericAllocationHandle;
-typedef void *CUmemAllocationProp;
-typedef void *CUmemAccessDesc;
-typedef void *CUmemAllocationGranularity_flags;
-CUresult cuMemAddressReserve(CUdeviceptr *ptr, size_t size, size_t alignment,
-                             CUdeviceptr addr, unsigned long long flags) {}
-CUresult cuMemMap(CUdeviceptr ptr, size_t size, size_t offset,
-                  CUmemGenericAllocationHandle handle,
-                  unsigned long long flags) {}
-CUresult cuMemCreate(CUmemGenericAllocationHandle *handle, size_t size,
-                     const CUmemAllocationProp *prop,
-                     unsigned long long flags) {}
-CUresult cuMemSetAccess(CUdeviceptr ptr, size_t size,
-                        const CUmemAccessDesc *desc, size_t count) {}
-CUresult
-cuMemGetAllocationGranularity(size_t *granularity,
-                              const CUmemAllocationProp *prop,
-                              CUmemAllocationGranularity_flags option) {}
-#endif
-
-#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11020))
-// Forward declarations of asynchronous memory management functions. This is
-// necessary for older versions of CUDA.
-CUresult cuMemAllocAsync(CUdeviceptr *ptr, size_t, CUstream) { *ptr = 0; }
-
-CUresult cuMemFreeAsync(CUdeviceptr dptr, CUstream hStream) {}
-#endif
 
 /// Class implementing the CUDA device images properties.
 struct CUDADeviceImageTy : public DeviceImageTy {
@@ -150,14 +123,23 @@ struct CUDAKernelTy : public GenericKernelTy {
     // The maximum number of threads cannot exceed the maximum of the kernel.
     MaxNumThreads = std::min(MaxNumThreads, (uint32_t)MaxThreads);
 
+    int SharedMemSize;
+    Res = cuFuncGetAttribute(&SharedMemSize,
+                             CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES, Func);
+    if (auto Err = Plugin::check(Res, "Error in cuFuncGetAttribute: %s"))
+      return Err;
+
+    // Set the static block memory size required by the kernel.
+    StaticBlockMemSize = SharedMemSize;
+
     // Retrieve the size of the arguments.
     return initArgsSize();
   }
 
   /// Launch the CUDA kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
-                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
-                   KernelLaunchParamsTy LaunchParams,
+                   uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
+                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// Return maximum block size for maximum occupancy
@@ -197,7 +179,7 @@ private:
   CUfunction Func;
   /// The maximum amount of dynamic shared memory per thread group. By default,
   /// this is set to 48 KB.
-  mutable uint32_t MaxDynCGroupMemLimit = 49152;
+  mutable uint32_t MaxDynBlockMemSize = 49152;
 
   /// The size of the kernel arguments.
   size_t ArgsSize;
@@ -670,125 +652,104 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuStreamSynchronize: %s");
   }
 
-  /// CUDA support VA management
-  bool supportVAManagement() const override {
-#if (defined(CUDA_VERSION) && (CUDA_VERSION >= 11000))
-    return true;
-#else
-    return false;
-#endif
+  /// Suggest a virtual address for device memory mapping.
+  void *getSuggestedVirtualAddress() override {
+    return reinterpret_cast<void *>(0x153940000000ULL);
   }
 
-  /// Allocates \p RSize bytes (rounded up to page size) and hints the cuda
-  /// driver to map it to \p VAddr. The obtained address is stored in \p Addr.
-  /// At return \p RSize contains the actual size
-  Error memoryVAMap(void **Addr, void *VAddr, size_t *RSize) override {
-    CUdeviceptr DVAddr = reinterpret_cast<CUdeviceptr>(VAddr);
-    auto IHandle = DeviceMMaps.find(DVAddr);
-    size_t Size = *RSize;
+  /// Allocate \p Size bytes on the device and hints the backend to map it to
+  /// virtual address \p VAddr. The function returns the allocated virtual
+  /// address. The memory must be deallocated through
+  /// GenericDeviceTy::deallocateWithVirtualAddress().
+  Expected<void *> allocateWithVirtualAddress(uint64_t Size,
+                                              void *VAddr) override {
+    CUdeviceptr ExpectedVAddr = 0;
+    if (VAddr != nullptr)
+      ExpectedVAddr = reinterpret_cast<CUdeviceptr>(VAddr);
 
-    if (Size == 0)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "memory Map Size must be larger than 0");
-
-    // Check if we have already mapped this address
-    if (IHandle != DeviceMMaps.end())
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "address already memory mapped");
-
-    CUmemAllocationProp Prop = {};
+    // Get the page size in the device.
     size_t Granularity = 0;
-
-    size_t Free, Total;
-    CUresult Res = cuMemGetInfo(&Free, &Total);
-    if (auto Err = Plugin::check(Res, "Error in cuMemGetInfo: %s"))
-      return Err;
-
-    if (Size >= Free) {
-      *Addr = nullptr;
-      return Plugin::error(
-          ErrorCode::OUT_OF_RESOURCES,
-          "cannot map memory size larger than the available device memory");
-    }
-
-    // currently NVidia only supports pinned device types
+    CUmemAllocationProp Prop = {};
     Prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
     Prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
-
     Prop.location.id = DeviceId;
-    cuMemGetAllocationGranularity(&Granularity, &Prop,
-                                  CU_MEM_ALLOC_GRANULARITY_MINIMUM);
+    CUresult Res = cuMemGetAllocationGranularity(
+        &Granularity, &Prop, CU_MEM_ALLOC_GRANULARITY_MINIMUM);
     if (auto Err =
             Plugin::check(Res, "error in cuMemGetAllocationGranularity: %s"))
       return Err;
-
     if (Granularity == 0)
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "wrong device Page size");
+                           "wrong device page size");
 
-    // Ceil to page size.
+    // Transparently round up to a multiple of the page size.
     Size = utils::roundUp(Size, Granularity);
 
-    // Create a handler of our allocation
-    CUmemGenericAllocationHandle AHandle;
-    Res = cuMemCreate(&AHandle, Size, &Prop, 0);
-    if (auto Err = Plugin::check(Res, "error in cuMemCreate: %s"))
-      return Err;
-
+    // Reserve the virtual address range.
     CUdeviceptr DevPtr = 0;
-    Res = cuMemAddressReserve(&DevPtr, Size, 0, DVAddr, 0);
+    Res = cuMemAddressReserve(&DevPtr, Size, 0, ExpectedVAddr, 0);
     if (auto Err = Plugin::check(Res, "error in cuMemAddressReserve: %s"))
       return Err;
 
-    Res = cuMemMap(DevPtr, Size, 0, AHandle, 0);
+    if (ExpectedVAddr != 0 && ExpectedVAddr != DevPtr)
+      ODBG(OLDT_Alloc) << "cuMemAddressReserve reserved device virtual address "
+                       << reinterpret_cast<void *>(DevPtr) << " instead of "
+                       << reinterpret_cast<void *>(ExpectedVAddr);
+
+    // Create a handle of the allocation.
+    CUmemGenericAllocationHandle Handle;
+    Res = cuMemCreate(&Handle, Size, &Prop, 0);
+    if (auto Err = Plugin::check(Res, "error in cuMemCreate: %s"))
+      return Err;
+
+    // Map the virtual address range to the memory allocation.
+    Res = cuMemMap(DevPtr, Size, 0, Handle, 0);
     if (auto Err = Plugin::check(Res, "error in cuMemMap: %s"))
       return Err;
 
-    CUmemAccessDesc ADesc = {};
-    ADesc.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
-    ADesc.location.id = DeviceId;
-    ADesc.flags = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
-
-    // Sets address
-    Res = cuMemSetAccess(DevPtr, Size, &ADesc, 1);
+    // Set the memory access properties for the allocation.
+    CUmemAccessDesc Desc = {};
+    Desc.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
+    Desc.location.id = DeviceId;
+    Desc.flags = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
+    Res = cuMemSetAccess(DevPtr, Size, &Desc, 1);
     if (auto Err = Plugin::check(Res, "error in cuMemSetAccess: %s"))
       return Err;
 
-    *Addr = reinterpret_cast<void *>(DevPtr);
-    *RSize = Size;
-    DeviceMMaps.insert({DevPtr, AHandle});
-    return Plugin::success();
+    VAddr = reinterpret_cast<void *>(DevPtr);
+
+    // Register the virtual address range in the tracker.
+    if (auto Err = VMemTracker.registerReservation(VAddr, Size, Handle))
+      return Err;
+
+    return VAddr;
   }
 
-  /// De-allocates device memory and Unmaps the Virtual Addr
-  Error memoryVAUnMap(void *VAddr, size_t Size) override {
-    CUdeviceptr DVAddr = reinterpret_cast<CUdeviceptr>(VAddr);
-    auto IHandle = DeviceMMaps.find(DVAddr);
-    // Mapping does not exist
-    if (IHandle == DeviceMMaps.end()) {
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "addr is not MemoryMapped");
-    }
+  /// Deallocate device memory \p VAddr, which was allocated through
+  /// GenericDeviceTy::allocateWithVirtualAddress(), and unmap the virtual
+  /// address range.
+  Error deallocateWithVirtualAddress(void *VAddr, uint64_t) override {
+    // Unregister the virtual address range and obtain the information about
+    // the reservation.
+    auto InfoOrErr = VMemTracker.unregisterReservation(VAddr);
+    if (!InfoOrErr)
+      return InfoOrErr.takeError();
 
-    if (IHandle == DeviceMMaps.end())
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "addr is not MemoryMapped");
+    auto [Size, Handle] = *InfoOrErr;
+    CUdeviceptr DevAddr = reinterpret_cast<CUdeviceptr>(VAddr);
 
-    CUmemGenericAllocationHandle &AllocHandle = IHandle->second;
-
-    CUresult Res = cuMemUnmap(DVAddr, Size);
+    CUresult Res = cuMemUnmap(DevAddr, Size);
     if (auto Err = Plugin::check(Res, "error in cuMemUnmap: %s"))
       return Err;
 
-    Res = cuMemRelease(AllocHandle);
+    Res = cuMemRelease(Handle);
     if (auto Err = Plugin::check(Res, "error in cuMemRelease: %s"))
       return Err;
 
-    Res = cuMemAddressFree(DVAddr, Size);
+    Res = cuMemAddressFree(DevAddr, Size);
     if (auto Err = Plugin::check(Res, "error in cuMemAddressFree: %s"))
       return Err;
 
-    DeviceMMaps.erase(IHandle);
     return Plugin::success();
   }
 
@@ -1077,6 +1038,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuEventSynchronize: %s");
   }
 
+  /// Get the elapsed time in milliseconds between two events.
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
+    CUevent StartEvent = reinterpret_cast<CUevent>(StartEventPtr);
+    CUevent EndEvent = reinterpret_cast<CUevent>(EndEventPtr);
+
+    float ElapsedTime = 0.0f;
+    CUresult Res = cuEventElapsedTime(&ElapsedTime, StartEvent, EndEvent);
+    if (auto Err = Plugin::check(Res, "error in cuEventElapsedTime: %s"))
+      return std::move(Err);
+
+    return ElapsedTime;
+  }
+
   /// Print information about the device.
   Expected<InfoTreeNode> obtainInfoImpl() override {
     char TmpChar[1000];
@@ -1119,7 +1094,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_GPU_OVERLAP, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Concurrent Copy and Execution", (bool)TmpInt);
+      Info.add("Concurrent Copy and Execution", bool(TmpInt));
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_TOTAL_CONSTANT_MEMORY, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1185,15 +1160,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Execution Timeout", (bool)TmpInt);
+      Info.add("Execution Timeout", bool(TmpInt));
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_INTEGRATED, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Integrated Device", (bool)TmpInt);
+      Info.add("Integrated Device", bool(TmpInt));
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_CAN_MAP_HOST_MEMORY, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Can Map Host Memory", (bool)TmpInt);
+      Info.add("Can Map Host Memory", bool(TmpInt));
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_COMPUTE_MODE, TmpInt);
     if (Res == CUDA_SUCCESS) {
@@ -1210,11 +1185,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_CONCURRENT_KERNELS, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Concurrent Kernels", (bool)TmpInt);
+      Info.add("Concurrent Kernels", bool(TmpInt));
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_ECC_ENABLED, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("ECC Enabled", (bool)TmpInt);
+      Info.add("ECC Enabled", bool(TmpInt));
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1240,29 +1215,29 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_UNIFIED_ADDRESSING, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Unified Addressing", (bool)TmpInt);
+      Info.add("Unified Addressing", bool(TmpInt));
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MANAGED_MEMORY, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Managed Memory", (bool)TmpInt);
+      Info.add("Managed Memory", bool(TmpInt));
 
     Res =
         getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_CONCURRENT_MANAGED_ACCESS, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Concurrent Managed Memory", (bool)TmpInt);
+      Info.add("Concurrent Managed Memory", bool(TmpInt));
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_COMPUTE_PREEMPTION_SUPPORTED,
                            TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Preemption Supported", (bool)TmpInt);
+      Info.add("Preemption Supported", bool(TmpInt));
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_COOPERATIVE_LAUNCH, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Cooperative Launch", (bool)TmpInt);
+      Info.add("Cooperative Launch", bool(TmpInt));
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MULTI_GPU_BOARD, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Multi-Device Boars", (bool)TmpInt);
+      Info.add("Multi-Device Boars", bool(TmpInt));
 
     Info.add("Compute Capabilities", ComputeCapability.str());
 
@@ -1411,7 +1386,7 @@ private:
     KernelArgsTy KernelArgs = {};
     uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
     if (auto Err = CUDAKernel.launchImpl(
-            *this, NumBlocksAndThreads, NumBlocksAndThreads, KernelArgs,
+            *this, NumBlocksAndThreads, NumBlocksAndThreads, 0, KernelArgs,
             KernelLaunchParamsTy{}, AsyncInfoWrapper))
       return Err;
 
@@ -1436,9 +1411,6 @@ private:
   /// The CUDA device handler.
   CUdevice Device = CU_DEVICE_INVALID;
 
-  /// The memory mapped addresses and their handles
-  std::unordered_map<CUdeviceptr, CUmemGenericAllocationHandle> DeviceMMaps;
-
   /// The compute capability of the corresponding CUDA device.
   struct ComputeCapabilityTy {
     uint32_t Major;
@@ -1451,10 +1423,14 @@ private:
   /// The maximum number of warps that can be resident on all the SMs
   /// simultaneously.
   uint32_t HardwareParallelism = 0;
+
+  /// Tracker for virtual address reservations.
+  VMemTrackerTy<CUmemGenericAllocationHandle> VMemTracker;
 };
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                uint32_t NumThreads[3], uint32_t NumBlocks[3],
+                               uint32_t DynBlockMemSize,
                                KernelArgsTy &KernelArgs,
                                KernelLaunchParamsTy LaunchParams,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
@@ -1470,9 +1446,6 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
-  uint32_t MaxDynCGroupMem =
-      std::max(KernelArgs.DynCGroupMem, GenericDevice.getDynamicMemorySize());
-
   size_t ConfigArgsSize = ArgsSize;
   void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
                     CU_LAUNCH_PARAM_BUFFER_SIZE,
@@ -1485,19 +1458,19 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     GenericDevice.Plugin.getRPCServer().Thread->notify();
 
   // In case we require more memory than the current limit.
-  if (MaxDynCGroupMem >= MaxDynCGroupMemLimit) {
+  if (DynBlockMemSize >= MaxDynBlockMemSize) {
     CUresult AttrResult = cuFuncSetAttribute(
-        Func, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, MaxDynCGroupMem);
+        Func, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, DynBlockMemSize);
     if (auto Err = Plugin::check(
             AttrResult,
             "error in cuFuncSetAttribute while setting the memory limits: %s"))
       return Err;
-    MaxDynCGroupMemLimit = MaxDynCGroupMem;
+    MaxDynBlockMemSize = DynBlockMemSize;
   }
 
   CUresult Res = cuLaunchKernel(Func, NumBlocks[0], NumBlocks[1], NumBlocks[2],
                                 NumThreads[0], NumThreads[1], NumThreads[2],
-                                MaxDynCGroupMem, Stream, nullptr, Config);
+                                DynBlockMemSize, Stream, nullptr, Config);
 
   // Register a callback to indicate when the kernel is complete.
   if (GenericDevice.getRPCServer())
@@ -1572,6 +1545,22 @@ struct CUDAPluginTy final : public GenericPluginTy {
 
     if (auto Err = Plugin::check(Res, "error in cuInit: %s"))
       return std::move(Err);
+
+    // Get the latest CUDA version supported by the driver.
+    int Version;
+    Res = cuDriverGetVersion(&Version);
+    if (auto Err = Plugin::check(Res, "error in cuDriverGetVersion: %s"))
+      return std::move(Err);
+
+    // Verify that the driver supports the minimum CUDA version required.
+    constexpr int MinVersion = OFFLOAD_MIN_CUDA_VERSION;
+    if (Version < MinVersion) {
+      ODBG(OLDT_Init) << "Minimum CUDA version not supported by the driver.";
+      return Plugin::error(
+          ErrorCode::UNSUPPORTED,
+          "CUDA driver does not support minimum CUDA version %d (%d detected)",
+          MinVersion, Version);
+    }
 
     // Get the number of devices.
     int NumDevices;

@@ -318,6 +318,10 @@ inline bool operator==(const CodeGenRegister &A, const CodeGenRegister &B) {
   return A.EnumValue == B.EnumValue;
 }
 
+inline bool operator!=(const CodeGenRegister &A, const CodeGenRegister &B) {
+  return !(A == B);
+}
+
 class CodeGenRegisterClass {
   CodeGenRegister::Vec Members;
   // Bit mask of members, indexed by getRegIndex.
@@ -503,11 +507,20 @@ public:
     const CodeGenRegister::Vec *Members;
     RegSizeInfoByHwMode RSI;
 
-    Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I)
-        : Members(M), RSI(I) {}
+    // Ignore artificial registers when comparing classes. We use this
+    // to find existing classes that contain the same non-artificial
+    // members, but may differ in presence of artificial ones, thus
+    // avoiding creating extra register classes for codegen needs.
+    bool IgnoreArtificialMembers;
 
-    Key(const CodeGenRegisterClass &RC)
-        : Members(&RC.getMembers()), RSI(RC.RSI) {}
+    Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I,
+        bool IgnoreArtificialMembers = false)
+        : Members(M), RSI(I), IgnoreArtificialMembers(IgnoreArtificialMembers) {
+    }
+
+    Key(const CodeGenRegisterClass &RC, bool IgnoreArtificialMembers = false)
+        : Members(&RC.getMembers()), RSI(RC.RSI),
+          IgnoreArtificialMembers(IgnoreArtificialMembers) {}
 
     // Lexicographical order of (Members, RegSizeInfoByHwMode).
     bool operator<(const Key &) const;
@@ -836,6 +849,13 @@ public:
   /// classes have a superset-subset relationship and the same set of types,
   /// return the superclass.  Otherwise return null.
   const CodeGenRegisterClass *getRegClassForRegister(const Record *R);
+
+  /// Returns whether \p RegClass contains register \p Reg, handling
+  /// RegClassByHwMode and RegisterByHwMode correctly.
+  /// This should be preferred instead of
+  /// `RegBank.getRegClass(RC).contains(RegBank.getReg(R))`.
+  bool regClassContainsReg(const Record *RegClass, const Record *RegDef,
+                           ArrayRef<SMLoc> Loc = {});
 
   // Analog of TargetRegisterInfo::getMinimalPhysRegClass. Unlike
   // getRegClassForRegister, this tries to find the smallest class containing

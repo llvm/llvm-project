@@ -551,3 +551,247 @@ entry:
   %conv = fptosi float %ret to i32
   ret i32 %conv
 }
+
+define i32 @signbits_sitofp_fptosi_roundtrip(i32 %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip(
+; CHECK-NEXT:    [[M:%.*]] = ashr i32 [[X:%.*]], 7
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %m = ashr i32 %x, 7
+  %f = sitofp i32 %m to float
+  %r = fptosi float %f to i32
+  ret i32 %r
+}
+
+define <4 x i32> @signbits_sitofp_fptosi_roundtrip_vec(<4 x i32> %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip_vec(
+; CHECK-NEXT:    [[M:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 7)
+; CHECK-NEXT:    ret <4 x i32> [[M]]
+;
+  %m = ashr <4 x i32> %x, splat (i32 7)
+  %f = sitofp <4 x i32> %m to <4 x float>
+  %r = fptosi <4 x float> %f to <4 x i32>
+  ret <4 x i32> %r
+}
+
+; Negative: 26 significant bits, 25 mantissa > 24.
+define i32 @signbits_sitofp_fptosi_roundtrip_neg(i32 %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip_neg(
+; CHECK-NEXT:    [[M:%.*]] = ashr i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[M]] to float
+; CHECK-NEXT:    [[R:%.*]] = fptosi float [[F]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = ashr i32 %x, 6
+  %f = sitofp i32 %m to float
+  %r = fptosi float %f to i32
+  ret i32 %r
+}
+
+define <8 x i16> @fptoui_sat_uitofp_zext_i8(<8 x i8> %a) {
+; CHECK-LABEL: @fptoui_sat_uitofp_zext_i8(
+; CHECK-NEXT:    [[CVT:%.*]] = zext <8 x i8> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    ret <8 x i16> [[CVT]]
+;
+  %zext = zext <8 x i8> %a to <8 x i16>
+  %fp = uitofp <8 x i16> %zext to <8 x half>
+  %cvt = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> %fp)
+  ret <8 x i16> %cvt
+}
+
+define <8 x i16> @fptoui_sat_uitofp_and_11bits(<8 x i16> %a) {
+; CHECK-LABEL: @fptoui_sat_uitofp_and_11bits(
+; CHECK-NEXT:    [[MASKED:%.*]] = and <8 x i16> [[A:%.*]], splat (i16 2047)
+; CHECK-NEXT:    ret <8 x i16> [[MASKED]]
+;
+  %masked = and <8 x i16> %a, splat (i16 2047)
+  %fp = uitofp <8 x i16> %masked to <8 x half>
+  %cvt = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> %fp)
+  ret <8 x i16> %cvt
+}
+
+define <4 x i32> @fptosi_sat_sitofp_sext_i16(<4 x i16> %a) {
+; CHECK-LABEL: @fptosi_sat_sitofp_sext_i16(
+; CHECK-NEXT:    [[CVT:%.*]] = sext <4 x i16> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[CVT]]
+;
+  %sext = sext <4 x i16> %a to <4 x i32>
+  %fp = sitofp <4 x i32> %sext to <4 x float>
+  %cvt = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> %fp)
+  ret <4 x i32> %cvt
+}
+
+define <4 x i16> @fptoui_sat_uitofp_and_255(<4 x i16> %a) {
+; CHECK-LABEL: @fptoui_sat_uitofp_and_255(
+; CHECK-NEXT:    [[MASKED:%.*]] = and <4 x i16> [[A:%.*]], splat (i16 255)
+; CHECK-NEXT:    ret <4 x i16> [[MASKED]]
+;
+  %masked = and <4 x i16> %a, splat (i16 255)
+  %fp = uitofp <4 x i16> %masked to <4 x half>
+  %cvt = call <4 x i16> @llvm.fptoui.sat.v4i16.v4f16(<4 x half> %fp)
+  ret <4 x i16> %cvt
+}
+
+define <4 x i32> @fptoui_sat_uitofp_widen_i16_to_i32(<4 x i16> %a) {
+; CHECK-LABEL: @fptoui_sat_uitofp_widen_i16_to_i32(
+; CHECK-NEXT:    [[CVT:%.*]] = zext <4 x i16> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[CVT]]
+;
+  %fp = uitofp <4 x i16> %a to <4 x float>
+  %cvt = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %fp)
+  ret <4 x i32> %cvt
+}
+
+define i32 @fptoui_sat_uitofp_scalar_widen(i16 %a) {
+; CHECK-LABEL: @fptoui_sat_uitofp_scalar_widen(
+; CHECK-NEXT:    [[CVT:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[CVT]]
+;
+  %fp = uitofp i16 %a to float
+  %cvt = call i32 @llvm.fptoui.sat.i32.f32(float %fp)
+  ret i32 %cvt
+}
+
+define i32 @fptosi_sat_sitofp_scalar_widen(i16 %a) {
+; CHECK-LABEL: @fptosi_sat_sitofp_scalar_widen(
+; CHECK-NEXT:    [[CVT:%.*]] = sext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[CVT]]
+;
+  %fp = sitofp i16 %a to float
+  %cvt = call i32 @llvm.fptosi.sat.i32.f32(float %fp)
+  ret i32 %cvt
+}
+
+define <2 x i64> @fptosi_sat_sitofp_double_widen(<2 x i32> %a) {
+; CHECK-LABEL: @fptosi_sat_sitofp_double_widen(
+; CHECK-NEXT:    [[CVT:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[CVT]]
+;
+  %fp = sitofp <2 x i32> %a to <2 x double>
+  %cvt = call <2 x i64> @llvm.fptosi.sat.v2i64.v2f64(<2 x double> %fp)
+  ret <2 x i64> %cvt
+}
+
+define <2 x i64> @fptoui_sat_uitofp_double_widen(<2 x i32> %a) {
+; CHECK-LABEL: @fptoui_sat_uitofp_double_widen(
+; CHECK-NEXT:    [[CVT:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[CVT]]
+;
+  %fp = uitofp <2 x i32> %a to <2 x double>
+  %cvt = call <2 x i64> @llvm.fptoui.sat.v2i64.v2f64(<2 x double> %fp)
+  ret <2 x i64> %cvt
+}
+
+; Negative: narrowing
+define <4 x i16> @neg_fptoui_sat_uitofp_narrow_known_bits(<4 x i32> %a) {
+; CHECK-LABEL: @neg_fptoui_sat_uitofp_narrow_known_bits(
+; CHECK-NEXT:    [[MASKED:%.*]] = and <4 x i32> [[A:%.*]], splat (i32 255)
+; CHECK-NEXT:    [[FP:%.*]] = uitofp nneg <4 x i32> [[MASKED]] to <4 x float>
+; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i16> @llvm.fptoui.sat.v4i16.v4f32(<4 x float> [[FP]])
+; CHECK-NEXT:    ret <4 x i16> [[CVT]]
+;
+  %masked = and <4 x i32> %a, splat (i32 255)
+  %fp = uitofp <4 x i32> %masked to <4 x float>
+  %cvt = call <4 x i16> @llvm.fptoui.sat.v4i16.v4f32(<4 x float> %fp)
+  ret <4 x i16> %cvt
+}
+
+; Negative: narrowing
+define <4 x i16> @neg_fptosi_sat_sitofp_narrow(<4 x i32> %a) {
+; CHECK-LABEL: @neg_fptosi_sat_sitofp_narrow(
+; CHECK-NEXT:    [[MASKED:%.*]] = and <4 x i32> [[A:%.*]], splat (i32 255)
+; CHECK-NEXT:    [[FP:%.*]] = uitofp nneg <4 x i32> [[MASKED]] to <4 x float>
+; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i16> @llvm.fptosi.sat.v4i16.v4f32(<4 x float> [[FP]])
+; CHECK-NEXT:    ret <4 x i16> [[CVT]]
+;
+  %masked = and <4 x i32> %a, splat (i32 255)
+  %fp = sitofp <4 x i32> %masked to <4 x float>
+  %cvt = call <4 x i16> @llvm.fptosi.sat.v4i16.v4f32(<4 x float> %fp)
+  ret <4 x i16> %cvt
+}
+
+; Negative: 16 > 11 (half mantissa), not exact
+define <8 x i16> @neg_fptoui_sat_uitofp_full_i16(<8 x i16> %a) {
+; CHECK-LABEL: @neg_fptoui_sat_uitofp_full_i16(
+; CHECK-NEXT:    [[FP:%.*]] = uitofp <8 x i16> [[A:%.*]] to <8 x half>
+; CHECK-NEXT:    [[CVT:%.*]] = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> [[FP]])
+; CHECK-NEXT:    ret <8 x i16> [[CVT]]
+;
+  %fp = uitofp <8 x i16> %a to <8 x half>
+  %cvt = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> %fp)
+  ret <8 x i16> %cvt
+}
+
+; Negative: 12 > 11 (half mantissa), not exact
+define <8 x i16> @neg_fptoui_sat_uitofp_12bits(<8 x i16> %a) {
+; CHECK-LABEL: @neg_fptoui_sat_uitofp_12bits(
+; CHECK-NEXT:    [[MASKED:%.*]] = and <8 x i16> [[A:%.*]], splat (i16 4095)
+; CHECK-NEXT:    [[FP:%.*]] = uitofp nneg <8 x i16> [[MASKED]] to <8 x half>
+; CHECK-NEXT:    [[CVT:%.*]] = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> [[FP]])
+; CHECK-NEXT:    ret <8 x i16> [[CVT]]
+;
+  %masked = and <8 x i16> %a, splat (i16 4095)
+  %fp = uitofp <8 x i16> %masked to <8 x half>
+  %cvt = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> %fp)
+  ret <8 x i16> %cvt
+}
+
+; Negative: cross-sign
+define <4 x i32> @neg_fptosi_sat_uitofp_cross_sign(<4 x i32> %a) {
+; CHECK-LABEL: @neg_fptosi_sat_uitofp_cross_sign(
+; CHECK-NEXT:    [[FP:%.*]] = uitofp <4 x i32> [[A:%.*]] to <4 x float>
+; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> [[FP]])
+; CHECK-NEXT:    ret <4 x i32> [[CVT]]
+;
+  %fp = uitofp <4 x i32> %a to <4 x float>
+  %cvt = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> %fp)
+  ret <4 x i32> %cvt
+}
+
+; Negative: cross-sign
+define <4 x i32> @neg_fptoui_sat_sitofp_cross_sign(<4 x i32> %a) {
+; CHECK-LABEL: @neg_fptoui_sat_sitofp_cross_sign(
+; CHECK-NEXT:    [[FP:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
+; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> [[FP]])
+; CHECK-NEXT:    ret <4 x i32> [[CVT]]
+;
+  %fp = sitofp <4 x i32> %a to <4 x float>
+  %cvt = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %fp)
+  ret <4 x i32> %cvt
+}
+
+; Negative: narrowing, exact but doesn't fit
+define <4 x i16> @neg_fptoui_sat_uitofp_narrow_no_fit(<4 x i32> %a) {
+; CHECK-LABEL: @neg_fptoui_sat_uitofp_narrow_no_fit(
+; CHECK-NEXT:    [[MASKED:%.*]] = and <4 x i32> [[A:%.*]], splat (i32 16777215)
+; CHECK-NEXT:    [[FP:%.*]] = uitofp nneg <4 x i32> [[MASKED]] to <4 x float>
+; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i16> @llvm.fptoui.sat.v4i16.v4f32(<4 x float> [[FP]])
+; CHECK-NEXT:    ret <4 x i16> [[CVT]]
+;
+  %masked = and <4 x i32> %a, splat (i32 16777215)
+  %fp = uitofp <4 x i32> %masked to <4 x float>
+  %cvt = call <4 x i16> @llvm.fptoui.sat.v4i16.v4f32(<4 x float> %fp)
+  ret <4 x i16> %cvt
+}
+
+; Negative: not a uitofp/sitofp source
+define <4 x i32> @neg_fptoui_sat_no_cast(<4 x float> %fp) {
+; CHECK-LABEL: @neg_fptoui_sat_no_cast(
+; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> [[FP:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[CVT]]
+;
+  %cvt = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %fp)
+  ret <4 x i32> %cvt
+}
+
+; Negative: non-integer cast feeding fptoui.sat
+define <4 x i32> @neg_fptoui_sat_fptrunc(<4 x double> %a) {
+; CHECK-LABEL: @neg_fptoui_sat_fptrunc(
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc <4 x double> [[A:%.*]] to <4 x float>
+; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> [[TRUNC]])
+; CHECK-NEXT:    ret <4 x i32> [[CVT]]
+;
+  %trunc = fptrunc <4 x double> %a to <4 x float>
+  %cvt = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %trunc)
+  ret <4 x i32> %cvt
+}

@@ -15,7 +15,7 @@ add_llvm_tool(llvm-debuginfod
   )
 
 if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
-  target_link_libraries(llvm-debuginfod PRIVATE LLVMDebuginfod)
+  target_link_libraries(llvm-debuginfod PRIVATE LLVMDebuginfod LLVMHTTP)
 endif()
 
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)

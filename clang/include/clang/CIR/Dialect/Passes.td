@@ -150,6 +150,29 @@ def TargetLowering : Pass<"cir-target-lowering", "mlir::ModuleOp"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def CIREHABILowering : Pass<"cir-eh-abi-lowering", "mlir::ModuleOp"> {
+  let summary = "Lower flattened CIR EH operations to target-specific ABI form";
+  let description = [{
+    This pass lowers the ABI-agnostic exception handling operations produced by
+    CFG flattening into an ABI-specific form. Currently only the Itanium C++
+    ABI is implemented.
+
+    For the Itanium ABI, the pass performs the following transformations:
+      - Replaces `cir.eh.initiate` with `cir.eh.inflight_exception`
+      - Replaces `cir.eh.dispatch` with `cir.eh.typeid` + comparison chains
+      - Removes `cir.begin_cleanup` and `cir.end_cleanup` operations
+      - Replaces `cir.begin_catch` with a call to `__cxa_begin_catch`
+      - Replaces `cir.end_catch` with a call to `__cxa_end_catch`
+      - Replaces `cir.resume` with `cir.resume.flat`
+      - Sets the personality function attribute on functions that require EH
+
+    If a non-Itanium ABI is specified, the pass emits a diagnostic indicating
+    that the target is not yet implemented.
+  }];
+  let constructor = "mlir::createCIREHABILoweringPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def LoweringPrepare : Pass<"cir-lowering-prepare"> {
   let summary = "Lower to more fine-grained CIR operations before lowering to "
     "other dialects";
@@ -158,6 +181,17 @@ def LoweringPrepare : Pass<"cir-lowering-prepare"> {
     it may expand the global variable initialziation in a more ABI-friendly form.
   }];
   let constructor = "mlir::createLoweringPreparePass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
+def IdiomRecognizer : Pass<"cir-idiom-recognizer", "mlir::ModuleOp"> {
+  let summary = "Raise calls to C/C++ libraries to CIR operations";
+  let description = [{
+    This pass recognizes idiomatic C++ usage and captures information about C++
+    standard library containers, library functions calls, and types into CIR
+    operations, attributes and types.
+  }];
+  let constructor = "mlir::createIdiomRecognizerPass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 

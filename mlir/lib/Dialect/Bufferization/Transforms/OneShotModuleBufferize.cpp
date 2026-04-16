@@ -70,6 +70,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
@@ -316,9 +317,9 @@ static LogicalResult getFuncOpsOrderedByCalls(
     SymbolTableCollection &symbolTables) {
   // For each FuncOp, the set of functions called by it (i.e. the union of
   // symbols of all nested func::CallOp).
-  DenseMap<func::FuncOp, DenseSet<func::FuncOp>> calledBy;
+  DenseMap<func::FuncOp, SetVector<func::FuncOp>> calledBy;
   // For each FuncOp, the number of func::CallOp it contains.
-  DenseMap<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
+  llvm::MapVector<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
   for (mlir::Region &region : moduleOp->getRegions()) {
     for (mlir::Block &block : region.getBlocks()) {
       for (func::FuncOp funcOp : block.getOps<func::FuncOp>()) {
@@ -333,7 +334,7 @@ static LogicalResult getFuncOpsOrderedByCalls(
             return WalkResult::skip();
 
           callerMap[calledFunction].insert(callOp);
-          if (calledBy[calledFunction].insert(funcOp).second) {
+          if (calledBy[calledFunction].insert(funcOp)) {
             numberCallOpsContainedInFuncOp[funcOp]++;
           }
           return WalkResult::advance();
@@ -377,9 +378,17 @@ static LogicalResult getFuncOpsOrderedByCalls(
 
 /// Helper function that extracts the source from a memref.cast. If the given
 /// value is not a memref.cast result, simply returns the given value.
+/// Only unpacks casts where the source is at least as specific as the result
+/// (i.e., does not unpack casts from unranked to ranked memref, which would
+/// downgrade the type).
 static Value unpackCast(Value v) {
   auto castOp = v.getDefiningOp<memref::CastOp>();
   if (!castOp)
+    return v;
+  // Do not unpack a cast from unranked to ranked memref: folding would
+  // downgrade the function return type from ranked to unranked.
+  if (isa<UnrankedMemRefType>(castOp.getSource().getType()) &&
+      isa<MemRefType>(v.getType()))
     return v;
   return castOp.getSource();
 }

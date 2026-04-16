@@ -57,6 +57,9 @@ public:
       : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
+  bool processAlign(mlir::omp::AlignClauseOps &result) const;
+  bool processAllocator(lower::StatementContext &stmtCtx,
+                        mlir::omp::AllocatorClauseOps &result) const;
   bool processBare(mlir::omp::BareClauseOps &result) const;
   bool processBind(mlir::omp::BindClauseOps &result) const;
   bool processCancelDirectiveName(
@@ -116,6 +119,7 @@ public:
   bool processSchedule(lower::StatementContext &stmtCtx,
                        mlir::omp::ScheduleClauseOps &result) const;
   bool processSimdlen(mlir::omp::SimdlenClauseOps &result) const;
+  bool processSimd(mlir::omp::OrderedRegionOperands &result) const;
   bool processThreadLimit(lower::StatementContext &stmtCtx,
                           mlir::omp::ThreadLimitClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
@@ -142,7 +146,8 @@ public:
   bool processIsDevicePtr(
       lower::StatementContext &stmtCtx, mlir::omp::IsDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
-  bool processLinear(mlir::omp::LinearClauseOps &result) const;
+  bool processLinear(mlir::omp::LinearClauseOps &result,
+                     bool isDeclareSimd = false) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
 
@@ -209,7 +214,8 @@ private:
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-      llvm::StringRef mapperIdNameRef = "") const;
+      llvm::StringRef mapperIdNameRef = "", bool isMotionModifier = false,
+      llvm::omp::Directive directive = llvm::omp::OMPD_unknown) const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;

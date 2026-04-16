@@ -34,7 +34,6 @@
 #include "lldb/Utility/State.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Threading.h"
 
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
@@ -173,13 +172,9 @@ ProcessMinidump::~ProcessMinidump() {
 }
 
 void ProcessMinidump::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  ProcessMinidump::CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(),
+                                ProcessMinidump::CreateInstance);
 }
 
 void ProcessMinidump::Terminate() {
@@ -355,7 +350,7 @@ DataExtractor ProcessMinidump::GetAuxvData() {
     return DataExtractor();
 
   return DataExtractor(auxv->data(), auxv->size(), GetByteOrder(),
-                       GetAddressByteSize(), GetAddressByteSize());
+                       GetAddressByteSize());
 }
 
 bool ProcessMinidump::IsLLDBMinidump() {
@@ -399,13 +394,13 @@ void ProcessMinidump::BuildMemoryRegions() {
                                                 section_sp->GetByteSize());
       MemoryRegionInfo region =
           MinidumpParser::GetMemoryRegionInfo(*m_memory_regions, load_addr);
-      if (region.GetMapped() != MemoryRegionInfo::eYes &&
+      if (region.GetMapped() != eLazyBoolYes &&
           region.GetRange().GetRangeBase() <= section_range.GetRangeBase() &&
           section_range.GetRangeEnd() <= region.GetRange().GetRangeEnd()) {
         to_add.emplace_back();
         to_add.back().GetRange() = section_range;
         to_add.back().SetLLDBPermissions(section_sp->GetPermissions());
-        to_add.back().SetMapped(MemoryRegionInfo::eYes);
+        to_add.back().SetMapped(eLazyBoolYes);
         to_add.back().SetName(module_sp->GetFileSpec().GetPath().c_str());
       }
     }

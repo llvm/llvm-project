@@ -123,7 +123,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gprnox0 = COPY $x12
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gprnox0 = COPY $x13
-    ; CHECK-NEXT: [[PseudoCCMOVGPRNoX0_:%[0-9]+]]:gprnox0 = PseudoCCMOVGPRNoX0 [[COPY]], [[COPY1]], 1, [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: [[PseudoCCMOVGPRNoX0_:%[0-9]+]]:gprnox0 = PseudoCCMOVGPRNoX0 [[COPY2]], [[COPY3]], 1, [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[PseudoCCMOVGPRNoX0_]], 0
     ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -133,7 +133,7 @@ body:             |
     %3:gpr = COPY $x13
     %4:gprnox0 = ADDIW %2, 0
     %5:gprnox0 = ADDIW %3, 0
-    %6:gprnox0 = PseudoCCMOVGPRNoX0 %0, %1, 1, %4, %5
+    %6:gprnox0 = PseudoCCMOVGPRNoX0 %4, %5, 1, %0, %1
     %7:gpr = ADDIW %6, 0
     $x10 = COPY %7
     PseudoRET implicit $x10
@@ -154,7 +154,7 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x13
     ; CHECK-NEXT: [[SRAIW:%[0-9]+]]:gprnox0 = SRAIW [[COPY2]], 0
     ; CHECK-NEXT: [[SRAIW1:%[0-9]+]]:gprnox0 = SRAIW [[COPY3]], 0
-    ; CHECK-NEXT: [[PseudoCCMOVGPRNoX0_:%[0-9]+]]:gprnox0 = PseudoCCMOVGPRNoX0 [[COPY]], [[COPY1]], 1, [[SRAIW]], [[SRAIW1]]
+    ; CHECK-NEXT: [[PseudoCCMOVGPRNoX0_:%[0-9]+]]:gprnox0 = PseudoCCMOVGPRNoX0 [[SRAIW]], [[SRAIW1]], 1, [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[PseudoCCMOVGPRNoX0_]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gpr = COPY $x10
@@ -163,7 +163,7 @@ body:             |
     %3:gpr = COPY $x13
     %4:gprnox0 = SRAIW %2, 0
     %5:gprnox0 = SRAIW %3, 0
-    %6:gprnox0 = PseudoCCMOVGPRNoX0 %0, %1, 1, %4, %5
+    %6:gprnox0 = PseudoCCMOVGPRNoX0 %4, %5, 1, %0, %1
     %7:gpr = ADDIW %6, 0
     $x10 = COPY %7
     PseudoRET implicit $x10
@@ -192,7 +192,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[ADDI]], %bb.0, [[LW]], %bb.1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gprtc = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gprtcnonx7 = COPY $x0
   ; CHECK-NEXT:   $x10 = COPY [[COPY1]]
   ; CHECK-NEXT:   $x11 = COPY [[PHI]]
   ; CHECK-NEXT:   PseudoTAILIndirect [[COPY1]], csr_ilp32_lp64, implicit $x2, implicit $x10, implicit $x11
@@ -212,7 +212,7 @@ body:             |
   bb.2:
     %1:gpr = PHI %3, %bb.0, %0, %bb.1
     %6:gpr = ADDIW %1, 0
-    %7:gprtc = COPY $x0
+    %7:gprtcnonx7 = COPY $x0
     $x10 = COPY %7
     $x11 = COPY %6
     PseudoTAILIndirect %7, csr_ilp32_lp64, implicit $x2, implicit $x10, implicit $x11
@@ -240,7 +240,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; CHECK-NEXT:   $x10 = COPY [[ADDIW]]
-  ; CHECK-NEXT:   %call_target_dummy:gprjalr = COPY $x0
+  ; CHECK-NEXT:   %call_target_dummy:gprjalrnonx7 = COPY $x0
   ; CHECK-NEXT:   PseudoCALLIndirect %call_target_dummy, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; CHECK-NEXT:   $x10 = COPY [[LWU]]
@@ -260,7 +260,7 @@ body:             |
   bb.2:
     ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     $x10 = COPY %16
-    %call_target_dummy:gprjalr = COPY $x0
+    %call_target_dummy:gprjalrnonx7 = COPY $x0
     PseudoCALLIndirect %call_target_dummy, csr_ilp32_lp64, implicit-def $x1, implicit $x10
     ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
 

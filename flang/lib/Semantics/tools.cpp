@@ -122,6 +122,19 @@ const Scope *FindOpenACCConstructContaining(const Scope *scope) {
                : nullptr;
 }
 
+bool HasOpenACCRoutineDirective(const Scope *scope) {
+  if (!scope) {
+    return false;
+  }
+  const Scope &progUnit{GetProgramUnitContaining(*scope)};
+  if (const Symbol *symbol{progUnit.symbol()}) {
+    if (const auto *subpDetails{symbol->detailsIf<SubprogramDetails>()}) {
+      return !subpDetails->openACCRoutineInfos().empty();
+    }
+  }
+  return false;
+}
+
 // 7.5.2.4 "same derived type" test -- rely on IsTkCompatibleWith() and its
 // infrastructure to detect and handle comparisons on distinct (but "same")
 // sequence/bind(C) derived types
@@ -1133,10 +1146,8 @@ bool CanCUDASymbolBeGlobal(const Symbol &sym) {
           return false;
         }
       }
-      if (details->cudaDataAttr() &&
-          *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
+      if (details->cudaDataAttr())
         return false;
-      }
     }
   }
   return true;

@@ -889,6 +889,9 @@ namespace bswap {
   int h15 = __builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412 ? 1 : f();
   // expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
   // ref-error@-2 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+  int h16 = __builtin_bswapg((_BitInt(5))0x1) == (_BitInt(5))0x1 ? 1 : f();
+  // expected-error@-1 {{_BitInt type '_BitInt(5)' (5 bits) must be a multiple of 16 bits for byte swapping}}
+  // ref-error@-2 {{_BitInt type '_BitInt(5)' (5 bits) must be a multiple of 16 bits for byte swapping}}
 #endif
 
   constexpr const int const_expr = 0x1234;
@@ -1213,7 +1216,7 @@ namespace shufflevector {
 #if __cplusplus >= 202002L
   constexpr int discarded3() {
     int i = 0;
-    vector4char a;
+    vector4char a; // both-note {{declared here}}
     __builtin_shufflevector((++i, a), a, 0); // both-note {{read of uninitialized object}} \
                                              // both-warning {{expression result unused}}
     return i;

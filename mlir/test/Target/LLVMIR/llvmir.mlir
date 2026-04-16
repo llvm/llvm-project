@@ -1227,6 +1227,41 @@ llvm.func @alignstackattr_decl(!llvm.ptr {llvm.alignstack = 32 : i64})
 // CHECK-LABEL: declare void @writeonlyattr_decl(ptr writeonly)
 llvm.func @writeonlyattr_decl(!llvm.ptr {llvm.writeonly})
 
+// CHECK-LABEL: define void @writableattr(ptr writable %
+llvm.func @writableattr(%arg0: !llvm.ptr {llvm.writable}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @writableattr_decl(ptr writable)
+llvm.func @writableattr_decl(!llvm.ptr {llvm.writable})
+
+// CHECK-LABEL: define void @deadonunwindattr(ptr dead_on_unwind %
+llvm.func @deadonunwindattr(%arg0: !llvm.ptr {llvm.dead_on_unwind}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @deadonunwindattr_decl(ptr dead_on_unwind)
+llvm.func @deadonunwindattr_decl(!llvm.ptr {llvm.dead_on_unwind})
+
+// CHECK-LABEL: define void @deadonreturnattr(ptr dead_on_return(8) %
+llvm.func @deadonreturnattr(%arg0: !llvm.ptr {llvm.dead_on_return = 8 : i64}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @deadonreturnattr_decl(ptr dead_on_return(8))
+llvm.func @deadonreturnattr_decl(!llvm.ptr {llvm.dead_on_return = 8 : i64})
+
+// CHECK-LABEL: define void @nofpclassattr(float nofpclass(nan inf) %
+llvm.func @nofpclassattr(%arg0: f32 {llvm.nofpclass = 519 : i64}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @nofpclassattr_decl(float nofpclass(nan inf))
+llvm.func @nofpclassattr_decl(f32 {llvm.nofpclass = 519 : i64})
+
+// CHECK-LABEL: declare nofpclass(nan inf) float @nofpclassattr_ret_decl()
+llvm.func @nofpclassattr_ret_decl() -> (f32 {llvm.nofpclass = 519 : i64})
+
 // CHECK-LABEL: declare align 4 ptr @alignattr_ret_decl()
 llvm.func @alignattr_ret_decl() -> (!llvm.ptr {llvm.align = 4})
 
@@ -1281,6 +1316,24 @@ llvm.func @intpointerconversion(%arg0 : i32) -> i32 {
   %1 = llvm.inttoptr %arg0 : i32 to !llvm.ptr
   %2 = llvm.ptrtoint %1 : !llvm.ptr to i32
   llvm.return %2 : i32
+}
+
+// CHECK-LABEL: @addrpointerconversion_scalar
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+llvm.func @addrpointerconversion_scalar(%arg0 : !llvm.ptr) -> i64 {
+// CHECK:      %[[PTR:.*]] = ptrtoaddr ptr %[[ARG0]] to i64
+// CHECK-NEXT: ret i64 %[[PTR]]
+  %1 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
+  llvm.return %1 : i64
+}
+
+// CHECK-LABEL: @addrpointerconversion_vector
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+llvm.func @addrpointerconversion_vector(%arg0 : vector<3x!llvm.ptr>) -> vector<3x i64> {
+// CHECK:      %[[PTR:.*]] = ptrtoaddr <3 x ptr> %[[ARG0]] to <3 x i64>
+// CHECK-NEXT: ret <3 x i64> %[[PTR]]
+  %1 = llvm.ptrtoaddr %arg0 : vector<3x!llvm.ptr> to vector<3x i64>
+  llvm.return %1 : vector<3x i64>
 }
 
 llvm.func @fpconversion(%arg0 : i32) -> i32 {
@@ -2155,6 +2208,11 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
   %25 = llvm.mlir.constant(true) : i1
 // CHECK: select contract i1
   %26 = llvm.select %25, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
+
+// CHECK: {{.*}} = fpext nnan float {{.*}} to double
+// CHECK: {{.*}} = fptrunc fast float {{.*}} to half
+  %27 = llvm.fpext %arg0 fastmath<nnan> : f32 to f64
+  %28 = llvm.fptrunc %arg0 fastmath<fast> : f32 to f16
   llvm.return
 }
 
@@ -2376,7 +2434,7 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 llvm.func @arg_mem_none_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none, target_mem0: none, target_mem1: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none, target_mem: none) }
 
 // -----
 
@@ -2384,7 +2442,7 @@ llvm.func @arg_mem_none_func() attributes {
 llvm.func @readwrite_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none, target_mem0: none, target_mem1: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none, target_mem: none) }
 
 // -----
 
@@ -3001,6 +3059,20 @@ llvm.func @default_func_attrs_call() {
 
 llvm.func @f()
 
+// CHECK-LABEL: @builtin_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @builtin_call() {
+  llvm.call @f() {builtin} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: builtin
+
+// -----
+
+llvm.func @f()
+
 // CHECK-LABEL: @nobuiltin_call
 // CHECK: call void @f() #[[ATTRS:[0-9]+]]
 llvm.func @nobuiltin_call() {
@@ -3133,11 +3205,11 @@ llvm.func @mem_effects_call() {
 // CHECK: #[[ATTRS_0]]
 // CHECK-SAME: memory(none)
 // CHECK: #[[ATTRS_1]]
-// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none, target_mem: none)
 // CHECK: #[[ATTRS_2]]
-// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none, target_mem: none)
 // CHECK: #[[ATTRS_3]]
-// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none, target_mem: none)
 
 // -----
 
@@ -3331,6 +3403,17 @@ llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
 // CHECK: ![[#DETAILED]] = !{![[#DS0:]], ![[#DS1:]]}
 // CHECK: ![[#DS0:]] = !{i64 10000, i64 86427, i64 1}
 // CHECK: ![[#DS1:]] = !{i64 100000, i64 86427, i64 1}
+
+// -----
+
+// Test that ArrayAttr of StringAttrs (e.g. "riscv-isa") is exported as an
+// MDTuple of MDStrings for a lossless round-trip.
+
+llvm.module_flags [#llvm.mlir.module_flag<error, "riscv-isa", ["rv64i2p1", "m2p0"]>]
+
+// CHECK: !llvm.module.flags = !{![[#RISCV:]], {{.*}}}
+// CHECK: ![[#RISCV]] = !{i32 1, !"riscv-isa", ![[#ISA:]]}
+// CHECK: ![[#ISA]] = !{!"rv64i2p1", !"m2p0"}
 
 // -----
 

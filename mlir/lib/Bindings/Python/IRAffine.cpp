@@ -37,7 +37,7 @@ static const char kDumpDocstring[] =
 /// Throws errors in case of failure, using "action" to describe what the caller
 /// was attempting to do.
 template <typename PyType, typename CType>
-static void pyListToVector(const nb::list &list, std::vector<CType> &result,
+static void pyListToVector(const nb::sequence &list, std::vector<CType> &result,
                            std::string_view action) {
   result.reserve(nb::len(list));
   for (nb::handle item : list) {
@@ -733,11 +733,12 @@ void populateIRAffine(nb::module_ &m) {
            })
       .def_static(
           "compress_unused_symbols",
-          [](const nb::list &affineMaps, DefaultingPyMlirContext context) {
+          [](nb::typed<nb::sequence, PyAffineMap> affineMaps,
+             DefaultingPyMlirContext context) {
             std::vector<MlirAffineMap> maps;
             pyListToVector<PyAffineMap, MlirAffineMap>(
                 affineMaps, maps, "attempting to create an AffineMap");
-            std::vector<MlirAffineMap> compressed(affineMaps.size());
+            std::vector<MlirAffineMap> compressed(nb::len(affineMaps));
             auto populate = [](void *result, intptr_t idx, MlirAffineMap m) {
               static_cast<MlirAffineMap *>(result)[idx] = (m);
             };
@@ -760,7 +761,8 @@ void populateIRAffine(nb::module_ &m) {
           kDumpDocstring)
       .def_static(
           "get",
-          [](intptr_t dimCount, intptr_t symbolCount, const nb::list &exprs,
+          [](intptr_t dimCount, intptr_t symbolCount,
+             nb::typed<nb::sequence, PyAffineExpr> exprs,
              DefaultingPyMlirContext context) {
             std::vector<MlirAffineExpr> affineExprs;
             pyListToVector<PyAffineExpr, MlirAffineExpr>(
@@ -927,13 +929,14 @@ void populateIRAffine(nb::module_ &m) {
           kDumpDocstring)
       .def_static(
           "get",
-          [](intptr_t numDims, intptr_t numSymbols, const nb::list &exprs,
+          [](intptr_t numDims, intptr_t numSymbols,
+             nb::typed<nb::sequence, PyAffineExpr> exprs,
              std::vector<bool> eqFlags, DefaultingPyMlirContext context) {
-            if (exprs.size() != eqFlags.size())
+            if (nb::len(exprs) != eqFlags.size())
               throw nb::value_error(
                   "Expected the number of constraints to match "
                   "that of equality flags");
-            if (exprs.size() == 0)
+            if (nb::len(exprs) == 0)
               throw nb::value_error("Expected non-empty list of constraints");
 
             // std::vector<bool> does not expose a bool* data pointer.
@@ -942,7 +945,7 @@ void populateIRAffine(nb::module_ &m) {
             pyListToVector<PyAffineExpr>(exprs, affineExprs,
                                          "attempting to create an IntegerSet");
             MlirIntegerSet set = mlirIntegerSetGet(
-                context->get(), numDims, numSymbols, exprs.size(),
+                context->get(), numDims, numSymbols, nb::len(exprs),
                 affineExprs.data(), reinterpret_cast<bool *>(flags.data()));
             return PyIntegerSet(context->getRef(), set);
           },
@@ -960,15 +963,15 @@ void populateIRAffine(nb::module_ &m) {
           nb::arg("context") = nb::none())
       .def(
           "get_replaced",
-          [](PyIntegerSet &self, const nb::list &dimExprs,
-             const nb::list &symbolExprs, intptr_t numResultDims,
-             intptr_t numResultSymbols) {
-            if (static_cast<intptr_t>(dimExprs.size()) !=
+          [](PyIntegerSet &self, nb::typed<nb::sequence, PyAffineExpr> dimExprs,
+             nb::typed<nb::sequence, PyAffineExpr> symbolExprs,
+             intptr_t numResultDims, intptr_t numResultSymbols) {
+            if (static_cast<intptr_t>(nb::len(dimExprs)) !=
                 mlirIntegerSetGetNumDims(self))
               throw nb::value_error(
                   "Expected the number of dimension replacement expressions "
                   "to match that of dimensions");
-            if (static_cast<intptr_t>(symbolExprs.size()) !=
+            if (static_cast<intptr_t>(nb::len(symbolExprs)) !=
                 mlirIntegerSetGetNumSymbols(self))
               throw nb::value_error(
                   "Expected the number of symbol replacement expressions "

@@ -9,10 +9,10 @@ define void @slice_seeds(ptr %ptr, float %val) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr float, ptr [[PTR]], i32 2
 ; CHECK-NEXT:    [[LD2:%.*]] = load float, ptr [[PTR2]], align 4
-; CHECK-NEXT:    store float [[LD2]], ptr [[PTR2]], align 4
+; CHECK-NEXT:    store float [[LD2]], ptr [[PTR2]], align 4, !sandboxvec [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
-; CHECK-NEXT:    store <2 x float> [[VECL]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    store <2 x float> [[VECL]], ptr [[PTR0]], align 4, !sandboxvec [[META1]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr float, ptr %ptr, i32 0
@@ -30,3 +30,7 @@ define void @slice_seeds(ptr %ptr, float %val) {
   store float %ld1, ptr %ptr1
   ret void
 }
+;.
+; CHECK: [[META0]] = distinct !{!"sandboxregion"}
+; CHECK: [[META1]] = distinct !{!"sandboxregion"}
+;.

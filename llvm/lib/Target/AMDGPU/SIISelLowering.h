@@ -77,7 +77,7 @@ private:
                             EVT VT,
                             AMDGPUFunctionArgInfo::PreloadedValue) const;
 
-  SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
   SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
 
@@ -218,7 +218,8 @@ private:
   SDValue performFCanonicalizeCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue performFPMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
-                                  SDValue Op0, SDValue Op1) const;
+                                  SDValue Op0, SDValue Op1,
+                                  bool IsKnownNoNaNs) const;
   SDValue performIntMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Src, SDValue MinVal, SDValue MaxVal,
                                    bool Signed) const;
@@ -286,6 +287,11 @@ public:
                                        EVT PtrVT) const override;
 
 private:
+  /// Returns true if the first real instruction in MBB is 8 bytes and could
+  /// be split by a 32-byte fetch window boundary. Used on GFX950 to avoid
+  /// instruction fetch delays.
+  bool needsFetchWindowAlignment(const MachineBasicBlock &MBB) const;
+
   // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
   // the three offsets (voffset, soffset and instoffset) into the SDValue[3]
   // array pointed to by Offsets.
@@ -590,6 +596,8 @@ public:
   bool requiresUniformRegister(MachineFunction &MF,
                                const Value *V) const override;
   Align getPrefLoopAlignment(MachineLoop *ML) const override;
+  unsigned
+  getMaxPermittedBytesForAlignment(MachineBasicBlock *MBB) const override;
 
   void allocateHSAUserSGPRs(CCState &CCInfo,
                             MachineFunction &MF,

@@ -16,11 +16,11 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: store <4 x i32>
 ;CHECK: store <4 x i32>
 ;CHECK: ret void
-define void @inc(i32 %n) nounwind uwtable noinline ssp {
+define void @inc(i32 %n) noinline {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %2 = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 %indvars.iv
   %3 = load i32, ptr %2, align 4
@@ -32,7 +32,7 @@ define void @inc(i32 %n) nounwind uwtable noinline ssp {
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph, !llvm.loop !0
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   ret void
 }
 

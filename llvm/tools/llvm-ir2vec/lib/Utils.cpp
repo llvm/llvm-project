@@ -43,16 +43,29 @@ namespace llvm {
 
 namespace ir2vec {
 
-Error IR2VecTool::initializeVocabulary(StringRef VocabPath) {
+Expected<std::shared_ptr<Vocabulary>> loadVocabulary(StringRef VocabPath) {
   auto VocabOrErr = Vocabulary::fromFile(VocabPath);
   if (!VocabOrErr)
     return VocabOrErr.takeError();
 
-  Vocab = std::make_unique<Vocabulary>(std::move(*VocabOrErr));
+  auto V = std::make_shared<Vocabulary>(std::move(*VocabOrErr));
 
-  if (!Vocab->isValid())
+  if (!V->isValid())
     return createStringError(errc::invalid_argument,
                              "Failed to initialize IR2Vec vocabulary");
+  return V;
+}
+
+Error IR2VecTool::setVocabulary(std::shared_ptr<Vocabulary> V) {
+  if (!V)
+    return createStringError(errc::invalid_argument,
+                             "Null pointer provided for vocabulary. Will not "
+                             "set IR2VecTool vocabulary.");
+  if (!V->isValid())
+    return createStringError(
+        errc::invalid_argument,
+        "Vocabulary is not valid. Will not set IR2VecTool vocabulary.");
+  Vocab = std::move(V);
   return Error::success();
 }
 
@@ -68,7 +81,9 @@ TripletResult IR2VecTool::generateTriplets(const Function &F) const {
   bool HasPrevOpcode = false;
 
   for (const BasicBlock &BB : F) {
-    for (const auto &I : BB.instructionsWithoutDebug()) {
+    for (const auto &I : BB) {
+      if (I.isDebugOrPseudoInst())
+        continue;
       unsigned Opcode = Vocabulary::getIndex(I.getOpcode());
       unsigned TypeID = Vocabulary::getIndex(I.getType()->getTypeID());
 
@@ -152,8 +167,8 @@ void IR2VecTool::writeEntitiesToStream(raw_ostream &OS) {
     OS << Entities[EntityID] << '\t' << EntityID << '\n';
 }
 
-Expected<Embedding> IR2VecTool::getFunctionEmbedding(const Function &F,
-                                                     IR2VecKind Kind) const {
+Expected<std::unique_ptr<Embedder>>
+IR2VecTool::createIR2VecEmbedder(const Function &F, IR2VecKind Kind) const {
   if (!Vocab || !Vocab->isValid())
     return createStringError(
         errc::invalid_argument,
@@ -169,16 +184,20 @@ Expected<Embedding> IR2VecTool::getFunctionEmbedding(const Function &F,
                              "Failed to create embedder for function '%s'.",
                              F.getName().str().c_str());
 
-  return Emb->getFunctionVector();
+  return std::move(Emb);
+}
+
+Expected<Embedding> IR2VecTool::getFunctionEmbedding(const Function &F,
+                                                     IR2VecKind Kind) const {
+  auto Emb = createIR2VecEmbedder(F, Kind);
+  if (!Emb)
+    return Emb.takeError();
+
+  return (*Emb)->getFunctionVector();
 }
 
 Expected<FuncEmbMap>
 IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
-  if (!Vocab || !Vocab->isValid())
-    return createStringError(
-        errc::invalid_argument,
-        "Vocabulary is not valid. IR2VecTool not initialized.");
-
   FuncEmbMap Result;
 
   for (const Function &F : M.getFunctionDefs()) {
@@ -193,61 +212,47 @@ IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
 
 Expected<BBEmbeddingsMap>
 IR2VecTool::getBBEmbeddingsMap(const Function &F, IR2VecKind Kind) const {
-  if (!Vocab || !Vocab->isValid())
-    return createStringError(
-        errc::invalid_argument,
-        "Vocabulary is not valid. IR2VecTool not initialized.");
+  auto Emb = createIR2VecEmbedder(F, Kind);
+  if (!Emb)
+    return Emb.takeError();
 
   BBEmbeddingsMap Result;
 
-  if (F.isDeclaration())
-    return createStringError(errc::invalid_argument,
-                             "Function is a declaration.");
-
-  auto Emb = Embedder::create(Kind, F, *Vocab);
-  if (!Emb)
-    return createStringError(errc::invalid_argument,
-                             "Failed to create embedder for function '%s'.",
-                             F.getName().str().c_str());
-
   for (const BasicBlock &BB : F)
-    Result.try_emplace(&BB, Emb->getBBVector(BB));
+    Result.try_emplace(&BB, (*Emb)->getBBVector(BB));
+
+  return Result;
+}
+
+Expected<InstEmbeddingsMap>
+IR2VecTool::getInstEmbeddingsMap(const Function &F, IR2VecKind Kind) const {
+  auto Emb = createIR2VecEmbedder(F, Kind);
+  if (!Emb)
+    return Emb.takeError();
+
+  InstEmbeddingsMap Result;
+
+  for (const Instruction &I : instructions(F))
+    Result.try_emplace(&I, (*Emb)->getInstVector(I));
 
   return Result;
 }
 
 void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
                                          EmbeddingLevel Level) const {
-  if (!Vocab || !Vocab->isValid()) {
-    WithColor::error(errs(), ToolName)
-        << "Vocabulary is not valid. IR2VecTool not initialized.\n";
-    return;
-  }
-
   for (const Function &F : M.getFunctionDefs())
     writeEmbeddingsToStream(F, OS, Level);
 }
 
 void IR2VecTool::writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
                                          EmbeddingLevel Level) const {
-  if (!Vocab || !Vocab->isValid()) {
+  auto IR2VecEmbedderObj = createIR2VecEmbedder(F, IR2VecEmbeddingKind);
+  if (!IR2VecEmbedderObj) {
     WithColor::error(errs(), ToolName)
-        << "Vocabulary is not valid. IR2VecTool not initialized.\n";
+        << toString(IR2VecEmbedderObj.takeError()) << "\n";
     return;
   }
-
-  if (F.isDeclaration()) {
-    OS << "Function " << F.getName() << " is a declaration, skipping.\n";
-    return;
-  }
-
-  // Create embedder for this function
-  auto Emb = Embedder::create(IR2VecEmbeddingKind, F, *Vocab);
-  if (!Emb) {
-    WithColor::error(errs(), ToolName)
-        << "Failed to create embedder for function " << F.getName() << "\n";
-    return;
-  }
+  auto Emb = std::move(*IR2VecEmbedderObj);
 
   OS << "Function: " << F.getName() << "\n";
 

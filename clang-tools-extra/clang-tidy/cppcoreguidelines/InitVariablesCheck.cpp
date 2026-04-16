@@ -86,13 +86,13 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
   std::optional<const char *> InitializationString;
   bool AddMathInclude = false;
 
-  if (TypePtr->isEnumeralType())
+  if (TypePtr->isEnumeralType()) {
     InitializationString = nullptr;
-  else if (TypePtr->isBooleanType())
+  } else if (TypePtr->isBooleanType()) {
     InitializationString = " = false";
-  else if (TypePtr->isIntegerType())
+  } else if (TypePtr->isIntegerType()) {
     InitializationString = " = 0";
-  else if (TypePtr->isFloatingType()) {
+  } else if (TypePtr->isFloatingType()) {
     InitializationString = " = NAN";
     AddMathInclude = true;
   } else if (TypePtr->isAnyPointerType() || TypePtr->isMemberPointerType()) {

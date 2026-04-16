@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Token.h"
@@ -65,12 +66,21 @@ AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
 
 AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
 
-AST_MATCHER_P(Decl, isAllRedeclsInMainFile, FileExtensionsSet,
+AST_MATCHER(Decl, isInImportableModuleUnit) {
+  if (const Module *OwningModule = Node.getOwningModule())
+    if (OwningModule->Kind == Module::ModuleInterfaceUnit ||
+        OwningModule->Kind == Module::ModulePartitionInterface ||
+        OwningModule->Kind == Module::ModulePartitionImplementation)
+      return true;
+  return false;
+}
+
+AST_MATCHER_P(Decl, isAllRedeclsInMainFile, const FileExtensionsSet *,
               HeaderFileExtensions) {
   return llvm::all_of(Node.redecls(), [&](const Decl *D) {
     return isInMainFile(D->getLocation(),
                         Finder->getASTContext().getSourceManager(),
-                        HeaderFileExtensions);
+                        *HeaderFileExtensions);
   });
 }
 
@@ -114,7 +124,6 @@ AST_MATCHER(CXXRecordDecl, isExplicitTemplateInstantiation) {
 UseInternalLinkageCheck::UseInternalLinkageCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()),
       FixMode(Options.get("FixMode", FixModeKind::UseStatic)),
       AnalyzeFunctions(Options.get("AnalyzeFunctions", true)),
       AnalyzeVariables(Options.get("AnalyzeVariables", true)),
@@ -134,15 +143,11 @@ void UseInternalLinkageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
-  auto Common =
-      allOf(isFirstDecl(), isAllRedeclsInMainFile(HeaderFileExtensions),
-            unless(anyOf(
-                // 1. internal linkage
-                isInAnonymousNamespace(), hasAncestor(decl(anyOf(
-                                              // 2. friend
-                                              friendDecl(),
-                                              // 3. module export decl
-                                              exportDecl()))))));
+  const auto Common =
+      allOf(isFirstDecl(), isAllRedeclsInMainFile(&getHeaderFileExtensions()),
+            unless(anyOf(isInAnonymousNamespace(), isInImportableModuleUnit(),
+                         hasAncestor(decl(friendDecl())))));
+
   if (AnalyzeFunctions)
     Finder->addMatcher(
         functionDecl(
@@ -154,6 +159,7 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                 isAllocationOrDeallocationOverloadedFunction(), isMain())))
             .bind("fn"),
         this);
+
   if (AnalyzeVariables)
     Finder->addMatcher(
         varDecl(Common, hasGlobalStorage(),
@@ -163,6 +169,7 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                              hasThreadStorageDuration())))
             .bind("var"),
         this);
+
   if (getLangOpts().CPlusPlus && AnalyzeTypes)
     Finder->addMatcher(
         tagDecl(Common, isDefinition(), hasNameForLinkage(),

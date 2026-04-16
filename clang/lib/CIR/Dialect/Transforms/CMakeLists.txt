@@ -4,11 +4,13 @@ add_clang_library(MLIRCIRTransforms
   CIRCanonicalize.cpp
   CIRSimplify.cpp
   CXXABILowering.cpp
+  EHABILowering.cpp
   TargetLowering.cpp
   FlattenCFG.cpp
   HoistAllocas.cpp
   LoweringPrepare.cpp
   GotoSolver.cpp
+  IdiomRecognizer.cpp
 
   DEPENDS
   MLIRCIRPassIncGen
@@ -25,4 +27,6 @@ add_clang_library(MLIRCIRTransforms
   MLIRCIR
   MLIRCIRInterfaces
   MLIRCIRTargetLowering
+  MLIROpenACCDialect
+  MLIROpenMPDialect
 )

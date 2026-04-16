@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s -check-prefix=LONG-WCHAR
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -emit-llvm -o - %s | FileCheck %s -check-prefix=SHORT-WCHAR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - -fwchar-type=short -fno-signed-wchar %s | FileCheck %s -check-prefix=SHORT-WCHAR
-// RUN: %clang_cc1 -triple s390x-none-zos -emit-llvm -o - %s | FileCheck %s -check-prefix=LONG-WCHAR
-// Note: -fno-short-wchar implies the target default is used; so there is no
-// need to test this separately here.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s -check-prefix=DEFAULT
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -emit-llvm -o - %s | FileCheck %s -check-prefix=DEFAULT
+// RUN: %clang_cc1 -triple s390x-none-zos -emit-llvm -o - %s | FileCheck %s -check-prefix=DEFAULT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - -fwchar-type=short -fno-signed-wchar %s | FileCheck %s -check-prefix=OVERRIDE
+// The wchar_size module flag is only emitted when the effective wchar_t size
+// differs from the target triple's default.
 
-// LONG-WCHAR: !{{[0-9]+}} = !{i32 {{[0-9]+}}, !"wchar_size", i32 4}
-// SHORT-WCHAR: !{{[0-9]+}} = !{i32 {{[0-9]+}}, !"wchar_size", i32 2}
+// DEFAULT-NOT: wchar_size
+// OVERRIDE: !{{[0-9]+}} = !{i32 {{[0-9]+}}, !"wchar_size", i32 2}

@@ -62,6 +62,7 @@ public:
     NewAllocator,
     LifetimeEnds,
     LoopExit,
+    FullExprCleanup,
     // stmt kind
     Statement,
     Constructor,
@@ -310,6 +311,32 @@ private:
 
   static bool isKind(const CFGElement &elem) {
     return elem.getKind() == LifetimeEnds;
+  }
+};
+
+class CFGFullExprCleanup : public CFGElement {
+
+public:
+  using MTEVecTy = BumpVector<const MaterializeTemporaryExpr *>;
+  explicit CFGFullExprCleanup(const MTEVecTy *MTEs)
+      : CFGElement(FullExprCleanup, MTEs, nullptr) {}
+
+  ArrayRef<const MaterializeTemporaryExpr *> getExpiringMTEs() const {
+    const MTEVecTy *ExpiringMTEs =
+        static_cast<const MTEVecTy *>(Data1.getPointer());
+    if (!ExpiringMTEs)
+      return {};
+    return ArrayRef<const MaterializeTemporaryExpr *>(ExpiringMTEs->begin(),
+                                                      ExpiringMTEs->end());
+  }
+
+private:
+  friend class CFGElement;
+
+  CFGFullExprCleanup() = default;
+
+  static bool isKind(const CFGElement &elem) {
+    return elem.getKind() == FullExprCleanup;
   }
 };
 
@@ -1181,6 +1208,11 @@ public:
 
   void appendLifetimeEnds(VarDecl *VD, Stmt *S, BumpVectorContext &C) {
     Elements.push_back(CFGLifetimeEnds(VD, S), C);
+  }
+
+  void appendFullExprCleanup(BumpVector<const MaterializeTemporaryExpr *> *BV,
+                             BumpVectorContext &C) {
+    Elements.push_back(CFGFullExprCleanup(BV), C);
   }
 
   void appendLoopExit(const Stmt *LoopStmt, BumpVectorContext &C) {

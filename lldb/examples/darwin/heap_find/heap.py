@@ -32,6 +32,7 @@ typedef natural_t task_t;
 typedef int kern_return_t;
 #define KERN_SUCCESS 0
 typedef void (*range_callback_t)(task_t, void *, unsigned, uintptr_t, uintptr_t);
+task_t task = 0;
 """
     if options.search_vm_regions:
         expr += """
@@ -130,7 +131,7 @@ memory_reader_t task_peek = [](task_t, vm_address_t remote_address, vm_size_t, v
     return KERN_SUCCESS;
 };
 vm_address_t *zones = 0;
-unsigned int num_zones = 0;task_t task = 0;
+unsigned int num_zones = 0;
 kern_return_t err = (kern_return_t)malloc_get_all_zones (task, task_peek, &zones, &num_zones);
 if (KERN_SUCCESS == err)
 {
@@ -1305,7 +1306,24 @@ def get_sections_ranges_struct(process):
                 base = section.GetLoadAddress(target)
                 size = section.GetByteSize()
                 if base != lldb.LLDB_INVALID_ADDRESS and size > 0:
-                    segment_dicts.append({"base": base, "size": size})
+                    # Walk VM regions across the section and only include
+                    # readable portions, since runtime permissions may
+                    # differ from the Mach-O section permissions.
+                    addr = base
+                    end = base + size
+                    while addr < end:
+                        region_info = lldb.SBMemoryRegionInfo()
+                        if not process.GetMemoryRegionInfo(addr, region_info).Success():
+                            break
+                        region_end = region_info.GetRegionEnd()
+                        if region_end <= addr:
+                            break
+                        chunk_end = min(region_end, end)
+                        if region_info.IsReadable():
+                            segment_dicts.append(
+                                {"base": addr, "size": chunk_end - addr}
+                            )
+                        addr = chunk_end
     segment_dicts_len = len(segment_dicts)
     if segment_dicts_len > 0:
         result = """

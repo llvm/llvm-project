@@ -1225,7 +1225,7 @@ SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
 
 MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex,
+    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
     LiveIntervals *LIS, VirtRegMap *VRM) const {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -1558,7 +1558,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
 MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    LiveIntervals *LIS) const {
+    MachineInstr *&CopyMI, LiveIntervals *LIS) const {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   MachineBasicBlock *MBB = MI.getParent();
 
@@ -1593,17 +1593,15 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
 
   // If RegMemOpcode clobbers CC, first make sure CC is not live at this point.
   if (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)) {
-    assert(LoadMI.getParent() == MI.getParent() && "Assuming a local fold.");
-    assert(LoadMI != InsertPt && "Assuming InsertPt not to be first in MBB.");
-    for (MachineBasicBlock::iterator MII = std::prev(InsertPt);;
-         --MII) {
-      if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
-        if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
+    for (MachineBasicBlock::iterator MII = InsertPt;;) {
+      if (MII == MBB->begin()) {
+        if (MBB->isLiveIn(SystemZ::CC))
           return nullptr;
         break;
       }
-      if (MII == MBB->begin()) {
-        if (MBB->isLiveIn(SystemZ::CC))
+      --MII;
+      if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
+        if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
           return nullptr;
         break;
       }
@@ -2159,6 +2157,28 @@ unsigned SystemZInstrInfo::getFusedCompare(unsigned Opcode,
     }
   }
   return 0;
+}
+
+bool SystemZInstrInfo::isLoadAndTestAsCmp(const MachineInstr &MI) const {
+  // If we during isel used a load-and-test as a compare with 0, the
+  // def operand is dead.
+  return (MI.getOpcode() == SystemZ::LTEBR ||
+          MI.getOpcode() == SystemZ::LTDBR ||
+          MI.getOpcode() == SystemZ::LTXBR) &&
+         MI.getOperand(0).isDead();
+}
+
+bool SystemZInstrInfo::isCompareZero(const MachineInstr &Compare) const {
+  if (isLoadAndTestAsCmp(Compare))
+    return true;
+  return Compare.isCompare() && Compare.getNumExplicitOperands() == 2 &&
+         Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
+}
+
+Register
+SystemZInstrInfo::getCompareSourceReg(const MachineInstr &Compare) const {
+  assert(isCompareZero(Compare) && "Expected a compare with 0.");
+  return Compare.getOperand(isLoadAndTestAsCmp(Compare) ? 1 : 0).getReg();
 }
 
 bool SystemZInstrInfo::

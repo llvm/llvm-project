@@ -34,7 +34,7 @@
 // Define __CUDACC__ early as libstdc++ standard headers with GNU extensions
 // enabled depend on it to avoid using __float128, which is unsupported in
 // CUDA.
-#define __CUDACC__
+#define __CUDACC__ 1
 
 // Include some standard headers to avoid CUDA headers including them
 // while some required macros (like __THROW) are in a weird state.
@@ -44,6 +44,18 @@
 #include <stdlib.h>
 #include <string.h>
 #undef __CUDACC__
+
+// math_functions.h from CUDA 13.2+ defines _NV_RSQRT_SPECIFIER.
+// Clang does not include it, so we need to define it ourselves.
+#if defined(__GNUC__) && defined(__GLIBC_PREREQ)
+#if __GLIBC_PREREQ(2, 42)
+#define _NV_RSQRT_SPECIFIER noexcept(true)
+#endif
+#endif
+
+#ifndef _NV_RSQRT_SPECIFIER
+#define _NV_RSQRT_SPECIFIER
+#endif
 
 // Preserve common macros that will be changed below by us or by CUDA
 // headers.
@@ -91,7 +103,7 @@
 #if CUDA_VERSION < 9000
 #define __CUDABE__
 #else
-#define __CUDACC__
+#define __CUDACC__ 1
 #define __CUDA_LIBDEVICE__
 #endif
 // Disables definitions of device-side runtime support stubs in
@@ -108,7 +120,7 @@
 #define nv_weak weak
 #undef __CUDABE__
 #undef __CUDA_LIBDEVICE__
-#define __CUDACC__
+#define __CUDACC__ 1
 #include "cuda_runtime.h"
 
 #pragma pop_macro("nv_weak")
@@ -254,7 +266,7 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 // branch of #if/else inside.
 #define __host__
 #undef __CUDABE__
-#define __CUDACC__
+#define __CUDACC__ 1
 #if CUDA_VERSION >= 9000
 // Some atomic functions became compiler builtins in CUDA-9 , so we need their
 // declarations.
@@ -400,7 +412,7 @@ __host__ __device__ void __nv_tex_surf_handler(const char *name, T *ptr,
 
 // Set up compiler macros expected to be seen during compilation.
 #undef __CUDABE__
-#define __CUDACC__
+#define __CUDACC__ 1
 
 extern "C" {
 // Device-side CUDA system calls.

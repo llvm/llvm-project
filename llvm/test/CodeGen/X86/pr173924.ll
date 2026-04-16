@@ -6,29 +6,29 @@ define i256 @PR173924(<8 x i256> %a0) {
 ; CHECK-LABEL: PR173924:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
-; CHECK-NEXT:    vmovdqu {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r8d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r8
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; CHECK-NEXT:    vmovd {{.*#+}} xmm0 = [1,0,0,0]
+; CHECK-NEXT:    vpand {{[0-9]+}}(%rsp), %ymm0, %ymm0
+; CHECK-NEXT:    vmovq %xmm0, %r11
 ; CHECK-NEXT:    andl $1, %r10d
 ; CHECK-NEXT:    andl $1, %esi
-; CHECK-NEXT:    addl %r10d, %esi
+; CHECK-NEXT:    addq %r10, %rsi
 ; CHECK-NEXT:    andl $1, %r8d
 ; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    addl %r8d, %ecx
-; CHECK-NEXT:    addl %esi, %ecx
+; CHECK-NEXT:    addq %r8, %rcx
+; CHECK-NEXT:    addq %rsi, %rcx
 ; CHECK-NEXT:    andl $1, %edx
-; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-NEXT:    vmovq %xmm0, %rsi
+; CHECK-NEXT:    addq %r11, %rdx
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    andl $1, %r9d
-; CHECK-NEXT:    addl %edi, %r9d
-; CHECK-NEXT:    addl %edx, %esi
-; CHECK-NEXT:    addl %r9d, %esi
-; CHECK-NEXT:    addl %ecx, %esi
-; CHECK-NEXT:    vmovd %esi, %xmm0
+; CHECK-NEXT:    addq %rdi, %r9
+; CHECK-NEXT:    addq %rdx, %r9
+; CHECK-NEXT:    addq %rcx, %r9
+; CHECK-NEXT:    vmovq %r9, %xmm0
 ; CHECK-NEXT:    vmovdqu %ymm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

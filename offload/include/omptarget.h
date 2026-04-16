@@ -274,12 +274,23 @@ struct __tgt_target_non_contig {
 extern "C" {
 #endif
 
+/// The OpenMP access group type. The criterion for grouping tasks using a
+/// specific grouping property.
+enum omp_access_t {
+  /// Groups the tasks based on the contention group to which they belong.
+  omp_access_cgroup = 0,
+  /// Groups the tasks based on the parallel region to which they bind.
+  omp_access_pteam = 1,
+};
+
 void ompx_dump_mapping_tables(void);
 int omp_get_num_devices(void);
 int omp_get_device_num(void);
 int omp_get_device_from_uid(const char *DeviceUid);
 const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
+size_t omp_get_gprivate_limit(int DeviceNum,
+                              omp_access_t AccessGroup = omp_access_cgroup);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);
@@ -417,9 +428,12 @@ void __tgt_target_nowait_query(void **AsyncHandle);
 /// device memory.
 int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                                void *DeviceMemory, int64_t DeviceMemorySize,
-                               void **TgtArgs, ptrdiff_t *TgtOffsets,
-                               int32_t NumArgs, int32_t NumTeams,
-                               int32_t ThreadLimit, uint64_t LoopTripCount);
+                               const llvm::offloading::EntryTy *Globals,
+                               int32_t NumGlobals, void **TgtArgs,
+                               ptrdiff_t *TgtOffsets, int32_t NumArgs,
+                               int32_t NumTeams, int32_t ThreadLimit,
+                               uint32_t SharedMemorySize,
+                               uint64_t LoopTripCount);
 
 void __tgt_set_info_flag(uint32_t);
 
@@ -427,7 +441,7 @@ int __tgt_print_device_info(int64_t DeviceId);
 
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                  void *VAddr, bool IsRecord, bool SaveOutput,
-                                 uint64_t &ReqPtrArgOffset);
+                                 bool EmitReport, const char *OutputDirPath);
 
 // Registers a callback for the RPC server. Expects this function type.
 // unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC
