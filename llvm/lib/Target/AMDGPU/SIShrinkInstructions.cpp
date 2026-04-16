@@ -735,9 +735,6 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
       continue;
     ++Count;
 
-    if (instModifiesReg(&*Iter, T, Tsub))
-      return nullptr;
-
     if (!MovX) {
       // Search for mov x, y.
       if ((Iter->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
@@ -788,6 +785,9 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
           return nullptr;
       }
     }
+
+    if (instModifiesReg(&*Iter, T, Tsub))
+      return nullptr;
   }
   if (MovY) {
     LLVM_DEBUG(dbgs() << "Matched v_swap:\n" << MovT << *MovX << *MovY);
