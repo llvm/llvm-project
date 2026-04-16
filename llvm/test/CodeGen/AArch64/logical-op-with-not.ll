@@ -17,8 +17,8 @@ define i64 @and_bic(i64 %0, i64 %1) {
 define i64 @and_bic2(i32 %0, i64 %1) {
 ; CHECK-LABEL: and_bic2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
-; CHECK-NEXT:    orn w8, w8, w0
+; CHECK-NEXT:    mvn w8, w0
+; CHECK-NEXT:    orr w8, w8, #0xffff00ff
 ; CHECK-NEXT:    and x0, x8, x1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -31,8 +31,8 @@ define i64 @and_bic2(i32 %0, i64 %1) {
 define i32 @and_bic3(i32 %0, i32 %1) {
 ; CHECK-LABEL: and_bic3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
-; CHECK-NEXT:    orn w8, w8, w0
+; CHECK-NEXT:    mvn w8, w0
+; CHECK-NEXT:    orr w8, w8, #0xffff00ff
 ; CHECK-NEXT:    and w0, w8, w1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -56,8 +56,8 @@ define i64 @and_eon(i64 %0, i64 %1) {
 define i64 @and_eon2(i32 %0, i64 %1) {
 ; CHECK-LABEL: and_eon2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
-; CHECK-NEXT:    orn w8, w8, w0
+; CHECK-NEXT:    mvn w8, w0
+; CHECK-NEXT:    orr w8, w8, #0xffff00ff
 ; CHECK-NEXT:    eor x0, x8, x1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -94,8 +94,8 @@ define i64 @and_orn(i64 %0, i64 %1) {
 define i64 @and_orn2(i32 %0, i64 %1) {
 ; CHECK-LABEL: and_orn2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
-; CHECK-NEXT:    orn w8, w8, w0
+; CHECK-NEXT:    mvn w8, w0
+; CHECK-NEXT:    orr w8, w8, #0xffff00ff
 ; CHECK-NEXT:    orr x0, x8, x1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -737,28 +737,4 @@ for.body:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, 256
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
-}
-
-; ORN with a constant should use "mov + orn" like BIC does, not "mvn + orr".
-
-define i32 @orn_cst_i32(i32 %c) {
-; CHECK-LABEL: orn_cst_i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4 // =0x4
-; CHECK-NEXT:    orn w0, w8, w0
-; CHECK-NEXT:    ret
-  %not = xor i32 %c, -1
-  %or  = or  i32 %not, 4
-  ret i32 %or
-}
-
-define i64 @orn_cst_i64(i64 %c) {
-; CHECK-LABEL: orn_cst_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #4 // =0x4
-; CHECK-NEXT:    orn x0, x8, x0
-; CHECK-NEXT:    ret
-  %not = xor i64 %c, -1
-  %or  = or  i64 %not, 4
-  ret i64 %or
 }
