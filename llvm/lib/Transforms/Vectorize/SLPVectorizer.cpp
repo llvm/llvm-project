@@ -7084,7 +7084,7 @@ static bool isMaskedLoadCompress(
     reorderScalars(OrderedPointerOps, Mask);
   auto [ScalarGEPCost, VectorGEPCost] =
       getGEPCosts(TTI, OrderedPointerOps, OrderedPointerOps.front(),
-                  Instruction::GetElementPtr, CostKind, ScalarTy, LoadVecTy);
+                  Instruction::Load, CostKind, ScalarTy, LoadVecTy);
   // The cost of scalar loads.
   InstructionCost ScalarLoadsCost =
       std::accumulate(VL.begin(), VL.end(), InstructionCost(),
@@ -7621,8 +7621,8 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     // Compare masked gather cost and loads + insert subvector costs.
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     auto [ScalarGEPCost, VectorGEPCost] =
-        getGEPCosts(TTI, PointerOps, PointerOps.front(),
-                    Instruction::GetElementPtr, CostKind, ScalarTy, VecTy);
+        getGEPCosts(TTI, PointerOps, PointerOps.front(), Instruction::Load,
+                    CostKind, ScalarTy, VecTy);
     // Estimate the cost of masked gather GEP. If not a splat, roughly
     // estimate as a buildvector, otherwise estimate as splat.
     APInt DemandedElts = APInt::getAllOnes(Sz);
@@ -7732,9 +7732,8 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
             (LS == LoadsState::ScatterVectorize && ProfitableGatherPointers)
                 ? 0
                 : getGEPCosts(TTI, ArrayRef(PointerOps).slice(I * VF, VF),
-                              LI0->getPointerOperand(),
-                              Instruction::GetElementPtr, CostKind, ScalarTy,
-                              SubVecTy)
+                              LI0->getPointerOperand(), Instruction::Load,
+                              CostKind, ScalarTy, SubVecTy)
                       .second;
         if (LS == LoadsState::ScatterVectorize) {
           if (static_cast<unsigned>(
