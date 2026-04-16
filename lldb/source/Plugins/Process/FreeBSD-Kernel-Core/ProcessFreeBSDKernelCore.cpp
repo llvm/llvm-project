@@ -9,6 +9,8 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandObjectMultiword.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -59,6 +61,55 @@ static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
 }
+
+class CommandObjectProcessFreeBSDKernelCoreRefreshThreads
+    : public CommandObjectParsed {
+public:
+  CommandObjectProcessFreeBSDKernelCoreRefreshThreads(
+      CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "process plugin refresh-threads",
+            "Refresh the thread list from the FreeBSD kernel core. The thread "
+            "list and related data structures may be being read from live "
+            "memory (/dev/mem), which may have changed since the last refresh. "
+            "This command clears LLDB's thread list and memory cache then "
+            "re-reads the kernel's allproc/zombie lists to rebuild the thread "
+            "list from scratch.",
+            "process plugin refresh-threads",
+            eCommandRequiresProcess | eCommandTryTargetAPILock) {}
+
+  ~CommandObjectProcessFreeBSDKernelCoreRefreshThreads() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    // TODO: Return early for elf-core based implementation.
+
+    auto process = static_cast<ProcessFreeBSDKernelCore *>(
+        m_interpreter.GetExecutionContext().GetProcessPtr());
+
+    // Clear the memory cache so DoUpdateThreadList() will re-read allproc,
+    // zombproc, and all thread/proc structures fresh from the core dump instead
+    // of getting stale cached values.
+    process->m_memory_cache.Clear();
+
+    // Clear both thread lists to guarantee that UpdateThreadListIfNeeded() sees
+    // size == 0 and enters the rebuild path regardless of stop-ID state.
+    // UpdateThreadListIfNeeded() passes m_thread_list_real as old_thread_list
+    // to DoUpdateThreadList(), and DoUpdateThreadList() only rebuilds from
+    // scratch when old_thread_list is empty. m_thread_list is the public copy
+    // that is sync'd from m_thread_list_real afterwards.
+    process->m_thread_list_real.Clear();
+    process->m_thread_list.Clear();
+
+    // This calls UpdateThreadListIfNeeded() to rebuild the process thread list.
+    const uint32_t num_threads =
+        process->GetThreadList().GetSize(/*can_update=*/true);
+    result.AppendMessageWithFormatv(
+        "Thread list refreshed, {0} thread{1} found.", num_threads,
+        num_threads == 1 ? "" : "s");
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
 
 ProcessFreeBSDKernelCore::ProcessFreeBSDKernelCore(lldb::TargetSP target_sp,
                                                    ListenerSP listener_sp,
@@ -116,6 +167,22 @@ void ProcessFreeBSDKernelCore::Terminate() {
 bool ProcessFreeBSDKernelCore::CanDebug(lldb::TargetSP target_sp,
                                         bool plugin_specified_by_name) {
   return true;
+}
+
+CommandObject *ProcessFreeBSDKernelCore::GetPluginCommandObject() {
+  if (!m_command_sp) {
+    CommandInterpreter &interp =
+        GetTarget().GetDebugger().GetCommandInterpreter();
+    m_command_sp = std::make_unique<CommandObjectMultiword>(
+        interp, "process plugin",
+        "Commands for the FreeBSD kernel process plug-in.",
+        "process plugin <subcommand> [<subcommand-options>]");
+    m_command_sp->LoadSubCommand(
+        "refresh-threads",
+        CommandObjectSP(
+            new CommandObjectProcessFreeBSDKernelCoreRefreshThreads(interp)));
+  }
+  return m_command_sp.get();
 }
 
 Status ProcessFreeBSDKernelCore::DoLoadCore() {
