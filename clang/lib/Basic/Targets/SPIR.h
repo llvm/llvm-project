@@ -351,16 +351,19 @@ public:
   }
 
   // SPIR-V targeting requires a fully specified Vulkan environment.
-  // Validate here before CreateTargetInfo() to emit a proper diagnostic
+  // SPIR-V requires the enviornment to be in a valid shader stage as well.
+  // Validate here before CreateTargetInfo() to emit a proper diagnostic.
   bool validateTarget(DiagnosticsEngine &Diags) const override {
     if (getTriple().getOS() != llvm::Triple::Vulkan ||
         getTriple().getVulkanVersion() == llvm::VersionTuple(0)) {
       Diags.Report(diag::err_fe_spirv_requires_vulkan);
       return false;
     }
-    assert(getTriple().getEnvironment() >= llvm::Triple::Pixel &&
-           getTriple().getEnvironment() <= llvm::Triple::Amplification &&
-           "Logical SPIR-V environment must be a valid shader stage.");
+    if (getTriple().getEnvironment() < llvm::Triple::Pixel ||
+        getTriple().getEnvironment() > llvm::Triple::Amplification) {
+      Diags.Report(diag::err_fe_spirv_requires_shader_stage);
+      return false;
+    }
     return true;
   }
 

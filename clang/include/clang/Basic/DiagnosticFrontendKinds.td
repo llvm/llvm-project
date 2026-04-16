@@ -44,7 +44,9 @@ def remark_fe_backend_plugin: Remark<"%0">, BackendInfo, InGroup<RemarkBackendPl
 def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 
 def err_fe_spirv_requires_vulkan : Error<
-    "SPIR-V target requires a Vulkan environment (e.g. '-target spirv64-unknown-vulkan1.3')">;
+    "SPIR-V target requires a Vulkan environment">;
+def err_fe_spirv_requires_shader_stage : Error<
+    "SPIR-V target requires a valid shader stage environment">;
 
 def warn_fe_override_module : Warning<
     "overriding the module target triple with %0">,
