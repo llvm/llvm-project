@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the helper for raw device image
+/// parsing and iteration.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_DEVICE_IMAGE_WRAPPER
 #define _LIBSYCL_DEVICE_IMAGE_WRAPPER
