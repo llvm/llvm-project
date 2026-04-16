@@ -3,7 +3,7 @@
 # Windows: the last access time is disabled by default in the OS
 # This test is also known to fail on Mac (and possibly elsewhere) when Crowdstrike is installed;
 # please make use of the LIT_XFAIL environment variable on such machines.
-# UNSUPPORTED: system-netbsd, system-windows
+# UNSUPPORTED: system-netbsd, system-windows, system-darwin
 
 # Preserve dates when stripping to an output file.
 # RUN: yaml2obj %s -o %t.1.o

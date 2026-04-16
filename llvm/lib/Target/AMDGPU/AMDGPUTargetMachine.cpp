@@ -27,6 +27,7 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPUMacroFusion.h"
+#include "AMDGPUNextUseAnalysis.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPUPrepareAGPRAlloc.h"
@@ -149,9 +150,9 @@ public:
   void addCodeGenPrepare(PassManagerWrapper &PMW) const;
   void addPreISel(PassManagerWrapper &PMW) const;
   void addILPOpts(PassManagerWrapper &PMWM) const;
-  void addAsmPrinterBegin(PassManagerWrapper &PMW, CreateMCStreamer) const;
-  void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW, CreateMCStreamer) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
+  void addAsmPrinter(PassManagerWrapper &PMW) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
   void addPreRewrite(PassManagerWrapper &PMW) const;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
@@ -546,6 +547,12 @@ static cl::opt<bool>
                               "and asan instrument resulting IR."),
                      cl::init(true), cl::Hidden);
 
+static cl::opt<bool, true> EnableObjectLinking(
+    "amdgpu-enable-object-linking",
+    cl::desc("Enable object linking for cross-TU LDS and ABI support"),
+    cl::location(AMDGPUTargetMachine::EnableObjectLinking), cl::init(false),
+    cl::Hidden);
+
 static cl::opt<bool, true> EnableLowerModuleLDS(
     "amdgpu-enable-lower-module-lds", cl::desc("Enable lower module lds pass"),
     cl::location(AMDGPUTargetMachine::EnableLowerModuleLDS), cl::init(true),
@@ -671,6 +678,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
+  initializeAMDGPUNextUseAnalysisLegacyPassPass(*PR);
+  initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(*PR);
   initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
@@ -712,7 +721,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFormMemoryClausesLegacyPass(*PR);
   initializeSIPostRABundlerLegacyPass(*PR);
   initializeGCNCreateVOPDLegacyPass(*PR);
-  initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
+  initializeAMDGPUUnifyDivergentExitNodesLegacyPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
   initializeAMDGPUExternalAAWrapperPass(*PR);
   initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
@@ -877,6 +886,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
 }
 
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
+bool AMDGPUTargetMachine::EnableObjectLinking = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
@@ -1265,11 +1275,12 @@ GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
 }
 
 Error GCNTargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts, MCContext &Ctx,
+    ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+    const CGPassBuilderOption &Opts, MCContext &Ctx,
     PassInstrumentationCallbacks *PIC) {
   AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
+  return CGPB.buildPipeline(MPM, MAM, Out, DwoOut, FileType, Ctx);
 }
 
 ScheduleDAGInstrs *
@@ -2382,17 +2393,15 @@ void AMDGPUCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
 }
 
 void AMDGPUCodeGenPassBuilder::addAsmPrinterBegin(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+    PassManagerWrapper &PMW) const {
   // TODO: Add AsmPrinterBegin
 }
 
-void AMDGPUCodeGenPassBuilder::addAsmPrinter(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+void AMDGPUCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
   // TODO: Add AsmPrinter.
 }
 
-void AMDGPUCodeGenPassBuilder::addAsmPrinterEnd(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+void AMDGPUCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
   // TODO: Add AsmPrinterEnd
 }
 

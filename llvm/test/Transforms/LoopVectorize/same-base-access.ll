@@ -24,13 +24,13 @@ define i32 @kernel11(ptr %x, ptr %y, i32 %n) {
   store i32 1, ptr %k, align 4
   br label %4
 
-; <label>:4                                       ; preds = %25, %0
+; <label>:
   %5 = load i32, ptr %k, align 4
   %6 = load i32, ptr %3, align 4
   %7 = icmp slt i32 %5, %6
   br i1 %7, label %8, label %28
 
-; <label>:8                                       ; preds = %4
+; <label>:
   %9 = load i32, ptr %k, align 4
   %10 = sub nsw i32 %9, 1
   %11 = sext i32 %10 to i64
@@ -50,13 +50,13 @@ define i32 @kernel11(ptr %x, ptr %y, i32 %n) {
   store double %20, ptr %24, align 8
   br label %25
 
-; <label>:25                                      ; preds = %8
+; <label>:
   %26 = load i32, ptr %k, align 4
   %27 = add nsw i32 %26, 1
   store i32 %27, ptr %k, align 4
   br label %4
 
-; <label>:28                                      ; preds = %4
+; <label>:
   ret i32 0
 }
 
@@ -80,7 +80,7 @@ define i32 @kernel11(ptr %x, ptr %y, i32 %n) {
 define i32 @func2(ptr nocapture %a) {
   br label %1
 
-; <label>:1                                       ; preds = %7, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %7 ]
   %2 = mul nsw i64 %indvars.iv, 7
   %3 = getelementptr inbounds i32, ptr %a, i64 %2
@@ -88,12 +88,12 @@ define i32 @func2(ptr nocapture %a) {
   %5 = icmp sgt i32 %4, 3
   br i1 %5, label %6, label %7
 
-; <label>:6                                       ; preds = %1
+; <label>:
   %tmp = add i32 %4, 4
   %tmp1 = mul i32 %tmp, %4
   br label %7
 
-; <label>:7                                       ; preds = %6, %1
+; <label>:
   %x.0 = phi i32 [ %tmp1, %6 ], [ %4, %1 ]
   %8 = add nsw i32 %x.0, 3
   store i32 %8, ptr %3, align 4
@@ -102,6 +102,6 @@ define i32 @func2(ptr nocapture %a) {
   %exitcond = icmp eq i32 %lftr.wideiv, 256
   br i1 %exitcond, label %9, label %1
 
-; <label>:9                                       ; preds = %7
+; <label>:
   ret i32 0
 }

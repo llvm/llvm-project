@@ -16,6 +16,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "mlir/Dialect/Transform/Interfaces/TransformAttrInterfaces.h.inc"
 #include "mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.h.inc"
 
 namespace mlir {
@@ -1623,5 +1624,17 @@ mlir::transform::TransformEachOpTrait<OpTy>::verifyTrait(Operation *op) {
 
   return success();
 }
+
+namespace llvm {
+template <>
+struct PointerLikeTypeTraits<mlir::transform::NormalFormAttrInterface>
+    : public PointerLikeTypeTraits<mlir::Attribute> {
+  static inline mlir::transform::NormalFormAttrInterface
+  getFromVoidPointer(void *p) {
+    return cast<mlir::transform::NormalFormAttrInterface>(
+        mlir::Attribute::getFromOpaquePointer(p));
+  }
+};
+} // namespace llvm
 
 #endif // DIALECT_TRANSFORM_INTERFACES_TRANSFORMINTERFACES_H

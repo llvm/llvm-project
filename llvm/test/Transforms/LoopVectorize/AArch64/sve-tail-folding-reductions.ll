@@ -66,7 +66,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %red = phi i32 [ %red.next, %while.body ], [ 0, %entry ]
   %gep = getelementptr i32, ptr %ptr, i64 %index
@@ -76,7 +76,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret i32 %red.next
 }
 
@@ -138,7 +138,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %red = phi float [ %red.next, %while.body ], [ 0.000000, %entry ]
   %gep = getelementptr float, ptr %ptr, i64 %index
@@ -148,7 +148,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret float %red.next
 }
 

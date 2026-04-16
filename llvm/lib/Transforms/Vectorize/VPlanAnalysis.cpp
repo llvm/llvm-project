@@ -106,8 +106,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
                inferScalarType(R->getOperand(1)) &&
            "different types inferred for different operands");
     return IntegerType::get(Ctx, 1);
-  case VPInstruction::ComputeAnyOfResult:
-    return inferScalarType(R->getOperand(1));
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -391,24 +389,6 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
   if (ParentA == ParentB)
     return LocalComesBefore(A, B);
 
-#ifndef NDEBUG
-  auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
-    VPRegionBlock *Region = R->getRegion();
-    if (Region && Region->isReplicator()) {
-      assert(Region->getNumSuccessors() == 1 &&
-             Region->getNumPredecessors() == 1 && "Expected SESE region!");
-      assert(R->getParent()->size() == 1 &&
-             "A recipe in an original replicator region must be the only "
-             "recipe in its block");
-      return Region;
-    }
-    return nullptr;
-  };
-  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(A)) &&
-         "No replicate regions expected at this point");
-  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(B)) &&
-         "No replicate regions expected at this point");
-#endif
   return Base::properlyDominates(ParentA, ParentB);
 }
 

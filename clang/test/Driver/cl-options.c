@@ -716,6 +716,8 @@
 // RUN:     -ffile-compilation-dir=. \
 // RUN:     -fdiagnostics-parseable-fixits \
 // RUN:     -fdiagnostics-absolute-paths \
+// RUN:     -fdiagnostics-show-inlining-chain \
+// RUN:     -fno-diagnostics-show-inlining-chain \
 // RUN:     -ferror-limit=10 \
 // RUN:     -fident \
 // RUN:     -fno-ident \
@@ -860,5 +862,11 @@
 // RUN: %clang_cl /funcoverride:override_me1 /funcoverride:override_me2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=FUNCOVERRIDE
 // FUNCOVERRIDE: -loader-replaceable-function=override_me1
 // FUNCOVERRIDE-SAME: -loader-replaceable-function=override_me2
+
+// RUN: %clang_cl /d2guardcfgdispatch /c -### -- %s 2>&1 | FileCheck %s --check-prefix=GUARDCFGDISPATCH
+// GUARDCFGDISPATCH: -fwin-cfg-mechanism=dispatch
+
+// RUN: %clang_cl /d2guardcfgdispatch- /c -### -- %s 2>&1 | FileCheck %s --check-prefix=GUARDCFGDISPATCHNEG
+// GUARDCFGDISPATCHNEG: -fwin-cfg-mechanism=check
 
 void f(void) { }

@@ -347,6 +347,7 @@ public:
 
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
+    VectorsAreElementAligned = true;
     resetDataLayout();
   }
 

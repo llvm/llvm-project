@@ -247,6 +247,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
 
   case llvm::Triple::tce:
   case llvm::Triple::tcele:
+  case llvm::Triple::tcele64:
     return createTCETargetCodeGenInfo(CGM);
 
   case llvm::Triple::x86: {
@@ -1163,6 +1164,13 @@ void CodeGenModule::Release() {
         llvm::Module::Warning, "cfguard",
         static_cast<unsigned>(llvm::ControlFlowGuardMode::TableOnly));
   }
+  if (CodeGenOpts.getWinControlFlowGuardMechanism() !=
+      llvm::ControlFlowGuardMechanism::Automatic) {
+    // Specify the Control Flow Guard mechanism to use on Windows.
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "cfguard-mechanism",
+        static_cast<unsigned>(CodeGenOpts.getWinControlFlowGuardMechanism()));
+  }
   if (CodeGenOpts.EHContGuard) {
     // Function ID tables for EH Continuation Guard.
     getModule().addModuleFlag(llvm::Module::Warning, "ehcontguard", 1);
@@ -1383,12 +1391,12 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 2);
 
     if (LangOpts.PointerAuthELFGOT)
-      getModule().addModuleFlag(llvm::Module::Min, "ptrauth-elf-got", 1);
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got", 1);
 
     if (getTriple().isOSLinux()) {
       if (LangOpts.PointerAuthCalls)
-        getModule().addModuleFlag(llvm::Module::Min, "ptrauth-sign-personality",
-                                  1);
+        getModule().addModuleFlag(llvm::Module::Error,
+                                  "ptrauth-sign-personality", 1);
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
       uint64_t PAuthABIVersion =

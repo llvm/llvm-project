@@ -1510,8 +1510,20 @@ public:
         rewriter, loc,
         LLVM::getVectorType(idxType, dstType.getShape()[0],
                             /*isScalable=*/true));
-    auto bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType,
-                                                 adaptor.getOperands()[0]);
+    Value maskBound = adaptor.getOperands()[0];
+    // When using 32-bit indices, cap the bound at INT32_MAX in index type
+    // before casting. For scalable vectors the runtime size (vscale * dim) is
+    // unknown at compile time, so we can't clamp to `dim` as in the fixed-size
+    // path. Clamping to INT32_MAX is safe because any realistic scalable vector
+    // size fits well below this limit, so a bound >= vscale*dim still produces
+    // an all-true mask after the comparison.
+    if (force32BitVectorIndices) {
+      Value maxBound =
+          arith::ConstantIndexOp::create(rewriter, loc, (1LL << 31) - 1);
+      maskBound = arith::MinSIOp::create(rewriter, loc, maskBound, maxBound);
+    }
+    auto bound =
+        getValueOrCreateCastToIndexLike(rewriter, loc, idxType, maskBound);
     Value bounds = BroadcastOp::create(rewriter, loc, indices.getType(), bound);
     Value comp = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
                                        indices, bounds);

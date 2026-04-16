@@ -86,7 +86,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0, !dbg !6
   br i1 %cmp6, label %for.body, label %for.end, !dbg !6
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ], !dbg !7
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv, !dbg !7
   %0 = load float, ptr %arrayidx, align 4, !dbg !7
@@ -98,7 +98,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n, !dbg !7
   br i1 %exitcond, label %for.end, label %for.body, !dbg !7
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void, !dbg !8
 }
 
