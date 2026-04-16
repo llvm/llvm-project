@@ -26,8 +26,7 @@ define <vscale x 16 x i8> @zext_slt_test2(<32 x i8> %a, <32 x i8> %b)
 ; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    cmpgt p1.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ret
 {
   %1 = icmp slt <32 x i8> %a, %b
@@ -61,8 +60,7 @@ define <vscale x 16 x i8> @zext_ult_test2(<32 x i8> %a, <32 x i8> %b)
 ; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    cmphi p1.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ret
 {
   %1 = icmp ult <32 x i8> %a, %b
@@ -96,8 +94,7 @@ define <vscale x 16 x i8> @zext_sgt_test2(<32 x i8> %a, <32 x i8> %b)
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    cmpgt p1.b, p0/z, z0.b, z2.b
-; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ret
 {
   %1 = icmp sgt <32 x i8> %a, %b
@@ -131,8 +128,7 @@ define <vscale x 16 x i8> @zext_ugt_test2(<32 x i8> %a, <32 x i8> %b)
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    cmphi p1.b, p0/z, z0.b, z2.b
-; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ret
 {
   %1 = icmp ugt <32 x i8> %a, %b
