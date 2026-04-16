@@ -168,11 +168,13 @@ module __fortran_builtins
 
   interface operator(==)
     module procedure __builtin_c_ptr_eq
+    module procedure __builtin_c_devptr_eq
   end interface
   public :: operator(==)
 
   interface operator(/=)
     module procedure __builtin_c_ptr_ne
+    module procedure __builtin_c_devptr_ne
   end interface
   public :: operator(/=)
 
@@ -184,11 +186,14 @@ module __fortran_builtins
 !  private :: c_associated_c_ptr, c_associated_c_funptr
 
   type(__builtin_c_ptr), parameter, public :: __builtin_c_null_ptr = __builtin_c_ptr(0)
+  type(__builtin_c_devptr), parameter, public :: __builtin_c_null_devptr = __builtin_c_devptr(__builtin_c_null_ptr)
   type(__builtin_c_funptr), parameter, public :: &
     __builtin_c_null_funptr = __builtin_c_funptr(0)
 
   public :: __builtin_c_ptr_eq
   public :: __builtin_c_ptr_ne
+  public :: __builtin_c_devptr_eq
+  public :: __builtin_c_devptr_ne
   public :: __builtin_c_funloc
 
   contains
@@ -201,6 +206,16 @@ module __fortran_builtins
   elemental logical function __builtin_c_ptr_ne(x, y)
     type(__builtin_c_ptr), intent(in) :: x, y
     __builtin_c_ptr_ne = x%__address /= y%__address
+  end function
+
+  elemental logical function __builtin_c_devptr_eq(x, y)
+    type(__builtin_c_devptr), intent(in) :: x, y
+    __builtin_c_devptr_eq = x%cptr == y%cptr
+  end function
+
+  elemental logical function __builtin_c_devptr_ne(x, y)
+    type(__builtin_c_devptr), intent(in) :: x, y
+    __builtin_c_devptr_ne = x%cptr /= y%cptr
   end function
 
   ! Semantics has some special-case code that allows c_funloc()
