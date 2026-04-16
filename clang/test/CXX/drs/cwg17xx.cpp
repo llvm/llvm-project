@@ -236,5 +236,19 @@ class A {
 #endif
 };
 
+#if __cplusplus >= 201402L
+auto gl = [](auto a) { return 5; };
+using GL = decltype(gl);
+
+template <>
+auto GL::operator()(int a) const { // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+    return 6;
+}
+
+auto gll = [](auto a) { return 5; }; // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+using GLL = decltype(gll);
+template auto GLL::operator()<int>(int a) const; // expected-note{{in instantiation of function template specialization 'cwg1780::(lambda)::operator()<int>' requested here}}
+#endif
+
 #endif
 } // namespace cwg1780
