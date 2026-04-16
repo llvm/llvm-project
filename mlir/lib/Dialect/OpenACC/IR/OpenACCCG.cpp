@@ -17,7 +17,6 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
@@ -26,7 +25,6 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include <optional>
 
 using namespace mlir;
 using namespace acc;
@@ -480,31 +478,7 @@ ComputeRegionOp::getKnownConstantLaunchArg(GPUParallelDimAttr parDim) {
 
 BlockArgument ComputeRegionOp::appendInputArg(Value value) {
   getInputArgsMutable().append(value);
-  BlockArgument arg = getBody()->addArgument(value.getType(), getLoc());
-  OpBuilder b(getContext());
-  updateComputeRegionInputOperandSegments(*this, b, getInputArgs().size());
-  return arg;
-}
-
-std::optional<BlockArgument>
-ComputeRegionOp::captureInsOperandReplacingUsesInRegion(Value value) {
-  Region &region = getRegion();
-  auto usedInRegion = [&](Value v) {
-    for (OpOperand &use : v.getUses()) {
-      Region *useRegion = use.getOwner()->getParentRegion();
-      if (useRegion && region.isAncestor(useRegion))
-        return true;
-    }
-    return false;
-  };
-  if (!usedInRegion(value))
-    return std::nullopt;
-  BlockArgument arg = appendInputArg(value);
-  value.replaceUsesWithIf(arg, [&](OpOperand &operand) {
-    Region *useRegion = operand.getOwner()->getParentRegion();
-    return useRegion && region.isAncestor(useRegion);
-  });
-  return arg;
+  return getBody()->addArgument(value.getType(), getLoc());
 }
 
 bool ComputeRegionOp::isEffectivelySerial() {
