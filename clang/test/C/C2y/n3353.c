@@ -166,7 +166,7 @@ void foo() {
 }
 #endif
 
-#172 "system_header.c" 3
+#172 "system_header.h" 3
 #define SYS_HEADER_MACRO_1 0o02
 #define SYS_HEADER_MACRO_2 02
 #174 "n3353.c" 1
