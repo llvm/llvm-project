@@ -8,19 +8,9 @@
 define <4 x i32> @buildvec_sext_extract_v4(<8 x i16> %x) {
 ; CHECK-LABEL: buildvec_sext_extract_v4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vslidedown.vi v8, v8, 3
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    vmv.x.s a3, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a2
-; CHECK-NEXT:    vslide1down.vx v8, v8, a3
+; CHECK-NEXT:    vsext.vf2 v9, v8
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %e0 = extractelement <8 x i16> %x, i32 0
   %e1 = extractelement <8 x i16> %x, i32 1
