@@ -22,6 +22,11 @@ public:
   UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
 
+  static EntityPointerLevel buildEntityPointerLevel(EntityId Entity,
+                                                    unsigned PointerLevel) {
+    return {Entity, PointerLevel};
+  }
+
   EntityId addEntity(EntityName EN) { return SummaryBuilder.addEntity(EN); }
 
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
