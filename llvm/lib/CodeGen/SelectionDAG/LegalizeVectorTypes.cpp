@@ -4714,8 +4714,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
   // If the input elements are only 1/2 the width of the result elements,
   // just use the normal splitting. Our trick only work if there's room
   // to split more than once.
-  if (isTypeLegal(LoOutVT) ||
-      InElementSize <= OutElementSize * 2)
+  if (isTypeLegal(LoOutVT) || InElementSize <= OutElementSize * 2)
     return SplitVecOp_UnaryOp(N);
   SDLoc DL(N);
 
