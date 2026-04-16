@@ -717,11 +717,9 @@ bool CastOp::canFoldIntoConsumerOp(CastOp castOp) {
         return false;
   }
 
-  // If cast is towards more static offset along any dimension, don't fold.
-  if (sourceOffset != resultOffset)
-    if (ShapedType::isDynamic(sourceOffset) &&
-        ShapedType::isStatic(resultOffset))
-      return false;
+  // Static offset is intentionally not checked here: a cast that claims a
+  // more-static offset cannot be trusted, so blocking the fold on that basis
+  // would only serve to keep the lying cast around.
 
   // If cast is towards more static strides along any dimension, don't fold.
   for (auto it : llvm::zip(sourceStrides, resultStrides)) {
