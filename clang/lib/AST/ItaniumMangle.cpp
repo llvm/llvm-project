@@ -3414,6 +3414,10 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << TI->getIbm128Mangling();
     break;
   }
+  case BuiltinType::MetaInfo:
+    // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
+    Out << "Dm";
+    break;
   case BuiltinType::NullPtr:
     Out << "Dn";
     break;
@@ -5003,8 +5007,22 @@ recurse:
     goto recurse;
 
   case Expr::CXXReflectExprClass: {
-    // TODO(Reflection): implement this after introducing std::meta::info
-    assert(false && "unimplemented");
+    // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
+    const CXXReflectExpr *RE = cast<CXXReflectExpr>(E);
+    Out << "LDm";
+    switch(RE->getKind()) {
+      case ReflectionKind::Null: {
+        Out << "nu";
+        break;
+      }
+      case ReflectionKind::Type: {
+        Out << "ty";
+        const TypeSourceInfo* TSI = RE->getTypeSourceInfo();
+        mangleType(TSI->getType());
+        break;
+      }
+    }
+    Out << 'E';
     break;
   }
 
@@ -6538,6 +6556,9 @@ static bool isZeroInitialized(QualType T, const APValue &V) {
 
   case APValue::MemberPointer:
     return !V.getMemberPointerDecl();
+
+  case APValue::Reflection:
+    return !V.getReflectionOpaqueOperand();
   }
 
   llvm_unreachable("Unhandled APValue::ValueKind enum");
@@ -6932,6 +6953,26 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
       break;
     }
 
+    break;
+  }
+
+  case APValue::Reflection: {
+    // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
+    Out << "LDm";
+    switch (V.getReflectionOperandKind()) {
+      case ReflectionKind::Null: {
+         Out << "nu";
+         break;
+      }
+      case ReflectionKind::Type: {
+        const auto *TSI =
+            static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
+        Out << "ty";
+        mangleType(TSI->getType());
+        break;
+      }
+    }
+    Out << 'E';
     break;
   }
 

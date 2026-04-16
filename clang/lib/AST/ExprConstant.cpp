@@ -10975,7 +10975,7 @@ bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
 }
 
 bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {
-  Result = APValue(ReflectionKind::Type, nullptr);
+  Result = APValue(ReflectionKind::Null, nullptr);
   return true;
 }
 

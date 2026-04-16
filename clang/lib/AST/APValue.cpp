@@ -542,6 +542,8 @@ static QualType unwrapReflectedTypeForProfile(QualType QT) {
 static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
   ID.AddInteger(static_cast<int>(V.getReflectionOperandKind()));
   switch (V.getReflectionOperandKind()) {
+  case ReflectionKind::Null:
+    return;
   case ReflectionKind::Type: {
     const TypeSourceInfo *Info =
         static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
