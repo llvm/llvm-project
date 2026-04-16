@@ -83,9 +83,13 @@ end
 
 subroutine test_use_details()
   use m
+  call doit(pinned_real)
   !$acc host_data use_device(pinned_real)
   call doit(pinned_real)
   !$acc end host_data
+  call doit(pinned_real)
 end subroutine
 
+! CHECK: fir.address_of(@_QP__host_sub)
 ! CHECK: fir.address_of(@_QP__device_sub)
+! CHECK: fir.address_of(@_QP__host_sub)
