@@ -217,6 +217,13 @@ public:
   /// @name High-Level Operations
   /// @{
 
+  // FIXME: Add a static InitializeProcess() method to consolidate process-level
+  // setup that is currently scattered across tool entry points (cc1_main,
+  // clang-repl, libclang, etc.). This would include things like AsmParsers and
+  // install_fatal_error_handler.
+  // These are process-global, so a single static method would allow clang-based
+  // tools to share them without duplication.
+
   /// ExecuteAction - Execute the provided action against the compiler's
   /// CompilerInvocation object.
   ///
@@ -809,6 +816,13 @@ public:
                    bool UseTemporary, bool CreateMissingDirectories = false);
 
 private:
+  /// Prepare the CompilerInstance for executing a frontend action.
+  ///
+  /// Called by ExecuteAction. Consolidates instance-level setup that was
+  /// previously duplicated across tool entry points (cc1_main,
+  /// clang-repl/Interpreter, etc.).
+  void PrepareForExecution();
+
   /// Create a new output file and add it to the list of tracked output files.
   ///
   /// If \p OutputPath is empty, then createOutputFile will derive an output
