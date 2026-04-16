@@ -133,6 +133,12 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Partially implemented `P2843R3 <https://wg21.link/P2843R3>`_ Preprocessing is
+  never undefined. A macro expansion producing ``defined`` in a conditional
+  expression is now a hard error in C++26; other constructs the paper makes
+  ill-formed (notably embedding a directive within macro arguments) remain a
+  pedantic warning for now and will be promoted separately.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

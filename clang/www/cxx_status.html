@@ -330,7 +330,15 @@ C++23, informally referred to as C++26.</p>
  <tr>
    <td>Preprocessing is never undefined</td>
    <td><a href="https://wg21.link/P2843">P2843R3</a></td>
-   <td class="none" align="center">No</td>
+   <td class="partial" align="center">
+     <details>
+       <summary>Partial</summary>
+       Clang diagnoses macro expansions producing <tt>defined</tt> in
+       conditional expressions in C++26, but embedded directives in macro
+       arguments and other constructs made ill-formed by this paper are not
+       yet fully implemented.
+     </details>
+   </td>
  </tr>
  <!-- Kona, Fall 2025-->
  <tr>
