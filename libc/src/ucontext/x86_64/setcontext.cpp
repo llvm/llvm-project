@@ -52,7 +52,9 @@ __attribute__((naked)) LLVM_LIBC_FUNCTION(int, setcontext,
 
       # Restore stack pointer and instruction pointer
       mov %c[rsp](%%rdi), %%rsp
-      mov %c[rip](%%rdi), %%r11 # Use r11 as temp for rip
+      # Note: r11 is a scratch register in the x86_64 ABI and is not preserved.
+      # It is used here as a temporary for rip.
+      mov %c[rip](%%rdi), %%r11
       
       # Restore RSI and RDI last
       mov %c[rsi](%%rdi), %%rsi
