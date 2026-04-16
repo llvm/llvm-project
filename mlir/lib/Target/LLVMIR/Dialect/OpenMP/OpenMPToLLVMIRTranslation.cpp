@@ -8185,8 +8185,9 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
         /*isExternallyInitialized=*/false);
     resultPtr = sharedVar;
   } else {
-    // Use original global address on host or when not allocating
-    // group-private storage.
+    if (shouldAllocate && !isTargetDevice)
+      opInst.emitWarning("groupprivate directive is currently ignored on the "
+                         "host, using original global");
     resultPtr = globalValue;
   }
 
