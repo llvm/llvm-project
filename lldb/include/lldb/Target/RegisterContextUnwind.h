@@ -207,9 +207,6 @@ private:
 
   void UnwindLogMsg(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
-  void UnwindLogMsgVerbose(const char *fmt, ...)
-      __attribute__((format(printf, 2, 3)));
-
   bool IsUnwindPlanValidForCurrentPC(
       std::shared_ptr<const UnwindPlan> unwind_plan_sp);
 
