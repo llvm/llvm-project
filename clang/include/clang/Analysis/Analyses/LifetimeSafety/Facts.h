@@ -246,6 +246,7 @@ public:
       : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
 
   const OriginList *getUsedOrigins() const { return OList; }
+  void setUsedOrigins(const OriginList *NewList) { OList = NewList; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }
