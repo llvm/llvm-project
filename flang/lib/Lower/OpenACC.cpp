@@ -15,6 +15,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -1407,6 +1408,13 @@ static void privatizeIv(
     builder.setInsertionPointToStart(builder.getAllocaBlock());
     ivValue = builder.createTemporaryAlloc(loc, ivTy, toStringRef(sym.name()));
     builder.restoreInsertionPoint(insPt);
+    // Register an hlfir.declare so that remapDataOperandSymbols can find this
+    // locally-scoped IV and remap it to the privatized copy inside the
+    // acc.loop region. Without this, the symbolMap lookup in
+    // remapDataOperandSymbols fails because the DO CONCURRENT body (which
+    // normally binds the IV) has not been lowered yet at this point.
+    Fortran::lower::genDeclareSymbol(converter, converter.getSymbolMap(), sym,
+                                     ivValue);
   }
 
   mlir::Operation *privateOp = nullptr;
@@ -2237,6 +2245,11 @@ static mlir::acc::LoopOp createLoopOp(
 
   uint64_t loopsToProcess =
       Fortran::lower::getLoopCountForCollapseAndTile(accClauseList);
+
+  if (outerDoConstruct.IsDoConcurrent() &&
+      Fortran::lower::getCollapseSizeAndForce(accClauseList).first > 1)
+    TODO(currentLocation, "collapse on acc loop with do concurrent");
+
   auto loopOp = buildACCLoopOp(
       converter, currentLocation, semanticsContext, stmtCtx, outerDoConstruct,
       eval, privateOperands, dataMap, gangOperands, workerNumOperands,

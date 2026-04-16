@@ -3,6 +3,7 @@
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/do_loop_with_cycle_goto.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK2
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/nested_goto_loop.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK3
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/nested_loop_with_inner_goto.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK4
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK5
 
 //--- do_loop_with_stop.f90
 
@@ -89,3 +90,18 @@ subroutine nested_loop_with_inner_goto()
 ! CHECK4: not yet implemented: unstructured do loop in acc kernels
 
 end subroutine
+
+//--- collapse.f90
+
+! !$acc parallel loop collapse(N) over a do concurrent.
+subroutine combined(i, j, k)
+  integer :: i, j, k
+  integer :: a(i,j,k)
+  !$acc parallel loop collapse(3)
+  do concurrent (i=1:10, j=1:100, k=1:200)
+    a(i,j,k) = a(i,j,k) + 1
+  end do
+  ! CHECK5: not yet implemented: collapse on acc loop with do concurrent
+end subroutine
+
+
