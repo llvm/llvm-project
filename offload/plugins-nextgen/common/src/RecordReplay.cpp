@@ -315,8 +315,8 @@ Error NativeRecordReplayTy::recordGlobals(const std::string &Filename) {
   }
   assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
          "Buffer over or under-filled.");
-  assert(TotalSize ==
-             utils::getPtrDiff(BufferPtr, GlobalsMB->get()->getBufferStart()) &&
+  assert(TotalSize == (uint64_t)utils::getPtrDiff(
+                          BufferPtr, GlobalsMB->get()->getBufferStart()) &&
          "Buffer size mismatch.");
 
   StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), TotalSize);
