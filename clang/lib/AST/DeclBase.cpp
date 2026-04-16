@@ -784,6 +784,7 @@ AvailabilityResult Decl::getAvailability(std::string *Message,
     }
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
+      Availability = Availability->getEffectiveAttr();
       AvailabilityResult AR = CheckAvailability(getASTContext(), Availability,
                                                 Message, EnclosingVersion);
 
@@ -812,10 +813,11 @@ VersionTuple Decl::getVersionIntroduced() const {
   StringRef TargetPlatform = Context.getTargetInfo().getPlatformName();
   for (const auto *A : attrs()) {
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
-      if (getRealizedPlatform(Availability, Context) != TargetPlatform)
-        continue;
-      if (!Availability->getIntroduced().empty())
-        return Availability->getIntroduced();
+      Availability = Availability->getEffectiveAttr();
+      if (getRealizedPlatform(Availability, Context) == TargetPlatform) {
+        if (!Availability->getIntroduced().empty())
+          return Availability->getIntroduced();
+      }
     }
   }
   return {};
@@ -860,6 +862,7 @@ bool Decl::isWeakImported(VersionTuple EnclosingVersion) const {
       return true;
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
+      Availability = Availability->getEffectiveAttr();
       if (CheckAvailability(getASTContext(), Availability, nullptr,
                             EnclosingVersion) == AR_NotYetIntroduced)
         return true;

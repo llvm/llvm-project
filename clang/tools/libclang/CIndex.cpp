@@ -8942,7 +8942,7 @@ static void getCursorPlatformAvailabilityForDecl(
     }
 
     if (AvailabilityAttr *Avail = dyn_cast<AvailabilityAttr>(A)) {
-      AvailabilityAttrs.push_back(Avail);
+      AvailabilityAttrs.push_back(Avail->getEffectiveAttr());
       HadAvailAttr = true;
     }
   }
