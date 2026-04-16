@@ -10,13 +10,21 @@ struct B { // expected-note {{in call to 'A()'}}
   A a;
 };
 
-constexpr A a1; // expected-error {{constant expression}} expected-note {{in call to 'A()'}}
-constexpr A a2 = A(); // expected-error {{constant expression}} expected-note {{in call to 'A()'}}
+constexpr A a1; // expected-error {{constant expression}} \
+                // expected-note {{in call to 'A()'}} \
+                // expected-note {{declared here}}
+constexpr A a2 = A(); // expected-error {{constant expression}} \
+                      // expected-note {{in call to 'A()'}} \
+                      // expected-note {{declared here}}
 void f() {
-  constexpr A a; // expected-error {{constant expression}} expected-note {{in call to 'A()'}}
+  constexpr A a; // expected-error {{constant expression}} \
+                 // expected-note {{in call to 'A()'}} \
+                 // expected-note {{declared here}}
 }
 
-constexpr B b1; // expected-error {{constant expression}} expected-note {{in call to 'B()'}}
+constexpr B b1; // expected-error {{constant expression}} \
+                // expected-note {{in call to 'B()'}} \
+                // expected-note {{declared here}}
 constexpr B b2 = B(); // ok
 static_assert(b2.a.a == 1, "");
 static_assert(b2.a.b == 2, "");
@@ -41,7 +49,9 @@ constexpr int n = Z<V>().c; // expected-error {{constant expression}} expected-n
 struct E { // expected-note {{in call to 'A()'}}
   A a[2];
 };
-constexpr E e1; // expected-error {{constant expression}} expected-note {{in call to 'E()'}}
+constexpr E e1; // expected-error {{constant expression}} \
+                // expected-note {{in call to 'E()'}} \
+                // expected-note {{declared here}}
 constexpr E e2 = E();
 static_assert(e2.a[0].a == 1, "");
 static_assert(e2.a[0].b == 2, "");

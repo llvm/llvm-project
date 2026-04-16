@@ -541,7 +541,7 @@ namespace IncDec {
   /// current interpreter. But they are stil OK.
   template<typename T, bool Inc, bool Pre>
   constexpr int uninit() {
-    T a;
+    T a; // both-note 10{{declared here}}
     if constexpr (Inc) {
       if (Pre)
         ++a; // ref-note 3{{increment of uninitialized}} \

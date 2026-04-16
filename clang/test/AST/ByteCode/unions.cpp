@@ -121,7 +121,7 @@ namespace SimpleActivate {
         float x,y;
       } a;
       int b;
-    } Z;
+    } Z; // both-note {{declared here}}
 
     Z.a.y = 10;
 
@@ -410,7 +410,7 @@ namespace UnionInBase {
   static_assert(read_wrong_member_indirect() == 1); // both-error {{not an integral constant expression}} \
                                                     // both-note {{in call to}}
   constexpr int read_uninitialized() {
-    B b = {.b = 1};
+    B b = {.b = 1}; // both-note {{declared here}}
     int *p = &b.a.y;
     b.a.x = 1;
     return *p; // both-note {{read of uninitialized object}}

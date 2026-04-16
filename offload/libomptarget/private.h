@@ -28,14 +28,17 @@ extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   bool InMultiDeviceMode, bool &IsMultiDeviceKernel);
 
 extern int target_activate_rr(DeviceTy &Device, uint64_t MemorySize,
-                              void *ReqAddr, bool isRecord, bool SaveOutput,
-                              uint64_t &ReqPtrArgOffset);
+                              void *ReqAddr, bool IsRecord, bool SaveOutput,
+                              bool EmitReport, const char *OutputDirPath);
 
 extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                          void *DeviceMemory, int64_t DeviceMemorySize,
-                         void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
+                         const llvm::offloading::EntryTy *Globals,
+                         int32_t NumGlobals, void **TgtArgs,
+                         ptrdiff_t *TgtOffsets, int32_t NumArgs,
                          int32_t NumTeams, int32_t ThreadLimit,
-                         uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
+                         uint32_t SharedMemorySize, uint64_t LoopTripCount,
+                         AsyncInfoTy &AsyncInfo);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 extern bool checkDevice(int64_t &DeviceID, ident_t *Loc);
