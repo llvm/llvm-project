@@ -47,5 +47,3 @@ end
 !UNPARSE:   y=(x)
 !UNPARSE:   z=0U_4-x
 !UNPARSE: END SUBROUTINE
-
-
