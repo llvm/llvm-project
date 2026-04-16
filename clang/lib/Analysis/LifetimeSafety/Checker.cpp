@@ -297,8 +297,7 @@ public:
   }
 
   /// Returns the declaration of a function that is visible across translation
-  /// units, if such a declaration exists and is different from the
-  /// definition.
+  /// units, if such a declaration exists and is different from the definition.
   static const FunctionDecl *getCrossTUDecl(const FunctionDecl &FD,
                                             SourceManager &SM) {
     if (!FD.isExternallyVisible())
