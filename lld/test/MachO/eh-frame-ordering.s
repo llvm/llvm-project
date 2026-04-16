@@ -1,4 +1,4 @@
-# REQUIRES: x86 || aarch64
+# REQUIRES: x86, aarch64
 ## Test that __eh_frame CIE/FDE ordering is preserved even when
 ## priority-based section sorting (from BP compression sort, order files,
 ## etc.) would otherwise reorder input sections. CIE records must precede
@@ -15,12 +15,14 @@
 # RUN: %lld -arch arm64 -lSystem -lc++ %t-arm64.o -o %t-arm64 --bp-compression-sort=both
 # RUN: llvm-objdump --dwarf=frames %t-arm64 2>&1 | FileCheck %s --implicit-check-not=error --implicit-check-not=warning
 
-## Verify that CIE records precede their FDE records and that
-## FDE records successfully reference their CIEs (no parse errors).
+## Verify that CIE records precede their FDE records, that no CIE
+## appears after the first FDE, and that no parse errors occur.
 # CHECK: .eh_frame contents:
 # CHECK: {{[0-9a-f]+}} {{.*}} CIE
 # CHECK: {{[0-9a-f]+}} {{.*}} FDE
+# CHECK-NOT: CIE
 # CHECK: {{[0-9a-f]+}} {{.*}} FDE
+# CHECK-NOT: CIE
 
 .globl _my_personality_a, _my_personality_b, _main
 
