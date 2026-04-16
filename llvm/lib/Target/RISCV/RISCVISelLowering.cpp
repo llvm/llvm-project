@@ -24428,7 +24428,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
 
       // If saving an odd number of registers then create an extra stack slot to
       // ensure that the frame pointer is 2*XLEN-aligned, which in turn ensures
-      // offsets to even-numbered registered remain 2*XLEN-aligned.
+      // offsets to even-numbered registers remain 2*XLEN-aligned.
       if (Idx % 2) {
         MFI.CreateFixedObject(
             XLenInBytes, VaArgOffset - static_cast<int>(XLenInBytes), true);
@@ -24461,6 +24461,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   // All stores are grouped in one node to allow the matching between
   // the size of Ins and InVals. This only happens for vararg functions.
   if (!OutChains.empty()) {
+    assert(IsVarArg && "Only variadic functions should have OutChains");
     OutChains.push_back(Chain);
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, OutChains);
   }
