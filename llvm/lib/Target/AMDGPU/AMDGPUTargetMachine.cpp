@@ -27,6 +27,7 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPUMacroFusion.h"
+#include "AMDGPUNextUseAnalysis.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPUPrepareAGPRAlloc.h"
@@ -645,10 +646,6 @@ static cl::opt<bool> EnableUniformIntrinsicCombine(
     cl::desc("Enable/Disable the Uniform Intrinsic Combine Pass"),
     cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnableNextUseAnalysis("amdgpu-enable-next-use-analysis",
-                                           cl::desc("Enable next-use analysis"),
-                                           cl::init(false), cl::Hidden);
-
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -681,7 +678,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
-  initializeAMDGPUNextUseAnalysisPassPass(*PR);
+  initializeAMDGPUNextUseAnalysisLegacyPassPass(*PR);
+  initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(*PR);
   initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
@@ -1728,9 +1726,6 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // we should fix it and enable the verifier.
   if (OptVGPRLiveRange)
     insertPass(&LiveVariablesID, &SIOptimizeVGPRLiveRangeLegacyID);
-
-  if (EnableNextUseAnalysis)
-    insertPass(&LiveVariablesID, &AMDGPUNextUseAnalysisID);
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
