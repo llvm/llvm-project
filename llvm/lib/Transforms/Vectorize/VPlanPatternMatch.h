@@ -499,13 +499,6 @@ inline bool matchFindIVResult(VPInstruction *VPI, Op0_t ReducedIV, Op1_t Start) 
                              m_ComputeReductionResult(ReducedIV), Start));
 }
 
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline VPInstruction_match<VPInstruction::ComputeAnyOfResult, Op0_t, Op1_t,
-                           Op2_t>
-m_ComputeAnyOfResult(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return m_VPInstruction<VPInstruction::ComputeAnyOfResult>(Op0, Op1, Op2);
-}
-
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::Reverse, Op0_t>
 m_Reverse(const Op0_t &Op0) {

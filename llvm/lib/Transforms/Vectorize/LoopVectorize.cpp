@@ -8050,11 +8050,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       NewExitingVPV =
           Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", *PhiR);
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
-        using namespace VPlanPatternMatch;
-        return match(
-            &U, m_CombineOr(
-                    m_VPInstruction<VPInstruction::ComputeAnyOfResult>(),
-                    m_VPInstruction<VPInstruction::ComputeReductionResult>()));
+        return match(&U,
+                     m_VPInstruction<VPInstruction::ComputeReductionResult>());
       });
 
       if (CM.usePredicatedReductionSelect(RecurrenceKind))
@@ -8077,27 +8074,55 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
-    // For AnyOf reductions, find the select among PhiR's users. This is used
-    // both to find NewVal for ComputeAnyOfResult and to adjust the reduction.
-    VPRecipeBase *AnyOfSelect = nullptr;
+    // For AnyOf reductions, find the select among PhiR's users and convert
+    // the reduction phi to operate on bools before creating the final
+    // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      AnyOfSelect = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
-        return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
-      }));
-    }
-    if (AnyOfSelect) {
+      auto *AnyOfSelect =
+          cast<VPSingleDefRecipe>(*find_if(PhiR->users(), [](VPUser *U) {
+            return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+          }));
       VPValue *Start = PhiR->getStartValue();
+      bool TrueValIsPhi = AnyOfSelect->getOperand(1) == PhiR;
       // NewVal is the non-phi operand of the select.
-      VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
-                            ? AnyOfSelect->getOperand(2)
-                            : AnyOfSelect->getOperand(1);
-      VPIRFlags OrFlags(RecurKind::Or, /*IsOrdered=*/false,
-                        /*IsInLoop=*/false, FastMathFlags());
-      auto *OrReduce =
-          Builder.createNaryOp(VPInstruction::ComputeReductionResult,
-                               {NewExitingVPV}, OrFlags, ExitDL);
-      FinalReductionResult = Builder.createNaryOp(
-          VPInstruction::ComputeAnyOfResult, {Start, NewVal, OrReduce}, ExitDL);
+      VPValue *NewVal = TrueValIsPhi ? AnyOfSelect->getOperand(2)
+                                     : AnyOfSelect->getOperand(1);
+
+      // Adjust AnyOf reductions; replace the reduction phi for the selected
+      // value with a boolean reduction phi node to check if the condition is
+      // true in any iteration. The final value is selected by the final
+      // ComputeReductionResult.
+      VPValue *Cmp = AnyOfSelect->getOperand(0);
+      // If the compare is checking the reduction PHI node, adjust it to check
+      // the start value.
+      if (VPRecipeBase *CmpR = Cmp->getDefiningRecipe())
+        CmpR->replaceUsesOfWith(PhiR, PhiR->getStartValue());
+      Builder.setInsertPoint(AnyOfSelect);
+
+      // If the true value of the select is the reduction phi, the new value
+      // is selected if the negated condition is true in any iteration.
+      if (TrueValIsPhi)
+        Cmp = Builder.createNot(Cmp);
+      VPValue *Or = Builder.createOr(PhiR, Cmp);
+      // Only replace uses inside the vector region with Or. External uses
+      // (e.g. scalar preheader resume phis) must be replaced by the user
+      // update loop below with FinalReductionResult.
+      AnyOfSelect->replaceUsesWithIf(Or, [](VPUser &U, unsigned) {
+        return cast<VPRecipeBase>(&U)->getRegion();
+      });
+      ToDelete.push_back(AnyOfSelect);
+
+      // Convert the reduction phi to operate on bools.
+      PhiR->setOperand(0, Plan->getFalse());
+
+      // Update NewExitingVPV if it was pointing to the now-replaced select.
+      if (NewExitingVPV == AnyOfSelect)
+        NewExitingVPV = Or;
+
+      Builder.setInsertPoint(MiddleVPBB, IP);
+
+      FinalReductionResult =
+          Builder.createAnyOfReduction(NewExitingVPV, NewVal, Start, ExitDL);
     } else {
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlags());
@@ -8158,32 +8183,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       if (match(U, m_CombineOr(m_ExtractLane(m_VPValue(), m_VPValue()),
                                m_ExtractLastLane(m_VPValue()))))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
-    }
-
-    // Adjust AnyOf reductions; replace the reduction phi for the selected value
-    // with a boolean reduction phi node to check if the condition is true in
-    // any iteration. The final value is selected by the final
-    // ComputeReductionResult.
-    if (AnyOfSelect) {
-      VPValue *Cmp = AnyOfSelect->getOperand(0);
-      // If the compare is checking the reduction PHI node, adjust it to check
-      // the start value.
-      if (VPRecipeBase *CmpR = Cmp->getDefiningRecipe())
-        CmpR->replaceUsesOfWith(PhiR, PhiR->getStartValue());
-      Builder.setInsertPoint(AnyOfSelect);
-
-      // If the true value of the select is the reduction phi, the new value is
-      // selected if the negated condition is true in any iteration.
-      if (AnyOfSelect->getOperand(1) == PhiR)
-        Cmp = Builder.createNot(Cmp);
-      VPValue *Or = Builder.createOr(PhiR, Cmp);
-      AnyOfSelect->getVPSingleValue()->replaceAllUsesWith(Or);
-      // Delete AnyOfSelect now that it has invalid types.
-      ToDelete.push_back(AnyOfSelect);
-
-      // Convert the reduction phi to operate on bools.
-      PhiR->setOperand(0, Plan->getFalse());
-      continue;
     }
 
     RecurKind RK = PhiR->getRecurrenceKind();
@@ -8723,21 +8722,9 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
       // Find the reduction result by searching users of the phi or its backedge
       // value.
-      using namespace VPlanPatternMatch;
       auto IsReductionResult = [](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
-        if (!VPI)
-          return false;
-        if (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult)
-          return true;
-        // ComputeReductionResult is also considered, unless it is used for the
-        // Or reduction in AnyOf reductions and feeds a ComputeAnyOfReduction,
-        // in which case the latter will be considered instead.
-        if (VPI->getOpcode() != VPInstruction::ComputeReductionResult)
-          return false;
-        return !any_of(VPI->users(), [](VPUser *U) {
-          return match(U, m_VPInstruction<VPInstruction::ComputeAnyOfResult>());
-        });
+        return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
       };
       auto *RdxResult = cast<VPInstruction>(
           vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
@@ -8756,36 +8743,35 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                             m_VPValue(SentinelVPV)));
       });
 
-      if (RdxResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
-        Value *StartV = RdxResult->getOperand(0)->getLiveInIRValue();
-        // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
-        // start value; compare the final value from the main vector loop
-        // to the start value.
-        BasicBlock *PBB = cast<Instruction>(ResumeV)->getParent();
-        IRBuilder<> Builder(PBB, PBB->getFirstNonPHIIt());
-        ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
-        if (auto *I = dyn_cast<Instruction>(ResumeV))
-          InstsToMove.push_back(I);
-      } else if (IsFindIV) {
-        assert(SentinelVPV && "expected to find icmp using RdxResult");
-
-        // Get the frozen start value from the main loop.
-        Value *FrozenStartV = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
+      RecurKind RK = ReductionPhi->getRecurrenceKind();
+      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) || IsFindIV) {
+        auto *ResumePhi = cast<PHINode>(ResumeV);
+        Value *StartV = ResumePhi->getIncomingValueForBlock(
             EPI.MainLoopIterationCountCheck);
-        if (auto *FreezeI = dyn_cast<FreezeInst>(FrozenStartV))
-          ToFrozen[FreezeI->getOperand(0)] = FrozenStartV;
+        IRBuilder<> Builder(ResumePhi->getParent(),
+                            ResumePhi->getParent()->getFirstNonPHIIt());
 
-        // Adjust resume: select(icmp eq ResumeV, FrozenStartV), Sentinel,
-        // ResumeV
-        BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
-        IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
-        Value *Cmp = Builder.CreateICmpEQ(ResumeV, FrozenStartV);
-        if (auto *I = dyn_cast<Instruction>(Cmp))
-          InstsToMove.push_back(I);
-        ResumeV =
-            Builder.CreateSelect(Cmp, SentinelVPV->getLiveInIRValue(), ResumeV);
-        if (auto *I = dyn_cast<Instruction>(ResumeV))
-          InstsToMove.push_back(I);
+        if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
+          // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
+          // start value; compare the final value from the main vector loop
+          // to the start value.
+          ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
+          if (auto *I = dyn_cast<Instruction>(ResumeV))
+            InstsToMove.push_back(I);
+        } else {
+          assert(SentinelVPV && "expected to find icmp using RdxResult");
+          if (auto *FreezeI = dyn_cast<FreezeInst>(StartV))
+            ToFrozen[FreezeI->getOperand(0)] = StartV;
+
+          // Adjust resume: select(icmp eq ResumeV, StartV), Sentinel, ResumeV
+          Value *Cmp = Builder.CreateICmpEQ(ResumeV, StartV);
+          if (auto *I = dyn_cast<Instruction>(Cmp))
+            InstsToMove.push_back(I);
+          ResumeV = Builder.CreateSelect(Cmp, SentinelVPV->getLiveInIRValue(),
+                                         ResumeV);
+          if (auto *I = dyn_cast<Instruction>(ResumeV))
+            InstsToMove.push_back(I);
+        }
       } else {
         VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
         auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);

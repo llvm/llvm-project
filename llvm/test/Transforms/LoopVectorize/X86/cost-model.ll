@@ -460,7 +460,6 @@ define i1 @any_of_cost(ptr %start, ptr %end) #0 {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i1> [[TMP27]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[BIN_RDX]])
 ; CHECK-NEXT:    [[TMP30:%.*]] = freeze i1 [[TMP29]]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP30]], i1 false, i1 false
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
@@ -473,7 +472,7 @@ loop:
   %gep = getelementptr i8, ptr %ptr.iv, i64 8
   %l = load ptr, ptr %gep, align 8
   %cmp13.not.not = icmp eq ptr %l, null
-  %any.of.next = select i1 %cmp13.not.not, i1 %any.of, i1 false
+  %any.of.next = select i1 %cmp13.not.not, i1 %any.of, i1 true
   %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 40
   %cmp.not = icmp eq ptr %ptr.iv, %end
   br i1 %cmp.not, label %exit, label %loop
