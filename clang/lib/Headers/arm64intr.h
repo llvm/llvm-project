@@ -104,6 +104,15 @@ unsigned __int32 __casl32(unsigned __int32 volatile *, unsigned __int32,
 unsigned __int64 __casl64(unsigned __int64 volatile *, unsigned __int64,
                           unsigned __int64);
 
+unsigned __int8 __casal8(unsigned __int8 volatile *, unsigned __int8,
+                         unsigned __int8);
+unsigned __int16 __casal16(unsigned __int16 volatile *, unsigned __int16,
+                           unsigned __int16);
+unsigned __int32 __casal32(unsigned __int32 volatile *, unsigned __int32,
+                           unsigned __int32);
+unsigned __int64 __casal64(unsigned __int64 volatile *, unsigned __int64,
+                           unsigned __int64);
+
 #ifdef __cplusplus
 }
 #endif
