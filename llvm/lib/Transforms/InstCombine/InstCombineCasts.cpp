@@ -2039,10 +2039,17 @@ static Type *shrinkFPConstantVector(Value *V, bool PreferBFloat) {
 }
 
 /// Find the minimum FP type we can safely truncate to.
-static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
+static Type *getMinimumFPType(Value *V, Type *PreferredTy, InstCombiner &IC) {
   if (auto *FPExt = dyn_cast<FPExtInst>(V))
     return FPExt->getOperand(0)->getType();
 
+  Value *Src;
+  if (match(V, m_IToFP(m_Value(Src))) &&
+      IC.canBeCastedExactlyIntToFP(Src, PreferredTy, isa<SIToFPInst>(V),
+                                   cast<Instruction>(V)))
+    return PreferredTy;
+
+  bool PreferBFloat = PreferredTy->getScalarType()->isBFloatTy();
   // If this value is a constant, return the constant in the smallest FP type
   // that can accurately represent it.  This allows us to turn
   // (float)((double)X+2.0) into x+2.0f.
@@ -2065,30 +2072,27 @@ static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
   return V->getType();
 }
 
-bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
-  CastInst::CastOps Opcode = I.getOpcode();
-  assert((Opcode == CastInst::SIToFP || Opcode == CastInst::UIToFP) &&
-         "Unexpected cast");
-  Value *Src = I.getOperand(0);
-  Type *SrcTy = Src->getType();
-  Type *FPTy = I.getType();
-  bool IsSigned = Opcode == Instruction::SIToFP;
+bool InstCombiner::canBeCastedExactlyIntToFP(Value *V, Type *FPTy,
+                                             bool IsSigned,
+                                             const Instruction *CxtI) const {
+  Type *SrcTy = V->getType();
+  assert(SrcTy->isIntOrIntVectorTy() && "Expected an integer type");
   int SrcSize = (int)SrcTy->getScalarSizeInBits() - IsSigned;
+  int DestNumSigBits = FPTy->getFPMantissaWidth();
 
   // Easy case - if the source integer type has less bits than the FP mantissa,
   // then the cast must be exact.
-  int DestNumSigBits = FPTy->getFPMantissaWidth();
   if (SrcSize <= DestNumSigBits)
     return true;
 
   // Cast from FP to integer and back to FP is independent of the intermediate
   // integer width because of poison on overflow.
   Value *F;
-  if (match(Src, m_FPToI(m_Value(F)))) {
+  if (match(V, m_FPToI(m_Value(F)))) {
     // If this is uitofp (fptosi F), the source needs an extra bit to avoid
     // potential rounding of negative FP input values.
     int SrcNumSigBits = F->getType()->getFPMantissaWidth();
-    if (!IsSigned && match(Src, m_FPToSI(m_Value())))
+    if (!IsSigned && match(V, m_FPToSI(m_Value())))
       SrcNumSigBits++;
 
     // [su]itofp (fpto[su]i F) --> exact if the source type has less or equal
@@ -2101,7 +2105,7 @@ bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
 
   // Try harder to find if the source integer type has less significant bits.
   // Compute number of sign bits or determine trailing zeros.
-  KnownBits SrcKnown = computeKnownBits(Src, &I);
+  KnownBits SrcKnown = computeKnownBits(V, CxtI);
   int SigBits = (int)SrcTy->getScalarSizeInBits() -
                 SrcKnown.countMinLeadingZeros() -
                 SrcKnown.countMinTrailingZeros();
@@ -2111,12 +2115,21 @@ bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
   // For sitofp, the sign maps to the FP sign bit, so only magnitude bits
   // (BitWidth - NumSignBits) consume mantissa.
   if (IsSigned) {
-    SigBits = (int)SrcTy->getScalarSizeInBits() - ComputeNumSignBits(Src, &I);
+    SigBits = (int)SrcTy->getScalarSizeInBits() - ComputeNumSignBits(V, CxtI);
     if (SigBits <= DestNumSigBits)
       return true;
   }
 
   return false;
+}
+
+bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
+  CastInst::CastOps Opcode = I.getOpcode();
+  assert((Opcode == CastInst::SIToFP || Opcode == CastInst::UIToFP) &&
+         "Unexpected cast");
+  Value *Src = I.getOperand(0);
+  Type *FPTy = I.getType();
+  return canBeCastedExactlyIntToFP(Src, FPTy, Opcode == CastInst::SIToFP, &I);
 }
 
 Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
@@ -2133,9 +2146,8 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   Type *Ty = FPT.getType();
   auto *BO = dyn_cast<BinaryOperator>(FPT.getOperand(0));
   if (BO && BO->hasOneUse()) {
-    bool PreferBFloat = Ty->getScalarType()->isBFloatTy();
-    Type *LHSMinType = getMinimumFPType(BO->getOperand(0), PreferBFloat);
-    Type *RHSMinType = getMinimumFPType(BO->getOperand(1), PreferBFloat);
+    Type *LHSMinType = getMinimumFPType(BO->getOperand(0), Ty, *this);
+    Type *RHSMinType = getMinimumFPType(BO->getOperand(1), Ty, *this);
     unsigned OpWidth = BO->getType()->getFPMantissaWidth();
     unsigned LHSWidth = LHSMinType->getFPMantissaWidth();
     unsigned RHSWidth = RHSMinType->getFPMantissaWidth();
