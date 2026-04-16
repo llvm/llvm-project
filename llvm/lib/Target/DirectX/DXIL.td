@@ -406,7 +406,7 @@ class DXILOp<int opcode, DXILOpClass opclass> {
   // Versioned attributes of operation
   list<Attributes> attributes = [];
 
-  // Emmit dx.precise to prevent optimizations
+  // Does the operation support precise calculation?
   bit precise = 0;
 }
 
@@ -422,7 +422,6 @@ def Abs : DXILOp<6, unary> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
-  let precise = 1;
 }
 
 def Saturate : DXILOp<7, unary> {
@@ -1302,7 +1301,6 @@ def LegacyF16ToF32 : DXILOp<131, legacyF16ToF32> {
   let arguments = [Int32Ty];
   let result = FloatTy;
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let precise = 1;
 }
 
 def WaveAllBitCount : DXILOp<135, waveAllOp> {
@@ -1358,7 +1356,6 @@ def Dot2AddHalf : DXILOp<162, dot2AddHalf> {
   let overloads = [Overloads<DXIL1_4, [FloatTy]>];
   let stages = [Stages<DXIL1_4, [all_stages]>];
   let attributes = [Attributes<DXIL1_4, [ReadNone]>];
-  let precise = 1;
 }
 
 def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {

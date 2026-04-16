@@ -42,7 +42,7 @@ struct DXILOperationDesc {
   int OpCode;         // ID of DXIL operation
   StringRef OpClass;  // name of the opcode class
   StringRef Doc;      // the documentation description of this instruction
-  bool CanUsePrecise; // Can this operation be maker with dx.precise
+  bool CanUsePrecise; // Can this operation be made with dx.precise
   // Vector of operand type records - return type is at index 0
   SmallVector<const Record *> OpTypes;
   SmallVector<const Record *> OverloadRecs;

@@ -500,13 +500,13 @@ static bool isOverloadTyFloat(uint16_t ValidTyMask) {
 }
 
 static void setDXILMetadata(CallInst *CI, const OpCodeProperty *Prop) {
-  if (OpPreciseEnabled) {
-    bool AllOverloadAreFloat = false;
+  if (OpPreciseEnabled && Prop->Precise) {
+    bool HasFloatOverload = false;
     for (const OpOverload &Overload : Prop->Overloads)
-      AllOverloadAreFloat =
-          AllOverloadAreFloat || isOverloadTyFloat(Overload.ValidTys);
+      HasFloatOverload =
+          HasFloatOverload || isOverloadTyFloat(Overload.ValidTys);
 
-    if (AllOverloadAreFloat && Prop->Precise) {
+    if (HasFloatOverload) {
       const StringRef Key = "dx.precise";
       Module *M = CI->getModule();
 
