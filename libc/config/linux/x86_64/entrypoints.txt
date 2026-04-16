@@ -1251,6 +1251,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.setjmp.siglongjmp
     libc.src.setjmp.sigsetjmp
 
+    # ucontext.h entrypoints
+    libc.src.ucontext.getcontext
+    libc.src.ucontext.setcontext
+
     # stdio.h entrypoints
     libc.src.stdio.clearerr
     libc.src.stdio.clearerr_unlocked

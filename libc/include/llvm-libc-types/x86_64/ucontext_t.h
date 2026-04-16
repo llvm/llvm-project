@@ -8,8 +8,8 @@
 
 // Note: Definitions in this file are based on the Linux kernel ABI.
 
-#ifndef LLVM_LIBC_TYPES_UCONTEXT_T_H
-#define LLVM_LIBC_TYPES_UCONTEXT_T_H
+#ifndef LLVM_LIBC_TYPES_X86_64_UCONTEXT_T_H
+#define LLVM_LIBC_TYPES_X86_64_UCONTEXT_T_H
 
 #include "../sigset_t.h"
 #include "../stack_t.h"
@@ -40,4 +40,4 @@ typedef struct alignas(16) ucontext_t {
   unsigned long long __ssp[4];
 } ucontext_t;
 
-#endif // LLVM_LIBC_TYPES_UCONTEXT_T_H
+#endif // LLVM_LIBC_TYPES_X86_64_UCONTEXT_T_H
