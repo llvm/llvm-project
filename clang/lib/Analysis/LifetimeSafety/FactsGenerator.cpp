@@ -587,36 +587,35 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
 }
 
 void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
-  NE->dumpColor();
+  OriginList *NewList = getOriginsList(*NE);
 
-  OriginList *NList = getOriginsList(*NE)->peelOuterOrigin();
-  const auto FlowOrigins = [&](const auto &T) {
-    if (OriginList *ArgList = getOriginsList(*T); ArgList && NList)
+  // Check if we have a placement new where the second argument is void*, to
+  // avoid flowing from std::nothrow and the placement parameter amount is 1,
+  // that is to mostly limit to standard library placement new
+  if (NE->getNumPlacementArgs() == 1) {
+    if (const auto *Arg = NE->getOperatorNew()
+                              ->getParamDecl(1)
+                              ->getType()
+                              ->getAs<PointerType>();
+        Arg && Arg->isVoidPointerType()) {
+      OriginList *PlacementList = getOriginsList(*NE->getPlacementArg(0));
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-          NList->getOuterOriginID(), ArgList->getOuterOriginID(),
-          /*Kill=*/true));
-  };
-
-  if (auto *CE = NE->getConstructExpr()) {
-    VisitCXXConstructExpr(CE);
-    FlowOrigins(CE);
-    return;
+          NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
+          true));
+    }
   }
 
-  if (auto *E = NE->getInitializer()) {
-    if (!NE->isArray()) {
-      FlowOrigins(E);
-      return;
-    }
-    if (const auto *ILE = dyn_cast<InitListExpr>(E); ILE) {
-      // FIXME: Right now this still overwrites the other origins. Probably will
-      // be fixed once OriginTree is in.
-      // We traverse the Init list in reverse order to prefer origins from the
-      // beginning.
-      for (unsigned i = ILE->getNumInits(); i > 0; i--) {
-        FlowOrigins(ILE->getInit(i - 1));
-      }
-      return;
+  NewList = NewList->peelOuterOrigin();
+
+  if (auto *CE = NE->getConstructExpr(); CE) {
+    if (OriginList *ArgList = getOriginsList(*CE); ArgList && NewList)
+      flow(NewList, ArgList, true);
+  } else if (const Expr *E = NE->getInitializer(); E) {
+    if (const auto *ILE = dyn_cast<InitListExpr>(E); NE->isArray() && ILE) {
+      if (OriginList *InitList = getOriginsList(*ILE); InitList && NewList)
+        flow(NewList, InitList, true);
+    } else if (OriginList *ArgList = getOriginsList(*E); ArgList && NewList) {
+      flow(NewList, ArgList, true);
     }
   }
 }
