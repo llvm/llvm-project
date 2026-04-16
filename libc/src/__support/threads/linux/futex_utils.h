@@ -44,19 +44,17 @@ public:
         return 0;
 
       int ret = syscall_impl<int>(
-          /* syscall number */ FUTEX_SYSCALL_ID,
-          /* futex address */ this,
-          /* futex operation  */ op,
-          /* expected value */ expected,
-          /* timeout */ timeout ? &timeout->get_timespec() : nullptr,
-          /* ignored */ nullptr,
-          /* bitset */ FUTEX_BITSET_MATCH_ANY);
+          /*syscall_number=*/FUTEX_SYSCALL_ID,
+          /*futex_addr=*/this,
+          /*op=*/op,
+          /*expected=*/expected,
+          /*timeout=*/timeout ? &timeout->get_timespec() : nullptr,
+          /*ignored=*/nullptr,
+          /*bitset=*/FUTEX_BITSET_MATCH_ANY);
 
       // continue waiting if interrupted; otherwise return the result
-      // which should normally be 0 or -ETIMEOUT. we also need to continue
-      // if the error is EAGAIN, where the futex value may be detected as
-      // changed spuriously, and we just poll again to ensure correctness.
-      if (ret == -EINTR || ret == -EAGAIN)
+      // which should normally be 0 or -ETIMEOUT.
+      if (ret == -EINTR)
         continue;
 
       if (ret < 0)
@@ -66,12 +64,12 @@ public:
   }
   LIBC_INLINE ErrorOr<int> notify_one(bool is_shared = false) {
     int ret = syscall_impl<int>(
-        /* syscall number */ FUTEX_SYSCALL_ID,
-        /* futex address */ this,
-        /* futex operation  */ is_shared ? FUTEX_WAKE : FUTEX_WAKE_PRIVATE,
-        /* wake up limit */ 1,
-        /* ignored */ nullptr,
-        /* ignored */ nullptr,
+        /*syscall_number=*/FUTEX_SYSCALL_ID,
+        /*futex_addr=*/this,
+        /*op=*/is_shared ? FUTEX_WAKE : FUTEX_WAKE_PRIVATE,
+        /*wake_limit=*/1,
+        /*ignored=*/nullptr,
+        /*ignored=*/nullptr,
         /* ignored */ 0);
     if (ret < 0)
       return cpp::unexpected(-ret);
@@ -79,13 +77,13 @@ public:
   }
   LIBC_INLINE ErrorOr<int> notify_all(bool is_shared = false) {
     int ret = syscall_impl<int>(
-        /* syscall number */ FUTEX_SYSCALL_ID,
-        /* futex address */ this,
-        /* futex operation  */ is_shared ? FUTEX_WAKE : FUTEX_WAKE_PRIVATE,
-        /* wake up limit */ cpp::numeric_limits<int>::max(),
-        /* ignored */ nullptr,
-        /* ignored */ nullptr,
-        /* ignored */ 0);
+        /*syscall_number=*/FUTEX_SYSCALL_ID,
+        /*futex_addr=*/this,
+        /*op=*/is_shared ? FUTEX_WAKE : FUTEX_WAKE_PRIVATE,
+        /*wake_limit=*/cpp::numeric_limits<int>::max(),
+        /*ignored=*/nullptr,
+        /*ignored=*/nullptr,
+        /*ignored=*/0);
     if (ret < 0)
       return cpp::unexpected(-ret);
     return ret;
@@ -97,24 +95,21 @@ public:
     int ret;
     if (oldval)
       ret = syscall_impl<int>(
-          /* syscall number */ FUTEX_SYSCALL_ID,
-          /* futex address */ this,
-          /* futex operation  */
+          /*syscall_number=*/FUTEX_SYSCALL_ID,
+          /*futex_addr=*/this,
+          /*op=*/
           is_shared ? FUTEX_CMP_REQUEUE : FUTEX_CMP_REQUEUE_PRIVATE,
-          /* wake up limit */ wake_limit,
-          /* requeue limit */ requeue_limit,
-          /* requeue address */ &other, *oldval);
+          /*wake_limit=*/wake_limit,
+          /*requeue_limit=*/requeue_limit,
+          /*requeue_addr=*/&other, *oldval);
     else
       ret = syscall_impl<int>(
-          /* syscall number */ FUTEX_SYSCALL_ID,
-          /* futex address */ this,
-          /* futex operation  */
-          is_shared ? FUTEX_REQUEUE : FUTEX_REQUEUE_PRIVATE,
-          /* wake up limit */ wake_limit,
-          /* requeue limit */
-          requeue_limit,
-          /* requeue address */
-          &other);
+          /*syscall_number=*/FUTEX_SYSCALL_ID,
+          /*futex_addr=*/this,
+          /*op=*/is_shared ? FUTEX_REQUEUE : FUTEX_REQUEUE_PRIVATE,
+          /*wake_limit=*/wake_limit,
+          /*requeue_limit=*/requeue_limit,
+          /*requeue_addr=*/&other);
     if (ret < 0)
       return cpp::unexpected<int>(-ret);
     return static_cast<int>(ret);
