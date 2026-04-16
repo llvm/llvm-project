@@ -2433,16 +2433,16 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      FriendTemplateDecl *FTD1,
                                      FriendTemplateDecl *FTD2) {
-  if (FTD1->getFriendTypeNumTemplateParameterLists() !=
-      FTD2->getFriendTypeNumTemplateParameterLists())
+  ArrayRef<TemplateParameterList *> TPL1 =
+      FTD1->getFriendTypeTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> TPL2 =
+      FTD2->getFriendTypeTemplateParameterLists();
+  if (TPL1.size() != TPL2.size())
     return false;
 
-  for (unsigned I = 0, N = FTD1->getFriendTypeNumTemplateParameterLists();
-       I != N; ++I) {
-    if (!Context.IsEquivalent(FTD1->getFriendTypeTemplateParameterList(I),
-                              FTD2->getFriendTypeTemplateParameterList(I)))
+  for (unsigned I = 0, N = TPL1.size(); I != N; ++I)
+    if (!Context.IsEquivalent(TPL1[I], TPL2[I]))
       return false;
-  }
 
   if ((FTD1->getFriendType() && FTD2->getFriendDecl()) ||
       (FTD1->getFriendDecl() && FTD2->getFriendType()))

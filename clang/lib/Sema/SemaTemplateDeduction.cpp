@@ -4108,6 +4108,16 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   return TemplateDeductionResult::Success;
 }
 
+TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
+    TemplateDecl *TD, TemplateParameterList *TPL,
+    ArrayRef<TemplateArgument> PatternArgs, ArrayRef<TemplateArgument> Args,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+    sema::TemplateDeductionInfo &Info, bool CopyDeducedArgs) {
+  return ::FinishTemplateArgumentDeduction(
+      *this, TD, TPL, TD, /*PartialOrdering=*/false, PatternArgs, Args, Deduced,
+      Info, CopyDeducedArgs);
+}
+
 /// Gets the type of a function for template-argument-deducton
 /// purposes when it's considered as part of an overload set.
 static QualType GetTypeOfFunction(Sema &S, const OverloadExpr::FindResult &R,

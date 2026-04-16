@@ -19,6 +19,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/DelayedDiagnostic.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Template.h"
@@ -276,12 +277,10 @@ private:
 }
 
 static bool CanDeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
+                                       TemplateDecl *TD,
                                        ArrayRef<TemplateArgument> PatternArgs,
                                        ArrayRef<TemplateArgument> Args,
                                        SourceLocation Loc) {
-  if (PatternArgs.size() != Args.size())
-    return false;
-
   auto Equal =
       llvm::equal(PatternArgs, Args,
                   [](const TemplateArgument &LHS, const TemplateArgument &RHS) {
@@ -290,16 +289,28 @@ static bool CanDeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
   if (Equal)
     return true;
 
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::Unevaluated);
   TemplateDeductionInfo Info(Loc);
+  Sema::SFINAETrap Trap(S, Info);
+  LocalInstantiationScope InstantiationScope(S);
   SmallVector<DeducedTemplateArgument, 4> Deduced(TPL->size());
-  S.DeduceTemplateArguments(TPL, PatternArgs, Args, Info, Deduced,
-                            /*NumberOfArgumentsMustMatch=*/false);
+  if (S.DeduceTemplateArguments(TPL, PatternArgs, Args, Info, Deduced,
+                                /*NumberOfArgumentsMustMatch=*/false) !=
+      TemplateDeductionResult::Success)
+    return false;
 
-  for (const DeducedTemplateArgument &Arg : Deduced)
-    if (Arg.isNull())
-      return false;
+  SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
+  Sema::InstantiatingTemplate Inst(S, Info.getLocation(), TD, DeducedArgs);
+  if (Inst.isInvalid())
+    return false;
 
-  return true;
+  if (S.FinishTemplateArgumentDeduction(
+          TD, TPL, PatternArgs, Args, Deduced, Info,
+          /*CopyDeducedArgs=*/false) != TemplateDeductionResult::Success)
+    return false;
+
+  return !Trap.hasErrorOccurred();
 }
 
 static CanQual<FunctionProtoType>
@@ -365,7 +376,8 @@ static bool MatchesFriendContext(Sema &S, FunctionDecl *FD,
   if (ContextCTD->getCanonicalDecl() != FriendCTD->getCanonicalDecl())
     return false;
 
-  return CanDeduceTemplateArguments(S, FriendTPL, FriendArgs, ContextArgs, Loc);
+  return CanDeduceTemplateArguments(S, FriendTPL, FriendCTD, FriendArgs,
+                                    ContextArgs, Loc);
 }
 
 /// Checks whether one class might instantiate to the other.
@@ -692,9 +704,12 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!FriendCTD)
     return OnFailure;
 
-  TemplateParameterList *FriendTPL =
-      FriendTD->getFriendTypeTemplateParameterList(0);
+  ArrayRef<TemplateParameterList *> FriendTPLists =
+      FriendTD->getFriendTypeTemplateParameterLists();
+  if (FriendTPLists.empty())
+    return OnFailure;
 
+  TemplateParameterList *FriendTPL = FriendTPLists.front();
   if (!FriendTPL)
     return OnFailure;
 
@@ -728,8 +743,12 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!FriendCTD)
     return OnFailure;
 
-  TemplateParameterList *FriendTPL =
-      FriendTD->getFriendTypeTemplateParameterList(0);
+  ArrayRef<TemplateParameterList *> FriendTPLists =
+      FriendTD->getFriendTypeTemplateParameterLists();
+  if (FriendTPLists.empty())
+    return OnFailure;
+
+  TemplateParameterList *FriendTPL = FriendTPLists.front();
   if (!FriendTPL)
     return OnFailure;
 
@@ -796,7 +815,12 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!CTD)
     return OnFailure;
 
-  TemplateParameterList *TPL = FTD->getFriendTypeTemplateParameterList(0);
+  ArrayRef<TemplateParameterList *> FriendTPLists =
+      FTD->getFriendTypeTemplateParameterLists();
+  if (FriendTPLists.empty())
+    return OnFailure;
+
+  TemplateParameterList *TPL = FriendTPLists.front();
   if (!TPL)
     return OnFailure;
 
@@ -813,7 +837,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
         CTD->getCanonicalDecl())
       continue;
 
-    if (CanDeduceTemplateArguments(S, TPL, TST->template_arguments(),
+    if (CanDeduceTemplateArguments(S, TPL, CTD, TST->template_arguments(),
                                    CTSD->getTemplateArgs().asArray(),
                                    FTD->getLocation()))
       return AR_accessible;

@@ -4548,8 +4548,11 @@ static bool IsEquivalentFriend(ASTImporter &Importer, FriendDecl *FD1,
 
 static bool IsEquivalentFriend(ASTImporter &Importer, FriendTemplateDecl *FTD1,
                                FriendTemplateDecl *FTD2) {
-  if (FTD1->getFriendTypeNumTemplateParameterLists() !=
-      FTD2->getFriendTypeNumTemplateParameterLists())
+  ArrayRef<TemplateParameterList *> TPL1 =
+      FTD1->getFriendTypeTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> TPL2 =
+      FTD2->getFriendTypeTemplateParameterLists();
+  if (TPL1.size() != TPL2.size())
     return false;
 
   ASTImporter::NonEquivalentDeclSet NonEquivalentDecls;
@@ -4559,12 +4562,9 @@ static bool IsEquivalentFriend(ASTImporter &Importer, FriendTemplateDecl *FTD1,
       StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
       /*Complain=*/false);
 
-  for (unsigned I = 0, N = FTD1->getFriendTypeNumTemplateParameterLists();
-       I != N; ++I) {
-    if (!Ctx.IsEquivalent(FTD1->getFriendTypeTemplateParameterList(I),
-                          FTD2->getFriendTypeTemplateParameterList(I)))
+  for (unsigned I = 0, N = TPL1.size(); I != N; ++I)
+    if (!Ctx.IsEquivalent(TPL1[I], TPL2[I]))
       return false;
-  }
 
   if ((!FTD1->getFriendType()) != (!FTD2->getFriendType()))
     return false;
@@ -4700,11 +4700,11 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
       return TSIOrErr.takeError();
   }
 
-  SmallVector<TemplateParameterList *, 1> ToParams(
-      D->getFriendTypeNumTemplateParameterLists());
-  for (unsigned I = 0, N = D->getFriendTypeNumTemplateParameterLists(); I != N;
-       ++I) {
-    if (auto ParamsOrErr = import(D->getFriendTypeTemplateParameterList(I)))
+  ArrayRef<TemplateParameterList *> TPLs =
+      D->getFriendTypeTemplateParameterLists();
+  SmallVector<TemplateParameterList *, 1> ToParams(TPLs.size());
+  for (unsigned I = 0, N = TPLs.size(); I != N; ++I) {
+    if (auto ParamsOrErr = import(TPLs[I]))
       ToParams[I] = *ParamsOrErr;
     else
       return ParamsOrErr.takeError();

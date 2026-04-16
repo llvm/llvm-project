@@ -1256,7 +1256,7 @@ FriendTemplateDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
 
 SourceRange FriendTemplateDecl::getSourceRange() const {
   SourceLocation Begin =
-      getFriendTypeTemplateParameterList(0)->getTemplateLoc();
+      getFriendTypeTemplateParameterLists().front()->getTemplateLoc();
   SourceLocation End = FriendDecl::getSourceRange().getEnd();
   return SourceRange(Begin, End);
 }

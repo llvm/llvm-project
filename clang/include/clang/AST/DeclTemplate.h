@@ -2523,12 +2523,10 @@ public:
     return Friend.dyn_cast<NamedDecl*>();
   }
 
-  TemplateParameterList *getFriendTypeTemplateParameterList(unsigned N) const {
-    assert(N < NumTPLists);
-    return getTrailingObjects()[N];
+  ArrayRef<TemplateParameterList *>
+  getFriendTypeTemplateParameterLists() const {
+    return ArrayRef(getTrailingObjects(), NumTPLists);
   }
-
-  unsigned getFriendTypeNumTemplateParameterLists() const { return NumTPLists; }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

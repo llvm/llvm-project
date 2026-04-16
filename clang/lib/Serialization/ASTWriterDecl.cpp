@@ -1836,8 +1836,8 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
 void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
   Record.push_back(D->NumTPLists);
-  for (unsigned i = 0, e = D->NumTPLists; i != e; ++i)
-    Record.AddTemplateParameterList(D->getFriendTypeTemplateParameterList(i));
+  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
+    Record.AddTemplateParameterList(TPL);
   Record.push_back(D->getFriendDecl() != nullptr);
   if (D->getFriendDecl())
     Record.AddDeclRef(D->getFriendDecl());

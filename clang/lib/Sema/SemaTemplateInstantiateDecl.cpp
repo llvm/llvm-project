@@ -4714,11 +4714,11 @@ Decl *TemplateDeclInstantiator::VisitObjCAtDefsFieldDecl(ObjCAtDefsFieldDecl *D)
 }
 
 Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  unsigned NumTPLists = D->getFriendTypeNumTemplateParameterLists();
-  SmallVector<TemplateParameterList *, 1> TPL(NumTPLists);
-  for (unsigned I = 0, N = NumTPLists; I != N; ++I) {
-    TemplateParameterList *InstParams =
-        SubstTemplateParams(D->getFriendTypeTemplateParameterList(I));
+  ArrayRef<TemplateParameterList *> TPLists =
+      D->getFriendTypeTemplateParameterLists();
+  SmallVector<TemplateParameterList *, 1> TPL(TPLists.size());
+  for (unsigned I = 0, N = TPLists.size(); I != N; ++I) {
+    TemplateParameterList *InstParams = SubstTemplateParams(TPLists[I]);
     if (!InstParams)
       return nullptr;
 
