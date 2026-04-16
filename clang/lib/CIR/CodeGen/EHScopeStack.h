@@ -25,6 +25,18 @@ namespace clang::CIRGen {
 
 class CIRGenFunction;
 
+template <class T> struct InvariantValue {
+  using type = T;
+  using saved_type = T;
+  static bool needsSaving(type value) { return false; }
+  static saved_type save(CIRGenFunction &cgf, type value) { return value; }
+  static type restore(CIRGenFunction &cgf, saved_type value) { return value; }
+};
+
+/// A metaprogramming class for ensuring that a value will dominate an
+/// arbitrary position in a function.
+template <class T> struct DominatingValue : InvariantValue<T> {};
+
 enum CleanupKind : unsigned {
   /// Denotes a cleanup that should run when a scope is exited using exceptional
   /// control flow (a throw statement leading to stack unwinding, ).

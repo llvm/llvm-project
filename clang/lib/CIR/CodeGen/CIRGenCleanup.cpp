@@ -86,6 +86,89 @@ Address CIRGenFunction::createCleanupActiveFlag() {
   return active;
 }
 
+void CIRGenFunction::initFullExprCleanup() {
+  initFullExprCleanupWithFlag(createCleanupActiveFlag());
+}
+
+void CIRGenFunction::initFullExprCleanupWithFlag(Address activeFlag) {
+  EHCleanupScope &cleanup = cast<EHCleanupScope>(*ehStack.begin());
+  assert(!cleanup.hasActiveFlag() && "cleanup already has active flag?");
+  cleanup.setActiveFlag(activeFlag);
+
+  if (cleanup.isNormalCleanup())
+    cleanup.setTestFlagInNormalCleanup();
+  if (cleanup.isEHCleanup())
+    cleanup.setTestFlagInEHCleanup();
+}
+
+//===----------------------------------------------------------------------===//
+// DominatingCIRValue / DominatingValue<RValue>
+//===----------------------------------------------------------------------===//
+
+bool DominatingCIRValue::needsSaving(mlir::Value value) {
+  if (!value)
+    return false;
+
+  // If it's a block argument, we don't need to save.
+  mlir::Operation *definingOp = value.getDefiningOp();
+  if (!definingOp)
+    return false;
+
+  // If the value is defined in the function entry block, it already dominates
+  // everything, so we don't need to save it.
+  mlir::Block *currBlock = definingOp->getBlock();
+  if (auto fnOp = definingOp->getParentOfType<cir::FuncOp>())
+    if (&fnOp.getBody().front() == currBlock)
+      return false;
+
+  return true;
+}
+
+DominatingCIRValue::saved_type DominatingCIRValue::save(CIRGenFunction &cgf,
+                                                        mlir::Value value) {
+  if (!needsSaving(value))
+    return saved_type(value, false);
+
+  // Otherwise, we need an alloca.
+  CharUnits align = CharUnits::fromQuantity(
+      cgf.cgm.getDataLayout().getABITypeAlign(value.getType()));
+  mlir::Location loc = value.getLoc();
+  Address alloca =
+      cgf.createTempAlloca(value.getType(), align, loc, "cond-cleanup.save");
+  cgf.getBuilder().createStore(loc, value, alloca);
+
+  return saved_type(alloca.emitRawPointer(), true);
+}
+
+mlir::Value DominatingCIRValue::restore(CIRGenFunction &cgf,
+                                        saved_type value) {
+  // If the value says it wasn't saved, trust that it's still dominating.
+  if (!value.getInt())
+    return value.getPointer();
+
+  // Otherwise, it should be an alloca instruction, as set up in save().
+  auto alloca = value.getPointer().getDefiningOp<cir::AllocaOp>();
+  return cgf.getBuilder().createAlignedLoad(
+      alloca.getLoc(), alloca.getAllocaType(), alloca,
+      llvm::MaybeAlign(alloca.getAlignment()));
+}
+
+DominatingValue<RValue>::saved_type
+DominatingValue<RValue>::saved_type::save(CIRGenFunction &cgf, RValue rv) {
+  if (rv.isScalar())
+    return saved_type(DominatingCIRValue::save(cgf, rv.getValue()));
+
+  if (rv.isAggregate())
+    cgf.cgm.errorNYI("DominatingValue<RValue>::save for aggregate type");
+  else
+    cgf.cgm.errorNYI("DominatingValue<RValue>::save for complex type");
+  return saved_type(DominatingCIRValue::saved_type());
+}
+
+RValue DominatingValue<RValue>::saved_type::restore(CIRGenFunction &cgf) {
+  return RValue::get(DominatingCIRValue::restore(cgf, val));
+}
+
 CIRGenFunction::FullExprCleanupScope::FullExprCleanupScope(CIRGenFunction &cgf,
                                                            const Expr *subExpr)
     : cgf(cgf), cleanups(cgf), scope(nullptr),
