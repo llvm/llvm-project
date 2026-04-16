@@ -201,6 +201,13 @@ ScalableToFixedVectorsPass::run(Function &F, FunctionAnalysisManager &FAM) {
     }
   }
 
+  assert(all_of(DemandedVLs,
+                [&](const auto &Pair) {
+                  return Pair.second == MaxVL ||
+                         ScaledToFixed.count(Pair.first);
+                }) &&
+         "Instructions not converted despite valid VL.");
+
   // Clean up old instructions
   // Work bottom up, only deleting once instruction has no users
   for (BasicBlock &BB : F)
