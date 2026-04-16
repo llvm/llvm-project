@@ -29,6 +29,10 @@ ${PROGNAME} [options] <BUILDER> [-- commit ...]
 [--lnt-url <URL>]   The optional URL of the LNT instance to submit results to. By
                     default, results are not submitted to any LNT instance.
 
+Environment variables
+SPEC_DIR            Optional path to a SPEC installation. If set and the directory
+                    exists, SPEC benchmarks are included in the run.
+
 If commits are provided after --, only those commits are benchmarked and the
 runner exits. Otherwise, the runner polls the given LNT url (which must be
 present) to discover un-benchmarked commits and runs indefinitely.
@@ -101,14 +105,33 @@ LNT_TEST_SUITE=libcxx2
 
 mkdir -p "${BUILD_DIR}"
 
+# Given path/to/abcdef.json, figures out the next available path,
+# considering path/to/abcdef.{1,2,3,etc}.json.
+next_available_path() {
+    local path="${1}"
+    local base="${path%.json}"
+    local i=1
+    while [ -f "${path}" ]; do
+        path="${base}.${i}.json"
+        i=$((i + 1))
+    done
+    echo "${path}"
+}
+
 run_benchmarks() {
-    local output="${BUILD_DIR}/${1}.json"
+    local spec_arg=""
+    if [ -d "${SPEC_DIR}" ]; then
+        spec_arg="--spec-dir ${SPEC_DIR}"
+    fi
+
+    local output=$(next_available_path "${BUILD_DIR}/${1}.json")
     ${MONOREPO_ROOT}/libcxx/utils/ci/lnt/run-benchmarks                                                         \
         --test-suite-commit ${BENCHMARK_SUITE_VERSION}                                                          \
         --git-repo ${MONOREPO_ROOT}                                                                             \
         --machine ${BUILDER}                                                                                    \
         --compiler ${COMPILER}                                                                                  \
         --benchmark-commit ${1}                                                                                 \
+        ${spec_arg}                                                                                             \
         --output ${output}
 
     if [ -n "${LNT_URL}" ]; then
