@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnusedReturnValueCheck.h"
+#include "../utils/CheckUtils.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -19,6 +20,11 @@ using namespace clang::ast_matchers::internal;
 namespace clang::tidy::bugprone {
 
 namespace {
+
+constexpr llvm::StringLiteral DeprecatedCheckName =
+    "hicpp-ignored-remove-result";
+constexpr llvm::StringLiteral CanonicalCheckName =
+    "bugprone-unused-return-value";
 
 // Matches functions that are instantiated from a class template member function
 // matching InnerMatcher. Functions not instantiated from a class template
@@ -145,7 +151,11 @@ UnusedReturnValueCheck::UnusedReturnValueCheck(StringRef Name,
                                             "^::std::errc$;"
                                             "^::std::expected$;"
                                             "^::boost::system::error_code$"))),
-      AllowCastToVoid(Options.get("AllowCastToVoid", false)) {}
+      AllowCastToVoid(Options.get("AllowCastToVoid", false)) {
+  if (Name == DeprecatedCheckName)
+    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
+                                    CanonicalCheckName);
+}
 
 UnusedReturnValueCheck::UnusedReturnValueCheck(
     StringRef Name, ClangTidyContext *Context,

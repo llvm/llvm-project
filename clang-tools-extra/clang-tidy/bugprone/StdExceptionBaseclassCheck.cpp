@@ -7,12 +7,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "StdExceptionBaseclassCheck.h"
+#include "../utils/CheckUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
+
+namespace {
+
+constexpr llvm::StringLiteral DeprecatedCheckName = "hicpp-exception-baseclass";
+constexpr llvm::StringLiteral CanonicalCheckName =
+    "bugprone-std-exception-baseclass";
+
+} // namespace
+
+StdExceptionBaseclassCheck::StdExceptionBaseclassCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context) {
+  if (Name == DeprecatedCheckName)
+    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
+                                    CanonicalCheckName);
+}
 
 void StdExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

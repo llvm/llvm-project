@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidGotoCheck.h"
+#include "../utils/CheckUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -14,6 +15,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::cppcoreguidelines {
 
 namespace {
+constexpr llvm::StringLiteral DeprecatedCheckName = "hicpp-avoid-goto";
+constexpr llvm::StringLiteral CanonicalCheckName =
+    "cppcoreguidelines-avoid-goto";
+
 AST_MATCHER(GotoStmt, isForwardJumping) {
   return Node.getBeginLoc() < Node.getLabel()->getBeginLoc();
 }
@@ -25,7 +30,11 @@ AST_MATCHER(GotoStmt, isInMacro) {
 
 AvoidGotoCheck::AvoidGotoCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {
+  if (Name == DeprecatedCheckName)
+    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
+                                    CanonicalCheckName);
+}
 
 void AvoidGotoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

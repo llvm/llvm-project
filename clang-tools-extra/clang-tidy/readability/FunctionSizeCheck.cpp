@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FunctionSizeCheck.h"
+#include "../utils/CheckUtils.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/BitVector.h"
@@ -15,6 +16,9 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 namespace {
+
+constexpr llvm::StringLiteral DeprecatedCheckName = "hicpp-function-size";
+constexpr llvm::StringLiteral CanonicalCheckName = "readability-function-size";
 
 class FunctionASTVisitor : public RecursiveASTVisitor<FunctionASTVisitor> {
   using Base = RecursiveASTVisitor<FunctionASTVisitor>;
@@ -146,7 +150,11 @@ FunctionSizeCheck::FunctionSizeCheck(StringRef Name, ClangTidyContext *Context)
       VariableThreshold(
           Options.get("VariableThreshold", DefaultVariableThreshold)),
       CountMemberInitAsStmt(
-          Options.get("CountMemberInitAsStmt", DefaultCountMemberInitAsStmt)) {}
+          Options.get("CountMemberInitAsStmt", DefaultCountMemberInitAsStmt)) {
+  if (Name == DeprecatedCheckName)
+    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
+                                    CanonicalCheckName);
+}
 
 void FunctionSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "LineThreshold", LineThreshold);

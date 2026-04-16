@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidCArraysCheck.h"
+#include "../utils/CheckUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -24,6 +25,9 @@ static const TargetType *getAs(const NodeType *Node) {
 }
 
 namespace {
+
+constexpr llvm::StringLiteral DeprecatedCheckName = "hicpp-avoid-c-arrays";
+constexpr llvm::StringLiteral CanonicalCheckName = "modernize-avoid-c-arrays";
 
 AST_MATCHER(TypeLoc, hasValidBeginLoc) { return Node.getBeginLoc().isValid(); }
 
@@ -85,7 +89,11 @@ AST_MATCHER(TypeLoc, isWithinImplicitTemplateInstantiation) {
 
 AvoidCArraysCheck::AvoidCArraysCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      AllowStringArrays(Options.get("AllowStringArrays", false)) {}
+      AllowStringArrays(Options.get("AllowStringArrays", false)) {
+  if (Name == DeprecatedCheckName)
+    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
+                                    CanonicalCheckName);
+}
 
 void AvoidCArraysCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowStringArrays", AllowStringArrays);
