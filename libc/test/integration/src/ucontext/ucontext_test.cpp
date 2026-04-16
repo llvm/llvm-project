@@ -38,18 +38,27 @@ void register_preservation_test() {
   ucontext_t ctx;
   static volatile int jumped = 0;
 
-  register long r12_val asm("r12") = 0x1212121212121212;
-  register long r13_val asm("r13") = 0x1313131313131313;
-  register long r14_val asm("r14") = 0x1414141414141414;
-  register long r15_val asm("r15") = 0x1515151515151515;
+  long checked_r12, checked_r13, checked_r14, checked_r15;
 
-  register void *rdi_val asm("rdi") = &ctx;
+  {
+    register long r12_val asm("r12") = 0x1212121212121212;
+    register long r13_val asm("r13") = 0x1313131313131313;
+    register long r14_val asm("r14") = 0x1414141414141414;
+    register long r15_val asm("r15") = 0x1515151515151515;
 
-  asm volatile("call *%[getcontext_ptr]"
-               : "+r"(rdi_val), "+r"(r12_val), "+r"(r13_val), "+r"(r14_val),
-                 "+r"(r15_val)
-               : [getcontext_ptr] "r"((void *)LIBC_NAMESPACE::getcontext)
-               : "memory", "rax", "rcx", "rdx", "rsi");
+    register void *rdi_val asm("rdi") = &ctx;
+
+    asm volatile("call *%[getcontext_ptr]"
+                 : "+r"(rdi_val), "+r"(r12_val), "+r"(r13_val), "+r"(r14_val),
+                   "+r"(r15_val)
+                 : [getcontext_ptr] "r"((void *)LIBC_NAMESPACE::getcontext)
+                 : "memory", "rax", "rcx", "rdx", "rsi");
+
+    checked_r12 = r12_val;
+    checked_r13 = r13_val;
+    checked_r14 = r14_val;
+    checked_r15 = r15_val;
+  }
 
   if (!jumped) {
     jumped = 1;
@@ -69,25 +78,32 @@ void register_preservation_test() {
     ASSERT_TRUE(false); // Should not reach here
   }
 
-  ASSERT_EQ(r12_val, (long)0x1212121212121212);
-  ASSERT_EQ(r13_val, (long)0x1313131313131313);
-  ASSERT_EQ(r14_val, (long)0x1414141414141414);
-  ASSERT_EQ(r15_val, (long)0x1515151515151515);
+  ASSERT_EQ(checked_r12, (long)0x1212121212121212);
+  ASSERT_EQ(checked_r13, (long)0x1313131313131313);
+  ASSERT_EQ(checked_r14, (long)0x1414141414141414);
+  ASSERT_EQ(checked_r15, (long)0x1515151515151515);
 }
 
 void test_rbx_rdx() {
   ucontext_t ctx;
   static volatile int jumped = 0;
 
-  register long rbx_val asm("rbx") = 0xBBBBBBBBBBBBBBBB;
-  register long rdx_val asm("rdx") = 0xDDDDDDDDDDDDDDDD;
+  long checked_rbx, checked_rdx;
 
-  register void *rdi_val asm("rdi") = &ctx;
+  {
+    register long rbx_val asm("rbx") = 0xBBBBBBBBBBBBBBBB;
+    register long rdx_val asm("rdx") = 0xDDDDDDDDDDDDDDDD;
 
-  asm volatile("call *%[getcontext_ptr]"
-               : "+r"(rdi_val), "+r"(rbx_val), "+r"(rdx_val)
-               : [getcontext_ptr] "r"((void *)LIBC_NAMESPACE::getcontext)
-               : "memory", "rax", "rcx", "rsi");
+    register void *rdi_val asm("rdi") = &ctx;
+
+    asm volatile("call *%[getcontext_ptr]"
+                 : "+r"(rdi_val), "+r"(rbx_val), "+r"(rdx_val)
+                 : [getcontext_ptr] "r"((void *)LIBC_NAMESPACE::getcontext)
+                 : "memory", "rax", "rcx", "rsi");
+
+    checked_rbx = rbx_val;
+    checked_rdx = rdx_val;
+  }
 
   if (!jumped) {
     jumped = 1;
@@ -104,26 +120,35 @@ void test_rbx_rdx() {
     ASSERT_TRUE(false);
   }
 
-  ASSERT_EQ(rbx_val, (long)0xBBBBBBBBBBBBBBBB);
-  ASSERT_EQ(rdx_val, (long)0xDDDDDDDDDDDDDDDD);
+  ASSERT_EQ(checked_rbx, (long)0xBBBBBBBBBBBBBBBB);
+  ASSERT_EQ(checked_rdx, (long)0xDDDDDDDDDDDDDDDD);
 }
 
 void test_r8_r11() {
   ucontext_t ctx;
   static volatile int jumped = 0;
 
-  register long r8_val asm("r8") = 0x0808080808080808;
-  register long r9_val asm("r9") = 0x0909090909090909;
-  register long r10_val asm("r10") = 0x1010101010101010;
-  register long r11_val asm("r11") = 0x1111111111111111;
+  long checked_r8, checked_r9, checked_r10, checked_r11;
 
-  register void *rdi_val asm("rdi") = &ctx;
+  {
+    register long r8_val asm("r8") = 0x0808080808080808;
+    register long r9_val asm("r9") = 0x0909090909090909;
+    register long r10_val asm("r10") = 0x1010101010101010;
+    register long r11_val asm("r11") = 0x1111111111111111;
 
-  asm volatile("call *%[getcontext_ptr]"
-               : "+r"(rdi_val), "+r"(r8_val), "+r"(r9_val), "+r"(r10_val),
-                 "+r"(r11_val)
-               : [getcontext_ptr] "r"((void *)LIBC_NAMESPACE::getcontext)
-               : "memory", "rax", "rcx", "rdx", "rsi");
+    register void *rdi_val asm("rdi") = &ctx;
+
+    asm volatile("call *%[getcontext_ptr]"
+                 : "+r"(rdi_val), "+r"(r8_val), "+r"(r9_val), "+r"(r10_val),
+                   "+r"(r11_val)
+                 : [getcontext_ptr] "r"((void *)LIBC_NAMESPACE::getcontext)
+                 : "memory", "rax", "rcx", "rdx", "rsi");
+
+    checked_r8 = r8_val;
+    checked_r9 = r9_val;
+    checked_r10 = r10_val;
+    checked_r11 = r11_val;
+  }
 
   if (!jumped) {
     jumped = 1;
@@ -142,10 +167,10 @@ void test_r8_r11() {
     ASSERT_TRUE(false);
   }
 
-  ASSERT_EQ(r8_val, (long)0x0808080808080808);
-  ASSERT_EQ(r9_val, (long)0x0909090909090909);
-  ASSERT_EQ(r10_val, (long)0x1010101010101010);
-  ASSERT_EQ(r11_val, (long)0x1111111111111111);
+  ASSERT_EQ(checked_r8, (long)0x0808080808080808);
+  ASSERT_EQ(checked_r9, (long)0x0909090909090909);
+  ASSERT_EQ(checked_r10, (long)0x1010101010101010);
+  ASSERT_EQ(checked_r11, (long)0x1111111111111111);
 }
 
 TEST_MAIN() {

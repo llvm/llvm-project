@@ -24,6 +24,15 @@ __attribute__((naked)) LLVM_LIBC_FUNCTION(int, setcontext,
       
       # Restore the signal mask using rt_sigprocmask syscall.
       # rt_sigprocmask(SIG_SETMASK, &ucp->uc_sigmask, NULL, sizeof(sigset_t))
+      # Note: Restoring the signal mask early means that if a signal
+      # arrives before the context switch is complete, it will run on
+      # the old stack with the new mask. Doing this later is difficult
+      # because the syscall clobbers registers.
+      #
+      # Note: We could avoid these stack operations by saving rdi in a
+      # non-volatile register (like r12) across the syscall, since all
+      # registers will be overwritten anyway. We stick to the stack for
+      # simplicity and readability.
       pushq %%rdi # Save ucp
       leaq %c[sigmask](%%rdi), %%rsi # set = &ucp->uc_sigmask
       xorq %%rdx, %%rdx # oldset = NULL
