@@ -24,6 +24,24 @@ add_libc_test(
 )
 
 add_libc_test(
+  rewind_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    rewind_test.cpp
+  DEPENDS
+    libc.include.stdio
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
+    libc.src.stdio.fread
+    libc.src.stdio.rewind
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   ungetc_test
   SUITE
     libc_stdio_unittests
