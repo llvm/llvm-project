@@ -278,7 +278,7 @@ constexpr int test_indeterminate(bool read_indet) {
   };
 
   pad p{1, 2};
-  no_pad np = bit_cast<no_pad>(p);
+  no_pad np = bit_cast<no_pad>(p); // expected-note {{declared here}}
 
   int tmp = np.a + np.b;
 
@@ -343,7 +343,7 @@ constexpr B one() {
 constexpr char good_one = one().x[0] + one().x[2] + one().x[3];
 // expected-error@+2 {{constexpr variable 'bad_one' must be initialized by a constant expression}}
 // expected-note@+1 {{read of uninitialized object is not allowed in a constant expression}}
-constexpr char bad_one = one().x[1];
+constexpr char bad_one = one().x[1]; // expected-note {{temporary created here}}
 
 constexpr A two() {
   B b = one(); // b.x[1] is indeterminate.
@@ -433,7 +433,7 @@ static_assert(round_trip<bytes>(ld), "");
 static_assert(round_trip<long double>(10.0L));
 
 constexpr bool f(bool read_uninit) {
-  bytes b = bit_cast<bytes>(ld);
+  bytes b = bit_cast<bytes>(ld); // expected-note {{declared here}}
   unsigned char ld_bytes[10] = {
     0x0,  0x48, 0x9f, 0x49, 0xf0,
     0x3c, 0x20, 0xc9, 0x0,  0x40,

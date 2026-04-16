@@ -24,7 +24,8 @@ int array2[recurse2]; // both-warning {{variable length arrays in C++}} \
                       // ref-warning {{variable length array folded to constant array as an extension}}
 
 constexpr int b = b; // both-error {{must be initialized by a constant expression}} \
-                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}}
+                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                     // both-note {{declared here}}
 
 
 [[clang::require_constant_initialization]] int c = c; // both-error {{variable does not have a constant initializer}} \

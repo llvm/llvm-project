@@ -232,7 +232,7 @@ namespace ParameterScopes {
 
   const int k = 42;
   constexpr const int &ObscureTheTruth(const int &a) { return a; }
-  constexpr const int &MaybeReturnJunk(bool b, const int a) {
+  constexpr const int &MaybeReturnJunk(bool b, const int a) { // expected-note 2{{declared here}}
     return ObscureTheTruth(b ? a : k);
   }
   static_assert(MaybeReturnJunk(false, 0) == 42, ""); // ok
@@ -694,7 +694,8 @@ static_assert(selfref[1][0][1] == 3, "");
 static_assert(selfref[1][1][0] == 0, "");
 static_assert(selfref[1][1][1] == 0, "");
 
-constexpr int badselfref[2][2][2] = { // expected-error {{constant expression}}
+constexpr int badselfref[2][2][2] = { // expected-error {{constant expression}} \
+                                      // expected-note {{declared here}}
   badselfref[1][0][0] // expected-note {{outside its lifetime}}
 };
 
@@ -1378,7 +1379,7 @@ namespace ExternConstexpr {
     constexpr int k; // expected-error {{constexpr variable 'k' must be initialized by a constant expression}}
   }
 
-  extern const int q;
+  extern const int q; // expected-note {{declared here}}
   constexpr int g() { return q; } // expected-note {{outside its lifetime}}
   constexpr int q = g(); // expected-error {{constant expression}} expected-note {{in call}}
 
@@ -1386,7 +1387,7 @@ namespace ExternConstexpr {
   constexpr int h() { return r; } // cxx11_20-error {{never produces a constant}} cxx11_20-note {{read of non-const}}
 
   struct S { int n; };
-  extern const S s;
+  extern const S s; // expected-note {{declared here}}
   constexpr int x() { return s.n; } // expected-note {{outside its lifetime}}
   constexpr S s = {x()}; // expected-error {{constant expression}} expected-note {{in call}}
 }
@@ -2014,7 +2015,9 @@ namespace Lifetime {
   void f() {
     constexpr int &n = n; // expected-error {{constant expression}} cxx23-note {{reference to 'n' is not a constant expression}} cxx23-note {{address of non-static constexpr variable 'n' may differ}} expected-warning {{not yet bound to a value}}
                           // cxx11_20-note@-1 {{use of reference outside its lifetime is not allowed in a constant expression}}
-    constexpr int m = m; // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
+    constexpr int m = m; // expected-error {{constant expression}} \
+                         // expected-note {{read of object outside its lifetime}} \
+                         // expected-note {{declared here}}
   }
 
   constexpr int &get(int &&n) { return n; }
@@ -2024,8 +2027,10 @@ namespace Lifetime {
     int &&r;
     int &s;
     int t;
-    constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // cxx11_20-note {{read of object outside its lifetime}}
-    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {} // cxx11_20-note {{read of object outside its lifetime}}
+    constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // cxx11_20-note {{read of object outside its lifetime}} \
+                                                     // cxx11_20-note {{temporary created here}}
+    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {} // cxx11_20-note {{read of object outside its lifetime}} \
+                                                        // cxx11_20-note {{temporary created here}}
   };
   constexpr int k1 = S().t; // expected-error {{constant expression}} cxx11_20-note {{in call}}
   constexpr int k2 = S(0).t; // expected-error {{constant expression}} cxx11_20-note {{in call}}
@@ -2034,7 +2039,8 @@ namespace Lifetime {
     int n = 0;
     constexpr int f() const { return 0; }
   };
-  constexpr Q *out_of_lifetime(Q q) { return &q; } // expected-warning {{address of stack}}
+  constexpr Q *out_of_lifetime(Q q) { return &q; } // expected-warning {{address of stack}} \
+                                                   // expected-note 2{{declared here}}
   constexpr int k3 = out_of_lifetime({})->n; // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
   constexpr int k4 = out_of_lifetime({})->f(); // expected-error {{constant expression}} expected-note {{member call on object outside its lifetime}}
 
@@ -2070,9 +2076,14 @@ namespace Lifetime {
     int a = b.f(); // expected-warning {{uninitialized}} expected-note 2{{member call on object outside its lifetime}}
     Inner b;
   };
-  constexpr R r; // expected-error {{constant expression}} expected-note {{in call}} expected-note {{implicit default constructor for 'Lifetime::R' first required here}}
+  constexpr R r; // expected-error {{constant expression}} \
+                 // expected-note {{in call}} \
+                 // expected-note {{implicit default constructor for 'Lifetime::R' first required here}} \
+                 // expected-note {{declared here}}
   void rf() {
-    constexpr R r; // expected-error {{constant expression}} expected-note {{in call}}
+    constexpr R r; // expected-error {{constant expression}} \
+                   // expected-note {{in call}} \
+                   // expected-note {{declared here}}
   }
 }
 
