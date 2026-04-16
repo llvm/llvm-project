@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 
 declare float @llvm.vector.reduce.fdot.v4f32(float, <4 x float>, <4 x float>)
+declare half @llvm.vector.reduce.fdot.v4f16(half, <4 x half>, <4 x half>)
 
 ; Default: sequential v_mul_f32 + v_add_f32 chain.
 define float @fdot_f32(float %acc, <4 x float> %a, <4 x float> %b) {
@@ -66,4 +67,66 @@ define float @fdot_f32_reassoc_contract(float %acc, <4 x float> %a, <4 x float> 
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %res = call reassoc contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
   ret float %res
+}
+
+; f16 variants: same expansion patterns, but for half elements.
+define half @fdot_f16(half %acc, <4 x half> %a, <4 x half> %b) {
+; GFX9-LABEL: fdot_f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mul_f16_e32 v5, v1, v3
+; GFX9-NEXT:    v_add_f16_e32 v0, v0, v5
+; GFX9-NEXT:    v_mul_f16_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX9-NEXT:    v_mul_f16_e32 v1, v2, v4
+; GFX9-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX9-NEXT:    v_mul_f16_sdwa v1, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %res = call half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+define half @fdot_f16_contract(half %acc, <4 x half> %a, <4 x half> %b) {
+; GFX9-LABEL: fdot_f16_contract:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_fma_f16 v0, v1, v3, v0
+; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; GFX9-NEXT:    v_fma_f16 v0, v1, v3, v0
+; GFX9-NEXT:    v_fma_f16 v0, v2, v4, v0
+; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
+; GFX9-NEXT:    v_fma_f16 v0, v1, v2, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %res = call contract half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+define half @fdot_f16_reassoc(half %acc, <4 x half> %a, <4 x half> %b) {
+; GFX9-LABEL: fdot_f16_reassoc:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_mul_f16 v2, v2, v4
+; GFX9-NEXT:    v_pk_mul_f16 v1, v1, v3
+; GFX9-NEXT:    v_pk_add_f16 v1, v1, v2
+; GFX9-NEXT:    v_add_f16_sdwa v1, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %res = call reassoc half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+define half @fdot_f16_reassoc_contract(half %acc, <4 x half> %a, <4 x half> %b) {
+; GFX9-LABEL: fdot_f16_reassoc_contract:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_mul_f16 v2, v2, v4
+; GFX9-NEXT:    v_pk_fma_f16 v1, v1, v3, v2
+; GFX9-NEXT:    v_add_f16_sdwa v1, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %res = call reassoc contract half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
 }

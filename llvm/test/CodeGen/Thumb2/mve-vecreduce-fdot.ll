@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp,+fp64 -verify-machineinstrs %s -o - | FileCheck %s
 
 declare float @llvm.vector.reduce.fdot.v4f32(float, <4 x float>, <4 x float>)
-declare half @llvm.vector.reduce.fdot.v4f16(half, <4 x half>, <4 x half>)
+declare double @llvm.vector.reduce.fdot.v4f64(double, <4 x double>, <4 x double>)
 
 ; Default: sequential vmla.f32 chain (mul + accumulate).
 define arm_aapcs_vfpcc float @fdot_f32(float %acc, <4 x float> %a, <4 x float> %b) {
@@ -57,100 +57,66 @@ define arm_aapcs_vfpcc float @fdot_f32_reassoc_contract(float %acc, <4 x float> 
   ret float %res
 }
 
-define arm_aapcs_vfpcc half @fdot_f16(half %acc, <4 x half> %a, <4 x half> %b) {
-; CHECK-LABEL: fdot_f16:
+define arm_aapcs_vfpcc double @fdot_f64(double %acc, <4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: fdot_f64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmla.f16 s0, s4, s8
-; CHECK-NEXT:    vmovx.f16 s2, s8
-; CHECK-NEXT:    vmovx.f16 s4, s4
-; CHECK-NEXT:    vmla.f16 s0, s4, s2
-; CHECK-NEXT:    vmovx.f16 s2, s9
-; CHECK-NEXT:    vmla.f16 s0, s5, s9
-; CHECK-NEXT:    vmovx.f16 s4, s5
-; CHECK-NEXT:    vmla.f16 s0, s4, s2
-; CHECK-NEXT:    vldr.16 s2, .LCPI4_0
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NEXT:    vmla.f64 d0, d2, d6
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vmla.f64 d0, d3, d7
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmla.f64 d0, d4, d2
+; CHECK-NEXT:    vmla.f64 d0, d5, d3
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 1
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI4_0:
-; CHECK-NEXT:    .short 0x0000 @ half 0
-  %res = call half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
-  ret half %res
+  %res = call double @llvm.vector.reduce.fdot.v4f64(double %acc, <4 x double> %a, <4 x double> %b)
+  ret double %res
 }
 
-define arm_aapcs_vfpcc half @fdot_f16_contract(half %acc, <4 x half> %a, <4 x half> %b) {
-; CHECK-LABEL: fdot_f16_contract:
+define arm_aapcs_vfpcc double @fdot_f64_contract(double %acc, <4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: fdot_f64_contract:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vfma.f16 s0, s4, s8
-; CHECK-NEXT:    vmovx.f16 s2, s8
-; CHECK-NEXT:    vmovx.f16 s4, s4
-; CHECK-NEXT:    vfma.f16 s0, s4, s2
-; CHECK-NEXT:    vmovx.f16 s2, s9
-; CHECK-NEXT:    vfma.f16 s0, s5, s9
-; CHECK-NEXT:    vmovx.f16 s4, s5
-; CHECK-NEXT:    vfma.f16 s0, s4, s2
-; CHECK-NEXT:    vldr.16 s2, .LCPI5_0
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NEXT:    vfma.f64 d0, d2, d6
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vfma.f64 d0, d3, d7
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vfma.f64 d0, d4, d2
+; CHECK-NEXT:    vfma.f64 d0, d5, d3
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 1
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI5_0:
-; CHECK-NEXT:    .short 0x0000 @ half 0
-  %res = call contract half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
-  ret half %res
+  %res = call contract double @llvm.vector.reduce.fdot.v4f64(double %acc, <4 x double> %a, <4 x double> %b)
+  ret double %res
 }
 
-define arm_aapcs_vfpcc half @fdot_f16_reassoc(half %acc, <4 x half> %a, <4 x half> %b) {
-; CHECK-LABEL: fdot_f16_reassoc:
+define arm_aapcs_vfpcc double @fdot_f64_reassoc(double %acc, <4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: fdot_f64_reassoc:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr.16 s10, .LCPI6_0
-; CHECK-NEXT:    vins.f16 s10, s10
-; CHECK-NEXT:    vmov.f32 s11, s10
-; CHECK-NEXT:    vmov.f32 s6, s10
-; CHECK-NEXT:    vmov.f32 s7, s10
-; CHECK-NEXT:    vmul.f16 q1, q1, q2
-; CHECK-NEXT:    vrev32.16 q2, q1
-; CHECK-NEXT:    vadd.f16 q1, q1, q2
-; CHECK-NEXT:    vadd.f16 s2, s6, s7
-; CHECK-NEXT:    vadd.f16 s4, s4, s5
-; CHECK-NEXT:    vadd.f16 s2, s4, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmul.f64 d3, d3, d7
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmul.f64 d1, d5, d9
+; CHECK-NEXT:    vmla.f64 d1, d4, d8
+; CHECK-NEXT:    vmla.f64 d3, d2, d6
+; CHECK-NEXT:    vadd.f64 d1, d3, d1
+; CHECK-NEXT:    vadd.f64 d0, d0, d1
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 1
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI6_0:
-; CHECK-NEXT:    .short 0x0000 @ half 0
-  %res = call reassoc half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
-  ret half %res
+  %res = call reassoc double @llvm.vector.reduce.fdot.v4f64(double %acc, <4 x double> %a, <4 x double> %b)
+  ret double %res
 }
 
-define arm_aapcs_vfpcc half @fdot_f16_reassoc_contract(half %acc, <4 x half> %a, <4 x half> %b) {
-; CHECK-LABEL: fdot_f16_reassoc_contract:
+define arm_aapcs_vfpcc double @fdot_f64_reassoc_contract(double %acc, <4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: fdot_f64_reassoc_contract:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr.16 s10, .LCPI7_0
-; CHECK-NEXT:    vins.f16 s10, s10
-; CHECK-NEXT:    vmov.f32 s11, s10
-; CHECK-NEXT:    vmov.f32 s6, s10
-; CHECK-NEXT:    vmov.f32 s7, s10
-; CHECK-NEXT:    vmul.f16 q1, q1, q2
-; CHECK-NEXT:    vrev32.16 q2, q1
-; CHECK-NEXT:    vadd.f16 q1, q1, q2
-; CHECK-NEXT:    vadd.f16 s2, s6, s7
-; CHECK-NEXT:    vadd.f16 s4, s4, s5
-; CHECK-NEXT:    vadd.f16 s2, s4, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vfma.f64 d0, d5, d9
+; CHECK-NEXT:    vfma.f64 d0, d4, d8
+; CHECK-NEXT:    vfma.f64 d0, d3, d7
+; CHECK-NEXT:    vfma.f64 d0, d2, d6
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 1
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI7_0:
-; CHECK-NEXT:    .short 0x0000 @ half 0
-  %res = call reassoc contract half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
-  ret half %res
+  %res = call reassoc contract double @llvm.vector.reduce.fdot.v4f64(double %acc, <4 x double> %a, <4 x double> %b)
+  ret double %res
 }

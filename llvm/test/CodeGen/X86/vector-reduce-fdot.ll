@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fma | FileCheck %s --check-prefix=FMA
 
 declare float @llvm.vector.reduce.fdot.v4f32(float, <4 x float>, <4 x float>)
+declare double @llvm.vector.reduce.fdot.v4f64(double, <4 x double>, <4 x double>)
 
 ; Default: sequential vmulss + vaddss chain.
 define float @fdot_f32(float %acc, <4 x float> %a, <4 x float> %b) {
@@ -131,4 +132,137 @@ define float @fdot_f32_reassoc_contract(float %acc, <4 x float> %a, <4 x float> 
 ; FMA-NEXT:    retq
   %res = call reassoc contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
   ret float %res
+}
+
+; f64 variants: same expansion patterns, but for double elements.
+define double @fdot_f64(double %acc, <4 x double> %a, <4 x double> %b) {
+; AVX2-LABEL: fdot_f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmulsd %xmm2, %xmm1, %xmm3
+; AVX2-NEXT:    vaddsd %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm2[1,0]
+; AVX2-NEXT:    vmulsd %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    vaddsd %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; AVX2-NEXT:    vmulsd %xmm2, %xmm1, %xmm3
+; AVX2-NEXT:    vaddsd %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; AVX2-NEXT:    vmulsd %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; FMA-LABEL: fdot_f64:
+; FMA:       # %bb.0:
+; FMA-NEXT:    vmulsd %xmm2, %xmm1, %xmm3
+; FMA-NEXT:    vaddsd %xmm3, %xmm0, %xmm0
+; FMA-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; FMA-NEXT:    vshufpd {{.*#+}} xmm4 = xmm2[1,0]
+; FMA-NEXT:    vmulsd %xmm4, %xmm3, %xmm3
+; FMA-NEXT:    vaddsd %xmm3, %xmm0, %xmm0
+; FMA-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; FMA-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; FMA-NEXT:    vmulsd %xmm2, %xmm1, %xmm3
+; FMA-NEXT:    vaddsd %xmm3, %xmm0, %xmm0
+; FMA-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; FMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; FMA-NEXT:    vmulsd %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; FMA-NEXT:    vzeroupper
+; FMA-NEXT:    retq
+  %res = call double @llvm.vector.reduce.fdot.v4f64(double %acc, <4 x double> %a, <4 x double> %b)
+  ret double %res
+}
+
+define double @fdot_f64_reassoc(double %acc, <4 x double> %a, <4 x double> %b) {
+; AVX2-LABEL: fdot_f64_reassoc:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmulpd %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX2-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; FMA-LABEL: fdot_f64_reassoc:
+; FMA:       # %bb.0:
+; FMA-NEXT:    vmulpd %ymm2, %ymm1, %ymm1
+; FMA-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; FMA-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; FMA-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; FMA-NEXT:    vzeroupper
+; FMA-NEXT:    retq
+  %res = call reassoc double @llvm.vector.reduce.fdot.v4f64(double %acc, <4 x double> %a, <4 x double> %b)
+  ret double %res
+}
+
+define double @fdot_f64_contract(double %acc, <4 x double> %a, <4 x double> %b) {
+; AVX2-LABEL: fdot_f64_contract:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmulsd %xmm2, %xmm1, %xmm3
+; AVX2-NEXT:    vaddsd %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm2[1,0]
+; AVX2-NEXT:    vmulsd %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    vaddsd %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; AVX2-NEXT:    vmulsd %xmm2, %xmm1, %xmm3
+; AVX2-NEXT:    vaddsd %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; AVX2-NEXT:    vmulsd %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; FMA-LABEL: fdot_f64_contract:
+; FMA:       # %bb.0:
+; FMA-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0
+; FMA-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; FMA-NEXT:    vshufpd {{.*#+}} xmm4 = xmm2[1,0]
+; FMA-NEXT:    vfmadd213sd {{.*#+}} xmm4 = (xmm3 * xmm4) + xmm0
+; FMA-NEXT:    vextractf128 $1, %ymm1, %xmm0
+; FMA-NEXT:    vextractf128 $1, %ymm2, %xmm1
+; FMA-NEXT:    vfmadd231sd {{.*#+}} xmm4 = (xmm0 * xmm1) + xmm4
+; FMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; FMA-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,0]
+; FMA-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm4
+; FMA-NEXT:    vzeroupper
+; FMA-NEXT:    retq
+  %res = call contract double @llvm.vector.reduce.fdot.v4f64(double %acc, <4 x double> %a, <4 x double> %b)
+  ret double %res
+}
+
+define double @fdot_f64_reassoc_contract(double %acc, <4 x double> %a, <4 x double> %b) {
+; AVX2-LABEL: fdot_f64_reassoc_contract:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmulpd %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX2-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; FMA-LABEL: fdot_f64_reassoc_contract:
+; FMA:       # %bb.0:
+; FMA-NEXT:    vmulpd %ymm2, %ymm1, %ymm1
+; FMA-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; FMA-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; FMA-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; FMA-NEXT:    vzeroupper
+; FMA-NEXT:    retq
+  %res = call reassoc contract double @llvm.vector.reduce.fdot.v4f64(double %acc, <4 x double> %a, <4 x double> %b)
+  ret double %res
 }
