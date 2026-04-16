@@ -6497,7 +6497,7 @@ unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {
   return ST->getEpilogueVectorizationMinVF();
 }
 
-bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
+bool AArch64TTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
   if (!ST->hasSVE())
     return false;
 

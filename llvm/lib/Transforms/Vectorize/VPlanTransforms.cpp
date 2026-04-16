@@ -3683,7 +3683,7 @@ void VPlanTransforms::createInterleaveGroups(
     VPlan &Plan,
     const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
         &InterleaveGroups,
-    VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed) {
+    VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed) {
   if (InterleaveGroups.empty())
     return;
 
@@ -3710,7 +3710,7 @@ void VPlanTransforms::createInterleaveGroups(
     }
 
     bool NeedsMaskForGaps =
-        (IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed) ||
+        (IG->requiresScalarEpilogue() && !EpilogueAllowed) ||
         (!StoredValues.empty() && !IG->isFull());
 
     Instruction *IRInsertPos = IG->getInsertPos();
