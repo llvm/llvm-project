@@ -1,4 +1,4 @@
-//===-- NVPTXMCAsmStreamer.h - NVPTX asm streamer --------------*- C++ -*--===//
+//===-- NVPTXAsmStreamer.h - NVPTX asm streamer ----------------*- C++ -*--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -49,39 +49,7 @@ public:
                    std::unique_ptr<formatted_raw_ostream> os,
                    std::unique_ptr<MCInstPrinter> printer,
                    std::unique_ptr<MCCodeEmitter> emitter,
-                   std::unique_ptr<MCAsmBackend> asmbackend)
-      : MCAsmBaseStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-        MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
-        Assembler(std::make_unique<MCAssembler>(
-            Context, std::move(asmbackend), std::move(emitter),
-            (asmbackend) ? asmbackend->createObjectWriter(NullStream)
-                         : nullptr)),
-        CommentStream(CommentToEmit) {
-    // assert(false && "Implement NVPTXAsmStreamer.");
-    assert(InstPrinter);
-    if (Assembler->getBackendPtr())
-      setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
-
-    Context.setUseNamesOnTempLabels(true);
-
-    auto *TO = Context.getTargetOptions();
-    IsVerboseAsm = TO->AsmVerbose;
-    if (IsVerboseAsm)
-      InstPrinter->setCommentStream(CommentStream);
-    ShowInst = TO->ShowMCInst;
-    switch (TO->MCUseDwarfDirectory) {
-    case MCTargetOptions::DisableDwarfDirectory:
-      UseDwarfDirectory = false;
-      break;
-    case MCTargetOptions::EnableDwarfDirectory:
-      UseDwarfDirectory = true;
-      break;
-    case MCTargetOptions::DefaultDwarfDirectory:
-      UseDwarfDirectory =
-          Context.getAsmInfo()->enableDwarfFileDirectoryDefault();
-      break;
-    }
-  }
+                   std::unique_ptr<MCAsmBackend> asmbackend);
 
   inline void EmitEOL() {
     // Dump Explicit Comments here.
