@@ -414,6 +414,9 @@ private:
   };
   MaybeExpr CheckStructureConstructor(parser::CharBlock typeName,
       const semantics::DerivedTypeSpec &, std::list<ComponentSpec> &&);
+  MaybeExpr AnalyzeEnumerationConstructor(parser::CharBlock typeName,
+      const semantics::DerivedTypeSpec &,
+      const std::list<parser::ComponentSpec> &);
 
   MaybeExpr IterativelyAnalyzeSubexpressions(const parser::Expr &);
 

@@ -1001,6 +1001,9 @@ public:
   void Post(const parser::EnumDef &);
   bool Pre(const parser::Enumerator &);
   bool Pre(const parser::EnumerationTypeDef &);
+  void Post(const parser::EnumerationTypeStmt &);
+  bool Pre(const parser::EnumerationEnumeratorStmt &);
+  void Post(const parser::EndEnumerationTypeStmt &);
   bool Pre(const parser::AccessSpec &);
   bool Pre(const parser::AsynchronousStmt &);
   bool Pre(const parser::ContiguousStmt &);
@@ -6011,14 +6014,93 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
   return false;
 }
 
+void DeclarationVisitor::Post(const parser::EnumDef &) {
+  enumerationState_ = EnumeratorState{};
+}
+
+// F2023 R766 EnumerationTypeDef — scope is pushed in Post(EnumerationTypeStmt)
+// and popped in Post(EndEnumerationTypeStmt).
 bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
+  BeginAttrs();
+  // TODO: Remove this and set true when ENUMERATION TYPEs are implemented.
   Say(std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source,
       "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
   return false;
 }
 
-void DeclarationVisitor::Post(const parser::EnumDef &) {
-  enumerationState_ = EnumeratorState{};
+// F2023 R767 EnumerationTypeStmt — create the enumeration type symbol
+// in the enclosing scope and push a DerivedType scope for it.
+void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
+  const auto &name{std::get<parser::Name>(x.t)};
+  Attrs attrs{EndAttrs()};
+  if (const auto &optAccessSpec{
+          std::get<std::optional<parser::AccessSpec>>(x.t)};
+      optAccessSpec) {
+    if (!NonDerivedTypeScope().IsModule()) { // F2023 C7114
+      Say(currStmtSource().value(),
+          "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
+    }
+  }
+  DerivedTypeDetails details;
+  details.set_isEnumerationType(true);
+  auto &symbol{MakeSymbol(name, attrs, std::move(details))};
+  symbol.ReplaceName(name.source);
+  PushScope(Scope::Kind::DerivedType, &symbol);
+  // Add a hidden __ordinal component to hold the 1-based enumerator position.
+  // This is a compiler-created INTEGER(4) component that preserves ordinal
+  // identity through constant folding and enables enumerator comparison.
+  SourceName ordinalName{context().SaveTempName(std::string{"__ordinal"})};
+  Symbol &ordinalSym{MakeSymbol(currScope(), ordinalName, Attrs{})};
+  ordinalSym.set_details(ObjectEntityDetails{});
+  ordinalSym.SetType(
+      currScope().MakeNumericType(TypeCategory::Integer, KindExpr{4}));
+  ordinalSym.set(Symbol::Flag::CompilerCreated);
+  symbol.get<DerivedTypeDetails>().add_component(ordinalSym);
+}
+
+// F2023 R768 EnumerationEnumeratorStmt — create PARAMETER symbols for
+// each enumerator name in the enclosing scope with 1-based ordinal init.
+bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
+  Scope &enclosingScope{NonDerivedTypeScope()};
+  // The current DerivedType scope's symbol is the enumeration type.
+  Symbol *typeSymbol{currScope().symbol()};
+  CHECK(typeSymbol);
+  auto &typeDetails{typeSymbol->get<DerivedTypeDetails>()};
+  // Build a DerivedTypeSpec for the enumeration type.
+  DerivedTypeSpec enumTypeSpec{typeSymbol->name(), *typeSymbol};
+  enumTypeSpec.set_category(DerivedTypeSpec::Category::EnumerationType);
+  DeclTypeSpec &declType{enclosingScope.MakeDerivedType(
+      DeclTypeSpec::TypeDerived, std::move(enumTypeSpec))};
+  for (const parser::Name &name : x.v) {
+    int ordinal{typeDetails.enumeratorCount() + 1};
+    // Create the enumerator symbol in the enclosing scope, not the
+    // enumeration type's own DerivedType scope.
+    Symbol &enumerator{
+        MakeSymbol(enclosingScope, name.source, Attrs{Attr::PARAMETER})};
+    Resolve(name, enumerator);
+    enumerator.set_details(ObjectEntityDetails{});
+    enumerator.SetType(declType);
+    // Store the init as a StructureConstructor of the enumeration type with
+    // the ordinal in the hidden __ordinal component.  This gives each
+    // enumerator a distinct Constant<SomeDerived> value.
+    evaluate::StructureConstructor enumCtor{declType.derivedTypeSpec()};
+    // Look up the __ordinal component symbol in the type's scope.
+    auto ordinalIter{currScope().find(SourceName{"__ordinal", 9})};
+    CHECK(ordinalIter != currScope().end());
+    const Symbol &ordinalSym{*ordinalIter->second};
+    enumCtor.Add(ordinalSym,
+        evaluate::AsGenericExpr(evaluate::Expr<evaluate::CInteger>{ordinal}));
+    enumerator.get<ObjectEntityDetails>().set_init(
+        SomeExpr{evaluate::Expr<evaluate::SomeDerived>{
+            evaluate::Constant<evaluate::SomeDerived>{std::move(enumCtor)}}});
+    typeDetails.set_enumeratorCount(ordinal);
+  }
+  return false;
+}
+
+// F2023 R769 EndEnumerationTypeStmt — pop the scope.
+void DeclarationVisitor::Post(const parser::EndEnumerationTypeStmt &) {
+  PopScope();
 }
 
 bool DeclarationVisitor::Pre(const parser::AccessSpec &x) {
@@ -6610,6 +6692,17 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   // in the current scope, this spec will be moved into that collection.
   const auto &dtDetails{spec->typeSymbol().get<DerivedTypeDetails>()};
   auto category{GetDeclTypeSpecCategory()};
+
+  // Enumeration types are a special case of derived types and are handled
+  // differently.
+  if (dtDetails.isEnumerationType()) {
+    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
+    DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
+    SetDeclTypeSpec(type);
+    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
+    return;
+  }
+
   if (dtDetails.isForwardReferenced()) {
     DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
     SetDeclTypeSpec(type);
@@ -8930,6 +9023,12 @@ public:
     return true;
   }
   void Post(const parser::DerivedTypeDef &) { PopScope(); }
+  bool Pre(const parser::EnumerationTypeStmt &x) {
+    Hide(std::get<parser::Name>(x.t));
+    PushScope();
+    return true;
+  }
+  void Post(const parser::EnumerationTypeDef &) { PopScope(); }
   bool Pre(const parser::SelectTypeConstruct &) {
     PushScope();
     return true;
@@ -9404,6 +9503,12 @@ const parser::Name *DeclarationVisitor::FindComponent(
       return &component;
     }
   } else if (DerivedTypeSpec * derived{type->AsDerived()}) {
+    if (derived->IsEnumerationType()) {
+      Say(component.source,
+          "Component reference is not allowed for enumeration type '%s'"_err_en_US,
+          derived->typeSymbol().name());
+      return nullptr;
+    }
     derived->Instantiate(currScope()); // in case of forward referenced type
     if (const Scope * scope{derived->scope()}) {
       if (Resolve(component, scope->FindComponent(component.source))) {
@@ -11093,6 +11198,25 @@ public:
     }
   }
   void Post(const parser::EndTypeStmt &) {
+    if (outerScope_) {
+      resolver_.SetScope(*outerScope_);
+      outerScope_ = nullptr;
+    }
+  }
+
+  void Post(const parser::EnumerationTypeStmt &x) {
+    const auto &name{std::get<parser::Name>(x.t)};
+    if (Symbol * symbol{name.symbol}) {
+      if (Scope * scope{symbol->scope()}) {
+        if (scope->IsDerivedType()) {
+          CHECK(outerScope_ == nullptr);
+          outerScope_ = &resolver_.currScope();
+          resolver_.SetScope(*scope);
+        }
+      }
+    }
+  }
+  void Post(const parser::EndEnumerationTypeStmt &) {
     if (outerScope_) {
       resolver_.SetScope(*outerScope_);
       outerScope_ = nullptr;

@@ -11,6 +11,7 @@
 #include "flang/Common/reference.h"
 #include "flang/Common/template.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
@@ -236,6 +237,103 @@ template <TypeCategory CAT> struct TypeVisitor {
   const std::list<parser::CaseConstruct::Case> &caseList;
 };
 
+// Convert a single enumeration CASE value to its __ordinal integer.
+static bool ConvertEnumCaseValue(SemanticsContext &context,
+    const parser::CaseValue &caseValue,
+    const semantics::DerivedTypeSpec &enumType,
+    const semantics::Symbol &ordSym) {
+  const auto &expr{parser::UnwrapRef<parser::Expr>(caseValue)};
+  auto *x{expr.typedExpr.get()};
+  if (!x || !x->v) {
+    return false;
+  }
+  auto type{x->v->GetType()};
+  if (!type || type->category() != TypeCategory::Derived) {
+    std::string typeStr{type ? type->AsFortran() : "typeless"s};
+    context.Say(expr.source,
+        "CASE value has type '%s' which is not compatible with the SELECT CASE expression's type '%s'"_err_en_US,
+        typeStr, enumType.AsFortran());
+    return false;
+  }
+  const auto *caseDerived{evaluate::GetDerivedTypeSpec(*type)};
+  if (!caseDerived || !caseDerived->IsEnumerationType() ||
+      &caseDerived->typeSymbol() != &enumType.typeSymbol()) {
+    context.Say(expr.source,
+        "CASE value has type '%s' which is not compatible with the SELECT CASE expression's type '%s'"_err_en_US,
+        type->AsFortran(), enumType.AsFortran());
+    return false;
+  }
+  // Extract the ordinal integer from the constant enum value
+  parser::Messages buffer;
+  parser::ContextualMessages foldingMessages{expr.source, &buffer};
+  evaluate::FoldingContext foldingContext{
+      context.foldingContext(), foldingMessages};
+  auto folded{evaluate::Fold(foldingContext, SomeExpr{*x->v})};
+  if (auto sc{
+          evaluate::GetScalarConstantValue<evaluate::SomeDerived>(folded)}) {
+    if (auto ordExpr{sc->Find(ordSym)}) {
+      x->v = std::move(*ordExpr);
+      return true;
+    }
+  }
+  context.Say(expr.source,
+      "CASE value (%s) must be a constant scalar"_err_en_US, x->v->AsFortran());
+  return false;
+}
+
+// Walk all CASE values in an enumeration SELECT CASE, check type
+// compatibility, and convert each to its ordinal integer value.
+static bool ConvertEnumCaseValues(SemanticsContext &context,
+    const std::list<parser::CaseConstruct::Case> &cases,
+    const semantics::DerivedTypeSpec &enumType) {
+  const auto *scope{enumType.GetScope()};
+  if (!scope) {
+    return false;
+  }
+  auto ordIter{scope->find(semantics::SourceName{"__ordinal", 9})};
+  if (ordIter == scope->end()) {
+    return false;
+  }
+  const semantics::Symbol &ordSym{*ordIter->second};
+  bool ok{true};
+  for (const auto &c : cases) {
+    const auto &stmt{std::get<parser::Statement<parser::CaseStmt>>(c.t)};
+    const auto &selector{std::get<parser::CaseSelector>(stmt.statement.t)};
+    common::visit(common::visitors{
+                      [&](const std::list<parser::CaseValueRange> &ranges) {
+                        for (const auto &range : ranges) {
+                          common::visit(
+                              common::visitors{
+                                  [&](const parser::CaseValue &val) {
+                                    if (!ConvertEnumCaseValue(
+                                            context, val, enumType, ordSym)) {
+                                      ok = false;
+                                    }
+                                  },
+                                  [&](const parser::CaseValueRange::Range &r) {
+                                    const auto &[lower, upper]{r.t};
+                                    if (lower &&
+                                        !ConvertEnumCaseValue(context, *lower,
+                                            enumType, ordSym)) {
+                                      ok = false;
+                                    }
+                                    if (upper &&
+                                        !ConvertEnumCaseValue(context, *upper,
+                                            enumType, ordSym)) {
+                                      ok = false;
+                                    }
+                                  },
+                              },
+                              range.u);
+                        }
+                      },
+                      [](const parser::Default &) {},
+                  },
+        selector.u);
+  }
+  return ok;
+}
+
 void CaseChecker::Enter(const parser::CaseConstruct &construct) {
   const auto &selectCaseStmt{
       std::get<parser::Statement<parser::SelectCaseStmt>>(construct.t)};
@@ -266,13 +364,26 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
       common::SearchTypes(
           TypeVisitor<TypeCategory::Character>{context_, *exprType, caseList});
       return;
+    case TypeCategory::Derived:
+      if (const auto *derived{evaluate::GetDerivedTypeSpec(*exprType)}) {
+        if (derived->IsEnumerationType()) {
+          if (ConvertEnumCaseValues(context_, caseList, *derived)) {
+            evaluate::DynamicType intType{TypeCategory::Integer, 4};
+            CaseValues<evaluate::Type<TypeCategory::Integer, 4>>{
+                context_, intType}
+                .Check(caseList);
+          }
+          return;
+        }
+      }
+      break;
     default:
       break;
     }
   }
   context_.Say(selectExpr.source,
       context_.IsEnabled(common::LanguageFeature::Unsigned)
-          ? "SELECT CASE expression must be integer, unsigned, logical, or character"_err_en_US
-          : "SELECT CASE expression must be integer, logical, or character"_err_en_US);
+          ? "SELECT CASE expression must be integer, unsigned, logical, character, or enumeration type"_err_en_US
+          : "SELECT CASE expression must be integer, logical, character, or enumeration type"_err_en_US);
 }
 } // namespace Fortran::semantics
