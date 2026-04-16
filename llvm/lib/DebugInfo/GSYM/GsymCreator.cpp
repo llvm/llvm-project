@@ -171,7 +171,7 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
 
   // Verify that the size of the string table does not exceed 32-bit max.
   // This means the offsets in the string table will not exceed 32-bit max.
-  if (static_cast<uint64_t>(StrtabSize) > UINT32_MAX) {
+  if (StrtabSize > UINT32_MAX) {
     return createStringError(std::errc::invalid_argument,
                              "string table size exceeded 32-bit max");
   }
