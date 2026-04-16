@@ -1850,7 +1850,6 @@ define i1 @same_const_sub_uitofp_olt(i32 %x) {
 
 define i1 @same_const_sub_no_fold_large_c(i32 %x) {
 ; CHECK-LABEL: @same_const_sub_no_fold_large_c(
-; CHECK-NOT:    icmp
 ; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to float
 ; CHECK-NEXT:    [[S:%.*]] = fsub float 0x417FFFFFE0000000, [[F]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[S]], 0x417FFFFFE0000000
@@ -1870,7 +1869,7 @@ define <2 x i1> @same_const_sub_sitofp_vec_eq(<2 x i32> %x) {
   %f = sitofp <2 x i32> %x to <2 x float>
   %s = fsub <2 x float> <float 1.000000e+00, float 1.000000e+00>, %f
   %cmp = fcmp oeq <2 x float> %s,
-                   <float 1.000000e+00, float 1.000000e+00>
+  <float 1.000000e+00, float 1.000000e+00>
   ret <2 x i1> %cmp
 }
 
@@ -1882,7 +1881,7 @@ define <2 x i1> @same_const_sub_uitofp_vec_olt(<2 x i32> %x) {
   %f = uitofp <2 x i32> %x to <2 x float>
   %s = fsub <2 x float> <float 2.000000e+00, float 2.000000e+00>, %f
   %cmp = fcmp olt <2 x float> %s,
-                   <float 2.000000e+00, float 2.000000e+00>
+  <float 2.000000e+00, float 2.000000e+00>
   ret <2 x i1> %cmp
 }
 
@@ -1925,7 +1924,6 @@ define i1 @same_const_sub_sitofp_x86_fp80_eq(i32 %x) {
 
 define i1 @same_const_sub_no_fold_x86_fp80_large_c(i32 %x) {
 ; CHECK-LABEL: @same_const_sub_no_fold_x86_fp80_large_c(
-; CHECK-NOT:    icmp
 ; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to x86_fp80
 ; CHECK-NEXT:    [[S:%.*]] = fsub x86_fp80 0xK403F8000000000000000, [[F]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq x86_fp80 [[S]], 0xK403F8000000000000000
@@ -1940,7 +1938,6 @@ define i1 @same_const_sub_no_fold_x86_fp80_large_c(i32 %x) {
 
 define i1 @same_const_sub_no_fold_ppcfp128(i32 %x) {
 ; CHECK-LABEL: @same_const_sub_no_fold_ppcfp128(
-; CHECK-NOT:    icmp
 ; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to ppc_fp128
 ; CHECK-NEXT:    [[S:%.*]] = fsub ppc_fp128 0xM3FF00000000000000000000000000000, [[F]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq ppc_fp128 [[S]], 0xM3FF00000000000000000000000000000
@@ -2597,7 +2594,7 @@ define i1 @fabs_uitofp_sub_olt_one(i16 %x, i16 %y) {
   ret i1 %cmp
 }
 
-; fabs(uitofp(a) - uitofp(b)) u< 1.0 --> a == b
+; fabs(uitofp(a) - uitofp(b)) < 1.0 --> a == b
 define i1 @fabs_uitofp_sub_ult_one(i16 %x, i16 %y) {
 ; CHECK-LABEL: @fabs_uitofp_sub_ult_one(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
@@ -2621,6 +2618,40 @@ define i1 @fabs_sitofp_sub_olt_one(i16 %x, i16 %y) {
   %sub = fsub float %fx, %fy
   %abs = call float @llvm.fabs.f32(float %sub)
   %cmp = fcmp olt float %abs, 1.0
+  ret i1 %cmp
+}
+
+define i1 @fabs_uitofp_sub_ule_one(i16 %x, i16 %y) {
+; CHECK-LABEL: @fabs_uitofp_sub_ule_one(
+; CHECK-NEXT:    [[FX:%.*]] = uitofp i16 [[X:%.*]] to float
+; CHECK-NEXT:    [[FY:%.*]] = uitofp i16 [[Y:%.*]] to float
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FX]], [[FY]]
+; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ABS]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = uitofp i16 %x to float
+  %fy = uitofp i16 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp ule float %abs, 1.0
+  ret i1 %cmp
+}
+
+define i1 @fabs_sitofp_sub_ole_one(i16 %x, i16 %y) {
+; CHECK-LABEL: @fabs_sitofp_sub_ole_one(
+; CHECK-NEXT:    [[FX:%.*]] = sitofp i16 [[X:%.*]] to float
+; CHECK-NEXT:    [[FY:%.*]] = sitofp i16 [[Y:%.*]] to float
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FX]], [[FY]]
+; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ABS]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = sitofp i16 %x to float
+  %fy = sitofp i16 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp ole float %abs, 1.0
   ret i1 %cmp
 }
 

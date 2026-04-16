@@ -8787,6 +8787,7 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
 
   FCmpInst::Predicate Pred = I.getPredicate();
   bool IsStrictLt = Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT;
+  bool IsLe = Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE;
   bool IsStrictGt = Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT;
   bool IsGe = Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE;
   if (!IsStrictLt && !IsStrictGt && !IsGe)
@@ -8804,6 +8805,8 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
     return nullptr;
   if (IsGe && Cmp == APFloat::cmpGreaterThan)
     return nullptr;
+  if (IsLe && Cmp == APFloat::cmpGreaterThan)
+    return nullptr;
   if (IsStrictGt && Cmp != APFloat::cmpLessThan)
     return nullptr;
 
@@ -8817,12 +8820,18 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
   if (A->getType() != B->getType())
     return nullptr;
 
-  auto *FPCast = cast<CastInst>(cast<Instruction>(FAbsArg)->getOperand(0));
-  if (!IC.isKnownExactCastIntToFP(*FPCast))
+  auto *FPCastOp0 = cast<CastInst>(cast<Instruction>(FAbsArg)->getOperand(0));
+  auto *FPCastOp1 = cast<CastInst>(cast<Instruction>(FAbsArg)->getOperand(1));
+  bool is_signed = FPCastOp0->getOpcode() == CastInst::SIToFP &&
+                   FPCastOp1->getOpcode() == CastInst::SIToFP;
+  Type *FPTy = FPCastOp0->getType();
+  if (!IC.canBeCastedExactlyIntToFP(FPCastOp0->getOperand(0), FPTy, is_signed,
+                                    &I) ||
+      !IC.canBeCastedExactlyIntToFP(FPCastOp1->getOperand(0), FPTy, is_signed,
+                                    &I))
     return nullptr;
-
   ICmpInst::Predicate ResultPred =
-      (IsStrictLt) ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+      IsStrictLt ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
   return new ICmpInst(ResultPred, A, B);
 }
 
