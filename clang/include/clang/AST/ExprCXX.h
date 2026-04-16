@@ -503,6 +503,7 @@ public:
                                     TypeSourceInfo *Written, SourceLocation L,
                                     SourceLocation RParenLoc,
                                     SourceRange AngleBrackets);
+
   static CXXDynamicCastExpr *CreateEmpty(const ASTContext &Context,
                                          unsigned pathSize);
 
