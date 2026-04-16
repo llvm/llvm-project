@@ -2422,9 +2422,9 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   // Retrieve the target table for each symbol.
   {
     std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
-    assert(TM->Table->TargetsTable.size() > (size_t)DeviceId &&
-           "Not expecting a device ID outside the table's bounds!");
     for (auto &S : Symbols) {
+      assert(S.TM->Table->TargetsTable.size() > (size_t)DeviceId &&
+             "Not expecting a device ID outside the table's bounds!");
       S.TargetTable = S.TM->Table->TargetsTable[DeviceId];
       assert(S.TargetTable && "Global data has not been mapped\n");
     }

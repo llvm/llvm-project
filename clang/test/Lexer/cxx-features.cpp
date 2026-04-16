@@ -14,21 +14,25 @@
 
 // expected-no-diagnostics
 
-// FIXME using `defined` in a macro has undefined behavior.
+// An undefined feature-test macro evaluates to 0 in an #if expression, so
+// `__cpp_##macro != N` tests the feature is defined with the exact value N
+// when N is nonzero, and tests the feature is not defined (or is defined to 0,
+// which feature-test macros never are) when N is 0. Avoiding `defined` inside
+// a macro expansion is required for conformance with [cpp.cond].
 #if __cplusplus < 201103L
-#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (cxx98 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx98)
+#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (__cpp_##macro != cxx98)
 #elif __cplusplus < 201402L
-#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (cxx11 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx11)
+#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (__cpp_##macro != cxx11)
 #elif __cplusplus < 201703L
-#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (cxx14 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx14)
+#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (__cpp_##macro != cxx14)
 #elif __cplusplus < 202002L
-#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (cxx17 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx17)
+#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (__cpp_##macro != cxx17)
 #elif __cplusplus < 202302L
-#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (cxx20 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx20)
+#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (__cpp_##macro != cxx20)
 #elif __cplusplus == 202302L
-#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (cxx23 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx23)
+#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (__cpp_##macro != cxx23)
 #else
-#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (cxx26 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx26)
+#define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23, cxx26) (__cpp_##macro != cxx26)
 #endif
 
 // --- C++26 features ---

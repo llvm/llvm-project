@@ -19,6 +19,17 @@ define void @fastmath_inst(float %arg1, float %arg2, i1 %arg3) {
 
 ; // -----
 
+; CHECK-LABEL: @fastmath_cast
+define void @fastmath_cast(float %arg1) {
+  ; CHECK: llvm.fpext %{{.*}} fastmath<nnan> : f32 to f64
+  %1 = fpext nnan float %arg1 to double
+  ; CHECK: llvm.fptrunc %{{.*}} fastmath<fast> : f32 to f16
+  %2 = fptrunc fast float %arg1 to half
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @fastmath_fcmp
 define void @fastmath_fcmp(float %arg1, float %arg2) {
   ; CHECK:  llvm.fcmp "oge" %{{.*}}, %{{.*}} {fastmathFlags = #llvm.fastmath<nsz>} : f32
