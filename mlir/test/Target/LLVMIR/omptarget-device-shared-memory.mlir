@@ -1,4 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+
 // This test checks that, when compiling for an offloading target, device shared
 // memory will be used in place of allocas for certain private variables.
 

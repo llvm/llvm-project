@@ -640,19 +640,19 @@ public:
   /// such InsertPoints need to be preserved, it can split the block itself
   /// before calling the callback.
   ///
-  /// AllocIP and CodeGenIP must not point to the same position.
+  /// AllocaIP and CodeGenIP must not point to the same position.
   ///
-  /// \param AllocIP    is the insertion point at which new allocations should
+  /// \param AllocaIP   is the insertion point at which new allocations should
   ///                   be placed. The BasicBlock it is pointing to must not be
   ///                   split.
   /// \param CodeGenIP  is the insertion point at which the body code should be
   ///                   placed.
-  /// \param DeallocIPs is the list of insertion points where explicit
-  ///                   deallocations, if needed, should be placed.
+  /// \param DeallocBlocks is the list of insertion blocks where explicit
+  ///                      deallocations, if needed, should be placed.
   /// \return an error, if any were triggered during execution.
   using BodyGenCallbackTy =
-      function_ref<Error(InsertPointTy AllocIP, InsertPointTy CodeGenIP,
-                         ArrayRef<InsertPointTy> DeallocIPs)>;
+      function_ref<Error(InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                         ArrayRef<BasicBlock *> DeallocBlocks)>;
 
   /// Callback type for task duplication function code generation. This is the
   /// task duplication function passed to __kmpc_taskloop. It is expected that
@@ -693,8 +693,8 @@ public:
   ///
   /// \return an error, if any were triggered during execution.
   using StorableBodyGenCallbackTy =
-      std::function<Error(InsertPointTy AllocIP, InsertPointTy CodeGenIP,
-                          ArrayRef<InsertPointTy> DeallocIPs)>;
+      std::function<Error(InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                          ArrayRef<BasicBlock *> DeallocBlocks)>;
 
   /// Callback type for loop body code generation.
   ///
@@ -788,8 +788,8 @@ public:
   /// Generator for '#omp parallel'
   ///
   /// \param Loc The insert and source location description.
-  /// \param AllocIP The insertion point to be used for allocations.
-  /// \param DeallocIPs The insertion points to be used for explicit
+  /// \param AllocaIP The insertion point to be used for allocations.
+  /// \param DeallocBlocks The insertion blocks to be used for explicit
   /// deallocations, if needed.
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param PrivCB Callback to copy a given variable (think copy constructor).
@@ -801,8 +801,8 @@ public:
   ///
   /// \returns The insertion position *after* the parallel.
   LLVM_ABI InsertPointOrErrorTy createParallel(
-      const LocationDescription &Loc, InsertPointTy AllocIP,
-      ArrayRef<InsertPointTy> DeallocIPs, BodyGenCallbackTy BodyGenCB,
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB,
       PrivatizeCallbackTy PrivCB, FinalizeCallbackTy FiniCB, Value *IfCondition,
       Value *NumThreads, omp::ProcBindKind ProcBind, bool IsCancellable);
 
@@ -1554,6 +1554,8 @@ public:
   ///
   /// \param Loc The location where the taskloop construct was encountered.
   /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param DeallocBlocks The list of insertion blocks where explicit
+  ///                      deallocations, if needed, should be placed.
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param LoopInfo Callback that return the CLI
   /// \param LBVal Lowerbound value of loop
@@ -1585,7 +1587,7 @@ public:
   ///                                bound, step} values in the task data.
   LLVM_ABI InsertPointOrErrorTy createTaskloop(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
-      ArrayRef<InsertPointTy> DeallocIPs, BodyGenCallbackTy BodyGenCB,
+      ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB,
       llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
       Value *LBVal, Value *UBVal, Value *StepVal, bool Untied = false,
       Value *IfCond = nullptr, Value *GrainSize = nullptr, bool NoGroup = false,
@@ -1597,9 +1599,9 @@ public:
   /// Generator for `#omp task`
   ///
   /// \param Loc The location where the task construct was encountered.
-  /// \param AllocIP The insertion point to be used for allocations.
-  /// \param DeallocIPs The insertion points to be used for explicit
-  ///                   deallocations, if needed.
+  /// \param AllocaIP The insertion point to be used for allocations.
+  /// \param DeallocBlocks The insertion blocks to be used for explicit
+  ///                      deallocations, if needed.
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param Tied True if the task is tied, false if the task is untied.
   /// \param Final i1 value which is `true` if the task is final, `false` if the
@@ -1620,8 +1622,8 @@ public:
   /// \param priority `priority-value' specifies the execution order of the
   ///                 tasks that is generated by the construct
   LLVM_ABI InsertPointOrErrorTy createTask(
-      const LocationDescription &Loc, InsertPointTy AllocIP,
-      ArrayRef<InsertPointTy> DeallocIPs, BodyGenCallbackTy BodyGenCB,
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB,
       bool Tied = true, Value *Final = nullptr, Value *IfCondition = nullptr,
       const DependenciesInfo Dependencies = {}, const AffinityData Affinities = {},
       bool Mergeable = false, Value *EventHandle = nullptr,
@@ -1630,13 +1632,13 @@ public:
   /// Generator for the taskgroup construct
   ///
   /// \param Loc The location where the taskgroup construct was encountered.
-  /// \param AllocIP The insertion point to be used for allocations.
-  /// \param DeallocIPs The insertion point to be used for explicit deallocation
-  /// instructions, if needed.
+  /// \param AllocaIP The insertion point to be used for allocations.
+  /// \param DeallocBlocks The insertion blocks to be used for explicit
+  ///                      deallocation instructions, if needed.
   /// \param BodyGenCB Callback that will generate the region code.
   LLVM_ABI InsertPointOrErrorTy createTaskgroup(
-      const LocationDescription &Loc, InsertPointTy AllocIP,
-      ArrayRef<InsertPointTy> DeallocIPs, BodyGenCallbackTy BodyGenCB);
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB);
 
   using FileIdentifierInfoCallbackTy =
       std::function<std::tuple<std::string, uint64_t>()>;
@@ -2650,8 +2652,8 @@ public:
   /// \return an error, if any were triggered during execution.
   LLVM_ABI Error emitIfClause(Value *Cond, BodyGenCallbackTy ThenGen,
                               BodyGenCallbackTy ElseGen,
-                              InsertPointTy AllocIP = {},
-                              ArrayRef<InsertPointTy> DeallocIPs = {});
+                              InsertPointTy AllocaIP = {},
+                              ArrayRef<BasicBlock *> DeallocBlocks = {});
 
   /// Create the global variable holding the offload mappings information.
   LLVM_ABI GlobalVariable *
@@ -3214,13 +3216,13 @@ public:
   /// Generator for `#omp distribute`
   ///
   /// \param Loc The location where the distribute construct was encountered.
-  /// \param AllocIP The insertion point to be used for allocations.
-  /// \param DeallocIPs The insertion points to be used for explicit
-  /// deallocations, if needed.
+  /// \param AllocaIP The insertion point to be used for allocations.
+  /// \param DeallocBlocks The insertion blocks to be used for explicit
+  ///        deallocations, if needed.
   /// \param BodyGenCB Callback that will generate the region code.
   LLVM_ABI InsertPointOrErrorTy createDistribute(
-      const LocationDescription &Loc, InsertPointTy AllocIP,
-      ArrayRef<InsertPointTy> DeallocIPs, BodyGenCallbackTy BodyGenCB);
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
@@ -3571,10 +3573,10 @@ public:
   /// Generator for '#omp target data'
   ///
   /// \param Loc The location where the target data construct was encountered.
-  /// \param AllocIP The insertion points to be used for allocations.
+  /// \param AllocaIP The insertion points to be used for allocations.
   /// \param CodeGenIP The insertion point at which the target directive code
   /// should be placed.
-  /// \param DeallocIPs The insertion points at which explicit deallocations
+  /// \param DeallocBlocks The insertion blocks at which explicit deallocations
   /// should be placed, if needed.
   /// \param IsBegin If true then emits begin mapper call otherwise emits
   /// end mapper call.
@@ -3588,8 +3590,8 @@ public:
   /// \param DeviceAddrCB Optional callback to generate code related to
   /// use_device_ptr and use_device_addr.
   LLVM_ABI InsertPointOrErrorTy createTargetData(
-      const LocationDescription &Loc, InsertPointTy AllocIP,
-      InsertPointTy CodeGenIP, ArrayRef<InsertPointTy> DeallocIPs,
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      InsertPointTy CodeGenIP, ArrayRef<BasicBlock *> DeallocBlocks,
       Value *DeviceID, Value *IfCond, TargetDataInfo &Info,
       GenMapInfoCallbackTy GenMapInfoCB, CustomMapperCallbackTy CustomMapperCB,
       omp::RuntimeFunction *MapperFunc = nullptr,
@@ -3600,8 +3602,8 @@ public:
       Value *SrcLocInfo = nullptr);
 
   using TargetBodyGenCallbackTy = function_ref<InsertPointOrErrorTy(
-      InsertPointTy AllocIP, InsertPointTy CodeGenIP,
-      ArrayRef<InsertPointTy> DeallocIPs)>;
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+      ArrayRef<BasicBlock *> DeallocBlocks)>;
 
   using TargetGenArgAccessorsCallbackTy = function_ref<InsertPointOrErrorTy(
       Argument &Arg, Value *Input, Value *&RetVal, InsertPointTy AllocIP,
@@ -3613,7 +3615,7 @@ public:
   /// \param IsOffloadEntry whether it is an offload entry.
   /// \param CodeGenIP The insertion point where the call to the outlined
   ///        function should be emitted.
-  /// \param DeallocIPs The insertion points at which explicit deallocations
+  /// \param DeallocBlocks The insertion points at which explicit deallocations
   ///        should be placed, if needed.
   /// \param Info Stores all information realted to the Target directive.
   /// \param EntryInfo The entry information about the function.
@@ -3639,9 +3641,9 @@ public:
   /// cgroup memory cannot be provided.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
-      OpenMPIRBuilder::InsertPointTy AllocIP,
+      OpenMPIRBuilder::InsertPointTy AllocaIP,
       OpenMPIRBuilder::InsertPointTy CodeGenIP,
-      ArrayRef<InsertPointTy> DeallocIPs, TargetDataInfo &Info,
+      ArrayRef<BasicBlock *> DeallocBlocks, TargetDataInfo &Info,
       TargetRegionEntryInfo &EntryInfo,
       const TargetKernelDefaultAttrs &DefaultAttrs,
       const TargetKernelRuntimeAttrs &RuntimeAttrs, Value *IfCond,

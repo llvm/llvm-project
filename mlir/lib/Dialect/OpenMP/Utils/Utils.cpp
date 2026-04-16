@@ -31,19 +31,16 @@ static bool allocaUseRequiresSharedMem(const OpOperand &use) {
   // unless the use is a private clause.
   if (owner->getParentOfType<omp::ParallelOp>()) {
     if (auto argIface = dyn_cast<omp::BlockArgOpenMPOpInterface>(owner)) {
-      if (auto privateSyms =
-              cast_or_null<ArrayAttr>(owner->getAttr("private_syms"))) {
-        for (auto [var, sym] :
-             llvm::zip_equal(argIface.getPrivateVars(), privateSyms)) {
-          if (var != use.get())
-            continue;
-
-          auto moduleOp = owner->getParentOfType<ModuleOp>();
-          auto privateOp = cast<omp::PrivateClauseOp>(
-              moduleOp.lookupSymbol(cast<SymbolRefAttr>(sym)));
-          return privateOp.getDataSharingType() !=
-                 omp::DataSharingClauseType::Private;
-        }
+      OperandRange privateVars = argIface.getPrivateVars();
+      auto it = llvm::find(privateVars, use.get());
+      if (it != privateVars.end()) {
+        auto privateSyms = owner->getAttrOfType<ArrayAttr>("private_syms");
+        size_t idx = std::distance(privateVars.begin(), it);
+        auto privateOp =
+            SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
+                owner, cast<SymbolRefAttr>(privateSyms[idx]));
+        return privateOp.getDataSharingType() !=
+               omp::DataSharingClauseType::Private;
       }
     }
     return true;

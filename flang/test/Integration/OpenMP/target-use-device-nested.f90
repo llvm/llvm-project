@@ -7,7 +7,7 @@
 !===----------------------------------------------------------------------===!
 
 ! This tests check that target code nested inside a target data region which
-! has only use_device_ptr mapping corectly generates code on the device pass.
+! has only use_device_ptr mapping correctly generates code on the device pass.
 
 !REQUIRES: amdgpu-registered-target
 !RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-llvm -fopenmp -fopenmp-version=50 -fopenmp-is-target-device %s -o - | FileCheck %s
