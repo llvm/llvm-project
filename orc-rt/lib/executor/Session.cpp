@@ -56,7 +56,13 @@ Session::Session(ExecutorProcessInfo EPI,
       ReportError(std::move(ReportError)),
       Notifiers(createService<NotificationService>()) {}
 
-Session::~Session() { waitForShutdown(); }
+Session::~Session() {
+  shutdown();
+  std::unique_lock<std::mutex> Lock(M);
+  CV.wait(Lock, [&]() {
+    return CurrentState == State::Shutdown && TargetState == State::None;
+  });
+}
 
 void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
   assert(CA && "attach called with null CA object");
@@ -193,14 +199,6 @@ void Session::shutdown(OnShutdownFn OnShutdown) {
   }
 
   TmpCA->disconnect();
-}
-
-void Session::waitForShutdown() {
-  std::promise<void> P;
-  auto F = P.get_future();
-  addOnShutdown([P = std::move(P)]() mutable { P.set_value(); });
-  shutdown();
-  F.get();
 }
 
 void Session::addOnDetach(OnDetachFn OnDetach) {
@@ -354,10 +352,13 @@ void Session::shutdownServices(std::vector<Service *> ToNotify) {
 void Session::completeShutdown() {
   Dispatcher->shutdown();
 
-  std::unique_lock<std::mutex> Lock(M);
-  assert(CurrentState == State::Shutdown);
-  assert(TargetState == State::Shutdown);
-  TargetState = State::None;
+  {
+    std::scoped_lock<std::mutex> Lock(M);
+    assert(CurrentState == State::Shutdown);
+    assert(TargetState == State::Shutdown);
+    TargetState = State::None;
+  }
+  CV.notify_all();
 }
 
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
