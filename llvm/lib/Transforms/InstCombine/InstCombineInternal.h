@@ -148,7 +148,7 @@ public:
   Instruction *visitIntToPtr(IntToPtrInst &CI);
   Instruction *visitBitCast(BitCastInst &CI);
   Instruction *visitAddrSpaceCast(AddrSpaceCastInst &CI);
-  Instruction *foldItoFPtoI(CastInst &FI);
+  template <typename FPToIntTy> Instruction *foldItoFPtoI(FPToIntTy &FI);
   Instruction *visitSelectInst(SelectInst &SI);
   Instruction *foldShuffledIntrinsicOperands(IntrinsicInst *II);
   Value *foldReversedIntrinsicOperands(IntrinsicInst *II);
