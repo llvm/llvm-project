@@ -1,10 +1,10 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc64-unknown-unknown -fsyntax-only \
-// RUN:   -flax-vector-conversions=none -target-feature +vsx \
-// RUN:   -target-feature +isa-future-instructions -verify %s
+// RUN:   -flax-vector-conversions=none -target-feature +future-vector \
+// RUN:   -target-feature +vsx -target-feature +isa-future-instructions -verify %s
 // RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -fsyntax-only \
-// RUN:   -flax-vector-conversions=none -target-feature +vsx \
-// RUN:   -target-feature +isa-future-instructions -verify %s
+// RUN:   -flax-vector-conversions=none -target-feature +future-vector \
+// RUN:   -target-feature +vsx -target-feature +isa-future-instructions -verify %s
 
 // AI Assissted.
 
