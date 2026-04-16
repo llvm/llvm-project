@@ -1,0 +1,162 @@
+# REQUIRES: aarch64-registered-target
+# REQUIRES: asserts
+
+# RUN: llc -o /dev/null %s -mtriple=aarch64 -mattr=+fuse-address \
+# RUN:   -run-pass machine-scheduler -debug-only=machine-scheduler 2>&1 \
+# RUN:   | FileCheck %s
+# RUN: llc -o /dev/null %s -mtriple=aarch64-apple-macos -mcpu=apple-m5 \
+# RUN:   -run-pass machine-scheduler -debug-only=machine-scheduler 2>&1 \
+# RUN:   | FileCheck %s
+
+#------------------------------------------------------------------------------
+# Test macro fusion conflicts with other macro fusions and with ld/st clustering.
+#
+# Conflict matrix (conflict-source × which-SU-is-clustered):
+#
+#                    | first-clustered | second-clustered | both-clustered
+#   -----------------+-----------------+------------------+----------------
+#   fusion-fusion    | TEST            | (a)              | (a)
+#   load-fusion      | (b)             | TEST             | TEST
+#   store-fusion     | (b)             | TEST             | TEST
+#
+# Unconstructible cases:
+#   (a) fusion-fusion second/both-clustered: the anchor (SecondSU) is visited
+#       exactly once in the fusion loop. It can only be pre-clustered by ld/st
+#       clustering (a different mutation), never by a prior fusion iteration.
+#       both-clustered requires SecondSU to be fusion-clustered, same issue.
+#   (b) load/store-fusion first-clustered: ADRP is not a load/store, so it
+#       cannot be ld/st clustered. The only way ADRP gets clustered is via a
+#       prior fusion, making it identical to fusion-fusion first-clustered.
+#       There are currently no other fusions with loads/stores on AArch64.
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Fusion-fusion conflicts
+#------------------------------------------------------------------------------
+
+# Fusion-fusion, first-clustered: ADRP fans out to two loads at non-adjacent
+# offsets (so they are NOT clustered by LoadClusterDAGMutation). Both ADRP→LDR
+# pairs are valid address fusion pairs. SU(0)→SU(1) fuses first; when
+# SU(0)→SU(2) is attempted, SU(0) is already clustered.
+---
+name: fusion-fusion-first-clustered
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fusion-fusion-first-clustered
+    ; CHECK: Macro fuse: SU(0) - SU(1) /  ADRP - LDRXui
+    ; CHECK: Fusion conflict: cannot fuse SU(0) and SU(2)
+    ; CHECK-NEXT:   SU(0) already clustered
+    ; CHECK: SU(0): $x0 = ADRP 0
+    ; CHECK: SU(1): $x1 = LDRXui $x0, 5 :: (load (s64))
+    ; CHECK: SU(2): $x2 = LDRXui $x0, 10 :: (load (s64))
+    $x0 = ADRP 0
+    $x1 = LDRXui $x0, 5 :: (load (s64))
+    $x2 = LDRXui $x0, 10 :: (load (s64))
+    RET_ReallyLR
+...
+
+#------------------------------------------------------------------------------
+# Load-fusion conflicts
+#------------------------------------------------------------------------------
+
+# Load-fusion, second-clustered: two adjacent loads get clustered by
+# LoadClusterDAGMutation. Then address fusion (ADRP + LDRXui) is attempted
+# but the load SUnit is already clustered.
+---
+name: load-fusion-second-clustered
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: load-fusion-second-clustered
+    ; CHECK: Cluster ld/st SU(1) - SU(2)
+    ; CHECK: Fusion conflict: cannot fuse SU(0) and SU(1)
+    ; CHECK-NEXT:   SU(1) already clustered
+    ; CHECK: SU(0): $x0 = ADRP 0
+    ; CHECK: SU(1): $x1 = LDRXui $x0, 0 :: (load (s64))
+    ; CHECK: SU(2): $x2 = LDRXui $x0, 1 :: (load (s64))
+    $x0 = ADRP 0
+    $x1 = LDRXui $x0, 0 :: (load (s64))
+    $x2 = LDRXui $x0, 1 :: (load (s64))
+    RET_ReallyLR
+...
+
+# Load-fusion, both-clustered: LDR2 and LDR3 get ld/st clustered (adjacent
+# offsets), then ADRP fuses with LDR1 (non-adjacent offset). When fusion tries
+# ADRP + LDR2, both are already clustered.
+---
+name: load-fusion-both-clustered
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: load-fusion-both-clustered
+    ; CHECK: Cluster ld/st SU(2) - SU(3)
+    ; CHECK: Macro fuse: SU(0) - SU(1) /  ADRP - LDRXui
+    ; CHECK: Fusion conflict: cannot fuse SU(0) and SU(2)
+    ; CHECK-NEXT:   SU(0) already clustered
+    ; CHECK-NEXT:   SU(2) already clustered
+    ; CHECK: SU(0): $x0 = ADRP 0
+    ; CHECK: SU(1): $x1 = LDRXui $x0, 5 :: (load (s64))
+    ; CHECK: SU(2): $x2 = LDRXui $x0, 0 :: (load (s64))
+    ; CHECK: SU(3): $x3 = LDRXui $x0, 1 :: (load (s64))
+    $x0 = ADRP 0
+    $x1 = LDRXui $x0, 5 :: (load (s64))
+    $x2 = LDRXui $x0, 0 :: (load (s64))
+    $x3 = LDRXui $x0, 1 :: (load (s64))
+    RET_ReallyLR
+...
+
+#------------------------------------------------------------------------------
+# Store-fusion conflicts
+#------------------------------------------------------------------------------
+
+# Store-fusion, second-clustered: two adjacent stores get clustered by
+# StoreClusterDAGMutation (runs before AArch64 macro fusion). Then address
+# fusion (ADRP + STRXui) is attempted but the store SUnit is already
+# clustered.
+---
+name: store-fusion-second-clustered
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: store-fusion-second-clustered
+    ; CHECK: Cluster ld/st SU(1) - SU(2)
+    ; CHECK: Fusion conflict: cannot fuse SU(0) and SU(1)
+    ; CHECK-NEXT:   SU(1) already clustered
+    ; CHECK: SU(0): $x1 = ADRP 0
+    ; CHECK: SU(1): STRXui $x0, $x1, 0 :: (store (s64))
+    ; CHECK: SU(2): STRXui $x0, $x1, 1 :: (store (s64))
+    $x1 = ADRP 0
+    STRXui $x0, $x1, 0 :: (store (s64))
+    STRXui $x0, $x1, 1 :: (store (s64))
+    RET_ReallyLR
+...
+
+# Store-fusion, both-clustered: STR2 and STR3 get ld/st clustered (adjacent
+# offsets), then ADRP fuses with STR1 (non-adjacent offset). When fusion tries
+# ADRP + STR2, both are already clustered.
+---
+name: store-fusion-both-clustered
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: store-fusion-both-clustered
+    ; CHECK: Cluster ld/st SU(2) - SU(3)
+    ; CHECK: Macro fuse: SU(0) - SU(1) /  ADRP - STRXui
+    ; CHECK: Fusion conflict: cannot fuse SU(0) and SU(2)
+    ; CHECK-NEXT:   SU(0) already clustered
+    ; CHECK-NEXT:   SU(2) already clustered
+    ; CHECK: SU(0): $x1 = ADRP 0
+    ; CHECK: SU(1): STRXui $x0, $x1, 5 :: (store (s64))
+    ; CHECK: SU(2): STRXui $x0, $x1, 0 :: (store (s64))
+    ; CHECK: SU(3): STRXui $x0, $x1, 1 :: (store (s64))
+    $x1 = ADRP 0
+    STRXui $x0, $x1, 5 :: (store (s64))
+    STRXui $x0, $x1, 0 :: (store (s64))
+    STRXui $x0, $x1, 1 :: (store (s64))
+    RET_ReallyLR
+...

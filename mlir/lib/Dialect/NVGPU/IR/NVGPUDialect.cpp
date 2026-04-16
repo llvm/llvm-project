@@ -261,6 +261,9 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
 }
 
 LogicalResult MmaSyncOp::verify() {
+  if (getMmaShape().size() != 3)
+    return emitOpError() << "mmaShape must have exactly 3 elements";
+
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
                          getOperation()->hasAttr(getTf32EnabledAttrName()));
@@ -281,6 +284,10 @@ LogicalResult MmaSparseSyncOp::verify() {
   unsigned sparsitySelector = getSparsitySelector();
   if (sparsitySelector > 1)
     return emitOpError() << "sparsity selector should be 0 or 1";
+
+  if (getMmaShape().size() != 3)
+    return emitOpError() << "mmaShape must have exactly 3 elements";
+
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
                          getOperation()->hasAttr(getTf32EnabledAttrName()),
