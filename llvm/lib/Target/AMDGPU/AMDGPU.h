@@ -541,7 +541,7 @@ extern char &SIPostRABundlerLegacyID;
 void initializeGCNCreateVOPDLegacyPass(PassRegistry &);
 extern char &GCNCreateVOPDID;
 
-void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry&);
+void initializeAMDGPUUnifyDivergentExitNodesLegacyPass(PassRegistry &);
 extern char &AMDGPUUnifyDivergentExitNodesID;
 
 ImmutablePass *createAMDGPUAAWrapperPass();
