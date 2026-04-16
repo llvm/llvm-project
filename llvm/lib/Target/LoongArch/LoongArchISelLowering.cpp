@@ -2211,19 +2211,12 @@ lowerVECTOR_SHUFFLE_VEXTRINS(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
 
     // Replace with EXTRACT_VECTOR_ELT + INSERT_VECTOR_ELT, it will match the
     // patterns of VEXTRINS in tablegen.
-    bool IsEltFP = EltVT.isFloatingPoint();
-    SDValue Extracted =
-        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, IsEltFP ? EltVT : GRLenVT,
-                    SrcVec, DAG.getConstant(SrcIdx, DL, GRLenVT));
-
-    SDValue InsertVal = Extracted;
-    if (!IsEltFP && EltVT != GRLenVT)
-      InsertVal = DAG.getNode(ISD::ANY_EXTEND, DL, GRLenVT,
-                              DAG.getNode(ISD::TRUNCATE, DL, EltVT, Extracted));
-
+    SDValue Extracted = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, DL, EltVT.isFloatingPoint() ? EltVT : GRLenVT,
+        SrcVec, DAG.getConstant(SrcIdx, DL, GRLenVT));
     SDValue Result =
         DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, (Base == 0) ? V1 : V2,
-                    InsertVal, DAG.getConstant(DiffPos, DL, GRLenVT));
+                    Extracted, DAG.getConstant(DiffPos, DL, GRLenVT));
 
     return Result;
   };
