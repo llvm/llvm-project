@@ -36,6 +36,8 @@ static Value castBuffer(OpBuilder &b, Value buffer, Type type) {
   if (buffer.getType() == type)
     return buffer;
 
+  // TODO: Properly support with options, for now it is hardcoded MemRef type
+  // based approach
   assert(isa<BaseMemRefType>(type) && "expected BaseMemRefType");
   assert(isa<BaseMemRefType>(buffer.getType()) && "expected BaseMemRefType");
   // TODO: In case `type` has a layout map that is not the fully dynamic
@@ -321,7 +323,9 @@ struct IfOpInterface
             elseBaseMemRefType.getMemorySpace())
       return op->emitError("inconsistent memory space on then/else branches");
 
-    // Layout maps are different: Promote to fully dynamic layout map.
+    // TODO: Properly support with options, for now it is hardcoded MemRef type
+    // based approach Layout maps are different: Promote to fully dynamic layout
+    // map.
     return cast<BufferLikeType>(getMemRefTypeWithFullyDynamicLayout(
         cast<TensorType>(opResult.getType()),
         thenBaseMemRefType.getMemorySpace()));
@@ -403,7 +407,8 @@ struct IndexSwitchOpInterface
     assert(value.getDefiningOp() == op && "invalid value");
     int64_t resultNum = cast<OpResult>(value).getResultNumber();
 
-    // Helper function to get buffer type of a case.
+    // TODO: Properly support with options, for now it is hardcoded MemRef type
+    // based approach Helper function to get buffer type of a case.
     auto getYieldedBufferType = [&](Block &b) -> FailureOr<BaseMemRefType> {
       auto yieldOp = cast<scf::YieldOp>(b.getTerminator());
       Value yieldedValue = yieldOp->getOperand(resultNum);
@@ -434,7 +439,9 @@ struct IndexSwitchOpInterface
       if (bufferType.getMemorySpace() != yieldedBufferType->getMemorySpace())
         return op->emitError("inconsistent memory space on switch cases");
 
-      // Layout maps are different: Promote to fully dynamic layout map.
+      // TODO: Properly support with options, for now it is hardcoded MemRef
+      // type based approach Layout maps are different: Promote to fully dynamic
+      // layout map.
       bufferType = getMemRefTypeWithFullyDynamicLayout(
           cast<TensorType>(value.getType()), bufferType.getMemorySpace());
     }
@@ -586,6 +593,8 @@ static FailureOr<BufferLikeType> computeLoopRegionIterArgBufferType(
         "expected same shape");
   }
 #endif // NDEBUG
+  // TODO: Properly support with options, for now it is hardcoded MemRef type
+  // based approach
   return cast<BufferLikeType>(getMemRefTypeWithFullyDynamicLayout(
       iterTensorType, yieldedBufferType.getMemorySpace()));
 }

@@ -161,6 +161,8 @@ Operation *bufferization::getOwnerOfValue(Value value) {
   return llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
 }
 
+// TODO: Properly support with options, for now it is hardcoded to builtin
+// Tensor/MemRef types based approach
 /// Create an AllocTensorOp for the given shaped value. If `copy` is set, the
 /// shaped value is copied. Otherwise, a tensor with undefined contents is
 /// allocated.
@@ -229,6 +231,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   return allocTensorOp.getResult();
 }
 
+// TODO: Properly support with options, for now it is hardcoded to builtin
+// Tensor/MemRef types based approach
 LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
     RewriterBase &rewriter, const AnalysisState &analysisState,
     const BufferizationState &bufferizationState) {
