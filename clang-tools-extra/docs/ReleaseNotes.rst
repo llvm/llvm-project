@@ -111,6 +111,9 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
   JSON when the source file path contains characters that require JSON escaping.
 
+- Improved :program:`clang-tidy` ``--verify-config`` by correctly handling
+  custom checks.
+
 New checks
 ^^^^^^^^^^
 
