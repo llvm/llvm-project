@@ -106,3 +106,29 @@ define float @fdot_f32_contract(float %acc, <4 x float> %a, <4 x float> %b) {
   %res = call contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
   ret float %res
 }
+
+; With reassoc+contract: reassoc takes priority (tree reduction); contract flag
+; preserved, backend may fuse muls+adds into FMAs within the tree.
+define float @fdot_f32_reassoc_contract(float %acc, <4 x float> %a, <4 x float> %b) {
+; AVX2-LABEL: fdot_f32_reassoc_contract:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX2-NEXT:    vaddps %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX2-NEXT:    vaddss %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; FMA-LABEL: fdot_f32_reassoc_contract:
+; FMA:       # %bb.0:
+; FMA-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; FMA-NEXT:    vaddps %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; FMA-NEXT:    vaddss %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; FMA-NEXT:    retq
+  %res = call reassoc contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}

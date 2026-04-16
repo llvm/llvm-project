@@ -101,6 +101,28 @@ define float @fdot_f32_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
   ret float %res
 }
 
+define float @fdot_f32_reassoc_contract(float %acc, <4 x float> %a, <4 x float> %b) {
+; O0-LABEL: fdot_f32_reassoc_contract:
+; O0:       // %bb.0:
+; O0-NEXT:    fmul v1.4s, v1.4s, v2.4s
+; O0-NEXT:    faddp v1.4s, v1.4s, v1.4s
+; O0-NEXT:    fmov x0, d1
+; O0-NEXT:    fmov d1, x0
+; O0-NEXT:    faddp s1, v1.2s
+; O0-NEXT:    fadd s0, s0, s1
+; O0-NEXT:    ret
+;
+; O1-LABEL: fdot_f32_reassoc_contract:
+; O1:       // %bb.0:
+; O1-NEXT:    fmul v1.4s, v1.4s, v2.4s
+; O1-NEXT:    faddp v1.4s, v1.4s, v1.4s
+; O1-NEXT:    faddp s1, v1.2s
+; O1-NEXT:    fadd s0, s0, s1
+; O1-NEXT:    ret
+  %res = call reassoc contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}
+
 define half @fdot_f16(half %acc, <4 x half> %a, <4 x half> %b) {
 ; O0-LABEL: fdot_f16:
 ; O0:       // %bb.0:
@@ -194,5 +216,223 @@ define half @fdot_f16(half %acc, <4 x half> %a, <4 x half> %b) {
 ; O1-NEXT:    fcvt h0, s0
 ; O1-NEXT:    ret
   %res = call half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+define half @fdot_f16_contract(half %acc, <4 x half> %a, <4 x half> %b) {
+; O0-LABEL: fdot_f16_contract:
+; O0:       // %bb.0:
+; O0-NEXT:    // implicit-def: $q5
+; O0-NEXT:    fmov d5, d1
+; O0-NEXT:    mov h1, v5.h[3]
+; O0-NEXT:    // implicit-def: $q16
+; O0-NEXT:    fmov d16, d2
+; O0-NEXT:    mov h2, v16.h[3]
+; O0-NEXT:    mov h3, v5.h[2]
+; O0-NEXT:    mov h4, v16.h[2]
+; O0-NEXT:    fmov s6, s5
+; O0-NEXT:    fmov s7, s16
+; O0-NEXT:    mov h5, v5.h[1]
+; O0-NEXT:    mov h16, v16.h[1]
+; O0-NEXT:    fcvt s16, h16
+; O0-NEXT:    fcvt s5, h5
+; O0-NEXT:    fmul s5, s5, s16
+; O0-NEXT:    fcvt h5, s5
+; O0-NEXT:    fcvt s5, h5
+; O0-NEXT:    fcvt s7, h7
+; O0-NEXT:    fcvt s6, h6
+; O0-NEXT:    fmul s6, s6, s7
+; O0-NEXT:    fcvt h6, s6
+; O0-NEXT:    fcvt s6, h6
+; O0-NEXT:    fcvt s0, h0
+; O0-NEXT:    fadd s0, s0, s6
+; O0-NEXT:    fcvt h0, s0
+; O0-NEXT:    fcvt s0, h0
+; O0-NEXT:    fadd s0, s0, s5
+; O0-NEXT:    fcvt h0, s0
+; O0-NEXT:    fcvt s0, h0
+; O0-NEXT:    fcvt s4, h4
+; O0-NEXT:    fcvt s3, h3
+; O0-NEXT:    fmul s3, s3, s4
+; O0-NEXT:    fcvt h3, s3
+; O0-NEXT:    fcvt s3, h3
+; O0-NEXT:    fadd s0, s0, s3
+; O0-NEXT:    fcvt h0, s0
+; O0-NEXT:    fcvt s0, h0
+; O0-NEXT:    fcvt s2, h2
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    fmul s1, s1, s2
+; O0-NEXT:    fcvt h1, s1
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    fadd s0, s0, s1
+; O0-NEXT:    fcvt h0, s0
+; O0-NEXT:    ret
+;
+; O1-LABEL: fdot_f16_contract:
+; O1:       // %bb.0:
+; O1-NEXT:    // kill: def $d2 killed $d2 def $q2
+; O1-NEXT:    // kill: def $d1 killed $d1 def $q1
+; O1-NEXT:    fcvt s3, h2
+; O1-NEXT:    fcvt s4, h1
+; O1-NEXT:    mov h5, v2.h[1]
+; O1-NEXT:    fcvt s0, h0
+; O1-NEXT:    fmul s3, s4, s3
+; O1-NEXT:    mov h4, v1.h[1]
+; O1-NEXT:    fcvt s5, h5
+; O1-NEXT:    fcvt h3, s3
+; O1-NEXT:    fcvt s4, h4
+; O1-NEXT:    fcvt s3, h3
+; O1-NEXT:    fmul s4, s4, s5
+; O1-NEXT:    mov h5, v2.h[2]
+; O1-NEXT:    mov h2, v2.h[3]
+; O1-NEXT:    fadd s0, s0, s3
+; O1-NEXT:    fcvt h3, s4
+; O1-NEXT:    mov h4, v1.h[2]
+; O1-NEXT:    fcvt s5, h5
+; O1-NEXT:    mov h1, v1.h[3]
+; O1-NEXT:    fcvt s2, h2
+; O1-NEXT:    fcvt h0, s0
+; O1-NEXT:    fcvt s3, h3
+; O1-NEXT:    fcvt s4, h4
+; O1-NEXT:    fcvt s1, h1
+; O1-NEXT:    fcvt s0, h0
+; O1-NEXT:    fmul s1, s1, s2
+; O1-NEXT:    fadd s0, s0, s3
+; O1-NEXT:    fmul s3, s4, s5
+; O1-NEXT:    fcvt h1, s1
+; O1-NEXT:    fcvt h0, s0
+; O1-NEXT:    fcvt h3, s3
+; O1-NEXT:    fcvt s1, h1
+; O1-NEXT:    fcvt s0, h0
+; O1-NEXT:    fcvt s3, h3
+; O1-NEXT:    fadd s0, s0, s3
+; O1-NEXT:    fcvt h0, s0
+; O1-NEXT:    fcvt s0, h0
+; O1-NEXT:    fadd s0, s0, s1
+; O1-NEXT:    fcvt h0, s0
+; O1-NEXT:    ret
+  %res = call contract half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+define half @fdot_f16_reassoc(half %acc, <4 x half> %a, <4 x half> %b) {
+; O0-LABEL: fdot_f16_reassoc:
+; O0:       // %bb.0:
+; O0-NEXT:    fcvtl v2.4s, v2.4h
+; O0-NEXT:    fcvtl v1.4s, v1.4h
+; O0-NEXT:    fmul v1.4s, v1.4s, v2.4s
+; O0-NEXT:    fcvtn v1.4h, v1.4s
+; O0-NEXT:    // implicit-def: $q2
+; O0-NEXT:    fmov d2, d1
+; O0-NEXT:    mov h1, v2.h[1]
+; O0-NEXT:    fcvt s3, h1
+; O0-NEXT:    fmov s1, s2
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    fadd s1, s1, s3
+; O0-NEXT:    fcvt h1, s1
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    mov h3, v2.h[2]
+; O0-NEXT:    fcvt s3, h3
+; O0-NEXT:    fadd s1, s1, s3
+; O0-NEXT:    fcvt h1, s1
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    mov h2, v2.h[3]
+; O0-NEXT:    fcvt s2, h2
+; O0-NEXT:    fadd s1, s1, s2
+; O0-NEXT:    fcvt h1, s1
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    fcvt s0, h0
+; O0-NEXT:    fadd s0, s0, s1
+; O0-NEXT:    fcvt h0, s0
+; O0-NEXT:    ret
+;
+; O1-LABEL: fdot_f16_reassoc:
+; O1:       // %bb.0:
+; O1-NEXT:    fcvtl v2.4s, v2.4h
+; O1-NEXT:    fcvtl v1.4s, v1.4h
+; O1-NEXT:    fcvt s0, h0
+; O1-NEXT:    fmul v1.4s, v1.4s, v2.4s
+; O1-NEXT:    fcvtn v1.4h, v1.4s
+; O1-NEXT:    mov h2, v1.h[1]
+; O1-NEXT:    fcvt s3, h1
+; O1-NEXT:    fcvt s2, h2
+; O1-NEXT:    fadd s2, s3, s2
+; O1-NEXT:    mov h3, v1.h[2]
+; O1-NEXT:    mov h1, v1.h[3]
+; O1-NEXT:    fcvt h2, s2
+; O1-NEXT:    fcvt s3, h3
+; O1-NEXT:    fcvt s1, h1
+; O1-NEXT:    fcvt s2, h2
+; O1-NEXT:    fadd s2, s2, s3
+; O1-NEXT:    fcvt h2, s2
+; O1-NEXT:    fcvt s2, h2
+; O1-NEXT:    fadd s1, s2, s1
+; O1-NEXT:    fcvt h1, s1
+; O1-NEXT:    fcvt s1, h1
+; O1-NEXT:    fadd s0, s0, s1
+; O1-NEXT:    fcvt h0, s0
+; O1-NEXT:    ret
+  %res = call reassoc half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+define half @fdot_f16_reassoc_contract(half %acc, <4 x half> %a, <4 x half> %b) {
+; O0-LABEL: fdot_f16_reassoc_contract:
+; O0:       // %bb.0:
+; O0-NEXT:    fcvtl v2.4s, v2.4h
+; O0-NEXT:    fcvtl v1.4s, v1.4h
+; O0-NEXT:    fmul v1.4s, v1.4s, v2.4s
+; O0-NEXT:    fcvtn v1.4h, v1.4s
+; O0-NEXT:    // implicit-def: $q2
+; O0-NEXT:    fmov d2, d1
+; O0-NEXT:    mov h1, v2.h[1]
+; O0-NEXT:    fcvt s3, h1
+; O0-NEXT:    fmov s1, s2
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    fadd s1, s1, s3
+; O0-NEXT:    fcvt h1, s1
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    mov h3, v2.h[2]
+; O0-NEXT:    fcvt s3, h3
+; O0-NEXT:    fadd s1, s1, s3
+; O0-NEXT:    fcvt h1, s1
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    mov h2, v2.h[3]
+; O0-NEXT:    fcvt s2, h2
+; O0-NEXT:    fadd s1, s1, s2
+; O0-NEXT:    fcvt h1, s1
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    fcvt s0, h0
+; O0-NEXT:    fadd s0, s0, s1
+; O0-NEXT:    fcvt h0, s0
+; O0-NEXT:    ret
+;
+; O1-LABEL: fdot_f16_reassoc_contract:
+; O1:       // %bb.0:
+; O1-NEXT:    fcvtl v2.4s, v2.4h
+; O1-NEXT:    fcvtl v1.4s, v1.4h
+; O1-NEXT:    fcvt s0, h0
+; O1-NEXT:    fmul v1.4s, v1.4s, v2.4s
+; O1-NEXT:    fcvtn v1.4h, v1.4s
+; O1-NEXT:    mov h2, v1.h[1]
+; O1-NEXT:    fcvt s3, h1
+; O1-NEXT:    fcvt s2, h2
+; O1-NEXT:    fadd s2, s3, s2
+; O1-NEXT:    mov h3, v1.h[2]
+; O1-NEXT:    mov h1, v1.h[3]
+; O1-NEXT:    fcvt h2, s2
+; O1-NEXT:    fcvt s3, h3
+; O1-NEXT:    fcvt s1, h1
+; O1-NEXT:    fcvt s2, h2
+; O1-NEXT:    fadd s2, s2, s3
+; O1-NEXT:    fcvt h2, s2
+; O1-NEXT:    fcvt s2, h2
+; O1-NEXT:    fadd s1, s2, s1
+; O1-NEXT:    fcvt h1, s1
+; O1-NEXT:    fcvt s1, h1
+; O1-NEXT:    fadd s0, s0, s1
+; O1-NEXT:    fcvt h0, s0
+; O1-NEXT:    ret
+  %res = call reassoc contract half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
   ret half %res
 }

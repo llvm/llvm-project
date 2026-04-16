@@ -2732,3 +2732,118 @@ define half @fdot_f16(half %acc, <4 x half> %a, <4 x half> %b) {
   %res = call half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
   ret half %res
 }
+
+; f32 reassoc+contract: reassoc takes priority (tree reduction).
+define float @fdot_f32_reassoc_contract(float %acc, <4 x float> %a, <4 x float> %b) {
+; CHECK-SM80-LABEL: fdot_f32_reassoc_contract(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b32 %r<14>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r6, %r7, %r8, %r9}, [fdot_f32_reassoc_contract_param_2];
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r2, %r3, %r4, %r5}, [fdot_f32_reassoc_contract_param_1];
+; CHECK-SM80-NEXT:    ld.param.b32 %r1, [fdot_f32_reassoc_contract_param_0];
+; CHECK-SM80-NEXT:    fma.rn.f32 %r10, %r5, %r9, %r1;
+; CHECK-SM80-NEXT:    fma.rn.f32 %r11, %r4, %r8, %r10;
+; CHECK-SM80-NEXT:    fma.rn.f32 %r12, %r3, %r7, %r11;
+; CHECK-SM80-NEXT:    fma.rn.f32 %r13, %r2, %r6, %r12;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r13;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: fdot_f32_reassoc_contract(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b32 %r<10>;
+; CHECK-SM100-NEXT:    .reg .b64 %rd<7>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [fdot_f32_reassoc_contract_param_2];
+; CHECK-SM100-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [fdot_f32_reassoc_contract_param_1];
+; CHECK-SM100-NEXT:    ld.param.b32 %r1, [fdot_f32_reassoc_contract_param_0];
+; CHECK-SM100-NEXT:    mul.f32x2 %rd5, %rd2, %rd4;
+; CHECK-SM100-NEXT:    mov.b64 {%r2, %r3}, %rd5;
+; CHECK-SM100-NEXT:    add.f32 %r4, %r2, %r3;
+; CHECK-SM100-NEXT:    mul.f32x2 %rd6, %rd1, %rd3;
+; CHECK-SM100-NEXT:    mov.b64 {%r5, %r6}, %rd6;
+; CHECK-SM100-NEXT:    add.f32 %r7, %r5, %r6;
+; CHECK-SM100-NEXT:    add.f32 %r8, %r7, %r4;
+; CHECK-SM100-NEXT:    add.f32 %r9, %r1, %r8;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-SM100-NEXT:    ret;
+  %res = call reassoc contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}
+
+; f16 contract: sequential fma chain.
+define half @fdot_f16_contract(half %acc, <4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: fdot_f16_contract(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<14>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v2.b32 {%r3, %r4}, [fdot_f16_contract_param_2];
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [fdot_f16_contract_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs1, [fdot_f16_contract_param_0];
+; CHECK-NEXT:    mov.b32 {%rs2, %rs3}, %r1;
+; CHECK-NEXT:    mov.b32 {%rs4, %rs5}, %r3;
+; CHECK-NEXT:    fma.rn.f16 %rs6, %rs2, %rs4, %rs1;
+; CHECK-NEXT:    fma.rn.f16 %rs7, %rs3, %rs5, %rs6;
+; CHECK-NEXT:    mov.b32 {%rs8, %rs9}, %r2;
+; CHECK-NEXT:    mov.b32 {%rs10, %rs11}, %r4;
+; CHECK-NEXT:    fma.rn.f16 %rs12, %rs8, %rs10, %rs7;
+; CHECK-NEXT:    fma.rn.f16 %rs13, %rs9, %rs11, %rs12;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs13;
+; CHECK-NEXT:    ret;
+  %res = call contract half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+; f16 reassoc: tree-reduction mul + add chain (unordered).
+define half @fdot_f16_reassoc(half %acc, <4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: fdot_f16_reassoc(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<10>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v2.b32 {%r3, %r4}, [fdot_f16_reassoc_param_2];
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [fdot_f16_reassoc_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs1, [fdot_f16_reassoc_param_0];
+; CHECK-NEXT:    mul.rn.f16x2 %r5, %r2, %r4;
+; CHECK-NEXT:    mov.b32 {%rs2, %rs3}, %r5;
+; CHECK-NEXT:    add.rn.f16 %rs4, %rs2, %rs3;
+; CHECK-NEXT:    mul.rn.f16x2 %r6, %r1, %r3;
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r6;
+; CHECK-NEXT:    add.rn.f16 %rs7, %rs5, %rs6;
+; CHECK-NEXT:    add.rn.f16 %rs8, %rs7, %rs4;
+; CHECK-NEXT:    add.rn.f16 %rs9, %rs1, %rs8;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs9;
+; CHECK-NEXT:    ret;
+  %res = call reassoc half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+; f16 reassoc+contract: reassoc takes priority (tree reduction).
+define half @fdot_f16_reassoc_contract(half %acc, <4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: fdot_f16_reassoc_contract(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<10>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v2.b32 {%r3, %r4}, [fdot_f16_reassoc_contract_param_2];
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [fdot_f16_reassoc_contract_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs1, [fdot_f16_reassoc_contract_param_0];
+; CHECK-NEXT:    mul.f16x2 %r5, %r2, %r4;
+; CHECK-NEXT:    mov.b32 {%rs2, %rs3}, %r5;
+; CHECK-NEXT:    add.f16 %rs4, %rs2, %rs3;
+; CHECK-NEXT:    mul.f16x2 %r6, %r1, %r3;
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r6;
+; CHECK-NEXT:    add.f16 %rs7, %rs5, %rs6;
+; CHECK-NEXT:    add.f16 %rs8, %rs7, %rs4;
+; CHECK-NEXT:    add.f16 %rs9, %rs1, %rs8;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs9;
+; CHECK-NEXT:    ret;
+  %res = call reassoc contract half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}

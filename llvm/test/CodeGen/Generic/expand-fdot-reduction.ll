@@ -2,27 +2,28 @@
 ; RUN: opt < %s -passes=expand-reductions -S | FileCheck %s
 
 declare float @llvm.vector.reduce.fdot.v4f32(float, <4 x float>, <4 x float>)
+declare half @llvm.vector.reduce.fdot.v4f16(half, <4 x half>, <4 x half>)
 
 ; Default (no fast-math flags): sequential fmul + fadd chain.
 define float @fdot_ordered(float %acc, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @fdot_ordered(
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[PROD0:%.*]] = fmul float [[A0]], [[B0]]
-; CHECK-NEXT:    [[ACC0:%.*]] = fadd float [[ACC:%.*]], [[PROD0]]
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i64 1
-; CHECK-NEXT:    [[PROD1:%.*]] = fmul float [[A1]], [[B1]]
-; CHECK-NEXT:    [[ACC1:%.*]] = fadd float [[ACC0]], [[PROD1]]
-; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i64 2
-; CHECK-NEXT:    [[PROD2:%.*]] = fmul float [[A2]], [[B2]]
-; CHECK-NEXT:    [[ACC2:%.*]] = fadd float [[ACC1]], [[PROD2]]
-; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i64 3
-; CHECK-NEXT:    [[PROD3:%.*]] = fmul float [[A3]], [[B3]]
-; CHECK-NEXT:    [[RDX:%.*]] = fadd float [[ACC2]], [[PROD3]]
-; CHECK-NEXT:    ret float [[RDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd float [[ACC:%.*]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[A]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[B]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul float [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd float [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[A]], i64 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[B]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul float [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd float [[TMP8]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[A]], i64 3
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x float> [[B]], i64 3
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul float [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd float [[TMP12]], [[TMP15]]
+; CHECK-NEXT:    ret float [[TMP16]]
 ;
   %res = call float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
   ret float %res
@@ -44,28 +45,124 @@ define float @fdot_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
   ret float %res
 }
 
+; With reassoc+contract: reassoc takes priority, so vector fmul then shuffle-tree
+; fadd; both flags preserved on the generated operations.
+define float @fdot_reassoc_contract(float %acc, <4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @fdot_reassoc_contract(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc contract <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <4 x float> [[TMP1]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd reassoc contract <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fadd reassoc contract float [[ACC:%.*]], [[TMP2]]
+; CHECK-NEXT:    ret float [[BIN_RDX3]]
+;
+  %res = call reassoc contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}
+
 ; With contract flag: sequential fmul+fadd chain with contract flags preserved;
 ; the backend may fuse each pair into an FMA.
 define float @fdot_contract(float %acc, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @fdot_contract(
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[PROD0:%.*]] = fmul contract float [[A0]], [[B0]]
-; CHECK-NEXT:    [[ACC0:%.*]] = fadd contract float [[ACC:%.*]], [[PROD0]]
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i64 1
-; CHECK-NEXT:    [[PROD1:%.*]] = fmul contract float [[A1]], [[B1]]
-; CHECK-NEXT:    [[ACC1:%.*]] = fadd contract float [[ACC0]], [[PROD1]]
-; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i64 2
-; CHECK-NEXT:    [[PROD2:%.*]] = fmul contract float [[A2]], [[B2]]
-; CHECK-NEXT:    [[ACC2:%.*]] = fadd contract float [[ACC1]], [[PROD2]]
-; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i64 3
-; CHECK-NEXT:    [[PROD3:%.*]] = fmul contract float [[A3]], [[B3]]
-; CHECK-NEXT:    [[RDX:%.*]] = fadd contract float [[ACC2]], [[PROD3]]
-; CHECK-NEXT:    ret float [[RDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract float [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd contract float [[ACC:%.*]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[A]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[B]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract float [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd contract float [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[A]], i64 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[B]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract float [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd contract float [[TMP8]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[A]], i64 3
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x float> [[B]], i64 3
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul contract float [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd contract float [[TMP12]], [[TMP15]]
+; CHECK-NEXT:    ret float [[TMP16]]
 ;
   %res = call contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
   ret float %res
+}
+
+; f16 variants: same expansion patterns as f32, but for half elements.
+define half @fdot_f16_ordered(half %acc, <4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: @fdot_f16_ordered(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x half> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x half> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul half [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd half [[ACC:%.*]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x half> [[A]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x half> [[B]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul half [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd half [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x half> [[A]], i64 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x half> [[B]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul half [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd half [[TMP8]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x half> [[A]], i64 3
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x half> [[B]], i64 3
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul half [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd half [[TMP12]], [[TMP15]]
+; CHECK-NEXT:    ret half [[TMP16]]
+;
+  %res = call half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+define half @fdot_f16_reassoc(half %acc, <4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: @fdot_f16_reassoc(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <4 x half> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc <4 x half> [[TMP1]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x half> [[BIN_RDX]], <4 x half> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd reassoc <4 x half> [[BIN_RDX]], [[RDX_SHUF1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x half> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fadd reassoc half [[ACC:%.*]], [[TMP2]]
+; CHECK-NEXT:    ret half [[BIN_RDX3]]
+;
+  %res = call reassoc half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+define half @fdot_f16_contract(half %acc, <4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: @fdot_f16_contract(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x half> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x half> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract half [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd contract half [[ACC:%.*]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x half> [[A]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x half> [[B]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract half [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd contract half [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x half> [[A]], i64 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x half> [[B]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract half [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd contract half [[TMP8]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x half> [[A]], i64 3
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x half> [[B]], i64 3
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul contract half [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd contract half [[TMP12]], [[TMP15]]
+; CHECK-NEXT:    ret half [[TMP16]]
+;
+  %res = call contract half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}
+
+define half @fdot_f16_reassoc_contract(half %acc, <4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: @fdot_f16_reassoc_contract(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc contract <4 x half> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <4 x half> [[TMP1]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x half> [[BIN_RDX]], <4 x half> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd reassoc contract <4 x half> [[BIN_RDX]], [[RDX_SHUF1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x half> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fadd reassoc contract half [[ACC:%.*]], [[TMP2]]
+; CHECK-NEXT:    ret half [[BIN_RDX3]]
+;
+  %res = call reassoc contract half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
 }
