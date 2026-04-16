@@ -238,6 +238,22 @@ def OrderModifierAttr : EnumAttr<OpenMP_Dialect, OrderModifier,
                                     "order_mod">;
 
 //===----------------------------------------------------------------------===//
+// linear_modifier enum.
+//===----------------------------------------------------------------------===//
+
+def LinearModifierVal : I32EnumAttrCase<"val", 0>;
+def LinearModifierRef : I32EnumAttrCase<"ref", 1>;
+def LinearModifierUval : I32EnumAttrCase<"uval", 2>;
+
+def LinearModifier : OpenMP_I32EnumAttr<"LinearModifier", "linear modifier",
+                                        [LinearModifierVal, LinearModifierRef,
+                                         LinearModifierUval]>;
+
+def LinearModifierAttr : OpenMP_EnumAttr<LinearModifier, "linear_modifier"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+//===----------------------------------------------------------------------===//
 // reduction_modifier enum.
 //===----------------------------------------------------------------------===//
 

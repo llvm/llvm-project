@@ -168,13 +168,10 @@ class CompilerInstance : public ModuleLoader {
   /// Should we delete the BuiltModules when we're done?
   bool DeleteBuiltModules = true;
 
-  /// The location of the module-import keyword for the last module
-  /// import.
-  SourceLocation LastModuleImportLoc;
-
-  /// The result of the last module import.
-  ///
-  ModuleLoadResult LastModuleImportResult;
+  /// Cache of module import results keyed by import location.
+  /// It is important to eliminate redundant diagnostics
+  /// when both the preprocessor and parser see the same import declaration.
+  llvm::SmallDenseMap<SourceLocation, ModuleLoadResult, 4> ModuleImportResults;
 
   /// Whether we should (re)build the global module index once we
   /// have finished with this translation unit.
@@ -937,12 +934,14 @@ public:
       std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
   /// Compile a module file for the given module, using the options
-  /// provided by the importing compiler instance. Returns true if the module
-  /// was built without errors.
+  /// provided by the importing compiler instance. Returns the PCM file in
+  /// a buffer.
   // FIXME: This should be private, but it's called from static non-member
   // functions in the implementation file.
-  bool compileModule(SourceLocation ImportLoc, StringRef ModuleName,
-                     StringRef ModuleFileName, CompilerInstance &Instance);
+  std::unique_ptr<llvm::MemoryBuffer> compileModule(SourceLocation ImportLoc,
+                                                    StringRef ModuleName,
+                                                    StringRef ModuleFileName,
+                                                    CompilerInstance &Instance);
 
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,

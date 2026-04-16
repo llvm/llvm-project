@@ -1082,7 +1082,6 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
             PP.RevertCachedTokens(2);
             ConsumeToken(); // the semi.
             EndLoc = ConsumeAnyToken();
-            assert(Tok.is(tok::semi));
           } else {
             EndLoc = Tok.getLocation();
           }
@@ -3245,7 +3244,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   }
 
   if (ExpectSemi &&
-      ExpectAndConsume(tok::semi, diag::err_expected_semi_decl_list)) {
+      ExpectAndConsume(tok::semi, diag::err_expected_semi_decl_list) &&
+      !isLikelyAtStartOfNewDeclaration()) {
     // Skip to end of block or statement.
     SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
     // If we stopped at a ';', eat it.

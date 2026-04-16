@@ -407,6 +407,7 @@ def SPV_INTEL_split_barrier                      : I32EnumAttrCase<"SPV_INTEL_sp
 def SPV_INTEL_bfloat16_conversion                : I32EnumAttrCase<"SPV_INTEL_bfloat16_conversion", 4031>;
 def SPV_INTEL_cache_controls                     : I32EnumAttrCase<"SPV_INTEL_cache_controls", 4032>;
 def SPV_INTEL_tensor_float32_conversion          : I32EnumAttrCase<"SPV_INTEL_tensor_float32_conversion", 4033>;
+def SPV_INTEL_masked_gather_scatter              : I32EnumAttrCase<"SPV_INTEL_masked_gather_scatter", 4034>;
 
 def SPV_NV_compute_shader_derivatives    : I32EnumAttrCase<"SPV_NV_compute_shader_derivatives", 5000>;
 def SPV_NV_cooperative_matrix            : I32EnumAttrCase<"SPV_NV_cooperative_matrix", 5001>;
@@ -472,6 +473,7 @@ def SPIRV_ExtensionAttr :
       SPV_INTEL_memory_access_aliasing, SPV_INTEL_split_barrier,
       SPV_INTEL_bfloat16_conversion, SPV_INTEL_cache_controls,
       SPV_INTEL_tensor_float32_conversion,
+      SPV_INTEL_masked_gather_scatter,
       SPV_NV_compute_shader_derivatives, SPV_NV_cooperative_matrix,
       SPV_NV_fragment_shader_barycentric, SPV_NV_geometry_shader_passthrough,
       SPV_NV_ray_tracing, SPV_NV_sample_mask_override_coverage,
@@ -1481,6 +1483,12 @@ def SPIRV_C_TensorFloat32RoundingINTEL                       : I32EnumAttrCase<"
   ];
 }
 
+def SPIRV_C_MaskedGatherScatterINTEL                         : I32EnumAttrCase<"MaskedGatherScatterINTEL", 6427> {
+  list<Availability> availability = [
+    Extension<[SPV_INTEL_masked_gather_scatter]>
+  ];
+}
+
 def SPIRV_C_CacheControlsINTEL : I32EnumAttrCase<"CacheControlsINTEL", 6441> {
   list<Availability> availability = [
     Extension<[SPV_INTEL_cache_controls]>
@@ -1590,7 +1598,8 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_ShaderStereoViewNV, SPIRV_C_Bfloat16ConversionINTEL,
       SPIRV_C_CacheControlsINTEL, SPIRV_C_BFloat16TypeKHR,
       SPIRV_C_BFloat16DotProductKHR, SPIRV_C_BFloat16CooperativeMatrixKHR,
-      SPIRV_C_TensorFloat32RoundingINTEL, SPIRV_C_Float8EXT
+      SPIRV_C_TensorFloat32RoundingINTEL, SPIRV_C_MaskedGatherScatterINTEL,
+      SPIRV_C_Float8EXT
     ]>;
 
 def SPIRV_AM_Logical                 : I32EnumAttrCase<"Logical", 0>;
@@ -4255,6 +4264,7 @@ def SPIRV_IsMatrixType : CPred<"::llvm::isa<::mlir::spirv::MatrixType>($_self)">
 def SPIRV_IsPtrType : CPred<"::llvm::isa<::mlir::spirv::PointerType>($_self)">;
 def SPIRV_IsRTArrayType : CPred<"::llvm::isa<::mlir::spirv::RuntimeArrayType>($_self)">;
 def SPIRV_IsSampledImageType : CPred<"::llvm::isa<::mlir::spirv::SampledImageType>($_self)">;
+def SPIRV_IsSamplerType : CPred<"::llvm::isa<::mlir::spirv::SamplerType>($_self)">;
 def SPIRV_IsStructType : CPred<"::llvm::isa<::mlir::spirv::StructType>($_self)">;
 def SPIRV_IsTensorArmType : CPred<"::llvm::isa<::mlir::spirv::TensorArmType>($_self)">;
 
@@ -4298,6 +4308,8 @@ def SPIRV_AnyStruct : DialectType<SPIRV_Dialect, SPIRV_IsStructType,
                                 "any SPIR-V struct type">;
 def SPIRV_AnySampledImage : DialectType<SPIRV_Dialect, SPIRV_IsSampledImageType,
                                 "any SPIR-V sampled image type">;
+def SPIRV_AnySampler : DialectType<SPIRV_Dialect, SPIRV_IsSamplerType,
+                                "any SPIR-V sampler type">;
 def SPIRV_AnyTensorArm : DialectType<SPIRV_Dialect, SPIRV_IsTensorArmType,
                                  "any SPIR-V tensorArm type">;
 
@@ -4311,7 +4323,7 @@ def SPIRV_Type : AnyTypeOf<[
     SPIRV_Void, SPIRV_Bool, SPIRV_Integer, SPIRV_AnyFloat, SPIRV_Vector,
     SPIRV_AnyPtr, SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct,
     SPIRV_AnyCooperativeMatrix, SPIRV_AnyMatrix, SPIRV_AnySampledImage,
-    SPIRV_AnyImage, SPIRV_AnyTensorArm
+    SPIRV_AnySampler, SPIRV_AnyImage, SPIRV_AnyTensorArm
   ]>;
 
 def SPIRV_SignedInt : SignedIntOfWidths<[8, 16, 32, 64]>;
@@ -4412,6 +4424,7 @@ def SPIRV_OC_OpTypeFloat                      : I32EnumAttrCase<"OpTypeFloat", 2
 def SPIRV_OC_OpTypeVector                     : I32EnumAttrCase<"OpTypeVector", 23>;
 def SPIRV_OC_OpTypeMatrix                     : I32EnumAttrCase<"OpTypeMatrix", 24>;
 def SPIRV_OC_OpTypeImage                      : I32EnumAttrCase<"OpTypeImage", 25>;
+def SPIRV_OC_OpTypeSampler                    : I32EnumAttrCase<"OpTypeSampler", 26>;
 def SPIRV_OC_OpTypeSampledImage               : I32EnumAttrCase<"OpTypeSampledImage", 27>;
 def SPIRV_OC_OpTypeArray                      : I32EnumAttrCase<"OpTypeArray", 28>;
 def SPIRV_OC_OpTypeRuntimeArray               : I32EnumAttrCase<"OpTypeRuntimeArray", 29>;
@@ -4449,6 +4462,7 @@ def SPIRV_OC_OpCompositeConstruct             : I32EnumAttrCase<"OpCompositeCons
 def SPIRV_OC_OpCompositeExtract               : I32EnumAttrCase<"OpCompositeExtract", 81>;
 def SPIRV_OC_OpCompositeInsert                : I32EnumAttrCase<"OpCompositeInsert", 82>;
 def SPIRV_OC_OpTranspose                      : I32EnumAttrCase<"OpTranspose", 84>;
+def SPIRV_OC_OpSampledImage                   : I32EnumAttrCase<"OpSampledImage", 86>;
 def SPIRV_OC_OpImageSampleImplicitLod         : I32EnumAttrCase<"OpImageSampleImplicitLod", 87>;
 def SPIRV_OC_OpImageSampleExplicitLod         : I32EnumAttrCase<"OpImageSampleExplicitLod", 88>;
 def SPIRV_OC_OpImageSampleProjDrefImplicitLod : I32EnumAttrCase<"OpImageSampleProjDrefImplicitLod", 93>;
@@ -4651,6 +4665,8 @@ def SPIRV_OC_OpControlBarrierWaitINTEL        : I32EnumAttrCase<"OpControlBarrie
 def SPIRV_OC_OpGroupIMulKHR                   : I32EnumAttrCase<"OpGroupIMulKHR", 6401>;
 def SPIRV_OC_OpGroupFMulKHR                   : I32EnumAttrCase<"OpGroupFMulKHR", 6402>;
 def SPIRV_OC_OpRoundFToTF32INTEL              : I32EnumAttrCase<"OpRoundFToTF32INTEL", 6426>;
+def SPIRV_OC_OpMaskedGatherINTEL              : I32EnumAttrCase<"OpMaskedGatherINTEL", 6428>;
+def SPIRV_OC_OpMaskedScatterINTEL             : I32EnumAttrCase<"OpMaskedScatterINTEL", 6429>;
 
 def SPIRV_OpcodeAttr :
     SPIRV_I32EnumAttr<"Opcode", "valid SPIR-V instructions", "opcode", [
@@ -4661,7 +4677,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpMemoryModel, SPIRV_OC_OpEntryPoint, SPIRV_OC_OpExecutionMode,
       SPIRV_OC_OpCapability, SPIRV_OC_OpTypeVoid, SPIRV_OC_OpTypeBool,
       SPIRV_OC_OpTypeInt, SPIRV_OC_OpTypeFloat, SPIRV_OC_OpTypeVector,
-      SPIRV_OC_OpTypeMatrix, SPIRV_OC_OpTypeImage, SPIRV_OC_OpTypeSampledImage,
+      SPIRV_OC_OpTypeMatrix, SPIRV_OC_OpTypeImage, SPIRV_OC_OpTypeSampler,
+      SPIRV_OC_OpTypeSampledImage,
       SPIRV_OC_OpTypeArray, SPIRV_OC_OpTypeRuntimeArray, SPIRV_OC_OpTypeStruct,
       SPIRV_OC_OpTypePointer, SPIRV_OC_OpTypeFunction, SPIRV_OC_OpTypeForwardPointer,
       SPIRV_OC_OpConstantTrue, SPIRV_OC_OpConstantFalse, SPIRV_OC_OpConstant,
@@ -4677,6 +4694,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpVectorInsertDynamic, SPIRV_OC_OpVectorShuffle,
       SPIRV_OC_OpCompositeConstruct, SPIRV_OC_OpCompositeExtract,
       SPIRV_OC_OpCompositeInsert, SPIRV_OC_OpTranspose,
+      SPIRV_OC_OpSampledImage,
       SPIRV_OC_OpImageSampleImplicitLod, SPIRV_OC_OpImageSampleExplicitLod,
       SPIRV_OC_OpImageSampleProjDrefImplicitLod, SPIRV_OC_OpImageFetch,
       SPIRV_OC_OpImageDrefGather,
@@ -4763,7 +4781,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpConvertFToBF16INTEL, SPIRV_OC_OpConvertBF16ToFINTEL,
       SPIRV_OC_OpControlBarrierArriveINTEL, SPIRV_OC_OpControlBarrierWaitINTEL,
       SPIRV_OC_OpGroupIMulKHR, SPIRV_OC_OpGroupFMulKHR,
-      SPIRV_OC_OpRoundFToTF32INTEL
+      SPIRV_OC_OpRoundFToTF32INTEL,
+      SPIRV_OC_OpMaskedGatherINTEL, SPIRV_OC_OpMaskedScatterINTEL
     ]>;
 
 // End opcode section. Generated from SPIR-V spec; DO NOT MODIFY!
@@ -4967,12 +4986,33 @@ def SPIRV_TosaExtAccTypeAttr : SPIRV_I32EnumAttr<
 
 // NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
 // SPIR-V proper.
+def SPIRV_TosaExtResizeModeAttr : SPIRV_I32EnumAttr<
+  "TosaExtResizeModeType", "Tosa Ext Resize Mode Type",
+  "tosa_ext_resize_mode_type",
+  [
+      I32EnumAttrCase<"NearestNeighbor", 1>,
+      I32EnumAttrCase<"Bilinear", 2>,
+  ]>;
+
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
 def SPIRV_TosaExtNaNPropagationModeAttr : SPIRV_I32EnumAttr<
   "TosaExtNaNPropagationModeType", "Tosa Ext NaN Propoagation Mode Type",
   "tosa_ext_nan_propagation_mode_type",
   [
       I32EnumAttrCase<"Propagate", 1>,
       I32EnumAttrCase<"Ignore", 2>,
+  ]>;
+
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
+def SPIRV_TosaExtRoundingModeAttr : SPIRV_I32EnumAttr<
+  "TosaExtRoundingModeType", "Tosa Ext Rounding Mode Type",
+  "tosa_ext_rounding_mode_type",
+  [
+      I32EnumAttrCase<"SingleRound", 1>,
+      I32EnumAttrCase<"InexactRound", 2>,
+      I32EnumAttrCase<"DoubleRound", 3>,
   ]>;
 
 #endif // MLIR_DIALECT_SPIRV_IR_BASE

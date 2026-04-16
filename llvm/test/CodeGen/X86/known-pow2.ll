@@ -352,7 +352,6 @@ define i1 @pow2_umin(i32 %x, i32 %y) {
 define i32 @pow2_umin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_umin_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    pslld $23, %xmm0
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -371,10 +370,9 @@ define i32 @pow2_umin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    por %xmm2, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, (%rsi)
-; CHECK-NEXT:    movd %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %yy = shl <4 x i32> <i32 1, i32 -1, i32 -1, i32 -1>, %x
   %d = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
@@ -452,7 +450,6 @@ define i1 @pow2_umax(i32 %x, i32 %y, i32 %z) {
 define i32 @pow2_umax_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_umax_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4096,4294967295,4294967295,4294967295]
 ; CHECK-NEXT:    movdqa %xmm2, %xmm3
@@ -476,10 +473,9 @@ define i32 @pow2_umax_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-NEXT:    andnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    orps %xmm4, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsi)
-; CHECK-NEXT:    movd %xmm0, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %yy = lshr <4 x i32> <i32 4096, i32 -1, i32 -1, i32 -1>, %x
   %d = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
@@ -560,7 +556,6 @@ define i1 @pow2_smin(i32 %x, i32 %y) {
 define i32 @pow2_smin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_smin_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    pslld $23, %xmm0
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -578,10 +573,9 @@ define i32 @pow2_smin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-NEXT:    pandn %xmm1, %xmm2
 ; CHECK-NEXT:    por %xmm0, %xmm2
 ; CHECK-NEXT:    movdqa %xmm2, (%rsi)
-; CHECK-NEXT:    movd %xmm2, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    movd %xmm2, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %yy = shl <4 x i32> <i32 1, i32 -1, i32 -1, i32 -1>, %x
   %d = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
@@ -659,7 +653,6 @@ define i1 @pow2_smax(i32 %x, i32 %y, i32 %z) {
 define i32 @pow2_smax_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_smax_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4096,4294967295,4294967295,4294967295]
 ; CHECK-NEXT:    movdqa %xmm2, %xmm3
@@ -683,10 +676,9 @@ define i32 @pow2_smax_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-NEXT:    pandn %xmm0, %xmm1
 ; CHECK-NEXT:    por %xmm4, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, (%rsi)
-; CHECK-NEXT:    movd %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %yy = lshr <4 x i32> <i32 4096, i32 -1, i32 -1, i32 -1>, %x
   %d = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
@@ -1339,6 +1331,84 @@ define i32 @pow2_blsi_sub(i32 %x, i32 %a) {
   %x_sub_y = sub i32 %x, %y
   %r = and i32 %x_sub_y, %y
   ret i32 %r
+}
+
+define i8 @pow2_trunc(i32 %x, i32 %a){
+; CHECK-LABEL: pow2_trunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    decb %al
+; CHECK-NEXT:    andb %dil, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %neg_a = sub i32 0, %a
+  %y = and i32 %a, %neg_a
+  %x8 = trunc i32 %x to i8
+  %y8 = trunc i32 %y to i8
+  %r = urem i8 %x8, %y8
+  ret i8 %r
+}
+
+define i8 @pow2_trunc_fail(i32 %x, i32 %a){
+; CHECK-LABEL: pow2_trunc_fail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andb $78, %sil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    divb %sil
+; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %y = and i32 %a, 78
+  %x8 = trunc i32 %x to i8
+  %y8 = trunc i32 %y to i8
+  %r = urem i8 %x8, %y8
+  ret i8 %r
+}
+
+define i8 @pow2_trunc_vec(i8 %x8, <4 x i32> %a, ptr %p) {
+; CHECK-LABEL: pow2_trunc_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [0,4294967295,4294967295,4294967295]
+; CHECK-NEXT:    psubd %xmm0, %xmm1
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    packuswb %xmm1, %xmm1
+; CHECK-NEXT:    packuswb %xmm1, %xmm1
+; CHECK-NEXT:    movd %xmm1, (%rsi)
+; CHECK-NEXT:    decb %al
+; CHECK-NEXT:    andb %dil, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %a.neg = sub <4 x i32> <i32 0, i32 -1, i32 -1, i32 -1>, %a
+  %y = and <4 x i32> %a, %a.neg
+  %y8 = trunc <4 x i32> %y to <4 x i8>
+  store <4 x i8> %y8, ptr %p
+  %y8.elt = extractelement <4 x i8> %y8, i8 0
+  %r = urem i8 %x8, %y8.elt
+  ret i8 %r
+}
+
+define i8 @pow2_truncc_vec_fail(<4 x i32> %x, <4 x i32> %a) {
+; CHECK-LABEL: pow2_truncc_vec_fail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    movd %xmm1, %ecx
+; CHECK-NEXT:    divb %cl
+; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %a.splat = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
+  %y = and <4 x i32> %a.splat, <i32 78, i32 69, i32 67, i32 100>
+  %x8 = trunc <4 x i32> %x to <4 x i8>
+  %y8 = trunc <4 x i32> %y to <4 x i8>
+  %r = urem <4 x i8> %x8, %y8
+  %ext = extractelement <4 x i8> %r, i8 0
+  ret i8 %ext
 }
 
 define i32 @pow2_rotl_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x, ptr %p) {

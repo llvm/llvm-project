@@ -34,6 +34,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 
+// This macro should be defined by the build system.
+#ifndef OFFLOAD_MIN_CUDA_VERSION
+#error "Missing OFFLOAD_MIN_CUDA_VERSION macro"
+#endif
+
 using namespace llvm::offload::debug;
 using namespace error;
 
@@ -46,38 +51,6 @@ namespace plugin {
 struct CUDAKernelTy;
 struct CUDADeviceTy;
 struct CUDAPluginTy;
-
-#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11000))
-/// Forward declarations for all Virtual Memory Management
-/// related data structures and functions. This is necessary
-/// for older cuda versions.
-typedef void *CUmemGenericAllocationHandle;
-typedef void *CUmemAllocationProp;
-typedef void *CUmemAccessDesc;
-typedef void *CUmemAllocationGranularity_flags;
-CUresult cuMemAddressReserve(CUdeviceptr *ptr, size_t size, size_t alignment,
-                             CUdeviceptr addr, unsigned long long flags) {}
-CUresult cuMemMap(CUdeviceptr ptr, size_t size, size_t offset,
-                  CUmemGenericAllocationHandle handle,
-                  unsigned long long flags) {}
-CUresult cuMemCreate(CUmemGenericAllocationHandle *handle, size_t size,
-                     const CUmemAllocationProp *prop,
-                     unsigned long long flags) {}
-CUresult cuMemSetAccess(CUdeviceptr ptr, size_t size,
-                        const CUmemAccessDesc *desc, size_t count) {}
-CUresult
-cuMemGetAllocationGranularity(size_t *granularity,
-                              const CUmemAllocationProp *prop,
-                              CUmemAllocationGranularity_flags option) {}
-#endif
-
-#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11020))
-// Forward declarations of asynchronous memory management functions. This is
-// necessary for older versions of CUDA.
-CUresult cuMemAllocAsync(CUdeviceptr *ptr, size_t, CUstream) { *ptr = 0; }
-
-CUresult cuMemFreeAsync(CUdeviceptr dptr, CUstream hStream) {}
-#endif
 
 /// Class implementing the CUDA device images properties.
 struct CUDADeviceImageTy : public DeviceImageTy {
@@ -679,125 +652,104 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuStreamSynchronize: %s");
   }
 
-  /// CUDA support VA management
-  bool supportVAManagement() const override {
-#if (defined(CUDA_VERSION) && (CUDA_VERSION >= 11000))
-    return true;
-#else
-    return false;
-#endif
+  /// Suggest a virtual address for device memory mapping.
+  void *getSuggestedVirtualAddress() override {
+    return reinterpret_cast<void *>(0x153940000000ULL);
   }
 
-  /// Allocates \p RSize bytes (rounded up to page size) and hints the cuda
-  /// driver to map it to \p VAddr. The obtained address is stored in \p Addr.
-  /// At return \p RSize contains the actual size
-  Error memoryVAMap(void **Addr, void *VAddr, size_t *RSize) override {
-    CUdeviceptr DVAddr = reinterpret_cast<CUdeviceptr>(VAddr);
-    auto IHandle = DeviceMMaps.find(DVAddr);
-    size_t Size = *RSize;
+  /// Allocate \p Size bytes on the device and hints the backend to map it to
+  /// virtual address \p VAddr. The function returns the allocated virtual
+  /// address. The memory must be deallocated through
+  /// GenericDeviceTy::deallocateWithVirtualAddress().
+  Expected<void *> allocateWithVirtualAddress(uint64_t Size,
+                                              void *VAddr) override {
+    CUdeviceptr ExpectedVAddr = 0;
+    if (VAddr != nullptr)
+      ExpectedVAddr = reinterpret_cast<CUdeviceptr>(VAddr);
 
-    if (Size == 0)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "memory Map Size must be larger than 0");
-
-    // Check if we have already mapped this address
-    if (IHandle != DeviceMMaps.end())
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "address already memory mapped");
-
-    CUmemAllocationProp Prop = {};
+    // Get the page size in the device.
     size_t Granularity = 0;
-
-    size_t Free, Total;
-    CUresult Res = cuMemGetInfo(&Free, &Total);
-    if (auto Err = Plugin::check(Res, "Error in cuMemGetInfo: %s"))
-      return Err;
-
-    if (Size >= Free) {
-      *Addr = nullptr;
-      return Plugin::error(
-          ErrorCode::OUT_OF_RESOURCES,
-          "cannot map memory size larger than the available device memory");
-    }
-
-    // currently NVidia only supports pinned device types
+    CUmemAllocationProp Prop = {};
     Prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
     Prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
-
     Prop.location.id = DeviceId;
-    cuMemGetAllocationGranularity(&Granularity, &Prop,
-                                  CU_MEM_ALLOC_GRANULARITY_MINIMUM);
+    CUresult Res = cuMemGetAllocationGranularity(
+        &Granularity, &Prop, CU_MEM_ALLOC_GRANULARITY_MINIMUM);
     if (auto Err =
             Plugin::check(Res, "error in cuMemGetAllocationGranularity: %s"))
       return Err;
-
     if (Granularity == 0)
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "wrong device Page size");
+                           "wrong device page size");
 
-    // Ceil to page size.
+    // Transparently round up to a multiple of the page size.
     Size = utils::roundUp(Size, Granularity);
 
-    // Create a handler of our allocation
-    CUmemGenericAllocationHandle AHandle;
-    Res = cuMemCreate(&AHandle, Size, &Prop, 0);
-    if (auto Err = Plugin::check(Res, "error in cuMemCreate: %s"))
-      return Err;
-
+    // Reserve the virtual address range.
     CUdeviceptr DevPtr = 0;
-    Res = cuMemAddressReserve(&DevPtr, Size, 0, DVAddr, 0);
+    Res = cuMemAddressReserve(&DevPtr, Size, 0, ExpectedVAddr, 0);
     if (auto Err = Plugin::check(Res, "error in cuMemAddressReserve: %s"))
       return Err;
 
-    Res = cuMemMap(DevPtr, Size, 0, AHandle, 0);
+    if (ExpectedVAddr != 0 && ExpectedVAddr != DevPtr)
+      ODBG(OLDT_Alloc) << "cuMemAddressReserve reserved device virtual address "
+                       << reinterpret_cast<void *>(DevPtr) << " instead of "
+                       << reinterpret_cast<void *>(ExpectedVAddr);
+
+    // Create a handle of the allocation.
+    CUmemGenericAllocationHandle Handle;
+    Res = cuMemCreate(&Handle, Size, &Prop, 0);
+    if (auto Err = Plugin::check(Res, "error in cuMemCreate: %s"))
+      return Err;
+
+    // Map the virtual address range to the memory allocation.
+    Res = cuMemMap(DevPtr, Size, 0, Handle, 0);
     if (auto Err = Plugin::check(Res, "error in cuMemMap: %s"))
       return Err;
 
-    CUmemAccessDesc ADesc = {};
-    ADesc.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
-    ADesc.location.id = DeviceId;
-    ADesc.flags = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
-
-    // Sets address
-    Res = cuMemSetAccess(DevPtr, Size, &ADesc, 1);
+    // Set the memory access properties for the allocation.
+    CUmemAccessDesc Desc = {};
+    Desc.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
+    Desc.location.id = DeviceId;
+    Desc.flags = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
+    Res = cuMemSetAccess(DevPtr, Size, &Desc, 1);
     if (auto Err = Plugin::check(Res, "error in cuMemSetAccess: %s"))
       return Err;
 
-    *Addr = reinterpret_cast<void *>(DevPtr);
-    *RSize = Size;
-    DeviceMMaps.insert({DevPtr, AHandle});
-    return Plugin::success();
+    VAddr = reinterpret_cast<void *>(DevPtr);
+
+    // Register the virtual address range in the tracker.
+    if (auto Err = VMemTracker.registerReservation(VAddr, Size, Handle))
+      return Err;
+
+    return VAddr;
   }
 
-  /// De-allocates device memory and Unmaps the Virtual Addr
-  Error memoryVAUnMap(void *VAddr, size_t Size) override {
-    CUdeviceptr DVAddr = reinterpret_cast<CUdeviceptr>(VAddr);
-    auto IHandle = DeviceMMaps.find(DVAddr);
-    // Mapping does not exist
-    if (IHandle == DeviceMMaps.end()) {
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "addr is not MemoryMapped");
-    }
+  /// Deallocate device memory \p VAddr, which was allocated through
+  /// GenericDeviceTy::allocateWithVirtualAddress(), and unmap the virtual
+  /// address range.
+  Error deallocateWithVirtualAddress(void *VAddr, uint64_t) override {
+    // Unregister the virtual address range and obtain the information about
+    // the reservation.
+    auto InfoOrErr = VMemTracker.unregisterReservation(VAddr);
+    if (!InfoOrErr)
+      return InfoOrErr.takeError();
 
-    if (IHandle == DeviceMMaps.end())
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "addr is not MemoryMapped");
+    auto [Size, Handle] = *InfoOrErr;
+    CUdeviceptr DevAddr = reinterpret_cast<CUdeviceptr>(VAddr);
 
-    CUmemGenericAllocationHandle &AllocHandle = IHandle->second;
-
-    CUresult Res = cuMemUnmap(DVAddr, Size);
+    CUresult Res = cuMemUnmap(DevAddr, Size);
     if (auto Err = Plugin::check(Res, "error in cuMemUnmap: %s"))
       return Err;
 
-    Res = cuMemRelease(AllocHandle);
+    Res = cuMemRelease(Handle);
     if (auto Err = Plugin::check(Res, "error in cuMemRelease: %s"))
       return Err;
 
-    Res = cuMemAddressFree(DVAddr, Size);
+    Res = cuMemAddressFree(DevAddr, Size);
     if (auto Err = Plugin::check(Res, "error in cuMemAddressFree: %s"))
       return Err;
 
-    DeviceMMaps.erase(IHandle);
     return Plugin::success();
   }
 
@@ -1084,6 +1036,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
     CUresult Res = cuEventSynchronize(Event);
     return Plugin::check(Res, "error in cuEventSynchronize: %s");
+  }
+
+  /// Get the elapsed time in milliseconds between two events.
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
+    CUevent StartEvent = reinterpret_cast<CUevent>(StartEventPtr);
+    CUevent EndEvent = reinterpret_cast<CUevent>(EndEventPtr);
+
+    float ElapsedTime = 0.0f;
+    CUresult Res = cuEventElapsedTime(&ElapsedTime, StartEvent, EndEvent);
+    if (auto Err = Plugin::check(Res, "error in cuEventElapsedTime: %s"))
+      return std::move(Err);
+
+    return ElapsedTime;
   }
 
   /// Print information about the device.
@@ -1445,9 +1411,6 @@ private:
   /// The CUDA device handler.
   CUdevice Device = CU_DEVICE_INVALID;
 
-  /// The memory mapped addresses and their handles
-  std::unordered_map<CUdeviceptr, CUmemGenericAllocationHandle> DeviceMMaps;
-
   /// The compute capability of the corresponding CUDA device.
   struct ComputeCapabilityTy {
     uint32_t Major;
@@ -1460,6 +1423,9 @@ private:
   /// The maximum number of warps that can be resident on all the SMs
   /// simultaneously.
   uint32_t HardwareParallelism = 0;
+
+  /// Tracker for virtual address reservations.
+  VMemTrackerTy<CUmemGenericAllocationHandle> VMemTracker;
 };
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
@@ -1579,6 +1545,22 @@ struct CUDAPluginTy final : public GenericPluginTy {
 
     if (auto Err = Plugin::check(Res, "error in cuInit: %s"))
       return std::move(Err);
+
+    // Get the latest CUDA version supported by the driver.
+    int Version;
+    Res = cuDriverGetVersion(&Version);
+    if (auto Err = Plugin::check(Res, "error in cuDriverGetVersion: %s"))
+      return std::move(Err);
+
+    // Verify that the driver supports the minimum CUDA version required.
+    constexpr int MinVersion = OFFLOAD_MIN_CUDA_VERSION;
+    if (Version < MinVersion) {
+      ODBG(OLDT_Init) << "Minimum CUDA version not supported by the driver.";
+      return Plugin::error(
+          ErrorCode::UNSUPPORTED,
+          "CUDA driver does not support minimum CUDA version %d (%d detected)",
+          MinVersion, Version);
+    }
 
     // Get the number of devices.
     int NumDevices;

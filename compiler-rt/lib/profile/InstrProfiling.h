@@ -57,6 +57,11 @@ typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT) VTableProfData {
 #include "profile/InstrProfData.inc"
 } VTableProfData;
 
+typedef struct __llvm_profile_gpu_sections {
+#define INSTR_PROF_GPU_SECT(Type, LLVMType, Name, Initializer) Type Name;
+#include "profile/InstrProfData.inc"
+} __llvm_profile_gpu_sections;
+
 typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
     __llvm_gcov_init_func_struct {
 #define COVINIT_FUNC(Type, LLVMType, Name, Initializer) Type Name;

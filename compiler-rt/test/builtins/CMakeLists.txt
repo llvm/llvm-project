@@ -23,10 +23,13 @@ configure_lit_site_cfg(
 
 include(builtin-config-ix)
 
-if (COMPILER_RT_BUILD_CRT AND TARGET crt)
-  list(APPEND BUILTINS_TEST_DEPS crt)
+if (COMPILER_RT_BUILD_CRT AND COMPILER_RT_HAS_CRT)
+  if (TARGET crt)
+    list(APPEND BUILTINS_TEST_DEPS crt)
+  endif()
+  set(COMPILER_RT_TEST_CRT ON)
 endif()
-pythonize_bool(COMPILER_RT_BUILD_CRT)
+pythonize_bool(COMPILER_RT_TEST_CRT)
 
 # Indicate if this is an MSVC environment.
 pythonize_bool(MSVC)

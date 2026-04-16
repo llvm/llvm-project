@@ -134,14 +134,14 @@ getSymbolFromGnuHashTable(StringRef Name, const typename ELFT::GnuHash &HashTab,
        I >= SymOffset && I < SymTab.size(); I = I + 1) {
     const uint32_t ChainHash = Chain[I - SymOffset];
 
-    if ((NameHash | 0x1) != (ChainHash | 0x1))
-      continue;
-
-    if (SymTab[I].st_name >= StrTab.size())
-      return createError("symbol [index " + Twine(I) +
-                         "] has invalid st_name: " + Twine(SymTab[I].st_name));
-    if (StrTab.drop_front(SymTab[I].st_name).data() == Name)
-      return &SymTab[I];
+    if ((NameHash | 0x1) == (ChainHash | 0x1)) {
+      if (SymTab[I].st_name >= StrTab.size())
+        return createError(
+            "symbol [index " + Twine(I) +
+            "] has invalid st_name: " + Twine(SymTab[I].st_name));
+      if (StrTab.drop_front(SymTab[I].st_name).data() == Name)
+        return &SymTab[I];
+    }
 
     if (ChainHash & 0x1)
       return nullptr;

@@ -905,8 +905,8 @@ std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
 // This is the version used during InlineSpiller::spillAroundUses
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
-    VirtRegMap *VRM) const {
+    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
+    LiveIntervals *LIS, VirtRegMap *VRM) const {
 
   std::optional<unsigned> LoadOpc = getFoldedOpcode(MF, MI, Ops, STI);
   if (!LoadOpc)
@@ -952,7 +952,7 @@ static unsigned getLoadPredicatedOpcode(unsigned Opcode) {
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    LiveIntervals *LIS) const {
+    MachineInstr *&CopyMI, LiveIntervals *LIS) const {
   // For now, only handle RISCV::PseudoCCMOVGPR.
   if (MI.getOpcode() != RISCV::PseudoCCMOVGPR)
     return nullptr;
@@ -3043,6 +3043,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM5_PLUS1:
           Ok = Imm >= 1 && Imm <= 32;
           break;
+        case RISCVOp::OPERAND_UIMM6_PLUS1:
+          Ok = Imm >= 1 && Imm <= 64;
+          break;
         case RISCVOp::OPERAND_UIMM8_GE32:
           Ok = isUInt<8>(Imm) && Imm >= 32;
           break;
@@ -3082,10 +3085,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = Imm != 0 && isInt<6>(Imm);
           break;
         case RISCVOp::OPERAND_VTYPEI10:
-          Ok = isUInt<10>(Imm);
+          Ok = isUInt<10>(Imm) && RISCVVType::isValidVType(Imm);
           break;
         case RISCVOp::OPERAND_VTYPEI11:
-          Ok = isUInt<11>(Imm);
+          Ok = isUInt<11>(Imm) && RISCVVType::isValidVType(Imm);
           break;
         case RISCVOp::OPERAND_SIMM12_LSB00000:
           Ok = isShiftedInt<7, 5>(Imm);
@@ -4116,6 +4119,16 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case CASE_RVV_OPCODE(VAADD_VV):
   case CASE_RVV_OPCODE(VAADDU_VV):
   case CASE_RVV_OPCODE(VSMUL_VV):
+  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, MF2):
+  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M1):
+  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M2):
+  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M4):
+  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M8):
+  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, MF2):
+  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M1):
+  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M2):
+  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M4):
+  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M8):
     // Operands 2 and 3 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
   case CASE_VFMA_SPLATS(FMADD):

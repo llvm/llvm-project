@@ -20,7 +20,6 @@ target triple = "x86_64-pc_linux"
 ;  }
 ;}
 
-; Function Attrs: nounwind uwtable
 define void @foo1(ptr noalias %in, ptr noalias %out, ptr noalias %trigger, ptr noalias %index) {
 ; AVX512-LABEL: @foo1(
 ; AVX512-NEXT:  entry:
@@ -152,8 +151,6 @@ define void @foo2(ptr noalias %in, ptr noalias %out, ptr noalias %trigger, ptr n
 ; FVW2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 16>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE3]] ]
 ; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX1]], 16
 ; FVW2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 16
-; FVW2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i64> poison, i64 [[OFFSET_IDX]], i32 0
-; FVW2-NEXT:    [[TMP19:%.*]] = insertelement <2 x i64> [[TMP18]], i64 [[TMP1]], i32 1
 ; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
 ; FVW2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[TMP1]]
 ; FVW2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -268,8 +265,6 @@ define void @foo3(ptr noalias %in, ptr noalias %out, ptr noalias %trigger) {
 ; FVW2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 16>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE2]] ]
 ; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 16
 ; FVW2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 16
-; FVW2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i64> poison, i64 [[OFFSET_IDX]], i32 0
-; FVW2-NEXT:    [[TMP19:%.*]] = insertelement <2 x i64> [[TMP18]], i64 [[TMP1]], i32 1
 ; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
 ; FVW2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[TMP1]]
 ; FVW2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -331,7 +326,6 @@ for.inc:
 for.end:
   ret void
 }
-declare void @llvm.masked.scatter.v16f32.v16p0(<16 x float>, <16 x ptr>, i32, <16 x i1>)
 
 ; The same as @foo2 but scatter/gather argument is a vecotr of ptrs with addresspace 1
 
@@ -371,8 +365,6 @@ define void @foo2_addrspace(ptr addrspace(1) noalias %in, ptr addrspace(1) noali
 ; FVW2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 16>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE3]] ]
 ; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX1]], 16
 ; FVW2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 16
-; FVW2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i64> poison, i64 [[OFFSET_IDX]], i32 0
-; FVW2-NEXT:    [[TMP19:%.*]] = insertelement <2 x i64> [[TMP18]], i64 [[TMP1]], i32 1
 ; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
 ; FVW2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[TMP1]]
 ; FVW2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -473,8 +465,6 @@ define void @foo2_addrspace2(ptr addrspace(1) noalias %in, ptr addrspace(0) noal
 ; FVW2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 16>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE3]] ]
 ; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX1]], 16
 ; FVW2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 16
-; FVW2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i64> poison, i64 [[OFFSET_IDX]], i32 0
-; FVW2-NEXT:    [[TMP19:%.*]] = insertelement <2 x i64> [[TMP18]], i64 [[TMP1]], i32 1
 ; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
 ; FVW2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[TMP1]]
 ; FVW2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -575,8 +565,6 @@ define void @foo2_addrspace3(ptr addrspace(0) noalias %in, ptr addrspace(1) noal
 ; FVW2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 16>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE3]] ]
 ; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX1]], 16
 ; FVW2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 16
-; FVW2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i64> poison, i64 [[OFFSET_IDX]], i32 0
-; FVW2-NEXT:    [[TMP19:%.*]] = insertelement <2 x i64> [[TMP18]], i64 [[TMP1]], i32 1
 ; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
 ; FVW2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[TMP1]]
 ; FVW2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4

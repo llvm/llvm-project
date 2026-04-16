@@ -1,4 +1,12 @@
-// RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
+// RUN: split-file %s %t
+// RUN: mlir-translate --mlir-to-llvmir %t/host.mlir | FileCheck %s --check-prefix=CHECK
+// RUN: mlir-translate --mlir-to-llvmir %t/target.mlir | FileCheck %s --check-prefix=TARGET
+
+//--- host.mlir
+
+// --------------------------------------------------------------------
+// Affinity clause
+// --------------------------------------------------------------------
 
 llvm.func @task_affinity_iterator_1d(%arr: !llvm.ptr {llvm.nocapture}) {
   %c1  = llvm.mlir.constant(1 : i64) : i64
@@ -293,3 +301,215 @@ llvm.func @task_affinity_iterator_negative_step(%arr: !llvm.ptr {llvm.nocapture}
 // CHECK: [[ENTRY:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr [[AFFLIST]], i64 %omp_iterator.iv
 // CHECK: [[LENPTR:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 1
 // CHECK: store i64 [[PHYSIV]], ptr [[LENPTR]]
+
+// --------------------------------------------------------------------
+// Depend clause
+// --------------------------------------------------------------------
+
+llvm.func @omp_task_depend_iterator_simple(%addr : !llvm.ptr) {
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %c10 = llvm.mlir.constant(10 : i64) : i64
+  %step = llvm.mlir.constant(1 : i64) : i64
+
+  %it = omp.iterator(%iv: i64) = (%c1 to %c10 step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_task_depend_iterator_simple
+// CHECK-SAME: (ptr %[[ADDR:[0-9]+]])
+// CHECK: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 %mallocsize)
+//
+// Iterator loop: preheader -> header -> cond -> body -> inc -> header...
+// CHECK: omp_dep_iterator.header:
+// CHECK: %[[IV:.*]] = phi i64 [ 0, %omp_dep_iterator.preheader ], [ %[[NEXT:.*]], %omp_dep_iterator.inc ]
+// CHECK: omp_dep_iterator.cond:
+// CHECK: %[[CMP:.*]] = icmp ult i64 %[[IV]], 10
+// CHECK: br i1 %[[CMP]], label %omp_dep_iterator.body, label %omp_dep_iterator.exit
+//
+// Body: store kmp_dep_info at depArray[0 + linearIV]
+// CHECK: omp_dep_iterator.body:
+// CHECK: %[[IDX:.*]] = add i64 0, %[[IV]]
+// CHECK: %[[ENTRY:.*]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR]], i64 %[[IDX]]
+// CHECK: %[[BASE_GEP:.*]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[ENTRY]], i32 0, i32 0
+// CHECK: %[[PTRINT:.*]] = ptrtoint ptr %[[ADDR]] to i64
+// CHECK: store i64 %[[PTRINT]], ptr %[[BASE_GEP]]
+// CHECK: %[[LEN_GEP:.*]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[ENTRY]], i32 0, i32 1
+// CHECK: store i64 8, ptr %[[LEN_GEP]]
+// CHECK: %[[FLAGS_GEP:.*]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[ENTRY]], i32 0, i32 2
+// depKind = 1 (DepIn)
+// CHECK: store i8 1, ptr %[[FLAGS_GEP]]
+//
+// CHECK: omp_dep_iterator.inc:
+// CHECK: %[[NEXT]] = add nuw i64 %[[IV]], 1
+//
+// Task creation with deps, then free
+// CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 10, ptr %[[DEP_ARR]], i32 0, ptr null)
+// CHECK: tail call void @free(ptr %[[DEP_ARR]])
+
+llvm.func @omp_task_depend_iterator_mixed(%addr : !llvm.ptr, %plain : !llvm.ptr) {
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %c10 = llvm.mlir.constant(10 : i64) : i64
+  %step = llvm.mlir.constant(1 : i64) : i64
+
+  %it = omp.iterator(%iv: i64) = (%c1 to %c10 step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependout -> %plain : !llvm.ptr, taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_task_depend_iterator_mixed
+// CHECK-SAME: (ptr %[[ADDR2:[0-9]+]], ptr %[[PLAIN:[0-9]+]])
+// CHECK: %[[DEP_ARR2:.*]] = tail call ptr @malloc(i64 %mallocsize)
+//
+// Plain entry at index 0
+// CHECK: %[[PLAIN_ENTRY:.*]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR2]], i64 0
+// CHECK: getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[PLAIN_ENTRY]], i32 0, i32 0
+// CHECK: %[[PLAIN_PTRINT:.*]] = ptrtoint ptr %[[PLAIN]] to i64
+// CHECK: store i64 %[[PLAIN_PTRINT]], ptr
+// depKind = 3 (DepInOut/out)
+// CHECK: store i8 3, ptr
+//
+// Iterator loop for iterated entry starting at offset 1
+// CHECK: omp_dep_iterator.body:
+// startIdx(1) + linearIV
+// CHECK: add i64 1, %omp_dep_iterator.iv
+// CHECK: getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR2]]
+// depKind = 1 (DepIn)
+// CHECK: store i8 1, ptr
+//
+// CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 11, ptr %[[DEP_ARR2]], i32 0, ptr null)
+// CHECK: tail call void @free(ptr %[[DEP_ARR2]])
+
+// Dynamic bounds: iterator bounds are function arguments, so the trip count
+// and dep-array size are computed at runtime.  The alloca must be placed
+// after the trip-count computation (not hoisted to the entry block)
+// to avoid "instruction does not dominate all uses" errors.
+llvm.func @omp_task_depend_iterator_dynamic(%addr : !llvm.ptr,
+    %lb : i64, %ub : i64, %step : i64) {
+  %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_task_depend_iterator_dynamic
+//
+// Tripcount computation from dynamic bounds
+// CHECK: %[[DIFF:.*]] = sub i64 %{{.*}}, %{{.*}}
+// CHECK: %[[DIV:.*]] = sdiv i64 %[[DIFF]], %{{.*}}
+// CHECK: %[[TRIPS:.*]] = add i64 %[[DIV]], 1
+// CHECK: %[[SCALED:.*]] = mul i64 1, %[[TRIPS]]
+// Dynamic total = 0 + scaled trip count
+// CHECK: %[[TOTAL:.*]] = add i64 0, %[[SCALED]]
+//
+// Malloc with dynamic size
+// CHECK: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 %mallocsize)
+// CHECK: omp_dep_iterator.body:
+// CHECK: getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR]]
+// NumDeps is truncated to i32 for the runtime call
+// CHECK: %[[NDEPS:.*]] = trunc i64 %[[TOTAL]] to i32
+// CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 %[[NDEPS]], ptr %[[DEP_ARR]], i32 0, ptr null)
+// CHECK: tail call void @free(ptr %[[DEP_ARR]])
+
+// Dynamic bounds with mixed plain + iterated depends.
+llvm.func @omp_task_depend_iterator_dynamic_mixed(%addr : !llvm.ptr,
+    %plain : !llvm.ptr, %lb : i64, %ub : i64, %step : i64) {
+  %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependout -> %plain : !llvm.ptr, taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_task_depend_iterator_dynamic_mixed
+// CHECK: %[[TRIPS2:.*]] = mul i64 1, %{{.*}}
+// total = 1 (plain) + dynamic trip count
+// CHECK: %[[TOTAL2:.*]] = add i64 1, %[[TRIPS2]]
+// CHECK: %[[DEP_ARR2:.*]] = tail call ptr @malloc(i64 %mallocsize)
+// Plain entry at index 0
+// CHECK: %[[PLAIN_ENTRY:.*]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR2]], i64 0
+// CHECK: store i8 3, ptr
+// Iterator loop
+// CHECK: omp_dep_iterator.body:
+// CHECK: add i64 1, %omp_dep_iterator.iv
+// CHECK: %[[NDEPS2:.*]] = trunc i64 %[[TOTAL2]] to i32
+// CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 %[[NDEPS2]], ptr %[[DEP_ARR2]], i32 0, ptr null)
+// CHECK: tail call void @free(ptr %[[DEP_ARR2]])
+
+//--- target.mlir
+
+// --------------------------------------------------------------------
+// Depend clause on target construct
+// --------------------------------------------------------------------
+
+// Target construct with iterator-based depend clause.
+// The iterator(i=1:10) should allocate a kmp_dep_info[10] array, fill it via
+// a dep_iterator loop, then emit __kmpc_omp_wait_deps with ndeps=10.
+module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @omp_target_depend_iterator(%addr: !llvm.ptr) {
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %c10 = llvm.mlir.constant(10 : i64) : i64
+    %step = llvm.mlir.constant(1 : i64) : i64
+
+    %it = omp.iterator(%iv: i64) = (%c1 to %c10 step %step) {
+      omp.yield(%addr : !llvm.ptr)
+    } -> !omp.iterated<!llvm.ptr>
+
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "data"}
+    omp.target depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// TARGET-LABEL: define void @omp_target_depend_iterator
+// TARGET-SAME: (ptr %[[ADDR:[0-9]+]])
+// TARGET-DAG: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 %mallocsize)
+//
+// Iterator loop: preheader -> header -> cond -> body -> inc -> header...
+// TARGET: omp_dep_iterator.header:
+// TARGET: %[[IV:.*]] = phi i64 [ 0, %omp_dep_iterator.preheader ], [ %[[NEXT:.*]], %omp_dep_iterator.inc ]
+// TARGET: omp_dep_iterator.cond:
+// TARGET: %[[CMP:.*]] = icmp ult i64 %[[IV]], 10
+// TARGET: br i1 %[[CMP]], label %omp_dep_iterator.body, label %omp_dep_iterator.exit
+//
+// Body: store kmp_dep_info at depArray[0 + linearIV]
+// TARGET: omp_dep_iterator.body:
+// TARGET: %[[IDX:.*]] = add i64 0, %[[IV]]
+// TARGET: %[[ENTRY:.*]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR]], i64 %[[IDX]]
+// TARGET: %[[BASE_GEP:.*]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[ENTRY]], i32 0, i32 0
+// TARGET: %[[PTRINT:.*]] = ptrtoint ptr %[[ADDR]] to i64
+// TARGET: store i64 %[[PTRINT]], ptr %[[BASE_GEP]]
+// TARGET: %[[LEN_GEP:.*]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[ENTRY]], i32 0, i32 1
+// TARGET: store i64 8, ptr %[[LEN_GEP]]
+// TARGET: %[[FLAGS_GEP:.*]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[ENTRY]], i32 0, i32 2
+// depKind = 1 (DepIn)
+// TARGET: store i8 1, ptr %[[FLAGS_GEP]]
+//
+// TARGET: omp_dep_iterator.inc:
+// TARGET: %[[NEXT]] = add nuw i64 %[[IV]], 1
+//
+// Target task: wait_deps with ndeps=10, then begin_if0/proxy/complete_if0, then free
+// TARGET: call void @__kmpc_omp_wait_deps(ptr @{{.*}}, i32 %{{.*}}, i32 10, ptr %[[DEP_ARR]], i32 0, ptr null)
+// TARGET: call void @__kmpc_omp_task_begin_if0
+// TARGET: call void @.omp_target_task_proxy_func
+// TARGET: call void @__kmpc_omp_task_complete_if0
+// TARGET: tail call void @free(ptr %[[DEP_ARR]])

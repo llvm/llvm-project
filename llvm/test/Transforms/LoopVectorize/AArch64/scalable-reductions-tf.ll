@@ -42,7 +42,7 @@ define void @invariant_store_red_exit_is_phi(ptr %dst, ptr readonly %src, i64 %n
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %red = phi i32 [ 0, %entry ], [ %storemerge, %for.body ]
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx6 = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
@@ -53,10 +53,10 @@ for.body:                                         ; preds = %entry, %for.inc
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.end.loopexit, label %for.body, !llvm.loop !0
 
-for.end.loopexit:                                 ; preds = %for.inc
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit
+for.end:
   ret void
 }
 

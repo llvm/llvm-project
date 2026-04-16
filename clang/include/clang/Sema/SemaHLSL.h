@@ -131,6 +131,7 @@ public:
   void ActOnVariableDeclarator(VarDecl *VD);
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
+  bool ActOnResourceMemberAccessExpr(MemberExpr *ME);
   void CheckEntryPoint(FunctionDecl *FD);
 
   // Return true if everything is ok; returns false if there was an error.
@@ -190,6 +191,7 @@ public:
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkExtBuiltinOutputAttr(Decl *D, const ParsedAttr &AL);
   void handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);

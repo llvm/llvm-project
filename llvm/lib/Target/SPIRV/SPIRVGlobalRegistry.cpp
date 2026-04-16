@@ -88,8 +88,8 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   llvm_unreachable("Unknown SPIRV::StorageClass enum");
 }
 
-SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
-    : PointerSize(PointerSize), Bound(0), CurMF(nullptr) {}
+SPIRVGlobalRegistry::SPIRVGlobalRegistry(DataLayout DL)
+    : DL(DL), Bound(0), CurMF(nullptr) {}
 
 SPIRVTypeInst
 SPIRVGlobalRegistry::assignIntTypeToVReg(unsigned BitWidth, Register VReg,
@@ -763,7 +763,7 @@ SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
   if (Res.isValid())
     return Res;
 
-  LLT LLTy = LLT::pointer(AddressSpace, PointerSize);
+  LLT LLTy = LLT::pointer(AddressSpace, getPointerSize());
   Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
   CurMF->getRegInfo().setRegClass(Res, &SPIRV::pIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
@@ -834,7 +834,14 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     return ResVReg;
   }
 
-  auto MIB = MIRBuilder.buildInstr(SPIRV::OpVariable)
+  // Emit the OpVariable into the entry block to ensure the def dominates
+  // all uses across all MBBs.
+  MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
+  MachineIRBuilder GVBuilder(MIRBuilder.getState());
+  if (&GVBuilder.getMBB() != &EntryBB)
+    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
+
+  auto MIB = GVBuilder.buildInstr(SPIRV::OpVariable)
                  .addDef(ResVReg)
                  .addUse(getSPIRVTypeID(BaseType))
                  .addImm(static_cast<uint32_t>(Storage));
@@ -1243,18 +1250,22 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
   }
 
   unsigned AddrSpace = typeToAddressSpace(Ty);
-  SPIRVTypeInst SpvElementType = nullptr;
-  if (Type *ElemTy = ::getPointeeType(Ty))
-    SpvElementType = getOrCreateSPIRVType(ElemTy, MIRBuilder, AccQual, EmitIR);
-  else
-    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
 
   // Get access to information about available extensions
   const SPIRVSubtarget *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   auto SC = addressSpaceToStorageClass(AddrSpace, *ST);
 
+  SPIRVTypeInst SpvElementType = nullptr;
   Type *ElemTy = ::getPointeeType(Ty);
+  if (ElemTy && isa<FunctionType>(ElemTy) &&
+      !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+    ElemTy = nullptr;
+  if (ElemTy)
+    SpvElementType = getOrCreateSPIRVType(ElemTy, MIRBuilder, AccQual, EmitIR);
+  else
+    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+
   if (!ElemTy) {
     ElemTy = Type::getInt8Ty(MIRBuilder.getContext());
   }
@@ -2203,7 +2214,7 @@ void SPIRVGlobalRegistry::buildMemAliasingOpDecorate(
       getOrAddMemAliasingINTELInst(MIRBuilder, AliasingListMD);
   if (!AliasList)
     return;
-  MIRBuilder.buildInstr(SPIRV::OpDecorate)
+  MIRBuilder.buildInstr(SPIRV::OpDecorateId)
       .addUse(Reg)
       .addImm(Dec)
       .addUse(AliasList->getOperand(0).getReg());
@@ -2269,7 +2280,6 @@ void SPIRVGlobalRegistry::updateAssignType(CallInst *AssignCI, Value *Arg,
 
 void SPIRVGlobalRegistry::addStructOffsetDecorations(
     Register Reg, StructType *Ty, MachineIRBuilder &MIRBuilder) {
-  DataLayout DL;
   ArrayRef<TypeSize> Offsets = DL.getStructLayout(Ty)->getMemberOffsets();
   for (uint32_t I = 0; I < Ty->getNumElements(); ++I) {
     buildOpMemberDecorate(Reg, MIRBuilder, SPIRV::Decoration::Offset, I,
@@ -2279,7 +2289,7 @@ void SPIRVGlobalRegistry::addStructOffsetDecorations(
 
 void SPIRVGlobalRegistry::addArrayStrideDecorations(
     Register Reg, Type *ElementType, MachineIRBuilder &MIRBuilder) {
-  uint32_t SizeInBytes = DataLayout().getTypeSizeInBits(ElementType) / 8;
+  uint32_t SizeInBytes = DL.getTypeSizeInBits(ElementType) / 8;
   buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::ArrayStride,
                   {SizeInBytes});
 }

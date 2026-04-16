@@ -1292,7 +1292,16 @@ add_entrypoint_object(
     ../erff16.h
   DEPENDS
     libc.src.__support.math.erff16
-    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  erfcf16
+  SRCS
+    erfcf16.cpp
+  HDRS
+    ../erfcf16.h
+  DEPENDS
+    libc.src.__support.math.erfcf16
 )
 
 add_entrypoint_object(
@@ -1490,9 +1499,7 @@ add_entrypoint_object(
   HDRS
     ../copysign.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.copysign
 )
 
 add_entrypoint_object(
@@ -1502,9 +1509,7 @@ add_entrypoint_object(
   HDRS
     ../copysignf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.copysignf
 )
 
 add_entrypoint_object(
@@ -1514,7 +1519,7 @@ add_entrypoint_object(
   HDRS
     ../copysignl.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.copysignl
 )
 
 add_entrypoint_object(
@@ -1524,10 +1529,7 @@ add_entrypoint_object(
   HDRS
     ../copysignf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.copysignf16
 )
 
 add_entrypoint_object(
@@ -1537,8 +1539,7 @@ add_entrypoint_object(
   HDRS
     ../copysignf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.copysignf128
 )
 
 add_entrypoint_object(
@@ -1548,13 +1549,7 @@ add_entrypoint_object(
   HDRS
     ../copysignbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.manipulation_functions
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.copysignbf16
 )
 
 add_entrypoint_object(
@@ -1855,6 +1850,17 @@ add_entrypoint_object(
     ../log10p1f16.h
   DEPENDS
     libc.src.__support.math.log10p1f16
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  log2p1f16
+  SRCS
+    log2p1f16.cpp
+  HDRS
+    ../log2p1f16.h
+  DEPENDS
+    libc.src.__support.math.log2p1f16
     libc.src.errno.errno
 )
 
@@ -4018,6 +4024,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  asinpi
+  SRCS
+    asinpi.cpp
+  HDRS
+    ../asinpi.h
+  DEPENDS
+    libc.src.__support.math.asinpi
+)
+
+add_entrypoint_object(
   asinpif
   SRCS
     asinpif.cpp
@@ -4066,6 +4082,16 @@ add_entrypoint_object(
     ../atanpif16.h
   DEPENDS
     libc.src.__support.math.atanpif16
+)
+
+add_entrypoint_object(
+  asinbf16
+  SRCS
+    asinbf16.cpp
+  HDRS
+    ../asinbf16.h
+  DEPENDS
+    libc.src.__support.math.asinbf16
 )
 
 add_entrypoint_object(
@@ -4985,11 +5011,7 @@ add_entrypoint_object (
   HDRS
     ../cbrtbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.math.generic.cbrt
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.cbrtbf16
 )
 
 add_entrypoint_object(

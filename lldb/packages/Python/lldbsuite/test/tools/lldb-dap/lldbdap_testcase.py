@@ -24,26 +24,40 @@ class DAPTestCaseBase(TestBase):
     DEFAULT_TIMEOUT: Final[float] = dap_server.DEFAULT_TIMEOUT
     NO_DEBUG_INFO_TESTCASE = True
 
+    def setUp(self):
+        self.dap_server_count = 0
+        super().setUp()
+
     def create_debug_adapter(
         self,
         lldbDAPEnv: Optional[dict[str, str]] = None,
         connection: Optional[str] = None,
+        connection_timeout: Optional[int] = None,
         additional_args: Optional[list[str]] = None,
     ):
         """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
-        log_file_path = self.getBuildArtifact("dap.log")
+        if self.dap_server_count:
+            log_file_path = (
+                self.getLogBasenameForCurrentTest()
+                + f"-dap-{self.dap_server_count}.log"
+            )
+        else:
+            log_file_path = self.getLogBasenameForCurrentTest() + "-dap.log"
+        self.dap_server_count += 1
         self.dap_server = dap_server.DebugAdapterServer(
             executable=self.lldbDAPExec,
             connection=connection,
+            connection_timeout=connection_timeout,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,
-            additional_args=additional_args or [],
+            additional_args=additional_args,
             spawn_helper=self.spawnSubprocess,
         )
+        self.log_files.append(log_file_path)
 
     def build_and_create_debug_adapter(
         self,

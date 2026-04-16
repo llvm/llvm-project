@@ -1030,7 +1030,8 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 }
 
 std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
-                                         uint64_t Offset, mapmode Mode) {
+                                         uint64_t Offset, mapmode Mode,
+                                         const char *Name) {
   this->Mode = Mode;
   if (OrigFileHandle == INVALID_HANDLE_VALUE)
     return make_error_code(errc::bad_file_descriptor);
@@ -1048,8 +1049,14 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
     break;
   }
 
-  HANDLE FileMappingHandle = ::CreateFileMappingW(OrigFileHandle, 0, flprotect,
-                                                  Hi_32(Size), Lo_32(Size), 0);
+  SmallVector<wchar_t, 128> NameUTF16;
+  if (Name)
+    if (std::error_code EC = UTF8ToUTF16(Name, NameUTF16))
+      return EC;
+
+  HANDLE FileMappingHandle =
+      ::CreateFileMappingW(OrigFileHandle, 0, flprotect, Hi_32(Size),
+                           Lo_32(Size), Name ? c_str(NameUTF16) : 0);
   if (FileMappingHandle == NULL) {
     std::error_code ec = mapWindowsError(GetLastError());
     return ec;
@@ -1106,11 +1113,11 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
 
 mapped_file_region::mapped_file_region(sys::fs::file_t fd, mapmode mode,
                                        size_t length, uint64_t offset,
-                                       std::error_code &ec)
+                                       std::error_code &ec, const char *name)
     : Size(length) {
   sandbox::violationIfEnabled();
 
-  ec = init(fd, offset, mode);
+  ec = init(fd, offset, mode, name);
   if (ec)
     copyFrom(mapped_file_region());
 }
@@ -1192,8 +1199,8 @@ void mapped_file_region::willNeedImpl() {
         llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
     if (!kernelM)
       return nullptr;
-    return (PrefetchVirtualMemory_t)::GetProcAddress(kernelM,
-                                                     "PrefetchVirtualMemory");
+    return (PrefetchVirtualMemory_t)(void *)::GetProcAddress(
+        kernelM, "PrefetchVirtualMemory");
   }();
   if (pfnPrefetchVirtualMemory) {
     MEMORY_RANGE_ENTRY Range{Mapping, Size};
@@ -1710,6 +1717,10 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
   return std::error_code();
 }
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnested-anon-types"
+#endif
 // This struct is normally only available in the Windows Driver Kit (WDK)
 // headers, not in the standard Windows SDK.
 struct LLVM_REPARSE_DATA_BUFFER {
@@ -1737,6 +1748,9 @@ struct LLVM_REPARSE_DATA_BUFFER {
     } GenericReparseBuffer;
   };
 };
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
   dest.clear();

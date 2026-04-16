@@ -54,10 +54,6 @@ class TargetInfo;
 /// Describes the name of a module.
 using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
 
-namespace serialization {
-class ModuleManager;
-} // namespace serialization
-
 /// Deduplication key for a loaded module file in \c ModuleManager.
 ///
 /// For implicitly-built modules, this is the \c DirectoryEntry of the module
@@ -77,7 +73,6 @@ class ModuleFileKey {
   /// for other kinds of module files.
   std::string ImplicitModulePathSuffix;
 
-  friend class serialization::ModuleManager;
   friend class ModuleFileName;
   friend llvm::DenseMapInfo<ModuleFileKey>;
 
@@ -310,6 +305,9 @@ public:
 
   /// The umbrella header or directory.
   std::variant<std::monostate, FileEntryRef, DirectoryEntryRef> Umbrella;
+
+  /// The location of the umbrella header or directory declaration.
+  SourceLocation UmbrellaDeclLoc;
 
   /// The module signature.
   ASTFileSignature Signature;

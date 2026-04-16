@@ -97,7 +97,7 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
     return nullptr;
   }
 
-  LLDB_LOG(log, "ObjectFileCOFF::ObjectFileCOFF module = {1} ({2}), file = {3}",
+  LLDB_LOG(log, "ObjectFileCOFF::ObjectFileCOFF module = {0} ({1}), file = {2}",
            module_sp.get(), module_sp->GetSpecificationDescription(),
            file->GetPath());
 
@@ -113,11 +113,12 @@ lldb_private::ObjectFile *ObjectFileCOFF::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFileCOFF::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
+ModuleSpecList
+ObjectFileCOFF::GetModuleSpecifications(const FileSpec &file,
+                                        DataExtractorSP &extractor_sp,
+                                        offset_t file_offset, offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData())
-    return 0;
+    return {};
 
   // If this is opearting on a VirtualDataExtractor, it can have
   // gaps between valid bytes in the DataBuffer. We extract an
@@ -125,9 +126,9 @@ size_t ObjectFileCOFF::GetModuleSpecifications(
   DataExtractorSP contiguous_extractor_sp =
       extractor_sp->GetContiguousDataExtractorSP();
   if (!contiguous_extractor_sp)
-    return 0;
+    return {};
   if (!IsCOFFObjectFile(contiguous_extractor_sp->GetData()))
-    return 0;
+    return {};
 
   MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
                          file.GetFilename().GetStringRef()};
@@ -137,27 +138,28 @@ size_t ObjectFileCOFF::GetModuleSpecifications(
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}",
                    file.GetFilename());
-    return 0;
+    return {};
   }
 
   std::unique_ptr<COFFObjectFile> object =
       unique_dyn_cast<COFFObjectFile>(std::move(*binary));
+  ModuleSpecList specs;
   switch (static_cast<COFF::MachineTypes>(object->getMachine())) {
-  case COFF::IMAGE_FILE_MACHINE_I386:
     specs.Append(ModuleSpec(file, ArchSpec("i686-unknown-windows-msvc")));
-    return 1;
+    return specs;
   case COFF::IMAGE_FILE_MACHINE_AMD64:
     specs.Append(ModuleSpec(file, ArchSpec("x86_64-unknown-windows-msvc")));
-    return 1;
+    return specs;
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
     specs.Append(ModuleSpec(file, ArchSpec("armv7-unknown-windows-msvc")));
-    return 1;
+    return specs;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
     specs.Append(ModuleSpec(file, ArchSpec("aarch64-unknown-windows-msvc")));
-    return 1;
+    return specs;
   default:
-    return 0;
+    break;
   }
+  return {};
 }
 
 void ObjectFileCOFF::Dump(Stream *stream) {
