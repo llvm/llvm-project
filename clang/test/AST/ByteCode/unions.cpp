@@ -1007,4 +1007,39 @@ namespace NonTrivialUnionCtor {
   static_assert(j()); // both-error {{not an integral constant expression}} \
                       // both-note {{in call to}}
 }
+
+/// u.a should not implicitly get activated when assigning to it, since A
+/// does not have a non-deleted trivial default constructor.
+namespace NoTrivialCtor {
+  struct A {
+   int i;
+   constexpr A() : i(0) {}
+   constexpr A(int i) : i(i) {}
+  };
+
+  constexpr auto test() {
+   union U {
+    int i;
+    A a;
+   } u{.i = 0};
+
+   u.a = {123}; // both-note {{member call on member 'a' of union with active member 'i'}}
+   return u.a.i;
+  }
+
+  constexpr auto r = test(); // both-error {{must be initialized by a constant expression}} \
+                             // both-note {{in call to}}
+
+  /// Should still work if the LHS is not a record type.
+  enum byte {};
+  constexpr byte operator|=(byte a, byte b) {
+    return byte{};
+  }
+  constexpr int foo() {
+    byte b{};
+    b |= byte{};
+    return 10;
+  }
+  static_assert(foo() == 10);
+}
 #endif
