@@ -79,3 +79,26 @@ void suppress_bare_operator();
 // Bare argument cannot be a balanced group
 [[profiles::suppress(std::type, (a b))]] // expected-error {{invalid token in profile argument}}
 void suppress_bare_group();
+
+// ===================================================================
+// Missing argument clause: must diagnose, not crash
+// ===================================================================
+
+// enforce with no argument clause at TU scope
+[[profiles::enforce]]; // expected-error {{'enforce' attribute requires an argument clause}}
+
+// suppress with no argument clause on a declaration
+[[profiles::suppress]] void suppress_no_args_decl(); // expected-error {{'suppress' attribute requires an argument clause}}
+
+// require appearing on an empty-declaration with no argument clause:
+// the no-l_paren diagnostic fires first; require-not-on-import is not
+// reached.
+[[profiles::require]]; // expected-error {{'require' attribute requires an argument clause}}
+
+// The [[using profiles: ...]] syntax must be gated identically.
+[[using profiles: enforce]]; // expected-error {{'enforce' attribute requires an argument clause}}
+
+// Regression: an unknown profiles-scoped attribute without parens must
+// continue to fall through to the generic "unknown attribute" warning
+// and must not trigger the new "requires an argument clause" error.
+[[profiles::bogus]]; // expected-warning {{unknown attribute 'profiles::bogus' ignored}}

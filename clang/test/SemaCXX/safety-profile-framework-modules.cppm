@@ -24,6 +24,8 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/mod_noflag_enforce.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/mod_bare.cppm -o %t/mod_bare.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/import_noflag_require.cpp -fmodule-file=BareMod=%t/mod_bare.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/mod_enforce_no_args.cppm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_require_no_args.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 
 // ===================================================================
 // Module with enforced profiles
@@ -219,3 +221,19 @@ export void bare_fn();
 // ===================================================================
 //--- import_noflag_require.cpp
 import BareMod [[profiles::require(test::type_cast)]]; // expected-warning {{'profiles::require' attribute ignored}}
+
+// ===================================================================
+// [[profiles::enforce]] on a module-declaration with no argument
+// clause must be diagnosed, not crash.
+// ===================================================================
+//--- mod_enforce_no_args.cppm
+export module NoArgsMod [[profiles::enforce]]; // expected-error {{'enforce' attribute requires an argument clause}}
+
+export void f();
+
+// ===================================================================
+// [[profiles::require]] on an import-declaration with no argument
+// clause must be diagnosed, not crash.
+// ===================================================================
+//--- import_require_no_args.cpp
+import TestMod [[profiles::require]]; // expected-error {{'require' attribute requires an argument clause}}

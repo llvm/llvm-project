@@ -2274,12 +2274,12 @@ private:
                           IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
                           ParsedAttr::Form Form);
 
-  bool ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
-                                  SourceLocation AttrNameLoc,
-                                  ParsedAttributes &Attrs,
-                                  SourceLocation *EndLoc,
-                                  IdentifierInfo *ScopeName,
-                                  SourceLocation ScopeLoc);
+  bool TryParseProfilesAttribute(IdentifierInfo *AttrName,
+                                 SourceLocation AttrNameLoc,
+                                 ParsedAttributes &Attrs,
+                                 SourceLocation *EndLoc,
+                                 IdentifierInfo *ScopeName,
+                                 SourceLocation ScopeLoc);
   struct ParsedProfileDesignator {
     std::string Name;
     std::string Spelling;

@@ -4502,12 +4502,6 @@ bool Parser::ParseCXX11AttributeArgs(
     return true;
   }
 
-  if (ScopeName && ScopeName->isStr("profiles")) {
-    if (ParseProfilesAttributeArgs(AttrName, AttrNameLoc, Attrs, EndLoc,
-                                    ScopeName, ScopeLoc))
-      return true;
-  }
-
   unsigned NumArgs;
   // Some Clang-scoped attributes have some special parsing behavior.
   if (ScopeName && (ScopeName->isStr("clang") || ScopeName->isStr("_Clang")))
@@ -4674,8 +4668,15 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       }
     }
 
+    // P3589R2 profile attributes need custom parsing for both the
+    // well-formed and the missing argument clause forms.
+    if (ScopeName && ScopeName->isStr("profiles") &&
+        TryParseProfilesAttribute(AttrName, AttrLoc, Attrs, EndLoc, ScopeName,
+                                  ScopeLoc))
+      AttrParsed = true;
+
     // Parse attribute arguments
-    if (Tok.is(tok::l_paren))
+    if (!AttrParsed && Tok.is(tok::l_paren))
       AttrParsed = ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc,
                                            ScopeName, ScopeLoc, OpenMPTokens);
 
@@ -5239,17 +5240,22 @@ bool Parser::ParseProfileSuppressBody(ParsedProfileSuppressArgs &Args) {
   return false;
 }
 
-bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
-                                         SourceLocation AttrNameLoc,
-                                         ParsedAttributes &Attrs,
-                                         SourceLocation *EndLoc,
-                                         IdentifierInfo *ScopeName,
-                                         SourceLocation ScopeLoc) {
+bool Parser::TryParseProfilesAttribute(IdentifierInfo *AttrName,
+                                       SourceLocation AttrNameLoc,
+                                       ParsedAttributes &Attrs,
+                                       SourceLocation *EndLoc,
+                                       IdentifierInfo *ScopeName,
+                                       SourceLocation ScopeLoc) {
   assert(ScopeName && ScopeName->isStr("profiles"));
 
   if (!AttrName->isStr("enforce") && !AttrName->isStr("suppress") &&
       !AttrName->isStr("require"))
     return false;
+
+  if (Tok.isNot(tok::l_paren)) {
+    Diag(AttrNameLoc, diag::err_profiles_expected_lparen) << AttrName;
+    return true;
+  }
 
   ConsumeParen();
 
