@@ -3,18 +3,11 @@
 ; RUN: llc < %s -mtriple=aarch64-none-eabi -global-isel | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define void @v2i64(<2 x i64> %a, ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: v2i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    str d1, [x1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v2i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    st1 { v0.d }[1], [x1]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    st1 { v0.d }[1], [x1]
+; CHECK-NEXT:    ret
   %s1 = shufflevector <2 x i64> %a, <2 x i64> poison, <1 x i32> <i32 0>
   store <1 x i64> %s1, ptr %p1, align 8
   %s2 = shufflevector <2 x i64> %a, <2 x i64> poison, <1 x i32> <i32 1>
@@ -23,19 +16,11 @@ define void @v2i64(<2 x i64> %a, ptr %p1, ptr %p2) {
 }
 
 define void @v4i32(<4 x i32> %a, ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: v4i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    str d1, [x1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v4i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    str d1, [x1]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    st1 { v0.d }[1], [x1]
+; CHECK-NEXT:    ret
   %s1 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
   store <2 x i32> %s1, ptr %p1, align 8
   %s2 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
@@ -44,19 +29,11 @@ define void @v4i32(<4 x i32> %a, ptr %p1, ptr %p2) {
 }
 
 define void @v8i16(<8 x i16> %a, ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: v8i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    str d1, [x1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v8i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    str d1, [x1]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    st1 { v0.d }[1], [x1]
+; CHECK-NEXT:    ret
   %s1 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x i16> %s1, ptr %p1, align 8
   %s2 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -65,19 +42,11 @@ define void @v8i16(<8 x i16> %a, ptr %p1, ptr %p2) {
 }
 
 define void @v16i8(<16 x i8> %a, ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: v16i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    str d1, [x1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v16i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    str d1, [x1]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    st1 { v0.d }[1], [x1]
+; CHECK-NEXT:    ret
   %s1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   store <8 x i8> %s1, ptr %p1, align 8
   %s2 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -86,18 +55,11 @@ define void @v16i8(<16 x i8> %a, ptr %p1, ptr %p2) {
 }
 
 define void @v2f64(<2 x double> %a, ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: v2f64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    str d1, [x1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v2f64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    st1 { v0.d }[1], [x1]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    st1 { v0.d }[1], [x1]
+; CHECK-NEXT:    ret
   %s1 = shufflevector <2 x double> %a, <2 x double> poison, <1 x i32> <i32 0>
   store <1 x double> %s1, ptr %p1, align 8
   %s2 = shufflevector <2 x double> %a, <2 x double> poison, <1 x i32> <i32 1>
@@ -106,19 +68,11 @@ define void @v2f64(<2 x double> %a, ptr %p1, ptr %p2) {
 }
 
 define void @v4f32(<4 x float> %a, ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: v4f32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    str d1, [x1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v4f32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    str d1, [x1]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    st1 { v0.d }[1], [x1]
+; CHECK-NEXT:    ret
   %s1 = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   store <2 x float> %s1, ptr %p1, align 8
   %s2 = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 2, i32 3>
@@ -127,19 +81,11 @@ define void @v4f32(<4 x float> %a, ptr %p1, ptr %p2) {
 }
 
 define void @v8f16(<8 x half> %a, ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: v8f16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    str d1, [x1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v8f16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    str d1, [x1]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    st1 { v0.d }[1], [x1]
+; CHECK-NEXT:    ret
   %s1 = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x half> %s1, ptr %p1, align 8
   %s2 = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -148,19 +94,11 @@ define void @v8f16(<8 x half> %a, ptr %p1, ptr %p2) {
 }
 
 define void @v8bf16(<8 x bfloat> %a, ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: v8bf16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    str d1, [x1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v8bf16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    str d1, [x1]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    st1 { v0.d }[1], [x1]
+; CHECK-NEXT:    ret
   %s1 = shufflevector <8 x bfloat> %a, <8 x bfloat> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x bfloat> %s1, ptr %p1, align 8
   %s2 = shufflevector <8 x bfloat> %a, <8 x bfloat> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -365,11 +303,10 @@ define ptr @post_v8bf16(<8 x bfloat> %a, ptr %p1, ptr %p2) {
 define ptr @postx_v2i64(<2 x i64> %a, ptr %p1, ptr %p2, i64 %o) {
 ; CHECK-SD-LABEL: postx_v2i64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mov x8, x0
 ; CHECK-SD-NEXT:    add x0, x1, x2
 ; CHECK-SD-NEXT:    str d0, [x8]
-; CHECK-SD-NEXT:    str d1, [x1]
+; CHECK-SD-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: postx_v2i64:
@@ -389,19 +326,17 @@ define ptr @postx_v2i64(<2 x i64> %a, ptr %p1, ptr %p2, i64 %o) {
 define ptr @postx_v4i32(<4 x i32> %a, ptr %p1, ptr %p2, i64 %o) {
 ; CHECK-SD-LABEL: postx_v4i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mov x8, x0
 ; CHECK-SD-NEXT:    add x0, x1, x2
 ; CHECK-SD-NEXT:    str d0, [x8]
-; CHECK-SD-NEXT:    str d1, [x1]
+; CHECK-SD-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: postx_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    str d0, [x0]
 ; CHECK-GI-NEXT:    add x0, x1, x2
-; CHECK-GI-NEXT:    str d1, [x1]
+; CHECK-GI-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-GI-NEXT:    ret
   %s1 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
   store <2 x i32> %s1, ptr %p1, align 8
@@ -414,19 +349,17 @@ define ptr @postx_v4i32(<4 x i32> %a, ptr %p1, ptr %p2, i64 %o) {
 define ptr @postx_v8i16(<8 x i16> %a, ptr %p1, ptr %p2, i64 %o) {
 ; CHECK-SD-LABEL: postx_v8i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mov x8, x0
 ; CHECK-SD-NEXT:    add x0, x1, x2
 ; CHECK-SD-NEXT:    str d0, [x8]
-; CHECK-SD-NEXT:    str d1, [x1]
+; CHECK-SD-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: postx_v8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    str d0, [x0]
 ; CHECK-GI-NEXT:    add x0, x1, x2
-; CHECK-GI-NEXT:    str d1, [x1]
+; CHECK-GI-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-GI-NEXT:    ret
   %s1 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x i16> %s1, ptr %p1, align 8
@@ -439,19 +372,17 @@ define ptr @postx_v8i16(<8 x i16> %a, ptr %p1, ptr %p2, i64 %o) {
 define ptr @postx_v16i8(<16 x i8> %a, ptr %p1, ptr %p2, i64 %o) {
 ; CHECK-SD-LABEL: postx_v16i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mov x8, x0
 ; CHECK-SD-NEXT:    add x0, x1, x2
 ; CHECK-SD-NEXT:    str d0, [x8]
-; CHECK-SD-NEXT:    str d1, [x1]
+; CHECK-SD-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: postx_v16i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    str d0, [x0]
 ; CHECK-GI-NEXT:    add x0, x1, x2
-; CHECK-GI-NEXT:    str d1, [x1]
+; CHECK-GI-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-GI-NEXT:    ret
   %s1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   store <8 x i8> %s1, ptr %p1, align 8
@@ -464,11 +395,10 @@ define ptr @postx_v16i8(<16 x i8> %a, ptr %p1, ptr %p2, i64 %o) {
 define ptr @postx_v2f64(<2 x double> %a, ptr %p1, ptr %p2, i64 %o) {
 ; CHECK-SD-LABEL: postx_v2f64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mov x8, x0
 ; CHECK-SD-NEXT:    add x0, x1, x2
 ; CHECK-SD-NEXT:    str d0, [x8]
-; CHECK-SD-NEXT:    str d1, [x1]
+; CHECK-SD-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: postx_v2f64:
@@ -488,19 +418,17 @@ define ptr @postx_v2f64(<2 x double> %a, ptr %p1, ptr %p2, i64 %o) {
 define ptr @postx_v4f32(<4 x float> %a, ptr %p1, ptr %p2, i64 %o) {
 ; CHECK-SD-LABEL: postx_v4f32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mov x8, x0
 ; CHECK-SD-NEXT:    add x0, x1, x2
 ; CHECK-SD-NEXT:    str d0, [x8]
-; CHECK-SD-NEXT:    str d1, [x1]
+; CHECK-SD-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: postx_v4f32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    str d0, [x0]
 ; CHECK-GI-NEXT:    add x0, x1, x2
-; CHECK-GI-NEXT:    str d1, [x1]
+; CHECK-GI-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-GI-NEXT:    ret
   %s1 = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   store <2 x float> %s1, ptr %p1, align 8
@@ -513,19 +441,17 @@ define ptr @postx_v4f32(<4 x float> %a, ptr %p1, ptr %p2, i64 %o) {
 define ptr @postx_v8f16(<8 x half> %a, ptr %p1, ptr %p2, i64 %o) {
 ; CHECK-SD-LABEL: postx_v8f16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mov x8, x0
 ; CHECK-SD-NEXT:    add x0, x1, x2
 ; CHECK-SD-NEXT:    str d0, [x8]
-; CHECK-SD-NEXT:    str d1, [x1]
+; CHECK-SD-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: postx_v8f16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    str d0, [x0]
 ; CHECK-GI-NEXT:    add x0, x1, x2
-; CHECK-GI-NEXT:    str d1, [x1]
+; CHECK-GI-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-GI-NEXT:    ret
   %s1 = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x half> %s1, ptr %p1, align 8
@@ -538,19 +464,17 @@ define ptr @postx_v8f16(<8 x half> %a, ptr %p1, ptr %p2, i64 %o) {
 define ptr @postx_v8bf16(<8 x bfloat> %a, ptr %p1, ptr %p2, i64 %o) {
 ; CHECK-SD-LABEL: postx_v8bf16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mov x8, x0
 ; CHECK-SD-NEXT:    add x0, x1, x2
 ; CHECK-SD-NEXT:    str d0, [x8]
-; CHECK-SD-NEXT:    str d1, [x1]
+; CHECK-SD-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: postx_v8bf16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    str d0, [x0]
 ; CHECK-GI-NEXT:    add x0, x1, x2
-; CHECK-GI-NEXT:    str d1, [x1]
+; CHECK-GI-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-GI-NEXT:    ret
   %s1 = shufflevector <8 x bfloat> %a, <8 x bfloat> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x bfloat> %s1, ptr %p1, align 8
@@ -560,5 +484,3 @@ define ptr @postx_v8bf16(<8 x bfloat> %a, ptr %p1, ptr %p2, i64 %o) {
   ret ptr %p3
 }
 
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
