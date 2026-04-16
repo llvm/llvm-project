@@ -3854,8 +3854,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
     unsigned BitWidth = ArgType->getIntegerBitWidth();
-    Value *Zero = ConstantInt::get(ArgType, 0);
     Value *One = ConstantInt::get(ArgType, 1);
+    Value *Two = ConstantInt::get(ArgType, 2);
 
     Value *IsLEOne = Builder.CreateICmpULE(ArgValue, One, "isleone");
 
@@ -3869,11 +3869,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
     Value *ArgMinusOne = Builder.CreateSub(ArgValue, One);
     Value *LZ = Builder.CreateCall(F, {ArgMinusOne, Builder.getFalse()});
-    Value *LZIsZero = Builder.CreateICmpEQ(LZ, Zero, "lzzero");
+    // 2<<(BitWidth-1-LZ) to get the next power of two. The shift
+    // amount is always in [0, BitWidth-1], so when LZ==0 (argument has its MSB
+    // set), the result wraps to 0
     Value *ShiftAmt =
-        Builder.CreateSub(ConstantInt::get(ArgType, BitWidth), LZ);
-    Value *Tmp = Builder.CreateShl(One, ShiftAmt);
-    Tmp = Builder.CreateSelect(LZIsZero, Zero, Tmp);
+        Builder.CreateSub(ConstantInt::get(ArgType, BitWidth - 1), LZ);
+    Value *Tmp = Builder.CreateShl(Two, ShiftAmt);
     Builder.CreateBr(MergeBB);
 
     Builder.SetInsertPoint(MergeBB);

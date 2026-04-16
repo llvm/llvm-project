@@ -2380,6 +2380,17 @@ static bool BuiltinStdCBuiltin(Sema &S, CallExpr *TheCall,
     return S.Diag(Arg->getBeginLoc(), diag::err_builtin_stdc_invalid_arg_type)
            << 1 /*1st argument*/ << ArgTy;
 
+  // For builtins returning unsigned int, verify the argument's bit width fits.
+  // On targets where unsigned int is 16 bits, a large _BitInt argument could
+  // produce a count that overflows the return type.
+  if (!ReturnType.isNull() && ReturnType == S.Context.UnsignedIntTy) {
+    uint64_t ArgWidth = S.Context.getIntWidth(ArgTy);
+    uint64_t ReturnTypeWidth = S.Context.getIntWidth(S.Context.UnsignedIntTy);
+    if (!llvm::isUIntN(ReturnTypeWidth, ArgWidth))
+      return S.Diag(Arg->getBeginLoc(), diag::err_builtin_stdc_result_overflow)
+             << ArgTy;
+  }
+
   TheCall->setType(ReturnType.isNull() ? ArgTy : ReturnType);
   return false;
 }

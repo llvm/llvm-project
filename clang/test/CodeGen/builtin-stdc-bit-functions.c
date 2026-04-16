@@ -174,6 +174,86 @@ void test_bit_width(unsigned char uc, unsigned short us, unsigned int ui, unsign
   r = __builtin_stdc_bit_width(ull);
 }
 
+// CHECK-LABEL: test_bit_floor_uc
+// CHECK: [[LZ:%.*]] = call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 true)
+// CHECK: [[SHIFT:%.*]] = sub i8 7, [[LZ]]
+// CHECK: [[SHIFTED:%.*]] = shl i8 1, [[SHIFT]]
+// CHECK: [[ISZERO:%.*]] = icmp eq i8 %{{.*}}, 0
+// CHECK: select i1 [[ISZERO]], i8 0, i8 [[SHIFTED]]
+unsigned char test_bit_floor_uc(unsigned char uc) { return __builtin_stdc_bit_floor(uc); }
+
+// CHECK-LABEL: test_bit_floor_us
+// CHECK: [[LZ:%.*]] = call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 true)
+// CHECK: [[SHIFT:%.*]] = sub i16 15, [[LZ]]
+// CHECK: [[SHIFTED:%.*]] = shl i16 1, [[SHIFT]]
+// CHECK: [[ISZERO:%.*]] = icmp eq i16 %{{.*}}, 0
+// CHECK: select i1 [[ISZERO]], i16 0, i16 [[SHIFTED]]
+unsigned short test_bit_floor_us(unsigned short us) { return __builtin_stdc_bit_floor(us); }
+
+// CHECK-LABEL: test_bit_floor_ui
+// CHECK: [[LZ:%.*]] = call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 true)
+// CHECK: [[SHIFT:%.*]] = sub i32 31, [[LZ]]
+// CHECK: [[SHIFTED:%.*]] = shl i32 1, [[SHIFT]]
+// CHECK: [[ISZERO:%.*]] = icmp eq i32 %{{.*}}, 0
+// CHECK: select i1 [[ISZERO]], i32 0, i32 [[SHIFTED]]
+unsigned int test_bit_floor_ui(unsigned int ui) { return __builtin_stdc_bit_floor(ui); }
+
+// CHECK-LABEL: test_bit_floor_ull
+// CHECK: [[LZ:%.*]] = call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 true)
+// CHECK: [[SHIFT:%.*]] = sub i64 63, [[LZ]]
+// CHECK: [[SHIFTED:%.*]] = shl i64 1, [[SHIFT]]
+// CHECK: [[ISZERO:%.*]] = icmp eq i64 %{{.*}}, 0
+// CHECK: select i1 [[ISZERO]], i64 0, i64 [[SHIFTED]]
+unsigned long long test_bit_floor_ull(unsigned long long ull) { return __builtin_stdc_bit_floor(ull); }
+
+// CHECK-LABEL: test_bit_ceil_uc
+// CHECK: icmp ule i8 %{{.*}}, 1
+// CHECK: br i1 %{{.*}}, label %bitceil.merge, label %bitceil.calc
+// CHECK: bitceil.calc:
+// CHECK: sub i8 %{{.*}}, 1
+// CHECK: [[LZ:%.*]] = call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// CHECK: [[SHIFT:%.*]] = sub i8 7, [[LZ]]
+// CHECK: shl i8 2, [[SHIFT]]
+// CHECK: bitceil.merge:
+// CHECK: phi i8 [ 1, %{{.*}} ], [ %{{.*}}, %bitceil.calc ]
+unsigned char test_bit_ceil_uc(unsigned char uc) { return __builtin_stdc_bit_ceil(uc); }
+
+// CHECK-LABEL: test_bit_ceil_us
+// CHECK: icmp ule i16 %{{.*}}, 1
+// CHECK: br i1 %{{.*}}, label %bitceil.merge, label %bitceil.calc
+// CHECK: bitceil.calc:
+// CHECK: sub i16 %{{.*}}, 1
+// CHECK: [[LZ:%.*]] = call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// CHECK: [[SHIFT:%.*]] = sub i16 15, [[LZ]]
+// CHECK: shl i16 2, [[SHIFT]]
+// CHECK: bitceil.merge:
+// CHECK: phi i16 [ 1, %{{.*}} ], [ %{{.*}}, %bitceil.calc ]
+unsigned short test_bit_ceil_us(unsigned short us) { return __builtin_stdc_bit_ceil(us); }
+
+// CHECK-LABEL: test_bit_ceil_ui
+// CHECK: icmp ule i32 %{{.*}}, 1
+// CHECK: br i1 %{{.*}}, label %bitceil.merge, label %bitceil.calc
+// CHECK: bitceil.calc:
+// CHECK: sub i32 %{{.*}}, 1
+// CHECK: [[LZ:%.*]] = call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// CHECK: [[SHIFT:%.*]] = sub i32 31, [[LZ]]
+// CHECK: shl i32 2, [[SHIFT]]
+// CHECK: bitceil.merge:
+// CHECK: phi i32 [ 1, %{{.*}} ], [ %{{.*}}, %bitceil.calc ]
+unsigned int test_bit_ceil_ui(unsigned int ui) { return __builtin_stdc_bit_ceil(ui); }
+
+// CHECK-LABEL: test_bit_ceil_ull
+// CHECK: icmp ule i64 %{{.*}}, 1
+// CHECK: br i1 %{{.*}}, label %bitceil.merge, label %bitceil.calc
+// CHECK: bitceil.calc:
+// CHECK: sub i64 %{{.*}}, 1
+// CHECK: [[LZ:%.*]] = call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// CHECK: [[SHIFT:%.*]] = sub i64 63, [[LZ]]
+// CHECK: shl i64 2, [[SHIFT]]
+// CHECK: bitceil.merge:
+// CHECK: phi i64 [ 1, %{{.*}} ], [ %{{.*}}, %bitceil.calc ]
+unsigned long long test_bit_ceil_ull(unsigned long long ull) { return __builtin_stdc_bit_ceil(ull); }
+
 // CHECK-LABEL: test_bit_floor
 // CHECK: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 true)
 // CHECK: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 true)
