@@ -761,7 +761,7 @@ bool APInt::isExhaustiveSlowCase(const APInt &RHS) const {
 
   unsigned TailBits = BitWidth - Last * APINT_BITS_PER_WORD;
   WordType TailMask = llvm::maskTrailingOnes<WordType>(TailBits);
-  return ((U.pVal[Last] | RHS.U.pVal[Last]) & TailMask) == TailMask;
+  return (U.pVal[Last] | RHS.U.pVal[Last]) == TailMask;
 }
 
 APInt APInt::byteSwap() const {
