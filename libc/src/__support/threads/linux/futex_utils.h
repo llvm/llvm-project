@@ -31,9 +31,9 @@ public:
     cpp::Atomic<FutexWordType>::store(value);
     return *this;
   }
-  LIBC_INLINE long wait(FutexWordType expected,
-                        cpp::optional<Timeout> timeout = cpp::nullopt,
-                        bool is_shared = false) {
+  LIBC_INLINE ErrorOr<int> wait(FutexWordType expected,
+                                cpp::optional<Timeout> timeout = cpp::nullopt,
+                                bool is_shared = false) {
     // use bitset variants to enforce abs_time
     uint32_t op = is_shared ? FUTEX_WAIT_BITSET : FUTEX_WAIT_BITSET_PRIVATE;
     if (timeout && timeout->is_realtime()) {
@@ -43,7 +43,7 @@ public:
       if (this->load(cpp::MemoryOrder::RELAXED) != expected)
         return 0;
 
-      long ret = syscall_impl<long>(
+      int ret = syscall_impl<int>(
           /* syscall number */ FUTEX_SYSCALL_ID,
           /* futex address */ this,
           /* futex operation  */ op,
@@ -53,15 +53,19 @@ public:
           /* bitset */ FUTEX_BITSET_MATCH_ANY);
 
       // continue waiting if interrupted; otherwise return the result
-      // which should normally be 0 or -ETIMEOUT
-      if (ret == -EINTR)
+      // which should normally be 0 or -ETIMEOUT. we also need to continue
+      // if the error is EAGAIN, where the futex value may be detected as
+      // changed spuriously, and we just poll again to ensure correctness.
+      if (ret == -EINTR || ret == -EAGAIN)
         continue;
 
+      if (ret < 0)
+        return cpp::unexpected(-ret);
       return ret;
     }
   }
-  LIBC_INLINE long notify_one(bool is_shared = false) {
-    return syscall_impl<long>(
+  LIBC_INLINE ErrorOr<int> notify_one(bool is_shared = false) {
+    int ret = syscall_impl<int>(
         /* syscall number */ FUTEX_SYSCALL_ID,
         /* futex address */ this,
         /* futex operation  */ is_shared ? FUTEX_WAKE : FUTEX_WAKE_PRIVATE,
@@ -69,9 +73,12 @@ public:
         /* ignored */ nullptr,
         /* ignored */ nullptr,
         /* ignored */ 0);
+    if (ret < 0)
+      return cpp::unexpected(-ret);
+    return ret;
   }
-  LIBC_INLINE long notify_all(bool is_shared = false) {
-    return syscall_impl<long>(
+  LIBC_INLINE ErrorOr<int> notify_all(bool is_shared = false) {
+    int ret = syscall_impl<int>(
         /* syscall number */ FUTEX_SYSCALL_ID,
         /* futex address */ this,
         /* futex operation  */ is_shared ? FUTEX_WAKE : FUTEX_WAKE_PRIVATE,
@@ -79,6 +86,9 @@ public:
         /* ignored */ nullptr,
         /* ignored */ nullptr,
         /* ignored */ 0);
+    if (ret < 0)
+      return cpp::unexpected(-ret);
+    return ret;
   }
   LIBC_INLINE ErrorOr<int> requeue_to(Futex &other,
                                       cpp::optional<FutexWordType> oldval,

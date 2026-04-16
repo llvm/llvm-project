@@ -24,13 +24,13 @@ namespace LIBC_NAMESPACE_DECL {
 using FutexWordType = uint32_t;
 
 // errno from libSystem
-extern int *__error(void);
+extern "C" int *__error(void);
 
 class FutexErrnoProtect {
   int backup;
 
 public:
-  LIBC_INLINE FutexErrnoProtect() : backup(*__error()) {}
+  LIBC_INLINE FutexErrnoProtect() : backup(*__error()) { *__error() = 0; }
   LIBC_INLINE ~FutexErrnoProtect() { *__error() = backup; }
 };
 
@@ -38,8 +38,8 @@ struct Futex : public cpp::Atomic<FutexWordType> {
   using cpp::Atomic<FutexWordType>::Atomic;
   using Timeout = internal::AbsTimeout;
 
-  LIBC_INLINE long wait(FutexWordType val, cpp::optional<Timeout> timeout,
-                        bool is_shared) {
+  LIBC_INLINE ErrorOr<int>
+  wait(FutexWordType val, cpp::optional<Timeout> timeout, bool is_shared) {
     FutexErrnoProtect protect;
     os_sync_wait_on_address_flags_t flags = OS_SYNC_WAIT_ON_ADDRESS_NONE;
     if (is_shared)
@@ -47,7 +47,7 @@ struct Futex : public cpp::Atomic<FutexWordType> {
     for (;;) {
       if (this->load(cpp::MemoryOrder::RELAXED) != val)
         return 0;
-      long ret = 0;
+      int ret = 0;
       if (timeout) {
         // Assuming, OS_CLOCK_MACH_ABSOLUTE_TIME is equivalent to CLOCK_REALTIME
         using namespace time_units;
@@ -62,7 +62,7 @@ struct Futex : public cpp::Atomic<FutexWordType> {
                                       sizeof(FutexWordType), flags);
       }
       if ((ret < 0) && (*__error() == ETIMEDOUT))
-        return -ETIMEDOUT;
+        return cpp::unexpected(ETIMEDOUT);
       // case when os_sync returns early with an error. retry.
       if ((ret < 0) && ((*__error() == EINTR) || (*__error() == EFAULT)))
         continue;
@@ -70,7 +70,7 @@ struct Futex : public cpp::Atomic<FutexWordType> {
     }
   }
 
-  LIBC_INLINE long notify_one(bool is_shared) {
+  LIBC_INLINE ErrorOr<int> notify_one(bool is_shared) {
     FutexErrnoProtect protect;
     os_sync_wake_by_address_flags_t flags = OS_SYNC_WAKE_BY_ADDRESS_NONE;
     if (is_shared)
@@ -78,11 +78,11 @@ struct Futex : public cpp::Atomic<FutexWordType> {
     int res = os_sync_wake_by_address_any(reinterpret_cast<void *>(this),
                                           sizeof(FutexWordType), flags);
     if (res < 0)
-      return -*__error();
+      return cpp::unexpected(*__error());
     return res;
   }
 
-  LIBC_INLINE long notify_all(bool is_shared) {
+  LIBC_INLINE ErrorOr<int> notify_all(bool is_shared) {
     FutexErrnoProtect protect;
     os_sync_wake_by_address_flags_t flags = OS_SYNC_WAKE_BY_ADDRESS_NONE;
     if (is_shared)
@@ -90,7 +90,7 @@ struct Futex : public cpp::Atomic<FutexWordType> {
     int res = os_sync_wake_by_address_all(reinterpret_cast<void *>(this),
                                           sizeof(FutexWordType), flags);
     if (res < 0)
-      return -*__error();
+      return cpp::unexpected(*__error());
     return res;
   }
 
