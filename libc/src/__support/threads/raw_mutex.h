@@ -15,16 +15,11 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/threads/futex_utils.h"
 #include "src/__support/threads/sleep.h"
 #include "src/__support/time/abs_timeout.h"
 
 #include <stdio.h>
-
-#if defined(__linux__)
-#include "src/__support/threads/linux/futex_utils.h"
-#elif defined(__APPLE__)
-#include "src/__support/threads/darwin/futex_utils.h"
-#endif
 
 #ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1

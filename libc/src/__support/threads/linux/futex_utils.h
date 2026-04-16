@@ -13,6 +13,7 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_word.h"
@@ -78,6 +79,35 @@ public:
         /* ignored */ nullptr,
         /* ignored */ nullptr,
         /* ignored */ 0);
+  }
+  LIBC_INLINE ErrorOr<int> requeue_to(Futex &other,
+                                      cpp::optional<FutexWordType> oldval,
+                                      int wake_limit, int requeue_limit,
+                                      bool is_shared = false) {
+    int ret;
+    if (oldval)
+      ret = syscall_impl<int>(
+          /* syscall number */ FUTEX_SYSCALL_ID,
+          /* futex address */ this,
+          /* futex operation  */
+          is_shared ? FUTEX_CMP_REQUEUE : FUTEX_CMP_REQUEUE_PRIVATE,
+          /* wake up limit */ wake_limit,
+          /* requeue limit */ requeue_limit,
+          /* requeue address */ &other, *oldval);
+    else
+      ret = syscall_impl<int>(
+          /* syscall number */ FUTEX_SYSCALL_ID,
+          /* futex address */ this,
+          /* futex operation  */
+          is_shared ? FUTEX_REQUEUE : FUTEX_REQUEUE_PRIVATE,
+          /* wake up limit */ wake_limit,
+          /* requeue limit */
+          requeue_limit,
+          /* requeue address */
+          &other);
+    if (ret < 0)
+      return cpp::unexpected<int>(-ret);
+    return static_cast<int>(ret);
   }
 };
 
