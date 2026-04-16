@@ -1362,6 +1362,36 @@ def int_ppc_altivec_vmulhsw : PowerPC_Vec_WWW_Intrinsic<"vmulhsw">;
 def int_ppc_altivec_vmulhuw : PowerPC_Vec_WWW_Intrinsic<"vmulhuw">;
 def int_ppc_altivec_vmulhsd : PowerPC_Vec_DDD_Intrinsic<"vmulhsd">;
 def int_ppc_altivec_vmulhud : PowerPC_Vec_DDD_Intrinsic<"vmulhud">;
+// Deeply Compressed Weights Intrinsics.
+def int_ppc_altivec_vucmprhn : PowerPC_Vec_BBB_Intrinsic<"vucmprhn">;
+def int_ppc_altivec_vucmprln : PowerPC_Vec_BBB_Intrinsic<"vucmprln">;
+def int_ppc_altivec_vucmprhb : PowerPC_Vec_BBB_Intrinsic<"vucmprhb">;
+def int_ppc_altivec_vucmprlb : PowerPC_Vec_BBB_Intrinsic<"vucmprlb">;
+def int_ppc_altivec_vucmprhh : PowerPC_Vec_BBB_Intrinsic<"vucmprhh">;
+def int_ppc_altivec_vucmprlh : PowerPC_Vec_BBB_Intrinsic<"vucmprlh">;
+def int_ppc_altivec_vupkhsntob :
+    PowerPC_Vec_Intrinsic<"vupkhsntob", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty], [IntrNoMem]>;
+def int_ppc_altivec_vupklsntob :
+    PowerPC_Vec_Intrinsic<"vupklsntob", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty], [IntrNoMem]>;
+def int_ppc_altivec_vupkint4tobf16 :
+    PowerPC_Vec_Intrinsic<"vupkint4tobf16", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_ppc_altivec_vupkint8tobf16 :
+    PowerPC_Vec_Intrinsic<"vupkint8tobf16", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_ppc_altivec_vupkint4tofp32 :
+    PowerPC_Vec_Intrinsic<"vupkint4tofp32", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_ppc_altivec_vupkint8tofp32 :
+    PowerPC_Vec_Intrinsic<"vupkint8tofp32", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
 
 //===----------------------------------------------------------------------===//
 // PowerPC VSX Intrinsic Definitions.

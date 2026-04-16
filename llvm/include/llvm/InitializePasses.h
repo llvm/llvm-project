@@ -322,6 +322,8 @@ LLVM_ABI void initializeStackSafetyInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeStackSlotColoringLegacyPass(PassRegistry &);
 LLVM_ABI void
 initializeStraightLineStrengthReduceLegacyPassPass(PassRegistry &);
+LLVM_ABI void
+initializeStripConvergenceIntrinsicsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeStripDebugMachineModulePass(PassRegistry &);
 LLVM_ABI void initializeStructurizeCFGLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeTailCallElimPass(PassRegistry &);

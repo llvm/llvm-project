@@ -275,6 +275,9 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
+  function template instantiations (#64087).
+
 - ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
   internal linkage (``static`` storage class) that are assigned but never used.
   This new coverage is added under the subgroup ``-Wunused-but-set-global``,
@@ -385,6 +388,7 @@ Improvements to Clang's diagnostics
 - Improved error recovery for missing semicolons after class members. Clang now avoids
   skipping subsequent valid declarations when their previous decl is missing semicolon.
 
+- Removed the body of lambdas from some diagnostic messages.
 
 Improvements to Clang's time-trace
 ----------------------------------

@@ -910,6 +910,16 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   cir::FuncOp dtorFunc =
       buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                            cir::GlobalLinkageKind::InternalLinkage);
+
+  SmallVector<mlir::NamedAttribute> paramAttrs;
+  paramAttrs.push_back(
+      builder.getNamedAttr("llvm.noundef", builder.getUnitAttr()));
+  SmallVector<mlir::Attribute> argAttrDicts;
+  argAttrDicts.push_back(
+      mlir::DictionaryAttr::get(builder.getContext(), paramAttrs));
+  dtorFunc.setArgAttrsAttr(
+      mlir::ArrayAttr::get(builder.getContext(), argAttrDicts));
+
   mlir::Block *entryBB = dtorFunc.addEntryBlock();
 
   // Move everything from the dtor region into the helper function.
