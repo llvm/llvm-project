@@ -95,10 +95,9 @@
 ; original loop body frequency, 11.
 ; UR4:     - do.body: float = 2.3702,
 ; UR4-ELP: - do.body.epil: float = 1.5193,
-; FIXME: Should sum to 1.5193:
 ; UR4-EUR: - do.body.epil: float = 0.78453,
-; UR4-EUR: - do.body.epil.1: float = 0.37941,
-; UR4-EUR: - do.body.epil.2: float = 0.18349,
+; UR4-EUR: - do.body.epil.1: float = 0.46232,
+; UR4-EUR: - do.body.epil.2: float = 0.27244,
 ;
 ; Unrolled loop guard, body, and latch.
 ; UR4: br i1 %{{.*}}, label %do.body.epil.preheader, label %entry.new, !prof !0
@@ -137,7 +136,7 @@
 ;   to the non-unrolled case.  There are only two, so the implementation can
 ;   compute uniform branch weights using the quadratic formula.
 ; - It has no llvm.loop.estimated_trip_count.
-; UR4-EUR: !6 = !{!"branch_weights", i32 1038564635, i32 1108919013}
+; UR4-EUR: !6 = !{!"branch_weights", i32 1265493781, i32 881989867}
 
 ; ------------------------------------------------------------------------------
 ; Check -unroll-count=10.

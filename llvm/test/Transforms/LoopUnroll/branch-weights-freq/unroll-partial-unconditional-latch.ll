@@ -95,8 +95,7 @@
 ;     RUN: %{ur-bf} -unroll-count=2 | %{fc} MULT2
 ;
 ;     Multiply by 2 to get the original loop body frequency, 10.
-;     FIXME: Should sum to 5.0:
-;     MULT2: - do.body: float = 10.0,
+;     MULT2: - do.body: float = 5.0,
 ;
 ;     MULT2:     call void @f
 ;     MULT2-NOT: br
@@ -105,8 +104,7 @@
 ;
 ;     The branch weights imply the estimated trip count is
 ;     (1717986918+429496730)/429496730 = approximately (8+2)/2 = 5.
-;     FIXME: Or at least they should.
-;     MULT2: !0 = !{!"branch_weights", i32 9, i32 1}
+;     MULT2: !0 = !{!"branch_weights", i32 1717986918, i32 429496730}
 ;     MULT2: !1 = distinct !{!1, !2, !3}
 ;     MULT2: !2 = !{!"llvm.loop.estimated_trip_count", i32 5}
 ;     MULT2: !3 = !{!"llvm.loop.unroll.disable"}
@@ -117,9 +115,8 @@
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} MULT4
 ;
 ;     Multiply by 2 and sum to get the original loop body frequency, 10.
-;     FIXME: Should sum to 5.0:
-;     MULT4: - do.body: float = 5.2632,
-;     MULT4: - do.body.2: float = 4.7368,
+;     MULT4: - do.body: float = 2.7778,
+;     MULT4: - do.body.2: float = 2.2222,
 ;
 ;     MULT4:     call void @f
 ;     MULT4-NOT: br
@@ -132,7 +129,7 @@
 ;
 ;     MULT4 is like applying -unroll-count=2 to MULT2 without converting any
 ;     more conditional latches to unconditional, so MULT2's branch weights work.
-;     MULT4: !0 = !{!"branch_weights", i32 9, i32 1}
+;     MULT4: !0 = !{!"branch_weights", i32 1717986918, i32 429496730}
 ;     MULT4: !1 = distinct !{!1, !2, !3}
 ;     MULT4: !2 = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;     MULT4: !3 = !{!"llvm.loop.unroll.disable"}
@@ -167,7 +164,7 @@
 ;   LOW2:     call void @f
 ;   LOW2:     br i1 %{{.*}}, label %do.body, label %do.end, !prof !0, !llvm.loop !1{{$}}
 ;
-;   LOW2: !0 = !{!"branch_weights", i32 0, i32 1}
+;   LOW2: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
 ;   LOW2: !1 = distinct !{!1, !2, !3}
 ;   LOW2: !2 = !{!"llvm.loop.estimated_trip_count", i32 1}
 ;   LOW2: !3 = !{!"llvm.loop.unroll.disable"}
@@ -192,7 +189,7 @@
 ;   LOW4:     call void @f
 ;   LOW4:     br i1 %{{.*}}, label %do.body, label %do.end, !prof !0, !llvm.loop !1
 ;
-;   LOW4: !0 = !{!"branch_weights", i32 0, i32 1}
+;   LOW4: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
 ;   LOW4: !1 = distinct !{!1, !2, !3}
 ;   LOW4: !2 = !{!"llvm.loop.estimated_trip_count", i32 1}
 ;   LOW4: !3 = !{!"llvm.loop.unroll.disable"}
@@ -218,8 +215,7 @@
 ;   RUN: %{ur-bf} -unroll-count=2 | %{fc} CONST2
 ;
 ;   Multiply by 2 to get the original loop body frequency, 10.
-;   FIXME: Should be 5.0:
-;   CONST2: - do.body: float = 10.0,
+;   CONST2: - do.body: float = 5.0,
 ;
 ;   CONST2:     call void @f
 ;   CONST2-NOT: br:
@@ -227,7 +223,7 @@
 ;   CONST2:     br i1 %{{.*}}, label %do.body, label %do.end, !prof !0, !llvm.loop !1
 ;
 ;   Like MULT2.
-;   CONST2: !0 = !{!"branch_weights", i32 9, i32 1}
+;   CONST2: !0 = !{!"branch_weights", i32 1717986918, i32 429496730}
 ;   CONST2: !1 = distinct !{!1, !2, !3}
 ;   CONST2: !2 = !{!"llvm.loop.estimated_trip_count", i32 5}
 ;   CONST2: !3 = !{!"llvm.loop.unroll.disable"}
@@ -237,9 +233,8 @@
 ;   RUN: %{ur-bf} -unroll-count=4 | %{fc} CONST4
 ;
 ;   Multiply by 2 and sum to get the original loop body frequency, 10.
-;   FIXME: Should sum to 5.0:
-;   CONST4: - do.body: float = 10.0,
-;   CONST4: - do.body.2: float = 9.0,
+;   CONST4: - do.body: float = 3.0,
+;   CONST4: - do.body.2: float = 2.0,
 ;
 ;   CONST4:     call void @f
 ;   CONST4-NOT: br
@@ -254,7 +249,7 @@
 ;   in do.body.2 unconditionally continues.  The branch weights on do.body's
 ;   branch imply do.body continues twice and then exits once, thus executing the
 ;   original loop body 10 times.
-;   CONST4: !0 = !{!"branch_weights", i32 9, i32 1}
+;   CONST4: !0 = !{!"branch_weights", i32 1431655765, i32 715827883}
 ;   CONST4: !1 = distinct !{!1, !2}
 ;   CONST4: !2 = !{!"llvm.loop.unroll.disable"}
 
