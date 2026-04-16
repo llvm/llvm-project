@@ -578,3 +578,23 @@ void instantiate_inline_member_template_suppress() {
   InlineMemberTemplateSuppress s;
   s.f<int>();
 }
+
+// Suppress on a static inline data member applies to its in-class initializer.
+struct StaticInlineDataMemberSuppress {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  static inline int *p = reinterpret_cast<int*>(0);
+};
+
+// Without per-member suppress, a static inline data member initializer fires.
+struct StaticInlineDataMemberNoSuppress {
+  static inline int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+};
+
+// Suppress on a static data member initializer with a non-matching profile
+// does not suppress the violation.
+struct StaticInlineDataMemberWrongProfile {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::other)]]
+  static inline int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+};

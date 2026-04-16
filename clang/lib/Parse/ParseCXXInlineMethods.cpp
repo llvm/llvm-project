@@ -692,8 +692,6 @@ void Parser::ParseLexedMemberInitializer(LateParsedMemberInitializer &MI) {
   EnterExpressionEvaluationContext Eval(
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed);
 
-  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, MI.Field);
-
   ExprResult Init = ParseCXXMemberInitializer(MI.Field, /*IsFunction=*/false,
                                               EqualLoc);
 
