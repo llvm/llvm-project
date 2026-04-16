@@ -854,6 +854,53 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
   return true;
 }
 
+// Sink users of fixed-order recurrences past or hoist before the recipe
+// defining the previous value, introduce FirstOrderRecurrenceSplice
+// VPInstructions, and replace FOR uses. Return false, if hoisting or sinking
+// fails.
+static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
+                                            VPDominatorTree &VPDT) {
+  for (VPRecipeBase &R : HeaderVPBB->phis()) {
+    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R);
+    if (!FOR)
+      continue;
+
+    // Follow through FOR phi chains to find the actual Previous recipe.
+    // Fixed-order recurrences do not contain cycles, so this loop is
+    // guaranteed to terminate.
+    SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
+    VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
+    while (auto *PrevPhi =
+               dyn_cast_or_null<VPFirstOrderRecurrencePHIRecipe>(Previous)) {
+      assert(PrevPhi->getParent() == FOR->getParent());
+      assert(SeenPhis.insert(PrevPhi).second);
+      Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
+    }
+
+    // Sink FOR users after Previous or hoist Previous before FOR users.
+    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
+        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
+      return false;
+
+    // Create FirstOrderRecurrenceSplice and replace FOR uses.
+    VPBasicBlock *InsertBlock =
+        Previous ? Previous->getParent() : FOR->getParent();
+    auto InsertPt = (!Previous || isa<VPHeaderPHIRecipe>(Previous))
+                        ? InsertBlock->getFirstNonPhi()
+                        : std::next(Previous->getIterator());
+    VPBuilder LoopBuilder(InsertBlock, InsertPt);
+    ;
+    auto *RecurSplice =
+        LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
+                                 {FOR, FOR->getBackedgeValue()});
+    FOR->replaceUsesWithIf(RecurSplice, [RecurSplice](VPUser &U, unsigned) {
+      return &U != RecurSplice;
+    });
+  }
+
+  return true;
+}
+
 bool VPlanTransforms::createHeaderPhiRecipes(
     VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
@@ -919,49 +966,8 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     PhiR->eraseFromParent();
   }
 
-  // Sink users of fixed-order recurrences past the recipe defining the
-  // previous value, introduce FirstOrderRecurrenceSplice VPInstructions, and
-  // replace FOR uses. At VPlan0, the VPlan mirrors the scalar IR, so the
-  // legality check (sink/hoist) is guaranteed to succeed by
-  // isFixedOrderRecurrence.
-  VPBuilder LoopBuilder;
-  for (VPRecipeBase &R : HeaderVPBB->phis()) {
-    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R);
-    if (!FOR)
-      continue;
-
-    // Follow through FOR phi chains to find the actual Previous recipe.
-    // Fixed-order recurrences do not contain cycles, so this loop is
-    // guaranteed to terminate.
-    SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
-    VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
-    while (auto *PrevPhi =
-               dyn_cast_or_null<VPFirstOrderRecurrencePHIRecipe>(Previous)) {
-      assert(PrevPhi->getParent() == FOR->getParent());
-      assert(SeenPhis.insert(PrevPhi).second);
-      Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
-    }
-
-    // Sink FOR users after Previous or hoist Previous before FOR users.
-    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
-        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
-      return false;
-
-    // Create FirstOrderRecurrenceSplice and replace FOR uses.
-    VPBasicBlock *InsertBlock =
-        Previous ? Previous->getParent() : FOR->getParent();
-    auto InsertPt = (!Previous || isa<VPHeaderPHIRecipe>(Previous))
-                        ? InsertBlock->getFirstNonPhi()
-                        : std::next(Previous->getIterator());
-    LoopBuilder.setInsertPoint(InsertBlock, InsertPt);
-
-    auto *RecurSplice =
-        LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
-                                 {FOR, FOR->getBackedgeValue()});
-    FOR->replaceUsesWithIf(RecurSplice, [RecurSplice](VPUser &U, unsigned) {
-      return &U != RecurSplice;
-    });
-  }
+  if (!tryToSinkOrHoistRecurrenceUsers(HeaderVPBB, VPDT))
+    return false;
 
   for (const auto &[HeaderPhiR, ScalarPhiR] :
        getMatchingPhisForScalarLoop(HeaderVPBB, Plan.getScalarPreheader())) {

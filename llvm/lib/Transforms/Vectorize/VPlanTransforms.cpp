@@ -5384,15 +5384,6 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
     if (!FOR)
       continue;
 
-    // For VF vscale x 1, if vscale = 1, we are unable to extract the
-    // penultimate value of the recurrence. Instead we rely on the existing
-    // extract of the last element from the result of
-    // VPInstruction::FirstOrderRecurrenceSplice.
-    // TODO: Consider vscale_range info and UF.
-    if (LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
-                                                           Range))
-      return;
-
     assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
            "Cannot handle loops with uncountable early exits");
 
@@ -5406,6 +5397,17 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
     });
     assert(It != FOR->users().end() && "expected FirstOrderRecurrenceSplice");
     auto *RecurSplice = cast<VPInstruction>(*It);
+
+    // For VF vscale x 1, if vscale = 1, we are unable to extract the
+    // penultimate value of the recurrence. Instead we rely on the existing
+    // extract of the last element from the result of
+    // VPInstruction::FirstOrderRecurrenceSplice.
+    // TODO: Consider vscale_range info and UF.
+    if (any_of(RecurSplice->users(),
+               [](VPUser *U) { return !cast<VPRecipeBase>(U)->getRegion(); }) &&
+        LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
+                                                           Range))
+      return;
 
     // This is the second phase of vectorizing first-order recurrences, creating
     // extracts for users outside the loop. An overview of the transformation is
