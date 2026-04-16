@@ -1706,7 +1706,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             // available.
             setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
           }
-          if (Subtarget.hasStdExtZvfbfa()) {
+          if (Subtarget.hasVInstructionsBF16()) {
             setOperationAction(ZvfbfaOps, VT, Custom);
             setOperationAction(ZvfbfaVPOps, VT, Custom);
             setCondCodeAction(VFPCCToExpand, VT, Expand);
@@ -1721,7 +1721,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           if (!isTypeLegal(F32VecVT))
             continue;
 
-          if (Subtarget.hasStdExtZvfbfa())
+          if (Subtarget.hasVInstructionsBF16())
             setOperationPromotedToType(ZvfbfaPromoteOps, VT, F32VecVT);
           else
             setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
@@ -4629,7 +4629,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // Proper support for f16 requires Zvfh. bf16 always requires special
   // handling. We need to cast the scalar to integer and create an integer
   // build_vector.
-  if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) ||
+  if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
       (EltVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
     MVT IVT = VT.changeVectorElementType(MVT::i16);
     SmallVector<SDValue, 16> NewOps(Op.getNumOperands());
@@ -5021,7 +5021,7 @@ static SDValue lowerScalarSplat(SDValue Passthru, SDValue Scalar, SDValue VL,
   MVT XLenVT = Subtarget.getXLenVT();
 
   if (VT.isFloatingPoint()) {
-    if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) ||
+    if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
         (EltVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
       if ((EltVT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) ||
           (EltVT == MVT::f16 && Subtarget.hasStdExtZfhmin()))
@@ -8417,7 +8417,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SPLAT_VECTOR: {
     MVT VT = Op.getSimpleValueType();
     MVT EltVT = VT.getVectorElementType();
-    if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) ||
+    if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
         EltVT == MVT::bf16) {
       SDLoc DL(Op);
       SDValue Elt;
@@ -18594,7 +18594,8 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root,
   case RISCVISD::VFNMADD_VL:
   case RISCVISD::VFNMSUB_VL:
     Strategies.push_back(canFoldToVWWithSameExtension);
-    if (Subtarget.hasStdExtZvfbfa() && Root->getOpcode() != RISCVISD::FMUL_VL)
+    if (Subtarget.hasVInstructionsBF16() &&
+        Root->getOpcode() != RISCVISD::FMUL_VL)
       // TODO: Once other widen operations are supported we can merge
       // canFoldToVWWithSameExtension and canFoldToVWWithSameExtBF16.
       Strategies.push_back(canFoldToVWWithSameExtBF16);
