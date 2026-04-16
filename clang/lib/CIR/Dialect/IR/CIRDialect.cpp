@@ -341,7 +341,23 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
   return success();
 }
 
-LogicalResult cir::ArrayCtor::verify() { return verifyArrayCtorDtor(*this); }
+LogicalResult cir::ArrayCtor::verify() {
+  if (failed(verifyArrayCtorDtor(*this)))
+    return failure();
+
+  mlir::Region &partialDtor = getPartialDtor();
+  if (!partialDtor.empty()) {
+    mlir::Block &dtorBlock = partialDtor.front();
+    if (dtorBlock.getNumArguments() != 1)
+      return emitOpError("partial_dtor must have exactly one block argument");
+
+    auto bodyArgTy = getBody().front().getArgument(0).getType();
+    if (dtorBlock.getArgument(0).getType() != bodyArgTy)
+      return emitOpError("partial_dtor block argument type must match "
+                         "the body block argument type");
+  }
+  return success();
+}
 LogicalResult cir::ArrayDtor::verify() { return verifyArrayCtorDtor(*this); }
 
 //===----------------------------------------------------------------------===//
