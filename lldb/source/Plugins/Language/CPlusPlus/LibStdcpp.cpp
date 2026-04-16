@@ -144,7 +144,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (m_pair_address != 0 && m_pair_type) {
     if (!m_pair_sp)
       m_pair_sp = CreateChildValueObjectFromAddress("pair", m_pair_address,
-                                               m_exe_ctx_ref, m_pair_type);
+                                                    m_exe_ctx_ref, m_pair_type);
     if (m_pair_sp)
       return m_pair_sp->GetChildAtIndex(idx);
   }

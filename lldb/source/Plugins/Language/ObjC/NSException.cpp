@@ -118,8 +118,8 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
 bool lldb_private::formatters::NSException_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   lldb::ValueObjectSP reason_sp;
-  if (!ExtractFields(valobj, nullptr, &reason_sp, nullptr, nullptr, 
-                     /*owned_by_valobj=*/ false))
+  if (!ExtractFields(valobj, nullptr, &reason_sp, nullptr, nullptr,
+                     /*owned_by_valobj=*/false))
     return false;
 
   if (!reason_sp) {
@@ -163,7 +163,7 @@ public:
 
     const auto ret = ExtractFields(m_backend, &m_name_sp, &m_reason_sp,
                                    &m_userinfo_sp, &m_reserved_sp,
-                                   /*owned_by_valobj=*/ true);
+                                   /*owned_by_valobj=*/true);
 
     return ret ? lldb::ChildCacheState::eReuse
                : lldb::ChildCacheState::eRefetch;

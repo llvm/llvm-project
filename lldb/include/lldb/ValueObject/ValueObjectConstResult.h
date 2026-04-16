@@ -35,16 +35,17 @@ class ValueObjectConstResult : public ValueObject {
 public:
   ~ValueObjectConstResult() override;
 
-  static lldb::ValueObjectSP
-  Create(ExecutionContextScope *exe_scope, lldb::ByteOrder byte_order,
-         uint32_t addr_byte_size, lldb::addr_t address = LLDB_INVALID_ADDRESS,
-         ValueObjectManager *manager = nullptr);
+  static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
+                                    lldb::ByteOrder byte_order,
+                                    uint32_t addr_byte_size,
+                                    lldb::addr_t address = LLDB_INVALID_ADDRESS,
+                                    ValueObjectManager *manager = nullptr);
 
-  static lldb::ValueObjectSP
-  Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-         ConstString name, const DataExtractor &data,
-         lldb::addr_t address = LLDB_INVALID_ADDRESS,
-         ValueObjectManager *manager = nullptr);
+  static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
+                                    const CompilerType &compiler_type,
+                                    ConstString name, const DataExtractor &data,
+                                    lldb::addr_t address = LLDB_INVALID_ADDRESS,
+                                    ValueObjectManager *manager = nullptr);
 
   static lldb::ValueObjectSP
   Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
@@ -53,12 +54,10 @@ public:
          lldb::addr_t address = LLDB_INVALID_ADDRESS,
          ValueObjectManager *manager = nullptr);
 
-  static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    const CompilerType &compiler_type,
-                                    ConstString name, lldb::addr_t address,
-                                    AddressType address_type,
-                                    uint32_t addr_byte_size,
-                                    ValueObjectManager *manager = nullptr);
+  static lldb::ValueObjectSP
+  Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
+         ConstString name, lldb::addr_t address, AddressType address_type,
+         uint32_t addr_byte_size, ValueObjectManager *manager = nullptr);
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     Value &value, ConstString name,

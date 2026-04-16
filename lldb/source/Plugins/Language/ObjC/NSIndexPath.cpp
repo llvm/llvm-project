@@ -162,7 +162,6 @@ protected:
 
     struct InlinedIndexes {
     public:
-      
       void SetIndexes(uint64_t value, Process &p) {
         m_indexes = value;
         _lengthForInlinePayload(p.GetAddressByteSize());

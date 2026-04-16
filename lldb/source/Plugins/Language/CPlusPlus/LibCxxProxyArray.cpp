@@ -123,8 +123,8 @@ lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::GetChildAtIndex(
   StreamString name;
   name.Printf("[%" PRIu64 "] -> [%zu]", (uint64_t)idx, value);
   return CreateChildValueObjectFromAddress(name.GetString(), offset,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
 lldb::ChildCacheState

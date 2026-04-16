@@ -1,5 +1,6 @@
 import lldb
 
+
 class WrapperSynthProvider:
     def __init__(self, valobj, internal_dict):
         self.valobj = valobj

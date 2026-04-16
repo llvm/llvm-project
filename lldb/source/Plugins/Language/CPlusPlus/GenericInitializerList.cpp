@@ -89,8 +89,8 @@ public:
     StreamString name;
     name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     return CreateChildValueObjectFromAddress(name.GetString(), offset,
-                                        m_backend.GetExecutionContextRef(),
-                                        m_element_type);
+                                             m_backend.GetExecutionContextRef(),
+                                             m_element_type);
   }
 
   lldb::ChildCacheState Update() override {

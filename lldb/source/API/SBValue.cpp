@@ -456,8 +456,8 @@ lldb::SBValue SBValue::CreateValueFromAddress(const char *name,
   if (value_sp && type_impl_sp) {
     CompilerType ast_type(type_impl_sp->GetCompilerType(true));
     ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
-    new_value_sp = value_sp->CreateChildValueObjectFromAddress(name, address,
-                                                             exe_ctx, ast_type);
+    new_value_sp = value_sp->CreateChildValueObjectFromAddress(
+        name, address, exe_ctx, ast_type);
   }
   sb_value.SetSP(new_value_sp);
   return sb_value;
@@ -508,8 +508,8 @@ lldb::SBValue SBValue::CreateBoolValue(const char *name, bool value) {
                      "cannot get a type system: {0}");
       return {};
     }
-    return value_sp->CreateChildValueObjectFromBool(exe_ctx, *type_system_or_err,
-                                                  value, name);
+    return value_sp->CreateChildValueObjectFromBool(
+        exe_ctx, *type_system_or_err, value, name);
   };
   sb_value.SetSP(get_new_value());
   return sb_value;

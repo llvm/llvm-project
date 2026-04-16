@@ -21,9 +21,7 @@ class ftsp:
         if index == 4:
             data = lldb.SBData.CreateDataFromInt(self.count)
             type = self.valobj.target.FindFirstType("char")
-            return self.valobj.CreateValueFromData(
-                str(index), data, type
-            )
+            return self.valobj.CreateValueFromData(str(index), data, type)
         return self.x.CreateChildAtOffset(str(index), index, self.char)
 
     def update(self):

@@ -329,8 +329,8 @@ ValueObjectSP LibCxxForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
     return nullptr;
 
   return CreateChildValueObjectFromData(llvm::formatv("[{0}]", idx).str(), data,
-                                   m_backend.GetExecutionContextRef(),
-                                   m_element_type);
+                                        m_backend.GetExecutionContextRef(),
+                                        m_element_type);
 }
 
 lldb::ChildCacheState LibCxxForwardListFrontEnd::Update() {
@@ -434,8 +434,8 @@ lldb::ValueObjectSP LibCxxListFrontEnd::GetChildAtIndex(uint32_t idx) {
     lldb::addr_t addr = current_sp->GetParent()->GetPointerValue().address;
     addr = addr + 2 * process_sp->GetAddressByteSize();
     ExecutionContext exe_ctx(process_sp);
-    current_sp =
-        CreateChildValueObjectFromAddress("__value_", addr, exe_ctx, m_element_type);
+    current_sp = CreateChildValueObjectFromAddress("__value_", addr, exe_ctx,
+                                                   m_element_type);
     if (!current_sp)
       return lldb::ValueObjectSP();
   }
@@ -451,8 +451,8 @@ lldb::ValueObjectSP LibCxxListFrontEnd::GetChildAtIndex(uint32_t idx) {
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
   return CreateChildValueObjectFromData(name.GetString(), data,
-                                   m_backend.GetExecutionContextRef(),
-                                   m_element_type);
+                                        m_backend.GetExecutionContextRef(),
+                                        m_element_type);
 }
 
 lldb::ChildCacheState LibCxxListFrontEnd::Update() {
@@ -520,8 +520,8 @@ ValueObjectSP MsvcStlForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
     return nullptr;
 
   return CreateChildValueObjectFromData(llvm::formatv("[{0}]", idx).str(), data,
-                                   m_backend.GetExecutionContextRef(),
-                                   m_element_type);
+                                        m_backend.GetExecutionContextRef(),
+                                        m_element_type);
 }
 
 lldb::ChildCacheState MsvcStlForwardListFrontEnd::Update() {
@@ -591,8 +591,8 @@ lldb::ValueObjectSP MsvcStlListFrontEnd::GetChildAtIndex(uint32_t idx) {
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
   return CreateChildValueObjectFromData(name.GetString(), data,
-                                   m_backend.GetExecutionContextRef(),
-                                   m_element_type);
+                                        m_backend.GetExecutionContextRef(),
+                                        m_element_type);
 }
 
 lldb::ChildCacheState MsvcStlListFrontEnd::Update() {

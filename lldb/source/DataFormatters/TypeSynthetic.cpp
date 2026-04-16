@@ -129,18 +129,20 @@ SyntheticChildrenFrontEnd::CalculateNumChildrenIgnoringErrors(uint32_t max) {
   return 0;
 }
 
-lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateChildValueObjectFromExpression(
+lldb::ValueObjectSP
+SyntheticChildrenFrontEnd::CreateChildValueObjectFromExpression(
     llvm::StringRef name, llvm::StringRef expression,
     const ExecutionContext &exe_ctx) {
   EvaluateExpressionOptions options;
-  ValueObjectSP valobj_sp = m_backend.CreateChildValueObjectFromExpression(name, 
-    expression, exe_ctx, options);
+  ValueObjectSP valobj_sp = m_backend.CreateChildValueObjectFromExpression(
+      name, expression, exe_ctx, options);
   if (valobj_sp)
     valobj_sp->SetSyntheticChildrenGenerated(true);
   return valobj_sp;
 }
 
-lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateChildValueObjectFromAddress(
+lldb::ValueObjectSP
+SyntheticChildrenFrontEnd::CreateChildValueObjectFromAddress(
     llvm::StringRef name, uint64_t address, const ExecutionContext &exe_ctx,
     CompilerType type, bool do_deref) {
   ValueObjectSP valobj_sp = m_backend.CreateChildValueObjectFromAddress(
@@ -153,8 +155,8 @@ lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateChildValueObjectFromAddress
 lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateChildValueObjectFromData(
     llvm::StringRef name, const DataExtractor &data,
     const ExecutionContext &exe_ctx, CompilerType type) {
-  ValueObjectSP valobj_sp = 
-  m_backend.CreateChildValueObjectFromData(name, data, exe_ctx, type);
+  ValueObjectSP valobj_sp =
+      m_backend.CreateChildValueObjectFromData(name, data, exe_ctx, type);
   if (valobj_sp)
     valobj_sp->SetSyntheticChildrenGenerated(true);
   return valobj_sp;

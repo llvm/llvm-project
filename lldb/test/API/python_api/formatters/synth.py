@@ -14,6 +14,7 @@ class jasSynthProvider:
             child = self.valobj.GetChildMemberWithName("A")
         if index == 1:
             import lldb
+
             data = lldb.SBData.CreateDataFromInt(1)
             type = self.valobj.target.FindFirstType("int")
             child = self.valobj.CreateValueFromData("X", data, type)

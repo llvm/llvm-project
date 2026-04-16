@@ -712,47 +712,37 @@ public:
   /// use the method CreateChildValueObjectFrom... instead for that purpose.
   /// That will ensure the right parent is passed in.
 
-  static lldb::ValueObjectSP
-  CreateValueObjectFromExpression(llvm::StringRef name,
-                                  llvm::StringRef expression,
-                                  const ExecutionContext &exe_ctx,
-                                  ValueObject *parent = nullptr);
+  static lldb::ValueObjectSP CreateValueObjectFromExpression(
+      llvm::StringRef name, llvm::StringRef expression,
+      const ExecutionContext &exe_ctx, ValueObject *parent = nullptr);
 
-  static lldb::ValueObjectSP
-  CreateValueObjectFromExpression(llvm::StringRef name,
-                                  llvm::StringRef expression,
-                                  const ExecutionContext &exe_ctx,
-                                  const EvaluateExpressionOptions &options,
-                                  ValueObject *parent = nullptr);
+  static lldb::ValueObjectSP CreateValueObjectFromExpression(
+      llvm::StringRef name, llvm::StringRef expression,
+      const ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
+      ValueObject *parent = nullptr);
 
   /// Given an address either create a value object containing the value at
   /// that address, or create a value object containing the address itself
   /// (pointer value), depending on whether the parameter 'do_deref' is true or
   /// false.
-  static lldb::ValueObjectSP
-  CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
-                               const ExecutionContext &exe_ctx,
-                               CompilerType type, bool do_deref = true,
-                               ValueObject *parent = nullptr);
+  static lldb::ValueObjectSP CreateValueObjectFromAddress(
+      llvm::StringRef name, uint64_t address, const ExecutionContext &exe_ctx,
+      CompilerType type, bool do_deref = true, ValueObject *parent = nullptr);
 
   static lldb::ValueObjectSP
   CreateValueObjectFromData(llvm::StringRef name, const DataExtractor &data,
                             const ExecutionContext &exe_ctx, CompilerType type,
-                                  ValueObject *parent = nullptr);
+                            ValueObject *parent = nullptr);
 
   /// Create a value object containing the given APInt value.
-  static lldb::ValueObjectSP
-  CreateValueObjectFromAPInt(const ExecutionContext &exe_ctx,
-                             const llvm::APInt &v, CompilerType type,
-                             llvm::StringRef name,
-                             ValueObject *parent = nullptr);
+  static lldb::ValueObjectSP CreateValueObjectFromAPInt(
+      const ExecutionContext &exe_ctx, const llvm::APInt &v, CompilerType type,
+      llvm::StringRef name, ValueObject *parent = nullptr);
 
   /// Create a value object containing the given APFloat value.
-  static lldb::ValueObjectSP
-  CreateValueObjectFromAPFloat(const ExecutionContext &exe_ctx,
-                               const llvm::APFloat &v, CompilerType type,
-                               llvm::StringRef name,
-                               ValueObject *parent = nullptr);
+  static lldb::ValueObjectSP CreateValueObjectFromAPFloat(
+      const ExecutionContext &exe_ctx, const llvm::APFloat &v,
+      CompilerType type, llvm::StringRef name, ValueObject *parent = nullptr);
 
   /// Create a value object containing the given Scalar value.
   static lldb::ValueObjectSP
@@ -761,11 +751,9 @@ public:
                               ValueObject *parent = nullptr);
 
   /// Create a value object containing the given boolean value.
-  static lldb::ValueObjectSP
-  CreateValueObjectFromBool(const ExecutionContext &exe_ctx,
-                            lldb::TypeSystemSP typesystem, bool value,
-                            llvm::StringRef name,
-                            ValueObject *parent = nullptr);
+  static lldb::ValueObjectSP CreateValueObjectFromBool(
+      const ExecutionContext &exe_ctx, lldb::TypeSystemSP typesystem,
+      bool value, llvm::StringRef name, ValueObject *parent = nullptr);
 
   /// Create a nullptr value object with the specified type (must be a
   /// nullptr type).
@@ -776,12 +764,12 @@ public:
 
   /// These are the appropriate routines to make a ValueObject that get managed
   /// by this ValueObject (and all the other members of its Cluster).
-  lldb::ValueObjectSP
-  CreateChildValueObjectFromExpression(llvm::StringRef name,
-                                  llvm::StringRef expression,
-                                  const ExecutionContext &exe_ctx,
-                                  const EvaluateExpressionOptions &options) {
-    return CreateValueObjectFromExpression(name, expression, exe_ctx, options, this);
+  lldb::ValueObjectSP CreateChildValueObjectFromExpression(
+      llvm::StringRef name, llvm::StringRef expression,
+      const ExecutionContext &exe_ctx,
+      const EvaluateExpressionOptions &options) {
+    return CreateValueObjectFromExpression(name, expression, exe_ctx, options,
+                                           this);
   }
 
   /// Given an address either create a value object containing the value at
@@ -790,45 +778,46 @@ public:
   /// false.
   lldb::ValueObjectSP
   CreateChildValueObjectFromAddress(llvm::StringRef name, uint64_t address,
-                               const ExecutionContext &exe_ctx,
-                               CompilerType type, bool do_deref = true)  {
-    return CreateValueObjectFromAddress(name, address, exe_ctx, type, do_deref, this);
+                                    const ExecutionContext &exe_ctx,
+                                    CompilerType type, bool do_deref = true) {
+    return CreateValueObjectFromAddress(name, address, exe_ctx, type, do_deref,
+                                        this);
   }
 
-  lldb::ValueObjectSP
-  CreateChildValueObjectFromData(llvm::StringRef name, const DataExtractor &data,
-                            const ExecutionContext &exe_ctx, CompilerType type)  {
+  lldb::ValueObjectSP CreateChildValueObjectFromData(
+      llvm::StringRef name, const DataExtractor &data,
+      const ExecutionContext &exe_ctx, CompilerType type) {
     return CreateValueObjectFromData(name, data, exe_ctx, type, this);
   }
 
   /// Create a value object containing the given APInt value.
   lldb::ValueObjectSP
   CreateChildValueObjectFromAPInt(const ExecutionContext &exe_ctx,
-                             const llvm::APInt &v, CompilerType type,
-                             llvm::StringRef name)  {
+                                  const llvm::APInt &v, CompilerType type,
+                                  llvm::StringRef name) {
     return CreateValueObjectFromAPInt(exe_ctx, v, type, name, this);
   }
 
   /// Create a value object containing the given APFloat value.
   lldb::ValueObjectSP
   CreateChildValueObjectFromAPFloat(const ExecutionContext &exe_ctx,
-                               const llvm::APFloat &v, CompilerType type,
-                               llvm::StringRef name)  {
+                                    const llvm::APFloat &v, CompilerType type,
+                                    llvm::StringRef name) {
     return CreateValueObjectFromAPFloat(exe_ctx, v, type, name, this);
   }
 
   /// Create a value object containing the given Scalar value.
   lldb::ValueObjectSP
   CreateChildValueObjectFromScalar(const ExecutionContext &exe_ctx, Scalar &s,
-                              CompilerType type, llvm::StringRef name)  {
+                                   CompilerType type, llvm::StringRef name) {
     return CreateValueObjectFromScalar(exe_ctx, s, type, name, this);
   }
 
   /// Create a value object containing the given boolean value.
   lldb::ValueObjectSP
   CreateChildValueObjectFromBool(const ExecutionContext &exe_ctx,
-                            lldb::TypeSystemSP typesystem, bool value,
-                            llvm::StringRef name)  {                             
+                                 lldb::TypeSystemSP typesystem, bool value,
+                                 llvm::StringRef name) {
     return CreateValueObjectFromBool(exe_ctx, typesystem, value, name, this);
   }
 
@@ -836,7 +825,7 @@ public:
   /// nullptr type).
   lldb::ValueObjectSP
   CreateChildValueObjectFromNullptr(const ExecutionContext &exe_ctx,
-                               CompilerType type, llvm::StringRef name)  {
+                                    CompilerType type, llvm::StringRef name) {
     return CreateValueObjectFromNullptr(exe_ctx, type, name, this);
   }
 
@@ -973,7 +962,7 @@ public:
   /// pointing to, and thus also can't know its size. See the comment in
   /// Value::m_value for a more thorough explanation of why that is.
   llvm::ArrayRef<uint8_t> GetLocalBuffer() const;
-  
+
   lldb::ValueObjectSP CheckValueObjectOwnership(ValueObject *child);
 
 protected:
@@ -1019,7 +1008,7 @@ protected:
     ChildrenMap m_children;
     size_t m_children_count = 0;
   };
-  
+
   // Classes that inherit from ValueObject can see and modify these
 
   /// The parent value object, or nullptr if this has no parent.
