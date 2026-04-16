@@ -205,3 +205,11 @@ LLVMErrorTypeId LLVMGetStringErrorTypeId() {
 LLVMErrorRef LLVMCreateStringError(const char *ErrMsg) {
   return wrap(make_error<StringError>(ErrMsg, inconvertibleErrorCode()));
 }
+
+char WrappedError::ID = 0;
+
+void WrappedError::log(llvm::raw_ostream &OS) const {
+  if (Prefix.size())
+    OS << Prefix << ": ";
+  OS << Msg;
+}

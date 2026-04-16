@@ -1513,6 +1513,24 @@ inline Error unwrap(LLVMErrorRef ErrRef) {
       reinterpret_cast<ErrorInfoBase *>(ErrRef)));
 }
 
+class LLVM_ABI WrappedError : public ErrorInfo<WrappedError, ECError> {
+public:
+  static char ID;
+  WrappedError(const Twine &Msg, const Twine &Prefix = "")
+      : Msg(Msg.str()), Prefix(Prefix.str()) {}
+  void log(raw_ostream &OS) const override;
+  const std::string &getMessage() const { return Msg; }
+  const std::string &getPrefix() const { return Prefix; }
+
+private:
+  std::string Msg;
+  std::string Prefix;
+};
+
+inline Error createWrappedError(const Twine &Msg, const Twine &Prefix) {
+  return make_error<WrappedError>(Msg, Prefix);
+}
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_ERROR_H
