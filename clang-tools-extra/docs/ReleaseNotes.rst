@@ -286,6 +286,11 @@ Changes in existing checks
   string constructor calls when the string class constructor has a default
   allocator argument.
 
+- Improved :doc:`bugprone-throwing-static-initialization
+  <clang-tidy/checks/bugprone/throwing-static-initialization>` check by adding
+  the `AllowedTypes` option. With this option it is possible to exclude
+  static declarations with specific types from the check.
+
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
   GoogleTest macros such as ``ASSERT_TRUE`` and ``ASSERT_FALSE``, reducing the
