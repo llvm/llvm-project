@@ -1945,6 +1945,18 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     }
   }
 
+  // sext(scmp(x, y)) -> scmp(x, y) with a wider result type.
+  // sext(ucmp(x, y)) -> ucmp(x, y) with a wider result type.
+  // scmp/ucmp return only -1, 0, or 1, which sign-extend correctly to any
+  // wider integer type, so we can sink the extension into the intrinsic.
+  if (auto *II = dyn_cast<IntrinsicInst>(Src)) {
+    Intrinsic::ID IID = II->getIntrinsicID();
+    if ((IID == Intrinsic::scmp || IID == Intrinsic::ucmp) && II->hasOneUse())
+      return replaceInstUsesWith(
+          Sext, Builder.CreateIntrinsic(
+                    DestTy, IID, {II->getArgOperand(0), II->getArgOperand(1)}));
+  }
+
   return nullptr;
 }
 
