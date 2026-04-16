@@ -47,9 +47,9 @@
   __riscv_sf_vc_x_se(p27_26, p24_20, p11_7, (uint32_t)rs1, 32, 3, vl)
 
 #define __riscv_sf_vc_i_se_u8mf4(p27_26, p24_20, p11_7, simm5, vl)             \
-  __riscv_sf_vc_i_se(p27_26, p24_20, p11_7, simm5, 8, 7, vl)
-#define __riscv_sf_vc_i_se_u8mf2(p27_26, p24_20, p11_7, simm5, vl)             \
   __riscv_sf_vc_i_se(p27_26, p24_20, p11_7, simm5, 8, 6, vl)
+#define __riscv_sf_vc_i_se_u8mf2(p27_26, p24_20, p11_7, simm5, vl)             \
+  __riscv_sf_vc_i_se(p27_26, p24_20, p11_7, simm5, 8, 7, vl)
 #define __riscv_sf_vc_i_se_u8m1(p27_26, p24_20, p11_7, simm5, vl)              \
   __riscv_sf_vc_i_se(p27_26, p24_20, p11_7, simm5, 8, 0, vl)
 #define __riscv_sf_vc_i_se_u8m2(p27_26, p24_20, p11_7, simm5, vl)              \

@@ -57,7 +57,7 @@ constexpr int pointerAssign2() {
 static_assert(pointerAssign2() == 12, "");
 
 constexpr int unInitLocal() {
-  int a;
+  int a; // both-note {{declared here}}
   return a; // both-note {{read of uninitialized object}}
 }
 static_assert(unInitLocal() == 0, ""); // both-error {{not an integral constant expression}} \
@@ -71,7 +71,7 @@ constexpr int initializedLocal() {
 static_assert(initializedLocal() == 20);
 
 constexpr int initializedLocal2() {
-  int a[2];
+  int a[2]; // both-note {{declared here}}
   return *a; // both-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 static_assert(initializedLocal2() == 20); // both-error {{not an integral constant expression}} \
@@ -80,7 +80,7 @@ static_assert(initializedLocal2() == 20); // both-error {{not an integral consta
 
 struct Int { int a; };
 constexpr int initializedLocal3() {
-  Int i;
+  Int i; // both-note {{declared here}}
   return i.a; // both-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 static_assert(initializedLocal3() == 20); // both-error {{not an integral constant expression}} \
@@ -274,7 +274,8 @@ namespace BaseInit {
 
   static_assert(Final{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final{1, 2, 3}.a == 0, ""); // both-error {{not an integral constant expression}} \
-                                            // both-note {{read of uninitialized object}}
+                                            // both-note {{read of uninitialized object}} \
+                                            // both-note {{temporary created here}}
 
 
   struct Mixin  {
@@ -294,7 +295,8 @@ namespace BaseInit {
   static_assert(Final2{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final2{1, 2, 3}.b == 2, ""); // OK
   static_assert(Final2{1, 2, 3}.a == 0, ""); // both-error {{not an integral constant expression}} \
-                                             // both-note {{read of uninitialized object}}
+                                             // both-note {{read of uninitialized object}} \
+                                             // both-note {{temporary created here}}
 
 
   struct Mixin3  {
@@ -311,7 +313,8 @@ namespace BaseInit {
   static_assert(Final3{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final3{1, 2, 3}.b == 2, ""); // OK
   static_assert(Final3{1, 2, 3}.a == 0, ""); // both-error {{not an integral constant expression}} \
-                                             // both-note {{read of uninitialized object}}
+                                             // both-note {{read of uninitialized object}} \
+                                             // both-note {{temporary created here}}
 };
 
 namespace Destructors {
@@ -584,7 +587,7 @@ namespace ImplicitFunction {
   };
 
   constexpr int callMe() {
-   A a;
+   A a; // expected-note {{declared here}}
    A b{12};
 
    /// The operator= call here will fail and the diagnostics should be fine.
@@ -785,6 +788,30 @@ namespace APValues {
   constexpr const A &w = get<A{1, &g, &A::n, "hello"}>;
 }
 
+namespace InitFromAPValues {
+  template <auto a> struct S {
+    static constexpr auto &ref = a;
+  };
+
+  union U1 { int x, y; };
+  static_assert(S<U1{1}>::ref.x == 1);
+  static_assert(S<U1{1}>::ref.y == 1); // both-error {{static assertion expression is not an integral constant expression}} \
+                                       // both-note {{read of member 'y' of union with active member 'x' is not allowed in a constant expression}}
+
+  union U2 {
+    bool x;
+    constexpr U2() {}
+  };
+  static_assert(S<U2{}>::ref.x); // both-error {{static assertion expression is not an integral constant expression}} \
+                                 // both-note {{read of member 'x' of union with no active member is not allowed in a constant expression}}
+
+  union U3 {
+    struct S { int x; };
+    S s;
+  };
+  static_assert(S<U3{2}>::ref.s.x == 2);
+}
+
 namespace self_referencing {
   struct S {
     S* ptr = nullptr;
@@ -945,7 +972,7 @@ namespace LocalDestroy {
 namespace PseudoDtor {
   constexpr int f1() {
    using T = int;
-   int a = 0;
+   int a = 0; // both-note {{declared here}}
    a.~T();
    return a; // both-note {{read of object outside its lifetime}}
   }
@@ -954,7 +981,7 @@ namespace PseudoDtor {
 
   constexpr int f2() {
    using T = int;
-   int a = 0;
+   int a = 0; // both-note {{declared here}}
    a.~T();
    a = 0; // both-note {{assignment to object outside its lifetime}}
    return a;
@@ -1224,4 +1251,86 @@ namespace ConditionalTemporaries {
   }
   static_assert(foo(false)== 13);
   static_assert(foo(true)== 12);
+}
+
+namespace PointerCmp {
+  struct  K {
+    struct  {
+      double a;
+      alignas(8) int b;
+    } m;
+    char c;
+  };
+  constexpr K k{1,2, 3};
+  static_assert((void*)(&k.m.a + 1) == (void*)&k.m.b);
+  static_assert((void*)(&k.m + 1) == (void*)&k.c);
+  static_assert((void*)(&k + 1) != (void*)(&k.c + 1));
+
+  struct  K2 {
+    struct  {
+      int a;
+      alignas(8) int b;
+    } m;
+    double c;
+  };
+  constexpr K2 k2{1,2, 3};
+  static_assert((void*)(&k2.m.a + 1) != (void*)&k2.m.b);
+ /// static_assert((void*)(&k2.m.a + 1) < (void*)&k2.m.b);  FIXME
+  static_assert((void*)(&k2.m + 1) == (void*)&k2.c);
+  static_assert((void*)(&k2 + 1) == (void*)(&k2.c + 1));
+
+
+  struct tuple {
+    int a;
+    int b;
+  };
+
+  constexpr tuple tpl{1,2};
+  static_assert((void*)&tpl == (void*)&tpl.a);
+
+
+  struct B {
+    int a;
+  };
+
+  struct tuple2 : public B {
+    int b;
+  };
+  constexpr tuple2 tpl2{1,2};
+  static_assert((void*)&tpl2 == (void*)&tpl2.a);
+
+  struct  A {
+    int i[3];
+    double c;
+  };
+  constexpr A a{1,2, 3};
+  static_assert((void*)(&a.i + 1) != (void*)(&a.i[1])); // expected-error {{static assertion failed}}
+  static_assert((void*)(&a.i[2] + 1) == (void*)(&a.i[3]));
+}
+
+namespace ExpandOnOPTEPointers {
+
+  template <class _BidirectionalIterator>
+  constexpr void inplace_merge(_BidirectionalIterator __first,
+                               _BidirectionalIterator __middle) {
+
+    if (__first != __middle)
+      ++__first;
+  }
+  template <class> struct bidirectional_iterator {
+    int *it_;
+    constexpr void operator++() { ++it_; }
+
+    friend constexpr bool operator!=(bidirectional_iterator x,
+                                     bidirectional_iterator y) {
+      return x.it_ != y.it_;
+    }
+  };
+  constexpr bool test() {
+    int *ia = new int[0];
+    inplace_merge(bidirectional_iterator<int *>(ia), bidirectional_iterator<int *>(ia + 0));
+    delete[] ia;
+    return true;
+  }
+  static_assert(test());
 }

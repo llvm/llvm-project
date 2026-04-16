@@ -34,6 +34,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -47,6 +48,10 @@
 using namespace llvm;
 
 namespace {
+
+// A map of uniqued case statements. The key is the body of the case statement
+// and the value is a list of cases which share the same body.
+using CaseMapT = std::map<std::string, std::vector<unsigned>>;
 
 class CodeEmitterGen {
   const RecordKeeper &RK;
@@ -72,9 +77,6 @@ private:
   void emitInstructionBaseValues(
       raw_ostream &O, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
       unsigned HwMode = DefaultMode);
-  void
-  emitCaseMap(raw_ostream &O,
-              const std::map<std::string, std::vector<std::string>> &CaseMap);
   unsigned BitWidth = 0u;
   bool UseAPInt = false;
 };
@@ -218,6 +220,22 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   return true;
 }
 
+static void emitCaseMap(raw_ostream &O, const CaseMapT &CaseMap,
+                        function_ref<void(raw_ostream &, unsigned)> PrintCase) {
+  for (const auto &[CaseBody, Cases] : CaseMap) {
+    ListSeparator LS("\n");
+    for (unsigned Case : Cases) {
+      O << LS << "    case ";
+      PrintCase(O, Case);
+      O << ":";
+    }
+    O << " {\n";
+    O << CaseBody;
+    O << "      break;\n"
+      << "    }\n";
+  }
+}
+
 std::pair<std::string, std::string>
 CodeEmitterGen::getInstructionCases(const Record *R) {
   std::string Case, BitOffsetCase;
@@ -264,12 +282,28 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
 
     Append("      switch (HwMode) {\n");
     Append("      default: llvm_unreachable(\"Unhandled HwMode\");\n");
+
+    // Attempt to unique the per-hw-mode encoding case statements. This helps
+    // reduce the code size if 2 or more hw-modes share the same encoding for
+    // the fields of the instruction.
+    CaseMapT CaseMap, BitOffsetCaseMap;
+    std::string ModeCase, ModeBitOffsetCase;
+
+    auto PrintHWMode = [](raw_ostream &O, unsigned Mode) { O << Mode; };
+
     for (auto &[ModeId, Encoding] : EBM) {
-      Append("      case " + itostr(ModeId) + ": {\n");
-      addInstructionCasesForEncoding(R, Encoding, Case, BitOffsetCase);
-      Append("      break;\n");
-      Append("      }\n");
+      ModeCase.clear();
+      ModeBitOffsetCase.clear();
+      addInstructionCasesForEncoding(R, Encoding, ModeCase, ModeBitOffsetCase);
+      CaseMap[ModeCase].push_back(ModeId);
+      BitOffsetCaseMap[ModeBitOffsetCase].push_back(ModeId);
     }
+
+    raw_string_ostream CaseOS(Case);
+    raw_string_ostream BitOffsetCaseOS(BitOffsetCase);
+    emitCaseMap(CaseOS, CaseMap, PrintHWMode);
+    emitCaseMap(BitOffsetCaseOS, BitOffsetCaseMap, PrintHWMode);
+
     Append("      }\n");
     return {std::move(Case), std::move(BitOffsetCase)};
   }
@@ -368,24 +402,6 @@ void CodeEmitterGen::emitInstructionBaseValues(
   O << "  };\n";
 }
 
-void CodeEmitterGen::emitCaseMap(
-    raw_ostream &O,
-    const std::map<std::string, std::vector<std::string>> &CaseMap) {
-  for (const auto &[Case, InstList] : CaseMap) {
-    bool First = true;
-    for (const auto &Inst : InstList) {
-      if (!First)
-        O << "\n";
-      O << "    case " << Inst << ":";
-      First = false;
-    }
-    O << " {\n";
-    O << Case;
-    O << "      break;\n"
-      << "    }\n";
-  }
-}
-
 CodeEmitterGen::CodeEmitterGen(const RecordKeeper &RK)
     : RK(RK), Target(RK), CGH(Target.getHwModes()) {
   // For little-endian instruction bit encodings, reverse the bit order.
@@ -451,20 +467,22 @@ void CodeEmitterGen::run(raw_ostream &O) {
   }
 
   // Map to accumulate all the cases.
-  std::map<std::string, std::vector<std::string>> CaseMap;
-  std::map<std::string, std::vector<std::string>> BitOffsetCaseMap;
+  CaseMapT CaseMap, BitOffsetCaseMap;
 
   // Construct all cases statement for each opcode
-  for (const CodeGenInstruction *CGI : EncodedInstructions) {
+  for (auto [Index, CGI] : enumerate(EncodedInstructions)) {
     const Record *R = CGI->TheDef;
-    std::string InstName =
-        (R->getValueAsString("Namespace") + "::" + R->getName()).str();
-    std::string Case, BitOffsetCase;
-    std::tie(Case, BitOffsetCase) = getInstructionCases(R);
+    auto [Case, BitOffsetCase] = getInstructionCases(R);
 
-    CaseMap[Case].push_back(InstName);
-    BitOffsetCaseMap[BitOffsetCase].push_back(std::move(InstName));
+    CaseMap[Case].push_back(Index);
+    BitOffsetCaseMap[BitOffsetCase].push_back(Index);
   }
+
+  auto PrintInstName = [&](raw_ostream &OS, unsigned Index) {
+    const CodeGenInstruction *CGI = EncodedInstructions[Index];
+    const Record *R = CGI->TheDef;
+    OS << R->getValueAsString("Namespace") << "::" << R->getName();
+  };
 
   unsigned FirstSupportedOpcode = EncodedInstructions.front()->EnumVal;
   O << "  constexpr unsigned FirstSupportedOpcode = " << FirstSupportedOpcode
@@ -494,7 +512,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
   }
 
   // Emit each case statement
-  emitCaseMap(O, CaseMap);
+  emitCaseMap(O, CaseMap, PrintInstName);
 
   // Default case: unhandled opcode.
   O << "  default:\n"
@@ -506,20 +524,18 @@ void CodeEmitterGen::run(raw_ostream &O) {
     O << "  return Value;\n";
   O << "}\n\n";
 
-  O << "#ifdef GET_OPERAND_BIT_OFFSET\n"
-    << "#undef GET_OPERAND_BIT_OFFSET\n\n"
-    << "uint32_t " << Target.getName()
+  IfDefEmitter IfDef(O, "GET_OPERAND_BIT_OFFSET");
+  O << "uint32_t " << Target.getName()
     << "MCCodeEmitter::getOperandBitOffset(const MCInst &MI,\n"
     << "    unsigned OpNum,\n"
     << "    const MCSubtargetInfo &STI) const {\n"
     << "  switch (MI.getOpcode()) {\n";
-  emitCaseMap(O, BitOffsetCaseMap);
+  emitCaseMap(O, BitOffsetCaseMap, PrintInstName);
   O << "  default:\n"
     << "    reportUnsupportedInst(MI);\n"
     << "  }\n"
     << "  reportUnsupportedOperand(MI, OpNum);\n"
-    << "}\n\n"
-    << "#endif // GET_OPERAND_BIT_OFFSET\n\n";
+    << "}\n";
 }
 
 static TableGen::Emitter::OptClass<CodeEmitterGen>

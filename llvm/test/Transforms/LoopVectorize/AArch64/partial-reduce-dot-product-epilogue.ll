@@ -11,7 +11,7 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -38,7 +38,7 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -53,7 +53,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -70,6 +70,7 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[IND_END6:%.*]] = add i64 [[IDX_NEG]], [[IV_NEXT]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -85,15 +86,14 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 ; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[IV_NEXT]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END6:%.*]] = add i64 [[IDX_NEG]], [[IV_NEXT]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF5:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT]], [[WHILE_BODY]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP6]], [[WHILE_BODY]] ], [ 0, [[ENTRY]] ]
@@ -116,7 +116,7 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 ; CHECK-NEXT:    [[TMP13]] = add <4 x i32> [[TMP14]], [[VEC_PHI9]]
 ; CHECK-NEXT:    [[INDEX_NEXT14]] = add nuw i64 [[INDEX9]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT14]], [[N_VEC5]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP13]])
 ; CHECK-NEXT:    [[CMP_N15:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC5]]
@@ -140,7 +140,7 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 ; CHECK-NEXT:    [[CMP_IV_NEG:%.*]] = icmp ugt i64 [[IV_NEG]], 0
 ; CHECK-NEXT:    [[CMP_IV:%.*]] = icmp ne i64 [[ACCUM1]], -1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = and i1 [[CMP_IV_NEG]], [[CMP_IV]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[WHILE_BODY1]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[WHILE_BODY1]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       while.end.loopexit:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[ADD]], [[WHILE_BODY1]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ], [ [[TMP15]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret void
@@ -148,7 +148,7 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %iv.neg = phi i64 [ %iv.neg.next, %while.body ], [ %idx.neg, %entry ]
   %iv = phi i64 [ %iv.next, %while.body ], [ 0, %entry ]
   %accum = phi i32 [ %add, %while.body ], [ 0, %entry ]
@@ -164,7 +164,7 @@ while.body:                                       ; preds = %while.body, %entry
   %exitcond = and i1 %cmp.iv.neg, %cmp.iv
   br i1 %exitcond, label %while.body, label %while.end.loopexit
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   %result = phi i32 [ %add, %while.body ]
   ret void
 }
@@ -419,7 +419,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP181:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP181]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP181]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP182:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -429,7 +429,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds i8, ptr %a, i64 %iv
@@ -444,7 +444,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %N
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !7
 
-exit:                        ; preds = %for.body
+exit:
   ret i32 %add
 }
 

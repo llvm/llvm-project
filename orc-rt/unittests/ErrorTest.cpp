@@ -21,10 +21,10 @@ using namespace orc_rt;
 
 namespace {
 
-class CustomError : public RTTIExtends<CustomError, ErrorInfoBase> {
+class CustomError : public ErrorExtends<CustomError, ErrorInfoBase> {
 public:
   CustomError(int Info) : Info(Info) {}
-  std::string toString() const override {
+  std::string toString() const noexcept override {
     return "CustomError (" + std::to_string(Info) + ")";
   }
   int getInfo() const { return Info; }
@@ -33,13 +33,13 @@ protected:
   int Info;
 };
 
-class CustomSubError : public RTTIExtends<CustomSubError, CustomError> {
+class CustomSubError : public ErrorExtends<CustomSubError, CustomError> {
 public:
   CustomSubError(int Info, std::string ExtraInfo)
-      : RTTIExtends<CustomSubError, CustomError>(Info),
+      : ErrorExtends<CustomSubError, CustomError>(Info),
         ExtraInfo(std::move(ExtraInfo)) {}
 
-  std::string toString() const override {
+  std::string toString() const noexcept override {
     return "CustomSubError (" + std::to_string(Info) + ", " + ExtraInfo + ")";
   }
   const std::string &getExtraInfo() const { return ExtraInfo; }
@@ -282,6 +282,21 @@ TEST(ErrorTest, IsAHandling) {
   consumeError(std::move(E));
   consumeError(std::move(F));
   consumeError(std::move(G));
+}
+
+TEST(Error, ReReturnErrorFromHandler) {
+  int ErrorInfo = 0;
+
+  Error E = handleErrors(make_error<CustomError>(7),
+                         [&](std::unique_ptr<CustomError> CE) {
+                           return make_error(std::move(CE));
+                         });
+
+  handleAllErrors(std::move(E),
+                  [&](const CustomError &CE) { ErrorInfo = CE.getInfo(); });
+
+  EXPECT_EQ(ErrorInfo, 7)
+      << "Failed to handle Error returned from handleErrors.";
 }
 
 TEST(ErrorTest, StringError) {

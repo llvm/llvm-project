@@ -73,7 +73,8 @@ are welcome:
 * iOS, tvOS, and watchOS simulator debugging on i386, x86_64 and AArch64
 * iOS, tvOS, and watchOS device debugging on ARM and AArch64
 * Linux user-space debugging for i386, x86_64, ARM, AArch64, PPC64le, s390x
-* FreeBSD user-space debugging for i386, x86_64, ARM, AArch64, MIPS64, PPC
+* FreeBSD user-space debugging for i386, x86_64, ARM, AArch64, PPC
+* FreeBSD kernel debugging for i386, x86_64, ARM, AArch64, PPC64le, RISCV64
 * NetBSD user-space debugging for i386 and x86_64
 * Windows user-space debugging for i386, x86_64, ARM and AArch64 (*)
 
@@ -136,7 +137,9 @@ interesting areas to contribute to lldb.
    use/ondemand
    use/aarch64-linux
    use/symbolfilejson
+   use/lldbdap
    use/mcp
+   use/settings
    use/troubleshooting
    use/links
    Man Page <man/lldb>
@@ -171,7 +174,7 @@ interesting areas to contribute to lldb.
    resources/lldbplatformpackets
    resources/caveats
    resources/projects
-   resources/lldbdap
+   resources/lldbdap-contributing
    resources/addinglanguagesupport
    Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
    Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>

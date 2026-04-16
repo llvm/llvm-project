@@ -51,6 +51,12 @@ cl::opt<bool> ConservativeInstrumentation(
              "accuracy (for debugging, default: false)"),
     cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
 
+cl::opt<uint32_t> InstrumentationMaxSize(
+    "instrumentation-max-size",
+    cl::desc("Set max memory size of the instrumentation bump allocator "
+             "default: 0x6400000)"),
+    cl::init(0x6400000), cl::Optional, cl::cat(BoltInstrCategory));
+
 cl::opt<uint32_t> InstrumentationSleepTime(
     "instrumentation-sleep-time",
     cl::desc("interval between profile writes (default: 0 = write only at "
@@ -405,8 +411,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   // Exit basic blocks are always instrumented so we start the traversal with
   // a minimum number of defined variables to make the equation solvable.
   std::stack<std::pair<const BinaryBasicBlock *, BinaryBasicBlock *>> Stack;
-  std::unordered_map<const BinaryBasicBlock *,
-                     std::set<const BinaryBasicBlock *>>
+  DenseMap<const BinaryBasicBlock *, SmallVector<const BinaryBasicBlock *>>
       STOutSet;
   for (auto BBI = Function.getLayout().block_rbegin();
        BBI != Function.getLayout().block_rend(); ++BBI) {
@@ -434,7 +439,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 
       VisitedSet.insert(BB);
       if (Pred)
-        STOutSet[Pred].insert(BB);
+        STOutSet[Pred].push_back(BB);
 
       for (BinaryBasicBlock *SuccBB : BB->successors())
         Stack.push(std::make_pair(BB, SuccBB));
@@ -501,7 +506,9 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       }
       if (TargetFunc) {
         // Do not instrument edges in the spanning tree
-        if (llvm::is_contained(STOutSet[&BB], TargetBB)) {
+        auto STIt = STOutSet.find(&BB);
+        if (STIt != STOutSet.end() &&
+            llvm::is_contained(STIt->second, TargetBB)) {
           auto L = BC.scopeLock();
           createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                 Function, ToOffset, BBToID[TargetBB],
@@ -516,9 +523,11 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       }
 
       if (IsJumpTable) {
+        auto STIt = STOutSet.find(&BB);
+        bool Found = STIt != STOutSet.end();
         for (BinaryBasicBlock *&Succ : BB.successors()) {
           // Do not instrument edges in the spanning tree
-          if (llvm::is_contained(STOutSet[&BB], &*Succ)) {
+          if (Found && llvm::is_contained(STIt->second, &*Succ)) {
             auto L = BC.scopeLock();
             createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                   Function, Succ->getInputOffset(),
@@ -561,7 +570,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       FromOffset = *BC.MIB->getOffset(*LastInstr);
 
       // Do not instrument edges in the spanning tree
-      if (llvm::is_contained(STOutSet[&BB], FTBB)) {
+      auto STIt = STOutSet.find(&BB);
+      if (STIt != STOutSet.end() && llvm::is_contained(STIt->second, FTBB)) {
         auto L = BC.scopeLock();
         createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                               Function, FTBB->getInputOffset(), BBToID[FTBB],
@@ -579,7 +589,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (!opts::ConservativeInstrumentation) {
     for (auto BBI = Function.begin(), BBE = Function.end(); BBI != BBE; ++BBI) {
       BinaryBasicBlock &BB = *BBI;
-      if (STOutSet[&BB].size() == 0)
+      auto STIt = STOutSet.find(&BB);
+      if (STIt == STOutSet.end() || STIt->second.empty())
         instrumentLeafNode(BB, BB.begin(), IsLeafFunction, *FuncDesc,
                            BBToID[&BB]);
     }
@@ -600,6 +611,22 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 }
 
 Error Instrumentation::runOnFunctions(BinaryContext &BC) {
+  if (BC.usesBTI())
+    return createFatalBOLTError(
+        "BOLT-ERROR: instrumenting binaries using BTI is not supported.\n");
+  /* BTI TODO:
+   Instrumentation functions add indirect branches into the .text.injected
+   section, see:
+   - __bolt_instr_ind_call_handler
+   - __bolt_instr_ind_tail_call_handler
+   - __bolt_instr_ind_tailcall_handler_func
+   - __bolt_start_trampoline
+   - __bolt_fini_trampoline
+   We cannot add BTIs to their targets when they are created, because the
+   instrumentation snippets get added later to these targets, and the added BTI
+   instruction will not be the first (rendering it useless).
+   */
+
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/false,
                                                  /*IsText=*/false,
                                                  /*IsAllocatable=*/true);

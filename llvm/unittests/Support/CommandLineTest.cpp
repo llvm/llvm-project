@@ -100,7 +100,7 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   static const char ArgString[] = "new-test-option";
   static const char ValueString[] = "Integer";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
 
   ASSERT_EQ(Map.count("test-option"), 1u) << "Could not find option in map.";
@@ -222,6 +222,71 @@ TEST(CommandLineTest, TokenizeGNUCommandLine) {
       "foo bar",     "foo bar",   "foo bar",          "foo\\bar",
       "-DFOO=bar()", "foobarbaz", "C:\\src\\foo.cpp", "C:srcfoo.cpp"};
   testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineEmptyQuotes) {
+  // Explicit '' and "" should be treated as an empty string argument, as shells
+  // and gcc do.
+  const char Input1[] = R"(a b c "" d)";
+  const char *const Output1[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"(a b c '' d)";
+  const char *const Output2[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+
+  // Check that empty arguments are preserved at the beginning/end of the
+  // input.
+  const char Input3[] = R"('' a b c d "")";
+  const char *const Output3[] = {"", "a", "b", "c", "d", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input3, Output3);
+
+  // Check that an input containing only empty arguments is handled
+  // correctly.
+  const char Input4[] = R"("" '')";
+  const char *const Output4[] = {"", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input4, Output4);
+
+  // Each sequence of juxtaposed empty string segments is still just one
+  // empty string.
+  const char Input5[] = R"('''' """" ''"")";
+  const char *const Output5[] = {"", "", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input5, Output5);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineWhitespace) {
+  // Leading/trailing whitespace should be ignored.
+  const char Input1[] = R"(  a b c '' d  )";
+  const char *const Output1[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineJuxtaposedQuotedSegments) {
+  const char Input1[] = R"(a""a ""b c"" d''d ''e f'')";
+  const char *const Output1[] = {"aa", "b", "c", "dd", "e", "f"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"("'a'"'"b"')";
+  const char *const Output2[] = {R"('a'"b")"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineUnterminatedQuotes) {
+  // Unterminated quotes are implicitly terminated at EOF.
+  const char Input1[] = R"(a b ')";
+  const char *const Output1[] = {"a", "b", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"(a b 'c d)";
+  const char *const Output2[] = {"a", "b", "c d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineNewlines) {
+  // Newlines are also treated literally inside quotes.
+  const char Input1[] = "a 'b\nc' d";
+  const char *const Output1[] = {"a", "b\nc", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
 }
 
 TEST(CommandLineTest, TokenizeWindowsCommandLine1) {
@@ -421,7 +486,7 @@ TEST(CommandLineTest, HideUnrelatedOptions) {
   ASSERT_EQ(cl::NotHidden, TestOption2.getOptionHiddenFlag())
       << "Hid extra option that should be visable.";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
@@ -447,7 +512,7 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
   ASSERT_EQ(cl::NotHidden, TestOption3.getOptionHiddenFlag())
       << "Hid extra option that should be visable.";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())

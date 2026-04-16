@@ -23,9 +23,6 @@ foreach(target IN LISTS libcxxabi_test_suite_install_targets)
                                                --component "${target}")
   add_dependencies(cxxabi-test-depends libcxxabi-test-suite-install-${target})
 endforeach()
-if (TARGET cxx_experimental)
-  add_dependencies(libcxxabi-test-suite-install-cxx cxx_experimental)
-endif()
 
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
 

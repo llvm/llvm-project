@@ -47,6 +47,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
       int FrameIdx, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;

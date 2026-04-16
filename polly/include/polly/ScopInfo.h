@@ -1767,7 +1767,9 @@ private:
   /// Scop::Context on the other side is an overapproximation and does not
   /// include all requirements, but is always defined. However, there is still
   /// no guarantee that there is no undefined behavior in
-  /// DefinedBehaviorContext.
+  /// DefinedBehaviorContext. Moreover, AssumedContext and InvalidContext are
+  /// gist'd using Scop::Context, but here we can add assumptions that only hold
+  /// under RTC-checked conditions.
   isl::set DefinedBehaviorContext;
 
   /// The schedule of the SCoP
@@ -1866,16 +1868,11 @@ private:
        ScopDetection::DetectionContext &DC, OptimizationRemarkEmitter &ORE,
        int ID);
 
-  //@}
-
   /// Return the access for the base ptr of @p MA if any.
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
 
   /// Create an id for @p Param and store it in the ParameterIds map.
   void createParameterId(const SCEV *Param);
-
-  /// Build the Context of the Scop.
-  void buildContext();
 
   /// Add the bounds of the parameters to the context.
   void addParameterBounds();
@@ -1939,6 +1936,12 @@ public:
   Scop(const Scop &) = delete;
   Scop &operator=(const Scop &) = delete;
   ~Scop();
+
+  /// Factory pattern for creating a new (empty) SCoP.
+  static std::unique_ptr<Scop> makeScop(Region &R, ScalarEvolution &SE,
+                                        LoopInfo &LI, DominatorTree &DT,
+                                        ScopDetection::DetectionContext &DC,
+                                        OptimizationRemarkEmitter &ORE, int ID);
 
   /// Increment actual number of aliasing assumptions taken
   ///
@@ -2481,6 +2484,12 @@ public:
   ///           SCEVs known to not reference any loops in the SCoP can be
   ///           passed without a @p BB.
   /// @param NonNegative Flag to indicate the @p E has to be non-negative.
+  /// @param IsInsideDomain If true, assumptions only need to apply during the
+  ///                       execution of @p BB. That is, when we know that we
+  ///                       are in its domain. Must be false if the SCEV is
+  ///                       evaluated outside a ScopStmt, or for code that
+  ///                       computes the domain (since while doing that, we
+  ///                       don't know whether we are in the domain yet).
   ///
   /// Note that this function will always return a valid isl_pw_aff. However, if
   /// the translation of @p E was deemed to complex the SCoP is invalidated and
@@ -2488,7 +2497,8 @@ public:
   /// for complex cases without "error handling code" needed on the users side.
   PWACtx getPwAff(const SCEV *E, BasicBlock *BB = nullptr,
                   bool NonNegative = false,
-                  RecordedAssumptionsTy *RecordedAssumptions = nullptr);
+                  RecordedAssumptionsTy *RecordedAssumptions = nullptr,
+                  bool IsInsideDomain = true);
 
   /// Compute the isl representation for the SCEV @p E
   ///
@@ -2670,17 +2680,10 @@ public:
 raw_ostream &operator<<(raw_ostream &OS, const Scop &scop);
 
 class ScopInfo {
-public:
-  using RegionToScopMapTy = MapVector<Region *, std::unique_ptr<Scop>>;
-  using reverse_iterator = RegionToScopMapTy::reverse_iterator;
-  using const_reverse_iterator = RegionToScopMapTy::const_reverse_iterator;
-  using iterator = RegionToScopMapTy::iterator;
-  using const_iterator = RegionToScopMapTy::const_iterator;
-
 private:
   /// A map of Region to its Scop object containing
   ///        Polly IR of static control part.
-  RegionToScopMapTy RegionToScopMap;
+  llvm::SmallDenseMap<const Region *, std::unique_ptr<Scop>> RegionToScopMap;
   const DataLayout &DL;
   ScopDetection &SD;
   ScalarEvolution &SE;
@@ -2701,47 +2704,12 @@ public:
   ///         the scop object. If the given region is a subregion, return a
   ///         nullptr. Top level region containing the entry block of a function
   ///         is not considered in the scop creation.
-  Scop *getScop(Region *R) const {
-    auto MapIt = RegionToScopMap.find(R);
-    if (MapIt != RegionToScopMap.end())
-      return MapIt->second.get();
-    return nullptr;
-  }
+  Scop *getScop(const Region *R);
 
   /// Recompute the Scop-Information for a function.
   ///
   /// This invalidates any iterators.
-  void recompute();
-
-  /// Handle invalidation explicitly
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
-
-  iterator begin() { return RegionToScopMap.begin(); }
-  iterator end() { return RegionToScopMap.end(); }
-  const_iterator begin() const { return RegionToScopMap.begin(); }
-  const_iterator end() const { return RegionToScopMap.end(); }
-  reverse_iterator rbegin() { return RegionToScopMap.rbegin(); }
-  reverse_iterator rend() { return RegionToScopMap.rend(); }
-  const_reverse_iterator rbegin() const { return RegionToScopMap.rbegin(); }
-  const_reverse_iterator rend() const { return RegionToScopMap.rend(); }
-  bool empty() const { return RegionToScopMap.empty(); }
-};
-
-struct ScopInfoAnalysis : AnalysisInfoMixin<ScopInfoAnalysis> {
-  static AnalysisKey Key;
-
-  using Result = ScopInfo;
-
-  Result run(Function &, FunctionAnalysisManager &);
-};
-
-struct ScopInfoPrinterPass final : PassInfoMixin<ScopInfoPrinterPass> {
-  ScopInfoPrinterPass(raw_ostream &OS) : Stream(OS) {}
-
-  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
-
-  raw_ostream &Stream;
+  void invalidate();
 };
 } // end namespace polly
 

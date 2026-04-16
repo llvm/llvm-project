@@ -23,6 +23,36 @@
 
 // RUN: %clang -E  %s -o - | FileCheck --check-prefix=CHECK-NO-UBSAN %s
 
+// Specifying a specific sanitizer under UBSan and immediately suppressing
+// `__has_feature(undefined_behavior_sanitizer)` for the same should result in
+// "no-UBSan."
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=undefined -fsanitize-ignore-for-ubsan-feature=undefined %s -o - | FileCheck --check-prefix=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=alignment -fsanitize-ignore-for-ubsan-feature=alignment %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=bool -fsanitize-ignore-for-ubsan-feature=bool %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=builtin -fsanitize-ignore-for-ubsan-feature=builtin %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=array-bounds -fsanitize-ignore-for-ubsan-feature=array-bounds %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=enum -fsanitize-ignore-for-ubsan-feature=enum %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=float-cast-overflow -fsanitize-ignore-for-ubsan-feature=float-cast-overflow %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=integer-divide-by-zero -fsanitize-ignore-for-ubsan-feature=integer-divide-by-zero %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=nonnull-attribute -fsanitize-ignore-for-ubsan-feature=nonnull-attribute %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=null -fsanitize-ignore-for-ubsan-feature=null %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// object-size is a no-op at O0.
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -O2 -fsanitize=object-size -fsanitize-ignore-for-ubsan-feature=object-size %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=pointer-overflow -fsanitize-ignore-for-ubsan-feature=pointer-overflow %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=return -fsanitize-ignore-for-ubsan-feature=return %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=returns-nonnull-attribute -fsanitize-ignore-for-ubsan-feature=returns-nonnull-attribute %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=shift-base -fsanitize-ignore-for-ubsan-feature=shift-base %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=shift-exponent -fsanitize-ignore-for-ubsan-feature=shift-exponent %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=shift -fsanitize-ignore-for-ubsan-feature=shift %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignore-for-ubsan-feature=signed-integer-overflow %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=unreachable -fsanitize-ignore-for-ubsan-feature=unreachable %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=vla-bound -fsanitize-ignore-for-ubsan-feature=vla-bound %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=function -fsanitize-ignore-for-ubsan-feature=function %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
+
+// Spot check: suppressing an unrelated sanitizer should still result in a "has
+// UBSan" configuration.
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=function -fsanitize-ignore-for-ubsan-feature=alignment %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-FUNCTION %s
+
 // REQUIRES: x86-registered-target
 
 #if !__has_feature(undefined_behavior_sanitizer_finegrained_feature_checks)

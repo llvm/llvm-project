@@ -2231,22 +2231,17 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
     auto *TI = BB->getTerminator();
     UpdateRangeFromGuards(TI);
 
-    auto *BI = dyn_cast<BranchInst>(TI);
-    if (!BI || !BI->isConditional())
+    auto *BI = dyn_cast<CondBrInst>(TI);
+    if (!BI)
       continue;
 
     auto *TrueSuccessor = BI->getSuccessor(0);
     auto *FalseSuccessor = BI->getSuccessor(1);
 
-    auto DominatesNarrowUser = [this, NarrowUser] (BasicBlockEdge BBE) {
-      return BBE.isSingleEdge() &&
-             DT->dominates(BBE, NarrowUser->getParent());
-    };
-
-    if (DominatesNarrowUser(BasicBlockEdge(BB, TrueSuccessor)))
+    if (DT->dominates(BasicBlockEdge(BB, TrueSuccessor), NarrowUserBB))
       UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/true);
 
-    if (DominatesNarrowUser(BasicBlockEdge(BB, FalseSuccessor)))
+    if (DT->dominates(BasicBlockEdge(BB, FalseSuccessor), NarrowUserBB))
       UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/false);
   }
 }

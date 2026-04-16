@@ -17,3 +17,7 @@ declare ptr @d_zeroed(i64) "alloc-family"="D"
 ; CHECK: 'alloc-variant-zeroed' must name a function with the same signature
 declare ptr @e(i64) "alloc-variant-zeroed"="e_zeroed" "alloc-family"="E"
 declare ptr @e_zeroed(i64, i64) "alloc-family"="E" allockind("zeroed")
+
+; CHECK: 'alloc-variant-zeroed' must name a function with the same calling convention
+declare cc99 ptr @f(i64) "alloc-variant-zeroed"="f_zeroed" "alloc-family"="F"
+declare cc100 ptr @f_zeroed(i64) "alloc-family"="F" allockind("zeroed")

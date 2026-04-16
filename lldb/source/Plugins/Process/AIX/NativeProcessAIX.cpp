@@ -80,14 +80,23 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::make_error<StringError>("Could not sync with inferior process",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
+  ProcessInstanceInfo Info;
+  if (!Host::GetProcessInfo(pid, Info)) {
+    return llvm::make_error<StringError>("Cannot get process architecture",
+                                         llvm::inconvertibleErrorCode());
+  }
+
+  // Set the architecture to the exe architecture.
+  LLDB_LOG(log, "pid = {0}, detected architecture {1}", pid,
+           Info.GetArchitecture().GetArchitectureName());
+
   return std::unique_ptr<NativeProcessAIX>(new NativeProcessAIX(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      HostInfo::GetArchitecture(HostInfo::eArchKind64), *this, {pid}));
+      Info.GetArchitecture(), *this, {pid}));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -187,7 +196,44 @@ Status NativeProcessAIX::Signal(int signo) { return Status("unsupported"); }
 
 Status NativeProcessAIX::Interrupt() { return Status("unsupported"); }
 
-Status NativeProcessAIX::Kill() { return Status("unsupported"); }
+Status NativeProcessAIX::Kill() {
+
+  Log *log = GetLog(POSIXLog::Process);
+  LLDB_LOG(log, "pid {0}", GetID());
+
+  Status error;
+
+  switch (m_state) {
+  case StateType::eStateInvalid:
+  case StateType::eStateExited:
+  case StateType::eStateCrashed:
+  case StateType::eStateDetached:
+  case StateType::eStateUnloaded:
+    // Nothing to do - the process is already dead.
+    LLDB_LOG(log, "ignored for PID {0} due to current state: {1}", GetID(),
+             m_state);
+    return error;
+
+  case StateType::eStateConnected:
+  case StateType::eStateAttaching:
+  case StateType::eStateLaunching:
+  case StateType::eStateStopped:
+  case StateType::eStateRunning:
+  case StateType::eStateStepping:
+  case StateType::eStateSuspended:
+    // We can try to kill a process in these states.
+    break;
+  }
+
+  llvm::Expected<int> result =
+      PtraceWrapper(PT_KILL, GetID(), nullptr, nullptr, 0);
+  if (!result) {
+    std::string error_string = std::string("Kill failed for process. error: ") +
+                               llvm::toString(result.takeError());
+    error.FromErrorString(error_string.c_str());
+  }
+  return error;
+}
 
 Status NativeProcessAIX::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                     size_t &bytes_read) {
@@ -204,6 +250,11 @@ size_t NativeProcessAIX::UpdateThreads() {
   // respect to thread state and they keep the thread list populated properly.
   // All this method needs to do is return the thread count.
   return m_threads.size();
+}
+
+Status NativeProcessAIX::GetFileLoadAddress(const llvm::StringRef &file_name,
+                                            lldb::addr_t &load_addr) {
+  return Status("unsupported");
 }
 
 Status NativeProcessAIX::GetLoadedModuleFileSpec(const char *module_path,
@@ -237,6 +288,7 @@ llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
   switch (req) {
   case PT_ATTACH:
   case PT_DETACH:
+  case PT_KILL:
     ret = ptrace64(req, pid, 0, 0, nullptr);
     break;
   default:

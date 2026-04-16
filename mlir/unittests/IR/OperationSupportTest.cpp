@@ -12,6 +12,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 
@@ -22,9 +23,9 @@ static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
                            ArrayRef<Type> resultTypes = {},
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
-  return Operation::create(UnknownLoc::get(context),
-                           OperationName("foo.bar", context), resultTypes,
-                           operands, NamedAttrList(), nullptr, {}, numRegions);
+  return Operation::create(
+      UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
+      operands, NamedAttrList(), PropertyRef(), {}, numRegions);
 }
 
 namespace {
@@ -236,7 +237,7 @@ TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
   Operation *op = Operation::create(
       NameLoc::get(StringAttr::get(&context, "my_named_loc")),
       OperationName("t.op", &context), builder.getIntegerType(16), {},
-      NamedAttrList(), nullptr, {}, 0);
+      NamedAttrList(), PropertyRef(), {}, 0);
 
   std::string str;
   OpPrintingFlags flags;
@@ -354,6 +355,87 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
             getHash(opWithProperty2, OperationEquivalence::None));
   opWithProperty1->destroy();
   opWithProperty2->destroy();
+}
+
+TEST(OperationCloneTest, CloneWithDifferentResults) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  Operation *useOp = createOp(&context, {}, builder.getI32Type());
+  IRMapping map;
+  Operation *cloneOp = useOp->clone(
+      map, Operation::CloneOptions::all().withResultTypes(
+               SmallVector<Type>{builder.getI32Type(), builder.getI16Type()}));
+
+  ASSERT_EQ(cloneOp->getNumResults(), 2u);
+  EXPECT_EQ(cloneOp->getResult(0).getType(), builder.getI32Type());
+  EXPECT_EQ(cloneOp->getResult(1).getType(), builder.getI16Type());
+  EXPECT_FALSE(map.contains(useOp->getResult(0)));
+
+  useOp->destroy();
+  cloneOp->destroy();
+}
+
+TEST(RepeatedRangeTest, TypeRangeFromRepeatedType) {
+  MLIRContext context;
+  Builder builder(&context);
+  Type i32 = builder.getI32Type();
+
+  llvm::Repeated<Type> rep(3, i32);
+  TypeRange range(rep);
+
+  EXPECT_EQ(range.size(), 3u);
+  EXPECT_FALSE(range.empty());
+  for (Type t : range)
+    EXPECT_EQ(t, i32);
+
+  // Indexing and slicing exercise offset_base (which must not advance).
+  EXPECT_EQ(range[0], i32);
+  EXPECT_EQ(range[2], i32);
+  TypeRange sliced = range.drop_front(1);
+  EXPECT_EQ(sliced.size(), 2u);
+  EXPECT_EQ(sliced[0], i32);
+
+  llvm::Repeated<Type> emptyRep(0, Type{});
+  TypeRange emptyTypeRange(emptyRep);
+
+  EXPECT_EQ(emptyTypeRange.size(), 0u);
+  EXPECT_TRUE(emptyTypeRange.empty());
+}
+
+TEST(RepeatedRangeTest, ValueRangeFromRepeatedValue) {
+  Value nullVal;
+  llvm::Repeated<Value> rep(4, nullVal);
+  ValueRange range(rep);
+
+  EXPECT_EQ(range.size(), 4u);
+  EXPECT_FALSE(range.empty());
+  for (Value v : range)
+    EXPECT_EQ(v, nullVal);
+
+  llvm::Repeated<Value> emptyRep(0, nullVal);
+  ValueRange emptyRange(emptyRep);
+  EXPECT_EQ(emptyRange.size(), 0u);
+  EXPECT_TRUE(emptyRange.empty());
+}
+
+TEST(RepeatedRangeTest, TypeRangeFromRepeatedValueViaValueRange) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  Operation *useOp =
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
+  Value operand = useOp->getResult(0);
+
+  llvm::Repeated<Value> rep(3, operand);
+  ValueRange vr(rep);
+  TypeRange tr(vr);
+
+  EXPECT_EQ(tr.size(), 3u);
+  for (Type t : tr)
+    EXPECT_EQ(t, builder.getIntegerType(16));
+
+  useOp->destroy();
 }
 
 } // namespace

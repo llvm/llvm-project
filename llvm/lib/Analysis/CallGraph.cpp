@@ -10,6 +10,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Function.h"
@@ -273,16 +274,11 @@ PreservedAnalyses CallGraphSCCsPrinterPass::run(Module &M,
        ++SCCI) {
     const std::vector<CallGraphNode *> &nextSCC = *SCCI;
     OS << "\nSCC #" << ++sccNum << ": ";
-    bool First = true;
-    for (CallGraphNode *CGN : nextSCC) {
-      if (First)
-        First = false;
-      else
-        OS << ", ";
-      OS << (CGN->getFunction() ? CGN->getFunction()->getName()
+    ListSeparator LS;
+    for (CallGraphNode *CGN : nextSCC)
+      OS << LS
+         << (CGN->getFunction() ? CGN->getFunction()->getName()
                                 : "external node");
-    }
-
     if (nextSCC.size() == 1 && SCCI.hasCycle())
       OS << " (Has self-loop).";
   }

@@ -1,6 +1,11 @@
 // RUN: mlir-irdl-to-cpp %s | FileCheck %s
 
+// CHECK: namespace mlir {
+// CHECK: namespace test_irdl_to_cpp {
+
 // CHECK: class TestIrdlToCpp
+// CHECK: } // namespace test_irdl_to_cpp
+// CHECK: } // namespace mlir
 irdl.dialect @test_irdl_to_cpp {
 
     // CHECK: class FooType

@@ -19,24 +19,22 @@
 
 using namespace mlir;
 
-MlirLogicalResult mlirTranslateOperationToSMTLIB(MlirOperation module,
-                                                 MlirStringCallback callback,
-                                                 void *userData,
-                                                 bool inlineSingleUseValues,
-                                                 bool indentLetBody) {
+MlirLogicalResult mlirTranslateOperationToSMTLIB(
+    MlirOperation module, MlirStringCallback callback, void *userData,
+    bool inlineSingleUseValues, bool indentLetBody, bool emitReset) {
   mlir::detail::CallbackOstream stream(callback, userData);
   smt::SMTEmissionOptions options;
   options.inlineSingleUseValues = inlineSingleUseValues;
   options.indentLetBody = indentLetBody;
-  return wrap(smt::exportSMTLIB(unwrap(module), stream));
+  options.emitReset = emitReset;
+  return wrap(smt::exportSMTLIB(unwrap(module), stream, options));
 }
 
-MlirLogicalResult mlirTranslateModuleToSMTLIB(MlirModule module,
-                                              MlirStringCallback callback,
-                                              void *userData,
-                                              bool inlineSingleUseValues,
-                                              bool indentLetBody) {
-  return mlirTranslateOperationToSMTLIB(mlirModuleGetOperation(module),
-                                        callback, userData,
-                                        inlineSingleUseValues, indentLetBody);
+MlirLogicalResult
+mlirTranslateModuleToSMTLIB(MlirModule module, MlirStringCallback callback,
+                            void *userData, bool inlineSingleUseValues,
+                            bool indentLetBody, bool emitReset) {
+  return mlirTranslateOperationToSMTLIB(
+      mlirModuleGetOperation(module), callback, userData, inlineSingleUseValues,
+      indentLetBody, emitReset);
 }

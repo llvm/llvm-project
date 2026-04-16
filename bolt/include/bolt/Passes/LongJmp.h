@@ -64,7 +64,7 @@ class LongJmpPass : public BinaryFunctionPass {
   uint32_t NumSharedStubs{0};
 
   /// The shortest distance for any branch instruction on AArch64.
-  static constexpr size_t ShortestJumpBits = 16;
+  static constexpr size_t ShortestJumpBits = 11;
   static constexpr size_t ShortestJumpSpan = 1ULL << (ShortestJumpBits - 1);
 
   /// The longest single-instruction branch.
@@ -82,15 +82,13 @@ class LongJmpPass : public BinaryFunctionPass {
   /// purposes, we need to do a size worst-case estimation. Real layout is done
   /// by RewriteInstance::mapFileSections()
   void tentativeLayout(const BinaryContext &BC,
-                       std::vector<BinaryFunction *> &SortedFunctions);
-  uint64_t
-  tentativeLayoutRelocMode(const BinaryContext &BC,
-                           std::vector<BinaryFunction *> &SortedFunctions,
-                           uint64_t DotAddress);
-  uint64_t
-  tentativeLayoutRelocColdPart(const BinaryContext &BC,
-                               std::vector<BinaryFunction *> &SortedFunctions,
-                               uint64_t DotAddress);
+                       BinaryFunctionListType &SortedFunctions);
+  uint64_t tentativeLayoutRelocMode(const BinaryContext &BC,
+                                    BinaryFunctionListType &SortedFunctions,
+                                    uint64_t DotAddress);
+  uint64_t tentativeLayoutRelocColdPart(const BinaryContext &BC,
+                                        BinaryFunctionListType &SortedFunctions,
+                                        uint64_t DotAddress);
   void tentativeBBLayout(const BinaryFunction &Func);
 
   /// Update stubs addresses with their exact address after a round of stub

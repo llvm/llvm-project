@@ -257,6 +257,20 @@ TEST(StringSwitchTest, StringSwitchMultipleMatches) {
   EXPECT_EQ(1, Translate("b"));
 }
 
+TEST(StringPredicateTest, Predicate) {
+  auto MatchFn = [](StringRef Str) { return Str == "abc" || Str == "def"; };
+  auto PredicateMatch = [&](StringRef S) {
+    return llvm::StringSwitch<int>(S)
+        .Case("abc", 0)
+        .Predicate(MatchFn, 1)
+        .Case("def", 2)
+        .Default(3);
+  };
+  EXPECT_EQ(0, PredicateMatch("abc"));
+  EXPECT_EQ(1, PredicateMatch("def"));
+  EXPECT_EQ(3, PredicateMatch("ghi"));
+}
+
 TEST(StringSwitchTest, DefaultUnreachable) {
   auto Translate = [](StringRef S) {
     return llvm::StringSwitch<int>(S)

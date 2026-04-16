@@ -75,7 +75,7 @@ public:
 // CHECK-NEXT:    [[A:%.*]] = alloca [[CLASS_A:%.*]], align 4, addrspace(5)
 // CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
 // CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
-// CHECK-NEXT:    call void @_ZN1AD1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[A_ASCAST]])
 // CHECK-NEXT:    ret void
 //
 void func3() {

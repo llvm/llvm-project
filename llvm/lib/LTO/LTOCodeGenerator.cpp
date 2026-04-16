@@ -614,7 +614,7 @@ bool LTOCodeGenerator::optimize() {
   TargetMach = createTargetMachine();
   if (!opt(Config, TargetMach.get(), 0, *MergedModule, /*IsThinLTO=*/false,
            /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
-           /*CmdArgs*/ std::vector<uint8_t>())) {
+           /*CmdArgs*/ std::vector<uint8_t>(), /*BitcodeLibFuncs=*/{})) {
     emitError("LTO middle-end optimizations failed");
     return false;
   }
@@ -639,7 +639,7 @@ bool LTOCodeGenerator::compileOptimized(AddStreamFn AddStream,
 
   Config.CodeGenOnly = true;
   Error Err = backend(Config, AddStream, ParallelismLevel, *MergedModule,
-                      CombinedIndex);
+                      CombinedIndex, /*BitcodeLibFuncs=*/{});
   assert(!Err && "unexpected code-generation failure");
   (void)Err;
 
@@ -699,7 +699,6 @@ void LTOCodeGenerator::DiagnosticHandler(const DiagnosticInfo &DI) {
   raw_string_ostream Stream(MsgStorage);
   DiagnosticPrinterRawOStream DP(Stream);
   DI.print(DP);
-  Stream.flush();
 
   // If this method has been called it means someone has set up an external
   // diagnostic handler. Assert on that.

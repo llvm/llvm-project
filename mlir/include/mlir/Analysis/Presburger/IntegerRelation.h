@@ -286,7 +286,7 @@ public:
   /// Return an interator over the variables of the specified kind
   /// starting at the relevant offset. The return type is auto in
   /// keeping with the convention for iterators.
-  auto iterVarKind(VarKind kind) {
+  auto iterVarKind(VarKind kind) const {
     return llvm::seq(getVarKindOffset(kind), getVarKindEnd(kind));
   }
 

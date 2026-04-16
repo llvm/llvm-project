@@ -85,10 +85,13 @@ public:
   bool hasDivRemOp(Type *DataType, bool IsSigned) const override;
   bool prefersVectorizedAddressing() const override { return false; }
   bool LSRWithInstrQueries() const override { return true; }
-  InstructionCost getScalarizationOverhead(
-      VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const override;
+  InstructionCost
+  getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
+                           bool Insert, bool Extract,
+                           TTI::TargetCostKind CostKind,
+                           bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+                           TTI::VectorInstrContext VIC =
+                               TTI::VectorInstrContext::None) const override;
   bool supportsEfficientVectorElementLoadStore() const override { return true; }
   bool enableInterleavedAccessVectorization() const override { return true; }
 
@@ -98,6 +101,16 @@ public:
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
+
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
@@ -118,10 +131,11 @@ public:
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
   bool isFoldableLoad(const LoadInst *Ld,
                       const Instruction *&FoldedValue) const;
   InstructionCost getMemoryOpCost(
@@ -146,6 +160,10 @@ public:
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
+
+  bool preferEpilogueVectorization(ElementCount Iters) const override {
+    return true;
+  }
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
   /// @}

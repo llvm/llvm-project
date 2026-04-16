@@ -8,8 +8,9 @@ subroutine loop_transformation_construct3
   integer :: x
   integer :: v(i)
 
-  !ERROR: The loop sequence following the DO construct must be fully fused first.
+  !ERROR: This construct applies to a loop nest, but has a loop sequence of length 2
   !$omp do
+  !BECAUSE: Out of 3 loops, 2 are fused
   !$omp fuse looprange(1,2)
   do x = 1, i
     v(x) = x * 2
@@ -30,8 +31,9 @@ subroutine loop_transformation_construct4
   integer :: x
   integer :: v(i)
 
-  !ERROR: The loop sequence following the TILE construct must be fully fused first.
+  !ERROR: This construct applies to a loop nest, but has a loop sequence of length 2
   !$omp tile sizes(2)
+  !BECAUSE: Out of 3 loops, 2 are fused
   !$omp fuse looprange(1,2)
   do x = 1, i
     v(x) = x * 2

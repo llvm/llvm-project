@@ -60,7 +60,7 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MI,
                                            Register DestReg, int FrameIdx,
                                            const TargetRegisterClass *RC,
-                                           Register VReg,
+                                           Register VReg, unsigned SubReg,
                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (MI != MBB.end()) DL = MI->getDebugLoc();

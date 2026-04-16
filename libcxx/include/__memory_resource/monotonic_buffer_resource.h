@@ -93,7 +93,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
 
 protected:
   void* do_allocate(size_t __bytes, size_t __alignment) override; // key function

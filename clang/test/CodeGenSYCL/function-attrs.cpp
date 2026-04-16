@@ -5,11 +5,11 @@
 int foo();
 
 // CHECK-LABEL: define dso_local spir_func void @_Z3barv(
-// CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(4)
-// CHECK-NEXT:    [[CALL:%.*]] = call spir_func noundef i32 @_Z3foov() #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call spir_func noundef i32 @_Z3foov() #[[ATTR1:[0-9]+]]
 // CHECK-NEXT:    store i32 [[CALL]], ptr addrspace(4) [[A_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -18,15 +18,16 @@ void bar() {
 }
 
 // CHECK-LABEL: define dso_local spir_func noundef i32 @_Z3foov(
-// CHECK-SAME: ) #[[ATTR2]] {
+// CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
 // CHECK-NEXT:    ret i32 1
 //
 int foo() {
   return 1;
 }
+
+template <typename Name, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 template <typename Name, typename Func>
 [[clang::sycl_kernel_entry_point(Name)]] void kernel_single_task(const Func &kernelFunc) {
@@ -38,8 +39,6 @@ int main() {
   return 0;
 }
 //.
-// CHECK: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #1 = { convergent nounwind }
-//.
-// CHECK: !{{[0-9]+}} = !{i32 1, !"wchar_size", i32 4}
+// CHECK: attributes #[[ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR1]] = { convergent nounwind }
 //.

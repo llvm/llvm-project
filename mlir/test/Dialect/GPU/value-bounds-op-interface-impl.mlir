@@ -157,3 +157,41 @@ module attributes {gpu.container_module} {
     }
   }
 }
+
+// -----
+
+// CHECK-LABEL: func @subgroup_broadcast
+module attributes {gpu.container_module} {
+  gpu.module @gpu_module {
+    gpu.func @subgroup_broadcast(%arg0 : index) kernel {
+      %lane = arith.constant 1 : i32
+
+      %bcast = gpu.subgroup_broadcast %arg0, specific_lane %lane : index
+      // expected-remark @below{{true}}
+      "test.compare"(%bcast, %arg0) {cmp = "EQ"} : (index, index) -> ()
+
+      %bcast2 = gpu.subgroup_broadcast %arg0, first_active_lane : index
+      // expected-remark @below{{true}}
+      "test.compare"(%bcast2, %arg0) {cmp = "EQ"} : (index, index) -> ()
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func @subgroup_broadcast_shaped
+module attributes {gpu.container_module} {
+  gpu.module @gpu_module {
+    gpu.func @subgroup_broadcast_shaped(%arg0 : memref<?xf32>) kernel {
+      %c0 = arith.constant 0 : index
+
+      %bcast = gpu.subgroup_broadcast %arg0, first_active_lane : memref<?xf32>
+      %bdim = memref.dim %bcast, %c0 : memref<?xf32>
+      %dim = memref.dim %arg0, %c0 : memref<?xf32>
+      // expected-remark @below{{true}}
+      "test.compare"(%bdim, %dim) {cmp = "EQ"} : (index, index) -> ()
+      gpu.return
+    }
+  }
+}

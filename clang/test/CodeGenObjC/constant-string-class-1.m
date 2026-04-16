@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fno-constant-cfstrings -fconstant-string-class OFConstantString  -emit-llvm -o %t %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fno-constant-cfstrings -fconstant-string-class OFConstantString  -emit-llvm -o - %s | FileCheck %s
 // pr9914
 
 @interface OFConstantString 

@@ -277,7 +277,7 @@ struct mlir::FieldParser<test::CopyCount> {
   }
 };
 namespace test {
-llvm::hash_code hash_value(const test::CopyCount &copyCount) {
+static llvm::hash_code hash_value(const test::CopyCount &copyCount) {
   return llvm::hash_value(copyCount.value);
 }
 } // namespace test
@@ -451,6 +451,30 @@ bool TestConstMemorySpaceAttr::isValidPtrIntCast(
   if (emitError)
     emitError() << "memory space doesn't allow int-ptr casts";
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// TestAttrNewlineAndIndent
+//===----------------------------------------------------------------------===//
+
+Attribute TestAttrNewlineAndIndentAttr::parse(::mlir::AsmParser &parser,
+                                              ::mlir::Type type) {
+  Type indentType;
+  if (parser.parseLess() || parser.parseType(indentType) ||
+      parser.parseGreater()) {
+    return Attribute();
+  }
+  return get(parser.getContext(), indentType);
+}
+
+void TestAttrNewlineAndIndentAttr::print(::mlir::AsmPrinter &printer) const {
+  printer << "<";
+  printer.increaseIndent();
+  printer.printNewline();
+  printer << getIndentType();
+  printer.decreaseIndent();
+  printer.printNewline();
+  printer << ">";
 }
 
 //===----------------------------------------------------------------------===//

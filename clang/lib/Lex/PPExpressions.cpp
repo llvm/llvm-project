@@ -204,7 +204,9 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     // in a different way, and compilers seem to agree on how to behave here.
     // So warn by default on object-type macros, but only warn in -pedantic
     // mode on function-type macros.
-    if (IsFunctionTypeMacro)
+    if (PP.getLangOpts().CPlusPlus26)
+      PP.Diag(beginLoc, diag::err_defined_in_macro);
+    else if (IsFunctionTypeMacro)
       PP.Diag(beginLoc, diag::warn_defined_in_function_type_macro);
     else
       PP.Diag(beginLoc, diag::warn_defined_in_object_type_macro);
@@ -429,7 +431,7 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     } else {
       assert(Result.Val.getBitWidth() == Val.getBitWidth() &&
              "intmax_t smaller than char/wchar_t?");
-      Result.Val = Val;
+      Result.Val = std::move(Val);
     }
 
     // Consume the token.
@@ -593,11 +595,13 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
                                      Token &PeekTok, bool ValueLive,
                                      bool &IncludedUndefinedIds,
                                      Preprocessor &PP) {
-  if (PP.getPreprocessorOpts().SingleFileParseMode && IncludedUndefinedIds) {
-    // The single-file parse mode behavior kicks in as soon as single identifier
-    // is undefined. If we've already seen one, there's no point in continuing
-    // with the rest of the expression. Besides saving work, this also prevents
-    // calling undefined function-like macros.
+  if ((PP.getPreprocessorOpts().SingleFileParseMode ||
+       PP.getPreprocessorOpts().SingleModuleParseMode) &&
+      IncludedUndefinedIds) {
+    // The single-{file,module}-parse mode behavior kicks in as soon as single
+    // identifier is undefined. If we've already seen one, there's no point in
+    // continuing with the rest of the expression. Besides saving work, this
+    // also prevents calling undefined function-like macros.
     PP.DiscardUntilEndOfDirective(PeekTok);
     return true;
   }

@@ -9,6 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
+#include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -19,12 +21,23 @@
 
 namespace llvm::orc {
 
+class SelfExecutorProcessControl::InProcessDylibManager : public DylibManager {
+public:
+  InProcessDylibManager(char GlobalManglingPrefix);
+  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
+  void
+  lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                     DylibManager::SymbolLookupCompleteFn Complete) override;
+
+private:
+  char GlobalManglingPrefix;
+};
+
 SelfExecutorProcessControl::SelfExecutorProcessControl(
     std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
     Triple TargetTriple, unsigned PageSize,
     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
-    : ExecutorProcessControl(std::move(SSP), std::move(D)),
-      IPMA(TargetTriple.isArch64Bit()) {
+    : ExecutorProcessControl(std::move(SSP), std::move(D)) {
 
   OwnedMemMgr = std::move(MemMgr);
   if (!OwnedMemMgr)
@@ -34,13 +47,8 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->TargetTriple = std::move(TargetTriple);
   this->PageSize = PageSize;
   this->MemMgr = OwnedMemMgr.get();
-  this->MemAccess = &IPMA;
-  this->DylibMgr = this;
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
-
-  if (this->TargetTriple.isOSBinFormatMachO())
-    GlobalManglingPrefix = '_';
 
   addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
 
@@ -75,40 +83,6 @@ SelfExecutorProcessControl::Create(
       std::move(MemMgr));
 }
 
-Expected<tpctypes::DylibHandle>
-SelfExecutorProcessControl::loadDylib(const char *DylibPath) {
-  std::string ErrMsg;
-  auto Dylib = sys::DynamicLibrary::getPermanentLibrary(DylibPath, &ErrMsg);
-  if (!Dylib.isValid())
-    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
-  return ExecutorAddr::fromPtr(Dylib.getOSSpecificHandle());
-}
-
-void SelfExecutorProcessControl::lookupSymbolsAsync(
-    ArrayRef<LookupRequest> Request,
-    DylibManager::SymbolLookupCompleteFn Complete) {
-  std::vector<tpctypes::LookupResult> R;
-
-  for (auto &Elem : Request) {
-    sys::DynamicLibrary Dylib(Elem.Handle.toPtr<void *>());
-    R.push_back(tpctypes::LookupResult());
-    for (auto &KV : Elem.Symbols) {
-      auto &Sym = KV.first;
-      std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
-                      (*Sym).size() - !!GlobalManglingPrefix);
-      void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str());
-      if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
-        R.back().emplace_back();
-      else
-        // FIXME: determine accurate JITSymbolFlags.
-        R.back().emplace_back(ExecutorSymbolDef(ExecutorAddr::fromPtr(Addr),
-                                                JITSymbolFlags::Exported));
-    }
-  }
-
-  Complete(std::move(R));
-}
-
 Expected<int32_t>
 SelfExecutorProcessControl::runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) {
@@ -132,9 +106,10 @@ void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
                                                   IncomingWFRHandler SendResult,
                                                   ArrayRef<char> ArgBuffer) {
   using WrapperFnTy =
-      shared::CWrapperFunctionResult (*)(const char *Data, size_t Size);
+      shared::CWrapperFunctionBuffer (*)(const char *Data, size_t Size);
   auto *WrapperFn = WrapperFnAddr.toPtr<WrapperFnTy>();
-  SendResult(WrapperFn(ArgBuffer.data(), ArgBuffer.size()));
+  SendResult(shared::WrapperFunctionBuffer(
+      WrapperFn(ArgBuffer.data(), ArgBuffer.size())));
 }
 
 Error SelfExecutorProcessControl::disconnect() {
@@ -142,7 +117,18 @@ Error SelfExecutorProcessControl::disconnect() {
   return Error::success();
 }
 
-shared::CWrapperFunctionResult
+Expected<std::unique_ptr<DylibManager>>
+SelfExecutorProcessControl::createDefaultDylibMgr() {
+  char Prefix = TargetTriple.isOSBinFormatMachO() ? '_' : '\0';
+  return std::make_unique<InProcessDylibManager>(Prefix);
+}
+
+Expected<std::unique_ptr<MemoryAccess>>
+SelfExecutorProcessControl::createDefaultMemoryAccess() {
+  return std::make_unique<InProcessMemoryAccess>(TargetTriple.isArch64Bit());
+}
+
+shared::CWrapperFunctionBuffer
 SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
     void *Ctx, const void *FnTag, const char *Data, size_t Size) {
 
@@ -151,18 +137,57 @@ SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
            << " byte payload.\n";
   });
 
-  std::promise<shared::WrapperFunctionResult> ResultP;
+  std::promise<shared::WrapperFunctionBuffer> ResultP;
   auto ResultF = ResultP.get_future();
   static_cast<SelfExecutorProcessControl *>(Ctx)
       ->getExecutionSession()
       .runJITDispatchHandler(
           [ResultP = std::move(ResultP)](
-              shared::WrapperFunctionResult Result) mutable {
+              shared::WrapperFunctionBuffer Result) mutable {
             ResultP.set_value(std::move(Result));
           },
-          ExecutorAddr::fromPtr(FnTag), {Data, Size});
+          ExecutorAddr::fromPtr(FnTag),
+          shared::WrapperFunctionBuffer::copyFrom(Data, Size));
 
   return ResultF.get().release();
+}
+
+SelfExecutorProcessControl::InProcessDylibManager::InProcessDylibManager(
+    char GlobalManglingPrefix)
+    : GlobalManglingPrefix(GlobalManglingPrefix) {}
+
+Expected<tpctypes::DylibHandle>
+SelfExecutorProcessControl::InProcessDylibManager::loadDylib(
+    const char *DylibPath) {
+  std::string ErrMsg;
+  auto Dylib = sys::DynamicLibrary::getPermanentLibrary(DylibPath, &ErrMsg);
+  if (!Dylib.isValid())
+    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
+  return ExecutorAddr::fromPtr(Dylib.getOSSpecificHandle());
+}
+
+void SelfExecutorProcessControl::InProcessDylibManager::lookupSymbolsAsync(
+    ArrayRef<LookupRequest> Request,
+    DylibManager::SymbolLookupCompleteFn Complete) {
+  std::vector<tpctypes::LookupResult> R;
+
+  for (auto &Elem : Request) {
+    sys::DynamicLibrary Dylib(Elem.Handle.toPtr<void *>());
+    R.push_back(tpctypes::LookupResult());
+    for (auto &KV : Elem.Symbols) {
+      auto &Sym = KV.first;
+      std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
+                      (*Sym).size() - !!GlobalManglingPrefix);
+      void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str());
+      if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
+        R.back().emplace_back();
+      else
+        // FIXME: determine accurate JITSymbolFlags.
+        R.back().emplace_back(ExecutorSymbolDef(ExecutorAddr::fromPtr(Addr),
+                                                JITSymbolFlags::Exported));
+    }
+  }
+  Complete(std::move(R));
 }
 
 } // namespace llvm::orc

@@ -167,7 +167,7 @@ void value_init() {
 // CIR:   cir.store{{.*}} %[[ZEROI2]], %[[I2_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[ZEROI_LHS:.+]] = cir.const #cir.int<0> : !s32i
 // CIR:   %[[ZEROI_RHS:.+]] = cir.const #cir.int<0> : !s32i
-// CIR:   %[[CMP:.+]] = cir.cmp(eq, %[[ZEROI_LHS]], %[[ZEROI_RHS]]) : !s32i, !cir.bool
+// CIR:   %[[CMP:.+]] = cir.cmp eq %[[ZEROI_LHS]], %[[ZEROI_RHS]] : !s32i
 // CIR:   cir.store{{.*}} %[[CMP]], %[[S_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:   cir.return
 

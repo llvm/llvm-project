@@ -19,9 +19,9 @@ define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH1]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
-; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <8 x i64> [[STEP_ADD]], splat (i64 8)
-; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <8 x i64> [[STEP_ADD1]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <8 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add nuw <8 x i64> [[STEP_ADD]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add nuw <8 x i64> [[STEP_ADD1]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt <8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt <8 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt <8 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]

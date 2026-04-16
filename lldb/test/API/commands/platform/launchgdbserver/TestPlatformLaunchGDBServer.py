@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 
 class TestPlatformProcessLaunchGDBServer(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def _launch_and_connect(self, exe):
         hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
@@ -65,6 +66,7 @@ class TestPlatformProcessLaunchGDBServer(TestBase):
 
     @skipIfRemote
     @skipIfDarwin  # Uses debugserver for debugging
+    @skipIfWindows
     @add_test_categories(["lldb-server"])
     def test_launch_with_unusual_process_name(self):
         """

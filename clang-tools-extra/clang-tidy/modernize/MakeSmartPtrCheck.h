@@ -41,7 +41,7 @@ protected:
   /// Returns whether the C++ version is compatible with current check.
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
 
-  static const char PointerType[];
+  static constexpr char PointerType[] = "pointerType";
 
 private:
   utils::IncludeInserter Inserter;

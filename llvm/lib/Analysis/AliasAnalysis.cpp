@@ -244,6 +244,29 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   return Result;
 }
 
+ModRefInfo
+getModRefInfoInaccessibleAndTargetMemLoc(const MemoryEffects CallUse,
+                                         const MemoryEffects CallDef) {
+
+  ModRefInfo Result = ModRefInfo::NoModRef;
+  auto addModRefInfoForLoc = [&](IRMemLocation L) {
+    ModRefInfo UseMR = CallUse.getModRef(L);
+    if (UseMR == ModRefInfo::NoModRef)
+      return;
+    ModRefInfo DefMR = CallDef.getModRef(L);
+    if (DefMR == ModRefInfo::NoModRef)
+      return;
+    if (DefMR == ModRefInfo::Ref && DefMR == UseMR)
+      return;
+    Result |= UseMR;
+  };
+
+  addModRefInfoForLoc(IRMemLocation::InaccessibleMem);
+  for (auto Loc : MemoryEffects::targetMemLocations())
+    addModRefInfoForLoc(Loc);
+  return Result;
+}
+
 ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
                                     const CallBase *Call2, AAQueryInfo &AAQI) {
   ModRefInfo Result = ModRefInfo::ModRef;
@@ -348,6 +371,12 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
     return R;
   }
 
+  // If only Inaccessible and Target Memory Location have set ModRefInfo
+  // then check the relation between the same locations.
+  if (Call1B.onlyAccessesInaccessibleOrTargetMem() &&
+      Call2B.onlyAccessesInaccessibleOrTargetMem())
+    return getModRefInfoInaccessibleAndTargetMemLoc(Call1B, Call2B);
+
   return Result;
 }
 
@@ -433,7 +462,7 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
-  if (isStrongerThanMonotonic(L->getOrdering()))
+  if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
     return ModRefInfo::ModRef;
 
   // If the load address doesn't alias the given address, it doesn't read
@@ -443,13 +472,6 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
     if (AR == AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
   }
-
-  assert(!isStrongerThanMonotonic(L->getOrdering()) &&
-         "Stronger atomic orderings should have been handled above!");
-
-  if (isStrongerThanUnordered(L->getOrdering()))
-    return ModRefInfo::ModRef;
-
   // Otherwise, a load just reads.
   return ModRefInfo::Ref;
 }
@@ -458,7 +480,7 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
-  if (isStrongerThanMonotonic(S->getOrdering()))
+  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
     return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
@@ -476,13 +498,7 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
       return ModRefInfo::NoModRef;
   }
 
-  assert(!isStrongerThanMonotonic(S->getOrdering()) &&
-         "Stronger atomic orderings should have been handled above!");
-
-  if (isStrongerThanUnordered(S->getOrdering()))
-    return ModRefInfo::ModRef;
-
-  // A store just writes.
+  // Otherwise, a store just writes.
   return ModRefInfo::Mod;
 }
 

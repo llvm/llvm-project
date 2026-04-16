@@ -68,8 +68,8 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    mtc1 $7, $f1
 ; 32R6-NEXT:    mthc1 $6, $f1
-; 32R6-NEXT:    mtc1 $4, $f0
 ; 32R6-NEXT:    ldc1 $f2, 16($sp)
+; 32R6-NEXT:    mtc1 $4, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f2, $f1
 ;
@@ -110,8 +110,8 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    mtc1 $7, $f1
 ; MM32R6-NEXT:    mthc1 $6, $f1
-; MM32R6-NEXT:    mtc1 $4, $f0
 ; MM32R6-NEXT:    ldc1 $f2, 16($sp)
+; MM32R6-NEXT:    mtc1 $4, $f0
 ; MM32R6-NEXT:    sel.d $f0, $f2, $f1
 ; MM32R6-NEXT:    jrc $ra
 entry:
@@ -229,8 +229,6 @@ define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ; 32R6-LABEL: tst_select_fcmp_olt_double:
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    cmp.lt.d $f0, $f12, $f14
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f14, $f12
 ;
@@ -256,8 +254,6 @@ define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ; 64R6-LABEL: tst_select_fcmp_olt_double:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.lt.d $f0, $f12, $f13
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f13, $f12
 ;
@@ -271,8 +267,6 @@ define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ; MM32R6-LABEL: tst_select_fcmp_olt_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.lt.d $f0, $f12, $f14
-; MM32R6-NEXT:    mfc1 $1, $f0
-; MM32R6-NEXT:    mtc1 $1, $f0
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
 entry:
@@ -311,8 +305,6 @@ define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ; 32R6-LABEL: tst_select_fcmp_ole_double:
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    cmp.le.d $f0, $f12, $f14
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f14, $f12
 ;
@@ -338,8 +330,6 @@ define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ; 64R6-LABEL: tst_select_fcmp_ole_double:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.le.d $f0, $f12, $f13
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f13, $f12
 ;
@@ -353,8 +343,6 @@ define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ; MM32R6-LABEL: tst_select_fcmp_ole_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.le.d $f0, $f12, $f14
-; MM32R6-NEXT:    mfc1 $1, $f0
-; MM32R6-NEXT:    mtc1 $1, $f0
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
 entry:
@@ -393,8 +381,6 @@ define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ; 32R6-LABEL: tst_select_fcmp_ogt_double:
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    cmp.lt.d $f0, $f14, $f12
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f14, $f12
 ;
@@ -420,8 +406,6 @@ define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ; 64R6-LABEL: tst_select_fcmp_ogt_double:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.lt.d $f0, $f13, $f12
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f13, $f12
 ;
@@ -435,8 +419,6 @@ define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ; MM32R6-LABEL: tst_select_fcmp_ogt_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.lt.d $f0, $f14, $f12
-; MM32R6-NEXT:    mfc1 $1, $f0
-; MM32R6-NEXT:    mtc1 $1, $f0
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
 entry:
@@ -475,8 +457,6 @@ define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ; 32R6-LABEL: tst_select_fcmp_oge_double:
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    cmp.le.d $f0, $f14, $f12
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f14, $f12
 ;
@@ -502,8 +482,6 @@ define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ; 64R6-LABEL: tst_select_fcmp_oge_double:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.le.d $f0, $f13, $f12
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f13, $f12
 ;
@@ -517,8 +495,6 @@ define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ; MM32R6-LABEL: tst_select_fcmp_oge_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.le.d $f0, $f14, $f12
-; MM32R6-NEXT:    mfc1 $1, $f0
-; MM32R6-NEXT:    mtc1 $1, $f0
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
 entry:
@@ -557,8 +533,6 @@ define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ; 32R6-LABEL: tst_select_fcmp_oeq_double:
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    cmp.eq.d $f0, $f12, $f14
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f14, $f12
 ;
@@ -584,8 +558,6 @@ define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ; 64R6-LABEL: tst_select_fcmp_oeq_double:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.eq.d $f0, $f12, $f13
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f13, $f12
 ;
@@ -599,8 +571,6 @@ define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ; MM32R6-LABEL: tst_select_fcmp_oeq_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.eq.d $f0, $f12, $f14
-; MM32R6-NEXT:    mfc1 $1, $f0
-; MM32R6-NEXT:    mtc1 $1, $f0
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
 entry:
@@ -639,11 +609,8 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; 32R6-LABEL: tst_select_fcmp_one_double:
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    cmp.ueq.d $f0, $f12, $f14
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    not $1, $1
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
-; 32R6-NEXT:    sel.d $f0, $f14, $f12
+; 32R6-NEXT:    sel.d $f0, $f12, $f14
 ;
 ; M3-LABEL: tst_select_fcmp_one_double:
 ; M3:       # %bb.0: # %entry
@@ -667,11 +634,8 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; 64R6-LABEL: tst_select_fcmp_one_double:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.ueq.d $f0, $f12, $f13
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    not $1, $1
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
-; 64R6-NEXT:    sel.d $f0, $f13, $f12
+; 64R6-NEXT:    sel.d $f0, $f12, $f13
 ;
 ; MM32R3-LABEL: tst_select_fcmp_one_double:
 ; MM32R3:       # %bb.0: # %entry
@@ -683,10 +647,7 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; MM32R6-LABEL: tst_select_fcmp_one_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.ueq.d $f0, $f12, $f14
-; MM32R6-NEXT:    mfc1 $1, $f0
-; MM32R6-NEXT:    not $1, $1
-; MM32R6-NEXT:    mtc1 $1, $f0
-; MM32R6-NEXT:    sel.d $f0, $f14, $f12
+; MM32R6-NEXT:    sel.d $f0, $f12, $f14
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %s = fcmp one double %x, %y

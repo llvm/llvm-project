@@ -107,6 +107,7 @@ X86_CPU_SUBTYPE(INTEL_COREI7_ARROWLAKE,      "arrowlake")
 X86_CPU_SUBTYPE(INTEL_COREI7_ARROWLAKE_S,    "arrowlake-s")
 X86_CPU_SUBTYPE(INTEL_COREI7_PANTHERLAKE,    "pantherlake")
 X86_CPU_SUBTYPE(AMDFAM1AH_ZNVER5,            "znver5")
+X86_CPU_SUBTYPE(AMDFAM1AH_ZNVER6,            "znver6")
 X86_CPU_SUBTYPE(INTEL_COREI7_DIAMONDRAPIDS,  "diamondrapids")
 X86_CPU_SUBTYPE(INTEL_COREI7_NOVALAKE,       "novalake")
 
@@ -267,6 +268,7 @@ X86_FEATURE       (PPX,                "ppx")
 X86_FEATURE       (NDD,                "ndd")
 X86_FEATURE       (EGPR,               "egpr")
 X86_FEATURE       (ZU,                 "zu")
+X86_FEATURE       (JMPABS,             "jmpabs")
 
 // These features aren't really CPU features, but the frontend can set them.
 X86_FEATURE       (RETPOLINE_EXTERNAL_THUNK,    "retpoline-external-thunk")

@@ -35,9 +35,11 @@ class NvgpuCompiler:
 
     def jit(self, module: ir.Module) -> execution_engine.ExecutionEngine:
         """Wraps the module in a JIT execution engine."""
-        return execution_engine.ExecutionEngine(
+        ee = execution_engine.ExecutionEngine(
             module, opt_level=self.opt_level, shared_libs=self.shared_libs
         )
+        ee.initialize()
+        return ee
 
     def compile_and_jit(self, module: ir.Module) -> execution_engine.ExecutionEngine:
         """Compiles and jits the module."""

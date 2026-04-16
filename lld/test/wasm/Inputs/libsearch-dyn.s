@@ -1,4 +1,4 @@
-.globl _bar,_dynamic
+.globl _bar,_dynamic,_foo_tag
 
 .section .data,"",@
 _bar:
@@ -6,3 +6,6 @@ _bar:
 
 _dynamic:
 .size _dynamic,4
+
+.tagtype _foo_tag i32
+_foo_tag:

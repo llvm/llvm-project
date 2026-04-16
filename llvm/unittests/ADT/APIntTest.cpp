@@ -14,7 +14,6 @@
 #include "llvm/Support/Alignment.h"
 #include "gtest/gtest.h"
 #include <array>
-#include <climits>
 #include <limits>
 #include <optional>
 
@@ -27,6 +26,28 @@ TEST(APIntTest, ValueInit) {
   EXPECT_TRUE(!Zero);
   EXPECT_TRUE(!Zero.zext(64));
   EXPECT_TRUE(!Zero.sext(64));
+}
+
+TEST(APIntTest, IsSameValue) {
+  APInt One8(8, 1, /*isSigned=*/false);
+  APInt Three4(4, 3, /*isSigned=*/false);
+  EXPECT_FALSE(APInt::isSameValue(One8, Three4, /*SignedCompare=*/false));
+  EXPECT_FALSE(APInt::isSameValue(One8, Three4, /*SignedCompare=*/true));
+
+  APInt Two8(8, 2, /*isSigned=*/false);
+  APInt Two4(4, 2, /*isSigned=*/false);
+  EXPECT_TRUE(APInt::isSameValue(Two8, Two4, /*SignedCompare=*/false));
+  EXPECT_TRUE(APInt::isSameValue(Two8, Two4, /*SignedCompare=*/true));
+
+  APInt Seven8(8, 7, /*isSigned=*/false);
+  APInt Seven3(3, 7, /*isSigned=*/false);
+  EXPECT_TRUE(APInt::isSameValue(Seven8, Seven3, /*SignedCompare=*/false));
+  EXPECT_FALSE(APInt::isSameValue(Seven8, Seven3, /*SignedCompare=*/true));
+
+  APInt Ones8 = APInt::getAllOnes(8);
+  APInt Ones4 = APInt::getAllOnes(4);
+  EXPECT_FALSE(APInt::isSameValue(Ones8, Ones4, /*SignedCompare=*/false));
+  EXPECT_TRUE(APInt::isSameValue(Ones8, Ones4, /*SignedCompare=*/true));
 }
 
 // Test that 0^5 == 0
@@ -1048,7 +1069,7 @@ TEST(APIntTest, divrem_big3) {
 }
 
 TEST(APIntTest, divrem_big4) {
-  // Tests heap allocation in divide() enfoced by huge numbers
+  // Tests heap allocation in divide() enforced by huge numbers
   testDiv(APInt{4096, 5}.shl(2001),
           APInt{4096, 1}.shl(2000),
           APInt{4096, 4219*13});
@@ -1165,6 +1186,29 @@ TEST(APIntTest, divrem_simple) {
   EXPECT_EQ(R, APInt(65, 0));
 }
 
+TEST(APIntTest, URemUint64PowerOf2Wide) {
+  // Edge case tests for urem with power of two arguments
+  APInt V(128, "80000000000000000000000000000FFF", 16);
+
+  EXPECT_EQ(15u, V.urem(16));
+  EXPECT_EQ(255u, V.urem(256));
+  EXPECT_EQ(4095u, V.urem(4096));
+
+  EXPECT_EQ(APInt(128, 15), V.urem(APInt(128, 16)));
+  EXPECT_EQ(APInt(128, 255), V.urem(APInt(128, 256)));
+  EXPECT_EQ(APInt(128, 4095), V.urem(APInt(128, 4096)));
+
+  APInt AllOnes = APInt::getAllOnes(128);
+
+  EXPECT_EQ(63u, AllOnes.urem(64));
+  EXPECT_EQ(255u, AllOnes.urem(256));
+  EXPECT_EQ(4095u, AllOnes.urem(4096));
+
+  EXPECT_EQ(APInt(128, 63), AllOnes.urem(APInt(128, 64)));
+  EXPECT_EQ(APInt(128, 255), AllOnes.urem(APInt(128, 256)));
+  EXPECT_EQ(APInt(128, 4095), AllOnes.urem(APInt(128, 4096)));
+}
+
 TEST(APIntTest, fromString) {
   EXPECT_EQ(APInt(32, 0), APInt(32,   "0", 2));
   EXPECT_EQ(APInt(32, 1), APInt(32,   "1", 2));
@@ -1269,10 +1313,20 @@ TEST(APIntTest, SaturatingMath) {
   EXPECT_EQ(APInt(6, 31), AP_42.truncSSat(6));
   EXPECT_EQ(APInt(5, 15), AP_42.truncSSat(5));
 
+  EXPECT_EQ(APInt(8, 42, false), AP_42.truncSSatU(8));
+  EXPECT_EQ(APInt(7, 42, false), AP_42.truncSSatU(7));
+  EXPECT_EQ(APInt(6, 42, false), AP_42.truncSSatU(6));
+  EXPECT_EQ(APInt(5, 31, false), AP_42.truncSSatU(5));
+
   EXPECT_EQ(APInt(8, -56, true), AP_200.truncSSat(8));
   EXPECT_EQ(APInt(7, -56, true), AP_200.truncSSat(7));
   EXPECT_EQ(APInt(6, -32, true), AP_200.truncSSat(6));
   EXPECT_EQ(APInt(5, -16, true), AP_200.truncSSat(5));
+
+  EXPECT_EQ(APInt(8, 200, false), AP_200.truncSSatU(8));
+  EXPECT_EQ(APInt(7, 0, false), AP_200.truncSSatU(7));
+  EXPECT_EQ(APInt(6, 0, false), AP_200.truncSSatU(6));
+  EXPECT_EQ(APInt(5, 0, false), AP_200.truncSSatU(5));
 
   EXPECT_EQ(APInt(8, 200), AP_100.uadd_sat(AP_100));
   EXPECT_EQ(APInt(8, 255), AP_100.uadd_sat(AP_200));
@@ -2591,6 +2645,26 @@ TEST(APIntTest, clearBits) {
   EXPECT_EQ(32u, i64hi32.countl_zero());
   EXPECT_EQ(0u, i64hi32.countl_one());
   EXPECT_EQ(32u, i64hi32.popcount());
+
+  APInt i65top = APInt::getAllOnes(65);
+  i65top.clearBits(64, 65);
+  EXPECT_EQ(64u, i65top.countr_one());
+  EXPECT_EQ(0u, i65top.countr_zero());
+  EXPECT_EQ(64u, i65top.getActiveBits());
+  EXPECT_EQ(1u, i65top.countl_zero());
+  EXPECT_EQ(0u, i65top.countl_one());
+  EXPECT_EQ(64u, i65top.popcount());
+  EXPECT_FALSE(i65top[64]);
+  EXPECT_EQ(APInt(65, UINT64_MAX), i65top);
+
+  APInt i128hi64 = APInt::getAllOnes(128);
+  i128hi64.clearBits(64, 128);
+  EXPECT_EQ(64u, i128hi64.countr_one());
+  EXPECT_EQ(0u, i128hi64.countr_zero());
+  EXPECT_EQ(64u, i128hi64.getActiveBits());
+  EXPECT_EQ(64u, i128hi64.countl_zero());
+  EXPECT_EQ(0u, i128hi64.countl_one());
+  EXPECT_EQ(64u, i128hi64.popcount());
 }
 
 TEST(APIntTest, getLoBits) {

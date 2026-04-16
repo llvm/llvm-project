@@ -46,7 +46,11 @@ void SARIFDiagnostic::emitDiagnosticMessage(
   if (!Diag)
     return;
 
-  SarifRule Rule = SarifRule::create().setRuleId(std::to_string(Diag->getID()));
+  const auto &DiagnosticIDs = *(Diag->getDiags()->getDiagnosticIDs());
+  std::string StableID = DiagnosticIDs.getStableID(Diag->getID());
+  auto LegacyStableIDs = DiagnosticIDs.getLegacyStableIDs(Diag->getID());
+  SarifRule Rule =
+      SarifRule::create().setRuleId(StableID).setDeprecatedIds(LegacyStableIDs);
 
   Rule = addDiagnosticLevelToRule(Rule, Level);
 
@@ -219,7 +223,7 @@ llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
       // on that system, both aforementioned paths point to the same place.
 #ifdef _WIN32
       SmallString<256> TmpFilename = File->getName();
-      llvm::sys::fs::make_absolute(TmpFilename);
+      SM.getFileManager().makeAbsolutePath(TmpFilename);
       llvm::sys::path::native(TmpFilename);
       llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);
       Filename = StringRef(TmpFilename.data(), TmpFilename.size());

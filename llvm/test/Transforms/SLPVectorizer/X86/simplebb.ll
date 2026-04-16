@@ -55,16 +55,15 @@ define void @test_volatile_load(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @test_volatile_load(
 ; CHECK-NEXT:    [[I0:%.*]] = load volatile double, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[I1:%.*]] = load volatile double, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[I0]], [[I1]]
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[I3:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
 ; CHECK-NEXT:    [[I4:%.*]] = load double, ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[I0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[I3]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[I1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[I4]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[C:%.*]], align 8
+; CHECK-NEXT:    [[MUL5:%.*]] = fmul double [[I3]], [[I4]]
+; CHECK-NEXT:    store double [[MUL]], ptr [[C:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, ptr [[C]], i64 1
+; CHECK-NEXT:    store double [[MUL5]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %i0 = load volatile double, ptr %a, align 8

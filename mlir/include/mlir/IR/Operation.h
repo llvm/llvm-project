@@ -92,17 +92,15 @@ public:
   /// necessary.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           NamedAttrList &&attributes,
-                           OpaqueProperties properties, BlockRange successors,
-                           unsigned numRegions);
+                           NamedAttrList &&attributes, PropertyRef properties,
+                           BlockRange successors, unsigned numRegions);
 
   /// Create a new Operation with the specific fields. This constructor uses an
   /// existing attribute dictionary to avoid uniquing a list of attributes.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           DictionaryAttr attributes,
-                           OpaqueProperties properties, BlockRange successors,
-                           unsigned numRegions);
+                           DictionaryAttr attributes, PropertyRef properties,
+                           BlockRange successors, unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
   static Operation *create(const OperationState &state);
@@ -110,8 +108,7 @@ public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           NamedAttrList &&attributes,
-                           OpaqueProperties properties,
+                           NamedAttrList &&attributes, PropertyRef properties,
                            BlockRange successors = {},
                            RegionRange regions = {});
 
@@ -140,18 +137,20 @@ public:
   /// * Whether cloning should recursively traverse into the regions of the
   ///   operation or not.
   /// * Whether cloning should also clone the operands of the operation.
+  /// * Whether to use different result types or clone them.
   class CloneOptions {
   public:
     /// Default constructs an option with all flags set to false. That means all
     /// parts of an operation that may optionally not be cloned, are not cloned.
     CloneOptions();
 
-    /// Constructs an instance with the clone regions and clone operands flags
-    /// set accordingly.
-    CloneOptions(bool cloneRegions, bool cloneOperands);
+    /// Constructs an instance with the options set accordingly.
+    CloneOptions(bool cloneRegions, bool cloneOperands,
+                 std::optional<SmallVector<Type>> resultTypes);
 
-    /// Returns an instance with all flags set to true. This is the default
-    /// when using the clone method and clones all parts of the operation.
+    /// Returns an instance such that all elements of the operation are cloned.
+    /// This is the default when using the clone method and clones all parts of
+    /// the operation.
     static CloneOptions all();
 
     /// Configures whether cloning should traverse into any of the regions of
@@ -172,11 +171,29 @@ public:
     /// Returns whether operands should be cloned as well.
     bool shouldCloneOperands() const { return cloneOperandsFlag; }
 
+    /// Configures different result types to use for the cloned operation.
+    /// If an empty optional, the result types are cloned from the original
+    /// operation.
+    CloneOptions &withResultTypes(std::optional<SmallVector<Type>> resultTypes);
+
+    /// Returns true if the results are cloned from the operation.
+    bool shouldCloneResults() const { return !resultTypes.has_value(); }
+
+    /// Returns the result types that should be used for the created operation
+    /// or `defaultResultTypes` if none were set.
+    TypeRange resultTypesOr(TypeRange defaultResultTypes) const {
+      if (resultTypes)
+        return *resultTypes;
+      return defaultResultTypes;
+    }
+
   private:
     /// Whether regions should be cloned.
     bool cloneRegionsFlag : 1;
     /// Whether operands should be cloned.
     bool cloneOperandsFlag : 1;
+    /// New result types to use in the cloned operation.
+    std::optional<SmallVector<Type>> resultTypes;
   };
 
   /// Create a deep copy of this operation, remapping any operands that use
@@ -185,7 +202,8 @@ public:
   /// sub-operations to the corresponding operation that is copied, and adds
   /// those mappings to the map.
   /// Optionally, one may configure what parts of the operation to clone using
-  /// the options parameter.
+  /// the options parameter. If parts of the operation (e.g. results or regions)
+  /// are not cloned, they will not appear in the mapper.
   ///
   /// Calling this method from multiple threads is generally safe if through the
   /// process of cloning no new uses of 'Value's from outside the operation are
@@ -194,8 +212,8 @@ public:
   /// mapper, it is possible to avoid adding uses to outside operands by
   /// remapping them to 'Value's owned by the caller thread.
   Operation *clone(IRMapping &mapper,
-                   CloneOptions options = CloneOptions::all());
-  Operation *clone(CloneOptions options = CloneOptions::all());
+                   const CloneOptions &options = CloneOptions::all());
+  Operation *clone(const CloneOptions &options = CloneOptions::all());
 
   /// Create a partial copy of this operation without traversing into attached
   /// regions. The new operation will have the same number of regions as the
@@ -241,6 +259,14 @@ public:
       if (auto parentOp = dyn_cast<OpTy>(op))
         return parentOp;
     return OpTy();
+  }
+  template <typename... OpTy>
+  std::enable_if_t<(sizeof...(OpTy) > 1), Operation *> getParentOfType() {
+    auto *op = this;
+    while ((op = op->getParentOp()))
+      if (isa<OpTy...>(op))
+        return op;
+    return nullptr;
   }
 
   /// Returns the closest surrounding parent operation with trait `Trait`.
@@ -896,23 +922,29 @@ public:
   int getPropertiesStorageSize() const {
     return ((int)propertiesStorageSize) * 8;
   }
-  /// Returns the properties storage.
-  OpaqueProperties getPropertiesStorage() {
+
+  /// Return a generic (but typed) reference to the property type storage.
+  PropertyRef getPropertiesStorage() {
     if (propertiesStorageSize)
-      return getPropertiesStorageUnsafe();
-    return {nullptr};
+      return PropertyRef(name.getOpPropertiesTypeID(),
+                         getRawPropertiesStorageUnsafe());
+    return {};
   }
-  OpaqueProperties getPropertiesStorage() const {
+
+  PropertyRef getPropertiesStorage() const {
     if (propertiesStorageSize)
-      return {reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
-          getTrailingObjects<detail::OpProperties>()))};
-    return {nullptr};
+      return PropertyRef(
+          name.getOpPropertiesTypeID(),
+          reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
+              getTrailingObjects<detail::OpProperties>())));
+    return {};
   }
-  /// Returns the properties storage without checking whether properties are
-  /// present.
-  OpaqueProperties getPropertiesStorageUnsafe() {
-    return {
-        reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
+
+  /// Returns a pointer to the properties storage (if it exists) with no type
+  /// information.
+  void *getRawPropertiesStorageUnsafe() {
+    return reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
+        getTrailingObjects<detail::OpProperties>()));
   }
 
   /// Return the properties converted to an attribute.
@@ -932,7 +964,7 @@ public:
 
   /// Copy properties from an existing other properties object. The two objects
   /// must be the same type.
-  void copyProperties(OpaqueProperties rhs);
+  void copyProperties(PropertyRef rhs);
 
   /// Compute a hash for the op properties (if any).
   llvm::hash_code hashProperties();
@@ -961,7 +993,7 @@ private:
   Operation(Location location, OperationName name, unsigned numResults,
             unsigned numSuccessors, unsigned numRegions,
             int propertiesStorageSize, DictionaryAttr attributes,
-            OpaqueProperties properties, bool hasOperandStorage);
+            PropertyRef properties, bool hasOperandStorage);
 
   // Operations are deleted through the destroy() member because they are
   // allocated with malloc.

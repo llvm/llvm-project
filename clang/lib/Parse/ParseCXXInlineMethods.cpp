@@ -131,7 +131,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
         << Delete;
       SkipUntil(tok::semi);
     } else if (ExpectAndConsume(tok::semi, diag::err_expected_after,
-                                Delete ? "delete" : "default")) {
+                                Delete ? "delete" : "default") &&
+               !isLikelyAtStartOfNewDeclaration()) {
       SkipUntil(tok::semi);
     }
 
@@ -603,7 +604,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
-  auto _ = llvm::make_scope_exit([&]() {
+  llvm::scope_exit _([&]() {
     while (Tok.isNot(tok::eof))
       ConsumeAnyToken();
 

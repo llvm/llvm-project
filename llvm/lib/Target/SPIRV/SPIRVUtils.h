@@ -21,9 +21,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
 #include <queue>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+
+#include "SPIRVTypeInst.h"
 
 namespace llvm {
 class MCInst;
@@ -37,6 +40,7 @@ class StringRef;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
 class SPIRVGlobalRegistry;
+class SPIRVTypeInst;
 
 // This class implements a partial ordering visitor, which visits a cyclic graph
 // in natural topological-like ordering. Topological ordering is not defined for
@@ -269,6 +273,8 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 11;
   case SPIRV::StorageClass::Uniform:
     return 12;
+  case SPIRV::StorageClass::PushConstant:
+    return 13;
   default:
     report_fatal_error("Unable to get address space id");
   }
@@ -342,7 +348,11 @@ bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
 Type *reconstitutePeeledArrayType(Type *Ty);
 
 inline bool hasInitializer(const GlobalVariable *GV) {
-  return GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer());
+  if (!GV->hasInitializer())
+    return false;
+  if (const auto *Init = GV->getInitializer(); isa<UndefValue>(Init))
+    return GV->isConstant() && Init->getType()->isAggregateType();
+  return true;
 }
 
 // True if this is an instance of TypedPointerType.
@@ -527,15 +537,13 @@ void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
                      MachineIRBuilder &MIRBuilder,
                      SPIRV::AccessQualifier::AccessQualifier AccessQual,
                      bool EmitIR, bool Force = false);
-void setRegClassType(Register Reg, const MachineInstr *SpvType,
+void setRegClassType(Register Reg, SPIRVTypeInst SpvType,
                      SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
                      const MachineFunction &MF, bool Force = false);
-Register createVirtualRegister(const MachineInstr *SpvType,
-                               SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineRegisterInfo *MRI,
                                const MachineFunction &MF);
-Register createVirtualRegister(const MachineInstr *SpvType,
-                               SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder);
 Register createVirtualRegister(
     const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
@@ -569,6 +577,8 @@ bool isTypeFoldingSupported(unsigned Opcode);
 
 // Get loop controls from llvm.loop. metadata.
 SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L);
+SmallVector<unsigned, 1>
+getSpirvLoopControlOperandsFromLoopMetadata(MDNode *LoopMD);
 
 // Traversing [g]MIR accounting for pseudo-instructions.
 MachineInstr *passCopy(MachineInstr *Def, const MachineRegisterInfo *MRI);
@@ -582,5 +592,6 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);
+Function *getOrCreateBackendServiceFunction(Module &M);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

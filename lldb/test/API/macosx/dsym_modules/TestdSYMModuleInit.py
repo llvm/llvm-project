@@ -13,10 +13,12 @@ from lldbsuite.test.decorators import *
 
 @skipUnlessDarwin
 class TestdSYMModuleInit(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @no_debug_info_test
     def test_add_module(self):
         """This loads a file into a target and ensures that the python module was
-        correctly added and the two intialization functions are called."""
+        correctly added and the two initialization functions are called."""
         self.exe_name = "has_dsym"
         self.py_name = self.exe_name + ".py"
 

@@ -151,13 +151,13 @@ if (APPLE AND LLVM_USE_SANITIZER)
   elseif("${LLVM_USE_SANITIZER}" STREQUAL "Thread")
     set(LIBFILE "libclang_rt.tsan_osx_dynamic.dylib")
   else()
-    message(WARNING "LLVM_USE_SANITIZER=${LLVM_USE_SANITIZER} is not supported on OS X")
+    message(WARNING "LLVM_USE_SANITIZER=${LLVM_USE_SANITIZER} is not supported on macOS")
   endif()
   if (LIBFILE)
     find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
     get_filename_component(LIBDIR "${LIBCXX_BUILTINS_LIBRARY}" DIRECTORY)
     if (NOT IS_DIRECTORY "${LIBDIR}")
-      message(FATAL_ERROR "Cannot find compiler-rt directory on OS X required for LLVM_USE_SANITIZER")
+      message(FATAL_ERROR "Cannot find compiler-rt directory on macOS required for LLVM_USE_SANITIZER")
     endif()
     set(LIBCXX_SANITIZER_LIBRARY "${LIBDIR}/${LIBFILE}")
     set(LIBCXX_SANITIZER_LIBRARY "${LIBCXX_SANITIZER_LIBRARY}" PARENT_SCOPE)
@@ -345,8 +345,8 @@ set_target_properties(cxx_experimental
 cxx_add_common_build_flags(cxx_experimental)
 target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
 
-# Add a meta-target for both libraries.
-add_custom_target(cxx)
+# Add a meta-target for both libraries and the experimental library.
+add_custom_target(cxx DEPENDS cxx_experimental)
 if (LIBCXX_ENABLE_SHARED)
   add_dependencies(cxx cxx_shared)
 endif()
@@ -388,9 +388,6 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
     COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx)
   add_custom_target(install-cxx-stripped
     COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx --strip)
-
-  add_dependencies(install-cxx cxx_experimental)
-  add_dependencies(install-cxx-stripped cxx_experimental)
 
   if (LIBCXX_INSTALL_LIBRARY)
     add_dependencies(install-cxx cxx)

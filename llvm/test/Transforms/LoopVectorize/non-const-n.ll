@@ -7,9 +7,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @c = common global [2048 x i32] zeroinitializer, align 16
 @a = common global [2048 x i32] zeroinitializer, align 16
 
-define void @example1(i32 %n) nounwind uwtable ssp {
+define void @example1(i32 %n) {
 ; CHECK-LABEL: define void @example1(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N4:%.*]] = shl i32 [[N]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N4]], -4
@@ -19,12 +19,12 @@ define void @example1(i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr @b, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr @c, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i8], ptr @c, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr @a, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i8], ptr @a, i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX]], [[TMP1]]

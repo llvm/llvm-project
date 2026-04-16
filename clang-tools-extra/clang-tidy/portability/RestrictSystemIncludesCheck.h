@@ -70,7 +70,7 @@ private:
     bool IsInMainFile;       // Whether or not the include is in the main file
   };
 
-  using FileIncludes = llvm::SmallVector<IncludeDirective, 8>;
+  using FileIncludes = SmallVector<IncludeDirective, 8>;
   llvm::SmallDenseMap<FileID, FileIncludes> IncludeDirectives;
 
   RestrictSystemIncludesCheck &Check;
