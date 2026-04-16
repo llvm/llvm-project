@@ -12,7 +12,8 @@
 // CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE2:1]], i32 [[MIN_THREADS2:1]], i32 [[MAX_THREADS2:30]], i32 [[MIN_TEAMS2:40]], i32 [[MAX_TEAMS2:40]], i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
-// Multi-dim thread_limit: min(target=20, teams_x=10) = 10.
+// Multi-dim thread_limit: first dim constant (10), second dim constant (5).
+// MaxThreads uses the first dim combined value: min(target=20, teams_x=10) = 10.
 // CHECK:      @[[EXEC_MODE3:.*]] = weak protected constant i8 1
 // CHECK:      @llvm.compiler.used{{.*}} = appending global [1 x ptr] [ptr @[[EXEC_MODE3]]], section "llvm.metadata"
 // CHECK:      @[[KERNEL3_ENV:.*_kernel_environment]] = weak_odr protected constant %struct.KernelEnvironmentTy {
@@ -45,8 +46,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       omp.terminator
     }
 
-    // Multi-dim thread_limit: first dim constant, second dim constant.
-    // MaxThreads uses the first dim combined value: min(20, 10) = 10.
     // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr %[[KERNEL_ARGS:.*]]) #[[ATTRS1]]
     // CHECK: %{{.*}} = call i32 @__kmpc_target_init(ptr @[[KERNEL3_ENV]], ptr %[[KERNEL_ARGS]])
     %target_threads3 = llvm.mlir.constant(20) : i32

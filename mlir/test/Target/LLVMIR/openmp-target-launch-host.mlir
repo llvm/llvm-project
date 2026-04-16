@@ -21,7 +21,7 @@
 // CHECK: %[[NT_GEP:.*]] = getelementptr inbounds nuw %struct.__tgt_kernel_arguments, ptr %[[KERNEL_ARGS2]], i32 0, i32 11
 // CHECK-NEXT: store [3 x i32] %[[NT_ARR]], ptr %[[NT_GEP]], align 4
 // CHECK: call i32 @__tgt_target_kernel(ptr {{.*}}, i64 -1, i32 0, i32 10, ptr @.{{.*}}.region_id, ptr %[[KERNEL_ARGS2]])
-// CHECK: define internal void @[[OUTLINED_FN]](i32 %[[NUM_TEAMS_OUTLINED:.*]])
+// CHECK: define internal void @[[OUTLINED_FN]](i32 %[[NUM_TEAMS_OUTLINED:.*]], ptr %{{.*}})
 // CHECK: call void @__kmpc_push_num_teams_51(ptr {{.*}}, i32 {{.*}}, i32 %[[NUM_TEAMS_OUTLINED]], i32 %[[NUM_TEAMS_OUTLINED]], i32 [[NUM_THREADS]])
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @main(%num_teams : i32) {
