@@ -1151,8 +1151,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
         Imm = SignExtend64<32>(Imm);
 
-      if (VT == MVT::i64 && Subtarget->hasStdExtP() && isApplicableToPLI(Imm) &&
-          hasAllWUsers(Node)) {
+      if (VT == MVT::i64 && !isInt<12>(Imm) && Subtarget->hasStdExtP() &&
+          isApplicableToPLI(Imm) && hasAllWUsers(Node)) {
         // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers,
         // we can simply copy lower 32 bits to higher 32 bits to make it able to
         // rematerialize to PLI_B or PLI_H
