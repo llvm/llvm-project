@@ -47,6 +47,8 @@ using namespace llvm;
 
 namespace opts {
 
+extern cl::opt<bool> LargeCodeModel;
+
 static cl::opt<bool>
     NoHugePages("no-huge-pages",
                 cl::desc("use regular size pages for code alignment"),
@@ -259,16 +261,6 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(*Ctx, IsPIC));
   Ctx->setObjectFileInfo(MOFI.get());
-  // We do not support X86 Large code model. Change this in the future.
-  bool Large = false;
-  if (TheTriple.getArch() == llvm::Triple::aarch64)
-    Large = true;
-  unsigned LSDAEncoding =
-      Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
-  if (IsPIC) {
-    LSDAEncoding = dwarf::DW_EH_PE_pcrel |
-                   (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
-  }
 
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, *Ctx));
@@ -306,7 +298,13 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
       std::move(InstructionPrinter), std::move(MIA), nullptr, std::move(MRI),
       std::move(DisAsm), Logger);
 
-  BC->LSDAEncoding = LSDAEncoding;
+  // Use large code model encoding for AArch64 (always). For X86, this is
+  // updated after detecting .ltext if unset.
+  // Otherwise allow the user to force it via `--large-code-model` flag.
+  if (TheTriple.getArch() == llvm::Triple::aarch64)
+    BC->UseLargeCodeModel = true;
+  else if (opts::LargeCodeModel.getNumOccurrences())
+    BC->UseLargeCodeModel = opts::LargeCodeModel;
 
   BC->MAB = std::unique_ptr<MCAsmBackend>(
       BC->TheTarget->createMCAsmBackend(*BC->STI, *BC->MRI, MCTargetOptions()));
@@ -317,6 +315,8 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   BC->SymbolicDisAsm = std::unique_ptr<MCDisassembler>(
       BC->TheTarget->createMCDisassembler(*BC->STI, *BC->Ctx));
+
+  BC->updateLSDAEncoding();
 
   if (!BC->SymbolicDisAsm)
     return createStringError(
@@ -391,6 +391,14 @@ bool BinaryContext::validateHoles() const {
     }
   }
   return Valid;
+}
+
+void BinaryContext::updateLSDAEncoding() {
+  LSDAEncoding = HasFixedLoadAddress
+                     ? dwarf::DW_EH_PE_absptr
+                     : (dwarf::DW_EH_PE_pcrel |
+                        (this->UseLargeCodeModel ? dwarf::DW_EH_PE_sdata8
+                                                 : dwarf::DW_EH_PE_sdata4));
 }
 
 void BinaryContext::updateObjectNesting(BinaryDataMapType::iterator GAI) {
