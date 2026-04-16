@@ -482,7 +482,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractLastPart:
-  case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::MaskedCond:
   case VPInstruction::Not:
   case VPInstruction::ResumeForEpilogue:
@@ -794,10 +793,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
-  case VPInstruction::ExtractLastLane:
-  case VPInstruction::ExtractPenultimateElement: {
-    unsigned Offset =
-        getOpcode() == VPInstruction::ExtractPenultimateElement ? 2 : 1;
+  case VPInstruction::ExtractLastLane: {
+    unsigned Offset = 1;
     Value *Res;
     if (State.VF.isVector()) {
       assert(Offset <= State.VF.getKnownMinValue() &&
@@ -1257,10 +1254,6 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
                                                     VecTy, Ctx.CostKind, 0);
   }
-  case VPInstruction::ExtractPenultimateElement:
-    if (VF == ElementCount::getScalable(1))
-      return InstructionCost::getInvalid();
-    [[fallthrough]];
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
@@ -1272,7 +1265,6 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractLastLane ||
-         getOpcode() == VPInstruction::ExtractPenultimateElement ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::ExtractLane ||
          getOpcode() == VPInstruction::FirstActiveLane ||
@@ -1354,7 +1346,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractLastPart:
-  case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
@@ -1525,9 +1516,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractLastPart:
     O << "extract-last-part";
-    break;
-  case VPInstruction::ExtractPenultimateElement:
-    O << "extract-penultimate-element";
     break;
   case VPInstruction::ComputeAnyOfResult:
     O << "compute-anyof-result";

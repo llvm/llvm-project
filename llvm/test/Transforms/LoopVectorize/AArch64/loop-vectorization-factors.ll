@@ -819,8 +819,8 @@ define i8 @add_phifail2(ptr noalias nocapture readonly %p, ptr noalias nocapture
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <16 x i32> [[TMP4]], i32 14
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i32> [[TMP4]], i32 15
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i32> [[TMP9]], i32 15
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
@@ -828,7 +828,7 @@ define i8 @add_phifail2(ptr noalias nocapture readonly %p, ptr noalias nocapture
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
-; CHECK-NEXT:    [[A_PHI_LCSSA:%.*]] = phi i32 [ [[A_PHI:%.*]], %[[FOR_BODY]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[A_PHI_LCSSA:%.*]] = phi i32 [ [[A_PHI:%.*]], %[[FOR_BODY]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[A_PHI_LCSSA]] to i8
 ; CHECK-NEXT:    ret i8 [[RET]]
 ; CHECK:       [[FOR_BODY]]:

@@ -1275,10 +1275,6 @@ public:
     ExtractLastPart,
     // Extracts the last lane of its vector operand, per part.
     ExtractLastLane,
-    // Extracts the second-to-last lane from its operand or the second-to-last
-    // part if it is scalar. In the latter case, the recipe will be removed
-    // during unrolling.
-    ExtractPenultimateElement,
     LogicalAnd, // Non-poison propagating logical And.
     LogicalOr,  // Non-poison propagating logical Or.
     // Add an offset in bytes (second operand) to a base pointer (first

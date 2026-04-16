@@ -53,7 +53,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-NEXT:    IR   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:    IR   %arrayidx = getelementptr inbounds float, ptr %y, i64 %iv
 ; CHECK-NEXT:    IR   %lv = load float, ptr %arrayidx, align 4
-; CHECK-NEXT:    IR   %call = tail call float @llvm.sqrt.f32(float %lv)
+; CHECK-NEXT:    IR   %call = tail call float @llvm.sqrt.f32(float %lv) #2
 ; CHECK-NEXT:    IR   %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %iv
 ; CHECK-NEXT:    IR   store float %call, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
@@ -1053,15 +1053,16 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract.for.phi> = extract-penultimate-element ir<%for.1.next>
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-part ir<%for.1.next>
 ; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-part vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-lane vp<[[VP10]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %for.1.lcssa = phi i16 [ %for.1, %loop ] (extra operand: vp<%vector.recur.extract.for.phi> from middle.block)
+; CHECK-NEXT:    IR   %for.1.lcssa = phi i16 [ %for.1, %loop ] (extra operand: vp<[[VP11]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:

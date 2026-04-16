@@ -7892,10 +7892,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
-  // TODO: We can't call runPass on these transforms yet, due to verifier
-  // failures.
-  VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
-
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
   // bring the VPlan to its final state.

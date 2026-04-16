@@ -93,6 +93,12 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i16> [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i16> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i16> [[TMP7]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A_PTR]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP3]], i64 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP3]], align 4
@@ -102,10 +108,8 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 1)
-; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i16> [[TMP7]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP8]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP9]], i32 3
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 [[VECTOR_RECUR_EXTRACT_FOR_PHI]]

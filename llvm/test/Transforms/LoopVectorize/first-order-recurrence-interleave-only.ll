@@ -15,6 +15,7 @@ define float @for_load_interleave_only(ptr %src) {
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[NEXT_GEP]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

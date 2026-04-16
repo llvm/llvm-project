@@ -1611,14 +1611,6 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       return Def->replaceAllUsesWith(A);
   }
 
-  // Look through ExtractPenultimateElement (BuildVector ....).
-  if (match(Def, m_ExtractPenultimateElement(m_BuildVector()))) {
-    auto *BuildVector = cast<VPInstruction>(Def->getOperand(0));
-    Def->replaceAllUsesWith(
-        BuildVector->getOperand(BuildVector->getNumOperands() - 2));
-    return;
-  }
-
   uint64_t Idx;
   if (match(Def, m_ExtractElement(m_BuildVector(), m_ConstantInt(Idx)))) {
     auto *BuildVector = cast<VPInstruction>(Def->getOperand(0));
@@ -1863,8 +1855,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         return [Op](const VPUser *U) {
           if (auto *VPI = dyn_cast<VPInstruction>(U)) {
             if (is_contained({VPInstruction::ExtractLastLane,
-                              VPInstruction::ExtractLastPart,
-                              VPInstruction::ExtractPenultimateElement},
+                              VPInstruction::ExtractLastPart},
                              VPI->getOpcode()))
               return false;
           }
@@ -2512,32 +2503,6 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // Set the first operand of RecurSplice to FOR again, after replacing
     // all users.
     RecurSplice->setOperand(0, FOR);
-
-    // Check for users extracting at the penultimate active lane of the FOR.
-    // If only a single lane is active in the current iteration, we need to
-    // select the last element from the previous iteration (from the FOR phi
-    // directly).
-    for (VPUser *U : RecurSplice->users()) {
-      if (!match(U, m_ExtractLane(m_LastActiveLane(m_VPValue()),
-                                  m_Specific(RecurSplice))))
-        continue;
-
-      VPBuilder B(cast<VPInstruction>(U));
-      VPValue *LastActiveLane = cast<VPInstruction>(U)->getOperand(0);
-      Type *Ty = TypeInfo.inferScalarType(LastActiveLane);
-      VPValue *Zero = Plan.getConstantInt(Ty, 0);
-      VPValue *One = Plan.getConstantInt(Ty, 1);
-      VPValue *PenultimateIndex = B.createSub(LastActiveLane, One);
-      VPValue *PenultimateLastIter =
-          B.createNaryOp(VPInstruction::ExtractLane,
-                         {PenultimateIndex, FOR->getBackedgeValue()});
-      VPValue *LastPrevIter =
-          B.createNaryOp(VPInstruction::ExtractLastLane, FOR);
-
-      VPValue *Cmp = B.createICmp(CmpInst::ICMP_EQ, LastActiveLane, Zero);
-      VPValue *Sel = B.createSelect(Cmp, LastPrevIter, PenultimateLastIter);
-      cast<VPInstruction>(U)->replaceAllUsesWith(Sel);
-    }
   }
   return true;
 }
@@ -5618,120 +5583,6 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
   MDNode *BranchWeights =
       MDB.createBranchWeights({1, VectorStep - 1}, /*IsExpected=*/false);
   MiddleTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
-}
-
-void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
-                                                           VFRange &Range) {
-  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-
-  auto IsScalableOne = [](ElementCount VF) -> bool {
-    return VF == ElementCount::getScalable(1);
-  };
-
-  for (auto &HeaderPhi : VectorRegion->getEntryBasicBlock()->phis()) {
-    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhi);
-    if (!FOR)
-      continue;
-
-    assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
-           "Cannot handle loops with uncountable early exits");
-
-    // This is the second phase of vectorizing first-order recurrences, creating
-    // extract for users outside the loop. An overview of the transformation is
-    // described below. Suppose we have the following loop with some use after
-    // the loop of the last a[i-1],
-    //
-    //   for (int i = 0; i < n; ++i) {
-    //     t = a[i - 1];
-    //     b[i] = a[i] - t;
-    //   }
-    //   use t;
-    //
-    // There is a first-order recurrence on "a". For this loop, the shorthand
-    // scalar IR looks like:
-    //
-    //   scalar.ph:
-    //     s.init = a[-1]
-    //     br scalar.body
-    //
-    //   scalar.body:
-    //     i = phi [0, scalar.ph], [i+1, scalar.body]
-    //     s1 = phi [s.init, scalar.ph], [s2, scalar.body]
-    //     s2 = a[i]
-    //     b[i] = s2 - s1
-    //     br cond, scalar.body, exit.block
-    //
-    //   exit.block:
-    //     use = lcssa.phi [s1, scalar.body]
-    //
-    // In this example, s1 is a recurrence because it's value depends on the
-    // previous iteration. In the first phase of vectorization, we created a
-    // VPFirstOrderRecurrencePHIRecipe v1 for s1. Now we create the extracts
-    // for users in the scalar preheader and exit block.
-    //
-    //   vector.ph:
-    //     v_init = vector(..., ..., ..., a[-1])
-    //     br vector.body
-    //
-    //   vector.body
-    //     i = phi [0, vector.ph], [i+4, vector.body]
-    //     v1 = phi [v_init, vector.ph], [v2, vector.body]
-    //     v2 = a[i, i+1, i+2, i+3]
-    //     b[i] = v2 - v1
-    //     // Next, third phase will introduce v1' = splice(v1(3), v2(0, 1, 2))
-    //     b[i, i+1, i+2, i+3] = v2 - v1
-    //     br cond, vector.body, middle.block
-    //
-    //   middle.block:
-    //     vector.recur.extract.for.phi = v2(2)
-    //     vector.recur.extract = v2(3)
-    //     br cond, scalar.ph, exit.block
-    //
-    //   scalar.ph:
-    //     scalar.recur.init = phi [vector.recur.extract, middle.block],
-    //                             [s.init, otherwise]
-    //     br scalar.body
-    //
-    //   scalar.body:
-    //     i = phi [0, scalar.ph], [i+1, scalar.body]
-    //     s1 = phi [scalar.recur.init, scalar.ph], [s2, scalar.body]
-    //     s2 = a[i]
-    //     b[i] = s2 - s1
-    //     br cond, scalar.body, exit.block
-    //
-    //   exit.block:
-    //     lo = lcssa.phi [s1, scalar.body],
-    //                    [vector.recur.extract.for.phi, middle.block]
-    //
-    // Now update VPIRInstructions modeling LCSSA phis in the exit block.
-    // Extract the penultimate value of the recurrence and use it as operand for
-    // the VPIRInstruction modeling the phi.
-    for (VPRecipeBase &R : make_early_inc_range(
-             make_range(MiddleVPBB->getFirstNonPhi(), MiddleVPBB->end()))) {
-      if (!match(&R, m_ExtractLastLaneOfLastPart(m_Specific(FOR))))
-        continue;
-
-      // For VF vscale x 1, if vscale = 1, we are unable to extract the
-      // penultimate value of the recurrence. Instead we rely on the existing
-      // extract of the last element from the result of
-      // VPInstruction::FirstOrderRecurrenceSplice.
-      // TODO: Consider vscale_range info and UF.
-      if (LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
-                                                             Range))
-        return;
-      VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractPenultimateElement, FOR->getBackedgeValue(), {},
-          "vector.recur.extract.for.phi");
-      for (VPUser *U : to_vector(cast<VPInstruction>(&R)->users())) {
-        auto *ExitPhi = dyn_cast<VPIRPhi>(U);
-        if (!ExitPhi)
-          continue;
-        ExitPhi->replaceUsesOfWith(cast<VPInstruction>(&R), PenultimateElement);
-      }
-    }
-  }
 }
 
 /// Check if \p V is a binary expression of a widened IV and a loop-invariant

@@ -8,17 +8,20 @@ define i16 @duplicate_lcssa(i16 %val) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i16> poison, i16 [[VAL]], i32 3
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 0, i16 -1, i16 -2, i16 -3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i16> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[TMP0:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0]] = sub nsw <4 x i16> [[VEC_IND]], splat (i16 1)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i16> [[VEC_IND]], splat (i16 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 65536
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw <4 x i16> [[VEC_IND]], splat (i16 1)
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI1:%.*]] = extractelement <4 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[TMP0]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI1:%.*]] = extractelement <4 x i16> [[TMP2]], i32 3
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i16 [[VECTOR_RECUR_EXTRACT_FOR_PHI1]]

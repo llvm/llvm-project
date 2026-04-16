@@ -81,8 +81,8 @@ define i64 @for_phi_used_in_loop_and_live_out(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <8 x i64> [[WIDE_LOAD]], i32 6
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[WIDE_LOAD]], i32 7
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i64> [[TMP1]], i32 7
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -100,7 +100,7 @@ define i64 @for_phi_used_in_loop_and_live_out(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[FOR_LCSSA:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[FOR_LCSSA:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[L_LCSSA:%.*]] = phi i64 [ [[L]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = add i64 [[L_LCSSA]], [[FOR_LCSSA]]
 ; CHECK-NEXT:    ret i64 [[RES]]
@@ -136,16 +136,18 @@ define i64 @for_phi_not_used_in_loop_and_live_out(ptr %a, i64 %N) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <8 x i64> [ <i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 99>, %[[VECTOR_PH]] ], [ [[WIDE_LOAD:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i64>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD]] = load <8 x i64>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i64> [[WIDE_LOAD]], splat (i64 10)
 ; CHECK-NEXT:    store <8 x i64> [[TMP1]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <8 x i64> [[WIDE_LOAD]], i32 6
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i64> [[VECTOR_RECUR]], <8 x i64> [[WIDE_LOAD]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[WIDE_LOAD]], i32 7
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i64> [[TMP3]], i32 7
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
@@ -163,7 +165,7 @@ define i64 @for_phi_not_used_in_loop_and_live_out(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[FOR_LCSSA:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[FOR_LCSSA:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[L_LCSSA:%.*]] = phi i64 [ [[L]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = add i64 [[L_LCSSA]], [[FOR_LCSSA]]
 ; CHECK-NEXT:    ret i64 [[RES]]

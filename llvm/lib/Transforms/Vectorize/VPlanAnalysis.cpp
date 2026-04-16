@@ -82,7 +82,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLastLane:
-  case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractLastActive:
   case VPInstruction::PtrAdd:

@@ -516,12 +516,6 @@ struct VPlanTransforms {
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
 
-  /// Handle users in the exit block for first order reductions in the original
-  /// exit block. The penultimate value of recurrences is fed to their LCSSA phi
-  /// users in the original exit block using the VPIRInstruction wrapping to the
-  /// LCSSA phi.
-  static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
-
   /// Optimize FindLast reductions selecting IVs (or expressions of IVs) by
   /// converting them to FindIV reductions, if their IV range excludes a
   /// suitable sentinel value. For expressions of IVs, the expression is sunk
