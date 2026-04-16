@@ -20,15 +20,15 @@ subroutine collapse_force_sink(n, m)
   !$acc end parallel loop
 end subroutine
 
-! CHECK: func.func @_QPcollapse_force_sink(
+! CHECK-LABEL: func.func @_QPcollapse_force_sink(
 ! CHECK: acc.parallel
-! Only one acc.loop should exist (the outer collapsed one)
-! CHECK-COUNT-1: acc.loop
+! Only one acc.loop with collapse = [2], inner loop absorbed
+! CHECK: acc.loop combined(parallel)
+! Prologue (4.2), body (2.0 add), epilogue (7.3) all inside
 ! CHECK: arith.constant 4.200000e+00
 ! CHECK: hlfir.assign
 ! CHECK: arith.constant 2.000000e+00
-! CHECK: arith.addf
 ! CHECK: hlfir.assign
 ! CHECK: arith.constant 7.300000e+00
 ! CHECK: hlfir.assign
-! CHECK: } attributes {collapse = [2]
+! CHECK: collapse = [2]
