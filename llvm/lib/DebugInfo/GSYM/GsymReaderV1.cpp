@@ -13,6 +13,7 @@
 
 #include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
@@ -94,7 +95,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << " (ADDRESS)\n";
   OS << "====== =============================== \n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
-    OS << format("[%4u] ", I);
+    OS << formatv("[{0,4}] ", I);
     switch (getAddressOffsetSize()) {
     case 1:
       OS << HEX8(getAddrOffsets<uint8_t>()[I]);
@@ -117,7 +118,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "INDEX  Offset\n";
   OS << "====== ==========\n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I)
-    OS << format("[%4u] ", I) << HEX32(*getAddressInfoOffset(I)) << "\n";
+    OS << formatv("[{0,4}] ", I) << HEX32(*getAddressInfoOffset(I)) << "\n";
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
   OS << "====== ========== ========== ==============================\n";
@@ -125,7 +126,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
     auto FE = getFile(I);
     if (!FE)
       break;
-    OS << format("[%4u] ", I) << HEX32(FE->Dir) << ' ' << HEX32(FE->Base)
+    OS << formatv("[{0,4}] ", I) << HEX32(FE->Dir) << ' ' << HEX32(FE->Base)
        << ' ';
     dump(OS, FE);
     OS << "\n";
