@@ -8938,7 +8938,7 @@ static void extractHostEvalClauses(
               numTeamsLower = hostEvalVar;
             } else if (llvm::is_contained(teamsOp.getNumTeamsUpperVars(),
                                           blockArg)) {
-              // Find which dimension this blockArg corresponds to
+              // Find which dimension this blockArg corresponds to.
               for (auto [i, upperVar] :
                    llvm::enumerate(teamsOp.getNumTeamsUpperVars())) {
                 if (upperVar == blockArg) {
@@ -9078,11 +9078,11 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     // ensures values are mapped and available inside of the target region.
     if (auto teamsOp = castOrGetParentOfType<omp::TeamsOp>(capturedOp)) {
       numTeamsLower = teamsOp.getNumTeamsLower();
-      // Handle all num_teams upper bound dimensions
+      // Handle all num_teams upper bound dimensions.
       numTeamsUpperVars.reserve(teamsOp.getNumTeamsUpperVars().size());
       for (auto upperVar : teamsOp.getNumTeamsUpperVars())
         numTeamsUpperVars.push_back(upperVar);
-      // Handle thread_limit (only first value for now)
+      // Handle thread_limit (only first value for now).
       if (!teamsOp.getThreadLimitVars().empty())
         threadLimit = teamsOp.getThreadLimit(0);
     }
@@ -9106,6 +9106,8 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
         if (upperVar) {
           if (auto val = extractConstInteger(upperVar))
             maxTeamsVals[i] = *val;
+          else
+            maxTeamsVals[i] = 0;
         }
       }
       // minTeamsVal is a single scalar and only meaningful for the
