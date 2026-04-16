@@ -1267,6 +1267,7 @@ static const unsigned kARMBTIJumpTableEntrySize = 8;
 static const unsigned kARMv6MJumpTableEntrySize = 16;
 static const unsigned kRISCVJumpTableEntrySize = 8;
 static const unsigned kLOONGARCH64JumpTableEntrySize = 8;
+static const unsigned kHexagonJumpTableEntrySize = 4;
 
 bool LowerTypeTestsModule::hasBranchTargetEnforcement() {
   if (HasBranchTargetEnforcement == -1) {
@@ -1310,6 +1311,8 @@ LowerTypeTestsModule::getJumpTableEntrySize(Triple::ArchType JumpTableArch) {
     return kRISCVJumpTableEntrySize;
   case Triple::loongarch64:
     return kLOONGARCH64JumpTableEntrySize;
+  case Triple::hexagon:
+    return kHexagonJumpTableEntrySize;
   default:
     report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -1376,6 +1379,8 @@ LowerTypeTestsModule::createJumpTableEntryAsm(Triple::ArchType JumpTableArch) {
   } else if (JumpTableArch == Triple::loongarch64) {
     AsmOS << "pcalau12i $$t0, %pc_hi20($0)\n"
           << "jirl $$r0, $$t0, %pc_lo12($0)\n";
+  } else if (JumpTableArch == Triple::hexagon) {
+    AsmOS << "jump $0\n";
   } else {
     report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -1393,7 +1398,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctions(
   if (Arch == Triple::x86 || Arch == Triple::x86_64 || Arch == Triple::arm ||
       Arch == Triple::thumb || Arch == Triple::aarch64 ||
       Arch == Triple::riscv32 || Arch == Triple::riscv64 ||
-      Arch == Triple::loongarch64)
+      Arch == Triple::loongarch64 || Arch == Triple::hexagon)
     buildBitSetsFromFunctionsNative(TypeIds, Functions);
   else if (Arch == Triple::wasm32 || Arch == Triple::wasm64)
     buildBitSetsFromFunctionsWASM(TypeIds, Functions);
