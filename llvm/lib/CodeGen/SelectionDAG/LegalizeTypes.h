@@ -1158,23 +1158,9 @@ private:
   /// By default, the vector will be widened with undefined values.
   SDValue ModifyToType(SDValue InOp, EVT NVT, bool FillWithZeroes = false);
 
-  /// Adjust element width (sign-extend/truncate) and element count
-  /// (extract/concat) of Mask to match ToMaskVT.
-  SDValue adjustMaskToType(SDValue Mask, EVT ToMaskVT);
-
-  /// Pick an intermediate VT and adjust both operands to it, minimizing
-  /// extend/truncate overhead given the final target ToVT.
-  EVT unifyMaskTypes(SDValue &Op0, SDValue &Op1, EVT ToVT);
-
   /// Return a mask of vector type MaskVT to replace InMask. Also adjust
   /// MaskVT to ToMaskVT if needed with vector extension or truncation.
   SDValue convertMask(SDValue InMask, EVT MaskVT, EVT ToMaskVT);
-
-  /// Recursively convert a mask expression tree to ToVT, walking through
-  /// mask-preserving operations down to SETCC leaves. Avoids redundant
-  /// extend/truncate chains that arise when each node is converted
-  /// independently. Returns SDValue() if the tree cannot be converted.
-  SDValue convertMaskTree(SDValue V, EVT ToVT, unsigned Depth = 0);
 
   //===--------------------------------------------------------------------===//
   // Generic Splitting: LegalizeTypesGeneric.cpp
