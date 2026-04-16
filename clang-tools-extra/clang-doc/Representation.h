@@ -305,7 +305,7 @@ struct Context : public Reference {
           StringRef Path, StringRef DocumentationFileName)
       : Reference(USR, Name, IT, QualName, Path, DocumentationFileName) {}
   explicit Context(const Info &I);
-  StringRef RelativePath;
+  StringRef RelativePath = {};
 };
 
 // Holds the children of a record or namespace.
@@ -465,7 +465,7 @@ struct Location : public llvm::ilist_node<Location> {
            std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
 
-  StringRef Filename;
+  StringRef Filename = {};
   int StartLineNumber = 0;
   int EndLineNumber = 0;
   bool IsFileInRootDir = false;
@@ -495,10 +495,10 @@ struct Info {
   StringRef getFileBaseName() const;
 
   // Path of directory where the clang-doc generated file will be saved.
-  StringRef Path;
+  StringRef Path = {};
 
   // Unqualified name of the decl.
-  StringRef Name;
+  StringRef Name = {};
 
   // The name used for the file that this info is documented in.
   // In the JSON generator, infos are documented in files with mangled names.
@@ -668,7 +668,7 @@ struct TypedefInfo : public SymbolInfo, public llvm::ilist_node<TypedefInfo> {
   std::optional<TemplateInfo> Template;
 
   // Underlying type declaration
-  StringRef TypeDeclaration;
+  StringRef TypeDeclaration = {};
 
   // Indicates if this is a new C++ "using"-style typedef:
   //   using MyVector = std::vector<int>
