@@ -79,7 +79,9 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     }
   }
 
-  if (STI.hasFeature(RISCV::FeatureStdExtP) && !isInt<12>(Val)) {
+  // Try PLI/PLUI if available, but prefer LI/LUI.
+  if (STI.hasFeature(RISCV::FeatureStdExtP) && !isInt<12>(Val) &&
+      !isShiftedInt<20, 12>(Val)) {
     unsigned Width = 64;
 
     int32_t Bit31To0 = Val;
