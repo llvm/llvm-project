@@ -1163,7 +1163,7 @@ static bool HandleDestructivePredicateHint(
   llvm::stable_sort(Hints, [&](Register A, Register B) {
     bool PrefA = (A != Op1Reg) && CanUseReg(A);
     bool PrefB = (B != Op1Reg) && CanUseReg(B);
-    return PrefA > PrefB;
+    return PrefA && !PrefB;
   });
   return true;
 }
