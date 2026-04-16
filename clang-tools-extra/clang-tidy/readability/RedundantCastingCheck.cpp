@@ -75,8 +75,9 @@ static bool binaryOperatorOperandsTypesEqualToOperatorResultType(
     // IgnoreImplicitCasts = false: neither of operands type matches cast type
     // IgnoreImplicitCasts = true: at least one operand type doesn't match cast
     //                             type
-    const bool castIsNeeded = IgnoreImplicitCasts ? (!LHSMatches || !RHSMatches)
-                                                  : (!LHSMatches && !RHSMatches);
+    const bool castIsNeeded = IgnoreImplicitCasts
+                                  ? (!LHSMatches || !RHSMatches)
+                                  : (!LHSMatches && !RHSMatches);
     if (castIsNeeded)
       return false;
   }

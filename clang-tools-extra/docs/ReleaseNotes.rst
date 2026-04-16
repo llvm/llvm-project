@@ -522,12 +522,12 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-casting>` check
 
   - Fixed a false negative where casts were not flagged as redundant when
-  atleast one operand of a binary operation had the same type as the cast result
-  type. For example, ``static_cast<float>(1.0f + 1)`` is now correctly
-  identified as redundant.
+    atleast one operand of a binary operation had the same type as the cast
+    result type. For example, ``static_cast<float>(1.0f + 1)`` is now correctly
+    identified as redundant.
 
   - Added `IgnoreImplicitCasts` option to control this, which can be opted-out
-  by setting it to ``true``, default is ``false``.
+    by setting it to ``true``, default is ``false``.
 
 - Improved :doc:`readability-redundant-member-init
   <clang-tidy/checks/readability/redundant-member-init>` check by adding an
