@@ -1362,26 +1362,32 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
   // Don't complain for incomplete types, since we'll get an error elsewhere.
   if ((Index < IList->getNumInits() || CurEmbed) && !T->isIncompleteType()) {
     // We have leftover initializers
+    Expr *ExtraInit = Index < IList->getNumInits() ? IList->getInit(Index)
+                                                   : CurEmbed;
+    SourceLocation ExtraInitLoc =
+        ExtraInit ? ExtraInit->getBeginLoc() : IList->getEndLoc();
+    SourceRange ExtraInitRange =
+        ExtraInit ? ExtraInit->getSourceRange() : IList->getSourceRange();
     bool ExtraInitsIsError = SemaRef.getLangOpts().CPlusPlus ||
           (SemaRef.getLangOpts().OpenCL && T->isVectorType());
     hadError = ExtraInitsIsError;
     if (VerifyOnly) {
       return;
     } else if (StructuredIndex == 1 &&
+               StructuredList->getNumInits() != 0 &&
+               StructuredList->getInit(0) &&
                IsStringInit(StructuredList->getInit(0), T, SemaRef.Context) ==
                    SIF_None) {
       unsigned DK =
           ExtraInitsIsError
               ? diag::err_excess_initializers_in_char_array_initializer
               : diag::ext_excess_initializers_in_char_array_initializer;
-      SemaRef.Diag(IList->getInit(Index)->getBeginLoc(), DK)
-          << IList->getInit(Index)->getSourceRange();
+      SemaRef.Diag(ExtraInitLoc, DK) << ExtraInitRange;
     } else if (T->isSizelessBuiltinType()) {
       unsigned DK = ExtraInitsIsError
                         ? diag::err_excess_initializers_for_sizeless_type
                         : diag::ext_excess_initializers_for_sizeless_type;
-      SemaRef.Diag(IList->getInit(Index)->getBeginLoc(), DK)
-          << T << IList->getInit(Index)->getSourceRange();
+      SemaRef.Diag(ExtraInitLoc, DK) << T << ExtraInitRange;
     } else {
       int initKind = T->isArrayType()    ? 0
                      : T->isVectorType() ? 1
@@ -1392,8 +1398,7 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
 
       unsigned DK = ExtraInitsIsError ? diag::err_excess_initializers
                                       : diag::ext_excess_initializers;
-      SemaRef.Diag(IList->getInit(Index)->getBeginLoc(), DK)
-          << initKind << IList->getInit(Index)->getSourceRange();
+      SemaRef.Diag(ExtraInitLoc, DK) << initKind << ExtraInitRange;
     }
   }
 
