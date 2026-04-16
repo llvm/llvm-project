@@ -694,12 +694,9 @@ define <2 x float> @vfwadd_v2bf16(ptr %x, ptr %y) {
 ; ZVFBFA-LABEL: vfwadd_v2bf16:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vle16.v v8, (a0)
-; ZVFBFA-NEXT:    vle16.v v9, (a1)
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v10, v8
+; ZVFBFA-NEXT:    vle16.v v9, (a0)
+; ZVFBFA-NEXT:    vle16.v v10, (a1)
+; ZVFBFA-NEXT:    vfwadd.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %a = load <2 x bfloat>, ptr %x
   %b = load <2 x bfloat>, ptr %y
@@ -724,12 +721,9 @@ define <4 x float> @vfwadd_v4bf16(ptr %x, ptr %y) {
 ; ZVFBFA-LABEL: vfwadd_v4bf16:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vle16.v v8, (a0)
-; ZVFBFA-NEXT:    vle16.v v9, (a1)
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v10, v8
+; ZVFBFA-NEXT:    vle16.v v9, (a0)
+; ZVFBFA-NEXT:    vle16.v v10, (a1)
+; ZVFBFA-NEXT:    vfwadd.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %a = load <4 x bfloat>, ptr %x
   %b = load <4 x bfloat>, ptr %y
@@ -755,11 +749,8 @@ define <8 x float> @vfwadd_v8bf16(ptr %x, ptr %y) {
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vle16.v v10, (a0)
-; ZVFBFA-NEXT:    vle16.v v12, (a1)
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v12
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v8, v10
+; ZVFBFA-NEXT:    vle16.v v11, (a1)
+; ZVFBFA-NEXT:    vfwadd.vv v8, v10, v11
 ; ZVFBFA-NEXT:    ret
   %a = load <8 x bfloat>, ptr %x
   %b = load <8 x bfloat>, ptr %y
@@ -785,11 +776,8 @@ define <16 x float> @vfwadd_v16bf16(ptr %x, ptr %y) {
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vle16.v v12, (a0)
-; ZVFBFA-NEXT:    vle16.v v16, (a1)
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v12
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v16
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v8, v12
+; ZVFBFA-NEXT:    vle16.v v14, (a1)
+; ZVFBFA-NEXT:    vfwadd.vv v8, v12, v14
 ; ZVFBFA-NEXT:    ret
   %a = load <16 x bfloat>, ptr %x
   %b = load <16 x bfloat>, ptr %y
@@ -817,11 +805,8 @@ define <32 x float> @vfwadd_v32bf16(ptr %x, ptr %y) {
 ; ZVFBFA-NEXT:    li a2, 32
 ; ZVFBFA-NEXT:    vsetvli zero, a2, e16alt, m4, ta, ma
 ; ZVFBFA-NEXT:    vle16.v v16, (a0)
-; ZVFBFA-NEXT:    vle16.v v24, (a1)
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v16
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v24
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v8, v16
+; ZVFBFA-NEXT:    vle16.v v20, (a1)
+; ZVFBFA-NEXT:    vfwadd.vv v8, v16, v20
 ; ZVFBFA-NEXT:    ret
   %a = load <32 x bfloat>, ptr %x
   %b = load <32 x bfloat>, ptr %y
@@ -883,27 +868,18 @@ define <64 x float> @vfwadd_v64bf16(ptr %x, ptr %y) {
 ; ZVFBFA-NEXT:    li a2, 64
 ; ZVFBFA-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; ZVFBFA-NEXT:    vle16.v v16, (a0)
-; ZVFBFA-NEXT:    vle16.v v8, (a1)
+; ZVFBFA-NEXT:    vle16.v v24, (a1)
 ; ZVFBFA-NEXT:    li a0, 32
 ; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; ZVFBFA-NEXT:    vslidedown.vx v24, v16, a0
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v0, v16
+; ZVFBFA-NEXT:    vslidedown.vx v8, v16, a0
 ; ZVFBFA-NEXT:    addi a1, sp, 16
-; ZVFBFA-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m8, ta, ma
-; ZVFBFA-NEXT:    vslidedown.vx v16, v8, a0
+; ZVFBFA-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; ZVFBFA-NEXT:    vslidedown.vx v0, v24, a0
 ; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v0, v8
-; ZVFBFA-NEXT:    vmv4r.v v8, v24
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v24, v8
-; ZVFBFA-NEXT:    vmv4r.v v8, v16
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
+; ZVFBFA-NEXT:    vfwadd.vv v8, v16, v24
 ; ZVFBFA-NEXT:    addi a0, sp, 16
-; ZVFBFA-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v8, v0
-; ZVFBFA-NEXT:    vfadd.vv v16, v24, v16
+; ZVFBFA-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; ZVFBFA-NEXT:    vfwadd.vv v16, v24, v0
 ; ZVFBFA-NEXT:    csrr a0, vlenb
 ; ZVFBFA-NEXT:    slli a0, a0, 3
 ; ZVFBFA-NEXT:    add sp, sp, a0
@@ -935,12 +911,8 @@ define <2 x float> @vfwadd_vf_v2bf16(ptr %x, bfloat %y) {
 ; ZVFBFA-LABEL: vfwadd_vf_v2bf16:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vle16.v v8, (a0)
-; ZVFBFA-NEXT:    vfmv.v.f v9, fa0
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v10, v8
+; ZVFBFA-NEXT:    vle16.v v9, (a0)
+; ZVFBFA-NEXT:    vfwadd.vf v8, v9, fa0
 ; ZVFBFA-NEXT:    ret
   %a = load <2 x bfloat>, ptr %x
   %b = insertelement <2 x bfloat> poison, bfloat %y, i32 0
@@ -967,12 +939,8 @@ define <4 x float> @vfwadd_vf_v4bf16(ptr %x, bfloat %y) {
 ; ZVFBFA-LABEL: vfwadd_vf_v4bf16:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vle16.v v8, (a0)
-; ZVFBFA-NEXT:    vfmv.v.f v9, fa0
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v10, v8
+; ZVFBFA-NEXT:    vle16.v v9, (a0)
+; ZVFBFA-NEXT:    vfwadd.vf v8, v9, fa0
 ; ZVFBFA-NEXT:    ret
   %a = load <4 x bfloat>, ptr %x
   %b = insertelement <4 x bfloat> poison, bfloat %y, i32 0
@@ -1000,11 +968,7 @@ define <8 x float> @vfwadd_vf_v8bf16(ptr %x, bfloat %y) {
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vle16.v v10, (a0)
-; ZVFBFA-NEXT:    vfmv.v.f v12, fa0
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v12
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v8, v10
+; ZVFBFA-NEXT:    vfwadd.vf v8, v10, fa0
 ; ZVFBFA-NEXT:    ret
   %a = load <8 x bfloat>, ptr %x
   %b = insertelement <8 x bfloat> poison, bfloat %y, i32 0
@@ -1032,11 +996,7 @@ define <16 x float> @vfwadd_vf_v16bf16(ptr %x, bfloat %y) {
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vle16.v v12, (a0)
-; ZVFBFA-NEXT:    vfmv.v.f v16, fa0
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v12
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v16
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v8, v12
+; ZVFBFA-NEXT:    vfwadd.vf v8, v12, fa0
 ; ZVFBFA-NEXT:    ret
   %a = load <16 x bfloat>, ptr %x
   %b = insertelement <16 x bfloat> poison, bfloat %y, i32 0
@@ -1066,11 +1026,7 @@ define <32 x float> @vfwadd_vf_v32bf16(ptr %x, bfloat %y) {
 ; ZVFBFA-NEXT:    li a1, 32
 ; ZVFBFA-NEXT:    vsetvli zero, a1, e16alt, m4, ta, ma
 ; ZVFBFA-NEXT:    vle16.v v16, (a0)
-; ZVFBFA-NEXT:    vfmv.v.f v24, fa0
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v16
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v24
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v8, v8, v16
+; ZVFBFA-NEXT:    vfwadd.vf v8, v16, fa0
 ; ZVFBFA-NEXT:    ret
   %a = load <32 x bfloat>, ptr %x
   %b = insertelement <32 x bfloat> poison, bfloat %y, i32 0
@@ -1349,10 +1305,8 @@ define <2 x float> @vfwadd_vf2_v2bf16(<2 x bfloat> %x, bfloat %y) {
 ; ZVFBFA-LABEL: vfwadd_vf2_v2bf16:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFBFA-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vfadd.vf v8, v9, fa5
+; ZVFBFA-NEXT:    vfwadd.vf v9, v8, fa0
+; ZVFBFA-NEXT:    vmv1r.v v8, v9
 ; ZVFBFA-NEXT:    ret
   %a = fpext <2 x bfloat> %x to <2 x float>
   %b = fpext bfloat %y to float

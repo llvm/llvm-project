@@ -18428,9 +18428,10 @@ static std::optional<CombineResult>
 canFoldToVWWithSameExtension(SDNode *Root, const NodeExtensionHelper &LHS,
                              const NodeExtensionHelper &RHS, SelectionDAG &DAG,
                              const RISCVSubtarget &Subtarget) {
-  return canFoldToVWWithSameExtensionImpl(
-      Root, LHS, RHS, ExtKind::ZExt | ExtKind::SExt | ExtKind::FPExt, DAG,
-      Subtarget);
+  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS,
+                                          ExtKind::ZExt | ExtKind::SExt |
+                                              ExtKind::FPExt | ExtKind::BF16Ext,
+                                          DAG, Subtarget);
 }
 
 /// Check if \p Root follows a pattern Root(zext(LHS), zext(RHS))

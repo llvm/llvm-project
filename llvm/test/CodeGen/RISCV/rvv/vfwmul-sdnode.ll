@@ -208,10 +208,8 @@ define <vscale x 1 x float> @vfwmul_vv_nxv1f32(<vscale x 1 x bfloat> %va, <vscal
 ; ZVFBFA-LABEL: vfwmul_vv_nxv1f32:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vfmul.vv v8, v10, v8
+; ZVFBFA-NEXT:    vfwmul.vv v10, v8, v9
+; ZVFBFA-NEXT:    vmv1r.v v8, v10
 ; ZVFBFA-NEXT:    ret
   %vc = fpext <vscale x 1 x bfloat> %va to <vscale x 1 x float>
   %vd = fpext <vscale x 1 x bfloat> %vb to <vscale x 1 x float>
@@ -234,10 +232,8 @@ define <vscale x 1 x float> @vfwmul_vf_nxv1f32(<vscale x 1 x bfloat> %va, bfloat
 ; ZVFBFA-LABEL: vfwmul_vf_nxv1f32:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFBFA-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vfmul.vf v8, v9, fa5
+; ZVFBFA-NEXT:    vfwmul.vf v9, v8, fa0
+; ZVFBFA-NEXT:    vmv1r.v v8, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 1 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 1 x bfloat> %head, <vscale x 1 x bfloat> poison, <vscale x 1 x i32> zeroinitializer
@@ -261,11 +257,9 @@ define <vscale x 1 x float> @vfwmul_vf_nxv1f32_2(<vscale x 1 x bfloat> %va, bflo
 ;
 ; ZVFBFA-LABEL: vfwmul_vf_nxv1f32_2:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vfmul.vf v8, v9, fa5
+; ZVFBFA-NEXT:    vfwmul.vf v9, v8, fa0
+; ZVFBFA-NEXT:    vmv1r.v v8, v9
 ; ZVFBFA-NEXT:    ret
   %fpext = fpext bfloat %b to float
   %head = insertelement <vscale x 1 x float> poison, float %fpext, i32 0
@@ -288,10 +282,8 @@ define <vscale x 2 x float> @vfwmul_vv_nxv2f32(<vscale x 2 x bfloat> %va, <vscal
 ; ZVFBFA-LABEL: vfwmul_vv_nxv2f32:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFA-NEXT:    vfmul.vv v8, v10, v8
+; ZVFBFA-NEXT:    vfwmul.vv v10, v8, v9
+; ZVFBFA-NEXT:    vmv1r.v v8, v10
 ; ZVFBFA-NEXT:    ret
   %vc = fpext <vscale x 2 x bfloat> %va to <vscale x 2 x float>
   %vd = fpext <vscale x 2 x bfloat> %vb to <vscale x 2 x float>
@@ -314,10 +306,8 @@ define <vscale x 2 x float> @vfwmul_vf_nxv2f32(<vscale x 2 x bfloat> %va, bfloat
 ; ZVFBFA-LABEL: vfwmul_vf_nxv2f32:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFBFA-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFA-NEXT:    vfmul.vf v8, v9, fa5
+; ZVFBFA-NEXT:    vfwmul.vf v9, v8, fa0
+; ZVFBFA-NEXT:    vmv1r.v v8, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 2 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 2 x bfloat> %head, <vscale x 2 x bfloat> poison, <vscale x 2 x i32> zeroinitializer
@@ -341,11 +331,9 @@ define <vscale x 2 x float> @vfwmul_vf_nxv2f32_2(<vscale x 2 x bfloat> %va, bflo
 ;
 ; ZVFBFA-LABEL: vfwmul_vf_nxv2f32_2:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFA-NEXT:    vfmul.vf v8, v9, fa5
+; ZVFBFA-NEXT:    vfwmul.vf v9, v8, fa0
+; ZVFBFA-NEXT:    vmv1r.v v8, v9
 ; ZVFBFA-NEXT:    ret
   %fpext = fpext bfloat %b to float
   %head = insertelement <vscale x 2 x float> poison, float %fpext, i32 0
@@ -368,10 +356,9 @@ define <vscale x 4 x float> @vfwmul_vv_nxv4f32(<vscale x 4 x bfloat> %va, <vscal
 ; ZVFBFA-LABEL: vfwmul_vv_nxv4f32:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m1, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFA-NEXT:    vfmul.vv v8, v10, v12
+; ZVFBFA-NEXT:    vmv1r.v v10, v9
+; ZVFBFA-NEXT:    vmv1r.v v11, v8
+; ZVFBFA-NEXT:    vfwmul.vv v8, v11, v10
 ; ZVFBFA-NEXT:    ret
   %vc = fpext <vscale x 4 x bfloat> %va to <vscale x 4 x float>
   %vd = fpext <vscale x 4 x bfloat> %vb to <vscale x 4 x float>
@@ -394,10 +381,8 @@ define <vscale x 4 x float> @vfwmul_vf_nxv4f32(<vscale x 4 x bfloat> %va, bfloat
 ; ZVFBFA-LABEL: vfwmul_vf_nxv4f32:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m1, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFA-NEXT:    vfmul.vf v8, v10, fa5
+; ZVFBFA-NEXT:    vmv1r.v v10, v8
+; ZVFBFA-NEXT:    vfwmul.vf v8, v10, fa0
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 4 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 4 x bfloat> %head, <vscale x 4 x bfloat> poison, <vscale x 4 x i32> zeroinitializer
@@ -421,11 +406,9 @@ define <vscale x 4 x float> @vfwmul_vf_nxv4f32_2(<vscale x 4 x bfloat> %va, bflo
 ;
 ; ZVFBFA-LABEL: vfwmul_vf_nxv4f32_2:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m1, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFA-NEXT:    vfmul.vf v8, v10, fa5
+; ZVFBFA-NEXT:    vmv1r.v v10, v8
+; ZVFBFA-NEXT:    vfwmul.vf v8, v10, fa0
 ; ZVFBFA-NEXT:    ret
   %fpext = fpext bfloat %b to float
   %head = insertelement <vscale x 4 x float> poison, float %fpext, i32 0
@@ -448,10 +431,9 @@ define <vscale x 8 x float> @vfwmul_vv_nxv8f32(<vscale x 8 x bfloat> %va, <vscal
 ; ZVFBFA-LABEL: vfwmul_vv_nxv8f32:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmul.vv v8, v12, v16
+; ZVFBFA-NEXT:    vmv2r.v v12, v10
+; ZVFBFA-NEXT:    vmv2r.v v14, v8
+; ZVFBFA-NEXT:    vfwmul.vv v8, v14, v12
 ; ZVFBFA-NEXT:    ret
   %vc = fpext <vscale x 8 x bfloat> %va to <vscale x 8 x float>
   %vd = fpext <vscale x 8 x bfloat> %vb to <vscale x 8 x float>
@@ -474,10 +456,8 @@ define <vscale x 8 x float> @vfwmul_vf_nxv8f32(<vscale x 8 x bfloat> %va, bfloat
 ; ZVFBFA-LABEL: vfwmul_vf_nxv8f32:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmul.vf v8, v12, fa5
+; ZVFBFA-NEXT:    vmv2r.v v12, v8
+; ZVFBFA-NEXT:    vfwmul.vf v8, v12, fa0
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 8 x bfloat> %head, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
@@ -501,11 +481,9 @@ define <vscale x 8 x float> @vfwmul_vf_nxv8f32_2(<vscale x 8 x bfloat> %va, bflo
 ;
 ; ZVFBFA-LABEL: vfwmul_vf_nxv8f32_2:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmul.vf v8, v12, fa5
+; ZVFBFA-NEXT:    vmv2r.v v12, v8
+; ZVFBFA-NEXT:    vfwmul.vf v8, v12, fa0
 ; ZVFBFA-NEXT:    ret
   %fpext = fpext bfloat %b to float
   %head = insertelement <vscale x 8 x float> poison, float %fpext, i32 0
@@ -527,9 +505,8 @@ define <vscale x 1 x float> @vfwmul_vv_nxv1f32_same_op(<vscale x 1 x bfloat> %va
 ; ZVFBFA-LABEL: vfwmul_vv_nxv1f32_same_op:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vfmul.vv v8, v9, v9
+; ZVFBFA-NEXT:    vfwmul.vv v9, v8, v8
+; ZVFBFA-NEXT:    vmv1r.v v8, v9
 ; ZVFBFA-NEXT:    ret
   %vb = fpext <vscale x 1 x bfloat> %va to <vscale x 1 x float>
   %vc = fmul <vscale x 1 x float> %vb, %vb
