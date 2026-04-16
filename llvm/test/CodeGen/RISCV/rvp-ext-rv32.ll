@@ -500,6 +500,22 @@ define <2 x i16> @test_plui_h_negative() {
   ret <2 x i16> splat (i16 u0xb640)
 }
 
+define <4 x i8> @test_allones_v4i8() {
+; CHECK-LABEL: test_allones_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+  ret <4 x i8> splat (i8 -1)
+}
+
+define <2 x i16> @test_allones_v2i16() {
+; CHECK-LABEL: test_allones_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+  ret <2 x i16> splat (i16 -1)
+}
+
 define i16 @test_extract_vector_16(<2 x i16> %a) {
 ; CHECK-LABEL: test_extract_vector_16:
 ; CHECK:       # %bb.0:
@@ -1963,10 +1979,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB138_2
+; CHECK-NEXT:    bnez a3, .LBB140_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB138_2:
+; CHECK-NEXT:  .LBB140_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -1977,10 +1993,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB139_2
+; CHECK-NEXT:    bnez a3, .LBB141_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB139_2:
+; CHECK-NEXT:  .LBB141_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
