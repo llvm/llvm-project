@@ -175,6 +175,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Updated the canonical order of one-letter RISC-V extensions to match the
+  latest specification, placing ``p`` after ``v`` and removing unused ``n``.
 * `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
 * `-mcpu=spacemit-x100` was added.
 * Change P extension version to match the 0.21 draft specification.
