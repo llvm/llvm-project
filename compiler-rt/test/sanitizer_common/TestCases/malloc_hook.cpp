@@ -4,7 +4,7 @@
 // XFAIL: target={{.*windows-msvc.*}}
 
 // Must not be implemented, no other reason to install interceptors.
-// XFAIL: tysan, ubsan
+// XFAIL: ubsan
 
 #include <stdlib.h>
 #include <unistd.h>
