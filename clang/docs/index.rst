@@ -31,6 +31,7 @@ Using Clang as a Compiler
    ScalableStaticAnalysisFramework/index
    DataFlowAnalysisIntro
    FunctionEffectAnalysis
+   ProfilesFramework
    AddressSanitizer
    ThreadSanitizer
    MemorySanitizer
