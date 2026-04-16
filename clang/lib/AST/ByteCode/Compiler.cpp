@@ -703,8 +703,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   case CK_VectorSplat: {
     assert(!canClassify(E->getType()));
-    assert(canClassify(SubExpr->getType()));
     assert(E->getType()->isVectorType());
+
+    if (!canClassify(SubExpr->getType()))
+      return false;
 
     if (!Initializing) {
       UnsignedOrNone LocalIndex = allocateLocal(E);
