@@ -24,7 +24,9 @@
 
 #  pragma weak dlopen
 #  pragma weak dlsym
+#if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD
 #  pragma weak dlvsym
+#endif
 
 namespace __interception {
 
