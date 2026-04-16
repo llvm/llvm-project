@@ -454,4 +454,8 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def __casl16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short, unsigned short)">;
 	def __casl32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int, unsigned int)">;
 	def __casl64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int, unsigned long long int)">;
+	def __casal8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char, unsigned char)">;
+	def __casal16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short, unsigned short)">;
+	def __casal32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int, unsigned int)">;
+	def __casal64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int, unsigned long long int)">;
 }

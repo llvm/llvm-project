@@ -5430,7 +5430,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__casa8 || BuiltinID == AArch64::BI__casa16 ||
       BuiltinID == AArch64::BI__casa32 || BuiltinID == AArch64::BI__casa64 ||
       BuiltinID == AArch64::BI__casl8 || BuiltinID == AArch64::BI__casl16 ||
-      BuiltinID == AArch64::BI__casl32 || BuiltinID == AArch64::BI__casl64) {
+      BuiltinID == AArch64::BI__casl32 || BuiltinID == AArch64::BI__casl64 ||
+      BuiltinID == AArch64::BI__casal8 || BuiltinID == AArch64::BI__casal16 ||
+      BuiltinID == AArch64::BI__casal32 || BuiltinID == AArch64::BI__casal64) {
     unsigned IntrID;
     llvm::Type *IntrArgTy;
     switch (BuiltinID) {
@@ -5480,6 +5482,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       break;
     case AArch64::BI__casl64:
       IntrID = Intrinsic::aarch64_casl64;
+      IntrArgTy = Builder.getInt64Ty();
+      break;
+    case AArch64::BI__casal8:
+      IntrID = Intrinsic::aarch64_casal8;
+      IntrArgTy = Builder.getInt32Ty();
+      break;
+    case AArch64::BI__casal16:
+      IntrID = Intrinsic::aarch64_casal16;
+      IntrArgTy = Builder.getInt32Ty();
+      break;
+    case AArch64::BI__casal32:
+      IntrID = Intrinsic::aarch64_casal32;
+      IntrArgTy = Builder.getInt32Ty();
+      break;
+    case AArch64::BI__casal64:
+      IntrID = Intrinsic::aarch64_casal64;
       IntrArgTy = Builder.getInt64Ty();
       break;
     default:
