@@ -84,6 +84,20 @@ subroutine test_intent_in(x)
   call bar_intent_in(x)
 end subroutine
 
+! Test copy-out is skipped when the actual argument has INTENT(IN).
+! CHECK-LABEL: func @_QPtest_actual_arg_intent_in(
+subroutine test_actual_arg_intent_in(x)
+  real, intent(in) :: x(:)
+! CHECK: hlfir.copy_in
+! CHECK: fir.call @_QPbar
+! Note: no-op hlfir.copy_out has comma separated list of args.
+! The actual working hlfir.copy_out has "to" in it.
+! CHECK: hlfir.copy_out
+! CHECK-SAME: ,
+! CHECK: return
+  call bar(x)
+end subroutine
+
 ! Test copy-in/copy-out is done for intent(inout)
 ! CHECK-LABEL: func @_QPtest_intent_inout(
 subroutine test_intent_inout(x)

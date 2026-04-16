@@ -1649,6 +1649,17 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // Expressions are copy-in, but not copy-out.
     return forCopyIn;
   }
+  if (forCopyOut) {
+    // If the actual argument's base object has INTENT(IN) in the caller's
+    // context, copy-out would violate the read-only semantics of INTENT(IN).
+    if (const Expr<SomeType> *expr{actual->UnwrapExpr()}) {
+      if (const Symbol *symbol{GetFirstSymbol(*expr)}) {
+        if (semantics::IsIntentIn(*symbol)) {
+          return false;
+        }
+      }
+    }
+  }
   auto maybeContigActual{IsContiguous(*actual, fc)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
