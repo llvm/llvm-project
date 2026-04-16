@@ -210,11 +210,9 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
 // will try to fold the tail-loop (epilogue) into the vector body and predicate
 // the instructions accordingly. If tail-folding fails, there are different
 // fallback strategies depending on these values:
-namespace TailFoldingPolicyTy {
-enum Option { None = 0, PreferFoldTail, MustFoldTail };
-} // namespace TailFoldingPolicyTy
+enum class TailFoldingPolicyTy { None = 0, PreferFoldTail, MustFoldTail };
 
-static cl::opt<TailFoldingPolicyTy::Option> TailFoldingPolicy(
+static cl::opt<TailFoldingPolicyTy> TailFoldingPolicy(
     "tail-folding-policy", cl::init(TailFoldingPolicyTy::None), cl::Hidden,
     cl::desc("Tail-folding preferences over creating an epilogue loop."),
     cl::values(
