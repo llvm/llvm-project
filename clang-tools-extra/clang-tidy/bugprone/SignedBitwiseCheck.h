@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_SIGNEDBITWISECHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_SIGNEDBITWISECHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIGNEDBITWISECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIGNEDBITWISECHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::hicpp {
+namespace clang::tidy::bugprone {
 
 /// This check implements the rule 5.6.1 of the HICPP Standard, which disallows
 /// bitwise operations on signed integer types.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/hicpp/signed-bitwise.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/signed-bitwise.html
 class SignedBitwiseCheck : public ClangTidyCheck {
 public:
   SignedBitwiseCheck(StringRef Name, ClangTidyContext *Context);
@@ -29,6 +29,6 @@ private:
   bool IgnorePositiveIntegerLiterals;
 };
 
-} // namespace clang::tidy::hicpp
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_SIGNEDBITWISECHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIGNEDBITWISECHECK_H
