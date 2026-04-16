@@ -1425,39 +1425,27 @@ def : Pat<(or (vt LASX256:$xj), (vt (vnot LASX256:$xk))),
 // XVANDI_B
 def : Pat<(and (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm))),
           (XVANDI_B LASX256:$xj, uimm8:$imm)>;
-def : Pat<(and (v16i16 LASX256:$xj), (v16i16 (vsplat_i8_uimm8 imm16:$imm))),
-          (XVANDI_B LASX256:$xj, imm16:$imm)>;
-def : Pat<(and (v8i32 LASX256:$xj), (v8i32 (vsplat_i8_uimm8 imm32:$imm))),
-          (XVANDI_B LASX256:$xj, imm32:$imm)>;
-def : Pat<(and (v4i64 LASX256:$xj), (v4i64 (vsplat_i8_uimm8 imm64:$imm))),
-          (XVANDI_B LASX256:$xj, imm64:$imm)>;
+foreach vt = [v16i16, v8i32, v4i64] in
+def : Pat<(and (vt LASX256:$xj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (XVANDI_B LASX256:$xj, grlenimm:$imm)>;
 // XVORI_B
 def : Pat<(or (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm))),
           (XVORI_B LASX256:$xj, uimm8:$imm)>;
-def : Pat<(or (v16i16 LASX256:$xj), (v16i16 (vsplat_i8_uimm8 imm16:$imm))),
-          (XVORI_B LASX256:$xj, imm16:$imm)>;
-def : Pat<(or (v8i32 LASX256:$xj), (v8i32 (vsplat_i8_uimm8 imm32:$imm))),
-          (XVORI_B LASX256:$xj, imm32:$imm)>;
-def : Pat<(or (v4i64 LASX256:$xj), (v4i64 (vsplat_i8_uimm8 imm64:$imm))),
-          (XVORI_B LASX256:$xj, imm64:$imm)>;
+foreach vt = [v16i16, v8i32, v4i64] in
+def : Pat<(or (vt LASX256:$xj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (XVORI_B LASX256:$xj, grlenimm:$imm)>;
 // XVXORI_B
 def : Pat<(xor (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm))),
           (XVXORI_B LASX256:$xj, uimm8:$imm)>;
-def : Pat<(xor (v16i16 LASX256:$xj), (v16i16 (vsplat_i8_uimm8 imm16:$imm))),
-          (XVXORI_B LASX256:$xj, imm16:$imm)>;
-def : Pat<(xor (v8i32 LASX256:$xj), (v8i32 (vsplat_i8_uimm8 imm32:$imm))),
-          (XVXORI_B LASX256:$xj, imm32:$imm)>;
-def : Pat<(xor (v4i64 LASX256:$xj), (v4i64 (vsplat_i8_uimm8 imm64:$imm))),
-          (XVXORI_B LASX256:$xj, imm64:$imm)>;
+foreach vt = [v16i16, v8i32, v4i64] in
+def : Pat<(xor (vt LASX256:$xj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (XVXORI_B LASX256:$xj, grlenimm:$imm)>;
 // XVNORI_B
 def : Pat<(vnot (or (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm)))),
           (XVNORI_B LASX256:$xj, uimm8:$imm)>;
-def : Pat<(vnot (or (v16i16 LASX256:$xj), (v16i16 (vsplat_i8_uimm8 imm16:$imm)))),
-          (XVNORI_B LASX256:$xj, imm16:$imm)>;
-def : Pat<(vnot (or (v8i32 LASX256:$xj), (v8i32 (vsplat_i8_uimm8 imm32:$imm)))),
-          (XVNORI_B LASX256:$xj, imm32:$imm)>;
-def : Pat<(vnot (or (v4i64 LASX256:$xj), (v4i64 (vsplat_i8_uimm8 imm64:$imm)))),
-          (XVNORI_B LASX256:$xj, imm64:$imm)>;
+foreach vt = [v16i16, v8i32, v4i64] in
+def : Pat<(vnot (or (vt LASX256:$xj), (vt (vsplat_i8_uimm8 grlenimm:$imm)))),
+          (XVNORI_B LASX256:$xj, grlenimm:$imm)>;
 
 // XVBSLL_V
 foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32,

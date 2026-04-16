@@ -1646,39 +1646,27 @@ def : Pat<(or (vt LSX128:$vj), (vt (vnot LSX128:$vk))),
 // VANDI_B
 def : Pat<(and (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VANDI_B LSX128:$vj, uimm8:$imm)>;
-def : Pat<(and (v8i16 LSX128:$vj), (v8i16 (vsplat_i8_uimm8 imm16:$imm))),
-          (VANDI_B LSX128:$vj, imm16:$imm)>;
-def : Pat<(and (v4i32 LSX128:$vj), (v4i32 (vsplat_i8_uimm8 imm32:$imm))),
-          (VANDI_B LSX128:$vj, imm32:$imm)>;
-def : Pat<(and (v2i64 LSX128:$vj), (v2i64 (vsplat_i8_uimm8 imm64:$imm))),
-          (VANDI_B LSX128:$vj, imm64:$imm)>;
+foreach vt = [v8i16, v4i32, v2i64] in
+def : Pat<(and (vt LSX128:$vj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (VANDI_B LSX128:$vj, grlenimm:$imm)>;
 // VORI_B
 def : Pat<(or (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VORI_B LSX128:$vj, uimm8:$imm)>;
-def : Pat<(or (v8i16 LSX128:$vj), (v8i16 (vsplat_i8_uimm8 imm16:$imm))),
-          (VORI_B LSX128:$vj, imm16:$imm)>;
-def : Pat<(or (v4i32 LSX128:$vj), (v4i32 (vsplat_i8_uimm8 imm32:$imm))),
-          (VORI_B LSX128:$vj, imm32:$imm)>;
-def : Pat<(or (v2i64 LSX128:$vj), (v2i64 (vsplat_i8_uimm8 imm64:$imm))),
-          (VORI_B LSX128:$vj, imm64:$imm)>;
+foreach vt = [v8i16, v4i32, v2i64] in
+def : Pat<(or (vt LSX128:$vj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (VORI_B LSX128:$vj, grlenimm:$imm)>;
 // VXORI_B
 def : Pat<(xor (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VXORI_B LSX128:$vj, uimm8:$imm)>;
-def : Pat<(xor (v8i16 LSX128:$vj), (v8i16 (vsplat_i8_uimm8 imm16:$imm))),
-          (VXORI_B LSX128:$vj, imm16:$imm)>;
-def : Pat<(xor (v4i32 LSX128:$vj), (v4i32 (vsplat_i8_uimm8 imm32:$imm))),
-          (VXORI_B LSX128:$vj, imm32:$imm)>;
-def : Pat<(xor (v2i64 LSX128:$vj), (v2i64 (vsplat_i8_uimm8 imm64:$imm))),
-          (VXORI_B LSX128:$vj, imm64:$imm)>;
+foreach vt = [v8i16, v4i32, v2i64] in
+def : Pat<(xor (vt LSX128:$vj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (VXORI_B LSX128:$vj, grlenimm:$imm)>;
 // VNORI_B
 def : Pat<(vnot (or (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm)))),
           (VNORI_B LSX128:$vj, uimm8:$imm)>;
-def : Pat<(vnot (or (v8i16 LSX128:$vj), (v8i16 (vsplat_i8_uimm8 imm16:$imm)))),
-          (VNORI_B LSX128:$vj, imm16:$imm)>;
-def : Pat<(vnot (or (v4i32 LSX128:$vj), (v4i32 (vsplat_i8_uimm8 imm32:$imm)))),
-          (VNORI_B LSX128:$vj, imm32:$imm)>;
-def : Pat<(vnot (or (v2i64 LSX128:$vj), (v2i64 (vsplat_i8_uimm8 imm64:$imm)))),
-          (VNORI_B LSX128:$vj, imm64:$imm)>;
+foreach vt = [v8i16, v4i32, v2i64] in
+def : Pat<(vnot (or (vt LSX128:$vj), (vt (vsplat_i8_uimm8 grlenimm:$imm)))),
+          (VNORI_B LSX128:$vj, grlenimm:$imm)>;
 
 // VBSLL_V
 foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32,

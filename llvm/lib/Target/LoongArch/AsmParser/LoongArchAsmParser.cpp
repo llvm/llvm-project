@@ -552,7 +552,6 @@ public:
                      IsValidKind;
   }
 
-  bool isImm16() const { return isSImm<16>() || isUImm<16>(); }
   bool isImm32() const { return isSImm<32>() || isUImm<32>(); }
   bool isImm64() const {
     if (!isImm())
