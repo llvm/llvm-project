@@ -4172,8 +4172,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
   // Walk the designator's path to find the subobject.
   for (unsigned I = 0, N = Sub.Entries.size(); /**/; ++I) {
     // Reading an indeterminate value is undefined, but assigning over one is
-    // OK. Reading an erroneous value is erroneous behavior also not allowed in
-    // constant expressions.
+    // OK.
     if ((O->isAbsent() && !(handler.AccessKind == AK_Construct && I == N)) ||
         (O->isUninit() && !isValidIndeterminateAccess(handler.AccessKind))) {
       // Object has ended lifetime.
@@ -4185,6 +4184,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       if (!Info.checkingPotentialConstantExpression()) {
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
             << handler.AccessKind << O->isUninit() << E->getSourceRange();
+        NoteLValueLocation(Info, Obj.Base);
+      }
       return handler.failed();
     }
 
