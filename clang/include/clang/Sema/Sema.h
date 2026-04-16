@@ -12707,6 +12707,12 @@ public:
             return false;
           });
 
+  TemplateDeductionResult FinishTemplateArgumentDeduction(
+      TemplateDecl *TD, TemplateParameterList *TPL,
+      ArrayRef<TemplateArgument> PatternArgs, ArrayRef<TemplateArgument> Args,
+      SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+      sema::TemplateDeductionInfo &Info, bool CopyDeducedArgs);
+
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
   ///
