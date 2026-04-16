@@ -103,6 +103,7 @@ void FactsGenerator::run() {
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
     EscapesInCurrentBlock.clear();
+    CurrentBlock = Block;
     if (Block == &Cfg.getEntry())
       CurrentBlockFacts.append(PlaceholderLoanFacts.begin(),
                                PlaceholderLoanFacts.end());
@@ -422,12 +423,58 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
-  if (hasOrigins(CO)) {
-    // Merge origins from both branches of the conditional operator.
-    // We kill to clear the initial state and merge both origins into it.
-    killAndFlowOrigin(*CO, *CO->getTrueExpr());
-    flowOrigin(*CO, *CO->getFalseExpr());
+  if (!hasOrigins(CO))
+    return;
+
+  const Expr *TrueExpr = CO->getTrueExpr();
+  const Expr *FalseExpr = CO->getFalseExpr();
+
+  const auto Preds = CurrentBlock->preds();
+
+  // Skip origin flow from conditional operator arms that cannot produce the
+  // result value: throw arms and calls to noreturn functions.
+  bool TBHasEdge = true;
+  bool FBHasEdge = true;
+
+  switch (CurrentBlock->pred_size()) {
+  case 0:
+    return;
+  case 1: {
+    TBHasEdge = llvm::any_of(**Preds.begin(),
+                             [ExpectedStmt = TrueExpr->IgnoreParenImpCasts()](
+                                 const CFGElement &Elt) {
+                               if (auto CS = Elt.getAs<CFGStmt>())
+                                 return CS->getStmt() == ExpectedStmt;
+                               return false;
+                             });
+    FBHasEdge = !TBHasEdge;
+    break;
   }
+  case 2: {
+    const auto *It = Preds.begin();
+    TBHasEdge = It->isReachable();
+    FBHasEdge = (++It)->isReachable();
+    break;
+  }
+  default:
+    llvm_unreachable("expected at most 2 predecessors");
+    return;
+  }
+
+  bool FirstFlow = true;
+  auto HandleFlow = [&](const Expr *E) {
+    if (FirstFlow) {
+      killAndFlowOrigin(*CO, *E);
+      FirstFlow = false;
+    } else {
+      flowOrigin(*CO, *E);
+    }
+  };
+
+  if (TBHasEdge)
+    HandleFlow(TrueExpr);
+  if (FBHasEdge)
+    HandleFlow(FalseExpr);
 }
 
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
