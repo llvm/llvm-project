@@ -241,6 +241,7 @@ class SPIRVEmitIntrinsics
 
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
+  void simplifyNullAddrSpaceCasts();
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
                         bool IsPostprocessing);
@@ -1533,6 +1534,20 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
   }
 }
 
+// Simplify addrspacecast(null) instructions to ConstantPointerNull of the
+// target type. Casting null always yields null, and this avoids SPIR-V
+// lowering issues where the null gets typed as an integer instead of a
+// pointer.
+void SPIRVEmitIntrinsics::simplifyNullAddrSpaceCasts() {
+  for (Instruction &I : make_early_inc_range(instructions(CurrF)))
+    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+      if (isa<ConstantPointerNull>(ASC->getPointerOperand())) {
+        ASC->replaceAllUsesWith(
+            ConstantPointerNull::get(cast<PointerType>(ASC->getType())));
+        ASC->eraseFromParent();
+      }
+}
+
 void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
   std::queue<Instruction *> Worklist;
   for (auto &I : instructions(CurrF))
@@ -1568,7 +1583,15 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
           for (unsigned i = 0; i < COp->getNumElements(); ++i)
             Args.push_back(COp->getElementAsConstant(i));
         else
-          llvm::append_range(Args, AggrConst->operands());
+          for (Value *Op : AggrConst->operands()) {
+            // Simplify addrspacecast(null) to null in the target address space
+            // so that null pointers get the correct pointer type when lowered.
+            if (auto *CE = dyn_cast<ConstantExpr>(Op);
+                CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
+                isa<ConstantPointerNull>(CE->getOperand(0)))
+              Op = ConstantPointerNull::get(cast<PointerType>(CE->getType()));
+            Args.push_back(Op);
+          }
         if (!BPrepared) {
           IsPhi ? B.SetInsertPointPastAllocas(I->getParent()->getParent())
                 : B.SetInsertPoint(I);
@@ -3172,6 +3195,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     processGlobalValue(GV, B);
 
   preprocessUndefs(B);
+  simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
 
   for (BasicBlock &BB : Func)
