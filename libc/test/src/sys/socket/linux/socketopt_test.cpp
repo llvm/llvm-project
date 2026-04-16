@@ -41,14 +41,14 @@ TEST_F(LlvmLibcSocketOptTest, BasicSocketOpt) {
                                          &optval, &optlen),
               Succeeds(0));
   ASSERT_EQ(optval, 1);
-  ASSERT_EQ(optlen, sizeof(optval));
+  ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(optval)));
 
   // Test SO_TYPE (read-only)
   ASSERT_THAT(
       LIBC_NAMESPACE::getsockopt(sock, SOL_SOCKET, SO_TYPE, &optval, &optlen),
       Succeeds(0));
   ASSERT_EQ(optval, SOCK_STREAM);
-  ASSERT_EQ(optlen, sizeof(optval));
+  ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(optval)));
 
   optval = SOCK_DGRAM;
   ASSERT_THAT(
