@@ -20942,11 +20942,35 @@ static SDValue performReinterpretCastCombine(SDNode *N) {
   return SDValue();
 }
 
+// and(sext(Op), splat(1)) -> zext(Op)
+static SDValue
+performSVEAndSplatSExtCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDLoc DL(N);
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue ExtendOp = N->getOperand(0);
+  SDValue SplatOp = N->getOperand(1);
+
+  if (SplatOp.getOpcode() != ISD::SPLAT_VECTOR ||
+      !isOneConstant(SplatOp.getOperand(0)) ||
+      ExtendOp.getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+
+  SDValue ZExtOp = ExtendOp.getOperand(0);
+
+  return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), ZExtOp);
+}
+
 static SDValue performSVEAndCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
+
+  if (SDValue R = performSVEAndSplatSExtCombine(N, DCI))
+    return R;
 
   // Zero/any extend of an unsigned unpack
   if (Opc == AArch64ISD::UUNPKHI || Opc == AArch64ISD::UUNPKLO) {

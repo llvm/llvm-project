@@ -25,8 +25,7 @@ define <vscale x 16 x i8> @zext_slt_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    cmpgt p1.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ret
   %1 = icmp slt <32 x i8> %a, %b
   %2 = zext <32 x i1> %1 to <32 x i8>
@@ -58,8 +57,7 @@ define <vscale x 16 x i8> @zext_ult_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-NEXT:    splice z1.b, p0, { z2.b, z3.b }
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    cmphi p1.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ret
   %1 = icmp ult <32 x i8> %a, %b
   %2 = zext <32 x i1> %1 to <32 x i8>
@@ -91,8 +89,7 @@ define <vscale x 16 x i8> @zext_sgt_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    cmpgt p1.b, p0/z, z0.b, z2.b
-; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ret
   %1 = icmp sgt <32 x i8> %a, %b
   %2 = zext <32 x i1> %1 to <32 x i8>
@@ -124,8 +121,7 @@ define <vscale x 16 x i8> @zext_ugt_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    cmphi p1.b, p0/z, z0.b, z2.b
-; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ret
   %1 = icmp ugt <32 x i8> %a, %b
   %2 = zext <32 x i1> %1 to <32 x i8>
@@ -169,8 +165,7 @@ define <8 x i32> @zext_slt_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-NEXT:    splice z1.s, p0, { z2.s, z3.s }
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    cmpgt p1.s, p0/z, z1.s, z0.s
-; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    mov z0.s, p1/z, #1 // =0x1
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -193,8 +188,7 @@ define <8 x i32> @zext_sle_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-NEXT:    splice z1.s, p0, { z2.s, z3.s }
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    cmpge p1.s, p0/z, z1.s, z0.s
-; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    mov z0.s, p1/z, #1 // =0x1
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -217,8 +211,7 @@ define <8 x i32> @zext_sge_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-NEXT:    splice z0.s, p0, { z0.s, z1.s }
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z2.s
-; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    mov z0.s, p1/z, #1 // =0x1
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
