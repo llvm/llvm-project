@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -passes=loop-vectorize -mattr=+sve -force-vector-width=4 -debug-only=loop-vectorize \
-; RUN:   -tail-folding-policy=prefer-epilogue -S -disable-output 2>&1 | FileCheck %s
+; RUN:   -tail-folding-policy=none -S -disable-output 2>&1 | FileCheck %s
 target triple = "aarch64-linux-gnu"
 
 define void @loop_sve_i1(ptr nocapture %ptr, i64 %N) {

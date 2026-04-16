@@ -211,22 +211,19 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
 // the instructions accordingly. If tail-folding fails, there are different
 // fallback strategies depending on these values:
 namespace TailFoldingPolicyTy {
-enum Option { None = 0, FoldTailElseEpilogue, FoldTailOrDontVectorize };
+enum Option { None = 0, PreferFoldTail, MustFoldTail };
 } // namespace TailFoldingPolicyTy
 
 static cl::opt<TailFoldingPolicyTy::Option> TailFoldingPolicy(
     "tail-folding-policy", cl::init(TailFoldingPolicyTy::None), cl::Hidden,
     cl::desc("Tail-folding preferences over creating an epilogue loop."),
     cl::values(
-        clEnumValN(TailFoldingPolicyTy::None, "prefer-epilogue",
-                   "Don't tail-fold loops."),
-        clEnumValN(TailFoldingPolicyTy::FoldTailElseEpilogue,
-                   "fold-tail-else-epilogue",
+        clEnumValN(TailFoldingPolicyTy::None, "none", "Don't tail-fold loops."),
+        clEnumValN(TailFoldingPolicyTy::PreferFoldTail, "prefer-fold-tail",
                    "prefer tail-folding, otherwise create an epilogue when "
                    "appropriate."),
-        clEnumValN(TailFoldingPolicyTy::FoldTailOrDontVectorize,
-                   "fold-tail-dont-vectorize",
-                   "prefers tail-folding, don't attempt vectorization if "
+        clEnumValN(TailFoldingPolicyTy::MustFoldTail, "must-fold-tail",
+                   "prefer tail-folding, don't attempt vectorization if "
                    "tail-folding fails.")));
 
 static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
@@ -8269,9 +8266,9 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
     switch (TailFoldingPolicy) {
     case TailFoldingPolicyTy::None:
       return CM_EpilogueAllowed;
-    case TailFoldingPolicyTy::FoldTailElseEpilogue:
+    case TailFoldingPolicyTy::PreferFoldTail:
       return CM_EpilogueNotNeededFoldTail;
-    case TailFoldingPolicyTy::FoldTailOrDontVectorize:
+    case TailFoldingPolicyTy::MustFoldTail:
       return CM_EpilogueNotAllowedFoldTail;
     };
   }

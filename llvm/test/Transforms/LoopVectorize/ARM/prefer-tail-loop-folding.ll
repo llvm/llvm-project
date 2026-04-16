@@ -37,14 +37,14 @@
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
-; RUN:   -tail-folding-policy=prefer-epilogue \
+; RUN:   -tail-folding-policy=none \
 ; RUN:   -tail-predication=enabled -passes=loop-vectorize \
 ; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
-; RUN:   -tail-folding-policy=fold-tail-dont-vectorize \
+; RUN:   -tail-folding-policy=must-fold-tail \
 ; RUN:   -tail-predication=enabled -passes=loop-vectorize \
 ; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \

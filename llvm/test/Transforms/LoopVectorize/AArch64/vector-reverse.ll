@@ -7,7 +7,7 @@
 ;    a[i] = b[i] + 1.0;
 
 ; RUN: opt -passes=loop-vectorize,dce  -mtriple aarch64-linux-gnu -S \
-; RUN:   -tail-folding-policy=prefer-epilogue < %s | FileCheck %s
+; RUN:   -tail-folding-policy=none < %s | FileCheck %s
 
 define void @vector_reverse_f64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: define void @vector_reverse_f64(
