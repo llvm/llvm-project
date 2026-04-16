@@ -17718,7 +17718,10 @@ InstructionCost BoUpSLP::getSpillCost() {
   };
   while (!LiveEntries.empty()) {
     const TreeEntry *Entry = LiveEntries.pop_back_val();
-    SmallVector<const TreeEntry *> Operands = EntriesToOperands.lookup(Entry);
+    const auto OpIt = EntriesToOperands.find(Entry);
+    if (OpIt == EntriesToOperands.end())
+      continue;
+    ArrayRef<const TreeEntry *> Operands = OpIt->second;
     if (Operands.empty())
       continue;
     if (ScalarOrPseudoEntries.contains(Entry)) {
