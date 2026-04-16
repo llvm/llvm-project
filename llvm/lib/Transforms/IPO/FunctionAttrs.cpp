@@ -1745,9 +1745,11 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
               return false;
 
             FPClassTest AttrFPClass = Attrs.getRetNoFPClass();
-            KnownFPClass ComputedFPClass = computeKnownFPClass(RetVal, DL);
-            if (!ComputedFPClass.isKnownNever(AttrFPClass))
-              return false;
+            if (AttrFPClass != fcNone) {
+              KnownFPClass ComputedFPClass = computeKnownFPClass(RetVal, DL);
+              if (!ComputedFPClass.isKnownNever(AttrFPClass))
+                return false;
+            }
           }
           return true;
         })) {
