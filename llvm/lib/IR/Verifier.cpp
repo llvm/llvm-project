@@ -930,6 +930,19 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
       Check(ETy->isPointerTy(), "wrong type for intrinsic global variable",
             &GV);
     }
+
+    auto *Init = GV.hasInitializer()
+                     ? dyn_cast<ConstantArray>(GV.getInitializer())
+                     : nullptr;
+    if (Init) {
+      for (const Use &U : Init->operands()) {
+        auto *Structor = dyn_cast<ConstantStruct>(U);
+        if (!Structor || Structor->getNumOperands() != 3)
+          continue;
+        Check(!isa<ConstantPtrAuth>(Structor->getOperand(1)),
+              "signing of ctors/dtors should be requested via module flags");
+      }
+    }
   }
 
   if (GV.hasName() && (GV.getName() == "llvm.used" ||
@@ -1998,26 +2011,49 @@ void Verifier::visitModuleFlags() {
   // Scan each flag, and track the flags and requirements.
   DenseMap<const MDString*, const MDNode*> SeenIDs;
   SmallVector<const MDNode*, 16> Requirements;
-  uint64_t PAuthABIPlatform = -1;
-  uint64_t PAuthABIVersion = -1;
+  std::optional<uint64_t> PAuthABIPlatform;
+  std::optional<uint64_t> PAuthABIVersion;
+  std::optional<uint64_t> HasPtrauthInitFini;
+  std::optional<uint64_t> HasPtrauthInitFiniAddr;
+
   for (const MDNode *MDN : Flags->operands()) {
     visitModuleFlag(MDN, SeenIDs, Requirements);
     if (MDN->getNumOperands() != 3)
       continue;
+
     if (const auto *FlagName = dyn_cast_or_null<MDString>(MDN->getOperand(1))) {
-      if (FlagName->getString() == "aarch64-elf-pauthabi-platform") {
-        if (const auto *PAP =
+      auto GetFlagNamed = [&](StringRef Name) -> std::optional<uint64_t> {
+        if (FlagName->getString() != Name)
+          return std::nullopt;
+        if (const auto *FlagValue =
                 mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
-          PAuthABIPlatform = PAP->getZExtValue();
-      } else if (FlagName->getString() == "aarch64-elf-pauthabi-version") {
-        if (const auto *PAV =
-                mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
-          PAuthABIVersion = PAV->getZExtValue();
-      }
+          return FlagValue->getZExtValue();
+
+        CheckFailed(Name + ": module flag expects integer value");
+        return std::nullopt;
+      };
+
+      if (auto Value = GetFlagNamed("aarch64-elf-pauthabi-platform"))
+        PAuthABIPlatform = *Value;
+      else if (auto Value = GetFlagNamed("aarch64-elf-pauthabi-version"))
+        PAuthABIVersion = *Value;
+      else if (auto Value = GetFlagNamed("ptrauth-init-fini"))
+        HasPtrauthInitFini = *Value;
+      else if (auto Value =
+                   GetFlagNamed("ptrauth-init-fini-address-discrimination"))
+        HasPtrauthInitFiniAddr = *Value;
     }
   }
 
-  if ((PAuthABIPlatform == uint64_t(-1)) != (PAuthABIVersion == uint64_t(-1)))
+  Check(!HasPtrauthInitFini || HasPtrauthInitFini.value() == 1,
+        "ptrauth-init-fini must be set to 1 or unset");
+  Check(!HasPtrauthInitFiniAddr || HasPtrauthInitFiniAddr.value() == 1,
+        "ptrauth-init-fini-address-discrimination must be set to 1 or unset");
+  if (HasPtrauthInitFiniAddr)
+    Check(HasPtrauthInitFini, "ptrauth-init-fini-address-discrimination module "
+                              "flag requires ptrauth-init-fini");
+
+  if (PAuthABIPlatform.has_value() != PAuthABIVersion.has_value())
     CheckFailed("either both or no 'aarch64-elf-pauthabi-platform' and "
                 "'aarch64-elf-pauthabi-version' module flags must be present");
 

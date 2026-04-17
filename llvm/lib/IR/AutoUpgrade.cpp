@@ -6217,12 +6217,109 @@ void llvm::UpgradeARCRuntime(Module &M) {
     UpgradeToIntrinsic(I.first, I.second);
 }
 
+// Upgrade from wrapping each pointer stored in the @llvm.global_(ctors|dtors)
+// with ptrauth constant expression to storing plain pointers in these arrays
+// and requesting the particular signing schema globally via module flags.
+//
+// Only perform the upgrade if all elements of *both* arrays agree on a common
+// signing schema. The processing of the array is *not* stopped on the first
+// null function pointer.
+static bool upgradePtrauthInitFiniArrays(Module &M) {
+  // Either "not decided yet" or whether we should request address diversity
+  // in addition to the basic constant diversity.
+  // There is no value representing "decided not to sign", as this results
+  // in immediate return from upgradePtrauthInitFiniArrays.
+  std::optional<bool> UseAddressDisc;
+
+  // Do not attempt upgrading if the new module flags already exist.
+  if (const NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
+    for (const MDNode *Flag : ModFlags->operands()) {
+      if (Flag->getNumOperands() != 3)
+        continue;
+      const MDString *ID = dyn_cast_or_null<MDString>(Flag->getOperand(1));
+      if (ID && (ID->getString() == "ptrauth-init-fini" ||
+                 ID->getString() == "ptrauth-init-fini-address-discriminator"))
+        return false;
+    }
+  }
+
+  auto UpgradeSinglePointer = [&UseAddressDisc](Constant *CV) -> Constant * {
+    const unsigned ExpectedConstDisc = 0xD9D4;
+    const unsigned ExpectedAddressMarker = 1;
+
+    auto *CPA = dyn_cast<ConstantPtrAuth>(CV);
+    if (!CPA || !CPA->getDiscriminator()->equalsInt(ExpectedConstDisc))
+      return nullptr; // Nothing to upgrade or unknown pattern found.
+
+    bool HasAddressDisc;
+    if (!CPA->hasAddressDiscriminator())
+      HasAddressDisc = false;
+    else if (CPA->hasSpecialAddressDiscriminator(ExpectedAddressMarker))
+      HasAddressDisc = true;
+    else
+      return nullptr; // Unknown pattern.
+
+    if (UseAddressDisc && *UseAddressDisc != HasAddressDisc)
+      return nullptr; // Disagreement with the decided mode.
+
+    UseAddressDisc = HasAddressDisc;
+    return CPA->getPointer();
+  };
+
+  SmallVector<std::pair<GlobalVariable *, Constant *>> PendingUpgrades;
+  for (const char *Name : {"llvm.global_ctors", "llvm.global_dtors"}) {
+    auto *GV = dyn_cast_if_present<GlobalVariable>(M.getNamedValue(Name));
+    if (!GV || !GV->hasInitializer())
+      continue; // Skip, but it is okay to upgrade the other variable.
+
+    auto *Init = dyn_cast<ConstantArray>(GV->getInitializer());
+    if (!Init)
+      return false;
+
+    std::vector<Constant *> NewStructors;
+    NewStructors.reserve(Init->getNumOperands());
+    for (Use &U : Init->operands()) {
+      auto *Structor = dyn_cast<ConstantStruct>(U.get());
+      if (!Structor || Structor->getNumOperands() != 3)
+        return false;
+
+      Constant *Prio = Structor->getOperand(0);
+      Constant *Func = UpgradeSinglePointer(Structor->getOperand(1));
+      Constant *Arg = Structor->getOperand(2);
+      if (!Func)
+        return false;
+
+      NewStructors.push_back(
+          ConstantStruct::get(Structor->getType(), {Prio, Func, Arg}));
+    }
+
+    Constant *NewInit = ConstantArray::get(Init->getType(), NewStructors);
+    PendingUpgrades.push_back({GV, NewInit});
+  }
+
+  if (PendingUpgrades.empty())
+    return false;
+  assert(UseAddressDisc.has_value());
+
+  for (auto [GV, NewInit] : PendingUpgrades)
+    GV->setInitializer(NewInit);
+  M.addModuleFlag(Module::Error, "ptrauth-init-fini", 1);
+  if (UseAddressDisc.value())
+    M.addModuleFlag(Module::Error, "ptrauth-init-fini-address-discriminator",
+                    1);
+
+  return true;
+}
+
 bool llvm::UpgradeModuleFlags(Module &M) {
+  bool Changed = false;
+  Changed |= upgradePtrauthInitFiniArrays(M);
+
   NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
   if (!ModFlags)
-    return false;
+    return Changed;
 
-  bool HasObjCFlag = false, HasClassProperties = false, Changed = false;
+  bool HasObjCFlag = false, HasClassProperties = false;
   bool HasSwiftVersionFlag = false;
   uint8_t SwiftMajorVersion, SwiftMinorVersion;
   uint32_t SwiftABIVersion;

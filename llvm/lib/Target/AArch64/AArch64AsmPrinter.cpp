@@ -98,6 +98,8 @@ class AArch64AsmPrinter : public AsmPrinter {
   FaultMaps FM;
   const AArch64Subtarget *STI;
   bool ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = false;
+  bool PtrauthInitFini = false;
+  bool PtrauthInitFiniAddressDisc = false;
 #ifndef NDEBUG
   unsigned InstsEmitted;
 #endif
@@ -404,6 +406,11 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     if (M.getModuleFlag("import-call-optimization"))
       EnableImportCallOptimization = true;
   }
+
+  if (M.getModuleFlag("ptrauth-init-fini"))
+    PtrauthInitFini = true;
+  if (M.getModuleFlag("ptrauth-init-fini-address-discrimination"))
+    PtrauthInitFiniAddressDisc = true;
 
   if (!TT.isOSBinFormatELF())
     return;
@@ -1461,18 +1468,31 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
 
 void AArch64AsmPrinter::emitXXStructor(const DataLayout &DL,
                                        const Constant *CV) {
-  if (const auto *CPA = dyn_cast<ConstantPtrAuth>(CV))
-    if (CPA->hasAddressDiscriminator() &&
-        !CPA->hasSpecialAddressDiscriminator(
-            ConstantPtrAuth::AddrDiscriminator_CtorsDtors))
-      report_fatal_error(
-          "unexpected address discrimination value for ctors/dtors entry, only "
-          "'ptr inttoptr (i64 1 to ptr)' is allowed");
-  // If we have signed pointers in xxstructors list, they'll be lowered to @AUTH
-  // MCExpr's via AArch64AsmPrinter::lowerConstantPtrAuth. It does not look at
-  // actual address discrimination value and only checks
-  // hasAddressDiscriminator(), so it's OK to leave special address
-  // discrimination value here.
+  LLVMContext &C = CV->getContext();
+  assert(!isa<ConstantPtrAuth>(CV) &&
+         "ctors/dtors are to be signed by asm printer");
+
+  if (PtrauthInitFini) {
+    IntegerType *Int32Ty = IntegerType::get(C, 32);
+    IntegerType *Int64Ty = IntegerType::get(C, 64);
+    PointerType *PtrTy = PointerType::get(C, 0);
+
+    ConstantInt *Key = ConstantInt::get(Int32Ty, AArch64PAuth::InitFiniKey);
+    ConstantInt *IntDisc = ConstantInt::get(
+        Int64Ty, AArch64PAuth::InitFiniPointerConstantDiscriminator);
+    Constant *Null = ConstantPointerNull::get(PtrTy);
+    Constant *AddressDisc = Null;
+    if (PtrauthInitFiniAddressDisc) {
+      uint64_t Marker = ConstantPtrAuth::AddrDiscriminator_CtorsDtors;
+      AddressDisc =
+          ConstantExpr::getIntToPtr(ConstantInt::get(Int64Ty, Marker), PtrTy);
+    }
+
+    CV = ConstantPtrAuth::get(const_cast<Constant *>(CV), Key, IntDisc,
+                              AddressDisc, /*DeactivationSymbol=*/Null);
+  }
+
+  // Signed pointers will be lowered by AArch64AsmPrinter::lowerConstantPtrAuth.
   AsmPrinter::emitXXStructor(DL, CV);
 }
 
