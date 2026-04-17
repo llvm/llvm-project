@@ -6362,7 +6362,7 @@ static void processNotesHelper(
     for (const typename ELFT::Shdr &S : Sections) {
       if (S.sh_type != SHT_NOTE)
         continue;
-      StartNotesFn(expectedToStdOptional(Obj.getSectionName(S)), S.sh_offset,
+      StartNotesFn(expectedToOptional(Obj.getSectionName(S)), S.sh_offset,
                    S.sh_size, S.sh_addralign);
       Error Err = Error::success();
       size_t I = 0;
