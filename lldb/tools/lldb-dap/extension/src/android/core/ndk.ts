@@ -69,27 +69,25 @@ export class Ndk {
     try {
       const entries1 = await fs.readdir(root1);
       for (const entry1 of entries1) {
-        if (entry1.startsWith("darwin-")) {
-          const root2 = path.join(root1, entry1, "lib", "clang");
-          try {
-            const entries2 = await fs.readdir(root2);
-            for (const entry2 of entries2) {
-              const root3 = path.join(root2, entry2, "lib", "linux");
-              try {
-                const entries3 = await fs.readdir(root3);
-                for (const entry3 of entries3) {
-                  if (entry3 === targetArch) {
-                    const candidate = path.join(root3, entry3, "lldb-server");
-                    try {
-                      await fs.access(candidate, fs.constants.R_OK);
-                      return candidate;
-                    } catch {}
-                  }
+        const root2 = path.join(root1, entry1, "lib", "clang");
+        try {
+          const entries2 = await fs.readdir(root2);
+          for (const entry2 of entries2) {
+            const root3 = path.join(root2, entry2, "lib", "linux");
+            try {
+              const entries3 = await fs.readdir(root3);
+              for (const entry3 of entries3) {
+                if (entry3 === targetArch) {
+                  const candidate = path.join(root3, entry3, "lldb-server");
+                  try {
+                    await fs.access(candidate, fs.constants.R_OK);
+                    return candidate;
+                  } catch {}
                 }
-              } catch {}
-            }
-          } catch {}
-        }
+              }
+            } catch {}
+          }
+        } catch {}
       }
     } catch {}
   }
