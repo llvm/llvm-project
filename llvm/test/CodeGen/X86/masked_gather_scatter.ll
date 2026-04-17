@@ -4035,7 +4035,7 @@ define <2 x i64> @gather_2i64_constant_indices(ptr %ptr, <2 x i1> %mask) {
 ; X64-KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; X64-KNL-NEXT:    vmovq %rdi, %xmm0
 ; X64-KNL-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X64-KNL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; X64-KNL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [0,0,0,0,0,0,0,0,240,255,255,255,255,255,255,255]
 ; X64-KNL-NEXT:    kmovw %k0, %eax
 ; X64-KNL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X64-KNL-NEXT:    testb $1, %al
@@ -4062,7 +4062,7 @@ define <2 x i64> @gather_2i64_constant_indices(ptr %ptr, <2 x i1> %mask) {
 ; X86-KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; X86-KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm0
-; X86-KNL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
+; X86-KNL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1 # [0,4294967280,u,u]
 ; X86-KNL-NEXT:    kmovw %k0, %eax
 ; X86-KNL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X86-KNL-NEXT:    testb $1, %al
@@ -4090,7 +4090,7 @@ define <2 x i64> @gather_2i64_constant_indices(ptr %ptr, <2 x i1> %mask) {
 ; X64-SKX-SMALL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; X64-SKX-SMALL-NEXT:    vpmovq2m %xmm0, %k0
 ; X64-SKX-SMALL-NEXT:    vpbroadcastq %rdi, %xmm0
-; X64-SKX-SMALL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; X64-SKX-SMALL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [0,0,0,0,0,0,0,0,240,255,255,255,255,255,255,255]
 ; X64-SKX-SMALL-NEXT:    kmovw %k0, %eax
 ; X64-SKX-SMALL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X64-SKX-SMALL-NEXT:    testb $1, %al
@@ -4141,7 +4141,7 @@ define <2 x i64> @gather_2i64_constant_indices(ptr %ptr, <2 x i1> %mask) {
 ; X86-SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpmovq2m %xmm0, %k0
 ; X86-SKX-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm0
-; X86-SKX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
+; X86-SKX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1 # [0,4294967280,u,u]
 ; X86-SKX-NEXT:    kmovw %k0, %eax
 ; X86-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X86-SKX-NEXT:    testb $1, %al
@@ -4231,7 +4231,7 @@ define void @scatter_2i64_constant_indices(ptr %ptr, <2 x i1> %mask, <2 x i32> %
 ; X64-KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; X64-KNL-NEXT:    vmovq %rdi, %xmm0
 ; X64-KNL-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X64-KNL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-KNL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,0,0,0,0,0,248,255,255,255,255,255,255,255]
 ; X64-KNL-NEXT:    kmovw %k0, %eax
 ; X64-KNL-NEXT:    testb $1, %al
 ; X64-KNL-NEXT:    jne .LBB60_1
@@ -4257,7 +4257,7 @@ define void @scatter_2i64_constant_indices(ptr %ptr, <2 x i1> %mask, <2 x i32> %
 ; X86-KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; X86-KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm0
-; X86-KNL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-KNL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0 # [0,4294967288,u,u]
 ; X86-KNL-NEXT:    kmovw %k0, %eax
 ; X86-KNL-NEXT:    testb $1, %al
 ; X86-KNL-NEXT:    jne .LBB60_1
@@ -4283,7 +4283,7 @@ define void @scatter_2i64_constant_indices(ptr %ptr, <2 x i1> %mask, <2 x i32> %
 ; X64-SKX-SMALL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; X64-SKX-SMALL-NEXT:    vpmovq2m %xmm0, %k0
 ; X64-SKX-SMALL-NEXT:    vpbroadcastq %rdi, %xmm0
-; X64-SKX-SMALL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-SKX-SMALL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,0,0,0,0,0,248,255,255,255,255,255,255,255]
 ; X64-SKX-SMALL-NEXT:    kmovw %k0, %eax
 ; X64-SKX-SMALL-NEXT:    testb $1, %al
 ; X64-SKX-SMALL-NEXT:    jne .LBB60_1
@@ -4332,7 +4332,7 @@ define void @scatter_2i64_constant_indices(ptr %ptr, <2 x i1> %mask, <2 x i32> %
 ; X86-SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpmovq2m %xmm0, %k0
 ; X86-SKX-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm0
-; X86-SKX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-SKX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0 # [0,4294967288,u,u]
 ; X86-SKX-NEXT:    kmovw %k0, %eax
 ; X86-SKX-NEXT:    testb $1, %al
 ; X86-SKX-NEXT:    jne .LBB60_1
