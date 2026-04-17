@@ -12,7 +12,7 @@
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
-@Lds = addrspace(3) global [16384 x i32] undef
+@Lds = addrspace(3) global [16384 x i32] poison
 
 define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 x i32> addrspace(1)* inreg %in, i32 %tid) #1 {
 ; VI-SDAG-LABEL: test_waterfall_readlane:
@@ -2265,7 +2265,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_multi_rl(<8 x i32> 
   ret <4 x float> %r1
 }
 
-define amdgpu_ps <4 x float> @test_waterfall_non_uni_img_2_idx(<8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %samp_in, i32 %index1, i32 %index2, float %s) #1 {
+define amdgpu_ps <4 x float> @test_waterfall_non_uni_img_2_idx(<8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %samp_in, i32 %index1, i32 %index2, float %s, <2 x i32> %dummy) #1 {
 ; VI-SDAG-LABEL: test_waterfall_non_uni_img_2_idx:
 ; VI-SDAG:       ; %bb.0:
 ; VI-SDAG-NEXT:    s_mov_b64 s[4:5], exec
@@ -2743,7 +2743,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uni_img_2_idx(<8 x i32> addrspa
 ; GFX12-GISEL-NEXT:    s_and_b64 exec, exec, s[4:5]
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
-  %t_idx = insertelement <2 x i32> undef, i32 %index1, i32 0
+  %t_idx = insertelement <2 x i32> %dummy, i32 %index1, i32 0
   %combined_idx = insertelement <2 x i32> %t_idx, i32 %index2, i32 1
   %wf_token = call i32 @llvm.amdgcn.waterfall.begin.v2i32(i32 0, <2 x i32> %combined_idx)
   %s_c_idx = call <2 x i32> @llvm.amdgcn.waterfall.readfirstlane.v2i32.v2i32(i32 %wf_token, <2 x i32> %combined_idx)
@@ -3850,7 +3850,7 @@ define amdgpu_ps <4 x float> @test_keep_waterfall_multi_rl(<8 x i32> addrspace(4
   ret <4 x float> %r1
 }
 
-define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %samp_in, i32 %index, float %s, i32 inreg %val) #1 {
+define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %samp_in, i32 %index, float %s, i32 inreg %val, float %dummy_f0, float %dummy_f1, float %dummy_f2) #1 {
 ; VI-LABEL: test_waterfall_sample_with_kill:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b64 s[6:7], exec
@@ -3872,7 +3872,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; VI-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
 ; VI-NEXT:    ; implicit-def: $vgpr0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    image_sample v[2:5], v1, s[12:19], s[20:23] dmask:0xf
+; VI-NEXT:    image_sample v[5:8], v1, s[12:19], s[20:23] dmask:0xf
 ; VI-NEXT:    ; implicit-def: $vgpr1
 ; VI-NEXT:    s_xor_b64 exec, exec, s[24:25]
 ; VI-NEXT:    s_cbranch_execnz .LBB10_1
@@ -3880,7 +3880,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; VI-NEXT:    s_mov_b64 exec, s[8:9]
 ; VI-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v2
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v5
 ; VI-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; VI-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; VI-NEXT:    s_cbranch_execz .LBB10_5
@@ -3920,7 +3920,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX9-NEXT:    s_load_dwordx4 s[20:23], s[26:27], 0x0
 ; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    image_sample v[2:5], v1, s[12:19], s[20:23] dmask:0xf
+; GFX9-NEXT:    image_sample v[5:8], v1, s[12:19], s[20:23] dmask:0xf
 ; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[24:25]
 ; GFX9-NEXT:    s_cbranch_execnz .LBB10_1
@@ -3928,7 +3928,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX9-NEXT:    s_mov_b64 exec, s[8:9]
 ; GFX9-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v2
+; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v5
 ; GFX9-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX9-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX9-NEXT:    s_cbranch_execz .LBB10_5
@@ -3968,7 +3968,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX10-32-NEXT:    s_load_dwordx8 s[12:19], s[10:11], 0x0
 ; GFX10-32-NEXT:    s_load_dwordx4 s[20:23], s[24:25], 0x0
 ; GFX10-32-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-32-NEXT:    image_sample v[2:5], v1, s[12:19], s[20:23] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10-32-NEXT:    image_sample v[5:8], v1, s[12:19], s[20:23] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-32-NEXT:    s_andn2_wrexec_b32 s8, s8
 ; GFX10-32-NEXT:    ; implicit-def: $vgpr0
 ; GFX10-32-NEXT:    ; implicit-def: $vgpr1
@@ -3978,7 +3978,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX10-32-NEXT:    s_mov_b32 exec_lo, s7
 ; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s6
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-32-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v2
+; GFX10-32-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v5
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX10-32-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX10-32-NEXT:    s_cbranch_execz .LBB10_5
@@ -4018,7 +4018,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX10-64-NEXT:    s_load_dwordx8 s[12:19], s[24:25], 0x0
 ; GFX10-64-NEXT:    s_load_dwordx4 s[20:23], s[26:27], 0x0
 ; GFX10-64-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-64-NEXT:    image_sample v[2:5], v1, s[12:19], s[20:23] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10-64-NEXT:    image_sample v[5:8], v1, s[12:19], s[20:23] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-64-NEXT:    s_andn2_wrexec_b64 s[10:11], s[10:11]
 ; GFX10-64-NEXT:    ; implicit-def: $vgpr0
 ; GFX10-64-NEXT:    ; implicit-def: $vgpr1
@@ -4028,7 +4028,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX10-64-NEXT:    s_mov_b64 exec, s[8:9]
 ; GFX10-64-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-64-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v2
+; GFX10-64-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v5
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX10-64-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX10-64-NEXT:    s_cbranch_execz .LBB10_5
@@ -4072,7 +4072,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX1150-NEXT:    s_load_b256 s[12:19], s[12:13], 0x0
 ; GFX1150-NEXT:    s_load_b128 s[20:23], s[20:21], 0x0
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1150-NEXT:    image_sample v[2:5], v1, s[12:19], s[20:23] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX1150-NEXT:    image_sample v[5:8], v1, s[12:19], s[20:23] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX1150-NEXT:    s_and_not1_wrexec_b64 s[10:11], s[10:11]
 ; GFX1150-NEXT:    ; implicit-def: $vgpr0
 ; GFX1150-NEXT:    ; implicit-def: $vgpr1
@@ -4083,7 +4083,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX1150-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX1150-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
-; GFX1150-NEXT:    v_cmpx_gt_f32_e32 0, v2
+; GFX1150-NEXT:    v_cmpx_gt_f32_e32 0, v5
 ; GFX1150-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX1150-NEXT:    s_cbranch_execz .LBB10_5
 ; GFX1150-NEXT:  ; %bb.3: ; %.kill
@@ -4132,7 +4132,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX12-SDAG-NEXT:    s_load_b128 s[20:23], s[20:21], 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    image_sample v[2:5], v1, s[12:19], s[20:23] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12-SDAG-NEXT:    image_sample v[5:8], v1, s[12:19], s[20:23] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12-SDAG-NEXT:    s_and_not1_wrexec_b64 s[10:11], s[10:11]
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr1
@@ -4143,7 +4143,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX12-SDAG-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    v_cmpx_gt_f32_e32 0, v2
+; GFX12-SDAG-NEXT:    v_cmpx_gt_f32_e32 0, v5
 ; GFX12-SDAG-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX12-SDAG-NEXT:    s_cbranch_execz .LBB10_5
 ; GFX12-SDAG-NEXT:  ; %bb.3: ; %.kill
@@ -4189,7 +4189,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX12-GISEL-NEXT:    s_load_b128 s[20:23], s[20:21], 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    image_sample v[2:5], v1, s[12:19], s[20:23] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12-GISEL-NEXT:    image_sample v[5:8], v1, s[12:19], s[20:23] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12-GISEL-NEXT:    s_and_not1_wrexec_b64 s[10:11], s[10:11]
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1
@@ -4200,7 +4200,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX12-GISEL-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    v_cmpx_gt_f32_e32 0, v2
+; GFX12-GISEL-NEXT:    v_cmpx_gt_f32_e32 0, v5
 ; GFX12-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX12-GISEL-NEXT:    s_cbranch_execz .LBB10_5
 ; GFX12-GISEL-NEXT:  ; %bb.3: ; %.kill
@@ -4236,7 +4236,7 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
   br label %.exit
 
 .exit:
-  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 1, float 0.000000e+00, float undef, float undef, float undef, i1 immarg true, i1 immarg true)
+  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 1, float 0.000000e+00, float %dummy_f0, float %dummy_f1, float %dummy_f2, i1 immarg true, i1 immarg true)
   ret void
 }
 
@@ -9468,7 +9468,7 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_begin_uniform_i
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
        <8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %s_in,
        i32 %idx1, i32 %idx2, i32 inreg %idx3, i32 inreg%idx4,
-       i32 %s_idx, i32 %s_idx2) #1 {
+       i32 %s_idx, i32 %s_idx2, { <4 x float>, <4 x float> } %dummy) #1 {
   %rptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
   %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
@@ -9487,7 +9487,7 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_begin_uniform_i
   %r2 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.000000e+00, float 0.000000e+00, <8 x i32> %s_rsrc1, <4 x i32> %s_srsrc1, i1 false, i32 0, i32 0)
   %r3 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok3, <4 x float> %r2)
 
-  %insert = insertvalue { <4 x float>, <4 x float> } undef, <4 x float> %r1, 0
+  %insert = insertvalue { <4 x float>, <4 x float> } %dummy, <4 x float> %r1, 0
   %insert1 = insertvalue { <4 x float>, <4 x float> } %insert, <4 x float> %r3, 1
   ret {<4 x float> , <4 x float>} %insert1
 }
@@ -10737,7 +10737,7 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop(
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
        <8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %s_in,
-       i32 %idx1, i32 %idx2, i32 %s_idx, i32 %s_idx2) #1 {
+       i32 %idx1, i32 %idx2, i32 %s_idx, i32 %s_idx2, { <4 x float>, <4 x float> } %dummy) #1 {
   %rptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
   %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
   %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
@@ -10751,7 +10751,7 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop(
   %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r)
   %r3 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r2)
 
-  %insert = insertvalue { <4 x float>, <4 x float> } undef, <4 x float> %r1, 0
+  %insert = insertvalue { <4 x float>, <4 x float> } %dummy, <4 x float> %r1, 0
   %insert1 = insertvalue { <4 x float>, <4 x float> } %insert, <4 x float> %r3, 1
   ret {<4 x float> , <4 x float>} %insert1
 }
@@ -11346,7 +11346,7 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop_rsrc_
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
        <8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %s_in,
-       i32 %idx1, i32 %idx2, i32 %s_idx, i32 %s_idx2) #1 {
+       i32 %idx1, i32 %idx2, i32 %s_idx, i32 %s_idx2, { <4 x float>, <4 x float> } %dummy) #1 {
   %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx1)
   %tok1 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %tok, i32 %idx2)
   %widx0 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 %tok1, i32 %s_idx)
@@ -11363,7 +11363,7 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop_rsrc_
   %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r)
   %r3 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r2)
 
-  %insert = insertvalue { <4 x float>, <4 x float> } undef, <4 x float> %r1, 0
+  %insert = insertvalue { <4 x float>, <4 x float> } %dummy, <4 x float> %r1, 0
   %insert1 = insertvalue { <4 x float>, <4 x float> } %insert, <4 x float> %r3, 1
   ret {<4 x float> , <4 x float>} %insert1
 }
@@ -11782,7 +11782,7 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct(
 ; GFX12-GISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
-              i32 %idx, <4 x i32> %s_idx, i32 %v_inp) #1 {
+              i32 %idx, <4 x i32> %s_idx, i32 %v_inp, { <4 x float>, float } %dummy) #1 {
   %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx)
   %widx0 = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok, <4 x i32> %s_idx)
   %val = call { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32> %widx0, i32 %v_inp, i32 0, i32 0, i32 0)
@@ -11792,7 +11792,7 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct(
   %r1 = call i32 @llvm.amdgcn.waterfall.end.i32(i32 %tok, i32 %tfe)
   %r1.float = bitcast i32 %r1 to float
 
-  %insert = insertvalue { <4 x float>, float } undef, <4 x float> %r0, 0
+  %insert = insertvalue { <4 x float>, float } %dummy, <4 x float> %r0, 0
   %insert1 = insertvalue { <4 x float>, float } %insert, float %r1.float, 1
   ret {<4 x float> , float} %insert1
 }
@@ -12078,7 +12078,7 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct_uniform(
 ; GFX12-GISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
-              i32 inreg %idx, <4 x i32> %s_idx, i32 %v_inp) #1 {
+              i32 inreg %idx, <4 x i32> %s_idx, i32 %v_inp, { <4 x float>, float } %dummy) #1 {
   %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx)
   %widx0 = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok, <4 x i32> %s_idx)
   %val = call { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32> %widx0, i32 %v_inp, i32 0, i32 0, i32 0)
@@ -12088,7 +12088,7 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct_uniform(
   %r1 = call i32 @llvm.amdgcn.waterfall.end.i32(i32 %tok, i32 %tfe)
   %r1.float = bitcast i32 %r1 to float
 
-  %insert = insertvalue { <4 x float>, float } undef, <4 x float> %r0, 0
+  %insert = insertvalue { <4 x float>, float } %dummy, <4 x float> %r0, 0
   %insert1 = insertvalue { <4 x float>, float } %insert, float %r1.float, 1
   ret {<4 x float> , float} %insert1
 }
