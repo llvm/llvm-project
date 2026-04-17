@@ -116,6 +116,7 @@ enum UniformityLLTOpPredicateID {
   B160,
   B256,
   B512,
+  BRC,
 
   UniB32,
   UniB64,
@@ -244,6 +245,7 @@ enum RegBankLLTMappingApplyID {
   // to move to SGPR.
   SgprB32_ReadFirstLane,
   SgprB64_ReadFirstLane,
+  SgprV4S32_ReadFirstLane,
 
   // Src only modifiers: extends
   Sgpr32AExt,
@@ -290,7 +292,11 @@ enum LoweringMethodID {
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE,
-  SplitBitCount64To32
+  SplitBitCount64To32,
+  ExtrVecEltToSel,
+  ExtrVecEltTo32,
+  InsVecEltToSel,
+  InsVecEltTo32
 };
 
 enum FastRulesTypes {

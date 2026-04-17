@@ -181,7 +181,7 @@ llvm::Error Socket::Initialize() {
   if (err == 0) {
     if (wsaData.wVersion < wVersion) {
       WSACleanup();
-      return llvm::createStringError("WSASock version is not expected.");
+      return llvm::createStringError("WSASock version is not expected");
     }
   } else {
     return llvm::errorCodeToError(llvm::mapWindowsError(::WSAGetLastError()));
@@ -247,7 +247,7 @@ Socket::CreatePair(std::optional<SocketProtocol> protocol) {
     return DomainSocket::CreatePair();
 #endif
   default:
-    return llvm::createStringError("Unsupported protocol");
+    return llvm::createStringError("unsupported protocol");
   }
 }
 
@@ -290,7 +290,12 @@ Socket::UdpConnect(llvm::StringRef host_and_port) {
 
 llvm::Expected<Socket::HostAndPort>
 Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
-  static llvm::Regex g_regex("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)");
+  // This regex parses host:port combinations, supporting:
+  // - IPv4 sockets (e.g., "127.0.0.1:8080")
+  // - IPv6 sockets with host part in square brackets (e.g., "[::1]:80")
+  // Group 1: Address (IPv4, hostname, or IPv6 in [])
+  // Group 2: Port number (digits only)
+  static llvm::Regex g_regex("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+$)");
   HostAndPort ret;
   llvm::SmallVector<llvm::StringRef, 3> matches;
   if (g_regex.match(host_and_port, &matches)) {
@@ -300,16 +305,13 @@ Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
       ret.hostname = ret.hostname.substr(1, ret.hostname.size() - 2);
     if (to_integer(matches[2], ret.port, 10))
       return ret;
-  } else {
-    // If this was unsuccessful, then check if it's simply an unsigned 16-bit
-    // integer, representing a port with an empty host.
-    if (to_integer(host_and_port, ret.port, 10))
-      return ret;
   }
 
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 "invalid host:port specification: '%s'",
-                                 host_and_port.str().c_str());
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "invalid host:port specification: '%s', both IPv4 (e.g., localhost:8080) "
+      "or IPv6 (e.g, [2001:db8::1]:8080) formats are supported",
+      host_and_port.str().c_str());
 }
 
 IOObject::WaitableHandle Socket::GetWaitableHandle() {

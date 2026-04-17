@@ -46,8 +46,8 @@ define void @vector_reverse_mask_v4i1(ptr noalias %a, ptr noalias %cond, i64 %N)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 -24
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP7]], i64 -56
 ; CHECK-NEXT:    [[REVERSE3:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP8]], <4 x i1> [[REVERSE3]], <4 x double> poison)
 ; CHECK-NEXT:    [[REVERSE5:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP8]], <4 x i1> [[REVERSE3]], <4 x double> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD6:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP9]], <4 x i1> [[REVERSE5]], <4 x double> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> [[WIDE_MASKED_LOAD]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x double> [[WIDE_MASKED_LOAD6]], splat (double 1.000000e+00)
@@ -88,10 +88,10 @@ entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08.in = phi i64 [ %i.08, %for.inc ], [ %N, %entry ]
   %i.08 = add nsw i64 %i.08.in, -1
   %arrayidx = getelementptr inbounds double, ptr %cond, i64 %i.08
@@ -99,14 +99,14 @@ for.body:                                         ; preds = %for.body, %entry
   %tobool = fcmp une double %0, 0.000000e+00
   br i1 %tobool, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx1 = getelementptr inbounds double, ptr %a, i64 %i.08
   %1 = load double, ptr %arrayidx1, align 8
   %add = fadd double %1, 1.000000e+00
   store double %add, ptr %arrayidx1, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %cmp = icmp sgt i64 %i.08.in, 1
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
 }

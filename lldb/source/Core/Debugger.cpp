@@ -1284,6 +1284,15 @@ void Debugger::RedrawStatusline(
   m_statusline->Redraw(exe_ctx_ref);
 }
 
+void Debugger::FlushStatusLine() {
+  std::lock_guard<std::mutex> guard(m_statusline_mutex);
+
+  if (!m_statusline)
+    return;
+
+  m_statusline->ClearExecutionContext();
+}
+
 ExecutionContext Debugger::GetSelectedExecutionContext() {
   bool adopt_selected = true;
   ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
@@ -2189,9 +2198,10 @@ static bool RequiresFollowChildWorkaround(const Process &process) {
 
 lldb::thread_result_t Debugger::DefaultEventHandler() {
   ListenerSP listener_sp(GetListener());
-  ConstString broadcaster_class_target(Target::GetStaticBroadcasterClass());
-  ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
-  ConstString broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_target(Target::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_process(
+      Process::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
   BroadcastEventSpec target_event_spec(broadcaster_class_target,
                                        Target::eBroadcastBitBreakpointChanged);
 
@@ -2243,7 +2253,7 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
         Broadcaster *broadcaster = event_sp->GetBroadcaster();
         if (broadcaster) {
           uint32_t event_type = event_sp->GetType();
-          ConstString broadcaster_class(broadcaster->GetBroadcasterClass());
+          llvm::StringRef broadcaster_class(broadcaster->GetBroadcasterClass());
           if (broadcaster_class == broadcaster_class_process) {
             if (ProcessSP process_sp = HandleProcessEvent(event_sp))
               if (!RequiresFollowChildWorkaround(*process_sp))
@@ -2316,7 +2326,8 @@ bool Debugger::StartEventHandlerThread() {
     // function. We do this by listening to events for the
     // eBroadcastBitEventThreadIsListening from the m_sync_broadcaster
     ConstString full_name("lldb.debugger.event-handler");
-    ListenerSP listener_sp(Listener::MakeListener(full_name.AsCString()));
+    ListenerSP listener_sp(
+        Listener::MakeListener(full_name.AsCString(nullptr)));
     listener_sp->StartListeningForEvents(&m_sync_broadcaster,
                                          eBroadcastBitEventThreadIsListening);
 

@@ -38,7 +38,7 @@ define void @cost_model_1() noinline {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = shl nsw i64 %indvars.iv, 1
   %arrayidx = getelementptr inbounds [2048 x i32], ptr @c, i64 0, i64 %0
@@ -56,7 +56,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 256
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -460,7 +460,6 @@ define i1 @any_of_cost(ptr %start, ptr %end) #0 {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i1> [[TMP27]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[BIN_RDX]])
 ; CHECK-NEXT:    [[TMP30:%.*]] = freeze i1 [[TMP29]]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP30]], i1 false, i1 false
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
@@ -473,7 +472,7 @@ loop:
   %gep = getelementptr i8, ptr %ptr.iv, i64 8
   %l = load ptr, ptr %gep, align 8
   %cmp13.not.not = icmp eq ptr %l, null
-  %any.of.next = select i1 %cmp13.not.not, i1 %any.of, i1 false
+  %any.of.next = select i1 %cmp13.not.not, i1 %any.of, i1 true
   %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 40
   %cmp.not = icmp eq ptr %ptr.iv, %end
   br i1 %cmp.not, label %exit, label %loop
@@ -957,7 +956,6 @@ exit:
   ret void
 }
 
-declare void @llvm.assume(i1 noundef) #0
 
 attributes #0 = { "target-cpu"="penryn" }
 attributes #1 = { "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }

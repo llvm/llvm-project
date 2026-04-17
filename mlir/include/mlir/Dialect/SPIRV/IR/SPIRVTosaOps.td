@@ -150,7 +150,7 @@ class SPIRV_TosaBoolElementwiseBinaryOp<string mnemonic, int opcode, list<Trait>
 }
 
 class SPIRV_TosaConvolutionOp<string mnemonic, int opcode, list<Trait> traits = []> :
-  SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [Pure,
+  SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [NoMemoryEffect,
     TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
     TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
     TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
@@ -273,7 +273,7 @@ def SPIRV_TosaArgMaxOp : SPIRV_TosaOpWithResult<"ArgMax", 0, [Pure,
 }
 
 
-def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [Pure,
+def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [NoMemoryEffect,
   TypeImpliesAccType<"input", I8, ["INT32"]>,
   TypeImpliesAccType<"input", I16, ["INT32"]>,
   TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
@@ -287,7 +287,8 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [Pure,
     window of size given by <kernel size> is passed over the input tensor, with
     the mean value being placed in the output tensor. When calculating the
     average, only the number of valid input tensor values, but not padding, are
-    used to calculate the divisor.
+    used to calculate the divisor. The behaviour is undefined if the accumulated
+    result overflows or underflows.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_avg_pool2d
@@ -343,6 +344,8 @@ def SPIRV_TosaConv2DOp : SPIRV_TosaConvolutionOp<"Conv2D", 2> {
 
     Input and weight have respective zero point values provided in input_zp and weight_zp.
 
+    The behaviour is undefined if the accumulated result overflows or underflows.
+
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_conv2d
       * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_conv2d
@@ -395,6 +398,8 @@ def SPIRV_TosaConv3DOp : SPIRV_TosaConvolutionOp<"Conv3D", 3> {
     may choose to skip calculation of multiplies in the padding area.
 
     Input and weight have respective zero point values provided in input_zp and weight_zp.
+
+    The behaviour is undefined if the accumulated result overflows or underflows.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_conv3d
@@ -449,6 +454,8 @@ def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaConvolutionOp<"DepthwiseConv2D", 4> 
     calculation of multiplies in the padding area.
 
     Input and weight have respective zero point values provided in input_zp and weight_zp.
+
+    The behaviour is undefined if the accumulated result overflows or underflows.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_depthwise_conv2d
@@ -546,7 +553,7 @@ def SPIRV_TosaFFT2DOp : SPIRV_TosaOpWithComplexResult<"FFT2D", 5, [Pure]> {
 }
 
 
-def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [Pure,
+def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [NoMemoryEffect,
   TypeConstraintImplicationOn<"A", I8, "output", [I32]>,
   TypeConstraintImplicationOn<"A", I16, "output", [I64]>,
   TypeConstraintImplicationOn<"A", BF16, "output", [F32]>,
@@ -557,7 +564,10 @@ def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [Pure,
 
   let description = [{
     Performs two dimensional matrix multiplications.
+
     A, B are the inputs with respective zero point values in A_zp, B_zp.
+
+    The behaviour is undefined if the accumulated result overflows or underflows.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_matmul
@@ -707,6 +717,8 @@ def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaConvolutionOp<"TransposeConv2D", 9> 
     by zero at fractional input positions.
 
     Input and weight have respective zero point values provided in input_zp and weight_zp.
+
+    The behaviour is undefined if the accumulated result overflows or underflows.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_transpose_conv2d
@@ -2649,11 +2661,57 @@ def SPIRV_TosaResizeOp : SPIRV_TosaOpWithResult<"Resize", 63, [Pure,
 
 
 def SPIRV_TosaCastOp : SPIRV_TosaOpWithResult<"Cast", 64, [Pure,
-  AllShapesMatch<["input", "output"]>]> {
+  AllShapesMatch<["input", "output"]>,
+  TypeConstraintImplicationOn<"input", F16, "output", [F32, I16, I32, I8]>,
+  TypeConstraintImplicationOn<"input", F32, "output", [F16, I16, I32, I8, BF16]>,
+  TypeConstraintImplicationOn<"input", I16, "output", [F16, F32, I32, I8, SPIRV_Bool, BF16]>,
+  TypeConstraintImplicationOn<"input", I32, "output", [F16, F32, I16, I8, SPIRV_Bool, BF16]>,
+  TypeConstraintImplicationOn<"input", I8, "output", [F16, F32, I16, I32, SPIRV_Bool, BF16]>,
+  TypeConstraintImplicationOn<"input", SPIRV_Bool, "output", [I16, I32, I8]>,
+  TypeConstraintImplicationOn<"input", BF16, "output", [F32, I16, I32, I8]>]> {
   let summary = "Cast operation.";
 
   let description = [{
     Casts a tensor from one data type to another.
+
+    Valid casting combinations are defined in the following table:
+
+    | From    | To      |
+    |---------|---------|
+    | float16 | float32 |
+    | float16 | int16   |
+    | float16 | int32   |
+    | float16 | int8    |
+    | float32 | float16 |
+    | float32 | int16   |
+    | float32 | int32   |
+    | float32 | int8    |
+    | int16   | float16 |
+    | int16   | float32 |
+    | int32   | float16 |
+    | int32   | float32 |
+    | int8    | float16 |
+    | int8    | float32 |
+    | Boolean | int16   |
+    | Boolean | int32   |
+    | Boolean | int8    |
+    | int16   | Boolean |
+    | int16   | int32   |
+    | int16   | int8    |
+    | int32   | Boolean |
+    | int32   | int16   |
+    | int32   | int8    |
+    | int8    | Boolean |
+    | int8    | int16   |
+    | int8    | int32   |
+    | bf16    | float32 |
+    | bf16    | int16   |
+    | bf16    | int32   |
+    | bf16    | int8    |
+    | float32 | bf16    |
+    | int16   | bf16    |
+    | int32   | bf16    |
+    | int8    | bf16    |
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_cast

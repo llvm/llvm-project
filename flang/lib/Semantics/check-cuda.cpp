@@ -116,8 +116,9 @@ struct DeviceExprChecker
 };
 
 static bool IsHostArray(const Symbol &symbol) {
+  const Symbol &resolved{GetAssociationRoot(symbol)};
   if (const auto *details{
-          symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+          resolved.detailsIf<semantics::ObjectEntityDetails>()}) {
     if (details->cudaDataAttr() &&
         (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
             *details->cudaDataAttr() == common::CUDADataAttr::Constant ||
@@ -137,14 +138,14 @@ struct FindHostArray
   FindHostArray() : Base(*this) {}
   using Base::operator();
   Result operator()(const evaluate::Component &x) const {
-    const Symbol &symbol{x.GetLastSymbol()};
-    if (symbol.IsFuncResult()) {
+    const Symbol &symbol{x.GetLastSymbol().GetUltimate()};
+    const Symbol &baseSymbol{GetAssociationRoot(x.base().GetFirstSymbol())};
+    if (symbol.IsFuncResult() || baseSymbol.IsFuncResult()) {
       return nullptr;
     }
     if (!IsHostArray(symbol)) {
       return nullptr;
     }
-    const Symbol &baseSymbol{x.base().GetFirstSymbol()};
     if (IsDummy(baseSymbol) && IsCUDADeviceContext(&baseSymbol.owner())) {
       return nullptr;
     }
@@ -437,6 +438,9 @@ private:
   template <typename A>
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
     if (isHostDevice)
+      return;
+    if (context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaUnified))
       return;
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
@@ -791,7 +795,7 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   }
 
   int nbLhs{evaluate::GetNbOfCUDADeviceSymbols(assign->lhs)};
-  int nbRhs{evaluate::GetNbOfCUDADeviceSymbols(assign->rhs)};
+  int nbRhs{evaluate::GetNbOfUniqueCUDADeviceSymbols(assign->rhs)};
   int nbRhsManaged{evaluate::GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs)};
 
   // device to host transfer with more than one device object on the rhs is not

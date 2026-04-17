@@ -10,23 +10,12 @@ module cuda_var
   end type
 
   real, constant :: mod_a_rc
-! CHECK: fir.global @_QMcuda_varEmod_a_rc {data_attr = #cuf.cuda<constant>} : f32 
   real, device :: mod_b_ra
-! CHECK: fir.global @_QMcuda_varEmod_b_ra {data_attr = #cuf.cuda<device>} : f32
   real, allocatable, managed :: mod_c_rm
-! CHECK: fir.global @_QMcuda_varEmod_c_rm {data_attr = #cuf.cuda<managed>} : !fir.box<!fir.heap<f32>>
-  
   integer, device, dimension(10) :: mod_d_i_init = (/ (i, i = 1, 10) /)
-! CHECK: fir.global @_QMcuda_varEmod_d_i_init(dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]> : tensor<10xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<10xi32>
-
   real, device, dimension(10) :: mod_d_rinit = (/ (i, i = 1, 10) /)
-! CHECK: fir.global @_QMcuda_varEmod_d_rinit(dense<[{{.*}}]> : tensor<10xf32>) {data_attr = #cuf.cuda<device>} : !fir.array<10xf32>
-
   real, allocatable, pinned :: mod_d_rp
-! CHECK: fir.global @_QMcuda_varEmod_d_rp {data_attr = #cuf.cuda<pinned>} : !fir.box<!fir.heap<f32>>
-
   type(t1), device :: mod_d_t(2)
-! CHECK: fir.global @_QMcuda_varEmod_d_t {data_attr = #cuf.cuda<device>} : !fir.array<2x!fir.type<_QMcuda_varTt1{a:i32}>>
 
 contains
 
@@ -115,3 +104,20 @@ end
 
 ! CHECK-LABEL: func.func @_QPcraypointer()
 ! CHECK: %{{.*}} = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf32>>> {data_attr = #cuf.cuda<device>} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+
+attributes(global) subroutine attr_value(a)
+  integer :: a
+  attributes(value) :: a
+end subroutine
+
+! CHECK-LABEL: func.func @_QPattr_value(%{{.*}}: i32 {fir.bindc_name = "a"})
+! CHECK: hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFattr_valueEa"}
+
+! CHECK: fir.global @_QMcuda_varEmod_a_rc {data_attr = #cuf.cuda<constant>} : f32 
+! CHECK: fir.global @_QMcuda_varEmod_b_ra {data_attr = #cuf.cuda<device>} : f32
+! CHECK: fir.global @_QMcuda_varEmod_c_rm {data_attr = #cuf.cuda<managed>} : !fir.box<!fir.heap<f32>>
+
+! CHECK: fir.global @_QMcuda_varEmod_d_i_init(dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]> : tensor<10xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<10xi32>
+! CHECK: fir.global @_QMcuda_varEmod_d_rinit(dense<[{{.*}}]> : tensor<10xf32>) {data_attr = #cuf.cuda<device>} : !fir.array<10xf32>
+! CHECK: fir.global @_QMcuda_varEmod_d_rp {data_attr = #cuf.cuda<pinned>} : !fir.box<!fir.heap<f32>>
+! CHECK: fir.global @_QMcuda_varEmod_d_t {data_attr = #cuf.cuda<device>} : !fir.array<2x!fir.type<_QMcuda_varTt1{a:i32}>>
