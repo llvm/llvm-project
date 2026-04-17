@@ -367,8 +367,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   // Vector unsigned division/remainder will be simplified to shifts/masks.
-  if ((ISD == ISD::UDIV || ISD == ISD::UREM) && Op2Info.isConstant() &&
-      Op2Info.isPowerOf2()) {
+  if ((ISD == ISD::UDIV || ISD == ISD::UREM) &&
+      Op2Info.isConstant() && Op2Info.isPowerOf2()) {
     if (ISD == ISD::UDIV)
       return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
                                     Op1Info.getNoProps(), Op2Info.getNoProps());
