@@ -6903,8 +6903,14 @@ private:
         if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
             DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
-      }
 
+        if (Fortran::evaluate::IsCoarray(sym) &&
+            !Fortran::semantics::IsAllocatable(sym) &&
+            Fortran::semantics::IsSaved(sym)) {
+          mlir::Location loc = toLocation();
+          TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
+        }
+      }
       Fortran::lower::defineModuleVariable(*this, var);
     }
     for (auto &eval : mod.evaluationList)
