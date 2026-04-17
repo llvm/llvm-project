@@ -5520,6 +5520,42 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Result;
   }
 
+  if (BuiltinID == AArch64::BI__swp8 || BuiltinID == AArch64::BI__swp16 ||
+      BuiltinID == AArch64::BI__swp32 || BuiltinID == AArch64::BI__swp64) {
+    unsigned IntrID;
+    llvm::Type *IntrArgTy;
+    switch (BuiltinID) {
+    case AArch64::BI__swp8:
+      IntrID = Intrinsic::aarch64_swp8;
+      IntrArgTy = Builder.getInt32Ty();
+      break;
+    case AArch64::BI__swp16:
+      IntrID = Intrinsic::aarch64_swp16;
+      IntrArgTy = Builder.getInt32Ty();
+      break;
+    case AArch64::BI__swp32:
+      IntrID = Intrinsic::aarch64_swp32;
+      IntrArgTy = Builder.getInt32Ty();
+      break;
+    case AArch64::BI__swp64:
+      IntrID = Intrinsic::aarch64_swp64;
+      IntrArgTy = Builder.getInt64Ty();
+      break;
+    default:
+      llvm_unreachable("missing builtin ID in switch!");
+    }
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    if (Val->getType() != IntrArgTy)
+      Val = Builder.CreateZExt(Val, IntrArgTy);
+    Value *Result = Builder.CreateCall(CGM.getIntrinsic(IntrID), {Ptr, Val});
+    // SWP{B/H} return i32 (zero-extended); truncate to declared type.
+    llvm::Type *RetTy = ConvertType(E->getType());
+    if (Result->getType() != RetTy)
+      Result = Builder.CreateTrunc(Result, RetTy);
+    return Result;
+  }
+
   if (BuiltinID == NEON::BI__builtin_neon_vcvth_bf16_f32)
     return Builder.CreateFPTrunc(
         Builder.CreateBitCast(EmitScalarExpr(E->getArg(0)),
