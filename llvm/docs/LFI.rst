@@ -89,8 +89,7 @@ order to conform to the LFI architecture subset.
 Assembler Directives
 ++++++++++++++++++++
 
-The LFI assembler supports the following directives for controlling the
-rewriter.
+The following directives are supported for controlling the rewriter.
 
 ``.lfi_rewrite_disable``
 ========================
@@ -134,7 +133,8 @@ combination with some other form of memory sandboxing, such as Intel MPK.
 AArch64
 +++++++
 
-The AArch64 LFI target is ``aarch64_lfi``.
+The AArch64 LFI target is ``aarch64_lfi``. This is the first part of a target
+triple that can be used with ``--triple=aarch64_lfi-<rest of triple>``.
 
 Reserved Registers
 ==================
@@ -348,7 +348,7 @@ used for branching into the runtime.
 |                 |                              |
 +-----------------+------------------------------+
 
-Thread pointer
+Thread pointer (TP)
 ~~~~~~~~~~~~~~
 
 TP accesses are rewritten into loads/stores from the context register
