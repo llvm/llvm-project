@@ -1082,7 +1082,7 @@ static unsigned getSegInstNF(unsigned Intrinsic) {
   }
 }
 
-static bool isApplicableToPLI(int Val) {
+static bool isApplicableToPLIOrPLUI(int Val) {
   // Check if the immediate is packed i8 or i10
   int16_t Bit31To16 = Val >> 16;
   int16_t Bit15To0 = Val;
@@ -1091,7 +1091,8 @@ static bool isApplicableToPLI(int Val) {
   if (Bit31To16 != Bit15To0)
     return false;
 
-  return isInt<10>(Bit31To16) || Bit15To8 == Bit7To0;
+  return isInt<10>(Bit15To0) || isShiftedInt<10, 6>(Bit15To0) ||
+         Bit15To8 == Bit7To0;
 }
 
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
@@ -1151,8 +1152,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
         Imm = SignExtend64<32>(Imm);
 
-      if (VT == MVT::i64 && !isInt<12>(Imm) && Subtarget->hasStdExtP() &&
-          isApplicableToPLI(Imm) && hasAllWUsers(Node)) {
+      if (VT == MVT::i64 && !isInt<12>(Imm) && !isShiftedInt<20, 12>(Imm) &&
+          Subtarget->hasStdExtP() && isApplicableToPLIOrPLUI(Imm) &&
+          hasAllWUsers(Node)) {
         // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers,
         // we can simply copy lower 32 bits to higher 32 bits to make it able to
         // rematerialize to PLI_B or PLI_H
