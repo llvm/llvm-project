@@ -2605,39 +2605,6 @@ private:
   };
 };
 
-/// Helper class with most of the code for saving a value for a
-/// conditional expression cleanup.
-struct DominatingCIRValue {
-  typedef llvm::PointerIntPair<mlir::Value, 1, bool> saved_type;
-
-  /// Answer whether the given value needs extra work to be saved.
-  static bool needsSaving(mlir::Value value);
-
-  static saved_type save(CIRGenFunction &cgf, mlir::Value value);
-  static mlir::Value restore(CIRGenFunction &cgf, saved_type value);
-};
-
-/// A specialization of DominatingValue for RValue.
-template <> struct DominatingValue<RValue> {
-  typedef RValue type;
-  class saved_type {
-    DominatingCIRValue::saved_type val;
-
-    saved_type(DominatingCIRValue::saved_type val) : val(val) {}
-
-  public:
-    static saved_type save(CIRGenFunction &cgf, RValue value);
-    RValue restore(CIRGenFunction &cgf);
-  };
-
-  static saved_type save(CIRGenFunction &cgf, type value) {
-    return saved_type::save(cgf, value);
-  }
-  static type restore(CIRGenFunction &cgf, saved_type value) {
-    return value.restore(cgf);
-  }
-};
-
 } // namespace clang::CIRGen
 
 #endif

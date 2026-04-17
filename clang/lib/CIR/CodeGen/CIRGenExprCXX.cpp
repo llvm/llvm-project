@@ -20,6 +20,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/TrailingObjects.h"
 
 using namespace clang;
@@ -898,7 +899,7 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
         EHCleanup, e->getNumPlacementArgs(), e->getOperatorDelete(),
         newPtr.getPointer(), allocSize, e->implicitAllocationParameters(),
         allocAlign);
-    for (unsigned i = 0, n = e->getNumPlacementArgs(); i != n; ++i) {
+    for (auto i : llvm::seq<unsigned>(0, e->getNumPlacementArgs())) {
       const CallArg &arg = newArgs[i + numNonPlacementArgs];
       cleanup->setPlacementArg(
           i, arg.getRValue(cgf, cgf.getLoc(e->getSourceRange())), arg.ty);
@@ -908,15 +909,27 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
   }
 
   // Otherwise, we need to save all this stuff.
-  DominatingValue<RValue>::saved_type savedNewPtr =
-      DominatingValue<RValue>::save(cgf, RValue::get(newPtr.getPointer()));
-  DominatingValue<RValue>::saved_type savedAllocSize =
-      DominatingValue<RValue>::save(cgf, RValue::get(allocSize));
+  auto saveValue = [&](mlir::Value value) -> mlir::Value {
+    CharUnits align = CharUnits::fromQuantity(
+        cgf.cgm.getDataLayout().getABITypeAlign(value.getType()));
+    Address alloca = cgf.createTempAlloca(value.getType(), align,
+                                          value.getLoc(), "cond-cleanup.save");
+    cgf.getBuilder().createStore(value.getLoc(), value, alloca);
+    return alloca.emitRawPointer();
+  };
+
+  mlir::Value savedNewPtr = saveValue(newPtr.getPointer());
+  mlir::Value savedAllocSize = saveValue(allocSize);
 
   struct ConditionalCleanupTraits {
-    typedef DominatingValue<RValue>::saved_type ValueTy;
-    typedef DominatingValue<RValue>::saved_type RValueTy;
-    static RValue get(CIRGenFunction &cgf, ValueTy v) { return v.restore(cgf); }
+    typedef mlir::Value ValueTy;
+    typedef mlir::Value RValueTy;
+    static RValue get(CIRGenFunction &cgf, ValueTy v) {
+      auto alloca = v.getDefiningOp<cir::AllocaOp>();
+      return RValue::get(cgf.getBuilder().createAlignedLoad(
+          alloca.getLoc(), alloca.getAllocaType(), alloca,
+          llvm::MaybeAlign(alloca.getAlignment())));
+    }
   };
   typedef CallDeleteDuringNew<ConditionalCleanupTraits> ConditionalCleanup;
 
@@ -926,12 +939,12 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
           EHCleanup, e->getNumPlacementArgs(), e->getOperatorDelete(),
           savedNewPtr, savedAllocSize, e->implicitAllocationParameters(),
           allocAlign);
-  for (unsigned i = 0, n = e->getNumPlacementArgs(); i != n; ++i) {
+  for (auto i : llvm::seq<unsigned>(0, e->getNumPlacementArgs())) {
     const CallArg &arg = newArgs[i + numNonPlacementArgs];
     cleanup->setPlacementArg(
         i,
-        DominatingValue<RValue>::save(
-            cgf, arg.getRValue(cgf, cgf.getLoc(e->getSourceRange()))),
+        saveValue(
+            arg.getRValue(cgf, cgf.getLoc(e->getSourceRange())).getValue()),
         arg.ty);
   }
 
