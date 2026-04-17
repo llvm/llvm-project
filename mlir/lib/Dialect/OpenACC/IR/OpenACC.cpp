@@ -247,9 +247,8 @@ struct MemRefPointerLikeModel
     return true;
   }
 
-  Value genCast(Type pointer, OpBuilder &builder, Location loc, Value value,
+  Value genCast(Type, OpBuilder &builder, Location loc, Value value,
                 Type resultType) const {
-    (void)pointer;
     if (value.getType() == resultType)
       return value;
 
@@ -307,9 +306,8 @@ struct LLVMPointerPointerLikeModel
     return true;
   }
 
-  Value genCast(Type pointer, OpBuilder &builder, Location loc, Value value,
+  Value genCast(Type, OpBuilder &builder, Location loc, Value value,
                 Type resultType) const {
-    (void)pointer;
     if (value.getType() == resultType)
       return value;
 
