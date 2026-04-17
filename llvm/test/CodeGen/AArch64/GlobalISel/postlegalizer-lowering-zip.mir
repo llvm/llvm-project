@@ -4,6 +4,7 @@
 # G_ZIP1 or G_ZIP2 where appropriate.
 #
 # RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-lowering -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple aarch64 -passes=aarch64-postlegalizer-lowering %s -o - | FileCheck %s
 
 ...
 ---
