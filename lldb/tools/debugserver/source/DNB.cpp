@@ -1933,7 +1933,7 @@ nub_addr_t DNBFixAddress(nub_addr_t addr, nub_process_t pid) {
   if (!DNBGetAddressingBits(addressing_bits))
     return addr;
 
-    // On arm64_32, no ptrauth bits to clear
+  // On arm64_32, no ptrauth bits to clear
 #if !defined(__LP64__)
   return addr;
 #endif
