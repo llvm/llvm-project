@@ -69,6 +69,7 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
       memref::ExtractStridedMetadataOp::create(rewriter, origLoc, source);
 
   auto [sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
+  (void)sourceOffset;
 #ifndef NDEBUG
   auto [resultStrides, resultOffset] = subview.getType().getStridesAndOffset();
 #endif // NDEBUG
@@ -86,9 +87,9 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
 
   bindSymbolsList(rewriter.getContext(), MutableArrayRef{symbols});
   AffineExpr expr = symbols.front();
-  values[0] = ShapedType::isDynamic(sourceOffset)
-                  ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
-                  : rewriter.getIndexAttr(sourceOffset);
+  // The MemRef type no longer carries a static offset, so always read the
+  // runtime offset from extract_strided_metadata.
+  values[0] = getAsOpFoldResult(newExtractStridedMetadata.getOffset());
   SmallVector<OpFoldResult> subOffsets = subview.getMixedOffsets();
 
   AffineExpr s0 = rewriter.getAffineSymbolExpr(0);
@@ -507,13 +508,14 @@ static FailureOr<StridedMetadata> resolveReshapeStridedMetadata(
 
   // Collect statically known information.
   auto [strides, offset] = sourceType.getStridesAndOffset();
+  (void)offset;
   MemRefType reshapeType = reshape.getResultType();
   unsigned reshapeRank = reshapeType.getRank();
 
+  // The MemRef type no longer carries a static offset, so always read the
+  // runtime offset from extract_strided_metadata.
   OpFoldResult offsetOfr =
-      ShapedType::isDynamic(offset)
-          ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
-          : rewriter.getIndexAttr(offset);
+      getAsOpFoldResult(newExtractStridedMetadata.getOffset());
 
   // Get the special case of 0-D out of the way.
   if (sourceRank == 0) {

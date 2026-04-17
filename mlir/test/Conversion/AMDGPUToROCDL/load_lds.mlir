@@ -19,14 +19,18 @@ func.func @global_load_to_rocdl_f32(%global : memref<128x72xf32, #gpu.address_sp
 
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_OFFSET_VAL:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][2]
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_OFFSET_VAL]]]
 
   // CHECK: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // CHECK: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // CHECK: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
 
   // CHECK: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRC_OFFSET]]]
-  // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_OFFSET_VAL:.*]] = llvm.extractvalue %[[LDS_DESC]][2]
+  // CHECK: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_OFFSET_VAL]]]
 
   // CHECK: %[[C64:.*]] = llvm.mlir.constant(64 : index) : i64
   // CHECK: %[[MUL_2:.*]] = llvm.mul %[[IC32]], %[[C64]] : i64
@@ -57,14 +61,18 @@ func.func @global_load_to_rocdl_wg_mem(%global : memref<128x72xf32>) {
 
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_OFFSET_VAL:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][2]
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_OFFSET_VAL]]]
 
   // CHECK: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // CHECK: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // CHECK: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
 
   // CHECK: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRC_OFFSET]]]
-  // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_OFFSET_VAL:.*]] = llvm.extractvalue %[[LDS_DESC]][2]
+  // CHECK: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_OFFSET_VAL]]]
 
   // CHECK: %[[C64:.*]] = llvm.mlir.constant(64 : index) : i64
   // CHECK: %[[MUL_2:.*]] = llvm.mul %[[IC32]], %[[C64]] : i64
@@ -86,8 +94,12 @@ func.func @global_load_to_rocdl_0d(%global : memref<f32>) {
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast %[[ALLOC]] : memref<f32, #gpu.address_space<workgroup>> to !llvm.struct<(ptr<3>, ptr<3>, i64)>
 
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1] : !llvm.struct<(ptr, ptr, i64)>
-  // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // CHECK: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1] : !llvm.struct<(ptr, ptr, i64)>
+  // CHECK: %[[GLOBAL_OFFSET_VAL:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][2] : !llvm.struct<(ptr, ptr, i64)>
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_OFFSET_VAL]]]
+  // CHECK: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // CHECK: %[[LDS_OFFSET_VAL:.*]] = llvm.extractvalue %[[LDS_DESC]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // CHECK: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_OFFSET_VAL]]]
 
   // CHECK: rocdl.load.to.lds %[[GLOBAL_BASE]], %[[LDS_BASE]], 4
   amdgpu.gather_to_lds %global[], %alloc[]
@@ -109,14 +121,18 @@ func.func @global_load_to_rocdl_i8(%global : memref<128x72xi8, #gpu.address_spac
 
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast %[[ALLOC]]
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_OFFSET_VAL:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][2]
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_OFFSET_VAL]]]
 
   // CHECK: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // CHECK: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // CHECK: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
 
   // CHECK: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRC_OFFSET]]]
-  // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_OFFSET_VAL:.*]] = llvm.extractvalue %[[LDS_DESC]][2]
+  // CHECK: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_OFFSET_VAL]]]
 
   // CHECK: %[[C64:.*]] = llvm.mlir.constant(64 : index) : i64
   // CHECK: %[[MUL_2:.*]] = llvm.mul %[[IC32]], %[[C64]] : i64
@@ -147,14 +163,18 @@ func.func @global_load_to_rocdl_vec(%global : memref<128x72xi16, #gpu.address_sp
 
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast %[[ALLOC]]
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_OFFSET_VAL:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][2]
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_OFFSET_VAL]]]
 
   // CHECK: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // CHECK: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // CHECK: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
 
   // CHECK: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRC_OFFSET]]]
-  // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_OFFSET_VAL:.*]] = llvm.extractvalue %[[LDS_DESC]][2]
+  // CHECK: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_OFFSET_VAL]]]
 
   // CHECK: %[[C128:.*]] = llvm.mlir.constant(128 : index) : i64
   // CHECK: %[[MUL_2:.*]] = llvm.mul %[[IC32]], %[[C128]] : i64
@@ -181,9 +201,13 @@ func.func @global_load_to_rocdl_dynamic_indices(%global : memref<512xi32, #gpu.a
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast %[[ALLOC]]
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[C0_I64:.*]] = builtin.unrealized_conversion_cast %[[C0]] : index to i64
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_OFFSET_VAL:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][2]
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_OFFSET_VAL]]]
   // CHECK: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRCIDX_CAST]]]
-  // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_OFFSET_VAL:.*]] = llvm.extractvalue %[[LDS_DESC]][2]
+  // CHECK: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_OFFSET_VAL]]]
   // CHECK: %[[C64:.*]] = llvm.mlir.constant(64 : index) : i64
   // CHECK: %[[DSTIDX:.*]] = llvm.mul %[[DSTIDX_CAST]], %[[C64]] : i64
   // CHECK: %[[DSTIDX1:.*]] = llvm.add %[[DSTIDX]], %[[C0_I64]] : i64
@@ -214,14 +238,18 @@ func.func @fat_buffer_load_to_rocdl_f32(%global : memref<128x72xf32, #amdgpu.add
 
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[BUFFER_DESC]][1]
+  // CHECK: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[BUFFER_DESC]][1]
+  // CHECK: %[[GLOBAL_OFFSET_VAL:.*]] = llvm.extractvalue %[[BUFFER_DESC]][2]
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_OFFSET_VAL]]]
 
   // CHECK: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // CHECK: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // CHECK: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
 
   // CHECK: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRC_OFFSET]]]
-  // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_OFFSET_VAL:.*]] = llvm.extractvalue %[[LDS_DESC]][2]
+  // CHECK: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_OFFSET_VAL]]]
 
   // CHECK: %[[C64:.*]] = llvm.mlir.constant(64 : index) : i64
   // CHECK: %[[MUL_2:.*]] = llvm.mul %[[IC32]], %[[C64]] : i64
@@ -252,14 +280,18 @@ func.func @global_load_to_rocdl_async_f32(%global : memref<128x72xf32, #gpu.addr
 
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_OFFSET_VAL:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][2]
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_OFFSET_VAL]]]
 
   // CHECK: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // CHECK: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // CHECK: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
 
   // CHECK: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRC_OFFSET]]]
-  // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_OFFSET_VAL:.*]] = llvm.extractvalue %[[LDS_DESC]][2]
+  // CHECK: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_OFFSET_VAL]]]
 
   // CHECK: %[[C64:.*]] = llvm.mlir.constant(64 : index) : i64
   // CHECK: %[[MUL_2:.*]] = llvm.mul %[[IC32]], %[[C64]] : i64
@@ -290,14 +322,18 @@ func.func @global_load_to_rocdl_async_f32_fat_raw_buffer(%global : memref<128x72
 
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+  // CHECK: %[[GLOBAL_OFFSET_VAL:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][2]
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_OFFSET_VAL]]]
 
   // CHECK: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // CHECK: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // CHECK: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
 
   // CHECK: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRC_OFFSET]]]
-  // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // CHECK: %[[LDS_OFFSET_VAL:.*]] = llvm.extractvalue %[[LDS_DESC]][2]
+  // CHECK: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_OFFSET_VAL]]]
 
   // CHECK: %[[C64:.*]] = llvm.mlir.constant(64 : index) : i64
   // CHECK: %[[MUL_2:.*]] = llvm.mul %[[IC32]], %[[C64]] : i64

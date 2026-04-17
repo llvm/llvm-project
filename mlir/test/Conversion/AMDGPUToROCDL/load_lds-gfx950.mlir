@@ -19,14 +19,18 @@ func.func @fat_buffer_load_to_rocdl_f96(%global : memref<128x72xf32, #amdgpu.add
 
   // GFX950: %[[ALLOC:.*]] = memref.alloc()
   // GFX950: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast
-  // GFX950: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[BUFFER_DESC]][1]
+  // GFX950: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[BUFFER_DESC]][1]
+  // GFX950: %[[GLOBAL_DESC_OFFSET:.*]] = llvm.extractvalue %[[BUFFER_DESC]][2]
+  // GFX950: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_DESC_OFFSET]]]
 
   // GFX950: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // GFX950: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // GFX950: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
 
   // GFX950: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRC_OFFSET]]]
-  // GFX950: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // GFX950: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // GFX950: %[[LDS_DESC_OFFSET:.*]] = llvm.extractvalue %[[LDS_DESC]][2]
+  // GFX950: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_DESC_OFFSET]]]
 
   // GFX950: %[[C64:.*]] = llvm.mlir.constant(64 : index) : i64
   // GFX950: %[[MUL_2:.*]] = llvm.mul %[[IC32]], %[[C64]] : i64
@@ -60,14 +64,18 @@ func.func @fat_buffer_load_to_rocdl_f128(%global : memref<128x72xf32, #amdgpu.ad
 
   // GFX950: %[[ALLOC:.*]] = memref.alloc()
   // GFX950: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast
-  // GFX950: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[BUFFER_DESC]][1]
+  // GFX950: %[[GLOBAL_ALIGNED:.*]] = llvm.extractvalue %[[BUFFER_DESC]][1]
+  // GFX950: %[[GLOBAL_DESC_OFFSET:.*]] = llvm.extractvalue %[[BUFFER_DESC]][2]
+  // GFX950: %[[GLOBAL_BASE:.*]] = llvm.getelementptr %[[GLOBAL_ALIGNED]][%[[GLOBAL_DESC_OFFSET]]]
 
   // GFX950: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // GFX950: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // GFX950: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
 
   // GFX950: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRC_OFFSET]]]
-  // GFX950: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // GFX950: %[[LDS_ALIGNED:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
+  // GFX950: %[[LDS_DESC_OFFSET:.*]] = llvm.extractvalue %[[LDS_DESC]][2]
+  // GFX950: %[[LDS_BASE:.*]] = llvm.getelementptr %[[LDS_ALIGNED]][%[[LDS_DESC_OFFSET]]]
 
   // GFX950: %[[C64:.*]] = llvm.mlir.constant(64 : index) : i64
   // GFX950: %[[MUL_2:.*]] = llvm.mul %[[IC32]], %[[C64]] : i64

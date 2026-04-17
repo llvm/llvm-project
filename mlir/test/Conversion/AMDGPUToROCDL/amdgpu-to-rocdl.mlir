@@ -69,7 +69,9 @@ func.func @fat_raw_buffer_cast_dyn_size_offset(%buf: memref<?xi32, strided<[1]>,
 // CHECK-LABEL: func @fat_raw_buffer_cast_reset_offset
 func.func @fat_raw_buffer_cast_reset_offset(%buf: memref<?xi32, strided<[1]>, #gpu.address_space<global>>) -> memref<?xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>> {
   // CHECK: %[[desc:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<?xi32, strided<[1]>, #gpu.address_space<global>> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
-  // CHECK-DAG: %[[basePtr:.*]] = llvm.extractvalue %[[desc]][1]
+  // CHECK-DAG: %[[aligned:.*]] = llvm.extractvalue %[[desc]][1]
+  // CHECK-DAG: %[[descOff:.*]] = llvm.extractvalue %[[desc]][2]
+  // CHECK-DAG: %[[basePtr:.*]] = llvm.getelementptr %[[aligned]][%[[descOff]]]
   // CHECK-DAG: %[[zeroOff:.*]] = llvm.mlir.constant(0 : index) : i64
   // CHECK: %[[fatBuf:.*]] = rocdl.make.buffer.rsrc %[[basePtr]], %{{.*}}, %{{.*}}, %{{.*}}
   // CHECK: llvm.insertvalue %[[fatBuf]], %{{.*}}[1]
@@ -152,7 +154,9 @@ func.func @gpu_gcn_raw_buffer_load_i32(%buf: memref<64xi32>, %idx: i32) -> i32 {
 func.func @gpu_gcn_raw_buffer_load_i32_strided(%buf: memref<16x16xi32, strided<[?, ?]>>, %i: i32, %j: i32) -> i32 {
     // CHECK: %[[descriptor:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<16x16xi32, strided<[?, ?]>> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
     // CHECK: %[[elem_size:.*]] = llvm.mlir.constant(4 : i32) : i32
-    // CHECK: %[[ptr:.*]] = llvm.extractvalue %[[descriptor]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK: %[[aligned:.*]] = llvm.extractvalue %[[descriptor]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK: %[[descOff:.*]] = llvm.extractvalue %[[descriptor]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK: %[[ptr:.*]] = llvm.getelementptr %[[aligned]][%[[descOff]]]
     // CHECK: %[[sz_i:.*]] = llvm.extractvalue %[[descriptor]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
     // CHECK: %[[stride_i:.*]] = llvm.extractvalue %[[descriptor]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
     // CHECK: %[[ext_i:.*]] = llvm.mul %[[sz_i]], %[[stride_i]] : i64
