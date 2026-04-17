@@ -25,7 +25,7 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 When proposing substantive changes to either the Flang codebase or community practices, please follow the LLVM [Request for Comment (RFC) process](https://llvm.org/docs/RFCProcess.html) with the following caveats:
 -   Currently, there is no Flang Area Team to facilitate decision making. The present best practice is for the RFC author to periodically summarize the discussion to date, clearly state the apparent next steps, and list any outstanding questions needing resolution. If a rough consensus has been reached, please indicate this in the summary comment.
 -   Ideally, if the RFC is discussed on a community call, reference the meeting notes directly in the summary comment, whether to indicate that a decision was reached or simply to point to the relevant discussion. 
--   If the RFC results in a pull request (or series thereof), the author should provide a link to it in the RFC discussion.
+-   If the RFC results in one or more pull requests, the author should provide a link to it in the RFC discussion.
 
 
 ## Forum and Mailing Lists
