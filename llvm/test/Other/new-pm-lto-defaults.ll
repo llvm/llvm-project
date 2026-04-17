@@ -152,7 +152,7 @@
 ; CHECK-EP-PEEPHOLE-NEXT: Running pass: NoOpFunctionPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: LowerTypeTestsPass
-; CHECK-O-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-O-NEXT: Running pass: DropTypeTestsPass
 ; CHECK-O23SZ-NEXT: Running pass: LoopSink
 ; CHECK-O23SZ-NEXT: Running pass: DivRemPairs
 ; CHECK-O23SZ-NEXT: Running pass: SimplifyCFGPass
