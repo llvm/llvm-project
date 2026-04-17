@@ -7475,7 +7475,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
         if (!Init->isTypeDependent() && !Init->isValueDependent() &&
-            !Init->isConstantInitializer(Context, /*IsForRef=*/false)) {
+            !Init->isConstantInitializer(Context)) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();
           return ExprError();
@@ -9152,7 +9152,7 @@ static QualType computeConditionalNullability(QualType ResTy, bool IsBin,
     return ResTy;
 
   auto GetNullability = [](QualType Ty) {
-    std::optional<NullabilityKind> Kind = Ty->getNullability();
+    NullabilityKindOrNone Kind = Ty->getNullability();
     if (Kind) {
       // For our purposes, treat _Nullable_result as _Nullable.
       if (*Kind == NullabilityKind::NullableResult)

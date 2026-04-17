@@ -471,10 +471,18 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   Value *StoredVal = SI->getValueOperand();
   Value *StorePtr = SI->getPointerOperand();
 
-  // Don't convert stores of non-integral pointer types to memsets (which stores
-  // integers).
-  if (DL->isNonIntegralPointerType(StoredVal->getType()->getScalarType()))
+  if (DL->hasUnstableRepresentation(StoredVal->getType()))
     return LegalStoreKind::None;
+
+  // Transformations could invalidate the external-state pointers
+  //   memcpy - LangRef specifies that a valid memcpy must preserve external
+  //            state, so no transformations are blocked by it.
+  //   memset - We assume that a memset of 0 has an equivalent external state
+  //            effect as a null pointer store. This is currently not explicitly
+  //            specified, but is true of the one exemplar we have (CHERI
+  //            capabilities). All other memset formations are not safe.
+  bool MustPreserveExternalState = DL->hasExternalState(StoredVal->getType()) &&
+                                   !isa<ConstantPointerNull>(StoredVal);
 
   // Reject stores that are so large that they overflow an unsigned.
   // When storing out scalable vectors we bail out for now, since the code
@@ -506,14 +514,16 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
 
   // If we're allowed to form a memset, and the stored value would be
   // acceptable for memset, use it.
-  if (!UnorderedAtomic && HasMemset && SplatValue && !DisableLIRP::Memset &&
+  if (!MustPreserveExternalState && !UnorderedAtomic && HasMemset &&
+      SplatValue && !DisableLIRP::Memset &&
       // Verify that the stored value is loop invariant.  If not, we can't
       // promote the memset.
       CurLoop->isLoopInvariant(SplatValue)) {
     // It looks like we can use SplatValue.
     return LegalStoreKind::Memset;
   }
-  if (!UnorderedAtomic && (HasMemsetPattern || ForceMemsetPatternIntrinsic) &&
+  if (!MustPreserveExternalState && !UnorderedAtomic &&
+      (HasMemsetPattern || ForceMemsetPatternIntrinsic) &&
       !DisableLIRP::Memset &&
       // Don't create memset_pattern16s with address spaces.
       StorePtr->getType()->getPointerAddressSpace() == 0 &&

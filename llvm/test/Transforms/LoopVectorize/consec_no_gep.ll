@@ -20,10 +20,10 @@ entry:
   %cmp2 = icmp sgt i32 %len, 0
   br i1 %cmp2, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %from.addr.04 = phi ptr [ %incdec.ptr, %for.body ], [ %from, %for.body.preheader ]
   %to.addr.03 = phi ptr [ %incdec.ptr1, %for.body ], [ %to, %for.body.preheader ]
@@ -35,9 +35,9 @@ for.body:                                         ; preds = %for.body.preheader,
   %cmp = icmp slt i32 %inc, %len
   br i1 %cmp, label %for.body, label %for.end.loopexit
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }

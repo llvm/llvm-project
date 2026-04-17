@@ -112,6 +112,12 @@ inferInsertStridedSliceSourceLayout(DistributeLayoutAttr resLayout,
                                     ArrayRef<int64_t> resShape,
                                     ArrayRef<int64_t> srcShape);
 
+/// Infers the layout attribute for mask and offset operand for Chunked load
+/// and store, given the anchor layout attribute for the value being load/store.
+DistributeLayoutAttr
+inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
+                                  int chunkSize);
+
 /// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
 /// the result.
 ///

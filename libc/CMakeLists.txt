@@ -34,7 +34,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-D_DEBUG")
 endif()
 
-
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 
@@ -272,6 +271,8 @@ endif()
 
 if(LIBC_TARGET_OS_IS_GPU)
   include(prepare_libc_gpu_build)
+  set(LIBC_ENABLE_UNITTESTS OFF)
+elseif(LIBC_TARGET_OS_IS_BAREMETAL)
   set(LIBC_ENABLE_UNITTESTS OFF)
 endif()
 

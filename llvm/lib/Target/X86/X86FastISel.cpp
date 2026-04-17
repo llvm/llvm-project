@@ -3992,9 +3992,10 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   SmallVector<MachineOperand, 8> AddrOps;
   AM.getFullAddress(AddrOps);
 
+  MachineInstr *CopyMI = nullptr;
   MachineInstr *Result = XII.foldMemoryOperandImpl(
       *FuncInfo.MF, *MI, OpNo, AddrOps, FuncInfo.InsertPt, Size, LI->getAlign(),
-      /*AllowCommute=*/true);
+      /*AllowCommute=*/true, CopyMI);
   if (!Result)
     return false;
 

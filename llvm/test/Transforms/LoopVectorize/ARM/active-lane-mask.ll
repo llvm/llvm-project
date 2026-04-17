@@ -60,7 +60,7 @@ for.end:
   ret void
 }
 
-attributes #0 = { nofree norecurse nounwind "target-features"="+armv8.1-m.main,+mve.fp" }
+attributes #0 = { nofree "target-features"="+armv8.1-m.main,+mve.fp" }
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 16}

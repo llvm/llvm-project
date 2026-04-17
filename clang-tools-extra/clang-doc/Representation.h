@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/StringSaver.h"
@@ -107,6 +108,11 @@ OwnedPtr<T> allocatePtr(Args &&...args) {
   return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
+template <typename T, typename... Args>
+T *allocatePtr(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
+  return new (Alloc.Allocate<T>()) T(std::forward<Args>(args)...);
+}
+
 // A helper function to access the underlying pointer from an owned pointer,
 // abstracting away the pointer dereferencing mechanism.
 template <typename T> T *getPtr(const OwnedPtr<T> &O) { return O.get(); }
@@ -161,9 +167,22 @@ llvm::StringRef commentKindToString(CommentKind Kind);
 // A representation of a parsed comment.
 struct CommentInfo : public llvm::ilist_node<CommentInfo> {
   CommentInfo() = default;
-  CommentInfo(CommentInfo &Other) = delete;
+  CommentInfo(const CommentInfo &Other) = default;
+  CommentInfo &operator=(const CommentInfo &Other) = default;
   CommentInfo(CommentInfo &&Other) = default;
   CommentInfo &operator=(CommentInfo &&Other) = default;
+
+  CommentInfo(CommentKind Kind, llvm::ArrayRef<CommentInfo> Children = {},
+              StringRef Text = StringRef(), StringRef Name = StringRef(),
+              StringRef CloseName = StringRef(),
+              StringRef Direction = StringRef(),
+              StringRef ParamName = StringRef(), bool Explicit = false,
+              bool SelfClosing = false, llvm::ArrayRef<StringRef> AttrKeys = {},
+              llvm::ArrayRef<StringRef> AttrValues = {})
+      : Children(Children), Direction(Direction), Name(Name),
+        ParamName(ParamName), CloseName(CloseName), Text(Text),
+        AttrKeys(AttrKeys), AttrValues(AttrValues), Kind(Kind),
+        SelfClosing(SelfClosing), Explicit(Explicit) {}
 
   bool operator==(const CommentInfo &Other) const;
 
@@ -173,7 +192,7 @@ struct CommentInfo : public llvm::ilist_node<CommentInfo> {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  OwningPtrVec<CommentInfo>
+  llvm::ArrayRef<CommentInfo>
       Children;              // List of child comments for this CommentInfo.
   StringRef Direction;       // Parameter direction (for (T)ParamCommand).
   StringRef Name;            // Name of the comment (for Verbatim and HTML).
@@ -197,7 +216,7 @@ struct CommentInfo : public llvm::ilist_node<CommentInfo> {
                             // (for (T)ParamCommand).
 };
 
-struct Reference {
+struct Reference : public llvm::ilist_node<Reference> {
   // This variant (that takes no qualified name parameter) uses the Name as the
   // QualName (very useful in unit tests to reduce verbosity). This can't use an
   // empty string to indicate the default because we need to accept the empty
@@ -273,7 +292,7 @@ struct ScopeChildren {
   //
   // Namespaces are not syntactically valid as children of records, but making
   // this general for all possible container types reduces code complexity.
-  OwningVec<Reference> Namespaces;
+  llvm::simple_ilist<Reference> Namespaces;
   OwningVec<Reference> Records;
   OwningVec<FunctionInfo> Functions;
   OwningVec<EnumInfo> Enums;
@@ -522,7 +541,7 @@ struct FriendInfo : public SymbolInfo, public llvm::ilist_node<FriendInfo> {
   Reference Ref;
   std::optional<TemplateInfo> Template;
   std::optional<TypeInfo> ReturnType;
-  std::optional<SmallVector<FieldTypeInfo, 4>> Params;
+  llvm::ArrayRef<FieldTypeInfo> Params;
   bool IsClass = false;
 };
 
@@ -750,6 +769,32 @@ struct ClangDocContext {
   bool PublicOnly; // Indicates if only public declarations are documented.
   bool FTimeTrace; // Indicates if ftime trace is turned on
 };
+
+// Ensure arena allocated types remain safe to allocate in the arena.
+// Only trivially destructible types are safe, so enforce that at compile-time.
+static_assert(std::is_trivially_destructible_v<CommentInfo>);
+static_assert(std::is_trivially_destructible_v<ConstraintInfo>);
+static_assert(std::is_trivially_destructible_v<FieldTypeInfo>);
+static_assert(std::is_trivially_destructible_v<Location>);
+static_assert(std::is_trivially_destructible_v<Reference>);
+static_assert(std::is_trivially_destructible_v<TemplateParamInfo>);
+static_assert(std::is_trivially_destructible_v<TypeInfo>);
+
+// FIXME: These types need to be trivially destructible for arena allocation.
+static_assert(!std::is_trivially_destructible_v<ConceptInfo>);
+static_assert(!std::is_trivially_destructible_v<EnumInfo>);
+static_assert(!std::is_trivially_destructible_v<FriendInfo>);
+static_assert(!std::is_trivially_destructible_v<FunctionInfo>);
+static_assert(!std::is_trivially_destructible_v<Info>);
+static_assert(!std::is_trivially_destructible_v<MemberTypeInfo>);
+static_assert(!std::is_trivially_destructible_v<NamespaceInfo>);
+static_assert(!std::is_trivially_destructible_v<RecordInfo>);
+static_assert(!std::is_trivially_destructible_v<ScopeChildren>);
+static_assert(!std::is_trivially_destructible_v<SymbolInfo>);
+static_assert(!std::is_trivially_destructible_v<TemplateInfo>);
+static_assert(!std::is_trivially_destructible_v<TemplateSpecializationInfo>);
+static_assert(!std::is_trivially_destructible_v<TypedefInfo>);
+static_assert(!std::is_trivially_destructible_v<VarInfo>);
 
 } // namespace doc
 } // namespace clang

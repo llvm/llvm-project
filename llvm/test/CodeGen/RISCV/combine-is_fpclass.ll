@@ -21,3 +21,74 @@ define i8 @iszero_constant_v4f32() nounwind {
   %r = bitcast <8 x i1> %f to i8
   ret i8 %r
 }
+
+define <vscale x 4 x i1> @splat_constant_is_pos_normal() {
+; CHECK-LABEL: splat_constant_is_pos_normal:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> splat (float 1.0), i32 128) ; 128 = pos_normal
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @splat_constant_isnan_false() {
+; CHECK-LABEL: splat_constant_isnan_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> splat (float 1.0), i32 3) ; 3 = nan
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 2 x i1> @splat_constant_f64_isinf_false() {
+; CHECK-LABEL: splat_constant_f64_isinf_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.is.fpclass.nxv2f64(<vscale x 2 x double> splat (double 1.0), i32 516) ; 516 = inf
+  ret <vscale x 2 x i1> %res
+}
+
+define <4 x i1> @fneg_vec_not_negative(<4 x i32> %vecbits) nounwind {
+; CHECK-LABEL: fneg_vec_not_negative:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    ret
+  %masked = or <4 x i32> %vecbits, splat(i32 u0x80000000) ; set sign bits
+  %fvec = bitcast <4 x i32> %masked to <4 x float>
+  %neg = fneg <4 x float> %fvec
+  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %neg, i32 60) ; any negative
+  ret <4 x i1> %res
+}
+
+define <4 x i1> @fneg_vec_not_positive(<4 x i32> %vecbits) nounwind {
+; CHECK-LABEL: fneg_vec_not_positive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    ret
+  %masked = and <4 x i32> %vecbits, splat(i32 u0x7fffffff) ; clear sign bit
+  %fvec = bitcast <4 x i32> %masked to <4 x float>
+  %neg = fneg <4 x float> %fvec
+  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %neg, i32 960) ; any positive
+  ret <4 x i1> %res
+}
+
+define <4 x i1> @fneg_vec_unknown_sign(<4 x i32> %vecbits) nounwind {
+; CHECK-LABEL: fneg_vec_unknown_sign:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 15
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %fvec = bitcast <4 x i32> %vecbits to <4 x float> ; no modification
+  %neg = fneg <4 x float> %fvec
+  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %neg, i32 60) ; any negative
+  ret <4 x i1> %res
+}

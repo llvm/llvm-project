@@ -100,7 +100,7 @@ size_t GDBRemoteCommunication::SendNack() {
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
-  StreamString packet(0, 4, eByteOrderBig);
+  StreamString packet(0, eByteOrderBig);
   packet.PutChar('$');
   packet.Write(payload.data(), payload.size());
   packet.PutChar('#');
@@ -119,7 +119,7 @@ GDBRemoteCommunication::SendNotificationPacketNoLock(
   // If there are no notification in the queue, send the notification
   // packet.
   if (queue.empty()) {
-    StreamString packet(0, 4, eByteOrderBig);
+    StreamString packet(0, eByteOrderBig);
     packet.PutChar('%');
     packet.Write(notify_type.data(), notify_type.size());
     packet.PutChar(':');

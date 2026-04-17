@@ -14,6 +14,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(GlobalISelTests
+  IRTranslatorBF16Test.cpp
   ConstantFoldingTest.cpp
   CSETest.cpp
   GIMatchTableExecutorTest.cpp

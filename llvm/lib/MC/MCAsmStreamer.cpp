@@ -20,6 +20,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -102,8 +103,6 @@ public:
     Context.setUseNamesOnTempLabels(true);
 
     auto *TO = Context.getTargetOptions();
-    if (!TO)
-      return;
     IsVerboseAsm = TO->AsmVerbose;
     if (IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);
@@ -287,7 +286,8 @@ public:
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
-  void emitPrefAlign(Align Alignment) override;
+  void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
+                     uint8_t Fill, const MCSubtargetInfo &STI) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
@@ -1567,8 +1567,15 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
-void MCAsmStreamer::emitPrefAlign(Align Alignment) {
-  OS << "\t.prefalign\t" << Alignment.value();
+void MCAsmStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
+                                  bool EmitNops, uint8_t Fill,
+                                  const MCSubtargetInfo &) {
+  OS << "\t.prefalign\t" << Log2(Alignment) << ", ";
+  End.print(OS, MAI);
+  if (EmitNops)
+    OS << ", nop";
+  else
+    OS << ", " << static_cast<unsigned>(Fill);
   EmitEOL();
 }
 
@@ -2596,6 +2603,9 @@ void MCAsmStreamer::emitRawTextImpl(StringRef String) {
 }
 
 void MCAsmStreamer::finishImpl() {
+  if (getContext().getTargetTriple().isLFI())
+    emitLFINoteSection(*this, getContext());
+
   // If we are generating dwarf for assembly source files dump out the sections.
   if (getContext().getGenDwarfForAssembly())
     MCGenDwarfInfo::Emit(this);
