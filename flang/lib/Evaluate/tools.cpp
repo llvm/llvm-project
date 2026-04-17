@@ -1138,11 +1138,8 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
 
   SymbolVector crtSymbols;
   for (const Symbol &sym : symbols) {
-    bool isComponent{sym.owner().IsDerivedType()};
-    if (isComponent) {
-      crtSymbols.push_back(sym);
-    } else {
-      crtSymbols.push_back(sym);
+    crtSymbols.push_back(sym);
+    if (!sym.owner().IsDerivedType()) {
       symbolVectors.push_back(crtSymbols);
       crtSymbols.clear();
     }
@@ -1150,14 +1147,17 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
   return symbolVectors;
 }
 
-int GetNbOfUniqueCUDADeviceSymbols(
-    const std::vector<SymbolVector> &symbolVectors) {
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
+  std::vector<SymbolVector> symbolVectors{evaluate::GetSymbolVectors(expr)};
   semantics::UnorderedSymbolSet symbols;
+  semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
   for (const auto &symbolVector : symbolVectors) {
     for (const auto &sym : symbolVector) {
-      if (IsCUDADeviceSymbol(*sym)) {
-        symbols.insert(sym);
-        break;
+      if (cudaSymbols.find(sym) != cudaSymbols.end()) {
+        if (IsCUDADeviceSymbol(*sym)) {
+          symbols.insert(sym);
+          break;
+        }
       }
     }
   }

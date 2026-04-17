@@ -699,3 +699,28 @@ subroutine sub39()
 
   lm(1:5) = a%f%m(1:5)
 end subroutine
+
+function sub40_call(x, y, n) result(z)
+  integer :: n
+  real, device :: x(n)
+  real, device :: y(n)
+  real :: z
+  z = 0.0
+end function
+
+subroutine sub40()
+  real, device :: x(10)
+  real, device :: y(10)
+  real :: res
+  res = sub40_call(x, y, 10)
+end subroutine
+
+subroutine sub41()
+  type :: bar
+    integer, device, allocatable :: m(:)
+  end type
+  type(bar), managed :: a
+  integer, managed :: lm(5)
+  
+  lm(1:5) = a%m(1:5)
+end subroutine

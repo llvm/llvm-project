@@ -1185,6 +1185,32 @@ UNALIASED_CUSTOM_BUILTIN(xsrebase3t1uqm, "VVV", false, "future-vector")
 UNALIASED_CUSTOM_BUILTIN(xsrebase3t2uqm, "VVV", false, "future-vector")
 UNALIASED_CUSTOM_BUILTIN(xsrebase3t3uqm, "VVV", false, "future-vector")
 
+// Deeply Compressed Weights built-ins.
+TARGET_BUILTIN(__builtin_altivec_vucmprhn, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprln, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprhb, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprlb, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprhh, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprlh, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkhsntob, "V16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupklsntob, "V16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint4tobf16, "V16UcV16UcIi", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint8tobf16, "V16UcV16UcIi", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint4tofp32, "V16UcV16UcIi", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint8tofp32, "V16UcV16UcIi", "",
+               "isa-future-instructions")
+
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN

@@ -1356,8 +1356,7 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
 }
 
 // Get the number of unique symbols with CUDA device attribute.
-int GetNbOfUniqueCUDADeviceSymbols(
-    const std::vector<SymbolVector> &symbolVectors);
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr);
 
 // Get the number of distinct symbols with CUDA managed or unified
 // attribute in the expression.
