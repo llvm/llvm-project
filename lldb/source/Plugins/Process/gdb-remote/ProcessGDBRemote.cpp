@@ -6105,14 +6105,26 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
                                bool is_expression_fork) {
   Log *log = GetLog(GDBRLog::Process);
 
-  // During expression evaluation, force follow-parent. The expression is
-  // running on the parent's thread and following the child would cause the
-  // expression thread to vanish (the child has different thread IDs).
+  // During expression evaluation, force follow-parent regardless of which
+  // thread forked. The expression is running on the parent and following the
+  // child would cause the expression thread to vanish (the child has different
+  // thread IDs). Even if a *different* thread forks, switching to the child
+  // would destroy the expression thread's process context.
   FollowForkMode follow_fork_mode = GetFollowForkMode();
-  if (follow_fork_mode == eFollowChild && is_expression_fork) {
-    LLDB_LOG(log, "ProcessGDBRemote::DidFork() overriding follow-fork-mode "
-                  "to parent during expression evaluation");
+  bool overrode_follow_mode = false;
+  if (follow_fork_mode == eFollowChild &&
+      GetModIDRef().IsRunningExpression()) {
+    if (is_expression_fork) {
+      LLDB_LOG(log, "ProcessGDBRemote::DidFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation");
+    } else {
+      LLDB_LOG(log, "ProcessGDBRemote::DidFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation. Child process "
+                    "{0} is available for manual attachment.",
+               child_pid);
+    }
     follow_fork_mode = eFollowParent;
+    overrode_follow_mode = true;
   }
 
   lldb::pid_t parent_pid = m_gdb_comm.GetCurrentProcessID();
@@ -6161,7 +6173,15 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
   }
 
   LLDB_LOG(log, "Detaching process {0}", detach_pid);
-  Status error = m_gdb_comm.Detach(false, detach_pid);
+  // When we overrode follow-child because of a concurrent expression, try to
+  // keep the child stopped so the user can attach to it manually.
+  bool keep_stopped = overrode_follow_mode && !is_expression_fork;
+  Status error = m_gdb_comm.Detach(keep_stopped, detach_pid);
+  if (error.Fail() && keep_stopped) {
+    LLDB_LOG(log, "ProcessGDBRemote::DidFork() detach-and-stay-stopped not "
+                  "supported, falling back to normal detach");
+    error = m_gdb_comm.Detach(false, detach_pid);
+  }
   if (error.Fail()) {
     LLDB_LOG(log, "ProcessGDBRemote::DidFork() detach packet send failed: {0}",
              error.AsCString() ? error.AsCString() : "<unknown error>");
@@ -6187,12 +6207,23 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
       child_pid, child_tid);
   ++m_vfork_in_progress_count;
 
-  // See comment in DidFork(): force follow-parent during expression evaluation.
+  // See comment in DidFork(): force follow-parent during expression evaluation
+  // regardless of which thread triggered the vfork.
   FollowForkMode follow_fork_mode = GetFollowForkMode();
-  if (follow_fork_mode == eFollowChild && is_expression_fork) {
-    LLDB_LOG(log, "ProcessGDBRemote::DidVFork() overriding follow-fork-mode "
-                  "to parent during expression evaluation");
+  bool overrode_follow_mode = false;
+  if (follow_fork_mode == eFollowChild &&
+      GetModIDRef().IsRunningExpression()) {
+    if (is_expression_fork) {
+      LLDB_LOG(log, "ProcessGDBRemote::DidVFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation");
+    } else {
+      LLDB_LOG(log, "ProcessGDBRemote::DidVFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation. Child process "
+                    "{0} is available for manual attachment.",
+               child_pid);
+    }
     follow_fork_mode = eFollowParent;
+    overrode_follow_mode = true;
   }
 
   // Disable all software breakpoints for the duration of vfork.
@@ -6232,7 +6263,13 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
   }
 
   LLDB_LOG(log, "Detaching process {0}", detach_pid);
-  Status error = m_gdb_comm.Detach(false, detach_pid);
+  bool keep_stopped = overrode_follow_mode && !is_expression_fork;
+  Status error = m_gdb_comm.Detach(keep_stopped, detach_pid);
+  if (error.Fail() && keep_stopped) {
+    LLDB_LOG(log, "ProcessGDBRemote::DidVFork() detach-and-stay-stopped not "
+                  "supported, falling back to normal detach");
+    error = m_gdb_comm.Detach(false, detach_pid);
+  }
   if (error.Fail()) {
       LLDB_LOG(log,
                "ProcessGDBRemote::DidVFork() detach packet send failed: {0}",
