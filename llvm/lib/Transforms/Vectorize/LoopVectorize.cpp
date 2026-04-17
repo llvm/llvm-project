@@ -6037,8 +6037,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     if (VF.isVector() && Legal->isFixedOrderRecurrence(Phi)) {
       return TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
                                 cast<VectorType>(VectorTy),
-                                cast<VectorType>(VectorTy), {}, CostKind,
-                                -(VF.getKnownMinValue() - 1));
+                                cast<VectorType>(VectorTy), {}, CostKind, -1);
     }
 
     // Phi nodes in non-header blocks (not inductions, reductions, etc.) are

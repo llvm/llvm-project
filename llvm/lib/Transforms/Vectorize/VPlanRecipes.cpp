@@ -1219,10 +1219,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::FirstOrderRecurrenceSplice: {
     assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
-    return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
-                                  cast<VectorType>(VectorTy),
-                                  cast<VectorType>(VectorTy), {}, Ctx.CostKind,
-                                  -(VF.getKnownMinValue() - 1));
+    return Ctx.TTI.getShuffleCost(
+        TargetTransformInfo::SK_Splice, cast<VectorType>(VectorTy),
+        cast<VectorType>(VectorTy), {}, Ctx.CostKind, -1);
   }
   case VPInstruction::ActiveLaneMask: {
     Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
