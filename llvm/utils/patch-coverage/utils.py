@@ -140,4 +140,3 @@ def group_contiguous_lines(lines):
 
     groups.append(current)
     return groups
-

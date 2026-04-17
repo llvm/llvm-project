@@ -47,7 +47,7 @@ def parse_args():
     parser.add_argument(
         "-b",
         "--build-dir",
-        help="path to build directory",
+        help="path to build directory if the target is already built",
         dest="build_dir",
         default="build",
     )
@@ -55,7 +55,7 @@ def parse_args():
     parser.add_argument(
         "-i",
         "--instrumented-build-dir",
-        help="path to directory in which the tool will build projects with intrumentation enabled",
+        help="path to directory in which tool will build projects with intrumentation enabled",
         dest="inst_build_dir",
         default="build_inst",
     )
@@ -69,15 +69,11 @@ def parse_args():
     )
 
     parser.add_argument(
-        "binary",
-        help="target binary to generate coverage for (e.g. opt, clang)",
+        "binary", help="target binary to generate coverage for (e.g. opt, clang)",
     )
 
     parser.add_argument(
-        "test_path",
-        nargs="*",
-        help="path to test suite/s (default: <build-dir>/test)",
-        default=argparse.SUPPRESS,
+        "test_path", metavar="TEST_PATH", nargs="*", help="path to test suite/s"
     )
 
     parser.add_argument(
@@ -88,7 +84,7 @@ def parse_args():
 
     args = parser.parse_args()
 
-    if not hasattr(args, "test_path") or not args.test_path:
+    if not args.test_path:
         args.test_path = [os.path.join(args.build_dir, "test")]
 
     return (
