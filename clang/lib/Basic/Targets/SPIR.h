@@ -357,12 +357,12 @@ public:
   bool validateTarget(DiagnosticsEngine &Diags) const override {
     if (getTriple().getOS() != llvm::Triple::Vulkan ||
         getTriple().getVulkanVersion() == llvm::VersionTuple(0)) {
-      Diags.Report(diag::err_fe_spirv_requires_vulkan);
+      Diags.Report(diag::err_target_spirv_requires_vulkan);
       return false;
     }
     if (getTriple().getEnvironment() < llvm::Triple::Pixel ||
         getTriple().getEnvironment() > llvm::Triple::Amplification) {
-      Diags.Report(diag::err_fe_spirv_requires_shader_stage);
+      Diags.Report(diag::err_target_spirv_requires_shader_stage);
       return false;
     }
     return true;
