@@ -1,1 +1,2 @@
 set(CMAKE_CXX_COMPILER_TARGET "aarch64-linux-gnu" CACHE STRING "")
+set(CMAKE_C_COMPILER_TARGET "aarch64-linux-gnu" CACHE STRING "")
