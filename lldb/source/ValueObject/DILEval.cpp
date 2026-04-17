@@ -16,7 +16,6 @@
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
-#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
 
@@ -293,7 +292,7 @@ static lldb::VariableSP DILFindVariable(ConstString name,
 
 lldb::ValueObjectSP LookupGlobalIdentifier(
     llvm::StringRef name_ref, std::shared_ptr<StackFrame> stack_frame,
-    lldb::TargetSP target_sp, lldb::DynamicValueType use_dynamic) {
+    lldb::DynamicValueType use_dynamic) {
   // Get a global variables list without the locals from the current frame
   SymbolContext symbol_context =
       stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
@@ -311,25 +310,7 @@ lldb::ValueObjectSP LookupGlobalIdentifier(
           stack_frame->GetValueObjectForFrameVariable(var_sp, use_dynamic);
   }
 
-  if (value_sp)
-    return value_sp;
-
-  // Check for match in modules global variables.
-  VariableList modules_var_list;
-  target_sp->GetImages().FindGlobalVariables(
-      ConstString(name_ref), std::numeric_limits<uint32_t>::max(),
-      modules_var_list);
-
-  if (!modules_var_list.Empty()) {
-    lldb::VariableSP var_sp =
-        DILFindVariable(ConstString(name_ref), modules_var_list);
-    if (var_sp)
-      value_sp = ValueObjectVariable::Create(stack_frame.get(), var_sp);
-
-    if (value_sp)
-      return value_sp;
-  }
-  return nullptr;
+  return value_sp;
 }
 
 lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
@@ -438,7 +419,7 @@ Interpreter::Visit(const IdentifierNode &node) {
 
   if (!identifier)
     identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
-                                        m_target, use_dynamic);
+                                        use_dynamic);
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());

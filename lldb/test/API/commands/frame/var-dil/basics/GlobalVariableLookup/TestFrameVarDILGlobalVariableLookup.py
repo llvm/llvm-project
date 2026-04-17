@@ -49,12 +49,23 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect_var_path("::ns::globalPtr", type="int *")
         self.expect_var_path("::ns::globalRef", type="int &")
 
-        self.expect_var_path("externGlobalVar", value="2")
-        self.expect_var_path("::externGlobalVar", value="2")
-        self.expect_var_path("ext::externGlobalVar", value="4")
-        self.expect_var_path("::ext::externGlobalVar", value="4")
-
-        self.expect_var_path("ExtStruct::static_inline", value="16")
+        # Globals from other compile units are not accessible (matching legacy
+        # frame var behavior).
+        self.expect(
+            "frame var externGlobalVar",
+            error=True,
+            substrs=["use of undeclared identifier"],
+        )
+        self.expect(
+            "frame var ext::externGlobalVar",
+            error=True,
+            substrs=["use of undeclared identifier"],
+        )
+        self.expect(
+            "frame var ExtStruct::static_inline",
+            error=True,
+            substrs=["use of undeclared identifier"],
+        )
 
         # Test local variable priority over global
         self.expect_var_path("foo", value="1")

@@ -28,12 +28,11 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
                                      lldb::DynamicValueType use_dynamic);
 
 /// Given the name of an identifier, check to see if it matches the name of a
-/// global variable. If so, find the ValueObject for that global variable, and
-/// create and return an IdentifierInfo object containing all the relevant
-/// informatin about it.
+/// global variable in the current compile unit. If so, find the ValueObject for
+/// that global variable, and create and return an IdentifierInfo object
+/// containing all the relevant information about it.
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            std::shared_ptr<StackFrame> frame_sp,
-                                           lldb::TargetSP target_sp,
                                            lldb::DynamicValueType use_dynamic);
 
 class Interpreter : Visitor {
