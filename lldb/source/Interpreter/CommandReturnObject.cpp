@@ -33,9 +33,21 @@ static llvm::raw_ostream &note(Stream &strm) {
          << "note: ";
 }
 
-static llvm::StringRef validate(llvm::StringRef diagnostic) {
+static llvm::StringRef validate_diagnostic(llvm::StringRef diagnostic) {
+  // This class is already adding the prefix.
+  assert(!diagnostic.starts_with("warning:") &&
+         !diagnostic.starts_with("error:") &&
+         !diagnostic.starts_with("note:") &&
+         "diagnostics shouldn't duplicate error:/warning:/note:");
+
+  // https://llvm.org/docs/CodingStandards.html#error-and-warning-messages
   assert(!diagnostic.ends_with('\n') && !diagnostic.ends_with('.') &&
          "diagnostics should end without a period/newline");
+
+  // Handing the case where the assert doesn't hold goes against the idea of
+  // them being pre-conditions. However this isn't really a matter of internal
+  // consistency and therefore we prioritize a consistent user experience over
+  // purity.
   return diagnostic.trim("\n.");
 }
 
@@ -81,14 +93,14 @@ void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
 }
 
 void CommandReturnObject::AppendNote(llvm::StringRef in_string) {
-  in_string = validate(in_string);
+  in_string = validate_diagnostic(in_string);
   if (in_string.empty())
     return;
   note(GetOutputStream()) << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
-  in_string = validate(in_string);
+  in_string = validate_diagnostic(in_string);
   if (in_string.empty())
     return;
   warning(GetErrorStream()) << in_string.rtrim() << '\n';
@@ -102,7 +114,7 @@ void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   llvm::StringRef msg(in_string.rtrim());
   msg.consume_front("error: ");
 
-  // FIXME: We should call validate here.
+  // FIXME: We should call validate_diagnostic here.
   error(GetErrorStream()) << msg << '\n';
 }
 
