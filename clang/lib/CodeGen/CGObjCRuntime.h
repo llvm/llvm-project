@@ -20,6 +20,7 @@
 #include "CGValue.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/IdentifierTable.h" // Selector
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/UniqueVector.h"
 
 namespace llvm {
@@ -60,12 +61,21 @@ class CGBlockInfo;
 
 // FIXME: Several methods should be pure virtual but aren't to avoid the
 // partially-implemented subclass breaking.
+typedef llvm::DenseSet<const ObjCInterfaceDecl *> RealizedClassSet;
 
 /// Implements runtime-specific code generation functions.
 class CGObjCRuntime {
 protected:
   CodeGen::CodeGenModule &CGM;
   CGObjCRuntime(CodeGen::CodeGenModule &CGM) : CGM(CGM) {}
+
+  /// Cache of classes known to be realized during loading.
+  mutable std::optional<RealizedClassSet> RealizedClasses;
+
+  /// Query the cache to determine if a class is guaranteed to be realized
+  /// because of +load. Construct the cache if by scanning all
+  /// ObjCInterfaceDecls in the translation unit if we haven't done so.
+  bool isClassRealizedByLoader(const ObjCInterfaceDecl *CalleeClassDecl) const;
 
   // Utility functions for unified ivar access. These need to
   // eventually be folded into other places (the structure layout
@@ -342,10 +352,11 @@ public:
                                      QualType resultType,
                                      CallArgList &callArgs);
 
-  bool canMessageReceiverBeNull(CodeGenFunction &CGF,
-                                const ObjCMethodDecl *method, bool isSuper,
-                                const ObjCInterfaceDecl *classReceiver,
-                                llvm::Value *receiver);
+  virtual bool canMessageReceiverBeNull(CodeGenFunction &CGF,
+                                        const ObjCMethodDecl *method,
+                                        bool isSuper,
+                                        const ObjCInterfaceDecl *classReceiver,
+                                        llvm::Value *receiver);
 
   /// Check if a class object can be unrealized (not yet initialized).
   /// Returns true if the class may be unrealized, false if provably realized.

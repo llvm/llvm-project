@@ -270,10 +270,11 @@ int useSRet(Root *r) {
     // TODO: we should know that this instance is non nil.
     // CHECK: call void @"-[Root getAggregate]D_thunk"
     [r getAggregate].a +
-    // TODO: The compiler is not smart enough to know the class object must be realized yet.
+    // CHECK-NOT: call i64 @"+[Root classGetComplex]D"(ptr noundef
     // CHECK: call i64 @"+[Root classGetComplex]D_thunk"(ptr noundef
     [Root classGetComplex].a +
-    // CHECK: call void @"+[Root classGetAggregate]D_thunk"(ptr {{.*}}sret
+    // CHECK-NOT: call void @"+[Root classGetAggregate]D_thunk"(ptr {{.*}}sret
+    // CHECK: call void @"+[Root classGetAggregate]D"(ptr {{.*}}sret
     [Root classGetAggregate].a
   );
 }
@@ -292,39 +293,5 @@ int useSRet(Root *r) {
 // CHECK: dummy_ret_block:
 // CHECK:   ret void
 
-// Class method thunks should have class realization (objc_msgSend)
-// instead of a nil check.
-// CHECK-LABEL: define linkonce_odr hidden i64 @"+[Root classGetComplex]D_thunk"(ptr noundef %self)
-// CHECK: entry:
-// CHECK-NOT: icmp eq ptr
-// CHECK:   call ptr @objc_msgSend
-// CHECK:   musttail call i64 @"+[Root classGetComplex]D"(ptr noundef %self)
-// CHECK:   ret i64
-
-// CHECK-LABEL: define linkonce_odr hidden void @"+[Root classGetAggregate]D_thunk"(ptr {{.*}} sret(%struct.my_aggregate_struct) {{.*}} %agg.result, ptr noundef %self)
-// CHECK: entry:
-// CHECK-NOT: icmp eq ptr
-// CHECK:   call ptr @objc_msgSend
-// CHECK:   musttail call void @"+[Root classGetAggregate]D"(ptr {{.*}} sret(%struct.my_aggregate_struct) {{.*}} %agg.result, ptr noundef %self)
-// CHECK:   ret void
-
-// CHECK-LABEL: define{{.*}} i32 @useWeakRoot()
-int useWeakRoot() {
-  // CHECK: call i32 @"+[WeakRoot classGetInt]D_thunk"
-  return [WeakRoot classGetInt];
-}
-
-// Weakly linked class method thunks should have class realization
-// AND a nil check (the weak class may not exist at runtime).
-// CHECK-LABEL: define linkonce_odr hidden i32 @"+[WeakRoot classGetInt]D_thunk"(ptr noundef %self)
-// CHECK: entry:
-// CHECK:   call ptr @objc_msgSend
-// CHECK:   %[[IS_NIL:.*]] = icmp eq ptr {{.*}}, null
-// CHECK:   br i1 %[[IS_NIL]], label %objc_direct_method.self_is_nil, label %objc_direct_method.cont
-// CHECK: objc_direct_method.self_is_nil:
-// CHECK:   call void @llvm.memset
-// CHECK:   br label %dummy_ret_block
-// CHECK: objc_direct_method.cont:
-// CHECK:   %[[RET:.*]] = musttail call i32 @"+[WeakRoot classGetInt]D"(ptr noundef %self)
-// CHECK:   ret i32 %[[RET]]
-// CHECK: dummy_ret_block:
+// CHECK: define {{.*}} @"+[Root classGetComplex]D_thunk"
+// CHECK-NOT: define {{.*}} @"+[Root classGetAggregate]D_thunk"

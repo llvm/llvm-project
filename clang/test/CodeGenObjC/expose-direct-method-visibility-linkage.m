@@ -106,7 +106,7 @@ int main() {
     // MAIN_M: call i32 @"-[Foo exportedInstanceMethod:]D_thunk"
     printf("Exported instance: %d\n", [obj exportedInstanceMethod:10]);
 
-    // MAIN_M: call i32 @"+[Foo exportedClassMethod:]D_thunk"
+    // MAIN_M: call i32 @"+[Foo exportedClassMethod:]D"
     printf("Exported class: %d\n", [Foo exportedClassMethod:10]);
 
     return 0;
@@ -116,4 +116,4 @@ int main() {
 // MAIN_M-LABEL: define linkonce_odr hidden void @"-[Foo setExportedValue:]D_thunk"
 // MAIN_M-LABEL: define linkonce_odr hidden i32 @"-[Foo exportedValue]D_thunk"
 // MAIN_M-LABEL: define linkonce_odr hidden i32 @"-[Foo exportedInstanceMethod:]D_thunk"
-// MAIN_M-LABEL: define linkonce_odr hidden i32 @"+[Foo exportedClassMethod:]D_thunk"
+// MAIN_M: declare i32 @"+[Foo exportedClassMethod:]D"

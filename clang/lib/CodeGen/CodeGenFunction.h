@@ -883,6 +883,12 @@ public:
   /// rethrows.
   SmallVector<llvm::Value *, 8> ObjCEHValueStack;
 
+  /// A cache of objc classes that that are known to have been realized in each
+  /// basic block
+  llvm::DenseMap<llvm::BasicBlock *,
+                 llvm::SmallPtrSet<const ObjCInterfaceDecl *, 4>>
+      ObjCRealizedClasses;
+
   /// A class controlling the emission of a finally block.
   class FinallyInfo {
     /// Where the catchall's edge through the cleanup should go.
