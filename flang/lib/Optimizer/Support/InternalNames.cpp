@@ -359,7 +359,7 @@ bool fir::NameUniquer::isModuleScopeDataUniquedName(
   auto [kind, parts] = fir::NameUniquer::deconstruct(uniquedName);
   if (parts.modules.empty())
     return false;
-  
+
   switch (kind) {
   case fir::NameUniquer::NameKind::VARIABLE:
   case fir::NameUniquer::NameKind::CONSTANT:
