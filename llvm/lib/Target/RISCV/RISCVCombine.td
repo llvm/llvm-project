@@ -13,6 +13,7 @@ include "llvm/Target/GlobalISel/Combine.td"
 
 def RISCVPreLegalizerCombiner: GICombiner<
   "RISCVPreLegalizerCombinerImpl", [all_combines]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 def RISCVO0PreLegalizerCombiner: GICombiner<
