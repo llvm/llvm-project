@@ -1,6 +1,6 @@
 ; This test checks that after SelectionDAG runs, it preserves the debug info that is lost due to the DAGCombiner combining a load and a zext instruction, where the #dbg_value is pointing to the result of the load. However, this test also ensures that the DIExpression, which has multiple DW_OP_LLVM_arg's is handled correctly when the debug info is preserved in selectioDAG.
-; RUN: llc %s -mtriple=x86_64-unkown-linux-gnu -start-before=x86-isel -stop-after=x86-isel -o - | FileCheck %s --check-prefix=MIR
-; RUN: llc -O2 %s -start-before=x86-isel -mtriple=x86_64-unkown-linux --filetype=obj -o %t.o 
+; RUN: llc %s -mtriple=x86_64-unkown-linux-gnu -start-before=x86-isel -stop-after=x86-isel -o - -experimental-debug-variable-locations=true | FileCheck %s --check-prefix=MIR
+; RUN: llc -O2 %s -start-before=x86-isel -mtriple=x86_64-unkown-linux --filetype=obj -o %t.o -experimental-debug-variable-locations=true
 
 ; MIR: ![[V:[0-9]+]] = !DILocalVariable(name: "v"
 ; MIR-LABEL: bb.0
