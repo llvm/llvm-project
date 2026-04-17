@@ -431,8 +431,23 @@ public:
     for (auto &[Unit, _] : Copies)
       if (!PreservedRegUnits.test(static_cast<unsigned>(Unit)))
         UnitsToClobber.push_back(Unit);
-    for (MCRegUnit Unit : UnitsToClobber)
-      clobberRegUnit(Unit, TRI, TII, UseCopyInstr);
+
+    for (MCRegUnit Unit : UnitsToClobber) {
+      // If we clobber the RegUnit, it will mark all the DefReg Units
+      // as unavailable, which leads to issues if the Destination Reg Unit is
+      // preserved, and used later. As such, only mark them as unavailable if
+      // they are not preserved.
+      auto RegUnitInfo = Copies.find(Unit);
+      if (RegUnitInfo == Copies.end())
+        continue;
+
+      for (MCRegister DstReg : RegUnitInfo->second.DefRegs)
+        for (MCRegUnit DstUnit : TRI.regunits(DstReg))
+          if (!PreservedRegUnits.test(static_cast<unsigned>(DstUnit)))
+            if (auto CI = Copies.find(DstUnit); CI != Copies.end())
+              CI->second.Avail = false;
+      Copies.erase(RegUnitInfo);
+    }
   }
 
   // Find last COPY that uses Reg.
