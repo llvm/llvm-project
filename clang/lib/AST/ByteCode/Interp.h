@@ -2070,7 +2070,7 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
 }
 
 inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  if (S.checkingPotentialConstantExpression())
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
