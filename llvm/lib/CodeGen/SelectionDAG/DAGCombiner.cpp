@@ -11591,9 +11591,9 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
         SDValue LastElt = BV.getOperand(NumElts - 1);
         EVT IntEltVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits);
         LastElt = DAG.getBitcast(LastElt.getValueType().changeTypeToInteger(),
-                                  LastElt);
-        return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT),
-                                  DL, VT);
+                                 LastElt);
+        return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT), DL,
+                                  VT);
       }
     }
   }
