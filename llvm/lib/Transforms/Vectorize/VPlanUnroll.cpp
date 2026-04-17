@@ -209,28 +209,26 @@ void UnrollState::unrollWidenInductionByUF(
   VPValue *Prev = IV;
   Builder.setInsertPoint(IV->getParent(), InsertPtForPhi);
   unsigned AddOpc;
-  VPIRFlags AddFlags = IVFlags;
   if (IVTy->isPointerTy()) {
     AddOpc = VPInstruction::WidePtrAdd;
-    AddFlags = GEPNoWrapFlags::none();
+    IVFlags = GEPNoWrapFlags::none();
   } else if (IVTy->isFloatingPointTy()) {
     AddOpc = ID.getInductionOpcode();
   } else {
     AddOpc = Instruction::Add;
     if (cast<VPWidenIntOrFpInductionRecipe>(IV)->isCanonical())
-      AddFlags = VPIRFlags::WrapFlagsTy(/*NUW=*/true, /*NSW=*/false);
+      IVFlags = VPIRFlags::WrapFlagsTy(/*NUW=*/true, /*NSW=*/false);
   }
   for (unsigned Part = 1; Part != UF; ++Part) {
     std::string Name =
         Part > 1 ? "step.add." + std::to_string(Part) : "step.add";
 
-    VPInstruction *Add =
-        Builder.createNaryOp(AddOpc,
-                             {
-                                 Prev,
-                                 VectorStep,
-                             },
-                             AddFlags, IV->getDebugLoc(), Name);
+    VPInstruction *Add = Builder.createNaryOp(AddOpc,
+                                              {
+                                                  Prev,
+                                                  VectorStep,
+                                              },
+                                              IVFlags, IV->getDebugLoc(), Name);
     ToSkip.insert(Add);
     addRecipeForPart(IV, Add, Part);
     Prev = Add;
