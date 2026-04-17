@@ -631,7 +631,12 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       }
       r.referent = findContainingSubsection(*sections[relInfo.r_symbolnum - 1],
                                             &referentOffset);
-      r.addend = referentOffset;
+      // For AUTH relocs the upper 32 bits of the addend slot hold AuthInfo;
+      // only write the int32_t addend half to avoid clobbering it.
+      if (r.hasAuth)
+        r.authData.addend = static_cast<int32_t>(referentOffset);
+      else
+        r.addend = referentOffset;
     }
 
     // Find the subsection that this relocation belongs to.
