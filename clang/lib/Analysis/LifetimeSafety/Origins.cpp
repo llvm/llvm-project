@@ -236,7 +236,7 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     ReferencedDecl = DRE->getDecl();
   else if (auto *ME = dyn_cast<MemberExpr>(E))
     if (auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        Field && isa<CXXThisExpr>(ME->getBase()))
+        Field && isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
       ReferencedDecl = Field;
   if (ReferencedDecl) {
     OriginList *Head = nullptr;
