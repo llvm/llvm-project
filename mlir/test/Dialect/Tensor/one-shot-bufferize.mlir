@@ -330,15 +330,15 @@ func.func @dim_not_reading(%t: tensor<?xf32>, %f: f32, %pos: index)
 
 // -----
 
-//       CHECK: #[[$map:.*]] = affine_map<(d0) -> (d0 + 5)>
+//       CHECK: #[[$map:.*]] = affine_map<(d0) -> (d0 * 2)>
 // CHECK-LABEL: func.func private @cast_retains_buffer_layout(
-//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, #[[$map]]>, %[[sz:.*]]: index) -> memref<?xf32, strided<[1]>> {
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, #[[$map]]>, %[[sz:.*]]: index) -> memref<?xf32, strided<[2]>> {
 //       CHECK:   %[[casted:.*]] = memref.cast %[[t]] : memref<?xf32, #[[$map]]> to memref<10xf32, #[[$map]]>
-//       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, #[[$map]]> to memref<?xf32, strided<[1]>>
+//       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, #[[$map]]> to memref<?xf32, strided<[2]>>
 //       CHECK:   return %[[slice]]
 func.func private @cast_retains_buffer_layout(
     %t: tensor<?xf32>
-        {bufferization.buffer_layout = affine_map<(d0) -> (d0 + 5)>},
+        {bufferization.buffer_layout = affine_map<(d0) -> (d0 * 2)>},
     %sz: index)
   -> (tensor<10xf32>, tensor<?xf32>)
 {
