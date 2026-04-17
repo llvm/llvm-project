@@ -277,8 +277,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       referentVA = referentIsec->getVA(r.getAddend());
 
       if (needsFixup) {
-        uint64_t segmentBase = referentIsec->parent->parent->addr;
-        writeChainedRebase(loc, referentVA, segmentBase, r.getAuthInfo());
+        writeChainedRebase(loc, referentVA, r.getAuthInfo());
         continue;
       }
     }

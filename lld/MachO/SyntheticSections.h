@@ -843,11 +843,10 @@ private:
   llvm::MachO::ChainedImportFormat importFormat;
 };
 
-void writeChainedRebase(uint8_t *buf, uint64_t targetVA, uint64_t segmentBase,
-                        const AuthInfo *ai);
+void writeChainedRebase(uint8_t *buf, uint64_t targetVA, const AuthInfo *ai);
 void writeChainedFixup(uint8_t *buf, const Symbol *sym, const Relocation &r);
 void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
-                       uint64_t segmentBase, const AuthInfo *ai);
+                       const AuthInfo *ai);
 
 struct InStruct {
   const uint8_t *bufferStart = nullptr;

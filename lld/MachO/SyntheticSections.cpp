@@ -392,7 +392,7 @@ static uint16_t computePointerFormat() {
 }
 
 void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA,
-                               uint64_t segmentBase, const AuthInfo *ai) {
+                               const AuthInfo *ai) {
   assert(config->emitChainedFixups);
   assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
   if (config->arch() == AK_arm64e) {
@@ -522,15 +522,15 @@ void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym,
   if (needsBinding(sym))
     writeChainedBind(buf, sym, addend, ai);
   else
-    writeChainedRebase(buf, sym->getVA() + addend, 0, ai);
+    writeChainedRebase(buf, sym->getVA() + addend, ai);
 }
 
 void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
-                              uint64_t segmentBase, const AuthInfo *ai) {
+                              const AuthInfo *ai) {
   if (needsBinding(sym))
     writeChainedBind(buf, sym, addend, ai);
   else
-    writeChainedRebase(buf, sym->getVA() + addend, segmentBase, ai);
+    writeChainedRebase(buf, sym->getVA() + addend, ai);
 }
 
 void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
@@ -539,8 +539,7 @@ void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
   if (config->emitChainedFixups) {
     for (const auto &[i, entry] : llvm::enumerate(entries)) {
       const AuthInfo *ai = isAuth ? &defaultAuthInfo : nullptr;
-      writeChainedFixup(&buf[i * target->wordSize], entry, 0,
-                        this->parent->addr, ai);
+      writeChainedFixup(&buf[i * target->wordSize], entry, 0, ai);
     }
   } else {
     for (const auto &[i, entry] : llvm::enumerate(entries))
