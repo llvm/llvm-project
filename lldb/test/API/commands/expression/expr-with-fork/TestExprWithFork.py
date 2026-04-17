@@ -387,9 +387,22 @@ class ExprWithForkTestCase(TestBase):
         options = lldb.SBExpressionOptions()
         options.SetStopOthers(False)
 
+        # Redirect debugger output to capture the async warning message
+        # that DidFork emits when overriding follow-fork-mode.
+        output_path = self.getBuildArtifact("debugger_output.txt")
+        outfile = open(output_path, "w")
+        self.dbg.SetOutputFileHandle(outfile, False)
+
         value = thread.GetSelectedFrame().EvaluateExpression(
             "expr_with_concurrent_fork()", options
         )
+
+        self.dbg.GetOutputFile().Flush()
+        outfile.close()
+        self.dbg.SetOutputFileHandle(None, False)
+
+        with open(output_path, "r") as f:
+            debugger_output = f.read()
 
         # Expression should complete successfully because DidFork overrides
         # follow-fork-mode to parent when any expression is running.
@@ -405,3 +418,17 @@ class ExprWithForkTestCase(TestBase):
 
         # Breakpoints should still be functional.
         self.expect_expr("x", result_type="int", result_value="42")
+
+        # Verify the user-facing warning about the follow-fork-mode override.
+        self.assertIn(
+            "follow-fork-mode",
+            debugger_output,
+            "expected override warning in debugger output",
+        )
+        self.assertIn(
+            str(child_pid), debugger_output, "expected child PID in debugger output"
+        )
+        self.assertTrue(
+            "stopped" in debugger_output or "running" in debugger_output,
+            "expected child stop status in debugger output",
+        )
