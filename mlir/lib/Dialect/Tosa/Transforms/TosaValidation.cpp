@@ -880,7 +880,7 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
     for (auto dim : shape) {
       const bool dimIsDynamic = mlir::ShapedType::isDynamic(dim);
       const TosaSpecificationVersion targetVersion = targetEnv.getSpecVersion();
-      const TosaSpecificationVersion minRequiredVersion(1, 1);
+      const TosaSpecificationVersion minRequiredVersion(1, 1, true);
       if (targetVersion.isBackwardsCompatibleWith(minRequiredVersion) &&
           dimIsDynamic)
         // TOSA 1.1 and above supports dynamic dimensions, however, they must be
