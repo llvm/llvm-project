@@ -992,9 +992,12 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
                                               sizeof(prpsinfo.pr_psargs)))
                           .str();
       // pr_psargs's char array used to represent arguments is only 80 character
-      // long
-      // (\0 included), hence 79.
-      m_process_args = CoreArgs(core_arg, core_arg.size() == 79);
+      // long (\0 included), for a total of 79.
+      // We set core_arg's m_might_be_truncated = true if its size
+      // is the maximum (79).
+      m_process_args =
+          CoreArgs(core_arg, /*might_be_truncated=*/core_arg.size() ==
+                                 sizeof(prpsinfo.pr_psargs) - 1);
       break;
     }
     case ELF::NT_SIGINFO: {
@@ -1182,7 +1185,6 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
     info.SetExecutableFile(GetTarget().GetExecutableModule()->GetFileSpec(),
                            add_exe_file_as_first_arg);
   }
-  if (!m_process_args.empty())
-    info.SetArguments(m_process_args.as_args(), true);
+  info.SetArguments(m_process_args.as_args(), /*first_arg_is_executable=*/true);
   return true;
 }

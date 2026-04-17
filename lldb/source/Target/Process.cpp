@@ -5948,13 +5948,11 @@ void Process::GetStatus(Stream &strm, bool is_verbose) {
     } else {
       if (state == eStateConnected)
         strm.Printf("Connected to remote target.\n");
-      else if (!IsLiveDebugSession()) {
+      else {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
-        auto core_args = GetCoreFileArgs();
-        if (core_args && is_verbose)
+        if (auto core_args = GetCoreFileArgs(); core_args && is_verbose)
           core_args->Format(strm);
-      } else
-        strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
+      }
     }
   } else {
     strm.Printf("Process %" PRIu64 " is running.\n", GetID());
