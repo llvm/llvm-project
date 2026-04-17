@@ -456,6 +456,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
 // JSON-NEXT:    },
+// JSON-NEXT:    "isReferenced": true,
 // JSON-NEXT:    "name": "foo",
 // JSON-NEXT:    "inner": [
 // JSON-NEXT:     {
@@ -941,6 +942,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
 // JSON-NEXT:      },
+// JSON-NEXT:      "isReferenced": true,
 // JSON-NEXT:      "name": "foo",
 // JSON-NEXT:      "tagUsed": "struct",
 // JSON-NEXT:      "completeDefinition": true,
@@ -1581,6 +1583,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
 // JSON-NEXT:      },
+// JSON-NEXT:      "isReferenced": true,
 // JSON-NEXT:      "name": "foo",
 // JSON-NEXT:      "tagUsed": "struct",
 // JSON-NEXT:      "completeDefinition": true,
@@ -3136,6 +3139,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
 // JSON-NEXT:    },
+// JSON-NEXT:    "isReferenced": true,
 // JSON-NEXT:    "name": "A",
 // JSON-NEXT:    "inner": [
 // JSON-NEXT:     {
@@ -3932,6 +3936,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
 // JSON-NEXT:      },
+// JSON-NEXT:      "isReferenced": true,
 // JSON-NEXT:      "name": "A",
 // JSON-NEXT:      "inner": [
 // JSON-NEXT:       {
@@ -4079,6 +4084,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
 // JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
 // JSON-NEXT:        "name": "A",
 // JSON-NEXT:        "tagUsed": "struct",
 // JSON-NEXT:        "inner": [
@@ -4430,6 +4436,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
 // JSON-NEXT:      },
+// JSON-NEXT:      "isReferenced": true,
 // JSON-NEXT:      "name": "foo",
 // JSON-NEXT:      "inner": [
 // JSON-NEXT:       {
@@ -4640,6 +4647,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
 // JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
 // JSON-NEXT:        "name": "foo",
 // JSON-NEXT:        "tagUsed": "struct",
 // JSON-NEXT:        "completeDefinition": true,
@@ -6676,6 +6684,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
 // JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
 // JSON-NEXT:        "name": "T2",
 // JSON-NEXT:        "tagUsed": "class",
 // JSON-NEXT:        "depth": 0,
@@ -6754,6 +6763,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
 // JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
 // JSON-NEXT:        "name": "U",
 // JSON-NEXT:        "tagUsed": "class",
 // JSON-NEXT:        "depth": 0,
@@ -7103,6 +7113,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
 // JSON-NEXT:      },
+// JSON-NEXT:      "isReferenced": true,
 // JSON-NEXT:      "name": "Template1",
 // JSON-NEXT:      "inner": [
 // JSON-NEXT:       {
@@ -8082,6 +8093,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
 // JSON-NEXT:      },
+// JSON-NEXT:      "isReferenced": true,
 // JSON-NEXT:      "name": "N",
 // JSON-NEXT:      "inner": [
 // JSON-NEXT:       {
@@ -8105,6 +8117,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
 // JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
 // JSON-NEXT:        "name": "S",
 // JSON-NEXT:        "inner": [
 // JSON-NEXT:         {
@@ -8296,6 +8309,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
 // JSON-NEXT:          },
+// JSON-NEXT:          "isReferenced": true,
 // JSON-NEXT:          "name": "S",
 // JSON-NEXT:          "tagUsed": "struct",
 // JSON-NEXT:          "completeDefinition": true,
@@ -9037,6 +9051,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
 // JSON-NEXT:      },
+// JSON-NEXT:      "isReferenced": true,
 // JSON-NEXT:      "name": "T1",
 // JSON-NEXT:      "inner": [
 // JSON-NEXT:       {
@@ -9059,6 +9074,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
 // JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
 // JSON-NEXT:        "name": "TT",
 // JSON-NEXT:        "depth": 0,
 // JSON-NEXT:        "index": 0,
@@ -9109,6 +9125,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
 // JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
 // JSON-NEXT:        "name": "T1",
 // JSON-NEXT:        "type": {
 // JSON-NEXT:         "qualType": "TT<int>"
@@ -9188,6 +9205,7 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
 // JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
 // JSON-NEXT:        "name": "T",
 // JSON-NEXT:        "tagUsed": "class",
 // JSON-NEXT:        "depth": 0,

@@ -121,7 +121,7 @@ public:
   bool enableScalableVectorization() const override {
     return ST->hasVInstructions();
   }
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override {
     return ST->hasVInstructions();
   }
   TailFoldingStyle getPreferredTailFoldingStyle() const override {
@@ -454,6 +454,7 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::FindLast:
       return true;
     case RecurKind::AnyOf:
     case RecurKind::FAdd:

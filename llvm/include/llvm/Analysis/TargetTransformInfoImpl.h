@@ -274,7 +274,7 @@ public:
 
   virtual unsigned getEpilogueVectorizationMinVF() const { return 16; }
 
-  virtual bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
+  virtual bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
     return false;
   }
 

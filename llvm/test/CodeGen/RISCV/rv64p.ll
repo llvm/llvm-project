@@ -119,12 +119,48 @@ define i64 @pli_h_i64() {
   ret i64 u0x0123012301230123
 }
 
+define i64 @pli_h_slli_i64() {
+; CHECK-LABEL: pli_h_slli_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a0, 511
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    ret
+  ret i64 u0x0ff80ff80ff80ff8
+}
+
+define i64 @pli_h_srli_i64() {
+; CHECK-LABEL: pli_h_srli_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a0, -240
+; CHECK-NEXT:    srli a0, a0, 4
+; CHECK-NEXT:    ret
+  ret i64 u0x0ff10ff10ff10ff1
+}
+
 define i64 @pli_w_i64() {
 ; CHECK-LABEL: pli_w_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.w a0, -292
 ; CHECK-NEXT:    ret
   ret i64 u0xfffffedcfffffedc
+}
+
+define i64 @pli_w_slli_i64() {
+; CHECK-LABEL: pli_w_slli_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.w a0, 511
+; CHECK-NEXT:    slli a0, a0, 7
+; CHECK-NEXT:    ret
+  ret i64 u0x0000ff800000ff80
+}
+
+define i64 @pli_w_srli_i64() {
+; CHECK-LABEL: pli_w_srli_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.w a0, -480
+; CHECK-NEXT:    srli a0, a0, 5
+; CHECK-NEXT:    ret
+  ret i64 u0x07fffff107fffff1
 }
 
 define void @pli_b_store_i32(ptr %p) {
@@ -135,6 +171,32 @@ define void @pli_b_store_i32(ptr %p) {
 ; CHECK-NEXT:    ret
   store i32 u0x41414141, ptr %p
   ret void
+}
+
+define void @pli_b_store_i16(ptr %p) {
+; CHECK-LABEL: pli_b_store_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, -127
+; CHECK-NEXT:    sh a1, 0(a0)
+; CHECK-NEXT:    ret
+  store i16 u0x8181, ptr %p
+  ret void
+}
+
+define i64 @plui_h_i64() {
+; CHECK-LABEL: plui_h_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    plui.h a0, -9
+; CHECK-NEXT:    ret
+  ret i64 u0xfdc0fdc0fdc0fdc0
+}
+
+define i64 @plui_w_i64() {
+; CHECK-LABEL: plui_w_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    plui.w a0, 473
+; CHECK-NEXT:    ret
+  ret i64 u0x7640000076400000
 }
 
 define i64 @pack_i64(i64 %a, i64 %b) nounwind {

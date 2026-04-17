@@ -121,74 +121,6 @@ static SmallVector<SmallVector<int64_t>> genStaticCoordinates(
   return coordinates;
 }
 
-// Checks if the given shape can be evenly distributed based on the layout
-// and data factors provided by the LayoutAttr.
-bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
-                                         xegpu::DistributeLayoutAttr attr) {
-  assert(attr && "Layout attribute is missing.");
-
-  // Checks whether the given shape can be evenly distributed using the
-  // specified layout and data attributes. If successful, it returns the work
-  // size for each compute unit; otherwise, it returns `std::nullopt`. The work
-  // size per compute unit is calculated as follows:
-  //   - If `data` is null: newShape[i] = shape[i] / layout[i]
-  //   - If `data` is not null: newShape[i] = data[i]
-  // When round-robin distribution (`rr`) is enabled, `shape[i]` can be
-  // smaller than `layout[i] * data[i]`, allowing multiple compute units to
-  // share the data.
-  auto tryDistribute = [&](llvm::ArrayRef<int64_t> shape,
-                           SmallVector<int64_t> layout,
-                           SmallVector<int64_t> data,
-                           bool rr = true) -> optional<SmallVector<int64_t>> {
-    llvm::SmallVector<int64_t> newShape(shape);
-    if (layout.size()) {
-      if (layout.size() != shape.size())
-        return std::nullopt;
-      auto ratio = computeShapeRatio(shape, layout);
-      if (ratio.has_value()) {
-        newShape = ratio.value();
-      } else if (!rr || !computeShapeRatio(layout, shape).has_value()) {
-        return std::nullopt;
-      }
-      // Round-robin case: continue with original newShape
-    }
-
-    if (data.size()) {
-      if (data.size() != shape.size())
-        return std::nullopt;
-      auto ratio = computeShapeRatio(newShape, data);
-      if (!ratio.has_value() && rr)
-        ratio = computeShapeRatio(data, newShape);
-      if (!ratio.has_value())
-        return std::nullopt;
-
-      // if data is not null, we always return it for next phase.
-      newShape = data;
-    }
-    return newShape;
-  };
-
-  // check the sgLayout and sgData
-  auto maybeSgShape = tryDistribute(shape, attr.getEffectiveSgLayoutAsInt(),
-                                    attr.getEffectiveSgDataAsInt());
-  if (!maybeSgShape)
-    return false;
-  auto sgShape = maybeSgShape.value();
-
-  // check InstData, it neither have layout nor need round-robin
-  auto maybeInstShape =
-      tryDistribute(sgShape, {}, attr.getEffectiveInstDataAsInt(), false);
-  if (!maybeInstShape)
-    return false;
-  auto instShape = maybeInstShape.value();
-
-  // check LaneLayout and LaneData
-  auto maybeLaneShape =
-      tryDistribute(instShape, attr.getEffectiveLaneLayoutAsInt(),
-                    attr.getEffectiveLaneDataAsInt());
-  return maybeLaneShape.has_value();
-}
-
 //===----------------------------------------------------------------------===//
 // XeGPU_BlockTensorDescAttr
 //===----------------------------------------------------------------------===//
@@ -206,28 +138,6 @@ BlockTensorDescAttr BlockTensorDescAttr::get(mlir::MLIRContext *context,
 bool BlockTensorDescAttr::hasDefaultsOnly() {
   return getMemorySpace().getValue() == xegpu::MemorySpace::Global &&
          getArrayLength().getInt() == 1 && getBoundaryCheck().getValue();
-}
-
-//===----------------------------------------------------------------------===//
-// XeGPU_ScatterTensorDescAttr
-//===----------------------------------------------------------------------===//
-ScatterTensorDescAttr
-ScatterTensorDescAttr::get(mlir::MLIRContext *context,
-                           xegpu::MemorySpace memory_space, int chunk_size) {
-  auto scopeAttr = MemorySpaceAttr::get(context, memory_space);
-  auto chunkSizeAttr =
-      IntegerAttr::get(IntegerType::get(context, 64), chunk_size);
-  return Base::get(context, scopeAttr, chunkSizeAttr);
-}
-
-LogicalResult ScatterTensorDescAttr::verify(
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    MemorySpaceAttr memory_space, IntegerAttr chunk_size) {
-  int64_t chunkSize = chunk_size.getInt();
-  if (chunkSize <= 0)
-    return emitError() << "invalid chunk size";
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1322,7 +1232,7 @@ mlir::Type TensorDescType::parse(AsmParser &parser) {
         layout = attr;
         continue;
       }
-      if (mlir::isa<BlockTensorDescAttr, ScatterTensorDescAttr>(attr)) {
+      if (mlir::isa<BlockTensorDescAttr>(attr)) {
         encoding = attr;
         continue;
       }
@@ -1377,15 +1287,6 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
   return Base::get(context, shape, elementType, attr, layout);
 }
 
-TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
-                                   mlir::Type elementType, int chunk_size,
-                                   MemorySpace memory_space,
-                                   mlir::Attribute layout) {
-  auto *context = elementType.getContext();
-  auto attr = ScatterTensorDescAttr::get(context, memory_space, chunk_size);
-  return Base::get(context, shape, elementType, attr, layout);
-}
-
 LogicalResult
 TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
                        llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
@@ -1407,49 +1308,12 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "unsupported element type " << elementType
                        << ": expected integer or float";
 
-  // for gather and scatter ops, Low-precision types are packed in 32-bit
-  // units.
-  unsigned bitWidth = elementType.getIntOrFloatBitWidth();
-  int chunkAlignmentFactor =
-      bitWidth < xegpu::uArch::generalPackedFormatBitSize
-          ? xegpu::uArch::generalPackedFormatBitSize / bitWidth
-          : 1;
-  auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
-  if (scatterAttr) {
-    int64_t chunkSize = scatterAttr.getChunkSizeAsInt();
-    if (rank == 1 && chunkSize != 1)
-      return emitError() << "expected non-contiguous elements for 1D tensor";
-
-    // If chunk size > 1, the second dimension of the tensor shape must be
-    // equal to chunk size and it must be a multiple of the
-    // chunkAlignmentFactor.
-    if (chunkSize > 1) {
-      if (shape.back() != chunkSize)
-        return emitError() << "expected last dim of tensor to match chunk size";
-      if (shape.back() % chunkAlignmentFactor != 0)
-        return emitError() << "expected last dim of tensor to be a multiple of "
-                           << chunkAlignmentFactor;
-    }
-  }
-
-  auto layoutAttr = llvm::dyn_cast_if_present<LayoutAttr>(layout);
-  if (layoutAttr) {
+  if (auto layoutAttr =
+          mlir::dyn_cast_if_present<DistributeLayoutAttr>(layout)) {
     if (rank != (size_t)layoutAttr.getRank())
       return emitError() << "expected layout rank to match tensor rank";
 
-    auto laneData = layoutAttr.getLaneData();
-    if (scatterAttr && laneData) {
-      // Validate subgroup mapping rules for scattered tensors.
-      // if chunkSize > 1, the last dimension of the tensor should
-      // be distributed in the units divisible by chunkAlignmentFactor.
-      int64_t chunkSize = scatterAttr.getChunkSizeAsInt();
-      if (chunkSize > 1 && laneData[rank - 1] % chunkAlignmentFactor)
-        return emitError()
-               << "expected last dim of lane_data to be a multiple of: "
-               << chunkAlignmentFactor;
-    }
-
-    if (!XeGPUDialect::isEvenlyDistributable(shape, layoutAttr)) {
+    if (!layoutAttr.isDistributable(SmallVector<int64_t>(shape))) {
       std::string shapeStr;
       llvm::raw_string_ostream stream(shapeStr);
       llvm::interleaveComma(shape, stream);
@@ -1457,6 +1321,7 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
                          << layoutAttr;
     }
   }
+
   return success();
 }
 
