@@ -1,12 +1,12 @@
-## Check that malformed .lit_test_times.txt lines do not crash discovery.
-##
-## The valid timing entries should still be honored for smart ordering.
+## Check that malformed .lit_test_times.txt aborts discovery with a
+## clear diagnostic.
 
 # RUN: cp %{inputs}/malformed-test-times/lit_test_times %{inputs}/malformed-test-times/.lit_test_times.txt
-# RUN: %{lit-no-order-opt} %{inputs}/malformed-test-times > %t.out
-# RUN: FileCheck < %t.out %s
+# RUN: not %{lit-no-order-opt} %{inputs}/malformed-test-times > %t.out 2> %t.err
+# RUN: FileCheck --allow-empty --check-prefix=OUT < %t.out %s
+# RUN: FileCheck --check-prefix=ERR < %t.err %s
 
-# CHECK: -- Testing: 2 tests, 1 workers --
-# CHECK-NEXT: PASS: malformed-test-times :: b.txt
-# CHECK-NEXT: PASS: malformed-test-times :: a.txt
-# CHECK: Passed: 2
+# OUT-NOT: -- Testing:
+
+# ERR: fatal: found malformed timing data in
+# ERR-SAME: ; remove the file to regenerate it
