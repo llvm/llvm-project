@@ -4668,6 +4668,11 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  return vputils::onlyFirstLaneUsed(this);
+}
+
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   Value *Op0 = State.get(getOperand(0));
   Type *VecTy = Op0->getType();
