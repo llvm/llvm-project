@@ -15,7 +15,7 @@
 #include "../stack_t.h"
 #include "mcontext_t.h"
 
-typedef struct alignas(16) ucontext_t {
+typedef struct ucontext_t {
   // The following fields must match the Linux kernel's struct ucontext
   // on x86_64 to ensure ABI compatibility for signal handling.
   unsigned long uc_flags;
@@ -34,7 +34,7 @@ typedef struct alignas(16) ucontext_t {
   // provide space here for the FP state, and the pointer in uc_mcontext
   // can be set to point here. 64 long ints provide 512 bytes, which is
   // the size required for FXSAVE.
-  alignas(16) long int __fpregs_mem[64];
+  _Alignas(16) long int __fpregs_mem[64];
 
   // Support for Shadow Stack Pointer (Intel CET).
   unsigned long long __ssp[4];
