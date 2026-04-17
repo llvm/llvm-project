@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -ffreestanding -std=c23 %s -emit-llvm -o - | FileCheck %s
 // RUN: %if clang-target-64-bits %{ %clang_cc1 -ffreestanding -std=c23 %s -emit-llvm -o - | FileCheck %s --check-prefix=INT128 %}
 // RUN: %clang_cc1 -std=c23 -isystem %S/Inputs -DTEST_LIB_SPELLINGS %s -emit-llvm -o - | FileCheck %s --check-prefix=LIB
-// RUN: %if clang-target-64-bits %{ %clang_cc1 -std=c23 -isystem %S/Inputs -DTEST_LIB_SPELLINGS -DTEST_UL_TYPED %s -emit-llvm -o - | FileCheck %s --check-prefix=LIBL %}
 
 // CHECK-LABEL: test_leading_zeros
 // CHECK: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
@@ -395,6 +394,45 @@ void test_int128_floor_ceil(unsigned __int128 u128) {
 }
 #endif
 
+// CHECK-LABEL: test_ulong
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: xor {{i32|i64}} %{{.*}}, -1
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: xor {{i32|i64}} %{{.*}}, -1
+// CHECK: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: xor {{i32|i64}} %{{.*}}, -1
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: xor {{i32|i64}} %{{.*}}, -1
+// CHECK: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// CHECK: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// CHECK: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 true)
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+void test_ulong(unsigned long ul) {
+  volatile unsigned r;
+  volatile unsigned long rl;
+  volatile _Bool rb;
+  r  = __builtin_stdc_leading_zeros(ul);
+  r  = __builtin_stdc_leading_ones(ul);
+  r  = __builtin_stdc_trailing_zeros(ul);
+  r  = __builtin_stdc_trailing_ones(ul);
+  r  = __builtin_stdc_first_leading_zero(ul);
+  r  = __builtin_stdc_first_leading_one(ul);
+  r  = __builtin_stdc_first_trailing_zero(ul);
+  r  = __builtin_stdc_first_trailing_one(ul);
+  r  = __builtin_stdc_count_zeros(ul);
+  r  = __builtin_stdc_count_ones(ul);
+  rb = __builtin_stdc_has_single_bit(ul);
+  r  = __builtin_stdc_bit_width(ul);
+  rl = __builtin_stdc_bit_floor(ul);
+  rl = __builtin_stdc_bit_ceil(ul);
+}
+
 #ifdef TEST_LIB_SPELLINGS
 #include <stdbit.h>
 
@@ -695,26 +733,25 @@ void test_lib_typed_bit_ceil(unsigned char uc, unsigned short us,
   volatile unsigned long long rll = stdc_bit_ceil_ull(ull);
 }
 
-#ifdef TEST_UL_TYPED
-// LIBL-LABEL: test_lib_typed_ul
-// LIBL: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
-// LIBL: xor i64 %{{.*}}, -1
-// LIBL: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
-// LIBL: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
-// LIBL: xor i64 %{{.*}}, -1
-// LIBL: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
-// LIBL: xor i64 %{{.*}}, -1
-// LIBL: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
-// LIBL: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
-// LIBL: xor i64 %{{.*}}, -1
-// LIBL: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
-// LIBL: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
-// LIBL: call i64 @llvm.ctpop.i64(i64 %{{.*}})
-// LIBL: call i64 @llvm.ctpop.i64(i64 %{{.*}})
-// LIBL: call i64 @llvm.ctpop.i64(i64 %{{.*}})
-// LIBL: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
-// LIBL: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 true)
-// LIBL: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LIB-LABEL: test_lib_typed_ul
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: xor {{i32|i64}} %{{.*}}, -1
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: xor {{i32|i64}} %{{.*}}, -1
+// LIB: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: xor {{i32|i64}} %{{.*}}, -1
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: xor {{i32|i64}} %{{.*}}, -1
+// LIB: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// LIB: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// LIB: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 true)
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
 void test_lib_typed_ul(unsigned long ul) {
   volatile unsigned r;
   volatile unsigned long rl;
@@ -734,5 +771,4 @@ void test_lib_typed_ul(unsigned long ul) {
   rl = stdc_bit_floor_ul(ul);
   rl = stdc_bit_ceil_ul(ul);
 }
-#endif
 #endif
