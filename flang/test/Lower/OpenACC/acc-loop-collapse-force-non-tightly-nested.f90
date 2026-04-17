@@ -67,3 +67,46 @@ end subroutine
 ! CHECK: acc.yield
 ! Outer has collapse = [2]
 ! CHECK: collapse = [2]
+
+! -----
+
+! Test 3: collapse(force:3) with statements before an inner !$acc loop.
+! The do k loop is absorbed by the collapse (3 IVs), but do l with
+! its own !$acc loop directive should remain as a separate acc.loop.
+
+subroutine collapse_force3_with_inner_acc_loop(a, n)
+  implicit none
+  integer, intent(in) :: n
+  real, intent(inout) :: a(n, n, n, n)
+  integer :: i, j, k, l
+  real :: tmp
+
+  !$acc parallel loop collapse(force:3) copy(a)
+  do i = 1, n
+    do j = 1, n
+      tmp = real(i + j)
+      do k = 1, n
+        a(i, j, k, 1) = tmp
+        !$acc loop
+        do l = 1, n
+          a(i, j, k, l) = a(i, j, k, l) + real(l)
+        end do
+      end do
+    end do
+  end do
+  !$acc end parallel loop
+end subroutine
+
+! CHECK-LABEL: func.func @_QPcollapse_force3_with_inner_acc_loop
+! CHECK: acc.parallel
+! Outer collapsed acc.loop with 3 IVs
+! CHECK: acc.loop combined(parallel)
+! Prologue (tmp = i + j) inside the collapsed body
+! CHECK: arith.addi
+! Statement before inner acc loop (a(i,j,k,1) = tmp)
+! CHECK: hlfir.assign
+! Inner acc.loop for l should remain
+! CHECK: acc.loop
+! CHECK: acc.yield
+! Outer has collapse = [3]
+! CHECK: collapse = [3]
