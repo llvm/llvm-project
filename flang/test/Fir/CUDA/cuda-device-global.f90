@@ -64,4 +64,3 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.conta
 // CHECK: fir.global linkonce_odr @_QMvector_typesE.dt.v2real2
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: fir.global linkonce_odr @_QMvector_typesE.dt.v2real2
-
