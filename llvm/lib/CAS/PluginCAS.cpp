@@ -129,6 +129,8 @@ public:
   Expected<CASID> parseID(StringRef ID) final;
   Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
                             ArrayRef<char> Data) final;
+  Expected<ObjectRef> storeFromFile(StringRef Path) final;
+  Error exportDataToFile(ObjectHandle Node, StringRef Path) const final;
   CASID getID(ObjectRef Ref) const final;
   std::optional<ObjectRef> getReference(const CASID &ID) const final;
   Expected<bool> isMaterialized(ObjectRef Ref) const final;
@@ -222,6 +224,35 @@ Expected<ObjectRef> PluginObjectStore::store(ArrayRef<ObjectRef> Refs,
     return Ctx->errorAndDispose(c_err);
 
   return ObjectRef::getFromInternalRef(*this, c_stored_id.opaque);
+}
+
+Expected<ObjectRef> PluginObjectStore::storeFromFile(StringRef Path) {
+  if (!Ctx->Functions.cas_store_from_filepath)
+    return ObjectStore::storeFromFile(Path);
+
+  llcas_objectid_t c_stored_id;
+  char *c_err = nullptr;
+  std::string PathStr = Path.str();
+  if (Ctx->Functions.cas_store_from_filepath(Ctx->c_cas, PathStr.c_str(),
+                                             &c_stored_id, &c_err))
+    return Ctx->errorAndDispose(c_err);
+
+  return ObjectRef::getFromInternalRef(*this, c_stored_id.opaque);
+}
+
+Error PluginObjectStore::exportDataToFile(ObjectHandle Node,
+                                          StringRef Path) const {
+  if (!Ctx->Functions.loaded_object_export_data_to_filepath)
+    return ObjectStore::exportDataToFile(Node, Path);
+
+  char *c_err = nullptr;
+  std::string PathStr = Path.str();
+  if (Ctx->Functions.loaded_object_export_data_to_filepath(
+          Ctx->c_cas, llcas_loaded_object_t{Node.getInternalRef(*this)},
+          PathStr.c_str(), &c_err))
+    return Ctx->errorAndDispose(c_err);
+
+  return Error::success();
 }
 
 static StringRef toStringRef(llcas_digest_t c_digest) {

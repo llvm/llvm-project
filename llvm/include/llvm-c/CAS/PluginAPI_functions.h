@@ -264,6 +264,27 @@ LLCAS_PUBLIC bool llcas_cas_store_object(llcas_cas_t, llcas_data_t,
                                          llcas_objectid_t *p_id, char **error);
 
 /**
+ * Stores the data of a file and provides its associated \c llcas_objectid_t.
+ *
+ * An underlying implementation could perform optimizations that reduce I/O
+ * and disk space consumption.
+ *
+ * If there are any concurrent modifications to the file, the contents in the
+ * CAS may be corrupt.
+ *
+ * \param filepath path to the file.
+ * \param p_id pointer to store the returned \c llcas_objectid_t object.
+ * \param error optional pointer to receive an error message if an error
+ * occurred. If set, the memory it points to needs to be released via
+ * \c llcas_string_dispose.
+ * \returns true if there was an error, false otherwise.
+ */
+LLCAS_PUBLIC bool llcas_cas_store_from_filepath(llcas_cas_t,
+                                                const char *filepath,
+                                                llcas_objectid_t *p_id,
+                                                char **error);
+
+/**
  * \returns the data buffer of the provided \c llcas_loaded_object_t. The buffer
  * pointer must be 8-byte aligned and \c NULL terminated. The memory that the
  * buffer points to is valid for the lifetime of the \c llcas_cas_t object.
@@ -290,6 +311,23 @@ LLCAS_PUBLIC size_t llcas_object_refs_get_count(llcas_cas_t,
 LLCAS_PUBLIC llcas_objectid_t llcas_object_refs_get_id(llcas_cas_t,
                                                        llcas_object_refs_t,
                                                        size_t index);
+
+/**
+ * Exports the data of an object to a file path. It does not include any
+ * references of the object.
+ *
+ * An underlying implementation could perform optimizations that reduce I/O
+ * and disk space consumption.
+ *
+ * \param filepath the file path to write the data to.
+ * \param error optional pointer to receive an error message if an error
+ * occurred. If set, the memory it points to needs to be released via
+ * \c llcas_string_dispose.
+ * \returns true if there was an error, false otherwise.
+ */
+LLCAS_PUBLIC bool
+llcas_loaded_object_export_data_to_filepath(llcas_cas_t, llcas_loaded_object_t,
+                                            const char *filepath, char **error);
 
 /**
  * Retrieves the \c llcas_objectid_t value associated with a \p key.
