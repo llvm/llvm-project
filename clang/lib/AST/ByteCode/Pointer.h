@@ -789,6 +789,7 @@ public:
   /// InlineDescriptor as well as primitive array elements. This function is
   /// used by std::destroy_at.
   void endLifetime() const;
+  void setLifeState(Lifetime L) const;
 
   /// Strip base casts from this Pointer.
   /// The result is either a root pointer or something
