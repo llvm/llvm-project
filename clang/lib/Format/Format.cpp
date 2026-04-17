@@ -4768,12 +4768,5 @@ bool isClangFormatOff(StringRef Comment) {
   return isClangFormatOnOff(Comment, /*On=*/false);
 }
 
-bool isNoLintEnd(StringRef Comment) {
-  static const char NoLintEnd[] = "// NOLINTEND";
-  const unsigned Size = sizeof NoLintEnd - 1;
-  return Comment.starts_with(NoLintEnd) &&
-         (Comment.size() == Size || Comment[Size] == '(');
-}
-
 } // namespace format
 } // namespace clang

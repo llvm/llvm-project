@@ -297,7 +297,29 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                "// NOLINTEND\n"
                "\n"
                "void some_function() {}\n",
-               Style);
+               Style,
+               "// NOLINTBEGIN\n"
+               "int x = 1;\n"
+               "int y = 2;\n"
+               "// NOLINTEND\n"
+               "\n"
+               "void some_function() {}\n",
+               false);
+
+  verifyFormat("int x = 0;\n"
+               "int y = 0;\n"
+               "// trailing comment 1\n"
+               "// trailing comment 2\n"
+               "\n"
+               "void some_function() {}\n",
+               Style,
+               "int x = 0;\n"
+               "int y = 0;\n"
+               "// trailing comment 1\n"
+               "// trailing comment 2\n"
+               "\n"
+               "void some_function() {}\n",
+               false);
 
   std::string Prefix = "namespace {\n";
   std::string Infix = "\n"

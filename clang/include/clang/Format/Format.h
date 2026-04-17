@@ -6430,7 +6430,6 @@ inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
 
 bool isClangFormatOn(StringRef Comment);
 bool isClangFormatOff(StringRef Comment);
-bool isNoLintEnd(StringRef Comment);
 
 } // end namespace format
 } // end namespace clang

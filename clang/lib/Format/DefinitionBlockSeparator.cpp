@@ -147,9 +147,11 @@ void DefinitionBlockSeparator::separateBlocks(
         return false;
 
       if (const auto *Tok = OperateLine->First;
-          Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText) &&
-          !isNoLintEnd(Tok->TokenText)) {
-        return true;
+          Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText)) {
+        const bool IsEndComment =
+            Tok->NewlinesBefore == 1 && OperateIndex + 1 < Lines.size() &&
+            Lines[OperateIndex + 1]->First->NewlinesBefore > 1;
+        return !IsEndComment;
       }
 
       // A single line identifier that is not in the last line.
