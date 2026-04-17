@@ -58,6 +58,20 @@ void walkRegionSkipping(
   });
 }
 
+/// Returns true if the region contains any nested op with regions
+/// (structured CIR ops that must be flattened before their parent).
+/// CaseOps are excluded because they are structural children of SwitchOp
+/// and are handled by the SwitchOp flattening pattern.
+static bool hasNestedOpsToFlatten(mlir::Region &region) {
+  return region
+      .walk([](mlir::Operation *op) {
+        if (op->getNumRegions() > 0 && !isa<cir::CaseOp>(op))
+          return mlir::WalkResult::interrupt();
+        return mlir::WalkResult::advance();
+      })
+      .wasInterrupted();
+}
+
 struct CIRFlattenCFGPass : public impl::CIRFlattenCFGBase<CIRFlattenCFGPass> {
 
   CIRFlattenCFGPass() = default;
@@ -229,19 +243,12 @@ public:
   matchAndRewrite(cir::SwitchOp op,
                   mlir::PatternRewriter &rewriter) const override {
     // All nested structured CIR ops must be flattened before the switch.
-    // Break statements inside nested structured ops (scopes, ifs, ternaries,
-    // cleanup scopes) would create branches to blocks outside those ops'
-    // regions, which is invalid. Fail the match so the pattern rewriter will
-    // process them first.
-    bool hasNestedStructuredOps =
-        op->walk([&](mlir::Operation *nestedOp) {
-            if (isa<cir::ScopeOp, cir::IfOp, cir::TernaryOp,
-                    cir::CleanupScopeOp, cir::TryOp>(nestedOp))
-              return mlir::WalkResult::interrupt();
-            return mlir::WalkResult::advance();
-          }).wasInterrupted();
-    if (hasNestedStructuredOps)
-      return mlir::failure();
+    // Break statements inside nested structured ops would create branches to
+    // blocks outside those ops' regions, which is invalid. Fail the match so
+    // the pattern rewriter will process them first.
+    for (mlir::Region &region : op->getRegions())
+      if (hasNestedOpsToFlatten(region))
+        return mlir::failure();
 
     llvm::SmallVector<CaseOp> cases;
     op.collectCases(cases);
@@ -439,19 +446,12 @@ public:
   matchAndRewrite(cir::LoopOpInterface op,
                   mlir::PatternRewriter &rewriter) const final {
     // All nested structured CIR ops must be flattened before the loop.
-    // Break/continue statements inside nested structured ops (switches, scopes,
-    // ifs, ternaries, cleanup scopes) would create branches to blocks outside
-    // those ops' regions, which is invalid. Fail the match so the pattern
-    // rewriter will process them first.
-    bool hasNestedOps =
-        op->walk([&](mlir::Operation *nestedOp) {
-            if (isa<cir::SwitchOp, cir::ScopeOp, cir::IfOp, cir::TernaryOp,
-                    cir::CleanupScopeOp, cir::TryOp>(nestedOp))
-              return mlir::WalkResult::interrupt();
-            return mlir::WalkResult::advance();
-          }).wasInterrupted();
-    if (hasNestedOps)
-      return mlir::failure();
+    // Break/continue statements inside nested structured ops would create
+    // branches to blocks outside those ops' regions, which is invalid. Fail
+    // the match so the pattern rewriter will process them first.
+    for (mlir::Region &region : op->getRegions())
+      if (hasNestedOpsToFlatten(region))
+        return mlir::failure();
 
     // Setup CFG blocks.
     mlir::Block *entry = rewriter.getInsertionBlock();
@@ -1440,17 +1440,7 @@ public:
     for (auto op : deadNestedOps)
       rewriter.eraseOp(op);
 
-    bool hasNestedOps =
-        cleanupOp.getBodyRegion()
-            .walk([&](mlir::Operation *op) {
-              if (isa<cir::CleanupScopeOp, cir::TryOp, cir::LoopOpInterface,
-                      cir::SwitchOp, cir::ScopeOp, cir::IfOp, cir::TernaryOp>(
-                      op))
-                return mlir::WalkResult::interrupt();
-              return mlir::WalkResult::advance();
-            })
-            .wasInterrupted();
-    if (hasNestedOps)
+    if (hasNestedOpsToFlatten(cleanupOp.getBodyRegion()))
       return mlir::failure();
 
     cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
@@ -1639,19 +1629,9 @@ public:
     // ternaries) must be flat because replaceCallWithTryCall creates try_call
     // ops whose unwind destination is outside the structured op's region,
     // which would be an invalid cross-region reference.
-    bool hasNestedOps =
-        tryOp
-            ->walk([&](mlir::Operation *op) {
-              if (isa<cir::CleanupScopeOp, cir::TryOp, cir::ScopeOp, cir::IfOp,
-                      cir::TernaryOp, cir::LoopOpInterface, cir::SwitchOp>(
-                      op) &&
-                  op != tryOp)
-                return mlir::WalkResult::interrupt();
-              return mlir::WalkResult::advance();
-            })
-            .wasInterrupted();
-    if (hasNestedOps)
-      return mlir::failure();
+    for (mlir::Region &region : tryOp->getRegions())
+      if (hasNestedOpsToFlatten(region))
+        return mlir::failure();
 
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     mlir::Location loc = tryOp.getLoc();
