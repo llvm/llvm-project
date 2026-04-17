@@ -1087,7 +1087,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
 
   auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
-                                LaunchArgs, AsyncInfoWrapper);
+                                LaunchArgs, nullptr, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
   if (Err)

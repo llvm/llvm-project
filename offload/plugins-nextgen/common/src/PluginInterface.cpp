@@ -231,6 +231,7 @@ GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
 
 Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                               ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
+                              KernelExtraArgsTy *KernelExtraArgs,
                               AsyncInfoWrapperTy &AsyncInfoWrapper,
                               RecordReplayTy::HandleTy *RRHandle) const {
   llvm::SmallVector<void *, 16> Args;
@@ -278,9 +279,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   // blocks/threads.
   RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
   if (RecordReplay) {
-    auto RRHandleOrErr =
-        RecordReplay->recordPrologue(*this, KernelArgs, LaunchParams, NumBlocks,
-                                     NumThreads, DynBlockMemConf.NativeSize);
+    auto RRHandleOrErr = RecordReplay->recordPrologue(
+        *this, KernelArgs, KernelExtraArgs, LaunchParams, NumBlocks, NumThreads,
+        DynBlockMemConf.NativeSize);
     if (!RRHandleOrErr)
       return RRHandleOrErr.takeError();
     if (RRHandle)
@@ -1105,6 +1106,7 @@ Error GenericDeviceTy::dataFill(void *TgtPtr, const void *PatternPtr,
 Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     ptrdiff_t *ArgOffsets,
                                     KernelArgsTy &KernelArgs,
+                                    KernelExtraArgsTy *KernelExtraArgs,
                                     __tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this,
                                       RecordReplay ? nullptr : AsyncInfo);
@@ -1126,7 +1128,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
 
   RecordReplayTy::HandleTy RRHandle;
   auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
-                                  AsyncInfoWrapper, &RRHandle);
+                                  KernelExtraArgs, AsyncInfoWrapper, &RRHandle);
 
   // 'finalize' here to guarantee next record-replay actions are in-sync
   AsyncInfoWrapper.finalize(Err);
@@ -1654,9 +1656,11 @@ int32_t GenericPluginTy::data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
 int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
                                        void **TgtArgs, ptrdiff_t *TgtOffsets,
                                        KernelArgsTy *KernelArgs,
+                                       KernelExtraArgsTy *KernelExtraArgs,
                                        __tgt_async_info *AsyncInfoPtr) {
   auto Err = getDevice(DeviceId).launchKernel(TgtEntryPtr, TgtArgs, TgtOffsets,
-                                              *KernelArgs, AsyncInfoPtr);
+                                              *KernelArgs, KernelExtraArgs,
+                                              AsyncInfoPtr);
   if (Err) {
     REPORT() << "Failure to run target region " << TgtEntryPtr << " in device "
              << DeviceId << ": " << toString(std::move(Err));

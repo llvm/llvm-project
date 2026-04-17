@@ -37,7 +37,8 @@ extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                          ptrdiff_t *TgtOffsets, int32_t NumArgs,
                          int32_t NumTeams, int32_t ThreadLimit,
                          uint32_t SharedMemorySize, uint64_t LoopTripCount,
-                         AsyncInfoTy &AsyncInfo);
+                         AsyncInfoTy &AsyncInfo,
+                         KernelReplayOutcomeTy *ReplayOutcome);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 

@@ -2350,7 +2350,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 #endif
 
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
-                              KernelArgs, AsyncInfo);
+                              KernelArgs, nullptr, AsyncInfo);
   }
 
   if (Ret != OFFLOAD_SUCCESS) {
@@ -2395,7 +2395,8 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
                   int32_t NumTeams, int32_t ThreadLimit,
                   uint32_t SharedMemorySize, uint64_t LoopTripCount,
-                  AsyncInfoTy &AsyncInfo) {
+                  AsyncInfoTy &AsyncInfo,
+                  KernelReplayOutcomeTy *ReplayOutcome) {
   int32_t DeviceId = Device.DeviceID;
   int32_t NumSymbols = NumGlobals + 1;
 
@@ -2473,8 +2474,11 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   KernelArgs.ThreadLimit[2] = 1;
   KernelArgs.DynCGroupMem = SharedMemorySize;
 
+  KernelExtraArgsTy KernelExtraArgs{};
+  KernelExtraArgs.ReplayOutcome = ReplayOutcome;
+
   Ret = Device.launchKernel(Symbols[0].DevPtr, TgtArgs, TgtOffsets, KernelArgs,
-                            AsyncInfo);
+                            &KernelExtraArgs, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT() << "Failed to launch kernel replay.";
     return OFFLOAD_FAIL;
