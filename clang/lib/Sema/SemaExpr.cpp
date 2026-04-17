@@ -19630,8 +19630,11 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
   }
 
   if (isa<BindingDecl>(Var)) {
-      if (Var->getDeclName() && !Var->isImplicit())
+    if (Var->getDeclName() && !Var->isImplicit()) {
+      if (auto *RSI = dyn_cast<CapturedRegionScopeInfo>(CSI))
+        if (RSI->CapRegionKind == CR_OpenMP)
           return true;
+    }
     if (!IsLambda || !S.getLangOpts().CPlusPlus) {
       if (Diagnose)
         diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
