@@ -343,7 +343,8 @@ static bool BuiltinAlignment(Sema &S, CallExpr *TheCall, unsigned ID) {
     else if (SrcTy->isMemberPointerType())
       S.Diag(Source->getExprLoc(), diag::note_alignment_invalid_member_pointer);
     else if (SrcTy->isFunctionPointerType())
-      S.Diag(Source->getExprLoc(), diag::note_alignment_invalid_function_pointer);
+      S.Diag(Source->getExprLoc(), 
+             diag::note_alignment_invalid_function_pointer);
     return true;
   }
 
