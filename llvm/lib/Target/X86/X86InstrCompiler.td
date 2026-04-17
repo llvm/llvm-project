@@ -158,6 +158,14 @@ def DYN_ALLOCA_64 : I<0, Pseudo, (outs), (ins GR64:$size),
                      "# dynamic stack allocation",
                      [(X86DynAlloca GR64:$size)]>,
                      Requires<[In64BitMode]>;
+
+let Defs = [RAX, RSP, EFLAGS], Uses = [RSP] in
+def WIN_ALLOCA_64 : I<0, Pseudo, (outs GR64:$dst),
+                     (ins GR64:$raw_size, i32imm:$align),
+                     "# dynamic stack allocation with a stable call frame",
+                     [(set GR64:$dst,
+                           (X86WinAlloca GR64:$raw_size, timm:$align))]>,
+                     Requires<[In64BitMode]>;
 } // SchedRW
 
 // These instructions XOR the frame pointer into a GPR. They are used in some

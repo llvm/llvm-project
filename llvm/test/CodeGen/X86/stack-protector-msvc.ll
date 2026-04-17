@@ -176,20 +176,20 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X64-LABEL: test_vla:
 ; MSVC-X64:       # %bb.0:
 ; MSVC-X64-NEXT:    pushq %rbp
-; MSVC-X64-NEXT:    subq $16, %rsp
-; MSVC-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
+; MSVC-X64-NEXT:    subq $48, %rsp
+; MSVC-X64-NEXT:    leaq 48(%rsp), %rbp
 ; MSVC-X64-NEXT:    movq __security_cookie(%rip), %rax
 ; MSVC-X64-NEXT:    xorq %rbp, %rax
 ; MSVC-X64-NEXT:    movq %rax, -8(%rbp)
-; MSVC-X64-NEXT:    movl %ecx, %eax
-; MSVC-X64-NEXT:    leaq 15(,%rax,4), %rax
+; MSVC-X64-NEXT:    movl %ecx, %ecx
+; MSVC-X64-NEXT:    shlq $2, %rcx
+; MSVC-X64-NEXT:    movabsq $15, %rax
+; MSVC-X64-NEXT:    addq %rcx, %rax
 ; MSVC-X64-NEXT:    andq $-16, %rax
 ; MSVC-X64-NEXT:    callq __chkstk
 ; MSVC-X64-NEXT:    subq %rax, %rsp
-; MSVC-X64-NEXT:    movq %rsp, %rcx
-; MSVC-X64-NEXT:    subq $32, %rsp
+; MSVC-X64-NEXT:    leaq 32(%rsp), %rcx
 ; MSVC-X64-NEXT:    callq escape
-; MSVC-X64-NEXT:    addq $32, %rsp
 ; MSVC-X64-NEXT:    movq -8(%rbp), %rax
 ; MSVC-X64-NEXT:    xorq %rbp, %rax
 ; MSVC-X64-NEXT:    movq __security_cookie(%rip), %rcx
@@ -202,7 +202,6 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X64-NEXT:  .LBB1_2:
 ; MSVC-X64-NEXT:    movq -8(%rbp), %rcx
 ; MSVC-X64-NEXT:    xorq %rbp, %rcx
-; MSVC-X64-NEXT:    subq $32, %rsp
 ; MSVC-X64-NEXT:    callq __security_check_cookie
 ;
 ; MSVC-X86-O0-LABEL: test_vla:
@@ -239,21 +238,21 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X64-O0-LABEL: test_vla:
 ; MSVC-X64-O0:       # %bb.0:
 ; MSVC-X64-O0-NEXT:    pushq %rbp
-; MSVC-X64-O0-NEXT:    subq $16, %rsp
-; MSVC-X64-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
+; MSVC-X64-O0-NEXT:    subq $48, %rsp
+; MSVC-X64-O0-NEXT:    leaq 48(%rsp), %rbp
 ; MSVC-X64-O0-NEXT:    movq __security_cookie(%rip), %rax
 ; MSVC-X64-O0-NEXT:    xorq %rbp, %rax
 ; MSVC-X64-O0-NEXT:    movq %rax, -8(%rbp)
 ; MSVC-X64-O0-NEXT:    movl %ecx, %eax
 ; MSVC-X64-O0-NEXT:    # kill: def $rax killed $eax
-; MSVC-X64-O0-NEXT:    leaq 15(,%rax,4), %rax
+; MSVC-X64-O0-NEXT:    shlq $2, %rax
+; MSVC-X64-O0-NEXT:    movabsq $15, %rcx
+; MSVC-X64-O0-NEXT:    addq %rcx, %rax
 ; MSVC-X64-O0-NEXT:    andq $-16, %rax
 ; MSVC-X64-O0-NEXT:    callq __chkstk
 ; MSVC-X64-O0-NEXT:    subq %rax, %rsp
-; MSVC-X64-O0-NEXT:    movq %rsp, %rcx
-; MSVC-X64-O0-NEXT:    subq $32, %rsp
+; MSVC-X64-O0-NEXT:    leaq 32(%rsp), %rcx
 ; MSVC-X64-O0-NEXT:    callq escape
-; MSVC-X64-O0-NEXT:    addq $32, %rsp
 ; MSVC-X64-O0-NEXT:    movq -8(%rbp), %rcx
 ; MSVC-X64-O0-NEXT:    xorq %rbp, %rcx
 ; MSVC-X64-O0-NEXT:    movq __security_cookie(%rip), %rax
@@ -263,7 +262,6 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X64-O0-NEXT:  .LBB1_2:
 ; MSVC-X64-O0-NEXT:    movq -8(%rbp), %rcx
 ; MSVC-X64-O0-NEXT:    xorq %rbp, %rcx
-; MSVC-X64-O0-NEXT:    subq $32, %rsp
 ; MSVC-X64-O0-NEXT:    callq __security_check_cookie
 ; MSVC-X64-O0-NEXT:  .LBB1_1:
 ; MSVC-X64-O0-NEXT:    movq %rbp, %rsp
@@ -323,26 +321,26 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X64-NEXT:    pushq %rbp
 ; MSVC-X64-NEXT:    pushq %rsi
 ; MSVC-X64-NEXT:    pushq %rbx
-; MSVC-X64-NEXT:    subq $32, %rsp
-; MSVC-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
+; MSVC-X64-NEXT:    subq $64, %rsp
+; MSVC-X64-NEXT:    leaq 64(%rsp), %rbp
 ; MSVC-X64-NEXT:    andq $-32, %rsp
 ; MSVC-X64-NEXT:    movq %rsp, %rbx
 ; MSVC-X64-NEXT:    movq __security_cookie(%rip), %rax
 ; MSVC-X64-NEXT:    xorq %rbp, %rax
-; MSVC-X64-NEXT:    movq %rax, 24(%rbx)
-; MSVC-X64-NEXT:    movl %ecx, %eax
-; MSVC-X64-NEXT:    leaq 15(,%rax,4), %rax
+; MSVC-X64-NEXT:    movq %rax, 56(%rbx)
+; MSVC-X64-NEXT:    movl %ecx, %ecx
+; MSVC-X64-NEXT:    shlq $2, %rcx
+; MSVC-X64-NEXT:    movabsq $15, %rax
+; MSVC-X64-NEXT:    addq %rcx, %rax
 ; MSVC-X64-NEXT:    andq $-16, %rax
 ; MSVC-X64-NEXT:    callq __chkstk
 ; MSVC-X64-NEXT:    subq %rax, %rsp
-; MSVC-X64-NEXT:    movq %rsp, %rsi
-; MSVC-X64-NEXT:    subq $32, %rsp
-; MSVC-X64-NEXT:    movq %rbx, %rcx
+; MSVC-X64-NEXT:    leaq 32(%rsp), %rsi
+; MSVC-X64-NEXT:    leaq 32(%rbx), %rcx
 ; MSVC-X64-NEXT:    callq escape
 ; MSVC-X64-NEXT:    movq %rsi, %rcx
 ; MSVC-X64-NEXT:    callq escape
-; MSVC-X64-NEXT:    addq $32, %rsp
-; MSVC-X64-NEXT:    movq 24(%rbx), %rax
+; MSVC-X64-NEXT:    movq 56(%rbx), %rax
 ; MSVC-X64-NEXT:    xorq %rbp, %rax
 ; MSVC-X64-NEXT:    movq __security_cookie(%rip), %rcx
 ; MSVC-X64-NEXT:    cmpq %rax, %rcx
@@ -354,9 +352,8 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X64-NEXT:    popq %rbp
 ; MSVC-X64-NEXT:    retq
 ; MSVC-X64-NEXT:  .LBB2_2:
-; MSVC-X64-NEXT:    movq 24(%rbx), %rcx
+; MSVC-X64-NEXT:    movq 56(%rbx), %rcx
 ; MSVC-X64-NEXT:    xorq %rbp, %rcx
-; MSVC-X64-NEXT:    subq $32, %rsp
 ; MSVC-X64-NEXT:    callq __security_check_cookie
 ;
 ; MSVC-X86-O0-LABEL: test_vla_realign:
@@ -403,37 +400,36 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X64-O0:       # %bb.0:
 ; MSVC-X64-O0-NEXT:    pushq %rbp
 ; MSVC-X64-O0-NEXT:    pushq %rbx
-; MSVC-X64-O0-NEXT:    subq $72, %rsp
-; MSVC-X64-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
+; MSVC-X64-O0-NEXT:    subq $104, %rsp
+; MSVC-X64-O0-NEXT:    leaq 96(%rsp), %rbp
 ; MSVC-X64-O0-NEXT:    andq $-32, %rsp
 ; MSVC-X64-O0-NEXT:    movq %rsp, %rbx
 ; MSVC-X64-O0-NEXT:    movq __security_cookie(%rip), %rax
 ; MSVC-X64-O0-NEXT:    xorq %rbp, %rax
-; MSVC-X64-O0-NEXT:    movq %rax, 64(%rbx)
+; MSVC-X64-O0-NEXT:    movq %rax, 96(%rbx)
 ; MSVC-X64-O0-NEXT:    movl %ecx, %eax
 ; MSVC-X64-O0-NEXT:    # kill: def $rax killed $eax
-; MSVC-X64-O0-NEXT:    leaq 15(,%rax,4), %rax
+; MSVC-X64-O0-NEXT:    shlq $2, %rax
+; MSVC-X64-O0-NEXT:    movabsq $15, %rcx
+; MSVC-X64-O0-NEXT:    addq %rcx, %rax
 ; MSVC-X64-O0-NEXT:    andq $-16, %rax
 ; MSVC-X64-O0-NEXT:    callq __chkstk
 ; MSVC-X64-O0-NEXT:    subq %rax, %rsp
-; MSVC-X64-O0-NEXT:    movq %rsp, %rax
-; MSVC-X64-O0-NEXT:    movq %rax, 24(%rbx) # 8-byte Spill
-; MSVC-X64-O0-NEXT:    leaq 32(%rbx), %rcx
-; MSVC-X64-O0-NEXT:    subq $32, %rsp
+; MSVC-X64-O0-NEXT:    leaq 32(%rsp), %rax
+; MSVC-X64-O0-NEXT:    movq %rax, 56(%rbx) # 8-byte Spill
+; MSVC-X64-O0-NEXT:    leaq 64(%rbx), %rcx
 ; MSVC-X64-O0-NEXT:    callq escape
-; MSVC-X64-O0-NEXT:    movq 24(%rbx), %rcx # 8-byte Reload
+; MSVC-X64-O0-NEXT:    movq 56(%rbx), %rcx # 8-byte Reload
 ; MSVC-X64-O0-NEXT:    callq escape
-; MSVC-X64-O0-NEXT:    addq $32, %rsp
-; MSVC-X64-O0-NEXT:    movq 64(%rbx), %rcx
+; MSVC-X64-O0-NEXT:    movq 96(%rbx), %rcx
 ; MSVC-X64-O0-NEXT:    xorq %rbp, %rcx
 ; MSVC-X64-O0-NEXT:    movq __security_cookie(%rip), %rax
 ; MSVC-X64-O0-NEXT:    subq %rcx, %rax
 ; MSVC-X64-O0-NEXT:    jne .LBB2_2
 ; MSVC-X64-O0-NEXT:    jmp .LBB2_1
 ; MSVC-X64-O0-NEXT:  .LBB2_2:
-; MSVC-X64-O0-NEXT:    movq 64(%rbx), %rcx
+; MSVC-X64-O0-NEXT:    movq 96(%rbx), %rcx
 ; MSVC-X64-O0-NEXT:    xorq %rbp, %rcx
-; MSVC-X64-O0-NEXT:    subq $32, %rsp
 ; MSVC-X64-O0-NEXT:    callq __security_check_cookie
 ; MSVC-X64-O0-NEXT:  .LBB2_1:
 ; MSVC-X64-O0-NEXT:    leaq 8(%rbp), %rsp
@@ -450,4 +446,3 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 declare ptr @strcpy(ptr, ptr) nounwind
 
 declare i32 @printf(ptr, ...) nounwind
-

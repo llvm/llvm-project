@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
+#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -49,6 +50,10 @@ private:
 
   /// Get the appropriate lowering based on current offset and amount.
   Lowering getLowering(int64_t CurrentOffset, int64_t AllocaAmount);
+
+  Register materializeWinAllocaAmount(MachineInstr *MI,
+                                      MachineBasicBlock::iterator I,
+                                      const DebugLoc &DL);
 
   /// Lower a DynAlloca instruction.
   void lower(MachineInstr* MI, Lowering L);
@@ -88,13 +93,17 @@ FunctionPass *llvm::createX86DynAllocaExpanderLegacyPass() {
 }
 
 /// Return the allocation amount for a DynAlloca instruction, or -1 if unknown.
-static int64_t getDynAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI) {
-  assert(MI->getOpcode() == X86::DYN_ALLOCA_32 ||
-         MI->getOpcode() == X86::DYN_ALLOCA_64);
-  assert(MI->getOperand(0).isReg());
+static bool isDynAllocaOpcode(unsigned Opc) {
+  return Opc == X86::DYN_ALLOCA_32 || Opc == X86::DYN_ALLOCA_64 ||
+         Opc == X86::WIN_ALLOCA_64;
+}
 
-  Register AmountReg = MI->getOperand(0).getReg();
-  MachineInstr *Def = MRI->getUniqueVRegDef(AmountReg);
+static unsigned getDynAllocaAmountOperandIndex(const MachineInstr *MI) {
+  return MI->getOpcode() == X86::WIN_ALLOCA_64 ? 1 : 0;
+}
+
+static int64_t getConstantRegValue(Register Reg, MachineRegisterInfo *MRI) {
+  MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
 
   if (!Def ||
       (Def->getOpcode() != X86::MOV32ri && Def->getOpcode() != X86::MOV64ri) ||
@@ -102,6 +111,36 @@ static int64_t getDynAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI) {
     return -1;
 
   return Def->getOperand(1).getImm();
+}
+
+static int64_t getWinAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI,
+                                  unsigned StackAlign) {
+  assert(MI->getOpcode() == X86::WIN_ALLOCA_64);
+  assert(MI->getOperand(1).isReg());
+
+  int64_t RawAmount = getConstantRegValue(MI->getOperand(1).getReg(), MRI);
+  if (RawAmount < 0)
+    return -1;
+
+  uint64_t Amount = static_cast<uint64_t>(RawAmount);
+  unsigned Alignment = MI->getOperand(2).getImm();
+  if (Alignment > StackAlign)
+    Amount += Alignment - 1;
+  Amount = alignTo(Amount, StackAlign);
+  if (Amount > static_cast<uint64_t>(INT64_MAX))
+    return -1;
+  return static_cast<int64_t>(Amount);
+}
+
+static int64_t getDynAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI,
+                                  unsigned StackAlign = 0) {
+  assert(isDynAllocaOpcode(MI->getOpcode()));
+  if (MI->getOpcode() == X86::WIN_ALLOCA_64)
+    return getWinAllocaAmount(MI, MRI, StackAlign);
+
+  unsigned AmountOperandIndex = getDynAllocaAmountOperandIndex(MI);
+  assert(MI->getOperand(AmountOperandIndex).isReg());
+  return getConstantRegValue(MI->getOperand(AmountOperandIndex).getReg(), MRI);
 }
 
 X86DynAllocaExpander::Lowering
@@ -154,6 +193,8 @@ void X86DynAllocaExpander::computeLowerings(MachineFunction &MF,
 
   // Compute the reverse post-order.
   ReversePostOrderTraversal<MachineFunction*> RPO(&MF);
+  bool HasStableWin64MSVCCallFrame =
+      MF.getInfo<X86MachineFunctionInfo>()->hasWin64MSVCDynAllocaCallFrame();
 
   for (MachineBasicBlock *MBB : RPO) {
     int64_t Offset = -1;
@@ -162,10 +203,10 @@ void X86DynAllocaExpander::computeLowerings(MachineFunction &MF,
     if (Offset == -1) Offset = INT32_MAX;
 
     for (MachineInstr &MI : *MBB) {
-      if (MI.getOpcode() == X86::DYN_ALLOCA_32 ||
-          MI.getOpcode() == X86::DYN_ALLOCA_64) {
+      if (isDynAllocaOpcode(MI.getOpcode())) {
         // A DynAlloca moves StackPtr, and potentially touches it.
-        int64_t Amount = getDynAllocaAmount(&MI, MRI);
+        int64_t Amount = getDynAllocaAmount(
+            &MI, MRI, STI->getFrameLowering()->getStackAlign().value());
         Lowering L = getLowering(Offset, Amount);
         Lowerings[&MI] = L;
         switch (L) {
@@ -184,10 +225,14 @@ void X86DynAllocaExpander::computeLowerings(MachineFunction &MF,
         Offset = 0;
       } else if (MI.getOpcode() == X86::ADJCALLSTACKUP32 ||
                  MI.getOpcode() == X86::ADJCALLSTACKUP64) {
-        Offset -= MI.getOperand(0).getImm();
+        if (!HasStableWin64MSVCCallFrame ||
+            MI.getOpcode() != X86::ADJCALLSTACKUP64)
+          Offset -= MI.getOperand(0).getImm();
       } else if (MI.getOpcode() == X86::ADJCALLSTACKDOWN32 ||
                  MI.getOpcode() == X86::ADJCALLSTACKDOWN64) {
-        Offset += MI.getOperand(0).getImm();
+        if (!HasStableWin64MSVCCallFrame ||
+            MI.getOpcode() != X86::ADJCALLSTACKDOWN64)
+          Offset += MI.getOperand(0).getImm();
       } else if (MI.modifiesRegister(StackPtr, TRI)) {
         // Any other modification of SP means we've lost track of it.
         Offset = INT32_MAX;
@@ -204,13 +249,47 @@ static unsigned getSubOpcode(bool Is64Bit) {
   return X86::SUB32ri;
 }
 
+Register X86DynAllocaExpander::materializeWinAllocaAmount(
+    MachineInstr *MI, MachineBasicBlock::iterator I, const DebugLoc &DL) {
+  assert(MI->getOpcode() == X86::WIN_ALLOCA_64);
+
+  MachineBasicBlock *MBB = MI->getParent();
+  unsigned StackAlign = STI->getFrameLowering()->getStackAlign().value();
+  unsigned Alignment = MI->getOperand(2).getImm();
+  Register RawAmountReg = MI->getOperand(1).getReg();
+
+  uint64_t AlignmentSlack = Alignment > StackAlign ? Alignment - 1 : 0;
+  uint64_t RoundUpBias = StackAlign - 1;
+  uint64_t Addend = AlignmentSlack + RoundUpBias;
+
+  Register AddendReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+  BuildMI(*MBB, I, DL, TII->get(X86::MOV64ri), AddendReg).addImm(Addend);
+
+  Register UnalignedAmountReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+  BuildMI(*MBB, I, DL, TII->get(X86::ADD64rr), UnalignedAmountReg)
+      .addReg(RawAmountReg)
+      .addReg(AddendReg);
+
+  Register AmountReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+  BuildMI(*MBB, I, DL, TII->get(X86::AND64ri32), AmountReg)
+      .addReg(UnalignedAmountReg)
+      .addImm(-int64_t(StackAlign));
+  return AmountReg;
+}
+
 void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
   const DebugLoc &DL = MI->getDebugLoc();
   MachineBasicBlock *MBB = MI->getParent();
+  unsigned Win64MSVCDynAllocaCallFrameSize =
+      MBB->getParent()
+          ->getInfo<X86MachineFunctionInfo>()
+          ->getWin64MSVCDynAllocaCallFrameSize();
   MachineBasicBlock::iterator I = *MI;
 
-  int64_t Amount = getDynAllocaAmount(MI, MRI);
-  if (Amount == 0) {
+  bool IsWinAlloca = MI->getOpcode() == X86::WIN_ALLOCA_64;
+  int64_t Amount = getDynAllocaAmount(
+      MI, MRI, STI->getFrameLowering()->getStackAlign().value());
+  if (Amount == 0 && !IsWinAlloca) {
     MI->eraseFromParent();
     return;
   }
@@ -218,65 +297,102 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
   // These two variables differ on x32, which is a 64-bit target with a
   // 32-bit alloca.
   bool Is64Bit = STI->is64Bit();
-  bool Is64BitAlloca = MI->getOpcode() == X86::DYN_ALLOCA_64;
+  bool Is64BitAlloca = MI->getOpcode() == X86::DYN_ALLOCA_64 ||
+                       MI->getOpcode() == X86::WIN_ALLOCA_64;
   assert(SlotSize == 4 || SlotSize == 8);
 
   std::optional<MachineFunction::DebugInstrOperandPair> InstrNum;
-  if (unsigned Num = MI->peekDebugInstrNum()) {
+  if (unsigned Num = MI->peekDebugInstrNum(); !IsWinAlloca && Num) {
     // Operand 2 of DYN_ALLOCAs contains the stack def.
     InstrNum = {Num, 2};
   }
 
-  switch (L) {
-  case TouchAndSub: {
-    assert(Amount >= SlotSize);
+  unsigned AmountOperandIndex = getDynAllocaAmountOperandIndex(MI);
+  Register AmountReg = MI->getOperand(AmountOperandIndex).getReg();
 
-    // Use a push to touch the top of the stack.
-    unsigned RegA = Is64Bit ? X86::RAX : X86::EAX;
-    BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
-        .addReg(RegA, RegState::Undef);
-    Amount -= SlotSize;
-    if (!Amount)
-      break;
+  if (Amount != 0) {
+    switch (L) {
+    case TouchAndSub: {
+      assert(Amount >= SlotSize);
 
-    // Fall through to make any remaining adjustment.
-    [[fallthrough]];
-  }
-  case Sub:
-    assert(Amount > 0);
-    if (Amount == SlotSize) {
-      // Use push to save size.
+      // Use a push to touch the top of the stack.
       unsigned RegA = Is64Bit ? X86::RAX : X86::EAX;
       BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
           .addReg(RegA, RegState::Undef);
-    } else {
-      // Sub.
-      BuildMI(*MBB, I, DL, TII->get(getSubOpcode(Is64BitAlloca)), StackPtr)
-          .addReg(StackPtr)
-          .addImm(Amount);
-    }
-    break;
-  case Probe:
-    if (!NoStackArgProbe) {
-      // The probe lowering expects the amount in RAX/EAX.
-      unsigned RegA = Is64BitAlloca ? X86::RAX : X86::EAX;
-      BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegA)
-          .addReg(MI->getOperand(0).getReg());
+      Amount -= SlotSize;
+      if (!Amount)
+        break;
 
-      // Do the probe.
-      STI->getFrameLowering()->emitStackProbe(*MBB->getParent(), *MBB, MI, DL,
-                                              /*InProlog=*/false, InstrNum);
-    } else {
-      // Sub
-      BuildMI(*MBB, I, DL,
-              TII->get(Is64BitAlloca ? X86::SUB64rr : X86::SUB32rr), StackPtr)
-          .addReg(StackPtr)
-          .addReg(MI->getOperand(0).getReg());
+      // Fall through to make any remaining adjustment.
+      [[fallthrough]];
     }
-    break;
+    case Sub:
+      assert(Amount > 0);
+      if (Amount == SlotSize) {
+        // Use push to save size.
+        unsigned RegA = Is64Bit ? X86::RAX : X86::EAX;
+        BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
+            .addReg(RegA, RegState::Undef);
+      } else {
+        // Sub.
+        BuildMI(*MBB, I, DL, TII->get(getSubOpcode(Is64BitAlloca)), StackPtr)
+            .addReg(StackPtr)
+            .addImm(Amount);
+      }
+      break;
+    case Probe:
+      Register ProbeAmountReg = AmountReg;
+      if (IsWinAlloca) {
+        if (Amount >= 0) {
+          ProbeAmountReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+          BuildMI(*MBB, I, DL, TII->get(X86::MOV64ri), ProbeAmountReg)
+              .addImm(Amount);
+        } else {
+          ProbeAmountReg = materializeWinAllocaAmount(MI, I, DL);
+        }
+      }
+      if (!NoStackArgProbe) {
+        // The probe lowering expects the amount in RAX/EAX.
+        unsigned RegA = Is64BitAlloca ? X86::RAX : X86::EAX;
+        BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegA)
+            .addReg(ProbeAmountReg);
+
+        // Do the probe.
+        STI->getFrameLowering()->emitStackProbe(*MBB->getParent(), *MBB, MI, DL,
+                                                /*InProlog=*/false, InstrNum);
+      } else {
+        // Sub
+        BuildMI(*MBB, I, DL,
+                TII->get(Is64BitAlloca ? X86::SUB64rr : X86::SUB32rr), StackPtr)
+            .addReg(StackPtr)
+            .addReg(ProbeAmountReg);
+      }
+      break;
+    }
   }
 
-  Register AmountReg = MI->getOperand(0).getReg();
+  if (IsWinAlloca) {
+    Register DstReg = MI->getOperand(0).getReg();
+    unsigned Alignment = MI->getOperand(2).getImm();
+    unsigned StackAlign = STI->getFrameLowering()->getStackAlign().value();
+
+    if (Alignment > StackAlign) {
+      Register TmpReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+      addRegOffset(BuildMI(*MBB, I, DL, TII->get(X86::LEA64r), TmpReg),
+                   StackPtr, false,
+                   Win64MSVCDynAllocaCallFrameSize + Alignment - 1);
+      BuildMI(*MBB, I, DL, TII->get(X86::AND64ri32), DstReg)
+          .addReg(TmpReg)
+          .addImm(-int64_t(Alignment));
+    } else if (Win64MSVCDynAllocaCallFrameSize != 0) {
+      addRegOffset(BuildMI(*MBB, I, DL, TII->get(X86::LEA64r), DstReg),
+                   StackPtr, false, Win64MSVCDynAllocaCallFrameSize);
+    } else {
+      BuildMI(*MBB, I, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(StackPtr);
+    }
+  }
+
   MI->eraseFromParent();
 
   // Delete the definition of AmountReg.
@@ -297,6 +413,22 @@ bool X86DynAllocaExpander::run(MachineFunction &MF) {
   SlotSize = TRI->getSlotSize();
   StackProbeSize = STI->getTargetLowering()->getStackProbeSize(MF);
   NoStackArgProbe = MF.getFunction().hasFnAttribute("no-stack-arg-probe");
+  auto *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  auto &MFI = MF.getFrameInfo();
+
+  unsigned Win64MSVCDynAllocaCallFrameSize = 0;
+  if (STI->isTargetWin64() && STI->isTargetWindowsMSVC()) {
+    MFI.computeMaxCallFrameSize(MF);
+    Align StackAlign = STI->getFrameLowering()->getStackAlign();
+    Win64MSVCDynAllocaCallFrameSize =
+        static_cast<unsigned>(alignTo(MFI.getMaxCallFrameSize(), StackAlign));
+    assert(Win64MSVCDynAllocaCallFrameSize == 0 ||
+           !X86FI->getHasPushSequences());
+    assert(Win64MSVCDynAllocaCallFrameSize == 0 ||
+           !X86FI->hasPreallocatedCall());
+  }
+  X86FI->setWin64MSVCDynAllocaCallFrameSize(Win64MSVCDynAllocaCallFrameSize);
+
   if (NoStackArgProbe)
     StackProbeSize = INT64_MAX;
 

@@ -26706,6 +26706,7 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
   MaybeAlign Alignment(Op.getConstantOperandVal(2));
+  SDValue RawSize = Op.getOperand(3);
   EVT VT = Node->getValueType(0);
 
   // Chain the dynamic stack allocation so that it doesn't modify the stack
@@ -26753,6 +26754,13 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     Result =
         DAG.getNode(X86ISD::SEG_ALLOCA, dl, {SPTy, MVT::Other}, {Chain, Size});
     Chain = Result.getValue(1);
+  } else if (Subtarget.isTargetWin64() && Subtarget.isTargetWindowsMSVC()) {
+    SDVTList NodeTys = DAG.getVTList(SPTy, MVT::Other);
+    Result = DAG.getNode(X86ISD::WIN_ALLOCA, dl, NodeTys, Chain, RawSize,
+                         DAG.getTargetConstant(
+                             Alignment ? Alignment->value() : 0, dl, MVT::i32));
+    Chain = Result.getValue(1);
+    MF.getInfo<X86MachineFunctionInfo>()->setHasDynAlloca(true);
   } else {
     SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
     Chain = DAG.getNode(X86ISD::DYN_ALLOCA, dl, NodeTys, Chain, Size);

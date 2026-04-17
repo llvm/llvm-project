@@ -72,16 +72,25 @@ define void @alloc_func(i32 %n) {
 
 ; X64-LABEL: alloc_func:
 ; X64: pushq   %rbp
-; X64: subq    $16, %rsp
-; X64: .seh_stackalloc 16
-; X64: leaq    16(%rsp), %rbp
-; X64: .seh_setframe %rbp, 16
+; X64: subq    $48, %rsp
+; X64: .seh_stackalloc 48
+; X64: leaq    48(%rsp), %rbp
+; X64: .seh_setframe %rbp, 48
+; X64: .seh_endprologue
 ; X64: .Lalloc_func$frame_escape_0 = -4
 ; X64: .Lalloc_func$frame_escape_1 = -12
 ; X64: movl $42, -4(%rbp)
 ; X64: movl $13, -12(%rbp)
-; X64: movq 	%rbp, %rcx
+; X64: movl %ecx, %ecx
+; X64: movabsq $15, %rax
+; X64: addq %rcx, %rax
+; X64: andq $-16, %rax
+; X64: callq __chkstk
+; X64: subq %rax, %rsp
+; X64: leaq 32(%rsp), %rax
+; X64: movq %rbp, %rcx
 ; X64: callq print_framealloc_from_fp
+; X64: movq %rbp, %rsp
 ; X64: retq
 
 ; X86-LABEL: alloc_func:

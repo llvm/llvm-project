@@ -116,6 +116,9 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   unsigned ArgumentStackSize = 0;
   /// NumLocalDynamics - Number of local-dynamic TLS accesses.
   unsigned NumLocalDynamics = 0;
+  /// On x86_64-windows-msvc dynalloca functions, stores the rounded stable
+  /// outgoing call-frame size inferred from ADJCALLSTACKDOWN64/UP64 pseudos.
+  unsigned Win64MSVCDynAllocaCallFrameSize = 0;
   /// HasPushSequences - Keeps track of whether this function uses sequences
   /// of pushes to pass function parameters.
   bool HasPushSequences = false;
@@ -275,6 +278,16 @@ public:
 
   bool hasPreallocatedCall() const { return HasPreallocatedCall; }
   void setHasPreallocatedCall(bool v) { HasPreallocatedCall = v; }
+
+  bool hasWin64MSVCDynAllocaCallFrame() const {
+    return Win64MSVCDynAllocaCallFrameSize != 0;
+  }
+  unsigned getWin64MSVCDynAllocaCallFrameSize() const {
+    return Win64MSVCDynAllocaCallFrameSize;
+  }
+  void setWin64MSVCDynAllocaCallFrameSize(unsigned Size) {
+    Win64MSVCDynAllocaCallFrameSize = Size;
+  }
 
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
   void setHasSwiftAsyncContext(bool v) { HasSwiftAsyncContext = v; }

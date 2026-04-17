@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -enable-misched=false | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 -enable-misched=false | FileCheck %s -check-prefix=X32ABI
+; RUN: llc < %s -mtriple=x86_64-pc-win32 -enable-misched=false | FileCheck %s -check-prefix=WIN64
 
 declare void @bar(ptr %n)
 
@@ -20,6 +21,15 @@ define void @foo2(i64 %h) {
 ; CHECK-LABEL: foo2
 ; CHECK: andq $-32, %rsp
 ; CHECK: andq $-32, %rax
+; WIN64-LABEL: foo2
+; WIN64: andq $-32, %rsp
+; WIN64: movabsq $46, %rax
+; WIN64: addq %rcx, %rax
+; WIN64: andq $-16, %rax
+; WIN64: callq __chkstk
+; WIN64: subq %rax, %rsp
+; WIN64: leaq 63(%rsp), %rcx
+; WIN64: andq $-32, %rcx
 ; X32ABI-LABEL: foo2
 ; X32ABI: andl $-32, %esp
 ; X32ABI: andl $-32, %eax

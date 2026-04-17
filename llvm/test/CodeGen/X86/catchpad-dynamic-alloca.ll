@@ -31,10 +31,27 @@ catch.switch:
   %cs = catchswitch within none [label %catch.pad] unwind to caller
 }
 
+; CHECK-LABEL: test1:
+; CHECK:      movabsq $15, %rax
+; CHECK-NEXT: addq    %rdx, %rax
+; CHECK-NEXT: andq    $-16, %rax
+; CHECK-NEXT: callq   __chkstk
+; CHECK-NEXT: subq    %rax, %rsp
+; CHECK-NEXT: leaq    32(%rsp), %rax
+; CHECK-NEXT: movb    $0, -9(%rbp)
+; CHECK-NEXT: movb    $0, (%rax)
+; CHECK:      callq   rt_init
+; CHECK-NOT:  subq
+; CHECK-NOT:  addq
+; CHECK:      callq   *%rsi
+; CHECK-LABEL: "?catch$3@?0?test1@4HA":
+; CHECK:      leaq    48(%rdx), %rbp
 ; CHECK-LABEL: $handlerMap$0$test1:
 ; CHECK:      .long   0
 ; CHECK-NEXT: .long   0
-; CHECK-NEXT: .long   16
+; CHECK-NEXT: .long   48
+; CHECK-NEXT: .long   "?catch$3@?0?test1@4HA"@IMGREL
+; CHECK-NEXT: .long   72
 
 define void @test2(ptr %fp, i64 %n) personality ptr @__CxxFrameHandler3 {
 entry:
@@ -59,7 +76,23 @@ catch.switch:
   %cs = catchswitch within none [label %catch.pad] unwind to caller
 }
 
+; CHECK-LABEL: test2:
+; CHECK:      movabsq $15, %rax
+; CHECK-NEXT: addq    %rdx, %rax
+; CHECK-NEXT: andq    $-16, %rax
+; CHECK-NEXT: callq   __chkstk
+; CHECK-NEXT: subq    %rax, %rsp
+; CHECK-NEXT: leaq    32(%rsp), %rax
+; CHECK-NEXT: movb    $0, (%rax)
+; CHECK:      callq   rt_init
+; CHECK-NOT:  subq
+; CHECK-NOT:  addq
+; CHECK:      callq   *%rsi
+; CHECK-LABEL: "?catch$3@?0?test2@4HA":
+; CHECK:      leaq    64(%rdx), %rbp
 ; CHECK-LABEL: $handlerMap$0$test2:
 ; CHECK:      .long   0
 ; CHECK-NEXT: .long   0
-; CHECK-NEXT: .long   16
+; CHECK-NEXT: .long   48
+; CHECK-NEXT: .long   "?catch$3@?0?test2@4HA"@IMGREL
+; CHECK-NEXT: .long   72
