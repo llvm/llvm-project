@@ -931,12 +931,17 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
       return false;
 
     // Only flatten as many source elements as the destination requires.
-    unsigned MaxElems = countHLSLFlatElements(DestType);
+    unsigned ElemCount = countHLSLFlatElements(DestType);
 
     SmallVector<HLSLFlatElement, 16> Elements;
-    Elements.reserve(MaxElems);
-    if (!emitHLSLFlattenAggregate(SrcType, SrcOffset, Elements, MaxElems, E))
+    Elements.reserve(ElemCount);
+    if (!emitHLSLFlattenAggregate(SrcType, SrcOffset, Elements, ElemCount, E))
       return false;
+
+    // Sema is expected to reject an elementwise cast whose source has fewer
+    // scalar elements than the destination.
+    assert(Elements.size() == ElemCount &&
+           "Source type has fewer scalar elements than the destination type");
 
     return emitHLSLConstructAggregate(DestType, Elements, E);
   }
@@ -6105,28 +6110,28 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
       return false;
   }
 
-    if (!this->visitBool(Cond))
-      return false;
+  if (!this->visitBool(Cond))
+    return false;
 
-    if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
-      return false;
+  if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+    return false;
 
-    if (!this->jumpFalse(EndLabel, S))
-      return false;
+  if (!this->jumpFalse(EndLabel, S))
+    return false;
 
-    if (!this->visitStmt(Body))
-      return false;
+  if (!this->visitStmt(Body))
+    return false;
 
-    if (!CondScope.destroyLocals())
-      return false;
-    // } End of loop body.
+  if (!CondScope.destroyLocals())
+    return false;
+  // } End of loop body.
 
-    if (!this->jump(CondLabel, S))
-      return false;
-    this->fallthrough(EndLabel);
-    this->emitLabel(EndLabel);
+  if (!this->jump(CondLabel, S))
+    return false;
+  this->fallthrough(EndLabel);
+  this->emitLabel(EndLabel);
 
-    return CondScope.destroyLocals() && WholeLoopScope.destroyLocals();
+  return CondScope.destroyLocals() && WholeLoopScope.destroyLocals();
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
