@@ -149,6 +149,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+supm %s -o - | FileCheck --check-prefix=RV32SUPM %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smctr  %s -o - | FileCheck --check-prefix=RV32SMCTR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssctr  %s -o - | FileCheck --check-prefix=RV32SSCTR %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-p %s -o - | FileCheck --check-prefix=RV32P %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zibi %s -o - | FileCheck --check-prefix=RV32ZIBI %s
 
 ; RUN: llc -mtriple=riscv64 %s -o - | FileCheck %s
