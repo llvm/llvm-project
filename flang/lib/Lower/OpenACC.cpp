@@ -1215,7 +1215,8 @@ createRegionOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
   // If it is an unstructured region and is not the outer region of a combined
   // construct, create empty blocks for all evaluations.
-  if (eval.lowerAsUnstructured() && !outerCombined)
+  if (eval.lowerAsUnstructured() && !outerCombined &&
+      eval.hasNestedEvaluations())
     Fortran::lower::createEmptyRegionBlocks<mlir::acc::TerminatorOp,
                                             mlir::acc::YieldOp>(
         builder, eval.getNestedEvaluations());
@@ -1544,6 +1545,7 @@ static void visitLoopControl(
       if (!innerDo)
         break; // No deeper loop; stop collecting collapsed bounds.
 
+      Fortran::lower::markDoConstructAsCollapsed(*innerDo);
       loopControl = &*innerDo->GetLoopControl();
       mlir::Location loc =
           converter.genLocation(Fortran::parser::FindSourceLocation(*innerDo));
@@ -2033,6 +2035,8 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
 }
 
 static bool hasEarlyReturn(Fortran::lower::pft::Evaluation &eval) {
+  if (!eval.hasNestedEvaluations())
+    return false;
   bool hasReturnStmt = false;
   for (auto &e : eval.getNestedEvaluations()) {
     e.visit(Fortran::common::visitors{
@@ -4682,6 +4686,23 @@ bool Fortran::lower::isInOpenACCLoop(fir::FirOpBuilder &builder) {
   if (builder.getBlock()->getParent()->getParentOfType<mlir::acc::LoopOp>())
     return true;
   return false;
+}
+
+static llvm::SmallPtrSet<const Fortran::parser::DoConstruct *, 8>
+    collapsedDoConstructs;
+
+void Fortran::lower::markDoConstructAsCollapsed(
+    const Fortran::parser::DoConstruct &dc) {
+  collapsedDoConstructs.insert(&dc);
+}
+
+bool Fortran::lower::isCollapsedDoConstruct(
+    const Fortran::parser::DoConstruct &dc) {
+  return collapsedDoConstructs.contains(&dc);
+}
+
+void Fortran::lower::clearCollapsedDoConstructs() {
+  collapsedDoConstructs.clear();
 }
 
 bool Fortran::lower::isInsideOpenACCComputeConstruct(
