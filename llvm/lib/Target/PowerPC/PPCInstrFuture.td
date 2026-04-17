@@ -431,38 +431,62 @@ let Predicates = [HasFutureVector] in {
   }
 
   def VUPKHSNTOB : VXForm_VRTB5<387, 0, (outs vrrc:$VRT), (ins vrrc:$VRB),
-                                "vupkhsntob $VRT, $VRB", []>;
+                                "vupkhsntob $VRT, $VRB",
+                                [(set v16i8:$VRT,
+                                  (int_ppc_altivec_vupkhsntob v16i8:$VRB))]>;
   def VUPKLSNTOB : VXForm_VRTB5<387, 1, (outs vrrc:$VRT), (ins vrrc:$VRB),
-                                "vupklsntob $VRT, $VRB", []>;
+                                "vupklsntob $VRT, $VRB",
+                                [(set v16i8:$VRT,
+                                  (int_ppc_altivec_vupklsntob v16i8:$VRB))]>;
   def VUPKINT4TOBF16
       : VXForm_VRTB5_UIM2<387, 2, (outs vrrc:$VRT), (ins vrrc:$VRB, u2imm:$UIM),
-                          "vupkint4tobf16 $VRT, $VRB, $UIM", []>;
+                          "vupkint4tobf16 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint4tobf16 v16i8:$VRB, u2imm_timm:$UIM))]>;
   def VUPKINT8TOBF16
       : VXForm_VRTB5_UIM1<387, 1, (outs vrrc:$VRT), (ins vrrc:$VRB, u1imm:$UIM),
-                          "vupkint8tobf16 $VRT, $VRB, $UIM", []>;
+                          "vupkint8tobf16 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint8tobf16 v16i8:$VRB, u1imm_timm:$UIM))]>;
   def VUPKINT8TOFP32
       : VXForm_VRTB5_UIM2<387, 3, (outs vrrc:$VRT), (ins vrrc:$VRB, u2imm:$UIM),
-                          "vupkint8tofp32 $VRT, $VRB, $UIM", []>;
+                          "vupkint8tofp32 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint8tofp32 v16i8:$VRB, u2imm_timm:$UIM))]>;
   def VUPKINT4TOFP32
       : VXForm_VRTB5_UIM3<387, 2, (outs vrrc:$VRT), (ins vrrc:$VRB, u3imm:$UIM),
-                          "vupkint4tofp32 $VRT, $VRB, $UIM", []>;
+                          "vupkint4tofp32 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint4tofp32 v16i8:$VRB, u3imm_timm:$UIM))]>;
 
   def VUCMPRHN : VXForm_VRTAB5<3, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                               "vucmprhn $VRT, $VRA, $VRB", []>;
+                               "vucmprhn $VRT, $VRA, $VRB",
+                               [(set v16i8:$VRT,
+                                 (int_ppc_altivec_vucmprhn v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRLN : VXForm_VRTAB5<67, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                               "vucmprln $VRT, $VRA, $VRB", []>;
+                               "vucmprln $VRT, $VRA, $VRB",
+                               [(set v16i8:$VRT,
+                                 (int_ppc_altivec_vucmprln v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRHB
       : VXForm_VRTAB5<131, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprhb $VRT, $VRA, $VRB", []>;
+                      "vucmprhb $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprhb v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRLB
       : VXForm_VRTAB5<195, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprlb $VRT, $VRA, $VRB", []>;
+                      "vucmprlb $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprlb v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRHH
       : VXForm_VRTAB5<259, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprhh $VRT, $VRA, $VRB", []>;
+                      "vucmprhh $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprhh v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRLH
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprlh $VRT, $VRA, $VRB", []>;
+                      "vucmprlh $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprlh v16i8:$VRA, v16i8:$VRB))]>;
 
   def XVRLW : XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                             "xvrlw $XT, $XA, $XB",
@@ -610,6 +634,52 @@ let Predicates = [HasFutureVector, PairedVectorMemops] in {
 let Predicates = [HasFutureVector] in {
   def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
                                                      v4i32:$vB))>;
+  def : Pat<(v4i32 (int_ppc_altivec_vrlw v4i32:$vA, v4i32:$vB)),
+            (v4i32 (XVRLW v4i32:$vA, v4i32:$vB))>;
+
+  // Elliptic Curve Cryptography Patterns
+  def : Pat<(v16i8 (int_ppc_xxmulmul v16i8:$XA, v16i8:$XB, u3imm_timm:$S)),
+            (v16i8 (COPY_TO_REGCLASS (XXMULMUL RCCp.AToVSRC, RCCp.BToVSRC, $S), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxmulmulhiadd v16i8:$XA, v16i8:$XB, u1imm_timm:$S0, u1imm_timm:$S1, u1imm_timm:$S2)),
+            (v16i8 (COPY_TO_REGCLASS (XXMULMULHIADD RCCp.AToVSRC, RCCp.BToVSRC, $S0, $S1, $S2), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxmulmulloadd v16i8:$XA, v16i8:$XB, u1imm_timm:$S1, u1imm_timm:$S2)),
+            (v16i8 (COPY_TO_REGCLASS (XXMULMULLOADD RCCp.AToVSRC, RCCp.BToVSRC, $S1, $S2), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxssumudm v16i8:$XA, v16i8:$XB, u1imm_timm:$P)),
+            (v16i8 (COPY_TO_REGCLASS (XXSSUMUDM RCCp.AToVSRC, RCCp.BToVSRC, $P), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxssumudmc v16i8:$XA, v16i8:$XB, u1imm_timm:$P)),
+            (v16i8 (COPY_TO_REGCLASS (XXSSUMUDMC RCCp.AToVSRC, RCCp.BToVSRC, $P), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxssumudmcext v16i8:$XA, v16i8:$XB, v16i8:$XC, u1imm_timm:$P)),
+            (v16i8 (COPY_TO_REGCLASS (XXSSUMUDMCEXT RCCp.AToVSRC, RCCp.BToVSRC, RCCp.CToVSRC, $P), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddadduqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDADDUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddaddsuqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDADDSUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddsubuqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDSUBUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddsubsuqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDSUBSUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge2t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE2T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge2t2uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE2T2UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge2t3uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE2T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge3t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE3T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t2uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T2UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t3uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t4uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T4UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase3t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE3T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase3t2uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE3T2UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase3t3uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE3T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
 }
 
 //---------------------------- Instruction aliases ---------------------------//

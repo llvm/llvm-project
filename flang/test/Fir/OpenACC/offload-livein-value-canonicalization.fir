@@ -371,3 +371,55 @@ func.func @test_convert_chain_and_direct(%arg0: !fir.boxchar<1>, %arg1: !fir.ref
 // CHECK:   %[[CVT_INT:.*]] = fir.convert %arg1
 // CHECK:   fir.call @use_ref(%[[DECL]])
 // CHECK:   fir.call @use_i64(%[[CVT_INT]])
+
+// -----
+
+// Test fir.undefined sinking into offload region.
+// fir.undefined is used in fir.slice to mark collapsed dimensions.
+// After gpu-kernel-outlining, function arguments lose their defining op,
+// so SliceOp::getOutputRank() can no longer identify collapsed dims.
+// The pass must sink fir.undefined to preserve this information.
+
+func.func @test_undef_slice_sink(%arg0: !fir.box<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %undef = fir.undefined index
+  %slice = fir.slice %c1, %c10, %c1, %c1, %undef, %undef : (index, index, index, index, index, index) -> !fir.slice<2>
+  acc.serial {
+    %rebox = fir.rebox %arg0 [%slice] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_undef_slice_sink
+// CHECK: acc.serial {
+// CHECK:   %[[UNDEF:.*]] = fir.undefined index
+// CHECK:   %[[SLICE:.*]] = fir.slice {{.*}}, %[[UNDEF]], %[[UNDEF]]
+// CHECK:   fir.rebox %arg0 [%[[SLICE]]]
+
+// -----
+
+// Test fir.undefined rematerialization (used both inside and outside region).
+
+func.func @test_undef_slice_rematerialize(%arg0: !fir.box<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %undef = fir.undefined index
+  %slice = fir.slice %c1, %c10, %c1, %c1, %undef, %undef : (index, index, index, index, index, index) -> !fir.slice<2>
+  %rebox_outer = fir.rebox %arg0 [%slice] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+  acc.serial {
+    %rebox_inner = fir.rebox %arg0 [%slice] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_undef_slice_rematerialize
+// CHECK: %[[UNDEF_OUTER:.*]] = fir.undefined index
+// CHECK: %[[SLICE_OUTER:.*]] = fir.slice {{.*}}, %[[UNDEF_OUTER]], %[[UNDEF_OUTER]]
+// CHECK: fir.rebox %arg0 [%[[SLICE_OUTER]]]
+// CHECK: acc.serial {
+// CHECK:   %[[UNDEF_INNER:.*]] = fir.undefined index
+// CHECK:   %[[SLICE_INNER:.*]] = fir.slice {{.*}}, %[[UNDEF_INNER]], %[[UNDEF_INNER]]
+// CHECK:   fir.rebox %arg0 [%[[SLICE_INNER]]]

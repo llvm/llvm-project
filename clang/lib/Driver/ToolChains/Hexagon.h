@@ -92,6 +92,11 @@ public:
     return getTriple().isMusl() ? "ld.lld" : "hexagon-link";
   }
 
+  RuntimeLibType
+  GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
+
+  UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const override;
+
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
 
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
@@ -102,8 +107,13 @@ public:
   std::string getHexagonTargetDir(
       const std::string &InstalledDir,
       const SmallVectorImpl<std::string> &PrefixDirs) const;
+  SmallString<128> getEffectiveSysRoot(const llvm::opt::ArgList &Args) const;
+  void getBaseIncludeDir(const llvm::opt::ArgList &Args,
+                         llvm::SmallString<128> &) const;
+  void getLibraryDir(const llvm::opt::ArgList &Args,
+                     llvm::SmallString<128> &) const;
   void getHexagonLibraryPaths(const llvm::opt::ArgList &Args,
-      ToolChain::path_list &LibPaths) const;
+                              ToolChain::path_list &LibPaths) const;
 
   std::string getCompilerRTPath() const override;
 

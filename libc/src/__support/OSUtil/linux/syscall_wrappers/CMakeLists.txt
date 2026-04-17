@@ -24,6 +24,61 @@ add_header_library(
 )
 
 add_header_library(
+  accept
+  HDRS
+    accept.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.accept
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.hdr.types.struct_sockaddr
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  connect
+  HDRS
+    connect.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.connect
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.hdr.types.struct_sockaddr
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  getsockopt
+  HDRS
+    getsockopt.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  listen
+  HDRS
+    listen.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   read
   HDRS
     read.h
@@ -33,6 +88,33 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.hdr.types.ssize_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  setsockopt
+  HDRS
+    setsockopt.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  raise
+  HDRS
+    raise.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
     libc.include.sys_syscall
 )
 
@@ -60,5 +142,18 @@ add_header_library(
     libc.src.__support.macros.config
     libc.hdr.fcntl_macros
     libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  utimensat
+  HDRS
+    utimensat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.struct_timespec
     libc.include.sys_syscall
 )

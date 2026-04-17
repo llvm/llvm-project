@@ -139,12 +139,11 @@ define <256 x i8> @select_v256i8(<256 x i1> %a, <256 x i8> %b, <256 x i8> %c, i3
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    li a2, 128
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v6, v8
 ; CHECK-NEXT:    vmv1r.v v7, v0
-; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    addi a4, a1, 128
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v24, (a0)
 ; CHECK-NEXT:    addi a0, a3, -128
 ; CHECK-NEXT:    vle8.v v8, (a4)

@@ -1,5 +1,5 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=verde < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=verde < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=verde < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}mbcnt_intrinsics:
 ; GCN: v_mbcnt_lo_u32_b32_e64 [[LO:v[0-9]+]], -1, 0

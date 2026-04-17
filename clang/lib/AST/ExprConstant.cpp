@@ -1862,19 +1862,22 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
 void CallStackFrame::describe(raw_ostream &Out) const {
   bool IsMemberCall = false;
   bool ExplicitInstanceParam = false;
+  clang::PrintingPolicy PrintingPolicy = Info.Ctx.getPrintingPolicy();
+  PrintingPolicy.SuppressLambdaBody = true;
+
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Callee)) {
     IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
     ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
   }
 
   if (!IsMemberCall)
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+    Callee->getNameForDiagnostic(Out, PrintingPolicy,
                                  /*Qualified=*/false);
 
   if (This && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
-      Object->printPretty(Out, /*Helper=*/nullptr, Info.Ctx.getPrintingPolicy(),
+      Object->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                           /*Indentation=*/0);
       if (Object->getType()->isPointerType())
           Out << "->";
@@ -1882,8 +1885,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Out << ".";
     } else if (const auto *OCE =
                    dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
-      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr,
-                                  Info.Ctx.getPrintingPolicy(),
+      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                                   /*Indentation=*/0);
       Out << ".";
     } else {
@@ -1894,7 +1896,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Info.Ctx.getLValueReferenceType(This->Designator.MostDerivedType));
       Out << ".";
     }
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+    Callee->getNameForDiagnostic(Out, PrintingPolicy,
                                  /*Qualified=*/false);
   }
 
@@ -1984,7 +1986,9 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::ObjCEncodeExprClass:
     return true;
   case Expr::ObjCBoxedExprClass:
-    return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
+  case Expr::ObjCArrayLiteralClass:
+  case Expr::ObjCDictionaryLiteralClass:
+    return cast<ObjCObjectLiteral>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
     return IsOpaqueConstantCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
@@ -4178,10 +4182,12 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       // IsWithinLifetime, resulting in false.
       if (I != 0 && handler.AccessKind == AK_IsWithinLifetime)
         return false;
-      if (!Info.checkingPotentialConstantExpression())
+      if (!Info.checkingPotentialConstantExpression()) {
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
             << handler.AccessKind << O->isIndeterminate()
             << E->getSourceRange();
+        NoteLValueLocation(Info, Obj.Base);
+      }
       return handler.failed();
     }
 
@@ -9899,6 +9905,12 @@ public:
       EvaluateIgnoredValue(Info, E->getSubExpr());
     return Error(E);
   }
+  bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
+    return E->isExpressibleAsConstantInitializer() ? Success(E) : Error(E);
+  }
+  bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E) {
+    return E->isExpressibleAsConstantInitializer() ? Success(E) : Error(E);
+  }
   bool VisitAddrLabelExpr(const AddrLabelExpr *E)
       { return Success(E); }
   bool VisitCallExpr(const CallExpr *E);
@@ -12868,6 +12880,85 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           APValue(APSInt(R, DestEltTy->isUnsignedIntegerOrEnumerationType())));
     }
 
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_compressdf128_mask:
+  case X86::BI__builtin_ia32_compressdf256_mask:
+  case X86::BI__builtin_ia32_compressdf512_mask:
+  case X86::BI__builtin_ia32_compressdi128_mask:
+  case X86::BI__builtin_ia32_compressdi256_mask:
+  case X86::BI__builtin_ia32_compressdi512_mask:
+  case X86::BI__builtin_ia32_compresshi128_mask:
+  case X86::BI__builtin_ia32_compresshi256_mask:
+  case X86::BI__builtin_ia32_compresshi512_mask:
+  case X86::BI__builtin_ia32_compressqi128_mask:
+  case X86::BI__builtin_ia32_compressqi256_mask:
+  case X86::BI__builtin_ia32_compressqi512_mask:
+  case X86::BI__builtin_ia32_compresssf128_mask:
+  case X86::BI__builtin_ia32_compresssf256_mask:
+  case X86::BI__builtin_ia32_compresssf512_mask:
+  case X86::BI__builtin_ia32_compresssi128_mask:
+  case X86::BI__builtin_ia32_compresssi256_mask:
+  case X86::BI__builtin_ia32_compresssi512_mask: {
+    APValue Source, Passthru;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
+        !EvaluateAsRValue(Info, E->getArg(1), Passthru))
+      return false;
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(2), Mask, Info))
+      return false;
+
+    unsigned NumElts = Source.getVectorLength();
+    SmallVector<APValue, 64> ResultElements;
+    ResultElements.reserve(NumElts);
+
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (Mask[I])
+        ResultElements.push_back(Source.getVectorElt(I));
+    }
+    for (unsigned I = ResultElements.size(); I != NumElts; ++I) {
+      ResultElements.push_back(Passthru.getVectorElt(I));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_expanddf128_mask:
+  case X86::BI__builtin_ia32_expanddf256_mask:
+  case X86::BI__builtin_ia32_expanddf512_mask:
+  case X86::BI__builtin_ia32_expanddi128_mask:
+  case X86::BI__builtin_ia32_expanddi256_mask:
+  case X86::BI__builtin_ia32_expanddi512_mask:
+  case X86::BI__builtin_ia32_expandhi128_mask:
+  case X86::BI__builtin_ia32_expandhi256_mask:
+  case X86::BI__builtin_ia32_expandhi512_mask:
+  case X86::BI__builtin_ia32_expandqi128_mask:
+  case X86::BI__builtin_ia32_expandqi256_mask:
+  case X86::BI__builtin_ia32_expandqi512_mask:
+  case X86::BI__builtin_ia32_expandsf128_mask:
+  case X86::BI__builtin_ia32_expandsf256_mask:
+  case X86::BI__builtin_ia32_expandsf512_mask:
+  case X86::BI__builtin_ia32_expandsi128_mask:
+  case X86::BI__builtin_ia32_expandsi256_mask:
+  case X86::BI__builtin_ia32_expandsi512_mask: {
+    APValue Source, Passthru;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
+        !EvaluateAsRValue(Info, E->getArg(1), Passthru))
+      return false;
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(2), Mask, Info))
+      return false;
+
+    unsigned NumElts = Source.getVectorLength();
+    SmallVector<APValue, 64> ResultElements;
+    ResultElements.reserve(NumElts);
+
+    unsigned SourceIdx = 0;
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (Mask[I])
+        ResultElements.push_back(Source.getVectorElt(SourceIdx++));
+      else
+        ResultElements.push_back(Passthru.getVectorElt(I));
+    }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   case X86::BI__builtin_ia32_vpconflictsi_128:

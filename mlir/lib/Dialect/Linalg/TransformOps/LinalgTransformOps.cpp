@@ -1393,8 +1393,10 @@ transform::SpecializeOp::applyToOne(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
   rewriter.setInsertionPoint(target);
+  GenericOpSpecializationOptions opts;
+  opts.emitCategoryOps = getEmitCategory();
   FailureOr<LinalgOp> named =
-      specializeGenericOp(rewriter, cast<GenericOp>(target));
+      specializeGenericOp(rewriter, cast<GenericOp>(target), opts);
   if (succeeded(named)) {
     results.push_back(named->getOperation());
     return DiagnosedSilenceableFailure::success();
@@ -3888,7 +3890,9 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
 
   tilingResult = *maybeTilingResult;
 
-  if (mixedNumThreads.empty()) {
+  // Rank-0 ops produce no loops; skip normalization when there is nothing
+  // to normalize.
+  if (mixedNumThreads.empty() && !tilingResult.loops.empty()) {
     auto generatedForallOp = cast<scf::ForallOp>(tilingResult.loops.front());
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(generatedForallOp);
@@ -3936,7 +3940,8 @@ DiagnosedSilenceableFailure transform::TileUsingForallOp::apply(
         getMapping(), tilingResult);
     if (!diag.succeeded())
       return diag;
-    tileOps.push_back(tilingResult.loops.front());
+    if (!tilingResult.loops.empty())
+      tileOps.push_back(tilingResult.loops.front());
     tiledOps.append(tilingResult.tiledOps);
   }
 

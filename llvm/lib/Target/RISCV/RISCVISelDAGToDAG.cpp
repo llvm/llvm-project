@@ -1133,17 +1133,31 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     else if (!isInt<16>(Imm) && isUInt<16>(Imm) &&
              isInt<12>(SignExtend64<16>(Imm)) && hasAllHUsers(Node))
       Imm = SignExtend64<16>(Imm);
-    // If the upper 32-bits are not used try to convert this into a simm32 by
-    // sign extending bit 32.
-    else if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
-      Imm = SignExtend64<32>(Imm);
 
-    if (VT == MVT::i64 && Subtarget->hasStdExtP() && isApplicableToPLI(Imm) &&
-        hasAllWUsers(Node)) {
-      // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
-      // can simply copy lower 32 bits to higher 32 bits to make it able to
-      // rematerialize to PLI_B or PLI_H
-      Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
+    // If the upper XLen-16 bits are not used, the lower 2 bytes are the same,
+    // and we can't use li, convert to an xlen splat so we can use pli.b.
+    if (Subtarget->hasStdExtP() && !isInt<12>(Imm) &&
+        (Imm & 0xff) == ((Imm >> 8) & 0xff) && hasAllHUsers(Node)) {
+      // Splat the lower 16 bits to XLen. Sign extend for RV32.
+      uint64_t Splat = Imm & 0xffff;
+      Splat = (Splat << 16) | Splat;
+      if (VT == MVT::i64)
+        Imm = Splat << 32 | Splat;
+      else
+        Imm = SignExtend64<32>(Splat);
+    } else {
+      // If the upper 32-bits are not used try to convert this into a simm32 by
+      // sign extending bit 32.
+      if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
+        Imm = SignExtend64<32>(Imm);
+
+      if (VT == MVT::i64 && !isInt<12>(Imm) && Subtarget->hasStdExtP() &&
+          isApplicableToPLI(Imm) && hasAllWUsers(Node)) {
+        // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers,
+        // we can simply copy lower 32 bits to higher 32 bits to make it able to
+        // rematerialize to PLI_B or PLI_H
+        Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
+      }
     }
 
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget).getNode());
@@ -1960,8 +1974,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         int ConstantVal = ConstantOffset->getSExtValue();
         Simm12 = isInt<12>(ConstantVal);
         if (Simm12)
-          Offset = CurDAG->getTargetConstant(ConstantVal, SDLoc(Offset),
-                                             Offset.getValueType());
+          Offset = CurDAG->getSignedTargetConstant(ConstantVal, SDLoc(Offset),
+                                                   Offset.getValueType());
       }
 
       unsigned Opcode = 0;
@@ -2952,6 +2966,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     unsigned EltSize = VT.getVectorElementType().getSizeInBits();
     APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
+
+    // Use LI for all ones since it can be compressed to c.li.
+    if (Val.isAllOnes()) {
+      SDNode *NewNode = CurDAG->getMachineNode(
+          RISCV::ADDI, DL, VT, CurDAG->getRegister(RISCV::X0, VT),
+          CurDAG->getAllOnesConstant(DL, XLenVT, /*IsTarget=*/true));
+      ReplaceNode(Node, NewNode);
+      return;
+    }
 
     // Find the smallest splat.
     if (Val.getBitWidth() > 16 && Val.isSplat(16))

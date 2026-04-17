@@ -641,8 +641,8 @@ func.func @func_execute_region_elim_multi_yield() {
 
 // CHECK-LABEL: @index_switch
 func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
-  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i32
-  // CHECK: cf.switch %[[CASE]] : i32
+  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i64
+  // CHECK: cf.switch %[[CASE]] : i64
   // CHECK-NEXT: default: ^[[DEFAULT:.+]],
   // CHECK-NEXT: 0: ^[[bb1:.+]],
   // CHECK-NEXT: 1: ^[[bb2:.+]]
@@ -665,6 +665,32 @@ func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
   // CHECK: ^[[bb4]](%[[V:.*]]: i32
   // CHECK-NEXT: return %[[V]]
   return %0 : i32
+}
+
+// Verify that case values larger than INT32_MAX are not truncated (issue #111589).
+// In particular, case 4294967296 (2^32) must not alias with case 0 after lowering.
+// CHECK-LABEL: @index_switch_large_cases
+func.func @index_switch_large_cases(%i: index) {
+  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i64
+  // CHECK: cf.switch %[[CASE]] : i64, [
+  // CHECK-NEXT: default: ^[[DEFAULT:.+]],
+  // CHECK-NEXT: 0: ^[[bb0:.+]],
+  // CHECK-NEXT: 4294967296: ^[[bb1:.+]],
+  // CHECK-NEXT: 8589934592: ^[[bb2:.+]]
+  scf.index_switch %i
+  case 0 {
+    scf.yield
+  }
+  case 4294967296 { // 2^32, previously truncated to 0
+    scf.yield
+  }
+  case 8589934592 { // 2^33
+    scf.yield
+  }
+  default {
+    scf.yield
+  }
+  return
 }
 
 // Note: scf.forall is lowered to scf.parallel, which is currently lowered to

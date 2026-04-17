@@ -42,6 +42,7 @@ import json
 import multiprocessing
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -732,7 +733,7 @@ async def main() -> None:
             progress = f"[{i + 1: >{len(f'{len(files)}')}}/{len(files)}]"
             runtime = f"[{result.elapsed:.1f}s]"
             if not args.hide_progress:
-                print(f"{progress}{runtime} {' '.join(result.invocation)}")
+                print(f"{progress}{runtime} {shlex.join(result.invocation)}")
             if result.stdout:
                 print(result.stdout, end=("" if result.stderr else "\n"))
             if result.stderr:

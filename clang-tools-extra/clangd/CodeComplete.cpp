@@ -477,10 +477,12 @@ struct CodeCompletionBuilder {
     BundledEntry &S = Bundled.back();
     bool IsConcept = false;
     if (C.SemaResult) {
-      getSignature(*SemaCCS, &S.Signature, &S.SnippetSuffix, C.SemaResult->Kind,
-                   C.SemaResult->CursorKind,
-                   /*IncludeFunctionArguments=*/C.SemaResult->FunctionCanBeCall,
-                   /*RequiredQualifiers=*/&Completion.RequiredQualifier);
+      getSignature(
+          *SemaCCS, &S.Signature, &S.SnippetSuffix, C.SemaResult->Kind,
+          C.SemaResult->CursorKind,
+          /*IncludeFunctionArguments=*/C.SemaResult->FunctionCanBeCall ||
+              C.SemaResult->DeclaringEntity,
+          /*RequiredQualifiers=*/&Completion.RequiredQualifier);
       S.ReturnType = getReturnType(*SemaCCS);
       if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)
         if (const auto *D = C.SemaResult->getDeclaration())
@@ -1418,7 +1420,8 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // overriding the preamble will break sema completion. Fortunately we can just
   // skip all includes in this case; these completions are really simple.
   PreambleBounds PreambleRegion =
-      ComputePreambleBounds(CI->getLangOpts(), *ContentsBuffer, 0);
+      computePreambleBounds(CI->getLangOpts(), *ContentsBuffer,
+                            Input.ParseInput.Opts.SkipPreambleBuild);
   bool CompletingInPreamble = Input.Offset < PreambleRegion.Size ||
                               (!PreambleRegion.PreambleEndsAtStartOfLine &&
                                Input.Offset == PreambleRegion.Size);
@@ -1431,7 +1434,10 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   if (Input.Preamble.StatCache)
     VFS = Input.Preamble.StatCache->getConsumingFS(std::move(VFS));
   auto Clang = prepareCompilerInstance(
-      std::move(CI), !CompletingInPreamble ? &Input.Preamble.Preamble : nullptr,
+      std::move(CI),
+      (!CompletingInPreamble && !Input.ParseInput.Opts.SkipPreambleBuild)
+          ? &Input.Preamble.Preamble
+          : nullptr,
       std::move(ContentsBuffer), std::move(VFS), IgnoreDiags);
   Clang->getPreprocessorOpts().SingleFileParseMode = CompletingInPreamble;
   Clang->setCodeCompletionConsumer(Consumer.release());

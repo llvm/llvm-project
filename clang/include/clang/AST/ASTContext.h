@@ -1368,7 +1368,7 @@ public:
   /// This does not include extern shared variables used by device host
   /// functions as addresses of shared variables are per warp, therefore
   /// cannot be accessed by host code.
-  llvm::DenseSet<const VarDecl *> CUDADeviceVarODRUsedByHost;
+  llvm::SetVector<const VarDecl *> CUDADeviceVarODRUsedByHost;
 
   /// Keep track of CUDA/HIP external kernels or device variables ODR-used by
   /// host code. SetVector is used to maintain the order.
@@ -3070,6 +3070,10 @@ public:
   /// types, values, and templates.
   TemplateName getCanonicalTemplateName(TemplateName Name,
                                         bool IgnoreDeduced = false) const;
+
+  /// Return the default argument of a template parameter, if one exists.
+  const TemplateArgument *
+  getDefaultTemplateArgumentOrNone(const NamedDecl *P) const;
 
   /// Determine whether the given template names refer to the same
   /// template.

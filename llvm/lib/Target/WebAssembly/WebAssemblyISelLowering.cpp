@@ -158,8 +158,13 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(ISD::FP16_TO_FP, T, Expand);
       setOperationAction(ISD::FP_TO_FP16, T, Expand);
     }
-    setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
-    setTruncStoreAction(T, MVT::f16, Expand);
+    if (Subtarget->hasFP16() && T == MVT::f32) {
+      setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Legal);
+      setTruncStoreAction(T, MVT::f16, Legal);
+    } else {
+      setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
+      setTruncStoreAction(T, MVT::f16, Expand);
+    }
   }
 
   // Expand unavailable integer operations.
@@ -1272,7 +1277,7 @@ static bool callingConvSupported(CallingConv::ID CallConv) {
          CallConv == CallingConv::PreserveAll ||
          CallConv == CallingConv::CXX_FAST_TLS ||
          CallConv == CallingConv::WASM_EmscriptenInvoke ||
-         CallConv == CallingConv::Swift;
+         CallConv == CallingConv::Swift || CallConv == CallingConv::SwiftTail;
 }
 
 SDValue
@@ -1359,12 +1364,14 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   bool HasSwiftSelfArg = false;
   bool HasSwiftErrorArg = false;
+  bool HasSwiftAsyncArg = false;
   unsigned NumFixedArgs = 0;
   for (unsigned I = 0; I < Outs.size(); ++I) {
     const ISD::OutputArg &Out = Outs[I];
     SDValue &OutVal = OutVals[I];
     HasSwiftSelfArg |= Out.Flags.isSwiftSelf();
     HasSwiftErrorArg |= Out.Flags.isSwiftError();
+    HasSwiftAsyncArg |= Out.Flags.isSwiftAsync();
     if (Out.Flags.isNest())
       fail(DL, DAG, "WebAssembly hasn't implemented nest arguments");
     if (Out.Flags.isInAlloca())
@@ -1395,11 +1402,11 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool IsVarArg = CLI.IsVarArg;
   auto PtrVT = getPointerTy(Layout);
 
-  // For swiftcc, emit additional swiftself and swifterror arguments
-  // if there aren't. These additional arguments are also added for callee
-  // signature They are necessary to match callee and caller signature for
-  // indirect call.
-  if (CallConv == CallingConv::Swift) {
+  // For swiftcc and swifttailcc, emit additional swiftself, swifterror, and
+  // (for swifttailcc) swiftasync arguments if there aren't. These additional
+  // arguments are also added for callee signature. They are necessary to match
+  // callee and caller signature for indirect call.
+  if (CallConv == CallingConv::Swift || CallConv == CallingConv::SwiftTail) {
     Type *PtrTy = PointerType::getUnqual(*DAG.getContext());
     if (!HasSwiftSelfArg) {
       NumFixedArgs++;
@@ -1414,6 +1421,15 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       NumFixedArgs++;
       ISD::ArgFlagsTy Flags;
       Flags.setSwiftError();
+      ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
+      CLI.Outs.push_back(Arg);
+      SDValue ArgVal = DAG.getUNDEF(PtrVT);
+      CLI.OutVals.push_back(ArgVal);
+    }
+    if (CallConv == CallingConv::SwiftTail && !HasSwiftAsyncArg) {
+      NumFixedArgs++;
+      ISD::ArgFlagsTy Flags;
+      Flags.setSwiftAsync();
       ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
       CLI.Outs.push_back(Arg);
       SDValue ArgVal = DAG.getUNDEF(PtrVT);
@@ -1614,9 +1630,11 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
 
   bool HasSwiftErrorArg = false;
   bool HasSwiftSelfArg = false;
+  bool HasSwiftAsyncArg = false;
   for (const ISD::InputArg &In : Ins) {
     HasSwiftSelfArg |= In.Flags.isSwiftSelf();
     HasSwiftErrorArg |= In.Flags.isSwiftError();
+    HasSwiftAsyncArg |= In.Flags.isSwiftAsync();
     if (In.Flags.isInAlloca())
       fail(DL, DAG, "WebAssembly hasn't implemented inalloca arguments");
     if (In.Flags.isNest())
@@ -1636,16 +1654,19 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     MFI->addParam(In.VT);
   }
 
-  // For swiftcc, emit additional swiftself and swifterror arguments
-  // if there aren't. These additional arguments are also added for callee
-  // signature They are necessary to match callee and caller signature for
-  // indirect call.
+  // For swiftcc and swifttailcc, emit additional swiftself, swifterror, and
+  // (for swifttailcc) swiftasync arguments if there aren't. These additional
+  // arguments are also added for callee signature. They are necessary to match
+  // callee and caller signature for indirect call.
   auto PtrVT = getPointerTy(MF.getDataLayout());
-  if (CallConv == CallingConv::Swift) {
+  if (CallConv == CallingConv::Swift || CallConv == CallingConv::SwiftTail) {
     if (!HasSwiftSelfArg) {
       MFI->addParam(PtrVT);
     }
     if (!HasSwiftErrorArg) {
+      MFI->addParam(PtrVT);
+    }
+    if (CallConv == CallingConv::SwiftTail && !HasSwiftAsyncArg) {
       MFI->addParam(PtrVT);
     }
   }
@@ -2388,7 +2409,7 @@ WebAssemblyTargetLowering::LowerEXTEND_VECTOR_INREG(SDValue Op,
 
 static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
-  if (Op.getValueType() != MVT::v2f64)
+  if (Op.getValueType() != MVT::v2f64 && Op.getValueType() != MVT::v4f32)
     return SDValue();
 
   auto GetConvertedLane = [](SDValue Op, unsigned &Opcode, SDValue &SrcVec,
@@ -2401,6 +2422,7 @@ static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
       Opcode = WebAssemblyISD::CONVERT_LOW_U;
       break;
     case ISD::FP_EXTEND:
+    case ISD::FP16_TO_FP:
       Opcode = WebAssemblyISD::PROMOTE_LOW;
       break;
     default:
@@ -2419,36 +2441,60 @@ static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
     return true;
   };
 
-  unsigned LHSOpcode, RHSOpcode, LHSIndex, RHSIndex;
-  SDValue LHSSrcVec, RHSSrcVec;
-  if (!GetConvertedLane(Op.getOperand(0), LHSOpcode, LHSSrcVec, LHSIndex) ||
-      !GetConvertedLane(Op.getOperand(1), RHSOpcode, RHSSrcVec, RHSIndex))
+  unsigned NumLanes = Op.getValueType() == MVT::v2f64 ? 2 : 4;
+  unsigned FirstOpcode = 0, SecondOpcode = 0, ThirdOpcode = 0, FourthOpcode = 0;
+  unsigned FirstIndex = 0, SecondIndex = 0, ThirdIndex = 0, FourthIndex = 0;
+  SDValue FirstSrcVec, SecondSrcVec, ThirdSrcVec, FourthSrcVec;
+
+  if (!GetConvertedLane(Op.getOperand(0), FirstOpcode, FirstSrcVec,
+                        FirstIndex) ||
+      !GetConvertedLane(Op.getOperand(1), SecondOpcode, SecondSrcVec,
+                        SecondIndex))
     return SDValue();
 
-  if (LHSOpcode != RHSOpcode)
+  // If we're converting to v4f32, check the third and fourth lanes, too.
+  if (NumLanes == 4 && (!GetConvertedLane(Op.getOperand(2), ThirdOpcode,
+                                          ThirdSrcVec, ThirdIndex) ||
+                        !GetConvertedLane(Op.getOperand(3), FourthOpcode,
+                                          FourthSrcVec, FourthIndex)))
+    return SDValue();
+
+  if (FirstOpcode != SecondOpcode)
+    return SDValue();
+
+  // TODO Add an optimization similar to the v2f64 below for shuffling the
+  // vectors when the lanes are in the wrong order or come from different src
+  // vectors.
+  if (NumLanes == 4 &&
+      (FirstOpcode != ThirdOpcode || FirstOpcode != FourthOpcode ||
+       FirstSrcVec != SecondSrcVec || FirstSrcVec != ThirdSrcVec ||
+       FirstSrcVec != FourthSrcVec || FirstIndex != 0 || SecondIndex != 1 ||
+       ThirdIndex != 2 || FourthIndex != 3))
     return SDValue();
 
   MVT ExpectedSrcVT;
-  switch (LHSOpcode) {
+  switch (FirstOpcode) {
   case WebAssemblyISD::CONVERT_LOW_S:
   case WebAssemblyISD::CONVERT_LOW_U:
     ExpectedSrcVT = MVT::v4i32;
     break;
   case WebAssemblyISD::PROMOTE_LOW:
-    ExpectedSrcVT = MVT::v4f32;
+    ExpectedSrcVT = NumLanes == 2 ? MVT::v4f32 : MVT::v8i16;
     break;
   }
-  if (LHSSrcVec.getValueType() != ExpectedSrcVT)
+  if (FirstSrcVec.getValueType() != ExpectedSrcVT)
     return SDValue();
 
-  auto Src = LHSSrcVec;
-  if (LHSIndex != 0 || RHSIndex != 1 || LHSSrcVec != RHSSrcVec) {
+  auto Src = FirstSrcVec;
+  if (NumLanes == 2 &&
+      (FirstIndex != 0 || SecondIndex != 1 || FirstSrcVec != SecondSrcVec)) {
     // Shuffle the source vector so that the converted lanes are the low lanes.
-    Src = DAG.getVectorShuffle(
-        ExpectedSrcVT, DL, LHSSrcVec, RHSSrcVec,
-        {static_cast<int>(LHSIndex), static_cast<int>(RHSIndex) + 4, -1, -1});
+    Src = DAG.getVectorShuffle(ExpectedSrcVT, DL, FirstSrcVec, SecondSrcVec,
+                               {static_cast<int>(FirstIndex),
+                                static_cast<int>(SecondIndex) + 4, -1, -1});
   }
-  return DAG.getNode(LHSOpcode, DL, MVT::v2f64, Src);
+  return DAG.getNode(FirstOpcode, DL, NumLanes == 2 ? MVT::v2f64 : MVT::v4f32,
+                     Src);
 }
 
 SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
@@ -2891,8 +2937,8 @@ static bool HasNoSignedZerosOrNaNs(SDValue Op, SelectionDAG &DAG) {
           (DAG.isKnownNeverNaN(Op->getOperand(0)) &&
            DAG.isKnownNeverNaN(Op->getOperand(1)))) &&
          (Op->getFlags().hasNoSignedZeros() ||
-          DAG.isKnownNeverZeroFloat(Op->getOperand(0)) ||
-          DAG.isKnownNeverZeroFloat(Op->getOperand(1)));
+          DAG.isKnownNeverLogicalZero(Op->getOperand(0)) ||
+          DAG.isKnownNeverLogicalZero(Op->getOperand(1)));
 }
 
 SDValue WebAssemblyTargetLowering::LowerFMIN(SDValue Op,
@@ -2992,6 +3038,29 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   assert(N->getOpcode() == ISD::SIGN_EXTEND ||
          N->getOpcode() == ISD::ZERO_EXTEND);
 
+  EVT ResVT = N->getValueType(0);
+  bool IsSext = N->getOpcode() == ISD::SIGN_EXTEND;
+  SDLoc DL(N);
+
+  if (ResVT == MVT::v16i32 && N->getOperand(0)->getValueType(0) == MVT::v16i8) {
+    // Use a tree of extend low/high to split and extend the input in two
+    // layers to avoid doing several shuffles and even more extends.
+    unsigned LowOp =
+        IsSext ? WebAssemblyISD::EXTEND_LOW_S : WebAssemblyISD::EXTEND_LOW_U;
+    unsigned HighOp =
+        IsSext ? WebAssemblyISD::EXTEND_HIGH_S : WebAssemblyISD::EXTEND_HIGH_U;
+    SDValue Input = N->getOperand(0);
+    SDValue LowHalf = DAG.getNode(LowOp, DL, MVT::v8i16, Input);
+    SDValue HighHalf = DAG.getNode(HighOp, DL, MVT::v8i16, Input);
+    SDValue Subvectors[] = {
+        DAG.getNode(LowOp, DL, MVT::v4i32, LowHalf),
+        DAG.getNode(HighOp, DL, MVT::v4i32, LowHalf),
+        DAG.getNode(LowOp, DL, MVT::v4i32, HighHalf),
+        DAG.getNode(HighOp, DL, MVT::v4i32, HighHalf),
+    };
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Subvectors);
+  }
+
   // Combine ({s,z}ext (extract_subvector src, i)) into a widening operation if
   // possible before the extract_subvector can be expanded.
   auto Extract = N->getOperand(0);
@@ -3005,7 +3074,6 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
   // Only v8i8, v4i16, and v2i32 extracts can be widened, and only if the
   // extracted subvector is the low or high half of its source.
-  EVT ResVT = N->getValueType(0);
   if (ResVT == MVT::v8i16) {
     if (Extract.getValueType() != MVT::v8i8 ||
         Source.getValueType() != MVT::v16i8 || (Index != 0 && Index != 8))
@@ -3022,7 +3090,6 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return SDValue();
   }
 
-  bool IsSext = N->getOpcode() == ISD::SIGN_EXTEND;
   bool IsLow = Index == 0;
 
   unsigned Op = IsSext ? (IsLow ? WebAssemblyISD::EXTEND_LOW_S
@@ -3030,7 +3097,7 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
                        : (IsLow ? WebAssemblyISD::EXTEND_LOW_U
                                 : WebAssemblyISD::EXTEND_HIGH_U);
 
-  return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+  return DAG.getNode(Op, DL, ResVT, Source);
 }
 
 static SDValue
@@ -3323,7 +3390,7 @@ static SDValue performBitcastCombine(SDNode *N,
     for (SDValue V : VectorsToShuffle) {
       ReturningInteger = DAG.getNode(
           ISD::SHL, DL, ReturnType,
-          {DAG.getShiftAmountConstant(16, ReturnType, DL), ReturningInteger});
+          {ReturningInteger, DAG.getShiftAmountConstant(16, ReturnType, DL)});
 
       SDValue ExtendedV = DAG.getZExtOrTrunc(V, DL, ReturnType);
       ReturningInteger =
@@ -3787,7 +3854,7 @@ static SDValue performShiftCombine(SDNode *N,
     if (ShiftAmt.uge(MaxValidShift))
       return SDValue();
 
-    APInt MulAmt = APInt(BitWidth, 1).shl(ShiftAmt);
+    APInt MulAmt = APInt::getOneBitSet(BitWidth, ShiftAmt.getZExtValue());
     MulConsts.push_back(DAG.getConstant(MulAmt, DL, FromVT.getScalarType(),
                                         /*isTarget=*/false, /*isOpaque=*/true));
   }

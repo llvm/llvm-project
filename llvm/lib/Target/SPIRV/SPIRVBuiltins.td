@@ -65,6 +65,7 @@ def CastToPtr : BuiltinGroup;
 def Construct : BuiltinGroup;
 def CoopMatr : BuiltinGroup;
 def ICarryBorrow : BuiltinGroup;
+def MulExtended : BuiltinGroup;
 def ExtendedBitOps : BuiltinGroup;
 def BindlessINTEL : BuiltinGroup;
 def TernaryBitwiseINTEL : BuiltinGroup;
@@ -676,6 +677,10 @@ defm : DemangledNativeBuiltin<"__spirv_ControlBarrier", OpenCL_std, Barrier, 3, 
 defm : DemangledNativeBuiltin<"__spirv_IAddCarry", OpenCL_std, ICarryBorrow, 3, 3, OpIAddCarryS>;
 defm : DemangledNativeBuiltin<"__spirv_ISubBorrow", OpenCL_std, ICarryBorrow, 3, 3, OpISubBorrowS>;
 
+// MulExtended builtin records:
+defm : DemangledNativeBuiltin<"__spirv_UMulExtended", OpenCL_std, MulExtended, 2, 3, OpUMulExtended>;
+defm : DemangledNativeBuiltin<"__spirv_SMulExtended", OpenCL_std, MulExtended, 2, 3, OpSMulExtended>;
+
 // cl_intel_split_work_group_barrier
 defm : DemangledNativeBuiltin<"intel_work_group_barrier_arrive", OpenCL_std, Barrier, 1, 2, OpControlBarrierArriveINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_ControlBarrierArriveINTEL", OpenCL_std, Barrier, 3, 3, OpControlBarrierArriveINTEL>;
@@ -702,9 +707,9 @@ defm : DemangledNativeBuiltin<"capture_event_profiling_info", OpenCL_std, Enqueu
 defm : DemangledNativeBuiltin<"__spirv_CaptureEventProfilingInfo", OpenCL_std, Enqueue, 3, 3, OpCaptureEventProfilingInfo>;
 defm : DemangledNativeBuiltin<"get_default_queue", OpenCL_std, Enqueue, 0, 0, OpGetDefaultQueue>;
 defm : DemangledNativeBuiltin<"__spirv_GetDefaultQueue", OpenCL_std, Enqueue, 0, 0, OpGetDefaultQueue>;
-defm : DemangledNativeBuiltin<"ndrange_1D", OpenCL_std, Enqueue, 1, 3, OpBuildNDRange>;
-defm : DemangledNativeBuiltin<"ndrange_2D", OpenCL_std, Enqueue, 1, 3, OpBuildNDRange>;
-defm : DemangledNativeBuiltin<"ndrange_3D", OpenCL_std, Enqueue, 1, 3, OpBuildNDRange>;
+defm : DemangledNativeBuiltin<"ndrange_1D", OpenCL_std, Enqueue, 1, 4, OpBuildNDRange>;
+defm : DemangledNativeBuiltin<"ndrange_2D", OpenCL_std, Enqueue, 1, 4, OpBuildNDRange>;
+defm : DemangledNativeBuiltin<"ndrange_3D", OpenCL_std, Enqueue, 1, 4, OpBuildNDRange>;
 
 // Spec constant builtin records:
 defm : DemangledNativeBuiltin<"__spirv_SpecConstant", OpenCL_std, SpecConstant, 2, 2, OpSpecConstant>;

@@ -153,7 +153,7 @@ getOrderedPossibleShardingAttrs(ArrayRef<Sharding> mustShardings,
 //     `annotate_for_users`.
 // 3. All other cases. Resharding is required for operands/results with
 //   annotation targeting explicitly this operation.
-ReshardingRquirementKind getReshardingRquirementKind(
+static ReshardingRquirementKind getReshardingRquirementKind(
     Operation *op, const std::vector<Sharding> &operandAndResultShardings) {
   ReshardingRquirementKind res = ReshardingRquirementKind::NO_RESHARDING;
 

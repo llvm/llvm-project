@@ -27,7 +27,8 @@ void *operator new(std::size_t, void *p) { return p; }
 void* operator new[] (std::size_t, void* p) {return p;}
 
 constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // both-error {{constant expression}} \
-                                                                            // both-note {{assignment to object outside its lifetime}}
+                                                                            // both-note {{assignment to object outside its lifetime}} \
+                                                                            // both-note {{heap allocation performed here}}
 
 consteval auto ok1() {
   bool b;
@@ -119,7 +120,7 @@ static_assert(fail2() == 0); // both-error {{not an integral constant expression
                              // both-note {{in call to}}
 
 consteval int indeterminate() {
-    int * indeterminate;
+    int * indeterminate; // both-note {{declared here}}
     new (indeterminate) int(0); // both-note {{read of uninitialized object is not allowed in a constant expression}}
     return 0;
 }
@@ -178,7 +179,7 @@ static_assert(blah()); // both-error {{not an integral constant expression}} \
 
 
 constexpr int *get_indeterminate() {
-  int *evil;
+  int *evil; // both-note {{declared here}}
   return evil; // both-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 
@@ -416,7 +417,7 @@ namespace PlacementNewAfterDelete {
 namespace SubObj {
   constexpr bool construct_after_lifetime_2() {
     struct A { struct B {} b; };
-    A a;
+    A a; // both-note {{declared here}}
     a.~A();
     std::construct_at<A::B>(&a.b); // both-note {{in call}}
     return true;
@@ -524,3 +525,44 @@ static_assert(intDestArray() == 0); // both-error {{not an integral constant exp
 
 constexpr void invalidDest() { new (undefinedfunction()) int; } // both-error {{use of undeclared identifier 'undefinedfunction'}}
 static_assert((invalidDest(), true)); // both-error {{not an integral constant expression}}
+
+namespace DirectBaseHasNoRecord {
+  constexpr int test_multidim_single_start() {
+    struct S {
+      union {
+        int storage[2][3];
+      };
+    };
+    S s;
+    new (&s.storage[0][0]) int(1); // both-note {{construction of subobject of member 'storage' of union with no active member is not allowed in a constant expression}}
+    return 13;
+  }
+  static_assert(test_multidim_single_start() == 13); // both-error {{not an integral constant expression}} \
+                                                     // both-note {{in call to}}
+}
+
+namespace PrimArray {
+  constexpr int test_start_lifetime_array() {
+    struct S {
+      union { int storage[4]; };
+    };
+    S s;
+    s.storage[0] = 10;
+    ::new (&s.storage[0]) int(10);
+    ::new (&s.storage[1]) int(20);
+    return s.storage[0] + s.storage[1];
+  }
+  static_assert(test_start_lifetime_array() == 30);
+
+
+  constexpr int primElem() {
+    union {int a[2]; };
+
+    new (&a[1]) int(30); // both-note {{construction of subobject of member 'a' of union with no active member is not allowed in a constant expression}}
+    return a[1];
+  }
+  static_assert(primElem() == 30); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+
+
+}

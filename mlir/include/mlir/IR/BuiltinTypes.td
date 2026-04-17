@@ -680,7 +680,13 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
 
     /// Get the storage type as a string.
     std::string getStorageTypeName(bool isSigned) const {
-      return (isSigned ? "i" : "u") + std::to_string(getWidth());
+      if (isSignless()) {
+        return (isSigned ? "i" : "u") + std::to_string(getWidth());
+      } else {
+        std::string s;
+        llvm::raw_string_ostream(s) << *this;
+        return s;
+      }
     }
 
     /// Check if this integer type uses packed representation.

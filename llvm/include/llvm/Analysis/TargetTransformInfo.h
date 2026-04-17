@@ -283,6 +283,9 @@ public:
   /// Get the kind of extension that a cast opcode represents.
   LLVM_ABI static PartialReductionExtendKind
   getPartialReductionExtendKind(Instruction::CastOps CastOpc);
+  /// Get the cast opcode for an extension kind.
+  LLVM_ABI static Instruction::CastOps
+  getOpcodeForPartialReductionExtendKind(PartialReductionExtendKind Kind);
 
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.
@@ -510,14 +513,14 @@ public:
   /// uniformity analysis and assume all values are uniform.
   LLVM_ABI bool hasBranchDivergence(const Function *F = nullptr) const;
 
-  /// Get target-specific uniformity information for an instruction.
+  /// Get target-specific uniformity information for a value.
   /// This allows targets to provide more fine-grained control over
-  /// uniformity analysis by specifying whether specific instructions
+  /// uniformity analysis by specifying whether specific values
   /// should always or never be considered uniform, or require custom
   /// operand-based analysis.
   /// \param V The value to query for uniformity information.
-  /// \return InstructionUniformity.
-  LLVM_ABI InstructionUniformity getInstructionUniformity(const Value *V) const;
+  /// \return ValueUniformity.
+  LLVM_ABI ValueUniformity getValueUniformity(const Value *V) const;
 
   /// Query the target whether the specified address space cast from FromAS to
   /// ToAS is valid.
@@ -751,9 +754,9 @@ public:
   // vectorization should be considered.
   LLVM_ABI unsigned getEpilogueVectorizationMinVF() const;
 
-  /// Query the target whether it would be prefered to create a predicated
+  /// Query the target whether it would be preferred to create a tail-folded
   /// vector loop, which can avoid the need to emit a scalar epilogue loop.
-  LLVM_ABI bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const;
+  LLVM_ABI bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const;
 
   /// Query the target what the preferred style of tail folding is.
   LLVM_ABI TailFoldingStyle getPreferredTailFoldingStyle() const;
@@ -1389,9 +1392,12 @@ public:
   /// \param VF Initial estimation of the minimum vector factor.
   /// \param ScalarMemTy Scalar memory type of the store operation.
   /// \param ScalarValTy Scalar type of the stored value.
+  /// \param Alignment Alignment of the store
+  /// \param AddrSpace Address space of the store
   /// Currently only used by the SLP vectorizer.
   LLVM_ABI unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                                      Type *ScalarValTy) const;
+                                      Type *ScalarValTy, Align Alignment,
+                                      unsigned AddrSpace) const;
 
   /// \return True if it should be considered for address type promotion.
   /// \p AllowPromotionWithoutCommonHeader Set true if promoting \p I is
@@ -2083,6 +2089,17 @@ public:
   /// Returns true if GEP should not be used to index into vectors for this
   /// target.
   LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
+
+  /// Determine if an instruction with Custom uniformity can be proven uniform
+  /// based on which operands are uniform.
+  ///
+  /// \param I The instruction to check.
+  /// \param UniformArgs A bitvector indicating which operands are known to be
+  ///                    uniform (bit N corresponds to operand N).
+  /// \returns true if the instruction result can be proven uniform given the
+  ///          uniform operands, false otherwise.
+  LLVM_ABI bool isUniform(const Instruction *I,
+                          const SmallBitVector &UniformArgs) const;
 
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;

@@ -1,15 +1,15 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}qux
-; CHECK: .set qux.num_vgpr, 13
-; CHECK: .set qux.num_agpr, 0
-; CHECK: .set qux.numbered_sgpr, 32
-; CHECK: .set qux.private_seg_size, 0
-; CHECK: .set qux.uses_vcc, 0
-; CHECK: .set qux.uses_flat_scratch, 0
-; CHECK: .set qux.has_dyn_sized_stack, 0
-; CHECK: .set qux.has_recursion, 0
-; CHECK: .set qux.has_indirect_call, 0
+; CHECK: .set .Lqux.num_vgpr, 13
+; CHECK: .set .Lqux.num_agpr, 0
+; CHECK: .set .Lqux.numbered_sgpr, 32
+; CHECK: .set .Lqux.private_seg_size, 0
+; CHECK: .set .Lqux.uses_vcc, 0
+; CHECK: .set .Lqux.uses_flat_scratch, 0
+; CHECK: .set .Lqux.has_dyn_sized_stack, 0
+; CHECK: .set .Lqux.has_recursion, 0
+; CHECK: .set .Lqux.has_indirect_call, 0
 define void @qux() {
 entry:
   call void asm sideeffect "", "~{v12}"()
@@ -17,15 +17,15 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}baz
-; CHECK: .set baz.num_vgpr, max(49, qux.num_vgpr)
-; CHECK: .set baz.num_agpr, max(0, qux.num_agpr)
-; CHECK: .set baz.numbered_sgpr, max(34, qux.numbered_sgpr)
-; CHECK: .set baz.private_seg_size, 16+max(qux.private_seg_size)
-; CHECK: .set baz.uses_vcc, or(0, qux.uses_vcc)
-; CHECK: .set baz.uses_flat_scratch, or(0, qux.uses_flat_scratch)
-; CHECK: .set baz.has_dyn_sized_stack, or(0, qux.has_dyn_sized_stack)
-; CHECK: .set baz.has_recursion, or(1, qux.has_recursion)
-; CHECK: .set baz.has_indirect_call, or(0, qux.has_indirect_call)
+; CHECK: .set .Lbaz.num_vgpr, max(49, .Lqux.num_vgpr)
+; CHECK: .set .Lbaz.num_agpr, max(0, .Lqux.num_agpr)
+; CHECK: .set .Lbaz.numbered_sgpr, max(34, .Lqux.numbered_sgpr)
+; CHECK: .set .Lbaz.private_seg_size, 16+max(.Lqux.private_seg_size)
+; CHECK: .set .Lbaz.uses_vcc, or(0, .Lqux.uses_vcc)
+; CHECK: .set .Lbaz.uses_flat_scratch, or(0, .Lqux.uses_flat_scratch)
+; CHECK: .set .Lbaz.has_dyn_sized_stack, or(0, .Lqux.has_dyn_sized_stack)
+; CHECK: .set .Lbaz.has_recursion, or(1, .Lqux.has_recursion)
+; CHECK: .set .Lbaz.has_indirect_call, or(0, .Lqux.has_indirect_call)
 define void @baz() {
 entry:
   call void @qux()
@@ -34,15 +34,15 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}bar
-; CHECK: .set bar.num_vgpr, max(65, baz.num_vgpr, qux.num_vgpr)
-; CHECK: .set bar.num_agpr, max(0, baz.num_agpr, qux.num_agpr)
-; CHECK: .set bar.numbered_sgpr, max(34, baz.numbered_sgpr, qux.numbered_sgpr)
-; CHECK: .set bar.private_seg_size, 16+max(baz.private_seg_size, qux.private_seg_size)
-; CHECK: .set bar.uses_vcc, or(0, baz.uses_vcc, qux.uses_vcc)
-; CHECK: .set bar.uses_flat_scratch, or(0, baz.uses_flat_scratch, qux.uses_flat_scratch)
-; CHECK: .set bar.has_dyn_sized_stack, or(0, baz.has_dyn_sized_stack, qux.has_dyn_sized_stack)
-; CHECK: .set bar.has_recursion, or(1, baz.has_recursion, qux.has_recursion)
-; CHECK: .set bar.has_indirect_call, or(0, baz.has_indirect_call, qux.has_indirect_call)
+; CHECK: .set .Lbar.num_vgpr, max(65, .Lbaz.num_vgpr, .Lqux.num_vgpr)
+; CHECK: .set .Lbar.num_agpr, max(0, .Lbaz.num_agpr, .Lqux.num_agpr)
+; CHECK: .set .Lbar.numbered_sgpr, max(34, .Lbaz.numbered_sgpr, .Lqux.numbered_sgpr)
+; CHECK: .set .Lbar.private_seg_size, 16+max(.Lbaz.private_seg_size, .Lqux.private_seg_size)
+; CHECK: .set .Lbar.uses_vcc, or(0, .Lbaz.uses_vcc, .Lqux.uses_vcc)
+; CHECK: .set .Lbar.uses_flat_scratch, or(0, .Lbaz.uses_flat_scratch, .Lqux.uses_flat_scratch)
+; CHECK: .set .Lbar.has_dyn_sized_stack, or(0, .Lbaz.has_dyn_sized_stack, .Lqux.has_dyn_sized_stack)
+; CHECK: .set .Lbar.has_recursion, or(1, .Lbaz.has_recursion, .Lqux.has_recursion)
+; CHECK: .set .Lbar.has_indirect_call, or(0, .Lbaz.has_indirect_call, .Lqux.has_indirect_call)
 define void @bar() {
 entry:
   call void @baz()
@@ -53,15 +53,15 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}foo
-; CHECK: .set foo.num_vgpr, max(38, bar.num_vgpr)
-; CHECK: .set foo.num_agpr, max(0, bar.num_agpr)
-; CHECK: .set foo.numbered_sgpr, max(34, bar.numbered_sgpr)
-; CHECK: .set foo.private_seg_size, 16+max(bar.private_seg_size)
-; CHECK: .set foo.uses_vcc, or(0, bar.uses_vcc)
-; CHECK: .set foo.uses_flat_scratch, or(0, bar.uses_flat_scratch)
-; CHECK: .set foo.has_dyn_sized_stack, or(0, bar.has_dyn_sized_stack)
-; CHECK: .set foo.has_recursion, or(1, bar.has_recursion)
-; CHECK: .set foo.has_indirect_call, or(0, bar.has_indirect_call)
+; CHECK: .set .Lfoo.num_vgpr, max(38, .Lbar.num_vgpr)
+; CHECK: .set .Lfoo.num_agpr, max(0, .Lbar.num_agpr)
+; CHECK: .set .Lfoo.numbered_sgpr, max(34, .Lbar.numbered_sgpr)
+; CHECK: .set .Lfoo.private_seg_size, 16+max(.Lbar.private_seg_size)
+; CHECK: .set .Lfoo.uses_vcc, or(0, .Lbar.uses_vcc)
+; CHECK: .set .Lfoo.uses_flat_scratch, or(0, .Lbar.uses_flat_scratch)
+; CHECK: .set .Lfoo.has_dyn_sized_stack, or(0, .Lbar.has_dyn_sized_stack)
+; CHECK: .set .Lfoo.has_recursion, or(1, .Lbar.has_recursion)
+; CHECK: .set .Lfoo.has_indirect_call, or(0, .Lbar.has_indirect_call)
 define void @foo() {
 entry:
   call void @bar()
@@ -70,15 +70,15 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}usefoo
-; CHECK: .set usefoo.num_vgpr, max(32, foo.num_vgpr)
-; CHECK: .set usefoo.num_agpr, max(0, foo.num_agpr)
-; CHECK: .set usefoo.numbered_sgpr, max(33, foo.numbered_sgpr)
-; CHECK: .set usefoo.private_seg_size, 0+max(foo.private_seg_size)
-; CHECK: .set usefoo.uses_vcc, or(0, foo.uses_vcc)
-; CHECK: .set usefoo.uses_flat_scratch, or(1, foo.uses_flat_scratch)
-; CHECK: .set usefoo.has_dyn_sized_stack, or(0, foo.has_dyn_sized_stack)
-; CHECK: .set usefoo.has_recursion, or(1, foo.has_recursion)
-; CHECK: .set usefoo.has_indirect_call, or(0, foo.has_indirect_call)
+; CHECK: .set .Lusefoo.num_vgpr, max(32, .Lfoo.num_vgpr)
+; CHECK: .set .Lusefoo.num_agpr, max(0, .Lfoo.num_agpr)
+; CHECK: .set .Lusefoo.numbered_sgpr, max(33, .Lfoo.numbered_sgpr)
+; CHECK: .set .Lusefoo.private_seg_size, 0+max(.Lfoo.private_seg_size)
+; CHECK: .set .Lusefoo.uses_vcc, or(0, .Lfoo.uses_vcc)
+; CHECK: .set .Lusefoo.uses_flat_scratch, or(1, .Lfoo.uses_flat_scratch)
+; CHECK: .set .Lusefoo.has_dyn_sized_stack, or(0, .Lfoo.has_dyn_sized_stack)
+; CHECK: .set .Lusefoo.has_recursion, or(1, .Lfoo.has_recursion)
+; CHECK: .set .Lusefoo.has_indirect_call, or(0, .Lfoo.has_indirect_call)
 define amdgpu_kernel void @usefoo() {
   call void @foo()
   ret void

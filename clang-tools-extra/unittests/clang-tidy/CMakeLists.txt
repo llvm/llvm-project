@@ -30,7 +30,6 @@ add_extra_unittest(ClangTidyTests
   LLVMModuleTest.cpp
   ModernizeModuleTest.cpp
   NamespaceAliaserTest.cpp
-  ObjCModuleTest.cpp
   OptionsProviderTest.cpp
   OverlappingReplacementsTest.cpp
   UsingInserterTest.cpp

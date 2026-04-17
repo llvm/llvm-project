@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "../ExprConstShared.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "EvalEmitter.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpHelpers.h"
@@ -283,6 +284,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
     return false;
   if (!A.isBlockPointer() || !B.isBlockPointer())
     return false;
+  if (!A.getFieldDesc()->isPrimitiveArray() ||
+      !B.getFieldDesc()->isPrimitiveArray())
+    return false;
 
   bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
                 ID == Builtin::BI__builtin_wcscmp ||
@@ -357,6 +361,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (!CheckLive(S, OpPC, StrPtr, AK_Read))
     return false;
 
+  if (!StrPtr.isBlockPointer())
+    return false;
+
   if (!CheckDummy(S, OpPC, StrPtr.block(), AK_Read))
     return false;
 
@@ -364,14 +371,15 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     return false;
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
-  unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
+  PrimType ElemT = StrPtr.getFieldDesc()->getPrimType();
+  unsigned ElemSize = StrPtr.getFieldDesc()->getElemDataSize();
   if (ElemSize != 1 && ElemSize != 2 && ElemSize != 4)
     return Invalid(S, OpPC);
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
     const ASTContext &AC = S.getASTContext();
     unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
-    if (ElemSize != WCharSize)
+    if (StrPtr.getFieldDesc()->getElemDataSize() != WCharSize)
       return false;
   }
 
@@ -383,19 +391,8 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
       return false;
 
     uint32_t Val;
-    switch (ElemSize) {
-    case 1:
-      Val = ElemPtr.deref<uint8_t>();
-      break;
-    case 2:
-      Val = ElemPtr.deref<uint16_t>();
-      break;
-    case 4:
-      Val = ElemPtr.deref<uint32_t>();
-      break;
-    default:
-      llvm_unreachable("Unsupported char size");
-    }
+    FIXED_SIZE_INT_TYPE_SWITCH(
+        ElemT, { Val = static_cast<uint32_t>(ElemPtr.deref<T>()); });
     if (Val == 0)
       break;
   }
@@ -419,18 +416,22 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
   // Convert the given string to an integer using StringRef's API.
   llvm::APInt Fill;
   std::string Str;
-  assert(Arg.getNumElems() >= 1);
-  for (unsigned I = 0;; ++I) {
-    const Pointer &Elem = Arg.atIndex(I);
-
-    if (!CheckLoad(S, OpPC, Elem))
+  unsigned ArgLength = Arg.getNumElems();
+  bool FoundZero = false;
+  for (unsigned I = 0; I != ArgLength; ++I) {
+    if (!Arg.isElementInitialized(I))
       return false;
 
-    if (Elem.deref<int8_t>() == 0)
+    if (Arg.elem<int8_t>(I) == 0) {
+      FoundZero = true;
       break;
-
-    Str += Elem.deref<char>();
+    }
+    Str += Arg.elem<char>(I);
   }
+
+  // If we didn't find a NUL byte, diagnose as a one-past-the-end read.
+  if (!FoundZero)
+    return CheckRange(S, OpPC, Arg.atIndex(ArgLength), AK_Read);
 
   // Treat empty strings as if they were zero.
   if (Str.empty())
@@ -1214,12 +1215,23 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   if (!Ptr.isBlockPointer())
     return false;
 
+  const ValueDecl *PtrDecl = Ptr.getDeclDesc()->asValueDecl();
+  // We need a pointer for a declaration here.
+  if (!PtrDecl) {
+    if (BuiltinOp == Builtin::BI__builtin_is_aligned)
+      S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_compute)
+          << Alignment;
+    else
+      S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_adjust)
+          << Alignment;
+    return false;
+  }
+
   // For one-past-end pointers, we can't call getIndex() since it asserts.
   // Use getNumElems() instead which gives the correct index for past-end.
   unsigned PtrOffset =
       Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
-  CharUnits BaseAlignment =
-      S.getASTContext().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
+  CharUnits BaseAlignment = S.getASTContext().getDeclAlign(PtrDecl);
   CharUnits PtrAlign =
       BaseAlignment.alignmentAtOffset(CharUnits::fromQuantity(PtrOffset));
 
@@ -1383,11 +1395,11 @@ interp__builtin_ptrauth_string_discriminator(InterpState &S, CodePtr OpPC,
   const auto &Ptr = S.Stk.pop<Pointer>();
   assert(Ptr.getFieldDesc()->isPrimitiveArray());
 
-  // This should be created for a StringLiteral, so should alway shold at least
+  // This should be created for a StringLiteral, so always holds at least
   // one array element.
   assert(Ptr.getFieldDesc()->getNumElems() >= 1);
-  StringRef R(&Ptr.deref<char>(), Ptr.getFieldDesc()->getNumElems() - 1);
-  uint64_t Result = getPointerAuthStableSipHash(R);
+  uint64_t Result = getPointerAuthStableSipHash(
+      cast<StringLiteral>(Ptr.getFieldDesc()->asExpr())->getString());
   pushInteger(S, Result, Call->getType());
   return true;
 }
@@ -1928,8 +1940,8 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     Pointer SrcP = SrcPtr.stripBaseCasts();
     Pointer DestP = DestPtr.stripBaseCasts();
 
-    unsigned SrcIndex = SrcP.expand().getIndex() * SrcP.elemSize();
-    unsigned DstIndex = DestP.expand().getIndex() * DestP.elemSize();
+    unsigned SrcIndex = SrcP.expand().getIndex() * SrcElemSize;
+    unsigned DstIndex = DestP.expand().getIndex() * DestElemSize;
 
     if ((SrcIndex <= DstIndex && (SrcIndex + Size) > DstIndex) ||
         (DstIndex <= SrcIndex && (DstIndex + Size) > SrcIndex)) {
@@ -1997,6 +2009,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   BitcastBuffer BufferA(
       Bits(ASTCtx.getTypeSize(ElemTypeA) * PtrA.getNumElems()));
   readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
+
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
   if (ASTCtx.getTargetInfo().isBigEndian())
@@ -2023,21 +2036,22 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   for (size_t I = 0; I != CmpSize; I += ElemSize) {
     if (IsWide) {
-      INT_TYPE_SWITCH(*S.getContext().classify(ASTCtx.getWCharType()), {
-        T A = *reinterpret_cast<T *>(BufferA.atByte(I));
-        T B = *reinterpret_cast<T *>(BufferB.atByte(I));
-        if (A < B) {
-          pushInteger(S, -1, Call->getType());
-          return true;
-        }
-        if (A > B) {
-          pushInteger(S, 1, Call->getType());
-          return true;
-        }
-      });
+      FIXED_SIZE_INT_TYPE_SWITCH(
+          *S.getContext().classify(ASTCtx.getWCharType()), {
+            T A = T::bitcastFromMemory(BufferA.atByte(I), T::bitWidth());
+            T B = T::bitcastFromMemory(BufferB.atByte(I), T::bitWidth());
+            if (A < B) {
+              pushInteger(S, -1, Call->getType());
+              return true;
+            }
+            if (A > B) {
+              pushInteger(S, 1, Call->getType());
+              return true;
+            }
+          });
     } else {
-      std::byte A = BufferA.deref<std::byte>(Bytes(I));
-      std::byte B = BufferB.deref<std::byte>(Bytes(I));
+      auto A = BufferA.deref<std::byte>(Bytes(I));
+      auto B = BufferB.deref<std::byte>(Bytes(I));
 
       if (A < B) {
         pushInteger(S, -1, Call->getType());
@@ -3714,12 +3728,12 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_ia32_shuffle_generic(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, const APInt &)>
         GetSourceIndex) {
 
   assert(Call->getNumArgs() == 2 || Call->getNumArgs() == 3);
 
-  unsigned ShuffleMask = 0;
+  APInt ShuffleMask;
   Pointer A, MaskVector, B;
   bool IsVectorMask = false;
   bool IsSingleOperand = (Call->getNumArgs() == 2);
@@ -3732,7 +3746,7 @@ static bool interp__builtin_ia32_shuffle_generic(
       A = S.Stk.pop<Pointer>();
       B = A;
     } else if (MaskType->isIntegerType()) {
-      ShuffleMask = popToAPSInt(S, Call->getArg(1)).getZExtValue();
+      ShuffleMask = popToAPSInt(S, Call->getArg(1));
       A = S.Stk.pop<Pointer>();
       B = A;
     } else {
@@ -3746,7 +3760,7 @@ static bool interp__builtin_ia32_shuffle_generic(
       MaskVector = S.Stk.pop<Pointer>();
       A = S.Stk.pop<Pointer>();
     } else if (Arg2Type->isIntegerType()) {
-      ShuffleMask = popToAPSInt(S, Call->getArg(2)).getZExtValue();
+      ShuffleMask = popToAPSInt(S, Call->getArg(2));
       B = S.Stk.pop<Pointer>();
       A = S.Stk.pop<Pointer>();
     } else {
@@ -3771,9 +3785,8 @@ static bool interp__builtin_ia32_shuffle_generic(
 
   for (unsigned DstIdx = 0; DstIdx != NumElems; ++DstIdx) {
     if (IsVectorMask) {
-      INT_TYPE_SWITCH(MaskElemT, {
-        ShuffleMask = static_cast<unsigned>(MaskVector.elem<T>(DstIdx));
-      });
+      INT_TYPE_SWITCH(MaskElemT,
+                      { ShuffleMask = MaskVector.elem<T>(DstIdx).toAPSInt(); });
     }
 
     auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
@@ -3794,6 +3807,18 @@ static bool interp__builtin_ia32_shuffle_generic(
   Dst.initializeAllElements();
 
   return true;
+}
+
+static bool interp__builtin_ia32_shuffle_generic(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
+        GetSourceIndex) {
+  return interp__builtin_ia32_shuffle_generic(
+      S, OpPC, Call,
+      [&GetSourceIndex](unsigned DstIdx,
+                        const APInt &Mask) -> std::pair<unsigned, int> {
+        return GetSourceIndex(DstIdx, Mask.getZExtValue());
+      });
 }
 
 static bool interp__builtin_ia32_shift_with_count(
@@ -5112,6 +5137,70 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpconflictdi_256:
   case X86::BI__builtin_ia32_vpconflictdi_512:
     return interp__builtin_ia32_vpconflict(S, OpPC, Call);
+  case X86::BI__builtin_ia32_compressdf128_mask:
+  case X86::BI__builtin_ia32_compressdf256_mask:
+  case X86::BI__builtin_ia32_compressdf512_mask:
+  case X86::BI__builtin_ia32_compressdi128_mask:
+  case X86::BI__builtin_ia32_compressdi256_mask:
+  case X86::BI__builtin_ia32_compressdi512_mask:
+  case X86::BI__builtin_ia32_compresshi128_mask:
+  case X86::BI__builtin_ia32_compresshi256_mask:
+  case X86::BI__builtin_ia32_compresshi512_mask:
+  case X86::BI__builtin_ia32_compressqi128_mask:
+  case X86::BI__builtin_ia32_compressqi256_mask:
+  case X86::BI__builtin_ia32_compressqi512_mask:
+  case X86::BI__builtin_ia32_compresssf128_mask:
+  case X86::BI__builtin_ia32_compresssf256_mask:
+  case X86::BI__builtin_ia32_compresssf512_mask:
+  case X86::BI__builtin_ia32_compresssi128_mask:
+  case X86::BI__builtin_ia32_compresssi256_mask:
+  case X86::BI__builtin_ia32_compresssi512_mask: {
+    unsigned NumElems =
+        Call->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [NumElems](unsigned DstIdx, const APInt &ShuffleMask) {
+          APInt CompressMask = ShuffleMask.trunc(NumElems);
+          if (DstIdx < CompressMask.popcount()) {
+            while (DstIdx != 0) {
+              CompressMask = CompressMask & (CompressMask - 1);
+              DstIdx--;
+            }
+            return std::pair<unsigned, int>{
+                0, static_cast<int>(CompressMask.countr_zero())};
+          }
+          return std::pair<unsigned, int>{1, static_cast<int>(DstIdx)};
+        });
+  }
+  case X86::BI__builtin_ia32_expanddf128_mask:
+  case X86::BI__builtin_ia32_expanddf256_mask:
+  case X86::BI__builtin_ia32_expanddf512_mask:
+  case X86::BI__builtin_ia32_expanddi128_mask:
+  case X86::BI__builtin_ia32_expanddi256_mask:
+  case X86::BI__builtin_ia32_expanddi512_mask:
+  case X86::BI__builtin_ia32_expandhi128_mask:
+  case X86::BI__builtin_ia32_expandhi256_mask:
+  case X86::BI__builtin_ia32_expandhi512_mask:
+  case X86::BI__builtin_ia32_expandqi128_mask:
+  case X86::BI__builtin_ia32_expandqi256_mask:
+  case X86::BI__builtin_ia32_expandqi512_mask:
+  case X86::BI__builtin_ia32_expandsf128_mask:
+  case X86::BI__builtin_ia32_expandsf256_mask:
+  case X86::BI__builtin_ia32_expandsf512_mask:
+  case X86::BI__builtin_ia32_expandsi128_mask:
+  case X86::BI__builtin_ia32_expandsi256_mask:
+  case X86::BI__builtin_ia32_expandsi512_mask: {
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, const APInt &ShuffleMask) {
+          // Trunc to the sub-mask for the dst index and count the number of
+          // src elements used prior to that.
+          APInt ExpandMask = ShuffleMask.trunc(DstIdx + 1);
+          if (ExpandMask[DstIdx]) {
+            int SrcIdx = ExpandMask.popcount() - 1;
+            return std::pair<unsigned, int>{0, SrcIdx};
+          }
+          return std::pair<unsigned, int>{1, static_cast<int>(DstIdx)};
+        });
+  }
   case clang::X86::BI__builtin_ia32_blendpd:
   case clang::X86::BI__builtin_ia32_blendpd256:
   case clang::X86::BI__builtin_ia32_blendps:

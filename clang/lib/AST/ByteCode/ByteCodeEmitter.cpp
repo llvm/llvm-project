@@ -221,16 +221,16 @@ bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args, SourceInfo SI) {
   return Success;
 }
 
-bool ByteCodeEmitter::jumpTrue(const LabelTy &Label) {
-  return emitJt(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
+  return emitJt(getOffset(Label), SI);
 }
 
-bool ByteCodeEmitter::jumpFalse(const LabelTy &Label) {
-  return emitJf(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jumpFalse(const LabelTy &Label, SourceInfo SI) {
+  return emitJf(getOffset(Label), SI);
 }
 
-bool ByteCodeEmitter::jump(const LabelTy &Label) {
-  return emitJmp(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jump(const LabelTy &Label, SourceInfo SI) {
+  return emitJmp(getOffset(Label), SI);
 }
 
 bool ByteCodeEmitter::fallthrough(const LabelTy &Label) {

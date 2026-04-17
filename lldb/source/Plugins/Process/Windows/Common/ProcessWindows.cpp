@@ -1010,7 +1010,7 @@ public:
       INPUT_RECORD inputRecord;
       DWORD numRead = 0;
       if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead))
-        return llvm::createStringError("Failed to peek standard input.");
+        return llvm::createStringError("failed to peek standard input");
 
       if (numRead == 0)
         return false;
@@ -1021,7 +1021,7 @@ public:
         return true;
 
       if (!ReadConsoleInput(hStdin, &inputRecord, 1, &numRead))
-        return llvm::createStringError("Failed to read standard input.");
+        return llvm::createStringError("failed to read standard input");
     }
   }
 

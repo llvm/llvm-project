@@ -4,8 +4,6 @@ import sys
 
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.libclc_obj_root = "@LIBCLC_TARGET_TEST_DIR@"
-config.libclc_test_root = "@CMAKE_CURRENT_SOURCE_DIR@"
-config.libclc_library_dir = "@LIBCLC_LIBRARY_DIR@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

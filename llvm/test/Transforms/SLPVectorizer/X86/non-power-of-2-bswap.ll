@@ -8,7 +8,7 @@ define i32 @test(i8 %0) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <3 x i8> [[TMP2]], <3 x i8> poison, <3 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <3 x i8> [[TMP3]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <3 x i8> [[TMP4]] to <3 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw <3 x i32> [[TMP5]], <i32 16, i32 8, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = shl <3 x i32> [[TMP5]], <i32 0, i32 8, i32 16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.or.v3i32(<3 x i32> [[TMP6]])
 ; CHECK-NEXT:    ret i32 [[TMP7]]
 ;

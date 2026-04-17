@@ -17,8 +17,9 @@ func.func @test_vector_insert_2d_idx(%arg0: vector<2x8x4xf32>, %arg1: vector<4xf
 // -----
 // CHECK-LABEL: test_vector_transpose
 // CHECK-SAME: (%[[ORIG_ARG:.*]]: vector<2x8xf32>) -> vector<8x2xf32>
+// CHECK: %[[POISON:.*]] = ub.poison : vector<16xf32>
 // CHECK: %[[ARG:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<2x8xf32> to vector<16xf32>
-// CHECK: %[[SHUFFLE:.*]] = vector.shuffle %[[ARG]], %[[ARG]]
+// CHECK: %[[SHUFFLE:.*]] = vector.shuffle %[[ARG]], %[[POISON]]
 // CHECK: [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15] : vector<16xf32>, vector<16xf32>
 // CHECK: %[[RES:.*]] = vector.shape_cast %[[SHUFFLE]] : vector<16xf32> to vector<8x2xf32>
 // CHECK: return %[[RES]] : vector<8x2xf32>
@@ -109,7 +110,7 @@ func.func @test_linearize_index(%arg0: vector<2x2xindex>, %arg1: vector<2x2xi32>
 // CHECK-SAME: (%[[ARG0:.*]]: vector<1x4xf32>) -> vector<3x4xf32>
 // CHECK: %[[POISON:.*]] = ub.poison : vector<12xf32>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[ARG0]] : vector<1x4xf32> to vector<4xf32>
-// CHECK: %[[SHUFFLE1:.*]] = vector.shuffle %[[POISON]], %[[CAST]] [12, 13, 14, 15, 4, 5, 6, 7, 8, 9, 10, 11] : vector<12xf32>, vector<4xf32>
+// CHECK: %[[SHUFFLE1:.*]] = vector.shuffle %[[POISON]], %[[CAST]] [12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1] : vector<12xf32>, vector<4xf32>
 // CHECK: %[[SHUFFLE2:.*]] = vector.shuffle %[[SHUFFLE1]], %[[CAST]] [0, 1, 2, 3, 12, 13, 14, 15, 8, 9, 10, 11] : vector<12xf32>, vector<4xf32>
 // CHECK: %[[SHUFFLE3:.*]] = vector.shuffle %[[SHUFFLE2]], %[[CAST]] [0, 1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15] : vector<12xf32>, vector<4xf32>
 // CHECK: %[[RESULT:.*]] = vector.shape_cast %[[SHUFFLE3]] : vector<12xf32> to vector<3x4xf32>
@@ -163,7 +164,7 @@ func.func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2
 // CHECK: %[[PASS_CAST:.*]] = vector.shape_cast %[[PASS]] : vector<2x3xf32> to vector<6xf32>
 
 // First shuffle + if ladder for row 0
-// CHECK: %[[ROW0_INIT:.*]] = vector.shuffle %[[PASS_CAST]], %[[PASS_CAST]] [0, 1, 2]
+// CHECK: %[[ROW0_INIT:.*]] = vector.shuffle %[[PASS_CAST]], %[[POISON]] [0, 1, 2]
 // CHECK: %[[DIM0:.*]] = memref.dim %[[BASE]], %[[C0]]
 // CHECK: %[[DIM1:.*]] = memref.dim %[[BASE]], %[[C1]]
 // CHECK: %[[MASK_0_0:.*]] = vector.extract %[[MASK]][0, 0]
@@ -187,8 +188,8 @@ func.func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2
 
 // … (similar checks for the rest of row 0, then row 1)
 
-// CHECK: %[[ROW_SHUFFLE:.*]] = vector.shuffle %[[POISON]], {{.*}} [6, 7, 8, 3, 4, 5]
-// CHECK: %[[ROW1_INIT:.*]] = vector.shuffle %[[PASS_CAST]], %[[PASS_CAST]] [3, 4, 5]
+// CHECK: %[[ROW_SHUFFLE:.*]] = vector.shuffle %[[POISON]], {{.*}} [6, 7, 8, -1, -1, -1]
+// CHECK: %[[ROW1_INIT:.*]] = vector.shuffle %[[PASS_CAST]], %[[POISON]] [3, 4, 5]
 
 // Row 1 if ladder checks
 // CHECK: %[[MASK_1_0:.*]] = vector.extract %[[MASK]][1, 0]
@@ -215,6 +216,7 @@ func.func @gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x3xindex>, %mask
 // The `xegpu-vector-linearize` pass does not itself affect the XeGPU ops.
 
 // CHECK: gpu.func @test_kernel(%[[A:.*]]: memref<8x16xf16>, %[[B:.*]]: memref<16x16xf16>, %[[C:.*]]: memref<8x16xf32>) kernel {
+// CHECK: %[[POISON_F32:.*]] = ub.poison : vector<128xf32>
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[CST_A:.*]] = arith.constant dense<0.000000e+00> : vector<64xf16>
 // CHECK: %[[CST_C:.*]] = arith.constant dense<5.000000e+00> : vector<64xf32>
@@ -233,7 +235,7 @@ func.func @gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x3xindex>, %mask
 
 // CHECK: %[[DPAS:.*]] = xegpu.dpas %[[A_RESULT]], %[[B_RESULT]] : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
 // CHECK: %[[DPAS_CAST:.*]] = vector.shape_cast %[[DPAS]] : vector<8x16xf32> to vector<128xf32>
-// CHECK: %[[EXTRACT_SHUFFLE:.*]] = vector.shuffle %[[DPAS_CAST]], %[[DPAS_CAST]] {{.*}} : vector<128xf32>, vector<128xf32>
+// CHECK: %[[EXTRACT_SHUFFLE:.*]] = vector.shuffle %[[DPAS_CAST]], %[[POISON_F32]] {{.*}} : vector<128xf32>, vector<128xf32>
 // CHECK: %[[ADDF:.*]] = arith.addf %[[EXTRACT_SHUFFLE]], %[[CST_C]] : vector<64xf32>
 // CHECK: %[[INSERT_SHUFFLE:.*]] = vector.shuffle %[[DPAS_CAST]], %[[ADDF]] {{.*}} : vector<128xf32>, vector<64xf32>
 // CHECK: %[[C_RESULT:.*]] = vector.shape_cast %[[INSERT_SHUFFLE]] : vector<128xf32> to vector<8x16xf32>

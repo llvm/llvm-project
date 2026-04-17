@@ -46,3 +46,16 @@ add_integration_test(
     libc.src.__support.threads.thread
     libc.src.stdlib.exit
 )
+
+add_integration_test(
+  futex_requeue_test
+  SUITE
+    libc-support-threads-integration-tests
+  SRCS
+    futex_requeue_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+)

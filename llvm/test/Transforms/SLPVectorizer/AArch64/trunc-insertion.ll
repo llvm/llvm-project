@@ -18,7 +18,8 @@ define dso_local void @l(i1 %arg) local_unnamed_addr {
 ; CHECK:       bb11:
 ; CHECK-NEXT:    [[I12:%.*]] = zext i1 undef to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i16> [[TMP0]], undef
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <2 x i16> undef, [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i16> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <2 x i64> undef, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP5]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <2 x i32> undef, [[TMP6]]
 ; CHECK-NEXT:    br label [[BB25]]

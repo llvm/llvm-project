@@ -386,6 +386,98 @@ static bool tryToRecognizePopCount(Instruction &I) {
   return false;
 }
 
+// Try to recognize below function as popcount intrinsic.
+// Ref. Hackers Delight
+// int popcnt(unsigned x) {
+// x = x - ((x >> 1) & 0x55555555);
+// x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+// x = (x + (x >> 4)) & 0x0F0F0F0F;
+// x = x + (x >> 8);
+// x = x + (x >> 16);
+// return x & 0x0000003F;
+// }
+
+// int popcnt(unsigned x) {
+// x = x - ((x >> 1) & 0x55555555);
+// x = x - 3*((x >> 2) & 0x33333333);
+// x = (x + (x >> 4)) & 0x0F0F0F0F;
+// x = x + (x >> 8);
+// x = x + (x >> 16);
+// return x & 0x0000003F;
+// }
+
+static bool tryToRecognizePopCount2n3(Instruction &I) {
+  if (I.getOpcode() != Instruction::And)
+    return false;
+
+  Type *Ty = I.getType();
+  if (!Ty->isIntOrIntVectorTy())
+    return false;
+
+  unsigned Len = Ty->getScalarSizeInBits();
+
+  if (Len > 64 || Len <= 8 || Len % 8 != 0)
+    return false;
+
+  // Len should be a power of 2 for the loop to work correctly
+  if (!isPowerOf2_32(Len))
+    return false;
+
+  APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
+  APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
+  APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
+
+  APInt MaskRes = APInt(Len, 2 * Len - 1);
+
+  Value *Add1;
+  if (!match(&I, m_And(m_Value(Add1), m_SpecificInt(MaskRes))))
+    return false;
+
+  Value *Add2;
+  for (unsigned I = Len; I >= 16; I = I / 2) {
+    // Matching "x = x + (x >> I/2)" for I-bit.
+    if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
+                             m_Deferred(Add2))))
+      return false;
+    Add1 = Add2;
+  }
+
+  Value *And1 = Add1;
+  // Matching "x = (x + (x >> 4)) & 0x0F0F0F0F".
+  if (!match(And1, m_And(m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(4)),
+                                 m_Deferred(Add2)),
+                         m_SpecificInt(Mask0F))))
+    return false;
+
+  Value *Sub1;
+  llvm::APInt NegThree(/*BitWidth=*/Len, /*Value=*/-3,
+                       /*isSigned=*/true);
+  // x = (x & 0x33333333) + ((x >> 2) & 0x33333333)".
+  if (!match(Add2, m_c_Add(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+                                 m_SpecificInt(Mask33)),
+                           m_And(m_Deferred(Sub1), m_SpecificInt(Mask33)))) &&
+      // Matching "x = x - 3*((x >> 2) & 0x33333333)".
+      !match(Add2, m_Add(m_Mul(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+                                     m_SpecificInt(Mask33)),
+                               m_SpecificInt(NegThree)),
+                         m_Deferred(Sub1))))
+    return false;
+
+  Value *Root;
+  // x = x - ((x >> 1) & 0x55555555);
+  if (!match(Sub1, m_Sub(m_Value(Root),
+                         m_And(m_LShr(m_Deferred(Root), m_SpecificInt(1)),
+                               m_SpecificInt(Mask55)))))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+  IRBuilder<> Builder(&I);
+  I.replaceAllUsesWith(
+      Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+  ++NumPopCountRecognized;
+  return true;
+}
+
 /// Fold smin(smax(fptosi(x), C1), C2) to llvm.fptosi.sat(x), providing C1 and
 /// C2 saturate the value of the fp conversion. The transform is not reversable
 /// as the fptosi.sat is more defined than the input - all values produce a
@@ -486,7 +578,8 @@ static bool isCTTZTable(Constant *Table, const APInt &Mul, const APInt &Shift,
                         unsigned InputBits, const APInt &GEPIdxFactor,
                         const DataLayout &DL) {
   for (unsigned Idx = 0; Idx < InputBits; Idx++) {
-    APInt Index = (APInt(InputBits, 1).shl(Idx) * Mul).lshr(Shift) & AndMask;
+    APInt Index =
+        (APInt::getOneBitSet(InputBits, Idx) * Mul).lshr(Shift) & AndMask;
     ConstantInt *C = dyn_cast_or_null<ConstantInt>(
         ConstantFoldLoadFromConst(Table, AccessTy, Index * GEPIdxFactor, DL));
     if (!C || C->getValue() != Idx)
@@ -2023,6 +2116,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
+      MadeChange |= tryToRecognizePopCount2n3(I);
       MadeChange |= tryToFPToSat(I, TTI);
       MadeChange |= tryToRecognizeTableBasedCttz(I, DL);
       MadeChange |= tryToRecognizeTableBasedLog2(I, DL, TTI);

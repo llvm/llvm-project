@@ -8,10 +8,10 @@ define void @tensormap_replace_global_address(ptr addrspace(1) %global_addr, ptr
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_global_address_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_global_address_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_global_address_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_global_address_param_2];
 ; CHECK-NEXT:    tensormap.replace.tile.global_address.global.b1024.b64 [%rd1], %rd2;
-; CHECK-NEXT:    ld.param.b64 %rd3, [tensormap_replace_global_address_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [tensormap_replace_global_address_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.global_address.shared::cta.b1024.b64 [%rd3], %rd2;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tensormap.replace.global.address.p1(ptr addrspace(1) %global_addr, i64 %value)
@@ -26,10 +26,10 @@ define void @tensormap_replace_rank(ptr addrspace(1) %global_addr, ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_rank_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [tensormap_replace_rank_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_rank_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tensormap_replace_rank_param_2];
 ; CHECK-NEXT:    tensormap.replace.tile.rank.global.b1024.b32 [%rd1], %r1;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_rank_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_rank_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.rank.shared::cta.b1024.b32 [%rd2], %r1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tensormap.replace.rank.p1(ptr addrspace(1) %global_addr, i32 %value)
@@ -44,10 +44,10 @@ define void @tensormap_replace_box_dim(ptr addrspace(1) %global_addr, ptr addrsp
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_box_dim_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [tensormap_replace_box_dim_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_box_dim_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tensormap_replace_box_dim_param_2];
 ; CHECK-NEXT:    tensormap.replace.tile.box_dim.global.b1024.b32 [%rd1], 0, %r1;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_box_dim_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_box_dim_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.box_dim.shared::cta.b1024.b32 [%rd2], 0, %r1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tensormap.replace.box.dim.p1(ptr addrspace(1) %global_addr, i32 0, i32 %value)
@@ -62,10 +62,10 @@ define void @tensormap_replace_global_dim(ptr addrspace(1) %global_addr, ptr add
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_global_dim_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [tensormap_replace_global_dim_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_global_dim_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tensormap_replace_global_dim_param_2];
 ; CHECK-NEXT:    tensormap.replace.tile.global_dim.global.b1024.b32 [%rd1], 0, %r1;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_global_dim_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_global_dim_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.global_dim.shared::cta.b1024.b32 [%rd2], 0, %r1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tensormap.replace.global.dim.p1(ptr addrspace(1) %global_addr, i32 0, i32 %value)
@@ -79,10 +79,10 @@ define void @tensormap_replace_global_stride(ptr addrspace(1) %global_addr, ptr 
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_global_stride_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_global_stride_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_global_stride_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_global_stride_param_2];
 ; CHECK-NEXT:    tensormap.replace.tile.global_stride.global.b1024.b64 [%rd1], 0, %rd2;
-; CHECK-NEXT:    ld.param.b64 %rd3, [tensormap_replace_global_stride_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [tensormap_replace_global_stride_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.global_stride.shared::cta.b1024.b64 [%rd3], 0, %rd2;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tensormap.replace.global.stride.p1(ptr addrspace(1) %global_addr, i32 0, i64 %value)
@@ -97,10 +97,10 @@ define void @tensormap_replace_element_stride(ptr addrspace(1) %global_addr, ptr
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_element_stride_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [tensormap_replace_element_stride_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_element_stride_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tensormap_replace_element_stride_param_2];
 ; CHECK-NEXT:    tensormap.replace.tile.element_stride.global.b1024.b32 [%rd1], 0, %r1;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_element_stride_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_element_stride_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.element_stride.shared::cta.b1024.b32 [%rd2], 0, %r1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tensormap.replace.element.stride.p1(ptr addrspace(1) %global_addr, i32 0, i32 %value)
@@ -114,9 +114,9 @@ define void @tensormap_replace_elemtype(ptr addrspace(1) %global_addr, ptr addrs
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_elemtype_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_elemtype_param_0];
 ; CHECK-NEXT:    tensormap.replace.tile.elemtype.global.b1024.b32 [%rd1], 0;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_elemtype_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_elemtype_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.elemtype.shared::cta.b1024.b32 [%rd2], 0;
 ; CHECK-NEXT:    tensormap.replace.tile.elemtype.global.b1024.b32 [%rd1], 1;
 ; CHECK-NEXT:    tensormap.replace.tile.elemtype.shared::cta.b1024.b32 [%rd2], 1;
@@ -145,7 +145,7 @@ define void @tensormap_replace_elemtype(ptr addrspace(1) %global_addr, ptr addrs
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tensormap.replace.elemtype.p1(ptr addrspace(1) %global_addr, /* elemtype=u8 */ i32 0)
   call void @llvm.nvvm.tensormap.replace.elemtype.p3(ptr addrspace(3) %shared_addr, /* elemtype=u8 */ i32 0)
-  
+
   call void @llvm.nvvm.tensormap.replace.elemtype.p1(ptr addrspace(1) %global_addr, /* elemtype=u16 */ i32 1)
   call void @llvm.nvvm.tensormap.replace.elemtype.p3(ptr addrspace(3) %shared_addr, /* elemtype=u16 */ i32 1)
 
@@ -190,9 +190,9 @@ define void @tensormap_replace_interleave_layout(ptr addrspace(1) %global_addr, 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_interleave_layout_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_interleave_layout_param_0];
 ; CHECK-NEXT:    tensormap.replace.tile.interleave_layout.global.b1024.b32 [%rd1], 0;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_interleave_layout_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_interleave_layout_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.interleave_layout.shared::cta.b1024.b32 [%rd2], 0;
 ; CHECK-NEXT:    tensormap.replace.tile.interleave_layout.global.b1024.b32 [%rd1], 1;
 ; CHECK-NEXT:    tensormap.replace.tile.interleave_layout.shared::cta.b1024.b32 [%rd2], 1;
@@ -216,9 +216,9 @@ define void @tensormap_replace_swizzle_mode(ptr addrspace(1) %global_addr, ptr a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_swizzle_mode_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_swizzle_mode_param_0];
 ; CHECK-NEXT:    tensormap.replace.tile.swizzle_mode.global.b1024.b32 [%rd1], 0;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_swizzle_mode_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_swizzle_mode_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.swizzle_mode.shared::cta.b1024.b32 [%rd2], 0;
 ; CHECK-NEXT:    tensormap.replace.tile.swizzle_mode.global.b1024.b32 [%rd1], 1;
 ; CHECK-NEXT:    tensormap.replace.tile.swizzle_mode.shared::cta.b1024.b32 [%rd2], 1;
@@ -247,16 +247,16 @@ define void @tensormap_replace_fill_mode(ptr addrspace(1) %global_addr, ptr addr
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_fill_mode_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_fill_mode_param_0];
 ; CHECK-NEXT:    tensormap.replace.tile.fill_mode.global.b1024.b32 [%rd1], 0;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_fill_mode_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_fill_mode_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.fill_mode.shared::cta.b1024.b32 [%rd2], 0;
 ; CHECK-NEXT:    tensormap.replace.tile.fill_mode.global.b1024.b32 [%rd1], 1;
 ; CHECK-NEXT:    tensormap.replace.tile.fill_mode.shared::cta.b1024.b32 [%rd2], 1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tensormap.replace.fill.mode.p1(ptr addrspace(1) %global_addr, /* fill_mode=Zero fill */ i32 0)
   call void @llvm.nvvm.tensormap.replace.fill.mode.p3(ptr addrspace(3) %shared_addr, /* fill_mode=Zero fill */ i32 0)
-  
+
   call void @llvm.nvvm.tensormap.replace.fill.mode.p1(ptr addrspace(1) %global_addr, /* fill_mode=OOB-NaN fill */ i32 1)
   call void @llvm.nvvm.tensormap.replace.fill.mode.p3(ptr addrspace(3) %shared_addr, /* fill_mode=OOB-NaN fill */ i32 1)
   ret void

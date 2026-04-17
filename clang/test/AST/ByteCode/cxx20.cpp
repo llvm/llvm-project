@@ -57,7 +57,7 @@ constexpr int pointerAssign2() {
 static_assert(pointerAssign2() == 12, "");
 
 constexpr int unInitLocal() {
-  int a;
+  int a; // both-note {{declared here}}
   return a; // both-note {{read of uninitialized object}}
 }
 static_assert(unInitLocal() == 0, ""); // both-error {{not an integral constant expression}} \
@@ -71,7 +71,7 @@ constexpr int initializedLocal() {
 static_assert(initializedLocal() == 20);
 
 constexpr int initializedLocal2() {
-  int a[2];
+  int a[2]; // both-note {{declared here}}
   return *a; // both-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 static_assert(initializedLocal2() == 20); // both-error {{not an integral constant expression}} \
@@ -80,7 +80,7 @@ static_assert(initializedLocal2() == 20); // both-error {{not an integral consta
 
 struct Int { int a; };
 constexpr int initializedLocal3() {
-  Int i;
+  Int i; // both-note {{declared here}}
   return i.a; // both-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 static_assert(initializedLocal3() == 20); // both-error {{not an integral constant expression}} \
@@ -274,7 +274,8 @@ namespace BaseInit {
 
   static_assert(Final{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final{1, 2, 3}.a == 0, ""); // both-error {{not an integral constant expression}} \
-                                            // both-note {{read of uninitialized object}}
+                                            // both-note {{read of uninitialized object}} \
+                                            // both-note {{temporary created here}}
 
 
   struct Mixin  {
@@ -294,7 +295,8 @@ namespace BaseInit {
   static_assert(Final2{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final2{1, 2, 3}.b == 2, ""); // OK
   static_assert(Final2{1, 2, 3}.a == 0, ""); // both-error {{not an integral constant expression}} \
-                                             // both-note {{read of uninitialized object}}
+                                             // both-note {{read of uninitialized object}} \
+                                             // both-note {{temporary created here}}
 
 
   struct Mixin3  {
@@ -311,7 +313,8 @@ namespace BaseInit {
   static_assert(Final3{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final3{1, 2, 3}.b == 2, ""); // OK
   static_assert(Final3{1, 2, 3}.a == 0, ""); // both-error {{not an integral constant expression}} \
-                                             // both-note {{read of uninitialized object}}
+                                             // both-note {{read of uninitialized object}} \
+                                             // both-note {{temporary created here}}
 };
 
 namespace Destructors {
@@ -387,21 +390,16 @@ namespace Destructors {
   }
   static_assert(E() == 1, "");
 
-
-  /// FIXME: This should be rejected, since we call the destructor
-  ///   twice. However, GCC doesn't care either.
   constexpr int ManualDtor() {
     int i = 0;
     {
-      Inc I(i); // ref-note {{destroying object 'I' whose lifetime has already ended}}
+      Inc I(i); // both-note {{destroying object 'I' whose lifetime has already ended}}
       I.~Inc();
     }
     return i;
   }
-  static_assert(ManualDtor() == 1, ""); // expected-error {{static assertion failed}} \
-                                        // expected-note {{evaluates to '2 == 1'}} \
-                                        // ref-error {{not an integral constant expression}} \
-                                        // ref-note {{in call to 'ManualDtor()'}}
+  static_assert(ManualDtor() == 1, ""); // both-error {{not an integral constant expression}} \
+                                        // both-note {{in call to 'ManualDtor()'}}
 
   constexpr void doInc(int &i) {
     Inc I(i);
@@ -559,6 +557,22 @@ namespace Destructors {
 
   constexpr Outer O;
   static_assert(O.bar() == 12);
+
+  struct S {
+    int a;
+    constexpr ~S() {}
+  };
+
+  constexpr int foo() {
+    S s; // both-note {{declared here}}
+    s.a = 10;
+    s.~S();
+    s.a = 11; // both-note {{assignment to object outside its lifetime}}
+    return 20;
+  }
+  static_assert(foo() == 20); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
+
 }
 
 namespace BaseAndFieldInit {
@@ -584,7 +598,7 @@ namespace ImplicitFunction {
   };
 
   constexpr int callMe() {
-   A a;
+   A a; // expected-note {{declared here}}
    A b{12};
 
    /// The operator= call here will fail and the diagnostics should be fine.
@@ -969,7 +983,7 @@ namespace LocalDestroy {
 namespace PseudoDtor {
   constexpr int f1() {
    using T = int;
-   int a = 0;
+   int a = 0; // both-note {{declared here}}
    a.~T();
    return a; // both-note {{read of object outside its lifetime}}
   }
@@ -978,7 +992,7 @@ namespace PseudoDtor {
 
   constexpr int f2() {
    using T = int;
-   int a = 0;
+   int a = 0; // both-note {{declared here}}
    a.~T();
    a = 0; // both-note {{assignment to object outside its lifetime}}
    return a;
@@ -1330,4 +1344,13 @@ namespace ExpandOnOPTEPointers {
     return true;
   }
   static_assert(test());
+}
+
+namespace ConstIntPotentialConstantExpr {
+  /// NO error about a constexpr function that's never a constant expression.
+  constexpr int Const() {
+    const int a = 10; // both-note {{declared const here}}
+    a = 20; // both-error {{cannot assign to variable 'a' with const-qualified type 'const int'}}
+    return 1;
+  }
 }

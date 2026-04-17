@@ -472,6 +472,9 @@ def parseOptionsAndInitTestdirs():
     if args.enable_mte:
         configuration.mte_enabled = True
 
+    if args.arm64e_debugserver:
+        configuration.arm64e_debugserver = True
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [
