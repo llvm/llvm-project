@@ -502,7 +502,13 @@ void ICF::segregate(size_t begin, size_t end, EqualsFn equals) {
 
 void macho::markSymAsAddrSig(Symbol *s) {
   if (auto *d = dyn_cast_or_null<Defined>(s))
-    if (d->isec())
+    // Compilers tend to emit over-broad __llvm_addrsig entries that also cover
+    // symbols in data sections ld64 coalesces unconditionally (__cfstring,
+    // __objc_classrefs, __objc_selrefs, etc.), and the fallback for objects
+    // lacking __llvm_addrsig marks every symbol. Scoping the mark to code
+    // sections keeps safe ICF aligned with their documented semantics and
+    // preserves data-section folding.
+    if (d->isec() && isCodeSection(d->isec()))
       d->isec()->keepUnique = true;
 }
 
