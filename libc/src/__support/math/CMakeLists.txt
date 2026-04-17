@@ -3406,6 +3406,7 @@ add_header_library(
   HDRS
     tgammaf16.h
   DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
@@ -3415,4 +3416,5 @@ add_header_library(
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )

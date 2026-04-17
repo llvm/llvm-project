@@ -22,6 +22,7 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

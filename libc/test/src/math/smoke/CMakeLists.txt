@@ -6694,6 +6694,6 @@ add_fp_unittest(
   SRCS
     tgammaf16_test.cpp
   DEPENDS
-    libc.src.__support.FPUtil.fp_bits
+    libc.hdr.errno_macros
     libc.src.math.tgammaf16
 )
