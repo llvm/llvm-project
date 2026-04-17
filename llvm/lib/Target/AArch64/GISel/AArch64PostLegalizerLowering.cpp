@@ -1265,7 +1265,6 @@ bool runPostLegalizerLowering(
     const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig) {
   if (MF.getProperties().hasFailedISel())
     return false;
-  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
   const Function &F = MF.getFunction();
 
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
@@ -1315,6 +1314,7 @@ AArch64PostLegalizerLoweringLegacy::AArch64PostLegalizerLoweringLegacy()
 
 bool AArch64PostLegalizerLoweringLegacy::runOnMachineFunction(
     MachineFunction &MF) {
+  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
   return runPostLegalizerLowering(MF, RuleConfig);
 }
 
@@ -1341,6 +1341,7 @@ AArch64PostLegalizerLoweringPass::~AArch64PostLegalizerLoweringPass() = default;
 PreservedAnalyses
 AArch64PostLegalizerLoweringPass::run(MachineFunction &MF,
                                       MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   const bool Changed = runPostLegalizerLowering(MF, *RuleConfig);
 
   if (!Changed)
