@@ -349,7 +349,7 @@ used for branching into the runtime.
 +-----------------+------------------------------+
 
 Thread pointer (TP)
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 TP accesses are rewritten into loads/stores from the context register
 (``x25``), which holds the virtual thread pointer at offset 16 (see
