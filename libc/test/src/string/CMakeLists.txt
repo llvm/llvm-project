@@ -119,6 +119,7 @@ add_libc_test(
     libc.src.string.strcmp
 )
 
+
 add_libc_test(
   strcasestr_test
   SUITE
@@ -233,6 +234,7 @@ add_libc_test(
   DEPENDS
     libc.src.string.strncat
 )
+
 
 add_libc_test(
   strncmp_test
