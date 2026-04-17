@@ -717,7 +717,7 @@ PromoteBoundsSafetyFlexibleArrayMember(Sema &S, MemberExpr *M, Expr *ArrayBase) 
   if (auto *PT = BasePtr->getType()->getAs<PointerType>()) {
     if (!PT->getPointerAttributes().hasUpperBound()) {
       auto *RecordPointee = PT->getPointeeType()->getAs<RecordType>();
-      auto *RD = RecordPointee->getDecl();
+      auto *RD = RecordPointee->getDecl()->getDefinition();
       assert(RD->hasFlexibleArrayMember() &&
              RD->getTagKind() != TagTypeKind::Union);
       // Skipping the null check for the struct base because it must have been

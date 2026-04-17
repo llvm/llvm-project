@@ -15,8 +15,6 @@ struct S {
 
 void sink(int *__bidi_indexable p);
 
-// XFAIL: *
-// FIXME: crash/assert
 void test_fam_member_access(S_ptr p) {
     sink(p->fam);
 }
