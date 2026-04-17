@@ -970,14 +970,6 @@ static void genDeclareDataOperandOperations(
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
 
-    if (designator) {
-      Fortran::semantics::SomeExpr someExpr = *designator;
-      if (Fortran::lower::detail::getRef<Fortran::evaluate::Component>(
-              someExpr)) {
-        TODO(operandLocation,
-             "OpenACC declare with component reference not yet supported");
-      }
-    }
     fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
@@ -3826,6 +3818,23 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
               if (const auto *name =
                       Fortran::parser::GetDesignatorNameIfDataRef(designator)) {
                 genCtors(operandLocation, *name->symbol);
+              } else if (const auto *dr = std::get_if<Fortran::parser::DataRef>(
+                             &designator.u);
+                         dr &&
+                         std::holds_alternative<Fortran::common::Indirection<
+                             Fortran::parser::StructureComponent>>(dr->u)) {
+                const Fortran::semantics::Scope &scope =
+                    converter.getCurrentScope();
+                if (scope.IsModule() || scope.IsSubmodule()) {
+                  TODO(operandLocation,
+                       "OpenACC declare does not support a component reference "
+                       "in a module; `acc declare` the whole variable instead");
+                } else {
+                  TODO(operandLocation,
+                       "OpenACC declare does not support a component reference "
+                       "in this declaration context; `acc declare` the whole "
+                       "variable instead");
+                }
               }
             },
             [&](const Fortran::parser::Name &name) {
