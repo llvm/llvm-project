@@ -189,7 +189,7 @@ public:
 
   std::function<Error(Error)> WarningHandler;
   void reportUniqueWarning(Error Err) const;
-  void reportUniqueWarning(const Twine &Msg) const;
+  void reportUniqueWarning(const Twine &Msg, const Twine &Prefix = "") const;
   void printOffloading(const object::ObjectFile &Obj);
 
 protected:
@@ -208,6 +208,7 @@ private:
   virtual void printSectionMapping() {}
 
   std::unordered_set<std::string> Warnings;
+  StringRef ObjName;
 };
 
 std::unique_ptr<ObjDumper> createCOFFDumper(const object::COFFObjectFile &Obj,

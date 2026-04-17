@@ -30,13 +30,12 @@ static inline Error createError(const Twine &Msg) {
   return createStringError(object::object_error::parse_failed, Msg);
 }
 
-ObjDumper::ObjDumper(ScopedPrinter &Writer, StringRef ObjName) : W(Writer) {
+ObjDumper::ObjDumper(ScopedPrinter &Writer, StringRef ObjName)
+    : W(Writer), ObjName(ObjName) {
   // Dumper reports all non-critical errors as warnings.
   // It does not print the same warning more than once.
   WarningHandler = [=](Error E) {
-    std::string Msg = toString(std::move(E));
-    if (Warnings.insert(Msg).second)
-      reportWarning(createError(Msg), ObjName);
+    reportUniqueWarning(std::move(E));
     return Error::success();
   };
 }
@@ -44,12 +43,25 @@ ObjDumper::ObjDumper(ScopedPrinter &Writer, StringRef ObjName) : W(Writer) {
 ObjDumper::~ObjDumper() = default;
 
 void ObjDumper::reportUniqueWarning(Error Err) const {
-  reportUniqueWarning(toString(std::move(Err)));
+  cantFail(llvm::handleErrors(
+      std::move(Err),
+      [this](const ContextualizedError &E) {
+        reportUniqueWarning(E.getMessageWithoutContext(), E.getContext());
+      },
+      [this](const llvm::ErrorInfoBase &E) {
+        reportUniqueWarning(E.message());
+      }));
 }
 
-void ObjDumper::reportUniqueWarning(const Twine &Msg) const {
-  cantFail(WarningHandler(createError(Msg)),
-           "WarningHandler should always return ErrorSuccess");
+void ObjDumper::reportUniqueWarning(const Twine &Msg,
+                                    const Twine &Prefix) const {
+  std::string MsgStr = Msg.str();
+  std::string PrefixStr = Prefix.str();
+  if (!const_cast<ObjDumper *>(this)->Warnings.insert(MsgStr).second)
+    return;
+  if (PrefixStr.size())
+    MsgStr = std::move(PrefixStr) + ": " + std::move(MsgStr);
+  reportWarning(createError(MsgStr), ObjName);
 }
 
 static void printAsPrintable(raw_ostream &W, const uint8_t *Start, size_t Len) {

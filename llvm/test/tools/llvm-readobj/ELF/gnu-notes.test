@@ -263,8 +263,7 @@ ProgramHeaders:
 # RUN: llvm-readobj --notes %t6.so 2>&1 | FileCheck %s -DFILE=%t6.so --check-prefix=PHENTSIZE-WARN-LLVM
 
 # PHENTSIZE-WARN-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
-# PHENTSIZE-WARN-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_NOTE segment: invalid e_phentsize: 1
 
+# PHENTSIZE-WARN-LLVM: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
 # PHENTSIZE-WARN-LLVM:      NoteSections [
-# PHENTSIZE-WARN-LLVM-NEXT: warning: '[[FILE]]': unable to read program headers to locate the PT_NOTE segment: invalid e_phentsize: 1
 # PHENTSIZE-WARN-LLVM-NEXT: ]

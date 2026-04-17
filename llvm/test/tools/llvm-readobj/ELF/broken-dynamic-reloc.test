@@ -217,7 +217,6 @@ ProgramHeaders:
 # LLVM-NO-DYNSYM:      Dynamic Relocations {
 # LLVM-NO-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 0: no dynamic symbol table found
 # LLVM-NO-DYNSYM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
-# LLVM-NO-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: no dynamic symbol table found
 # LLVM-NO-DYNSYM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
 # LLVM-NO-DYNSYM-NEXT: }
 
@@ -225,7 +224,6 @@ ProgramHeaders:
 # GNU-NO-DYNSYM-NEXT: Offset            Info             Type             Symbol's Value   Symbol's Name + Addend
 # GNU-NO-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 0: no dynamic symbol table found
 # GNU-NO-DYNSYM-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                     <corrupt> + 0
-# GNU-NO-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: no dynamic symbol table found
 # GNU-NO-DYNSYM-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE                     <corrupt> + 0
 
 --- !ELF

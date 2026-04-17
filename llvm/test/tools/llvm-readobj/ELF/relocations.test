@@ -360,7 +360,6 @@ Symbols:
 
 # BROKEN-REL-GNU:      Relocation section '.rel.text' at offset 0x51 contains 64 entries:
 # BROKEN-REL-GNU-NEXT:     Offset             Info             Type       Symbol's Value  Symbol's Name
-# BROKEN-REL-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_REL section with index 2: section [index 2] has invalid sh_entsize: expected 16, but got 1
 # BROKEN-REL-GNU:      Relocation section '.rela.text' at offset 0x91 contains 5 entries:
 # BROKEN-REL-GNU-NEXT:     Offset             Info             Type       Symbol's Value  Symbol's Name
 # BROKEN-REL-GNU-NEXT: 0000000000000000  0000000500000000 R_X86_64_NONE  0000000000000000 rela_0 + 0
@@ -413,7 +412,6 @@ Symbols:
 # BROKEN-LINK-LLVM-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_REL section with index 2: invalid section index: 65535
 # BROKEN-LINK-LLVM-NEXT:   }
 # BROKEN-LINK-LLVM-NEXT:   Section (3) .rela.text {
-# BROKEN-LINK-LLVM-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_RELA section with index 3: invalid section index: 65535
 # BROKEN-LINK-LLVM-NEXT:   }
 # BROKEN-LINK-LLVM-NEXT: ]
 
@@ -423,7 +421,6 @@ Symbols:
 # BROKEN-LINK-GNU-EMPTY:
 # BROKEN-LINK-GNU-NEXT: Relocation section '.rela.text' at offset 0x91 contains 5 entries:
 # BROKEN-LINK-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
-# BROKEN-LINK-GNU-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_RELA section with index 3: invalid section index: 65535
 
 ## Show that ELF32 is dumped correctly.
 # RUN: yaml2obj %s --docnum=2 -o %t32

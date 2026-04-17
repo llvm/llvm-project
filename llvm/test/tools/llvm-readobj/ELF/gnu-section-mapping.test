@@ -77,6 +77,6 @@ ProgramHeaders:
 # RUN: llvm-readelf --section-mapping %t64-err1.elf 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t64-err1.elf --check-prefix=PHENTSIZE
 
+# PHENTSIZE: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
 # PHENTSIZE:      Section to Segment mapping:
 # PHENTSIZE-NEXT:  Segment Sections...
-# PHENTSIZE-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: invalid e_phentsize: 1

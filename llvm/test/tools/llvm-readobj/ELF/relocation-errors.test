@@ -7,7 +7,6 @@
 # LLVM:      Relocations [
 # LLVM-NEXT:   Section (3) .rel.text {
 # LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 0 in SHT_REL section with index 3: unable to read an entry with index 4278124286 from SHT_SYMTAB section with index 6: can't read an entry at 0x17e7e7e7d0: it goes past the end of the section (0x90)
-# LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_REL section with index 3: unable to read an entry with index 4278124286 from SHT_SYMTAB section with index 6: can't read an entry at 0x17e7e7e7d0: it goes past the end of the section (0x90)
 # LLVM-NEXT:     0x2 R_X86_64_NONE -{{$}}
 # LLVM-NEXT:     0x3 R_X86_64_NONE .sec.symbol1{{$}}
 # LLVM-NEXT: warning: '[[FILE]]': invalid section index: 255
@@ -24,7 +23,6 @@
 # GNU:       Relocation section '.rel.text' at offset 0x41 contains 7 entries:
 # GNU-NEXT:      Offset             Info             Type               Symbol's Value  Symbol's Name
 # GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 0 in SHT_REL section with index 3: unable to read an entry with index 4278124286 from SHT_SYMTAB section with index 6: can't read an entry at 0x17e7e7e7d0: it goes past the end of the section (0x90)
-# GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 1 in SHT_REL section with index 3: unable to read an entry with index 4278124286 from SHT_SYMTAB section with index 6: can't read an entry at 0x17e7e7e7d0: it goes past the end of the section (0x90)
 # GNU-NEXT:  0000000000000002  0000000000000000 R_X86_64_NONE
 # GNU-NEXT:  0000000000000003  0000000200000000 R_X86_64_NONE 0000000000000000 .sec.symbol1
 # GNU-NEXT:  warning: '[[FILE]]': invalid section index: 255
@@ -43,7 +41,6 @@
 # CREL-GNU:       Relocation section '.rel.text' at offset 0x41 contains 7 entries:
 # CREL-GNU-NEXT:      Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # CREL-GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 0 in SHT_CREL section with index 3: unable to read an entry with index 4278124286 from SHT_NULL section with index 0: section [index 0] has invalid sh_entsize: expected 24, but got 0
-# CREL-GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 1 in SHT_CREL section with index 3: unable to read an entry with index 4278124286 from SHT_NULL section with index 0: section [index 0] has invalid sh_entsize: expected 24, but got 0
 # CREL-GNU-NEXT:  0000000000000002  0000000000000000 R_X86_64_NONE                     0
 # CREL-GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 3 in SHT_CREL section with index 3: unable to read an entry with index 2 from SHT_NULL section with index 0: section [index 0] has invalid sh_entsize: expected 24, but got 0
 # CREL-GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 4 in SHT_CREL section with index 3: unable to read an entry with index 4 from SHT_NULL section with index 0: section [index 0] has invalid sh_entsize: expected 24, but got 0

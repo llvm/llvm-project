@@ -60,7 +60,6 @@ Symbols:
 # BROKEN-RELA-GNU:      warning: '[[FILE]]': unable to get the number of relocations in SHT_ANDROID_RELA section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x3a) that is greater than the file size (0x238)
 # BROKEN-RELA-GNU:      Relocation section '.rela.dyn' at offset 0xffffffff contains <?> entries:
 # BROKEN-RELA-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
-# BROKEN-RELA-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_ANDROID_RELA section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x3a) that is greater than the file size (0x238)
 
 ## Check we report a warning when the sh_link field of the SHT_ANDROID_RELA section is broken.
 
@@ -143,7 +142,6 @@ Symbols:
 # BROKEN-REL-GNU:      warning: '[[FILE]]': unable to get the number of relocations in SHT_ANDROID_REL section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x12) that cannot be represented
 # BROKEN-REL-GNU:      Relocation section '.rel.dyn' at offset 0xffffffff contains <?> entries:
 # BROKEN-REL-GNU-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name
-# BROKEN-REL-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_ANDROID_REL section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x12) that cannot be represented
 
 ## Check we report a warning when the sh_link field of the SHT_ANDROID_REL section is broken.
 

@@ -236,7 +236,7 @@ Symbols: []
 # RUN: llvm-readobj --program-headers %p/Inputs/invalid-e_shnum.elf 2>&1 | \
 # RUN:  FileCheck -DFILE=%p/Inputs/invalid-e_shnum.elf --check-prefix=INVALID-PH-ENTSIZE %s
 
-# INVALID-PH-ENTSIZE: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 12336
+# INVALID-PH-ENTSIZE: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 12336
 
 ## Check that llvm-readobj reports a warning when we have no SHT_SYMTAB_SHNDX section,
 ## but have a symbol referencing it.

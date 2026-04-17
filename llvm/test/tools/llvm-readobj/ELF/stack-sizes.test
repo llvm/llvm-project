@@ -152,7 +152,6 @@ Symbols:
 # SYM-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 3
 # SYM-GNU-NEXT:            16     ?
 # SYM-GNU-NEXT:            32     ?
-# SYM-GNU-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol 'separate_text_section_baz': invalid section index: 255
 # SYM-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 4
 # SYM-GNU-NEXT:             8     ?
 
@@ -167,7 +166,6 @@ Symbols:
 # SYM-LLVM-NEXT:     Functions: [?]
 # SYM-LLVM-NEXT:     Size: 0x20
 # SYM-LLVM-NEXT:   }
-# SYM-LLVM-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol 'separate_text_section_baz': invalid section index: 255
 # SYM-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 4
 # SYM-LLVM-NEXT:   Entry {
 # SYM-LLVM-NEXT:     Functions: [?]
@@ -441,7 +439,6 @@ Symbols:
 # RUN:   FileCheck %s --check-prefix=BADSIZE -DFILE=%t06 --implicit-check-not=warning:
 
 # BADSIZE: warning: '[[FILE]]': could not extract a valid stack size from SHT_PROGBITS section with index 2: unable to decode LEB128 at offset 0x00000008: malformed uleb128, extends past end
-# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size from SHT_PROGBITS section with index 3: unable to decode LEB128 at offset 0x00000008: malformed uleb128, extends past end
 
 --- !ELF
 FileHeader:
@@ -481,17 +478,14 @@ Symbols:
 # BADSECTION-OUT-GNU:      Stack Sizes:
 # BADSECTION-OUT-GNU-NEXT:          Size     Functions
 # BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol '_Z3foof': invalid section index: 10
-# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get address of symbol '_Z3foof': invalid section index: 10
 # BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 2
 # BADSECTION-OUT-GNU-NEXT:             8     ?
 # BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
 # BADSECTION-OUT-GNU-NEXT:            22     ?
-# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
 # BADSECTION-OUT-GNU-NEXT:            36     ?
 
 # BADSECTION-OUT-LLVM:      StackSizes [
 # BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol '_Z3foof': invalid section index: 10
-# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get address of symbol '_Z3foof': invalid section index: 10
 # BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 2
 # BADSECTION-OUT-LLVM-NEXT:   Entry {
 # BADSECTION-OUT-LLVM-NEXT:     Functions: [?]
@@ -502,7 +496,6 @@ Symbols:
 # BADSECTION-OUT-LLVM-NEXT:     Functions: [?]
 # BADSECTION-OUT-LLVM-NEXT:     Size: 0x16
 # BADSECTION-OUT-LLVM-NEXT:   }
-# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
 # BADSECTION-OUT-LLVM-NEXT:   Entry {
 # BADSECTION-OUT-LLVM-NEXT:     Functions: [?]
 # BADSECTION-OUT-LLVM-NEXT:     Size: 0x24

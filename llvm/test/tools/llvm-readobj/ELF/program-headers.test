@@ -694,7 +694,6 @@ ProgramHeaders:
 # ERROR-INTERP-NEXT: INTERP         0x000[[#OFFSET + 3]]
 # ERROR-INTERP-NEXT: warning: '[[FILE]]': unable to read program interpreter name at offset 0x[[#OFFSET+3]]: it goes past the end of the file (0x[[#OFFSET + 3]])
 # ERROR-INTERP-NEXT: INTERP         0xaabbccddeeff1122
-# ERROR-INTERP-NEXT: warning: '[[FILE]]': unable to read program interpreter name at offset 0xaabbccddeeff1122: it goes past the end of the file (0x[[#OFFSET + 3]])
 # ERROR-INTERP-NEXT: INTERP         0xaabbccddeeff1122
 
 --- !ELF
@@ -733,15 +732,14 @@ ProgramHeaders:
 # RUN: llvm-readobj --program-headers %t.phdr.err 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.phdr.err --check-prefix=WARN-PHENTSIZE-LLVM
 
+# WARN-PHENTSIZE-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
 # WARN-PHENTSIZE-GNU:      Program Headers:
 # WARN-PHENTSIZE-GNU-NEXT:   Type Offset VirtAddr PhysAddr FileSiz  MemSiz Flg Align
-# WARN-PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
 # WARN-PHENTSIZE-GNU:      Section to Segment mapping:
 # WARN-PHENTSIZE-GNU-NEXT:   Segment Sections...
-# WARN-PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: invalid e_phentsize: 1
 
+# WARN-PHENTSIZE-LLVM: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
 # WARN-PHENTSIZE-LLVM:      ProgramHeaders [
-# WARN-PHENTSIZE-LLVM-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
 # WARN-PHENTSIZE-LLVM-NEXT: ]
 
 --- !ELF
@@ -774,15 +772,14 @@ ProgramHeaders:
 # RUN: llvm-readobj --program-headers %t.phdr.err2 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.phdr.err2 --check-prefix=WARN-PHOFF-LLVM -DOFF=0x161
 
+# WARN-PHOFF-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
 # WARN-PHOFF-GNU:      Program Headers:
 # WARN-PHOFF-GNU-NEXT:   Type Offset VirtAddr PhysAddr FileSiz MemSiz Flg Align
-# WARN-PHOFF-GNU-NEXT: warning: '[[FILE]]': unable to dump program headers: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
 # WARN-PHOFF-GNU:      Section to Segment mapping:
 # WARN-PHOFF-GNU-NEXT:   Segment Sections...
-# WARN-PHOFF-GNU-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
 
+# WARN-PHOFF-LLVM: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
 # WARN-PHOFF-LLVM:      ProgramHeaders [
-# WARN-PHOFF-LLVM-NEXT: warning: '[[FILE]]': unable to dump program headers: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
 # WARN-PHOFF-LLVM-NEXT: ]
 
 ## Check we report a warning when the value of e_phoff is so large that
