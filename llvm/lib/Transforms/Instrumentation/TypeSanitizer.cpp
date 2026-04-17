@@ -352,7 +352,7 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
     } else if (i == 1 && MD->getNumOperands() == 2) {
       // According to the LLVM language reference, the third operand for a
       // scalar tag is actually optional, its absence indicating an offset
-      // of zero.
+      // The third operand for a scalar tag is actually optional, its absence indicating an offset of zero.
       Offset = 0;
     } else {
       assert(false && "Malformed TBAA MD.");
