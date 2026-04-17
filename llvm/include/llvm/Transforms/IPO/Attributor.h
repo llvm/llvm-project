@@ -165,16 +165,28 @@ class Function;
 namespace AA {
 using InstExclusionSetTy = SmallPtrSet<Instruction *, 4>;
 
-enum class GPUAddressSpace : unsigned {
-  Generic = 0,
-  Global = 1,
-  Shared = 3,
-  Constant = 4,
-  Local = 5,
-};
-
 /// Return true iff \p M target a GPU (and we can use GPU AS reasoning).
 LLVM_ABI bool isGPU(const Module &M);
+
+/// Check if the given address space \p AS corresponds to a GPU generic
+/// address space for the target triple in module \p M.
+LLVM_ABI bool isGPUGenericAddressSpace(const Module &M, unsigned AS);
+
+/// Check if the given address space \p AS corresponds to a GPU global
+/// address space for the target triple in module \p M.
+LLVM_ABI bool isGPUGlobalAddressSpace(const Module &M, unsigned AS);
+
+/// Check if the given address space \p AS corresponds to a GPU shared
+/// address space for the target triple in module \p M.
+LLVM_ABI bool isGPUSharedAddressSpace(const Module &M, unsigned AS);
+
+/// Check if the given address space \p AS corresponds to a GPU constant
+/// address space for the target triple in module \p M.
+LLVM_ABI bool isGPUConstantAddressSpace(const Module &M, unsigned AS);
+
+/// Check if the given address space \p AS corresponds to a GPU local/private
+/// address space for the target triple in module \p M.
+LLVM_ABI bool isGPULocalAddressSpace(const Module &M, unsigned AS);
 
 /// Flags to distinguish intra-procedural queries from *potentially*
 /// inter-procedural queries. Not that information can be valid for both and
