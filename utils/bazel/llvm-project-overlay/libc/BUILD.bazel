@@ -489,6 +489,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_wctype_overlay",
+    hdrs = ["hdr/wctype_overlay.h"],
+)
+
+libc_support_library(
     name = "hdr_stdint_proxy",
     hdrs = ["hdr/stdint_proxy.h"],
 )
@@ -672,6 +677,14 @@ libc_support_library(
     hdrs = ["hdr/types/wchar_t.h"],
     deps = [
         ":hdr_wchar_overlay",
+    ],
+)
+
+libc_support_library(
+    name = "types_wctype_t",
+    hdrs = ["hdr/types/wctype_t.h"],
+    deps = [
+        ":hdr_wctype_overlay",
     ],
 )
 
@@ -2319,9 +2332,12 @@ libc_support_library(
     name = "__support_wctype_utils",
     hdrs = ["src/__support/wctype_utils.h"],
     deps = [
+        ":__support_cpp_array",
+        ":__support_cpp_string_view",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":types_wchar_t",
+        ":types_wctype_t",
     ],
 )
 
