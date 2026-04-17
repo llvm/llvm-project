@@ -491,32 +491,20 @@ static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
   return;
 }
 
-static bool isOverloadTyFloat(uint16_t ValidTyMask) {
-  if (ValidTyMask == OverloadKind::UNDEFINED)
-    return false;
-  return (ValidTyMask &
-          ((uint16_t)OverloadKind::HALF | (uint16_t)OverloadKind::FLOAT |
-           (uint16_t)OverloadKind::DOUBLE)) != 0;
-}
-
 static void setDXILMetadata(CallInst *CI, const OpCodeProperty *Prop) {
-  if (OpPreciseEnabled && Prop->Precise) {
-    bool HasFloatOverload = false;
-    for (const OpOverload &Overload : Prop->Overloads)
-      HasFloatOverload =
-          HasFloatOverload || isOverloadTyFloat(Overload.ValidTys);
+  if (OpPreciseEnabled &&
+      Prop->Precise &
+          CI->getFunctionType()->getReturnType()->isFloatingPointTy()) {
 
-    if (HasFloatOverload) {
-      const StringRef Key = "dx.precise";
-      Module *M = CI->getModule();
+    const StringRef Key = "dx.precise";
+    Module *M = CI->getModule();
 
-      LLVMContext &Ctx = M->getContext();
-      MDNode *One =
-          llvm::MDNode::get(Ctx, ConstantAsMetadata::get(ConstantInt::get(
-                                     llvm::Type::getInt32Ty(Ctx), 1)));
+    LLVMContext &Ctx = M->getContext();
+    MDNode *One =
+        llvm::MDNode::get(Ctx, ConstantAsMetadata::get(ConstantInt::get(
+                                   llvm::Type::getInt32Ty(Ctx), 1)));
 
-      CI->setMetadata(Key, One);
-    }
+    CI->setMetadata(Key, One);
   }
 }
 
