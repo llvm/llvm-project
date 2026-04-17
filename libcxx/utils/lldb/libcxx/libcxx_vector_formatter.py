@@ -1,12 +1,9 @@
-"""
-Python LLDB data formatter for libc++ std::vector
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-1-to-1 translation from the LLDB builtin std::vector formatter.
+# LLDB data formatter for libc++ std::vector
 
-Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-See https://llvm.org/LICENSE.txt for license information.
-SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-"""
 
 import lldb
 
@@ -64,6 +61,8 @@ class LibCxxStdVectorSyntheticFrontEnd:
 
         return num_children // self.m_element_size
 
+    # FIXME: newer versions of LLDB auto-generate this.
+    # Eventually this can be removed.
     def get_child_at_index(self, index):
         if not self.m_start or not self.m_finish:
             return None
@@ -71,7 +70,7 @@ class LibCxxStdVectorSyntheticFrontEnd:
         offset = index * self.m_element_size
         offset = offset + self.m_start.GetValueAsUnsigned(0)
 
-        name = "[%d]" % index
+        name = f'[{index}]'
         target = self.valobj.GetTarget()
         if not target:
             return None

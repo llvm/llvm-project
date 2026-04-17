@@ -1,12 +1,8 @@
-"""
-Python LLDB synthetic child provider for libc++ std::map
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-1-to-1 translation from the LLDB builtin std::(multi)map formatter.
-
-Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-See https://llvm.org/LICENSE.txt for license information.
-SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-"""
+# LLDB data formatters for libc++ std::(multi)map and std::(multi)set
 
 import lldb
 
