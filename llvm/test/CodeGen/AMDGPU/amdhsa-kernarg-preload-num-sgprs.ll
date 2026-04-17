@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck --check-prefix=ASM %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -filetype=obj < %s | llvm-readobj --notes - | FileCheck --check-prefix=GFX1250-OBJDUMP %s
 
 ; OBJDUMP: Contents of section .rodata:
 ; OBJDUMP-NEXT: 0000 00000000 00000000 10010000 00000000  ................
@@ -69,5 +70,20 @@ define amdgpu_kernel void @amdhsa_kernarg_preload_1_implicit_2(i32 inreg) #0 { r
 ; Encoded like '00'.
 
 define amdgpu_kernel void @amdhsa_kernarg_preload_0_implicit_2(i32) #0 { ret void }
+
+; GFX1250-OBJDUMP:     .sgpr_count:     32
+define amdgpu_kernel void @many_inreg_i32(
+  i32 inreg %a0, i32 inreg %a1, i32 inreg %a2, i32 inreg %a3,
+  i32 inreg %a4, i32 inreg %a5, i32 inreg %a6, i32 inreg %a7,
+  i32 inreg %a8, i32 inreg %a9, i32 inreg %a10, i32 inreg %a11,
+  i32 inreg %a12, i32 inreg %a13, i32 inreg %a14, i32 inreg %a15,
+  i32 inreg %a16, i32 inreg %a17, i32 inreg %a18, i32 inreg %a19,
+  i32 inreg %a20, i32 inreg %a21, i32 inreg %a22, i32 inreg %a23,
+  i32 inreg %a24, i32 inreg %a25, i32 inreg %a26, i32 inreg %a27,
+  i32 inreg %a28, i32 inreg %a29, i32 inreg %a30, i32 inreg %a31,
+  i32 inreg %a32, i32 inreg %a33, i32 inreg %a34, i32 inreg %a35) {
+  ret void
+}
+
 
 attributes #0 = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
