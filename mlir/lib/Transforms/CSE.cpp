@@ -196,7 +196,7 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
   Operation *nextOp = fromOp->getNextNode();
   auto result =
       memEffectsCache.try_emplace(fromOp, std::make_pair(fromOp, nullptr));
-  if (result.second) {
+  if (!result.second) {
     auto memEffectsCachePair = result.first->second;
     if (memEffectsCachePair.second == nullptr) {
       // No MemoryEffects::Write has been detected until the cached operation.
@@ -258,11 +258,9 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
 
-  // If the operation is already trivially dead, erase it immediately.
-  // Retaining dead operations in a region can affect the equivalence check
-  // between two region ops, causing CSE to miss optimization opportunities.
+  // If the operation is already trivially dead just add it to the erase list.
   if (isOpTriviallyDead(op)) {
-    rewriter.eraseOp(op);
+    opsToErase.push_back(op);
     ++numDCE;
     return success();
   }
@@ -310,7 +308,7 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
 void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                               bool hasSSADominance) {
-  for (auto &op : llvm::make_early_inc_range(*bb)) {
+  for (auto &op : *bb) {
     // Most operations don't have regions, so fast path that case.
     if (op.getNumRegions() != 0) {
       // If this operation is isolated above, we can't process nested regions
@@ -396,13 +394,15 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   for (auto &region : op->getRegions())
     simplifyRegion(knownValues, region);
 
-  /// Erase any operations that were marked as dead during simplification.
-  for (auto *op : opsToErase)
+  /// Erase any operations that were marked as dead during simplification, and
+  /// remove their associated dominator trees.
+  for (auto *op : opsToErase) {
+    for (Region &region : op->getRegions())
+      domInfo->invalidate(&region);
     rewriter.eraseOp(op);
-  if (changed) {
-    assert(opsToErase.empty() || numDCE || numCSE);
-    *changed = numDCE || numCSE;
   }
+  if (changed)
+    *changed = !opsToErase.empty();
 
   // Note: CSE does currently not remove ops with regions, so DominanceInfo
   // does not have to be invalidated.

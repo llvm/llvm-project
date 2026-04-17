@@ -1332,16 +1332,47 @@ public:
     return StructuredData::ObjectSP();
   }
 
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return the full list of loaded shared libraries without needing any input.
+  /// Retrieve a StructuredData dictionary about all of the binaries
+  /// loaded in the process at this time.
+  /// A Darwin target specific behavior, only supported by debugserver,
+  /// response will include load address, filepath, uuid, and may also
+  /// include the fully parsed mach header and load commands.
+  ///
+  /// \param [in] information_level
+  ///     How much information about each binary should be returned;
+  ///     there may be performance reasons to retrieve a minimal set
+  ///     of information about all binaries, and then retrieve the
+  ///     full information for a subset of the whole group.
+  ///
+  /// \return
+  ///     A StructuredData object with the information that could be
+  ///     retrieved.
   virtual lldb_private::StructuredData::ObjectSP
-  GetLoadedDynamicLibrariesInfos() {
+  GetLoadedDynamicLibrariesInfos(lldb::BinaryInformationLevel info_level) {
     return StructuredData::ObjectSP();
   }
 
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return information about binaries given their load addresses.
+  /// Retrieve a StructuredData dictionary about the binaries at
+  /// the provided load addresses.
+  /// A Darwin target specific behavior, only supported by debugserver,
+  /// response will include load address, filepath, uuid, fully parsed
+  /// mach header and load commands.
+  ///
+  /// \param [in] information_level
+  ///     How much information about each binary should be returned;
+  ///     there may be performance reasons to retrieve a minimal set
+  ///     of information about all binaries, and then retrieve the
+  ///     full information for a subset of the whole group.
+  ///
+  /// \param [in] load_addresses
+  ///     The virtual address of the start of binaries to fetch
+  ///     information.
+  ///
+  /// \return
+  ///     A StructuredData object with the information that could be
+  ///     retrieved..
   virtual lldb_private::StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level,
       const std::vector<lldb::addr_t> &load_addresses) {
     return StructuredData::ObjectSP();
   }
@@ -3199,9 +3230,10 @@ protected:
   struct PrivateStateThread {
     PrivateStateThread(Process &process, lldb::StateType public_state,
                        lldb::StateType private_state,
-                       llvm::StringRef thread_name)
+                       llvm::StringRef thread_name, bool is_override = false)
         : m_process(process), m_public_state(public_state),
-          m_private_state(private_state), m_thread_name(thread_name) {}
+          m_private_state(private_state), m_is_override(is_override),
+          m_thread_name(thread_name) {}
     // This returns false if we couldn't start up the thread.  If that happens,
     // you won't be doing any debugging today.
     bool StartupThread();
@@ -3218,6 +3250,8 @@ protected:
     }
 
     bool IsRunning() { return m_is_running; }
+
+    bool IsOverride() const { return m_is_override; }
 
     void SetThreadName(llvm::StringRef new_name) { m_thread_name = new_name; }
 
@@ -3288,6 +3322,7 @@ protected:
     ProcessRunLock m_public_run_lock;
     ProcessRunLock m_private_run_lock;
     bool m_is_running = false;
+    bool m_is_override = false;
     ///< This will be the thread name given to the Private State HostThread when
     ///< it gets spun up.
     std::string m_thread_name;
@@ -3530,7 +3565,7 @@ private:
   // Starts up the private state thread that will watch for events from the
   // debugee.
 
-  lldb::thread_result_t RunPrivateStateThread();
+  lldb::thread_result_t RunPrivateStateThread(bool is_override);
 
 protected:
   void HandlePrivateEvent(lldb::EventSP &event_sp);
@@ -3624,6 +3659,28 @@ public:
     if (m_process)
       m_process->SetRunningUtilityFunction(false);
   }
+};
+
+/// RAII guard that marks the current thread as a private state thread.
+///
+/// When RunThreadPlan detects it is running on the private state thread, it
+/// spins up an override thread and reassigns m_current_private_state_thread_sp
+/// to it. The original PST continues processing events via DoOnRemoval
+/// callbacks, but CurrentThreadIsPrivateStateThread() no longer recognizes it.
+/// This guard sets a thread_local flag so that GetStackFrameList can identify
+/// the original PST and return parent frames instead of provider-augmented
+/// frames.
+struct PrivateStateThreadGuard {
+  PrivateStateThreadGuard() { g_is_private_state_thread = true; }
+  ~PrivateStateThreadGuard() { g_is_private_state_thread = false; }
+  static bool IsPrivateStateThread() { return g_is_private_state_thread; }
+
+  // Non-copyable, non-movable.
+  PrivateStateThreadGuard(const PrivateStateThreadGuard &) = delete;
+  PrivateStateThreadGuard &operator=(const PrivateStateThreadGuard &) = delete;
+
+private:
+  static thread_local bool g_is_private_state_thread;
 };
 
 } // namespace lldb_private

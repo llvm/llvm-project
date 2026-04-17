@@ -21,6 +21,7 @@
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -30,6 +31,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -178,8 +180,23 @@ bool fir::mayBeAbsentBox(mlir::Value val) {
   assert(mlir::isa<fir::BaseBoxType>(val.getType()) && "expected box argument");
   while (val) {
     mlir::Operation *defOp = val.getDefiningOp();
-    if (!defOp)
+    if (!defOp) {
+      // TODO: we need a better way to identify definitely
+      // present boxes to allow more speculation.
+      // Maybe we should rely on [hl]fir.declare's inside
+      // acc.compute_region or use more generic interface
+      // (such as RegionBranchOpInterface) to map the block
+      // arguments to the operands (though, the meaning
+      // of operands/block-arguments of acc.compute_region
+      // is tricky).
+      if (mlir::Operation *accOp =
+              mlir::acc::getACCDataClauseOpForBlockArg(val)) {
+        val = mlir::acc::getVar(accOp);
+        continue;
+      }
+
       return true;
+    }
 
     if (auto varIface = mlir::dyn_cast<fir::FortranVariableOpInterface>(defOp))
       return varIface.isOptional();
@@ -1203,6 +1220,66 @@ mlir::OpFoldResult fir::BoxCharLenOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// BoxEleSizeOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Canonicalize fir.box_elesize when the element type is statically known.
+struct FoldBoxEleSize : public mlir::OpRewritePattern<fir::BoxEleSizeOp> {
+  using mlir::OpRewritePattern<fir::BoxEleSizeOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxEleSizeOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto boxTy = mlir::cast<fir::BaseBoxType>(op.getVal().getType());
+
+    // ClassType is polymorphic — the actual runtime type may differ, size
+    // not statically known.
+    if (mlir::isa<fir::ClassType>(boxTy))
+      return mlir::failure();
+
+    // unwrapInnerType peels through any ptr/heap/array wrapper inside the box
+    // to reach the scalar element type.
+    mlir::Type eleTy = boxTy.unwrapInnerType();
+
+    // NoneType is the element type for TYPE(*) assumed-type boxes — no static
+    // element type.
+    if (mlir::isa<mlir::NoneType>(eleTy))
+      return mlir::failure();
+
+    // Bail out for types whose size is only known at runtime as a string whose
+    // length is unknown or a record type with fields with a dynamic size
+    if (fir::hasDynamicSize(eleTy))
+      return mlir::failure();
+
+    mlir::DataLayout dl = mlir::DataLayout::closest(op);
+    fir::KindMapping kindMap = fir::getKindMapping(op.getOperation());
+
+    auto sizeAndAlign =
+        fir::getTypeSizeAndAlignment(op.getLoc(), eleTy, dl, kindMap);
+    if (!sizeAndAlign)
+      return mlir::failure();
+
+    // The descriptor stores the byte stride between elements (not the raw
+    // natural size), so we must round up to alignment just as
+    // fir::computeElementDistance does.
+    auto [size, alignment] = *sizeAndAlign;
+    std::int64_t distance = llvm::alignTo(size, alignment);
+
+    mlir::Type resultTy = op.getType();
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+        op, resultTy, rewriter.getIntegerAttr(resultTy, distance));
+    return mlir::success();
+  }
+};
+} // namespace
+
+void fir::BoxEleSizeOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
+  results.insert<FoldBoxEleSize>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // BoxDimsOp
 //===----------------------------------------------------------------------===//
 
@@ -1636,6 +1713,93 @@ mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
             (fromTy.getWidth() == 1))
           return inner.getValue();
   }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// Logical binary operations fold helpers
+//===----------------------------------------------------------------------===//
+
+/// If \p value is a fir.convert of an arith.constant i1, return the i1 value.
+static std::optional<bool> getLogicalConstant(mlir::Value value) {
+  mlir::Value maybeConvertInput = value;
+  if (auto convertOp = value.getDefiningOp<fir::ConvertOp>())
+    maybeConvertInput = convertOp.getValue();
+  if (auto cst = fir::getIntIfConstant(maybeConvertInput))
+    return *cst != 0;
+  return std::nullopt;
+}
+
+/// Try to fold a logical binary operation where both operands are constants.
+/// For integer result types, return an IntegerAttr directly (materialized by
+/// the dialect's materializeConstant hook).  For fir.logical result types we
+/// cannot create new operations in a folder, so return one of the existing
+/// constant operands if its truth value matches the intended result.
+static mlir::OpFoldResult
+foldLogicalBinaryWithConstants(bool result, mlir::Type resTy, bool lhsCst,
+                               mlir::Value lhs, bool rhsCst, mlir::Value rhs) {
+  if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(resTy))
+    return mlir::IntegerAttr::get(intTy, result ? 1 : 0);
+  if (lhsCst == result)
+    return lhs;
+  if (rhsCst == result)
+    return rhs;
+  return {};
+}
+
+mlir::OpFoldResult fir::LogicalAndOp::fold(FoldAdaptor adaptor) {
+  auto lhsCst = getLogicalConstant(getLhs());
+  auto rhsCst = getLogicalConstant(getRhs());
+  if (lhsCst && rhsCst)
+    return foldLogicalBinaryWithConstants(*lhsCst && *rhsCst, getType(),
+                                          *lhsCst, getLhs(), *rhsCst, getRhs());
+  // logical_and(x, true) -> x
+  if (rhsCst && *rhsCst)
+    return getLhs();
+  if (lhsCst && *lhsCst)
+    return getRhs();
+  return {};
+}
+
+mlir::OpFoldResult fir::LogicalOrOp::fold(FoldAdaptor adaptor) {
+  auto lhsCst = getLogicalConstant(getLhs());
+  auto rhsCst = getLogicalConstant(getRhs());
+  if (lhsCst && rhsCst)
+    return foldLogicalBinaryWithConstants(*lhsCst || *rhsCst, getType(),
+                                          *lhsCst, getLhs(), *rhsCst, getRhs());
+  // logical_or(x, false) -> x
+  if (rhsCst && !*rhsCst)
+    return getLhs();
+  if (lhsCst && !*lhsCst)
+    return getRhs();
+  return {};
+}
+
+mlir::OpFoldResult fir::EqvOp::fold(FoldAdaptor adaptor) {
+  auto lhsCst = getLogicalConstant(getLhs());
+  auto rhsCst = getLogicalConstant(getRhs());
+  if (lhsCst && rhsCst)
+    return foldLogicalBinaryWithConstants(*lhsCst == *rhsCst, getType(),
+                                          *lhsCst, getLhs(), *rhsCst, getRhs());
+  // eqv(x, true) -> x
+  if (rhsCst && *rhsCst)
+    return getLhs();
+  if (lhsCst && *lhsCst)
+    return getRhs();
+  return {};
+}
+
+mlir::OpFoldResult fir::NeqvOp::fold(FoldAdaptor adaptor) {
+  auto lhsCst = getLogicalConstant(getLhs());
+  auto rhsCst = getLogicalConstant(getRhs());
+  if (lhsCst && rhsCst)
+    return foldLogicalBinaryWithConstants(*lhsCst != *rhsCst, getType(),
+                                          *lhsCst, getLhs(), *rhsCst, getRhs());
+  // neqv(x, false) -> x
+  if (rhsCst && !*rhsCst)
+    return getLhs();
+  if (lhsCst && !*lhsCst)
+    return getRhs();
   return {};
 }
 

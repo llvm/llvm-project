@@ -32,6 +32,8 @@ def SDT_LoongArchVFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTC
 def SDT_LoongArchVFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
 def SDT_LoongArchVLDREPL : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisPtrTy<1>]>;
 def SDT_LoongArchVMSKCOND : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>;
+def SDT_LoongArchVFCVT_S_D : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
+                                                  SDTCisVec<1>, SDTCisFP<1>, SDTCisSameAs<1, 2>]>;
 
 // Target nodes.
 
@@ -93,6 +95,8 @@ def loongarch_vmskltz: SDNode<"LoongArchISD::VMSKLTZ", SDT_LoongArchVMSKCOND>;
 def loongarch_vmskgez: SDNode<"LoongArchISD::VMSKGEZ", SDT_LoongArchVMSKCOND>;
 def loongarch_vmskeqz: SDNode<"LoongArchISD::VMSKEQZ", SDT_LoongArchVMSKCOND>;
 def loongarch_vmsknez: SDNode<"LoongArchISD::VMSKNEZ", SDT_LoongArchVMSKCOND>;
+
+def loongarch_vfcvt_s_d: SDNode<"LoongArchISD::VFCVT", SDT_LoongArchVFCVT_S_D>;
 
 def immZExt1 : ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]>;
@@ -201,6 +205,10 @@ foreach N = [3, 4, 5, 6, 8] in
 
 foreach N = [5] in
   def SplatPat_simm#N : ComplexPattern<vAny, 1, "selectVSplatImm<"#N#", true>",
+                                       [build_vector, bitconvert]>;
+
+foreach N = [5] in
+  def SplatPat_nimm#N : ComplexPattern<vAny, 1, "selectVSplatImmNeg<"#N#">",
                                        [build_vector, bitconvert]>;
 
 def vsplat_uimm_inv_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmInvPow2",
@@ -1370,6 +1378,17 @@ multiclass PatVrUimm5<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_DU") LSX128:$vj, uimm5:$imm)>;
 }
 
+multiclass PatVrNimm5<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_BU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_HU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_WU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_DU") LSX128:$vj, uimm5:$imm)>;
+}
+
 multiclass PatVrVrVr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v16i8 LSX128:$vd), (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
             (!cast<LAInst>(Inst#"_B") LSX128:$vd, LSX128:$vj, LSX128:$vk)>;
@@ -1552,8 +1571,10 @@ defm : PatVrVr<add, "VADD">;
 defm : PatVrVr<sub, "VSUB">;
 
 // VADDI_{B/H/W/D}U
+defm : PatVrNimm5<sub, "VADDI">;
 defm : PatVrUimm5<add, "VADDI">;
 // VSUBI_{B/H/W/D}U
+defm : PatVrNimm5<add, "VSUBI">;
 defm : PatVrUimm5<sub, "VSUBI">;
 
 // VNEG_{B/H/W/D}
@@ -2576,6 +2597,9 @@ defm : PatVrF<fceil, "VFRINTRP">;
 defm : PatVrF<ffloor, "VFRINTRM">;
 defm : PatVrF<ftrunc, "VFRINTRZ">;
 defm : PatVrF<froundeven, "VFRINTRNE">;
+
+def : Pat<(v4f32 (loongarch_vfcvt_s_d (v2f64 LSX128:$vj), (v2f64 LSX128:$vk))),
+          (VFCVT_S_D LSX128:$vj, LSX128:$vk)>;
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),

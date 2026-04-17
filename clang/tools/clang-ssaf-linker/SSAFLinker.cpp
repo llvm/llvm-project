@@ -20,7 +20,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
@@ -29,12 +28,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <string>
-#include <system_error>
 
 using namespace llvm;
 using namespace clang::ssaf;
 
-namespace fs = llvm::sys::fs;
 namespace path = llvm::sys::path;
 
 namespace {
@@ -48,7 +45,7 @@ cl::OptionCategory SsafLinkerCategory("clang-ssaf-linker options");
 cl::list<std::string> InputPaths(cl::Positional, cl::desc("<input files>"),
                                  cl::OneOrMore, cl::cat(SsafLinkerCategory));
 
-cl::opt<std::string> OutputPath("o", cl::desc("Output summary path"),
+cl::opt<std::string> OutputPath("o", cl::desc("Output file path"),
                                 cl::value_desc("path"), cl::Required,
                                 cl::cat(SsafLinkerCategory));
 
@@ -63,9 +60,6 @@ cl::opt<bool> Time("time", cl::desc("Enable timing"), cl::init(false),
 //===----------------------------------------------------------------------===//
 
 namespace LocalErrorMessages {
-
-constexpr const char *OutputDirectoryNotWritable =
-    "Parent directory is not writable";
 
 constexpr const char *LinkingSummary = "Linking summary '{0}'";
 
@@ -91,8 +85,8 @@ void info(unsigned IndentationLevel, const char *Fmt, Ts &&...Args) {
 //===----------------------------------------------------------------------===//
 
 struct LinkerInput {
-  std::vector<SummaryFile> InputFiles;
-  SummaryFile OutputFile;
+  std::vector<FormatFile> InputFiles;
+  FormatFile OutputFile;
   std::string LinkUnitName;
 };
 
@@ -106,20 +100,8 @@ LinkerInput validate(llvm::TimerGroup &TG) {
 
   {
     llvm::TimeRegion _(Time ? &TValidate : nullptr);
-    llvm::StringRef ParentDir = path::parent_path(OutputPath);
-    llvm::StringRef DirToCheck = ParentDir.empty() ? "." : ParentDir;
 
-    if (!fs::exists(DirToCheck)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           ErrorMessages::OutputDirectoryMissing);
-    }
-
-    if (fs::access(DirToCheck, fs::AccessMode::Write)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           LocalErrorMessages::OutputDirectoryNotWritable);
-    }
-
-    LI.OutputFile = SummaryFile::fromPath(OutputPath);
+    LI.OutputFile = FormatFile::fromOutputPath(OutputPath);
     LI.LinkUnitName = path::stem(LI.OutputFile.Path).str();
   }
 
@@ -128,12 +110,7 @@ LinkerInput validate(llvm::TimerGroup &TG) {
   {
     llvm::TimeRegion _(Time ? &TValidate : nullptr);
     for (const auto &InputPath : InputPaths) {
-      llvm::SmallString<256> RealPath;
-      std::error_code EC = fs::real_path(InputPath, RealPath, true);
-      if (EC) {
-        fail(ErrorMessages::CannotValidateSummary, InputPath, EC.message());
-      }
-      LI.InputFiles.push_back(SummaryFile::fromPath(RealPath));
+      LI.InputFiles.push_back(FormatFile::fromInputPath(InputPath));
     }
   }
 

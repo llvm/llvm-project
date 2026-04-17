@@ -8907,6 +8907,8 @@ let CategoryName = "Lambda Issue" in {
     "capture of variable '%0' as type %1 calls %select{private|protected}3 "
     "%select{default |copy |move |*ERROR* |*ERROR* |*ERROR* |}2constructor">,
     AccessControl;
+  def err_friend_lambda_decl : Error<
+    "a member of a lambda should not be the target of a friend declaration">;
   def note_lambda_to_block_conv : Note<
     "implicit capture of lambda object due to conversion to block pointer "
     "here">;
@@ -9598,14 +9600,6 @@ def err_atomic_builtin_must_be_pointer_intfltptr : Error<
 def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
-def err_arm_atomic_store_with_stshh_bad_type : Error<
-  "address argument to '__arm_atomic_store_with_stshh' must be a pointer to an "
-  "8,16,32, or 64-bit integer type (%0 invalid)">;
-def err_arm_atomic_store_with_stshh_bad_value_type : Error<
-  "value argument to '__arm_atomic_store_with_stshh' must be %0; got %1">;
-def err_arm_atomic_store_with_stshh_bad_order : Error<
-  "memory order argument to '__arm_atomic_store_with_stshh' must be one of "
-  "__ATOMIC_RELAXED, __ATOMIC_RELEASE, or __ATOMIC_SEQ_CST">;
 def err_atomic_exclusive_builtin_pointer_size : Error<
   "address argument to load or store exclusive builtin must be a pointer to "
   // Because the range of legal sizes for load/store exclusive varies with the
@@ -11179,6 +11173,8 @@ def err_omp_bind_required_on_loop : Error<
   "construct">;
 def err_omp_loop_reduction_clause : Error<
   "'reduction' clause not allowed with '#pragma omp loop bind(teams)'">;
+def err_omp_split_counts_not_one_omp_fill : Error<
+  "exactly one 'omp_fill' must appear in the 'counts' clause">;
 def warn_break_binds_to_switch : Warning<
   "'break' is bound to loop, GCC binds it to switch">,
   InGroup<GccCompat>;
@@ -13304,6 +13300,15 @@ def err_builtin_requires_double_type: Error<
 def err_bswapg_invalid_bit_width : Error<
   "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;
 
+def err_builtin_stdc_invalid_arg_type: Error<
+  "%ordinal0 argument must be a scalar unsigned integer type (was %1)">;
+
+def err_builtin_stdc_invalid_arg_type_bool_or_enum: Error<
+  "%ordinal0 argument must not be a boolean or enumeration type (was %1)">;
+def err_builtin_stdc_result_overflow: Error<
+  "argument type %0 has bit width that exceeds the range of the return type "
+  "'unsigned int' on this target">;
+
 def err_builtin_trivially_relocate_invalid_arg_type: Error <
   "first%select{||| and second}0 argument%select{|||s}0 to "
   "'__builtin_trivially_relocate' must be"
@@ -13711,6 +13716,9 @@ def err_hlsl_samplecmp_requires_float
             "a floating point type">;
 def err_hlsl_gathercmp_invalid_component
     : Error<"gatherCmp%select{Red|Green|Blue|Alpha}0 operations on the Vulkan target are not supported; only GatherCmp and GatherCmpRed are allowed">;
+
+def err_hlsl_resource_member_array_access_not_constant
+    : Error<"index for struct array inside cbuffer that contains resources must be a constant integer expression">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

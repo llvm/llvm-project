@@ -1938,12 +1938,12 @@ void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   const parser::OmpDirectiveName &dirName{beginSpec.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
-  ++allocateDirectiveLevel;
+  ++allocateDirectiveLevel_;
 
   bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
 
   unsigned version{context_.langOptions().OpenMPVersion};
-  if (isExecutable && allocateDirectiveLevel == 1 && version >= 52) {
+  if (isExecutable && allocateDirectiveLevel_ == 1 && version >= 52) {
     context_.Warn(common::UsageWarning::OpenMPUsage, dirName.source,
         "The executable form of the OpenMP ALLOCATE directive has been deprecated, please use ALLOCATORS instead"_warn_en_US);
   }
@@ -1984,11 +1984,11 @@ void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
 
 void OmpStructureChecker::Leave(const parser::OmpAllocateDirective &x) {
   bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
-  if (isExecutable && allocateDirectiveLevel == 1) {
+  if (isExecutable && allocateDirectiveLevel_ == 1) {
     CheckExecutableAllocateDirective(x);
   }
 
-  --allocateDirectiveLevel;
+  --allocateDirectiveLevel_;
   dirContext_.pop_back();
 }
 
@@ -3982,6 +3982,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_private);
   CheckCrayPointee(x.v, "PRIVATE");
+  CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_private);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
@@ -4060,6 +4061,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   GetSymbolsInObjectList(x.v, currSymbols);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_firstprivate);
+  CheckAssumedSizeArray(currSymbols, llvm::omp::Clause::OMPC_firstprivate);
 
   DirectivesClauseTriple dirClauseTriple;
   // Check firstprivate variables in worksharing constructs
@@ -4731,6 +4733,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckIntentInPointer(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_lastprivate);
+  CheckAssumedSizeArray(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
 
   // Check lastprivate variables in worksharing constructs
   dirClauseTriple.emplace(llvm::omp::Directive::OMPD_do,
@@ -5198,6 +5201,18 @@ void OmpStructureChecker::CheckIntentInPointer(
     if (IsPointer(*symbol) && IsIntentIn(*symbol)) {
       context_.Say(source,
           "Pointer '%s' with the INTENT(IN) attribute may not appear in a %s clause"_err_en_US,
+          symbol->name(), parser::omp::GetUpperName(clauseId, version));
+    }
+  }
+}
+
+void OmpStructureChecker::CheckAssumedSizeArray(
+    SymbolSourceMap &symbols, llvm::omp::Clause clauseId) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  for (auto &[symbol, source] : symbols) {
+    if (IsAssumedSizeArray(*symbol)) {
+      context_.Say(source,
+          "Assumed-size array '%s' may not appear in a %s clause"_err_en_US,
           symbol->name(), parser::omp::GetUpperName(clauseId, version));
     }
   }

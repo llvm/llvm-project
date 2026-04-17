@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdangling -Wdangling-field -Wreturn-stack-address -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=cfg,cfg-field %s
-
-// FIXME: cfg-field should be detected in end-of-TU analysis but it doesn't work for constructors!
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=cfg,tu %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -84,17 +82,17 @@ void dangligGslPtrFromTemporary() {
 
 struct DanglingGslPtrField {
   MyIntPointer p; // expected-note {{pointer member declared here}} \
-                  // cfg-field-note 3 {{this field dangles}}
+                  // cfg-note 3 {{this field dangles}}
   MyLongPointerFromConversion p2; // expected-note {{pointer member declared here}} \
-                                  // cfg-field-note 2 {{this field dangles}}
+                                  // cfg-note 2 {{this field dangles}}
 
-  DanglingGslPtrField(int i) : p(&i) {} // cfg-field-warning {{address of stack memory escapes to a field}}
+  DanglingGslPtrField(int i) : p(&i) {} // cfg-warning {{address of stack memory escapes to a field}}
   DanglingGslPtrField() : p2(MyLongOwnerWithConversion{}) {}  // expected-warning {{initializing pointer member 'p2' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}} \
-                                                              // cfg-field-warning {{address of stack memory escapes to a field}}
+                                                              // cfg-warning {{address of stack memory escapes to a field}}
   DanglingGslPtrField(double) : p(MyIntOwner{}) {}  // expected-warning {{initializing pointer member 'p' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}} \
-                                                    // cfg-field-warning {{address of stack memory escapes to a field}}
-  DanglingGslPtrField(MyIntOwner io) : p(io) {} // cfg-field-warning {{address of stack memory escapes to a field}}
-  DanglingGslPtrField(MyLongOwnerWithConversion lo) : p2(lo) {} // cfg-field-warning {{address of stack memory escapes to a field}}
+                                                    // cfg-warning {{address of stack memory escapes to a field}}
+  DanglingGslPtrField(MyIntOwner io) : p(io) {} // cfg-warning {{address of stack memory escapes to a field}}
+  DanglingGslPtrField(MyLongOwnerWithConversion lo) : p2(lo) {} // cfg-warning {{address of stack memory escapes to a field}}
 };
 
 MyIntPointer danglingGslPtrFromLocal() {
@@ -175,6 +173,16 @@ void initLocalGslPtrWithTempOwner() {
                                           // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
   use(global2, p2);                       // cfg-note 2 {{later used here}}
 }
+
+struct LifetimeBoundCtor {
+  LifetimeBoundCtor(const MyIntOwner& obj1 [[clang::lifetimebound]]);
+  LifetimeBoundCtor(std::string_view sv [[clang::lifetimebound]]);
+};
+
+auto lifetimebound_make_unique_single_param() {
+  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // tu-warning {{address of stack memory is returned later}} tu-note {{returned here}}
+}
+
 
 
 struct Unannotated {
@@ -350,11 +358,11 @@ const char *trackThroughMultiplePointer() {
 
 struct X {
   X(std::unique_ptr<int> up) :
-    pointee(*up),             // cfg-field-warning {{may have been moved.}}
-    pointee2(up.get()),       // cfg-field-warning {{may have been moved.}}
-    pointer(std::move(up)) {} // cfg-field-note 2 {{potentially moved here}}
-  int &pointee;               // cfg-field-note {{this field dangles}}
-  int *pointee2;              // cfg-field-note {{this field dangles}}
+    pointee(*up),             // cfg-warning {{may have been moved.}}
+    pointee2(up.get()),       // cfg-warning {{may have been moved.}}
+    pointer(std::move(up)) {} // cfg-note 2 {{potentially moved here}}
+  int &pointee;               // cfg-note {{this field dangles}}
+  int *pointee2;              // cfg-note {{this field dangles}}
   std::unique_ptr<int> pointer;
 };
 
@@ -365,9 +373,9 @@ struct X2 {
   // A common usage that moves the passing owner to the class.
   // verify a strict warning on this case.
   X2(XOwner owner) :
-    pointee(owner.get()),       // cfg-field-warning {{may have been moved.}}
-    owner(std::move(owner)) {}  // cfg-field-note {{potentially moved here}}
-  int* pointee;                 // cfg-field-note {{this field dangles}}
+    pointee(owner.get()),       // cfg-warning {{may have been moved.}}
+    owner(std::move(owner)) {}  // cfg-note {{potentially moved here}}
+  int* pointee;                 // cfg-note {{this field dangles}}
   XOwner owner;
 };
 
@@ -931,13 +939,11 @@ struct [[gsl::Pointer]] Pointer {
   Pointer(const Bar & bar [[clang::lifetimebound]]);
 };
 Pointer test3(Bar bar) {
-  // FIXME: Detect this using the CFG-based lifetime analysis (constructor of a pointer).
-  //        https://github.com/llvm/llvm-project/issues/175898
-  Pointer p = Pointer(Bar()); // expected-warning {{temporary}}
-  use(p);
-  p = Pointer(Bar()); // expected-warning {{object backing}}
-  use(p);
-  return bar; // expected-warning {{address of stack}}
+  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(p);                     // cfg-note {{later used here}}
+  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(p);                     // cfg-note {{later used here}}
+  return bar;                 // expected-warning {{address of stack}} cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
 }
 
 template<typename T>
@@ -1118,10 +1124,10 @@ struct Foo2 {
 };
 
 struct Test {
-  Test(Foo2 foo) : bar(foo.bar.get()),  // cfg-field-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
-      storage(std::move(foo.bar)) {};   // cfg-field-note {{potentially moved here}}
+  Test(Foo2 foo) : bar(foo.bar.get()),  // cfg-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
+      storage(std::move(foo.bar)) {};   // cfg-note {{potentially moved here}}
 
-  Bar* bar; // cfg-field-note {{this field dangles}}
+  Bar* bar; // cfg-note {{this field dangles}}
   std::unique_ptr<Bar> storage;
 };
 

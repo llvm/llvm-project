@@ -16,6 +16,7 @@
 
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
@@ -25,6 +26,7 @@
 
 struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
+struct AArch64PostLegalizerLoweringImplRuleConfig;
 
 namespace llvm {
 
@@ -66,7 +68,6 @@ FunctionPass *createAArch64PostCoalescerPass();
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
 FunctionPass *createAArch64CollectLOHPass();
-FunctionPass *createSMEABIPass();
 FunctionPass *createSMEPeepholeOptPass();
 FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
 FunctionPass *createAArch64SRLTDefineSuperRegsPass();
@@ -101,6 +102,31 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AArch64PostSelectOptimizePass
+    : public PassInfoMixin<AArch64PostSelectOptimizePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64PostLegalizerLoweringPass
+    : public PassInfoMixin<AArch64PostLegalizerLoweringPass> {
+  std::unique_ptr<AArch64PostLegalizerLoweringImplRuleConfig> RuleConfig;
+
+public:
+  AArch64PostLegalizerLoweringPass();
+  AArch64PostLegalizerLoweringPass(AArch64PostLegalizerLoweringPass &&);
+  ~AArch64PostLegalizerLoweringPass();
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::Legalized);
+  }
+};
+
 FunctionPass *createAArch64O0PreLegalizerCombiner();
 FunctionPass *createAArch64PreLegalizerCombiner();
 FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone);
@@ -131,8 +157,8 @@ void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PostCoalescerLegacyPass(PassRegistry &);
 void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
-void initializeAArch64PostLegalizerLoweringPass(PassRegistry &);
-void initializeAArch64PostSelectOptimizePass(PassRegistry &);
+void initializeAArch64PostSelectOptimizeLegacyPass(PassRegistry &);
+void initializeAArch64PostLegalizerLoweringLegacyPass(PassRegistry &);
 void initializeAArch64PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationLegacyPass(PassRegistry &);
@@ -145,8 +171,7 @@ void initializeAArch64StackTaggingPreRAPass(PassRegistry &);
 void initializeAArch64StorePairSuppressPass(PassRegistry&);
 void initializeFalkorHWPFFixPass(PassRegistry&);
 void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
-void initializeLDTLSCleanupPass(PassRegistry&);
-void initializeSMEABIPass(PassRegistry &);
+void initializeLDTLSCleanupPass(PassRegistry &);
 void initializeSMEPeepholeOptPass(PassRegistry &);
 void initializeMachineSMEABIPass(PassRegistry &);
 void initializeAArch64SRLTDefineSuperRegsPass(PassRegistry &);

@@ -158,8 +158,13 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(ISD::FP16_TO_FP, T, Expand);
       setOperationAction(ISD::FP_TO_FP16, T, Expand);
     }
-    setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
-    setTruncStoreAction(T, MVT::f16, Expand);
+    if (Subtarget->hasFP16() && T == MVT::f32) {
+      setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Legal);
+      setTruncStoreAction(T, MVT::f16, Legal);
+    } else {
+      setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
+      setTruncStoreAction(T, MVT::f16, Expand);
+    }
   }
 
   // Expand unavailable integer operations.
@@ -2932,8 +2937,8 @@ static bool HasNoSignedZerosOrNaNs(SDValue Op, SelectionDAG &DAG) {
           (DAG.isKnownNeverNaN(Op->getOperand(0)) &&
            DAG.isKnownNeverNaN(Op->getOperand(1)))) &&
          (Op->getFlags().hasNoSignedZeros() ||
-          DAG.isKnownNeverZeroFloat(Op->getOperand(0)) ||
-          DAG.isKnownNeverZeroFloat(Op->getOperand(1)));
+          DAG.isKnownNeverLogicalZero(Op->getOperand(0)) ||
+          DAG.isKnownNeverLogicalZero(Op->getOperand(1)));
 }
 
 SDValue WebAssemblyTargetLowering::LowerFMIN(SDValue Op,
