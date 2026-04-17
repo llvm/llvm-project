@@ -70,7 +70,7 @@ class LibCxxStdVectorSyntheticFrontEnd:
         offset = index * self.m_element_size
         offset = offset + self.m_start.GetValueAsUnsigned(0)
 
-        name = f'[{index}]'
+        name = f"[{index}]"
         target = self.valobj.GetTarget()
         if not target:
             return None
