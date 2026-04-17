@@ -176,6 +176,19 @@ add_header_library(
 )
 
 add_header_library(
+  wctype_impl
+  HDRS
+    wctype_impl.h
+  DEPENDS
+    .wctype_utils
+    libc.hdr.types.wctype_t
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   str_to_num_result
   HDRS
     str_to_num_result.h
