@@ -203,6 +203,8 @@ static void WarnUnusedOrUndefinedLocal(
       scope.kind() == Scope::Kind::BlockConstruct) {
     for (const auto &[_, symbolRef] : scope) {
       const Symbol &symbol{*symbolRef};
+      const auto *ownerSubp{symbol.detailsIf<SubprogramDetails>()};
+      bool inInterface{ownerSubp && ownerSubp->isInterface()};
       if ((symbol.has<semantics::ObjectEntityDetails>() ||
               (symbol.has<semantics::ProcEntityDetails>() &&
                   IsProcedurePointer(symbol))) &&
@@ -223,6 +225,13 @@ static void WarnUnusedOrUndefinedLocal(
                 symbol.name());
           }
         }
+      }
+      if (symbol.has<semantics::ObjectEntityDetails>() && IsDummy(symbol) &&
+          !inInterface && !context.IsSymbolUsed(symbol) &&
+          scope.kind() == Scope::Kind::Subprogram) {
+        context.Warn(common::UsageWarning::UnusedDummyArgument, symbol.name(),
+            "Value of dummy argument '%s' is never used"_warn_en_US,
+            symbol.name());
       }
     }
   }

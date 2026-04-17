@@ -7,6 +7,7 @@ module m
   end type
  contains
   subroutine sub(x)
+    !WARNING: Value of dummy argument 'x' is never used [-Wunused-dummy-argument]
     class(t), intent(in) :: x
   end subroutine
 end module

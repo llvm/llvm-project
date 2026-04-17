@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Wno-portability -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Wno-portability -Wno-unused-dummy-argument -Werror
 subroutine assumedshape(normal, contig)
   real normal(:)
   real, contiguous :: contig(:)

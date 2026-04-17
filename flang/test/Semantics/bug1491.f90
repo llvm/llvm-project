@@ -1,4 +1,4 @@
-!RUN: %python %S/test_errors.py %s %flang_fc1 -Werror -pedantic
+!RUN: %python %S/test_errors.py %s %flang_fc1 -Werror -Wno-unused-dummy-argument -pedantic
 module m
   interface
     integer function foo1()
