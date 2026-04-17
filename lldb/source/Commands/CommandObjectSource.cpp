@@ -497,7 +497,7 @@ protected:
         displayed_something = true;
     }
     if (!displayed_something) {
-      result.AppendErrorWithFormat("No source filenames matched '%s'.\n",
+      result.AppendErrorWithFormat("no source filenames matched '%s'",
                                    filename);
       return false;
     }
@@ -1068,7 +1068,7 @@ protected:
                 "Reached {0} of the file, no more to page",
                 m_options.reverse ? "beginning" : "end");
           } else {
-            result.AppendNote("No source available");
+            result.AppendNote("no source available");
           }
         }
 

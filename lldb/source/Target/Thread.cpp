@@ -1936,7 +1936,7 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
         "first location:\n",
         file.GetFilename(), line);
     DumpAddressList(sstr, candidates, target);
-    *warnings = std::string(sstr.GetString());
+    *warnings = std::string(sstr.GetString().trim('\n'));
   }
 
   if (!reg_ctx->SetPC(dest))
