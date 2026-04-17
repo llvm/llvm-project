@@ -809,7 +809,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 
   // Set fixedFormColumns based on -ffixed-line-length=<value>
   if (const auto *arg =
-          args.getLastArg(clang::options::OPT_ffixed_line_length_EQ)) {
+          args.getLastArg(clang::options::OPT_ffixed_line_length_EQ,
+                          clang::options::OPT_ffree_line_length_EQ)) {
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
     std::int64_t columns = -1;
     if (argValue == "none") {
@@ -821,13 +822,15 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       diags.Report(clang::diag::err_drv_negative_columns)
           << arg->getOption().getName() << arg->getValue();
     } else if (columns == 0) {
-      opts.fixedFormColumns = 1000000;
+      columns = 1000000;
     } else if (columns < 7) {
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
-    } else {
-      opts.fixedFormColumns = columns;
     }
+    if (arg->getOption().matches(clang::options::OPT_ffixed_line_length_EQ))
+      opts.fixedFormColumns = columns;
+    else
+      opts.freeFormColumns = columns;
   }
 
   // Set conversion based on -fconvert=<value>
@@ -1890,6 +1893,7 @@ void CompilerInvocation::setFortranOpts() {
         frontendOptions.fortranForm == FortranForm::FixedForm;
   }
   fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns;
+  fortranOptions.freeFormColumns = frontendOptions.freeFormColumns;
 
   // -E
   fortranOptions.prescanAndReformat =
