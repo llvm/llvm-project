@@ -311,16 +311,7 @@ def get_lldb_version_string():
 
 def set_lldb_formatters_compatibility_feature():
     current_lldb_version = get_lldb_version_string()
-    if current_lldb_version:
-        print(
-            f"Found LLDB version '{gdb_version_string}'",
-            file=sys.stderr,
-        )
-    else:
-        print(
-            "No LLDB found on host. Skipping tests that require LLDB.",
-            file=sys.stderr,
-        )
+    if not current_lldb_version:
         return
 
     if platform.system() == "Darwin":
