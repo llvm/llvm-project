@@ -659,6 +659,11 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
     return CheckVarType(S, CK, VarExpr, InnerLoc, ArrTy->getElementType());
   }
 
+  if (S.SemaRef.RequireCompleteType(InnerLoc, InnerTy,
+                                    Sema::CompleteTypeKind::Normal,
+                                    diag::err_incomplete_type))
+    return ExprError();
+
   auto *RD = InnerTy->getAsCXXRecordDecl();
 
   // if this isn't a C++ record decl, we can create/copy/destroy this thing at
