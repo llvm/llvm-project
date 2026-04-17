@@ -6003,57 +6003,61 @@ struct ExtendedReductionOperand {
 };
 
 /// A chain of recipes that form a partial reduction. Matches either
-///   reduction_bin_op (extend (A), accumulator), or
-///   reduction_bin_op (bin_op (extend (A), (extend (B))), accumulator).
+///   reduction_bin_op (extended op, accumulator), or
+///   reduction_bin_op (accumulator, extended op).
+/// The possible forms of the "extended op" are listed in
+/// matchExtendedReductionOperand.
 struct VPPartialReductionChain {
   /// The top-level binary operation that forms the reduction to a scalar
   /// after the loop body.
   VPWidenRecipe *ReductionBinOp = nullptr;
   /// The user of the extends that is then reduced.
   ExtendedReductionOperand ExtendedOp;
-  unsigned ScaleFactor;
   /// The recurrence kind for the entire partial reduction chain.
   /// This allows distinguishing between Sub and AddWithSub recurrences,
   /// when the ReductionBinOp is a Instruction::Sub.
   RecurKind RK;
+  /// The index of the accumulator operand of ReductionBinOp. The extended op
+  /// is `1 - AccumulatorOpIdx`.
+  unsigned AccumulatorOpIdx;
+  unsigned ScaleFactor;
 };
 
 static VPSingleDefRecipe *
-optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
+optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op,
                                    VPTypeAnalysis &TypeInfo) {
   // reduce.add(mul(ext(A), C))
   // -> reduce.add(mul(ext(A), ext(trunc(C))))
   const APInt *Const;
-  if (match(BinOp, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
-    auto *ExtA = cast<VPWidenCastRecipe>(BinOp->getOperand(0));
+  if (match(Op, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
+    auto *ExtA = cast<VPWidenCastRecipe>(Op->getOperand(0));
     Instruction::CastOps ExtOpc = ExtA->getOpcode();
     Type *NarrowTy = TypeInfo.inferScalarType(ExtA->getOperand(0));
-    if (!BinOp->hasOneUse() ||
+    if (!Op->hasOneUse() ||
         !llvm::canConstantBeExtended(
             Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc)))
-      return BinOp;
+      return Op;
 
-    VPBuilder Builder(BinOp);
+    VPBuilder Builder(Op);
     auto *Trunc = Builder.createWidenCast(Instruction::CastOps::Trunc,
-                                          BinOp->getOperand(1), NarrowTy);
+                                          Op->getOperand(1), NarrowTy);
     Type *WideTy = TypeInfo.inferScalarType(ExtA);
-    BinOp->setOperand(1, Builder.createWidenCast(ExtOpc, Trunc, WideTy));
-    return BinOp;
+    Op->setOperand(1, Builder.createWidenCast(ExtOpc, Trunc, WideTy));
+    return Op;
   }
 
   // reduce.add(abs(sub(ext(A), ext(B))))
   // -> reduce.add(ext(absolute-difference(A, B)))
   VPValue *X, *Y;
-  if (match(BinOp,
-            m_WidenIntrinsic<Intrinsic::abs>(m_Sub(
-                m_ZExtOrSExt(m_VPValue(X)), m_ZExtOrSExt(m_VPValue(Y)))))) {
-    auto *Sub = BinOp->getOperand(0)->getDefiningRecipe();
+  if (match(Op, m_WidenIntrinsic<Intrinsic::abs>(m_Sub(
+                    m_ZExtOrSExt(m_VPValue(X)), m_ZExtOrSExt(m_VPValue(Y)))))) {
+    auto *Sub = Op->getOperand(0)->getDefiningRecipe();
     auto *Ext = cast<VPWidenCastRecipe>(Sub->getOperand(0));
     assert(Ext->getOpcode() ==
                cast<VPWidenCastRecipe>(Sub->getOperand(1))->getOpcode() &&
            "Expected both the LHS and RHS extends to be the same");
     bool IsSigned = Ext->getOpcode() == Instruction::SExt;
-    VPBuilder Builder(BinOp);
+    VPBuilder Builder(Op);
     Type *SrcTy = TypeInfo.inferScalarType(X);
     auto *FreezeX = Builder.insert(new VPWidenRecipe(Instruction::Freeze, {X}));
     auto *FreezeY = Builder.insert(new VPWidenRecipe(Instruction::Freeze, {Y}));
@@ -6066,22 +6070,22 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
     auto *AbsDiff =
         Builder.insert(new VPWidenRecipe(Instruction::Sub, {Max, Min}));
     return Builder.createWidenCast(Instruction::CastOps::ZExt, AbsDiff,
-                                   TypeInfo.inferScalarType(BinOp));
+                                   TypeInfo.inferScalarType(Op));
   }
 
   // reduce.add(ext(mul(ext(A), ext(B))))
   // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
   // TODO: Support this optimization for float types.
-  if (match(BinOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
-                                      m_ZExtOrSExt(m_VPValue()))))) {
-    auto *Ext = cast<VPWidenCastRecipe>(BinOp);
+  if (match(Op, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                   m_ZExtOrSExt(m_VPValue()))))) {
+    auto *Ext = cast<VPWidenCastRecipe>(Op);
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
     auto *MulLHS = cast<VPWidenCastRecipe>(Mul->getOperand(0));
     auto *MulRHS = cast<VPWidenCastRecipe>(Mul->getOperand(1));
     if (!Mul->hasOneUse() ||
         (Ext->getOpcode() != MulLHS->getOpcode() && MulLHS != MulRHS) ||
         MulLHS->getOpcode() != MulRHS->getOpcode())
-      return BinOp;
+      return Op;
     VPBuilder Builder(Mul);
     Mul->setOperand(0, Builder.createWidenCast(MulLHS->getOpcode(),
                                                MulLHS->getOperand(0),
@@ -6094,7 +6098,7 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
     return Mul;
   }
 
-  return BinOp;
+  return Op;
 }
 
 // Helper to transform a partial reduction chain into a partial reduction
@@ -6105,14 +6109,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
   assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
 
-  VPValue *BinOpVal = WidenRecipe->getOperand(0);
-  VPValue *Accumulator = WidenRecipe->getOperand(1);
-
-  // Swap if needed to ensure Accumulator is the PHI or partial reduction.
-  if (isa<VPReductionPHIRecipe, VPReductionRecipe>(BinOpVal) ||
-      isa<VPExpressionRecipe>(BinOpVal))
-    std::swap(BinOpVal, Accumulator);
-  auto *BinOp = cast<VPSingleDefRecipe>(BinOpVal->getDefiningRecipe());
+  VPValue *Accumulator = WidenRecipe->getOperand(Chain.AccumulatorOpIdx);
+  auto *ExtendedOp = cast<VPSingleDefRecipe>(
+      WidenRecipe->getOperand(1 - Chain.AccumulatorOpIdx));
 
   // Sub-reductions can be implemented in two ways:
   // (1) negate the operand in the vector loop (the default way).
@@ -6131,17 +6130,17 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   if (WidenRecipe->getOpcode() == Instruction::Sub &&
       Chain.RK != RecurKind::Sub) {
     VPBuilder Builder(WidenRecipe);
-    Type *ElemTy = TypeInfo.inferScalarType(BinOp);
+    Type *ElemTy = TypeInfo.inferScalarType(ExtendedOp);
     auto *Zero = Plan.getZero(ElemTy);
     auto *NegRecipe =
-        new VPWidenRecipe(Instruction::Sub, {Zero, BinOp}, VPIRFlags(),
+        new VPWidenRecipe(Instruction::Sub, {Zero, ExtendedOp}, VPIRFlags(),
                           VPIRMetadata(), DebugLoc::getUnknown());
     Builder.insert(NegRecipe);
-    BinOp = NegRecipe;
+    ExtendedOp = NegRecipe;
   }
 
   // FIXME: Do these transforms before invoking the cost-model.
-  BinOp = optimizeExtendsForPartialReduction(BinOp, TypeInfo);
+  ExtendedOp = optimizeExtendsForPartialReduction(ExtendedOp, TypeInfo);
 
   // Check if WidenRecipe is the final result of the reduction. If so look
   // through selects for predicated reductions.
@@ -6161,7 +6160,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       RdxKind,
       RdxKind == RecurKind::FAdd ? WidenRecipe->getFastMathFlags()
                                  : FastMathFlags(),
-      WidenRecipe->getUnderlyingInstr(), Accumulator, BinOp, Cond,
+      WidenRecipe->getUnderlyingInstr(), Accumulator, ExtendedOp, Cond,
       RdxUnordered{/*VFScaleFactor=*/Chain.ScaleFactor});
   PartialRed->insertBefore(WidenRecipe);
 
@@ -6412,8 +6411,9 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
     // not have an invalid cost) for the given VF range. Clamps the range and
     // returns true if feasible for any VF.
     VPPartialReductionChain Link(
-        {UpdateR, *ExtendedOp,
-         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize)), RK});
+        {UpdateR, *ExtendedOp, RK,
+         PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
+         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize))});
     Chain.push_back(Link);
     CurrentValue = PrevValue;
   }
