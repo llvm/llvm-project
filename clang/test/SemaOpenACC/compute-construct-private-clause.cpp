@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -fopenacc -verify
 
-struct Incomplete;
+struct Incomplete; // #INCOMPLETE
 enum SomeE{};
 typedef struct IsComplete {
   struct S { int A; } CompositeMember;
@@ -172,3 +172,9 @@ void inst_crash() {
   ThisCrashed<int>(1, 2);
 }
 
+void incomplete_use(Incomplete &i) {
+  // expected-error@+2{{incomplete type 'Incomplete' where a complete type is required}}
+  // expected-note@#INCOMPLETE{{forward declaration}}
+#pragma acc parallel private(i)
+  while (1);
+}
