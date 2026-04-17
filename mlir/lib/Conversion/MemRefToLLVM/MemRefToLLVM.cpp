@@ -43,10 +43,6 @@ static constexpr LLVM::GEPNoWrapFlags kNoWrapFlags =
 
 namespace {
 
-static bool isStaticStrideOrOffset(int64_t strideOrOffset) {
-  return ShapedType::isStatic(strideOrOffset);
-}
-
 static FailureOr<LLVM::LLVMFuncOp>
 getFreeFn(OpBuilder &b, const LLVMTypeConverter *typeConverter,
           Operation *module, SymbolTableCollection *symbolTables) {
