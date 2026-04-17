@@ -139,7 +139,7 @@ static uint64_t getPGMRSrc1Reg(const SIProgramInfo &ProgInfo,
 static uint64_t getComputePGMRSrc2Reg(const GCNSubtarget &ST,
                                       const SIProgramInfo &ProgInfo) {
   uint64_t Reg = ST.hasGFX1250Insts()
-                     ? ((ProgInfo.UserSGPR & 0x3F) << 0x1)
+                     ? S_00B84C_USER_SGPR_GFX1250(ProgInfo.UserSGPR)
                      : (S_00B84C_USER_SGPR(ProgInfo.UserSGPR) |
                         S_00B84C_TRAP_HANDLER(ProgInfo.TrapHandlerEnable));
 
