@@ -2479,12 +2479,14 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel1 : f32)
   }
 
-  // Complex equality  →  bitcasted integer cmpxchg
-  // CHECK: store { float, float } %[[EC]], ptr %{{.*}}
-  // CHECK: %[[EINT:.*]] = load i64, ptr %{{.*}}
-  // CHECK: store { float, float } %[[DC]], ptr %{{.*}}
-  // CHECK: %[[DINT:.*]] = load i64, ptr %{{.*}}
-  // CHECK: cmpxchg ptr %[[XC]], i64 %[[EINT]], i64 %[[DINT]] monotonic monotonic
+  // Complex equality  →  bitcasted integer cmpxchg with consistent alignment
+  // CHECK: %[[EALLOCA:.*]] = alloca { float, float }, align [[ALIGN:[0-9]+]]
+  // CHECK: %[[DALLOCA:.*]] = alloca { float, float }, align [[ALIGN]]
+  // CHECK: store { float, float } %[[EC]], ptr %[[EALLOCA]], align [[ALIGN]]
+  // CHECK: %[[EINT:.*]] = load i64, ptr %[[EALLOCA]], align [[ALIGN]]
+  // CHECK: store { float, float } %[[DC]], ptr %[[DALLOCA]], align [[ALIGN]]
+  // CHECK: %[[DINT:.*]] = load i64, ptr %[[DALLOCA]], align [[ALIGN]]
+  // CHECK: cmpxchg ptr %[[XC]], i64 %[[EINT]], i64 %[[DINT]] monotonic monotonic, align [[ALIGN]]
   omp.atomic.compare %xc : !llvm.ptr {
   ^bb0(%xval : !llvm.struct<(f32, f32)>):
     %re_x = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
@@ -2498,8 +2500,8 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel : !llvm.struct<(f32, f32)>)
   }
 
-  // Integer x < e  →  atomicrmw umax (reversed, unsigned)
-  // CHECK: atomicrmw umax ptr %[[X]], i32 %[[E]] monotonic
+  // Integer x < e  →  atomicrmw max (signed)
+  // CHECK: atomicrmw max ptr %[[X]], i32 %[[E]] monotonic
   omp.atomic.compare %x : !llvm.ptr {
   ^bb0(%xval : i32):
     %cmp2 = llvm.icmp "slt" %xval, %e : i32
@@ -2507,8 +2509,8 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel2 : i32)
   }
 
-  // Integer x > e  →  atomicrmw umin (reversed, unsigned)
-  // CHECK: atomicrmw umin ptr %[[X]], i32 %[[E]] monotonic
+  // Integer x > e  →  atomicrmw min (signed)
+  // CHECK: atomicrmw min ptr %[[X]], i32 %[[E]] monotonic
   omp.atomic.compare %x : !llvm.ptr {
   ^bb0(%xval : i32):
     %cmp3 = llvm.icmp "sgt" %xval, %e : i32

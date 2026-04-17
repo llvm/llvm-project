@@ -4532,8 +4532,13 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
         "unable to determine element type for atomic compare");
 
   llvm::Value *llvmX = moduleTranslation.lookupValue(atomicCompareOp.getX());
+
+  // Fortran integers are signed, and the OpenMPIRBuilder may use signedness
+  // for GT/LT atomic compare operations. Set IsSigned=true to produce correct
+  // code for all valid inputs.
   llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicX = {llvmX, llvmXElementType,
-                                                      false, false};
+                                                      /*IsSigned=*/true,
+                                                      /*IsVolatile=*/false};
 
   llvm::AtomicOrdering atomicOrdering =
       convertAtomicOrdering(atomicCompareOp.getMemoryOrder());
@@ -4630,23 +4635,41 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
         builder.GetInsertBlock()->getModule()->getDataLayout();
     unsigned totalBits =
         DL.getTypeStoreSizeInBits(llvmXElementType).getFixedValue();
+
+    // Reject complex types wider than 128 bits (e.g. COMPLEX(16) would be
+    // i256). Major LLVM backends do not natively support cmpxchg for such
+    // wide integer types, resulting in code having libcall within a lock/mutex.
+    if (totalBits > 128)
+      return atomicCompareOp.emitError(
+          "atomic compare for complex types wider than 128 bits is not "
+          "supported (requires i" +
+          llvm::Twine(totalBits) + " cmpxchg)");
+
     llvm::IntegerType *intTy =
         llvm::IntegerType::get(builder.getContext(), totalBits);
 
-    llvm::Value *eAlloca =
-        builder.CreateAlloca(llvmXElementType, nullptr, "cmplx.e");
-    llvm::Value *dAlloca =
-        builder.CreateAlloca(llvmXElementType, nullptr, "cmplx.d");
+    llvm::Align complexAlign = DL.getABITypeAlign(llvmXElementType);
+    llvm::Align intAlign = DL.getABITypeAlign(intTy);
+    llvm::Align maxAlign = std::max(complexAlign, intAlign);
 
-    builder.CreateStore(eVal, eAlloca);
-    llvm::Value *eInt = builder.CreateLoad(intTy, eAlloca, "cmplx.e.int");
-    builder.CreateStore(dVal, dAlloca);
-    llvm::Value *dInt = builder.CreateLoad(intTy, dAlloca, "cmplx.d.int");
+    llvm::AllocaInst *eAlloca =
+        builder.CreateAlloca(llvmXElementType, nullptr, "cmplx.e");
+    eAlloca->setAlignment(maxAlign);
+    llvm::AllocaInst *dAlloca =
+        builder.CreateAlloca(llvmXElementType, nullptr, "cmplx.d");
+    dAlloca->setAlignment(maxAlign);
+
+    builder.CreateAlignedStore(eVal, eAlloca, maxAlign);
+    llvm::Value *eInt =
+        builder.CreateAlignedLoad(intTy, eAlloca, maxAlign, "cmplx.e.int");
+    builder.CreateAlignedStore(dVal, dAlloca, maxAlign);
+    llvm::Value *dInt =
+        builder.CreateAlignedLoad(intTy, dAlloca, maxAlign, "cmplx.d.int");
 
     llvm::AtomicOrdering failOrdering =
         llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
-    builder.CreateAtomicCmpXchg(llvmX, eInt, dInt, llvm::MaybeAlign(),
-                                atomicOrdering, failOrdering);
+    builder.CreateAtomicCmpXchg(llvmX, eInt, dInt, maxAlign, atomicOrdering,
+                                failOrdering);
 
     return success();
   } else {
