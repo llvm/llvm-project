@@ -42,17 +42,23 @@ void DominanceInfoBase<IsPostDom>::invalidate() {
 
 template <bool IsPostDom>
 void DominanceInfoBase<IsPostDom>::invalidate(Region *region) {
-  SmallVector<Region *> regions = {region};
-  region->walk([&](Operation *op) {
-    for (Region &r : op->getRegions())
-      regions.push_back(&r);
-  });
-  for (Region *region : regions) {
-    auto it = dominanceInfos.find(region);
-    if (it != dominanceInfos.end()) {
-      delete it->second.getPointer();
-      dominanceInfos.erase(it);
-    }
+  auto it = dominanceInfos.find(region);
+  if (it != dominanceInfos.end()) {
+    delete it->second.getPointer();
+    dominanceInfos.erase(it);
+  }
+
+  // Invalidate dominator trees of nested sub-regions.
+  if (region) {
+    region->walk([&](Operation *op) {
+      for (Region &region : op->getRegions()) {
+        auto it = dominanceInfos.find(&region);
+        if (it != dominanceInfos.end()) {
+          delete it->second.getPointer();
+          dominanceInfos.erase(it);
+        }
+      }
+    });
   }
 }
 
