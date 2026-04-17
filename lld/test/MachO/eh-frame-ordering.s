@@ -15,14 +15,17 @@
 # RUN: %lld -arch arm64 -lSystem -lc++ %t-arm64.o -o %t-arm64 --bp-compression-sort=both
 # RUN: llvm-objdump --dwarf=frames %t-arm64 2>&1 | FileCheck %s --implicit-check-not=error --implicit-check-not=warning
 
-## Verify that CIE records precede their FDE records, that no CIE
-## appears after the first FDE, and that no parse errors occur.
+## Verify that __eh_frame starts with a CIE (not an FDE), contains both
+## CIEs and FDEs, and that no parse errors occur. The test uses two
+## personality functions, producing two CIE groups (CIE_A + FDEs, CIE_B +
+## FDEs). The --implicit-check-not flags above ensure no FDE fails to
+## resolve its CIE pointer.
 # CHECK: .eh_frame contents:
 # CHECK: {{[0-9a-f]+}} {{.*}} CIE
 # CHECK: {{[0-9a-f]+}} {{.*}} FDE
-# CHECK-NOT: CIE
 # CHECK: {{[0-9a-f]+}} {{.*}} FDE
-# CHECK-NOT: CIE
+# CHECK: {{[0-9a-f]+}} {{.*}} FDE
+# CHECK: {{[0-9a-f]+}} {{.*}} FDE
 
 .globl _my_personality_a, _my_personality_b, _main
 
