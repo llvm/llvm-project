@@ -32,9 +32,8 @@ static mlir::Value emitBinaryExpMaybeConstrainedFPBuiltin(
   CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, e);
 
   if (builder.getIsFPConstrained()) {
-    return builder.emitIntrinsicCallOp(loc, constrainedIntrinsicName,
-                                       src0.getType(),
-                                       mlir::ValueRange{src0, src1});
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "constrained FP intrinsic support is NYI.");
   }
 
   return builder.emitIntrinsicCallOp(loc, intrinsicName, src0.getType(),
