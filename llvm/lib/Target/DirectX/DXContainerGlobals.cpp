@@ -300,9 +300,8 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
       MMI.ShaderProfile != Triple::RootSignature)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
-  // use the latest version
-  uint32_t Version = std::numeric_limits<uint32_t>::max();
-  PSV.finalize(MMI.ShaderProfile, Version);
+  // Use the latest version.
+  PSV.finalize(MMI.ShaderProfile);
   PSV.write(OS);
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);

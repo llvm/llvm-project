@@ -776,7 +776,7 @@ void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
     return;
   }
 
-  IO.mapRequired("EntryName", EntryName);
+  IO.mapOptional("EntryName", EntryName);
 }
 
 } // namespace llvm

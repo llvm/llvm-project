@@ -201,7 +201,8 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       mcdxbc::PSVRuntimeInfo PSV;
       memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v3::RuntimeInfo));
       PSV.Resources = P.Info->Resources;
-      PSV.EntryName = P.Info->EntryName;
+      if (P.Info->Version >= 3)
+        PSV.EntryName = P.Info->EntryName;
 
       for (auto El : P.Info->SigInputElements)
         PSV.InputElements.push_back(mcdxbc::PSVSignatureElement{
@@ -242,8 +243,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
                                 P.Info->PatchOutputMap.end());
 
       PSV.finalize(static_cast<Triple::EnvironmentType>(
-                       Triple::Pixel + P.Info->Info.ShaderStage),
-                   P.Info->Version);
+          Triple::Pixel + P.Info->Info.ShaderStage));
       PSV.write(OS, P.Info->Version);
       break;
     }
