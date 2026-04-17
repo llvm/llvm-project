@@ -300,19 +300,19 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapOptional("OpcodeBase", LineTable.OpcodeBase);
   IO.mapOptional("StandardOpcodeLengths", LineTable.StandardOpcodeLengths);
   if (LineTable.Version >= 5) {
-    IO.mapRequired("DirectoryEntryFormat", LineTable.DirectoryEntryFormat);
+    IO.mapOptional("DirectoryEntryFormat", LineTable.DirectoryEntryFormat);
     IO.mapOptional("DirectoryEntryFormatCount",
                    LineTable.DirectoryEntryFormatCount,
                    LineTable.DirectoryEntryFormat.size());
-    IO.mapRequired("Directories", LineTable.Directories);
+    IO.mapOptional("Directories", LineTable.Directories);
     IO.mapOptional("DirectoriesCount", LineTable.DirectoriesCount,
                    LineTable.Directories.size());
 
-    IO.mapRequired("FileNameEntryFormat", LineTable.FileNameEntryFormat);
+    IO.mapOptional("FileNameEntryFormat", LineTable.FileNameEntryFormat);
     IO.mapOptional("FileNameEntryFormatCount",
                    LineTable.FileNameEntryFormatCount,
                    LineTable.FileNameEntryFormat.size());
-    IO.mapRequired("FileNames", LineTable.FileNames);
+    IO.mapOptional("FileNames", LineTable.FileNames);
     IO.mapOptional("FileNamesCount", LineTable.FileNamesCount,
                    LineTable.FileNames.size());
   } else {

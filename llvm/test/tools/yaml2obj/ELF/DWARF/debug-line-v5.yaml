@@ -20,10 +20,6 @@ DWARF:
       LineBase:            1
       LineRange:           14
       OpcodeBase:          13
-      DirectoryEntryFormat:
-      Directories:
-      FileNameEntryFormat:
-      FileNames:
 
 # RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB -DFORMAT=DWARF32 %s | \
 # RUN:   llvm-readelf --hex-dump=.debug_line - | \
@@ -155,12 +151,10 @@ DWARF:
       DirectoryEntryFormat:
         - ContentType:     DW_LNCT_path
           Form:            DW_FORM_string
-      Directories:
       FileNameEntryFormatCount: 1  # Explicit
       FileNameEntryFormat:
         - ContentType:     DW_LNCT_path
           Form:            DW_FORM_string
-      FileNames:
 
 # RUN: yaml2obj --docnum=2 %s | llvm-readelf --hex-dump=.debug_line - | \
 # RUN:   FileCheck %s --check-prefix=FORMATCNT1
@@ -212,12 +206,10 @@ DWARF:
       DirectoryEntryFormat:
         - ContentType:     DW_LNCT_path
           Form:            DW_FORM_string
-      Directories:
       FileNameEntryFormatCount: 2  # Larger than the array length
       FileNameEntryFormat:
         - ContentType:     DW_LNCT_path
           Form:            DW_FORM_string
-      FileNames:
 
 # RUN: yaml2obj --docnum=3 %s | llvm-readelf --hex-dump=.debug_line - | \
 # RUN:   FileCheck %s --check-prefix=FORMATCNT2
