@@ -187,6 +187,15 @@ void DynamicLoaderAIXDYLD::ResolveExecutableModule(
       LLDB_LOGF(log, "Realpath error: Unable to resolve. ");
   }
   
+  if(path_resolved == false) {
+    std::string exe_path(psinfo.pr_psargs);
+    std::string full_path = std::string(cwd) + exe_path.c_str();
+    if (realpath(full_path.c_str(), resolved_path) != nullptr) {
+      LLDB_LOG(log, "Resolved executable path via real path : {0}", resolved_path);
+      path_resolved = true;
+    }
+  }
+
   executable_name = resolved_path;
   if(path_resolved == false) {
       std::string command_line(psinfo.pr_psargs);
