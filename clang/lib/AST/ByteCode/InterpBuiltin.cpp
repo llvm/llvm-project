@@ -4413,6 +4413,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_leading_zeros_uc:
+  case Builtin::BIstdc_leading_zeros_us:
+  case Builtin::BIstdc_leading_zeros_ui:
+  case Builtin::BIstdc_leading_zeros_ul:
+  case Builtin::BIstdc_leading_zeros_ull:
   case Builtin::BIstdc_leading_zeros:
   case Builtin::BI__builtin_stdc_leading_zeros: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4422,6 +4427,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_leading_ones_uc:
+  case Builtin::BIstdc_leading_ones_us:
+  case Builtin::BIstdc_leading_ones_ui:
+  case Builtin::BIstdc_leading_ones_ul:
+  case Builtin::BIstdc_leading_ones_ull:
   case Builtin::BIstdc_leading_ones:
   case Builtin::BI__builtin_stdc_leading_ones: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4431,6 +4441,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_trailing_zeros_uc:
+  case Builtin::BIstdc_trailing_zeros_us:
+  case Builtin::BIstdc_trailing_zeros_ui:
+  case Builtin::BIstdc_trailing_zeros_ul:
+  case Builtin::BIstdc_trailing_zeros_ull:
   case Builtin::BIstdc_trailing_zeros:
   case Builtin::BI__builtin_stdc_trailing_zeros: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4440,6 +4455,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_trailing_ones_uc:
+  case Builtin::BIstdc_trailing_ones_us:
+  case Builtin::BIstdc_trailing_ones_ui:
+  case Builtin::BIstdc_trailing_ones_ul:
+  case Builtin::BIstdc_trailing_ones_ull:
   case Builtin::BIstdc_trailing_ones:
   case Builtin::BI__builtin_stdc_trailing_ones: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4449,6 +4469,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_first_leading_zero_uc:
+  case Builtin::BIstdc_first_leading_zero_us:
+  case Builtin::BIstdc_first_leading_zero_ui:
+  case Builtin::BIstdc_first_leading_zero_ul:
+  case Builtin::BIstdc_first_leading_zero_ull:
   case Builtin::BIstdc_first_leading_zero:
   case Builtin::BI__builtin_stdc_first_leading_zero: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4458,6 +4483,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_first_leading_one_uc:
+  case Builtin::BIstdc_first_leading_one_us:
+  case Builtin::BIstdc_first_leading_one_ui:
+  case Builtin::BIstdc_first_leading_one_ul:
+  case Builtin::BIstdc_first_leading_one_ull:
   case Builtin::BIstdc_first_leading_one:
   case Builtin::BI__builtin_stdc_first_leading_one: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4467,6 +4497,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_first_trailing_zero_uc:
+  case Builtin::BIstdc_first_trailing_zero_us:
+  case Builtin::BIstdc_first_trailing_zero_ui:
+  case Builtin::BIstdc_first_trailing_zero_ul:
+  case Builtin::BIstdc_first_trailing_zero_ull:
   case Builtin::BIstdc_first_trailing_zero:
   case Builtin::BI__builtin_stdc_first_trailing_zero: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4476,6 +4511,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_first_trailing_one_uc:
+  case Builtin::BIstdc_first_trailing_one_us:
+  case Builtin::BIstdc_first_trailing_one_ui:
+  case Builtin::BIstdc_first_trailing_one_ul:
+  case Builtin::BIstdc_first_trailing_one_ull:
   case Builtin::BIstdc_first_trailing_one:
   case Builtin::BI__builtin_stdc_first_trailing_one: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4485,6 +4525,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_count_zeros_uc:
+  case Builtin::BIstdc_count_zeros_us:
+  case Builtin::BIstdc_count_zeros_ui:
+  case Builtin::BIstdc_count_zeros_ul:
+  case Builtin::BIstdc_count_zeros_ull:
   case Builtin::BIstdc_count_zeros:
   case Builtin::BI__builtin_stdc_count_zeros: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4495,6 +4540,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_count_ones_uc:
+  case Builtin::BIstdc_count_ones_us:
+  case Builtin::BIstdc_count_ones_ui:
+  case Builtin::BIstdc_count_ones_ul:
+  case Builtin::BIstdc_count_ones_ull:
   case Builtin::BIstdc_count_ones:
   case Builtin::BI__builtin_stdc_count_ones: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4504,6 +4554,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_has_single_bit_uc:
+  case Builtin::BIstdc_has_single_bit_us:
+  case Builtin::BIstdc_has_single_bit_ui:
+  case Builtin::BIstdc_has_single_bit_ul:
+  case Builtin::BIstdc_has_single_bit_ull:
   case Builtin::BIstdc_has_single_bit:
   case Builtin::BI__builtin_stdc_has_single_bit: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4513,6 +4568,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_bit_width_uc:
+  case Builtin::BIstdc_bit_width_us:
+  case Builtin::BIstdc_bit_width_ui:
+  case Builtin::BIstdc_bit_width_ul:
+  case Builtin::BIstdc_bit_width_ull:
   case Builtin::BIstdc_bit_width:
   case Builtin::BI__builtin_stdc_bit_width: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
@@ -4523,6 +4583,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_bit_floor_uc:
+  case Builtin::BIstdc_bit_floor_us:
+  case Builtin::BIstdc_bit_floor_ui:
+  case Builtin::BIstdc_bit_floor_ul:
+  case Builtin::BIstdc_bit_floor_ull:
   case Builtin::BIstdc_bit_floor:
   case Builtin::BI__builtin_stdc_bit_floor:
     return interp__builtin_elementwise_int_unaryop(
@@ -4534,6 +4599,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                                      BitWidth - Val.countl_zero() - 1);
         });
 
+  case Builtin::BIstdc_bit_ceil_uc:
+  case Builtin::BIstdc_bit_ceil_us:
+  case Builtin::BIstdc_bit_ceil_ui:
+  case Builtin::BIstdc_bit_ceil_ul:
+  case Builtin::BIstdc_bit_ceil_ull:
   case Builtin::BIstdc_bit_ceil:
   case Builtin::BI__builtin_stdc_bit_ceil:
     return interp__builtin_elementwise_int_unaryop(
