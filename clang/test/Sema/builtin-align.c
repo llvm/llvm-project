@@ -133,5 +133,5 @@ char *test_array_and_fnptr(void) {
   (void)(ALIGN_BUILTIN(buf, 16));
   // But not on functions and function pointers:
   (void)(ALIGN_BUILTIN(test_array_and_fnptr, 16));  // expected-error{{operand of type 'char *(void)' where arithmetic or pointer type is required}}
-  (void)(ALIGN_BUILTIN(&test_array_and_fnptr, 16)); // expected-error{{operand of type 'char *(*)(void)' where arithmetic or pointer type is required}}
+  (void)(ALIGN_BUILTIN(&test_array_and_fnptr, 16)); // expected-error{{operand of type 'char *(*)(void)' where arithmetic or pointer type is required}} expected-note{{function pointers are not allowed here}}
 }
