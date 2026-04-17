@@ -1766,7 +1766,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_global_load_async_to_lds_b8,
                     amdgcn_global_load_async_to_lds_b32,
                     amdgcn_global_load_async_to_lds_b64,
-                    amdgcn_global_load_async_to_lds_b128})
+                    amdgcn_global_load_async_to_lds_b128,
+                    amdgcn_global_store_async_from_lds_b8,
+                    amdgcn_global_store_async_from_lds_b32,
+                    amdgcn_global_store_async_from_lds_b64,
+                    amdgcn_global_store_async_from_lds_b128})
       .Any({{}, {{}, {IntrId, VgprP1, VgprP3}}});
 
   addRulesForIOpcs({amdgcn_perm_pk16_b4_u4}, StandardB)
