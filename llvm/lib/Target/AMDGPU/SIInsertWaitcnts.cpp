@@ -226,8 +226,13 @@ static const unsigned
 // ASYNCMARK and WAIT_ASYNCMARK are meta instructions that emit no hardware
 // code but still need to be processed by this pass for async vmcnt tracking.
 static bool isNonWaitcntMetaInst(const MachineInstr &MI) {
-  return MI.isMetaInstruction() && MI.getOpcode() != AMDGPU::ASYNCMARK &&
-         MI.getOpcode() != AMDGPU::WAIT_ASYNCMARK;
+  switch (MI.getOpcode()) {
+  case AMDGPU::ASYNCMARK:
+  case AMDGPU::WAIT_ASYNCMARK:
+    return false;
+  default:
+    return MI.isMetaInstruction();
+  }
 }
 
 static bool updateVMCntOnly(const MachineInstr &Inst) {
