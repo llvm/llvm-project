@@ -4684,7 +4684,8 @@ public:
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.
   VPBasicBlock *getScalarPreheader() const {
-    return cast<VPBasicBlock>(getScalarHeader()->getSinglePredecessor());
+    return dyn_cast_or_null<VPBasicBlock>(
+        getScalarHeader()->getSinglePredecessor());
   }
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
@@ -4947,8 +4948,9 @@ public:
   /// if the middle block is a predecessor of the scalar preheader. Note that
   /// this relies on unneeded branches to the scalar tail loop being removed.
   bool hasScalarTail() const {
-    return is_contained(getScalarPreheader()->getPredecessors(),
-                        getMiddleBlock());
+    auto *ScalarPH = getScalarPreheader();
+    return ScalarPH &&
+           is_contained(ScalarPH->getPredecessors(), getMiddleBlock());
   }
 };
 
