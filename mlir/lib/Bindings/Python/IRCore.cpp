@@ -20,6 +20,7 @@
 #include "mlir-c/Support.h"
 
 #include <array>
+#include <cassert>
 #include <functional>
 #include <optional>
 #include <string>
@@ -2745,6 +2746,8 @@ applyCurrentLocAction(MlirContext ctx, MlirLocation baseLoc,
   auto *currentLoc = PyThreadContextEntry::getDefaultLocation();
   if (!currentLoc)
     return baseLoc;
+  assert(mlirLocationGetContext(currentLoc->get()).ptr == ctx.ptr &&
+         "Location.current must belong to the current MLIR context");
 
   // NamelocWrap: walk the NameLoc chain on Location.current, collect scope
   // names, wrap baseLoc innermost-first so result is Outer(Inner(baseLoc)).
