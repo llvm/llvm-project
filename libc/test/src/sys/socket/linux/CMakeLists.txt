@@ -80,6 +80,26 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  socketopt_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    socketopt_test.cpp
+  DEPENDS
+    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.socklen_t
+    libc.src.errno.errno
+    libc.src.sys.socket.getsockopt
+    libc.src.sys.socket.setsockopt
+    libc.src.sys.socket.socket
+    libc.src.unistd.close
+    libc.src.unistd.pipe
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
   socketpair_test
   SUITE
     libc_sys_socket_unittests

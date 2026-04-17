@@ -12,6 +12,7 @@
 #include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/IR/AffineExpr.h"
@@ -20,6 +21,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <utility>
@@ -2009,6 +2011,26 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
     for (auto [origIdx, newIdx] : ifResultMapping)
       rewriter.replaceAllUsesExcept(newWarpOp.getResult(origIdx),
                                     newIfOp.getResult(newIdx), newIfOp);
+
+    // The original `ifOp` was left inside `newWarpOp` with empty then/else
+    // regions (their blocks were moved into the inner WarpOps by takeBody).
+    // Clear remaining uses and erase it to restore IR validity. Directly
+    // update newWarpOp's yield operands instead of using replaceAllUsesWith,
+    // to avoid triggering notifyOperandReplaced on the now-invalid ifOp.
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(ifOp);
+      Operation *yield = newWarpOp.getTerminator();
+      rewriter.modifyOpInPlace(yield, [&]() {
+        for (auto [origIdx, ifResultIdx] : ifResultMapping) {
+          Value poison = ub::PoisonOp::create(
+              rewriter, ifOp.getLoc(), ifOp.getResult(ifResultIdx).getType());
+          yield->setOperand(origIdx, poison);
+        }
+      });
+      rewriter.eraseOp(ifOp);
+    }
+
     return success();
   }
 
@@ -2080,6 +2102,7 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     SmallVector<unsigned> nonForResultIndices;
     llvm::SmallDenseMap<unsigned, unsigned> forResultMapping;
     llvm::SmallDenseMap<unsigned, VectorType> forResultDistTypes;
+    llvm::SmallBitVector forResultsMapped(forOp.getNumResults());
     for (OpOperand &yieldOperand : warpOpYield->getOpOperands()) {
       // Yielded value is not a result of the forOp.
       if (yieldOperand.get().getDefiningOp() != forOp.getOperation()) {
@@ -2090,6 +2113,7 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
       OpResult forResult = cast<OpResult>(yieldOperand.get());
       unsigned int forResultNumber = forResult.getResultNumber();
       forResultMapping[yieldOperand.getOperandNumber()] = forResultNumber;
+      forResultsMapped.set(forResultNumber);
       // If this `ForOp` result is vector type and it is yielded by the
       // `WarpOp`, we keep track the distributed type for this result.
       if (!isa<VectorType>(forResult.getType()))
@@ -2224,6 +2248,17 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     for (auto [origIdx, newIdx] : forResultMapping)
       rewriter.replaceAllUsesExcept(newWarpOp.getResult(origIdx),
                                     newForOp.getResult(newIdx), newForOp);
+
+    // The original `ForOp` was left inside `newWarpOp` with an empty body
+    // region (its body block was moved into `innerWarp` by `mergeBlocks`).
+    // Clear remaining uses and erase it to restore IR validity.
+    for (OpResult result : forOp.getResults()) {
+      if (forResultsMapped.test(result.getResultNumber()))
+        rewriter.replaceAllUsesWith(
+            result, forOp.getInitArgs()[result.getResultNumber()]);
+    }
+    rewriter.eraseOp(forOp);
+
     // Update any users of escaping values that were forwarded to the
     // inner `WarpOp`. These values are now arguments of the inner `WarpOp`.
     newForOp.walk([&](Operation *op) {

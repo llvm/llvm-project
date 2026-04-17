@@ -945,7 +945,7 @@ void VPlan::execute(VPTransformState *State) {
 
   BasicBlock *ScalarPh = State->CFG.ExitBB;
   VPBasicBlock *ScalarPhVPBB = getScalarPreheader();
-  if (ScalarPhVPBB->hasPredecessors()) {
+  if (ScalarPhVPBB) {
     // Disconnect scalar preheader and scalar header, as the dominator tree edge
     // will be updated as part of VPlan execution. This allows keeping the DTU
     // logic generic during VPlan execution.
@@ -993,7 +993,7 @@ void VPlan::execute(VPTransformState *State) {
   }
 
   // If the original loop is unreachable, delete it and all its blocks.
-  if (!ScalarPhVPBB->hasPredecessors()) {
+  if (!ScalarPhVPBB) {
     // DeleteDeadBlocks will remove single-entry phis. Remove them from the exit
     // VPIRBBs in VPlan as well, otherwise we would retain references to deleted
     // IR instructions.
@@ -1007,7 +1007,7 @@ void VPlan::execute(VPTransformState *State) {
     Loop *OrigLoop =
         State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
     auto Blocks = OrigLoop->getBlocksVector();
-    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
+    Blocks.push_back(ScalarPh);
     while (!OrigLoop->isInnermost())
       State->LI->erase(*OrigLoop->begin());
     State->LI->erase(OrigLoop);
@@ -1615,6 +1615,21 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   return "<badref>";
 }
 
+VPInstruction *VPBuilder::createAnyOfReduction(VPValue *ChainOp,
+                                               VPValue *TrueVal,
+                                               VPValue *FalseVal, DebugLoc DL) {
+  assert(VPTypeAnalysis(*getInsertBlock()->getPlan())
+             .inferScalarType(ChainOp)
+             ->isIntegerTy(1) &&
+         "ChainOp must be i1 for AnyOf reduction");
+  VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                  FastMathFlags());
+  auto *OrReduce =
+      createNaryOp(VPInstruction::ComputeReductionResult, {ChainOp}, Flags, DL);
+  auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
+  return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
+}
+
 bool LoopVectorizationPlanner::getDecisionAndClampRange(
     const std::function<bool(ElementCount)> &Predicate, VFRange &Range) {
   assert(!Range.isEmpty() && "Trying to test an empty VF range.");
@@ -1710,7 +1725,8 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   // Update the metadata of the scalar loop. Skip the update when vectorizing
   // the epilogue loop to ensure it is updated only once. Also skip the update
   // when the scalar loop became unreachable.
-  if (Plan.getScalarPreheader()->hasPredecessors() && !VectorizingEpilogue) {
+  auto *ScalarPH = Plan.getScalarPreheader();
+  if (ScalarPH && !VectorizingEpilogue) {
     std::optional<MDNode *> RemainderLoopID =
         makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                         LLVMLoopVectorizeFollowupEpilogue});
@@ -1772,7 +1788,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
     AverageVectorTripCount = SE.getSmallConstantTripCount(VectorLoop);
     if (ProfcheckDisableMetadataFixes || !AverageVectorTripCount)
       return;
-    if (Plan.getScalarPreheader()->hasPredecessors())
+    if (ScalarPH)
       RemainderAverageTripCount =
           SE.getSmallConstantTripCount(OrigLoop) % EstimatedVFxUF;
     // Setting to 1 should be sufficient to generate the correct branch weights.
@@ -1788,7 +1804,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
                               OrigLoopInvocationWeight);
   }
 
-  if (Plan.getScalarPreheader()->hasPredecessors()) {
+  if (ScalarPH) {
     setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
                               OrigLoopInvocationWeight);
   }

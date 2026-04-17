@@ -63,6 +63,8 @@ to be applied to hand-written assembly, including inline assembly.
 Compiler Options
 ================
 
+**Note**: these options are not yet implemented.
+
 The LFI target has several configuration options.
 
 * ``+lfi-loads``: enable sandboxing for loads (default: true).
@@ -71,7 +73,7 @@ The LFI target has several configuration options.
 Use ``+nolfi-loads`` to create a "stores-only" sandbox that may read, but not
 write, outside the sandbox region.
 
-Use ``+nolfi-loads+nolfi-stores`` to create a "jumps-only" sandbox that may
+Use ``+nolfi-loads,+nolfi-stores`` to create a "jumps-only" sandbox that may
 read/write outside the sandbox region but may not transfer control outside
 (e.g., may not execute system calls directly). This is primarily useful in
 combination with some other form of memory sandboxing, such as Intel MPK.
@@ -83,12 +85,35 @@ The LFI target uses a custom ABI that reserves additional registers for the
 platform. The registers are listed below, along with the security invariant
 that must be maintained.
 
-* ``x27``: always holds the sandbox base address.
+* ``x27``: always holds the sandbox base address (must be aligned to the size
+  of the sandbox).
 * ``x28``: always holds an address within the sandbox.
 * ``sp``: always holds an address within the sandbox.
 * ``x30``: always holds an address within the sandbox.
 * ``x26``: scratch register.
-* ``x25``: points to a thread-local virtual register file for storing runtime context information.
+* ``x25``: context register (see below).
+
+The current design only supports 4GiB sandboxes, which requires the sandbox
+base address to be 4GiB-aligned. This is because LFI's ABI stores pointers as
+their full 64-bit values, rather than just 32-bit offsets from the base. This
+enables stores-only mode, where loads are not sandboxed but stores are, and
+allows the host to directly pass pointers to the sandbox.
+
+Context Register
+~~~~~~~~~~~~~~~~
+
+The context register (``x25``) points to a block of thread-local memory managed
+by the LFI runtime. The layout is as follows:
+
++--------+--------+----------------------------------------------+
+| Offset | Size   | Description                                  |
++--------+--------+----------------------------------------------+
+| 0      | 8      | Reserved for future use.                     |
++--------+--------+----------------------------------------------+
+| 8      | 8      | Reserved for use by the LFI runtime.         |
++--------+--------+----------------------------------------------+
+| 16     | 8      | Virtual thread pointer (used for TP access). |
++--------+--------+----------------------------------------------+
 
 Linker Support
 ==============
@@ -115,6 +140,8 @@ In the following assembly rewrites, some shorthand is used.
 Control flow
 ~~~~~~~~~~~~
 
+**Note**: not yet implemented.
+
 Indirect branches get rewritten to branch through register ``x28``, which must
 always contain an address within the sandbox. An ``add`` is used to safely
 update ``x28`` with the destination address. Since ``ret`` uses ``x30`` by
@@ -138,6 +165,8 @@ require any rewrite.
 
 Memory accesses
 ~~~~~~~~~~~~~~~
+
+**Note**: not yet implemented.
 
 Memory accesses are rewritten to use the ``[x27, wM, uxtw]`` addressing mode if
 it is available, which is automatically safe. Otherwise, rewrites fall back to
@@ -219,6 +248,8 @@ address.
 Stack pointer modification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+**Note**: not yet implemented.
+
 When the stack pointer is modified, we write the modified value to a temporary,
 before moving it back into ``sp`` with a safe ``add``.
 
@@ -239,6 +270,8 @@ before moving it back into ``sp`` with a safe ``add``.
 
 Link register modification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Note**: not yet implemented.
 
 When the link register is modified, we write the modified value to a
 temporary, before loading it back into ``x30`` with a safe ``add``.
@@ -270,49 +303,50 @@ System instructions
 
 System calls are rewritten into a sequence that loads the address of the first
 runtime call entrypoint and jumps to it. The runtime call entrypoint table is
-stored at the start of the sandbox, so it can be referenced by ``x27``. The
-rewrite also saves and restores the link register, since it is used for
-branching into the runtime.
+stored at a negative offset from the sandbox base, so it can be referenced by
+``x27``. The rewrite also saves and restores the link register, since it is
+used for branching into the runtime.
 
-+-----------------+----------------------------+
-|    Original     |         Rewritten          |
-+-----------------+----------------------------+
-| .. code-block:: | .. code-block::            |
-|                 |                            |
-|    svc #0       |    mov w26, w30            |
-|                 |    ldr x30, [x27]          |
-|                 |    blr x30                 |
-|                 |    add x30, x27, w26, uxtw |
-|                 |                            |
-+-----------------+----------------------------+
++-----------------+------------------------------+
+|    Original     |          Rewritten           |
++-----------------+------------------------------+
+| .. code-block:: | .. code-block::              |
+|                 |                              |
+|    svc #0       |    mov x26, x30              |
+|                 |    ldur x30, [x27, #-8]      |
+|                 |    blr x30                   |
+|                 |    add x30, x27, w26, uxtw   |
+|                 |                              |
++-----------------+------------------------------+
 
 Thread-local storage
 ~~~~~~~~~~~~~~~~~~~~
 
-TLS accesses are rewritten into accesses offset from ``x25``, which is a
-reserved register that points to a virtual register file, with a location for
-storing the sandbox's thread pointer. ``TP`` is the offset into that virtual
-register file where the thread pointer is stored.
+TLS accesses are rewritten into loads/stores from the context register
+(``x25``), which holds the virtual thread pointer at offset 16 (see
+`Context Register`_).
 
-+----------------------+-----------------------+
-|       Original       |       Rewritten       |
-+----------------------+-----------------------+
-| .. code-block::      | .. code-block::       |
-|                      |                       |
-|    mrs xN, tpidr_el0 |    ldr xN, [x25, #TP] |
-|                      |                       |
-+----------------------+-----------------------+
-| .. code-block::      | .. code-block::       |
-|                      |                       |
-|    mrs tpidr_el0, xN |    str xN, [x25, #TP] |
-|                      |                       |
-+----------------------+-----------------------+
++----------------------+-------------------------+
+|       Original       |        Rewritten        |
++----------------------+-------------------------+
+| .. code-block::      | .. code-block::         |
+|                      |                         |
+|    mrs xN, tpidr_el0 |    ldr xN, [x25, #16]   |
+|                      |                         |
++----------------------+-------------------------+
+| .. code-block::      | .. code-block::         |
+|                      |                         |
+|    msr tpidr_el0, xN |    str xN, [x25, #16]   |
+|                      |                         |
++----------------------+-------------------------+
 
 Optimizations
 =============
 
 Basic guard elimination
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+**Note**: not yet implemented.
 
 If a register is guarded multiple times in the same basic block without any
 modifications to it during the intervening instructions, then subsequent guards
@@ -335,6 +369,8 @@ can be removed.
 Address generation
 ~~~~~~~~~~~~~~~~~~
 
+**Note**: not yet implemented.
+
 Addresses to global symbols in position-independent executables are frequently
 generated via ``adrp`` followed by ``ldr``. Since the address generated by
 ``adrp`` can be statically guaranteed to be within the sandbox, it is safe to
@@ -354,7 +390,7 @@ guard instruction before the ``ldr``.
 Stack guard elimination
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Note**: this optimization has not been implemented.
+**Note**: not yet implemented.
 
 If the stack pointer is modified by adding/subtracting a small immediate, and
 then later used to perform a memory access without any intervening jumps, then
@@ -377,7 +413,7 @@ the sandbox region.
 Guard hoisting
 ~~~~~~~~~~~~~~
 
-**Note**: this optimization has not been implemented.
+**Note**: not yet implemented.
 
 In certain cases, guards may be hoisted outside of loops.
 

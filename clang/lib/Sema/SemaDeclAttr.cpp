@@ -2360,7 +2360,7 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
     VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
     bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
     int Priority, const IdentifierInfo *Environment,
-    VersionTuple OrigAnyAppleOSVersion) {
+    const IdentifierInfo *InferredPlatformII) {
   VersionTuple MergedIntroduced = Introduced;
   VersionTuple MergedDeprecated = Deprecated;
   VersionTuple MergedObsoleted = Obsoleted;
@@ -2382,20 +2382,35 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
   if (D->hasAttrs()) {
     AttrVec &Attrs = D->getAttrs();
     for (unsigned i = 0, e = Attrs.size(); i != e;) {
-      const auto *OldAA = dyn_cast<AvailabilityAttr>(Attrs[i]);
+      auto *OldAA = dyn_cast<AvailabilityAttr>(Attrs[i]);
       if (!OldAA) {
-        ++i;
-        continue;
-      }
-
-      const IdentifierInfo *OldPlatform = OldAA->getPlatform();
-      if (OldPlatform != Platform) {
         ++i;
         continue;
       }
 
       const IdentifierInfo *OldEnvironment = OldAA->getEnvironment();
       if (OldEnvironment != Environment) {
+        ++i;
+        continue;
+      }
+
+      if (OldAA->getPlatform() != Platform) {
+        // If this new attr is for anyappleos and the old attr is for the
+        // inferred platform, the existing explicit platform attr wins.
+        if (InferredPlatformII) {
+          if (OldAA->getPlatform() == InferredPlatformII)
+            return nullptr;
+        } else {
+          // If this new attr is an explicit platform attr, check if the old
+          // attr is an existing anyAppleOS attr whose inferred attr is for this
+          // platform. If so, the explicit attr wins: erase the old attr.
+          if (AvailabilityAttr *Inf = OldAA->getInferredAttrAs();
+              Inf && Inf->getPlatform() == Platform) {
+            Attrs.erase(Attrs.begin() + i);
+            --e;
+            continue;
+          }
+        }
         ++i;
         continue;
       }
@@ -2520,11 +2535,39 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
     auto *Avail = ::new (Context) AvailabilityAttr(
         Context, CI, Platform, Introduced, Deprecated, Obsoleted, IsUnavailable,
         Message, IsStrict, Replacement, Priority, Environment,
-        OrigAnyAppleOSVersion);
+        /*InferredAttr=*/nullptr);
     Avail->setImplicit(Implicit);
     return Avail;
   }
   return nullptr;
+}
+
+AvailabilityAttr *Sema::mergeAndInferAvailabilityAttr(
+    NamedDecl *D, const AttributeCommonInfo &CI, const IdentifierInfo *Platform,
+    bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
+    VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
+    bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
+    int Priority, const IdentifierInfo *IIEnvironment,
+    const IdentifierInfo *InferredPlatformII) {
+  AvailabilityAttr *OrigAttr = mergeAvailabilityAttr(
+      D, CI, Platform, Implicit, Introduced, Deprecated, Obsoleted,
+      IsUnavailable, Message, IsStrict, Replacement, AMK, Priority,
+      IIEnvironment, InferredPlatformII);
+  if (!OrigAttr || !InferredPlatformII)
+    return OrigAttr;
+
+  auto *InferredAttr = ::new (Context) AvailabilityAttr(
+      Context, CI, InferredPlatformII, OrigAttr->getIntroduced(),
+      OrigAttr->getDeprecated(), OrigAttr->getObsoleted(),
+      OrigAttr->getUnavailable(), OrigAttr->getMessage(), OrigAttr->getStrict(),
+      OrigAttr->getReplacement(),
+      Priority == AP_PragmaClangAttribute
+          ? AP_PragmaClangAttribute_InferredFromAnyAppleOS
+          : AP_InferredFromAnyAppleOS,
+      IIEnvironment, /*InferredAttr=*/nullptr);
+  InferredAttr->setImplicit(true);
+  OrigAttr->setInferredAttr(InferredAttr);
+  return OrigAttr;
 }
 
 /// Returns true if the given availability attribute should be inferred, and
@@ -2706,8 +2749,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  // Handle anyAppleOS specially: create implicit platform-specific attributes
-  // instead of the original anyAppleOS attribute.
+  // Handle anyAppleOS: preserve the original anyappleos attr on the decl and
+  // store the inferred platform-specific attr as a field on it.
   if (II->getName() == "anyappleos") {
     // Validate anyAppleOS versions; reject versions older than 26.0.
     auto ValidateVersion = [&](const llvm::VersionTuple &Version,
@@ -2742,24 +2785,20 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     else // For iOS, tvOS, watchOS, visionOS, bridgeOS, etc.
       PlatformName = llvm::Triple::getOSTypeName(T.getOS());
 
-    IdentifierInfo *NewII = &S.Context.Idents.get(PlatformName);
+    IdentifierInfo *InferredPlatformII = &S.Context.Idents.get(PlatformName);
 
-    // Use the special low-priority value for pragma push anyAppleOS.
-    int ExpandedPriority =
-        (PriorityModifier == Sema::AP_PragmaClangAttribute)
-            ? Sema::AP_PragmaClangAttribute_InferredFromAnyAppleOS
-            : Sema::AP_InferredFromAnyAppleOS;
-
-    AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
-        ND, AL, NewII, /*Implicit=*/true, Introduced.Version,
-        Deprecated.Version, Obsoleted.Version, IsUnavailable, Str, IsStrict,
-        Replacement, AvailabilityMergeKind::None, ExpandedPriority,
-        IIEnvironment, Introduced.Version);
-    if (NewAttr)
-      D->addAttr(NewAttr);
-
-    // Don't add the original anyAppleOS attribute - only the implicit
-    // platform-specific attributes.
+    // Call mergeAvailabilityAttr for the original anyappleos attr. Pass
+    // InferredPlatformII so the dedup loop can detect a conflicting explicit
+    // platform attr (in which case mergeAvailabilityAttr returns null and we
+    // add neither attr).
+    AvailabilityAttr *OrigAttr = S.mergeAndInferAvailabilityAttr(
+        ND, AL, II, /*Implicit=*/false, Introduced.Version, Deprecated.Version,
+        Obsoleted.Version, IsUnavailable, Str, IsStrict, Replacement,
+        AvailabilityMergeKind::None, PriorityModifier, IIEnvironment,
+        InferredPlatformII);
+    if (!OrigAttr)
+      return;
+    D->addAttr(OrigAttr);
     return;
   }
 

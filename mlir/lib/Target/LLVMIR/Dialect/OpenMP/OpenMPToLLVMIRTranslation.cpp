@@ -1975,13 +1975,25 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
+static omp::DistributeOp
+getDistributeCapturingTeamsReduction(omp::TeamsOp teamsOp) {
+  // Early return if we found more than one distribute op or if we can't find
+  // any distribute op in the teams region.
+  omp::DistributeOp distOp;
+  WalkResult walk = teamsOp.getRegion().walk([&](omp::DistributeOp op) {
+    if (distOp)
+      return WalkResult::interrupt();
+    distOp = op;
+    return WalkResult::skip();
+  });
+  if (walk.wasInterrupted() || !distOp)
+    return {};
+
   auto iface =
       llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(teamsOp.getOperation());
   // Check that all uses of the reduction block arg has the same distribute op
   // parent.
   llvm::SmallVector<mlir::Operation *> debugUses;
-  Operation *distOp = nullptr;
   for (auto ra : iface.getReductionBlockArgs())
     for (auto &use : ra.getUses()) {
       auto *useOp = use.getOwner();
@@ -1990,17 +2002,8 @@ static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
         debugUses.push_back(useOp);
         continue;
       }
-
-      auto currentDistOp = useOp->getParentOfType<omp::DistributeOp>();
-      // Use is not inside a distribute op - return false
-      if (!currentDistOp)
-        return false;
-      // Multiple distribute operations - return false
-      Operation *currentOp = currentDistOp.getOperation();
-      if (distOp && (distOp != currentOp))
-        return false;
-
-      distOp = currentOp;
+      if (!distOp->isProperAncestor(useOp))
+        return {};
     }
 
   // If we are going to use distribute reduction then remove any debug uses of
@@ -2008,7 +2011,7 @@ static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
   // any mapped value in moduleTranslation and will eventually error out.
   for (auto *use : debugUses)
     use->erase();
-  return true;
+  return distOp;
 }
 
 // Convert an OpenMP Teams construct to LLVM IR using OpenMPIRBuilder
@@ -2029,7 +2032,7 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
 
   // Only do teams reduction if there is no distribute op that captures the
   // reduction instead.
-  bool doTeamsReduction = !teamsReductionContainedInDistribute(op);
+  bool doTeamsReduction = !getDistributeCapturingTeamsReduction(op);
   if (doTeamsReduction) {
     isByRef = getIsByRef(op.getReductionByref());
 
@@ -4814,6 +4817,26 @@ static Operation *getGlobalOpFromValue(Value value) {
   return nullptr;
 }
 
+static Value getBaseValueForTypeLookup(Value value) {
+  while (Operation *op = value.getDefiningOp()) {
+    if (auto addrCast = dyn_cast_if_present<LLVM::AddrSpaceCastOp>(op))
+      value = addrCast.getOperand();
+    // Traces through hlfir.declare, fir.declare to reach the base address and
+    // use for type lookup.
+    else if (op->getName().getIdentifier() &&
+             (op->getName().getIdentifier().str() == "hlfir.declare" ||
+              op->getName().getIdentifier().str() == "fir.declare")) {
+      if (op->getNumOperands() > 0)
+        value = op->getOperand(0);
+      else
+        break;
+    } else {
+      break;
+    }
+  }
+  return value;
+}
+
 static llvm::SmallString<64>
 getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
                              llvm::OpenMPIRBuilder &ompBuilder) {
@@ -6302,10 +6325,10 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   /// Process teams op reduction in distribute if the reduction is contained in
-  /// the distribute op.
+  /// this specific distribute op.
   omp::TeamsOp teamsOp = opInst.getParentOfType<omp::TeamsOp>();
   bool doDistributeReduction =
-      teamsOp ? teamsReductionContainedInDistribute(teamsOp) : false;
+      teamsOp && getDistributeCapturingTeamsReduction(teamsOp) == distributeOp;
 
   DenseMap<Value, llvm::Value *> reductionVariableMap;
   unsigned numReductionVars = teamsOp ? teamsOp.getNumReductionVars() : 0;
@@ -7486,6 +7509,26 @@ public:
   amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
                  NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final;
+
+  /// Records the LLVM alloc pointer produced for an OMP ALLOCATE variable so
+  /// that the paired omp.allocate_free op can generate the matching
+  /// __kmpc_free call.
+  void registerAllocatedPtr(Value var, llvm::Value *ptr) const {
+    ompAllocatedPtrs[var] = ptr;
+  }
+
+  /// Returns the LLVM alloc pointer previously registered for var, or
+  /// nullptr if no allocation was recorded.
+  llvm::Value *lookupAllocatedPtr(Value var) const {
+    auto it = ompAllocatedPtrs.find(var);
+    return it != ompAllocatedPtrs.end() ? it->second : nullptr;
+  }
+
+private:
+  /// Maps each MLIR variable value that appeared in an omp.allocate_dir op to
+  /// the LLVM pointer returned by the corresponding __kmpc_alloc call.  The
+  /// paired omp.allocate_free op looks up these pointers to emit __kmpc_free.
+  mutable DenseMap<Value, llvm::Value *> ompAllocatedPtrs;
 };
 
 } // namespace
@@ -7660,6 +7703,121 @@ convertTargetAllocMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Map the result
   moduleTranslation.mapValue(allocMemOp.getResult(), resultI64);
+  return success();
+}
+
+static LogicalResult
+convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation,
+                     const OpenMPDialectLLVMIRTranslationInterface &ompIface) {
+  auto allocateDirOp = cast<omp::AllocateDirOp>(opInst);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::DataLayout dataLayout = llvmModule->getDataLayout();
+  SmallVector<Value> vars = allocateDirOp.getVarList();
+  std::optional<int64_t> alignAttr = allocateDirOp.getAlign();
+
+  llvm::Value *allocator;
+  if (auto allocatorVar = allocateDirOp.getAllocator()) {
+    allocator = moduleTranslation.lookupValue(allocatorVar);
+    if (allocator->getType()->isIntegerTy())
+      allocator = builder.CreateIntToPtr(allocator, builder.getPtrTy());
+    else if (allocator->getType()->isPointerTy())
+      allocator = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocator, builder.getPtrTy());
+  } else {
+    allocator = llvm::ConstantPointerNull::get(builder.getPtrTy());
+  }
+
+  for (Value var : vars) {
+    llvm::Type *llvmVarTy = moduleTranslation.convertType(var.getType());
+
+    // Opaque pointers lose element type. Trace to GlobalOp for type
+    // Falls back to llvmVarTy when not from a global.
+    llvm::Type *typeToInspect = llvmVarTy;
+    if (llvmVarTy->isPointerTy()) {
+      Value baseVar = getBaseValueForTypeLookup(var);
+      if (Operation *globalOp = getGlobalOpFromValue(baseVar)) {
+        if (auto gop = dyn_cast<LLVM::GlobalOp>(globalOp))
+          typeToInspect = moduleTranslation.convertType(gop.getGlobalType());
+      }
+    }
+
+    llvm::Value *size;
+    if (auto arrTy = llvm::dyn_cast<llvm::ArrayType>(typeToInspect)) {
+      llvm::Value *elementCount = builder.getInt64(1);
+      llvm::Type *currentType = arrTy;
+      while (auto nestedArrTy = llvm::dyn_cast<llvm::ArrayType>(currentType)) {
+        elementCount = builder.CreateMul(
+            elementCount, builder.getInt64(nestedArrTy->getNumElements()));
+        currentType = nestedArrTy->getElementType();
+      }
+      uint64_t elemSizeInBits = dataLayout.getTypeSizeInBits(currentType);
+      size =
+          builder.CreateMul(elementCount, builder.getInt64(elemSizeInBits / 8));
+    } else {
+      size = builder.getInt64(
+          dataLayout.getTypeStoreSize(typeToInspect).getFixedValue());
+    }
+
+    uint64_t alignValue =
+        alignAttr ? alignAttr.value()
+                  : dataLayout.getABITypeAlign(typeToInspect).value();
+    llvm::Value *alignConst = builder.getInt64(alignValue);
+    // Align the size: ((size + align - 1) / align) * align
+    size = builder.CreateAdd(size, builder.getInt64(alignValue - 1), "", true);
+    size = builder.CreateUDiv(size, alignConst);
+    size = builder.CreateMul(size, alignConst, "", true);
+
+    std::string allocName =
+        ompBuilder->createPlatformSpecificName({".void.addr"});
+    llvm::CallInst *allocCall;
+    if (alignAttr.has_value()) {
+      allocCall = ompBuilder->createOMPAlignedAlloc(
+          ompLoc, builder.getInt64(alignAttr.value()), size, allocator,
+          allocName);
+    } else {
+      allocCall =
+          ompBuilder->createOMPAlloc(ompLoc, size, allocator, allocName);
+    }
+    // Record the alloc pointer keyed by the MLIR variable value.
+    ompIface.registerAllocatedPtr(var, allocCall);
+  }
+
+  return success();
+}
+
+static LogicalResult
+convertAllocateFreeOp(Operation &opInst, llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation,
+                      const OpenMPDialectLLVMIRTranslationInterface &ompIface) {
+  auto freeOp = cast<omp::AllocateFreeOp>(opInst);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+
+  llvm::Value *allocator;
+  if (auto allocatorVar = freeOp.getAllocator()) {
+    allocator = moduleTranslation.lookupValue(allocatorVar);
+    if (allocator->getType()->isIntegerTy())
+      allocator = builder.CreateIntToPtr(allocator, builder.getPtrTy());
+    else if (allocator->getType()->isPointerTy())
+      allocator = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocator, builder.getPtrTy());
+  } else {
+    allocator = llvm::ConstantPointerNull::get(builder.getPtrTy());
+  }
+
+  // Emit __kmpc_free for each variable in reverse allocation order.
+  SmallVector<Value> vars = freeOp.getVarList();
+  for (Value var : llvm::reverse(vars)) {
+    llvm::Value *allocPtr = ompIface.lookupAllocatedPtr(var);
+    if (!allocPtr)
+      return opInst.emitError("omp.allocate_free: no allocation recorded");
+    ompBuilder->createOMPFree(ompLoc, allocPtr, allocator, "");
+  }
+
   return success();
 }
 
@@ -7907,6 +8065,13 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::TargetFreeMemOp) {
             return convertTargetFreeMemOp(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::AllocateDirOp) {
+            return convertAllocateDirOp(*op, builder, moduleTranslation, *this);
+          })
+          .Case([&](omp::AllocateFreeOp) {
+            return convertAllocateFreeOp(*op, builder, moduleTranslation,
+                                         *this);
           })
           .Default([&](Operation *inst) {
             return inst->emitError()
