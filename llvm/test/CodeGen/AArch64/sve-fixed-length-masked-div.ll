@@ -505,8 +505,8 @@ define <2 x i32> @sdiv_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(1,0) #
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    sdiv z0.s, p1/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = icmp ne <2 x i32> %op1, zeroinitializer
@@ -521,8 +521,8 @@ define <4 x i32> @sdiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(1,0) #
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    sdiv z0.s, p1/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = icmp ne <4 x i32> %op1, zeroinitializer
@@ -583,10 +583,10 @@ define void @sdiv_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-NEXT:    ldr q6, [x1, #48]
 ; VBITS_GE_128-NEXT:    sdiv z4.s, p1/m, z4.s, z6.s
 ; VBITS_GE_128-NEXT:    cmpne p1.s, p0/z, z5.s, #0
-; VBITS_GE_128-NEXT:    cmpne p0.s, p0/z, z2.s, #0
 ; VBITS_GE_128-NEXT:    ldr q5, [x1, #32]
 ; VBITS_GE_128-NEXT:    sdiv z3.s, p1/m, z3.s, z5.s
-; VBITS_GE_128-NEXT:    sdiv z0.s, p0/m, z0.s, z16.s
+; VBITS_GE_128-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; VBITS_GE_128-NEXT:    sdiv z0.s, p1/m, z0.s, z16.s
 ; VBITS_GE_128-NEXT:    stp q3, q4, [x0, #32]
 ; VBITS_GE_128-NEXT:    stp q1, q0, [x0]
 ; VBITS_GE_128-NEXT:    ret
@@ -686,8 +686,8 @@ define <2 x i64> @sdiv_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(1,0) #
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    sdiv z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    sdiv z0.d, p1/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = icmp ne <2 x i64> %op1, zeroinitializer
@@ -753,8 +753,8 @@ define void @sdiv_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-NEXT:    mov v5.b[4], v4.b[3]
 ; VBITS_GE_128-NEXT:    ushll v4.2d, v5.2s, #0
 ; VBITS_GE_128-NEXT:    shl v4.2d, v4.2d, #63
-; VBITS_GE_128-NEXT:    cmpne p0.d, p0/z, z4.d, #0
-; VBITS_GE_128-NEXT:    sdiv z0.d, p0/m, z0.d, z6.d
+; VBITS_GE_128-NEXT:    cmpne p1.d, p0/z, z4.d, #0
+; VBITS_GE_128-NEXT:    sdiv z0.d, p1/m, z0.d, z6.d
 ; VBITS_GE_128-NEXT:    stp q1, q2, [x0, #32]
 ; VBITS_GE_128-NEXT:    stp q3, q0, [x0]
 ; VBITS_GE_128-NEXT:    ret
@@ -1347,8 +1347,8 @@ define <2 x i32> @udiv_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(1,0) #
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = icmp ne <2 x i32> %op1, zeroinitializer
@@ -1363,8 +1363,8 @@ define <4 x i32> @udiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(1,0) #
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = icmp ne <4 x i32> %op1, zeroinitializer
@@ -1425,10 +1425,10 @@ define void @udiv_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-NEXT:    ldr q6, [x1, #48]
 ; VBITS_GE_128-NEXT:    udiv z4.s, p1/m, z4.s, z6.s
 ; VBITS_GE_128-NEXT:    cmpne p1.s, p0/z, z5.s, #0
-; VBITS_GE_128-NEXT:    cmpne p0.s, p0/z, z2.s, #0
 ; VBITS_GE_128-NEXT:    ldr q5, [x1, #32]
 ; VBITS_GE_128-NEXT:    udiv z3.s, p1/m, z3.s, z5.s
-; VBITS_GE_128-NEXT:    udiv z0.s, p0/m, z0.s, z16.s
+; VBITS_GE_128-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; VBITS_GE_128-NEXT:    udiv z0.s, p1/m, z0.s, z16.s
 ; VBITS_GE_128-NEXT:    stp q3, q4, [x0, #32]
 ; VBITS_GE_128-NEXT:    stp q1, q0, [x0]
 ; VBITS_GE_128-NEXT:    ret
@@ -1528,8 +1528,8 @@ define <2 x i64> @udiv_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(1,0) #
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    udiv z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    udiv z0.d, p1/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = icmp ne <2 x i64> %op1, zeroinitializer
@@ -1595,8 +1595,8 @@ define void @udiv_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-NEXT:    mov v5.b[4], v4.b[3]
 ; VBITS_GE_128-NEXT:    ushll v4.2d, v5.2s, #0
 ; VBITS_GE_128-NEXT:    shl v4.2d, v4.2d, #63
-; VBITS_GE_128-NEXT:    cmpne p0.d, p0/z, z4.d, #0
-; VBITS_GE_128-NEXT:    udiv z0.d, p0/m, z0.d, z6.d
+; VBITS_GE_128-NEXT:    cmpne p1.d, p0/z, z4.d, #0
+; VBITS_GE_128-NEXT:    udiv z0.d, p1/m, z0.d, z6.d
 ; VBITS_GE_128-NEXT:    stp q1, q2, [x0, #32]
 ; VBITS_GE_128-NEXT:    stp q3, q0, [x0]
 ; VBITS_GE_128-NEXT:    ret

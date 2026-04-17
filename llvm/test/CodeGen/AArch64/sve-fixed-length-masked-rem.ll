@@ -900,13 +900,13 @@ define void @srem_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    and z3.d, z3.d, #0x1
 ; VBITS_GE_256-NEXT:    and z2.d, z2.d, #0x1
 ; VBITS_GE_256-NEXT:    cmpne p2.d, p1/z, z3.d, #0
-; VBITS_GE_256-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; VBITS_GE_256-NEXT:    mov z3.d, #1 // =0x1
-; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    sel z4.d, p2, z4.d, z3.d
-; VBITS_GE_256-NEXT:    sel z2.d, p1, z2.d, z3.d
+; VBITS_GE_256-NEXT:    cmpne p2.d, p1/z, z2.d, #0
+; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    movprfx z5, z0
 ; VBITS_GE_256-NEXT:    sdiv z5.d, p0/m, z5.d, z4.d
+; VBITS_GE_256-NEXT:    sel z2.d, p2, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    movprfx z3, z1
 ; VBITS_GE_256-NEXT:    sdiv z3.d, p0/m, z3.d, z2.d
 ; VBITS_GE_256-NEXT:    mls z0.d, p0/m, z5.d, z4.d
@@ -1874,13 +1874,13 @@ define void @urem_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    and z3.d, z3.d, #0x1
 ; VBITS_GE_256-NEXT:    and z2.d, z2.d, #0x1
 ; VBITS_GE_256-NEXT:    cmpne p2.d, p1/z, z3.d, #0
-; VBITS_GE_256-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; VBITS_GE_256-NEXT:    mov z3.d, #1 // =0x1
-; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    sel z4.d, p2, z4.d, z3.d
-; VBITS_GE_256-NEXT:    sel z2.d, p1, z2.d, z3.d
+; VBITS_GE_256-NEXT:    cmpne p2.d, p1/z, z2.d, #0
+; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    movprfx z5, z0
 ; VBITS_GE_256-NEXT:    udiv z5.d, p0/m, z5.d, z4.d
+; VBITS_GE_256-NEXT:    sel z2.d, p2, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    movprfx z3, z1
 ; VBITS_GE_256-NEXT:    udiv z3.d, p0/m, z3.d, z2.d
 ; VBITS_GE_256-NEXT:    mls z0.d, p0/m, z5.d, z4.d

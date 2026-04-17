@@ -37,8 +37,8 @@ define <4 x i32> @udiv_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) {
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    shl v2.4s, v2.4s, #31
-; SVE-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; SVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; SVE-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   %res = call <4 x i32> @llvm.masked.udiv(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m)
@@ -71,8 +71,8 @@ define <2 x i64> @udiv_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m) {
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    shl v2.2d, v2.2d, #63
-; SVE-NEXT:    cmpne p0.d, p0/z, z2.d, #0
-; SVE-NEXT:    udiv z0.d, p0/m, z0.d, z1.d
+; SVE-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; SVE-NEXT:    udiv z0.d, p1/m, z0.d, z1.d
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   %res = call <2 x i64> @llvm.masked.udiv(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m)
@@ -129,8 +129,8 @@ define <4 x i64> @udiv_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; SVE-NEXT:    ushll v3.2d, v4.2s, #0
 ; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; SVE-NEXT:    shl v3.2d, v3.2d, #63
-; SVE-NEXT:    cmpne p0.d, p0/z, z3.d, #0
-; SVE-NEXT:    udiv z0.d, p0/m, z0.d, z2.d
+; SVE-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; SVE-NEXT:    udiv z0.d, p1/m, z0.d, z2.d
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   %res = call <4 x i64> @llvm.masked.udiv(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m)
@@ -164,8 +164,8 @@ define <2 x i32> @udiv_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i1> %m) {
 ; SVE-NEXT:    ptrue p0.s, vl2
 ; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
-; SVE-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; SVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; SVE-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
 ; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
   %res = call <2 x i32> @llvm.masked.udiv(<2 x i32> %x, <2 x i32> %y, <2 x i1> %m)
