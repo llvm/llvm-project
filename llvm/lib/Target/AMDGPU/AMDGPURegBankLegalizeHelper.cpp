@@ -1492,6 +1492,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprV2S32:
     return LLT::fixed_vector(2, 32);
   case VgprV3S32:
+  case UniInVgprV3S32:
     return LLT::fixed_vector(3, 32);
   case VgprV4S16:
     return LLT::fixed_vector(4, 16);
@@ -1503,6 +1504,15 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
     return LLT::fixed_vector(4, 32);
   case VgprV8S32:
     return LLT::fixed_vector(8, 32);
+  case VgprV9S32:
+    return LLT::fixed_vector(9, 32);
+  case VgprV10S32:
+  case UniInVgprV10S32:
+    return LLT::fixed_vector(10, 32);
+  case VgprV11S32:
+    return LLT::fixed_vector(11, 32);
+  case VgprV12S32:
+    return LLT::fixed_vector(12, 32);
   case VgprV2S64:
   case UniInVgprV2S64:
     return LLT::fixed_vector(2, 64);
@@ -1639,7 +1649,9 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprS64:
   case UniInVgprV2S16:
   case UniInVgprV2S32:
+  case UniInVgprV3S32:
   case UniInVgprV4S32:
+  case UniInVgprV10S32:
   case UniInVgprV2S64:
   case UniInVgprB32:
   case UniInVgprB64:
@@ -1675,6 +1687,10 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprV4S32:
   case VgprV6S32:
   case VgprV8S32:
+  case VgprV9S32:
+  case VgprV10S32:
+  case VgprV11S32:
+  case VgprV12S32:
   case VgprV32S16:
   case VgprB32:
   case VgprB64:
@@ -1741,6 +1757,10 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprV4S32:
     case VgprV6S32:
     case VgprV8S32:
+    case VgprV9S32:
+    case VgprV10S32:
+    case VgprV11S32:
+    case VgprV12S32:
     case VgprV32S16: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
@@ -1801,7 +1821,9 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case UniInVgprS64:
     case UniInVgprV2S16:
     case UniInVgprV2S32:
+    case UniInVgprV3S32:
     case UniInVgprV4S32:
+    case UniInVgprV10S32:
     case UniInVgprV2S64: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == SgprRB);
@@ -1936,6 +1958,10 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprV4S32:
     case VgprV6S32:
     case VgprV8S32:
+    case VgprV9S32:
+    case VgprV10S32:
+    case VgprV11S32:
+    case VgprV12S32:
     case VgprV32S16:
     case VgprV32S32: {
       assert(Ty == getTyFromID(MethodIDs[i]));
