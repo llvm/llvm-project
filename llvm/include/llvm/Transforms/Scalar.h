@@ -49,7 +49,7 @@ LLVM_ABI FunctionPass *createSROAPass(bool PreserveCFG = true);
 //===----------------------------------------------------------------------===//
 //
 // LSROA - Replace aggregates or pieces of aggregates with scalar SSA values
-// when used when logical allocation/GEP instructions.
+// when used with logical allocation/GEP instructions.
 //
 LLVM_ABI FunctionPass *createLSROAPass();
 

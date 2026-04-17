@@ -7,24 +7,16 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This transformation implements the well known scalar replacement of
-/// aggregates transformation. It tries to identify promotable elements of an
-/// aggregate alloca, and promote them to registers. It will also try to
-/// convert uses of an element (or set of elements) of an alloca into a vector
-/// or bitfield-style integer scalar if appropriate.
+/// aggregates transformation but for logical pointers.
+/// It tries to identify promotable elements of an aggregate alloca, and
+/// promote them to multiple allocas of scalar type.
 ///
-/// It works to do this with minimal slicing of the alloca so that regions
-/// which are merely transferred in and out of external memory remain unchanged
-/// and are not decomposed to scalar code.
-///
-/// Because this also performs alloca promotion, it can be thought of as also
-/// serving the purpose of SSA formation. The algorithm iterates on the
-/// function until all opportunities for promotion have been realized.
+/// FIXME: nested aggregates are not fully optimized (#192619).
+/// FIXME: array are not optimized (#192620).
 ///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LSROA.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/IRBuilder.h"
@@ -45,16 +37,14 @@ SmallVector<LifetimeIntrinsic *>
 collectLifetimeIntrinsicsUsing(Instruction &I) {
   SmallVector<LifetimeIntrinsic *> Output;
 
-  for (const auto &user : I.users()) {
-    auto II = dyn_cast<IntrinsicInst>(user);
+  for (User *U : I.users()) {
+    auto II = dyn_cast<IntrinsicInst>(U);
     if (II && isLifetimeIntrinsic(II->getIntrinsicID()))
       Output.push_back(cast<LifetimeIntrinsic>(II));
   }
 
   return Output;
 }
-
-using SGEPVec = SmallVector<StructuredGEPInst *>;
 
 // Returns a vector with one element for each field of the struct allocated by
 // SAI. Each element is a vector of SGEP instruction referencing this field.
@@ -67,12 +57,12 @@ collectPerFieldSGEP(StructuredAllocaInst &SAI) {
   StructType *ST = cast<StructType>(SAI.getAllocationType());
   SmallVector<SmallVector<StructuredGEPInst *>> Output(ST->getNumElements());
 
-  for (const auto &user : SAI.users()) {
-    auto II = dyn_cast<IntrinsicInst>(user);
+  for (User *U : SAI.users()) {
+    auto II = dyn_cast<IntrinsicInst>(U);
     if (II && II->isLifetimeStartOrEnd())
       continue;
 
-    auto SGEP = dyn_cast<StructuredGEPInst>(user);
+    auto SGEP = dyn_cast<StructuredGEPInst>(U);
     if (!SGEP)
       return {};
 
@@ -112,10 +102,7 @@ void rewriteSGEPChain(IRBuilder<> &B, StructuredGEPInst *SGEP,
     return;
   }
 
-  SmallVector<Value *, 4> Indices;
-  for (unsigned J = 1; J < SGEP->getNumIndices(); ++J)
-    Indices.push_back(SGEP->getIndexOperand(J));
-
+  SmallVector<Value *, 4> Indices(llvm::drop_begin(SGEP->indices()));
   B.SetInsertPoint(SGEP);
   auto *I = B.CreateStructuredGEP(FieldAlloca->getAllocationType(), FieldAlloca,
                                   Indices, SGEP->getName());
@@ -129,12 +116,11 @@ bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
   if (!ST)
     return false;
 
-  SmallVector<LifetimeIntrinsic *> LifetimeIntrinsics =
-      collectLifetimeIntrinsicsUsing(SAI);
   auto PerFieldSGEP = collectPerFieldSGEP(SAI);
   if (PerFieldSGEP.size() == 0)
     return false;
 
+  auto LifetimeIntrinsics = collectLifetimeIntrinsicsUsing(SAI);
   IRBuilder B(&SAI);
   for (size_t I = 0; I < PerFieldSGEP.size(); ++I) {
     auto &Users = PerFieldSGEP[I];

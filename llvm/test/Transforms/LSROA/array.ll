@@ -23,4 +23,3 @@ entry:
   ret i32 %res
 
 }
-
