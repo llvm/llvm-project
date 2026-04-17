@@ -934,6 +934,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     unsigned MaxElems = countHLSLFlatElements(DestType);
 
     SmallVector<HLSLFlatElement, 16> Elements;
+    Elements.reserve(MaxElems);
     if (!emitHLSLFlattenAggregate(SrcType, SrcOffset, Elements, MaxElems, E))
       return false;
 
