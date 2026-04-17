@@ -3799,22 +3799,27 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   // an enclosing scope.
   if (const auto *BD = dyn_cast<BindingDecl>(ND)) {
     if (E->refersToEnclosingVariableOrCapture()) {
-      if (auto *DD = dyn_cast<VarDecl>(BD->getDecomposedDecl())) {
-        auto I = LocalDeclMap.find(DD);
-        if (I != LocalDeclMap.end()) {
-          Address DDAddr = I->second;
-          llvm::Type *StructTy = CGM.getTypes().ConvertTypeForMem(
-              DD->getType().getCanonicalType());
-          if (DDAddr.getElementType() != StructTy)
-            DDAddr = DDAddr.withElementType(StructTy);
-          LValue BaseLV =
-              MakeAddrLValue(DDAddr, DD->getType().getCanonicalType());
-          return EmitLValueForField(
-              BaseLV, cast<FieldDecl>(
-                          cast<MemberExpr>(BD->getBinding()->IgnoreImplicit())
-                              ->getMemberDecl()));
+      auto *FD = LambdaCaptureFields.lookup(BD);
+      if (!FD) {
+        // OpenMP case: binding was captured via its decomposed decl.
+        if (auto *DD = dyn_cast<VarDecl>(BD->getDecomposedDecl())) {
+          auto I = LocalDeclMap.find(DD);
+          if (I != LocalDeclMap.end()) {
+            Address DDAddr = I->second;
+            llvm::Type *StructTy = CGM.getTypes().ConvertTypeForMem(
+                DD->getType().getCanonicalType());
+            if (DDAddr.getElementType() != StructTy)
+              DDAddr = DDAddr.withElementType(StructTy);
+            LValue BaseLV =
+                MakeAddrLValue(DDAddr, DD->getType().getCanonicalType());
+            return EmitLValueForField(
+                BaseLV, cast<FieldDecl>(
+                            cast<MemberExpr>(BD->getBinding()->IgnoreImplicit())
+                                ->getMemberDecl()));
+          }
         }
       }
+      return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
     }
     // Suppress debug location updates when visiting the binding, since the
     // binding may emit instructions that would otherwise be associated with the
