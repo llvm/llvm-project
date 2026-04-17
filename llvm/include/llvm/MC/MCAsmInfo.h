@@ -383,6 +383,12 @@ protected:
   /// names in .cfi_* directives.  Defaults to false.
   bool DwarfRegNumForCFI = false;
 
+  /// When true, emit a new CIE in .debug_frame whenever the CIE key changes
+  /// (e.g. different return-address register per function).  The default LLVM
+  /// behaviour reuses a single CIE for all .debug_frame FDEs; targets that
+  /// need per-function CIE variation must opt in.
+  bool UsePerFunctionDebugFrameCIE = false;
+
   /// True if target uses @ (expr@specifier) for relocation specifiers.
   bool UseAtForSpecifier = false;
 
@@ -674,6 +680,9 @@ public:
 
   bool doDwarfFDESymbolsUseAbsDiff() const { return DwarfFDESymbolsUseAbsDiff; }
   bool useDwarfRegNumForCFI() const { return DwarfRegNumForCFI; }
+  bool usePerFunctionDebugFrameCIE() const {
+    return UsePerFunctionDebugFrameCIE;
+  }
   bool useAtForSpecifier() const { return UseAtForSpecifier; }
   bool useParensForSpecifier() const { return UseParensForSpecifier; }
   bool supportsExtendedDwarfLocDirective() const {
