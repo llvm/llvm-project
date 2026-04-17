@@ -21,7 +21,6 @@
 
 namespace llvm {
 class LoongArchSubtarget;
-
 class LoongArchTargetLowering : public TargetLowering {
   const LoongArchSubtarget &Subtarget;
 
@@ -247,6 +246,7 @@ private:
   SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRotate(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
