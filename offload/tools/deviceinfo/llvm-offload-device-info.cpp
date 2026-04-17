@@ -43,6 +43,9 @@ void doWrite<ol_platform_backend_t>(std::ostream &S,
   case OL_PLATFORM_BACKEND_AMDGPU:
     S << "AMDGPU";
     break;
+  case OL_PLATFORM_BACKEND_LEVEL_ZERO:
+    S << "LEVEL_ZERO";
+    break;
   case OL_PLATFORM_BACKEND_HOST:
     S << "HOST";
     break;
