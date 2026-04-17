@@ -27,10 +27,12 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #include <cassert>
+#include <optional>
 #include <queue>
 #include <unordered_set>
 
@@ -158,6 +160,20 @@ public:
 
 static bool isaGEP(const Value *V) {
   return isa<StructuredGEPInst>(V) || isa<GetElementPtrInst>(V);
+}
+
+// If Ty is a byte-addressing type, return the multiplier for the offset.
+// Otherwise return std::nullopt.
+static std::optional<uint64_t> getByteAddressingMultiplier(Type *Ty) {
+  if (Ty == IntegerType::getInt8Ty(Ty->getContext())) {
+    return 1;
+  }
+  if (auto *AT = dyn_cast<ArrayType>(Ty)) {
+    if (AT->getElementType() == IntegerType::getInt8Ty(Ty->getContext())) {
+      return AT->getNumElements();
+    }
+  }
+  return std::nullopt;
 }
 
 class SPIRVEmitIntrinsics
@@ -325,13 +341,14 @@ class SPIRVEmitIntrinsics
   //    Parameters:
   //      ElementType: the type of the elements stored in the parent array.
   //      Offset: the Value* containing the byte offset into the array.
+  //      Multiplier: a scaling factor for the offset.
   // Return true if an error occurred during the walk, false otherwise.
   bool walkLogicalAccessChain(
       GetElementPtrInst &GEP,
       const std::function<void(Type *PointedType, uint64_t Index)>
           &OnLiteralIndexing,
-      const std::function<void(Type *ElementType, Value *Offset)>
-          &OnDynamicIndexing);
+      const std::function<void(Type *ElementType, Value *Offset,
+                               uint64_t Multiplier)> &OnDynamicIndexing);
 
   // Returns the type accessed using the given GEP instruction by relying
   // on the GEP type.
@@ -719,11 +736,13 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
 bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
     GetElementPtrInst &GEP,
     const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
-    const std::function<void(Type *, Value *)> &OnDynamicIndexing) {
-  // We only rewrite i8* GEP. Other should be left as-is.
-  // Valid i8* GEP must always have a single index.
-  assert(GEP.getSourceElementType() ==
-         IntegerType::getInt8Ty(CurrF->getContext()));
+    const std::function<void(Type *, Value *, uint64_t)> &OnDynamicIndexing) {
+  // We only rewrite byte-addressing GEP. Other should be left as-is.
+  // Valid byte-addressing GEP must always have a single index.
+  std::optional<uint64_t> MultiplierOpt =
+      getByteAddressingMultiplier(GEP.getSourceElementType());
+  assert(MultiplierOpt && "We only rewrite byte-addressing GEP");
+  uint64_t Multiplier = *MultiplierOpt;
   assert(GEP.getNumIndices() == 1);
 
   auto &DL = CurrF->getDataLayout();
@@ -733,16 +752,29 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
   Value *Operand = *GEP.idx_begin();
   ConstantInt *CI = dyn_cast<ConstantInt>(Operand);
   if (!CI) {
+    // If we have dynamic indexing, we might need to drill through structs
+    // to reach the array.
+    while (CurType && !CurType->isArrayTy()) {
+      if (auto *ST = dyn_cast<StructType>(CurType)) {
+        if (ST->getNumElements() > 0) {
+          CurType = ST->getElementType(0);
+          OnLiteralIndexing(CurType, 0);
+          continue;
+        }
+      }
+      break;
+    }
+
     ArrayType *AT = dyn_cast<ArrayType>(CurType);
     // Operand is not constant. Either we have an array and accept it, or we
     // give up.
     if (AT)
-      OnDynamicIndexing(AT->getElementType(), Operand);
+      OnDynamicIndexing(AT->getElementType(), Operand, Multiplier);
     return AT == nullptr;
   }
 
   assert(CI);
-  uint64_t Offset = CI->getZExtValue();
+  uint64_t Offset = CI->getZExtValue() * Multiplier;
 
   do {
     if (ArrayType *AT = dyn_cast<ArrayType>(CurType)) {
@@ -797,11 +829,28 @@ SPIRVEmitIntrinsics::buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP) {
         Indices.push_back(
             ConstantInt::get(B.getInt64Ty(), Index, /* Signed= */ false));
       },
-      [&Indices, &B, &DL](Type *EltType, Value *Offset) {
+      [&Indices, &B, &DL, this](Type *EltType, Value *Offset,
+                                uint64_t Multiplier) {
+        Value *Index = nullptr;
         uint32_t EltTypeSize = DL.getTypeSizeInBits(EltType) / 8;
-        Value *Index = B.CreateUDiv(
-            Offset, ConstantInt::get(Offset->getType(), EltTypeSize,
-                                     /* Signed= */ false));
+        assert(Multiplier != 0);
+        if (Multiplier == EltTypeSize) {
+          Index = Offset;
+        } else if (EltTypeSize % Multiplier == 0) {
+          Index =
+              B.CreateUDiv(Offset, ConstantInt::get(Offset->getType(),
+                                                    EltTypeSize / Multiplier,
+                                                    /* Signed= */ false));
+        } else {
+          Index = B.CreateMul(Offset,
+                              ConstantInt::get(Offset->getType(), Multiplier,
+                                               /* Signed= */ false));
+          insertAssignTypeIntrs(cast<Instruction>(Index), B);
+          Index = B.CreateUDiv(Index,
+                               ConstantInt::get(Offset->getType(), EltTypeSize,
+                                                /* Signed= */ false));
+        }
+        insertAssignTypeIntrs(cast<Instruction>(Index), B);
         Indices.push_back(Index);
       });
 
@@ -821,14 +870,13 @@ Type *SPIRVEmitIntrinsics::getGEPTypeLogical(GetElementPtrInst *GEP) {
 
   bool Interrupted = walkLogicalAccessChain(
       *GEP, [&CurType](Type *EltType, uint64_t Index) { CurType = EltType; },
-      [&CurType](Type *EltType, Value *Index) { CurType = EltType; });
+      [&CurType](Type *EltType, Value *Index, uint64_t) { CurType = EltType; });
 
   return Interrupted ? GEP->getResultElementType() : CurType;
 }
 
 Type *SPIRVEmitIntrinsics::getGEPType(GetElementPtrInst *Ref) {
-  if (Ref->getSourceElementType() ==
-          IntegerType::getInt8Ty(CurrF->getContext()) &&
+  if (getByteAddressingMultiplier(Ref->getSourceElementType()) &&
       TM.getSubtargetImpl()->isLogicalSPIRV()) {
     return getGEPTypeLogical(Ref);
   }
@@ -1768,8 +1816,7 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
     //
     // If the GEP is doing byte addressing, try to rebuild the full access chain
     // from the type of the pointer.
-    if (I.getSourceElementType() ==
-        IntegerType::getInt8Ty(CurrF->getContext())) {
+    if (getByteAddressingMultiplier(I.getSourceElementType())) {
       return buildLogicalAccessChainFromGEP(I);
     }
 
