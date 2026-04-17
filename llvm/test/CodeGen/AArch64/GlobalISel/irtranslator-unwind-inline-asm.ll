@@ -21,7 +21,7 @@ define dso_local void @test() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @.str.2
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
-  ; CHECK-NEXT:   INLINEASM &"bl trap", 65 /* sideeffect unwind attdialect */
+  ; CHECK-NEXT:   INLINEASM &"bl trap", sideeffect unwind attdialect
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -71,7 +71,7 @@ define void @test2() #0 personality ptr @__gcc_personality_v0 {
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY [[DEF]](p0)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, {{[0-9]+}} /* reguse:GPR64common */, [[COPY]]
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, reguse:GPR64common, [[COPY]]
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
