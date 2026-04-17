@@ -59439,7 +59439,7 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   if (VT == MVT::i64) {
     APInt Mask = APInt::getHighBitsSet(64, 33);
     if (DAG.MaskedValueIsZero(Op0, Mask) && DAG.MaskedValueIsZero(Op1, Mask)) {
-      // Guard to check if one of the  operand is constant.
+      // Guard to check if one of the operand is constant.
       // promoteExtBeforeAdd() will revert this fold, if guard not present.
 
       if (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1)) {
