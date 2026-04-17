@@ -458,9 +458,21 @@
 @ CHECK-ERRORS-V8: error: source register and base register can't be identical
 @ CHECK-ERRORS-V8: strb r0, [r0], #1
 @ CHECK-ERRORS-V8:          ^
-@ CHECK-ERRORS-V8: error: source register and base register can't be identical
+@ CHECK-ERRORS-V8: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS-V8: strd r0, r1, [r0], #1
-@ CHECK-ERRORS-V8:              ^
-@ CHECK-ERRORS-V8: error: source register and base register can't be identical
+@ CHECK-ERRORS-V8: ^
+@ CHECK-ERRORS-V8: note: instruction requires: arm-mode
+@ CHECK-ERRORS-V8: strd r0, r1, [r0], #1
+@ CHECK-ERRORS-V8: ^
+@ CHECK-ERRORS-V8: note: invalid operand for instruction
+@ CHECK-ERRORS-V8: strd r0, r1, [r0], #1
+@ CHECK-ERRORS-V8:                    ^
+@ CHECK-ERRORS-V8: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS-V8: strd r1, r0, [r0], #1
-@ CHECK-ERRORS-V8:              ^
+@ CHECK-ERRORS-V8: ^
+@ CHECK-ERRORS-V8: note: instruction requires: arm-mode
+@ CHECK-ERRORS-V8: strd r1, r0, [r0], #1
+@ CHECK-ERRORS-V8: ^
+@ CHECK-ERRORS-V8: note: invalid operand for instruction
+@ CHECK-ERRORS-V8: strd r1, r0, [r0], #1
+@ CHECK-ERRORS-V8:                    ^
