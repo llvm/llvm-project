@@ -157,13 +157,8 @@ void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PostCoalescerLegacyPass(PassRegistry &);
 void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
-<<<<<<< HEAD
-void initializeAArch64PostLegalizerLoweringPass(PassRegistry &);
 void initializeAArch64PostSelectOptimizeLegacyPass(PassRegistry &);
-=======
 void initializeAArch64PostLegalizerLoweringLegacyPass(PassRegistry &);
-void initializeAArch64PostSelectOptimizePass(PassRegistry &);
->>>>>>> main
 void initializeAArch64PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationLegacyPass(PassRegistry &);
