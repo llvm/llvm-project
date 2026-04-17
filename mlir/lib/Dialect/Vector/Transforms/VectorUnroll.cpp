@@ -26,12 +26,9 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-/// Compute the indices of the slice `index` for a transfer op.
-static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
-                                               ArrayRef<Value> indices,
-                                               AffineMap permutationMap,
-                                               Location loc,
-                                               OpBuilder &builder) {
+SmallVector<Value> mlir::vector::sliceTransferIndices(
+    ArrayRef<int64_t> elementOffsets, ArrayRef<Value> indices,
+    AffineMap permutationMap, Location loc, OpBuilder &builder) {
   MLIRContext *ctx = builder.getContext();
   auto isBroadcast = [](AffineExpr expr) {
     if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
