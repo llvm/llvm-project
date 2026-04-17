@@ -966,7 +966,9 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::DerivativeControl, Capability::MinLod,
                     Capability::ImageQuery, Capability::ImageGatherExtended,
                     Capability::Addresses, Capability::VulkanMemoryModelKHR,
-                    Capability::StorageImageExtendedFormats});
+                    Capability::StorageImageExtendedFormats,
+                    Capability::StorageImageMultisample,
+                    Capability::ImageMSArray});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1060,7 +1062,11 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
     break;
   case SPIRV::Dim::DIM_2D:
     if (IsMultisampled && NoSampler)
+      Reqs.addRequirements(SPIRV::Capability::StorageImageMultisample);
+    if (IsMultisampled && IsArrayed)
       Reqs.addRequirements(SPIRV::Capability::ImageMSArray);
+    break;
+  case SPIRV::Dim::DIM_3D:
     break;
   case SPIRV::Dim::DIM_Cube:
     Reqs.addRequirements(SPIRV::Capability::Shader);
