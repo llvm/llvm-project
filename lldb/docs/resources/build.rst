@@ -242,7 +242,7 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
           -DCMAKE_BUILD_TYPE=[<build type>] \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
-  $ cmake --build /path/to/lldb-build lldb lldb-server
+  $ cmake --build /path/to/lldb-build -t lldb lldb-server
 
 If you do not require or cannot build ``lldb-server`` on your platform, simply
 remove it from the Ninja command.
