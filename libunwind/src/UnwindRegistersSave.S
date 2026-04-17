@@ -794,9 +794,14 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   stp    x18,x19, [x0, #0x090]
   stp    x20,x21, [x0, #0x0A0]
   stp    x22,x23, [x0, #0x0B0]
+#if defined(__LFI__)
+  stp    x24,xzr, [x0, #0x0C0]
+  stp    xzr,x29, [x0, #0x0E0]
+#else
   stp    x24,x25, [x0, #0x0C0]
   stp    x26,x27, [x0, #0x0D0]
   stp    x28,x29, [x0, #0x0E0]
+#endif
   str    x30,     [x0, #0x0F0]
   mov    x1,sp
   str    x1,      [x0, #0x0F8]
