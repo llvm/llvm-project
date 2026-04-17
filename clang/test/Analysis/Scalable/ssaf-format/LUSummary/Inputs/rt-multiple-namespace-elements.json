@@ -1,0 +1,19 @@
+{
+  "data": [],
+  "id_table": [],
+  "linkage_table": [],
+  "lu_namespace": [
+    {
+      "kind": "CompilationUnit",
+      "name": "a.cpp"
+    },
+    {
+      "kind": "CompilationUnit",
+      "name": "b.cpp"
+    },
+    {
+      "kind": "LinkUnit",
+      "name": "libtest.so"
+    }
+  ]
+}

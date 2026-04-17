@@ -1,0 +1,32 @@
+{
+  "data": [],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "test.cpp"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@baz"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    }
+  ],
+  "lu_namespace": [
+    {
+      "kind": "CompilationUnit",
+      "name": "test.cpp"
+    }
+  ]
+}
