@@ -20,6 +20,46 @@
     ret i32 %c
   }
 
+  define i32 @test_framePointerPolicy_none(i32 %a) {
+  entry:
+    %b = alloca i32
+    store i32 %a, ptr %b
+    %c = load i32, ptr %b
+    ret i32 %c
+  }
+
+  define i32 @test_framePointerPolicy_non_leaf(i32 %a) {
+  entry:
+    %b = alloca i32
+    store i32 %a, ptr %b
+    %c = load i32, ptr %b
+    ret i32 %c
+  }
+
+  define i32 @test_framePointerPolicy_all(i32 %a) {
+  entry:
+    %b = alloca i32
+    store i32 %a, ptr %b
+    %c = load i32, ptr %b
+    ret i32 %c
+  }
+
+  define i32 @test_framePointerPolicy_reserved(i32 %a) {
+  entry:
+    %b = alloca i32
+    store i32 %a, ptr %b
+    %c = load i32, ptr %b
+    ret i32 %c
+  }
+
+  define i32 @test_framePointerPolicy_non_leaf_no_reserve(i32 %a) {
+  entry:
+    %b = alloca i32
+    store i32 %a, ptr %b
+    %c = load i32, ptr %b
+    ret i32 %c
+  }
+
 ...
 ---
 name:            test
@@ -71,7 +111,7 @@ stack:
 # CHECK-NEXT: maxAlignment:
 # CHECK-NEXT: adjustsStack: true
 # CHECK-NEXT: hasCalls: true
-# CHECK-NEXT: framePointerPolicy: non-leaf
+# CHECK-NEXT: framePointerPolicy: none
 # CHECK-NEXT: stackProtector:  ''
 # CHECK-NEXT: functionContext:  '%stack.0'
 # CHECK-NEXT: maxCallFrameSize: 4
@@ -91,7 +131,6 @@ frameInfo:
   maxAlignment:    4
   adjustsStack:    true
   hasCalls:        true
-  framePointerPolicy: non-leaf
   functionContext: '%stack.0'
   maxCallFrameSize: 4
   cvBytesOfCalleeSavedRegisters: 8
@@ -100,6 +139,61 @@ frameInfo:
   hasTailCall:     true
   hasMustTailInVarArgFunc: true
   localFrameSize: 256
+body: |
+  bb.0.entry:
+...
+---
+name:            test_framePointerPolicy_none
+
+# CHECK: test_framePointerPolicy_none
+# CHECK: frameInfo:
+# CHECK: framePointerPolicy: none
+frameInfo:
+  framePointerPolicy: none
+body: |
+  bb.0.entry:
+...
+---
+name:            test_framePointerPolicy_non_leaf
+
+# CHECK: test_framePointerPolicy_non_leaf
+# CHECK: frameInfo:
+# CHECK: framePointerPolicy: non-leaf
+frameInfo:
+  framePointerPolicy: non-leaf
+body: |
+  bb.0.entry:
+...
+---
+name:            test_framePointerPolicy_all
+
+# CHECK: test_framePointerPolicy_all
+# CHECK: frameInfo:
+# CHECK: framePointerPolicy: all
+frameInfo:
+  framePointerPolicy: all
+body: |
+  bb.0.entry:
+...
+---
+name:            test_framePointerPolicy_reserved
+
+# CHECK: test_framePointerPolicy_reserved
+# CHECK: frameInfo:
+# CHECK: framePointerPolicy: reserved
+frameInfo:
+  framePointerPolicy: reserved
+body: |
+  bb.0.entry:
+...
+---
+name:            test_framePointerPolicy_non_leaf_no_reserve
+
+# CHECK: test_framePointerPolicy_non_leaf_no_reserve
+# CHECK: frameInfo:
+# CHECK: framePointerPolicy: non-leaf-no-reserve
+frameInfo:
+  framePointerPolicy: non-leaf-no-reserve
 body: |
   bb.0.entry:
 ...
