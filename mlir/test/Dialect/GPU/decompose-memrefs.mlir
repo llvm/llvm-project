@@ -26,13 +26,13 @@ func.func @decompose_store(%arg0 : f32, %arg1 : memref<?x?x?xf32>) {
 
 // -----
 
-//       CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5, s6] -> (s0 + s1 * s2 + s3 * s4 + s5 * s6)>
+//       CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0 * s1 + s2 * s3 + s4 * s5)>
 //       CHECK: @decompose_store_strided
 //  CHECK-SAME: (%[[VAL:.*]]: f32, %[[MEM:.*]]: memref<?x?x?xf32, strided<[?, ?, ?]>>)
 //       CHECK:  %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[MEM]]
 //       CHECK:  gpu.launch
 //  CHECK-SAME:  threads(%[[TX:.*]], %[[TY:.*]], %[[TZ:.*]]) in
-//       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[OFFSET]], %[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]], %[[STRIDES]]#2]
+//       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]], %[[STRIDES]]#2]
 //       CHECK:  %[[PTR:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[IDX]]], sizes: [], strides: [] : memref<f32> to memref<f32, strided<[]>>
 //       CHECK:  memref.store %[[VAL]], %[[PTR]][] : memref<f32, strided<[]>>
 func.func @decompose_store_strided(%arg0 : f32, %arg1 : memref<?x?x?xf32, strided<[?, ?, ?]>>) {

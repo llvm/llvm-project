@@ -600,8 +600,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG:      %[[CST:.+]] = arith.constant 0.000000e+00 : f32
 // CHECK:          %[[ALLOC:.+]] = memref.alloc() : memref<32x64xf32>
 // CHECK:          %[[ALLOC_0:.+]] = memref.alloc() : memref<32x128xf32>
-// CHECK:          %[[CAST:.+]] = memref.cast %[[ALLOC_0]] : memref<32x128xf32> to memref<32x128xf32, strided<[128, 1],
-// CHECK-SAME:       offset: ?>>
+// CHECK:          %[[CAST:.+]] = memref.cast %[[ALLOC_0]] : memref<32x128xf32> to memref<32x128xf32, strided<[128, 1]>>
 // CHECK:          %[[D0:.+]] = vector.transfer_read %[[ALLOC]][%[[C0]], %[[C0]]], %[[CST]] {in_bounds = [true, true]} :
 // CHECK-SAME:       memref<32x64xf32>, vector<32x64xf32>
 // CHECK:          scf.for %[[ARG0:.+]] = %[[C0]] to %[[C1024]] step %[[C128]] {

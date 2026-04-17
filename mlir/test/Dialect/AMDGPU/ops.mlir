@@ -415,18 +415,18 @@ func.func @fat_raw_buffer_cast_easy(%m: memref<8xi32>) -> memref<8xi32, #amdgpu.
 // CHECK-SAME: cacheSwizzleStride(%{{[^)]*}})
 // CHECK-SAME: boundsCheck(false)
 // CHECK-SAME: resetOffset
-func.func @fat_raw_buffer_cast(%m: memref<8xi32, strided<[1]>>, %validBytes: i64, %cacheSwizzle: i14) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+func.func @fat_raw_buffer_cast(%m: memref<8xi32, strided<[1]>>, %validBytes: i64, %cacheSwizzle: i14) -> memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>> {
   %ret = amdgpu.fat_raw_buffer_cast %m validBytes(%validBytes) cacheSwizzleStride(%cacheSwizzle) boundsCheck(false) resetOffset
-    : memref<8xi32, strided<[1]>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
-  func.return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+    : memref<8xi32, strided<[1]>> to memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_dynamic_1d_reset_offset
 // CHECK: amdgpu.fat_raw_buffer_cast
-func.func @fat_raw_buffer_cast_dynamic_1d_reset_offset(%m: memref<?xi32, strided<[1]>>) -> memref<?xi32, #amdgpu.address_space<fat_raw_buffer>> {
+func.func @fat_raw_buffer_cast_dynamic_1d_reset_offset(%m: memref<?xi32, strided<[1]>>) -> memref<?xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>> {
   %ret = amdgpu.fat_raw_buffer_cast %m resetOffset
-    : memref<?xi32, strided<[1]>> to memref<?xi32, #amdgpu.address_space<fat_raw_buffer>>
-  func.return %ret : memref<?xi32, #amdgpu.address_space<fat_raw_buffer>>
+    : memref<?xi32, strided<[1]>> to memref<?xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<?xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_dynamic_0d_reset_offset
