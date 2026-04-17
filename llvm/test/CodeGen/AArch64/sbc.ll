@@ -129,14 +129,11 @@ define i32 @test_sext_add(i32 %a, i32 %b, i32 %x, i32 %y) {
   ret i32 %res
 }
 
-; FIXME: This case could be supported with reversed operands to the CMP.
 define i32 @test_ugt(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-SD-LABEL: test_ugt:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmp w0, w1
-; CHECK-SD-NEXT:    sub w8, w2, w3
-; CHECK-SD-NEXT:    cset w9, hi
-; CHECK-SD-NEXT:    sub w0, w8, w9
+; CHECK-SD-NEXT:    cmp w1, w0
+; CHECK-SD-NEXT:    sbc w0, w2, w3
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_ugt:

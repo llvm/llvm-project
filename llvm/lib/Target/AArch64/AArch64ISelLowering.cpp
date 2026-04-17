@@ -23100,6 +23100,7 @@ static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
 // Attempt to combine the following patterns:
 //   SUB x, (CSET LO, (CMP a, b)) -> SBC x, 0, (CMP a, b)
 //   SUB (SUB x, y), (CSET LO, (CMP a, b)) -> SBC x, y, (CMP a, b)
+// Also handles CSET HI by swapping the CMP operands (a > b ≡ b < a).
 // The CSET may be preceded by a ZEXT.
 static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
   if (N->getOpcode() != ISD::SUB)
@@ -23112,12 +23113,21 @@ static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue N1 = N->getOperand(1);
   if (N1.getOpcode() == ISD::ZERO_EXTEND && N1.hasOneUse())
     N1 = N1.getOperand(0);
-  if (!N1.hasOneUse() || getCSETCondCode(N1) != AArch64CC::LO)
+  auto CC = getCSETCondCode(N1);
+  if (!N1.hasOneUse() || (CC != AArch64CC::LO && CC != AArch64CC::HI))
     return SDValue();
 
   SDValue Flags = N1.getOperand(3);
   if (Flags.getOpcode() != AArch64ISD::SUBS)
     return SDValue();
+
+  // For HI (unsigned >), swap the SUBS operands to obtain LO (unsigned <).
+  if (CC == AArch64CC::HI) {
+    Flags = DAG.getNode(AArch64ISD::SUBS, SDLoc(Flags),
+                        DAG.getVTList(VT, FlagsVT),
+                        Flags.getOperand(1), Flags.getOperand(0));
+    Flags = Flags.getValue(1);
+  }
 
   SDLoc DL(N);
   SDValue N0 = N->getOperand(0);
