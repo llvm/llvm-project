@@ -1650,13 +1650,17 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     return forCopyIn;
   }
   if (forCopyOut) {
-    // If the actual argument's base object has INTENT(IN) in the caller's
-    // context, copy-out would violate the read-only semantics of INTENT(IN).
-    if (const Expr<SomeType> *expr{actual->UnwrapExpr()}) {
-      if (const Symbol *symbol{GetFirstSymbol(*expr)}) {
-        if (semantics::IsIntentIn(*symbol)) {
-          return false;
-        }
+    // F2023 8.5.10 C846/p2/p6: a nonpointer INTENT(IN) dummy and its
+    // subobjects may not be defined. Suppress copy-out when the actual
+    // argument is a subobject of a nonpointer INTENT(IN) dummy.
+    // Exception: a data-ref that goes through a pointer component defines the
+    // pointer's target, which is not a subobject of the dummy (F2023 9.4.2
+    // p5), so copy-out is still needed in that case.
+    if (const auto dataRef{ExtractDataRef(*actual)}) {
+      const Symbol &firstSym{dataRef->GetFirstSymbol()};
+      if (semantics::IsIntentIn(firstSym) && !IsPointer(firstSym) &&
+          !GetLastPointerSymbol(*dataRef)) {
+        return false;
       }
     }
   }
