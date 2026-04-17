@@ -360,7 +360,7 @@ std::string SelectSymStoreCache(std::optional<std::string> sympath_cache) {
       return path;
     if (std::error_code ec = llvm::sys::fs::create_directories(path)) {
       LLDB_LOG(log, "Ignoring invalid SymStore cache directory '{0}': {1}",
-                    path, ec.message());
+               path, ec.message());
       continue;
     }
     return path;
