@@ -439,11 +439,9 @@ gpu.func @load_from_subview_1D(%source: memref<4096x4096xf16>, %off1: index, %of
 // LOAD-ND-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
 // LOAD-ND-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
 // LOAD-ND:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
-// LOAD-ND:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1] : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1]>> 
-// LOAD-ND:        %[[BB:.+]], %[[OFFSET:.+]],{{.*}},{{.*}} = memref.extract_strided_metadata %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1]>> -> memref<f16>, index, index, index, index, index
+// LOAD-ND:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1] : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1]>>
 // LOAD-ND:        %[[STEP:.+]] = vector.step : vector<8xindex>
 // LOAD-ND:        arith.muli {{.*}} : index
-// LOAD-ND:        arith.addi %[[OFFSET]]{{.*}} : index
 // LOAD-ND:        arith.addi {{.*}} : index
 // LOAD-ND:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
 // LOAD-ND:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
@@ -455,11 +453,9 @@ gpu.func @load_from_subview_1D(%source: memref<4096x4096xf16>, %off1: index, %of
 // LOAD-GATHER-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
 // LOAD-GATHER-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
 // LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
-// LOAD-GATHER:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1] : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1]>> 
-// LOAD-GATHER:        %[[BB:.+]], %[[OFFSET:.+]],{{.*}},{{.*}} = memref.extract_strided_metadata %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1]>> -> memref<f16>, index, index, index, index, index
+// LOAD-GATHER:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1] : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1]>>
 // LOAD-GATHER:        %[[STEP:.+]] = vector.step : vector<8xindex>
 // LOAD-GATHER:        arith.muli {{.*}} : index
-// LOAD-GATHER:        arith.addi %[[OFFSET]]{{.*}} : index
 // LOAD-GATHER:        arith.addi {{.*}} : index
 // LOAD-GATHER:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
 // LOAD-GATHER:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
@@ -498,7 +494,6 @@ gpu.func @load_from_subview_2D(%source: memref<4096x4096xf16>, %off1: index, %of
 // LOAD-GATHER-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
 // LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<8x16xi1>
 // LOAD-GATHER:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1] : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1]>>
-// LOAD-GATHER:        %[[BB:.+]], %[[OFFSET:.+]],{{.*}},{{.*}} = memref.extract_strided_metadata %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1]>> -> memref<f16>, index, index, index, index, index
 // LOAD-GATHER-COUNT2: vector.step
 // LOAD-GATHER-COUNT2: vector.shape_cast
 // LOAD-GATHER-COUNT2: vector.broadcast
