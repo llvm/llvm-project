@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fbounds-safety -ast-dump -Wno-bounds-attributes-implicit-conversion-single-to-explicit-indexable %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump -Wno-bounds-attributes-implicit-conversion-single-to-explicit-indexable %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fbounds-safety -ast-dump %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump %s 2>&1 | FileCheck %s
 
 #include <ptrcheck.h>
 
@@ -69,7 +69,19 @@ int baz(S_ptr p) { return foo(p); }
 // CHECK-NEXT: {{^}}      `-CallExpr
 // CHECK-NEXT: {{^}}        |-ImplicitCastExpr {{.+}} 'int (*__single)(struct S *__bidi_indexable)' <FunctionToPointerDecay>
 // CHECK-NEXT: {{^}}        | `-DeclRefExpr {{.+}} [[func_foo]]
-// CHECK-NEXT: {{^}}        `-ImplicitCastExpr {{.+}} 'struct S *__bidi_indexable' <BoundsSafetyPointerCast>
-// CHECK-NEXT: {{^}}          `-ImplicitCastExpr {{.+}} 'struct S *__single' <LValueToRValue>
-// CHECK-NEXT: {{^}}            `-DeclRefExpr {{.+}} [[var_p_2]]
+// CHECK-NEXT: {{^}}        `-MaterializeSequenceExpr {{.+}} <Unbind>
+// CHECK-NEXT: {{^}}          |-MaterializeSequenceExpr {{.+}} <Bind>
+// CHECK-NEXT: {{^}}          | |-BoundsSafetyPointerPromotionExpr {{.+}} 'struct S *__bidi_indexable'
+// CHECK-NEXT: {{^}}          | | |-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} 'struct S *__single'
+// CHECK:      {{^}}          | | |-BinaryOperator {{.+}} 'int *' '+'
+// CHECK-NEXT: {{^}}          | | | |-ImplicitCastExpr {{.+}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: {{^}}          | | | | `-MemberExpr {{.+}} ->fam
+// CHECK-NEXT: {{^}}          | | | |   `-OpaqueValueExpr [[ove_2]] {{.*}} 'struct S *__single'
+// CHECK:      {{^}}          | | | `-ImplicitCastExpr {{.+}} 'int' <LValueToRValue>
+// CHECK-NEXT: {{^}}          | | |   `-MemberExpr {{.+}} ->count
+// CHECK-NEXT: {{^}}          | | |     `-OpaqueValueExpr [[ove_2]] {{.*}} 'struct S *__single'
+// CHECK:      {{^}}          | `-OpaqueValueExpr [[ove_2]]
+// CHECK-NEXT: {{^}}          |   `-ImplicitCastExpr {{.+}} 'struct S *__single' <LValueToRValue>
+// CHECK-NEXT: {{^}}          |     `-DeclRefExpr {{.+}} [[var_p_2]]
+// CHECK-NEXT: {{^}}          `-OpaqueValueExpr [[ove_2]] {{.*}} 'struct S *__single'
 

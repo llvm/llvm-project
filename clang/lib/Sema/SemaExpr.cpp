@@ -914,8 +914,8 @@ static RecordDecl *getImmediateDeclForFlexibleArrayPromotion(QualType T) {
   if (T->isSinglePointerType() && !T->isBoundsAttributedType()) {
     auto *PT = T->getAs<PointerType>();
     if (auto *RecordPointee = PT->getPointeeType()->getAs<RecordType>()) {
-      auto *RD = RecordPointee->getDecl();
-      if (RD->hasFlexibleArrayMember() &&
+      auto *RD = RecordPointee->getDecl()->getDefinition();
+      if (RD && RD->hasFlexibleArrayMember() &&
           RD->getTagKind() != TagTypeKind::Union) {
         return RD;
       }
