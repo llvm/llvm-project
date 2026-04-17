@@ -37,44 +37,16 @@ define void @wide_phi_2_predecessors(ptr noalias %A, ptr noalias %B, i32 %c, i1 
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 1000, %[[SCALAR_PH]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OUTER_IV]]
-; CHECK-NEXT:    store i32 [[C]], ptr [[GEP_A]], align 4
-; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
-; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[RED_NEXT:%.*]], %[[INNER_LATCH]] ]
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INNER_IV]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[INNER_LATCH]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[THEN:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[L_B:%.*]] = load i64, ptr [[GEP_B]], align 8
-; CHECK-NEXT:    br label %[[INNER_LATCH]]
+; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
 ; CHECK:       [[INNER_LATCH]]:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[L_B]], %[[THEN]] ], [ 0, %[[INNER_HEADER]] ]
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i64 [[P]], [[OUTER_IV]]
-; CHECK-NEXT:    [[RED_NEXT]] = add nsw i64 [[ADD_1]], [[RED]]
-; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
-; CHECK-NEXT:    [[INNER_EC:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[INNER_EC]], label %[[OUTER_LATCH]], label %[[INNER_HEADER]]
-; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i64 [ [[RED_NEXT]], %[[INNER_LATCH]] ]
-; CHECK-NEXT:    store i64 [[RED_NEXT_LCSSA]], ptr [[GEP_A]], align 8
-; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
-; CHECK-NEXT:    [[OUTER_EC:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[OUTER_EC]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
   br label %outer.header
 
-outer.header:                                         ; preds = %outer.latch, %outer.header.lr.ph
+outer.header:
   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
   %gep.A = getelementptr inbounds i64, ptr %A, i64 %outer.iv
   store i32 %c, ptr %gep.A, align 4
@@ -144,44 +116,16 @@ define void @wide_phi_2_predecessors_phi_ops_swapped(ptr noalias %A, ptr noalias
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 1000, %[[SCALAR_PH]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OUTER_IV]]
-; CHECK-NEXT:    store i32 [[C]], ptr [[GEP_A]], align 4
-; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
-; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[RED_NEXT:%.*]], %[[INNER_LATCH]] ]
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INNER_IV]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[INNER_LATCH]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[THEN:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[L_B:%.*]] = load i64, ptr [[GEP_B]], align 8
-; CHECK-NEXT:    br label %[[INNER_LATCH]]
+; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
 ; CHECK:       [[INNER_LATCH]]:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 0, %[[INNER_HEADER]] ], [ [[L_B]], %[[THEN]] ]
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i64 [[P]], [[OUTER_IV]]
-; CHECK-NEXT:    [[RED_NEXT]] = add nsw i64 [[ADD_1]], [[RED]]
-; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
-; CHECK-NEXT:    [[INNER_EC:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[INNER_EC]], label %[[OUTER_LATCH]], label %[[INNER_HEADER]]
-; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i64 [ [[RED_NEXT]], %[[INNER_LATCH]] ]
-; CHECK-NEXT:    store i64 [[RED_NEXT_LCSSA]], ptr [[GEP_A]], align 8
-; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
-; CHECK-NEXT:    [[OUTER_EC:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[OUTER_EC]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
   br label %outer.header
 
-outer.header:                                         ; preds = %outer.latch, %outer.header.lr.ph
+outer.header:
   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
   %gep.A = getelementptr inbounds i64, ptr %A, i64 %outer.iv
   store i32 %c, ptr %gep.A, align 4

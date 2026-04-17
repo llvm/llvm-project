@@ -32,6 +32,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValue.h"
+#include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueLanguage.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
@@ -212,6 +213,27 @@ enum {
 };
 #endif
 
+static const FileSpecList &GetDefaultSafeAutoLoadPaths() {
+  static const FileSpecList sSafePaths = [] {
+    // FIXME: in c++20 this could be a std::array (with CTAD deduced size)
+    // and we could statically assert that all members are non-empty.
+    const llvm::SmallVector<llvm::StringRef> kVendorSafePaths = {
+#include "SafeAutoloadPaths.inc"
+    };
+    FileSpecList fspecs;
+    for (auto path : kVendorSafePaths) {
+      assert(!path.empty());
+      LLDB_LOG(GetLog(SystemLog::System), "Safe auto-load path configured: {0}",
+               path);
+      fspecs.EmplaceBack(path);
+    }
+
+    return fspecs;
+  }();
+
+  return sSafePaths;
+}
+
 #ifndef NDEBUG
 TestingProperties::TestingProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>("testing");
@@ -227,6 +249,27 @@ bool TestingProperties::GetInjectVarLocListError() const {
 TestingProperties &TestingProperties::GetGlobalTestingProperties() {
   static TestingProperties g_testing_properties;
   return g_testing_properties;
+}
+
+void TestingProperties::SetSafeAutoLoadPaths(FileSpecList paths) {
+  const uint32_t idx = ePropertySafeAutoloadPaths;
+  OptionValueFileSpecList *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
+  assert(option_value);
+  option_value->SetCurrentValue(std::move(paths));
+}
+
+void TestingProperties::AppendSafeAutoLoadPaths(FileSpec path) {
+  const uint32_t idx = ePropertySafeAutoloadPaths;
+  OptionValueFileSpecList *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
+  assert(option_value);
+  option_value->AppendCurrentValue(path);
+}
+
+FileSpecList TestingProperties::GetSafeAutoLoadPaths() const {
+  const uint32_t idx = ePropertySafeAutoloadPaths;
+  return GetPropertyAtIndexAs<FileSpecList>(idx, {});
 }
 #endif
 
@@ -307,13 +350,10 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       if (target_sp->TargetProperties::GetLoadScriptFromSymbolFile() ==
           eLoadScriptFromSymFileTrue) {
         std::list<Status> errors;
-        StreamString feedback_stream;
-        if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
+        if (!target_sp->LoadScriptingResources(errors)) {
           lldb::StreamUP s = GetAsyncErrorStream();
           for (auto &error : errors)
             s->Printf("%s\n", error.AsCString());
-          if (feedback_stream.GetSize())
-            s->PutCString(feedback_stream.GetString());
         }
       }
     }
@@ -967,34 +1007,6 @@ Debugger::FindDebuggerWithInstanceName(llvm::StringRef instance_name) {
   return nullptr;
 }
 
-TargetSP Debugger::FindTargetWithProcessID(lldb::pid_t pid) {
-  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
-  if (!g_debugger_list_ptr)
-    return nullptr;
-
-  for (const DebuggerSP &debugger_sp : *g_debugger_list_ptr) {
-    if (TargetSP target_sp =
-            debugger_sp->GetTargetList().FindTargetWithProcessID(pid))
-      return target_sp;
-  }
-
-  return nullptr;
-}
-
-TargetSP Debugger::FindTargetWithProcess(Process *process) {
-  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
-  if (!g_debugger_list_ptr)
-    return nullptr;
-
-  for (const DebuggerSP &debugger_sp : *g_debugger_list_ptr) {
-    if (TargetSP target_sp =
-            debugger_sp->GetTargetList().FindTargetWithProcess(process))
-      return target_sp;
-  }
-
-  return nullptr;
-}
-
 llvm::StringRef Debugger::GetStaticBroadcasterClass() {
   static constexpr llvm::StringLiteral class_name("lldb.debugger");
   return class_name;
@@ -1043,6 +1055,12 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
         "Settings specify to the debugger's command interpreter.", true,
         m_command_interpreter_up->GetValueProperties());
   }
+#ifndef NDEBUG
+  m_collection_sp->AppendProperty(
+      "testing", "Testing-only settings.", /*is_global=*/true,
+      TestingProperties::GetGlobalTestingProperties().GetValueProperties());
+#endif
+
   if (log_callback)
     m_callback_handler_sp =
         std::make_shared<CallbackLogHandler>(log_callback, baton);
@@ -1264,6 +1282,15 @@ void Debugger::RedrawStatusline(
     return;
 
   m_statusline->Redraw(exe_ctx_ref);
+}
+
+void Debugger::FlushStatusLine() {
+  std::lock_guard<std::mutex> guard(m_statusline_mutex);
+
+  if (!m_statusline)
+    return;
+
+  m_statusline->ClearExecutionContext();
 }
 
 ExecutionContext Debugger::GetSelectedExecutionContext() {
@@ -2105,6 +2132,46 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
   m_forward_listener_sp.reset();
 }
 
+/// Conservative heuristic to detect whether OSC 9;4 progress is supported by
+/// the current terminal.
+static bool TerminalSupportsOSCProgress() {
+#if defined(_WIN32)
+  // On Windows, we assume that the user is using the Windows Terminal.
+  return true;
+#else
+  static std::once_flag g_once_flag;
+  static bool g_supports_osc_progress = false;
+
+  std::call_once(g_once_flag, []() {
+    // Check TERM_PROGRAM for known supported terminals. This can lead to false
+    // negatives, for example when using tmux.
+    if (const char *term_program = std::getenv("TERM_PROGRAM")) {
+      llvm::StringRef term_program_str(term_program);
+      if (term_program_str.starts_with("ghostty") ||
+          term_program_str.starts_with("wezterm")) {
+        g_supports_osc_progress = true;
+        return;
+      }
+    }
+
+    // Check other known environment variables.
+    std::array<const char *, 3> known_env_vars = {
+        "ConEmuPID", // https://conemu.github.io/en/ConEmuEnvironment.html
+        "GHOSTTY_RESOURCES_DIR", // https://ghostty.org/docs/features/shell-integration
+        "OSC_PROGRESS",          // LLDB specific override.
+    };
+    for (const char *env_var : known_env_vars) {
+      if (std::getenv(env_var)) {
+        g_supports_osc_progress = true;
+        return;
+      }
+    }
+  });
+
+  return g_supports_osc_progress;
+#endif
+}
+
 bool Debugger::IsEscapeCodeCapableTTY() {
   if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
     File &file = stream_sp->GetUnlockedFile();
@@ -2131,9 +2198,10 @@ static bool RequiresFollowChildWorkaround(const Process &process) {
 
 lldb::thread_result_t Debugger::DefaultEventHandler() {
   ListenerSP listener_sp(GetListener());
-  ConstString broadcaster_class_target(Target::GetStaticBroadcasterClass());
-  ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
-  ConstString broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_target(Target::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_process(
+      Process::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
   BroadcastEventSpec target_event_spec(broadcaster_class_target,
                                        Target::eBroadcastBitBreakpointChanged);
 
@@ -2185,12 +2253,21 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
         Broadcaster *broadcaster = event_sp->GetBroadcaster();
         if (broadcaster) {
           uint32_t event_type = event_sp->GetType();
-          ConstString broadcaster_class(broadcaster->GetBroadcasterClass());
+          llvm::StringRef broadcaster_class(broadcaster->GetBroadcasterClass());
           if (broadcaster_class == broadcaster_class_process) {
-            if (ProcessSP process_sp = HandleProcessEvent(event_sp))
+            if (ProcessSP process_sp = HandleProcessEvent(event_sp)) {
+              // Don't pass adopt_selected = true if this is a stop for an
+              // auto-continue event (e.g. an auto-continue breakpoint).  We
+              // would be fetching stale state, since the process resumed since
+              // this event, and we'd needlessly interrupt the target to do so.
+              const bool adopt_selected =
+                  process_sp->GetPrivateState() == eStateStopped &&
+                  !Process::ProcessEventData::GetRestartedFromEvent(
+                      event_sp.get());
               if (!RequiresFollowChildWorkaround(*process_sp))
-                exe_ctx_ref = ExecutionContextRef(process_sp.get(),
-                                                  /*adopt_selected=*/true);
+                exe_ctx_ref =
+                    ExecutionContextRef(process_sp.get(), adopt_selected);
+            }
           } else if (broadcaster_class == broadcaster_class_target) {
             if (Breakpoint::BreakpointEventData::GetEventDataFromEvent(
                     event_sp.get())) {
@@ -2258,7 +2335,8 @@ bool Debugger::StartEventHandlerThread() {
     // function. We do this by listening to events for the
     // eBroadcastBitEventThreadIsListening from the m_sync_broadcaster
     ConstString full_name("lldb.debugger.event-handler");
-    ListenerSP listener_sp(Listener::MakeListener(full_name.AsCString()));
+    ListenerSP listener_sp(
+        Listener::MakeListener(full_name.AsCString(nullptr)));
     listener_sp->StartListeningForEvents(&m_sync_broadcaster,
                                          eBroadcastBitEventThreadIsListening);
 
@@ -2333,7 +2411,8 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
     }
 
     // Show progress using Operating System Command (OSC) sequences.
-    if (GetShowProgress() && IsEscapeCodeCapableTTY()) {
+    if (GetShowProgress() && IsEscapeCodeCapableTTY() &&
+        TerminalSupportsOSCProgress()) {
       if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
 
         // Clear progress if this was the last progress event.
@@ -2530,4 +2609,16 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       "A boolean value that indicates if lua support is enabled in LLDB");
   AddLLVMTargets(*config_up);
   return config_up;
+}
+
+FileSpecList Debugger::GetSafeAutoLoadPaths() {
+  FileSpecList fspecs = GetDefaultSafeAutoLoadPaths();
+
+#ifndef NDEBUG
+  for (const auto &fspec :
+       TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
+    fspecs.Append(fspec);
+#endif
+
+  return fspecs;
 }

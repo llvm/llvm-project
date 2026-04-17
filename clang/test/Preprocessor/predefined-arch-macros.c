@@ -1876,6 +1876,7 @@
 // CHECK_GNR_M32: #define __FMA__ 1
 // CHECK_GNR_M32: #define __GFNI__ 1
 // CHECK_GNR_M32: #define __INVPCID__ 1
+// CHECK_DMR_M32: #define __JMPABS__ 1
 // CHECK_GNR_M32: #define __LZCNT__ 1
 // CHECK_GNR_M32: #define __MMX__ 1
 // CHECK_GNR_M32: #define __MOVBE__ 1
@@ -1981,6 +1982,7 @@
 // CHECK_GNR_M64: #define __FMA__ 1
 // CHECK_GNR_M64: #define __GFNI__ 1
 // CHECK_GNR_M64: #define __INVPCID__ 1
+// CHECK_DMR_M64: #define __JMPABS__ 1
 // CHECK_GNR_M64: #define __LZCNT__ 1
 // CHECK_GNR_M64: #define __MMX__ 1
 // CHECK_GNR_M64: #define __MOVBE__ 1
@@ -2576,6 +2578,7 @@
 // CHECK_ARL_M32: #define __GFNI__ 1
 // CHECK_ARL_M32: #define __HRESET__ 1
 // CHECK_ARL_M32: #define __INVPCID__ 1
+// CHECK_NVL_M32: #define __JMPABS__ 1
 // CHECK_KL_M32:  #define __KL__ 1
 // CHECK_NKL_M32-NOT: __KL__
 // CHECK_ARL_M32: #define __LZCNT__ 1
@@ -2709,6 +2712,7 @@
 // CHECK_ARL_M64: #define __GFNI__ 1
 // CHECK_ARL_M64: #define __HRESET__ 1
 // CHECK_ARL_M64: #define __INVPCID__ 1
+// CHECK_NVL_M64: #define __JMPABS__ 1
 // CHECK_KL_M64:  #define __KL__ 1
 // CHECK_NKL_M64-NOT: __KL__
 // CHECK_ARL_M64: #define __LZCNT__ 1
@@ -4607,19 +4611,20 @@
 
 // Begin amdgcn tests ----------------
 
-// RUN: %clang -mcpu=gfx803 -E -dM %s -o - 2>&1 \
+// RUN: %clang -mcpu=gfx900 -E -dM %s -o - 2>&1 \
 // RUN:     -target amdgcn-unknown-unknown \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_803
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_900
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target amdgcn-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_NONE
+// CHECK_AMDGCN: #define FP_FAST_FMA 1
+// CHECK_AMDGCN_900: #define FP_FAST_FMAF 1
+// CHECK_AMDGCN: #define FP_FAST_FMA_HALF 1
+// CHECK_AMDGCN_NONE-NOT: FP_FAST_FMAF
 // CHECK_AMDGCN: #define __AMDGCN__ 1
-// CHECK_AMDGCN_803: #define __HAS_FMAF__ 1
-// CHECK_AMDGCN_803: #define __HAS_FP64__ 1
-// CHECK_AMDGCN_803: #define __HAS_LDEXPF__ 1
-// CHECK_AMDGCN_NONE-NOT: #define __HAS_FMAF__
-// CHECK_AMDGCN_NONE-NOT: #define __HAS_FP64__
-// CHECK_AMDGCN_NONE-NOT: #define __HAS_LDEXPF__
+// CHECK_AMDGCN: #define __HAS_FMAF__ 1
+// CHECK_AMDGCN: #define __HAS_FP64__ 1
+// CHECK_AMDGCN: #define __HAS_LDEXPF__ 1
 
 // Begin r600 tests ----------------
 

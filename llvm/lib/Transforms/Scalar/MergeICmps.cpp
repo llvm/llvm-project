@@ -43,8 +43,8 @@
 
 #include "llvm/Transforms/Scalar/MergeICmps.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -53,9 +53,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <algorithm>
@@ -344,20 +341,17 @@ visitCmpBlock(Value *const Val, BasicBlock *const Block,
               const BasicBlock *const PhiBlock, BaseIdentifier &BaseId) {
   if (Block->empty())
     return std::nullopt;
-  auto *const BranchI = dyn_cast<BranchInst>(Block->getTerminator());
-  if (!BranchI)
-    return std::nullopt;
-  LLVM_DEBUG(dbgs() << "branch\n");
+  auto *Term = Block->getTerminator();
   Value *Cond;
   ICmpInst::Predicate ExpectedPredicate;
-  if (BranchI->isUnconditional()) {
+  if (isa<UncondBrInst>(Term)) {
     // In this case, we expect an incoming value which is the result of the
     // comparison. This is the last link in the chain of comparisons (note
     // that this does not mean that this is the last incoming value, blocks
     // can be reordered).
     Cond = Val;
     ExpectedPredicate = ICmpInst::ICMP_EQ;
-  } else {
+  } else if (auto *BranchI = dyn_cast<CondBrInst>(Term)) {
     // In this case, we expect a constant incoming value (the comparison is
     // chained).
     const auto *const Const = cast<ConstantInt>(Val);
@@ -370,7 +364,8 @@ visitCmpBlock(Value *const Val, BasicBlock *const Block,
     Cond = BranchI->getCondition();
     ExpectedPredicate =
         FalseBlock == PhiBlock ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
-  }
+  } else
+    return std::nullopt;
 
   auto *CmpI = dyn_cast<ICmpInst>(Cond);
   if (!CmpI)
@@ -382,7 +377,7 @@ visitCmpBlock(Value *const Val, BasicBlock *const Block,
     return std::nullopt;
 
   BCECmpBlock::InstructionSet BlockInsts(
-      {Result->Lhs.LoadI, Result->Rhs.LoadI, Result->CmpI, BranchI});
+      {Result->Lhs.LoadI, Result->Rhs.LoadI, Result->CmpI, Term});
   if (Result->Lhs.GEP)
     BlockInsts.insert(Result->Lhs.GEP);
   if (Result->Rhs.GEP)
@@ -890,7 +885,7 @@ static bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI,
 static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
                     const TargetTransformInfo &TTI, AliasAnalysis &AA,
                     DominatorTree *DT) {
-  LLVM_DEBUG(dbgs() << "MergeICmpsLegacyPass: " << F.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "MergeICmpsPass: " << F.getName() << "\n");
 
   // We only try merging comparisons if the target wants to expand memcmp later.
   // The rationale is to avoid turning small chains into memcmp calls.
@@ -914,49 +909,6 @@ static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
 
   return MadeChange;
 }
-
-namespace {
-class MergeICmpsLegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  MergeICmpsLegacyPass() : FunctionPass(ID) {
-    initializeMergeICmpsLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F)) return false;
-    const auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    const auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    // MergeICmps does not need the DominatorTree, but we update it if it's
-    // already available.
-    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-    auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-    return runImpl(F, TLI, TTI, AA, DTWP ? &DTWP->getDomTree() : nullptr);
-  }
-
- private:
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-};
-
-} // namespace
-
-char MergeICmpsLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(MergeICmpsLegacyPass, "mergeicmps",
-                      "Merge contiguous icmps into a memcmp", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(MergeICmpsLegacyPass, "mergeicmps",
-                    "Merge contiguous icmps into a memcmp", false, false)
-
-Pass *llvm::createMergeICmpsLegacyPass() { return new MergeICmpsLegacyPass(); }
 
 PreservedAnalyses MergeICmpsPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {

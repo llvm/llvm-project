@@ -102,7 +102,7 @@ public:
     return enum_seq_inclusive(Location::First, Location::Last,
                               force_iteration_on_noniterable_enum);
   }
-
+  /// Returns iterator over all target location kinds
   static auto targetMemLocations() {
     return enum_seq_inclusive(Location::TargetMem0, Location::TargetMem1,
                               force_iteration_on_noniterable_enum);
@@ -167,6 +167,29 @@ public:
     MemoryEffectsBase FRMB = none();
     FRMB.setModRef(Location::ArgMem, MR);
     FRMB.setModRef(Location::InaccessibleMem, MR);
+    return FRMB;
+  }
+
+  /// Create MemoryEffectsBase that can only access inaccessible or errno
+  /// memory.
+  static MemoryEffectsBase
+  inaccessibleOrErrnoMemOnly(ModRefInfo InaccessibleMR = ModRefInfo::ModRef,
+                             ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::InaccessibleMem, InaccessibleMR);
+    FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
+    return FRMB;
+  }
+
+  /// Create MemoryEffectsBase that can only access inaccessible, argument or
+  /// errno memory.
+  static MemoryEffectsBase inaccessibleOrArgOrErrnoMemOnly(
+      ModRefInfo InaccessibleOrArgMR = ModRefInfo::ModRef,
+      ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::InaccessibleMem, InaccessibleOrArgMR);
+    FRMB.setModRef(Location::ArgMem, InaccessibleOrArgMR);
+    FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
     return FRMB;
   }
 
@@ -250,6 +273,26 @@ public:
     for (auto Loc : MemoryEffectsBase::targetMemLocations())
       ME &= ME.getWithoutLoc(Loc);
     return ME.getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
+  }
+
+  /// Whether location is target memory location.
+  bool isTargetMemLoc(IRMemLocation Loc) const {
+    for (auto L : targetMemLocations())
+      if (Loc == L)
+        return true;
+    return false;
+  }
+
+  /// Whether the target memory locations are all the same.
+  /// So it behaves as the default read/write, but for Target
+  /// locations only.
+  bool isTargetMemLocSameForAll() const {
+    ModRefInfo Expected = getModRef(IRMemLocation::TargetMem0);
+    for (auto Loc : targetMemLocations()) {
+      if (Expected != getModRef(Loc))
+        return false;
+    }
+    return true;
   }
 
   /// Whether this function only (at most) accesses errno memory.

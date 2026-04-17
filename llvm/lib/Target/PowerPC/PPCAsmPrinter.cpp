@@ -27,7 +27,6 @@
 #include "PPCTargetMachine.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -360,7 +359,7 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
     MO.getMBB()->getSymbol()->print(O, MAI);
     return;
   case MachineOperand::MO_ConstantPoolIndex:
-    O << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+    O << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << '_'
       << MO.getIndex();
     return;
   case MachineOperand::MO_BlockAddress:
@@ -945,31 +944,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return PPC::S_AIX_TLSML;
     return PPC::S_None;
   };
-
-#ifndef NDEBUG
-  // Instruction sizes must be correct for PPCBranchSelector to pick the
-  // right branch kind. Verify that the reported sizes and the actually
-  // emitted sizes match.
-  unsigned ExpectedSize = Subtarget->getInstrInfo()->getInstSizeInBytes(*MI);
-  MCFragment *OldFragment = OutStreamer->getCurrentFragment();
-  size_t OldFragSize = OldFragment->getFixedSize();
-  scope_exit VerifyInstSize([&]() {
-    if (!OutStreamer->isObj())
-      return; // Can only verify size when streaming to object.
-    MCFragment *NewFragment = OutStreamer->getCurrentFragment();
-    if (NewFragment != OldFragment)
-      return; // Don't try to handle fragment splitting cases.
-    unsigned ActualSize = NewFragment->getFixedSize() - OldFragSize;
-    // FIXME: InstrInfo currently over-estimates the size of STACKMAP.
-    if (ActualSize != ExpectedSize &&
-        MI->getOpcode() != TargetOpcode::STACKMAP) {
-      dbgs() << "Size mismatch for: " << *MI << "\n";
-      dbgs() << "Expected size: " << ExpectedSize << "\n";
-      dbgs() << "Actual size: " << ActualSize << "\n";
-      abort();
-    }
-  });
-#endif
 
   // Lower multi-instruction pseudo operations.
   switch (MI->getOpcode()) {
@@ -3611,12 +3585,13 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 
   // generate the code for .foo now:
   if (TOCRestoreNeededForCallToImplementation(GI)) {
-    Twine Msg = "unimplemented: TOC register save/restore needed for ifunc \"" +
-                Twine(GI.getName()) +
-                "\", because couldn't prove all candidates "
-                "are static or hidden/protected visibility definitions";
+    SmallString<128> Msg;
+    Msg.append("unimplemented: TOC register save/restore needed for ifunc \"");
+    getNameWithPrefix(Msg, &GI);
+    Msg.append("\", because couldn't prove all candidates are static or "
+               "hidden/protected visibility definitions");
     if (!IFuncWarnInsteadOfError)
-      reportFatalUsageError(Msg);
+      reportFatalUsageError(Msg.str());
     else
       dbgs() << Msg << "\n";
   }

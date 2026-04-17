@@ -250,6 +250,9 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
     Option<"isOptimized", "is-optimized",
            "bool", /*default=*/"false",
            "is optimized.">,
+    Option<"debugInfoForProfiling", "debug-info-for-profiling", "bool",
+           /*default=*/"false",
+            "Emit extra debug info to make sample profile more accurate">,
     Option<"inputFilename", "file-name",
            "std::string",
            /*default=*/"std::string{}",
@@ -443,7 +446,7 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
        Option<"noInfsFPMath", "no-infs-fp-math", "bool", /*default=*/"false",
               "Set the ninf flag on instructions in the module.">,
        Option<"noNaNsFPMath", "no-nans-fp-math", "bool", /*default=*/"false",
-              "Set the no-nans-fp-math attribute on functions in the module.">,
+              "Set the nnan flag on instructions in the module.">,
        Option<"approxFuncFPMath", "approx-func-fp-math", "bool",
               /*default=*/"false",
               "Set the afn flag on instructions in the module.">,
@@ -459,6 +462,10 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
        Option<"preferVectorWidth", "prefer-vector-width", "std::string",
               /*default=*/"",
               "Set the prefer-vector-width attribute on functions in the "
+              "module.">,
+       Option<"UseSampleProfile", "use-sample-profile", "bool",
+              /*default=*/"false",
+              "Set the use-sample-profile attribute on functions in the "
               "module.">,
        Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
               "Set the tune-cpu attribute on functions in the module.">,
@@ -642,7 +649,8 @@ def OptimizeArrayRepacking
 
 def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
   let summary = "Convert some MIF operations to runtime calls";
-  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect",
+                           "mlir::cf::ControlFlowDialect"];
 }
 
 def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
@@ -654,6 +662,19 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
     The pass only moves existing operations, so there are no dependent
     dialects.
   }];
+  let options = [Option<"hoistFromNestedRegions", "hoist-from-nested-regions",
+                        "::fir::LICMNestedHoistingMode",
+                        /*default=*/"::fir::LICMNestedHoistingMode::Cheap",
+                        "Control hoisting of invariant ops from nested regions "
+                        "(e.g. scf.if within loops)",
+                        [{::llvm::cl::values(
+            clEnumValN(::fir::LICMNestedHoistingMode::None,
+                       "none", "Do not hoist from nested regions"),
+            clEnumValN(::fir::LICMNestedHoistingMode::Cheap,
+                       "cheap", "Only hoist cheap ops like fir.convert"),
+            clEnumValN(::fir::LICMNestedHoistingMode::Aggressive,
+                       "aggressive", "Hoist all safe invariant ops")
+           )}]>];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

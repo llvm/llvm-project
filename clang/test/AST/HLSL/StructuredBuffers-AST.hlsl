@@ -70,7 +70,7 @@ RESOURCE<float> Buffer;
 
 #endif
 
-// CHECK: ClassTemplateDecl {{.*}} implicit [[RESOURCE]]
+// CHECK: ClassTemplateDecl {{.*}} implicit referenced [[RESOURCE]]
 // CHECK-NEXT: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 element_type
 // CHECK-NEXT: ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} '__is_structured_resource_element_compatible'
 // CHECK-NEXT: ImplicitConceptSpecializationDecl {{.*}}
@@ -288,7 +288,7 @@ RESOURCE<float> Buffer;
 // CHECK-SUBSCRIPT-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-SUBSCRIPT-UAV-NEXT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
+// CHECK-SUBSCRIPT-UAV: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
 // CHECK-SUBSCRIPT-UAV-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-SUBSCRIPT-UAV-NEXT: CompoundStmt
 // CHECK-SUBSCRIPT-UAV-NEXT: ReturnStmt
@@ -364,7 +364,7 @@ RESOURCE<float> Buffer;
 
 // DecrementCounter method
 
-// CHECK-COUNTER-NEXT: CXXMethodDecl {{.*}} DecrementCounter 'unsigned int ()'
+// CHECK-COUNTER: CXXMethodDecl {{.*}} DecrementCounter 'unsigned int ()'
 // CHECK-COUNTER-NEXT: CompoundStmt
 // CHECK-COUNTER-NEXT: ReturnStmt
 // CHECK-COUNTER-NEXT: CStyleCastExpr {{.*}} 'unsigned int'

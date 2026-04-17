@@ -83,7 +83,7 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
       add_library(MLIR_NVPTXCOMPILER_LIB STATIC IMPORTED GLOBAL)
       # Downstream projects can modify this path and use it in CMake. For example:
       # add_library(MLIR_NVPTXCOMPILER_LIB STATIC IMPORTED GLOBAL)
-      # set_property(TARGET MLIR_NVPTXCOMPILER_LIB PROPERTY IMPORTED_LOCATION ${...})  
+      # set_property(TARGET MLIR_NVPTXCOMPILER_LIB PROPERTY IMPORTED_LOCATION ${...})
       # where `...` is to be replaced with the path to the library.
       set_property(TARGET MLIR_NVPTXCOMPILER_LIB PROPERTY IMPORTED_LOCATION ${MLIR_NVPTXCOMPILER_LIB_PATH})
       # Link against `nvptxcompiler_static`. TODO: use `CUDA::nvptxcompiler_static`.
@@ -101,7 +101,7 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
       endif()
 
       add_library(MLIR_NVFATBIN_LIB STATIC IMPORTED GLOBAL)
-      set_property(TARGET MLIR_NVFATBIN_LIB PROPERTY IMPORTED_LOCATION ${MLIR_NVFATBIN_LIB_PATH})  
+      set_property(TARGET MLIR_NVFATBIN_LIB PROPERTY IMPORTED_LOCATION ${MLIR_NVFATBIN_LIB_PATH})
       target_link_libraries(MLIRNVVMTarget PRIVATE MLIR_NVFATBIN_LIB)
     endif()
   else()
@@ -141,7 +141,7 @@ if (MLIR_NVVM_EMBED_LIBDEVICE)
               "Requested using the `nvptxcompiler` library backend but it couldn't be found.")
     endif()
   endif()
-  
+
   embed_binary_to_src(${MLIR_NVVM_LIBDEVICE_PATH} ${CMAKE_CURRENT_BINARY_DIR}/libdevice_embedded.c _mlir_embedded_libdevice)
   add_mlir_library(MLIRNVVMLibdevice
     ${CMAKE_CURRENT_BINARY_DIR}/libdevice_embedded.c
@@ -159,7 +159,7 @@ else()
 endif()
 
 
-if (MLIR_ENABLE_ROCM_CONVERSIONS)
+if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(AMDGPU_LIBS
     AMDGPUAsmParser
     AMDGPUCodeGen
@@ -188,7 +188,7 @@ add_mlir_dialect_library(MLIRROCDLTarget
   MLIRROCDLToLLVMIRTranslation
   )
 
-if(MLIR_ENABLE_ROCM_CONVERSIONS)
+if("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
   if (DEFINED ROCM_PATH)
     set(DEFAULT_ROCM_PATH "${ROCM_PATH}" CACHE PATH "Fallback path to search for ROCm installs")
   elseif(DEFINED ENV{ROCM_PATH})
@@ -234,3 +234,20 @@ add_mlir_dialect_library(MLIRXeVMTarget
   MLIRTargetLLVM
   MLIRXeVMToLLVMIRTranslation
 )
+
+find_package(ocloc)
+if (OCLOC_FOUND)
+  target_include_directories(MLIRXeVMTarget PRIVATE "${OCLOC_INCLUDE_DIR}")
+  target_link_libraries(MLIRXeVMTarget PRIVATE "${OCLOC_LIBRARY}")
+  target_compile_definitions(obj.MLIRXeVMTarget
+    PRIVATE
+    MLIR_XEVM_OCLOC_LIB_AVAILABLE=1
+  )
+else()
+  target_compile_definitions(obj.MLIRXeVMTarget
+    PRIVATE
+    MLIR_XEVM_OCLOC_LIB_AVAILABLE=0
+  )
+  message(WARNING "ocloc not found, MLIRXeVMTarget will not be able to use ocloc for native binary compilation.")
+endif()
+

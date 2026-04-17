@@ -184,3 +184,33 @@
   %0:2 = "test.producer"() : () -> (i32, i32)
   "test.consumer"(%0#1, %0#0) : (i32, i32) -> ()
   }) : () -> ()
+
+// -----
+
+// CHECK-LABEL: test.commutatively_equal_permutation
+// CHECK-SAME: compares equals
+
+builtin.module attributes {test.includes_setup} {
+  %0:2 = "test.producer"() : () -> (i32, i32)
+  "test.commutatively_equal_permutation"() ({
+    arith.addi %0#0, %0#1 : i32
+  }) : () -> ()
+  "test.commutatively_equal_permutation"() ({
+    arith.addi %0#1, %0#0 : i32
+  }) : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: test.ignore_commutatively_equal_permutation
+// CHECK-SAME: compares NOT equals
+
+builtin.module attributes {test.includes_setup} {
+  %0:2 = "test.producer"() : () -> (i32, i32)
+  "test.ignore_commutatively_equal_permutation"() ({
+    arith.addi %0#0, %0#1 : i32
+  }) { ignore_commutativity } : () -> ()
+  "test.ignore_commutatively_equal_permutation"() ({
+    arith.addi %0#1, %0#0 : i32
+  }) { ignore_commutativity } : () -> ()
+}

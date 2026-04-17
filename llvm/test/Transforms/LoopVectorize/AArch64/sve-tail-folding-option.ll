@@ -74,7 +74,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep = getelementptr i32, ptr %ptr, i64 %index
   store i32 %val, ptr %gep
@@ -82,7 +82,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }
 
@@ -264,7 +264,7 @@ entry:
   %.pre = load i32, ptr %src, align 4
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %0 = phi i32 [ %1, %for.body ], [ %.pre, %entry ]
   %i.010 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %add = add nuw nsw i64 %i.010, 1
@@ -276,7 +276,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %add, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -320,7 +320,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.021 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %mul = shl nuw nsw i64 %i.021, 1
   %arrayidx = getelementptr inbounds float, ptr %src, i64 %mul
@@ -341,7 +341,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -379,7 +379,7 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 1023, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %src, i64 %indvars.iv
   %0 = load double, ptr %arrayidx, align 8
@@ -390,7 +390,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp.not = icmp eq i64 %indvars.iv, 0
   br i1 %cmp.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 

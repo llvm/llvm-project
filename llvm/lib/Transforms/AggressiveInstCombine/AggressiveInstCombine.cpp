@@ -259,30 +259,44 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
   // The 'any-bits-set' ('or' chain) pattern is simpler to match because the
   // final "and X, 1" instruction must be the final op in the sequence.
   bool MatchAllBitsSet;
-  if (match(&I, m_c_And(m_OneUse(m_And(m_Value(), m_Value())), m_Value())))
-    MatchAllBitsSet = true;
-  else if (match(&I, m_And(m_OneUse(m_Or(m_Value(), m_Value())), m_One())))
-    MatchAllBitsSet = false;
-  else
-    return false;
-
-  MaskOps MOps(I.getType()->getScalarSizeInBits(), MatchAllBitsSet);
-  if (MatchAllBitsSet) {
-    if (!matchAndOrChain(cast<BinaryOperator>(&I), MOps) || !MOps.FoundAnd1)
+  bool MatchTrunc;
+  Value *X;
+  if (I.getType()->isIntOrIntVectorTy(1)) {
+    if (match(&I, m_Trunc(m_OneUse(m_And(m_Value(), m_Value())))))
+      MatchAllBitsSet = true;
+    else if (match(&I, m_Trunc(m_OneUse(m_Or(m_Value(), m_Value())))))
+      MatchAllBitsSet = false;
+    else
       return false;
+    MatchTrunc = true;
+    X = I.getOperand(0);
   } else {
-    if (!matchAndOrChain(cast<BinaryOperator>(&I)->getOperand(0), MOps))
+    if (match(&I, m_c_And(m_OneUse(m_And(m_Value(), m_Value())), m_Value()))) {
+      X = &I;
+      MatchAllBitsSet = true;
+    } else if (match(&I,
+                     m_And(m_OneUse(m_Or(m_Value(), m_Value())), m_One()))) {
+      X = I.getOperand(0);
+      MatchAllBitsSet = false;
+    } else
       return false;
+    MatchTrunc = false;
   }
+  Type *Ty = X->getType();
+
+  MaskOps MOps(Ty->getScalarSizeInBits(), MatchAllBitsSet);
+  if (!matchAndOrChain(X, MOps) ||
+      (MatchAllBitsSet && !MatchTrunc && !MOps.FoundAnd1))
+    return false;
 
   // The pattern was found. Create a masked compare that replaces all of the
   // shift and logic ops.
   IRBuilder<> Builder(&I);
-  Constant *Mask = ConstantInt::get(I.getType(), MOps.Mask);
+  Constant *Mask = ConstantInt::get(Ty, MOps.Mask);
   Value *And = Builder.CreateAnd(MOps.Root, Mask);
   Value *Cmp = MatchAllBitsSet ? Builder.CreateICmpEQ(And, Mask)
                                : Builder.CreateIsNotNull(And);
-  Value *Zext = Builder.CreateZExt(Cmp, I.getType());
+  Value *Zext = MatchTrunc ? Cmp : Builder.CreateZExt(Cmp, Ty);
   I.replaceAllUsesWith(Zext);
   ++NumAnyOrAllBitsSet;
   return true;
@@ -370,6 +384,98 @@ static bool tryToRecognizePopCount(Instruction &I) {
   }
 
   return false;
+}
+
+// Try to recognize below function as popcount intrinsic.
+// Ref. Hackers Delight
+// int popcnt(unsigned x) {
+// x = x - ((x >> 1) & 0x55555555);
+// x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+// x = (x + (x >> 4)) & 0x0F0F0F0F;
+// x = x + (x >> 8);
+// x = x + (x >> 16);
+// return x & 0x0000003F;
+// }
+
+// int popcnt(unsigned x) {
+// x = x - ((x >> 1) & 0x55555555);
+// x = x - 3*((x >> 2) & 0x33333333);
+// x = (x + (x >> 4)) & 0x0F0F0F0F;
+// x = x + (x >> 8);
+// x = x + (x >> 16);
+// return x & 0x0000003F;
+// }
+
+static bool tryToRecognizePopCount2n3(Instruction &I) {
+  if (I.getOpcode() != Instruction::And)
+    return false;
+
+  Type *Ty = I.getType();
+  if (!Ty->isIntOrIntVectorTy())
+    return false;
+
+  unsigned Len = Ty->getScalarSizeInBits();
+
+  if (Len > 64 || Len <= 8 || Len % 8 != 0)
+    return false;
+
+  // Len should be a power of 2 for the loop to work correctly
+  if (!isPowerOf2_32(Len))
+    return false;
+
+  APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
+  APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
+  APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
+
+  APInt MaskRes = APInt(Len, 2 * Len - 1);
+
+  Value *Add1;
+  if (!match(&I, m_And(m_Value(Add1), m_SpecificInt(MaskRes))))
+    return false;
+
+  Value *Add2;
+  for (unsigned I = Len; I >= 16; I = I / 2) {
+    // Matching "x = x + (x >> I/2)" for I-bit.
+    if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
+                             m_Deferred(Add2))))
+      return false;
+    Add1 = Add2;
+  }
+
+  Value *And1 = Add1;
+  // Matching "x = (x + (x >> 4)) & 0x0F0F0F0F".
+  if (!match(And1, m_And(m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(4)),
+                                 m_Deferred(Add2)),
+                         m_SpecificInt(Mask0F))))
+    return false;
+
+  Value *Sub1;
+  llvm::APInt NegThree(/*BitWidth=*/Len, /*Value=*/-3,
+                       /*isSigned=*/true);
+  // x = (x & 0x33333333) + ((x >> 2) & 0x33333333)".
+  if (!match(Add2, m_c_Add(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+                                 m_SpecificInt(Mask33)),
+                           m_And(m_Deferred(Sub1), m_SpecificInt(Mask33)))) &&
+      // Matching "x = x - 3*((x >> 2) & 0x33333333)".
+      !match(Add2, m_Add(m_Mul(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+                                     m_SpecificInt(Mask33)),
+                               m_SpecificInt(NegThree)),
+                         m_Deferred(Sub1))))
+    return false;
+
+  Value *Root;
+  // x = x - ((x >> 1) & 0x55555555);
+  if (!match(Sub1, m_Sub(m_Value(Root),
+                         m_And(m_LShr(m_Deferred(Root), m_SpecificInt(1)),
+                               m_SpecificInt(Mask55)))))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+  IRBuilder<> Builder(&I);
+  I.replaceAllUsesWith(
+      Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+  ++NumPopCountRecognized;
+  return true;
 }
 
 /// Fold smin(smax(fptosi(x), C1), C2) to llvm.fptosi.sat(x), providing C1 and
@@ -472,7 +578,8 @@ static bool isCTTZTable(Constant *Table, const APInt &Mul, const APInt &Shift,
                         unsigned InputBits, const APInt &GEPIdxFactor,
                         const DataLayout &DL) {
   for (unsigned Idx = 0; Idx < InputBits; Idx++) {
-    APInt Index = (APInt(InputBits, 1).shl(Idx) * Mul).lshr(Shift) & AndMask;
+    APInt Index =
+        (APInt::getOneBitSet(InputBits, Idx) * Mul).lshr(Shift) & AndMask;
     ConstantInt *C = dyn_cast_or_null<ConstantInt>(
         ConstantFoldLoadFromConst(Table, AccessTy, Index * GEPIdxFactor, DL));
     if (!C || C->getValue() != Idx)
@@ -620,6 +727,189 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
 
     ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
   }
+
+  LI->replaceAllUsesWith(ZExtOrTrunc);
+
+  return true;
+}
+
+// Check if this array of constants represents a log2 table.
+// Iterate over the elements from \p Table by trying to find/match all
+// the numbers from 0 to \p InputBits that should represent log2 results.
+static bool isLog2Table(Constant *Table, const APInt &Mul, const APInt &Shift,
+                        Type *AccessTy, unsigned InputBits,
+                        const APInt &GEPIdxFactor, const DataLayout &DL) {
+  for (unsigned Idx = 0; Idx < InputBits; Idx++) {
+    APInt Index = (APInt::getLowBitsSet(InputBits, Idx + 1) * Mul).lshr(Shift);
+    ConstantInt *C = dyn_cast_or_null<ConstantInt>(
+        ConstantFoldLoadFromConst(Table, AccessTy, Index * GEPIdxFactor, DL));
+    if (!C || C->getValue() != Idx)
+      return false;
+  }
+
+  // Verify that an input of zero will select table index 0.
+  APInt ZeroIndex = Mul.lshr(Shift);
+  if (!ZeroIndex.isZero())
+    return false;
+
+  return true;
+}
+
+// Try to recognize table-based log2 implementation.
+// E.g., an example in C (for more cases please the llvm/tests):
+// int f(unsigned v) {
+//    static const char table[32] =
+//    {0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
+//     8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31};
+//
+//    v |= v >> 1; // first round down to one less than a power of 2
+//    v |= v >> 2;
+//    v |= v >> 4;
+//    v |= v >> 8;
+//    v |= v >> 16;
+//
+//    return table[(unsigned)(v * 0x07C4ACDDU) >> 27];
+// }
+// this can be lowered to `ctlz` instruction.
+// There is also a special case when the element is 0.
+//
+// The >> and |= sequence sets all bits below the most significant set bit. The
+// multiply is a de-bruijn sequence that contains each pattern of bits in it.
+// The shift extracts the top bits after the multiply, and that index into the
+// table should represent the floor log base 2 of the original number.
+//
+// Here are some examples of LLVM IR for a 64-bit target.
+//
+// CASE 1:
+// %shr = lshr i32 %v, 1
+// %or = or i32 %shr, %v
+// %shr1 = lshr i32 %or, 2
+// %or2 = or i32 %shr1, %or
+// %shr3 = lshr i32 %or2, 4
+// %or4 = or i32 %shr3, %or2
+// %shr5 = lshr i32 %or4, 8
+// %or6 = or i32 %shr5, %or4
+// %shr7 = lshr i32 %or6, 16
+// %or8 = or i32 %shr7, %or6
+// %mul = mul i32 %or8, 130329821
+// %shr9 = lshr i32 %mul, 27
+// %idxprom = zext nneg i32 %shr9 to i64
+// %arrayidx = getelementptr inbounds i8, ptr @table, i64 %idxprom
+// %0 = load i8, ptr %arrayidx, align 1
+//
+// CASE 2:
+// %shr = lshr i64 %v, 1
+// %or = or i64 %shr, %v
+// %shr1 = lshr i64 %or, 2
+// %or2 = or i64 %shr1, %or
+// %shr3 = lshr i64 %or2, 4
+// %or4 = or i64 %shr3, %or2
+// %shr5 = lshr i64 %or4, 8
+// %or6 = or i64 %shr5, %or4
+// %shr7 = lshr i64 %or6, 16
+// %or8 = or i64 %shr7, %or6
+// %shr9 = lshr i64 %or8, 32
+// %or10 = or i64 %shr9, %or8
+// %mul = mul i64 %or10, 285870213051386505
+// %shr11 = lshr i64 %mul, 58
+// %arrayidx = getelementptr inbounds i8, ptr @table, i64 %shr11
+// %0 = load i8, ptr %arrayidx, align 1
+//
+// All these can be lowered to @llvm.ctlz.i32/64 intrinsics and a subtract.
+static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
+                                         TargetTransformInfo &TTI) {
+  LoadInst *LI = dyn_cast<LoadInst>(&I);
+  if (!LI)
+    return false;
+
+  Type *AccessType = LI->getType();
+  if (!AccessType->isIntegerTy())
+    return false;
+
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+  if (!GEP || !GEP->hasNoUnsignedSignedWrap())
+    return false;
+
+  GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
+  if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
+    return false;
+
+  unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
+  APInt ModOffset(BW, 0);
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
+  if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset) ||
+      VarOffsets.size() != 1 || ModOffset != 0)
+    return false;
+  auto [GepIdx, GEPScale] = VarOffsets.front();
+
+  Value *X;
+  const APInt *MulConst, *ShiftConst;
+  // Check that the gep variable index is (x * MulConst) >> ShiftConst.
+  auto MatchInner =
+      m_LShr(m_Mul(m_Value(X), m_APInt(MulConst)), m_APInt(ShiftConst));
+  if (!match(GepIdx, m_CastOrSelf(MatchInner)))
+    return false;
+
+  unsigned InputBits = X->getType()->getScalarSizeInBits();
+  if (InputBits != 16 && InputBits != 32 && InputBits != 64 && InputBits != 128)
+    return false;
+
+  // Verify shift amount.
+  // TODO: Allow other shift amounts when we have proper test coverage.
+  if (*ShiftConst != InputBits - Log2_32(InputBits))
+    return false;
+
+  // Match the sequence of OR operations with right shifts by powers of 2.
+  for (unsigned ShiftAmt = InputBits / 2; ShiftAmt != 0; ShiftAmt /= 2) {
+    Value *Y;
+    if (!match(X, m_c_Or(m_LShr(m_Value(Y), m_SpecificInt(ShiftAmt)),
+                         m_Deferred(Y))))
+      return false;
+    X = Y;
+  }
+
+  if (!GEPScale.isIntN(InputBits) ||
+      !isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
+                   AccessType, InputBits, GEPScale.zextOrTrunc(InputBits), DL))
+    return false;
+
+  ConstantInt *ZeroTableElem = cast<ConstantInt>(
+      ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
+
+  // Use InputBits - 1 - ctlz(X) to compute log2(X).
+  IRBuilder<> B(LI);
+  ConstantInt *BoolConst = B.getTrue();
+  Type *XType = X->getType();
+
+  // Check the the backend has an efficient ctlz instruction.
+  // FIXME: Teach the backend to emit the original code when ctlz isn't
+  // supported like we do for cttz.
+  IntrinsicCostAttributes Attrs(
+      Intrinsic::ctlz, XType,
+      {PoisonValue::get(XType), /*is_zero_poison=*/BoolConst});
+  InstructionCost Cost =
+      TTI.getIntrinsicInstrCost(Attrs, TargetTransformInfo::TCK_SizeAndLatency);
+  if (Cost > TargetTransformInfo::TCC_Basic)
+    return false;
+
+  Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
+
+  Constant *InputBitsM1 = ConstantInt::get(XType, InputBits - 1);
+  Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
+
+  // The table won't produce a sensible result for 0.
+  Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
+  Value *Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
+
+  // The true branch of select handles the log2(0) case, which is rare.
+  if (!ProfcheckDisableMetadataFixes) {
+    if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+      SelectI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+  }
+
+  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
 
   LI->replaceAllUsesWith(ZExtOrTrunc);
 
@@ -1306,7 +1596,7 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
         BasicBlock::Create(Ctx, "sub_" + Twine(I), BBCI->getParent(), BBTail));
   BasicBlock *BBNE = BasicBlock::Create(Ctx, "ne", BBCI->getParent(), BBTail);
 
-  cast<BranchInst>(BBCI->getTerminator())->setSuccessor(0, BBSubs[0]);
+  cast<UncondBrInst>(BBCI->getTerminator())->setSuccessor(BBSubs[0]);
 
   B.SetInsertPoint(BBNE);
   PHINode *Phi = B.CreatePHI(CI->getType(), N);
@@ -1323,7 +1613,7 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
         ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
     Value *Sub = Swapped ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
     if (i < N - 1) {
-      BranchInst *CondBrInst = B.CreateCondBr(
+      CondBrInst *CondBrInst = B.CreateCondBr(
           B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)), BBNE,
           BBSubs[i + 1]);
 
@@ -1826,8 +2116,10 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
+      MadeChange |= tryToRecognizePopCount2n3(I);
       MadeChange |= tryToFPToSat(I, TTI);
       MadeChange |= tryToRecognizeTableBasedCttz(I, DL);
+      MadeChange |= tryToRecognizeTableBasedLog2(I, DL, TTI);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);

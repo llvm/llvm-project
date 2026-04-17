@@ -304,15 +304,12 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-ORDERED-TF-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
-; CHECK-ORDERED-TF-NEXT:    [[INDEX_PART_NEXT:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP1]], 1
-; CHECK-ORDERED-TF-NEXT:    [[INDEX_PART_NEXT1:%.*]] = add i64 0, [[TMP3]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP1]], 3
-; CHECK-ORDERED-TF-NEXT:    [[INDEX_PART_NEXT2:%.*]] = add i64 0, [[TMP4]]
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[N]])
-; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_PART_NEXT]], i64 [[N]])
-; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY4:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_PART_NEXT1]], i64 [[N]])
-; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY5:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_PART_NEXT2]], i64 [[N]])
+; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP1]], i64 [[N]])
+; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY4:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP3]], i64 [[N]])
+; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY5:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP4]], i64 [[N]])
 ; CHECK-ORDERED-TF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED-TF:       vector.body:
 ; CHECK-ORDERED-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -799,7 +796,7 @@ entry:
   %cmp1 = fcmp ogt float %0, 5.000000e-01
   br i1 %cmp1, label %for.body, label %for.end
 
-for.body:                                      ; preds = %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %res.014 = phi float [ 0.000000e+00, %entry ], [ %rdx, %for.body ]
   %arrayidx2 = getelementptr inbounds float, ptr %a, i64 %iv
@@ -812,7 +809,7 @@ for.body:                                      ; preds = %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !2
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   %res = phi float [ 0.000000e+00, %entry ], [ %rdx, %for.body ]
   ret float %res
 }
@@ -991,7 +988,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
   %res = phi float [ 1.000000e+00, %entry ], [ %fadd, %for.inc ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %iv
@@ -999,7 +996,7 @@ for.body:                                      ; preds = %for.body
   %tobool = fcmp une float %0, 0.000000e+00
   br i1 %tobool, label %if.then, label %for.inc
 
-if.then:                                      ; preds = %for.body
+if.then:
   %arrayidx2 = getelementptr inbounds float, ptr %a, i64 %iv
   %1 = load float, ptr %arrayidx2, align 4
   br label %for.inc
@@ -1134,7 +1131,7 @@ define float @fadd_multiple(ptr noalias nocapture %a, ptr noalias nocapture %b, 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum = phi float [ -0.000000e+00, %entry ], [ %add3, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
@@ -1147,7 +1144,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                         ; preds = %for.body
+for.end:
   %rdx = phi float [ %add3, %for.body ]
   ret float %rdx
 }
@@ -1320,15 +1317,12 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-ORDERED-TF-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
-; CHECK-ORDERED-TF-NEXT:    [[INDEX_PART_NEXT:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP1]], 1
-; CHECK-ORDERED-TF-NEXT:    [[INDEX_PART_NEXT1:%.*]] = add i64 0, [[TMP3]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP1]], 3
-; CHECK-ORDERED-TF-NEXT:    [[INDEX_PART_NEXT2:%.*]] = add i64 0, [[TMP4]]
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[N]])
-; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_PART_NEXT]], i64 [[N]])
-; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY4:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_PART_NEXT1]], i64 [[N]])
-; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY5:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_PART_NEXT2]], i64 [[N]])
+; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP1]], i64 [[N]])
+; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY4:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP3]], i64 [[N]])
+; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY5:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP4]], i64 [[N]])
 ; CHECK-ORDERED-TF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED-TF:       vector.body:
 ; CHECK-ORDERED-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1572,15 +1566,12 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-ORDERED-TF-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
-; CHECK-ORDERED-TF-NEXT:    [[INDEX_PART_NEXT:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP1]], 1
-; CHECK-ORDERED-TF-NEXT:    [[INDEX_PART_NEXT1:%.*]] = add i64 0, [[TMP3]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP1]], 3
-; CHECK-ORDERED-TF-NEXT:    [[INDEX_PART_NEXT2:%.*]] = add i64 0, [[TMP4]]
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[N]])
-; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_PART_NEXT]], i64 [[N]])
-; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY4:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_PART_NEXT1]], i64 [[N]])
-; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY5:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_PART_NEXT2]], i64 [[N]])
+; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP1]], i64 [[N]])
+; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY4:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP3]], i64 [[N]])
+; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY5:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP4]], i64 [[N]])
 ; CHECK-ORDERED-TF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED-TF:       vector.body:
 ; CHECK-ORDERED-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1656,7 +1647,6 @@ for.end:
   ret float %muladd
 }
 
-declare float @llvm.fmuladd.f32(float, float, float)
 
 attributes #0 = { vscale_range(1, 16) }
 !0 = distinct !{!0, !3, !6, !8}
