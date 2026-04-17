@@ -3382,7 +3382,7 @@ IntrinsicLibrary::genCLoc(mlir::Type resultType,
   return genCLocOrCFunLoc(builder, loc, resultType, args);
 }
 
-// C_PTR_EQ / C_PTR_NE and C_DEVPTR_EQ / C_DEVPTR_NE 
+// C_PTR_EQ / C_PTR_NE and C_DEVPTR_EQ / C_DEVPTR_NE
 template <mlir::arith::CmpIPredicate pred>
 fir::ExtendedValue
 IntrinsicLibrary::genCPtrCompare(mlir::Type resultType,
