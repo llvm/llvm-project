@@ -57,10 +57,9 @@ jobs:
         --group-add video
         --device /dev/kfd
         --device /dev/dri
+        --group-add 993
         --group-add 992
         --group-add 110
-        --cap-add SYS_MODULE
-        -v /lib/modules:/lib/modules
         --ulimit memlock=-1:-1
         --security-opt seccomp=unconfined
         --env-file /etc/podinfo/gha-gpu-isolation-settings
