@@ -153,7 +153,7 @@ void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PostLegalizerLoweringLegacyPass(PassRegistry &);
 void initializeAArch64PostSelectOptimizePass(PassRegistry &);
 void initializeAArch64PreLegalizerCombinerLegacyPass(PassRegistry &);
-void initializeAArch64PromoteConstantPass(PassRegistry&);
+void initializeAArch64PromoteConstantLegacyPass(PassRegistry &);
 void initializeAArch64RedundantCopyEliminationLegacyPass(PassRegistry &);
 void initializeAArch64RedundantCondBranchPass(PassRegistry &);
 void initializeAArch64SIMDInstrOptPass(PassRegistry &);
@@ -262,6 +262,12 @@ class AArch64RedundantCopyEliminationPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64PromoteConstantPass
+    : public PassInfoMixin<AArch64PromoteConstantPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // end namespace llvm
