@@ -292,9 +292,9 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
   %smem_coop_a = memref.subview %arg0[64, 0][1, 16][1, 1] : memref<256x16xbf16, 3> to memref<1x16xbf16, strided<[16, 1]>, 3>
 
   //CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %{{.*}} : memref<1x16xbf16, strided<[16, 1]>, 3> -> index
-  //CHECK: %[[C1024:.*]] = arith.constant 1024 : index
+  //CHECK: %[[C0:.*]] = arith.constant 0 : index
   //CHECK: %[[CAST0:.*]] = arith.index_castui %[[INTPTR]] : index to i32
-  //CHECK: %[[CAST1:.*]] = arith.index_castui %[[C1024]] : index to i32
+  //CHECK: %[[CAST1:.*]] = arith.index_castui %[[C0]] : index to i32
   //CHECK: %[[C2:.*]] = arith.constant 2 : i32
   //CHECK: %[[MUL:.*]] = arith.muli %[[CAST1]], %[[C2]] : i32
   //CHECK: %{{.*}} = arith.addi %[[CAST0]], %[[MUL]] : i32

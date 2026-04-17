@@ -119,15 +119,11 @@ gpu.func @load_gather_from_dyn_memref_subview(%dyn: memref<?xf16>, %offset: vect
   %id = gpu.subgroup_id : index
   %src = memref.subview %dyn[%id][16][1] : memref<?xf16> to memref<16xf16, strided<[1]>>
 
-  // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]], %[[STRIDES:.*]] = memref.extract_strided_metadata %{{.*}} : memref<16xf16, strided<[1]>> -> memref<f16>, index, index, index
-  // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
+  // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %{{.*}} : memref<16xf16, strided<[1]>> -> index
   // CHECK: %[[CAST1:.*]] = arith.index_castui %[[INTPTR]] : index to i64
-  // CHECK: %[[CAST2:.*]] = arith.index_castui %[[OFFSET]] : index to i64
-  // CHECK: %[[MUL1:.*]] = arith.muli %[[CAST2]], %{{.*}} : i64
+  // CHECK: %[[MUL1:.*]] = arith.muli %{{.*}}, %{{.*}} : i64
   // CHECK: %[[ADD1:.*]] = arith.addi %[[CAST1]], %[[MUL1]] : i64
-  // CHECK: %[[MUL2:.*]] = arith.muli %{{.*}}, %{{.*}} : i64
-  // CHECK: %[[ADD2:.*]] = arith.addi %[[ADD1]], %[[MUL2]] : i64
-  // CHECK: %{{.*}} = llvm.inttoptr %[[ADD2]] : i64 to !llvm.ptr<1>
+  // CHECK: %{{.*}} = llvm.inttoptr %[[ADD1]] : i64 to !llvm.ptr<1>
 
   %0 = xegpu.load %src[%offset], %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
       : memref<16xf16, strided<[1]>>, vector<1xindex>, vector<1xi1> -> vector<1xf16>
