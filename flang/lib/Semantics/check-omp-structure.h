@@ -184,113 +184,10 @@ public:
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
 private:
-  bool CheckAllowedClause(llvmOmpClause clause);
-  void CheckVariableListItem(const SymbolSourceMap &symbols);
-  void CheckDirectiveSpelling(
-      parser::CharBlock spelling, llvm::omp::Directive id);
-  void AnalyzeObject(const parser::OmpObject &object);
-  void AnalyzeObjects(const parser::OmpObjectList &objects);
-  void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
-      const std::list<parser::Name> &nameList, const parser::CharBlock &item,
-      const std::string &clauseName);
-  void CheckMultListItems();
-  void CheckStructureComponent(
-      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
-  bool HasInvalidWorksharingNesting(
-      const parser::OmpDirectiveName &name, const OmpDirectiveSet &);
+  // Most of these functions are defined in check-omp-structure.cpp, but
+  // some groups have their own files.
 
-  bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
-  bool IsNestedInDirective(llvm::omp::Directive directive);
-  bool IsCombinedParallelWorksharing(llvm::omp::Directive directive) const;
-  bool InTargetRegion();
-  void HasInvalidTeamsNesting(
-      const llvm::omp::Directive &dir, const parser::CharBlock &source);
-  void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
-  void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
-  bool HasRequires(llvm::omp::Clause req);
-  // specific clause related
-  void CheckAllowedMapTypes(
-      parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
-
-  const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
-      const parser::OmpTraitSelector &);
-  std::optional<llvm::omp::Clause> GetClauseFromProperty(
-      const parser::OmpTraitProperty &);
-
-  void CheckTraitSelectorList(const std::list<parser::OmpTraitSelector> &);
-  void CheckTraitSetSelector(const parser::OmpTraitSetSelector &);
-  void CheckTraitScore(const parser::OmpTraitScore &);
-  bool VerifyTraitPropertyLists(
-      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
-  void CheckTraitSelector(
-      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
-  void CheckTraitADMO(
-      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
-  void CheckTraitCondition(
-      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
-  void CheckTraitDeviceNum(
-      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
-  void CheckTraitRequires(
-      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
-  void CheckTraitSimd(
-      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
-
-  llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
-  llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
-
-  template < //
-      typename LessTy, typename RangeTy,
-      typename IterTy = decltype(std::declval<RangeTy>().begin())>
-  std::optional<IterTy> FindDuplicate(RangeTy &&);
-
-  void CheckDependList(const parser::DataRef &);
-  void CheckDependArraySection(
-      const common::Indirection<parser::ArrayElement> &, const parser::Name &);
-  void CheckDoacross(const parser::OmpDoacross &doa);
-  void CheckDimsModifier(parser::CharBlock source, size_t numValues,
-      const parser::OmpDimsModifier &x);
-  bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
-  void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
-      const parser::OmpObject &obj, llvm::StringRef clause = "");
-  void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
-      const parser::OmpObjectList &objList, llvm::StringRef clause = "");
-  void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
-  void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
-  void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObject &);
-  void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
-  void CheckSymbolName(
-      const parser::CharBlock &source, const parser::OmpObject &object);
-  void CheckSymbolNames(
-      const parser::CharBlock &source, const parser::OmpObjectList &objList);
-  void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
-  void CheckAssumedSizeArray(SymbolSourceMap &, const llvm::omp::Clause);
-  void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
-  void CheckCrayPointee(const parser::OmpObjectList &objectList,
-      llvm::StringRef clause, bool suggestToUseCrayPointer = true);
-  void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
-  void CheckDefinableObjects(SymbolSourceMap &, const llvm::omp::Clause);
-  void CheckCopyingPolymorphicAllocatable(
-      SymbolSourceMap &, const llvm::omp::Clause);
-  void CheckPrivateSymbolsInOuterCxt(
-      SymbolSourceMap &, DirectivesClauseTriple &, const llvm::omp::Clause);
-  const parser::Name GetLoopIndex(const parser::DoConstruct *x);
-  void SetLoopInfo(const parser::OpenMPLoopConstruct &x);
-  void CheckIsLoopIvPartOfClause(
-      llvmOmpClause clause, const parser::OmpObjectList &ompObjectList);
-  bool CheckTargetBlockOnlyTeams(const parser::Block &);
-  void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
-  void CheckWorkdistributeBlockStmts(const parser::Block &, parser::CharBlock);
-  void CheckIndividualAllocateDirective(
-      const parser::OmpAllocateDirective &x, bool isExecutable);
-  void CheckExecutableAllocateDirective(const parser::OmpAllocateDirective &x);
-
-  void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
-  void CheckIteratorModifier(const parser::OmpIterator &x);
-  void CheckIterationVariableType(const parser::OpenMPLoopConstruct &x);
-  void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
-  void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
-  template <typename T, typename D> bool IsOperatorValid(const T &, const D &);
-
+  // check-omp-atomic.cpp
   void CheckStorageOverlap(const evaluate::Expr<evaluate::SomeType> &,
       llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>>, parser::CharBlock);
   void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
@@ -330,12 +227,119 @@ private:
   void CheckAtomicWrite(const parser::OpenMPAtomicConstruct &x);
   void CheckAtomicUpdate(const parser::OpenMPAtomicConstruct &x);
 
-  void CheckScanModifier(const parser::OmpClause::Reduction &x);
-  void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
+  // check-omp-loop.cpp
+  void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
+  void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckRectangularNest(const parser::OmpDirectiveSpecification &spec,
       const omp::LoopSequence &nest);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
+  const parser::Name GetLoopIndex(const parser::DoConstruct *x);
+  void SetLoopInfo(const parser::OpenMPLoopConstruct &x);
+  void CheckIterationVariableType(const parser::OpenMPLoopConstruct &x);
+  std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
+  void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
+  void CheckScanModifier(const parser::OmpClause::Reduction &x);
+  void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
+
+  // check-omp-metadirective.cpp
+  const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
+      const parser::OmpTraitSelector &);
+  std::optional<llvm::omp::Clause> GetClauseFromProperty(
+      const parser::OmpTraitProperty &);
+
+  void CheckTraitSelectorList(const std::list<parser::OmpTraitSelector> &);
+  void CheckTraitSetSelector(const parser::OmpTraitSetSelector &);
+  void CheckTraitScore(const parser::OmpTraitScore &);
+  bool VerifyTraitPropertyLists(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitSelector(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitADMO(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitCondition(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitDeviceNum(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitRequires(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitSimd(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+
+  // check-omp-structure.cpp
+  bool CheckAllowedClause(llvmOmpClause clause);
+  void CheckVariableListItem(const SymbolSourceMap &symbols);
+  void CheckDirectiveSpelling(
+      parser::CharBlock spelling, llvm::omp::Directive id);
+  void AnalyzeObject(const parser::OmpObject &object);
+  void AnalyzeObjects(const parser::OmpObjectList &objects);
+  void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
+      const std::list<parser::Name> &nameList, const parser::CharBlock &item,
+      const std::string &clauseName);
+  void CheckMultListItems();
+  void CheckStructureComponent(
+      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
+  bool HasInvalidWorksharingNesting(
+      const parser::OmpDirectiveName &name, const OmpDirectiveSet &);
+
+  bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
+  bool IsNestedInDirective(llvm::omp::Directive directive);
+  bool IsCombinedParallelWorksharing(llvm::omp::Directive directive) const;
+  bool InTargetRegion();
+  void HasInvalidTeamsNesting(
+      const llvm::omp::Directive &dir, const parser::CharBlock &source);
+  bool HasRequires(llvm::omp::Clause req);
+  void CheckAllowedMapTypes(
+      parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
+
+  llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
+  llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
+
+  template < //
+      typename LessTy, typename RangeTy,
+      typename IterTy = decltype(std::declval<RangeTy>().begin())>
+  std::optional<IterTy> FindDuplicate(RangeTy &&);
+
+  void CheckDependList(const parser::DataRef &);
+  void CheckDoacross(const parser::OmpDoacross &doa);
+  void CheckDimsModifier(parser::CharBlock source, size_t numValues,
+      const parser::OmpDimsModifier &x);
+  bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
+  void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
+      const parser::OmpObject &obj, llvm::StringRef clause = "");
+  void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
+      const parser::OmpObjectList &objList, llvm::StringRef clause = "");
+  void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObject &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
+  void CheckSymbolName(
+      const parser::CharBlock &source, const parser::OmpObject &object);
+  void CheckSymbolNames(
+      const parser::CharBlock &source, const parser::OmpObjectList &objList);
+  void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckAssumedSizeArray(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckCrayPointee(const parser::OmpObjectList &objectList,
+      llvm::StringRef clause, bool suggestToUseCrayPointer = true);
+  void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
+  void CheckDefinableObjects(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckCopyingPolymorphicAllocatable(
+      SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckPrivateSymbolsInOuterCxt(
+      SymbolSourceMap &, DirectivesClauseTriple &, const llvm::omp::Clause);
+  void CheckIsLoopIvPartOfClause(
+      llvmOmpClause clause, const parser::OmpObjectList &ompObjectList);
+  bool CheckTargetBlockOnlyTeams(const parser::Block &);
+  void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
+  void CheckWorkdistributeBlockStmts(const parser::Block &, parser::CharBlock);
+  void CheckIndividualAllocateDirective(
+      const parser::OmpAllocateDirective &x, bool isExecutable);
+  void CheckExecutableAllocateDirective(const parser::OmpAllocateDirective &x);
+
+  void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
+  void CheckIteratorModifier(const parser::OmpIterator &x);
+
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
   void CheckTaskgraph(const parser::OmpBlockConstruct &x);
@@ -346,7 +350,6 @@ private:
       const std::optional<parser::OmpClauseList> &maybeClauses);
   void CheckCancellationNest(
       const parser::CharBlock &source, llvm::omp::Directive type);
-  std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool CheckReductionOperator(const parser::OmpReductionIdentifier &ident,
@@ -373,20 +376,14 @@ private:
   const parser::Name *GetObjectName(const parser::OmpObject &object);
   void CheckInitOnDepobj(const parser::OpenMPDepobjConstruct &depobj,
       const parser::OmpClause &initClause);
-
   void CheckAllowedRequiresClause(llvmOmpClause clause);
-  bool deviceConstructFound_{false};
-
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
-  inline void ErrIfAllocatableVariable(const parser::Variable &);
-  inline void ErrIfLHSAndRHSSymbolsMatch(
-      const parser::Variable &, const parser::Expr &);
-  inline void ErrIfNonScalarAssignmentStmt(
-      const parser::Variable &, const parser::Expr &);
+
+  bool deviceConstructFound_{false};
   enum directiveNestType : int {
     SIMDNest,
     TargetBlockOnlyTeams,
@@ -398,7 +395,7 @@ private:
   };
   int directiveNest_[LastType + 1] = {0};
 
-  int allocateDirectiveLevel{0};
+  int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;
   SymbolSourceMap deferredNonVariables_;
 
