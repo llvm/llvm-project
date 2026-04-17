@@ -67,7 +67,7 @@ MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::OneShotAnalysisState)
 using namespace mlir;
 using namespace mlir::bufferization;
 
-static bool isaTensor(Type t) { return isa<TensorType>(t); }
+static bool isaTensor(Type t) { return isa<TensorLikeType>(t); }
 
 //===----------------------------------------------------------------------===//
 // Bufferization-specific attribute manipulation.
@@ -100,7 +100,7 @@ static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
   } else {
     inPlaceVector = SmallVector<StringRef>(op->getNumOperands(), "none");
     for (OpOperand &opOperand : op->getOpOperands())
-      if (isa<TensorType>(opOperand.get().getType()))
+      if (isa<TensorLikeType>(opOperand.get().getType()))
         inPlaceVector[opOperand.getOperandNumber()] = "false";
   }
   inPlaceVector[opOperand.getOperandNumber()] = inPlace ? "true" : "false";
@@ -118,12 +118,12 @@ OneShotAnalysisState::OneShotAnalysisState(
   // Set up alias sets.
   op->walk([&](Operation *op) {
     for (Value v : op->getResults())
-      if (isa<TensorType>(v.getType()))
+      if (isa<TensorLikeType>(v.getType()))
         createAliasInfoEntry(v);
     for (Region &r : op->getRegions())
       for (Block &b : r.getBlocks())
         for (auto bbArg : b.getArguments())
-          if (isa<TensorType>(bbArg.getType()))
+          if (isa<TensorLikeType>(bbArg.getType()))
             createAliasInfoEntry(bbArg);
   });
 
@@ -132,7 +132,7 @@ OneShotAnalysisState::OneShotAnalysisState(
     if (!options.isOpAllowed(bufferizableOp))
       return WalkResult::skip();
     for (OpOperand &opOperand : bufferizableOp->getOpOperands())
-      if (isa<TensorType>(opOperand.get().getType()))
+      if (isa<TensorLikeType>(opOperand.get().getType()))
         if (bufferizableOp.mustBufferizeInPlace(opOperand, *this))
           bufferizeInPlace(opOperand);
     return WalkResult::advance();
@@ -195,7 +195,7 @@ void OneShotAnalysisState::gatherUndefinedTensorUses(Operation *op) {
 
     // Check all tensor OpResults.
     for (OpResult opResult : op->getOpResults()) {
-      if (!isa<TensorType>(opResult.getType()))
+      if (!isa<TensorLikeType>(opResult.getType()))
         continue;
 
       // If there is no preceding definition, the tensor contents are
@@ -1011,7 +1011,7 @@ LogicalResult
 OneShotAnalysisState::analyzeSingleOp(Operation *op,
                                       const DominanceInfo &domInfo) {
   for (OpOperand &opOperand : op->getOpOperands())
-    if (isa<TensorType>(opOperand.get().getType()))
+    if (isa<TensorLikeType>(opOperand.get().getType()))
       if (failed(bufferizableInPlaceAnalysisImpl(opOperand, *this, domInfo)))
         return failure();
   return success();
@@ -1023,7 +1023,7 @@ static void equivalenceAnalysis(SmallVector<Operation *> &ops,
   for (Operation *op : ops) {
     if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op)) {
       for (OpResult opResult : op->getOpResults()) {
-        if (!isa<TensorType>(opResult.getType()))
+        if (!isa<TensorLikeType>(opResult.getType()))
           continue;
         AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);
         if (aliases.getNumAliases() == 0)
@@ -1095,7 +1095,7 @@ bottomUpFromTerminatorsHeuristic(Operation *op,
     // we stay within the same region.
     SmallVector<OpResult> worklist;
     for (Value v : term->getOperands()) {
-      if (!isa<TensorType>(v.getType()))
+      if (!isa<TensorLikeType>(v.getType()))
         continue;
       auto opResult = dyn_cast<OpResult>(v);
       if (!opResult)
@@ -1112,7 +1112,7 @@ bottomUpFromTerminatorsHeuristic(Operation *op,
       AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);
       for (auto alias : aliases) {
         Value v = alias.opOperand->get();
-        if (!isa<TensorType>(v.getType()))
+        if (!isa<TensorLikeType>(v.getType()))
           continue;
         auto opResult = dyn_cast<OpResult>(v);
         if (!opResult)
@@ -1232,7 +1232,7 @@ checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
     }
 
     for (OpOperand &opOperand : op->getOpOperands()) {
-      if (isa<TensorType>(opOperand.get().getType())) {
+      if (isa<TensorLikeType>(opOperand.get().getType())) {
         if (wouldCreateReadAfterWriteInterference(
                 opOperand, domInfo, state,
                 /*checkConsistencyOnly=*/true)) {
@@ -1269,7 +1269,7 @@ annotateOpsWithBufferizationMarkers(Operation *op,
   // Add __inplace_operands_attr__.
   op->walk([&](Operation *op) {
     for (OpOperand &opOperand : op->getOpOperands())
-      if (isa<TensorType>(opOperand.get().getType()))
+      if (isa<TensorLikeType>(opOperand.get().getType()))
         setInPlaceOpOperand(opOperand, state.isInPlace(opOperand));
   });
 }
@@ -1294,7 +1294,7 @@ static void annotateOpsWithAliasSets(Operation *op,
     // Build alias set array for every OpResult.
     SmallVector<Attribute> opResultAliasSets;
     for (OpResult opResult : op->getOpResults()) {
-      if (llvm::isa<TensorType>(opResult.getType())) {
+      if (llvm::isa<TensorLikeType>(opResult.getType())) {
         opResultAliasSets.push_back(buildAliasesArray(opResult));
       }
     }
@@ -1309,7 +1309,7 @@ static void annotateOpsWithAliasSets(Operation *op,
       for (Block &block : r.getBlocks()) {
         SmallVector<Attribute> bbArgAliasSets;
         for (BlockArgument bbArg : block.getArguments()) {
-          if (llvm::isa<TensorType>(bbArg.getType())) {
+          if (llvm::isa<TensorLikeType>(bbArg.getType())) {
             bbArgAliasSets.push_back(buildAliasesArray(bbArg));
             hasTensorBbArg = true;
           }
