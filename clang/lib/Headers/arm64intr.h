@@ -118,6 +118,11 @@ unsigned __int16 __swp16(unsigned __int16 volatile *, unsigned __int16);
 unsigned __int32 __swp32(unsigned __int32 volatile *, unsigned __int32);
 unsigned __int64 __swp64(unsigned __int64 volatile *, unsigned __int64);
 
+unsigned __int8 __swpa8(unsigned __int8 volatile *, unsigned __int8);
+unsigned __int16 __swpa16(unsigned __int16 volatile *, unsigned __int16);
+unsigned __int32 __swpa32(unsigned __int32 volatile *, unsigned __int32);
+unsigned __int64 __swpa64(unsigned __int64 volatile *, unsigned __int64);
+
 #ifdef __cplusplus
 }
 #endif

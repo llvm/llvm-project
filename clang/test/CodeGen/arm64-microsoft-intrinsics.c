@@ -1150,6 +1150,55 @@ unsigned long long int test__swp64(unsigned long long int volatile* t,
 // CHECK-MSCOMPAT:       ret i64 %[[RET]]
 // CHECK-LINUX: error: call to undeclared function '__swp64'
 
+unsigned char test__swpa8(unsigned char volatile* t, unsigned char v)
+{
+  return __swpa8(t, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @test__swpa8(ptr{{.*}}%t, i8{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[TMPT:[0-9]+]] = load ptr, ptr %t.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMPV:[0-9]+]] = load i8, ptr %v.addr, align 1
+// CHECK-MSCOMPAT:       %[[ZEXTV:[0-9]+]] = zext i8 %[[TMPV]] to i32
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = call i32 @llvm.aarch64.swpa8(ptr %[[TMPT]], i32 %[[ZEXTV]])
+// CHECK-MSCOMPAT:       %[[TRUNC:[0-9]+]] = trunc i32 %[[RET]] to i8
+// CHECK-MSCOMPAT:       ret i8 %[[TRUNC]]
+// CHECK-LINUX: error: call to undeclared function '__swpa8'
+
+unsigned short test__swpa16(unsigned short volatile* t, unsigned short v)
+{
+  return __swpa16(t, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i16 @test__swpa16(ptr{{.*}}%t, i16{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[TMPT:[0-9]+]] = load ptr, ptr %t.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMPV:[0-9]+]] = load i16, ptr %v.addr, align 2
+// CHECK-MSCOMPAT:       %[[ZEXTV:[0-9]+]] = zext i16 %[[TMPV]] to i32
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = call i32 @llvm.aarch64.swpa16(ptr %[[TMPT]], i32 %[[ZEXTV]])
+// CHECK-MSCOMPAT:       %[[TRUNC:[0-9]+]] = trunc i32 %[[RET]] to i16
+// CHECK-MSCOMPAT:       ret i16 %[[TRUNC]]
+// CHECK-LINUX: error: call to undeclared function '__swpa16'
+
+unsigned int test__swpa32(unsigned int volatile* t, unsigned int v)
+{
+  return __swpa32(t, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i32 @test__swpa32(ptr{{.*}}%t, i32{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[TMPT:[0-9]+]] = load ptr, ptr %t.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMPV:[0-9]+]] = load i32, ptr %v.addr, align 4
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = call i32 @llvm.aarch64.swpa32(ptr %[[TMPT]], i32 %[[TMPV]])
+// CHECK-MSCOMPAT:       ret i32 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__swpa32'
+
+unsigned long long int test__swpa64(unsigned long long int volatile* t,
+                                    unsigned long long int v)
+{
+  return __swpa64(t, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i64 @test__swpa64(ptr{{.*}}%t, i64{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[TMPT:[0-9]+]] = load ptr, ptr %t.addr, align 8
+// CHECK-MSCOMPAT:       %[[TMPV:[0-9]+]] = load i64, ptr %v.addr, align 8
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = call i64 @llvm.aarch64.swpa64(ptr %[[TMPT]], i64 %[[TMPV]])
+// CHECK-MSCOMPAT:       ret i64 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__swpa64'
+
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
 // CHECK-MSCOMPAT: ![[MD3]] = !{!"sp"}
 // CHECK-MSCOMPAT: ![[MD4]] = !{!"d5"}
