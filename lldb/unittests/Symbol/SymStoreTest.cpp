@@ -96,7 +96,7 @@ TEST(SymStoreTest, ParseEnvSymbolPaths_Cache) {
             returns("C:\\X"));
 
   // Fall back to default cache.
-  auto default_cache = SymbolLocatorSymStore::GetDefaultCachePath();
+  auto default_cache = SymbolLocatorSymStore::GetSystemDefaultCachePath();
   EXPECT_EQ(check("cache*;srv*\\\\corp"), returns(default_cache));
   EXPECT_EQ(check("srv**https://symbols.mozilla.org"), returns(default_cache));
 

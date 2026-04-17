@@ -65,7 +65,7 @@ public:
             ePropertyCachePath);
     if (s && !s->GetCurrentValueAsRef().empty())
       return s->GetCurrentValue();
-    return SymbolLocatorSymStore::GetDefaultCachePath();
+    return SymbolLocatorSymStore::GetSystemDefaultCachePath();
   }
 };
 
@@ -84,6 +84,13 @@ void SymbolLocatorSymStore::Initialize() {
       nullptr, LocateExecutableSymbolFile, nullptr, nullptr,
       SymbolLocatorSymStore::DebuggerInitialize);
   llvm::HTTPClient::initialize();
+
+  std::string default_cache = GetSystemDefaultCachePath();
+  if (std::error_code ec = llvm::sys::fs::create_directories(default_cache)) {
+    Debugger::ReportWarning(llvm::formatv(
+        "default SymStore cache directory '{0}' is not accessible: {1}",
+        default_cache, ec.message()));
+  }
 }
 
 void SymbolLocatorSymStore::DebuggerInitialize(Debugger &debugger) {
@@ -154,10 +161,10 @@ ParseSrvEntry(llvm::StringRef entry) {
   case 2:
     return MakeLookupEntry(parts[1]);
   case 3: {
-    // Fall back to LLDB's default cache for empty values.
+    // Fall back to the configured default cache for empty values.
     if (parts[1].empty())
       return MakeLookupEntry(parts[2],
-                             SymbolLocatorSymStore::GetDefaultCachePath());
+                             GetGlobalPluginProperties().GetCachePath());
     return MakeLookupEntry(parts[2], parts[1]);
   }
   default:
@@ -180,7 +187,7 @@ std::optional<std::string> ParseCacheEntry(llvm::StringRef entry) {
 
   // Fall back to LLDB's default cache for empty values.
   if (value.empty())
-    return SymbolLocatorSymStore::GetDefaultCachePath();
+    return GetGlobalPluginProperties().GetCachePath();
 
   return value.str();
 }
@@ -341,8 +348,8 @@ LocateSymStoreEntry(const SymbolLocatorSymStore::LookupEntry &entry,
   Log *log = GetLog(LLDBLog::Symbols);
   llvm::StringRef url = entry.source;
   if (url.starts_with("http://") || url.starts_with("https://")) {
-    // Always fall back LLDB default cache. After all, once the files have been
-    // successfully downloaded, we want to save them somewhere.
+    // Use the configured default cache as fallback. After all, once the files
+    // have been successfully downloaded, we want to save them somewhere.
     std::string cache_path = GetGlobalPluginProperties().GetCachePath();
 
     // Override, if the entry has a valid cache path.
@@ -460,7 +467,7 @@ SymbolLocatorSymStore::ParseEnvSymbolPaths(llvm::StringRef val) {
   return result;
 }
 
-std::string SymbolLocatorSymStore::GetDefaultCachePath() {
+std::string SymbolLocatorSymStore::GetSystemDefaultCachePath() {
   // Fall back to the platform cache directory.
   llvm::SmallString<128> cache_dir;
   if (llvm::sys::path::cache_directory(cache_dir)) {

@@ -50,7 +50,7 @@ public:
   };
 
   static std::vector<LookupEntry> ParseEnvSymbolPaths(llvm::StringRef val);
-  static std::string GetDefaultCachePath();
+  static std::string GetSystemDefaultCachePath();
 };
 
 } // namespace lldb_private
