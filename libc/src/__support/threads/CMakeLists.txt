@@ -147,12 +147,17 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.callonce)
   )
 endif()
 
-if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
-  add_object_library(
+if(TARGET libc.src.__support.threads.futex_utils)
+  add_header_library(
     CndVar
-    ALIAS
+    HDRS
+      CndVar.h
     DEPENDS
-    .${LIBC_TARGET_OS}.CndVar
+      .futex_utils
+      .mutex
+      .raw_mutex
+      libc.hdr.stdint_proxy
+      libc.src.__support.CPP.mutex
   )
 endif()
 
