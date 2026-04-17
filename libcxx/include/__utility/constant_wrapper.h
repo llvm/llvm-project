@@ -26,25 +26,27 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 26
 
 template <class _Tp>
-struct __cw_fixed_value;
-
-template <__cw_fixed_value _Xp, class = typename decltype(_Xp)::__type>
-struct constant_wrapper;
-
-template <class _Tp>
-concept __constexpr_param = requires { typename constant_wrapper<_Tp::value>; };
-
-struct __cw_operators;
-
-template <__cw_fixed_value _Xp>
-constexpr auto cw = constant_wrapper<_Xp>{};
-
-template <class _Tp>
 struct __cw_fixed_value {
   using __type _LIBCPP_NODEBUG = _Tp;
   _LIBCPP_HIDE_FROM_ABI constexpr __cw_fixed_value(__type __v) noexcept : __data(__v) {}
   _Tp __data;
 };
+
+template <__cw_fixed_value _Xp,
+#  ifdef _LIBCPP_COMPILER_GCC
+          // gcc bug:  https://gcc.gnu.org/PR117392
+          class = typename decltype(__cw_fixed_value(_Xp))::__type
+#  else
+          class = typename decltype(_Xp)::__type
+#  endif
+          >
+struct constant_wrapper;
+
+template <class _Tp>
+concept __constexpr_param = requires { typename constant_wrapper<_Tp::value>; };
+
+template <__cw_fixed_value _Xp>
+constexpr auto cw = constant_wrapper<_Xp>{};
 
 template <class _Tp, size_t _Extent>
 struct __cw_fixed_value<_Tp[_Extent]> {
