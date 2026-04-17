@@ -15702,7 +15702,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         TheCall = CXXOperatorCallExpr::Create(
             Context, ChosenOp, FnExpr.get(), Args, ResultTy, VK, OpLoc,
             CurFPFeatureOverrides(),
-            static_cast<CallExpr::ADLCallKind>(Best->IsADLCandidate));
+            static_cast<CallExpr::ADLCallKind>(Best->IsADLCandidate),
+            IsReversed);
 
         if (const auto *Method = dyn_cast<CXXMethodDecl>(FnDecl);
             Method && Method->isImplicitObjectMemberFunction()) {
