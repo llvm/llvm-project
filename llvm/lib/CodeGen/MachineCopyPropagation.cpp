@@ -1323,11 +1323,9 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
           if (CopySourceInvalid.count(Reload))
             return;
 
-        auto CheckCopyConstraint = [this](Register Def, Register Src) {
-          for (const TargetRegisterClass *RC : TRI->regclasses()) {
-            if (RC->contains(Def) && RC->contains(Src))
+        auto CheckCopyConstraint = [this](Register Dst, Register Src) {
+          if (TRI->getCommonMinimalPhysRegClass(Dst, Src))
               return true;
-          }
           return false;
         };
 
