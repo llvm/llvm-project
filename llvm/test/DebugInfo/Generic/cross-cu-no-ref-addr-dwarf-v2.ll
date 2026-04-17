@@ -11,13 +11,13 @@
 
 ; CHECK-V3: DW_TAG_compile_unit
 ; CHECK-V3: DW_AT_name{{.*}}"x"
-; CHECK-V3-NEXT: DW_AT_type [DW_FORM_ref4]{{.*}}(cu + {{.*}} => {0x[[INT_ADDR:[0-9a-f]+]]} "int")
+; CHECK-V3-NEXT: DW_AT_type [DW_FORM_ref4]{{.*}}{0x[[INT_ADDR:[0-9a-f]+]]}
 ; CHECK-V3: [[INT_ADDR]]:{{.*}}DW_TAG_base_type
 ; CHECK-V3-NEXT: DW_AT_name{{.*}}"int"
 
 ; CHECK-V3: DW_TAG_compile_unit
 ; CHECK-V3: DW_AT_name{{.*}}"y"
-; CHECK-V3-NEXT: DW_AT_type [DW_FORM_ref_addr]{{.*}}(0x{{0*}}[[INT_ADDR]] "int")
+; CHECK-V3-NEXT: DW_AT_type [DW_FORM_ref_addr]{{.*}}0x{{0*}}[[INT_ADDR]]
 
 ; DWARF V2: cross-CU type deduplication disabled resulting in two "int"
 ; definitions and no DW_FORM_ref_addr (cross-CU ref)
@@ -26,13 +26,13 @@
 
 ; CHECK-V2: DW_TAG_compile_unit
 ; CHECK-V2: DW_AT_name{{.*}}"x"
-; CHECK-V2-NEXT: DW_AT_type [DW_FORM_ref4]{{.*}}(cu + {{.*}} => {0x[[X_INT_ADDR:[0-9a-f]+]]} "int")
+; CHECK-V2-NEXT: DW_AT_type [DW_FORM_ref4]{{.*}}{0x[[X_INT_ADDR:[0-9a-f]+]]}
 ; CHECK-V2: [[X_INT_ADDR]]:{{.*}}DW_TAG_base_type
 ; CHECK-V2-NEXT: DW_AT_name{{.*}}"int"
 
 ; CHECK-V2: DW_TAG_compile_unit
 ; CHECK-V2: DW_AT_name{{.*}}"y"
-; CHECK-V2-NEXT: DW_AT_type [DW_FORM_ref4]{{.*}}(cu + {{.*}} => {0x[[Y_INT_ADDR:[0-9a-f]+]]} "int")
+; CHECK-V2-NEXT: DW_AT_type [DW_FORM_ref4]{{.*}}{0x[[Y_INT_ADDR:[0-9a-f]+]]}
 ; CHECK-V2: [[Y_INT_ADDR]]:{{.*}}DW_TAG_base_type
 ; CHECK-V2-NEXT: DW_AT_name{{.*}}"int"
 
