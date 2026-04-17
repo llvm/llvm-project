@@ -136,6 +136,8 @@ public:
     };
 
     /// Policy for composing Location.current with the computed location.
+    /// TODO: possibly add CallSiteLoc wrap and a generic Fuse option
+    ///       (`fused[Location.current, baseLoc]`) for non-NameLoc cases.
     enum class CurrentLocAction : uint8_t {
       Fallback,    // use Location.current only as fallback (default)
       NamelocWrap, // extract NameLoc names, wrap computed loc
