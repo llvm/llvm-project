@@ -18495,6 +18495,11 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
       Diag(Loc, diag::err_introducing_special_friend) << DiagArg;
       return nullptr;
     }
+  } else {
+    CXXRecordDecl *RC = dyn_cast<CXXRecordDecl>(DC);
+    if (RC->isLambda()) {
+      Diag(NameInfo.getBeginLoc(), diag::err_friend_lambda_decl);
+    }
   }
 
   // FIXME: This is an egregious hack to cope with cases where the scope stack

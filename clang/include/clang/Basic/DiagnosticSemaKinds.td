@@ -8907,6 +8907,8 @@ let CategoryName = "Lambda Issue" in {
     "capture of variable '%0' as type %1 calls %select{private|protected}3 "
     "%select{default |copy |move |*ERROR* |*ERROR* |*ERROR* |}2constructor">,
     AccessControl;
+  def err_friend_lambda_decl : Error<
+    "a member of a lambda should not be the target of a friend declaration">;
   def note_lambda_to_block_conv : Note<
     "implicit capture of lambda object due to conversion to block pointer "
     "here">;
