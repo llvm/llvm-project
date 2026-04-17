@@ -807,8 +807,7 @@ void CodeGenModule::checkAliases() {
     if (!IsIFunc) {
       // Function declarations can only alias functions (including IFUNCs).
       // Similarly, variable declarations can only alias variables.
-      if (isa<FunctionDecl>(D) !=
-          (isa<llvm::Function>(GV) || isa<llvm::GlobalIFunc>(GV))) {
+      if (isa<FunctionDecl>(D) != isa<llvm::Function, llvm::GlobalIFunc>(GV)) {
         GlobalDecl AliaseeGD = getMangledNameDecl(GV->getName());
         assert(AliaseeGD);
         Diags.Report(Location, diag::err_alias_between_function_and_variable)
