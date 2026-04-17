@@ -31,6 +31,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassNameParser.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileUtilities.h"
@@ -359,6 +360,15 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
 
   if (!options.mArch.empty()) {
     tmBuilderOrError->getTargetTriple().setArchName(options.mArch);
+  }
+
+  // On RISC-V, JITLink requires PIC relocations and the medium code model so
+  // that generated code and data fit within the +/-2GiB addressing range used
+  // by the default RISC-V relocations (e.g. PCREL_HI20/LO12). Without this,
+  // linking JITted objects can fail with out-of-range relocation errors.
+  if (tmBuilderOrError->getTargetTriple().isRISCV()) {
+    tmBuilderOrError->setRelocationModel(llvm::Reloc::PIC_);
+    tmBuilderOrError->setCodeModel(llvm::CodeModel::Medium);
   }
 
   // Build TargetMachine

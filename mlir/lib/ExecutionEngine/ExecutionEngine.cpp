@@ -10,23 +10,26 @@
 // JIT engine.
 //
 //===----------------------------------------------------------------------===//
-#include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
 #include "llvm/ExecutionEngine/JITEventListener.h"
+#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/TargetParser/Host.h"
@@ -311,56 +314,105 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
-  auto objectLinkingLayerCreator = [&](ExecutionSession &session,
-                                       llvm::jitlink::JITLinkMemoryManager
-                                           &IgnoredMemMgr) {
-    // Needed to respect AArch64 ABI requirements on the distance between
-    // TEXT and GOT sections.
-    bool reserveAlloc = llvmModule->getTargetTriple().isAArch64();
-    auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, [sectionMemoryMapper = options.sectionMemoryMapper,
-                  reserveAlloc](const MemoryBuffer &) {
-          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper,
-                                                        reserveAlloc);
-        });
+  auto objectLinkingLayerCreator =
+      [&](ExecutionSession &session,
+          llvm::jitlink::JITLinkMemoryManager &ignoredMemMgr) {
+        // Needed to respect AArch64 ABI requirements on the distance between
+        // TEXT and GOT sections.
 
-    // Register JIT event listeners if they are enabled.
-    if (engine->gdbListener)
-      objectLayer->registerJITEventListener(*engine->gdbListener);
-    if (engine->perfListener)
-      objectLayer->registerJITEventListener(*engine->perfListener);
+        // Prefer ObjectLinkingLayer (JITLink) by default and only fall back to
+        // RuntimeDyld for target / format combinations where JITLink is not
+        // currently supported.
+        const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
+        bool useJITLink = true;
+        switch (targetTriple.getArch()) {
+        case Triple::aarch64:
+          useJITLink = !targetTriple.isOSBinFormatCOFF();
+          break;
+        case Triple::arm:
+        case Triple::armeb:
+        case Triple::thumb:
+        case Triple::thumbeb:
+          useJITLink = targetTriple.isOSBinFormatELF();
+          break;
+        case Triple::ppc64:
+          useJITLink = targetTriple.isPPC64ELFv2ABI();
+          break;
+        case Triple::ppc64le:
+          useJITLink = targetTriple.isOSBinFormatELF();
+          break;
+        case Triple::x86_64:
+          useJITLink = !targetTriple.isOSBinFormatCOFF();
+          break;
+        default:
+          break;
+        }
 
-    // COFF format binaries (Windows) need special handling to deal with
-    // exported symbol visibility.
-    // cf llvm/lib/ExecutionEngine/Orc/LLJIT.cpp LLJIT::createObjectLinkingLayer
-    const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
-    if (targetTriple.isOSBinFormatCOFF()) {
-      objectLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
-      objectLayer->setAutoClaimResponsibilityForObjectSymbols(true);
-    }
+        std::unique_ptr<llvm::orc::ObjectLayer> objectLayer;
 
-    // Resolve symbols from shared libraries.
-    for (auto &libPath : jitDyLibPaths) {
-      auto mb = llvm::MemoryBuffer::getFile(libPath);
-      if (!mb) {
-        errs() << "Failed to create MemoryBuffer for: " << libPath
-               << "\nError: " << mb.getError().message() << "\n";
-        continue;
-      }
-      auto &jd = session.createBareJITDylib(std::string(libPath));
-      auto loaded = DynamicLibrarySearchGenerator::Load(
-          libPath.str().c_str(), dataLayout.getGlobalPrefix());
-      if (!loaded) {
-        errs() << "Could not load " << libPath << ":\n  " << loaded.takeError()
-               << "\n";
-        continue;
-      }
-      jd.addGenerator(std::move(*loaded));
-      cantFail(objectLayer->add(jd, std::move(mb.get())));
-    }
+        if (useJITLink) {
+          // JITLink path
+          LDBG() << "Using ObjectLinkingLayer (JITLink)";
+          objectLayer = std::make_unique<llvm::orc::ObjectLinkingLayer>(
+              session, ignoredMemMgr);
+        } else {
+          // RuntimeDyld path
+          auto rtDyldLayer =
+              std::make_unique<llvm::orc::RTDyldObjectLinkingLayer>(
+                  session,
+                  [sectionMemoryMapper =
+                       options.sectionMemoryMapper](const llvm::MemoryBuffer &)
+                      -> std::unique_ptr<llvm::RuntimeDyld::MemoryManager> {
+                    return std::make_unique<SectionMemoryManager>(
+                        sectionMemoryMapper);
+                  });
 
-    return objectLayer;
-  };
+          // Only RTDyld supports listener
+          if (engine->gdbListener)
+            rtDyldLayer->registerJITEventListener(*engine->gdbListener);
+
+          if (engine->perfListener)
+            rtDyldLayer->registerJITEventListener(*engine->perfListener);
+
+          LDBG() << "mlir::ExecutionEngine initialized with "
+                    "RTDyldObjectLinkingLayer engine";
+          objectLayer = std::move(rtDyldLayer);
+        }
+
+        // COFF format binaries (Windows) need special handling to deal with
+        // exported symbol visibility.
+        // cf llvm/lib/ExecutionEngine/Orc/LLJIT.cpp
+        // LLJIT::createObjectLinkingLayer
+        if (!useJITLink && targetTriple.isOSBinFormatCOFF()) {
+          if (auto *rtDyldLayer = cast<llvm::orc::RTDyldObjectLinkingLayer>(
+                  objectLayer.get())) {
+            rtDyldLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+            rtDyldLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+          }
+        }
+
+        // Resolve symbols from shared libraries.
+        for (auto &libPath : jitDyLibPaths) {
+          auto mb = llvm::MemoryBuffer::getFile(libPath);
+          if (!mb) {
+            errs() << "Failed to create MemoryBuffer for: " << libPath
+                   << "\nError: " << mb.getError().message() << "\n";
+            continue;
+          }
+          auto &jd = session.createBareJITDylib(std::string(libPath));
+          auto loaded = DynamicLibrarySearchGenerator::Load(
+              libPath.str().c_str(), dataLayout.getGlobalPrefix());
+          if (!loaded) {
+            errs() << "Could not load " << libPath << ":\n  "
+                   << loaded.takeError() << "\n";
+            continue;
+          }
+          jd.addGenerator(std::move(*loaded));
+          cantFail(objectLayer->add(jd, std::move(mb.get())));
+        }
+
+        return objectLayer;
+      };
 
   // Callback to inspect the cache and recompile on demand. This follows Lang's
   // LLJITWithObjectCache example.
