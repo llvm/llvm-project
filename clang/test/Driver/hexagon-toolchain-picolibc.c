@@ -67,8 +67,8 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin -mcpu=hexagonv60 \
 // RUN:   -nolibc %s 2>&1 | FileCheck -check-prefix=CHECK-NOLIBC %s
 // CHECK-NOLIBC: "-cc1"
-// CHECK-NOLIBC: hexagon-link
-// CHECK-NOLIBC-SAME: "{{.*}}crt0-semihost.o"
+// CHECK-NOLIBC: {{hexagon-link|ld}}
+// CHECK-NOLIBC: "{{.*}}crt0-semihost.o"
 // CHECK-NOLIBC-SAME: "-lc++"
 // CHECK-NOLIBC-SAME: "-lm"
 // CHECK-NOLIBC-SAME: "--start-group"
