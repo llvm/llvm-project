@@ -160,6 +160,8 @@ def note_alignment_invalid_type : Note<
   "floating point types are not allowed here">;
 def note_alignment_invalid_member_pointer : Note<
   "member pointers are not allowed here">;
+def note_alignment_invalid_function_pointer : Note<
+  "function pointers are not allowed here">;
 def err_ice_ambiguous_conversion : Error<
   "ambiguous conversion from type %0 to an integral or unscoped "
   "enumeration type">;
