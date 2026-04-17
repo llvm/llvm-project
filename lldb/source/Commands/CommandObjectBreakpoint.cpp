@@ -1843,13 +1843,8 @@ protected:
       FileSpec file;
       const size_t num_files = m_options.m_filenames.GetSize();
       if (num_files == 0) {
-<<<<<<< HEAD
-        if (!GetDefaultFile(target, file, result)) {
-          result.AppendError("No file supplied and no default file available.");
-=======
         if (!GetDefaultFile(target, m_exe_ctx.GetFramePtr(), file, result)) {
           result.AppendError("no file supplied and no default file available.");
->>>>>>> 2110db0f4959 (Add a `breakpoint add` command to fix the option-madness that is `breakpoint set` (#156067))
           return;
         }
       } else if (num_files > 1) {
