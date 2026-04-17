@@ -6625,7 +6625,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
         buildVPlansWithVPRecipes(EpilogueUserVF, EpilogueUserVF);
       }
       buildVPlansWithVPRecipes(UserVF, UserVF);
-      if (!VPlans.empty()) {
+      if (!VPlans.empty() && VPlans.back()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
         // vector VFs only.
         if (UserVF.isScalar() ||
