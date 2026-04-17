@@ -1610,8 +1610,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   cir::GlobalOp gv =
       CIRGenModule::createGlobalOp(cgm, loc, name, init.getType(),
                                    /*isConstant=*/true);
-  gv.setLinkageAttr(
-      cir::GlobalLinkageKindAttr::get(&cgm.getMLIRContext(), linkage));
+  gv.setLinkage(linkage);
 
   // Export the typeinfo in the same circumstances as the vtable is
   // exported.
