@@ -1,6 +1,100 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// spirv.Any
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @any_vector2
+func.func @any_vector2(%arg0: vector<2xi1>) -> i1 {
+  // CHECK: spirv.Any %{{.*}} : vector<2xi1>
+  %0 = spirv.Any %arg0 : vector<2xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @any_vector3
+func.func @any_vector3(%arg0: vector<3xi1>) -> i1 {
+  // CHECK: spirv.Any %{{.*}} : vector<3xi1>
+  %0 = spirv.Any %arg0 : vector<3xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @any_vector4
+func.func @any_vector4(%arg0: vector<4xi1>) -> i1 {
+  // CHECK: spirv.Any %{{.*}} : vector<4xi1>
+  %0 = spirv.Any %arg0 : vector<4xi1>
+  return %0 : i1
+}
+
+// -----
+
+func.func @any_scalar(%arg0: i1) -> i1 {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'i1'}}
+  %0 = spirv.Any %arg0 : i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @any_wrong_result_type(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // expected-error @+1 {{'spirv.Any' op result #0 must be bool, but got 'vector<2xi1>'}}
+  %0 = "spirv.Any"(%arg0) : (vector<2xi1>) -> vector<2xi1>
+  return %0 : vector<2xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.All
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @all_vector2
+func.func @all_vector2(%arg0: vector<2xi1>) -> i1 {
+  // CHECK: spirv.All %{{.*}} : vector<2xi1>
+  %0 = spirv.All %arg0 : vector<2xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @all_vector3
+func.func @all_vector3(%arg0: vector<3xi1>) -> i1 {
+  // CHECK: spirv.All %{{.*}} : vector<3xi1>
+  %0 = spirv.All %arg0 : vector<3xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @all_vector4
+func.func @all_vector4(%arg0: vector<4xi1>) -> i1 {
+  // CHECK: spirv.All %{{.*}} : vector<4xi1>
+  %0 = spirv.All %arg0 : vector<4xi1>
+  return %0 : i1
+}
+
+// -----
+
+func.func @all_scalar(%arg0: i1) -> i1 {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'i1'}}
+  %0 = spirv.All %arg0 : i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @all_wrong_result_type(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // expected-error @+1 {{'spirv.All' op result #0 must be bool, but got 'vector<2xi1>'}}
+  %0 = "spirv.All"(%arg0) : (vector<2xi1>) -> vector<2xi1>
+  return %0 : vector<2xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.IEqual
 //===----------------------------------------------------------------------===//
 

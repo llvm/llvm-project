@@ -217,6 +217,11 @@ MODULE_PASS_WITH_PARAMS(
     [](HWAddressSanitizerOptions Opts) { return HWAddressSanitizerPass(Opts); },
     parseHWASanPassOptions, "kernel;recover")
 MODULE_PASS_WITH_PARAMS(
+    "drop-type-tests", "DropTypeTestsPass",
+    [](lowertypetests::DropTestKind Kind) { return DropTypeTestsPass(Kind); },
+    parseDropTypeTestsPassOptions,
+    "assume;all")
+MODULE_PASS_WITH_PARAMS(
     "internalize", "InternalizePass",
     [](SmallVector<std::string, 0> PreservedGVs) {
       if (PreservedGVs.empty())
@@ -542,6 +547,7 @@ FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass(TM))
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("stack-protector", StackProtectorPass(*TM))
+FUNCTION_PASS("strip-convergence-intrinsics", StripConvergenceIntrinsicsPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())

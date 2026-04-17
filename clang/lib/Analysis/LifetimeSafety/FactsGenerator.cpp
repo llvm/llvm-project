@@ -288,8 +288,7 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
 
   switch (CE->getCastKind()) {
   case CK_LValueToRValue:
-    // TODO: Decide what to do for x-values here.
-    if (!SubExpr->isLValue())
+    if (!SubExpr->isGLValue())
       return;
 
     assert(Src && "LValue being cast to RValue has no origin list");
@@ -507,7 +506,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
       hasOrigins(OCE->getArg(0)->getType())) {
     // Pointer-like types: assignment inherently propagates origins.
     QualType LHSTy = OCE->getArg(0)->getType();
-    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy)) {
+    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy) ||
+        isGslOwnerType(LHSTy)) {
       handleAssignment(OCE->getArg(0), OCE->getArg(1));
       return;
     }
