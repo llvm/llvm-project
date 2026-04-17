@@ -1453,8 +1453,8 @@ getLayoutSuccessorProbThreshold(const MachineBasicBlock *BB) {
        *   (1-T) * Prob(BB->Succ) > T * Prob(BB->Pred)
        *   So T / (1 - T) = 2, Yielding T = 2/3
        *
-       * Then remap the user-controlled ProfileLikelyProb into 
-       * a triangle-specific threshold T. 
+       * Then remap the user-controlled ProfileLikelyProb into
+       * a triangle-specific threshold T.
        *   T = (2/3) * (ProfileLikelyProb / 50)
        *     = (2 * ProfileLikelyProb) / 150
        * This preserves T = 2/3 at ProfileLikelyProb = 50.
