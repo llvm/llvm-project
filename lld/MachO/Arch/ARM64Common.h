@@ -19,7 +19,7 @@
 namespace lld::macho {
 
 // Shared stub helper code — identical for ARM64 and ARM64e.
-static constexpr uint32_t arm64StubHelperHeaderCode[] = {
+inline constexpr uint32_t arm64StubHelperHeaderCode[] = {
     0x90000011, // 00: adrp  x17, _dyld_private@page
     0x91000231, // 04: add   x17, x17, _dyld_private@pageoff
     0xa9bf47f0, // 08: stp   x16/x17, [sp, #-16]!
@@ -28,7 +28,7 @@ static constexpr uint32_t arm64StubHelperHeaderCode[] = {
     0xd61f0200, // 14: br    x16
 };
 
-static constexpr uint32_t arm64StubHelperEntryCode[] = {
+inline constexpr uint32_t arm64StubHelperEntryCode[] = {
     0x18000050, // 00: ldr  w16, l0
     0x14000000, // 04: b    stubHelperHeader
     0x00000000, // 08: l0: .long 0
@@ -37,14 +37,14 @@ static constexpr uint32_t arm64StubHelperEntryCode[] = {
 // A thunk is the relaxed variation of stubCode. We don't need the
 // extra indirection through a lazy pointer because the target address
 // is known at link time.
-static constexpr uint32_t arm64ThunkCode[] = {
+inline constexpr uint32_t arm64ThunkCode[] = {
     0x90000010, // 00: adrp  x16, <thunk.ptr>@page
     0x91000210, // 04: add   x16, [x16,<thunk.ptr>@pageoff]
     0xd61f0200, // 08: br    x16
 };
 
 // Just a single direct branch to the target function.
-static constexpr uint32_t arm64ICFSafeThunkCode[] = {
+inline constexpr uint32_t arm64ICFSafeThunkCode[] = {
     0x14000000, // 00: b    target
 };
 
