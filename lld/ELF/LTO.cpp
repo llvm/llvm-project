@@ -436,7 +436,3 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   }
   return ret;
 }
-
-void BitcodeCompiler::setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs) {
-  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
-}
