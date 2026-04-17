@@ -97,6 +97,21 @@ def ArithEmulateUnsupportedFloats : Pass<"arith-emulate-unsupported-floats"> {
   let dependentDialects = ["vector::VectorDialect"];
 }
 
+def ArithExpandFlushDenormalsPass : Pass<"arith-expand-flush-denormals"> {
+  let summary = "Expand arith.flush_denormals to integer arithmetic";
+  let description = [{
+    Lower `arith.flush_denormals` operations on IEEE-like floating-point
+    types to a bitcast + bit-mask + compare + select sequence using integer
+    arithmetic. A value is denormal iff its biased exponent field is zero and
+    its stored mantissa is non-zero. Denormal inputs are replaced by a
+    sign-preserved zero; all other inputs pass through unchanged.
+
+    This pass leaves `arith.flush_denormals` operating on non-IEEE-like
+    float types untouched.
+  }];
+  let dependentDialects = ["::mlir::arith::ArithDialect"];
+}
+
 def ArithEmulateWideInt : Pass<"arith-emulate-wide-int"> {
   let summary = "Emulate 2*N-bit integer operations using N-bit operations";
   let description = [{

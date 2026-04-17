@@ -13,10 +13,12 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 namespace mlir {
 namespace arith {
 #define GEN_PASS_DEF_ARITHEXPANDOPSPASS
+#define GEN_PASS_DEF_ARITHEXPANDFLUSHDENORMALSPASS
 #include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
 } // namespace arith
 } // namespace mlir
@@ -27,6 +29,17 @@ using namespace mlir;
 static Value createConst(Location loc, Type type, int value,
                          PatternRewriter &rewriter) {
   auto attr = rewriter.getIntegerAttr(getElementTypeOrSelf(type), value);
+  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
+    return arith::ConstantOp::create(rewriter, loc,
+                                     DenseElementsAttr::get(shapedTy, attr));
+  }
+  return arith::ConstantOp::create(rewriter, loc, attr);
+}
+
+/// Create an integer constant from an APInt.
+static Value createAPIntConst(Location loc, Type type, const APInt &value,
+                              PatternRewriter &rewriter) {
+  auto attr = IntegerAttr::get(getElementTypeOrSelf(type), value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
     return arith::ConstantOp::create(rewriter, loc,
                                      DenseElementsAttr::get(shapedTy, attr));
@@ -729,6 +742,109 @@ struct ScalingTruncFOpConverter
   }
 };
 
+/// Expands `arith.flush_denormals` into integer arithmetic.
+///
+/// For an IEEE-like floating-point value with a sign|exponent|mantissa
+/// bit layout, this mirrors `APFloat::isDenormal`: a value is denormal
+/// iff its biased exponent field is zero *and* its stored mantissa is
+/// non-zero. Denormal inputs are replaced by a sign-preserved zero
+/// (i.e. the operand's bits AND'ed with the sign-bit mask); all other
+/// inputs pass through unchanged.
+///
+/// Pseudocode:
+///   bits        = bitcast(x, iN)
+///   expField    = bits & expMask
+///   manField    = bits & manMask
+///   isDenormal  = (expField == 0) AND (manField != 0)
+///   signZero    = bits & signMask
+///   resultBits  = select(isDenormal, signZero, bits)
+///   result      = bitcast(resultBits, floatTy)
+struct FlushDenormalsOpConverter
+    : public OpRewritePattern<arith::FlushDenormalsOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::FlushDenormalsOp op,
+                                PatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    ImplicitLocOpBuilder b(loc, rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    auto floatTy = dyn_cast<FloatType>(getElementTypeOrSelf(operandTy));
+    if (!floatTy)
+      return rewriter.notifyMatchFailure(op, "operand is not a float type");
+
+    const llvm::fltSemantics &sem = floatTy.getFloatSemantics();
+    // Restrict to IEEE-like encodings, where the sign bit is the MSB and
+    // denormals are exactly "biased exponent == 0 and non-zero mantissa".
+    if (!llvm::APFloatBase::isIEEELikeFP(sem))
+      return rewriter.notifyMatchFailure(
+          op, "only IEEE-like floating-point types are supported");
+
+    unsigned totalBits = llvm::APFloatBase::semanticsSizeInBits(sem);
+    unsigned precision = llvm::APFloatBase::semanticsPrecision(sem);
+    // Stored mantissa bits = precision - 1 (implicit leading bit not stored).
+    // Exponent field bits = totalBits - 1 (sign) - storedMantissa.
+    if (precision < 1 || precision > totalBits)
+      return rewriter.notifyMatchFailure(op, "unexpected float semantics");
+    unsigned mantissaBits = precision - 1;
+    unsigned expBits = totalBits - 1 - mantissaBits;
+    if (expBits == 0 || mantissaBits == 0)
+      return rewriter.notifyMatchFailure(
+          op, "degenerate float encoding has no exponent or mantissa");
+
+    Type intTy =
+        cloneToShapedType(operandTy, rewriter.getIntegerType(totalBits));
+    Value bits = arith::BitcastOp::create(b, intTy, operand);
+
+    // Build bit masks using APInt to support widths like 64 bits that don't
+    // fit into an `int` parameter.
+    APInt mantissaMaskVal = APInt::getLowBitsSet(totalBits, mantissaBits);
+    APInt expMaskVal =
+        APInt::getBitsSet(totalBits, mantissaBits, mantissaBits + expBits);
+    APInt signMaskVal = APInt::getOneBitSet(totalBits, totalBits - 1);
+    APInt zeroVal = APInt::getZero(totalBits);
+
+    Value mantissaMask =
+        createAPIntConst(loc, intTy, mantissaMaskVal, rewriter);
+    Value expMask = createAPIntConst(loc, intTy, expMaskVal, rewriter);
+    Value signMask = createAPIntConst(loc, intTy, signMaskVal, rewriter);
+    Value zero = createAPIntConst(loc, intTy, zeroVal, rewriter);
+
+    // expField == 0
+    Value expField = arith::AndIOp::create(b, bits, expMask);
+    Value expIsZero =
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, expField, zero);
+
+    // mantissaField != 0
+    Value mantissaField = arith::AndIOp::create(b, bits, mantissaMask);
+    Value mantissaNonZero =
+        arith::CmpIOp::create(b, arith::CmpIPredicate::ne, mantissaField, zero);
+
+    // isDenormal = (exp == 0) AND (mantissa != 0)
+    Value isDenormal = arith::AndIOp::create(b, expIsZero, mantissaNonZero);
+
+    // Flushed bits preserve the sign bit only -> ±0.0.
+    Value signOnly = arith::AndIOp::create(b, bits, signMask);
+    Value resultBits = arith::SelectOp::create(b, isDenormal, signOnly, bits);
+    Value result = arith::BitcastOp::create(b, operandTy, resultBits);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+struct ArithExpandFlushDenormalsPass final
+    : public arith::impl::ArithExpandFlushDenormalsPassBase<
+          ArithExpandFlushDenormalsPass> {
+  using ArithExpandFlushDenormalsPassBase::ArithExpandFlushDenormalsPassBase;
+
+  void runOnOperation() override {
+    MLIRContext *context = &getContext();
+    RewritePatternSet patterns(context);
+    arith::populateExpandFlushDenormalsPatterns(patterns);
+    walkAndApplyPatterns(getOperation(), std::move(patterns));
+  }
+};
+
 struct ArithExpandOpsPass
     : public arith::impl::ArithExpandOpsPassBase<ArithExpandOpsPass> {
   using ArithExpandOpsPassBase::ArithExpandOpsPassBase;
@@ -829,6 +945,11 @@ void mlir::arith::populateExpandScalingExtTruncPatterns(
     RewritePatternSet &patterns) {
   patterns.add<ScalingExtFOpConverter, ScalingTruncFOpConverter>(
       patterns.getContext());
+}
+
+void mlir::arith::populateExpandFlushDenormalsPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<FlushDenormalsOpConverter>(patterns.getContext());
 }
 
 void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
