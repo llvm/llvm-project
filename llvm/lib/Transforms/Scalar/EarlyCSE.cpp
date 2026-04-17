@@ -967,7 +967,33 @@ private:
       V = isa<LoadInst>(Inst) ? Inst : cast<StoreInst>(Inst)->getValueOperand();
     }
 
-    return V->getType() == ExpectedType ? V : nullptr;
+    if (V->getType() == ExpectedType) {
+      return V;
+    }
+
+    if (CanCreate && isa<StoreInst>(Inst)) {
+      auto *FromTy = dyn_cast<IntegerType>(V->getType());
+      auto *ToTy = dyn_cast<IntegerType>(ExpectedType);
+      if (!FromTy || !ToTy)
+        return nullptr;
+
+      unsigned FromBW = FromTy->getBitWidth();
+      unsigned RoundedBW = alignTo(FromBW, 8);
+      auto *ExtendedType = IntegerType::get(V->getContext(), RoundedBW);
+
+      if (ExpectedType != ExtendedType)
+        return nullptr;
+
+      if (auto *CI = dyn_cast<ConstantInt>(V))
+        return ConstantInt::get(cast<IntegerType>(ExpectedType),
+                                CI->getValue().zext(RoundedBW));
+
+      return CastInst::Create(Instruction::ZExt, V,
+                              cast<IntegerType>(ExpectedType), "",
+                              Inst->getIterator());
+    } else {
+      return nullptr;
+    }
   }
 
   /// Return true if the instruction is known to only operate on memory
