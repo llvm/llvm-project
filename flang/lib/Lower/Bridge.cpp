@@ -5592,15 +5592,29 @@ private:
 
     // Gather some information about the assignment that will impact how it is
     // lowered.
-    const bool isWholeAllocatableAssignment =
+    const bool lhsIsWholeAllocatable =
         !userDefinedAssignment && !isInsideHlfirWhere() &&
-        Fortran::lower::isWholeAllocatable(assign.lhs) &&
-        bridge.getLoweringOptions().getReallocateLHS();
+        Fortran::lower::isWholeAllocatable(assign.lhs);
+    std::optional<Fortran::evaluate::DynamicType> lhsType =
+        assign.lhs.GetType();
+    // Polymorphic allocatable LHS always requires reallocation semantics
+    // regardless of -fno-realloc-lhs: assignment to a polymorphic variable
+    // is a F2003+ feature that requires dynamic type tracking, which cannot
+    // be safely skipped.  When -fno-realloc-lhs is specified but the LHS is
+    // polymorphic, emit a warning and proceed with reallocation semantics.
+    const bool lhsIsPolymorphic =
+        lhsType.has_value() && lhsType->IsPolymorphic();
+    if (lhsIsWholeAllocatable && lhsIsPolymorphic &&
+        !bridge.getLoweringOptions().getReallocateLHS())
+      mlir::emitWarning(loc,
+                        "-fno-realloc-lhs is ignored for assignment to "
+                        "polymorphic allocatable");
+    const bool isWholeAllocatableAssignment =
+        lhsIsWholeAllocatable &&
+        (bridge.getLoweringOptions().getReallocateLHS() || lhsIsPolymorphic);
     const bool isUserDefAssignToPointerOrAllocatable =
         userDefinedAssignment &&
         firstDummyIsPointerOrAllocatable(*userDefinedAssignment);
-    std::optional<Fortran::evaluate::DynamicType> lhsType =
-        assign.lhs.GetType();
     const bool keepLhsLengthInAllocatableAssignment =
         isWholeAllocatableAssignment && lhsType.has_value() &&
         lhsType->category() == Fortran::common::TypeCategory::Character &&
