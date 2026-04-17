@@ -210,6 +210,16 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
 
 bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
     const llvm::Triple &triple) {
+  // GPU targets are freestanding, so they should not search the host system's
+  // `/usr/include` or `/usr/local/include`.
+  //
+  // Example: `clang --target=amdgcn-amd-amdhsa -ffreestanding -nogpulib`
+  // compiling a file with `#include <string.h>` should not read the host
+  // glibc header `/usr/include/string.h`. GPU toolchains add their own include
+  // paths explicitly, so skip the generic host fallback here.
+  if (triple.isGPU())
+    return false;
+
   switch (triple.getOS()) {
   case llvm::Triple::AIX:
   case llvm::Triple::DragonFly:
