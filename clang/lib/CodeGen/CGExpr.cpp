@@ -3555,6 +3555,37 @@ static bool canEmitSpuriousReferenceToVariable(CodeGenFunction &CGF,
   }
 }
 
+/// Returns true if \p E refers to an enclosing variable whose value/object is
+/// represented by capture storage in the current function (lambda field,
+/// captured statement, block).
+static bool declRefExprNamesCaptureStorage(CodeGenFunction &CGF,
+                                           const DeclRefExpr *E,
+                                           const VarDecl *VD) {
+
+  if (!E->refersToEnclosingVariableOrCapture())
+    return false;
+
+  // Captured in an Objective-C block (or C with language extension):
+  const auto *BD = dyn_cast<BlockDecl>(CGF.CurCodeDecl);
+  if (BD && BD->capturesVariable(VD))
+    return true;
+
+  const VarDecl *CanonicalDecl = VD->getCanonicalDecl();
+
+  // Captured in a C++ lambda:
+  if (CGF.LambdaCaptureFields.lookup(CanonicalDecl))
+    return true;
+
+  // Captured in OpenMP regions (CR_OpenMP), Objective-C @finally
+  // (CR_ObjCAtFinally), or other default captured regions (CR_Default).
+  if (CGF.CapturedStmtInfo &&
+      (CGF.hasLocalDeclEntry(CanonicalDecl) ||
+       CGF.CapturedStmtInfo->lookup(CanonicalDecl)))
+    return true;
+
+  return false;
+}
+
 LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   const NamedDecl *ND = E->getDecl();
   QualType T = E->getType();
@@ -3574,7 +3605,9 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     // constant value directly instead.
     if (E->isNonOdrUse() == NOUR_Constant &&
         (VD->getType()->isReferenceType() ||
-         !canEmitSpuriousReferenceToVariable(*this, E, VD))) {
+         !canEmitSpuriousReferenceToVariable(*this, E, VD)) &&
+        !declRefExprNamesCaptureStorage(*this, E, VD)) {
+
       VD->getAnyInitializer(VD);
       llvm::Constant *Val = ConstantEmitter(*this).emitAbstract(
           E->getLocation(), *VD->evaluateValue(), VD->getType());
