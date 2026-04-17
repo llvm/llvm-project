@@ -2683,12 +2683,11 @@ RISCVTTIImpl::getCombinedArithmeticInstructionCost(
   if ((ISDOpcode == ISD::UDIV || ISDOpcode == ISD::UREM) &&
       Opd2Info.isConstant() && Opd2Info.isPowerOf2()) {
     if (ISDOpcode == ISD::UDIV)
-      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
-                                    Opd1Info,
+      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Opd1Info,
                                     Opd2Info.getNoProps());
     // UREM
-    return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
-                                  Opd1Info.getNoProps(), Opd2Info.getNoProps());
+    return getArithmeticInstrCost(Instruction::And, Ty, CostKind, Opd1Info,
+                                  Opd2Info.getNoProps());
   }
   return std::nullopt;
 }
