@@ -2676,13 +2676,13 @@ RISCVTTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
 /// than the cost of a `udiv`
 std::optional<InstructionCost>
 RISCVTTIImpl::getCombinedArithmeticInstructionCost(
-    unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   // Vector unsigned division/remainder will be simplified to shifts/masks.
-  if ((ISDOpcode == ISD::UDIV || ISDOpcode == ISD::UREM) &&
+  if ((Opcode == Instruction::UDiv || Opcode == Instruction::URem) &&
       Opd2Info.isConstant() && Opd2Info.isPowerOf2()) {
-    if (ISDOpcode == ISD::UDIV)
+    if (Opcode == Instruction::UDiv)
       return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Opd1Info,
                                     Opd2Info.getNoProps());
     // UREM
@@ -2711,14 +2711,14 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
 
+  if (std::optional<InstructionCost> CombinedCost =
+          getCombinedArithmeticInstructionCost(Opcode, Ty, CostKind, Op1Info,
+                                               Op2Info, Args, CxtI))
+    return *CombinedCost;
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
-
-  if (std::optional<InstructionCost> CombinedCost =
-          getCombinedArithmeticInstructionCost(ISDOpcode, Ty, CostKind, Op1Info,
-                                               Op2Info, Args, CxtI))
-    return *CombinedCost;
 
   // TODO: Handle scalar type.
   if (!LT.second.isVector()) {
