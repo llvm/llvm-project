@@ -9217,6 +9217,7 @@ cc_library(
         ":LLVMDialect",
         ":OpenMPCommon",
         ":OpenMPDialect",
+        ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
         ":TransformUtils",
