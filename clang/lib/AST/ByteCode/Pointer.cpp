@@ -958,7 +958,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     return std::nullopt;
 
   // Invalid to read from.
-  if (isDummy() || !isLive() || isPastEnd())
+  if (isDummy() || !isLive() || isPastEnd() ||
+      (isOnePastEnd() && !isZeroSizeArray()))
     return std::nullopt;
 
   // We can return these as rvalues, but we can't deref() them.
