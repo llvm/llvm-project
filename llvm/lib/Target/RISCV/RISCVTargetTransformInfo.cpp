@@ -2684,7 +2684,7 @@ RISCVTTIImpl::getCombinedArithmeticInstructionCost(
       Opd2Info.isConstant() && Opd2Info.isPowerOf2()) {
     if (ISDOpcode == ISD::UDIV)
       return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
-                                    Opd1Info.getNoProps(),
+                                    Opd1Info,
                                     Opd2Info.getNoProps());
     // UREM
     return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
