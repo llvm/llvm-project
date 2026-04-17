@@ -14,7 +14,9 @@ gpu.module @test_module {
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] {leadDimension = 32 : index, transpose} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
     // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i64
     // CHECK: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
-    // CHECK:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK:  %[[BASE_RAW:.*]] = llvm.extractvalue %[[DESC:.*]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK:  %[[DESC_OFF:.*]] = llvm.extractvalue %[[DESC]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK:  %[[BASE:.*]] = llvm.getelementptr %[[BASE_RAW]][%[[DESC_OFF]]]
     // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i64
     // CHECK:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i64
     // CHECK:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i64
@@ -26,7 +28,9 @@ gpu.module @test_module {
 
     // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i32
     // CHECK32: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
-    // CHECK32:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
+    // CHECK32:  %[[BASE_RAW:.*]] = llvm.extractvalue %[[DESC32:.*]][1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
+    // CHECK32:  %[[DESC_OFF32:.*]] = llvm.extractvalue %[[DESC32]][2] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
+    // CHECK32:  %[[BASE:.*]] = llvm.getelementptr %[[BASE_RAW]][%[[DESC_OFF32]]]
     // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i32
     // CHECK32:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i32
     // CHECK32:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i32
@@ -53,7 +57,9 @@ gpu.module @test_module {
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] {leadDimension = 32 : index, transpose} : memref<32x32xi8, 3> -> !gpu.mma_matrix<16x16xsi8, "AOp">
     // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i64
     // CHECK: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
-    // CHECK:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK:  %[[BASE_RAW:.*]] = llvm.extractvalue %[[DESC:.*]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK:  %[[DESC_OFF:.*]] = llvm.extractvalue %[[DESC]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK:  %[[BASE:.*]] = llvm.getelementptr %[[BASE_RAW]][%[[DESC_OFF]]]
     // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i64
     // CHECK:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i64
     // CHECK:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i64
@@ -65,7 +71,9 @@ gpu.module @test_module {
 
     // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i32
     // CHECK32: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
-    // CHECK32:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
+    // CHECK32:  %[[BASE_RAW:.*]] = llvm.extractvalue %[[DESC32:.*]][1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
+    // CHECK32:  %[[DESC_OFF32:.*]] = llvm.extractvalue %[[DESC32]][2] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
+    // CHECK32:  %[[BASE:.*]] = llvm.getelementptr %[[BASE_RAW]][%[[DESC_OFF32]]]
     // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i32
     // CHECK32:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i32
     // CHECK32:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i32
@@ -122,7 +130,9 @@ gpu.module @test_module {
     // CHECK:  %[[EL2:.*]] = llvm.extractvalue %[[D]][1] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  %[[EL3:.*]] = llvm.extractvalue %[[D]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  %[[EL4:.*]] = llvm.extractvalue %[[D]][3] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
-    // CHECK:  %[[BASE:.*]] = llvm.extractvalue %[[MEMREF]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK:  %[[BASE_RAW:.*]] = llvm.extractvalue %[[MEMREF]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK:  %[[DESC_OFF:.*]] = llvm.extractvalue %[[MEMREF]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK:  %[[BASE:.*]] = llvm.getelementptr %[[BASE_RAW]][%[[DESC_OFF]]]
     // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i64
     // CHECK:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]   : i64
     // CHECK:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i64
@@ -141,7 +151,9 @@ gpu.module @test_module {
     // CHECK32:  %[[EL2:.*]] = llvm.extractvalue %[[D]][1] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK32:  %[[EL3:.*]] = llvm.extractvalue %[[D]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK32:  %[[EL4:.*]] = llvm.extractvalue %[[D]][3] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
-    // CHECK32:  %[[BASE:.*]] = llvm.extractvalue %[[MEMREF]][1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
+    // CHECK32:  %[[BASE_RAW:.*]] = llvm.extractvalue %[[MEMREF]][1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
+    // CHECK32:  %[[DESC_OFF:.*]] = llvm.extractvalue %[[MEMREF]][2] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
+    // CHECK32:  %[[BASE:.*]] = llvm.getelementptr %[[BASE_RAW]][%[[DESC_OFF]]]
     // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i32
     // CHECK32:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]   : i32
     // CHECK32:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i32

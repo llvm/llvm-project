@@ -50,7 +50,7 @@ func.func @memref_subview(%arg0: memref<8x16x4xf32, strided<[64, 4, 1]>>, %arg1:
   // Test a subview with mixed bounded and unbound dynamic sizes.
   // CHECK: Op:  %[[SV5:.*]] = memref.subview
   // CHECK-NEXT: result[0]: strided_metadata<
-  // CHECK-SAME: offset = [{unsigned : [32, 32] signed : [32, 32]}]
+  // CHECK-SAME: offset = [{unsigned : [16, 16] signed : [16, 16]}]
   // CHECK-SAME: sizes = [{unsigned : [11, 13] signed : [11, 13]}, {unsigned : [5, 7] signed : [5, 7]}, {unsigned : [0, 18446744073709551615] signed : [-9223372036854775808, 9223372036854775807]}]
   // CHECK-SAME: strides = [{unsigned : [1, 1] signed : [1, 1]}, {unsigned : [64, 64] signed : [64, 64]}, {unsigned : [8, 8] signed : [8, 8]}]
   %subview_4 = memref.subview %arg2[%c0, %c0, %c2] [%0, %1, %arg5] [%c1, %c1, %c1] : memref<8x16x4xf32, strided<[1, 64, 8]>> to memref<?x?x?xf32, strided<[?, ?, ?]>>

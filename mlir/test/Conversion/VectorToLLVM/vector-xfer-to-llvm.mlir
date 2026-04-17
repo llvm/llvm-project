@@ -36,6 +36,8 @@ func.func @transfer_read_write_1d(%A : memref<?xf32>, %base: index) -> vector<17
 //       CHECK: %[[mask:.*]] = arith.cmpi sgt, %[[boundVect]], %[[linearIndex]] : vector<17x[[$IDX_TYPE]]>
 //
 // 5. Bitcast to vector form.
+//       CHECK: %{{.*}} = llvm.getelementptr %{{.*}} :
+//  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //       CHECK: %[[gep:.*]] = llvm.getelementptr %{{.*}} :
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
@@ -57,6 +59,8 @@ func.func @transfer_read_write_1d(%A : memref<?xf32>, %base: index) -> vector<17
 //  CHECK-SAME: %[[linearIndex]] : vector<17x[[$IDX_TYPE]]>
 //
 // 3. Bitcast to vector form.
+//       CHECK: %{{.*}} = llvm.getelementptr {{.*}} :
+//  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //       CHECK: %[[gep_b:.*]] = llvm.getelementptr {{.*}} :
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
@@ -100,6 +104,8 @@ func.func @transfer_read_write_1d_scalable(%A : memref<?xf32>, %base: index) -> 
 //  CHECK-SAME: : vector<[17]x[[$IDX_TYPE]]>
 //
 // 5. Bitcast to vector form.
+//       CHECK: %{{.*}} = llvm.getelementptr %{{.*}} :
+//  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //       CHECK: %[[gep:.*]] = llvm.getelementptr %{{.*}} :
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
@@ -124,6 +130,8 @@ func.func @transfer_read_write_1d_scalable(%A : memref<?xf32>, %base: index) -> 
 //  CHECK-SAME: %[[boundVect_b]] : vector<[17]x[[$IDX_TYPE]]>
 //
 // 4. Bitcast to vector form.
+//       CHECK: %{{.*}} = llvm.getelementptr {{.*}} :
+//  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //       CHECK: %[[gep_b:.*]] = llvm.getelementptr {{.*}} :
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
@@ -298,6 +306,8 @@ func.func @transfer_read_1d_inbounds(%A : memref<?xf32>, %base: index) -> vector
 //  CHECK-SAME: %[[BASE:[a-zA-Z0-9]*]]: index) -> vector<17xf32>
 //
 // 1. Bitcast to vector form.
+//       CHECK: %{{.*}} = llvm.getelementptr {{.*}} :
+//  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
@@ -314,6 +324,8 @@ func.func @transfer_read_1d_inbounds_scalable(%A : memref<?xf32>, %base: index) 
 //  CHECK-SAME: %[[BASE:[a-zA-Z0-9]*]]: index) -> vector<[17]xf32>
 //
 // 1. Bitcast to vector form.
+//       CHECK: %{{.*}} = llvm.getelementptr {{.*}} :
+//  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //

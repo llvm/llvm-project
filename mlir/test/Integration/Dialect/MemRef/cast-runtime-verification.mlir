@@ -58,11 +58,6 @@ func.func @main() {
 
   // CHECK-NEXT: ERROR: Runtime op verification failed
   // CHECK-NEXT: memref.cast %{{.*}} : memref<?xf32, strided<[?]>>
-  // CHECK-NEXT: ^ offset mismatch
-  // CHECK-NEXT: Location: loc({{.*}})
-
-  // CHECK-NEXT: ERROR: Runtime op verification failed
-  // CHECK-NEXT: memref.cast %{{.*}} : memref<?xf32, strided<[?]>>
   // CHECK-NEXT: ^ stride mismatch of dim 0
   // CHECK-NEXT: Location: loc({{.*}})
   %4 = memref.cast %alloc

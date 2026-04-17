@@ -224,7 +224,9 @@ func.func @m16n8k4_tf32(%arg0: vector<2x1xf32>, %arg1: vector<1x1xf32>, %arg2: v
 func.func @async_cp(
   %src: memref<128x128xf32>, %dst: memref<3x16x128xf32, 3>, %i : index) {
   // CHECK: %[[IDX1:.*]] = builtin.unrealized_conversion_cast %[[IDX]] : index to i64
-  // CHECK-DAG: %[[BASEDST:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+  // CHECK-DAG: %[[BASEDST_RAW:.*]] = llvm.extractvalue %[[DESCDST:.*]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+  // CHECK-DAG: %[[OFFDST:.*]] = llvm.extractvalue %[[DESCDST]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+  // CHECK-DAG: %[[BASEDST:.*]] = llvm.getelementptr %[[BASEDST_RAW]][%[[OFFDST]]]
   // CHECK-DAG: %[[S0:.*]] = llvm.mlir.constant(2048 : index) : i64
   // CHECK-DAG: %[[LI:.*]] = llvm.mul %[[IDX1]], %[[S0]] : i64
   // CHECK-DAG: %[[S1:.*]] = llvm.mlir.constant(128 : index) : i64
@@ -232,7 +234,9 @@ func.func @async_cp(
   // CHECK-DAG: %[[FI1:.*]] = llvm.add %[[LI]], %[[FI0]] : i64
   // CHECK-DAG: %[[FI2:.*]] = llvm.add %[[FI1]], %[[IDX1]] : i64
   // CHECK-DAG: %[[ADDRESSDST:.*]] = llvm.getelementptr %[[BASEDST]][%[[FI2]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>
-  // CHECK-DAG: %[[BASESRC:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[BASESRC_RAW:.*]] = llvm.extractvalue %[[DESCSRC:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[OFFSRC:.*]] = llvm.extractvalue %[[DESCSRC]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[BASESRC:.*]] = llvm.getelementptr %[[BASESRC_RAW]][%[[OFFSRC]]]
   // CHECK-DAG: %[[S3:.*]] = llvm.mlir.constant(128 : index) : i64
   // CHECK-DAG: %[[FI3:.*]] = llvm.mul %[[IDX1]], %[[S3]]  : i64
   // CHECK-DAG: %[[FI4:.*]] = llvm.add %[[FI3]], %[[IDX1]]  : i64
@@ -255,12 +259,16 @@ func.func @async_cp(
 func.func @async_cp_i4(
   %src: memref<128x64xi4>, %dst: memref<128x128xi4, 3>, %i : index) -> !nvgpu.device.async.token {
   // CHECK: %[[IDX1:.*]] = builtin.unrealized_conversion_cast %[[IDX]] : index to i64
-  // CHECK-DAG: %[[BASEDST:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[BASEDST_RAW:.*]] = llvm.extractvalue %[[DESCDST:.*]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[OFFDST:.*]] = llvm.extractvalue %[[DESCDST]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[BASEDST:.*]] = llvm.getelementptr %[[BASEDST_RAW]][%[[OFFDST]]]
   // CHECK-DAG: %[[S0:.*]] = llvm.mlir.constant(128 : index) : i64
   // CHECK-DAG: %[[LI:.*]] = llvm.mul %[[IDX1]], %[[S0]] : i64
   // CHECK-DAG: %[[FI1:.*]] = llvm.add %[[LI]], %[[IDX1]] : i64
   // CHECK-DAG: %[[ADDRESSDST:.*]] = llvm.getelementptr %[[BASEDST]][%[[FI1]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>
-  // CHECK-DAG: %[[BASESRC:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[BASESRC_RAW:.*]] = llvm.extractvalue %[[DESCSRC:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[OFFSRC:.*]] = llvm.extractvalue %[[DESCSRC]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[BASESRC:.*]] = llvm.getelementptr %[[BASESRC_RAW]][%[[OFFSRC]]]
   // CHECK-DAG: %[[S2:.*]] = llvm.mlir.constant(64 : index) : i64
   // CHECK-DAG: %[[FI2:.*]] = llvm.mul %[[IDX1]], %[[S2]]  : i64
   // CHECK-DAG: %[[FI3:.*]] = llvm.add %[[FI2]], %[[IDX1]]  : i64
@@ -277,7 +285,9 @@ func.func @async_cp_zfill_f32_align4(
   %src: memref<128x128xf32>, %dst: memref<3x16x128xf32, 3>, %i : index, %srcElements : index) {
   // CHECK-DAG: %[[IDX1:.*]] = builtin.unrealized_conversion_cast %[[IDX]] : index to i64
   // CHECK-DAG: %[[SRC1:.*]] = builtin.unrealized_conversion_cast %[[SRCELEMENTS]] : index to i64
-  // CHECK-DAG: %[[BASEDST:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+  // CHECK-DAG: %[[BASEDST_RAW:.*]] = llvm.extractvalue %[[DESCDST:.*]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+  // CHECK-DAG: %[[OFFDST:.*]] = llvm.extractvalue %[[DESCDST]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+  // CHECK-DAG: %[[BASEDST:.*]] = llvm.getelementptr %[[BASEDST_RAW]][%[[OFFDST]]]
   // CHECK-DAG: %[[S2048:.*]] = llvm.mlir.constant(2048 : index) : i64
   // CHECK-DAG: %[[LI1:.*]] = llvm.mul %[[IDX1]], %[[S2048]] : i64
   // CHECK-DAG: %[[S0:.*]] = llvm.mlir.constant(128 : index) : i64
@@ -285,7 +295,9 @@ func.func @async_cp_zfill_f32_align4(
   // CHECK-DAG: %[[FI1:.*]] = llvm.add %[[LI1]], %[[LI]] : i64
   // CHECK-DAG: %[[FI2:.*]] = llvm.add %[[FI1]], %[[IDX1]] : i64
   // CHECK-DAG: %[[ADDRESSDST:.*]] = llvm.getelementptr %[[BASEDST]][%[[FI2]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
-  // CHECK-DAG: %[[BASESRC:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[BASESRC_RAW:.*]] = llvm.extractvalue %[[DESCSRC:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[OFFSRC:.*]] = llvm.extractvalue %[[DESCSRC]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[BASESRC:.*]] = llvm.getelementptr %[[BASESRC_RAW]][%[[OFFSRC]]]
   // CHECK-DAG: %[[S2:.*]] = llvm.mlir.constant(128 : index) : i64
   // CHECK-DAG: %[[FI2:.*]] = llvm.mul %[[IDX1]], %[[S2]]  : i64
   // CHECK-DAG: %[[FI3:.*]] = llvm.add %[[FI2]], %[[IDX1]]  : i64
@@ -312,7 +324,9 @@ func.func @async_cp_zfill_f32_align1(
   %src: memref<128x128xf32>, %dst: memref<3x16x128xf32, 3>, %i : index, %srcElements : index) {
   // CHECK-DAG: %[[IDX1:.*]] = builtin.unrealized_conversion_cast %[[IDX]] : index to i64
   // CHECK-DAG: %[[SRC1:.*]] = builtin.unrealized_conversion_cast %[[SRCELEMENTS]] : index to i64
-  // CHECK-DAG: %[[BASEDST:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+  // CHECK-DAG: %[[BASEDST_RAW:.*]] = llvm.extractvalue %[[DESCDST:.*]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+  // CHECK-DAG: %[[OFFDST:.*]] = llvm.extractvalue %[[DESCDST]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+  // CHECK-DAG: %[[BASEDST:.*]] = llvm.getelementptr %[[BASEDST_RAW]][%[[OFFDST]]]
   // CHECK-DAG: %[[S2048:.*]] = llvm.mlir.constant(2048 : index) : i64
   // CHECK-DAG: %[[LI1:.*]] = llvm.mul %[[IDX1]], %[[S2048]] : i64
   // CHECK-DAG: %[[S0:.*]] = llvm.mlir.constant(128 : index) : i64
@@ -320,7 +334,9 @@ func.func @async_cp_zfill_f32_align1(
   // CHECK-DAG: %[[FI1:.*]] = llvm.add %[[LI1]], %[[LI]] : i64
   // CHECK-DAG: %[[FI2:.*]] = llvm.add %[[FI1]], %[[IDX1]] : i64
   // CHECK-DAG: %[[ADDRESSDST:.*]] = llvm.getelementptr %[[BASEDST]][%[[FI2]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
-  // CHECK-DAG: %[[BASESRC:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[BASESRC_RAW:.*]] = llvm.extractvalue %[[DESCSRC:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[OFFSRC:.*]] = llvm.extractvalue %[[DESCSRC]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[BASESRC:.*]] = llvm.getelementptr %[[BASESRC_RAW]][%[[OFFSRC]]]
   // CHECK-DAG: %[[S2:.*]] = llvm.mlir.constant(128 : index) : i64
   // CHECK-DAG: %[[FI2:.*]] = llvm.mul %[[IDX1]], %[[S2]]  : i64
   // CHECK-DAG: %[[FI3:.*]] = llvm.add %[[FI2]], %[[IDX1]]  : i64
@@ -484,17 +500,23 @@ func.func @mbarrier() {
   %barrier = nvgpu.mbarrier.create -> !barrierType
 
   // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
-  // CHECK: %[[base:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[bar_off:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base:.+]] = llvm.getelementptr %[[base_raw]][%[[bar_off]]]
   // CHECK: %[[barPtr:.+]] = llvm.getelementptr %[[base]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
   // CHECK: nvvm.mbarrier.init %[[barPtr]]
     nvgpu.mbarrier.init %barrier[%c0], %num_threads : !barrierType
 
-  // CHECK: %[[base2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base2_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[bar_off2:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base2:.+]] = llvm.getelementptr %[[base2_raw]][%[[bar_off2]]]
   // CHECK: %[[barPtr2:.+]] = llvm.getelementptr %[[base2]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
   // CHECK: %[[token:.+]] = nvvm.mbarrier.arrive %[[barPtr2]]
   %token = nvgpu.mbarrier.arrive %barrier[%c0] : !barrierType -> !tokenType
 
-  // CHECK: %[[base3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base3_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[bar_off3:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base3:.+]] = llvm.getelementptr %[[base3_raw]][%[[bar_off3]]]
   // CHECK: %[[barPtr3:.+]] = llvm.getelementptr %[[base3]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
   // CHECK: nvvm.mbarrier.test.wait %[[barPtr3]], %[[token]]
   %isDone = nvgpu.mbarrier.test.wait %barrier[%c0], %token : !barrierType, !tokenType
@@ -514,17 +536,23 @@ func.func @mbarrier_nocomplete() {
   %barrier = nvgpu.mbarrier.create -> !barrierType
 
   // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
-  // CHECK: %[[base:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[bar_off:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base:.+]] = llvm.getelementptr %[[base_raw]][%[[bar_off]]]
   // CHECK: %[[barPtr:.+]] = llvm.getelementptr %[[base]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
   // CHECK: nvvm.mbarrier.init %[[barPtr]]
   nvgpu.mbarrier.init %barrier[%c0], %num_threads : !barrierType
 
-  // CHECK: %[[base2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base2_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[bar_off2:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base2:.+]] = llvm.getelementptr %[[base2_raw]][%[[bar_off2]]]
   // CHECK: %[[barPtr2:.+]] = llvm.getelementptr %[[base2]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
   // CHECK: %[[token:.+]] = nvvm.mbarrier.arrive.nocomplete %[[barPtr2]]
   %token = nvgpu.mbarrier.arrive.nocomplete %barrier[%c0], %count : !barrierType -> !tokenType
 
-  // CHECK: %[[base3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base3_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[bar_off3:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[base3:.+]] = llvm.getelementptr %[[base3_raw]][%[[bar_off3]]]
   // CHECK: %[[barPtr3:.+]] = llvm.getelementptr %[[base3]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
   // CHECK: nvvm.mbarrier.test.wait %[[barPtr3]], %[[token]]
   %isDone = nvgpu.mbarrier.test.wait %barrier[%c0], %token : !barrierType, !tokenType
@@ -538,7 +566,9 @@ func.func @mbarrier_get(%barriers : !nvgpu.mbarrier.group<memorySpace = #gpu.add
   // CHECK: %[[S0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>, num_barriers = 5> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[c2:.+]] = arith.constant 2 : index
   // CHECK: %[[S1:.+]] = builtin.unrealized_conversion_cast %[[c2]] : index to i64
-  // CHECK: %[[S2:.+]] = llvm.extractvalue %[[S0]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[S2_RAW:.+]] = llvm.extractvalue %[[S0]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[S2_OFF:.+]] = llvm.extractvalue %[[S0]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[S2:.+]] = llvm.getelementptr %[[S2_RAW]][%[[S2_OFF]]]
   // CHECK: %[[S3:.+]] = llvm.getelementptr %[[S2]][%[[S1]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
   // CHECK: %[[S4:.+]] = llvm.ptrtoint %[[S3]] : !llvm.ptr<3> to i32
   %c2 = arith.constant 2 : index
@@ -546,7 +576,9 @@ func.func @mbarrier_get(%barriers : !nvgpu.mbarrier.group<memorySpace = #gpu.add
 
   // CHECK: %[[c4:.+]] = arith.constant 4 : index
   // CHECK: %[[S5:.+]] = builtin.unrealized_conversion_cast %[[c4]] : index to i64
-  // CHECK: %[[S6:.+]] = llvm.extractvalue %[[S0]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[S6_RAW:.+]] = llvm.extractvalue %[[S0]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[S6_OFF:.+]] = llvm.extractvalue %[[S0]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[S6:.+]] = llvm.getelementptr %[[S6_RAW]][%[[S6_OFF]]]
   // CHECK: %[[S7:.+]] = llvm.getelementptr %[[S6]][%[[S5]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
   // CHECK: %[[S8:.+]] = llvm.ptrtoint %[[S7]] : !llvm.ptr<3> to i64
   %c4 = arith.constant 4 : index
@@ -570,7 +602,9 @@ func.func @mbarrier_wait(%barriers : !nvgpu.mbarrier.group<memorySpace = #gpu.ad
 // CHECK: scf.for %[[i:.*]] =
 // CHECK: %[[S2:.+]] = arith.remui %[[i]], %[[c5]] : index
 // CHECK: %[[S3:.+]] = builtin.unrealized_conversion_cast %[[S2]] : index to i64
-// CHECK: %[[S4:.+]] = llvm.extractvalue %[[CARG0]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK: %[[S4_RAW:.+]] = llvm.extractvalue %[[CARG0]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK: %[[S4_OFF:.+]] = llvm.extractvalue %[[CARG0]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK: %[[S4:.+]] = llvm.getelementptr %[[S4_RAW]][%[[S4_OFF]]]
 // CHECK: %[[S5:.+]] = llvm.getelementptr %[[S4]][%[[S3]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
 // CHECK: nvvm.mbarrier.test.wait {{.*}}, %[[CARG1]]
     %mbarId = arith.remui %i, %numBarriers : index
@@ -590,7 +624,9 @@ func.func @mbarrier_txcount() {
     %barrier = nvgpu.mbarrier.create -> !barrierType
 
     // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: %[[base:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[base_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[bar_off:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[base:.+]] = llvm.getelementptr %[[base_raw]][%[[bar_off]]]
     // CHECK: %[[barPtr:.+]] = llvm.getelementptr %[[base]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
     // CHECK: nvvm.mbarrier.init %[[barPtr]]
     nvgpu.mbarrier.init %barrier[%c0], %num_threads : !barrierType
@@ -601,14 +637,18 @@ func.func @mbarrier_txcount() {
 
     scf.if %cnd {
       %txcount = arith.constant 256 : index
-      // CHECK: %[[base2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+      // CHECK: %[[base2_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+      // CHECK: %[[bar_off2:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+      // CHECK: %[[base2:.+]] = llvm.getelementptr %[[base2_raw]][%[[bar_off2]]]
       // CHECK: %[[barPtr2:.+]] = llvm.getelementptr %[[base2]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
       // CHECK: nvvm.mbarrier.arrive.expect_tx %[[barPtr2]]
       nvgpu.mbarrier.arrive.expect_tx %barrier[%c0], %txcount : !barrierType
       scf.yield
     } else {
       %txcount = arith.constant 0 : index
-      // CHECK: %[[base2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+      // CHECK: %[[base2_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+      // CHECK: %[[bar_off2:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+      // CHECK: %[[base2:.+]] = llvm.getelementptr %[[base2_raw]][%[[bar_off2]]]
       // CHECK: %[[barPtr2:.+]] = llvm.getelementptr %[[base2]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
       // CHECK: nvvm.mbarrier.arrive.expect_tx %[[barPtr2]]
       nvgpu.mbarrier.arrive.expect_tx %barrier[%c0], %txcount : !barrierType
@@ -618,7 +658,9 @@ func.func @mbarrier_txcount() {
 
     %phase_c0 = arith.constant 0 : i1
     %ticks = arith.constant 10000000 : index
-    // CHECK: %[[base3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[base3_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[bar_off3:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[base3:.+]] = llvm.getelementptr %[[base3_raw]][%[[bar_off3]]]
     // CHECK: %[[barPtr3:.+]] = llvm.getelementptr %[[base3]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
     // CHECK: nvvm.mbarrier.try_wait.parity %[[barPtr3]]
     nvgpu.mbarrier.try_wait.parity %barrier[%c0], %phase_c0, %ticks : !barrierType
@@ -641,20 +683,26 @@ func.func @mbarrier_txcount_pred() {
     %barrier = nvgpu.mbarrier.create -> !barrierType
 
     // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: %[[base:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[base_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[bar_off:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[base:.+]] = llvm.getelementptr %[[base_raw]][%[[bar_off]]]
     // CHECK: %[[barPtr:.+]] = llvm.getelementptr %[[base]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
     // CHECK: nvvm.mbarrier.init %[[barPtr]], {{.*}}, predicate = %[[P]]
     nvgpu.mbarrier.init %barrier[%c0], %mine, predicate = %pred : !barrierType
 
     %txcount = arith.constant 256 : index
-    // CHECK: %[[base2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[base2_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[bar_off2:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[base2:.+]] = llvm.getelementptr %[[base2_raw]][%[[bar_off2]]]
     // CHECK: %[[barPtr2:.+]] = llvm.getelementptr %[[base2]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
     // CHECK: nvvm.mbarrier.arrive.expect_tx %[[barPtr2]], {{.*}}, predicate = %[[P]]
     nvgpu.mbarrier.arrive.expect_tx %barrier[%c0], %txcount, predicate = %pred : !barrierType
 
     %phase_c0 = arith.constant 0 : i1
     %ticks = arith.constant 10000000 : index
-    // CHECK: %[[base3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[base3_raw:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[bar_off3:.+]] = llvm.extractvalue %[[barStr]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[base3:.+]] = llvm.getelementptr %[[base3_raw]][%[[bar_off3]]]
     // CHECK: %[[barPtr3:.+]] = llvm.getelementptr %[[base3]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
     // CHECK: nvvm.mbarrier.try_wait.parity %[[barPtr3]]
     nvgpu.mbarrier.try_wait.parity %barrier[%c0], %phase_c0, %ticks : !barrierType
@@ -851,7 +899,9 @@ module @mymodule {
     %rhsShmem = memref.subview %rhsShmem3[0, 0, 0][1, 64, 64][1, 1, 1]  : memref<1x64x64xf16, strided<[4096, 64, 1]>, 3> to memref<64x64xf16, strided<[64, 1]>, 3>
     // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global
     nvgpu.tma.async.load %lhsTensorMap[%c0, %c0], %mbarrier[%c0] to %lhsShmem : !lhsTensorMap, !barrierType -> memref<128x64xf16,3>
-    // CHECK: %[[desc:.+]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK: %[[desc_raw:.+]] = llvm.extractvalue %[[desc_struct:.*]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK: %[[desc_off:.+]] = llvm.extractvalue %[[desc_struct]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK: %[[desc:.+]] = llvm.getelementptr %[[desc_raw]][%[[desc_off]]]
     // CHECK: %[[dest:.+]] = llvm.addrspacecast %[[desc]] : !llvm.ptr<3> to !llvm.ptr<7>
     // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %[[dest]], %{{.*}}, %{{.*}}, box[%{{.*}}, %{{.*}}]
     nvgpu.tma.async.load %rhsTensorMap[%c0, %c0], %mbarrier[%c0] to %rhsShmem : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[64, 1]>, 3>
@@ -870,7 +920,9 @@ func.func @create_wgmma_descriptor(%tensorMap : !tensorMap) -> !nvgpu.warpgroup.
     // CHECK: %[[S1:.+]] = builtin.unrealized_conversion_cast %[[Sre]] : memref<128x64xf16, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
     // CHECK: %[[c64:.+]] =  llvm.mlir.constant(64 : i64) : i64
     // CHECK: %[[c1024:.+]] = llvm.mlir.constant(1024 : i64) : i64
-    // CHECK: %[[S2:.+]] = llvm.extractvalue %[[S1]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK: %[[S2_RAW:.+]] = llvm.extractvalue %[[S1]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK: %[[S2_OFF:.+]] = llvm.extractvalue %[[S1]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK: %[[S2:.+]] = llvm.getelementptr %[[S2_RAW]][%[[S2_OFF]]]
     // CHECK: %[[S3:.+]] = llvm.ptrtoint %[[S2]] : !llvm.ptr<3> to i64
     // CHECK: %[[S4:.+]] = llvm.mlir.constant(46 : i64) : i64
     // CHECK: %[[S5:.+]] = llvm.shl %[[S3]], %[[S4]]  : i64

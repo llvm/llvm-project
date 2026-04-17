@@ -105,7 +105,9 @@ func.func @use_too_many_tiles() {
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_H]] step %[[C1]] {
 //      AFTER-LLVM-LOWERING:   %[[MEM_DESC:.*]] = builtin.unrealized_conversion_cast %[[TILE_ALLOCA]]
-//      AFTER-LLVM-LOWERING:   %[[BASE_PTR:.*]] = llvm.extractvalue %[[MEM_DESC]][1]
+//      AFTER-LLVM-LOWERING:   %[[BASE_RAW:.*]] = llvm.extractvalue %[[MEM_DESC]][1]
+//      AFTER-LLVM-LOWERING:   %[[DESC_OFF:.*]] = llvm.extractvalue %[[MEM_DESC]][2]
+//      AFTER-LLVM-LOWERING:   %[[BASE_PTR:.*]] = llvm.getelementptr %[[BASE_RAW]][%[[DESC_OFF]]]
 //      AFTER-LLVM-LOWERING:   %[[SLICE_PTR:.*]] = llvm.getelementptr %[[BASE_PTR]]
 //      AFTER-LLVM-LOWERING:   %[[SLICE:.*]] = "arm_sme.intr.read.horiz"{{.*}} <{tile_id = 0 : i32}>
 // AFTER-LLVM-LOWERING-NEXT:   "arm_sme.intr.ld1h.horiz"({{.*}}, %[[SLICE_PTR]], {{.*}}) <{tile_id = 0 : i32}>
@@ -123,7 +125,9 @@ func.func @use_too_many_tiles() {
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_H]] step %[[C1]] {
 //      AFTER-LLVM-LOWERING:   %[[MEM_DESC:.*]] = builtin.unrealized_conversion_cast %[[TILE_ALLOCA]]
-//      AFTER-LLVM-LOWERING:   %[[BASE_PTR:.*]] = llvm.extractvalue %[[MEM_DESC]][1]
+//      AFTER-LLVM-LOWERING:   %[[BASE_RAW:.*]] = llvm.extractvalue %[[MEM_DESC]][1]
+//      AFTER-LLVM-LOWERING:   %[[DESC_OFF:.*]] = llvm.extractvalue %[[MEM_DESC]][2]
+//      AFTER-LLVM-LOWERING:   %[[BASE_PTR:.*]] = llvm.getelementptr %[[BASE_RAW]][%[[DESC_OFF]]]
 //      AFTER-LLVM-LOWERING:   %[[SLICE_PTR:.*]] = llvm.getelementptr %[[BASE_PTR]]
 //      AFTER-LLVM-LOWERING:   %[[SLICE:.*]] = "arm_sme.intr.read.horiz"{{.*}} <{tile_id = 0 : i32}>
 // AFTER-LLVM-LOWERING-NEXT:   "arm_sme.intr.ld1h.horiz"({{.*}}, %[[SLICE_PTR]], {{.*}}) <{tile_id = 0 : i32}>
@@ -164,7 +168,9 @@ func.func @very_excessive_spills(%useAllTiles : vector<[16]x[16]xi8>, %memref: m
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_S]] step %[[C1]] {
 //      AFTER-LLVM-LOWERING:   %[[MEM_DESC:.*]] = builtin.unrealized_conversion_cast %[[TILE_ALLOCA]]
-//      AFTER-LLVM-LOWERING:   %[[BASE_PTR:.*]] = llvm.extractvalue %[[MEM_DESC]][1]
+//      AFTER-LLVM-LOWERING:   %[[BASE_RAW:.*]] = llvm.extractvalue %[[MEM_DESC]][1]
+//      AFTER-LLVM-LOWERING:   %[[DESC_OFF:.*]] = llvm.extractvalue %[[MEM_DESC]][2]
+//      AFTER-LLVM-LOWERING:   %[[BASE_PTR:.*]] = llvm.getelementptr %[[BASE_RAW]][%[[DESC_OFF]]]
 //      AFTER-LLVM-LOWERING:   %[[SLICE_PTR:.*]] = llvm.getelementptr %[[BASE_PTR]]
 // Read ZA tile slice -> vector
 //      AFTER-LLVM-LOWERING:   %[[SLICE:.*]] = "arm_sme.intr.read.horiz"{{.*}} <{tile_id = 0 : i32}>
@@ -183,7 +189,9 @@ func.func @very_excessive_spills(%useAllTiles : vector<[16]x[16]xi8>, %memref: m
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_S]] step %[[C1]] {
 //      AFTER-LLVM-LOWERING:   %[[MEM_DESC:.*]] = builtin.unrealized_conversion_cast %[[TILE_ALLOCA]]
-//      AFTER-LLVM-LOWERING:   %[[BASE_PTR:.*]] = llvm.extractvalue %[[MEM_DESC]][1]
+//      AFTER-LLVM-LOWERING:   %[[BASE_RAW:.*]] = llvm.extractvalue %[[MEM_DESC]][1]
+//      AFTER-LLVM-LOWERING:   %[[DESC_OFF:.*]] = llvm.extractvalue %[[MEM_DESC]][2]
+//      AFTER-LLVM-LOWERING:   %[[BASE_PTR:.*]] = llvm.getelementptr %[[BASE_RAW]][%[[DESC_OFF]]]
 //      AFTER-LLVM-LOWERING:   %[[SLICE_PTR:.*]] = llvm.getelementptr %[[BASE_PTR]]
 /// Read ZA tile slice -> vector
 //      AFTER-LLVM-LOWERING:   %[[SLICE:.*]] = "arm_sme.intr.read.horiz"{{.*}} <{tile_id = 0 : i32}>

@@ -29,7 +29,8 @@ func.func @subview(%0 : memref<64x4xf32, strided<[4, 1]>>, %arg0 : index, %arg1 
 
   // CHECK-DAG: %[[STRIDE0:.*]] = llvm.mlir.constant(4 : index) : i64
   // CHECK-DAG: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] overflow<nsw> : i64
-  // CHECK-DAG: %[[OFF2:.*]] = llvm.add %[[DESCSTRIDE0]], %[[ARG1]] : i64
+  // CHECK-DAG: %[[OFF1:.*]] = llvm.add %[[BASE_OFFSET]], %[[DESCSTRIDE0]] : i64
+  // CHECK-DAG: %[[OFF2:.*]] = llvm.add %[[OFF1]], %[[ARG1]] : i64
   // CHECK-DAG: %[[DESC:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 
   // Base address and algined address.

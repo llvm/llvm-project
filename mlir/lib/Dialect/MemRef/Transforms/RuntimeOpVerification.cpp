@@ -123,23 +123,12 @@ struct CastOpInterface
                                        std::to_string(it.index())));
     }
 
-    // Get result offset and strides.
+    // Get result strides. Offset is no longer carried by the memref type.
     int64_t resultOffset;
     SmallVector<int64_t> resultStrides;
     if (failed(resultType.getStridesAndOffset(resultStrides, resultOffset)))
       return;
-
-    // Check offset.
-    if (resultOffset != ShapedType::kDynamic) {
-      // Static/dynamic offset -> dynamic offset does not need verification.
-      Value srcOffset = metadataOp.getResult(1);
-      Value resultOffsetVal =
-          arith::ConstantIndexOp::create(builder, loc, resultOffset);
-      Value isSameOffset = arith::CmpIOp::create(
-          builder, loc, arith::CmpIPredicate::eq, srcOffset, resultOffsetVal);
-      cf::AssertOp::create(builder, loc, isSameOffset,
-                           generateErrorMessage(op, "offset mismatch"));
-    }
+    (void)resultOffset;
 
     // Check strides.
     for (const auto &it : llvm::enumerate(resultStrides)) {
