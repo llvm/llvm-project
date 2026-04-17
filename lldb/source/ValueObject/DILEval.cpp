@@ -290,9 +290,10 @@ static lldb::VariableSP DILFindVariable(ConstString name,
   return nullptr;
 }
 
-lldb::ValueObjectSP LookupGlobalIdentifier(
-    llvm::StringRef name_ref, std::shared_ptr<StackFrame> stack_frame,
-    lldb::DynamicValueType use_dynamic) {
+lldb::ValueObjectSP
+LookupGlobalIdentifier(llvm::StringRef name_ref,
+                       std::shared_ptr<StackFrame> stack_frame,
+                       lldb::DynamicValueType use_dynamic) {
   // Get a global variables list without the locals from the current frame
   SymbolContext symbol_context =
       stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
@@ -418,8 +419,8 @@ Interpreter::Visit(const IdentifierNode &node) {
       LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
   if (!identifier)
-    identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
-                                        use_dynamic);
+    identifier =
+        LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());
