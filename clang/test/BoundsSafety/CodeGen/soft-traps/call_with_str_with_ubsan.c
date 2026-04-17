@@ -43,19 +43,19 @@
 // To workaround this these lines have been manually patched.
 
 //.
-// UNOPT: @.src = private unnamed_addr constant [70 x i8] c"clang/test/BoundsSafety/CodeGen/soft-traps/call_with_str_with_ubsan.c\00", align 1
+// UNOPT: @.src = private unnamed_addr constant [{{[0-9]+}} x i8] c"{{.+}}", align 1
 // UNOPT: @[[GLOB0:[0-9]+]] = private unnamed_addr constant { i16, i16, [6 x i8] } { i16 0, i16 11, [6 x i8] c"'int'\00" }
 // UNOPT: @trap.reason = private unnamed_addr constant [41 x i8] c"indexing above upper bound in 'ptr[tmp]'\00", align 4
 // UNOPT: @trap.reason.1 = private unnamed_addr constant [47 x i8] c"indexing overflows address space in 'ptr[tmp]'\00", align 4
 // UNOPT: @trap.reason.2 = private unnamed_addr constant [41 x i8] c"indexing below lower bound in 'ptr[tmp]'\00", align 4
 //.
-// UNOPT-TF: @.src = private unnamed_addr constant [70 x i8] c"clang/test/BoundsSafety/CodeGen/soft-traps/call_with_str_with_ubsan.c\00", align 1
+// UNOPT-TF: @.src = private unnamed_addr constant [{{[0-9]+}} x i8] c"{{.+}}", align 1
 // UNOPT-TF: @[[GLOB0:[0-9]+]] = private unnamed_addr constant { i16, i16, [6 x i8] } { i16 0, i16 11, [6 x i8] c"'int'\00" }
 // UNOPT-TF: @trap.reason = private unnamed_addr constant [41 x i8] c"indexing above upper bound in 'ptr[tmp]'\00", align 4
 // UNOPT-TF: @trap.reason.1 = private unnamed_addr constant [47 x i8] c"indexing overflows address space in 'ptr[tmp]'\00", align 4
 // UNOPT-TF: @trap.reason.2 = private unnamed_addr constant [41 x i8] c"indexing below lower bound in 'ptr[tmp]'\00", align 4
 //.
-// UNOPT-TFR: @.src = private unnamed_addr constant [70 x i8] c"clang/test/BoundsSafety/CodeGen/soft-traps/call_with_str_with_ubsan.c\00", align 1
+// UNOPT-TFR: @.src = private unnamed_addr constant [{{[0-9]+}} x i8] c"{{.+}}", align 1
 // UNOPT-TFR: @[[GLOB0:[0-9]+]] = private unnamed_addr constant { i16, i16, [6 x i8] } { i16 0, i16 11, [6 x i8] c"'int'\00" }
 // UNOPT-TFR: @trap.reason = private unnamed_addr constant [41 x i8] c"indexing above upper bound in 'ptr[tmp]'\00", align 4
 // UNOPT-TFR: @trap.reason.1 = private unnamed_addr constant [47 x i8] c"indexing overflows address space in 'ptr[tmp]'\00", align 4

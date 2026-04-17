@@ -3,8 +3,6 @@
 //
 // RUN: %clang_cc1 -O2 -fbounds-safety -emit-llvm -triple x86_64 %s -o - | FileCheck %s
 
-// XFAIL: !rdar109424213
-
 #include <ptrcheck.h>
 #include <stdint.h>
 

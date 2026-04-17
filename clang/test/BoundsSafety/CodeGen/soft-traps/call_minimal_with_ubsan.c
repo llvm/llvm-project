@@ -43,13 +43,13 @@
 // To workaround this these lines have been manually patched.
 
 //.
-// UNOPT: @.src = private unnamed_addr constant [69 x i8] c"clang/test/BoundsSafety/CodeGen/soft-traps/call_minimal_with_ubsan.c\00", align 1
+// UNOPT: @.src = private unnamed_addr constant [{{[0-9]+}} x i8] c"{{.+}}", align 1
 // UNOPT: @[[GLOB0:[0-9]+]] = private unnamed_addr constant { i16, i16, [6 x i8] } { i16 0, i16 11, [6 x i8] c"'int'\00" }
 //.
-// UNOPT-TF: @.src = private unnamed_addr constant [69 x i8] c"clang/test/BoundsSafety/CodeGen/soft-traps/call_minimal_with_ubsan.c\00", align 1
+// UNOPT-TF: @.src = private unnamed_addr constant [{{[0-9]+}} x i8] c"{{.+}}", align 1
 // UNOPT-TF: @[[GLOB0:[0-9]+]] = private unnamed_addr constant { i16, i16, [6 x i8] } { i16 0, i16 11, [6 x i8] c"'int'\00" }
 //.
-// UNOPT-TFR: @.src = private unnamed_addr constant [69 x i8] c"clang/test/BoundsSafety/CodeGen/soft-traps/call_minimal_with_ubsan.c\00", align 1
+// UNOPT-TFR: @.src = private unnamed_addr constant [{{[0-9]+}} x i8] c"{{.+}}", align 1
 // UNOPT-TFR: @[[GLOB0:[0-9]+]] = private unnamed_addr constant { i16, i16, [6 x i8] } { i16 0, i16 11, [6 x i8] c"'int'\00" }
 //.
 // UNOPT-LABEL: define dso_local i32 @read(
