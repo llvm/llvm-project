@@ -351,6 +351,16 @@ def OpenACC_ComputeRegionOp
     /// the region block arguments. Returns the new block argument.
     ::mlir::BlockArgument appendInputArg(::mlir::Value);
 
+    /// After hoisting `value`'s defining op, wire it into this region: append it
+    /// as an `ins` operand, add the matching body entry argument, and replace
+    /// uses under this region with that argument (excluding this op's own `ins`
+    /// operand uses).
+    ///
+    /// Requires that `value` is defined outside `getRegion()` and is still used
+    /// inside the region. Otherwise returns `std::nullopt`.
+    std::optional<::mlir::BlockArgument>
+    wireHoistedValueThroughIns(::mlir::Value value);
+
     /// Check whether all parallel dimensions have width 1.
     bool isEffectivelySerial();
 
