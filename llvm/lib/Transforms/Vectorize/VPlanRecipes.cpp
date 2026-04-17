@@ -4670,8 +4670,6 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  // Recursing through Blend recipes only, must terminate at header phi's the
-  // latest.
   return vputils::onlyFirstLaneUsed(this);
 }
 
