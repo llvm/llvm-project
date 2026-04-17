@@ -72,7 +72,7 @@ public:
   void unregisterFatBin(__sycl_tgt_bin_desc *FatbinDesc);
 
   /// Creates a liboffload kernel that is ready for execution.
-  /// This method is thread-safe (protected with MDataCollectionMutex).
+  /// This method is thread-safe.
   /// \param KernelInfo a set of kernel specific data: name, corresponding
   /// device image, etc.
   /// \param Device the device for which this kernel must be compiled.
