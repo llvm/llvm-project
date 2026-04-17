@@ -42,6 +42,7 @@
 #include "QualifiedAutoCheck.h"
 #include "RedundantAccessSpecifiersCheck.h"
 #include "RedundantCastingCheck.h"
+#include "RedundantConstCheck.h"
 #include "RedundantControlFlowCheck.h"
 #include "RedundantDeclarationCheck.h"
 #include "RedundantFunctionPtrDereferenceCheck.h"
@@ -141,6 +142,8 @@ public:
         "readability-redundant-access-specifiers");
     CheckFactories.registerCheck<RedundantCastingCheck>(
         "readability-redundant-casting");
+    CheckFactories.registerCheck<RedundantConstCheck>(
+        "readability-redundant-const");
     CheckFactories.registerCheck<RedundantFunctionPtrDereferenceCheck>(
         "readability-redundant-function-ptr-dereference");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
