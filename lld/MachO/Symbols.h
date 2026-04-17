@@ -45,7 +45,7 @@ public:
 
   virtual ~Symbol() {}
 
-  Kind kind() const { return symbolKind; }
+  Kind kind() const { return static_cast<Kind>(symbolKind); }
 
   StringRef getName() const { return {nameData, nameSize}; }
 
@@ -102,16 +102,19 @@ public:
 
 protected:
   Symbol(Kind k, StringRef name, InputFile *file)
-      : symbolKind(k), nameData(name.data()), file(file), nameSize(name.size()),
+      : nameData(name.data()), file(file), nameSize(name.size()), symbolKind(k),
         isUsedInRegularObj(!file || isa<ObjFile>(file)),
         used(!config->deadStrip) {}
 
-  Kind symbolKind;
   const char *nameData;
   InputFile *file;
   uint32_t nameSize;
 
 public:
+  // Packed to share its byte with the booleans below; keeps sizeof(Symbol)==56.
+  LLVM_PREFERRED_TYPE(Kind)
+  uint8_t symbolKind : 3;
+
   // True if this symbol was referenced by a regular (non-bitcode) object.
   bool isUsedInRegularObj : 1;
 
