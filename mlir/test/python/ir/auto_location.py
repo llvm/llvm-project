@@ -102,7 +102,7 @@ def testInferLocations():
 def testNamelocWrap():
     with Context() as ctx, Location.unknown():
         ctx.allow_unregistered_dialects = True
-        with loc_tracebacks(current_loc=CurrentLocAction.NAMELOC_WRAP):
+        with loc_tracebacks(current_loc_actn=CurrentLocAction.NAMELOC_WRAP):
             # Build nested NameLoc: TaskA(ResourceB(unknown))
             inner = Location.name("ResourceB", childLoc=Location.unknown())
             outer = Location.name("TaskA", childLoc=inner)
@@ -131,7 +131,7 @@ def testOnExplicitDefault():
 def testOnExplicitUseTraceback():
     with Context() as ctx, Location.unknown():
         ctx.allow_unregistered_dialects = True
-        with loc_tracebacks(on_explicit=OnExplicitAction.USE_TRACEBACK):
+        with loc_tracebacks(on_explicit_actn=OnExplicitAction.USE_TRACEBACK):
             explicit = Location.file("explicit.py", 1, 1)
             op = Operation.create("custom.op1", loc=explicit)
             # fmt: off
@@ -146,8 +146,8 @@ def testDslProfilingUseCase():
     with Context() as ctx, Location.unknown():
         ctx.allow_unregistered_dialects = True
         with loc_tracebacks(
-            current_loc=CurrentLocAction.NAMELOC_WRAP,
-            on_explicit=OnExplicitAction.USE_TRACEBACK,
+            current_loc_actn=CurrentLocAction.NAMELOC_WRAP,
+            on_explicit_actn=OnExplicitAction.USE_TRACEBACK,
         ):
             task_loc = Location.name("Task", childLoc=Location.unknown())
             with task_loc:
@@ -194,8 +194,8 @@ def testUseExplicitWithNamelocWrap():
     with Context() as ctx, Location.unknown():
         ctx.allow_unregistered_dialects = True
         with loc_tracebacks(
-            on_explicit=OnExplicitAction.USE_EXPLICIT,
-            current_loc=CurrentLocAction.NAMELOC_WRAP,
+            on_explicit_actn=OnExplicitAction.USE_EXPLICIT,
+            current_loc_actn=CurrentLocAction.NAMELOC_WRAP,
         ):
             task_loc = Location.name("Task", childLoc=Location.unknown())
             with task_loc:
