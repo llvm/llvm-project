@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
@@ -89,8 +88,6 @@ private:
   bool expandCALL_BTI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandStoreSwiftAsyncContext(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI);
-  bool expandSTSHHAtomicStore(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI);
   struct ConditionalBlocks {
     MachineBasicBlock &CondBB;
     MachineBasicBlock &EndBB;
@@ -1066,71 +1063,6 @@ bool AArch64ExpandPseudoImpl::expandStoreSwiftAsyncContext(
   return true;
 }
 
-bool AArch64ExpandPseudoImpl::expandSTSHHAtomicStore(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
-  MachineInstr &MI = *MBBI;
-  DebugLoc DL(MI.getDebugLoc());
-
-  unsigned Order = MI.getOperand(2).getImm();
-  unsigned Policy = MI.getOperand(3).getImm();
-  unsigned Size = MI.getOperand(4).getImm();
-
-  bool IsRelaxed = Order == 0;
-  unsigned StoreOpc = 0;
-
-  // __ATOMIC_RELAXED uses STR. __ATOMIC_{RELEASE/SEQ_CST} use STLR.
-  switch (Size) {
-  case 8:
-    StoreOpc = IsRelaxed ? AArch64::STRBBui : AArch64::STLRB;
-    break;
-  case 16:
-    StoreOpc = IsRelaxed ? AArch64::STRHHui : AArch64::STLRH;
-    break;
-  case 32:
-    StoreOpc = IsRelaxed ? AArch64::STRWui : AArch64::STLRW;
-    break;
-  case 64:
-    StoreOpc = IsRelaxed ? AArch64::STRXui : AArch64::STLRX;
-    break;
-  default:
-    llvm_unreachable("Unexpected STSHH atomic store size");
-  }
-
-  // Emit the hint with the retention policy immediate.
-  MachineInstr *Hint = BuildMI(MBB, MBBI, DL, TII->get(AArch64::STSHH))
-                           .addImm(Policy)
-                           .getInstr();
-
-  // Emit the associated store instruction.
-  Register ValReg = MI.getOperand(0).getReg();
-
-  if (Size < 64) {
-    const TargetRegisterInfo *TRI =
-        MBB.getParent()->getSubtarget().getRegisterInfo();
-    Register SubReg = TRI->getSubReg(ValReg, AArch64::sub_32);
-    if (SubReg)
-      ValReg = SubReg;
-  }
-
-  MachineInstrBuilder Store = BuildMI(MBB, MBBI, DL, TII->get(StoreOpc))
-                                  .addReg(ValReg)
-                                  .add(MI.getOperand(1));
-
-  // Relaxed uses base+imm addressing with a zero offset.
-  if (IsRelaxed)
-    Store.addImm(0);
-
-  // Preserve memory operands and any implicit uses/defs.
-  Store->setMemRefs(*MBB.getParent(), MI.memoperands());
-  transferImpOps(MI, Store, Store);
-
-  // Bundle the hint and store so they remain adjacent.
-  finalizeBundle(MBB, Hint->getIterator(), std::next(Store->getIterator()));
-
-  MI.eraseFromParent();
-  return true;
-}
-
 AArch64ExpandPseudoImpl::ConditionalBlocks
 AArch64ExpandPseudoImpl::expandConditionalPseudo(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc DL,
@@ -1825,8 +1757,6 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     return expandCALL_BTI(MBB, MBBI);
   case AArch64::StoreSwiftAsyncContext:
     return expandStoreSwiftAsyncContext(MBB, MBBI);
-  case AArch64::STSHH_ATOMIC_STORE_SZ:
-    return expandSTSHHAtomicStore(MBB, MBBI);
   case AArch64::RestoreZAPseudo:
   case AArch64::CommitZASavePseudo:
   case AArch64::MSRpstatePseudo: {
