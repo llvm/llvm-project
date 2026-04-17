@@ -9971,9 +9971,12 @@ bool SpecialMemberDeletionInfo::shouldDeleteForAllConstMembers() {
 
 /// C++26 [class.dtor]p7: Check union-specific destructor deletion rules.
 /// Returns true if the destructor should be deleted.
-static bool ShouldDeleteUnionDestructorInCpp26(Sema &S, CXXRecordDecl *RD,
-                                               CXXMethodDecl *MD,
-                                               bool Diagnose) {
+static bool ShouldDeleteNonTrivialUnionDestructor(Sema &S, CXXRecordDecl *RD,
+                                                  CXXMethodDecl *MD,
+                                                  bool Diagnose) {
+  if (!S.getLangOpts().CPlusPlus26 || !RD->isUnion())
+    return false;
+
   // Bullet 1: overload resolution for default initialization.
   Sema::SpecialMemberOverloadResult SMOR = S.LookupSpecialMember(
       RD, CXXSpecialMemberKind::DefaultConstructor,
@@ -10142,11 +10145,9 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
   SpecialMemberDeletionInfo SMI(*this, MD, CSM, ICI, Diagnose);
 
   // C++26 [class.dtor]p7: union-specific destructor deletion rules.
-  if (getLangOpts().CPlusPlus26 && RD->isUnion() &&
-      CSM == CXXSpecialMemberKind::Destructor) {
-    if (ShouldDeleteUnionDestructorInCpp26(*this, RD, MD, Diagnose))
-      return true;
-  }
+  if (CSM == CXXSpecialMemberKind::Destructor &&
+      ShouldDeleteNonTrivialUnionDestructor(*this, RD, MD, Diagnose))
+    return true;
 
   // Per DR1611, do not consider virtual bases of constructors of abstract
   // classes, since we are not going to construct them.
