@@ -590,7 +590,7 @@ public:
   UnregisterPlugin(InstrumentationRuntimeCreateInstance create_callback);
 
   static llvm::SmallVector<InstrumentationRuntimeCallbacks>
-  GetInstrumentationRuntimeCallbacks();
+  GetInstrumentationRuntimeCallbacks(bool enabled_only = true);
 
   // TypeSystem
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
