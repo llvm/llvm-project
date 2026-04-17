@@ -1332,6 +1332,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CTLS, VT, Legal);
     setOperationAction(ISD::BITREVERSE, MVT::v8i8, Legal);
     setOperationAction(ISD::BITREVERSE, MVT::v16i8, Legal);
+    setOperationAction(ISD::BITREVERSE, MVT::v4i16, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::v8i16, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::v2i32, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::v4i32, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::v1i64, Custom);
@@ -11821,7 +11823,7 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
 
   if (VT.isScalableVector() ||
       useSVEForFixedLengthVectorVT(
-          VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors()))
+          VT, /*OverrideNEON=*/Subtarget->isSVEorStreamingSVEAvailable()))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::BITREVERSE_MERGE_PASSTHRU);
 
   SDLoc DL(Op);
@@ -11831,6 +11833,20 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
   switch (VT.getSimpleVT().SimpleTy) {
   default:
     llvm_unreachable("Invalid type for bitreverse!");
+
+  case MVT::v4i16: {
+    SDValue Bswap = DAG.getNode(ISD::BSWAP, DL, VT, Op.getOperand(0));
+    VST = MVT::v8i8;
+    REVB = DAG.getBitcast(VST, Bswap);
+    break;
+  }
+
+  case MVT::v8i16: {
+    SDValue Bswap = DAG.getNode(ISD::BSWAP, DL, VT, Op.getOperand(0));
+    VST = MVT::v16i8;
+    REVB = DAG.getBitcast(VST, Bswap);
+    break;
+  }
 
   case MVT::v2i32: {
     VST = MVT::v8i8;

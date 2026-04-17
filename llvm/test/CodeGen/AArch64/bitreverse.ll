@@ -17,8 +17,9 @@ define <2 x i16> @f(<2 x i16> %a) {
 ;
 ; SVE-LABEL: f:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev32 v0.8b, v0.8b
-; SVE-NEXT:    rbit v0.8b, v0.8b
+; SVE-NEXT:    ptrue p0.s, vl2
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    rbit z0.s, p0/m, z0.s
 ; SVE-NEXT:    ushr v0.2s, v0.2s, #16
 ; SVE-NEXT:    ret
 ;
@@ -220,8 +221,9 @@ define <4 x i8> @g_vec_4x8(<4 x i8> %a) {
 ;
 ; SVE-LABEL: g_vec_4x8:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev16 v0.8b, v0.8b
-; SVE-NEXT:    rbit v0.8b, v0.8b
+; SVE-NEXT:    ptrue p0.h, vl4
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    rbit z0.h, p0/m, z0.h
 ; SVE-NEXT:    ushr v0.4h, v0.4h, #8
 ; SVE-NEXT:    ret
 ;
@@ -263,8 +265,10 @@ define <4 x i16> @g_vec_4x16(<4 x i16> %a) {
 ;
 ; SVE-LABEL: g_vec_4x16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev16 v0.8b, v0.8b
-; SVE-NEXT:    rbit v0.8b, v0.8b
+; SVE-NEXT:    ptrue p0.h, vl4
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    rbit z0.h, p0/m, z0.h
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
   %b = call <4 x i16> @llvm.bitreverse.v4i16(<4 x i16> %a)
   ret <4 x i16> %b
@@ -281,8 +285,10 @@ define <8 x i16> @g_vec_8x16(<8 x i16> %a) {
 ;
 ; SVE-LABEL: g_vec_8x16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev16 v0.16b, v0.16b
-; SVE-NEXT:    rbit v0.16b, v0.16b
+; SVE-NEXT:    ptrue p0.h, vl8
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    rbit z0.h, p0/m, z0.h
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   %b = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %a)
   ret <8 x i16> %b
@@ -301,10 +307,13 @@ define <16 x i16> @g_vec_16x16(<16 x i16> %a) {
 ;
 ; SVE-LABEL: g_vec_16x16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev16 v0.16b, v0.16b
-; SVE-NEXT:    rev16 v1.16b, v1.16b
-; SVE-NEXT:    rbit v0.16b, v0.16b
-; SVE-NEXT:    rbit v1.16b, v1.16b
+; SVE-NEXT:    ptrue p0.h, vl8
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    rbit z0.h, p0/m, z0.h
+; SVE-NEXT:    rbit z1.h, p0/m, z1.h
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; SVE-NEXT:    ret
   %b = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
   ret <16 x i16> %b
@@ -321,8 +330,10 @@ define <2 x i32> @g_vec_2x32(<2 x i32> %a) {
 ;
 ; SVE-LABEL: g_vec_2x32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev32 v0.8b, v0.8b
-; SVE-NEXT:    rbit v0.8b, v0.8b
+; SVE-NEXT:    ptrue p0.s, vl2
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    rbit z0.s, p0/m, z0.s
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
   %b = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %a)
   ret <2 x i32> %b
@@ -339,8 +350,10 @@ define <4 x i32> @g_vec_4x32(<4 x i32> %a) {
 ;
 ; SVE-LABEL: g_vec_4x32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev32 v0.16b, v0.16b
-; SVE-NEXT:    rbit v0.16b, v0.16b
+; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    rbit z0.s, p0/m, z0.s
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   %b = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %a)
   ret <4 x i32> %b
@@ -359,10 +372,13 @@ define <8 x i32> @g_vec_8x32(<8 x i32> %a) {
 ;
 ; SVE-LABEL: g_vec_8x32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev32 v0.16b, v0.16b
-; SVE-NEXT:    rev32 v1.16b, v1.16b
-; SVE-NEXT:    rbit v0.16b, v0.16b
-; SVE-NEXT:    rbit v1.16b, v1.16b
+; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    rbit z0.s, p0/m, z0.s
+; SVE-NEXT:    rbit z1.s, p0/m, z1.s
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; SVE-NEXT:    ret
   %b = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
   ret <8 x i32> %b
@@ -379,8 +395,10 @@ define <1 x i64> @g_vec_1x64(<1 x i64> %a) {
 ;
 ; SVE-LABEL: g_vec_1x64:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev64 v0.8b, v0.8b
-; SVE-NEXT:    rbit v0.8b, v0.8b
+; SVE-NEXT:    ptrue p0.d, vl1
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    rbit z0.d, p0/m, z0.d
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; GISEL-LABEL: g_vec_1x64:
@@ -404,8 +422,10 @@ define <2 x i64> @g_vec_2x64(<2 x i64> %a) {
 ;
 ; SVE-LABEL: g_vec_2x64:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev64 v0.16b, v0.16b
-; SVE-NEXT:    rbit v0.16b, v0.16b
+; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    rbit z0.d, p0/m, z0.d
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   %b = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %a)
   ret <2 x i64> %b
@@ -424,10 +444,13 @@ define <4 x i64> @g_vec_4x64(<4 x i64> %a) {
 ;
 ; SVE-LABEL: g_vec_4x64:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    rev64 v0.16b, v0.16b
-; SVE-NEXT:    rev64 v1.16b, v1.16b
-; SVE-NEXT:    rbit v0.16b, v0.16b
-; SVE-NEXT:    rbit v1.16b, v1.16b
+; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    rbit z0.d, p0/m, z0.d
+; SVE-NEXT:    rbit z1.d, p0/m, z1.d
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; SVE-NEXT:    ret
   %b = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
   ret <4 x i64> %b
