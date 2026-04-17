@@ -15,7 +15,7 @@ func.func @transfer_read_rank_reducing(
 // CHECK-LABEL: func @transfer_read_rank_reducing
 //  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x2xi8
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0] [1, 1, 3, 2] [1, 1, 1, 1]
-//  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8, {{.*}}>
+//  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8>
 //       CHECK:   vector.transfer_read %[[SUBVIEW]]
 
 func.func @transfer_read_rank_reducing_masked(
@@ -33,7 +33,7 @@ func.func @transfer_read_rank_reducing_masked(
 //  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x2xi8
 //  CHECK-SAME:     %[[MASK:.+]]: vector<3x2xi1>
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0] [1, 1, 3, 2] [1, 1, 1, 1]
-//  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8, {{.*}}>
+//  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8>
 //       CHECK:   vector.mask %[[MASK]]
 //  CHECK-SAME:  vector.transfer_read %[[SUBVIEW]]
 
@@ -49,7 +49,7 @@ func.func @transfer_write_rank_reducing(
 // CHECK-LABEL: func @transfer_write_rank_reducing
 //  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x2xi8
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0] [1, 1, 3, 2] [1, 1, 1, 1]
-//  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8, {{.*}}>
+//  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8>
 //       CHECK:   vector.transfer_write %{{.*}}, %[[SUBVIEW]]
 
 func.func @transfer_write_rank_reducing_masked(
@@ -68,7 +68,7 @@ func.func @transfer_write_rank_reducing_masked(
 //  CHECK-SAME:     %[[VEC:.+]]: vector<3x2xi8>
 //  CHECK-SAME:     %[[MASK:.+]]: vector<3x2xi1>
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0] [1, 1, 3, 2] [1, 1, 1, 1]
-//  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8, {{.*}}>
+//  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8>
 //       CHECK:   vector.mask %[[MASK]]
 //  CHECK-SAME:   vector.transfer_write %{{.*}}, %[[SUBVIEW]]
 
