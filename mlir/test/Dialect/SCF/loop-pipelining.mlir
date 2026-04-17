@@ -620,7 +620,7 @@ func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
 // CHECK-SAME: ins(%[[R]]#0, %[[R]]#1, %{{.*}} : {{.*}}) outs(%[[CV]] :
 
 
-#map = strided<[1]>
+#strided1 = strided<[1]>
 #map1 = affine_map<(d0)->(d0)>
 #map2 = affine_map<(d0)->()>
 #linalg_attrs = {
@@ -641,17 +641,17 @@ func.func @pipeline_op_with_region(%A: memref<?xf32>, %B: memref<?xf32>, %result
   %a_buf = memref.alloc() : memref<2x8xf32>
   %b_buf = memref.alloc() : memref<2x8xf32>
   scf.for %i0 = %c0 to %c4 step %c1 {
-    %A_view = memref.subview %A[%i0][8][1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 3 } : memref<?xf32> to memref<8xf32, #map>
-    %B_view = memref.subview %B[%i0][8][1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 4 } : memref<?xf32> to memref<8xf32, #map>
+    %A_view = memref.subview %A[%i0][8][1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 3 } : memref<?xf32> to memref<8xf32, #strided1>
+    %B_view = memref.subview %B[%i0][8][1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 4 } : memref<?xf32> to memref<8xf32, #strided1>
     %buf_idx = affine.apply  affine_map<(d0)->(d0 mod 2)> (%i0)[] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 5 }
-    %a_buf_view = memref.subview %a_buf[%buf_idx,0][1,8][1,1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 6 } : memref<2x8xf32> to memref<8xf32, #map>
-    %b_buf_view = memref.subview %b_buf[%buf_idx,0][1,8][1,1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 7 } : memref<2x8xf32> to memref<8xf32, #map>
-    memref.copy %A_view , %a_buf_view {__test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 8} : memref<8xf32, #map> to memref<8xf32, #map>
-    memref.copy %B_view , %b_buf_view {__test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 9} : memref<8xf32, #map> to memref<8xf32, #map>
-    %C_view = memref.subview %result[%i0][8][1] { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 0 } : memref<?xf32> to memref<8xf32, #map>
+    %a_buf_view = memref.subview %a_buf[%buf_idx,0][1,8][1,1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 6 } : memref<2x8xf32> to memref<8xf32, #strided1>
+    %b_buf_view = memref.subview %b_buf[%buf_idx,0][1,8][1,1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 7 } : memref<2x8xf32> to memref<8xf32, #strided1>
+    memref.copy %A_view , %a_buf_view {__test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 8} : memref<8xf32, #strided1> to memref<8xf32, #strided1>
+    memref.copy %B_view , %b_buf_view {__test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 9} : memref<8xf32, #strided1> to memref<8xf32, #strided1>
+    %C_view = memref.subview %result[%i0][8][1] { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 0 } : memref<?xf32> to memref<8xf32, #strided1>
     %scalar = arith.addf %cf, %cf {__test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1} : f32
-    linalg.generic #linalg_attrs ins(%a_buf_view, %b_buf_view, %scalar : memref<8xf32, #map>, memref<8xf32, #map>, f32)
-      outs(%C_view: memref<8xf32, #map>) {
+    linalg.generic #linalg_attrs ins(%a_buf_view, %b_buf_view, %scalar : memref<8xf32, #strided1>, memref<8xf32, #strided1>, f32)
+      outs(%C_view: memref<8xf32, #strided1>) {
       ^bb0(%a: f32, %b: f32, %s: f32, %c: f32):
         %add = arith.addf %a, %b : f32
         %accum = arith.addf %add, %c : f32

@@ -1,5 +1,12 @@
 // RUN: mlir-opt %s -test-compose-subview -split-input-file | FileCheck %s
 
+// These tests verify that nested subviews compose into a single subview whose
+// offset operands encode the composed offset. The composed runtime offset is
+// `sum(offsets[i] * strides[i])` and used to be cross-checked via an
+// `offset: N` field on the result type (e.g. 3*1024 + 384*1 = 3456); since
+// memref types no longer carry offsets, the composed offset operands (e.g.
+// [3, 384]) are the canonical verification.
+
 // CHECK-LABEL: func.func @subview_strided(
 // CHECK-SAME: %[[input:.*]]: memref<4x1024xf32>) -> memref<1x128xf32, strided<[1024, 1]>> {
 func.func @subview_strided(%input: memref<4x1024xf32>) -> memref<1x128xf32, strided<[1024, 1]>> {

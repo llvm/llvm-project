@@ -35,13 +35,20 @@ func.func @check_static_return(%static : memref<32x18xf32>) -> memref<32x18xf32>
   return %static : memref<32x18xf32>
 }
 
-// CHECK-LABEL: func @check_static_return_with_offset
+// The return type has `strided<[22,1]>` (non-identity strides) rather than
+// identity so the BAREPTR materialization round-trip has to synthesize a
+// descriptor with shape/stride constants. Pre-refactor this test also
+// exercised a non-zero static offset via `offset: 7` baked in the type;
+// offsets are no longer part of memref types, so BAREPTR rebuilds the
+// descriptor with offset 0 (a fresh-from-bare-ptr descriptor cannot
+// recover the caller's original offset through this convention).
+// CHECK-LABEL: func @check_static_return_with_strides
 // CHECK-COUNT-2: !llvm.ptr
 // CHECK-COUNT-5: i64
 // CHECK-SAME: -> !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// BAREPTR-LABEL: func @check_static_return_with_offset
+// BAREPTR-LABEL: func @check_static_return_with_strides
 // BAREPTR-SAME: (%[[arg:.*]]: !llvm.ptr) -> !llvm.ptr {
-func.func @check_static_return_with_offset(%static : memref<32x18xf32, strided<[22,1]>>) -> memref<32x18xf32, strided<[22,1]>> {
+func.func @check_static_return_with_strides(%static : memref<32x18xf32, strided<[22,1]>>) -> memref<32x18xf32, strided<[22,1]>> {
 // CHECK:  llvm.return %{{.*}} : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 
 // BAREPTR: %[[udf:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>

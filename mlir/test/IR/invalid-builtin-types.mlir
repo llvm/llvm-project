@@ -84,6 +84,13 @@ func.func private @memref_incorrect_strided_ending() -> memref<?x?xf32, strided<
 
 // -----
 
+// `offset:` is no longer accepted inside strided layouts; it is a bare-text
+// token after the stride list and so the parser bails on the closing '>'.
+// expected-error @below {{expected '>'}}
+func.func private @memref_no_offset_in_strided_layout() -> memref<?xf32, strided<[1], offset: 5>>
+
+// -----
+
 // expected-error @below {{expected the number of strides to match the rank}}
 func.func private @memref_strided_rank_mismatch() -> memref<?x?xf32, strided<[1]>>
 

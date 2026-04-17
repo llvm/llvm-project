@@ -204,8 +204,10 @@ func.func @contiguous_inner_most_dim_with_subview(%src: memref<1000x1xf32>, %i:i
   return %v : vector<4x1xf32>
 }
 //      CHECK: func @contiguous_inner_most_dim_with_subview(%[[SRC:.+]]: memref<1000x1xf32>, %[[II:.+]]: index, %[[J:.+]]: index) -> vector<4x1xf32>
-//      CHECK:   %[[SRC_0:.+]] = memref.subview %[[SRC]]
-//      CHECK:   %[[SRC_1:.+]] = memref.subview %[[SRC_0]]
+//      CHECK:   %[[SRC_0:.+]] = memref.subview %[[SRC]][%[[II]], 0] [40, 1] [1, 1]
+// The rank-reducing inner subview must not add any additional offset; the
+// runtime offset from %[[II]] is already in %[[SRC_0]]'s descriptor.
+//      CHECK:   %[[SRC_1:.+]] = memref.subview %[[SRC_0]][0, 0] [40, 1] [1, 1]
 //      CHECK:   %[[V:.+]] = vector.transfer_read %[[SRC_1]]
 // CHECK-SAME:       {in_bounds = [true]}
 // CHECK-SAME:       vector<4xf32>

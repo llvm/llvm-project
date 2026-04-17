@@ -809,11 +809,17 @@ func.func @extract_strided_metadata_of_alloc_with_cst_offset(%arg : index)
 
 // -----
 
-// CHECK-LABEL: extract_strided_metadata_of_alloc_with_cst_offset_in_type
+// Negative test: explicit strided layout (even with unit strides) is treated
+// as non-normalized by the pass, so the alloc's extract_strided_metadata is
+// lowered via reinterpret_cast rather than simplified away. The pre-refactor
+// version used `strided<[1], offset: 3>` to inject a non-zero static offset;
+// since types cannot carry offsets anymore, the strided-layout-annotated
+// alloc itself is what keeps this test in the negative-path.
+// CHECK-LABEL: extract_strided_metadata_of_alloc_with_strided_layout
 //       CHECK: %[[ALLOC:.*]] = memref.alloc
 //       CHECK: %[[BASE:.*]] = memref.reinterpret_cast %[[ALLOC]]
 //       CHECK: return %[[BASE]]
-func.func @extract_strided_metadata_of_alloc_with_cst_offset_in_type(%arg : index)
+func.func @extract_strided_metadata_of_alloc_with_strided_layout(%arg : index)
     -> (memref<i16>, index, index, index) {
 
   %A = memref.alloc() : memref<4xi16, strided<[1]>>

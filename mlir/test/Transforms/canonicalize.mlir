@@ -733,6 +733,11 @@ func.func @view(%arg0 : index) -> (f32, f32, f32, f32) {
 
 // -----
 
+// Offset folding is still verified by the subview op's offset operands
+// (e.g. `[1, 2, 7]` with strides `[6144, 64, 1]` pins the composed runtime
+// offset to 6279; `[2, 4]` with strides `[64, 1]` pins it to 132). The
+// pre-refactor `offset: 6279` / `offset: 132` on the result type was a
+// redundant cross-check.
 // CHECK-LABEL: func @subview
 // CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
 func.func @subview(%arg0 : index, %arg1 : index) -> (index, index) {

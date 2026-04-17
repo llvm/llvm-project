@@ -70,10 +70,13 @@ func.func @subview_of_static_full_size(%arg0 : memref<4x6x16x32xi8>) -> memref<4
 
 // -----
 
-// CHECK-LABEL: func @subview_of_static_full_size_folds
+// CHECK-LABEL: func @negative_subview_of_static_full_size
 //  CHECK-SAME:   %[[ARG0:.+]]: memref<16x4xf32,  strided<[4, 1]>>
-//       CHECK:    return %[[ARG0]] : memref<16x4xf32,  strided<[4, 1]>>
-func.func @subview_of_static_full_size_folds(%arg0:  memref<16x4xf32,  strided<[4, 1]>>, %idx: index) -> memref<16x4xf32,  strided<[4, 1]>> {
+//  CHECK-SAME:   %[[IDX:.+]]: index
+//       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][%[[IDX]], 0] [16, 4] [1, 1]
+//  CHECK-SAME:                    to memref<16x4xf32,  strided<[4, 1]>>
+//       CHECK:    return %[[S]] : memref<16x4xf32,  strided<[4, 1]>>
+func.func @negative_subview_of_static_full_size(%arg0:  memref<16x4xf32,  strided<[4, 1]>>, %idx: index) -> memref<16x4xf32,  strided<[4, 1]>> {
   %0 = memref.subview %arg0[%idx, 0][16, 4][1, 1] : memref<16x4xf32,  strided<[4, 1]>> to memref<16x4xf32,  strided<[4, 1]>>
   return %0 : memref<16x4xf32,  strided<[4, 1]>>
 }
@@ -1270,6 +1273,9 @@ func.func @reinterpret_of_extract_strided_metadata_w_different_stride(%arg0 : me
 }
 // -----
 
+// Check that we don't simplify reinterpret_cast of extract_strided_metadata
+// when the offset doesn't match. (The reinterpret_cast uses constant offset 1
+// while extract_strided_metadata produces the source's runtime offset.)
 // CHECK-LABEL: func @reinterpret_of_extract_strided_metadata_w_different_offset
 //  CHECK-SAME: (%[[ARG:.*]]: memref<8x2xf32>)
 //       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [1]

@@ -2151,6 +2151,39 @@ SmallVector<OpFoldResult> ReinterpretCastOp::getConstifiedMixedSizes() {
   return values;
 }
 
+void ReinterpretCastOp::inferStridedMetadataRanges(
+    ArrayRef<StridedMetadataRange> ranges, GetIntRangeFn getIntRange,
+    SetStridedMetadataRangeFn setMetadata, int32_t indexBitwidth) {
+  auto isUninitialized =
+      +[](IntegerValueRange range) { return range.isUninitialized(); };
+
+  SmallVector<IntegerValueRange> offsetOperands =
+      getIntValueRanges(getMixedOffsets(), getIntRange, indexBitwidth);
+  if (llvm::any_of(offsetOperands, isUninitialized))
+    return;
+
+  SmallVector<IntegerValueRange> sizeOperands =
+      getIntValueRanges(getMixedSizes(), getIntRange, indexBitwidth);
+  if (llvm::any_of(sizeOperands, isUninitialized))
+    return;
+
+  SmallVector<IntegerValueRange> strideOperands =
+      getIntValueRanges(getMixedStrides(), getIntRange, indexBitwidth);
+  if (llvm::any_of(strideOperands, isUninitialized))
+    return;
+
+  SmallVector<ConstantIntRanges> sizes, strides;
+  for (IntegerValueRange &size : sizeOperands)
+    sizes.push_back(size.getValue());
+  for (IntegerValueRange &stride : strideOperands)
+    strides.push_back(stride.getValue());
+
+  setMetadata(getResult(),
+              StridedMetadataRange::getRanked(
+                  SmallVector<ConstantIntRanges>({offsetOperands.front().getValue()}),
+                  std::move(sizes), std::move(strides)));
+}
+
 SmallVector<OpFoldResult> ReinterpretCastOp::getConstifiedMixedStrides() {
   SmallVector<OpFoldResult> values = getMixedStrides();
   SmallVector<int64_t> staticValues;
@@ -3657,7 +3690,9 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
 
   if (resultMemrefType == sourceMemrefType &&
       resultMemrefType.hasStaticShape() &&
-      (!resultLayout || resultLayout.hasStaticLayout())) {
+      (!resultLayout || resultLayout.hasStaticLayout()) &&
+      llvm::all_of(getMixedOffsets(), isZeroInteger) &&
+      llvm::all_of(getMixedStrides(), isOneInteger)) {
     return getViewSource();
   }
 

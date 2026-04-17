@@ -318,8 +318,11 @@ gpu.func @store_to_subview(%vec: vector<8xf16>,
 // STORE-SCATTER:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
 // STORE-SCATTER:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1]
 // STORE-SCATTER-SAME:     : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1]>>
+// STORE-SCATTER:        %[[BB:.+]], %[[OFFSET:.+]], {{.*}}, {{.*}} = memref.extract_strided_metadata %[[SUBVIEW]]
+// STORE-SCATTER-SAME:     : memref<256x256xf16, strided<[4096, 1]>> -> memref<f16>, index, index, index, index, index
 // STORE-SCATTER:        %[[STEP:.+]] = vector.step : vector<8xindex>
 // STORE-SCATTER:        arith.muli {{.*}} : index
+// STORE-SCATTER:        arith.addi %[[OFFSET]]{{.*}} : index
 // STORE-SCATTER:        arith.addi {{.*}} : index
 // STORE-SCATTER:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
 // STORE-SCATTER:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>

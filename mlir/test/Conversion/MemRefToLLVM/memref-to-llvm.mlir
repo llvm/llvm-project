@@ -539,6 +539,25 @@ func.func @atomic_rmw_with_offset(%I : memref<10xi32, strided<[1]>>, %ival : i32
 
 // -----
 
+// Construct a non-zero runtime offset via reinterpret_cast and verify
+// atomic_rmw threads the constant `5` through descriptor [2] into the data
+// pointer. This replaces the pre-refactor type-level `offset: 5` anchor.
+func.func @atomic_rmw_with_nonzero_offset(%M : memref<20xi32>, %ival : i32, %i : index) {
+  %cast = memref.reinterpret_cast %M to offset: [5], sizes: [10], strides: [1] : memref<20xi32> to memref<10xi32, strided<[1]>>
+  memref.atomic_rmw andi %ival, %cast[%i] : (i32, memref<10xi32, strided<[1]>>) -> i32
+  return
+}
+// CHECK-LABEL:  func @atomic_rmw_with_nonzero_offset
+// CHECK:        %[[C5:.+]] = llvm.mlir.constant(5 : index) : i64
+// CHECK:        %[[DESC:.+]] = llvm.insertvalue %[[C5]], %{{.*}}[2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK:        %[[ALIGNED:.+]] = llvm.extractvalue %{{.*}}[1]
+// CHECK:        %[[DESC_OFF:.+]] = llvm.extractvalue %{{.*}}[2]
+// CHECK:        %[[BASE:.+]] = llvm.getelementptr %[[ALIGNED]][%[[DESC_OFF]]]
+// CHECK:        llvm.getelementptr %[[BASE]]
+// CHECK:        llvm.atomicrmw _and
+
+// -----
+
 // CHECK-LABEL: func @generic_atomic_rmw
 // CHECK-INTERFACE-LABEL: func @generic_atomic_rmw
 llvm.func @generic_atomic_rmw() {

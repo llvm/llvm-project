@@ -702,32 +702,32 @@ func.func @memref_64bit_Output(
 
 // -----
 
-// Check that memref offset and strides affect the array size.
+// Check that memref strides affect the array size. (Pre-refactor this test
+// also covered non-zero static offsets like `offset: 8` producing arrays of
+// size 72; offsets are no longer part of memref types, so offset's influence
+// on array size is no longer testable at the type-conversion layer. The
+// strides' influence on array size remains covered below.)
 module attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [StorageBuffer16BitAccess], [SPV_KHR_16bit_storage]>, #spirv.resource_limits<>>
 } {
 
-// CHECK-LABEL: spirv.func @memref_offset_strides
-func.func @memref_offset_strides(
-// CHECK-SAME: !spirv.array<64 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-LABEL: spirv.func @memref_strides
+func.func @memref_strides(
 // CHECK-SAME: !spirv.array<64 x f32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<256 x f32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<64 x f32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<88 x f32, stride=4> [0])>, StorageBuffer>
   %arg0: memref<16x4xf32, strided<[4, 1]>, #spirv.storage_class<StorageBuffer>>,  // tightly packed; row major
-  %arg1: memref<16x4xf32, strided<[4, 1]>, #spirv.storage_class<StorageBuffer>>,  // offset 8
   %arg2: memref<16x4xf32, strided<[16, 1]>, #spirv.storage_class<StorageBuffer>>, // pad 12 after each row
   %arg3: memref<16x4xf32, strided<[1, 16]>, #spirv.storage_class<StorageBuffer>>, // tightly packed; col major
   %arg4: memref<16x4xf32, strided<[1, 22]>, #spirv.storage_class<StorageBuffer>>, // pad 4 after each col
 
 // CHECK-SAME: !spirv.array<64 x f16, stride=2> [0])>, StorageBuffer>
-// CHECK-SAME: !spirv.array<64 x f16, stride=2> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<256 x f16, stride=2> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<64 x f16, stride=2> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<88 x f16, stride=2> [0])>, StorageBuffer>
   %arg5: memref<16x4xf16, strided<[4, 1]>, #spirv.storage_class<StorageBuffer>>,
-  %arg6: memref<16x4xf16, strided<[4, 1]>, #spirv.storage_class<StorageBuffer>>,
   %arg7: memref<16x4xf16, strided<[16, 1]>, #spirv.storage_class<StorageBuffer>>,
   %arg8: memref<16x4xf16, strided<[1, 16]>, #spirv.storage_class<StorageBuffer>>,
   %arg9: memref<16x4xf16, strided<[1, 22]>, #spirv.storage_class<StorageBuffer>>

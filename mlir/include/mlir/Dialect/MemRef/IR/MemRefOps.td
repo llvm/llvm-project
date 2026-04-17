@@ -1484,6 +1484,7 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch", [
 def MemRef_ReinterpretCastOp
   : MemRef_OpWithOffsetSizesAndStrides<"reinterpret_cast", [
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      DeclareOpInterfaceMethods<InferStridedMetadataOpInterface>,
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       AttrSizedOperandSegments,
       MemRefsNormalizable,
