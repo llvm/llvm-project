@@ -3563,15 +3563,17 @@ private:
       e->dirs.push_back(&dir);
   }
 
-  void markCurrentFuncAsAlwaysInline(const Fortran::parser::CompilerDirective::InlineAlways &dir) {
+  void markCurrentFuncAsAlwaysInline(
+      const Fortran::parser::CompilerDirective::InlineAlways &dir) {
     mlir::func::FuncOp func = builder->getFunction();
     if (currentFunctionUnit && !currentFunctionUnit->isMainProgram()) {
       const std::string symName =
           currentFunctionUnit->getSubprogramSymbol().name().ToString();
       if (!llvm::StringRef(dir.v->ToString()).equals_insensitive(symName)) {
         mlir::emitWarning(toLocation())
-            << "Directive Ignored: INLINEALWAYS directive function name '" << dir.v->ToString()
-            << "' does not match the function '" << symName << "' where this is declared.";
+            << "Directive Ignored: INLINEALWAYS directive function name '"
+            << dir.v->ToString() << "' does not match the function '" << symName
+            << "' where this is declared.";
         return;
       }
     }
@@ -3656,7 +3658,8 @@ private:
             [&](const Fortran::parser::CompilerDirective::IVDep &) {
               attachDirectiveToLoop(dir, &eval);
             },
-            [&](const Fortran::parser::CompilerDirective::InlineAlways &inlineAlways) {
+            [&](const Fortran::parser::CompilerDirective::InlineAlways
+                    &inlineAlways) {
               if (inlineAlways.v.has_value())
                 markCurrentFuncAsAlwaysInline(inlineAlways);
               else

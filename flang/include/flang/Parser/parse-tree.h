@@ -3383,8 +3383,7 @@ struct CompilerDirective {
         Prefetch, std::list<common::Indirection<Designator>>);
   };
   struct InlineAlways {
-    WRAPPER_CLASS_BOILERPLATE(
-      InlineAlways, std::optional<Name>);
+    WRAPPER_CLASS_BOILERPLATE(InlineAlways, std::optional<Name>);
   };
   EMPTY_CLASS(NoVector);
   EMPTY_CLASS(NoUnroll);
