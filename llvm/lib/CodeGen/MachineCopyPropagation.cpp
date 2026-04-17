@@ -1325,7 +1325,7 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
 
         auto CheckCopyConstraint = [this](Register Dst, Register Src) {
           if (TRI->getCommonMinimalPhysRegClass(Dst, Src))
-              return true;
+            return true;
           return false;
         };
 
