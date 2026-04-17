@@ -45,8 +45,9 @@ constexpr bool test() {
 
   {
     // array constant
-    constexpr int arr[]                                                  = {1, 2, 3};
-    std::same_as<const std::constant_wrapper<arr>> decltype(auto) cw_val = std::cw<arr>;
+    constexpr int arr[] = {1, 2, 3};
+    // gcc complains that cw_val is unused
+    [[maybe_unused]] std::same_as<const std::constant_wrapper<arr>> decltype(auto) cw_val = std::cw<arr>;
     static_assert(cw_val[0] == 1);
     static_assert(cw_val[1] == 2);
     static_assert(cw_val[2] == 3);
@@ -54,7 +55,7 @@ constexpr bool test() {
 
   {
     // string literals
-    std::same_as<const std::constant_wrapper<"hello">> decltype(auto) cw_val = std::cw<"hello">;
+    [[maybe_unused]] std::same_as<const std::constant_wrapper<"hello">> decltype(auto) cw_val = std::cw<"hello">;
     static_assert(cw_val[0] == 'h');
     static_assert(cw_val[1] == 'e');
     static_assert(cw_val[2] == 'l');
