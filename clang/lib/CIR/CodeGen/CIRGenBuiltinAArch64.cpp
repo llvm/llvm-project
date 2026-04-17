@@ -2576,12 +2576,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case NEON::BI__builtin_neon_vsqrt_v:
-  case NEON::BI__builtin_neon_vsqrtq_v: {
-    // TODO: implement vsqrt and vsqrtq
-    // refer:
-    // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#square-root
+  case NEON::BI__builtin_neon_vsqrtq_v:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
     return emitNeonCall(cgm, builder, {ty}, ops, "sqrt", ty, loc);
-  }
   case NEON::BI__builtin_neon_vrbit_v:
   case NEON::BI__builtin_neon_vrbitq_v:
   case NEON::BI__builtin_neon_vmaxv_f16:
