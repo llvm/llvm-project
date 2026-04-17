@@ -244,11 +244,13 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:fpr64 = COPY $d0
-    ; CHECK-NEXT: %rev:fpr64 = REV16v8i8 %copy
-    ; CHECK-NEXT: $d0 = COPY %rev
+    ; CHECK-NEXT: %rev2:fpr64 = REV16v8i8 %copy
+    ; CHECK-NEXT: $d0 = COPY %rev2
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:fpr(<8 x s8>) = COPY $d0
-    %rev:fpr(<8 x s8>) = G_REV16 %copy
+    %rev1:fpr(<4 x s16>) = G_BITCAST %copy
+    %rev2:fpr(<4 x s16>) = G_BSWAP %rev1
+    %rev:fpr(<8 x s8>) = G_BITCAST %rev2
     $d0 = COPY %rev(<8 x s8>)
     RET_ReallyLR implicit $d0
 
@@ -266,10 +268,12 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:fpr128 = COPY $q0
-    ; CHECK-NEXT: %rev:fpr128 = REV16v16i8 %copy
-    ; CHECK-NEXT: $q0 = COPY %rev
+    ; CHECK-NEXT: %rev2:fpr128 = REV16v16i8 %copy
+    ; CHECK-NEXT: $q0 = COPY %rev2
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:fpr(<16 x s8>) = COPY $q0
-    %rev:fpr(<16 x s8>) = G_REV16 %copy
+    %rev1:fpr(<8 x s16>) = G_BITCAST %copy
+    %rev2:fpr(<8 x s16>) = G_BSWAP %rev1
+    %rev:fpr(<16 x s8>) = G_BITCAST %rev2
     $q0 = COPY %rev(<16 x s8>)
     RET_ReallyLR implicit $q0

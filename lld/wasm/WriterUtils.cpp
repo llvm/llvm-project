@@ -97,7 +97,7 @@ void writeSleb128(raw_ostream &os, int64_t number, const Twine &msg) {
 }
 
 void writeBytes(raw_ostream &os, const char *bytes, size_t count,
-                      const Twine &msg) {
+                const Twine &msg) {
   debugWrite(os.tell(), msg + " [data[" + Twine(count) + "]]");
   os.write(bytes, count);
 }
@@ -218,6 +218,10 @@ void writeTableType(raw_ostream &os, const WasmTableType &type) {
 
 void writeImport(raw_ostream &os, const WasmImport &import) {
   writeStr(os, import.Module, "import module name");
+  writeCompactImport(os, import);
+}
+
+void writeCompactImport(raw_ostream &os, const WasmImport &import) {
   writeStr(os, import.Field, "import field name");
   writeU8(os, import.Kind, "import kind");
   switch (import.Kind) {

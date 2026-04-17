@@ -30,22 +30,22 @@ public:
     return "WebAssembly object file reader.";
   }
 
-  static ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const FileSpec *file,
-                 lldb::offset_t file_offset, lldb::offset_t length);
+  static ObjectFile *CreateInstance(const lldb::ModuleSP &module_sp,
+                                    lldb::DataExtractorSP extractor_sp,
+                                    lldb::offset_t data_offset,
+                                    const FileSpec *file,
+                                    lldb::offset_t file_offset,
+                                    lldb::offset_t length);
 
   static ObjectFile *CreateMemoryInstance(const lldb::ModuleSP &module_sp,
                                           lldb::WritableDataBufferSP data_sp,
                                           const lldb::ProcessSP &process_sp,
                                           lldb::addr_t header_addr);
 
-  static size_t GetModuleSpecifications(const FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t length,
-                                        ModuleSpecList &specs);
+  static ModuleSpecList
+  GetModuleSpecifications(const FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t length);
 
   /// PluginInterface protocol.
   /// \{
@@ -112,9 +112,10 @@ public:
   std::optional<FileSpec> GetExternalDebugInfoFileSpec();
 
 private:
-  ObjectFileWasm(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const FileSpec *file,
-                 lldb::offset_t offset, lldb::offset_t length);
+  ObjectFileWasm(const lldb::ModuleSP &module_sp,
+                 lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset,
+                 const FileSpec *file, lldb::offset_t offset,
+                 lldb::offset_t length);
   ObjectFileWasm(const lldb::ModuleSP &module_sp,
                  lldb::WritableDataBufferSP header_data_sp,
                  const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);

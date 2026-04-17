@@ -124,14 +124,6 @@ private:
 template <StlType Stl>
 class AbstractListFrontEnd : public SyntheticChildrenFrontEnd {
 public:
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-    if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    }
-    return *optional_idx;
-  }
   lldb::ChildCacheState Update() override;
 
 protected:
@@ -354,9 +346,8 @@ lldb::ChildCacheState LibCxxForwardListFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
 
   // Anonymous strucutre index is in base class at index 0.
-  auto [impl_sp, is_compressed_pair] =
-      GetValueOrOldCompressedPair(*list_base_sp, /*anon_struct_idx=*/0,
-                                  "__before_begin_", "__before_begin_");
+  auto [impl_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
+      *list_base_sp, "__before_begin_", "__before_begin_");
   if (!impl_sp)
     return ChildCacheState::eRefetch;
 
@@ -383,8 +374,8 @@ llvm::Expected<uint32_t> LibCxxListFrontEnd::CalculateNumChildren() {
   if (!m_head || !m_tail || m_node_address == 0)
     return 0;
 
-  auto [size_node_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      m_backend, /*anon_struct_idx=*/1, "__size_", "__size_alloc_");
+  auto [size_node_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(m_backend, "__size_", "__size_alloc_");
   if (is_compressed_pair)
     size_node_sp = GetFirstValueOfLibCXXCompressedPair(*size_node_sp);
 
@@ -562,11 +553,11 @@ llvm::Expected<uint32_t> MsvcStlListFrontEnd::CalculateNumChildren() {
   auto size_sp =
       m_backend.GetChildAtNamePath({"_Mypair", "_Myval2", "_Mysize"});
   if (!size_sp)
-    return llvm::createStringError("Failed to resolve size.");
+    return llvm::createStringError("failed to resolve size");
 
   m_count = size_sp->GetValueAsUnsigned(UINT32_MAX);
   if (m_count == UINT32_MAX)
-    return llvm::createStringError("Failed to read size value.");
+    return llvm::createStringError("failed to read size value");
 
   return m_count;
 }

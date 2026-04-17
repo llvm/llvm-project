@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
@@ -213,6 +214,12 @@ public:
     return PS->deinitialize(JD);
   }
 
+  /// Returns a reference to the DylibManager for the target process.
+  DylibManager &getDylibMgr() {
+    assert(DylibMgr && "No DylibMgr set");
+    return *DylibMgr;
+  }
+
   /// Returns a reference to the ObjLinkingLayer
   ObjectLayer &getObjLinkingLayer() { return *ObjLinkingLayer; }
 
@@ -235,7 +242,8 @@ public:
 
 protected:
   static Expected<std::unique_ptr<ObjectLayer>>
-  createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES);
+  createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
+                           jitlink::JITLinkMemoryManager &MemMgr);
 
   static Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>
   createCompileFunction(LLJITBuilderState &S, JITTargetMachineBuilder JTMB);
@@ -247,6 +255,7 @@ protected:
 
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<PlatformSupport> PS;
+  std::unique_ptr<DylibManager> DylibMgr;
 
   JITDylib *ProcessSymbols = nullptr;
   JITDylib *Platform = nullptr;
@@ -300,7 +309,8 @@ private:
 class LLJITBuilderState {
 public:
   using ObjectLinkingLayerCreator =
-      std::function<Expected<std::unique_ptr<ObjectLayer>>(ExecutionSession &)>;
+      std::function<Expected<std::unique_ptr<ObjectLayer>>(
+          ExecutionSession &, jitlink::JITLinkMemoryManager &)>;
 
   using CompileFunctionCreator =
       std::function<Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>(

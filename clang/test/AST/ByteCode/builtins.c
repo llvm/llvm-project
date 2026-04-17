@@ -1,8 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -verify
-// RUN: %clang_cc1                                         %s -verify=ref
-
-// expected-no-diagnostics
-// ref-no-diagnostics
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -verify=expected,both
+// RUN: %clang_cc1                                         %s -verify=ref,both
 
 extern __SIZE_TYPE__ strlen(const char *);
 
@@ -17,3 +14,23 @@ int structStrlen(void) {
   return 1;
 }
 
+void f() { __builtin_memcpy(f, f, 1); }
+void f2()  { __builtin_memchr(f2, 0, 1); }
+
+
+_Static_assert(__atomic_is_lock_free(4, (void*)2), ""); // both-error {{not an integral constant expression}}
+
+_Static_assert(__builtin_strlen((void*)0 + 1) == 2, ""); // both-error {{not an integral constant expression}} \
+                                                         // both-note {{cannot perform pointer arithmetic on null pointer}}
+
+
+int strcmp(const char *, const char *);
+#define S "\x01\x02"
+
+const char _str[] = {S[0], S[1]};
+const union u {
+  int a;
+  char b[2];
+} _str2[] = {S[0], S[1]};
+
+const int compared = strcmp(_str, (const char *)_str2); // both-error {{initializer element is not a compile-time constant}}

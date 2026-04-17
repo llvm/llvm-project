@@ -58,6 +58,7 @@ def ResPropsTy : DXILOpParamType;
 def SplitDoubleTy : DXILOpParamType;
 def BinaryWithCarryTy : DXILOpParamType;
 def DimensionsTy : DXILOpParamType;
+def Fouri32s : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -212,12 +213,12 @@ defset list<DXILOpClass> OpClasses = {
   def unpack4x8 : DXILOpClass;
   def viewID : DXILOpClass;
   def waveActiveAllEqual : DXILOpClass;
-  def waveActiveBallot : DXILOpClass;
   def waveActiveBit : DXILOpClass;
   def waveActiveOp : DXILOpClass;
   def waveAllOp : DXILOpClass;
   def waveAllTrue : DXILOpClass;
   def waveAnyTrue : DXILOpClass;
+  def waveActiveBallot : DXILOpClass;
   def waveGetLaneCount : DXILOpClass;
   def waveGetLaneIndex : DXILOpClass;
   def waveIsFirstLane : DXILOpClass;
@@ -316,8 +317,16 @@ defvar WaveOpKind_Product = 1;
 defvar WaveOpKind_Min = 2;
 defvar WaveOpKind_Max = 3;
 
+defvar WaveBitOpKind_And = 0;
+defvar WaveBitOpKind_Or = 1;
+defvar WaveBitOpKind_Xor = 2;
+
 defvar SignedOpKind_Signed = 0;
 defvar SignedOpKind_Unsigned = 1;
+
+defvar QuadOpKind_ReadAcrossX = 0;
+defvar QuadOpKind_ReadAcrossY = 1;
+defvar QuadOpKind_ReadAcrossDiagonal = 2;
 
 // Intrinsic arg selection
 class IntrinArgSelectType;
@@ -781,6 +790,16 @@ def FMad : DXILOp<46, tertiary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def Fma : DXILOp<47, tertiary> {
+  let Doc = "Double-precision fused multiply-add. fma(a,b,c) = a * b + c.";
+  let intrinsics = [IntrinSelect<int_fma>];
+  let arguments = [OverloadTy, OverloadTy, OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def IMad : DXILOp<48, tertiary> {
   let Doc = "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m "
             "* a + b.";
@@ -912,6 +931,8 @@ def GetDimensions : DXILOp<72, getDimensions> {
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
   let intrinsics = [
+    IntrinSelect<int_dx_group_memory_barrier,
+                 [IntrinArgI32<BarrierMode_GroupMemoryBarrier>]>,
     IntrinSelect<int_dx_group_memory_barrier_with_group_sync,
                  [IntrinArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync>]>,
   ];
@@ -942,6 +963,24 @@ def DerivCoarseX : DXILOp<83, unary> {
 def DerivCoarseY : DXILOp<84, unary> {
   let Doc = "computes the rate of change per stamp in y direction";
   let intrinsics = [IntrinSelect<int_dx_ddy_coarse>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>];
+}
+
+def DerivFineX : DXILOp<85, unary> {
+  let Doc = "computes the rate of change per stamp in x direction";
+  let intrinsics = [IntrinSelect<int_dx_ddx_fine>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>];
+}
+
+def DerivFineY : DXILOp<86, unary> {
+  let Doc = "computes the rate of change per stamp in y direction";
+  let intrinsics = [IntrinSelect<int_dx_ddy_fine>];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -1043,6 +1082,23 @@ def WaveActiveAllTrue : DXILOp<114, waveAllTrue> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def WaveActiveAllEqual : DXILOp<115, waveActiveAllEqual> {
+  let Doc = "returns true for each scalar element of the expression if the "
+            "expression is equal in all of the active lanes in the current wave";
+  let intrinsics = [IntrinSelect<int_dx_wave_all_equal>];
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def WaveActiveBallot : DXILOp<116, waveActiveBallot> {
+  let Doc = "returns uint4 containing a bitmask of the evaluation of the boolean expression for all active lanes in the current wave.";
+  let intrinsics = [IntrinSelect<int_dx_wave_ballot>];
+  let arguments = [Int1Ty];
+  let result = Fouri32s;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let Doc = "returns the value from the specified lane";
   let intrinsics = [IntrinSelect<int_dx_wave_readlane>];
@@ -1064,6 +1120,16 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
     IntrinSelect<int_dx_wave_reduce_usum,
                  [
                    IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
+    IntrinSelect<int_dx_wave_product,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Product>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_uproduct,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Product>,
                    IntrinArgI8<SignedOpKind_Unsigned>
                  ]>,
     IntrinSelect<int_dx_wave_reduce_max,
@@ -1097,8 +1163,108 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let attributes = [Attributes<DXIL1_0, []>];
 }
 
+def WaveActiveBit : DXILOp<120, waveActiveBit> {
+  let Doc = "returns the result of the operation across waves";
+  let intrinsics = [
+    IntrinSelect<int_dx_wave_reduce_or,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,                   
+                 ]>,
+    IntrinSelect<int_dx_wave_reduce_xor,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Xor>,
+                 ]>,
+    IntrinSelect<int_dx_wave_reduce_and,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_And>,
+                 ]>
+  ];
+
+  let arguments = [OverloadTy, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_0, [Int32Ty, Int64Ty]>
+  ];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+}
+
+def WavePrefixOp : DXILOp<121, wavePrefixOp> {
+  let Doc = "returns partial result of the computation in the corresponding lane";
+  let intrinsics = [
+    IntrinSelect<int_dx_wave_prefix_sum,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_prefix_usum,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
+    IntrinSelect<int_dx_wave_prefix_product,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Product>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_prefix_uproduct,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Product>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
+  ];
+
+  let arguments = [OverloadTy, Int8Ty, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
+  ];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+}
+
+def QuadOp : DXILOp<123, quadOp> {
+  let Doc = "returns the value from another lane within the quad by swapping values in a direction";
+  let intrinsics = [
+    IntrinSelect<int_dx_quad_read_across_x,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossX>
+                 ]>,
+    IntrinSelect<int_dx_quad_read_across_y,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossY>
+                 ]>,
+  ];
+
+  let arguments = [OverloadTy, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
+  ];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+}
+
+def WavePrefixBitCount : DXILOp<136, wavePrefixOp> {
+  let Doc = "returns the count of bits of Expr set to 1 on prior lanes";
+  let intrinsics = [IntrinSelect<int_dx_wave_prefix_bit_count>];
+  let arguments = [Int1Ty];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+}
+
+def LegacyF32ToF16 : DXILOp<130, legacyF32ToF16> {
+  let Doc = "converts the float stored in the first element of the float2 "
+            "to a half and stores it in the low-half of the output uint";
+  let intrinsics = [IntrinSelect<int_dx_legacyf32tof16>];
+  let arguments = [FloatTy];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def LegacyF16ToF32 : DXILOp<131, legacyF16ToF32> {
-  let Doc = "returns the float16 stored in the low-half of the uint converted "
+  let Doc = "returns the half stored in the low-half of the uint converted "
             "to a float";
   let intrinsics = [IntrinSelect<int_dx_legacyf16tof32>];
   let arguments = [Int32Ty];

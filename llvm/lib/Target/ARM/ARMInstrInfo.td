@@ -250,7 +250,7 @@ def ARMBcci64        : SDNode<"ARMISD::BCC_i64", SDT_ARMBCC_i64,
 def ARMcmp           : SDNode<"ARMISD::CMP", SDT_ARMCmp>;
 
 // ARM CMN instructions.
-def ARMcmn           : SDNode<"ARMISD::CMN", SDT_ARMCmp>;
+def ARMcmn           : SDNode<"ARMISD::CMN", SDT_ARMCmp, [SDNPCommutative]>;
 
 // ARM compare that sets only Z flag.
 def ARMcmpZ          : SDNode<"ARMISD::CMPZ", SDT_ARMCmp, [SDNPCommutative]>;
@@ -1797,6 +1797,7 @@ multiclass AsI1_rbin_irs<bits<4> opcod, string opc,
     let Inst{3-0} = Rm;
     let Inst{15-12} = Rd;
     let Inst{19-16} = Rn;
+    let hasSideEffects = 0;
   }
 
   def rsi : AsI1<opcod, (outs GPR:$Rd),
@@ -2735,6 +2736,7 @@ let isBranch = 1, isTerminator = 1 in {
     bits<24> target;
     let Inst{23-0} = target;
     let DecoderMethod = "DecodeBranchImmInstruction";
+    let hasSideEffects = 0;
   }
 
   let isBarrier = 1 in {
@@ -3964,6 +3966,7 @@ def SBFX  : I<(outs GPRnopc:$Rd),
   let Inst{15-12} = Rd;
   let Inst{11-7}  = lsb;
   let Inst{3-0}   = Rn;
+  let hasSideEffects = 0;
 }
 
 def UBFX  : I<(outs GPRnopc:$Rd),
@@ -3981,6 +3984,7 @@ def UBFX  : I<(outs GPRnopc:$Rd),
   let Inst{15-12} = Rd;
   let Inst{11-7}  = lsb;
   let Inst{3-0}   = Rn;
+  let hasSideEffects = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5074,10 +5078,10 @@ def CMNri : AI1<0b1011, (outs), (ins GPR:$Rn, mod_imm:$imm), DPFrm, IIC_iCMPi,
 }
 
 // CMN register-register/shift
-def CMNzrr : AI1<0b1011, (outs), (ins GPR:$Rn, GPR:$Rm), DPFrm, IIC_iCMPr,
+def CMNrr : AI1<0b1011, (outs), (ins GPR:$Rn, GPR:$Rm), DPFrm, IIC_iCMPr,
                  "cmn", "\t$Rn, $Rm",
-                 [(set CPSR, (BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
-                   GPR:$Rn, GPR:$Rm))]>, Sched<[WriteCMP, ReadALU, ReadALU]> {
+                 [(set CPSR, (ARMcmn GPR:$Rn, GPR:$Rm))]>,
+                 Sched<[WriteCMP, ReadALU, ReadALU]> {
   bits<4> Rn;
   bits<4> Rm;
   let isCommutable = 1;
@@ -5091,12 +5095,11 @@ def CMNzrr : AI1<0b1011, (outs), (ins GPR:$Rn, GPR:$Rm), DPFrm, IIC_iCMPr,
   let Unpredictable{15-12} = 0b1111;
 }
 
-def CMNzrsi : AI1<0b1011, (outs),
+def CMNrsi : AI1<0b1011, (outs),
                   (ins GPR:$Rn, so_reg_imm:$shift), DPSoRegImmFrm, IIC_iCMPsr,
                   "cmn", "\t$Rn, $shift",
-                  [(set CPSR, (BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
-                    GPR:$Rn, so_reg_imm:$shift))]>,
-                    Sched<[WriteCMPsi, ReadALU]> {
+                  [(set CPSR, (ARMcmn GPR:$Rn, so_reg_imm:$shift))]>,
+                  Sched<[WriteCMPsi, ReadALU]> {
   bits<4> Rn;
   bits<12> shift;
   let Inst{25} = 0;
@@ -5110,12 +5113,11 @@ def CMNzrsi : AI1<0b1011, (outs),
   let Unpredictable{15-12} = 0b1111;
 }
 
-def CMNzrsr : AI1<0b1011, (outs),
+def CMNrsr : AI1<0b1011, (outs),
                   (ins GPRnopc:$Rn, so_reg_reg:$shift), DPSoRegRegFrm, IIC_iCMPsr,
                   "cmn", "\t$Rn, $shift",
-                  [(set CPSR, (BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
-                    GPRnopc:$Rn, so_reg_reg:$shift))]>,
-                    Sched<[WriteCMPsr, ReadALU]> {
+                  [(set CPSR, (ARMcmn GPRnopc:$Rn, so_reg_reg:$shift))]>,
+                  Sched<[WriteCMPsr, ReadALU]> {
   bits<4> Rn;
   bits<12> shift;
   let Inst{25} = 0;
@@ -5133,11 +5135,17 @@ def CMNzrsr : AI1<0b1011, (outs),
 
 }
 
+// ARMcmpZ patterns for CMN (compare-to-zero with negated operands)
 def : ARMPat<(ARMcmp  GPR:$src, mod_imm_neg:$imm),
              (CMNri   GPR:$src, mod_imm_neg:$imm)>;
-
 def : ARMPat<(ARMcmpZ GPR:$src, mod_imm_neg:$imm),
              (CMNri   GPR:$src, mod_imm_neg:$imm)>;
+def : ARMPat<(ARMcmpZ GPR:$src, (ineg GPR:$rhs)),
+             (CMNrr GPR:$src, GPR:$rhs)>;
+def : ARMPat<(ARMcmpZ GPR:$src, (ineg so_reg_imm:$rhs)),
+             (CMNrsi GPR:$src, so_reg_imm:$rhs)>;
+def : ARMPat<(ARMcmpZ GPRnopc:$src, (ineg so_reg_reg:$rhs)),
+             (CMNrsr GPRnopc:$src, so_reg_reg:$rhs)>;
 
 // Note that TST/TEQ don't set all the same flags that CMP does!
 defm TST  : AI1_cmp_irs<0b1000, "tst",

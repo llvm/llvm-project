@@ -187,6 +187,7 @@ for dirs in tool_dirs:
     llvm_config.with_environment("PATH", dirs, append_path=True)
 
 tools = [
+    "llvm-strings",
     "mlir-tblgen",
     "mlir-translate",
     "mlir-lsp-server",
@@ -214,8 +215,8 @@ tools = [
     "not",
 ]
 
-if "Linux" in config.host_os:
-    # TODO: Run only on Linux until we figure out how to build
+if "Linux" in config.host_os or "Darwin" in config.host_os:
+    # TODO: Run only on Linux and Mac until we figure out how to build
     # mlir_apfloat_wrappers in a platform-independent way.
     tools.extend([add_runtime("mlir_apfloat_wrappers")])
 
@@ -352,6 +353,9 @@ if config.enable_assertions:
     config.available_features.add("asserts")
 else:
     config.available_features.add("noasserts")
+
+if config.enable_python_stable_abi:
+    config.available_features.add("python-stable-abi")
 
 if config.expensive_checks:
     config.available_features.add("expensive_checks")

@@ -8,7 +8,6 @@ add_mlir_conversion_library(MLIRVectorToAMX
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAMXDialect
   MLIRAffineUtils
   MLIRArithDialect
   MLIRLinalgUtils
@@ -16,4 +15,5 @@ add_mlir_conversion_library(MLIRVectorToAMX
   MLIRSCFDialect
   MLIRTransforms
   MLIRVectorDialect
+  MLIRX86Dialect
   )

@@ -31,7 +31,7 @@ public:
       : Stream(Stream), Diags(Diags) {}
 
   // Main entry point, calls readBlock to read each block in the given stream.
-  llvm::Expected<std::vector<std::unique_ptr<Info>>> readBitcode();
+  llvm::Expected<OwningPtrArray<Info>> readBitcode();
 
 private:
   enum class Cursor { BadBlock = 1, Record, BlockEnd, BlockBegin };
@@ -45,6 +45,11 @@ private:
   // record found.
   template <typename T> llvm::Error readBlock(unsigned ID, T I);
 
+  template <typename T, typename BlockBeginHandler, typename BlockEndHandler,
+            typename RecordHandler>
+  llvm::Error parseBlock(unsigned ID, T I, BlockBeginHandler &&BBH,
+                         BlockEndHandler &&BEH, RecordHandler &&RH);
+
   // Step through a block of records to find the next data field.
   template <typename T> llvm::Error readSubBlock(unsigned ID, T I);
 
@@ -53,15 +58,14 @@ private:
   template <typename T> llvm::Error readRecord(unsigned ID, T I);
 
   // Allocate the relevant type of info and add read data to the object.
-  template <typename T>
-  llvm::Expected<std::unique_ptr<Info>> createInfo(unsigned ID);
+  template <typename T> llvm::Expected<OwnedPtr<Info>> createInfo(unsigned ID);
 
   // Helper function to step through blocks to find and dispatch the next record
   // or block to be read.
   llvm::Expected<Cursor> skipUntilRecordOrBlock(unsigned &BlockOrRecordID);
 
   // Helper function to set up the appropriate type of Info.
-  llvm::Expected<std::unique_ptr<Info>> readBlockToInfo(unsigned ID);
+  llvm::Expected<OwnedPtr<Info>> readBlockToInfo(unsigned ID);
 
   template <typename InfoType, typename T, typename CallbackFunction>
   llvm::Error handleSubBlock(unsigned ID, T Parent, CallbackFunction Function);

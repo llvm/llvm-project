@@ -25,6 +25,9 @@
 #define DEBUG_TYPE "machine-scheduler"
 
 STATISTIC(NumFused, "Number of instr pairs fused");
+STATISTIC(NumFusionConflicts,
+          "Number of conflicts between a fusion pair and an already existing "
+          "cluster (either fusion or non-fusion)");
 
 using namespace llvm;
 
@@ -52,22 +55,20 @@ bool llvm::hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit) {
 
 bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
                                SUnit &SecondSU) {
-  // Check that neither instr is already paired with another along the edge
-  // between them.
-  for (SDep &SI : FirstSU.Succs)
-    if (SI.isCluster())
-      return false;
-
-  for (SDep &SI : SecondSU.Preds)
-    if (SI.isCluster())
-      return false;
-
-  assert(FirstSU.ParentClusterIdx == InvalidClusterId &&
-         SecondSU.ParentClusterIdx == InvalidClusterId);
-
-  // Though the reachability checks above could be made more generic,
-  // perhaps as part of ScheduleDAGInstrs::addEdge(), since such edges are valid,
-  // the extra computation cost makes it less interesting in general cases.
+  // Check that neither instr is already associated with a cluster (either
+  // fusion or non-fusion)
+  if (FirstSU.isClustered() || SecondSU.isClustered()) {
+    ++NumFusionConflicts;
+    LLVM_DEBUG({
+      dbgs() << "Fusion conflict: cannot fuse SU(" << FirstSU.NodeNum
+             << ") and SU(" << SecondSU.NodeNum << ")\n";
+      if (FirstSU.isClustered())
+        dbgs() << "  SU(" << FirstSU.NodeNum << ") already clustered\n";
+      if (SecondSU.isClustered())
+        dbgs() << "  SU(" << SecondSU.NodeNum << ") already clustered\n";
+    });
+    return false;
+  }
 
   // Create a single weak edge between the adjacent instrs. The only effect is
   // to cause bottom-up scheduling to heavily prioritize the clustered instrs.
@@ -76,8 +77,9 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
 
   auto &Clusters = DAG.getClusters();
 
-  FirstSU.ParentClusterIdx = Clusters.size();
-  SecondSU.ParentClusterIdx = Clusters.size();
+  unsigned ClusterIdx = Clusters.size();
+  FirstSU.ParentClusterIdx = ClusterIdx;
+  SecondSU.ParentClusterIdx = ClusterIdx;
 
   SmallPtrSet<SUnit *, 8> Cluster{{&FirstSU, &SecondSU}};
   Clusters.push_back(Cluster);

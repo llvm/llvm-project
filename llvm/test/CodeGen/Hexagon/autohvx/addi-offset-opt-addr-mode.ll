@@ -14,21 +14,21 @@ target triple = "hexagon"
 
 define dllexport void @foo() local_unnamed_addr #0 {
 entry:
-  %0 = load i8*, i8** undef, align 4
-  %1 = bitcast i8* %0 to half*
+  %0 = load ptr, ptr undef, align 4
+  %1 = bitcast ptr %0 to ptr
   %2 = or i32 undef, 128
-  %3 = getelementptr half, half* %1, i32 %2
-  %4 = bitcast half* %3 to <64 x half>*
-  %5 = load i8*, i8** undef, align 4
-  %6 = getelementptr i8, i8* %5, i32 1024
-  %7 = bitcast i8* %6 to <64 x half>*
-  %8 = load <64 x half>, <64 x half>* %7
-  %9 = getelementptr i8, i8* %5, i32 1152
-  %10 = bitcast i8* %9 to <64 x half>*
-  %11 = load <64 x half>, <64 x half>* %10
+  %3 = getelementptr half, ptr %1, i32 %2
+  %4 = bitcast ptr %3 to ptr
+  %5 = load ptr, ptr undef, align 4
+  %6 = getelementptr i8, ptr %5, i32 1024
+  %7 = bitcast ptr %6 to ptr
+  %8 = load <64 x half>, ptr %7
+  %9 = getelementptr i8, ptr %5, i32 1152
+  %10 = bitcast ptr %9 to ptr
+  %11 = load <64 x half>, ptr %10
   %12 = fadd <64 x half> %8, %11
-  store <64 x half> %12, <64 x half>* %4, align 128
-  call void @llvm.assume(i1 true) [ "align"(i8* undef, i32 128) ]
+  store <64 x half> %12, ptr %4, align 128
+  call void @llvm.assume(i1 true) [ "align"(ptr undef, i32 128) ]
   ret void
 }
 
@@ -36,6 +36,6 @@ entry:
 declare void @llvm.assume(i1 noundef) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
-declare <64 x half> @llvm.masked.load.v64f16.p0v64f16(<64 x half>*, i32 immarg, <64 x i1>, <64 x half>) #2
+declare <64 x half> @llvm.masked.load.v64f16.p0(ptr, i32 immarg, <64 x i1>, <64 x half>) #2
 
 attributes #0 = { "target-features"="+hvxv68,+hvx-length128b,+hvx-qfloat" }

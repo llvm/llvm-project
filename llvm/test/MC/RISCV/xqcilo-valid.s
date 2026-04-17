@@ -1,24 +1,24 @@
 # Xqcilo - Qualcomm uC Large Offset Load Store extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcilo -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcilo -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilo < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcilo -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcilo < %s \
+# RUN:     | llvm-objdump --mattr=+xqcilo -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcilo -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcilo -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilo < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcilo --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcilo < %s \
+# RUN:     | llvm-objdump --mattr=+xqcilo --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+zcb,+experimental-xqcilo -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zcb,+xqcilo -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC-ZCB,CHECK-INST-ZCB,CHECK-NOALIAS-ZCB %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zcb,+experimental-xqcilo < %s \
-# RUN:     | llvm-objdump --mattr=+zcb,+experimental-xqcilo -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zcb,+xqcilo < %s \
+# RUN:     | llvm-objdump --mattr=+zcb,+xqcilo -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ZCB %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+zcb,+experimental-xqcilo -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zcb,+xqcilo -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC-ZCB,CHECK-INST-ZCB,CHECK-ALIAS-ZCB %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zcb,+experimental-xqcilo < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcilo --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zcb,+xqcilo < %s \
+# RUN:     | llvm-objdump --mattr=+xqcilo --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ZCB %s
 
 # CHECK-INST: qc.e.lb a1, 3000(a0)

@@ -287,10 +287,8 @@ bool RegisterAggr::hasAliasOf(RegisterRef RR) const {
 }
 
 bool RegisterAggr::hasCoverOf(RegisterRef RR) const {
-  if (RR.isMask()) {
-    BitVector T(PRI.getMaskUnits(RR));
-    return T.reset(Units).none();
-  }
+  if (RR.isMask())
+    return PRI.getMaskUnits(RR).subsetOf(Units);
 
   for (MCRegUnitMaskIterator U(RR.asMCReg(), &PRI.getTRI()); U.isValid(); ++U) {
     auto [Unit, LaneMask] = *U;

@@ -28,6 +28,7 @@ class Stmt;
 class TranslationUnitDecl;
 class Type;
 class TypedefDecl;
+class VarDecl;
 
 // Ref-countability of a type is implicitly defined by Ref<T> and RefPtr<T>
 // implementation. It can be modeled as: type T having public methods ref() and
@@ -87,10 +88,6 @@ public:
   bool defaultSynthProperties() const { return DefaultSynthProperties; }
 };
 
-/// \returns true if \p Class is NS or CF objects AND not retained, false if
-/// not, std::nullopt if inconclusive.
-std::optional<bool> isUnretained(const clang::QualType T, bool IsARCEnabled);
-
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::CXXRecordDecl* Class);
@@ -106,10 +103,6 @@ std::optional<bool> isUncountedPtr(const clang::QualType T);
 /// \returns true if \p T is either a raw pointer or reference to an unchecked
 /// class, false if not, std::nullopt if inconclusive.
 std::optional<bool> isUncheckedPtr(const clang::QualType T);
-
-/// \returns true if \p T is either a raw pointer or reference to an uncounted
-/// or unchecked class, false if not, std::nullopt if inconclusive.
-std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled);
 
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or its
 /// variant, false if not.
@@ -160,6 +153,10 @@ std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
 /// pointer types.
 bool isPtrConversion(const FunctionDecl *F);
 
+/// \returns true if \p F's return type is annotated with
+/// [[clang::annotate_type("webkit.nodelete")]].
+bool isNoDeleteFunction(const FunctionDecl *F);
+
 /// \returns true if \p F is a builtin function which is considered trivial.
 bool isTrivialBuiltinFunction(const FunctionDecl *F);
 
@@ -171,8 +168,15 @@ bool isSingleton(const NamedDecl *F);
 class TrivialFunctionAnalysis {
 public:
   /// \returns true if \p D is a "trivial" function.
-  bool isTrivial(const Decl *D) const { return isTrivialImpl(D, TheCache); }
-  bool isTrivial(const Stmt *S) const { return isTrivialImpl(S, TheCache); }
+  bool isTrivial(const Decl *D, const Stmt **OffendingStmt = nullptr) const {
+    return isTrivialImpl(D, TheCache, OffendingStmt);
+  }
+  bool isTrivial(const Stmt *S, const Stmt **OffendingStmt = nullptr) const {
+    return isTrivialImpl(S, TheCache, OffendingStmt);
+  }
+  bool hasTrivialDtor(const VarDecl *VD) const {
+    return hasTrivialDtorImpl(VD, TheCache);
+  }
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
@@ -181,8 +185,9 @@ private:
       llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>, bool>;
   mutable CacheTy TheCache{};
 
-  static bool isTrivialImpl(const Decl *D, CacheTy &Cache);
-  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache);
+  static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt **);
+  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt **);
+  static bool hasTrivialDtorImpl(const VarDecl *VD, CacheTy &Cache);
 };
 
 } // namespace clang

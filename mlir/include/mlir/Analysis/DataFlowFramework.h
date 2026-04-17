@@ -70,11 +70,9 @@ struct ProgramPoint : public StorageUniquer::BaseStorage {
   ProgramPoint() {}
 
   /// Create a new program point from the given program point.
-  ProgramPoint(const ProgramPoint &point) {
-    this->block = point.getBlock();
-    this->point = point.getPoint();
-    this->op = point.getOperation();
-  }
+  ProgramPoint(const ProgramPoint &point)
+      : block(point.getBlock()), point(point.getPoint()),
+        op(point.getOperation()) {}
 
   static ProgramPoint *construct(StorageUniquer::StorageAllocator &alloc,
                                  KeyTy &&key) {
@@ -479,7 +477,7 @@ private:
 /// these requirements.
 ///
 /// 1. Querying the state of a lattice anchor prior to visiting that anchor
-///    results in uninitialized state. Analyses must be aware of unintialized
+///    results in uninitialized state. Analyses must be aware of uninitialized
 ///    states.
 /// 2. Analysis states can reach fixpoints, where subsequent updates will never
 ///    trigger a change in the state.

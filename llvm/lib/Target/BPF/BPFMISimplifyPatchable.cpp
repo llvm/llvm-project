@@ -42,6 +42,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "bpf-mi-simplify-patchable"
 
+static cl::opt<bool>
+    DisableCOREOptimization("disable-bpf-core-optimization", cl::Hidden,
+                            cl::desc("Disable CORE relocation optimization"));
+
 namespace {
 
 struct BPFMISimplifyPatchable : public MachineFunctionPass {
@@ -197,7 +201,7 @@ void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
       // We can optimize such a pattern:
       //  %1:gpr = LD_imm64 @"llvm.s:0:4$0:2"
       //  %2:gpr32 = LDW32 %1:gpr, 0
-      //  %3:gpr = SUBREG_TO_REG 0, %2:gpr32, %subreg.sub_32
+      //  %3:gpr = SUBREG_TO_REG %2:gpr32, %subreg.sub_32
       //  %4:gpr = ADD_rr %0:gpr, %3:gpr
       //  or similar patterns below for non-alu32 case.
       auto Begin = MRI->use_begin(DstReg), End = MRI->use_end();
@@ -216,7 +220,7 @@ void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
     }
 
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::COPY), DstReg)
-        .addReg(SrcReg, 0, BPF::sub_32);
+        .addReg(SrcReg, {}, BPF::sub_32);
     return;
   }
 
@@ -293,9 +297,24 @@ void BPFMISimplifyPatchable::processInst(MachineRegisterInfo *MRI,
     return;
   }
 
-  if (Opcode == BPF::ADD_rr)
-    checkADDrr(MRI, RelocOp, GVal);
-  else if (Opcode == BPF::SLL_rr)
+  if (DisableCOREOptimization)
+    return;
+
+  if (Opcode == BPF::ADD_rr) {
+    // If the struct offset is greater than INT16_MAX, skip optimization.
+    StringRef AccessPattern = GVal->getName();
+    size_t FirstDollar = AccessPattern.find_first_of('$');
+    size_t FirstColon = AccessPattern.find_first_of(':');
+    size_t SecondColon = AccessPattern.find_first_of(':', FirstColon + 1);
+    StringRef PatchImmStr =
+        AccessPattern.substr(SecondColon + 1, FirstDollar - SecondColon);
+    int PatchImm = std::stoll(std::string(PatchImmStr));
+    if (PatchImm <= INT16_MAX)
+      checkADDrr(MRI, RelocOp, GVal);
+    return;
+  }
+
+  if (Opcode == BPF::SLL_rr)
     checkShift(MRI, *Inst->getParent(), RelocOp, GVal, BPF::SLL_ri);
   else if (Opcode == BPF::SRA_rr)
     checkShift(MRI, *Inst->getParent(), RelocOp, GVal, BPF::SRA_ri);

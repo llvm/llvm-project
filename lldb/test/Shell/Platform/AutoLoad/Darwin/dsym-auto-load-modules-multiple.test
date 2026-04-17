@@ -1,0 +1,38 @@
+# REQUIRES: python, system-darwin
+
+# Test that multiple modules listed in target.auto-load-scripts-for-modules are all
+# auto-loaded.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g -shared %t/lib.c -o %t/libFoo.dylib
+# RUN: %clang_host -g %t/main.c -o %t/TestModule.out %t/libFoo.dylib
+# RUN: mkdir -p %t/TestModule.out.dSYM/Contents/Resources/Python
+# RUN: mkdir -p %t/libFoo.dylib.dSYM/Contents/Resources/Python
+
+# RUN: cp %t/main_script.py %t/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py
+# RUN: cp %t/lib_script.py %t/libFoo.dylib.dSYM/Contents/Resources/Python/libFoo.py
+
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file false' \
+# RUN:   -o 'settings set target.auto-load-scripts-for-modules TestModule=true libFoo=true' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 | FileCheck %s
+
+# CHECK-DAG: MAIN_AUTOLOAD_SUCCESS
+# CHECK-DAG: LIB_AUTOLOAD_SUCCESS
+
+#--- main.c
+extern int foo(void);
+int main() { return foo(); }
+
+#--- lib.c
+int foo(void) { return 0; }
+
+#--- main_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("MAIN_AUTOLOAD_SUCCESS", file=sys.stderr)
+
+#--- lib_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("LIB_AUTOLOAD_SUCCESS", file=sys.stderr)

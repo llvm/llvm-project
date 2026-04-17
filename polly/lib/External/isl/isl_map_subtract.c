@@ -765,14 +765,14 @@ static __isl_give isl_point *singleton_extract_point(
 	for (j = 0; j < bmap->n_eq; ++j) {
 		int i = dim - 1 - j;
 		isl_assert(bmap->ctx,
-		    isl_seq_first_non_zero(bmap->eq[j] + 1, i) == -1,
+		    !isl_seq_any_non_zero(bmap->eq[j] + 1, i),
 		    goto error);
 		isl_assert(bmap->ctx,
 		    isl_int_is_one(bmap->eq[j][1 + i]) ||
 		    isl_int_is_negone(bmap->eq[j][1 + i]),
 		    goto error);
 		isl_assert(bmap->ctx,
-		    isl_seq_first_non_zero(bmap->eq[j]+1+i+1, dim-i-1) == -1,
+		    !isl_seq_any_non_zero(bmap->eq[j]+1+i+1, dim-i-1),
 		    goto error);
 
 		isl_int_gcd(m, point->el[0], bmap->eq[j][1 + i]);

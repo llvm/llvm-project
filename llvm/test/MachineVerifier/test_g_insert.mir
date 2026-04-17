@@ -1,12 +1,9 @@
-# RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_insert
-legalized:       true
-tracksRegLiveness: true
-liveins:
-body:             |
+name: test_insert
+body: |
   bb.0:
 
     ; CHECK: Bad machine code: Too few operands
@@ -40,5 +37,4 @@ body:             |
 
     ; CHECK: Bad machine code: inserted size must be smaller than total register
     %9:_(s32) = G_INSERT %3, %3, 0
-
 ...

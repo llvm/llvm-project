@@ -23,7 +23,7 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
@@ -77,7 +77,7 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 entry:
   br label %loop.body
 
-loop.body:                                    ; preds = %loop.body, %entry
+loop.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.body ]
   %ptr.iv.1 = phi ptr [ %start.1, %entry ], [ %ptr.iv.1.next, %loop.body ]
   %ptr.iv.2 = phi ptr [ %start.2, %entry ], [ %ptr.iv.2.next, %loop.body ]
@@ -91,7 +91,7 @@ loop.body:                                    ; preds = %loop.body, %entry
   %c = icmp ne i64 %iv.next, %N
   br i1 %c, label %loop.body, label %exit, !llvm.loop !0
 
-exit:                            ; preds = %loop.body
+exit:
   ret void
 }
 
@@ -105,7 +105,7 @@ define void @pointer_induction(ptr noalias %start, i64 %N) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[N_VEC]]

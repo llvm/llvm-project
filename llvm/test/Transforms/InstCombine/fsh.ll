@@ -1146,6 +1146,21 @@ define i8 @fshl_range_trunc(i1 %x) {
   ret i8 %tr
 }
 
+define <2 x i8> @fshl_range_vec(<2 x i1> %x) {
+; CHECK-LABEL: @fshl_range_vec(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i32> [[ZEXT]], splat (i32 126)
+; CHECK-NEXT:    [[FSHL:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[OR]], <2 x i32> splat (i32 -2), <2 x i32> splat (i32 1))
+; CHECK-NEXT:    [[TR:%.*]] = trunc nuw <2 x i32> [[FSHL]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[TR]]
+;
+  %zext = zext <2 x i1> %x to <2 x i32>
+  %or = or disjoint <2 x i32> %zext, <i32 -2, i32 -2>
+  %fshl = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %or, <2 x i32> <i32 -2, i32 -2>, <2 x i32> <i32 1, i32 1>), !range !{i32 -4, i32 2}
+  %tr = trunc <2 x i32> %fshl to <2 x i8>
+  ret <2 x i8> %tr
+}
+
 ;; Issue #138334 negative rotate amounts can be folded into the opposite direction
 define i32 @fshl_neg_amount(i32 %x, i32 %y) {
 ; CHECK-LABEL: @fshl_neg_amount(

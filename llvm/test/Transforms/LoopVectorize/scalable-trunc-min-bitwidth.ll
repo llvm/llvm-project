@@ -10,7 +10,7 @@ define void @trunc_minimal_bitwidth(ptr %bptr, ptr noalias %hptr, i32 %val, i64 
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
@@ -68,7 +68,7 @@ define void @trunc_minimal_bitwidths_shufflevector (ptr %p, i32 %arg1, i64 %len)
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[LEN]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[LEN]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[ARG1:%.*]], i64 0
@@ -109,7 +109,7 @@ define void @trunc_minimal_bitwidths_shufflevector (ptr %p, i32 %arg1, i64 %len)
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
   %0 = load i8, ptr %arrayidx
@@ -122,7 +122,7 @@ for.body:                                         ; preds = %entry
   %exitcond = icmp eq i64 %indvars.iv.next, %len
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                                 ; preds = %for.body
+for.exit:
   ret void
 }
 !0 = !{!0, !1, !2}

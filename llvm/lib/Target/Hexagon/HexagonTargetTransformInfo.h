@@ -145,17 +145,18 @@ public:
                    TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                    const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                  const Instruction *I = nullptr) const override {
     return 1;
   }
-
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
                           unsigned AddressSpace,
                           TTI::MaskKind MaskKind) const override;
@@ -167,6 +168,15 @@ public:
                                   Align Alignment) const override;
   bool forceScalarizeMaskedScatter(VectorType *VTy,
                                    Align Alignment) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 
   /// @}
 

@@ -30,4 +30,4 @@ export module mismatching_module;
 //--- use.cpp
 import mismatching_module;
 // CHECK: error: POSIX thread support was enabled in precompiled file '{{.*[/|\\\\]}}mismatching_module.pcm' but is currently disabled
-// CHECK-NEXT: module file {{.*[/|\\\\]}}mismatching_module.pcm cannot be loaded due to a configuration mismatch with the current compilation
+// CHECK-NEXT: precompiled file '{{.*[/|\\\\]}}mismatching_module.pcm' cannot be loaded due to a configuration mismatch with the current compilation

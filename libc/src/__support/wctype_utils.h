@@ -10,8 +10,22 @@
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
 #include "hdr/types/wchar_t.h"
+#include "hdr/types/wctype_t.h"
+#include "src/__support/CPP/array.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
+
+#define LIBC_WCTYPE_MODE_ASCII 0
+#define LIBC_WCTYPE_MODE_UTF8 1
+
+#ifndef LIBC_CONF_WCTYPE_MODE
+#define LIBC_CONF_WCTYPE_MODE LIBC_WCTYPE_MODE_ASCII
+#endif
+
+#if LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
+#include "src/__support/wctype/wctype_classification_utils.h"
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -38,8 +52,8 @@ namespace internal {
 // This assumes the character ranges are contiguous, which they aren't in
 // EBCDIC. Technically we could use some smaller ranges, but that's even harder
 // to read.
-
-LIBC_INLINE static constexpr bool islower(wchar_t wch) {
+namespace ascii {
+LIBC_INLINE constexpr bool islower(wchar_t wch) {
   switch (wch) {
   case L'a':
   case L'b':
@@ -73,7 +87,7 @@ LIBC_INLINE static constexpr bool islower(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr bool isupper(wchar_t wch) {
+LIBC_INLINE constexpr bool isupper(wchar_t wch) {
   switch (wch) {
   case L'A':
   case L'B':
@@ -107,7 +121,7 @@ LIBC_INLINE static constexpr bool isupper(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr bool isdigit(wchar_t wch) {
+LIBC_INLINE constexpr bool isdigit(wchar_t wch) {
   switch (wch) {
   case L'0':
   case L'1':
@@ -125,7 +139,207 @@ LIBC_INLINE static constexpr bool isdigit(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr wchar_t tolower(wchar_t wch) {
+LIBC_INLINE constexpr bool isalpha(wchar_t wch) {
+  switch (wch) {
+  case L'a':
+  case L'b':
+  case L'c':
+  case L'd':
+  case L'e':
+  case L'f':
+  case L'g':
+  case L'h':
+  case L'i':
+  case L'j':
+  case L'k':
+  case L'l':
+  case L'm':
+  case L'n':
+  case L'o':
+  case L'p':
+  case L'q':
+  case L'r':
+  case L's':
+  case L't':
+  case L'u':
+  case L'v':
+  case L'w':
+  case L'x':
+  case L'y':
+  case L'z':
+  case L'A':
+  case L'B':
+  case L'C':
+  case L'D':
+  case L'E':
+  case L'F':
+  case L'G':
+  case L'H':
+  case L'I':
+  case L'J':
+  case L'K':
+  case L'L':
+  case L'M':
+  case L'N':
+  case L'O':
+  case L'P':
+  case L'Q':
+  case L'R':
+  case L'S':
+  case L'T':
+  case L'U':
+  case L'V':
+  case L'W':
+  case L'X':
+  case L'Y':
+  case L'Z':
+    return true;
+  default:
+    return false;
+  }
+}
+
+LIBC_INLINE constexpr bool isalnum(wchar_t wch) {
+  switch (wch) {
+  case L'a':
+  case L'b':
+  case L'c':
+  case L'd':
+  case L'e':
+  case L'f':
+  case L'g':
+  case L'h':
+  case L'i':
+  case L'j':
+  case L'k':
+  case L'l':
+  case L'm':
+  case L'n':
+  case L'o':
+  case L'p':
+  case L'q':
+  case L'r':
+  case L's':
+  case L't':
+  case L'u':
+  case L'v':
+  case L'w':
+  case L'x':
+  case L'y':
+  case L'z':
+  case L'A':
+  case L'B':
+  case L'C':
+  case L'D':
+  case L'E':
+  case L'F':
+  case L'G':
+  case L'H':
+  case L'I':
+  case L'J':
+  case L'K':
+  case L'L':
+  case L'M':
+  case L'N':
+  case L'O':
+  case L'P':
+  case L'Q':
+  case L'R':
+  case L'S':
+  case L'T':
+  case L'U':
+  case L'V':
+  case L'W':
+  case L'X':
+  case L'Y':
+  case L'Z':
+  case L'0':
+  case L'1':
+  case L'2':
+  case L'3':
+  case L'4':
+  case L'5':
+  case L'6':
+  case L'7':
+  case L'8':
+  case L'9':
+    return true;
+  default:
+    return false;
+  }
+}
+
+LIBC_INLINE constexpr bool isspace(wchar_t wch) {
+  switch (wch) {
+  case L' ':
+  case L'\t':
+  case L'\n':
+  case L'\v':
+  case L'\f':
+  case L'\r':
+    return true;
+  default:
+    return false;
+  }
+}
+
+LIBC_INLINE constexpr bool isblank(wchar_t wch) {
+  switch (wch) {
+  case L' ':
+  case L'\t':
+    return true;
+  default:
+    return false;
+  }
+}
+
+LIBC_INLINE constexpr bool isgraph(wchar_t wch) {
+  return 0x20 < wch && wch < 0x7f;
+}
+
+LIBC_INLINE constexpr bool isprint(wchar_t wch) {
+  return (static_cast<unsigned>(wch) - ' ') < 95;
+}
+
+LIBC_INLINE constexpr bool isxdigit(wchar_t wch) {
+  switch (wch) {
+  case L'a':
+  case L'b':
+  case L'c':
+  case L'd':
+  case L'e':
+  case L'f':
+  case L'A':
+  case L'B':
+  case L'C':
+  case L'D':
+  case L'E':
+  case L'F':
+  case L'0':
+  case L'1':
+  case L'2':
+  case L'3':
+  case L'4':
+  case L'5':
+  case L'6':
+  case L'7':
+  case L'8':
+  case L'9':
+    return true;
+  default:
+    return false;
+  }
+}
+
+LIBC_INLINE constexpr bool iscntrl(wchar_t wch) {
+  return (wch < 0x20 || wch == 0x7f);
+}
+
+LIBC_INLINE constexpr bool ispunct(wchar_t wch) {
+  return !isalnum(wch) && isgraph(wch);
+}
+
+LIBC_INLINE constexpr wchar_t tolower(wchar_t wch) {
   switch (wch) {
   case L'A':
     return L'a';
@@ -184,7 +398,7 @@ LIBC_INLINE static constexpr wchar_t tolower(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr wchar_t toupper(wchar_t wch) {
+LIBC_INLINE constexpr wchar_t toupper(wchar_t wch) {
   switch (wch) {
   case L'a':
     return L'A';
@@ -243,137 +457,234 @@ LIBC_INLINE static constexpr wchar_t toupper(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr bool isalpha(wchar_t wch) {
-  switch (wch) {
-  case L'a':
-  case L'b':
-  case L'c':
-  case L'd':
-  case L'e':
-  case L'f':
-  case L'g':
-  case L'h':
-  case L'i':
-  case L'j':
-  case L'k':
-  case L'l':
-  case L'm':
-  case L'n':
-  case L'o':
-  case L'p':
-  case L'q':
-  case L'r':
-  case L's':
-  case L't':
-  case L'u':
-  case L'v':
-  case L'w':
-  case L'x':
-  case L'y':
-  case L'z':
-  case L'A':
-  case L'B':
-  case L'C':
-  case L'D':
-  case L'E':
-  case L'F':
-  case L'G':
-  case L'H':
-  case L'I':
-  case L'J':
-  case L'K':
-  case L'L':
-  case L'M':
-  case L'N':
-  case L'O':
-  case L'P':
-  case L'Q':
-  case L'R':
-  case L'S':
-  case L'T':
-  case L'U':
-  case L'V':
-  case L'W':
-  case L'X':
-  case L'Y':
-  case L'Z':
-    return true;
+} // namespace ascii
+
+LIBC_INLINE constexpr bool islower(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::islower(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::islower(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::LOWER;
+#endif
+}
+
+LIBC_INLINE constexpr bool isupper(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isupper(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isupper(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::UPPER;
+#endif
+}
+
+LIBC_INLINE constexpr bool isdigit(wchar_t wch) {
+  // In C.UT8, only ASCII digits are considered digits
+  return ascii::isdigit(wch);
+}
+
+LIBC_INLINE constexpr bool isalpha(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isalpha(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isalpha(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::ALPHA;
+#endif
+}
+
+LIBC_INLINE constexpr bool isalnum(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isalnum(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isalnum(wch);
+  }
+  // Only need to check ALPHA, digit cases are covered by ASCII path
+  return lookup_properties(wch) & PropertyFlag::ALPHA;
+#endif
+}
+
+LIBC_INLINE constexpr bool isspace(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isspace(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isspace(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::SPACE;
+#endif
+}
+
+LIBC_INLINE constexpr bool isblank(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isblank(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isblank(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::BLANK;
+#endif
+}
+
+LIBC_INLINE constexpr bool isgraph(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isgraph(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isgraph(wch);
+  }
+  // print && !space
+  return (lookup_properties(wch) &
+          (PropertyFlag::PRINT | PropertyFlag::SPACE)) == PropertyFlag::PRINT;
+#endif
+}
+
+LIBC_INLINE constexpr bool isprint(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isprint(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isprint(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::PRINT;
+#endif
+}
+LIBC_INLINE constexpr bool isxdigit(wchar_t wch) {
+  // Hexadecimal digits are the same in C.UTF8 as in ASCII
+  return ascii::isxdigit(wch);
+}
+
+LIBC_INLINE constexpr bool iscntrl(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::iscntrl(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::iscntrl(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::CNTRL;
+#endif
+}
+
+LIBC_INLINE constexpr bool ispunct(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::ispunct(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::ispunct(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::PUNCT;
+#endif
+}
+
+struct wctype_mapping {
+  cpp::string_view name;
+  wctype_t desc;
+};
+
+LIBC_INLINE constexpr wctype_t WCTYPE_INVALID = 0;
+LIBC_INLINE constexpr wctype_t WCTYPE_ALNUM = 1;
+LIBC_INLINE constexpr wctype_t WCTYPE_ALPHA = 2;
+LIBC_INLINE constexpr wctype_t WCTYPE_BLANK = 3;
+LIBC_INLINE constexpr wctype_t WCTYPE_CNTRL = 4;
+LIBC_INLINE constexpr wctype_t WCTYPE_DIGIT = 5;
+LIBC_INLINE constexpr wctype_t WCTYPE_GRAPH = 6;
+LIBC_INLINE constexpr wctype_t WCTYPE_LOWER = 7;
+LIBC_INLINE constexpr wctype_t WCTYPE_PRINT = 8;
+LIBC_INLINE constexpr wctype_t WCTYPE_PUNCT = 9;
+LIBC_INLINE constexpr wctype_t WCTYPE_SPACE = 10;
+LIBC_INLINE constexpr wctype_t WCTYPE_UPPER = 11;
+LIBC_INLINE constexpr wctype_t WCTYPE_XDIGIT = 12;
+
+LIBC_INLINE constexpr cpp::array<wctype_mapping, 12> mappings = {{
+    {"alnum", WCTYPE_ALNUM},
+    {"alpha", WCTYPE_ALPHA},
+    {"blank", WCTYPE_BLANK},
+    {"cntrl", WCTYPE_CNTRL},
+    {"digit", WCTYPE_DIGIT},
+    {"graph", WCTYPE_GRAPH},
+    {"lower", WCTYPE_LOWER},
+    {"print", WCTYPE_PRINT},
+    {"punct", WCTYPE_PUNCT},
+    {"space", WCTYPE_SPACE},
+    {"upper", WCTYPE_UPPER},
+    {"xdigit", WCTYPE_XDIGIT},
+}};
+
+LIBC_INLINE constexpr wctype_t wctype(const char *property) {
+  if (!property)
+    return WCTYPE_INVALID;
+
+  cpp::string_view prop(property);
+
+  for (const auto &wc : mappings) {
+    if (wc.name == prop) {
+      return wc.desc;
+    }
+  }
+  return WCTYPE_INVALID;
+}
+
+LIBC_INLINE constexpr int iswctype(wchar_t c, wctype_t desc) {
+  switch (desc) {
+  case WCTYPE_ALNUM:
+    return isalnum(c);
+  case WCTYPE_ALPHA:
+    return isalpha(c);
+  case WCTYPE_BLANK:
+    return isblank(c);
+  case WCTYPE_CNTRL:
+    return iscntrl(c);
+  case WCTYPE_DIGIT:
+    return isdigit(c);
+  case WCTYPE_GRAPH:
+    return isgraph(c);
+  case WCTYPE_LOWER:
+    return islower(c);
+  case WCTYPE_PRINT:
+    return isprint(c);
+  case WCTYPE_PUNCT:
+    return ispunct(c);
+  case WCTYPE_SPACE:
+    return isspace(c);
+  case WCTYPE_UPPER:
+    return isupper(c);
+  case WCTYPE_XDIGIT:
+    return isxdigit(c);
   default:
-    return false;
+    return 0;
   }
 }
 
-LIBC_INLINE static constexpr bool isalnum(wchar_t wch) {
-  switch (wch) {
-  case L'a':
-  case L'b':
-  case L'c':
-  case L'd':
-  case L'e':
-  case L'f':
-  case L'g':
-  case L'h':
-  case L'i':
-  case L'j':
-  case L'k':
-  case L'l':
-  case L'm':
-  case L'n':
-  case L'o':
-  case L'p':
-  case L'q':
-  case L'r':
-  case L's':
-  case L't':
-  case L'u':
-  case L'v':
-  case L'w':
-  case L'x':
-  case L'y':
-  case L'z':
-  case L'A':
-  case L'B':
-  case L'C':
-  case L'D':
-  case L'E':
-  case L'F':
-  case L'G':
-  case L'H':
-  case L'I':
-  case L'J':
-  case L'K':
-  case L'L':
-  case L'M':
-  case L'N':
-  case L'O':
-  case L'P':
-  case L'Q':
-  case L'R':
-  case L'S':
-  case L'T':
-  case L'U':
-  case L'V':
-  case L'W':
-  case L'X':
-  case L'Y':
-  case L'Z':
-  case L'0':
-  case L'1':
-  case L'2':
-  case L'3':
-  case L'4':
-  case L'5':
-  case L'6':
-  case L'7':
-  case L'8':
-  case L'9':
-    return true;
-  default:
-    return false;
+LIBC_INLINE constexpr wchar_t tolower(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::tolower(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::tolower(wch);
   }
+  // TODO: Add UTF8 implementation.
+  return wch;
+#endif
 }
 
-LIBC_INLINE static constexpr int b36_char_to_int(wchar_t wch) {
+LIBC_INLINE constexpr wchar_t toupper(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::toupper(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::toupper(wch);
+  }
+  // TODO: Add UTF8 implementation.
+  return wch;
+#endif
+}
+
+LIBC_INLINE constexpr int b36_char_to_int(wchar_t wch) {
   switch (wch) {
   case L'0':
     return 0;
@@ -558,20 +869,6 @@ LIBC_INLINE static constexpr wchar_t int_to_b36_wchar(int num) {
     return L'z';
   default:
     return L'!';
-  }
-}
-
-LIBC_INLINE static constexpr bool isspace(wchar_t wch) {
-  switch (wch) {
-  case L' ':
-  case L'\t':
-  case L'\n':
-  case L'\v':
-  case L'\f':
-  case L'\r':
-    return true;
-  default:
-    return false;
   }
 }
 

@@ -615,11 +615,11 @@ protected:
   /// this contains the number of bits in the last unit that can be used for
   /// an adjacent bitfield if necessary.  The unit in question is usually
   /// a byte, but larger units are used if IsMsStruct.
-  unsigned char UnfilledBitsInLastUnit;
+  uint64_t UnfilledBitsInLastUnit;
 
   /// LastBitfieldStorageUnitSize - If IsMsStruct, represents the size of the
   /// storage unit of the previous field if it was a bitfield.
-  unsigned char LastBitfieldStorageUnitSize;
+  uint64_t LastBitfieldStorageUnitSize;
 
   /// MaxFieldAlignment - The maximum allowed field alignment. This is set by
   /// #pragma pack.
@@ -1676,7 +1676,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   unsigned UnpackedFieldAlign = FieldAlign;
 
   // Ignore the field alignment if the field is packed unless it has zero-size.
-  if (!IsMsStruct && FieldPacked && FieldSize != 0)
+  if (FieldPacked && FieldSize != 0)
     FieldAlign = 1;
 
   // But, if there's an 'aligned' attribute on the field, honor that.
@@ -2794,6 +2794,13 @@ void MicrosoftRecordLayoutBuilder::initializeLayout(const RecordDecl *RD) {
     UseExternalLayout = Source->layoutRecordType(
         RD, External.Size, External.Align, External.FieldOffsets,
         External.BaseOffsets, External.VirtualBaseOffsets);
+
+  if (!RD->isMsStruct(Context)) {
+    auto Location = RD->getLocation();
+    if (Location.isValid())
+      Context.getDiagnostics().Report(Location,
+                                      diag::err_itanium_layout_unimplemented);
+  }
 }
 
 void
@@ -3356,6 +3363,11 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
         RequiresVtordisp(BasesWithOverriddenMethods, BaseDecl))
       HasVtordispSet.insert(BaseDecl);
   }
+}
+
+bool ASTContext::defaultsToMsStruct() const {
+  return getTargetInfo().hasMicrosoftRecordLayout() ||
+         getTargetInfo().getTriple().isWindowsGNUEnvironment();
 }
 
 /// getASTRecordLayout - Get or compute information about the layout of the

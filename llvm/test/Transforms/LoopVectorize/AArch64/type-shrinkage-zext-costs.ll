@@ -8,6 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-COST-LABEL: LV: Checking a loop in 'zext_i8_i16'
+; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = zext i8 %0 to i32
 ; CHECK-COST: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
@@ -16,7 +17,6 @@ define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = zext i8 %0 to i32
 ; CHECK-LABEL: define void @zext_i8_i16
 ; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -29,7 +29,7 @@ define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -53,8 +53,8 @@ define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP12]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV]], 2
 ; CHECK-NEXT:    [[CONV1:%.*]] = trunc i32 [[ADD]] to i16
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDVARS_IV]]
@@ -69,7 +69,7 @@ define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
   %0 = load i8, ptr %arrayidx
@@ -83,7 +83,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %len
   br i1 %exitcond, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 
@@ -109,7 +109,7 @@ define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -133,8 +133,8 @@ define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP12]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV]], 2
 ; CHECK-NEXT:    [[CONV1:%.*]] = trunc i32 [[ADD]] to i16
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDVARS_IV]]
@@ -149,7 +149,7 @@ define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
   %0 = load i8, ptr %arrayidx
@@ -163,7 +163,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %len
   br i1 %exitcond, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 

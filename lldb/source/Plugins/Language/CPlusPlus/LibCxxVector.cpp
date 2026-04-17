@@ -13,6 +13,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <optional>
 
 using namespace lldb;
@@ -126,8 +127,8 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex(
 }
 
 static ValueObjectSP GetDataPointer(ValueObject &root) {
-  auto [cap_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      root, /*anon_struct_idx=*/2, "__cap_", "__end_cap_");
+  auto [cap_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(root, "__cap_", "__end_cap_");
   if (!cap_sp)
     return nullptr;
 
@@ -166,12 +167,10 @@ llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_start || !m_finish)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
   if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
   return *optional_idx;
 }
@@ -269,17 +268,14 @@ llvm::Expected<size_t>
 lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_count || !m_base_data_address)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  auto optional_idx = ExtractIndexFromString(name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
+  auto optional_idx = ExtractIndexFromString(name.AsCString(nullptr));
   if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
   uint32_t idx = *optional_idx;
   if (idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   return idx;
 }
 

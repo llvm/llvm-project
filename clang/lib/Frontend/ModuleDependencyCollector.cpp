@@ -16,6 +16,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -161,11 +162,16 @@ std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src,
   }
 
   // Copy the file into place.
-  if (std::error_code EC = fs::create_directories(path::parent_path(CacheDst),
-                                                  /*IgnoreExisting=*/true))
-    return EC;
-  if (std::error_code EC = fs::copy_file(Paths.CopyFrom, CacheDst))
-    return EC;
+  {
+    // FIXME(sandboxing): Implement this via vfs::{FileSystem,OutputBackend}.
+    auto BypassSandbox = sandbox::scopedDisable();
+
+    if (std::error_code EC = fs::create_directories(path::parent_path(CacheDst),
+                                                    /*IgnoreExisting=*/true))
+      return EC;
+    if (std::error_code EC = fs::copy_file(Paths.CopyFrom, CacheDst))
+      return EC;
+  }
 
   // Always map a canonical src path to its real path into the YAML, by doing
   // this we map different virtual src paths to the same entry in the VFS

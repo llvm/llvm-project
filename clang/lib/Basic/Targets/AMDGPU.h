@@ -78,8 +78,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
            !!(GPUFeatures & llvm::AMDGPU::FEATURE_LDEXP);
   }
 
-  static bool isAMDGCN(const llvm::Triple &TT) { return TT.isAMDGCN(); }
-
   static bool isR600(const llvm::Triple &TT) {
     return TT.getArch() == llvm::Triple::r600;
   }
@@ -137,7 +135,7 @@ public:
     return getTriple().isAMDGCN() ? 64 : 32;
   }
 
-  bool hasBFloat16Type() const override { return isAMDGCN(getTriple()); }
+  bool hasBFloat16Type() const override { return getTriple().isAMDGCN(); }
 
   std::string_view getClobbers() const override { return ""; }
 
@@ -302,10 +300,11 @@ public:
     Opts["cl_clang_storage_class_specifiers"] = true;
     Opts["__cl_clang_variadic_functions"] = true;
     Opts["__cl_clang_function_pointers"] = true;
+    Opts["__cl_clang_function_scope_local_variables"] = true;
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
     Opts["__cl_clang_bitfields"] = true;
 
-    bool IsAMDGCN = isAMDGCN(getTriple());
+    bool IsAMDGCN = getTriple().isAMDGCN();
 
     Opts["cl_khr_fp64"] = hasFP64();
     Opts["__opencl_c_fp64"] = hasFP64();
@@ -344,6 +343,10 @@ public:
         Opts["__opencl_c_generic_address_space"] = true;
         Opts["__opencl_c_device_enqueue"] = true;
         Opts["__opencl_c_pipes"] = true;
+      }
+
+      if (getTriple().getEnvironment() == llvm::Triple::LLVM) {
+        Opts["cl_khr_subgroup_extended_types"] = true;
       }
     }
   }
@@ -445,11 +448,13 @@ public:
   // address space has value 0 but in private and local address space has
   // value ~0.
   uint64_t getNullPointerValue(LangAS AS) const override {
-    // FIXME: Also should handle region.
-    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
-            AS == LangAS::sycl_local || AS == LangAS::sycl_private)
-               ? ~0
-               : 0;
+    // Check language-specific address spaces
+    if (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
+        AS == LangAS::sycl_local || AS == LangAS::sycl_private)
+      return ~0;
+    if (isTargetAddressSpace(AS))
+      return llvm::AMDGPU::getNullPointerValue(toTargetAddressSpace(AS));
+    return 0;
   }
 
   void setAuxTarget(const TargetInfo *Aux) override;
@@ -484,7 +489,7 @@ public:
   }
 
   std::optional<std::string> getTargetID() const override {
-    if (!isAMDGCN(getTriple()))
+    if (!getTriple().isAMDGCN())
       return std::nullopt;
     // When -target-cpu is not set, we assume generic code that it is valid
     // for all GPU and use an empty string as target ID to represent that.

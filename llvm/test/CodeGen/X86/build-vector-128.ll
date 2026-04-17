@@ -667,11 +667,10 @@ define <4 x float> @test_buildvector_4f32_2_var(float %a0, float %a1) {
 ;
 ; SSE41-64-LABEL: test_buildvector_4f32_2_var:
 ; SSE41-64:       # %bb.0:
-; SSE41-64-NEXT:    movaps %xmm0, %xmm2
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[2,3]
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0],xmm2[3]
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm0[0]
-; SSE41-64-NEXT:    movaps %xmm2, %xmm0
+; SSE41-64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE41-64-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; SSE41-64-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[0]
+; SSE41-64-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_buildvector_4f32_2_var:
@@ -681,12 +680,19 @@ define <4 x float> @test_buildvector_4f32_2_var(float %a0, float %a1) {
 ; AVX-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-32-NEXT:    retl
 ;
-; AVX-64-LABEL: test_buildvector_4f32_2_var:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX-64-NEXT:    retq
+; AVX1-64-LABEL: test_buildvector_4f32_2_var:
+; AVX1-64:       # %bb.0:
+; AVX1-64-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-64-NEXT:    vmovss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX1-64-NEXT:    retq
+;
+; AVX2-64-LABEL: test_buildvector_4f32_2_var:
+; AVX2-64:       # %bb.0:
+; AVX2-64-NEXT:    vbroadcastss %xmm1, %xmm1
+; AVX2-64-NEXT:    vmovss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; AVX2-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX2-64-NEXT:    retq
   %v0 = insertelement <4 x float> poison, float %a0, i32 0
   %v1 = insertelement <4 x float> %v0, float %a1, i32 1
   %v2 = insertelement <4 x float> %v1, float %a1, i32 2
@@ -722,21 +728,19 @@ define <4 x float> @test_buildvector_4f32_2_load(ptr %p0, ptr %p1) {
 ; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE41-32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE41-32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE41-32-NEXT:    movaps %xmm2, %xmm0
-; SSE41-32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; SSE41-32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; SSE41-32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm2[0]
+; SSE41-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE41-32-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE41-32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
 ; SSE41-32-NEXT:    retl
 ;
 ; SSE41-64-LABEL: test_buildvector_4f32_2_load:
 ; SSE41-64:       # %bb.0:
 ; SSE41-64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE41-64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE41-64-NEXT:    movaps %xmm2, %xmm0
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm2[0]
+; SSE41-64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE41-64-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
 ; SSE41-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_buildvector_4f32_2_load:
@@ -744,19 +748,17 @@ define <4 x float> @test_buildvector_4f32_2_load(ptr %p0, ptr %p1) {
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vinsertps {{.*#+}} xmm2 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1],xmm0[0],xmm2[3]
-; AVX-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; AVX-32-NEXT:    vbroadcastss (%eax), %xmm1
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; AVX-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: test_buildvector_4f32_2_load:
 ; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-64-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1],xmm0[0],xmm2[3]
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; AVX-64-NEXT:    vbroadcastss (%rsi), %xmm1
+; AVX-64-NEXT:    vmovss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX-64-NEXT:    retq
   %a0 = load float, ptr %p0
   %a1 = load float, ptr %p1

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang-rt/runtime/type-info.h"
+#include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include <cstdio>
@@ -37,11 +38,11 @@ RT_API_ATTRS std::size_t Component::GetElementByteSize(
   switch (category()) {
   case TypeCategory::Integer:
   case TypeCategory::Unsigned:
-  case TypeCategory::Real:
   case TypeCategory::Logical:
     return kind_;
+  case TypeCategory::Real:
   case TypeCategory::Complex:
-    return 2 * kind_;
+    return Descriptor::BytesFor(category(), kind_);
   case TypeCategory::Character:
     if (auto value{characterLen_.GetValue(&instance)}) {
       return kind_ * *value;
@@ -95,16 +96,18 @@ RT_API_ATTRS std::size_t Component::SizeInBytes(
 RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
     const Descriptor &container, Terminator &terminator) const {
   ISO::CFI_attribute_t attribute{static_cast<ISO::CFI_attribute_t>(
-      genre_ == Genre::Allocatable || genre_ == Genre::AllocatableDevice
-          ? CFI_attribute_allocatable
-          : genre_ == Genre::Pointer || genre_ == Genre::PointerDevice
-          ? CFI_attribute_pointer
-          : CFI_attribute_other)};
+      genre_ == Genre::Allocatable   ? CFI_attribute_allocatable
+          : genre_ == Genre::Pointer ? CFI_attribute_pointer
+                                     : CFI_attribute_other)};
   TypeCategory cat{category()};
-  unsigned allocatorIdx{
-      genre_ == Genre::AllocatableDevice || genre_ == Genre::PointerDevice
-          ? kDeviceAllocatorPos
-          : kDefaultAllocator};
+  unsigned allocatorIdx{kDefaultAllocator};
+  if (memorySpace_ == MemorySpace::Device) {
+    allocatorIdx = kDeviceAllocatorPos;
+  } else if (memorySpace_ == MemorySpace::Managed) {
+    allocatorIdx = kManagedAllocatorPos;
+  } else if (memorySpace_ == MemorySpace::Unified) {
+    allocatorIdx = kUnifiedAllocatorPos;
+  }
   if (cat == TypeCategory::Character) {
     std::size_t lengthInChars{0};
     if (auto length{characterLen_.GetValue(&container)}) {
@@ -127,8 +130,7 @@ RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
     descriptor.Establish(
         cat, kind_, nullptr, rank_, nullptr, attribute, false, allocatorIdx);
   }
-  if (rank_ && genre_ != Genre::Allocatable && genre_ != Genre::Pointer &&
-      genre_ != Genre::AllocatableDevice && genre_ != Genre::PointerDevice) {
+  if (rank_ && genre_ != Genre::Allocatable && genre_ != Genre::Pointer) {
     const typeInfo::Value *boundValues{bounds()};
     RUNTIME_CHECK(terminator, boundValues != nullptr);
     auto byteStride{static_cast<SubscriptValue>(descriptor.ElementBytes())};
@@ -279,17 +281,14 @@ FILE *Component::Dump(FILE *f) const {
     std::fputs("    Data            ", f);
   } else if (genre_ == Genre::Pointer) {
     std::fputs("    Pointer          ", f);
-  } else if (genre_ == Genre::PointerDevice) {
-    std::fputs("    PointerDevice    ", f);
   } else if (genre_ == Genre::Allocatable) {
     std::fputs("    Allocatable.     ", f);
-  } else if (genre_ == Genre::AllocatableDevice) {
-    std::fputs("    AllocatableDevice", f);
   } else if (genre_ == Genre::Automatic) {
     std::fputs("    Automatic        ", f);
   } else {
     std::fprintf(f, "    (bad genre 0x%x)", static_cast<int>(genre_));
   }
+  // TODO: valentin
   std::fprintf(f, " category %d  kind %d  rank %d  offset 0x%zx\n", category_,
       kind_, rank_, static_cast<std::size_t>(offset_));
   const auto &dtDesc{derivedType_.descriptor()};

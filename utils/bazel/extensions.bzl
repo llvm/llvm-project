@@ -63,18 +63,11 @@ def _llvm_repos_extension_impl(module_ctx):
         name = "pfm",
         urls = [
             "https://versaweb.dl.sourceforge.net/project/perfmon2/libpfm4/libpfm-4.13.0.tar.gz",
+            "https://sourceforge.net/projects/perfmon2/files/libpfm4/libpfm-4.13.0.tar.gz",
         ],
         sha256 = "d18b97764c755528c1051d376e33545d0eb60c6ebf85680436813fa5b04cc3d1",
         strip_prefix = "libpfm-4.13.0",
         build_file = "@llvm-raw//utils/bazel/third_party_build:pfm.BUILD",
-    )
-
-    http_archive(
-        name = "pybind11",
-        url = "https://github.com/pybind/pybind11/archive/v2.10.3.zip",
-        sha256 = "201966a61dc826f1b1879a24a3317a1ec9214a918c8eb035be2f30c3e9cfbdcb",
-        strip_prefix = "pybind11-2.10.3",
-        build_file = "@llvm-raw//utils/bazel/third_party_build:pybind.BUILD",
     )
 
     http_archive(

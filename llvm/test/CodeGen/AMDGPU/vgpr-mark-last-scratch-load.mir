@@ -37,7 +37,7 @@ body:             |
     ; CHECK-NEXT: SI_SPILL_V32_SAVE $vgpr9, %stack.9, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; CHECK-NEXT: SI_SPILL_V32_SAVE $vgpr10, %stack.10, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.10, addrspace 5)
     ; CHECK-NEXT: SI_SPILL_V32_SAVE $vgpr11, %stack.11, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.11, addrspace 5)
-    ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, clobber, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.0, addrspace 5)
     ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE1:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.1, addrspace 5)
     ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE2:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.2, addrspace 5)
@@ -63,7 +63,7 @@ body:             |
     %9:vgpr_32 = COPY $vgpr9
     %10:vgpr_32 = COPY $vgpr10
     %11:vgpr_32 = COPY $vgpr11
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
     S_ENDPGM 0, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %5, implicit %6, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11
 ...
 
@@ -80,11 +80,11 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SI_SPILL_V384_SAVE $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, %stack.0, $sgpr32, 0, implicit $exec :: (store (s384) into %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, clobber, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: [[SI_SPILL_V384_RESTORE:%[0-9]+]]:vreg_384 = SI_SPILL_V384_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: ("amdgpu-last-use" load (s384) from %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SI_SPILL_V384_RESTORE]]
     %0:vreg_384 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
     S_ENDPGM 0, implicit %0
 ...
 

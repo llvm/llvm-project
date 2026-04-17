@@ -510,9 +510,6 @@ public:
   ///     \b true if it is, \b false otherwise.
   bool IsLoadedInTarget(Target *target);
 
-  bool LoadScriptingResourceInTarget(Target *target, Status &error,
-                                     Stream &feedback_stream);
-
   /// Get the number of compile units for this module.
   ///
   /// \return
@@ -846,7 +843,7 @@ public:
   ///     /b true if \a orig_spec was successfully located and
   ///     \a new_spec is filled in with an existing file spec,
   ///     \b false otherwise.
-  bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
+  bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec);
 
   /// Remaps a source file given \a path into \a new_path.
   ///
@@ -860,8 +857,13 @@ public:
   /// \return
   ///     The newly remapped filespec that is may or may not exist if
   ///     \a path was successfully located.
-  std::optional<std::string> RemapSourceFile(llvm::StringRef path) const;
+  std::optional<std::string> RemapSourceFile(llvm::StringRef path);
   bool RemapSourceFile(const char *, std::string &) const = delete;
+
+  /// Register a directory to be searched for \c compilation-prefix-map.json
+  /// on the first call to RemapSourceFile or FindSourceFile. Duplicate
+  /// directories are silently ignored.
+  void AddPrefixMapSearchDir(FileSpec dir);
 
   /// Update the ArchSpec to a more specific variant.
   bool MergeArchitecture(const ArchSpec &arch_spec);
@@ -909,6 +911,9 @@ public:
   public:
     LookupInfo() = default;
 
+    /// Copies an existing LookupInfo with a different lookup name.
+    LookupInfo(const LookupInfo &lookup_info, ConstString lookup_name);
+
     /// Creates a vector of lookup infos for function name resolution.
     ///
     /// \param[in] name
@@ -925,27 +930,25 @@ public:
     ///     The language to create lookups for. If eLanguageTypeUnknown is
     ///     passed, creates one LookupInfo for each language plugin currently
     ///     available in LLDB. If a specific language is provided, creates only
-    //      a single LookupInfo for that language.
+    ///     a single LookupInfo for that language.
+    ///
+    /// \param[in] lookup_name_override
+    ///     Manually override the name used for lookup. This parameter is
+    ///     optional. If not provided, it will be set to the value of the name
+    ///     parameter.
     ///
     /// \return
     ///     A vector of LookupInfo objects, one per relevant language.
     static std::vector<LookupInfo>
     MakeLookupInfos(ConstString name, lldb::FunctionNameType name_type_mask,
-                    lldb::LanguageType lang_type);
+                    lldb::LanguageType lang_type,
+                    ConstString lookup_name_override = {});
 
     ConstString GetName() const { return m_name; }
 
-    void SetName(ConstString name) { m_name = name; }
-
     ConstString GetLookupName() const { return m_lookup_name; }
 
-    void SetLookupName(ConstString name) { m_lookup_name = name; }
-
     lldb::FunctionNameType GetNameTypeMask() const { return m_name_type_mask; }
-
-    void SetNameTypeMask(lldb::FunctionNameType mask) {
-      m_name_type_mask = mask;
-    }
 
     lldb::LanguageType GetLanguageType() const { return m_language; }
 
@@ -974,7 +977,8 @@ public:
     bool m_match_name_after_lookup = false;
 
   private:
-    LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
+    LookupInfo(ConstString name, ConstString lookup_name,
+               lldb::FunctionNameType name_type_mask,
                lldb::LanguageType lang_type);
   };
 
@@ -1042,10 +1046,10 @@ protected:
   uint64_t m_object_offset = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
-  /// DataBuffer containing the module image, if it was provided at
+  /// DataExtractor containing the module image, if it was provided at
   /// construction time. Otherwise the data will be retrieved by mapping
   /// one of the FileSpec members above.
-  lldb::DataBufferSP m_data_sp;
+  lldb::DataExtractorSP m_extractor_sp;
 
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
@@ -1066,6 +1070,15 @@ protected:
   /// module that doesn't match where the sources currently are.
   PathMappingList m_source_mappings =
       ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
+
+  /// Directories registered via AddPrefixMapSearchDir, searched lazily on the
+  /// first call to RemapSourceFile or FindSourceFile. Cleared after searching.
+  llvm::DenseSet<ConstString> m_prefix_map_search_dirs;
+
+  /// Search each registered directory upward for compilation-prefix-map.json
+  /// and apply any found mappings to m_source_mappings. Called at most once.
+  /// Must be called with m_mutex held.
+  void LoadPrefixMapsIfNeeded();
 
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
                                      /// is used by the ObjectFile and
@@ -1099,8 +1112,6 @@ protected:
                                         SymbolContextList &sc_list);
 
   bool SetArchitecture(const ArchSpec &new_arch);
-
-  void SetUUID(const lldb_private::UUID &uuid);
 
   SectionList *GetUnifiedSectionList();
 

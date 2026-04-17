@@ -114,7 +114,7 @@ ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
 /// floating point instructions can have their mode set separately, so the
 /// direction is also needed.
 ///
-/// If the calling function's "denormal-fp-math" input mode is "dynamic" for the
+/// If the calling function's denormal_fpenv input mode is dynamic for the
 /// floating-point type, returns nullptr for denormal inputs.
 LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
                                    bool IsOutput);

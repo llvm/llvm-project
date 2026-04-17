@@ -21,6 +21,7 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
@@ -36,6 +37,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -44,6 +46,7 @@
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -160,6 +163,38 @@ static mlir::Location genLocation(Fortran::lower::AbstractConverter &converter,
   return converter.getCurrentLocation();
 }
 
+/// If \p sym has acc declare flags, attach the acc.declare attribute to
+/// \p global so that the variable is recognized as already managed by
+/// OpenACC declare directives (and should not be implicitly copied to
+/// the device).
+static void attachAccDeclareAttribute(fir::FirOpBuilder &builder,
+                                      fir::GlobalOp global,
+                                      const Fortran::semantics::Symbol &sym) {
+  using Flag = Fortran::semantics::Symbol::Flag;
+  const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+  if (!ultimate.test(Flag::AccDeclare))
+    return;
+  mlir::acc::DataClause clause = mlir::acc::DataClause::acc_create;
+  if (ultimate.test(Flag::AccCopy))
+    clause = mlir::acc::DataClause::acc_copy;
+  else if (ultimate.test(Flag::AccCopyIn))
+    clause = mlir::acc::DataClause::acc_copyin;
+  else if (ultimate.test(Flag::AccCopyOut))
+    clause = mlir::acc::DataClause::acc_copyout;
+  else if (ultimate.test(Flag::AccCreate))
+    clause = mlir::acc::DataClause::acc_create;
+  else if (ultimate.test(Flag::AccPresent))
+    clause = mlir::acc::DataClause::acc_present;
+  else if (ultimate.test(Flag::AccDeviceResident))
+    clause = mlir::acc::DataClause::acc_declare_device_resident;
+  else if (ultimate.test(Flag::AccLink))
+    clause = mlir::acc::DataClause::acc_declare_link;
+  global->setAttr(mlir::acc::getDeclareAttrName(),
+                  mlir::acc::DeclareAttr::get(
+                      builder.getContext(), mlir::acc::DataClauseAttr::get(
+                                                builder.getContext(), clause)));
+}
+
 /// Create the global op declaration without any initializer
 static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
                                    const Fortran::lower::pft::Variable &var,
@@ -185,9 +220,11 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       !Fortran::semantics::IsProcedurePointer(ultimate))
     mlir::emitError(loc, "processing global declaration: symbol '")
         << toStringRef(sym.name()) << "' has unexpected details\n";
-  return builder.createGlobal(loc, converter.genType(var), globalName, linkage,
-                              mlir::Attribute{}, isConstant(ultimate),
-                              var.isTarget(), dataAttr);
+  fir::GlobalOp global = builder.createGlobal(
+      loc, converter.genType(var), globalName, linkage, mlir::Attribute{},
+      isConstant(ultimate), var.isTarget(), dataAttr);
+  attachAccDeclareAttribute(builder, global, sym);
+  return global;
 }
 
 /// Temporary helper to catch todos in initial data target lowering.
@@ -682,6 +719,12 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = genLocation(converter, sym);
   mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   fir::GlobalOp global;
+
+  if (Fortran::evaluate::IsCoarray(sym))
+    if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
+      TODO(loc, "Coarray with an allocatable direct component and/or requiring "
+                "finalization.");
+
   if (var.isModuleOrSubmoduleVariable()) {
     // A non-intrinsic module global is defined when lowering the module.
     // Emit only a declaration if the global does not exist.
@@ -1132,6 +1175,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
       });
     }
   }
+
   if (std::optional<VariableCleanUp> cleanup =
           needDeallocationOrFinalization(var)) {
     auto *builder = &converter.getFirOpBuilder();
@@ -2186,6 +2230,11 @@ void Fortran::lower::mapSymbolAttributes(
   }
 
   if (isDummy) {
+    if (Fortran::evaluate::IsCoarray(sym))
+      // Operation in MIF dialect to create an alias of the coarray not
+      // yet supported (by using the procedure provided by PRIF).
+      TODO(loc, "coarray dummy argument not yet supported.");
+
     mlir::Value dummyArg = symMap.lookupSymbol(sym).getAddr();
     if (lowerToBoxValue(sym, dummyArg, converter)) {
       llvm::SmallVector<mlir::Value> lbounds;
@@ -2478,6 +2527,19 @@ void Fortran::lower::mapSymbolAttributes(
       else
         populateLBoundsExtents(lbounds, extents, ba.dynamicBound(), arg);
     }
+  }
+
+  if (Fortran::evaluate::IsCoarray(sym)) {
+    assert(!Fortran::semantics::IsAllocatable(sym) &&
+           "must be a non-ALLOCATABLE coarray");
+    if (Fortran::semantics::IsSaved(sym) &&
+        sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram)
+      TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
+    ;
+    Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
+    ::genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,
+                       replace);
+    return;
   }
 
   // Allocate or extract raw address for the entity

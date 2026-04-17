@@ -81,7 +81,7 @@ define float @canonicalize_denorm() {
   ret float %ret
 }
 
-define float @canonicalize_pos_denorm_preserve_sign_output() "denormal-fp-math"="preserve-sign,ieee" {
+define float @canonicalize_pos_denorm_preserve_sign_output() denormal_fpenv(preservesign|ieee) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_preserve_sign_output(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -89,7 +89,7 @@ define float @canonicalize_pos_denorm_preserve_sign_output() "denormal-fp-math"=
   ret float %ret
 }
 
-define float @canonicalize_pos_denorm_preserve_sign_input() "denormal-fp-math"="ieee,preserve-sign" {
+define float @canonicalize_pos_denorm_preserve_sign_input() denormal_fpenv(ieee|preservesign) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_preserve_sign_input(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -97,7 +97,7 @@ define float @canonicalize_pos_denorm_preserve_sign_input() "denormal-fp-math"="
   ret float %ret
 }
 
-define float @canonicalize_neg_denorm_preserve_sign_output() "denormal-fp-math"="preserve-sign,ieee" {
+define float @canonicalize_neg_denorm_preserve_sign_output() denormal_fpenv(preservesign|ieee) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_preserve_sign_output(
 ; CHECK-NEXT:    ret float -0.000000e+00
 ;
@@ -105,7 +105,7 @@ define float @canonicalize_neg_denorm_preserve_sign_output() "denormal-fp-math"=
   ret float %ret
 }
 
-define float @canonicalize_neg_denorm_preserve_sign_input() "denormal-fp-math"="ieee,preserve-sign" {
+define float @canonicalize_neg_denorm_preserve_sign_input() denormal_fpenv(ieee|preservesign) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_preserve_sign_input(
 ; CHECK-NEXT:    ret float -0.000000e+00
 ;
@@ -113,7 +113,7 @@ define float @canonicalize_neg_denorm_preserve_sign_input() "denormal-fp-math"="
   ret float %ret
 }
 
-define float @canonicalize_pos_denorm_positive_zero_output() "denormal-fp-math"="positive-zero,ieee" {
+define float @canonicalize_pos_denorm_positive_zero_output() denormal_fpenv(positivezero|ieee) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_positive_zero_output(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -121,7 +121,7 @@ define float @canonicalize_pos_denorm_positive_zero_output() "denormal-fp-math"=
   ret float %ret
 }
 
-define float @canonicalize_pos_denorm_positive_zero_input() "denormal-fp-math"="ieee,positive-zero" {
+define float @canonicalize_pos_denorm_positive_zero_input() denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_positive_zero_input(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -129,7 +129,7 @@ define float @canonicalize_pos_denorm_positive_zero_input() "denormal-fp-math"="
   ret float %ret
 }
 
-define float @canonicalize_neg_denorm_positive_zero_output() "denormal-fp-math"="positive-zero,ieee" {
+define float @canonicalize_neg_denorm_positive_zero_output() denormal_fpenv(positivezero|ieee) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_positive_zero_output(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -137,7 +137,7 @@ define float @canonicalize_neg_denorm_positive_zero_output() "denormal-fp-math"=
   ret float %ret
 }
 
-define float @canonicalize_neg_denorm_positive_zero_input() "denormal-fp-math"="ieee,positive-zero" {
+define float @canonicalize_neg_denorm_positive_zero_input() denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_positive_zero_input(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -145,7 +145,7 @@ define float @canonicalize_neg_denorm_positive_zero_input() "denormal-fp-math"="
   ret float %ret
 }
 
-define float @canonicalize_pos_denorm_dynamic_dynamic() "denormal-fp-math"="dynamic,dynamic" {
+define float @canonicalize_pos_denorm_dynamic_dynamic() denormal_fpenv(dynamic) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_dynamic_dynamic(
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0x380FFFFFC0000000)
 ; CHECK-NEXT:    ret float [[RET]]
@@ -154,7 +154,7 @@ define float @canonicalize_pos_denorm_dynamic_dynamic() "denormal-fp-math"="dyna
   ret float %ret
 }
 
-define float @canonicalize_neg_denorm_dynamic_dynamic() "denormal-fp-math"="dynamic,dynamic" {
+define float @canonicalize_neg_denorm_dynamic_dynamic() denormal_fpenv(dynamic) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_dynamic_dynamic(
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0xB80FFFFFC0000000)
 ; CHECK-NEXT:    ret float [[RET]]
@@ -164,7 +164,7 @@ define float @canonicalize_neg_denorm_dynamic_dynamic() "denormal-fp-math"="dyna
 }
 
 ; Dynamic output - cannot flush
-define float @canonicalize_pos_denorm_dynamic_output() "denormal-fp-math"="dynamic,ieee" {
+define float @canonicalize_pos_denorm_dynamic_output() denormal_fpenv(dynamic|ieee) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_dynamic_output(
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0x380FFFFFC0000000)
 ; CHECK-NEXT:    ret float [[RET]]
@@ -174,7 +174,7 @@ define float @canonicalize_pos_denorm_dynamic_output() "denormal-fp-math"="dynam
 }
 
 ; Dynamic output - cannot flush
-define float @canonicalize_neg_denorm_dynamic_output() "denormal-fp-math"="dynamic,ieee" {
+define float @canonicalize_neg_denorm_dynamic_output() denormal_fpenv(dynamic|ieee) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_dynamic_output(
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0xB80FFFFFC0000000)
 ; CHECK-NEXT:    ret float [[RET]]
@@ -184,7 +184,7 @@ define float @canonicalize_neg_denorm_dynamic_output() "denormal-fp-math"="dynam
 }
 
 ; Dynamic input - cannot flush
-define float @canonicalize_pos_denorm_dynamic_input() "denormal-fp-math"="ieee,dynamic" {
+define float @canonicalize_pos_denorm_dynamic_input() denormal_fpenv(ieee|dynamic) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_dynamic_input(
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0x380FFFFFC0000000)
 ; CHECK-NEXT:    ret float [[RET]]
@@ -194,7 +194,7 @@ define float @canonicalize_pos_denorm_dynamic_input() "denormal-fp-math"="ieee,d
 }
 
 ; Dynamic input - cannot flush
-define float @canonicalize_neg_denorm_dynamic_input() "denormal-fp-math"="ieee,dynamic" {
+define float @canonicalize_neg_denorm_dynamic_input() denormal_fpenv(ieee|dynamic) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_dynamic_input(
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0xB80FFFFFC0000000)
 ; CHECK-NEXT:    ret float [[RET]]
@@ -204,7 +204,7 @@ define float @canonicalize_neg_denorm_dynamic_input() "denormal-fp-math"="ieee,d
 }
 
 ; Input is flushed, can fold
-define float @canonicalize_pos_denorm_dynamic_output_preserve_sign_input() "denormal-fp-math"="dynamic,preserve-sign" {
+define float @canonicalize_pos_denorm_dynamic_output_preserve_sign_input() denormal_fpenv(dynamic|preservesign) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_dynamic_output_preserve_sign_input(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -213,7 +213,7 @@ define float @canonicalize_pos_denorm_dynamic_output_preserve_sign_input() "deno
 }
 
 ; Input is flushed, can fold
-define float @canonicalize_neg_denorm_dynamic_output_preserve_sign_input() "denormal-fp-math"="dynamic,preserve-sign" {
+define float @canonicalize_neg_denorm_dynamic_output_preserve_sign_input() denormal_fpenv(dynamic|preservesign) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_dynamic_output_preserve_sign_input(
 ; CHECK-NEXT:    ret float -0.000000e+00
 ;
@@ -222,7 +222,7 @@ define float @canonicalize_neg_denorm_dynamic_output_preserve_sign_input() "deno
 }
 
 ; Output is known flushed, can fold
-define float @canonicalize_pos_preserve_sign_output_denorm_dynamic_input() "denormal-fp-math"="preserve-sign,dynamic" {
+define float @canonicalize_pos_preserve_sign_output_denorm_dynamic_input() denormal_fpenv(preservesign|dynamic) {
 ; CHECK-LABEL: @canonicalize_pos_preserve_sign_output_denorm_dynamic_input(
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0x380FFFFFC0000000)
 ; CHECK-NEXT:    ret float [[RET]]
@@ -232,7 +232,7 @@ define float @canonicalize_pos_preserve_sign_output_denorm_dynamic_input() "deno
 }
 
 ; Output is known flushed, can fold
-define float @canonicalize_neg_denorm_preserve_sign_output_dynamic_input() "denormal-fp-math"="preserve-sign,dynamic" {
+define float @canonicalize_neg_denorm_preserve_sign_output_dynamic_input() denormal_fpenv(preservesign|dynamic) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_preserve_sign_output_dynamic_input(
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0xB80FFFFFC0000000)
 ; CHECK-NEXT:    ret float [[RET]]
@@ -291,7 +291,7 @@ define float @canonicalize_neg_normal() {
   ret float %ret
 }
 
-define <2 x float> @canonicalize_pos_denorm_preserve_sign_output_mixed_vector() "denormal-fp-math"="preserve-sign,ieee" {
+define <2 x float> @canonicalize_pos_denorm_preserve_sign_output_mixed_vector() denormal_fpenv(preservesign|ieee) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_preserve_sign_output_mixed_vector(
 ; CHECK-NEXT:    ret <2 x float> <float 0.000000e+00, float -0.000000e+00>
 ;
@@ -299,7 +299,7 @@ define <2 x float> @canonicalize_pos_denorm_preserve_sign_output_mixed_vector() 
   ret <2 x float> %ret
 }
 
-define <2 x float> @canonicalize_pos_denorm_preserve_sign_input_mixed_vector() "denormal-fp-math"="ieee,preserve-sign" {
+define <2 x float> @canonicalize_pos_denorm_preserve_sign_input_mixed_vector() denormal_fpenv(ieee|preservesign) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_preserve_sign_input_mixed_vector(
 ; CHECK-NEXT:    ret <2 x float> <float -0.000000e+00, float 0.000000e+00>
 ;
@@ -307,7 +307,7 @@ define <2 x float> @canonicalize_pos_denorm_preserve_sign_input_mixed_vector() "
   ret <2 x float> %ret
 }
 
-define <2 x float> @canonicalize_pos_denorm_positive_zero_output_mixed_vector() "denormal-fp-math"="positive-zero,ieee" {
+define <2 x float> @canonicalize_pos_denorm_positive_zero_output_mixed_vector() denormal_fpenv(positivezero|ieee) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_positive_zero_output_mixed_vector(
 ; CHECK-NEXT:    ret <2 x float> zeroinitializer
 ;
@@ -315,7 +315,7 @@ define <2 x float> @canonicalize_pos_denorm_positive_zero_output_mixed_vector() 
   ret <2 x float> %ret
 }
 
-define <2 x float> @canonicalize_pos_denorm_positive_zero_input_mixed_vector() "denormal-fp-math"="ieee,positive-zero" {
+define <2 x float> @canonicalize_pos_denorm_positive_zero_input_mixed_vector() denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @canonicalize_pos_denorm_positive_zero_input_mixed_vector(
 ; CHECK-NEXT:    ret <2 x float> zeroinitializer
 ;
@@ -323,7 +323,7 @@ define <2 x float> @canonicalize_pos_denorm_positive_zero_input_mixed_vector() "
   ret <2 x float> %ret
 }
 
-define float @canonicalize_neg_denorm_preserve_sign_output_positive_zero_input() "denormal-fp-math"="preserve-sign,positive-zero" {
+define float @canonicalize_neg_denorm_preserve_sign_output_positive_zero_input() denormal_fpenv(preservesign|positivezero) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_preserve_sign_output_positive_zero_input(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -331,7 +331,7 @@ define float @canonicalize_neg_denorm_preserve_sign_output_positive_zero_input()
   ret float %ret
 }
 
-define float @canonicalize_neg_denorm_positive_zero_output_preserve_sign_input() "denormal-fp-math"="positive-zero,preserve-sign" {
+define float @canonicalize_neg_denorm_positive_zero_output_preserve_sign_input() denormal_fpenv(positivezero|preservesign) {
 ; CHECK-LABEL: @canonicalize_neg_denorm_positive_zero_output_preserve_sign_input(
 ; CHECK-NEXT:    ret float -0.000000e+00
 ;
@@ -766,7 +766,7 @@ define ppc_fp128 @canonicalize_neg1.0_ppcf128() {
 ; Test folds of using canonicalize + is.fpclass to inspect the denormal mode.
 ; --------------------------------------------------------------------
 
-define i1 @is_poszero_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" {
+define i1 @is_poszero_daz_enabled_check_dynamic() denormal_fpenv(ieee|dynamic) {
 ; CHECK-LABEL: @is_poszero_daz_enabled_check_dynamic(
 ; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0x36A0000000000000)
 ; CHECK-NEXT:    [[IS_POS_ZERO:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CANONICAL]], i32 64)
@@ -777,7 +777,7 @@ define i1 @is_poszero_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynam
   ret i1 %is.pos.zero
 }
 
-define i1 @is_preserve_sign_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" {
+define i1 @is_preserve_sign_daz_enabled_check_dynamic() denormal_fpenv(ieee|dynamic) {
 ; CHECK-LABEL: @is_preserve_sign_daz_enabled_check_dynamic(
 ; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0xB6A0000000000000)
 ; CHECK-NEXT:    [[IS_NEG_ZERO:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CANONICAL]], i32 32)
@@ -788,7 +788,7 @@ define i1 @is_preserve_sign_daz_enabled_check_dynamic() "denormal-fp-math"="ieee
   ret i1 %is.neg.zero
 }
 
-define i1 @is_positive_zero_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" {
+define i1 @is_positive_zero_daz_enabled_check_dynamic() denormal_fpenv(ieee|dynamic) {
 ; CHECK-LABEL: @is_positive_zero_daz_enabled_check_dynamic(
 ; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0xB6A0000000000000)
 ; CHECK-NEXT:    [[IS_POS_ZERO:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CANONICAL]], i32 64)
@@ -799,7 +799,7 @@ define i1 @is_positive_zero_daz_enabled_check_dynamic() "denormal-fp-math"="ieee
   ret i1 %is.pos.zero
 }
 
-define i1 @is_any_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" {
+define i1 @is_any_daz_enabled_check_dynamic() denormal_fpenv(ieee|dynamic) {
 ; CHECK-LABEL: @is_any_daz_enabled_check_dynamic(
 ; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0xB6A0000000000000)
 ; CHECK-NEXT:    [[IS_ANY_ZERO:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CANONICAL]], i32 96)
@@ -810,7 +810,7 @@ define i1 @is_any_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" 
   ret i1 %is.any.zero
 }
 
-define i1 @is_not_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" {
+define i1 @is_not_daz_enabled_check_dynamic() denormal_fpenv(ieee|dynamic) {
 ; CHECK-LABEL: @is_not_daz_enabled_check_dynamic(
 ; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0x36A0000000000000)
 ; CHECK-NEXT:    [[IS_NOT_POS_ZERO:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CANONICAL]], i32 959)
@@ -821,7 +821,7 @@ define i1 @is_not_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" 
   ret i1 %is.not.pos.zero
 }
 
-define i1 @is_poszero_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
+define i1 @is_poszero_daz_enabled_check_ieee() denormal_fpenv(ieee|ieee) {
 ; CHECK-LABEL: @is_poszero_daz_enabled_check_ieee(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -830,7 +830,7 @@ define i1 @is_poszero_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
   ret i1 %is.pos.zero
 }
 
-define i1 @is_preserve_sign_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
+define i1 @is_preserve_sign_daz_enabled_check_ieee() denormal_fpenv(ieee|ieee) {
 ; CHECK-LABEL: @is_preserve_sign_daz_enabled_check_ieee(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -839,7 +839,7 @@ define i1 @is_preserve_sign_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ie
   ret i1 %is.neg.zero
 }
 
-define i1 @is_positive_zero_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
+define i1 @is_positive_zero_daz_enabled_check_ieee() denormal_fpenv(ieee|ieee) {
 ; CHECK-LABEL: @is_positive_zero_daz_enabled_check_ieee(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -848,7 +848,7 @@ define i1 @is_positive_zero_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ie
   ret i1 %is.pos.zero
 }
 
-define i1 @is_any_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
+define i1 @is_any_daz_enabled_check_ieee() denormal_fpenv(ieee|ieee) {
 ; CHECK-LABEL: @is_any_daz_enabled_check_ieee(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -857,7 +857,7 @@ define i1 @is_any_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
   ret i1 %is.any.zero
 }
 
-define i1 @is_not_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
+define i1 @is_not_daz_enabled_check_ieee() denormal_fpenv(ieee|ieee) {
 ; CHECK-LABEL: @is_not_daz_enabled_check_ieee(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -866,7 +866,7 @@ define i1 @is_not_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
   ret i1 %is.not.pos.zero
 }
 
-define i1 @is_poszero_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,preserve-sign" {
+define i1 @is_poszero_daz_enabled_check_preserve_sign() denormal_fpenv(ieee|preservesign) {
 ; CHECK-LABEL: @is_poszero_daz_enabled_check_preserve_sign(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -875,7 +875,7 @@ define i1 @is_poszero_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee
   ret i1 %is.pos.zero
 }
 
-define i1 @is_preserve_sign_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,preserve-sign" {
+define i1 @is_preserve_sign_daz_enabled_check_preserve_sign() denormal_fpenv(ieee|preservesign) {
 ; CHECK-LABEL: @is_preserve_sign_daz_enabled_check_preserve_sign(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -884,7 +884,7 @@ define i1 @is_preserve_sign_daz_enabled_check_preserve_sign() "denormal-fp-math"
   ret i1 %is.neg.zero
 }
 
-define i1 @is_positive_zero_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,preserve-sign" {
+define i1 @is_positive_zero_daz_enabled_check_preserve_sign() denormal_fpenv(ieee|preservesign) {
 ; CHECK-LABEL: @is_positive_zero_daz_enabled_check_preserve_sign(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -893,7 +893,7 @@ define i1 @is_positive_zero_daz_enabled_check_preserve_sign() "denormal-fp-math"
   ret i1 %is.pos.zero
 }
 
-define i1 @is_any_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,preserve-sign" {
+define i1 @is_any_daz_enabled_check_preserve_sign() denormal_fpenv(ieee|preservesign) {
 ; CHECK-LABEL: @is_any_daz_enabled_check_preserve_sign(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -902,7 +902,7 @@ define i1 @is_any_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,pre
   ret i1 %is.any.zero
 }
 
-define i1 @is_not_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,preserve-sign" {
+define i1 @is_not_daz_enabled_check_preserve_sign() denormal_fpenv(ieee|preservesign) {
 ; CHECK-LABEL: @is_not_daz_enabled_check_preserve_sign(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -911,7 +911,7 @@ define i1 @is_not_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,pre
   ret i1 %is.not.pos.zero
 }
 
-define i1 @is_poszero_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,positive-zero" {
+define i1 @is_poszero_daz_enabled_check_positive_zero() denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @is_poszero_daz_enabled_check_positive_zero(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -920,7 +920,7 @@ define i1 @is_poszero_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee
   ret i1 %is.pos.zero
 }
 
-define i1 @is_preserve_sign_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,positive-zero" {
+define i1 @is_preserve_sign_daz_enabled_check_positive_zero() denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @is_preserve_sign_daz_enabled_check_positive_zero(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -929,7 +929,7 @@ define i1 @is_preserve_sign_daz_enabled_check_positive_zero() "denormal-fp-math"
   ret i1 %is.neg.zero
 }
 
-define i1 @is_positive_zero_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,positive-zero" {
+define i1 @is_positive_zero_daz_enabled_check_positive_zero() denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @is_positive_zero_daz_enabled_check_positive_zero(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -938,7 +938,7 @@ define i1 @is_positive_zero_daz_enabled_check_positive_zero() "denormal-fp-math"
   ret i1 %is.pos.zero
 }
 
-define i1 @is_any_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,positive-zero" {
+define i1 @is_any_daz_enabled_check_positive_zero() denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @is_any_daz_enabled_check_positive_zero(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -947,7 +947,7 @@ define i1 @is_any_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,pos
   ret i1 %is.any.zero
 }
 
-define i1 @is_not_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,positive-zero" {
+define i1 @is_not_daz_enabled_check_positive_zero() denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @is_not_daz_enabled_check_positive_zero(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -956,7 +956,7 @@ define i1 @is_not_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,pos
   ret i1 %is.not.pos.zero
 }
 
-define i1 @is_poszero_daz_enabled_check_dynamic_bitcast() "denormal-fp-math"="ieee,dynamic" {
+define i1 @is_poszero_daz_enabled_check_dynamic_bitcast() denormal_fpenv(ieee|dynamic) {
 ; CHECK-LABEL: @is_poszero_daz_enabled_check_dynamic_bitcast(
 ; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0x36A0000000000000)
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[CANONICAL]] to i32
@@ -969,7 +969,7 @@ define i1 @is_poszero_daz_enabled_check_dynamic_bitcast() "denormal-fp-math"="ie
   ret i1 %is.pos.zero
 }
 
-define i1 @is_poszero_daz_enabled_check_preserve_sign_bitcast() "denormal-fp-math"="ieee,preserve-sign" {
+define i1 @is_poszero_daz_enabled_check_preserve_sign_bitcast() denormal_fpenv(ieee|preservesign) {
 ; CHECK-LABEL: @is_poszero_daz_enabled_check_preserve_sign_bitcast(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -979,7 +979,7 @@ define i1 @is_poszero_daz_enabled_check_preserve_sign_bitcast() "denormal-fp-mat
   ret i1 %is.pos.zero
 }
 
-define i1 @is_poszero_daz_enabled_check_positive_zero_bitcast() "denormal-fp-math"="ieee,positive-zero" {
+define i1 @is_poszero_daz_enabled_check_positive_zero_bitcast() denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @is_poszero_daz_enabled_check_positive_zero_bitcast(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -989,7 +989,7 @@ define i1 @is_poszero_daz_enabled_check_positive_zero_bitcast() "denormal-fp-mat
   ret i1 %is.pos.zero
 }
 
-define i1 @is_poszero_daz_enabled_check_ieee_bitcast() "denormal-fp-math"="ieee,ieee" {
+define i1 @is_poszero_daz_enabled_check_ieee_bitcast() denormal_fpenv(ieee|ieee) {
 ; CHECK-LABEL: @is_poszero_daz_enabled_check_ieee_bitcast(
 ; CHECK-NEXT:    ret i1 false
 ;

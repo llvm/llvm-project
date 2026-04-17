@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This implements an analysis pass that tries to delinearize all GEP
-// instructions in all loops using the SCEV analysis functionality. This pass is
-// only used for testing purposes: if your pass needs delinearization, please
-// use the on-demand SCEVAddRecExpr::delinearize() function.
+// instructions in all loops using the SCEV analysis functionality.
 //
 //===----------------------------------------------------------------------===//
 
@@ -143,12 +141,10 @@ bool delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
 
 /// Check that each subscript in \p Subscripts is within the corresponding size
 /// in \p Sizes. For the outermost dimension, the subscript being negative is
-/// allowed. If \p Ptr is not nullptr, it may be used to get information from
-/// the IR pointer value, which may help in the validation.
+/// allowed.
 bool validateDelinearizationResult(ScalarEvolution &SE,
                                    ArrayRef<const SCEV *> Sizes,
-                                   ArrayRef<const SCEV *> Subscripts,
-                                   const Value *Ptr = nullptr);
+                                   ArrayRef<const SCEV *> Subscripts);
 
 /// Gathers the individual index expressions from a GEP instruction.
 ///

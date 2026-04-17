@@ -145,6 +145,9 @@ void SPIRV64AMDGCNTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AMD__");
   Builder.defineMacro("__AMDGPU__");
   Builder.defineMacro("__AMDGCN__");
+
+  if (Opts.AtomicIgnoreDenormalMode)
+    Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
 }
 
 void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {
@@ -180,4 +183,13 @@ void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {
     HasFloat128 = true;
     Float128Format = DoubleFormat;
   }
+}
+
+bool SPIRV64AMDGCNTargetInfo::isValidCPUName(StringRef CPU) const {
+  return AMDGPUTI.isValidCPUName(CPU);
+}
+
+void SPIRV64AMDGCNTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  return AMDGPUTI.fillValidCPUList(Values);
 }

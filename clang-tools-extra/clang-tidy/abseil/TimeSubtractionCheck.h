@@ -29,7 +29,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void emitDiagnostic(const Expr *Node, llvm::StringRef Replacement);
+  void emitDiagnostic(const Expr *Node, StringRef Replacement);
 };
 
 } // namespace clang::tidy::abseil

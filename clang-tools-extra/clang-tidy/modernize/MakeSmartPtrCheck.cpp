@@ -28,13 +28,10 @@ static std::string getNewExprName(const CXXNewExpr *NewExpr,
       CharSourceRange::getTokenRange(
           NewExpr->getAllocatedTypeSourceInfo()->getTypeLoc().getSourceRange()),
       SM, Lang);
-  if (NewExpr->isArray()) {
+  if (NewExpr->isArray())
     return (WrittenName + "[]").str();
-  }
   return WrittenName.str();
 }
-
-const char MakeSmartPtrCheck::PointerType[] = "pointerType";
 
 MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
                                      StringRef MakeSmartPtrFunctionName)
@@ -153,9 +150,8 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM, ASTContext *Ctx,
   const SourceLocation ConstructCallStart = Construct->getExprLoc();
   const bool InMacro = ConstructCallStart.isMacroID();
 
-  if (InMacro && IgnoreMacros) {
+  if (InMacro && IgnoreMacros)
     return;
-  }
 
   bool Invalid = false;
   const StringRef ExprStr = Lexer::getSourceText(
@@ -169,13 +165,11 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM, ASTContext *Ctx,
               << MakeSmartPtrFunctionName;
 
   // Disable the fix in macros.
-  if (InMacro) {
+  if (InMacro)
     return;
-  }
 
-  if (!replaceNew(Diag, New, SM, Ctx)) {
+  if (!replaceNew(Diag, New, SM, Ctx))
     return;
-  }
 
   // Find the location of the template's left angle.
   const size_t LAngle = ExprStr.find('<');
@@ -228,28 +222,24 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM, ASTContext *Ctx,
 
   const bool InMacro = ExprStart.isMacroID();
 
-  if (InMacro && IgnoreMacros) {
+  if (InMacro && IgnoreMacros)
     return;
-  }
 
   // There are some cases where we don't have operator ("." or "->") of the
   // "reset" expression, e.g. call "reset()" method directly in the subclass of
   // "std::unique_ptr<>". We skip these cases.
-  if (OperatorLoc.isInvalid()) {
+  if (OperatorLoc.isInvalid())
     return;
-  }
 
   auto Diag = diag(ResetCallStart, "use %0 instead")
               << MakeSmartPtrFunctionName;
 
   // Disable the fix in macros.
-  if (InMacro) {
+  if (InMacro)
     return;
-  }
 
-  if (!replaceNew(Diag, New, SM, Ctx)) {
+  if (!replaceNew(Diag, New, SM, Ctx))
     return;
-  }
 
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(OperatorLoc, ExprEnd),
@@ -302,7 +292,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
   //   Foo(Bar{1, 2}) => true
   //   Foo(1) => false
   //   Foo{1} => false
-  auto HasListIntializedArgument = [](const CXXConstructExpr *CE) {
+  auto HasListInitializedArgument = [](const CXXConstructExpr *CE) {
     for (const auto *Arg : CE->arguments()) {
       Arg = Arg->IgnoreImplicit();
 
@@ -358,7 +348,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     //   std::make_smart_ptr<S2>(std::vector<int>({1}));
     //   std::make_smart_ptr<S3>(S2{1, 2}, 3);
     if (const auto *CE = New->getConstructExpr()) {
-      if (HasListIntializedArgument(CE))
+      if (HasListInitializedArgument(CE))
         return false;
     }
     if (ArraySizeExpr.empty()) {
@@ -380,7 +370,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     SourceRange InitRange;
     if (const auto *NewConstruct = New->getConstructExpr()) {
       if (NewConstruct->isStdInitListInitialization() ||
-          HasListIntializedArgument(NewConstruct)) {
+          HasListInitializedArgument(NewConstruct)) {
         // FIXME: Add fixes for direct initialization with the initializer-list
         // constructor. Similar to the above CallInit case, the type has to be
         // specified explicitly in the fixes.
@@ -439,9 +429,8 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
 }
 
 void MakeSmartPtrCheck::insertHeader(DiagnosticBuilder &Diag, FileID FD) {
-  if (MakeSmartPtrFunctionHeader.empty()) {
+  if (MakeSmartPtrFunctionHeader.empty())
     return;
-  }
   Diag << Inserter.createIncludeInsertion(FD, MakeSmartPtrFunctionHeader);
 }
 

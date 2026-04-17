@@ -13,20 +13,32 @@ declare noalias ptr @malloc(i32)
 
 ; resume part of the coroutine
 define fastcc void @f.resume(ptr noalias nonnull align 8 dereferenceable(24) %FramePtr) {
-    tail call void @bar()
-    ret void
+; CHECK-LABEL: @f.resume(
+; CHECK-NEXT:    tail call void @bar()
+; CHECK-NEXT:    ret void
+;
+  tail call void @bar()
+  ret void
 }
 
 ; destroy part of the coroutine
 define fastcc void @f.destroy(ptr noalias nonnull align 8 dereferenceable(24) %FramePtr) {
-    tail call void @bar()
-    ret void
+; CHECK-LABEL: @f.destroy(
+; CHECK-NEXT:    tail call void @bar()
+; CHECK-NEXT:    ret void
+;
+  tail call void @bar()
+  ret void
 }
 
 ; cleanup part of the coroutine
 define fastcc void @f.cleanup(ptr noalias nonnull align 8 dereferenceable(24) %FramePtr) {
-    tail call void @bar()
-    ret void
+; CHECK-LABEL: @f.cleanup(
+; CHECK-NEXT:    tail call void @bar()
+; CHECK-NEXT:    ret void
+;
+  tail call void @bar()
+  ret void
 }
 
 @f.resumers = private constant [3 x ptr] [ptr @f.resume, ptr @f.destroy, ptr @f.cleanup]
@@ -44,16 +56,15 @@ define ptr @test_chr_with_coro_id(ptr %i) !prof !14 {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[BB_CORO_ID:%.*]]
 ; CHECK:       entry.split.nonchr:
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[DOTFR1]], 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT]], label [[BB1_NONCHR:%.*]], label [[BB0_NONCHR:%.*]], !prof [[PROF16:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[DOTFR1]] to i1
+; CHECK-NEXT:    br i1 [[TMP3]], label [[BB0_NONCHR:%.*]], label [[BB1_NONCHR:%.*]], !prof [[PROF16:![0-9]+]]
 ; CHECK:       bb0.nonchr:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[BB1_NONCHR]]
 ; CHECK:       bb1.nonchr:
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[DOTFR1]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label [[BB2_NONCHR:%.*]], label [[BB_CORO_ID]], !prof [[PROF16]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[BB2_NONCHR:%.*]], label [[BB_CORO_ID]], !prof [[PROF17:![0-9]+]]
 ; CHECK:       bb2.nonchr:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[BB_CORO_ID]]
@@ -124,4 +135,5 @@ bb.coro.begin:
 !16 = !{!"branch_weights", i32 1, i32 1}
 !17 = !{!"branch_weights", i32 0, i32 0}
 ; CHECK: !15 = !{!"branch_weights", i32 1000, i32 0}
-; CHECK: !16 = !{!"branch_weights", i32 0, i32 1}
+; CHECK: !16 = !{!"branch_weights", i32 1, i32 0}
+; CHECK: !17 = !{!"branch_weights", i32 0, i32 1}

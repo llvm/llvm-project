@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 #define LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 
+#include "InitMap.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
@@ -22,12 +23,10 @@ namespace interp {
 class Block;
 class Record;
 class SourceInfo;
-struct InitMap;
 struct Descriptor;
 enum PrimType : uint8_t;
 
 using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
-using InitMapPtr = std::optional<std::pair<bool, std::shared_ptr<InitMap>>>;
 
 /// Invoked whenever a block is created. The constructor method fills in the
 /// inline descriptors of all fields and array elements. It also initializes
@@ -55,6 +54,7 @@ static_assert(sizeof(GlobalInlineDescriptor) == sizeof(void *), "");
 
 enum class Lifetime : uint8_t {
   Started,
+  Destroyed,
   Ended,
 };
 
@@ -204,6 +204,7 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   QualType getDataType(const ASTContext &Ctx) const;
+  QualType getDataElemType() const;
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 
@@ -227,6 +228,10 @@ public:
     return dyn_cast_if_present<RecordDecl>(asDecl());
   }
 
+  template <typename T> const T *getAs() const {
+    return dyn_cast_if_present<T>(asDecl());
+  }
+
   /// Returns the size of the object without metadata.
   unsigned getSize() const {
     assert(!isUnknownSizeArray() && "Array of unknown size");
@@ -242,6 +247,11 @@ public:
   unsigned getAllocSize() const { return AllocSize; }
   /// returns the size of an element when the structure is viewed as an array.
   unsigned getElemSize() const { return ElemSize; }
+  /// Returns the element data size, i.e. not what the size of
+  /// our primitive data type is, but what the data size of that is.
+  /// E.g., for PT_SInt32, that's 4 bytes.
+  unsigned getElemDataSize() const;
+
   /// Returns the size of the metadata.
   unsigned getMetadataSize() const { return MDSize; }
 
@@ -276,40 +286,6 @@ public:
   void dump(llvm::raw_ostream &OS) const;
   void dumpFull(unsigned Offset = 0, unsigned Indent = 0) const;
 };
-
-/// Bitfield tracking the initialisation status of elements of primitive arrays.
-struct InitMap final {
-private:
-  /// Type packing bits.
-  using T = uint64_t;
-  /// Bits stored in a single field.
-  static constexpr uint64_t PER_FIELD = sizeof(T) * CHAR_BIT;
-
-public:
-  /// Initializes the map with no fields set.
-  explicit InitMap(unsigned N);
-
-private:
-  friend class Pointer;
-
-  /// Returns a pointer to storage.
-  T *data() { return Data.get(); }
-  const T *data() const { return Data.get(); }
-
-  /// Initializes an element. Returns true when object if fully initialized.
-  bool initializeElement(unsigned I);
-
-  /// Checks if an element was initialized.
-  bool isElementInitialized(unsigned I) const;
-
-  static constexpr size_t numFields(unsigned N) {
-    return (N + PER_FIELD - 1) / PER_FIELD;
-  }
-  /// Number of fields not initialized.
-  unsigned UninitFields;
-  std::unique_ptr<T[]> Data;
-};
-
 } // namespace interp
 } // namespace clang
 

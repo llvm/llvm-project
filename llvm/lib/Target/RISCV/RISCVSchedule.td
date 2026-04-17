@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Define TII for use in SchedPredicates that target MachineInstr.
+def : PredicateProlog<[{
+  [[maybe_unused]] const RISCVInstrInfo *TII =
+    static_cast<const RISCVInstrInfo*>(SchedModel->getInstrInfo());
+}]>;
+
 /// Define scheduler resources associated with def operands.
 def WriteIALU       : SchedWrite;    // 32 or 64-bit integer ALU operations
 def WriteIALU32     : SchedWrite;    // 32-bit integer ALU operations on RV64I

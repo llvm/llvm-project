@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 HEADER(NO_HEADER, nullptr)
-HEADER(ARMACLE_H, "arm_acle.h")
+HEADER(ARM_ACLE_H, "arm_acle.h")
 HEADER(BLOCKS_H, "Blocks.h")
 HEADER(COMPLEX_H, "complex.h")
 HEADER(CTYPE_H, "ctype.h")
@@ -32,6 +32,7 @@ HEADER(OBJC_RUNTIME_H, "objc/runtime.h")
 HEADER(PTHREAD_H, "pthread.h")
 HEADER(SETJMPEX_H, "setjmpex.h")
 HEADER(SETJMP_H, "setjmp.h")
+HEADER(STDBIT_H, "stdbit.h")
 HEADER(STDARG_H, "stdarg.h")
 HEADER(STDIO_H, "stdio.h")
 HEADER(STDLIB_H, "stdlib.h")

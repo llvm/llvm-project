@@ -15,12 +15,14 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
+#include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -200,6 +202,8 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::assume:
   case Intrinsic::abs:
   case Intrinsic::atan2:
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
   case Intrinsic::exp:
   case Intrinsic::is_fpclass:
   case Intrinsic::log:
@@ -226,6 +230,8 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::matrix_multiply:
+  case Intrinsic::matrix_transpose:
     return true;
   case Intrinsic::dx_resource_load_rawbuffer:
     return resourceAccessNeeds64BitExpansion(
@@ -274,7 +280,7 @@ static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   // Handle the initial start value for floating-point addition.
   if (IsFAdd) {
     Constant *StartValue = dyn_cast<Constant>(Orig->getOperand(0));
-    if (StartValue && !StartValue->isZeroValue())
+    if (StartValue && !StartValue->isNullValue())
       Sum = Builder.CreateFAdd(Sum, StartValue);
   }
 
@@ -483,7 +489,8 @@ static Value *expandIsFPClass(CallInst *Orig) {
   switch (TCI->getZExtValue()) {
   case FPClassTest::fcNegZero: {
     Value *NegZero =
-        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1));
+        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1),
+                         /*IsSigned=*/true);
     Value *RetVal;
     if (FNumElem) {
       Value *NegZeroSplat = Builder.CreateVectorSplat(FNumElem, NegZero);
@@ -653,6 +660,63 @@ static Value *expandAtan2Intrinsic(CallInst *Orig) {
   Value *XEq0AndYGe0 = Builder.CreateAnd(XEq0, YGe0);
   Result = Builder.CreateSelect(XEq0AndYGe0, HalfPi, Result);
 
+  return Result;
+}
+
+template <bool LeftFunnel>
+static Value *expandFunnelShiftIntrinsic(CallInst *Orig) {
+  Type *Ty = Orig->getType();
+  Value *A = Orig->getOperand(0);
+  Value *B = Orig->getOperand(1);
+  Value *Shift = Orig->getOperand(2);
+
+  IRBuilder<> Builder(Orig);
+
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+  assert(llvm::isPowerOf2_32(BitWidth) &&
+         "Can't use Mask to compute modulo and inverse");
+
+  // Note: if (Shift % BitWidth) == 0 then (BitWidth - Shift) == BitWidth,
+  // shifting by the bitwidth for shl/lshr returns a poisoned result. As such,
+  // we implement the same formula as LegalizerHelper::lowerFunnelShiftAsShifts.
+  //
+  // The funnel shift is expanded like so:
+  // fshl
+  //  -> msb_extract((concat(A, B) << (Shift % BitWidth)), BitWidth)
+  //  -> A << (Shift % BitWidth) | B >> 1 >> (BitWidth - 1 - (Shift % BitWidth))
+  // fshr
+  //  -> lsb_extract((concat(A, B) >> (Shift % BitWidth), BitWidth))
+  //  -> A << 1 << (BitWidth - 1 - (Shift % BitWidth)) | B >> (Shift % BitWidth)
+
+  // (BitWidth - 1) -> Mask
+  Constant *Mask = ConstantInt::get(Ty, Ty->getScalarSizeInBits() - 1);
+
+  // Shift % BitWidth
+  //  -> Shift & (BitWidth - 1)
+  //  -> Shift & Mask
+  Value *MaskedShift = Builder.CreateAnd(Shift, Mask);
+
+  // (BitWidth - 1) - (Shift % BitWidth)
+  //  -> ~Shift & (BitWidth - 1)
+  //  -> ~Shift & Mask
+  Value *NotShift = Builder.CreateNot(Shift);
+  Value *InverseShift = Builder.CreateAnd(NotShift, Mask);
+
+  Constant *One = ConstantInt::get(Ty, 1);
+  Value *ShiftedA;
+  Value *ShiftedB;
+
+  if (LeftFunnel) {
+    ShiftedA = Builder.CreateShl(A, MaskedShift);
+    Value *ShiftB1 = Builder.CreateLShr(B, One);
+    ShiftedB = Builder.CreateLShr(ShiftB1, InverseShift);
+  } else {
+    Value *ShiftA1 = Builder.CreateShl(A, One);
+    ShiftedA = Builder.CreateShl(ShiftA1, InverseShift);
+    ShiftedB = Builder.CreateLShr(B, MaskedShift);
+  }
+
+  Value *Result = Builder.CreateOr(ShiftedA, ShiftedB);
   return Result;
 }
 
@@ -982,6 +1046,113 @@ static Value *expandSignIntrinsic(CallInst *Orig) {
   return Builder.CreateSub(ZextGT, ZextLT);
 }
 
+// Expand llvm.matrix.multiply by extracting row/column vectors and computing
+// dot products.
+// Result[r,c] = dot(row_r(LHS), col_c(RHS))
+// Element (r,c) is at index c*NumRows + r (column-major).
+static Value *expandMatrixMultiply(CallInst *Orig) {
+  Value *LHS = Orig->getArgOperand(0);
+  Value *RHS = Orig->getArgOperand(1);
+  unsigned LHSRows = cast<ConstantInt>(Orig->getArgOperand(2))->getZExtValue();
+  unsigned LHSCols = cast<ConstantInt>(Orig->getArgOperand(3))->getZExtValue();
+  unsigned RHSCols = cast<ConstantInt>(Orig->getArgOperand(4))->getZExtValue();
+
+  auto *RetTy = cast<FixedVectorType>(Orig->getType());
+  Type *EltTy = RetTy->getElementType();
+  bool IsFP = EltTy->isFloatingPointTy();
+
+  IRBuilder<> Builder(Orig);
+
+  // Column-major indexing:
+  // LHS row R, element K: index = K * LHSRows + R
+  // RHS col C, element K: index = C * LHSCols + K
+  Value *Result = PoisonValue::get(RetTy);
+
+  // Extract all scalar elements from LHS and RHS once, then reuse them.
+  unsigned LHSSize = LHSRows * LHSCols;
+  unsigned RHSSize = LHSCols * RHSCols;
+  SmallVector<Value *, 16> LHSElts(LHSSize);
+  SmallVector<Value *, 16> RHSElts(RHSSize);
+  for (unsigned I = 0; I < LHSSize; ++I)
+    LHSElts[I] = Builder.CreateExtractElement(LHS, I);
+  for (unsigned I = 0; I < RHSSize; ++I)
+    RHSElts[I] = Builder.CreateExtractElement(RHS, I);
+
+  // Choose the appropriate scalar-arg dot intrinsic for floats.
+  // K=1 and double types use scalar expansion instead.
+  Intrinsic::ID FloatDotID = Intrinsic::not_intrinsic;
+  bool UseScalarFP = IsFP && (EltTy->isDoubleTy() || LHSCols == 1);
+  if (IsFP && !UseScalarFP) {
+    switch (LHSCols) {
+    case 2:
+      FloatDotID = Intrinsic::dx_dot2;
+      break;
+    case 3:
+      FloatDotID = Intrinsic::dx_dot3;
+      break;
+    case 4:
+      FloatDotID = Intrinsic::dx_dot4;
+      break;
+    default:
+      reportFatalUsageError(
+          "Invalid matrix inner dimension for dot product: must be 2-4");
+      return nullptr;
+    }
+  }
+
+  for (unsigned C = 0; C < RHSCols; ++C) {
+    for (unsigned R = 0; R < LHSRows; ++R) {
+      // Gather row R from LHS and column C from RHS.
+      SmallVector<Value *, 4> RowElts, ColElts;
+      for (unsigned K = 0; K < LHSCols; ++K) {
+        RowElts.push_back(LHSElts[K * LHSRows + R]);
+        ColElts.push_back(RHSElts[C * LHSCols + K]);
+      }
+
+      Value *Dot;
+      if (UseScalarFP) {
+        // Scalar fmul+fmuladd expansion for double types and K=1.
+        Dot = Builder.CreateFMul(RowElts[0], ColElts[0]);
+        for (unsigned K = 1; K < LHSCols; ++K)
+          Dot = Builder.CreateIntrinsic(EltTy, Intrinsic::fmuladd,
+                                        {RowElts[K], ColElts[K], Dot});
+      } else if (IsFP) {
+        // Emit scalar-arg DXIL dot directly (dx.dot2/dx.dot3/dx.dot4).
+        SmallVector<Value *, 8> Args;
+        Args.append(RowElts.begin(), RowElts.end());
+        Args.append(ColElts.begin(), ColElts.end());
+        Dot = Builder.CreateIntrinsic(EltTy, FloatDotID, Args);
+      } else {
+        // Integer: emit multiply + imad chain.
+        Dot = Builder.CreateMul(RowElts[0], ColElts[0]);
+        for (unsigned K = 1; K < LHSCols; ++K)
+          Dot = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_imad,
+                                        {RowElts[K], ColElts[K], Dot});
+      }
+      unsigned ResIdx = C * LHSRows + R;
+      Result = Builder.CreateInsertElement(Result, Dot, ResIdx);
+    }
+  }
+  return Result;
+}
+
+// Expand llvm.matrix.transpose as a shufflevector that permutes elements
+// from column-major source to column-major transposed layout.
+// Element (r,c) at index c*Rows + r moves to index r*Cols + c.
+static Value *expandMatrixTranspose(CallInst *Orig) {
+  Value *Mat = Orig->getArgOperand(0);
+  unsigned Rows = cast<ConstantInt>(Orig->getArgOperand(1))->getZExtValue();
+  unsigned Cols = cast<ConstantInt>(Orig->getArgOperand(2))->getZExtValue();
+
+  unsigned NumElts = Rows * Cols;
+  SmallVector<int, 16> Mask(NumElts);
+  for (unsigned I = 0; I < NumElts; ++I)
+    Mask[I] = (I % Cols) * Rows + (I / Cols);
+
+  IRBuilder<> Builder(Orig);
+  return Builder.CreateShuffleVector(Mat, Mask);
+}
+
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   Value *Result = nullptr;
   Intrinsic::ID IntrinsicId = F.getIntrinsicID();
@@ -994,6 +1165,12 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return true;
   case Intrinsic::atan2:
     Result = expandAtan2Intrinsic(Orig);
+    break;
+  case Intrinsic::fshl:
+    Result = expandFunnelShiftIntrinsic<true>(Orig);
+    break;
+  case Intrinsic::fshr:
+    Result = expandFunnelShiftIntrinsic<false>(Orig);
     break;
   case Intrinsic::exp:
     Result = expandExpIntrinsic(Orig);
@@ -1076,6 +1253,12 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
     Result = expandVecReduceAdd(Orig, IntrinsicId);
+    break;
+  case Intrinsic::matrix_multiply:
+    Result = expandMatrixMultiply(Orig);
+    break;
+  case Intrinsic::matrix_transpose:
+    Result = expandMatrixTranspose(Orig);
     break;
   }
   if (Result) {
