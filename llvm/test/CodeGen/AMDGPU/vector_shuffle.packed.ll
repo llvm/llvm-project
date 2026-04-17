@@ -1957,8 +1957,6 @@ define <6 x half> @shuffle_v6f16_452367(ptr addrspace(1) %arg0, ptr addrspace(1)
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    global_load_dwordx3 v[4:6], v[0:1], off
 ; GFX942-NEXT:    global_load_dword v4, v[2:3], off
-; GFX942-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX942-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v5
@@ -2110,8 +2108,6 @@ define <4 x half> @shuffle_v4f16_0456(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GX900-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
 ; GX900-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
 ; GX900-NEXT:    s_mov_b32 s4, 0x5040100
-; GX900-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GX900-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; GX900-NEXT:    s_waitcnt vmcnt(0)
 ; GX900-NEXT:    v_perm_b32 v0, v5, v4, s4
 ; GX900-NEXT:    v_alignbit_b32 v1, v6, v5, 16
@@ -2133,8 +2129,6 @@ define <4 x half> @shuffle_v4f16_0456(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
 ; GFX10-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
-; GFX10-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX10-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_perm_b32 v0, v5, v4, 0x5040100
 ; GFX10-NEXT:    v_alignbit_b32 v1, v6, v5, 16
@@ -5151,8 +5145,6 @@ define <6 x bfloat> @shuffle_v6bf16_452367(ptr addrspace(1) %arg0, ptr addrspace
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    global_load_dwordx3 v[4:6], v[0:1], off
 ; GFX942-NEXT:    global_load_dword v4, v[2:3], off
-; GFX942-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX942-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v5
@@ -5668,8 +5660,6 @@ define <4 x bfloat> @shuffle_v4bf16_0456(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GX900-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
 ; GX900-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
 ; GX900-NEXT:    s_mov_b32 s4, 0x5040100
-; GX900-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GX900-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; GX900-NEXT:    s_waitcnt vmcnt(0)
 ; GX900-NEXT:    v_perm_b32 v0, v5, v4, s4
 ; GX900-NEXT:    v_alignbit_b32 v1, v6, v5, 16
@@ -5691,8 +5681,6 @@ define <4 x bfloat> @shuffle_v4bf16_0456(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
 ; GFX10-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
-; GFX10-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX10-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_perm_b32 v0, v5, v4, 0x5040100
 ; GFX10-NEXT:    v_alignbit_b32 v1, v6, v5, 16

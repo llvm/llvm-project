@@ -298,13 +298,10 @@ define amdgpu_kernel void @v_mul_i64_masked_src1_lo(ptr addrspace(1) %out, ptr a
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
-; GFX10-NEXT:    ; kill: killed $vgpr3
-; GFX10-NEXT:    ; kill: killed $sgpr2_sgpr3
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v3, s[2:3]
 ; GFX10-NEXT:    global_load_dwordx2 v[1:2], v3, s[6:7]
-; GFX10-NEXT:    ; kill: killed $sgpr6_sgpr7
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v0, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0

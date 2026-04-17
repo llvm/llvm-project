@@ -357,8 +357,6 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V4-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX9V4-NEXT:    v_mov_b32_e32 v1, s11
-; GFX9V4-NEXT:    ; kill: killed $sgpr6_sgpr7
-; GFX9V4-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX9V4-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9V4-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
@@ -374,8 +372,6 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX9V5-NEXT:    v_mov_b32_e32 v1, s11
-; GFX9V5-NEXT:    ; kill: killed $sgpr6_sgpr7
-; GFX9V5-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX9V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9V5-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)

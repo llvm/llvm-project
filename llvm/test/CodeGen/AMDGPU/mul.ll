@@ -439,7 +439,6 @@ define amdgpu_kernel void @s_trunc_i64_mul_to_i32(ptr addrspace(1) %out, i64 %a,
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_load_dword s3, s[4:5], 0x34
-; GFX9-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX9-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s6, -1
 ; GFX9-NEXT:    s_mov_b32 s4, s0
@@ -455,7 +454,6 @@ define amdgpu_kernel void @s_trunc_i64_mul_to_i32(ptr addrspace(1) %out, i64 %a,
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_load_dword s3, s[4:5], 0x34
-; GFX10-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_mul_i32 s2, s3, s2
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
@@ -496,7 +494,6 @@ define amdgpu_kernel void @s_trunc_i64_mul_to_i32(ptr addrspace(1) %out, i64 %a,
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x34 nv
-; GFX1250-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mul_i32 s2, s3, s2
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
@@ -3002,7 +2999,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB16_4:
-; SI-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SI-NEXT:    s_branch .LBB16_2
 ;
 ; VI-LABEL: mul64_in_branch:
@@ -3034,7 +3030,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:  .LBB16_4:
-; VI-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; VI-NEXT:    s_branch .LBB16_2
 ;
 ; GFX9-LABEL: mul64_in_branch:
@@ -3061,7 +3056,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9-NEXT:    buffer_load_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_branch .LBB16_5
 ; GFX9-NEXT:  .LBB16_3:
-; GFX9-NEXT:    ; implicit-def: $sgpr2_sgpr3
 ; GFX9-NEXT:    s_branch .LBB16_2
 ; GFX9-NEXT:  .LBB16_4:
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -3095,7 +3089,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX10-NEXT:    s_branch .LBB16_5
 ; GFX10-NEXT:  .LBB16_3:
-; GFX10-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; GFX10-NEXT:    s_branch .LBB16_2
 ; GFX10-NEXT:  .LBB16_4:
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
@@ -3186,7 +3179,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], null
 ; GFX1250-NEXT:    s_branch .LBB16_5
 ; GFX1250-NEXT:  .LBB16_3:
-; GFX1250-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; GFX1250-NEXT:    s_branch .LBB16_2
 ; GFX1250-NEXT:  .LBB16_4:
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]

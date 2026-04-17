@@ -15534,8 +15534,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
 ; GFX9-NEXT:    s_load_dwordx2 s[34:35], s[34:35], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_load_dword s52, s[34:35], 0x0
-; GFX9-NEXT:    ; kill: killed $sgpr34_sgpr35
-; GFX9-NEXT:    ; kill: killed $sgpr34_sgpr35
 ; GFX9-NEXT:    s_load_dwordx16 s[36:51], s[34:35], 0x40
 ; GFX9-NEXT:    s_load_dwordx16 s[4:19], s[34:35], 0x0
 ; GFX9-NEXT:    s_mov_b32 s35, external_void_func_v32i32_i32_inreg@abs32@hi

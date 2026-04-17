@@ -2657,7 +2657,6 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; CISI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[8:11], 0
 ; CISI-NEXT:    s_endpgm
 ; CISI-NEXT:  .LBB16_4:
-; CISI-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CISI-NEXT:    s_branch .LBB16_2
 ;
 ; VI-LABEL: sudiv64:
@@ -2800,7 +2799,6 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_branch .LBB16_5
 ; VI-NEXT:  .LBB16_3:
-; VI-NEXT:    ; implicit-def: $sgpr8_sgpr9
 ; VI-NEXT:    s_branch .LBB16_2
 ; VI-NEXT:  .LBB16_4:
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
@@ -2958,7 +2956,6 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ; GFX9-NEXT:  .LBB16_4:
-; GFX9-NEXT:    ; implicit-def: $sgpr8_sgpr9
 ; GFX9-NEXT:    s_branch .LBB16_2
 ;
 ; GFX1010-LABEL: sudiv64:
@@ -3111,7 +3108,6 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1010-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX1010-NEXT:    s_endpgm
 ; GFX1010-NEXT:  .LBB16_4:
-; GFX1010-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX1010-NEXT:    s_branch .LBB16_2
 ;
 ; GFX1030W32-LABEL: sudiv64:
@@ -3264,7 +3260,6 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1030W32-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX1030W32-NEXT:    s_endpgm
 ; GFX1030W32-NEXT:  .LBB16_4:
-; GFX1030W32-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GFX1030W32-NEXT:    s_branch .LBB16_2
 ;
 ; GFX1030W64-LABEL: sudiv64:
@@ -3415,7 +3410,6 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1030W64-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX1030W64-NEXT:    s_endpgm
 ; GFX1030W64-NEXT:  .LBB16_4:
-; GFX1030W64-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GFX1030W64-NEXT:    s_branch .LBB16_2
 ;
 ; GFX11-LABEL: sudiv64:
@@ -3583,7 +3577,6 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB16_4:
-; GFX11-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GFX11-NEXT:    s_branch .LBB16_2
 ;
 ; GFX1250-LABEL: sudiv64:
@@ -3735,7 +3728,6 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ; GFX1250-NEXT:  .LBB16_4:
-; GFX1250-NEXT:    ; implicit-def: $sgpr8_sgpr9
 ; GFX1250-NEXT:    s_branch .LBB16_2
 ;
 ; GFX13-LABEL: sudiv64:

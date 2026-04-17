@@ -1654,7 +1654,6 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GCN-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GCN-NEXT:    s_endpgm
 ; GCN-NEXT:  .LBB8_4:
-; GCN-NEXT:    ; implicit-def: $sgpr8_sgpr9
 ; GCN-NEXT:    s_branch .LBB8_2
 ;
 ; TAHITI-LABEL: srem_i64:
@@ -1973,7 +1972,6 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; TONGA-NEXT:    v_mov_b32_e32 v1, 0
 ; TONGA-NEXT:    s_branch .LBB8_5
 ; TONGA-NEXT:  .LBB8_3:
-; TONGA-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; TONGA-NEXT:    s_branch .LBB8_2
 ; TONGA-NEXT:  .LBB8_4:
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s6
@@ -2998,10 +2996,8 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
 ; GCN-NEXT:    s_branch .LBB10_9
 ; GCN-NEXT:  .LBB10_6:
-; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GCN-NEXT:    s_branch .LBB10_2
 ; GCN-NEXT:  .LBB10_7:
-; GCN-NEXT:    ; implicit-def: $sgpr10_sgpr11
 ; GCN-NEXT:    s_branch .LBB10_5
 ; GCN-NEXT:  .LBB10_8:
 ; GCN-NEXT:    v_mov_b32_e32 v2, s10
@@ -3313,7 +3309,6 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TAHITI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[4:7], 0
 ; TAHITI-NEXT:    s_endpgm
 ; TAHITI-NEXT:  .LBB10_7:
-; TAHITI-NEXT:    ; implicit-def: $vgpr8_vgpr9
 ; TAHITI-NEXT:    s_branch .LBB10_2
 ; TAHITI-NEXT:  .LBB10_8:
 ; TAHITI-NEXT:    s_branch .LBB10_5
@@ -3480,7 +3475,6 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_cndmask_b32_e32 v8, v0, v1, vcc
 ; TONGA-NEXT:    s_branch .LBB10_5
 ; TONGA-NEXT:  .LBB10_3:
-; TONGA-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; TONGA-NEXT:    s_branch .LBB10_2
 ; TONGA-NEXT:  .LBB10_4:
 ; TONGA-NEXT:    v_mov_b32_e32 v9, s7
@@ -5176,10 +5170,8 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
 ; GCN-NEXT:    s_branch .LBB12_9
 ; GCN-NEXT:  .LBB12_6:
-; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GCN-NEXT:    s_branch .LBB12_2
 ; GCN-NEXT:  .LBB12_7:
-; GCN-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GCN-NEXT:    s_branch .LBB12_5
 ; GCN-NEXT:  .LBB12_8:
 ; GCN-NEXT:    v_mov_b32_e32 v2, s18
@@ -5333,7 +5325,6 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, v0, v1, vcc
 ; GCN-NEXT:    s_branch .LBB12_14
 ; GCN-NEXT:  .LBB12_12:
-; GCN-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GCN-NEXT:    s_branch .LBB12_11
 ; GCN-NEXT:  .LBB12_13:
 ; GCN-NEXT:    v_mov_b32_e32 v4, s14
@@ -5487,7 +5478,6 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_cndmask_b32_e32 v6, v0, v1, vcc
 ; GCN-NEXT:    s_branch .LBB12_19
 ; GCN-NEXT:  .LBB12_17:
-; GCN-NEXT:    ; implicit-def: $sgpr10_sgpr11
 ; GCN-NEXT:    s_branch .LBB12_16
 ; GCN-NEXT:  .LBB12_18:
 ; GCN-NEXT:    v_mov_b32_e32 v6, s10
@@ -6088,12 +6078,10 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TAHITI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[4:7], 0
 ; TAHITI-NEXT:    s_endpgm
 ; TAHITI-NEXT:  .LBB12_13:
-; TAHITI-NEXT:    ; implicit-def: $vgpr8_vgpr9
 ; TAHITI-NEXT:    s_branch .LBB12_2
 ; TAHITI-NEXT:  .LBB12_14:
 ; TAHITI-NEXT:    s_branch .LBB12_5
 ; TAHITI-NEXT:  .LBB12_15:
-; TAHITI-NEXT:    ; implicit-def: $vgpr12_vgpr13
 ; TAHITI-NEXT:    s_branch .LBB12_8
 ; TAHITI-NEXT:  .LBB12_16:
 ; TAHITI-NEXT:    s_branch .LBB12_11
@@ -6270,7 +6258,6 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_mov_b32_e32 v9, 0
 ; TONGA-NEXT:    s_branch .LBB12_5
 ; TONGA-NEXT:  .LBB12_3:
-; TONGA-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; TONGA-NEXT:    s_branch .LBB12_2
 ; TONGA-NEXT:  .LBB12_4:
 ; TONGA-NEXT:    v_mov_b32_e32 v9, s7
@@ -6679,7 +6666,6 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:  .LBB12_15:
 ; TONGA-NEXT:    s_branch .LBB12_7
 ; TONGA-NEXT:  .LBB12_16:
-; TONGA-NEXT:    ; implicit-def: $vgpr12_vgpr13
 ; TONGA-NEXT:    s_branch .LBB12_10
 ; TONGA-NEXT:  .LBB12_17:
 ; TONGA-NEXT:    s_branch .LBB12_13

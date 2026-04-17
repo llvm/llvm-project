@@ -49,7 +49,6 @@ define amdgpu_ps float @else2(i32 %z, float %v) #0 {
 ; SI-LABEL: else2:
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v0
-; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; SI-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; SI-NEXT:  ; %bb.1: ; %else
@@ -98,8 +97,6 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
 ; SI-NEXT:    s_cbranch_scc0 .LBB2_6
 ; SI-NEXT:  .LBB2_2: ; %for.body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SI-NEXT:    ; implicit-def: $vgpr3
-; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; SI-NEXT:    s_xor_b32 s2, exec_lo, s2
 ; SI-NEXT:  ; %bb.3: ; %else

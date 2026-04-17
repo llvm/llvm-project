@@ -1225,7 +1225,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX9-NEXT:    s_endpgm
 ; GFX9-NEXT:  .LBB9_4:
-; GFX9-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; GFX9-NEXT:    s_branch .LBB9_2
 ;
 ; GFX10-LABEL: add64_in_branch:
@@ -1248,7 +1247,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB9_4:
-; GFX10-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; GFX10-NEXT:    s_branch .LBB9_2
 ;
 ; GFX11-LABEL: add64_in_branch:

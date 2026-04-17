@@ -40,6 +40,7 @@ private:
   const SIRegisterInfo *TRI = nullptr;
   MachineLoopInfo *MLI = nullptr;
 
+  bool eliminateDeadMeta(MachineFunction &MF) const;
   bool optimizeVccBranch(MachineInstr &MI) const;
   void updateMLIBeforeRemovingEdge(MachineBasicBlock *From,
                                    MachineBasicBlock *To) const;
@@ -156,6 +157,31 @@ void SIPreEmitPeephole::updateMLIBeforeRemovingEdge(
     MLI->removeLoop(llvm::find(*MLI, Loop));
 
   MLI->destroy(Loop);
+}
+
+// Based on dead-mi-elimination.  dead-mi-elimination is not used instead
+// of this code because it is too aggressive at this late stage in the pipeline.
+bool SIPreEmitPeephole::eliminateDeadMeta(MachineFunction &MF) const {
+  LiveRegUnits LivePhysRegs;
+  bool Changed = false;
+  const TargetSubtargetInfo &ST = MF.getSubtarget();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  LivePhysRegs.init(*ST.getRegisterInfo());
+  for (MachineBasicBlock *MBB : post_order(&MF)) {
+    LivePhysRegs.addLiveOuts(*MBB);
+    for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
+      if (MI.isDebugInstr())
+        continue;
+      if (MI.isMetaInstruction() && MI.isDead(MRI, &LivePhysRegs)) {
+        MI.eraseFromParent();
+        Changed = true;
+        continue;
+      }
+      LivePhysRegs.stepBackward(MI);
+    }
+  }
+
+  return Changed;
 }
 
 bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
@@ -840,26 +866,31 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   // side effects.
 
   // Perform the extra MF scans only for supported archs
-  if (!ST.hasGFX940Insts())
-    return Changed;
-  for (MachineBasicBlock &MBB : MF) {
-    // Unpack packed instructions overlapped by MFMAs. This allows the
-    // compiler to co-issue unpacked instructions with MFMA
-    auto SchedModel = TII->getSchedModel();
-    SetVector<MachineInstr *> InstrsToUnpack;
-    for (auto &MI : make_early_inc_range(MBB.instrs())) {
-      if (!SIInstrInfo::isMFMA(MI))
-        continue;
-      const MCSchedClassDesc *SchedClassDesc =
-          SchedModel.resolveSchedClass(&MI);
-      uint16_t NumMFMACycles =
-          SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
-      collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
-    }
-    for (MachineInstr *MI : InstrsToUnpack) {
-      performF32Unpacking(*MI);
+  if (ST.hasGFX940Insts()) {
+    for (MachineBasicBlock &MBB : MF) {
+      // Unpack packed instructions overlapped by MFMAs. This allows the
+      // compiler to co-issue unpacked instructions with MFMA
+      auto SchedModel = TII->getSchedModel();
+      SetVector<MachineInstr *> InstrsToUnpack;
+      for (auto &MI : make_early_inc_range(MBB.instrs())) {
+        if (!SIInstrInfo::isMFMA(MI))
+          continue;
+        const MCSchedClassDesc *SchedClassDesc =
+            SchedModel.resolveSchedClass(&MI);
+        uint16_t NumMFMACycles =
+            SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
+        collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
+      }
+      for (MachineInstr *MI : InstrsToUnpack) {
+        performF32Unpacking(*MI);
+      }
     }
   }
+
+  // optimizeVccBranch can result in blocks that only have a dead IMPLICIT_DEF
+  // and a branch.  Eliminate dead meta instructions so that subsequent
+  // branch-folder pass can simplify this branch.
+  Changed |= eliminateDeadMeta(MF);
 
   return Changed;
 }

@@ -102,7 +102,6 @@ define amdgpu_kernel void @if_call_kernel() #0 {
 ; SDAG-NEXT:    v_or_b32_e32 v31, v0, v2
 ; SDAG-NEXT:    s_mov_b32 s12, s14
 ; SDAG-NEXT:    s_mov_b32 s14, s16
-; SDAG-NEXT:    ; implicit-def: $sgpr15
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; SDAG-NEXT:  .LBB3_2: ; %end
 ; SDAG-NEXT:    s_endpgm
@@ -129,7 +128,6 @@ define amdgpu_kernel void @if_call_kernel() #0 {
 ; GISEL-NEXT:    v_or_b32_e32 v31, v0, v1
 ; GISEL-NEXT:    s_mov_b32 s12, s14
 ; GISEL-NEXT:    s_mov_b32 s14, s16
-; GISEL-NEXT:    ; implicit-def: $sgpr15
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GISEL-NEXT:  .LBB3_2: ; %end
 ; GISEL-NEXT:    s_endpgm

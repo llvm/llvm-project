@@ -3,6 +3,7 @@
 
 ---
 name: skip_waitcnt_vscnt
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_waitcnt_vscnt
   ; CHECK: bb.0:
@@ -33,6 +34,7 @@ body: |
 
 ---
 name: skip_waitcnt_expcnt
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_waitcnt_expcnt
   ; CHECK: bb.0:
@@ -63,6 +65,7 @@ body: |
 
 ---
 name: skip_waitcnt_vmcnt
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_waitcnt_vmcnt
   ; CHECK: bb.0:
@@ -93,6 +96,7 @@ body: |
 
 ---
 name: skip_waitcnt_lgkmcnt
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_waitcnt_lgkmcnt
   ; CHECK: bb.0:
@@ -123,6 +127,7 @@ body: |
 
 ---
 name: skip_wait_idle
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_wait_idle
   ; CHECK: bb.0:
@@ -153,6 +158,7 @@ body: |
 
 ---
 name: skip_bvh
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_bvh
   ; CHECK: bb.0:
@@ -187,6 +193,7 @@ body: |
 
 ---
 name: skip_barrier
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_barrier
   ; CHECK: bb.0:

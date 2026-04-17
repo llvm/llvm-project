@@ -8,6 +8,7 @@
 # GCN-NOT: S_AND_
 # GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -26,6 +27,7 @@ body:             |
 # GCN-NOT: S_AND_
 # GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_imm_vccz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -43,6 +45,7 @@ body:             |
 # GCN-NOT: S_AND_
 # GCN: S_CBRANCH_EXECNZ %bb.1, implicit $exec
 name:            and_execnz_imm_vccnz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -60,6 +63,7 @@ body:             |
 # GCN: $vcc = S_AND_B64 $exec, -1, implicit-def $scc
 # GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_imm_vccz_live_scc
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -78,6 +82,7 @@ body:             |
 # GCN: $vcc = S_AND_B64 $exec, -1, implicit-def $scc
 # GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz_live_scc
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -96,6 +101,7 @@ body:             |
 # GCN:      $sgpr0_sgpr1 = S_MOV_B64 -1
 # GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz_live_sreg
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -114,6 +120,7 @@ body:             |
 # GCN:      $sgpr0_sgpr1 = S_MOV_B64 -1
 # GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz_live_sreg_commute
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -133,6 +140,7 @@ body:             |
 # GCN: $vcc = S_AND_B64 $exec, -1, implicit-def $scc
 # GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz_live_scc_commute
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -152,6 +160,7 @@ body:             |
 # GCN-NOT: S_AND_
 # GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz_commute
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -170,6 +179,7 @@ body:             |
 # GCN:      $exec = S_MOV_B64 -1
 # GCN-NEXT: S_ENDPGM 0
 name:            and_execz_mov_exec_vccz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -188,6 +198,7 @@ body:             |
 # GCN:      $exec = S_MOV_B64 -1
 # GCN-NEXT: S_BRANCH %bb.1{{$}}
 name:            and_execz_mov_exec_vccnz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -207,6 +218,7 @@ body:             |
 # GCN-NEXT: $sgpr2 = S_MOV_B32 $sgpr1
 # GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz_reads_sreg_early
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -227,6 +239,7 @@ body:             |
 # GCN-NEXT: $sgpr2 = S_MOV_B32 $sgpr1
 # GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz_reads_sreg_late
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -247,6 +260,7 @@ body:             |
 # GCN-NEXT: $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
 name:            and_execz_mov_vccz_reads_writes_sreg_early
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -267,6 +281,7 @@ body:             |
 # GCN-NEXT: $sgpr2 = S_MOV_B32 $vcc_lo
 # GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz_reads_cond
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -288,6 +303,7 @@ body:             |
 # GCN-NEXT: $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
 name:            and_execz_mov_vccz_modifies_sreg
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -308,6 +324,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
 # GCN-NEXT: S_ENDPGM 0, implicit $scc
 name:            and_execz_imm_vccz_liveout_scc
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -326,6 +343,7 @@ body:             |
 # W32-NOT: S_AND_
 # W32: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz_w32
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -345,6 +363,7 @@ body:             |
 # GCN-NOT: S_ANDN2_
 # GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            andn2_execz_mov_vccz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -364,6 +383,7 @@ body:             |
 # GCN-NOT: S_ANDN2_
 # GCN: S_BRANCH %bb.1
 name:            andn2_branch_mov_vccz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -383,6 +403,7 @@ body:             |
 # GCN-NOT: S_ANDN2_
 # GCN: S_CBRANCH_EXECNZ %bb.1, implicit $exec
 name:            andn2_execnz_mov_vccnz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -403,6 +424,7 @@ body:             |
 # GCN-NOT: S_CBRANCH
 # GCN-NOT: S_BRANCH
 name:            andn2_no_branch_mov_vccnz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -423,6 +445,7 @@ body:             |
 # GCN: $vcc = S_MOV_B64 0
 # GCN-NEXT: S_BRANCH %bb.1
 name:            and_0_mov
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -443,6 +466,7 @@ body:             |
 # GCN: $vcc = S_MOV_B64 0
 # GCN-NEXT: S_BRANCH %bb.1
 name:            andn2_m1_mov
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -463,6 +487,7 @@ body:             |
 # GCN: $vcc = S_MOV_B64 $exec
 # GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_m1_mov
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -483,6 +508,7 @@ body:             |
 # GCN: $vcc = S_MOV_B64 $exec
 # GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            andn2_0_mov
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -503,6 +529,7 @@ body:             |
 # GCN: S_AND_
 # GCN-NEXT: S_BRANCH %bb.1
 name:            and_0_scc_req
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -523,6 +550,7 @@ body:             |
 # GCN: S_ANDN2_
 # GCN-NEXT: S_BRANCH %bb.1
 name:            andn2_m1_scc_req
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -542,6 +570,7 @@ body:             |
 # GCN-NOT: S_AND_
 # GCN: S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
 name:            and_cmp_vccz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -550,6 +579,7 @@ body:             |
     S_NOP 0
 
   bb.2:
+    liveins: $vgpr0
     V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
@@ -561,6 +591,7 @@ body:             |
 # GCN-NOT: S_AND_
 # GCN: S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
 name:            and_cmp_vccnz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -569,6 +600,7 @@ body:             |
     S_NOP 0
 
   bb.2:
+    liveins: $vgpr0
     V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
@@ -580,6 +612,7 @@ body:             |
 # GCN: $vcc = S_ANDN2_B64 $exec, $vcc, implicit-def dead $scc
 # GCN: S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
 name:            andn2_cmp_vccz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -588,6 +621,7 @@ body:             |
     S_NOP 0
 
   bb.2:
+    liveins: $vgpr0
     V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     $vcc = S_ANDN2_B64 $exec, $vcc, implicit-def dead $scc
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
@@ -599,6 +633,7 @@ body:             |
 # GCN-NOT: S_AND_
 # GCN: S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
 name:            and_cmpclass_vccz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -607,6 +642,7 @@ body:             |
     S_NOP 0
 
   bb.2:
+    liveins: $sgpr0, $vgpr0
     V_CMP_CLASS_F32_e32 killed $sgpr0, killed $vgpr0, implicit-def $vcc, implicit $exec
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
@@ -618,6 +654,7 @@ body:             |
 # GCN-NOT: S_AND_
 # GCN: S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
 name:            and_cmpx_vccz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -626,6 +663,7 @@ body:             |
     S_NOP 0
 
   bb.2:
+    liveins: $vgpr0
     V_CMPX_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit-def $exec, implicit $exec
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
@@ -638,6 +676,7 @@ body:             |
 # GCN: $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
 # GCN: S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
 name:            and_or_cmp_vccz
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -646,6 +685,7 @@ body:             |
     S_NOP 0
 
   bb.2:
+    liveins: $vgpr0, $sgpr0_sgpr1
     V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     $exec = S_OR_B64 $exec, $sgpr0_sgpr1, implicit-def dead $scc
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
@@ -659,6 +699,7 @@ body:             |
 # GCN-NOT: S_
 # GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            issue176578_src0_nonreg
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -678,6 +719,7 @@ body:             |
 # GCN-NOT: S_
 # GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            issue176578_src1_nonreg
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -696,6 +738,7 @@ body:             |
 # GCN: $vcc = S_AND_B64
 # GCN-NEXT: S_CBRANCH_VCCZ %bb.1
 name:            issue176578_nonregs
+tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0

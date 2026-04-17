@@ -5297,7 +5297,6 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
-; GFX7-NEXT:    ; implicit-def: $vgpr1
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX7-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX7-NEXT:  ; %bb.1: ; %ret
@@ -5322,7 +5321,6 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
-; GFX8-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX8-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX8-NEXT:  ; %bb.1: ; %ret

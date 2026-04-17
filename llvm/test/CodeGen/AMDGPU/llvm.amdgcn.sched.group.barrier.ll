@@ -32,7 +32,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
-; GCN-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
 ; GCN-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
@@ -100,7 +99,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr
 ; EXACTCUTOFF-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
-; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
 ; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
@@ -388,7 +386,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v16, 7, v0
-; GCN-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[12:15], v16, s[0:1] offset:32
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
@@ -477,7 +474,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v16, 7, v0
-; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[12:15], v16, s[0:1] offset:32
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
@@ -1324,7 +1320,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GCN-NEXT:    ds_write_b128 v0, a[36:39] offset:16
 ; GCN-NEXT:    ds_write_b128 v0, a[32:35]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s7
-; GCN-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000400) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000400) size(1) SyncID(0)
@@ -1509,7 +1504,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[36:39] offset:16
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[32:35]
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v0, s7
-; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000400) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000400) size(1) SyncID(0)
