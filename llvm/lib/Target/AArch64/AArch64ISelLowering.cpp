@@ -23123,9 +23123,9 @@ static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
 
   // For HI (unsigned >), swap the SUBS operands to obtain LO (unsigned <).
   if (CC == AArch64CC::HI) {
-    Flags = DAG.getNode(AArch64ISD::SUBS, SDLoc(Flags),
-                        DAG.getVTList(VT, FlagsVT),
-                        Flags.getOperand(1), Flags.getOperand(0));
+    Flags =
+        DAG.getNode(AArch64ISD::SUBS, SDLoc(Flags), DAG.getVTList(VT, FlagsVT),
+                    Flags.getOperand(1), Flags.getOperand(0));
     Flags = Flags.getValue(1);
   }
 
