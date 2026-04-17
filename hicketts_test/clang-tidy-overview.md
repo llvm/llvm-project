@@ -56,3 +56,11 @@ check->diag(loc, "message")
 - **Pluggable**: new checks just subclass `ClangTidyCheck` and register in a module — no core changes needed
 - **AST Matcher-based**: most checks are declarative pattern matches over the Clang AST
 - **Hierarchical config**: `.clang-tidy` files cascade up the directory tree, merged by priority
+
+
+Kay TODO next
+- To implement new attributes
+SemaDeclAttr.cpp - define the attribute so clang can parse it [clang/lib/Sema/]
+every FlowSensitive class would need updating to check if that module is meant to be use for a partuclar pass (we can just do this for UncheckedOptional for now) [clang/lib/Analysis/FlowSens
+  itive/Models/]
+Have a look at attributes that are currently implemented in Attr.td [clang/include/Basic]

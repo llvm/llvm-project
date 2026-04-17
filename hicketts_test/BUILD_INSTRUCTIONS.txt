@@ -1,0 +1,60 @@
+LLVM Build Instructions (clang + clang-tools-extra)
+====================================================
+
+Prerequisites:
+- CMake 3.20+
+- C/C++ compiler (Apple Clang or GCC)
+- Python 3.8+
+- Make or Ninja
+
+All commands should be run from the llvm-project root directory.
+
+
+Using Ninja
+-----------
+
+Configure:
+
+  cmake -G "Ninja" -S llvm -B build-llvm \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_ASSERTIONS=ON \
+    -DLLVM_UNREACHABLE_OPTIMIZE=ON \
+    -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" \
+    -DLLVM_FORCE_VC_REPOSITORY=https://github.com/KHicketts/llvm-project
+
+Build:
+
+  ninja -C build-llvm
+
+Install (optional):
+
+  ninja -C build-llvm install
+
+
+Using Make
+----------
+
+Configure:
+
+  cmake -G "Unix Makefiles" -S llvm -B build-llvm \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_ASSERTIONS=ON \
+    -DLLVM_UNREACHABLE_OPTIMIZE=ON \
+    -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" \
+    -DLLVM_FORCE_VC_REPOSITORY=https://github.com/KHicketts/llvm-project
+
+Build (using all available cores):
+
+  make -C build-llvm -j$(sysctl -n hw.ncpu)
+
+Install (optional):
+
+  make -C build-llvm install
+
+
+Notes
+-----
+
+- clang-tidy binary will be at: build-llvm/bin/clang-tidy
+- To do a clean rebuild, remove the build directory: rm -rf build-llvm
+- Ninja is recommended over Make as it is faster and handles parallelism automatically.
