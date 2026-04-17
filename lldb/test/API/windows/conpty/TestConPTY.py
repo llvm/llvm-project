@@ -69,7 +69,9 @@ class ConPTYTestCase(TestBase):
         output = self._run_to_exit("large")
         output_lines = output.split("\r\n")[:-1]
 
-        self.assertEqual(_NUM_LINES, len(output_lines), "Got fewer lines than expected.")
+        self.assertEqual(
+            _NUM_LINES, len(output_lines), "Got fewer lines than expected."
+        )
 
         for i, line in enumerate(output_lines):
             self.assertEqual("line %04d" % i, line)
