@@ -390,21 +390,16 @@ namespace Destructors {
   }
   static_assert(E() == 1, "");
 
-
-  /// FIXME: This should be rejected, since we call the destructor
-  ///   twice. However, GCC doesn't care either.
   constexpr int ManualDtor() {
     int i = 0;
     {
-      Inc I(i); // ref-note {{destroying object 'I' whose lifetime has already ended}}
+      Inc I(i); // both-note {{destroying object 'I' whose lifetime has already ended}}
       I.~Inc();
     }
     return i;
   }
-  static_assert(ManualDtor() == 1, ""); // expected-error {{static assertion failed}} \
-                                        // expected-note {{evaluates to '2 == 1'}} \
-                                        // ref-error {{not an integral constant expression}} \
-                                        // ref-note {{in call to 'ManualDtor()'}}
+  static_assert(ManualDtor() == 1, ""); // both-error {{not an integral constant expression}} \
+                                        // both-note {{in call to 'ManualDtor()'}}
 
   constexpr void doInc(int &i) {
     Inc I(i);
@@ -562,6 +557,22 @@ namespace Destructors {
 
   constexpr Outer O;
   static_assert(O.bar() == 12);
+
+  struct S {
+    int a;
+    constexpr ~S() {}
+  };
+
+  constexpr int foo() {
+    S s; // both-note {{declared here}}
+    s.a = 10;
+    s.~S();
+    s.a = 11; // both-note {{assignment to object outside its lifetime}}
+    return 20;
+  }
+  static_assert(foo() == 20); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
+
 }
 
 namespace BaseAndFieldInit {

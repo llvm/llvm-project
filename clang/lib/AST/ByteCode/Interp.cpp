@@ -1506,6 +1506,22 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   return false;
 }
 
+static bool diagnoseOutOfLifetimeDestroy(InterpState &S, CodePtr OpPC,
+                                         const Pointer &Ptr) {
+  assert(Ptr.getLifetime() != Lifetime::Started);
+  // Try to use the declaration for better diagnostics
+  if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
+    auto *ND = cast<NamedDecl>(D);
+    S.FFDiag(ND->getLocation(), diag::note_constexpr_destroy_out_of_lifetime)
+        << ND->getNameAsString();
+  } else {
+    S.FFDiag(Ptr.getDeclDesc()->getLocation(),
+             diag::note_constexpr_destroy_out_of_lifetime)
+        << Ptr.toDiagnosticString(S.getASTContext());
+  }
+  return false;
+}
+
 bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Destroy))
     return false;
@@ -1513,8 +1529,11 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Destroy))
     return false;
-  if (!CheckLifetime(S, OpPC, Ptr, AK_Destroy))
-    return false;
+
+  if (Ptr.getLifetime() == Lifetime::Destroyed)
+    return diagnoseOutOfLifetimeDestroy(S, OpPC, Ptr);
+  if (Ptr.getLifetime() == Lifetime::Ended)
+    return CheckLifetime(S, OpPC, Ptr, AK_Destroy);
 
   // Can't call a dtor on a global variable.
   if (Ptr.block()->isStatic()) {
@@ -1954,11 +1973,11 @@ bool StartLifetime(InterpState &S, CodePtr OpPC) {
 
 // FIXME: It might be better to the recursing as part of the generated code for
 // a destructor?
-static void endLifetimeRecurse(const Pointer &Ptr) {
+static void setLifeStateRecurse(const Pointer &Ptr, Lifetime L) {
   if (const Record *R = Ptr.getRecord()) {
-    Ptr.endLifetime();
+    Ptr.setLifeState(L);
     for (const Record::Field &Fi : R->fields())
-      endLifetimeRecurse(Ptr.atField(Fi.Offset));
+      setLifeStateRecurse(Ptr.atField(Fi.Offset), L);
     return;
   }
 
@@ -1967,11 +1986,11 @@ static void endLifetimeRecurse(const Pointer &Ptr) {
     // No endLifetime() for array roots.
     assert(Ptr.getLifetime() == Lifetime::Started);
     for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I)
-      endLifetimeRecurse(Ptr.atIndex(I).narrow());
+      setLifeStateRecurse(Ptr.atIndex(I).narrow(), L);
     return;
   }
 
-  Ptr.endLifetime();
+  Ptr.setLifeState(L);
 }
 
 /// Ends the lifetime of the peek'd pointer.
@@ -1980,7 +1999,7 @@ bool EndLifetime(InterpState &S, CodePtr OpPC) {
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
 
-  endLifetimeRecurse(Ptr.narrow());
+  setLifeStateRecurse(Ptr.narrow(), Lifetime::Ended);
   return true;
 }
 
@@ -1990,7 +2009,16 @@ bool EndLifetimePop(InterpState &S, CodePtr OpPC) {
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
 
-  endLifetimeRecurse(Ptr.narrow());
+  setLifeStateRecurse(Ptr.narrow(), Lifetime::Ended);
+  return true;
+}
+
+bool MarkDestroyed(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
+    return false;
+
+  setLifeStateRecurse(Ptr.narrow(), Lifetime::Destroyed);
   return true;
 }
 
@@ -2489,20 +2517,8 @@ bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
     if (!S.Current->getLocalBlock(Local.Offset)->isInitialized())
       continue;
     const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
-    if (Ptr.getLifetime() == Lifetime::Ended) {
-      // Try to use the declaration for better diagnostics
-      if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
-        auto *ND = cast<NamedDecl>(D);
-        S.FFDiag(ND->getLocation(),
-                 diag::note_constexpr_destroy_out_of_lifetime)
-            << ND->getNameAsString();
-      } else {
-        S.FFDiag(Ptr.getDeclDesc()->getLocation(),
-                 diag::note_constexpr_destroy_out_of_lifetime)
-            << Ptr.toDiagnosticString(S.getASTContext());
-      }
-      return false;
-    }
+    if (Ptr.getLifetime() == Lifetime::Ended)
+      return diagnoseOutOfLifetimeDestroy(S, OpPC, Ptr);
   }
 
   S.Current->destroy(I);
