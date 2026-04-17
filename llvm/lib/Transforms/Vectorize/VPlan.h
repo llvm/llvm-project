@@ -2846,14 +2846,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool usesFirstLaneOnly(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    // Recursing through Blend recipes only, must terminate at header phi's the
-    // latest.
-    return all_of(users(),
-                  [this](VPUser *U) { return U->usesFirstLaneOnly(this); });
-  }
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
