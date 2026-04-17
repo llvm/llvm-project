@@ -48,7 +48,7 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI,
       LAI(LAI), LI(LI), DT(DT), SE(SE) {}
 
 void LoopVersioning::versionLoop(
-    const SmallVectorImpl<Instruction *> &DefsUsedOutside) {
+    const SmallVectorImpl<Instruction *> &DefsUsedOutside, Instruction *UserRuntimeCheck) {
   assert(VersionedLoop->getUniqueExitBlock() && "No single exit block");
   assert(VersionedLoop->isLoopSimplifyForm() &&
          "Loop is not in loop-simplify form");
@@ -59,27 +59,37 @@ void LoopVersioning::versionLoop(
 
   // Add the memcheck in the original preheader (this is empty initially).
   BasicBlock *RuntimeCheckBB = VersionedLoop->getLoopPreheader();
-  const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
 
-  SCEVExpander Exp2(*RtPtrChecking.getSE(), "induction");
-  MemRuntimeCheck = addRuntimeChecks(RuntimeCheckBB->getTerminator(),
-                                     VersionedLoop, AliasChecks, Exp2);
+  if (!UserRuntimeCheck) {
+    const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
 
-  SCEVExpander Exp(*SE, "scev.check");
-  SCEVRuntimeCheck =
-      Exp.expandCodeForPredicate(&Preds, RuntimeCheckBB->getTerminator());
+    SCEVExpander Exp2(*RtPtrChecking.getSE(), "induction");
+    MemRuntimeCheck = addRuntimeChecks(RuntimeCheckBB->getTerminator(),
+                                      VersionedLoop, AliasChecks, Exp2);
+    SCEVExpander Exp(*SE, "scev.check");
+    SCEVRuntimeCheck =
+        Exp.expandCodeForPredicate(&Preds, RuntimeCheckBB->getTerminator());
+
+    IRBuilder<InstSimplifyFolder> Builder(
+        RuntimeCheckBB->getContext(),
+        InstSimplifyFolder(RuntimeCheckBB->getDataLayout()));
+    if (MemRuntimeCheck && SCEVRuntimeCheck) {
+      Builder.SetInsertPoint(RuntimeCheckBB->getTerminator());
+      RuntimeCheck =
+          Builder.CreateOr(MemRuntimeCheck, SCEVRuntimeCheck, "lver.safe");
+    } else
+      RuntimeCheck = MemRuntimeCheck ? MemRuntimeCheck : SCEVRuntimeCheck;
+
+    Exp.eraseDeadInstructions(SCEVRuntimeCheck);
+  }
+  else {
+    RuntimeCheck = UserRuntimeCheck;
+    RuntimeCheckBB = UserRuntimeCheck->getParent();
+  }
 
   IRBuilder<InstSimplifyFolder> Builder(
       RuntimeCheckBB->getContext(),
       InstSimplifyFolder(RuntimeCheckBB->getDataLayout()));
-  if (MemRuntimeCheck && SCEVRuntimeCheck) {
-    Builder.SetInsertPoint(RuntimeCheckBB->getTerminator());
-    RuntimeCheck =
-        Builder.CreateOr(MemRuntimeCheck, SCEVRuntimeCheck, "lver.safe");
-  } else
-    RuntimeCheck = MemRuntimeCheck ? MemRuntimeCheck : SCEVRuntimeCheck;
-
-  Exp.eraseDeadInstructions(SCEVRuntimeCheck);
 
   assert(RuntimeCheck && "called even though we don't need "
                          "any runtime checks");

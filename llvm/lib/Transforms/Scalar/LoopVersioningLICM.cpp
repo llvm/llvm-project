@@ -70,19 +70,23 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 
 using namespace llvm;
@@ -116,8 +120,8 @@ struct LoopVersioningLICM {
   LoopVersioningLICM(AliasAnalysis *AA, ScalarEvolution *SE,
                      OptimizationRemarkEmitter *ORE,
                      LoopAccessInfoManager &LAIs, LoopInfo &LI,
-                     Loop *CurLoop)
-      : AA(AA), SE(SE), LAIs(LAIs), LI(LI), CurLoop(CurLoop),
+                     AssumptionCache *AC, Loop *CurLoop)
+      : AA(AA), SE(SE), LAIs(LAIs), LI(LI), AC(AC), CurLoop(CurLoop),
         LoopDepthThreshold(LVLoopDepthThreshold),
         InvariantThreshold(LVInvarThreshold), ORE(ORE) {}
 
@@ -138,8 +142,16 @@ private:
 
   LoopInfo &LI;
 
+  AssumptionCache *AC;
+
   // The current loop we are working on.
   Loop *CurLoop;
+
+  // Dynamic bound marker.
+  bool IsDynamicBound = false;
+
+  // Hoistable dependencies
+  SmallVector<Instruction *, 16> HoistedDependencies;
 
   // Maximum loop nest threshold
   unsigned LoopDepthThreshold;
@@ -156,6 +168,9 @@ private:
   // Read only loop marker.
   bool IsReadOnlyLoop = true;
 
+  // Placeholder instruction for inserting runtime checks in the preheader.
+  Instruction *PlaceholderForRuntimeChecks = nullptr;
+
   // OptimizationRemarkEmitter
   OptimizationRemarkEmitter *ORE;
 
@@ -165,6 +180,10 @@ private:
   bool legalLoopMemoryAccesses();
   bool isLoopAlreadyVisited();
   bool instructionSafeForVersioning(Instruction *I);
+  bool isSafeToHoistBoundDep(Instruction *I,
+                              const SmallPtrSetImpl<Value *> &ModifiedPtrs);
+  Instruction *insertRuntimeCheckPlaceholder(Loop *L);
+  void generateAndAddRuntimeChecks(DominatorTree *DT);
 };
 
 } // end anonymous namespace
@@ -213,10 +232,122 @@ bool LoopVersioningLICM::legalLoopStructure() {
   // to generate the bound checks.
   const SCEV *ExitCount = SE->getBackedgeTakenCount(CurLoop);
   if (isa<SCEVCouldNotCompute>(ExitCount)) {
+    IsDynamicBound = true;
     LLVM_DEBUG(dbgs() << "    loop does not have trip count\n");
+    LLVM_DEBUG(dbgs() << "    checking the possibility of dynamic trip count\n");
+
+    HoistedDependencies.clear();
+
+    // Check if the loop trip count is dynamic
+    BasicBlock *ExitBlock = CurLoop->getExitingBlock();
+    assert(ExitBlock && "Exiting block guaranteed by earlier getExitingBlock() check");
+    CondBrInst *ExitBranch = dyn_cast<CondBrInst>(ExitBlock->getTerminator());
+    if (!ExitBranch) {
+      LLVM_DEBUG(dbgs() << "    loop exit condition is not a conditional branch\n");
+      return false;
+    }
+    ICmpInst *ExitCmp = dyn_cast<ICmpInst>(ExitBranch->getCondition());
+    if (!ExitCmp) {
+      LLVM_DEBUG(dbgs() << "    loop exit condition is not an icmp instruction\n");
+      return false;
+    }
+    
+    PHINode *IndVar = CurLoop->getInductionVariable(*SE);
+    if (!IndVar) {
+      LLVM_DEBUG(dbgs() << "    unable to find loop induction variable\n");
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "    Induction variable: " << *IndVar << "\n");
+
+    Value *StepInst = IndVar->getIncomingValueForBlock(CurLoop->getLoopLatch());
+
+    auto IsIVOrStep = [&](Value *V) {
+      return V == IndVar || V == StepInst;
+    };
+
+    Value *DynamicUpperBound = nullptr;
+    if (IsIVOrStep(ExitCmp->getOperand(0))) {
+      DynamicUpperBound = ExitCmp->getOperand(1);
+    }
+    else if (IsIVOrStep(ExitCmp->getOperand(1))) {
+      DynamicUpperBound = ExitCmp->getOperand(0);
+    }
+    else {
+      LLVM_DEBUG(dbgs() << "    unable to identify dynamic bound operand\n");
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "    Dynamic upper bound: " << *DynamicUpperBound
+                      << "\n");
+    
+    SmallVector<Instruction *, 16> Worklist;
+    
+    SmallPtrSet<Value *, 16> ModifiedPtrs;
+    for (BasicBlock *BB : CurLoop->getBlocks()) {
+      for (Instruction &I : *BB) {
+        if (StoreInst *SI = dyn_cast<StoreInst>(&I))
+          ModifiedPtrs.insert(SI->getPointerOperand());
+      }
+    }
+
+    if (Instruction *I = dyn_cast<Instruction>(DynamicUpperBound)) {
+      Worklist.push_back(I);
+    }
+    
+    SmallPtrSet<Instruction *, 16> Visited;
+
+    while(!Worklist.empty()) {
+      Instruction *I = Worklist.pop_back_val();
+      if (!Visited.insert(I).second)
+        continue;
+
+      if (!CurLoop->contains(I->getParent()))
+        continue;
+
+      if (!isSafeToHoistBoundDep(I, ModifiedPtrs))
+        return false;
+
+      for (Use &U : I->operands()) {
+        if (Instruction *OpI = dyn_cast<Instruction>(U.get())) {
+          if (CurLoop->contains(OpI)) {
+            Worklist.push_back(OpI);
+          }
+        }
+      }
+
+      HoistedDependencies.push_back(I);
+    }
+    return true;
+  }
+  return true;
+}
+
+/// Check if an instruction in the dynamic bound dependency chain is safe to
+/// hoist. Only side-effect-free arithmetic, bitwise, cast, GEP,
+/// and simple load instructions are allowed.
+bool LoopVersioningLICM::isSafeToHoistBoundDep(
+  Instruction *I, const SmallPtrSetImpl<Value *> &ModifiedPtrs) {
+if (auto *LI = dyn_cast<LoadInst>(I)) {
+  if (!LI->isSimple()) {
+    LLVM_DEBUG(dbgs() << "    Found a non-simple load, as a dependency"
+                         " of exit condition\n");
+    return false;
+  }
+  Value *Ptr = LI->getPointerOperand();
+  if (ModifiedPtrs.count(Ptr)) {
+    LLVM_DEBUG(dbgs() << "    Bound candidate is invalid - pointer is"
+                         " stored to within loop: " << *LI << "\n");
     return false;
   }
   return true;
+}
+
+if (I->isBinaryOp() || I->isUnaryOp() || I->isCast() || isa<GetElementPtrInst>(I)) {
+  LLVM_DEBUG(dbgs() << "    Bound candidate is valid - " << *I << "\n");
+  return true;
+}
+
+LLVM_DEBUG(dbgs() << "    Bound candidate is invalid - unsupported instruction: " << *I << "\n");
+return false;
 }
 
 /// Check memory accesses in loop and confirms it's good for
@@ -413,7 +544,7 @@ bool LoopVersioningLICM::legalLoopInstructions() {
     LLVM_DEBUG(dbgs() << "    Found a read-only loop!\n");
     return false;
   }
-  // Profitability check:
+  // Profitablity check:
   // Check invariant threshold, should be in limit.
   if (InvariantCounter * 100 < InvariantThreshold * LoadAndStoreCounter) {
     LLVM_DEBUG(
@@ -507,38 +638,148 @@ bool LoopVersioningLICM::isLegalForVersioning() {
   return true;
 }
 
+Instruction *LoopVersioningLICM::insertRuntimeCheckPlaceholder(Loop *L) {
+  // Preheader for our checks
+  BasicBlock *Preheader = L->getLoopPreheader();
+
+  // Determine the insertion point.
+  Instruction *InsertPt = Preheader->getTerminator();
+  LLVMContext &Context = CurLoop->getHeader()->getParent()->getContext();
+  // Create the comparison.
+  Instruction *Placeholder = nullptr;
+  Placeholder = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ,
+                                 ConstantInt::get(Type::getInt32Ty(Context), 1),
+                                 ConstantInt::get(Type::getInt32Ty(Context), 1),
+                                 "runtime.check.placeholder", InsertPt->getIterator());
+
+  return Placeholder;
+}
+
+void LoopVersioningLICM::generateAndAddRuntimeChecks(DominatorTree *DT) {
+  BasicBlock *RuntimeCheckBB = PlaceholderForRuntimeChecks->getParent();
+
+  const auto &RtPtrChecking = *LAI->getRuntimePointerChecking();
+
+  SCEVExpander Exp1(*RtPtrChecking.getSE(), "induction");
+  
+  auto RPC = LAI->getRuntimePointerChecking();
+
+  Value *MemRuntimeChecks = llvm::addRuntimeChecks(PlaceholderForRuntimeChecks, 
+    CurLoop, RPC->getChecks(), Exp1);
+
+  SCEVExpander Exp2(*SE, "scev.check");
+  
+  const SCEVPredicate &Preds(LAI->getPSE().getPredicate());
+  Value *SCEVRuntimeChecks = Exp2.expandCodeForPredicate(&Preds, PlaceholderForRuntimeChecks);
+
+  IRBuilder<InstSimplifyFolder> Builder(RuntimeCheckBB->getContext(), 
+                InstSimplifyFolder(RuntimeCheckBB->getModule()->getDataLayout()));
+  
+  Value *RuntimeCheck = nullptr;
+  if (MemRuntimeChecks && SCEVRuntimeChecks) {
+    Builder.SetInsertPoint(PlaceholderForRuntimeChecks);
+    RuntimeCheck = Builder.CreateOr(MemRuntimeChecks, SCEVRuntimeChecks, "lver.safe");
+  } else {
+    RuntimeCheck = MemRuntimeChecks ? MemRuntimeChecks : SCEVRuntimeChecks;
+  }
+
+  RuntimeCheckBB->setName(CurLoop->getHeader()->getName() + ".lver.check");
+
+  CondBrInst *BI = dyn_cast<CondBrInst>(RuntimeCheckBB->getTerminator());
+  assert(BI && "Expected conditional branch in runtime check block");
+
+  assert(RuntimeCheck && "called even though we don't need "
+    "any runtime checks");
+
+  PlaceholderForRuntimeChecks->replaceAllUsesWith(RuntimeCheck);
+  PlaceholderForRuntimeChecks->eraseFromParent();
+}
+
 bool LoopVersioningLICM::run(DominatorTree *DT) {
   // Do not do the transformation if disabled by metadata.
   if (hasLICMVersioningTransformation(CurLoop) & TM_Disable)
     return false;
-
   bool Changed = false;
-
   // Check feasiblity of LoopVersioningLICM.
   // If versioning found to be feasible and beneficial then proceed
   // else simply return, by cleaning up memory.
   if (isLegalForVersioning()) {
+    PlaceholderForRuntimeChecks = nullptr;
+    if (IsDynamicBound) {
+      PlaceholderForRuntimeChecks = insertRuntimeCheckPlaceholder(CurLoop);
+      if (!PlaceholderForRuntimeChecks) {
+        LLVM_DEBUG(dbgs() << "No runtime check created\n");
+        return false;
+      }
+    }
     // Do loop versioning.
     // Create memcheck for memory accessed inside loop.
     // Clone original loop, and set blocks properly.
     LoopVersioning LVer(*LAI, LAI->getRuntimePointerChecking()->getChecks(),
                         CurLoop, &LI, DT, SE);
-    LVer.versionLoop();
+    LVer.versionLoop(PlaceholderForRuntimeChecks);
+    
+    // Add the extra checks for dynamic bounds
+    if (IsDynamicBound) {
+      for (auto p = HoistedDependencies.rbegin(); p != HoistedDependencies.rend(); ++p) {
+        Instruction *I = *p;
+        if (isa<LoadInst>(I)) {
+          // Clone the load to the preheader instead of moving it. The original
+          // dead load is intentionally kept in the loop body so that the subsequent LAA recomputation sees 
+          // the load and generates runtime pointer checks for its address range. The cleanup passes will erase it later. 
+          LoadInst *LI = cast<LoadInst>(I);
+          LoadInst *NewLI = new LoadInst(
+            LI->getType(), LI->getPointerOperand(), LI->getName() + ".hoisted",
+            false, LI->getAlign(), LI->getOrdering(), LI->getSyncScopeID(),
+            PlaceholderForRuntimeChecks->getIterator()
+          );
+
+          NewLI->copyMetadata(*I);
+          I->replaceAllUsesWith(NewLI);
+        } else {
+          I->moveBefore(PlaceholderForRuntimeChecks->getIterator());
+        }
+      }
+
+// #ifdef EXPENSIVE_CHECKS
+      assert(!verifyFunction(*LVer.getVersionedLoop()->getHeader()->getParent(), &dbgs())
+             && "Verification failure after dynamic bounds");
+// #endif
+
+      SE->forgetLoop(CurLoop);
+      // Recompute LoopAccessInfo after hoisting the dynamic bound
+      LoopAccessInfoManager FreshLAIs(*SE, *AA, *DT, LI, nullptr, nullptr, AC);
+      LAI = &FreshLAIs.getInfo(*CurLoop);
+
+      generateAndAddRuntimeChecks(DT);
+
+// #ifdef EXPENSIVE_CHECKS
+      assert(!verifyFunction(*LVer.getVersionedLoop()->getHeader()->getParent(), &dbgs())
+             && "Verification failure after runtime checks");
+// #endif
+
+      // LAI isn't used anymore, so clear it to avoid dangling reference
+      LAI = nullptr;
+    }
     // Set Loop Versioning metaData for original loop.
     addStringMetadataToLoop(LVer.getNonVersionedLoop(), LICMVersioningMetaData);
     // Set Loop Versioning metaData for version loop.
     addStringMetadataToLoop(LVer.getVersionedLoop(), LICMVersioningMetaData);
+
     // Set "llvm.mem.parallel_loop_access" metaData to versioned loop.
     // FIXME: "llvm.mem.parallel_loop_access" annotates memory access
     // instructions, not loops.
     addStringMetadataToLoop(LVer.getVersionedLoop(),
                             "llvm.mem.parallel_loop_access");
+
     // Update version loop with aggressive aliasing assumption.
     LVer.annotateLoopWithNoAlias();
     Changed = true;
   }
   return Changed;
 }
+
+namespace llvm {
 
 PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &LAR,
@@ -550,7 +791,8 @@ PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
   OptimizationRemarkEmitter ORE(F);
 
   LoopAccessInfoManager LAIs(*SE, *AA, *DT, LAR.LI, nullptr, nullptr, &LAR.AC);
-  if (!LoopVersioningLICM(AA, SE, &ORE, LAIs, LAR.LI, &L).run(DT))
+  if (!LoopVersioningLICM(AA, SE, &ORE, LAIs, LAR.LI, &LAR.AC, &L).run(DT))
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();
 }
+} // namespace llvm
