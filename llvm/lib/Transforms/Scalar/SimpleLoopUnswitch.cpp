@@ -591,6 +591,35 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
     }
   }
 
+  std::optional<int> LatchIdx = std::nullopt;
+  if (BI.getSuccessor(0) == L.getLoopLatch() && L.contains(BI.getSuccessor(1))) {
+    LatchIdx = 0;
+  }
+  if (BI.getSuccessor(1) == L.getLoopLatch() && L.contains(BI.getSuccessor(0))) {
+    LatchIdx = 1;
+  }
+
+  bool ModifiedBranch = false;
+  if (LatchIdx && FullUnswitch &&
+      !llvm::any_of(*L.getLoopLatch(), [](Instruction &I) { return I.mayHaveSideEffects(); }) &&
+      areLoopExitPHIsLoopInvariant(L, *L.getLoopLatch(), *L.getUniqueLatchExitBlock())) {
+
+    SmallVector<cfg::Update<BasicBlock *>, 2> Updates;
+    Updates.push_back({cfg::UpdateKind::Delete, BI.getParent(), BI.getSuccessor(*LatchIdx)});
+    Updates.push_back({cfg::UpdateKind::Insert,  BI.getParent(), L.getUniqueLatchExitBlock()});
+    BI.setSuccessor(*LatchIdx, L.getUniqueLatchExitBlock());
+    for (PHINode &PN : L.getUniqueLatchExitBlock()->phis()) {
+      Value *V = PN.getIncomingValueForBlock(L.getLoopLatch());
+      PN.addIncoming(V, BI.getParent());
+    }
+    //L.getLoopLatch()->removePredecessor(BI.getParent());
+    DT.applyUpdates(Updates);
+    if (MSSAU)
+      MSSAU->applyUpdates(Updates, DT);
+    ModifiedBranch = true;
+  }
+
+
   // Check that one of the branch's successors exits, and which one.
   bool ExitDirection = true;
   int LoopExitSuccIdx = 0;
@@ -606,7 +635,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   }
   auto *ContinueBB = BI.getSuccessor(1 - LoopExitSuccIdx);
   auto *ParentBB = BI.getParent();
-  if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
+  if (!ModifiedBranch && !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
     LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
     return false;
   }
