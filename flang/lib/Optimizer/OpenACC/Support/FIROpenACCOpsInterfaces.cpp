@@ -17,9 +17,40 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace fir::acc {
+
+mlir::Value ReductionInitOpFortranObjectViewModel::getViewSource(
+    mlir::Operation *op, mlir::OpResult resultView) const {
+  assert(resultView.getOwner() == op && "result value must be the op's result");
+  assert(op->getNumResults() == 1 &&
+         "definition of acc.reduction_init changed");
+  auto iface = mlir::cast<mlir::RegionBranchOpInterface>(op);
+  llvm::SmallVector<mlir::Value, 1> resultValues;
+  iface.getPredecessorValues(mlir::RegionSuccessor::parent(), /*index=*/0,
+                             resultValues);
+  assert(!resultValues.empty() &&
+         "acc.reduction_init's result must have at least one possible value");
+  mlir::Value passThroughValue;
+  for (mlir::Value v : resultValues) {
+    if (!passThroughValue) {
+      passThroughValue = v;
+      continue;
+    }
+    assert(passThroughValue == v &&
+           "acc.reduction_init must return the same allocation");
+  }
+  return passThroughValue;
+}
+
+std::optional<std::int64_t>
+ReductionInitOpFortranObjectViewModel::getViewOffset(
+    mlir::Operation *op, mlir::OpResult resultView) const {
+  assert(resultView.getOwner() == op && "result value must be the op's result");
+  return 0;
+}
 
 template <>
 mlir::Value PartialEntityAccessModel<fir::ArrayCoorOp>::getBaseEntity(
@@ -185,6 +216,23 @@ void IndirectGlobalAccessModel<fir::TypeDescOp>::getReferencedSymbols(
 }
 
 template <>
+void IndirectGlobalAccessModel<fir::UseStmtOp>::getReferencedSymbols(
+    mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+    mlir::SymbolTable *symbolTable) const {
+  auto useStmtOp = mlir::cast<fir::UseStmtOp>(op);
+  if (auto onlySymbols = useStmtOp.getOnlySymbols()) {
+    for (auto attr : *onlySymbols)
+      if (auto symRef = mlir::dyn_cast<mlir::SymbolRefAttr>(attr))
+        symbols.push_back(symRef);
+  }
+  if (auto renames = useStmtOp.getRenames()) {
+    for (auto attr : *renames)
+      if (auto renameAttr = mlir::dyn_cast<fir::UseRenameAttr>(attr))
+        symbols.push_back(renameAttr.getSymbol());
+  }
+}
+
+template <>
 bool OperationMoveModel<mlir::acc::LoopOp>::canMoveFromDescendant(
     mlir::Operation *op, mlir::Operation *descendant,
     mlir::Operation *candidate) const {
@@ -196,7 +244,7 @@ bool OperationMoveModel<mlir::acc::LoopOp>::canMoveFromDescendant(
 template <>
 bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
     mlir::Operation *op, mlir::Operation *candidate) const {
-  // TODO: disallow moving operations, which have operands that are referenced
+  // Disallow moving operations, which have operands that are referenced
   // in the data operands (e.g. in [first]private() etc.) of the acc.loop.
   // For example:
   //   %17 = acc.private var(%16 : !fir.box<!fir.array<?xf32>>)
@@ -205,9 +253,23 @@ bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
   //   }
   // We cannot hoist %19 without violating assumptions that OpenACC
   // transformations rely on.
-  //
-  // Always return false in the initial implementation.
-  return false;
+
+  // In general, some movement out of acc.loop is allowed,
+  // so return true if candidate is nullptr.
+  if (!candidate)
+    return true;
+
+  auto loopOp = mlir::cast<mlir::acc::LoopOp>(op);
+  unsigned numDataOperands = loopOp.getNumDataOperands();
+  for (unsigned i = 0; i < numDataOperands; ++i) {
+    mlir::Value dataOperand = loopOp.getDataOperand(i);
+    if (llvm::any_of(candidate->getOperands(),
+                     [&](mlir::Value candidateOperand) {
+                       return dataOperand == candidateOperand;
+                     }))
+      return false;
+  }
+  return true;
 }
 
 } // namespace fir::acc

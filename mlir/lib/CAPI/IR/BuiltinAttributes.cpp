@@ -175,6 +175,29 @@ uint64_t mlirIntegerAttrGetValueUInt(MlirAttribute attr) {
   return llvm::cast<IntegerAttr>(unwrap(attr)).getUInt();
 }
 
+unsigned mlirIntegerAttrGetValueBitWidth(MlirAttribute attr) {
+  return llvm::cast<IntegerAttr>(unwrap(attr)).getValue().getBitWidth();
+}
+
+unsigned mlirIntegerAttrGetValueNumWords(MlirAttribute attr) {
+  return llvm::cast<IntegerAttr>(unwrap(attr)).getValue().getNumWords();
+}
+
+void mlirIntegerAttrGetValueWords(MlirAttribute attr, uint64_t *words) {
+  const APInt &value = llvm::cast<IntegerAttr>(unwrap(attr)).getValue();
+  unsigned numWords = value.getNumWords();
+  const uint64_t *rawData = value.getRawData();
+  std::copy(rawData, rawData + numWords, words);
+}
+
+MlirAttribute mlirIntegerAttrGetFromWords(MlirType type, unsigned numWords,
+                                          const uint64_t *words) {
+  Type mlirType = unwrap(type);
+  unsigned bitWidth = mlirType.getIntOrFloatBitWidth();
+  APInt value(bitWidth, ArrayRef<uint64_t>(words, numWords));
+  return wrap(IntegerAttr::get(mlirType, value));
+}
+
 MlirTypeID mlirIntegerAttrGetTypeID(void) {
   return wrap(IntegerAttr::getTypeID());
 }
@@ -324,7 +347,7 @@ MlirTypeID mlirSymbolRefAttrGetTypeID(void) {
   return wrap(SymbolRefAttr::getTypeID());
 }
 
-MlirAttribute mlirDisctinctAttrCreate(MlirAttribute referencedAttr) {
+MlirAttribute mlirDistinctAttrCreate(MlirAttribute referencedAttr) {
   return wrap(mlir::DistinctAttr::create(unwrap(referencedAttr)));
 }
 
@@ -536,8 +559,13 @@ bool mlirAttributeIsADenseFPElements(MlirAttribute attr) {
   return llvm::isa<DenseFPElementsAttr>(unwrap(attr));
 }
 
+MlirTypeID mlirDenseTypedElementsAttrGetTypeID(void) {
+  return wrap(DenseTypedElementsAttr::getTypeID());
+}
+
+// Deprecated API. Will be removed in the future.
 MlirTypeID mlirDenseIntOrFPElementsAttrGetTypeID(void) {
-  return wrap(DenseIntOrFPElementsAttr::getTypeID());
+  return mlirDenseTypedElementsAttrGetTypeID();
 }
 
 //===----------------------------------------------------------------------===//
@@ -559,9 +587,7 @@ MlirAttribute mlirDenseElementsAttrRawBufferGet(MlirType shapedType,
   auto shapedTypeCpp = llvm::cast<ShapedType>(unwrap(shapedType));
   ArrayRef<char> rawBufferCpp(static_cast<const char *>(rawBuffer),
                               rawBufferSize);
-  bool isSplat = false;
-  if (!DenseElementsAttr::isValidRawBuffer(shapedTypeCpp, rawBufferCpp,
-                                           isSplat))
+  if (!DenseElementsAttr::isValidRawBuffer(shapedTypeCpp, rawBufferCpp))
     return mlirAttributeGetNull();
   return wrap(DenseElementsAttr::getFromRawBuffer(shapedTypeCpp, rawBufferCpp));
 }

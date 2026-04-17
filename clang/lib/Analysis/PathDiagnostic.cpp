@@ -564,6 +564,7 @@ getLocationForCaller(const StackFrameContext *SFC,
   case CFGElement::CleanupFunction:
     llvm_unreachable("not yet implemented!");
   case CFGElement::LifetimeEnds:
+  case CFGElement::FullExprCleanup:
   case CFGElement::LoopExit:
     llvm_unreachable("CFGElement kind should not be on callsite!");
   }

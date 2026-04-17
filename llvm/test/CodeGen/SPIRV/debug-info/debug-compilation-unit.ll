@@ -30,8 +30,8 @@
 ; CHECK-SPIRV: [[debug_source_cpp:%[0-9]+]] = OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugSource [[filename_str_cpp]]
 ; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugCompilationUnit [[debug_info_version]] [[dwarf_version]] [[debug_source_cpp]] [[source_language_cpp]]
 
-; CHECK-OPTION-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
-; CHECK-OPTION-NOT: OpString "/AAAAAAAAAA/BBBBBBBB/CCCCCCCCC{{[/\\]}}example.c"
+; CHECK-OPTION: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+; CHECK-OPTION: OpString "/AAAAAAAAAA/BBBBBBBB/CCCCCCCCC{{[/\\]}}example.c"
 
 define spir_func void @foo() {
 entry:

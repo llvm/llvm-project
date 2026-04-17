@@ -2,35 +2,37 @@
 // RUN: mkdir %t
 // RUN: split-file %s %t
 
-// RUN: %clang_cc1 -std=c++20 %t/cwg2947_example1.cpp -D'DOT_BAR=.bar' -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/cwg2947_example2.cpp -D'MOD_ATTR=[[vendor::shiny_module]]' -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/cwg2947_example3.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/cwg2947_example4.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/cwg2947_example5.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/cwg2947_example6.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/cwg2947_ext1.cpp -verify -E | FileCheck %t/cwg2947_ext1.cpp
-// RUN: %clang_cc1 -std=c++20 %t/cwg2947_ext2.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/cwg2947_ext3.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/cwg2947_example1.cpp -D'DOT_BAR=.bar'
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/cwg2947_example2.cpp -D'MOD_ATTR=[[vendor::shiny_module]]'
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/cwg2947_example3.cpp
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/cwg2947_example4.cpp
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/cwg2947_example5.cpp
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/cwg2947_example6.cpp
+// RUN: %clang_cc1 -std=c++20 -E            -verify %t/cwg2947_ext1.cpp     | FileCheck %t/cwg2947_ext1.cpp
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/cwg2947_ext2.cpp
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/cwg2947_ext3.cpp
 
-// RUN: %clang_cc1 -std=c++23 %t/cwg2947_example1.cpp -D'DOT_BAR=.bar' -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++23 %t/cwg2947_example2.cpp -D'MOD_ATTR=[[vendor::shiny_module]]' -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++23 %t/cwg2947_example3.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++23 %t/cwg2947_example4.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++23 %t/cwg2947_example5.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++23 %t/cwg2947_example6.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++23 %t/cwg2947_ext1.cpp -verify -E | FileCheck %t/cwg2947_ext1.cpp
-// RUN: %clang_cc1 -std=c++23 %t/cwg2947_ext2.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++23 %t/cwg2947_ext3.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %t/cwg2947_example1.cpp -D'DOT_BAR=.bar'
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %t/cwg2947_example2.cpp -D'MOD_ATTR=[[vendor::shiny_module]]'
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %t/cwg2947_example3.cpp
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %t/cwg2947_example4.cpp
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %t/cwg2947_example5.cpp
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %t/cwg2947_example6.cpp
+// RUN: %clang_cc1 -std=c++23 -E            -verify %t/cwg2947_ext1.cpp     | FileCheck %t/cwg2947_ext1.cpp
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %t/cwg2947_ext2.cpp
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %t/cwg2947_ext3.cpp
 
-// RUN: %clang_cc1 -std=c++26 %t/cwg2947_example1.cpp -D'DOT_BAR=.bar' -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++26 %t/cwg2947_example2.cpp -D'MOD_ATTR=[[vendor::shiny_module]]' -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++26 %t/cwg2947_example3.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++26 %t/cwg2947_example4.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++26 %t/cwg2947_example5.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++26 %t/cwg2947_example6.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++26 %t/cwg2947_ext1.cpp -verify -E | FileCheck %t/cwg2947_ext1.cpp
-// RUN: %clang_cc1 -std=c++26 %t/cwg2947_ext2.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++26 %t/cwg2947_ext3.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %t/cwg2947_example1.cpp -D'DOT_BAR=.bar'
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %t/cwg2947_example2.cpp -D'MOD_ATTR=[[vendor::shiny_module]]'
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %t/cwg2947_example3.cpp
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %t/cwg2947_example4.cpp
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %t/cwg2947_example5.cpp
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %t/cwg2947_example6.cpp
+// RUN: %clang_cc1 -std=c++26 -E            -verify %t/cwg2947_ext1.cpp     | FileCheck %t/cwg2947_ext1.cpp
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %t/cwg2947_ext2.cpp
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %t/cwg2947_ext3.cpp
+
+// cwg2947: 23 tentatively ready 2026-03-06
 
 //--- cwg2947_example1.cpp
 // #define DOT_BAR .bar

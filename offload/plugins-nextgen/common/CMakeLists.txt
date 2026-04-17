@@ -13,6 +13,7 @@ add_library(PluginCommon OBJECT
   src/PluginInterface.cpp
   src/GlobalHandler.cpp
   src/JIT.cpp
+  src/RecordReplay.cpp
   src/RPC.cpp
   src/OffloadError.cpp
   src/Utils/ELF.cpp
@@ -35,9 +36,14 @@ endif()
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
 
+if (TARGET flang_rt.runtime.static)
+  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime.static)
+  target_compile_definitions(PluginCommon PRIVATE OFFLOAD_HAS_FLANG_RT)
+endif()
+
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE
-  TARGET_NAME="PluginInterface"
+  TARGET_NAME=PluginInterface
   DEBUG_PREFIX="PluginInterface"
 )
 

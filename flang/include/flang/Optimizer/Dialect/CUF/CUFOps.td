@@ -16,8 +16,9 @@
 
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
-include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
+include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.td"
+include "flang/Optimizer/Dialect/FIRTypes.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
@@ -175,9 +176,10 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
   }];
 
   let arguments = (ins Arg<AnyType, "", [MemRead]>:$src,
-                       Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
-                       Optional<AnyShapeOrShiftType>:$shape,
-                       cuf_DataTransferKindAttr:$transfer_kind);
+      Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
+      Optional<AnyShapeOrShiftType>:$shape,
+      cuf_DataTransferKindAttr:$transfer_kind,
+      UnitAttr:$hasManagedOrUnifedSymbols);
 
   let assemblyFormat = [{
     $src `to` $dst (`,` $shape^ `:` type($shape) )? attr-dict `:` type($src) `,` type($dst)
@@ -243,8 +245,10 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
   let hasVerifier = 1;
 }
 
-def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+def cuf_KernelOp
+    : cuf_Op<"kernel", [AttrSizedOperandSegments,
+                        DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+                        DeclareOpInterfaceMethods<OperationMoveOpInterface>]> {
 
   let description = [{
     Represent the CUDA Fortran kernel directive. The operation is a loop like

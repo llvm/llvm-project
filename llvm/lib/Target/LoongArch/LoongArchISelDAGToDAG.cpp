@@ -425,6 +425,27 @@ bool LoongArchDAGToDAGISel::selectVSplatImm(SDValue N, SDValue &SplatVal) {
   return false;
 }
 
+template <unsigned ImmBitSize>
+bool LoongArchDAGToDAGISel::selectVSplatImmNeg(SDValue N,
+                                               SDValue &SplatVal) const {
+  APInt ImmValue;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+
+  if (N->getOpcode() == ISD::BITCAST)
+    N = N->getOperand(0);
+
+  if (selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
+      ImmValue.getBitWidth() == EltTy.getSizeInBits()) {
+    if ((-ImmValue).isIntN(ImmBitSize)) {
+      SplatVal = CurDAG->getTargetConstant(-ImmValue.getSExtValue(), SDLoc(N),
+                                           Subtarget->getGRLenVT());
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool LoongArchDAGToDAGISel::selectVSplatUimmInvPow2(SDValue N,
                                                     SDValue &SplatImm) const {
   APInt ImmValue;

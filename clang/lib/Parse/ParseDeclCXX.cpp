@@ -1082,7 +1082,6 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
             PP.RevertCachedTokens(2);
             ConsumeToken(); // the semi.
             EndLoc = ConsumeAnyToken();
-            assert(Tok.is(tok::semi));
           } else {
             EndLoc = Tok.getLocation();
           }
@@ -1405,7 +1404,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   DeclSpec DS(AttrFactory);
   DS.SetRangeStart(IdLoc);
   DS.SetRangeEnd(EndLocation);
-  DS.getTypeSpecScope() = SS;
+  DS.getTypeSpecScope() = std::move(SS);
 
   const char *PrevSpec = nullptr;
   unsigned DiagID;
@@ -1471,6 +1470,8 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
   case tok::annot_pragma_ms_vtordisp:
   // struct foo {...} _Pragma(pointers_to_members(...));
   case tok::annot_pragma_ms_pointers_to_members:
+  // struct foo {...} _Pragma(export(...));
+  case tok::annot_pragma_export:
     return true;
   case tok::colon:
     return CouldBeBitfield || // enum E { ... }   :         2;
@@ -3243,7 +3244,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   }
 
   if (ExpectSemi &&
-      ExpectAndConsume(tok::semi, diag::err_expected_semi_decl_list)) {
+      ExpectAndConsume(tok::semi, diag::err_expected_semi_decl_list) &&
+      !isLikelyAtStartOfNewDeclaration()) {
     // Skip to end of block or statement.
     SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
     // If we stopped at a ';', eat it.
@@ -3396,6 +3398,9 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     return nullptr;
   case tok::annot_pragma_ms_vtordisp:
     HandlePragmaMSVtorDisp();
+    return nullptr;
+  case tok::annot_pragma_export:
+    HandlePragmaExport();
     return nullptr;
   case tok::annot_pragma_dump:
     HandlePragmaDump();
@@ -4527,9 +4532,10 @@ bool Parser::ParseCXX11AttributeArgs(
       // The attribute parsed successfully, but was not allowed to have any
       // arguments. It doesn't matter whether any were provided -- the
       // presence of the argument list (even if empty) is diagnosed.
-      Diag(LParenLoc, diag::err_cxx11_attribute_forbids_arguments)
-          << AttrName
-          << FixItHint::CreateRemoval(SourceRange(LParenLoc, *EndLoc));
+      auto D = Diag(LParenLoc, diag::err_cxx11_attribute_forbids_arguments)
+               << AttrName;
+      if (EndLoc)
+        D << FixItHint::CreateRemoval(SourceRange(LParenLoc, *EndLoc));
       Attr.setInvalid(true);
     }
   }

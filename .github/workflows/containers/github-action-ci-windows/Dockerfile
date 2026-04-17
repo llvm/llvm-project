@@ -87,7 +87,12 @@ RUN powershell -Command \
 RUN git config --system core.longpaths true & \
     git config --global core.autocrlf false
 
-ARG RUNNER_VERSION=2.331.0
+# Enable long paths so that ninja can work with paths longer than 260 characters.
+RUN powershell -Command \
+    New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" \
+    -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+
+ARG RUNNER_VERSION=2.332.0
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
 RUN powershell -Command \
@@ -97,7 +102,7 @@ RUN powershell -Command \
     rm actions-runner-win.zip
 
 # Set the LLVM_VERSION environment variable
-ENV LLVM_VERSION=21.1.8
+ENV LLVM_VERSION=22.1.0
 
 # Download and extract Clang compiler.
 # Create directories, download, extract, and clean up all in one layer
@@ -114,18 +119,18 @@ RUN powershell -Command \
     Add-Type -AssemblyName "System.IO.Compression.FileSystem"; \
     [System.IO.Compression.ZipFile]::ExtractToDirectory('C:\temp-download\xz.zip', 'C:\xz-utils'); \ 
     # --- 2. Download and decompress Clang --- \
-    Invoke-WebRequest -Uri "http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" -OutFile "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" ; \
-    (Get-FileHash -Path "C:\temp-download\clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" -Algorithm MD5).Hash -eq '0ae1d3effd9ab9d323f7fa595777f0a2' ; \
-    C:\xz-utils\bin_x86-64\xz.exe -d -qq clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz ; \
+    Invoke-WebRequest -Uri "http://github.com/llvm/llvm-project/releases/download/llvmorg-${env:LLVM_VERSION}/clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" -OutFile "clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" ; \
+    (Get-FileHash -Path "C:\temp-download\clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" -Algorithm MD5).Hash -eq '0ae1d3effd9ab9d323f7fa595777f0a2' ; \
+    C:\xz-utils\bin_x86-64\xz.exe -d -qq clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz ; \
     # --- 3. Extract clang --- \
-    C:\Windows\System32\tar.exe -xf clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar -C C:\clang ; \
+    C:\Windows\System32\tar.exe -xf clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar -C C:\clang ; \
     # --- 4. Clean up --- \
     Set-Location C:\ ; \
     Remove-Item C:\temp-download -Recurse -Force; \
     Remove-Item C:\xz-utils -Recurse -Force; \
     # -- 5. Shorten path to clang files & remove unnecessary files -- \
     Set-Location C:\clang ; \
-    Rename-Item -Path "C:\clang\clang+llvm-21.1.2-x86_64-pc-windows-msvc" -NewName "C:\clang\clang-msvc" ; \
+    Rename-Item -Path "C:\clang\clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc" -NewName "C:\clang\clang-msvc" ; \
     Set-Location C:\clang\clang-msvc ; \
     Remove-Item -Path C:\clang\clang-msvc\libexec -Recurse -Force ; \
     Remove-Item -Path C:\clang\clang-msvc\share -Recurse -Force ; \

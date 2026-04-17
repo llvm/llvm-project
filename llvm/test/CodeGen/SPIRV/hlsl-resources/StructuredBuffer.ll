@@ -44,7 +44,7 @@ entry:
 ; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[BufferHandle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %BufferHandle,  i32 1)
 
-; CHECK: [[LD:%.+]] = OpLoad [[int]] [[AC]] Aligned 4
+; CHECK: [[LD:%.+]] = OpLoad [[int]] [[AC]]
   %1 = load i32, ptr addrspace(11) %0, align 4, !tbaa !3
 
 ; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[RWBufferHandle]] [[zero]] [[zero]]
@@ -56,7 +56,7 @@ entry:
 ; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[BufferHandle2]] [[zero]] [[two]]
   %3 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %BufferHandle2,  i32 2)
 
-; CHECK: [[LD:%.+]] = OpLoad [[int]] [[AC]] Aligned 4
+; CHECK: [[LD:%.+]] = OpLoad [[int]] [[AC]]
   %4 = load i32, ptr addrspace(11) %3, align 4, !tbaa !3
 
 ; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[RWBufferHandle]] [[zero]] [[zero]]

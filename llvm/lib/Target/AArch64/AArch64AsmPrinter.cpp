@@ -199,11 +199,21 @@ public:
     bool AddrDiscIsKilled;
   };
 
-  // Emit the sequence for AUT or AUTPAC.
+  // Helper for emitting AUTRELLOADPAC: increment Pointer by Addend and then by
+  // a 32-bit signed value loaded from memory. The instructions emitted are
+  //
+  //     ldrsw Scratch, [Pointer, #Addend]!
+  //     add Pointer, Pointer, Scratch
+  //
+  // for small Addend value, with longer sequences required for wider Addend.
+  void emitPtrauthApplyIndirectAddend(Register Pointer, Register Scratch,
+                                      int64_t Addend);
+
+  // Emit the sequence for AUT or AUTPAC. Addend if AUTRELLOADPAC
   void emitPtrauthAuthResign(Register Pointer, Register Scratch,
                              PtrAuthSchema AuthSchema,
                              std::optional<PtrAuthSchema> SignSchema,
-                             Value *DS);
+                             std::optional<int64_t> Addend, Value *DS);
 
   // Emit R_AARCH64_PATCHINST, the deactivation symbol relocation. Returns true
   // if no instruction should be emitted because the deactivation symbol is
@@ -2235,11 +2245,64 @@ AArch64AsmPrinter::PtrAuthSchema::PtrAuthSchema(
     : Key(Key), IntDisc(IntDisc), AddrDisc(AddrDiscOp.getReg()),
       AddrDiscIsKilled(AddrDiscOp.isKill()) {}
 
+void AArch64AsmPrinter::emitPtrauthApplyIndirectAddend(Register Pointer,
+                                                       Register Scratch,
+                                                       int64_t Addend) {
+  if (isInt<9>(Addend)) {
+    // ldrsw Scratch, [Pointer, #Addend]! ; note: Pointer+Addend is used later.
+    EmitToStreamer(MCInstBuilder(AArch64::LDRSWpre)
+                       .addReg(Pointer)
+                       .addReg(Scratch)
+                       .addReg(Pointer)
+                       .addImm(/*simm9:*/ Addend));
+  } else {
+    // Pointer += Addend computation has 2 variants
+    if (isUInt<24>(Addend)) {
+      // Variant 1: add Pointer, Pointer, (Addend >> shift12) lsl shift12
+      // This can take up to 2 instructions.
+      for (int BitPos = 0; BitPos != 24 && (Addend >> BitPos); BitPos += 12) {
+        EmitToStreamer(
+            MCInstBuilder(AArch64::ADDXri)
+                .addReg(Pointer)
+                .addReg(Pointer)
+                .addImm((Addend >> BitPos) & 0xfff)
+                .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, BitPos)));
+      }
+    } else {
+      // Variant 2: accumulate constant in Scratch 16 bits at a time,
+      // and add it to Pointer. This can take 2-5 instructions.
+      emitMOVZ(Scratch, Addend & 0xffff, 0);
+      for (int Offset = 16; Offset < 64; Offset += 16) {
+        if (unsigned Fragment = (Addend >> Offset) & 0xffff)
+          emitMOVK(Scratch, Fragment, Offset);
+      }
+
+      // add Pointer, Pointer, Scratch
+      EmitToStreamer(MCInstBuilder(AArch64::ADDXrs)
+                         .addReg(Pointer)
+                         .addReg(Pointer)
+                         .addReg(Scratch)
+                         .addImm(0));
+    }
+    // ldrsw Scratch, [Pointer]
+    EmitToStreamer(MCInstBuilder(AArch64::LDRSWui)
+                       .addReg(Scratch)
+                       .addReg(Pointer)
+                       .addImm(0));
+  }
+  // add Pointer, Pointer, Scratch
+  EmitToStreamer(MCInstBuilder(AArch64::ADDXrs)
+                     .addReg(Pointer)
+                     .addReg(Pointer)
+                     .addReg(Scratch)
+                     .addImm(0));
+}
+
 void AArch64AsmPrinter::emitPtrauthAuthResign(
     Register Pointer, Register Scratch, PtrAuthSchema AuthSchema,
-    std::optional<PtrAuthSchema> SignSchema, Value *DS) {
+    std::optional<PtrAuthSchema> SignSchema, std::optional<int64_t> Addend,
+    Value *DS) {
   const bool IsResign = SignSchema.has_value();
-
   // We expand AUT/AUTPAC into a sequence of the form
   //
   //      ; authenticate x16
@@ -2301,12 +2364,15 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   }
 
   // We already emitted unchecked and checked-but-non-trapping AUTs.
-  // That left us with trapping AUTs, and AUTPACs.
+  // That left us with trapping AUTs, and AUTPA/AUTRELLOADPACs.
   // Trapping AUTs don't need PAC: we're done.
   if (!IsResign)
     return;
 
-  // Compute pac discriminator
+  if (Addend.has_value())
+    emitPtrauthApplyIndirectAddend(Pointer, Scratch, *Addend);
+
+  // Compute pac discriminator into x17
   Register PACDiscReg = emitPtrauthDiscriminator(SignSchema->IntDisc,
                                                  SignSchema->AddrDisc, Scratch);
   emitPAC(SignSchema->Key, Pointer, PACDiscReg);
@@ -2606,8 +2672,9 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
         MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
   OutStreamer->popSection();
 
-  return MCSymbolRefExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
-                                 OutStreamer->getContext());
+  return MCSpecifierExpr::create(
+      MCSymbolRefExpr::create(IRelativeSym, OutStreamer->getContext()),
+      AArch64::S_FUNCINIT, OutStreamer->getContext());
 }
 
 const MCExpr *
@@ -2631,8 +2698,10 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
     else if (Offset.slt(0))
       Sym = MCBinaryExpr::createSub(
           Sym, MCConstantExpr::create((-Offset).getSExtValue(), Ctx), Ctx);
-  } else {
+  } else if (isa<ConstantPointerNull>(BaseGV)) {
     Sym = MCConstantExpr::create(Offset.getSExtValue(), Ctx);
+  } else {
+    reportFatalUsageError("unsupported constant expression in ptrauth pointer");
   }
 
   const MCExpr *DSExpr = nullptr;
@@ -3221,7 +3290,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
                              MI->getOperand(1).getImm(), MI->getOperand(2));
 
     emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, std::nullopt,
-                          MI->getDeactivationSymbol());
+                          std::nullopt, MI->getDeactivationSymbol());
     return;
   }
 
@@ -3233,7 +3302,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
                              MI->getOperand(4).getImm(), MI->getOperand(5));
 
     emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, std::nullopt,
-                          MI->getDeactivationSymbol());
+                          std::nullopt, MI->getDeactivationSymbol());
     return;
   }
 
@@ -3248,7 +3317,24 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
                              MI->getOperand(4).getImm(), MI->getOperand(5));
 
     emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, SignSchema,
+                          std::nullopt, MI->getDeactivationSymbol());
+    return;
+  }
+
+  case AArch64::AUTRELLOADPAC: {
+    const Register Pointer = AArch64::X16;
+    const Register Scratch = AArch64::X17;
+
+    PtrAuthSchema AuthSchema((AArch64PACKey::ID)MI->getOperand(0).getImm(),
+                             MI->getOperand(1).getImm(), MI->getOperand(2));
+
+    PtrAuthSchema SignSchema((AArch64PACKey::ID)MI->getOperand(3).getImm(),
+                             MI->getOperand(4).getImm(), MI->getOperand(5));
+
+    emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, SignSchema,
+                          MI->getOperand(6).getImm(),
                           MI->getDeactivationSymbol());
+
     return;
   }
 

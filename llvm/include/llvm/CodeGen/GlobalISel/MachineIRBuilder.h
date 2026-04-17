@@ -2202,9 +2202,10 @@ public:
   }
 
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
-  MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
-                                     const SrcOp &Src1) {
-    return buildInstr(TargetOpcode::G_FCOPYSIGN, {Dst}, {Src0, Src1});
+  MachineInstrBuilder
+  buildFCopysign(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FCOPYSIGN, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_UITOFP \p Src0
@@ -2235,6 +2236,12 @@ public:
   /// Build and insert \p Res = G_FPTOSI_SAT \p Src0
   MachineInstrBuilder buildFPTOSI_SAT(const DstOp &Dst, const SrcOp &Src0) {
     return buildInstr(TargetOpcode::G_FPTOSI_SAT, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Dst = G_FRINT \p Src0
+  MachineInstrBuilder buildFRint(const DstOp &Dst, const SrcOp &Src0,
+                                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FRINT, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Dst = G_INTRINSIC_ROUNDEVEN \p Src0, \p Src1

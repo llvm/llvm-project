@@ -22,6 +22,10 @@
 #include <tuple>
 #include <vector>
 
+namespace lldb_private {
+class StackFrame;
+}
+
 namespace lldb_private::dil {
 
 enum class ErrorCode : unsigned char {
@@ -30,6 +34,9 @@ enum class ErrorCode : unsigned char {
   kUndeclaredIdentifier,
   kUnknown,
 };
+
+llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx);
 
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError
@@ -64,8 +71,7 @@ public:
                                          DILLexer lexer,
                                          std::shared_ptr<StackFrame> frame_sp,
                                          lldb::DynamicValueType use_dynamic,
-                                         bool use_synthetic, bool fragile_ivar,
-                                         bool check_ptr_vs_member);
+                                         uint32_t options, lldb::DILMode mode);
 
   ~DILParser() = default;
 
@@ -82,11 +88,13 @@ private:
                      std::shared_ptr<StackFrame> frame_sp,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
                      bool fragile_ivar, bool check_ptr_vs_member,
-                     llvm::Error &error);
+                     llvm::Error &error, lldb::DILMode mode);
 
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
+  ASTNodeUP ParseAdditiveExpression();
+  ASTNodeUP ParseMultiplicativeExpression();
   ASTNodeUP ParseUnaryExpression();
   ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
@@ -103,6 +111,9 @@ private:
   ASTNodeUP ParseCastExpression();
   std::optional<CompilerType> ParseBuiltinType();
   std::optional<CompilerType> ParseTypeId();
+  void ParseTypeSpecifierSeq(std::string &type_name);
+  std::optional<std::string> ParseTypeSpecifier();
+  std::optional<std::string> ParseTypeName();
   CompilerType ResolveTypeDeclarators(CompilerType type,
                                       const std::vector<Token> &ptr_operators);
 
@@ -136,6 +147,9 @@ private:
   bool m_use_synthetic;
   bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
+
+  // DIL Mode requested by the caller.
+  lldb::DILMode m_mode;
 }; // class DILParser
 
 } // namespace lldb_private::dil

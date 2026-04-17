@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_SCRIPTEDMETADATA_H
-#define LLDB_INTERPRETER_SCRIPTEDMETADATA_H
+#ifndef LLDB_UTILITY_SCRIPTEDMETADATA_H
+#define LLDB_UTILITY_SCRIPTEDMETADATA_H
 
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StreamString.h"
@@ -41,7 +41,7 @@ public:
   /// The ID is computed from the class name and arguments dictionary,
   /// not from the pointer address, so two metadata objects with the same
   /// contents will have the same ID.
-  uint32_t GetID() const {
+  uint32_t GetHash() const {
     if (m_class_name.empty())
       return 0;
 
@@ -65,4 +65,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_SCRIPTEDMETADATA_H
+#endif // LLDB_UTILITY_SCRIPTEDMETADATA_H

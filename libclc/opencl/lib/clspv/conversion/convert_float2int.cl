@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/opencl/convert.h>
+#include "clc/clc_convert.h"
+#include "clc/opencl/convert.h"
 
 #define __CLC_S_SCALAR_TYPE_DST __CLC_SCALAR_TYPE_DST
 #define __CLC_U_SCALAR_TYPE_DST __CLC_XCONCAT(u, __CLC_SCALAR_TYPE_DST)
@@ -30,21 +30,21 @@
 #define __CLC_HAVE_RTE
 
 #define __CLC_SCALAR_TYPE_DST char
-#define __CLC_BODY <convert_float.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "convert_float.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 
 #define __CLC_SCALAR_TYPE_DST short
-#define __CLC_BODY <convert_float.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "convert_float.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 
 #define __CLC_SCALAR_TYPE_DST int
-#define __CLC_BODY <convert_float.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "convert_float.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 
 #define __CLC_SCALAR_TYPE_DST long
-#define __CLC_BODY <convert_float.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "convert_float.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST

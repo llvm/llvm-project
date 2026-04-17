@@ -672,7 +672,7 @@ SDValue R600TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   return vectorToVerticalVector(DAG, Insert);
 }
 
-SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
+SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                                                SDValue Op,
                                                SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
@@ -949,15 +949,12 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
   SDLoc SL(Op);
   EVT VT = Op.getValueType();
 
-  const R600TargetMachine &TM =
-      static_cast<const R600TargetMachine &>(getTargetMachine());
-
   const AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(Op);
   unsigned SrcAS = ASC->getSrcAddressSpace();
   unsigned DestAS = ASC->getDestAddressSpace();
 
   if (isNullConstant(Op.getOperand(0)) && SrcAS == AMDGPUAS::FLAT_ADDRESS)
-    return DAG.getSignedConstant(TM.getNullPointerValue(DestAS), SL, VT);
+    return DAG.getSignedConstant(AMDGPU::getNullPointerValue(DestAS), SL, VT);
 
   return Op;
 }
@@ -1480,6 +1477,9 @@ SDValue R600TargetLowering::LowerFormalArguments(
       MemVT = MemVT.getVectorElementType();
     }
 
+    if (VT.isInteger() && !MemVT.isInteger())
+      MemVT = MemVT.changeTypeToInteger();
+
     if (AMDGPU::isShader(CallConv)) {
       Register Reg = MF.addLiveIn(VA.getLocReg(), &R600::R600_Reg128RegClass);
       SDValue Register = DAG.getCopyFromReg(Chain, DL, Reg, VT);
@@ -1496,11 +1496,15 @@ SDValue R600TargetLowering::LowerFormalArguments(
     // thread group and global sizes.
     ISD::LoadExtType Ext = ISD::NON_EXTLOAD;
     if (MemVT.getScalarSizeInBits() != VT.getScalarSizeInBits()) {
-      // FIXME: This should really check the extload type, but the handling of
-      // extload vector parameters seems to be broken.
+      if (VT.isFloatingPoint()) {
+        Ext = ISD::EXTLOAD;
+      } else {
+        // FIXME: This should really check the extload type, but the handling of
+        // extload vector parameters seems to be broken.
 
-      // Ext = In.Flags.isSExt() ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
-      Ext = ISD::SEXTLOAD;
+        // Ext = In.Flags.isSExt() ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
+        Ext = ISD::SEXTLOAD;
+      }
     }
 
     // Compute the offset from the value.

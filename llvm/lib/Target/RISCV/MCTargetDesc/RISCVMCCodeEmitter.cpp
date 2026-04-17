@@ -180,6 +180,19 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI,
 
   const MCExpr *CallExpr = Func.getExpr();
 
+  if (STI.getTargetTriple().isOSBinFormatMachO()) {
+    MCOperand FuncOp = MCOperand::createExpr(CallExpr);
+    if (MI.getOpcode() == RISCV::PseudoTAIL ||
+        MI.getOpcode() == RISCV::PseudoJump)
+      // Emit JAL X0, Func
+      TmpInst = MCInstBuilder(RISCV::JAL).addReg(RISCV::X0).addOperand(FuncOp);
+    else
+      // Emit JAL Ra, Func
+      TmpInst = MCInstBuilder(RISCV::JAL).addReg(Ra).addOperand(FuncOp);
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(CB, Binary, llvm::endianness::little);
+    return;
+  }
   // Emit AUIPC Ra, Func with R_RISCV_CALL relocation type.
   TmpInst = MCInstBuilder(RISCV::AUIPC).addReg(Ra).addExpr(CallExpr);
   Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
@@ -255,6 +268,10 @@ static unsigned getInvertedBranchOp(unsigned BrOp) {
     return RISCV::BNE;
   case RISCV::PseudoLongBNE:
     return RISCV::BEQ;
+  case RISCV::PseudoLongBEQI:
+    return RISCV::BNEI;
+  case RISCV::PseudoLongBNEI:
+    return RISCV::BEQI;
   case RISCV::PseudoLongBLT:
     return RISCV::BGE;
   case RISCV::PseudoLongBGE:
@@ -297,14 +314,15 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
   MCRegister SrcReg1 = MI.getOperand(0).getReg();
-  MCRegister SrcReg2 = MI.getOperand(1).getReg();
-  MCOperand SrcSymbol = MI.getOperand(2);
+  const MCOperand &Src2 = MI.getOperand(1);
+  const MCOperand &SrcSymbol = MI.getOperand(2);
   unsigned Opcode = MI.getOpcode();
   bool IsEqTest =
       Opcode == RISCV::PseudoLongBNE || Opcode == RISCV::PseudoLongBEQ;
 
   bool UseCompressedBr = false;
   if (IsEqTest && STI.hasFeature(RISCV::FeatureStdExtZca)) {
+    MCRegister SrcReg2 = Src2.getReg();
     if (RISCV::X8 <= SrcReg1.id() && SrcReg1.id() <= RISCV::X15 &&
         SrcReg2.id() == RISCV::X0) {
       UseCompressedBr = true;
@@ -326,7 +344,7 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
   } else {
     unsigned InvOpc = getInvertedBranchOp(Opcode);
     MCInst TmpInst =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addReg(SrcReg2).addImm(8);
+        MCInstBuilder(InvOpc).addReg(SrcReg1).addOperand(Src2).addImm(8);
     uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
     support::endian::write(CB, Binary, llvm::endianness::little);
     Offset = 4;
@@ -429,6 +447,8 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
     return;
   case RISCV::PseudoLongBEQ:
   case RISCV::PseudoLongBNE:
+  case RISCV::PseudoLongBEQI:
+  case RISCV::PseudoLongBNEI:
   case RISCV::PseudoLongBLT:
   case RISCV::PseudoLongBGE:
   case RISCV::PseudoLongBLTU:
@@ -651,8 +671,12 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
         llvm_unreachable("VK_PCREL_LO used with unexpected instruction format");
       RelaxCandidate = true;
       break;
-    case ELF::R_RISCV_PCREL_HI20:
+    case RISCV::S_PCREL_HI:
       FixupKind = RISCV::fixup_riscv_pcrel_hi20;
+      RelaxCandidate = true;
+      break;
+    case RISCV::S_GOT_HI:
+      FixupKind = ELF::R_RISCV_GOT_HI20;
       RelaxCandidate = true;
       break;
     case RISCV::S_TPREL_LO:
@@ -664,7 +688,11 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
         llvm_unreachable("VK_TPREL_LO used with unexpected instruction format");
       RelaxCandidate = true;
       break;
-    case ELF::R_RISCV_CALL_PLT:
+    case RISCV::S_CALL_PLT:
+      if (Ctx.getTargetTriple().isOSBinFormatMachO()) {
+        FixupKind = RISCV::fixup_riscv_jal;
+        break;
+      }
       FixupKind = RISCV::fixup_riscv_call_plt;
       RelaxCandidate = true;
       break;

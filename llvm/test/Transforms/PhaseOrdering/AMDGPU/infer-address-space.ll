@@ -12,7 +12,7 @@ declare void @external_use(i32)
 
 define internal void @callee(ptr %ptr_as0, i32 %val) {
 ; NO-INFER-LABEL: define internal void @callee(
-; NO-INFER-SAME: ptr [[PTR_AS0:%.*]], i32 [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
+; NO-INFER-SAME: ptr [[PTR_AS0:%.*]], i32 [[VAL:%.*]]) {
 ; NO-INFER-NEXT:    [[LOADED:%.*]] = load i32, ptr [[PTR_AS0]], align 4
 ; NO-INFER-NEXT:    [[COMPUTED:%.*]] = add i32 [[LOADED]], [[VAL]]
 ; NO-INFER-NEXT:    store i32 [[COMPUTED]], ptr [[PTR_AS0]], align 4
@@ -28,7 +28,7 @@ define internal void @callee(ptr %ptr_as0, i32 %val) {
 
 define void @caller(ptr addrspace(1) %ptr_as1, i32 %value) {
 ; INFER-LABEL: define void @caller(
-; INFER-SAME: ptr addrspace(1) captures(none) [[PTR_AS1:%.*]], i32 [[VALUE:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; INFER-SAME: ptr addrspace(1) captures(none) [[PTR_AS1:%.*]], i32 [[VALUE:%.*]]) local_unnamed_addr {
 ; INFER-NEXT:    [[LOADED_I:%.*]] = load i32, ptr addrspace(1) [[PTR_AS1]], align 4
 ; INFER-NEXT:    [[COMPUTED_I:%.*]] = add i32 [[LOADED_I]], [[VALUE]]
 ; INFER-NEXT:    store i32 [[COMPUTED_I]], ptr addrspace(1) [[PTR_AS1]], align 4
@@ -36,7 +36,7 @@ define void @caller(ptr addrspace(1) %ptr_as1, i32 %value) {
 ; INFER-NEXT:    ret void
 ;
 ; NO-INFER-LABEL: define void @caller(
-; NO-INFER-SAME: ptr addrspace(1) [[PTR_AS1:%.*]], i32 [[VALUE:%.*]]) #[[ATTR1]] {
+; NO-INFER-SAME: ptr addrspace(1) [[PTR_AS1:%.*]], i32 [[VALUE:%.*]]) {
 ; NO-INFER-NEXT:    [[DATA:%.*]] = alloca [[STRUCT_DATA:%.*]], align 8, addrspace(5)
 ; NO-INFER-NEXT:    [[VAL_FIELD:%.*]] = getelementptr [[STRUCT_DATA]], ptr addrspace(5) [[DATA]], i32 0, i32 1
 ; NO-INFER-NEXT:    store i32 [[VALUE]], ptr addrspace(5) [[VAL_FIELD]], align 4

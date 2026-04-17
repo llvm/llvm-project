@@ -551,6 +551,33 @@ def TileOp : OpenMPTransformBase_Op<"tile",
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP fuse operation
+//===----------------------------------------------------------------------===//
+
+def FuseOp
+    : OpenMPTransformBase_Op<"fuse", clauses = [OpenMP_LooprangeClause]> {
+  let summary = "OpenMP fuse operation";
+  let description = [{
+    Represents the OpenMP fuse directive introduced in OpenMP 6.0.
+    
+    The construct takes a loop sequence and merges the loops specifed by the
+    `looprange` clause and generates a loop sequence with the loops before the
+    `first` attribute untouched, the generated fused loop, and the loops after
+    the the `first` + `count` attributes untouched mantaining the orignal
+    order. If the `looprange` clause is not present all the loops in the
+    sequence are fused generating a single loop.
+    Each logical iteration of the fused loop executes a logical iteration of
+    each affected loop. The fused loop has the number of logical iterations 
+    equal to the affected loop with most logical iterations.
+
+    The `first` and `count` attributes of the `looprange` clause are constant
+    and known beforehand if present.
+  }]#clausesDescription;
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.8.3 Workshare Construct
 //===----------------------------------------------------------------------===//
 
@@ -638,7 +665,7 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
     loop operations intended to serve as a stopgap solution until the long-term
     representation of canonical loops is defined. Specifically, this operation
     is intended to serve as a unique source for loop information during the
-    transition to making `omp.distribute`, `omp.simd`, `omp.taskloop` and
+    transition to making `omp.distribute`, `omp.simd`, `omp.taskloop.wrapper` and
     `omp.wsloop` wrapper operations. It is not intended to help with the
     addition of support for loop transformations, non-rectangular loops and
     non-perfectly nested loops.
@@ -818,11 +845,11 @@ def SimdOp : OpenMP_Op<"simd", traits = [
   let hasRegionVerifier = 1;
 }
 
-
-def YieldOp : OpenMP_Op<"yield",
-    [Pure, ReturnLike, Terminator,
-     ParentOneOf<["AtomicUpdateOp", "DeclareReductionOp", "LoopNestOp",
-                  "PrivateClauseOp"]>]> {
+def YieldOp
+    : OpenMP_Op<"yield", [Pure, ReturnLike, Terminator,
+                          ParentOneOf<["AtomicUpdateOp", "DeclareReductionOp",
+                                       "LoopNestOp", "PrivateClauseOp",
+                                       "IteratorOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -905,9 +932,9 @@ def TaskOp
                 traits = [AttrSizedOperandSegments, AutomaticAllocationScope,
                           OutlineableOpenMPOpInterface],
                 clauses = [
-                    // TODO: Complete clause list (affinity, detach).
-                    OpenMP_AllocateClause, OpenMP_DependClause,
-                    OpenMP_FinalClause, OpenMP_IfClause,
+                    // TODO: Complete clause list (detach).
+                    OpenMP_AffinityClause, OpenMP_AllocateClause,
+                    OpenMP_DependClause, OpenMP_FinalClause, OpenMP_IfClause,
                     OpenMP_InReductionClause, OpenMP_MergeableClause,
                     OpenMP_PriorityClause, OpenMP_PrivateClause,
                     OpenMP_UntiedClause, OpenMP_DetachClause],
@@ -945,40 +972,54 @@ def TaskOp
   let hasVerifier = 1;
 }
 
-def TaskloopOp : OpenMP_Op<"taskloop", traits = [
+// SingleBlock restriction is just to ease implementation. It would be okay to
+// relax this.
+def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
-    DeclareOpInterfaceMethods<ComposableOpInterface>,
-    DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
-    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
-    RecursiveMemoryEffects, SingleBlock
+    RecursiveMemoryEffects, SingleBlock,
+    DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
     OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_MergeableClause,
     OpenMP_NogroupClause, OpenMP_NumTasksClause, OpenMP_PriorityClause,
     OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_UntiedClause
   ], singleRegion = true> {
-  let summary = "taskloop construct";
+  let summary = "OutlinableOpenMPOpInterface wrapper for taskloop construct";
   let description = [{
     The taskloop construct specifies that the iterations of one or more
     associated loops will be executed in parallel using explicit tasks. The
     iterations are distributed across tasks generated by the construct and
-    scheduled to be executed.
+    scheduled to be executed. The representation of this construct is split
+    between omp.taskloop.context and omp.taskloop.wrapper.
 
-    The body region can only contain a single block which must contain a single
-    operation. This operation must be another compatible loop wrapper or an
-    `omp.loop_nest`.
-
+    The taskloop construct must be a loop wrapper to support composite
+    constructs such as taskloop simd. Loop wrappers do not allow intervening
+    operations between the wrapper and wrapped loop(wrapper). But unlike other
+    loop wrappers, the body of taskloop is also outlined. This outlining means
+    that we need a way to represent the correct location of allocas for
+    temporaries created inside of the loop body. In order to achieve this,
+    the outlining part is represented in this operation: `omp.taskloop.context`,
+    and the loop wrapping is represented in `omp.taskloop.wrapper`. For example:
     ```
-    omp.taskloop <clauses> {
-      omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
-        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
-        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
-        %sum = arith.addf %a, %b : f32
-        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
-        omp.yield
+    omp.taskloop.context <clauses> {
+      // task-local stack allocations can go here
+      omp.taskloop.wrapper {
+        omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+          %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+          %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+          %sum = arith.addf %a, %b : f32
+          store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+          omp.yield
+        }
       }
+      omp.terminator
     }
     ```
+
+    The wrapped `omp.loop_nest` lower bounds, upper bounds and steps must be
+    either defined outside of the `omp.taskloop.context` region or produced by
+    pure, regionless operations inside the region that do not depend on block
+    arguments.
 
     For definitions of "undeferred task", "included task", "final task" and
     "mergeable task", please check OpenMP Specification.
@@ -1009,7 +1050,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
   }];
 
   let builders = [
-    OpBuilder<(ins CArg<"const TaskloopOperands &">:$clauses)>
+    OpBuilder<(ins CArg<"const TaskloopContextOperands &">:$clauses)>
   ];
 
   let assemblyFormat = clausesAssemblyFormat # [{
@@ -1022,7 +1063,61 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
   }];
 
   let extraClassDeclaration = [{
-    void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
+    TaskloopWrapperOp getLoopOp();
+  }] # clausesExtraClassDeclaration;
+
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
+}
+
+def TaskloopWrapperOp : OpenMP_Op<"taskloop.wrapper", traits = [
+    DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
+    RecursiveMemoryEffects, SingleBlock
+  ], clauses = [
+    // See taskloop.context, which generates the runtime calls and outlined
+    // task function.
+  ], singleRegion = true> {
+  let summary = "taskloop construct";
+  let description = [{
+    The taskloop construct specifies that the iterations of one or more
+    associated loops will be executed in parallel using explicit tasks. The
+    iterations are distributed across tasks generated by the construct and
+    scheduled to be executed. The representation of this construct is split
+    between omp.taskloop.context and omp.taskloop.wrapper.
+
+    This operation is intended to act as the loop wrapper portion of the
+    taskloop op definition. See the description of omp.taskloop.context for more
+    details.
+
+    The body region can only contain a single block which must contain a single
+    operation. This operation must be another compatible loop wrapper or an
+    `omp.loop_nest`.
+
+    ```
+    omp.taskloop.context <clauses> {
+      omp.taskloop.wrapper {
+        omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+          %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+          %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+          %sum = arith.addf %a, %b : f32
+          store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    ```
+  }] # clausesDescription;
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskloopWrapperOperands &">:$clauses)>
+  ];
+
+  let assemblyFormat = "$region attr-dict";
+
+  let extraClassDeclaration = [{
+    TaskloopContextOp getTaskloopContext();
   }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
@@ -1638,9 +1733,9 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region", clauses = [
 // 2.17.5 taskwait Construct
 //===----------------------------------------------------------------------===//
 
-def TaskwaitOp : OpenMP_Op<"taskwait", clauses = [
-    OpenMP_DependClause, OpenMP_NowaitClause
-  ]> {
+def TaskwaitOp
+    : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
   let summary = "taskwait construct";
   let description = [{
     The taskwait construct specifies a wait on the completion of child tasks
@@ -2125,6 +2220,26 @@ def AllocateDirOp : OpenMP_Op<"allocate_dir", [AttrSizedOperandSegments], clause
 }
 
 //===----------------------------------------------------------------------===//
+// AllocateFreeOp
+//===----------------------------------------------------------------------===//
+
+def AllocateFreeOp : OpenMP_Op<"allocate_free", [AttrSizedOperandSegments],
+    clauses = [OpenMP_AllocatorClause]> {
+  let summary = "free-op paired with allocate directive";
+  let description = [{
+    At the end of the scope each list item allocated using allocate directive
+    should be deallocated(using this free operation).
+  }] # clausesDescription;
+
+  let arguments = !con((ins Variadic<AnyType>:$varList),
+                       clausesArgs);
+
+  let assemblyFormat = " `(` $varList `:` type($varList) `)` oilist(" #
+                       clausesOptAssemblyFormat #
+                       ") attr-dict ";
+}
+
+//===----------------------------------------------------------------------===//
 // TargetAllocMemOp
 //===----------------------------------------------------------------------===//
 
@@ -2247,7 +2362,8 @@ def WorkdistributeOp : OpenMP_Op<"workdistribute"> {
 
 def DeclareSimdOp
     : OpenMP_Op<"declare_simd", traits = [AttrSizedOperandSegments],
-                clauses = [OpenMP_AlignedClause, OpenMP_LinearClause,
+                clauses = [OpenMP_AlignedClause, OpenMP_InbranchClause,
+                           OpenMP_LinearClause, OpenMP_NotinbranchClause,
                            OpenMP_SimdlenClause, OpenMP_UniformClause]> {
   let summary = "declare simd directive";
   let description = [{
@@ -2268,6 +2384,59 @@ def DeclareSimdOp
 
   let builders = [OpBuilder<(
       ins CArg<"const DeclareSimdOperands &">:$clauses)>];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Affinity Entry Op
+//===----------------------------------------------------------------------===//
+
+def AffinityEntryOp : OpenMP_Op<"affinity_entry", [Pure]> {
+  let summary = "OpenMP affinity clause entry value";
+
+  let arguments = (ins OpenMP_PointerLikeType:$addr, IntLikeType:$len);
+
+  let results = (outs OpenMP_AffinityEntryType:$entry);
+
+  let assemblyFormat = [{
+    $addr `,` $len `:` `(` type($addr) `,` type($len) `)` `->`
+    qualified(type($entry)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Iterator Op
+//===----------------------------------------------------------------------===//
+
+def IteratorOp : OpenMP_Op<"iterator",
+                           [AttrSizedOperandSegments,
+                            SingleBlockImplicitTerminator<"YieldOp">],
+                           clauses = [OpenMP_LoopRelatedClause]> {
+  let summary = "OpenMP iterator modifier";
+  let description = [{
+    The result of `omp.iterator` is an abstract handle of type
+    `!omp.iterated<T>`, representing the list of yielded values. This handle
+    can be directly consumed by OpenMP clauses that accept iterator modifiers,
+    such as `affinity`, `map`, `to`, `from`, or `depend`.
+
+    Example:
+      %it = omp.iterator(%i, %j) =
+        (%lb_i to %ub_i step %st_i, %lb_j to %ub_j step %st_j) {
+        %addr = ...
+        omp.yield(%addr)
+      } -> !omp.iterated<ptr>
+  }];
+
+  let regions = (region SizedRegion<1>:$region);
+  let results = (outs OpenMP_IteratedType:$iterated);
+
+  let assemblyFormat = [{
+    `(` custom<IteratorHeader>($region,
+                                $loop_lower_bounds, $loop_upper_bounds, $loop_steps,
+                                type($loop_lower_bounds), type($loop_upper_bounds), type($loop_steps))
+    `->` qualified(type($iterated)) attr-dict
+  }];
 
   let hasVerifier = 1;
 }

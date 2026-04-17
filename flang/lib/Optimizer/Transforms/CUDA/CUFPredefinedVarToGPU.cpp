@@ -132,7 +132,7 @@ struct CUFPredefinedVarToGPU
                                                         blockdims);
 
         llvm::SmallVector<mlir::Operation *> opsToDelete;
-        for (auto declareOp : funcOp.getOps<fir::DeclareOp>()) {
+        funcOp.walk([&](fir::DeclareOp declareOp) {
           processDeclareOp(builder, loc, declareOp, mangleBuiltin(threadidx),
                            threadids, opsToDelete);
           processDeclareOp(builder, loc, declareOp, mangleBuiltin(blockidx),
@@ -141,7 +141,7 @@ struct CUFPredefinedVarToGPU
                            blockdims, opsToDelete);
           processDeclareOp(builder, loc, declareOp, mangleBuiltin(griddim),
                            griddims, opsToDelete);
-        }
+        });
 
         for (auto op : opsToDelete)
           op->erase();

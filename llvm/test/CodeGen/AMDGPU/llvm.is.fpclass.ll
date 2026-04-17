@@ -34,9 +34,6 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ; GFX7GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], s3, 3
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
-; GFX7GLISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX7GLISEL-NEXT:    s_and_b32 s3, s3, 1
-; GFX7GLISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX7GLISEL-NEXT:    s_cselect_b32 s3, -1, 0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX7GLISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -62,9 +59,6 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ; GFX8GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8GLISEL-NEXT:    v_cmp_class_f32_e64 s[2:3], s2, 3
 ; GFX8GLISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; GFX8GLISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX8GLISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX8GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX8GLISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX8GLISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8GLISEL-NEXT:    v_mov_b32_e32 v2, s2
@@ -91,9 +85,6 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ; GFX9GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9GLISEL-NEXT:    v_cmp_class_f32_e64 s[2:3], s2, 3
 ; GFX9GLISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; GFX9GLISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX9GLISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX9GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX9GLISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX9GLISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9GLISEL-NEXT:    global_store_dword v1, v0, s[0:1]
@@ -113,18 +104,15 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ;
 ; GFX10GLISEL-LABEL: sgpr_isnan_f32:
 ; GFX10GLISEL:       ; %bb.0:
-; GFX10GLISEL-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; GFX10GLISEL-NEXT:    s_clause 0x1
+; GFX10GLISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10GLISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10GLISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10GLISEL-NEXT:    v_cmp_class_f32_e64 s2, s0, 3
-; GFX10GLISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX10GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX10GLISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX10GLISEL-NEXT:    s_and_b32 s2, s2, 1
+; GFX10GLISEL-NEXT:    v_cmp_class_f32_e64 s2, s2, 3
 ; GFX10GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10GLISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX10GLISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10GLISEL-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10GLISEL-NEXT:    s_endpgm
 ;
@@ -143,20 +131,16 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ;
 ; GFX11GLISEL-LABEL: sgpr_isnan_f32:
 ; GFX11GLISEL:       ; %bb.0:
-; GFX11GLISEL-NEXT:    s_load_b32 s0, s[4:5], 0x2c
+; GFX11GLISEL-NEXT:    s_clause 0x1
+; GFX11GLISEL-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11GLISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11GLISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11GLISEL-NEXT:    v_cmp_class_f32_e64 s2, s0, 3
-; GFX11GLISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX11GLISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX11GLISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11GLISEL-NEXT:    s_and_b32 s2, s2, 1
+; GFX11GLISEL-NEXT:    v_cmp_class_f32_e64 s2, s2, 3
 ; GFX11GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11GLISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11GLISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11GLISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX11GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11GLISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11GLISEL-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.f32(float %x, i32 3)  ; nan
@@ -186,9 +170,6 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX7GLISEL-NEXT:    v_cmp_class_f64_e64 s[4:5], s[2:3], 3
 ; GFX7GLISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
-; GFX7GLISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX7GLISEL-NEXT:    s_and_b32 s3, s3, 1
-; GFX7GLISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX7GLISEL-NEXT:    s_cselect_b32 s3, -1, 0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX7GLISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -214,9 +195,6 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX8GLISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8GLISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8GLISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; GFX8GLISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX8GLISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX8GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX8GLISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX8GLISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8GLISEL-NEXT:    flat_store_dword v[0:1], v2
@@ -239,9 +217,6 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX9GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9GLISEL-NEXT:    v_cmp_class_f64_e64 s[2:3], s[2:3], 3
 ; GFX9GLISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; GFX9GLISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX9GLISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX9GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX9GLISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX9GLISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9GLISEL-NEXT:    global_store_dword v1, v0, s[0:1]
@@ -263,9 +238,6 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX10GLISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10GLISEL-NEXT:    v_cmp_class_f64_e64 s2, s[2:3], 3
-; GFX10GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX10GLISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX10GLISEL-NEXT:    s_and_b32 s2, s2, 1
 ; GFX10GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10GLISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX10GLISEL-NEXT:    v_mov_b32_e32 v0, s2
@@ -289,10 +261,6 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX11GLISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11GLISEL-NEXT:    v_cmp_class_f64_e64 s2, s[2:3], 3
-; GFX11GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX11GLISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX11GLISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11GLISEL-NEXT:    s_and_b32 s2, s2, 1
 ; GFX11GLISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11GLISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11GLISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

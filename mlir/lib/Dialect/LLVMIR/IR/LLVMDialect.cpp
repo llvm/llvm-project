@@ -779,7 +779,7 @@ verifyStructIndices(Type baseGEPType, unsigned indexPos,
     return success();
 
   return TypeSwitch<Type, LogicalResult>(baseGEPType)
-      .Case<LLVMStructType>([&](LLVMStructType structType) -> LogicalResult {
+      .Case([&](LLVMStructType structType) -> LogicalResult {
         auto attr = dyn_cast<IntegerAttr>(indices[indexPos]);
         if (!attr)
           return emitOpError() << "expected index " << indexPos
@@ -995,6 +995,15 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
         /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
+        /*noreturn=*/nullptr, /*returns_twice=*/nullptr, /*hot=*/nullptr,
+        /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1025,6 +1034,16 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr,
         /*no_unwind=*/nullptr, /*will_return=*/nullptr,
+        /*noreturn=*/nullptr,
+        /*returns_twice=*/nullptr, /*hot=*/nullptr,
+        /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
@@ -1041,6 +1060,16 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*fastmathFlags=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
+        /*noreturn=*/nullptr,
+        /*returns_twice=*/nullptr, /*hot=*/nullptr,
+        /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1057,6 +1086,16 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*fastmathFlags=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
+        /*noreturn=*/nullptr,
+        /*returns_twice=*/nullptr, /*hot=*/nullptr,
+        /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
@@ -1216,10 +1255,15 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       fnType = fn.getFunctionType();
     } else if (auto ifunc = dyn_cast<IFuncOp>(callee)) {
       fnType = ifunc.getIFuncType();
+    } else if (isa<AliasOp>(callee)) {
+      // Aliases can alias functions, so calling through an alias is valid.
+      // The function type is determined by the call's operands and result
+      // types.
+      fnType = getCalleeFunctionType();
     } else {
       return emitOpError()
              << "'" << calleeName.getValue()
-             << "' does not reference a valid LLVM function or IFunc";
+             << "' does not reference a valid LLVM function, IFunc, or alias";
     }
   }
 
@@ -2996,6 +3040,15 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
                         builder.getI64IntegerAttr(functionEntryCount.value()));
+#ifndef NDEBUG
+  std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
+  if (duplicate.has_value()) {
+    llvm::report_fatal_error(
+        Twine("LLVMFuncOp propagated an attribute that is meant "
+              "to be constructed by the builder: ") +
+        duplicate->getName().str());
+  }
+#endif
   if (argAttrs.empty())
     return;
 
@@ -3242,13 +3295,13 @@ LogicalResult LLVMFuncOp::verify() {
            return WalkResult::advance();
          };
          return TypeSwitch<Operation *, WalkResult>(op)
-             .Case<LandingpadOp>([&](auto landingpad) {
+             .Case([&](LandingpadOp landingpad) {
                constexpr StringLiteral errorMessage =
                    "'llvm.landingpad' should have a consistent result type "
                    "inside a function";
                return checkType(landingpad.getType(), errorMessage);
              })
-             .Case<ResumeOp>([&](auto resume) {
+             .Case([&](ResumeOp resume) {
                constexpr StringLiteral errorMessage =
                    "'llvm.resume' should have a consistent input type inside a "
                    "function";
@@ -3610,7 +3663,9 @@ LogicalResult AtomicRMWOp::verify() {
   if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
       getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax ||
       getBinOp() == AtomicBinOp::fminimum ||
-      getBinOp() == AtomicBinOp::fmaximum) {
+      getBinOp() == AtomicBinOp::fmaximum ||
+      getBinOp() == AtomicBinOp::fminimumnum ||
+      getBinOp() == AtomicBinOp::fmaximumnum) {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
@@ -3815,6 +3870,22 @@ LogicalResult LLVM::BitcastOp::verify() {
   if (resultType.getAddressSpace() != sourceType.getAddressSpace())
     return emitOpError("cannot cast pointers of different address spaces, "
                        "use 'llvm.addrspacecast' instead");
+
+  return success();
+}
+
+LogicalResult LLVM::PtrToAddrOp::verify() {
+  auto pointerType =
+      cast<LLVM::LLVMPointerType>(extractVectorElementType(getArg().getType()));
+  auto integerType = cast<IntegerType>(extractVectorElementType(getType()));
+
+  auto dataLayout = DataLayout::closest(*this);
+  std::optional<unsigned> width = dataLayout.getTypeIndexBitwidth(pointerType);
+  assert(width && "pointers always return an index bitwidth");
+  if (width != integerType.getWidth())
+    return emitOpError("bit-width of integer result type ")
+           << integerType << " must match the pointer bitwidth (" << *width
+           << ") specified in the datalayout";
 
   return success();
 }
@@ -4116,11 +4187,13 @@ LLVMFuncOp BlockAddressOp::getFunction(SymbolTableCollection &symbolTable) {
 }
 
 BlockTagOp BlockAddressOp::getBlockTagOp() {
-  auto funcOp = dyn_cast<LLVMFuncOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
-      parentLLVMModule(*this), getBlockAddr().getFunction()));
+  Operation *sym = mlir::SymbolTable::lookupNearestSymbolFrom(
+      parentLLVMModule(*this), getBlockAddr().getFunction());
+  if (!sym)
+    return nullptr;
+  auto funcOp = dyn_cast<LLVMFuncOp>(sym);
   if (!funcOp)
     return nullptr;
-
   BlockTagOp blockTagOp = nullptr;
   funcOp.walk([&](LLVM::BlockTagOp labelOp) {
     if (labelOp.getTag() == getBlockAddr().getTag()) {

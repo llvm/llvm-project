@@ -752,7 +752,7 @@ bool PPCFastISel::SelectStore(const Instruction *I) {
 
 // Attempt to fast-select a branch instruction.
 bool PPCFastISel::SelectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *BrBB = FuncInfo.MBB;
   MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
@@ -1938,7 +1938,7 @@ bool PPCFastISel::fastSelectInstruction(const Instruction *I) {
       return SelectLoad(I);
     case Instruction::Store:
       return SelectStore(I);
-    case Instruction::Br:
+    case Instruction::CondBr:
       return SelectBranch(I);
     case Instruction::IndirectBr:
       return SelectIndirectBr(I);

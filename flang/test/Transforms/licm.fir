@@ -103,9 +103,9 @@ func.func @_QPtest_dummy_scalar(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_na
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_0]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONVERT_0]] step %[[CONSTANT_0]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
-// CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[BOX_ADDR_0]] : !fir.heap<i32>
 // CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_3]] : (i32) -> i64
@@ -318,9 +318,9 @@ func.func @_QPtest_global_scalar(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_n
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_0]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONVERT_0]] step %[[CONSTANT_0]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_1]] : !fir.ref<i32>
-// CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[BOX_ADDR_0]] : !fir.heap<f32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
 // CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<i32>
@@ -391,9 +391,9 @@ func.func @_QPtest_global_scalar_allocatable(%arg0: !fir.ref<!fir.array<?xi32>> 
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_0]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.ptr<f32>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONVERT_0]] step %[[CONSTANT_0]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_1]] : !fir.ref<i32>
-// CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[BOX_ADDR_0]] : !fir.ptr<f32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
 // CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<i32>
@@ -756,11 +756,11 @@ func.func @_QPtest_dummy_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_nam
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_1]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+// CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_1]] to %[[CONVERT_0]] step %[[CONSTANT_1]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
-// CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-// CHECK:             %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-// CHECK:             %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[BOX_ADDR_0]](%[[SHAPE_SHIFT_0]]) %[[CONSTANT_1]] : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<i32>
 // CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
@@ -834,10 +834,10 @@ func.func @_QPtest_dummy_array_allocatable(%arg0: !fir.ref<!fir.array<?xi32>> {f
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_1]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
+// CHECK:           %[[SHIFT_0:.*]] = fir.shift %[[BOX_DIMS_0]]#0 : (index) -> !fir.shift<1>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_1]] to %[[CONVERT_0]] step %[[CONSTANT_1]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
-// CHECK:             %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
-// CHECK:             %[[SHIFT_0:.*]] = fir.shift %[[BOX_DIMS_0]]#0 : (index) -> !fir.shift<1>
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[LOAD_1]](%[[SHIFT_0]]) %[[CONSTANT_1]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shift<1>, index) -> !fir.ref<i32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<i32>
 // CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
@@ -985,11 +985,11 @@ func.func @_QPtest_global_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_na
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_1]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
+// CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_1]] to %[[CONVERT_0]] step %[[CONSTANT_1]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_1]] : !fir.ref<i32>
-// CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-// CHECK:             %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
-// CHECK:             %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[BOX_ADDR_0]](%[[SHAPE_SHIFT_0]]) %[[CONSTANT_1]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<f32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
@@ -1066,10 +1066,10 @@ func.func @_QPtest_global_array_allocatable(%arg0: !fir.ref<!fir.array<?xi32>> {
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_1]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
+// CHECK:           %[[SHIFT_0:.*]] = fir.shift %[[BOX_DIMS_0]]#0 : (index) -> !fir.shift<1>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_1]] to %[[CONVERT_0]] step %[[CONSTANT_1]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_1]] : !fir.ref<i32>
-// CHECK:             %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
-// CHECK:             %[[SHIFT_0:.*]] = fir.shift %[[BOX_DIMS_0]]#0 : (index) -> !fir.shift<1>
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[LOAD_1]](%[[SHIFT_0]]) %[[CONSTANT_1]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>, index) -> !fir.ref<f32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<f32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
@@ -1530,8 +1530,8 @@ func.func @_QPtest_common_scalar(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_n
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[CONVERT_1]](%{{.*}}) storage(%[[ADDRESS_OF_0]][4]) {uniq_name = "_QFtest_common_arrayEc"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<10xf32>>
 // CHECK:           %[[DECLARE_4:.*]] = fir.declare %[[ARG2]] dummy_scope %{{.*}} arg 3 {uniq_name = "_QFtest_common_arrayEm"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_4]] : !fir.ref<i32>
+// CHECK:           %[[CONVERT_4:.*]] = fir.convert %[[LOAD_1]] : (i32) -> i64
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop
-// CHECK:             %[[CONVERT_4:.*]] = fir.convert %[[LOAD_1]] : (i32) -> i64
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[DECLARE_2]](%{{.*}}) %[[CONVERT_4]] : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<f32>
 // CHECK:             %[[CONVERT_5:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
@@ -1724,6 +1724,966 @@ func.func @_QPtest_acc_loop_with_private(%arg0: !fir.ref<f32> {fir.bindc_name = 
       acc.yield
     } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
     acc.yield
+  }
+  return
+}
+
+// -----
+// Test fir.slice and fir.rebox hoisting:
+// CHECK-LABEL:   func.func @_QPtest_slice_rebox_licm(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 20 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_slice_rebox_licmEi"}
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_slice_rebox_licmEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {uniq_name = "_QFtest_slice_rebox_licmEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[REBOX_0:.*]] = fir.rebox %[[DECLARE_1]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[CONSTANT_2]] : (index) -> i32
+// CHECK:           %[[SLICE_0:.*]] = fir.slice %[[CONSTANT_1]], %[[CONSTANT_0]], %[[CONSTANT_2]] : (index, index, index) -> !fir.slice<1>
+// CHECK:           %[[REBOX_1:.*]] = fir.rebox %[[REBOX_0]] {{\[}}%[[SLICE_0]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<11xf32>>
+// CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[REBOX_1]] : (!fir.box<!fir.array<11xf32>>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_2]] to %[[CONSTANT_1]] step %[[CONSTANT_2]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_0]]) -> (i32) {
+// CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             fir.call @takes_assumed_shape(%[[CONVERT_1]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+// CHECK:             %[[LOAD_0:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[LOAD_0]], %[[CONVERT_0]] overflow<nsw> : i32
+// CHECK:             fir.result %[[ADDI_0]] : i32
+// CHECK:           }
+func.func @_QPtest_slice_rebox_licm(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+  %c20 = arith.constant 20 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %3 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_slice_rebox_licmEi"}
+  %4 = fir.declare %3 {uniq_name = "_QFtest_slice_rebox_licmEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %5 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_slice_rebox_licmEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %6 = fir.rebox %5 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  %7 = fir.convert %c1 : (index) -> i32
+  %8 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %7) -> (i32) {
+    fir.store %arg3 to %4 : !fir.ref<i32>
+    %9 = fir.slice %c10, %c20, %c1 : (index, index, index) -> !fir.slice<1>
+    %10 = fir.rebox %6 [%9] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<11xf32>>
+    %11 = fir.convert %10 : (!fir.box<!fir.array<11xf32>>) -> !fir.box<!fir.array<?xf32>>
+    fir.call @takes_assumed_shape(%11) : (!fir.box<!fir.array<?xf32>>) -> ()
+    %12 = fir.load %4 : !fir.ref<i32>
+    %13 = arith.addi %12, %7 overflow<nsw> : i32
+    fir.result %13 : i32
+  }
+  fir.store %8 to %4 : !fir.ref<i32>
+  return
+}
+func.func private @takes_assumed_shape(!fir.box<!fir.array<?xf32>>)
+
+// -----
+// Test fir.shape and fir.embox hoisting:
+// CHECK-LABEL:   func.func @_QPtest_shape_embox_licm(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 11 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_shape_embox_licmEi"}
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_shape_embox_licmEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
+// CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[ASSUMED_SIZE_EXTENT_0]] : (index) -> !fir.shape<1>
+// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG0]](%[[SHAPE_0]]) dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {uniq_name = "_QFtest_shape_embox_licmEx"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[CONSTANT_2]] : (index) -> i32
+// CHECK:           %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[DECLARE_1]](%[[SHAPE_0]]) %[[CONSTANT_1]] : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+// CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
+// CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[ARRAY_COOR_0]] : (!fir.ref<f32>) -> !fir.ref<!fir.array<11xf32>>
+// CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[CONVERT_1]](%[[SHAPE_1]]) : (!fir.ref<!fir.array<11xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<11xf32>>
+// CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[EMBOX_0]] : (!fir.box<!fir.array<11xf32>>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_2]] to %[[CONSTANT_1]] step %[[CONSTANT_2]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_0]]) -> (i32) {
+// CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             fir.call @takes_assumed_shape(%[[CONVERT_2]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+// CHECK:             %[[LOAD_0:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[LOAD_0]], %[[CONVERT_0]] overflow<nsw> : i32
+// CHECK:             fir.result %[[ADDI_0]] : i32
+// CHECK:           }
+func.func @_QPtest_shape_embox_licm(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+  %c11 = arith.constant 11 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_shape_embox_licmEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_shape_embox_licmEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.assumed_size_extent : index
+  %4 = fir.shape %3 : (index) -> !fir.shape<1>
+  %5 = fir.declare %arg0(%4) dummy_scope %0 arg 1 {uniq_name = "_QFtest_shape_embox_licmEx"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+  %6 = fir.convert %c1 : (index) -> i32
+  %9 = fir.array_coor %5(%4) %c10 : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  %7 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %6) -> (i32) {
+    fir.store %arg2 to %2 : !fir.ref<i32>
+    %8 = fir.shape %c11 : (index) -> !fir.shape<1>
+    %10 = fir.convert %9 : (!fir.ref<f32>) -> !fir.ref<!fir.array<11xf32>>
+    %11 = fir.embox %10(%8) : (!fir.ref<!fir.array<11xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<11xf32>>
+    %12 = fir.convert %11 : (!fir.box<!fir.array<11xf32>>) -> !fir.box<!fir.array<?xf32>>
+    fir.call @takes_assumed_shape(%12) : (!fir.box<!fir.array<?xf32>>) -> ()
+    %13 = fir.load %2 : !fir.ref<i32>
+    %14 = arith.addi %13, %6 overflow<nsw> : i32
+    fir.result %14 : i32
+  }
+  fir.store %7 to %2 : !fir.ref<i32>
+  return
+}
+
+// -----
+// CHECK-LABEL:   func.func @test_shapeshift_licm(
+// CHECK-SAME:      %[[ARG0:.*]]: index) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
+// CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[ARG0]], %[[ARG0]] : (index, index) -> !fir.shapeshift<1>
+// CHECK:           fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONSTANT_1]] step %[[CONSTANT_0]] {
+// CHECK:             fir.call @takes_shape_shift(%[[SHAPE_SHIFT_0]]) : (!fir.shapeshift<1>) -> ()
+// CHECK:           }
+func.func @test_shapeshift_licm(%arg0 : index) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %op = fir.shape_shift %arg0, %arg0 : (index, index) -> !fir.shapeshift<1>
+    fir.call @takes_shape_shift(%op) : (!fir.shapeshift<1>) -> ()
+  }
+  return
+}
+func.func private @takes_shape_shift(!fir.shapeshift<1>)
+
+// -----
+// CHECK-LABEL:   func.func @test_shift_licm(
+// CHECK-SAME:      %[[ARG0:.*]]: index) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
+// CHECK:           %[[SHIFT_0:.*]] = fir.shift %[[ARG0]] : (index) -> !fir.shift<1>
+// CHECK:           fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONSTANT_1]] step %[[CONSTANT_0]] {
+// CHECK:             fir.call @takes_shift(%[[SHIFT_0]]) : (!fir.shift<1>) -> ()
+// CHECK:           }
+func.func @test_shift_licm(%arg0 : index) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %op = fir.shift %arg0 : (index) -> !fir.shift<1>
+    fir.call @takes_shift(%op) : (!fir.shift<1>) -> ()
+  }
+  return
+}
+func.func private @takes_shift(!fir.shift<1>)
+
+// -----
+// Check that fir.box_addr of !fir.boxproc is not speculated.
+// For some reason, we do not produce proper [hl]fir.declare
+// for optional dummy procedure pointers.
+// CHECK-LABEL: func.func @_QPtest_box_addr_proc(
+// CHECK-NOT: fir.box_addr
+// CHECK: fir.do_loop
+// CHECK: fir.box_addr
+func.func @_QPtest_box_addr_proc(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.boxproc<() -> ()>) {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_box_addr_procEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_box_addr_procEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_box_addr_procEx"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %4 = fir.convert %c1 : (index) -> i32
+  %5 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %4) -> (i32) {
+    fir.store %arg3 to %2 : !fir.ref<i32>
+    %6 = fir.box_addr %arg1 : (!fir.boxproc<() -> ()>) -> (() -> f32)
+    %7 = fir.call %6() : () -> f32
+    fir.store %7 to %3 : !fir.ref<f32>
+    %8 = fir.load %2 : !fir.ref<i32>
+    %9 = arith.addi %8, %4 overflow<nsw> : i32
+    fir.result %9 : i32
+  }
+  fir.store %5 to %2 : !fir.ref<i32>
+  return
+}
+
+// -----
+// CHECK-LABEL: func.func @test_acc_loop_private_hoisting(
+// CHECK: %[[CLAUSE_VAL:.*]] = acc.private
+// CHECK-NOT: %[[CLAUSE_VAL]]
+// CHECK: acc.loop{{.*}}private(%[[CLAUSE_VAL]] : !fir.ref<f32>)
+func.func @test_acc_loop_private_hoisting() {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+    %5 = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    acc.loop combined(parallel) private(%5 : !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %7 : !fir.ref<f32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}
+
+// -----
+// CHECK-LABEL: func.func @test_acc_loop_firstprivate_hoisting(
+// CHECK: %[[CLAUSE_VAL:.*]] = acc.firstprivate
+// CHECK-NOT: %[[CLAUSE_VAL]]
+// CHECK: acc.loop{{.*}}firstprivate(%[[CLAUSE_VAL]] : !fir.ref<f32>)
+func.func @test_acc_loop_firstprivate_hoisting() {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+    %5 = acc.firstprivate varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    acc.loop combined(parallel) firstprivate(%5 : !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %7 : !fir.ref<f32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}
+
+// -----
+// CHECK-LABEL: func.func @test_acc_loop_reduction_hoisting(
+// CHECK: %[[CLAUSE_VAL:.*]] = acc.reduction
+// CHECK-NOT: %[[CLAUSE_VAL]]
+// CHECK: acc.loop{{.*}}reduction(%[[CLAUSE_VAL]] : !fir.ref<f32>)
+func.func @test_acc_loop_reduction_hoisting() {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+  %5 = acc.reduction varPtr(%2 : !fir.ref<f32>) recipe(@reduction_add_ref_f32) -> !fir.ref<f32> {name = "b"}
+    acc.loop combined(parallel) reduction(%5 : !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %7 : !fir.ref<f32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}
+acc.reduction.recipe @reduction_add_ref_f32 : !fir.ref<f32> reduction_operator <add> init {
+^bb0(%arg0: !fir.ref<f32>):
+  acc.yield %arg0 : !fir.ref<f32>
+} combiner {
+^bb0(%arg0: !fir.ref<f32>, %arg1: !fir.ref<f32>):
+  acc.yield %arg0 : !fir.ref<f32>
+}
+
+// -----
+// CHECK-LABEL: func.func @test_acc_loop_private2_hoisting(
+// CHECK: %[[CLAUSE_VAL1:.*]] = acc.private
+// CHECK: %[[CLAUSE_VAL2:.*]] = acc.private
+// CHECK-NOT: %[[CLAUSE_VAL1]]
+// CHECK-NOT: %[[CLAUSE_VAL2]]
+// CHECK: acc.loop{{.*}}private(%[[CLAUSE_VAL1]], %[[CLAUSE_VAL2]] : !fir.ref<f32>, !fir.ref<f32>)
+func.func @test_acc_loop_private2_hoisting() {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %3 = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFtestEa"}
+  %4 = fir.declare %3 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+    %5 = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    %6 = acc.private varPtr(%4 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "a"}
+    acc.loop combined(parallel) private(%5, %6 : !fir.ref<f32>, !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %7 : !fir.ref<f32>
+      %cvt2 = fir.convert %6 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %8 = fir.declare %cvt2 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %8 : !fir.ref<f32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}
+
+// -----
+// Test hoisting of fir.field_index and fir.coordinate_of.
+// CHECK-LABEL:   func.func @_QMmPtest(
+// CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
+// CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+// CHECK:           %[[FIELD_INDEX_0:.*]] = fir.field_index a, !fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
+// CHECK:           %[[COORDINATE_OF_0:.*]] = fir.coordinate_of %[[DECLARE_0]], a : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:           %[[LOAD_1:.*]] = fir.load %[[COORDINATE_OF_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_2]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
+// CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
+// CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop
+func.func @_QMmPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+  %2 = fir.declare %1 {uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+  %3 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMmFtestEi"}
+  %4 = fir.declare %3 {uniq_name = "_QMmFtestEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %5 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QMmFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %6 = fir.load %5 : !fir.ref<i32>
+  %7 = fir.convert %6 : (i32) -> index
+  %8 = fir.convert %c1 : (index) -> i32
+  %9 = fir.do_loop %arg1 = %c1 to %7 step %c1 iter_args(%arg2 = %8) -> (i32) {
+    fir.store %arg2 to %4 : !fir.ref<i32>
+    %10 = fir.field_index a, !fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
+    %11 = fir.coordinate_of %2, a : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %12 = fir.load %11 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %13 = fir.load %4 : !fir.ref<i32>
+    %14 = fir.convert %13 : (i32) -> i64
+    %15 = fir.box_addr %12 : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+    %c0 = arith.constant 0 : index
+    %16:3 = fir.box_dims %12, %c0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
+    %17 = fir.shape_shift %16#0, %16#1 : (index, index) -> !fir.shapeshift<1>
+    %18 = fir.array_coor %15(%17) %14 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, i64) -> !fir.ref<f32>
+    fir.store %cst to %18 : !fir.ref<f32>
+    %19 = fir.load %4 : !fir.ref<i32>
+    %20 = arith.addi %19, %8 overflow<nsw> : i32
+    fir.result %20 : i32
+  }
+  fir.store %9 to %4 : !fir.ref<i32>
+  return
+}
+
+// -----
+// Test hoisting of fir.convert for memref<> type.
+// CHECK-LABEL:   func.func @test_() {
+// CHECK:           %[[ALLOCA_0:.*]] = memref.alloca() {bindc_name = "x", uniq_name = "_QFtestEx"} : memref<10xf32>
+// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[ALLOCA_0]] : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONVERT_0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:           scf.for %[[VAL_0:.*]] = {{.*}} {
+// CHECK:             memref.store %{{.*}}, %[[CONVERT_1]]{{\[}}%[[VAL_0]]] : memref<10xf32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+func.func @test_() {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %alloca_0 = memref.alloca() {bindc_name = "x", uniq_name = "_QFtestEx"} : memref<10xf32>
+  scf.for %arg0 = %c0 to %c10 step %c1 {
+    %3 = fir.convert %alloca_0 : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+    %10 = fir.convert %3 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+    memref.store %cst, %10[%arg0] : memref<10xf32>
+    scf.yield
+  }
+  return
+}
+
+// -----
+// Test hoisting of fir.convert from nested scf.if regions inside a loop.
+// The two fir.convert ops inside separate scf.if blocks should be hoisted
+// before the scf.for, enabling downstream CSE to merge them.
+// CHECK-LABEL:   func.func @test_nested_hoist(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK-DAG:     %[[CST1:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG:     %[[CST2:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK:         %[[CONV1:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         %[[CONV2:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         scf.for %[[I:.*]] =
+// CHECK:           scf.if
+// CHECK-NOT:         fir.convert
+// CHECK:             memref.store %[[CST1]], %[[CONV1]][%[[I]]] : memref<10xf32>
+// CHECK:           scf.if
+// CHECK-NOT:         fir.convert
+// CHECK:             memref.store %[[CST2]], %[[CONV2]][%[[I]]] : memref<10xf32>
+// CHECK:         return
+func.func @test_nested_hoist(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst1 = arith.constant 1.000000e+00 : f32
+  %cst2 = arith.constant 2.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cmp1 = arith.cmpi slt, %i, %c5 : index
+    scf.if %cmp1 {
+      %mem = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+      memref.store %cst1, %mem[%i] : memref<10xf32>
+    }
+    %cmp2 = arith.cmpi sge, %i, %c5 : index
+    scf.if %cmp2 {
+      %mem = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+      memref.store %cst2, %mem[%i] : memref<10xf32>
+    }
+  }
+  return
+}
+
+// -----
+// Test hoisting of fir.convert from deeply nested scf.if (scf.if inside
+// scf.if inside scf.for). The fir.convert should be hoisted before the loop.
+// CHECK-LABEL:   func.func @test_deeply_nested_hoist(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK:         %[[CONV:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         scf.for %[[I:.*]] =
+// CHECK:           scf.if
+// CHECK:             scf.if
+// CHECK-NOT:           fir.convert
+// CHECK:               memref.store %{{.*}}, %[[CONV]][%[[I]]] : memref<10xf32>
+// CHECK:         return
+func.func @test_deeply_nested_hoist(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cmp1 = arith.cmpi sgt, %i, %c3 : index
+    scf.if %cmp1 {
+      %cmp2 = arith.cmpi slt, %i, %c5 : index
+      scf.if %cmp2 {
+        %mem = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+        memref.store %cst, %mem[%i] : memref<10xf32>
+      }
+    }
+  }
+  return
+}
+
+// -----
+// Test that fir.convert fully invariant w.r.t. both loops is hoisted all the
+// way out (inner loop top-level LICM hoists it between the loops, then outer
+// loop top-level LICM hoists it before both loops).
+// CHECK-LABEL:   func.func @test_nested_loop_fully_invariant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>)
+// CHECK:         %[[CONV:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<100xf32>>) -> memref<100xf32>
+// CHECK:         scf.for
+// CHECK:           scf.for %[[J:.*]] =
+// CHECK-NOT:         fir.convert
+// CHECK:             memref.store %{{.*}}, %[[CONV]][%[[J]]] : memref<100xf32>
+// CHECK:         return
+func.func @test_nested_loop_fully_invariant(%arg0: !fir.ref<!fir.array<100xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    scf.for %j = %c0 to %c10 step %c1 {
+      %mem = fir.convert %arg0 : (!fir.ref<!fir.array<100xf32>>) -> memref<100xf32>
+      memref.store %cst, %mem[%j] : memref<100xf32>
+    }
+  }
+  return
+}
+
+// -----
+// Test that fir.convert inside scf.if inside nested loops is hoisted all the
+// way out when it is fully invariant (nested LICM on inner loop hoists from
+// scf.if, then top-level LICM on each loop hoists further).
+// CHECK-LABEL:   func.func @test_nested_loop_with_if_fully_invariant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>)
+// CHECK:         %[[CONV:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<100xf32>>) -> memref<100xf32>
+// CHECK:         scf.for
+// CHECK:           scf.for %[[J:.*]] =
+// CHECK:             scf.if
+// CHECK-NOT:           fir.convert
+// CHECK:               memref.store %{{.*}}, %[[CONV]][%[[J]]] : memref<100xf32>
+// CHECK:         return
+func.func @test_nested_loop_with_if_fully_invariant(%arg0: !fir.ref<!fir.array<100xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    scf.for %j = %c0 to %c10 step %c1 {
+      %cmp = arith.cmpi slt, %j, %c5 : index
+      scf.if %cmp {
+        %mem = fir.convert %arg0 : (!fir.ref<!fir.array<100xf32>>) -> memref<100xf32>
+        memref.store %cst, %mem[%j] : memref<100xf32>
+      }
+    }
+  }
+  return
+}
+
+// -----
+// Test that fir.convert using an outer-loop-variant value is hoisted from
+// scf.if to between the two loops (by inner loop's nested LICM), but NOT
+// further (because its operand %ptr depends on the outer loop induction var).
+// CHECK-LABEL:   func.func @test_nested_loop_outer_variant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>)
+// CHECK:         scf.for %[[I:.*]] =
+// CHECK:           %[[PTR:.*]] = fir.coordinate_of %[[ARG0]], %[[I]]
+// CHECK:           %[[CONV:.*]] = fir.convert %[[PTR]] : (!fir.ref<f32>) -> memref<f32>
+// CHECK:           scf.for %[[J:.*]] =
+// CHECK:             scf.if
+// CHECK-NOT:           fir.convert
+// CHECK:               memref.store %{{.*}}, %[[CONV]][] : memref<f32>
+// CHECK:         return
+func.func @test_nested_loop_outer_variant(%arg0: !fir.ref<!fir.array<100xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    %ptr = fir.coordinate_of %arg0, %i : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
+    scf.for %j = %c0 to %c10 step %c1 {
+      %cmp = arith.cmpi slt, %j, %c5 : index
+      scf.if %cmp {
+        %mem = fir.convert %ptr : (!fir.ref<f32>) -> memref<f32>
+        memref.store %cst, %mem[] : memref<f32>
+      }
+    }
+  }
+  return
+}
+
+// -----
+// Test chained fir.convert ops across nested loop and scf.if boundaries.
+// %conv1 is inside the outer scf.if, %conv2 and %conv3 use the chain and are
+// inside scf.if inside an inner loop inside the outer scf.if.
+// All three should be hoisted before both loops via user-propagation:
+//   1. Inner loop nested LICM hoists %conv2, %conv3 from inner scf.if.
+//   2. Inner loop top-level LICM hoists them to the outer scf.if body.
+//   3. Outer loop nested LICM hoists %conv1 from outer scf.if; user
+//      propagation then hoists %conv2, %conv3 too.
+// CHECK-LABEL:   func.func @test_chained_converts(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK:         %[[C1:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         %[[C2:.*]] = fir.convert %[[C1]] : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:         %[[C3:.*]] = fir.convert %[[C2]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         scf.for %{{.*}} =
+// CHECK:           scf.if
+// CHECK:             scf.for %[[J:.*]] =
+// CHECK:               scf.if
+// CHECK-NOT:             fir.convert
+// CHECK:                 memref.store %{{.*}}, %[[C3]][%[[J]]] : memref<10xf32>
+// CHECK:         return
+func.func @test_chained_converts(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond1 = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond1 {
+      %conv1 = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+      scf.for %j = %c0 to %c10 step %c1 {
+        %cond2 = arith.cmpi slt, %j, %c5 : index
+        scf.if %cond2 {
+          %conv2 = fir.convert %conv1 : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+          %conv3 = fir.convert %conv2 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+          memref.store %cst, %conv3[%j] : memref<10xf32>
+        }
+      }
+    }
+  }
+  return
+}
+
+// -----
+// Test chained fir.convert ops across deeply nested scf.if regions within
+// a single loop. %conv1 feeds into both branches: one scf.if uses a chain
+// of two converts, the other has a further-nested scf.if with a three-deep
+// chain. All fir.convert ops should be hoisted before the loop.
+// CHECK-LABEL:   func.func @test_chained_deep_ifs(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK-DAG:     %[[CST1:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG:     %[[CST2:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK:         %[[C1:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         %[[C2A:.*]] = fir.convert %[[C1]] : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:         %[[C3A:.*]] = fir.convert %[[C2A]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         %[[C2B:.*]] = fir.convert %[[C1]] : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:         %[[C3B:.*]] = fir.convert %[[C2B]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         scf.for %[[I:.*]] =
+// CHECK:           scf.if
+// CHECK:             scf.if
+// CHECK-NOT:           fir.convert
+// CHECK:               memref.store %[[CST1]], %[[C3A]][%[[I]]] : memref<10xf32>
+// CHECK:             scf.if
+// CHECK:               scf.if
+// CHECK-NOT:             fir.convert
+// CHECK:                 memref.store %[[CST2]], %[[C3B]][%[[I]]] : memref<10xf32>
+// CHECK:         return
+func.func @test_chained_deep_ifs(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst1 = arith.constant 1.000000e+00 : f32
+  %cst2 = arith.constant 2.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond1 = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond1 {
+      %conv1 = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+      %cond2 = arith.cmpi slt, %i, %c3 : index
+      scf.if %cond2 {
+        %conv2a = fir.convert %conv1 : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+        %conv3a = fir.convert %conv2a : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+        memref.store %cst1, %conv3a[%i] : memref<10xf32>
+      }
+      %cond3 = arith.cmpi sge, %i, %c3 : index
+      scf.if %cond3 {
+        %conv2b = fir.convert %conv1 : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+        %cond4 = arith.cmpi slt, %i, %c5 : index
+        scf.if %cond4 {
+          %conv3b = fir.convert %conv2b : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+          memref.store %cst2, %conv3b[%i] : memref<10xf32>
+        }
+      }
+    }
+  }
+  return
+}
+
+// -----
+// Test that canMoveOutOf prevents nested hoisting of fir.convert when its
+// operand is a data operand (private variable) of acc.loop, while
+// fir.convert of a non-data operand is still hoisted.
+// CHECK-LABEL:   func.func @test_acc_loop_nested_canMoveOutOf(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK:         acc.parallel combined(loop) {
+// CHECK:           %[[PRIV:.*]] = acc.private
+// The non-private fir.convert IS hoisted out of acc.loop:
+// CHECK:           %[[CVT_ARG:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:           acc.loop{{.*}}private(%[[PRIV]] : !fir.ref<f32>)
+// CHECK:             scf.if
+// The private fir.convert is NOT hoisted (canMoveOutOf blocks it):
+// CHECK:               fir.convert %[[PRIV]] : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:               memref.store %{{.*}}, %[[CVT_ARG]]
+func.func @test_acc_loop_nested_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c5_i32 = arith.constant 5 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+    %priv = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    acc.loop combined(parallel) private(%priv : !fir.ref<f32>) control(%arg1 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cond = arith.cmpi slt, %arg1, %c5_i32 : i32
+      scf.if %cond {
+        %cvt_priv = fir.convert %priv : (!fir.ref<f32>) -> !fir.ref<f32>
+        fir.store %cst to %cvt_priv : !fir.ref<f32>
+        %cvt_arg = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+        %idx = fir.convert %arg1 : (i32) -> index
+        memref.store %cst, %cvt_arg[%idx] : memref<10xf32>
+      }
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}
+
+// -----
+// Test that canMoveFromDescendant prevents nested hoisting when the parent
+// of the loop is an omp.wsloop (LoopWrapperInterface), which disallows
+// moving operations from its descendants into it.
+// The fir.convert of %arg0 inside scf.if is loop-invariant but must NOT
+// be hoisted because canMoveFromDescendant(omp.wsloop, omp.loop_nest, ...)
+// returns false.
+// CHECK-LABEL:   func.func @test_omp_wsloop_nested_canMoveFromDescendant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK:         omp.parallel
+// CHECK-NEXT:      omp.wsloop
+// CHECK-NEXT:        omp.loop_nest
+// CHECK:               scf.if
+// CHECK:                 fir.convert %[[ARG0]]
+func.func @test_omp_wsloop_nested_canMoveFromDescendant(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c5_i32 = arith.constant 5 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %alloca = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtestEi"}
+  %decl_i = fir.declare %alloca {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  omp.parallel {
+    omp.wsloop private(@_QFtestEi_private_i32 %decl_i -> %arg1 : !fir.ref<i32>) {
+      omp.loop_nest (%arg2) : i32 = (%c1_i32) to (%c10_i32) inclusive step (%c1_i32) {
+        %cond = arith.cmpi slt, %arg2, %c5_i32 : i32
+        scf.if %cond {
+          %cvt = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+          %idx = fir.convert %arg2 : (i32) -> index
+          memref.store %cst, %cvt[%idx] : memref<10xf32>
+        }
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+// Test that fir.undefined and fir.insert_value (used for complex constant
+// creation) are hoisted out of loops as pure operations.
+// CHECK-LABEL:   func.func @test_hoist_complex_constant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<complex<f32>>)
+// CHECK:           %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[UNDEF:.*]] = fir.undefined complex<f32>
+// CHECK:           %[[INS0:.*]] = fir.insert_value %[[UNDEF]], %[[CST]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+// CHECK:           %[[INS1:.*]] = fir.insert_value %[[INS0]], %[[CST]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[INS1]] to %[[ARG0]] : !fir.ref<complex<f32>>
+func.func @test_hoist_complex_constant(%arg0: !fir.ref<complex<f32>>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.undefined complex<f32>
+    %1 = fir.insert_value %0, %cst, [0 : index] : (complex<f32>, f32) -> complex<f32>
+    %2 = fir.insert_value %1, %cst, [1 : index] : (complex<f32>, f32) -> complex<f32>
+    fir.store %2 to %arg0 : !fir.ref<complex<f32>>
+  }
+  return
+}
+
+// -----
+// Test that fir.zero_bits is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_zero_bits(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.ptr<f32>>)
+// CHECK:           %[[ZERO:.*]] = fir.zero_bits !fir.ptr<f32>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[ZERO]] to %[[ARG0]] : !fir.ref<!fir.ptr<f32>>
+func.func @test_hoist_zero_bits(%arg0: !fir.ref<!fir.ptr<f32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.zero_bits !fir.ptr<f32>
+    fir.store %0 to %arg0 : !fir.ref<!fir.ptr<f32>>
+  }
+  return
+}
+
+// -----
+// Test that fir.emboxchar is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_emboxchar(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.char<1>>,
+// CHECK-SAME:      %[[ARG1:.*]]: i32,
+// CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<!fir.boxchar<1>>)
+// CHECK:           %[[BC:.*]] = fir.emboxchar %[[ARG0]], %[[ARG1]] : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[BC]] to %[[ARG2]] : !fir.ref<!fir.boxchar<1>>
+func.func @test_hoist_emboxchar(%arg0: !fir.ref<!fir.char<1>>, %arg1: i32, %arg2: !fir.ref<!fir.boxchar<1>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg3 = %c1 to %c10 step %c1 {
+    %0 = fir.emboxchar %arg0, %arg1 : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
+    fir.store %0 to %arg2 : !fir.ref<!fir.boxchar<1>>
+  }
+  return
+}
+
+// -----
+// Test that fir.extract_value is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_extract_value(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.type<derived{f:f32}>,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<f32>)
+// CHECK:           %[[EV:.*]] = fir.extract_value %[[ARG0]], ["f", !fir.type<derived{f:f32}>] : (!fir.type<derived{f:f32}>) -> f32
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[EV]] to %[[ARG1]] : !fir.ref<f32>
+func.func @test_hoist_extract_value(%arg0: !fir.type<derived{f:f32}>, %arg1: !fir.ref<f32>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.extract_value %arg0, ["f", !fir.type<derived{f:f32}>] : (!fir.type<derived{f:f32}>) -> f32
+    fir.store %0 to %arg1 : !fir.ref<f32>
+  }
+  return
+}
+
+// -----
+// Test that fir.insert_on_range is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_insert_on_range(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xi32>>)
+// CHECK:           %[[C1:.*]] = arith.constant 1 : i32
+// CHECK:           %[[ARR:.*]] = fir.zero_bits !fir.array<10xi32>
+// CHECK:           %[[INS:.*]] = fir.insert_on_range %[[ARR]], %[[C1]] from (0) to (9) : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
+// CHECK:           fir.do_loop
+func.func @test_hoist_insert_on_range(%arg0: !fir.ref<!fir.array<10xi32>>) {
+  %c1_i32 = arith.constant 1 : i32
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.zero_bits !fir.array<10xi32>
+    %1 = fir.insert_on_range %0, %c1_i32 from (0) to (9) : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
+    fir.store %1 to %arg0 : !fir.ref<!fir.array<10xi32>>
+  }
+  return
+}
+
+// -----
+// Test that fir.string_lit is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_string_lit(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.char<1,5>>)
+// CHECK:           %[[STR:.*]] = fir.string_lit "hello"(5) : !fir.char<1,5>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[STR]] to %[[ARG0]] : !fir.ref<!fir.char<1,5>>
+func.func @test_hoist_string_lit(%arg0: !fir.ref<!fir.char<1,5>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.string_lit "hello"(5) : !fir.char<1,5>
+    fir.store %0 to %arg0 : !fir.ref<!fir.char<1,5>>
+  }
+  return
+}
+
+// -----
+// Test that fir.address_of is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_address_of(
+// CHECK-SAME:      %[[ARG0:.*]]: f32)
+// CHECK:           %[[ADDR:.*]] = fir.address_of(@_QMtestEglobal) : !fir.ref<f32>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[ARG0]] to %[[ADDR]] : !fir.ref<f32>
+fir.global @_QMtestEglobal : f32
+func.func @test_hoist_address_of(%arg0: f32) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.address_of(@_QMtestEglobal) : !fir.ref<f32>
+    fir.store %arg0 to %0 : !fir.ref<f32>
+  }
+  return
+}
+
+// -----
+// Test that fir.type_desc is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_type_desc(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i64>)
+// CHECK:           %[[TD:.*]] = fir.type_desc !fir.type<t>
+// CHECK:           %[[CVT:.*]] = fir.convert %[[TD]] : (!fir.tdesc<!fir.type<t>>) -> i64
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[CVT]] to %[[ARG0]] : !fir.ref<i64>
+func.func @test_hoist_type_desc(%arg0: !fir.ref<i64>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.type_desc !fir.type<t>
+    %1 = fir.convert %0 : (!fir.tdesc<!fir.type<t>>) -> i64
+    fir.store %1 to %arg0 : !fir.ref<i64>
+  }
+  return
+}
+
+// -----
+// Test that fir.absent is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_absent(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.array<?xf32>>>)
+// CHECK:           %[[ABS:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[ABS]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
+func.func @test_hoist_absent(%arg0: !fir.ref<!fir.box<!fir.array<?xf32>>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.absent !fir.box<!fir.array<?xf32>>
+    fir.store %0 to %arg0 : !fir.ref<!fir.box<!fir.array<?xf32>>>
+  }
+  return
+}
+
+// -----
+// Test that fir.box_offset is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_box_offset(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>)
+// CHECK:           %[[OFF:.*]] = fir.box_offset %[[ARG0]] base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.llvm_ptr<!fir.ref<i32>>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[OFF]] to %[[ARG1]] : !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>
+func.func @test_hoist_box_offset(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>, %arg1: !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.box_offset %arg0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.llvm_ptr<!fir.ref<i32>>
+    fir.store %0 to %arg1 : !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>
+  }
+  return
+}
+
+// -----
+// Test that fir.assumed_size_extent is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_assumed_size_extent(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<index>)
+// CHECK:           %[[EXT:.*]] = fir.assumed_size_extent : index
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[EXT]] to %[[ARG0]] : !fir.ref<index>
+func.func @test_hoist_assumed_size_extent(%arg0: !fir.ref<index>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.assumed_size_extent : index
+    fir.store %0 to %arg0 : !fir.ref<index>
+  }
+  return
+}
+
+// -----
+// Test that fir.is_assumed_size_extent is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_is_assumed_size_extent(
+// CHECK-SAME:      %[[ARG0:.*]]: index,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<i1>)
+// CHECK:           %[[RES:.*]] = fir.is_assumed_size_extent %[[ARG0]] : (index) -> i1
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[RES]] to %[[ARG1]] : !fir.ref<i1>
+func.func @test_hoist_is_assumed_size_extent(%arg0: index, %arg1: !fir.ref<i1>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.is_assumed_size_extent %arg0 : (index) -> i1
+    fir.store %0 to %arg1 : !fir.ref<i1>
+  }
+  return
+}
+
+// -----
+// Test that fir.no_reassoc is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_no_reassoc(
+// CHECK-SAME:      %[[ARG0:.*]]: f64,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<f64>)
+// CHECK:           %[[NR:.*]] = fir.no_reassoc %[[ARG0]] : f64
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[NR]] to %[[ARG1]] : !fir.ref<f64>
+func.func @test_hoist_no_reassoc(%arg0: f64, %arg1: !fir.ref<f64>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.no_reassoc %arg0 : f64
+    fir.store %0 to %arg1 : !fir.ref<f64>
+  }
+  return
+}
+
+// -----
+// Test that hlfir.null is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_hlfir_null(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i64>)
+// CHECK:           %[[NULL:.*]] = hlfir.null !fir.ref<none>
+// CHECK:           %[[CVT:.*]] = fir.convert %[[NULL]] : (!fir.ref<none>) -> i64
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[CVT]] to %[[ARG0]] : !fir.ref<i64>
+func.func @test_hoist_hlfir_null(%arg0: !fir.ref<i64>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = hlfir.null !fir.ref<none>
+    %1 = fir.convert %0 : (!fir.ref<none>) -> i64
+    fir.store %1 to %arg0 : !fir.ref<i64>
   }
   return
 }

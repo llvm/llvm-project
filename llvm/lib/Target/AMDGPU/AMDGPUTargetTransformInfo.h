@@ -95,6 +95,8 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
                                          : 4 * TargetTransformInfo::TCC_Basic;
   }
 
+  int getTransInstrCost(TTI::TargetCostKind CostKind) const;
+
   // On some parts, normal fp64 operations are half rate, and others
   // quarter. This also applies to some integer operations.
   int get64BitInstrCost(TTI::TargetCostKind CostKind) const;
@@ -176,10 +178,11 @@ public:
                                      ArrayRef<unsigned> Indices = {}) const;
 
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *ValTy, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
 
   bool isReadRegisterSourceOfDivergence(const IntrinsicInst *ReadReg) const;
 
@@ -268,6 +271,15 @@ public:
                              std::optional<FastMathFlags> FMF,
                              TTI::TargetCostKind CostKind) const override;
 
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
+
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
@@ -309,7 +321,20 @@ public:
   /// implementation.
   unsigned getNumberOfParts(Type *Tp) const override;
 
-  InstructionUniformity getInstructionUniformity(const Value *V) const override;
+  ValueUniformity getValueUniformity(const Value *V) const override;
+
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       StackOffset BaseOffset, bool HasBaseReg,
+                                       int64_t Scale,
+                                       unsigned AddrSpace) const override;
+
+  bool isLSRCostLess(const TTI::LSRCost &A,
+                     const TTI::LSRCost &B) const override;
+  bool isNumRegsMajorCostOfLSR() const override;
+  bool shouldDropLSRSolutionIfLessProfitable() const override;
+
+  bool isUniform(const Instruction *I,
+                 const SmallBitVector &UniformArgs) const override;
 };
 
 } // end namespace llvm

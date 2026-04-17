@@ -232,8 +232,8 @@ for env_var in ("ASAN_OPTIONS", "DYLD_INSERT_LIBRARIES"):
     if env_var in config.environment:
         dotest_cmd += ["--inferior-env", env_var + "=" + config.environment[env_var]]
 
-if is_configured("test_arch"):
-    dotest_cmd += ["--arch", config.test_arch]
+if is_configured("test_triple"):
+    dotest_cmd += ["--triple", config.test_triple]
 
 if is_configured("lldb_build_directory"):
     dotest_cmd += ["--build-dir", config.lldb_build_directory]
@@ -299,6 +299,12 @@ if "lldb-simulator-qemu-user" in config.available_features:
 if is_configured("enabled_plugins"):
     for plugin in config.enabled_plugins:
         dotest_cmd += ["--enable-plugin", plugin]
+
+if getattr(config, "lldb_enable_mte", False):
+    dotest_cmd += ["--enable-mte"]
+
+if getattr(config, "lldb_enable_arm64e_debugserver", False):
+    dotest_cmd += ["--arm64e-debugserver"]
 
 # `dotest` args come from three different sources:
 # 1. Derived by CMake based on its configs (LLDB_TEST_COMMON_ARGS), which end

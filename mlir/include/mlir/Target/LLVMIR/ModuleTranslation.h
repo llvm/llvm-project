@@ -202,6 +202,9 @@ public:
   /// in these blocks.
   void forgetMapping(Region &region);
 
+  /// Removes the mapping for the given value.
+  void forgetMapping(Value value) { valueMapping.erase(value); }
+
   /// Returns the LLVM metadata corresponding to a mlir LLVM dialect alias scope
   /// attribute. Creates the metadata node if it has not been converted before.
   llvm::MDNode *getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr);
@@ -308,6 +311,13 @@ public:
                             /*recordInsertions=*/false);
   }
 
+  /// Converts the given MLIR operation into LLVM IR using this translator. It
+  /// is up to the caller to ensure that all operands have been mapped before
+  /// calling this function.
+  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder) {
+    return convertOperationImpl(op, builder, /*recordInsertions=*/false);
+  }
+
   /// Converts argument and result attributes from `attrsOp` to LLVM IR
   /// attributes on the `call` instruction. Returns failure if conversion fails.
   /// The `immArgPositions` parameter is only relevant for intrinsics. It
@@ -349,14 +359,41 @@ public:
 
   SymbolTableCollection &symbolTable() { return symbolTableCollection; }
 
+  // A helper callback that takes an attribute, and if it is a StringAttr,
+  // properly converts it to the 'no-builtin-VALUE' form.
+  static std::optional<llvm::Attribute> convertNoBuiltin(llvm::LLVMContext &ctx,
+                                                         mlir::Attribute a);
+
+  static std::optional<llvm::Attribute>
+  convertDefaultFuncAttr(llvm::LLVMContext &ctx,
+                         mlir::NamedAttribute namedAttr);
+
+  /// A template that takes a collection-like attribute, and converts it via a
+  /// user provided callback, then adds each element as function attributes to
+  /// the provided operation.
+  template <typename AttrsTy, typename Operation, typename Converter>
+  void convertFunctionAttrCollection(AttrsTy attrs, Operation *op,
+                                     const Converter &conv) {
+    if (!attrs)
+      return;
+    for (auto elt : attrs) {
+      std::optional<llvm::Attribute> result = conv(getLLVMContext(), elt);
+      if (result)
+        op->addFnAttr(*result);
+    }
+  }
+
+  llvm::Attribute convertAllocsizeAttr(DenseI32ArrayAttr allocsizeAttr);
+
 private:
   ModuleTranslation(Operation *module,
                     std::unique_ptr<llvm::Module> llvmModule);
   ~ModuleTranslation();
 
   /// Converts individual components.
-  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder,
-                                 bool recordInsertions = false);
+  LogicalResult convertOperationImpl(Operation &op,
+                                     llvm::IRBuilderBase &builder,
+                                     bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
   LogicalResult convertIFuncs();

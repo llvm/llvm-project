@@ -16,6 +16,9 @@
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#endif
 
 #include "llvm/Support/Compiler.h"
 
@@ -293,6 +296,15 @@ lldb::thread_result_t ThreadedCommunication::ReadThread() {
         disconnect = GetCloseOnEOF();
         done = true;
       }
+#ifdef _WIN32
+      if (error.GetType() == eErrorTypeWin32 &&
+          error.GetError() == ERROR_INVALID_HANDLE) {
+        // ERROR_INVALID_HANDLE on a pipe is usually caused by a remote shutdown
+        // of the pipe's ConPTY
+        disconnect = GetCloseOnEOF();
+        done = true;
+      }
+#endif
       if (error.Fail())
         LLDB_LOG(log, "error: {0}, status = {1}", error,
                  ThreadedCommunication::ConnectionStatusAsString(status));
@@ -348,6 +360,10 @@ void ThreadedCommunication::SetReadThreadBytesReceivedCallback(
   m_callback_baton = callback_baton;
 }
 
+void ThreadedCommunication::InterruptRead() {
+  m_connection_sp->InterruptRead();
+}
+
 void ThreadedCommunication::SynchronizeWithReadThread() {
   // Only one thread can do the synchronization dance at a time.
   std::lock_guard<std::mutex> guard(m_synchronize_mutex);
@@ -362,7 +378,7 @@ void ThreadedCommunication::SynchronizeWithReadThread() {
     return;
 
   // Notify the read thread.
-  m_connection_sp->InterruptRead();
+  InterruptRead();
 
   // Wait for the synchronization event.
   EventSP event_sp;

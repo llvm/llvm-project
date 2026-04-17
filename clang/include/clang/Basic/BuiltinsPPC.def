@@ -1019,6 +1019,10 @@ TARGET_BUILTIN(__builtin_amo_stwat, "vUi*UiIi", "", "isa-v30-instructions")
 TARGET_BUILTIN(__builtin_amo_stdat, "vULi*ULiIi", "", "isa-v30-instructions")
 TARGET_BUILTIN(__builtin_amo_stwat_s, "vSi*SiIi", "", "isa-v30-instructions")
 TARGET_BUILTIN(__builtin_amo_stdat_s, "vSLi*SLiIi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_lwat_csne, "UiUi*UiUi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_ldat_csne, "ULiULi*ULiULi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_lwat_csne_s, "SiSi*SiSi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_ldat_csne_s, "SLiSLi*SLiSLi", "", "isa-v30-instructions")
 
 
 // Set the floating point rounding mode
@@ -1114,15 +1118,15 @@ UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4spp, "vW1024*W256V", true,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4spp, "vW1024*W256Vi255i15i15", true,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_dmsetdmrz, "vW1024*", false,
+UNALIASED_CUSTOM_BUILTIN(dmsetdmrz, "vW1024*", false,
                          "mma,isa-future-instructions")
-UNALIASED_CUSTOM_BUILTIN(mma_dmmr, "vW1024*W1024*", false,
+UNALIASED_CUSTOM_BUILTIN(dmmr, "vW1024*W1024*", false,
                          "mma,isa-future-instructions")
-UNALIASED_CUSTOM_BUILTIN(mma_dmxor, "vW1024*W1024*", true,
+UNALIASED_CUSTOM_BUILTIN(dmxor, "vW1024*W1024*", true,
                          "mma,isa-future-instructions")
-UNALIASED_CUSTOM_BUILTIN(mma_disassemble_dmr, "vv*W1024*", false,
+UNALIASED_CUSTOM_BUILTIN(disassemble_dmr, "vv*W1024*", false,
                          "mma,isa-future-instructions")
-UNALIASED_CUSTOM_BUILTIN(mma_build_dmr, "vW1024*VVVVVVVV", false,
+UNALIASED_CUSTOM_BUILTIN(build_dmr, "vW1024*VVVVVVVV", false,
                          "mma,isa-future-instructions")
 
 UNALIASED_CUSTOM_BUILTIN(mma_dmsha2hash, "vW1024*W1024*Ii", true,
@@ -1157,6 +1161,55 @@ UNALIASED_CUSTOM_MMA_BUILTIN(mma_dmxvf16gerx2, "vW1024*W256V",
                              "mma,isa-future-instructions")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmdmxvf16gerx2, "vW1024*W256Vi255i15i3",
                              "mma,isa-future-instructions")
+
+// Elliptic Curve Cryptography Builtins
+UNALIASED_CUSTOM_BUILTIN(xxmulmul, "VVVi7", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xxmulmulhiadd, "VVVi1i1i1", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xxmulmulloadd, "VVVi1i1", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xxssumudm, "VVVi1", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xxssumudmc, "VVVi1", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xxssumudmcext, "VVVVi1", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsaddadduqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsaddaddsuqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsaddsubuqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsaddsubsuqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsmerge2t1uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsmerge2t2uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsmerge2t3uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsmerge3t1uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t1uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t2uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t3uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t4uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase3t1uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase3t2uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase3t3uqm, "VVV", false, "future-vector")
+
+// Deeply Compressed Weights built-ins.
+TARGET_BUILTIN(__builtin_altivec_vucmprhn, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprln, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprhb, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprlb, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprhh, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprlh, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkhsntob, "V16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupklsntob, "V16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint4tobf16, "V16UcV16UcIi", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint8tobf16, "V16UcV16UcIi", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint4tofp32, "V16UcV16UcIi", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint8tofp32, "V16UcV16UcIi", "",
+               "isa-future-instructions")
 
 // FIXME: Obviously incomplete.
 

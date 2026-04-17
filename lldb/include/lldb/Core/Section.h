@@ -146,8 +146,7 @@ public:
           lldb::user_id_t sect_id, ConstString name,
           lldb::SectionType sect_type, lldb::addr_t file_vm_addr,
           lldb::addr_t vm_size, lldb::offset_t file_offset,
-          lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
-          uint32_t target_byte_size = 1);
+          lldb::offset_t file_size, uint32_t log2align, uint32_t flags);
 
   // Create a section that is a child of parent_section_sp
   Section(const lldb::SectionSP &parent_section_sp, // NULL for top level
@@ -157,8 +156,7 @@ public:
           lldb::user_id_t sect_id, ConstString name,
           lldb::SectionType sect_type, lldb::addr_t file_vm_addr,
           lldb::addr_t vm_size, lldb::offset_t file_offset,
-          lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
-          uint32_t target_byte_size = 1);
+          lldb::offset_t file_size, uint32_t log2align, uint32_t flags);
 
   ~Section();
 
@@ -272,9 +270,6 @@ public:
 
   void SetLog2Align(uint32_t align) { m_log2align = align; }
 
-  // Get the number of host bytes required to hold a target byte
-  uint32_t GetTargetByteSize() const { return m_target_byte_size; }
-
   bool IsRelocated() const { return m_relocated; }
 
   void SetIsRelocated(bool b) { m_relocated = b; }
@@ -311,15 +306,12 @@ protected:
       // children contains an address. This allows for gaps between the
       // children that are contained in the address range for this section, but
       // do not produce hits unless the children contain the address.
-      m_encrypted : 1,         // Set to true if the contents are encrypted
-      m_thread_specific : 1,   // This section is thread specific
-      m_readable : 1,          // If this section has read permissions
-      m_writable : 1,          // If this section has write permissions
-      m_executable : 1,        // If this section has executable permissions
-      m_relocated : 1;         // If this section has had relocations applied
-  uint32_t m_target_byte_size; // Some architectures have non-8-bit byte size.
-                               // This is specified as
-                               // as a multiple number of a host bytes
+      m_encrypted : 1,       // Set to true if the contents are encrypted
+      m_thread_specific : 1, // This section is thread specific
+      m_readable : 1,        // If this section has read permissions
+      m_writable : 1,        // If this section has write permissions
+      m_executable : 1,      // If this section has executable permissions
+      m_relocated : 1;       // If this section has had relocations applied
 private:
   Section(const Section &) = delete;
   const Section &operator=(const Section &) = delete;

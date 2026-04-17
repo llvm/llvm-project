@@ -5,6 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class ExprDefinitionInDylibTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
 
     @skipIf(
         compiler="clang",

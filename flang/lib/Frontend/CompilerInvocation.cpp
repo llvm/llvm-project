@@ -165,6 +165,14 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
             args.getLastArg(clang::options::OPT_split_dwarf_output))
       opts.SplitDwarfOutput = a->getValue();
   }
+
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_dwarf_debug_flags))
+    opts.DwarfDebugFlags = arg->getValue();
+
+  opts.DebugInfoForProfiling =
+      args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
   return true;
 }
 
@@ -276,9 +284,17 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_debug_pass_manager, false))
     opts.DebugPassManager = 1;
 
+  if (!args.hasFlag(clang::options::OPT_fprotect_parens,
+                    clang::options::OPT_fno_protect_parens, true))
+    opts.ProtectParens = 0;
+
   if (args.hasFlag(clang::options::OPT_fstack_arrays,
                    clang::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
+
+  if (args.hasFlag(clang::options::OPT_fsafe_trampoline,
+                   clang::options::OPT_fno_safe_trampoline, false))
+    opts.EnableSafeTrampoline = 1;
 
   if (args.getLastArg(clang::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
@@ -335,6 +351,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (args.hasArg(clang::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
+
+  // -fno-integrated-as: emit GNU Assembler compatible assembly.
+  if (!args.hasFlag(clang::options::OPT_fintegrated_as,
+                    clang::options::OPT_fno_integrated_as, true))
+    opts.DisableIntegratedAS = 1;
 
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
@@ -452,6 +473,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
     opts.ProfileInstrumentUsePath = A->getValue();
   }
+
+  opts.SampleProfileFile =
+      args.getLastArgValue(clang::options::OPT_fprofile_sample_use_EQ);
 
   // -mcmodel option.
   if (const llvm::opt::Arg *a =
@@ -1652,6 +1676,12 @@ bool CompilerInvocation::createFromArgs(
     invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
                                             llvm::StringRef{"whole"});
 
+  if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
+    auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());
+    invoc.getCodeGenOpts().setFPMaxminBehavior(value);
+    invoc.loweringOpts.setFPMaxminBehavior(value);
+  }
+
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
@@ -1890,7 +1920,7 @@ CompilerInvocation::getSemanticsCtx(
 
   auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
       getDefaultKinds(), fortranOptions.features, getLangOpts(),
-      allCookedSources);
+      allCookedSources, getCodeGenOpts().getFPMaxminBehavior());
 
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
@@ -1920,6 +1950,7 @@ void CompilerInvocation::setLoweringOptions() {
   const Fortran::common::LangOptions &langOptions = getLangOpts();
   loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
                                     Fortran::common::LangOptions::SOB_Defined);
+  loweringOpts.setProtectParens(codegenOpts.ProtectParens);
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,
