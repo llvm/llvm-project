@@ -3454,7 +3454,7 @@ static OpFoldResult foldShuffleConstantInputs(ShuffleOp op, Attribute v1Attr,
 OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
   auto v1Type = getV1VectorType();
 
-  assert(!v1Type.isScalable() && !getV2VectorType.isScalable() &&
+  assert(!v1Type.isScalable() && !getV2VectorType().isScalable() &&
          "Vector shuffle does not support scalable vectors");
 
   // For consistency: 0-D shuffle return type is 1-D, this cannot be a folding
