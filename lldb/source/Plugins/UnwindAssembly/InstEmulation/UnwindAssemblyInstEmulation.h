@@ -138,7 +138,7 @@ private:
   lldb_private::AddressRange *m_range_ptr;
   lldb_private::UnwindPlan *m_unwind_plan_ptr;
   UnwindState m_state;
-  uint64_t m_initial_cfa;
+  lldb::addr_t m_initial_cfa;
   typedef std::map<uint64_t, uint64_t> PushedRegisterToAddrMap;
   PushedRegisterToAddrMap m_pushed_regs;
 

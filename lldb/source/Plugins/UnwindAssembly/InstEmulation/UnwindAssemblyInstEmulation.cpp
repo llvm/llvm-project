@@ -95,7 +95,13 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
   // CreateFunctionEntryUnwind should have created the first row. If it doesn't,
   // then we are done.
-  if (unwind_plan.GetRowCount() == 0)
+  const UnwindPlan::Row *initial_row = unwind_plan.GetFirstRow();
+  if (!initial_row)
+    return false;
+
+  // Only isRegisterPlusOffset rule is currently supported.
+  const UnwindPlan::Row::FAValue &initial_row_cfa = initial_row->GetCFAValue();
+  if (!initial_row_cfa.IsRegisterPlusOffset())
     return false;
 
   const bool prefer_file_cache = true;
@@ -119,7 +125,9 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   m_pushed_regs.clear();
 
   RegisterValue cfa_reg_value;
-  cfa_reg_value.SetUInt(m_initial_cfa, m_state.cfa_reg_info.byte_size);
+  assert(initial_row_cfa.IsRegisterPlusOffset());
+  cfa_reg_value.SetUInt(m_initial_cfa - initial_row_cfa.GetOffset(),
+                        m_state.cfa_reg_info.byte_size);
   SetRegisterValue(m_state.cfa_reg_info, cfa_reg_value);
 
   InstructionList inst_list = disasm_sp->GetInstructionList();

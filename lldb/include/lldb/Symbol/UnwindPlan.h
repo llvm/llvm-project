@@ -486,7 +486,9 @@ public:
 
   const UnwindPlan::Row *GetRowAtIndex(uint32_t idx) const;
 
-  const UnwindPlan::Row *GetLastRow() const;
+  const Row *GetFirstRow() const;
+
+  const Row *GetLastRow() const;
 
   lldb_private::ConstString GetSourceName() const;
 
