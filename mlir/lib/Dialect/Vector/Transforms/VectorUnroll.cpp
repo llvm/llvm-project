@@ -41,11 +41,12 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
   // Compute 'sliceIndices' by adding 'sliceOffsets[i]' to 'indices[i]'.
   SmallVector<Value> slicedIndices(indices);
   for (const auto &dim : llvm::enumerate(permutationMap.getResults())) {
-    if (isBroadcast(dim.value()))
+    int64_t elementOffset = elementOffsets[dim.index()];
+    if (isBroadcast(dim.value()) || elementOffset == 0)
       continue;
     unsigned pos = cast<AffineDimExpr>(dim.value()).getPosition();
     auto expr = getAffineDimExpr(0, builder.getContext()) +
-                getAffineConstantExpr(elementOffsets[dim.index()], ctx);
+                getAffineConstantExpr(elementOffset, ctx);
     auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
     slicedIndices[pos] =
         affine::AffineApplyOp::create(builder, loc, map, indices[pos]);
