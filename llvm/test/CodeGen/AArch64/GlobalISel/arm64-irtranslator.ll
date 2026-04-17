@@ -1550,8 +1550,8 @@ define double @test_fneg_f64_fmf(double %x) {
 
 define void @test_trivial_inlineasm() {
 ; CHECK-LABEL: name: test_trivial_inlineasm
-; CHECK: INLINEASM &wibble, 1
-; CHECK: INLINEASM &wibble, 0
+; CHECK: INLINEASM &wibble, sideeffect attdialect
+; CHECK: INLINEASM &wibble, attdialect
   call void asm sideeffect "wibble", ""()
   call void asm "wibble", ""()
   ret void
