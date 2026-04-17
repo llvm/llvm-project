@@ -20,6 +20,7 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -2491,19 +2492,25 @@ PreservedAnalyses LowerTypeTestsPass::run(Module &M,
   return PreservedAnalyses::none();
 }
 
-PreservedAnalyses DropTypeTestsPass::run(Module &M, ModuleAnalysisManager &AM) {
-  return dropTypeTests(M, All) ? PreservedAnalyses::none()
-                               : PreservedAnalyses::all();
-}
-
 void DropTypeTestsPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<DropTypeTestsPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   OS << '<';
-  if (All)
+  switch (Kind) {
+  case DropTestKind::Assume:
+    OS << "assume";
+    break;
+  case DropTestKind::All:
     OS << "all";
+    break;
+  }
   OS << '>';
+}
+
+PreservedAnalyses DropTypeTestsPass::run(Module &M, ModuleAnalysisManager &AM) {
+  return dropTypeTests(M, Kind == DropTestKind::All) ? PreservedAnalyses::none()
+                                                     : PreservedAnalyses::all();
 }
 
 PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,

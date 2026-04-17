@@ -1782,7 +1782,7 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   // object code, only in the bitcode section, so drop it before we run
   // module optimization and generate machine code. If llvm.type.test() isn't in
   // the IR, this won't do anything.
-  MPM.addPass(DropTypeTestsPass(/*All=*/true));
+  MPM.addPass(DropTypeTestsPass(lowertypetests::DropTestKind::All));
 
   // Use the ThinLTO post-link pipeline with sample profiling
   if (ThinLTO && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
