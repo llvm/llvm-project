@@ -7,6 +7,10 @@ subroutine s(assumedRank, coarray, class, classStar, typeStar)
   end type
 
   real :: assumedRank(..), coarray[*]
+  real :: volatileVar
+  volatile :: volatileVar
+  real :: asyncVar
+  asynchronous :: asyncVar
   class(t) :: class
   class(*) :: classStar
   type(*) :: typeStar
@@ -24,6 +28,10 @@ subroutine s(assumedRank, coarray, class, classStar, typeStar)
   call implicit11(assumedRank)  ! 15.4.2.2(3)(c)
   call implicit12(coarray)  ! ok
   call implicit12a(coarray[1]) ! ok
+  !WARNING: Procedure with VOLATILE argument 'volatilevar' should have an explicit interface [-Wimplicit-interface-actual]
+  call implicit12b(volatileVar)
+  !WARNING: Procedure with ASYNCHRONOUS argument 'asyncvar' should have an explicit interface [-Wimplicit-interface-actual]
+  call implicit12c(asyncVar)
   !ERROR: Parameterized derived type actual argument requires an explicit interface
   call implicit13(pdtx)  ! 15.4.2.2(3)(e)
   call implicit14(class)  ! ok
