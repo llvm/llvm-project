@@ -1497,11 +1497,6 @@ public:
   /// \param Loc The location where the flush directive was encountered
   LLVM_ABI void createFlush(const LocationDescription &Loc);
 
-  /// Generator for '#omp taskwait'
-  ///
-  /// \param Loc The location where the taskwait directive was encountered.
-  LLVM_ABI void createTaskwait(const LocationDescription &Loc);
-
   /// Generator for '#omp taskyield'
   ///
   /// \param Loc The location where the taskyield directive was encountered.
@@ -1540,7 +1535,14 @@ public:
   LLVM_ABI void emitTaskDependency(IRBuilderBase &Builder, Value *Entry,
                                    const DependData &Dep);
 
-  /// Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
+  /// Generator for '#omp taskwait'
+  ///
+  /// \param Loc The location where the taskwait directive was encountered.
+  /// \param Dependencies dependencies as specified by the 'depend' clause.
+  LLVM_ABI void createTaskwait(const LocationDescription &Loc,
+                               DependenciesInfo Dependencies = {});
+
+  ///  Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
   /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`
   LLVM_ABI llvm::StructType *getKmpTaskAffinityInfoTy();
 
