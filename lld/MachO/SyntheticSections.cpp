@@ -886,9 +886,9 @@ void StubsSection::writeTo(uint8_t *buf) const {
   for (const Symbol *sym : entries) {
     uint64_t pointerVA;
     if (config->emitChainedFixups) {
-      // For arm64e, stubs use authgot instead of regular got
+      // For arm64e, stubs use authgot instead of regular got.
       if (config->arch() == AK_arm64e)
-        pointerVA = in.authgot->getVA(sym->authGotIndex);
+        pointerVA = sym->getAuthGotVA();
       else
         pointerVA = sym->getGotVA();
     } else {
