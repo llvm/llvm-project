@@ -105,38 +105,45 @@ static OpType getSingleOpOfType(Block &block) {
   return res;
 }
 
-/// Helper function to extract the input slices after filter is unrolled along
-/// kw.
+/// Layout of the canonical 1D conv/pool form:
+///   - Scalar:    no batch, no channels (e.g. 1D non-channeled conv).
+///   - Batched:   [n, w, c] / [n, w, f] (e.g. NWC conv).
+///   - Batchless: [w, c]    / [w, f]    (no batch dim).
+enum class ConvLayoutKind { Scalar, Batched, Batchless };
+
+/// Extract input slices after unrolling the filter along kw.
+///
+/// Per-tile shape and offset depend on `layout`:
+///   Scalar:    {wSizeStep}            @ [w + kw]
+///   Batched:   {n, wSizeStep, c}      @ [0, sw*w + dw*kw, 0]
+///   Batchless: {wSizeStep, c}         @ [sw*w + dw*kw, 0]
 static SmallVector<Value>
 extractConvInputSlices(RewriterBase &rewriter, Location loc, Value input,
                        int64_t nSize, int64_t wSize, int64_t cSize,
                        int64_t kwSize, int strideW, int dilationW,
-                       int64_t wSizeStep, bool isSingleChanneled) {
+                       int64_t wSizeStep, ConvLayoutKind layout) {
   SmallVector<Value> result;
-  if (isSingleChanneled) {
-    // Extract input slice of size {wSizeStep} @ [w + kw] for non-channeled
-    // convolution.
-    SmallVector<int64_t> sizes = {wSizeStep};
-    SmallVector<int64_t> strides = {1};
-    for (int64_t kw = 0; kw < kwSize; ++kw) {
-      for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        result.push_back(vector::ExtractStridedSliceOp::create(
-            rewriter, loc, input, /*offsets=*/ArrayRef<int64_t>{w + kw}, sizes,
-            strides));
+  for (int64_t kw = 0; kw < kwSize; ++kw) {
+    for (int64_t w = 0; w < wSize; w += wSizeStep) {
+      int64_t offset = w * strideW + kw * dilationW;
+      SmallVector<int64_t> sizes, offsets;
+      switch (layout) {
+      case ConvLayoutKind::Scalar:
+        sizes = {wSizeStep};
+        offsets = {w + kw};
+        break;
+      case ConvLayoutKind::Batched:
+        sizes = {nSize, wSizeStep, cSize};
+        offsets = {0, offset, 0};
+        break;
+      case ConvLayoutKind::Batchless:
+        sizes = {wSizeStep, cSize};
+        offsets = {offset, 0};
+        break;
       }
-    }
-  } else {
-    // Extract lhs slice of size {n, wSizeStep, c} @ [0, sw * w + dw * kw, 0]
-    // for channeled convolution.
-    SmallVector<int64_t> sizes = {nSize, wSizeStep, cSize};
-    SmallVector<int64_t> strides = {1, 1, 1};
-    for (int64_t kw = 0; kw < kwSize; ++kw) {
-      for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        result.push_back(vector::ExtractStridedSliceOp::create(
-            rewriter, loc, input,
-            /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
-            sizes, strides));
-      }
+      SmallVector<int64_t> strides(sizes.size(), 1);
+      result.push_back(vector::ExtractStridedSliceOp::create(
+          rewriter, loc, input, offsets, sizes, strides));
     }
   }
   return result;
@@ -157,60 +164,66 @@ static SmallVector<Value> extractConvFilterSlices(RewriterBase &rewriter,
   return result;
 }
 
-/// Helper function to extract the result slices after filter is unrolled along
-/// kw.
+/// Extract result slices, one per output spatial tile.
+///
+/// Per-tile shape and offset depend on `layout`:
+///   Scalar:    {wSizeStep}            @ [w]
+///   Batched:   {n, wSizeStep, f}      @ [0, w, 0]
+///   Batchless: {wSizeStep, f}         @ [w, 0]
 static SmallVector<Value>
 extractConvResultSlices(RewriterBase &rewriter, Location loc, Value res,
                         int64_t nSize, int64_t wSize, int64_t fSize,
-                        int64_t wSizeStep, bool isSingleChanneled) {
+                        int64_t wSizeStep, ConvLayoutKind layout) {
   SmallVector<Value> result;
-  if (isSingleChanneled) {
-    // Extract res slice: {wSizeStep} @ [w] for non-channeled convolution.
-    SmallVector<int64_t> sizes = {wSizeStep};
-    SmallVector<int64_t> strides = {1};
-    for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      result.push_back(vector::ExtractStridedSliceOp::create(
-          rewriter, loc, res, /*offsets=*/ArrayRef<int64_t>{w}, sizes,
-          strides));
+  for (int64_t w = 0; w < wSize; w += wSizeStep) {
+    SmallVector<int64_t> sizes, offsets;
+    switch (layout) {
+    case ConvLayoutKind::Scalar:
+      sizes = {wSizeStep};
+      offsets = {w};
+      break;
+    case ConvLayoutKind::Batched:
+      sizes = {nSize, wSizeStep, fSize};
+      offsets = {0, w, 0};
+      break;
+    case ConvLayoutKind::Batchless:
+      sizes = {wSizeStep, fSize};
+      offsets = {w, 0};
+      break;
     }
-  } else {
-    // Extract res slice: {n, wSizeStep, f} @ [0, w, 0] for channeled
-    // convolution.
-    SmallVector<int64_t> sizes = {nSize, wSizeStep, fSize};
-    SmallVector<int64_t> strides = {1, 1, 1};
-    for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      result.push_back(vector::ExtractStridedSliceOp::create(
-          rewriter, loc, res, /*offsets=*/ArrayRef<int64_t>{0, w, 0}, sizes,
-          strides));
-    }
+    SmallVector<int64_t> strides(sizes.size(), 1);
+    result.push_back(vector::ExtractStridedSliceOp::create(
+        rewriter, loc, res, offsets, sizes, strides));
   }
   return result;
 }
 
-/// Helper function to insert the computed result slices.
+/// Insert computed result slices back into the result vector.
+///
+/// Per-tile offset depends on `layout`:
+///   Scalar:    @ [w]
+///   Batched:   @ [0, w, 0]
+///   Batchless: @ [w, 0]
 static Value insertConvResultSlices(RewriterBase &rewriter, Location loc,
                                     Value res, int64_t wSize, int64_t wSizeStep,
                                     SmallVectorImpl<Value> &resVals,
-                                    bool isSingleChanneled) {
-
-  if (isSingleChanneled) {
-    // Write back res slice: {wSizeStep} @ [w] for non-channeled convolution.
-    // This does not depend on kw.
-    SmallVector<int64_t> strides = {1};
-    for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      res = vector::InsertStridedSliceOp::create(
-          rewriter, loc, resVals[w], res, /*offsets=*/ArrayRef<int64_t>{w},
-          strides);
+                                    ConvLayoutKind layout) {
+  for (int64_t w = 0; w < wSize; w += wSizeStep) {
+    SmallVector<int64_t> offsets;
+    switch (layout) {
+    case ConvLayoutKind::Scalar:
+      offsets = {w};
+      break;
+    case ConvLayoutKind::Batched:
+      offsets = {0, w, 0};
+      break;
+    case ConvLayoutKind::Batchless:
+      offsets = {w, 0};
+      break;
     }
-  } else {
-    // Write back res slice: {n, wSizeStep, f} @ [0, w, 0] for channeled
-    // convolution. This does not depend on kw.
-    SmallVector<int64_t> strides = {1, 1, 1};
-    for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      res = vector::InsertStridedSliceOp::create(
-          rewriter, loc, resVals[w], res,
-          /*offsets=*/ArrayRef<int64_t>{0, w, 0}, strides);
-    }
+    SmallVector<int64_t> strides(offsets.size(), 1);
+    res = vector::InsertStridedSliceOp::create(
+        rewriter, loc, resVals[w / wSizeStep], res, offsets, strides);
   }
   return res;
 }
@@ -603,13 +616,6 @@ static AffineMap reindexIndexingMap(AffineMap map) {
          "expected reindexed map with same number of dims and results");
   return res;
 }
-
-/// Helper enum to represent conv1d input traversal order.
-enum class Conv1DOpOrder {
-  W,   // Corresponds to non-channeled 1D convolution operation.
-  Ncw, // Corresponds to operation that traverses the input in (n, c, w) order.
-  Nwc  // Corresponds to operation that traverses the input in (n, w, c) order.
-};
 
 /// Helper data structure to represent the result of vectorization for a single
 /// operation. In certain specific cases, like terminators, we do not want to
@@ -2164,41 +2170,225 @@ static bool isSupportedPoolKind(vector::CombiningKind kind) {
   }
 }
 
-static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
-  auto getOperandType = [&](auto operand) {
-    return dyn_cast<ShapedType>((operand->get()).getType());
+namespace {
+/// Classification of a 1D convolution/pooling derived from
+/// ConvolutionDimensions. Cached state used by every step of the rewrite
+/// pipeline.
+struct Conv1DConfig {
+  ConvolutionDimensions dims;
+  ConvOperationKind convKind = ConvOperationKind::Conv;
+  ConvLayoutKind layout = ConvLayoutKind::Scalar;
+  bool isDepthwise = false;
+  bool isPooling = false;
+  /// Subset of `dims.batch` treated as outer (N-like) batch dims.
+  SmallVector<unsigned> nLikeBatch;
+  /// Subset of `dims.batch` treated as the channel-like dim for pooling.
+  /// Derived from the LHS indexing map (innermost LHS position) by
+  /// `splitPoolBatchByLhsInnermost`, not from the order of `dims.batch`.
+  SmallVector<unsigned> cLikeBatch;
+};
+
+/// Sizes extracted from the canonical 1D conv/pool form.
+struct Conv1DSizes {
+  int64_t kw = 0;
+  int64_t w = 0;
+  int64_t n = 0;
+  int64_t c = 0;
+  int64_t f = 0;
+};
+
+/// Permutations from the original operand layouts to the canonical NWC form.
+/// An empty vector means the permutation is identity (no transpose needed).
+struct Conv1DPerms {
+  SmallVector<int64_t> lhs;
+  SmallVector<int64_t> rhs;
+  SmallVector<int64_t> res;
+
+  bool allIdentity() const { return lhs.empty() && rhs.empty() && res.empty(); }
+};
+
+/// Pre-permutation (i.e. as-stored-in-tensor) shapes used for transfer_read.
+struct Conv1DShapes {
+  SmallVector<int64_t> lhs;
+  SmallVector<int64_t> rhs;
+  SmallVector<int64_t> res;
+};
+
+/// Triple of operand vector values (in canonical NWC form). `rhs` is null
+/// for pooling.
+struct Conv1DOperandVecs {
+  Value lhs;
+  Value rhs;
+  Value res;
+};
+} // namespace
+
+/// Build a map from loop-dim position to tensor-dim position for the dims of
+/// `map` that are plain `AffineDimExpr`s. Non-plain results (e.g. strided
+/// access expressions) are skipped.
+static DenseMap<unsigned, unsigned> buildLoopToTensorDimMap(AffineMap map) {
+  DenseMap<unsigned, unsigned> result;
+  for (unsigned i = 0; i < map.getNumResults(); ++i) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(map.getResult(i)))
+      result[dimExpr.getPosition()] = i;
+  }
+  return result;
+}
+
+/// For a pool-like op (no inputChannel/outputChannel dims), split `batch`
+/// into (outer, channel-like) based on the LHS indexing map: the batch loop
+/// that appears at the innermost LHS tensor position plays the channel-like
+/// role in the canonical NWC vector form; all other batch loops are outer
+/// (N-like) batch dims. This derivation is independent of the order in
+/// which `inferConvolutionDims` returns `batch`, so equivalent pools written
+/// with different iterator orderings classify the same way.
+///
+/// Returns failure when:
+///   - any batch loop is missing from the LHS indexing map (malformed pool);
+///   - two batch loops tie at the innermost LHS position (ambiguous).
+static FailureOr<std::pair<SmallVector<unsigned>, SmallVector<unsigned>>>
+splitPoolBatchByLhsInnermost(LinalgOp linalgOp, ArrayRef<unsigned> batch) {
+  DenseMap<unsigned, unsigned> loopToLhs =
+      buildLoopToTensorDimMap(linalgOp.getIndexingMapsArray()[0]);
+
+  std::optional<unsigned> cLike;
+  unsigned maxPos = 0;
+  for (unsigned d : batch) {
+    auto it = loopToLhs.find(d);
+    if (it == loopToLhs.end())
+      return failure();
+    unsigned p = it->second;
+    if (!cLike || p > maxPos) {
+      cLike = d;
+      maxPos = p;
+    } else if (p == maxPos) {
+      return failure();
+    }
+  }
+
+  SmallVector<unsigned> nLike, cLikeOut;
+  for (unsigned d : batch) {
+    if (d == *cLike)
+      cLikeOut.push_back(d);
+    else
+      nLike.push_back(d);
+  }
+  return std::make_pair(std::move(nLike), std::move(cLikeOut));
+}
+
+/// Classify `op` as a vectorizable 1D convolution/pooling. On failure,
+/// optionally writes a human-readable reason into `*reason`.
+static FailureOr<Conv1DConfig> classifyAs1DConv(LinalgOp op,
+                                                std::string *reason = nullptr) {
+  auto fail = [&](StringRef msg) -> FailureOr<Conv1DConfig> {
+    if (reason)
+      *reason = msg.str();
+    return failure();
   };
-  ShapedType lhsShapedType = getOperandType(convOp.getDpsInputOperand(0));
-  ShapedType rhsShapedType = getOperandType(convOp.getDpsInputOperand(1));
-  ShapedType resShapedType = getOperandType(convOp.getDpsInitOperand(0));
-  // (LHS has dimension NCW/NWC and RES has dimension NFW/NCW/NWF/NWC) OR
-  // (non-channeled convolution -> LHS and RHS both have single dimensions).
-  // Note that this also ensures 2D and 3D convolutions are rejected.
-  if ((lhsShapedType.getRank() != 3 || resShapedType.getRank() != 3) &&
-      (lhsShapedType.getRank() != 1 || resShapedType.getRank() != 1))
+
+  FailureOr<ConvolutionDimensions> maybeDims = inferConvolutionDims(op);
+  if (failed(maybeDims))
+    return fail("op is not a convolution (inferConvolutionDims failed)");
+
+  // Restrict to 1D: exactly one filter-loop dim and one output-image dim.
+  if (maybeDims->filterLoop.size() != 1 || maybeDims->outputImage.size() != 1)
+    return fail("only 1D convolutions are supported");
+  if (maybeDims->strides.empty() || maybeDims->dilations.empty())
+    return fail("strides and dilations must be statically known");
+
+  // Channel symmetry: either both channel kinds present or both folded away.
+  if (maybeDims->inputChannel.empty() != maybeDims->outputChannel.empty())
+    return fail("asymmetric inputChannel/outputChannel dims");
+
+  // Multiplicity restrictions: every category we index later assumes <= 1.
+  if (maybeDims->inputChannel.size() > 1 || maybeDims->outputChannel.size() > 1)
+    return fail("multiple inputChannel/outputChannel dims are not supported");
+  if (maybeDims->depth.size() > 1)
+    return fail("multiple depth dims are not supported");
+
+  // Inspect the reduce body to know whether this is a conv or a pool.
+  Operation *reduceOp = matchLinalgReduction(op.getDpsInitOperand(0));
+  if (!reduceOp)
+    return fail("could not match the reduction in the op body");
+  std::optional<ConvOperationKind> maybeKind = getConvOperationKind(reduceOp);
+  if (!maybeKind)
+    return fail("unsupported reduction body (not a conv or pool kind)");
+
+  Conv1DConfig config;
+  config.dims = std::move(*maybeDims);
+  config.convKind = *maybeKind;
+  config.isDepthwise = !config.dims.depth.empty();
+
+  bool bothChannelsEmpty =
+      config.dims.inputChannel.empty() && config.dims.outputChannel.empty();
+  bool noBatchOrChannels =
+      bothChannelsEmpty && config.dims.batch.empty() && !config.isDepthwise;
+
+  // Pure non-channeled 1D convolution: lhs=[iw], rhs=[kw], res=[w].
+  if (noBatchOrChannels) {
+    config.layout = ConvLayoutKind::Scalar;
+    return config;
+  }
+
+  // Both channel dims folded away with a batch dim => structurally pooling.
+  // Reject if the body is actually a multiply-add convolution (it would need
+  // channel dims that do not exist).
+  if (bothChannelsEmpty && !config.isDepthwise &&
+      config.convKind != ConvOperationKind::Pool)
+    return fail("convolution body but no channel dims (use a pooling body or "
+                "add channel dims)");
+  config.isPooling = bothChannelsEmpty && !config.isDepthwise;
+
+  // Batch-dim splitting.
+  //
+  // For pooling, the op body alone cannot distinguish "N" from "C": both are
+  // parallel loops on LHS and result that do not appear on RHS, so
+  // `inferConvolutionDims` groups them together in `dims.batch`. We derive
+  // which one plays the channel-like role from the LHS tensor layout
+  // (innermost LHS position) via `splitPoolBatchByLhsInnermost`, so that the
+  // classification does not depend on the order of `dims.batch`.
+  if (config.isPooling && !config.dims.batch.empty()) {
+    auto split = splitPoolBatchByLhsInnermost(op, config.dims.batch);
+    if (failed(split))
+      return fail("cannot determine channel-like batch dim for pooling op "
+                  "(ambiguous LHS layout or batch dim missing from LHS)");
+    std::tie(config.nLikeBatch, config.cLikeBatch) = std::move(*split);
+  } else if (!config.isPooling) {
+    config.nLikeBatch.assign(config.dims.batch.begin(),
+                             config.dims.batch.end());
+  }
+
+  // Multi-batch is not supported by the current canonical shapes.
+  if (config.nLikeBatch.size() > 1)
+    return fail("more than one N-like batch dim is not supported");
+
+  config.layout = config.nLikeBatch.empty() ? ConvLayoutKind::Batchless
+                                            : ConvLayoutKind::Batched;
+  return config;
+}
+
+static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
+  // Single shared classifier ensures the precondition and the matcher in
+  // Conv1DGenerator::create cannot drift apart.
+  FailureOr<Conv1DConfig> maybeConfig = classifyAs1DConv(convOp);
+  if (failed(maybeConfig))
     return failure();
 
   Operation *reduceOp = matchLinalgReduction(convOp.getDpsInitOperand(0));
-  if (!reduceOp)
-    return failure();
-
-  auto maybeOper = getConvOperationKind(reduceOp);
-  if (!maybeOper.has_value())
-    return failure();
-
-  auto maybeKind = getCombinerOpKind(reduceOp);
+  std::optional<vector::CombiningKind> maybeKind = getCombinerOpKind(reduceOp);
   // Typically convolution will have a `Add` CombiningKind but for i1 type it
   // can get strength reduced to `OR` which is also supported. This strength
   // reduction logic is in `buildBinaryFn` helper in the Linalg dialect.
   if (!maybeKind || ((*maybeKind != vector::CombiningKind::ADD &&
                       *maybeKind != vector::CombiningKind::OR) &&
-                     (*maybeOper != ConvOperationKind::Pool ||
-                      !isSupportedPoolKind(*maybeKind)))) {
+                     (maybeConfig->convKind != ConvOperationKind::Pool ||
+                      !isSupportedPoolKind(*maybeKind))))
     return failure();
-  }
 
-  auto rhsRank = rhsShapedType.getRank();
-  if (*maybeOper == ConvOperationKind::Pool) {
+  ShapedType rhsShapedType =
+      cast<ShapedType>(convOp.getDpsInputOperand(1)->get().getType());
+  int64_t rhsRank = rhsShapedType.getRank();
+  if (maybeConfig->convKind == ConvOperationKind::Pool) {
     if (rhsRank != 1)
       return failure();
   } else {
@@ -3308,35 +3498,83 @@ static void bindShapeDims(ShapedType shapedType, IntTy &...vals) {
   bindShapeDims<0>(shapedType, vals...);
 }
 
-/// Match 1D convolution or pooling operations and return their dilations and
-/// strides. Returns std::nullopt for unrecognized ops.
-static std::optional<DilationsAndStrides> match1DConvPoolOp(LinalgOp op) {
-#define MATCH_1D_CONV_POOL_OP(ConvOpTy)                                        \
-  if (auto convParams = matchConvolutionOpOfType<ConvOpTy>(op))                \
-    return convParams;
+/// Compute permutations to transpose each operand from its current layout to
+/// the canonical NWC form:
+///   lhs = [N?, iw, inputChannel?, depth?, C_like_batch?]
+///   rhs = [kw, inputChannel?, outputChannel?, depth?]
+///   res = [N?, w,  outputChannel?, depth?, C_like_batch?]
+/// An empty result vector means the permutation is identity.
+static Conv1DPerms computeCanonicalPerms(LinalgOp linalgOp,
+                                         const Conv1DConfig &config) {
+  const ConvolutionDimensions &dims = config.dims;
+  ArrayRef<unsigned> nLikeBatch = config.nLikeBatch;
+  ArrayRef<unsigned> cLikeBatch = config.cLikeBatch;
+  AffineMap lhsMap = linalgOp.getIndexingMapsArray()[0];
+  AffineMap rhsMap = linalgOp.getIndexingMapsArray()[1];
+  AffineMap resMap = linalgOp.getIndexingMapsArray()[2];
 
-  // 1D Convolution ops.
-  MATCH_1D_CONV_POOL_OP(linalg::Conv1DOp);
-  MATCH_1D_CONV_POOL_OP(linalg::Conv1DNwcWcfOp);
-  MATCH_1D_CONV_POOL_OP(linalg::Conv1DNcwFcwOp);
-  // Depthwise 1D Convolution ops.
-  // Note: Only NWC layout without channel multiplier is supported.
-  // DepthwiseConv1DNcwCwOp (NCW) and DepthwiseConv1DNwcWcmOp (with multiplier)
-  // are not supported.
-  MATCH_1D_CONV_POOL_OP(linalg::DepthwiseConv1DNwcWcOp);
-  // 1D Pooling ops (NWC layout).
-  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcSumOp);
-  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMaxOp);
-  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMaxUnsignedOp);
-  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMinOp);
-  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMinUnsignedOp);
-  // 1D Pooling ops (NCW layout).
-  MATCH_1D_CONV_POOL_OP(linalg::PoolingNcwSumOp);
-  MATCH_1D_CONV_POOL_OP(linalg::PoolingNcwMaxOp);
+  DenseMap<unsigned, unsigned> loopToLhs = buildLoopToTensorDimMap(lhsMap);
+  DenseMap<unsigned, unsigned> loopToRhs = buildLoopToTensorDimMap(rhsMap);
+  DenseMap<unsigned, unsigned> loopToRes = buildLoopToTensorDimMap(resMap);
 
-#undef MATCH_1D_CONV_POOL_OP
+  // The spatial (outputImage) tensor dim in LHS is the result that is NOT a
+  // plain AffineDimExpr: its expression is `strideW*ow + dilationW*kw`.
+  std::optional<unsigned> lhsSpatialTensorDim;
+  for (unsigned i = 0; i < lhsMap.getNumResults(); ++i) {
+    if (!isa<AffineDimExpr>(lhsMap.getResult(i))) {
+      lhsSpatialTensorDim = i;
+      break;
+    }
+  }
+  assert((dims.outputImage.empty() || lhsSpatialTensorDim) &&
+         "expected a non-plain LHS dim expr for the spatial dim");
 
-  return std::nullopt;
+  Conv1DPerms perms;
+
+  // Result: [N_like_batch, outputImage, outputChannel, depth, C_like_batch].
+  for (unsigned d : nLikeBatch)
+    perms.res.push_back(loopToRes[d]);
+  for (unsigned d : dims.outputImage)
+    perms.res.push_back(loopToRes[d]);
+  for (unsigned d : dims.outputChannel)
+    perms.res.push_back(loopToRes[d]);
+  for (unsigned d : dims.depth)
+    perms.res.push_back(loopToRes[d]);
+  for (unsigned d : cLikeBatch)
+    perms.res.push_back(loopToRes[d]);
+
+  // LHS: [N_like_batch, outputImage->spatial, inputChannel, depth,
+  //       C_like_batch]. The spatial position is the non-plain dim expr.
+  for (unsigned d : nLikeBatch)
+    perms.lhs.push_back(loopToLhs[d]);
+  if (lhsSpatialTensorDim)
+    perms.lhs.push_back(*lhsSpatialTensorDim);
+  for (unsigned d : dims.inputChannel)
+    perms.lhs.push_back(loopToLhs[d]);
+  for (unsigned d : dims.depth)
+    perms.lhs.push_back(loopToLhs[d]);
+  for (unsigned d : cLikeBatch)
+    perms.lhs.push_back(loopToLhs[d]);
+
+  // RHS: [filterLoop, inputChannel, outputChannel, depth]. For pooling RHS
+  // only has filterLoop.
+  for (unsigned d : dims.filterLoop)
+    perms.rhs.push_back(loopToRhs[d]);
+  for (unsigned d : dims.inputChannel)
+    perms.rhs.push_back(loopToRhs[d]);
+  for (unsigned d : dims.outputChannel)
+    perms.rhs.push_back(loopToRhs[d]);
+  for (unsigned d : dims.depth)
+    perms.rhs.push_back(loopToRhs[d]);
+
+  if (isIdentityPermutation(perms.lhs))
+    perms.lhs.clear();
+  if (isIdentityPermutation(perms.rhs))
+    perms.rhs.clear();
+  if (isIdentityPermutation(perms.res))
+    perms.res.clear();
+
+  return perms;
 }
 
 namespace {
@@ -3376,26 +3614,25 @@ namespace {
 /// kw is unrolled, w is unrolled iff dilationW > 1.
 struct Conv1DGenerator
     : public StructuredGenerator<LinalgOp, utils::IteratorType> {
-  /// Factory method to create a Conv1DGenerator. Returns failure if the
-  /// operation doesn't have valid strides/dilations.
+  /// Factory method to create a Conv1DGenerator. Uses the shared
+  /// `classifyAs1DConv` so the precondition and the matcher cannot drift
+  /// apart. Returns failure if the op is not a supported 1D conv/pool op.
   static FailureOr<Conv1DGenerator> create(RewriterBase &rewriter,
                                            LinalgOp linalgOp) {
-    // Try to match a 1D conv/pool op using matchConvolutionOpOfType. This
-    // works for both named ops and generic ops that match their semantics.
-    std::optional<DilationsAndStrides> convParams = match1DConvPoolOp(linalgOp);
-    if (!convParams)
-      return failure();
-
-    int strideW = static_cast<int>(convParams->strides.front());
-    int dilationW = static_cast<int>(convParams->dilations.front());
-    return Conv1DGenerator(rewriter, linalgOp, strideW, dilationW);
+    std::string reason;
+    FailureOr<Conv1DConfig> maybeConfig = classifyAs1DConv(linalgOp, &reason);
+    if (failed(maybeConfig))
+      return rewriter.notifyMatchFailure(linalgOp, reason);
+    return Conv1DGenerator(rewriter, linalgOp, std::move(*maybeConfig));
   }
 
 private:
-  Conv1DGenerator(RewriterBase &rewriter, LinalgOp linalgOp, int strideW,
-                  int dilationW)
+  Conv1DGenerator(RewriterBase &rewriter, LinalgOp linalgOp,
+                  Conv1DConfig config)
       : StructuredGenerator<LinalgOp, utils::IteratorType>(rewriter, linalgOp),
-        strideW(strideW), dilationW(dilationW) {
+        config(std::move(config)) {
+    strideW = static_cast<int>(this->config.dims.strides.front());
+    dilationW = static_cast<int>(this->config.dims.dilations.front());
 
     lhsShaped = linalgOp.getDpsInputOperand(0)->get();
     rhsShaped = linalgOp.getDpsInputOperand(1)->get();
@@ -3406,242 +3643,11 @@ private:
 
     Operation *reduceOp = matchLinalgReduction(linalgOp.getDpsInitOperand(0));
     redOp = reduceOp->getName().getIdentifier();
-
-    setConvOperationKind(reduceOp);
-
-    auto maybeKind = getCombinerOpKind(reduceOp);
-    reductionKind = maybeKind.value();
+    setPoolExtFromReduce(reduceOp);
+    reductionKind = getCombinerOpKind(reduceOp).value();
   }
 
 public:
-  /// Generate a vector implementation for:
-  /// ```
-  ///   Op def: (     w,     kw  )
-  ///    Iters: ({Par(), Red()})
-  ///   Layout: {{w + kw}, {kw}, {w}}
-  /// ```
-  /// kw is always unrolled.
-  ///
-  /// or
-  ///
-  /// ```
-  ///   Op def: (     n,     w,     c,    kw,    f  )
-  ///    Iters: ({Par(), Par(), Par(), Red(), Red()})
-  ///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c, f}, {n, w, f}}
-  /// ```
-  /// kw is always unrolled.
-  /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
-  /// > 1.
-  FailureOr<Operation *> conv(Conv1DOpOrder conv1DOpOrder) {
-    int64_t nSize, wSize, cSize, kwSize, fSize;
-    SmallVector<int64_t, 3> lhsShape, rhsShape, resShape;
-    bool isSingleChanneled = (conv1DOpOrder == Conv1DOpOrder::W);
-    switch (conv1DOpOrder) {
-    case Conv1DOpOrder::W:
-      // Initialize unused dimensions
-      nSize = fSize = cSize = 0;
-      // out{W}
-      bindShapeDims(resShapedType, wSize);
-      // kernel{kw}
-      bindShapeDims(rhsShapedType, kwSize);
-      lhsShape = {// iw = ow + kw - 1
-                  //   (i.e. 16 convolved with 3 -> 14)
-                  (wSize + kwSize - 1)};
-      rhsShape = {kwSize};
-      resShape = {wSize};
-      break;
-    case Conv1DOpOrder::Nwc:
-      // out{n, w, f}
-      bindShapeDims(resShapedType, nSize, wSize, fSize);
-      switch (oper) {
-      case ConvOperationKind::Conv:
-        // kernel{kw, c, f}
-        bindShapeDims(rhsShapedType, kwSize, cSize);
-        break;
-      case ConvOperationKind::Pool:
-        // kernel{kw}
-        bindShapeDims(rhsShapedType, kwSize);
-        cSize = fSize;
-        break;
-      }
-      lhsShape = {nSize,
-                  // iw = ow * sw + kw *  dw - 1
-                  //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
-                  // Perform the proper inclusive -> exclusive -> inclusive.
-                  ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) -
-                      1,
-                  cSize};
-      switch (oper) {
-      case ConvOperationKind::Conv:
-        rhsShape = {kwSize, cSize, fSize};
-        break;
-      case ConvOperationKind::Pool:
-        rhsShape = {kwSize};
-        break;
-      }
-      resShape = {nSize, wSize, fSize};
-      break;
-    case Conv1DOpOrder::Ncw:
-      // out{n, f, w}
-      bindShapeDims(resShapedType, nSize, fSize, wSize);
-      switch (oper) {
-      case ConvOperationKind::Conv:
-        // kernel{f, c, kw}
-        bindShapeDims(rhsShapedType, fSize, cSize, kwSize);
-        break;
-      case ConvOperationKind::Pool:
-        // kernel{kw}
-        bindShapeDims(rhsShapedType, kwSize);
-        cSize = fSize;
-        break;
-      }
-      lhsShape = {nSize, cSize,
-                  // iw = ow * sw + kw *  dw - 1
-                  //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
-                  // Perform the proper inclusive -> exclusive -> inclusive.
-                  ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) -
-                      1};
-      switch (oper) {
-      case ConvOperationKind::Conv:
-        rhsShape = {fSize, cSize, kwSize};
-        break;
-      case ConvOperationKind::Pool:
-        rhsShape = {kwSize};
-        break;
-      }
-      resShape = {nSize, fSize, wSize};
-      break;
-    }
-
-    vector::TransferWriteOp write;
-    Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
-
-    // w is unrolled (i.e. wSizeStep == 1) iff strideW > 1.
-    // When strideW == 1, we can batch the contiguous loads and avoid
-    // unrolling
-    int64_t wSizeStep = strideW == 1 ? wSize : 1;
-
-    Type lhsEltType = lhsShapedType.getElementType();
-    Type rhsEltType = rhsShapedType.getElementType();
-    Type resEltType = resShapedType.getElementType();
-    auto lhsType = VectorType::get(lhsShape, lhsEltType);
-    auto rhsType = VectorType::get(rhsShape, rhsEltType);
-    auto resType = VectorType::get(resShape, resEltType);
-    // Zero padding with the corresponding dimensions for lhs, rhs and res.
-    SmallVector<Value> lhsPadding(lhsShape.size(), zero);
-    SmallVector<Value> rhsPadding(rhsShape.size(), zero);
-    SmallVector<Value> resPadding(resShape.size(), zero);
-
-    // Read the whole lhs, rhs and res in one shot (with zero padding).
-    Value lhs = vector::TransferReadOp::create(
-        rewriter, loc, lhsType, lhsShaped, lhsPadding,
-        /*padding=*/arith::getZeroConstant(rewriter, loc, lhsEltType));
-    // This is needed only for Conv.
-    Value rhs = nullptr;
-    if (oper == ConvOperationKind::Conv)
-      rhs = vector::TransferReadOp::create(
-          rewriter, loc, rhsType, rhsShaped, rhsPadding,
-          /*padding=*/arith::getZeroConstant(rewriter, loc, rhsEltType));
-    Value res = vector::TransferReadOp::create(
-        rewriter, loc, resType, resShaped, resPadding,
-        /*padding=*/arith::getZeroConstant(rewriter, loc, resEltType));
-
-    // The base vectorization case for channeled convolution is input:
-    // {n,w,c}, weight: {kw,c,f}, output: {n,w,f}. To reuse the base pattern
-    // vectorization case, we do pre transpose on input, weight, and output.
-    switch (conv1DOpOrder) {
-    case Conv1DOpOrder::W:
-    case Conv1DOpOrder::Nwc:
-      // Base case, so no transposes necessary.
-      break;
-    case Conv1DOpOrder::Ncw: {
-      // To match base vectorization case, we pre-transpose current case.
-      // ncw -> nwc
-      static constexpr std::array<int64_t, 3> permLhs = {0, 2, 1};
-      lhs = vector::TransposeOp::create(rewriter, loc, lhs, permLhs);
-      // fcw -> wcf
-      static constexpr std::array<int64_t, 3> permRhs = {2, 1, 0};
-
-      // This is needed only for Conv.
-      if (oper == ConvOperationKind::Conv)
-        rhs = vector::TransposeOp::create(rewriter, loc, rhs, permRhs);
-      // nfw -> nwf
-      static constexpr std::array<int64_t, 3> permRes = {0, 2, 1};
-      res = vector::TransposeOp::create(rewriter, loc, res, permRes);
-      break;
-    }
-    }
-
-    //===------------------------------------------------------------------===//
-    // Begin vector-only rewrite part
-    //===------------------------------------------------------------------===//
-    // Unroll along kw and read slices of lhs and rhs.
-    SmallVector<Value> lhsVals, rhsVals, resVals;
-    lhsVals = extractConvInputSlices(rewriter, loc, lhs, nSize, wSize, cSize,
-                                     kwSize, strideW, dilationW, wSizeStep,
-                                     isSingleChanneled);
-    // Do not do for pooling.
-    if (oper == ConvOperationKind::Conv)
-      rhsVals = extractConvFilterSlices(rewriter, loc, rhs, kwSize);
-    resVals = extractConvResultSlices(rewriter, loc, res, nSize, wSize, fSize,
-                                      wSizeStep, isSingleChanneled);
-
-    auto linearIndex = [&](int64_t kw, int64_t w) {
-      return kw * (wSize / wSizeStep) + w;
-    };
-
-    // Compute contraction: O{n, w, f} += I{n, sw * w + dw * kw, c} * F{c, f}
-    // or perform outerproduct for non-channeled convolution or perform simple
-    // arith operation for pooling
-    for (int64_t kw = 0; kw < kwSize; ++kw) {
-      for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        switch (oper) {
-        case ConvOperationKind::Conv:
-          if (isSingleChanneled) {
-            resVals[w] = conv1dSliceAsOuterProduct(rewriter, loc,
-                                                   lhsVals[linearIndex(kw, w)],
-                                                   rhsVals[kw], resVals[w]);
-          } else {
-            resVals[w] = conv1dSliceAsContraction(rewriter, loc,
-                                                  lhsVals[linearIndex(kw, w)],
-                                                  rhsVals[kw], resVals[w]);
-          }
-          break;
-        case ConvOperationKind::Pool:
-          resVals[w] = pool1dSlice(rewriter, loc, lhsVals[linearIndex(kw, w)],
-                                   resVals[w]);
-          break;
-        }
-      }
-    }
-
-    res = insertConvResultSlices(rewriter, loc, res, wSize, wSizeStep, resVals,
-                                 isSingleChanneled);
-    //===------------------------------------------------------------------===//
-    // End vector-only rewrite part
-    //===------------------------------------------------------------------===//
-
-    // The base vectorization case for channeled convolution is output:
-    // {n,w,f} To reuse the result from base pattern vectorization case, we
-    // post transpose the base case result.
-    switch (conv1DOpOrder) {
-    case Conv1DOpOrder::W:
-    case Conv1DOpOrder::Nwc:
-      // Base case, so no transposes necessary.
-      break;
-    case Conv1DOpOrder::Ncw: {
-      // nwf -> nfw
-      static constexpr std::array<int64_t, 3> perm = {0, 2, 1};
-      res = vector::TransposeOp::create(rewriter, loc, res, perm);
-      break;
-    }
-    }
-
-    return vector::TransferWriteOp::create(rewriter, loc, res, resShaped,
-                                           resPadding)
-        .getOperation();
-  }
-
   // Take a value and widen to have the same element type as `ty`.
   Value promote(RewriterBase &rewriter, Location loc, Value val, Type ty) {
     const Type srcElementType = getElementTypeOrSelf(val.getType());
@@ -3745,7 +3751,6 @@ public:
     // out{n, w, c}
     bindShapeDims(resShapedType, nSize, wSize);
 
-    vector::TransferWriteOp write;
     Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
 
     // w is unrolled (i.e. wSizeStep == 1) iff strideW > 1.
@@ -3816,34 +3821,59 @@ public:
     auto *maybeMaskedRes = maybeMaskXferOp(
         resType.getShape(), resType.getScalableDims(), res.getDefiningOp());
 
-    //===------------------------------------------------------------------===//
-    // Begin vector-only rewrite part
-    //===------------------------------------------------------------------===//
-    // Unroll along kw and read slices of lhs and rhs.
-    SmallVector<Value> lhsVals, rhsVals, resVals;
+    FailureOr<Value> kernelRes = depthwise1DKernel(
+        maybeMaskedLhs->getResult(0), maybeMaskedRhs->getResult(0),
+        maybeMaskedRes->getResult(0), nSize, wSize, cSize, kwSize, wSizeStep,
+        flatten);
+    if (failed(kernelRes)) {
+      // Best-effort: erase the original transfer_reads we created above.
+      // (Mask wrapper ops, if any, will be handled by the failed-pattern
+      // rollback in the parent rewrite driver.)
+      for (Value v : {res, rhs, lhs, zero})
+        if (v)
+          rewriter.eraseOp(v.getDefiningOp());
+      return failure();
+    }
+
+    Operation *resOut = vector::TransferWriteOp::create(
+        rewriter, loc, *kernelRes, resShaped, ValueRange{zero, zero, zero});
+    return maybeMaskXferOp(resType.getShape(), resType.getScalableDims(),
+                           resOut);
+  }
+
+  /// Vector-level depthwise compute kernel: extracts kw x w tiles from the
+  /// canonical NWC operand vectors, runs MulAcc, and re-inserts the tiles
+  /// back into the result vector. All inputs must be in canonical NWC form
+  /// (lhs=[n,iw,c], rhs=[kw,c], res=[n,w,c]).
+  ///
+  /// On MulAcc failure the kernel erases only the IR it created; the caller
+  /// is responsible for cleaning up its own pre-kernel IR.
+  FailureOr<Value> depthwise1DKernel(Value lhs, Value rhs, Value res,
+                                     int64_t nSize, int64_t wSize,
+                                     int64_t cSize, int64_t kwSize,
+                                     int64_t wSizeStep, bool flatten) {
+    Type lhsEltType = cast<VectorType>(lhs.getType()).getElementType();
+    Type resEltType = cast<VectorType>(res.getType()).getElementType();
+
     SmallVector<int64_t> inOutSliceSizes = {nSize, wSizeStep, cSize};
     SmallVector<int64_t> inOutStrides = {1, 1, 1};
 
-    // Extract lhs slice of size {n, wSizeStep, c}
-    //   @ [0, sw * w + dw * kw, 0].
+    SmallVector<Value> lhsVals, rhsVals, resVals;
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         lhsVals.push_back(vector::ExtractStridedSliceOp::create(
-            rewriter, loc, maybeMaskedLhs->getResult(0),
+            rewriter, loc, lhs,
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
             inOutSliceSizes, inOutStrides));
       }
     }
-    // Extract rhs slice of size {c} @ [kw].
     for (int64_t kw = 0; kw < kwSize; ++kw) {
-      rhsVals.push_back(
-          vector::ExtractOp::create(rewriter, loc, maybeMaskedRhs->getResult(0),
-                                    /*offsets=*/ArrayRef<int64_t>{kw}));
+      rhsVals.push_back(vector::ExtractOp::create(
+          rewriter, loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
     }
-    // Extract res slice: {n, wSizeStep, c} @ [0, w, 0].
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       resVals.push_back(vector::ExtractStridedSliceOp::create(
-          rewriter, loc, maybeMaskedRes->getResult(0),
+          rewriter, loc, res,
           /*offsets=*/ArrayRef<int64_t>{0, w, 0}, inOutSliceSizes,
           inOutStrides));
     }
@@ -3852,7 +3882,7 @@ public:
       return kw * (wSize / wSizeStep) + w;
     };
 
-    // Note - the scalable flags are ignored as flattening combined with
+    // Note: the scalable flags are ignored because flattening combined with
     // scalable vectorization is not supported.
     SmallVector<int64_t> inOutFlattenSliceSizes = {nSize, wSizeStep * cSize};
     auto lhsTypeAfterFlattening =
@@ -3860,24 +3890,19 @@ public:
     auto resTypeAfterFlattening =
         VectorType::get(inOutFlattenSliceSizes, resEltType);
 
-    // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         Value lhsVal = lhsVals[linearIndex(kw, w)];
         Value resVal = resVals[w];
         if (flatten) {
-          // Flatten the input and output vectors (collapse the channel
-          // dimension)
-          lhsVal =
-              vector::ShapeCastOp::create(rewriter, loc, lhsTypeAfterFlattening,
-                                          lhsVals[linearIndex(kw, w)]);
-          resVal = vector::ShapeCastOp::create(
-              rewriter, loc, resTypeAfterFlattening, resVals[w]);
+          lhsVal = vector::ShapeCastOp::create(rewriter, loc,
+                                               lhsTypeAfterFlattening, lhsVal);
+          resVal = vector::ShapeCastOp::create(rewriter, loc,
+                                               resTypeAfterFlattening, resVal);
         }
         resVals[w] = depthwiseConv1dSliceAsMulAcc(rewriter, loc, lhsVal,
                                                   rhsVals[kw], resVal, flatten);
         if (flatten) {
-          // Un-flatten the output vector (restore the channel dimension)
           resVals[w] = vector::ShapeCastOp::create(
               rewriter, loc, VectorType::get(inOutSliceSizes, resEltType),
               resVals[w]);
@@ -3885,34 +3910,86 @@ public:
       }
     }
 
-    // Its possible we failed to create the Fma.
     if (!llvm::all_of(resVals, [](Value v) { return v; })) {
-      // Manually revert (in reverse order) to avoid leaving a bad IR state.
-      for (auto &collection :
-           {resVals, rhsVals, lhsVals, {res, rhs, lhs, zero}})
+      for (auto &collection : {resVals, rhsVals, lhsVals})
         for (Value v : collection)
-          rewriter.eraseOp(v.getDefiningOp());
+          if (v)
+            rewriter.eraseOp(v.getDefiningOp());
       return rewriter.notifyMatchFailure(op, "failed to create FMA");
     }
 
-    // Write back res slice: {n, wSizeStep, c} @ [0, w, 0].
-    // This does not depend on kw.
+    Value out = res;
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      maybeMaskedRes = vector::InsertStridedSliceOp::create(
-          rewriter, loc, resVals[w], maybeMaskedRes->getResult(0),
+      out = vector::InsertStridedSliceOp::create(
+          rewriter, loc, resVals[w], out,
           /*offsets=*/ArrayRef<int64_t>{0, w, 0},
           /*strides=*/ArrayRef<int64_t>{1, 1, 1});
     }
-    //===------------------------------------------------------------------===//
-    // End vector-only rewrite part
-    //===------------------------------------------------------------------===//
+    return out;
+  }
 
-    // Write back res slice of size {n, w, c} @ [0, 0, 0].
-    Operation *resOut = vector::TransferWriteOp::create(
-        rewriter, loc, maybeMaskedRes->getResult(0), resShaped,
-        ValueRange{zero, zero, zero});
-    return maybeMaskXferOp(resType.getShape(), resType.getScalableDims(),
-                           resOut);
+  /// Depthwise convolution for non-canonical layouts: read the operands in
+  /// their original layout, transpose the loaded vectors to canonical NWC,
+  /// run the kernel, inverse-transpose the result, and write it back.
+  /// Static shapes only (no masking).
+  FailureOr<Operation *> depthwiseConvViaTranspose(const Conv1DPerms &perms,
+                                                   bool flatten) {
+    // Canonical sizes: kernel is [kw, c], result is [n, w, c].
+    int64_t kwSize = 0, cSize = 0, nSize = 0, wSize = 0;
+    {
+      DenseMap<unsigned, unsigned> loopToRhs =
+          buildLoopToTensorDimMap(cast<LinalgOp>(op).getIndexingMapsArray()[1]);
+      DenseMap<unsigned, unsigned> loopToRes =
+          buildLoopToTensorDimMap(cast<LinalgOp>(op).getIndexingMapsArray()[2]);
+      kwSize = rhsShapedType.getShape()[loopToRhs[dims().filterLoop[0]]];
+      cSize = rhsShapedType.getShape()[loopToRhs[dims().depth[0]]];
+      nSize = config.nLikeBatch.empty()
+                  ? 1
+                  : resShapedType.getShape()[loopToRes[config.nLikeBatch[0]]];
+      wSize = resShapedType.getShape()[loopToRes[dims().outputImage[0]]];
+    }
+    int64_t iwSize =
+        ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1;
+
+    Conv1DShapes canon{
+        /*lhs=*/{nSize, iwSize, cSize},
+        /*rhs=*/{kwSize, cSize},
+        /*res=*/{nSize, wSize, cSize},
+    };
+    Conv1DShapes read = computeReadShapes(canon, perms);
+
+    Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    Type lhsEltType = lhsShapedType.getElementType();
+    Type rhsEltType = rhsShapedType.getElementType();
+    Type resEltType = resShapedType.getElementType();
+    SmallVector<Value> lhsIdx(read.lhs.size(), zero);
+    SmallVector<Value> rhsIdx(read.rhs.size(), zero);
+    SmallVector<Value> resIdx(read.res.size(), zero);
+
+    Value lhs = vector::TransferReadOp::create(
+        rewriter, loc, VectorType::get(read.lhs, lhsEltType), lhsShaped, lhsIdx,
+        arith::getZeroConstant(rewriter, loc, lhsEltType));
+    Value rhs = vector::TransferReadOp::create(
+        rewriter, loc, VectorType::get(read.rhs, rhsEltType), rhsShaped, rhsIdx,
+        arith::getZeroConstant(rewriter, loc, rhsEltType));
+    Value res = vector::TransferReadOp::create(
+        rewriter, loc, VectorType::get(read.res, resEltType), resShaped, resIdx,
+        arith::getZeroConstant(rewriter, loc, resEltType));
+
+    if (!perms.lhs.empty())
+      lhs = vector::TransposeOp::create(rewriter, loc, lhs, perms.lhs);
+    if (!perms.rhs.empty())
+      rhs = vector::TransposeOp::create(rewriter, loc, rhs, perms.rhs);
+    if (!perms.res.empty())
+      res = vector::TransposeOp::create(rewriter, loc, res, perms.res);
+
+    int64_t wSizeStep = strideW == 1 ? wSize : 1;
+    FailureOr<Value> kernelRes = depthwise1DKernel(
+        lhs, rhs, res, nSize, wSize, cSize, kwSize, wSizeStep, flatten);
+    if (failed(kernelRes))
+      return failure();
+
+    return writeAndPostTranspose(*kernelRes, read.res, perms.res);
   }
 
   /// Lower:
@@ -3964,148 +4041,284 @@ public:
     return arith::AddIOp::create(rewriter, loc, mul, res);
   }
 
-  /// Entry point for non-channeled convolution:
-  ///   {{w + kw}, {kw}, {w}}
-  FailureOr<Operation *> generateNonChanneledConv() {
-    AffineExpr w, kw;
-    bindDims(ctx, w, kw);
-    if (!iters({Par(), Red()}))
-      return rewriter.notifyMatchFailure(op,
-                                         "failed to match conv::W 1-par 1-red");
-
-    // No transposition needed.
-    if (layout({/*lhsIndex*/ {w + kw},
-                /*rhsIndex*/ {kw},
-                /*resIndex*/ {w}}))
-      return conv(Conv1DOpOrder::W);
-
-    return rewriter.notifyMatchFailure(op, "not a conv::W layout");
+  /// Create a contraction: lhs{w, c} * rhs{c, f} -> res{w, f}.
+  /// Used for batchless channeled convolution.
+  Value conv1dBatchlessSliceAsContraction(RewriterBase &rewriter, Location loc,
+                                          Value lhs, Value rhs, Value res) {
+    vector::IteratorType par = vector::IteratorType::parallel;
+    vector::IteratorType red = vector::IteratorType::reduction;
+    AffineExpr w, f, c;
+    bindDims(ctx, w, f, c);
+    lhs = promote(rewriter, loc, lhs, res.getType());
+    rhs = promote(rewriter, loc, rhs, res.getType());
+    auto contractionOp = vector::ContractionOp::create(
+        rewriter, loc, lhs, rhs, res,
+        /*indexingMaps=*/MapList{{w, c}, {c, f}, {w, f}},
+        /*iteratorTypes=*/ArrayRef<vector::IteratorType>{par, par, red});
+    contractionOp.setKind(reductionKind);
+    return contractionOp;
   }
 
-  /// Entry point that transposes into the common form:
-  ///   {{n, strideW * w + dilationW * kw, c}, {kw, c, f}, {n, w, f}}
-  FailureOr<Operation *> generateNwcConv() {
-    AffineExpr n, w, f, kw, c;
-    bindDims(ctx, n, w, f, kw, c);
-    if (!iters({Par(), Par(), Par(), Red(), Red()}))
+  //===--------------------------------------------------------------------===//
+  // generate() pipeline helpers
+  //===--------------------------------------------------------------------===//
+
+  /// Handle depthwise convolution. For canonical (NWC) layout, delegate to
+  /// the existing depthwiseConv() which supports masking/scalable channel
+  /// dim. For non-canonical layouts (e.g. NcwCw), pre-transpose at the
+  /// vector boundaries and run the canonical kernel; this path requires
+  /// fully-static shapes (no masking).
+  FailureOr<Operation *> handleDepthwise(ArrayRef<int64_t> inputVecSizes,
+                                         ArrayRef<bool> inputScalableVecDims,
+                                         bool flatten1DDepthwiseConv) {
+    LinalgOp linalgOp = cast<LinalgOp>(op);
+    Conv1DPerms perms = computeCanonicalPerms(linalgOp, config);
+
+    if (perms.allIdentity()) {
+      // Canonical NWC: existing path handles masking + scalable dims.
+      int64_t vecChDimSize = 0;
+      bool vecChScalableFlag = false;
+      if (!inputVecSizes.empty()) {
+        DenseMap<unsigned, unsigned> loopToRes =
+            buildLoopToTensorDimMap(linalgOp.getIndexingMapsArray()[2]);
+        unsigned chTensorDim = loopToRes[dims().depth[0]];
+        vecChDimSize = inputVecSizes[chTensorDim];
+        vecChScalableFlag = inputScalableVecDims[chTensorDim];
+      }
+      return depthwiseConv(vecChDimSize, vecChScalableFlag,
+                           flatten1DDepthwiseConv);
+    }
+
+    // Non-canonical depthwise: only static shapes are supported because
+    // boundary masking interacts with the post-transpose layout in ways we
+    // don't yet handle.
+    if (!lhsShapedType.hasStaticShape() || !rhsShapedType.hasStaticShape() ||
+        !resShapedType.hasStaticShape())
       return rewriter.notifyMatchFailure(
-          op, "failed to match conv::Nwc 3-par 2-red");
-
-    // No transposition needed.
-    if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
-                /*rhsIndex*/ {kw, c, f},
-                /*resIndex*/ {n, w, f}}))
-      return conv(Conv1DOpOrder::Nwc);
-
-    return rewriter.notifyMatchFailure(op, "not a conv::Nwc layout");
+          op,
+          "depthwise conv with non-canonical layout requires static shapes");
+    return depthwiseConvViaTranspose(perms, flatten1DDepthwiseConv);
   }
 
-  /// Entry point that transposes into the common form:
-  ///   {{n, c, strideW * w + dilationW * kw}, {f, c, kw}, {n, f, w}}
-  FailureOr<Operation *> generateNcwConv() {
-    AffineExpr n, w, f, kw, c;
-    bindDims(ctx, n, f, w, c, kw);
-    if (!iters({Par(), Par(), Par(), Red(), Red()}))
-      return rewriter.notifyMatchFailure(
-          op, "failed to match conv::Ncw 3-par 2-red");
-
-    if (layout({/*lhsIndex*/ {n, c, strideW * w + dilationW * kw},
-                /*rhsIndex*/ {f, c, kw},
-                /*resIndex*/ {n, f, w}}))
-      return conv(Conv1DOpOrder::Ncw);
-
-    return rewriter.notifyMatchFailure(op, "not a conv::Ncw layout");
+  /// Extract canonical loop sizes from ConvolutionDimensions.
+  Conv1DSizes computeConvSizes(LinalgOp linalgOp) const {
+    SmallVector<int64_t> loopRanges = linalgOp.getStaticLoopRanges();
+    Conv1DSizes sizes;
+    sizes.kw = loopRanges[dims().filterLoop[0]];
+    sizes.w = loopRanges[dims().outputImage[0]];
+    if (!config.nLikeBatch.empty())
+      sizes.n = loopRanges[config.nLikeBatch[0]];
+    if (config.isPooling) {
+      // Pooling has no separate filter channel: the C-like batch dim doubles
+      // as both input and output channel size.
+      if (!config.cLikeBatch.empty())
+        sizes.c = sizes.f = loopRanges[config.cLikeBatch[0]];
+    } else if (config.layout != ConvLayoutKind::Scalar) {
+      sizes.c = loopRanges[dims().inputChannel[0]];
+      sizes.f = loopRanges[dims().outputChannel[0]];
+    }
+    return sizes;
   }
 
-  /// Entry point that transposes into the common form:
-  ///   {{n, strideW * w + dilationW * kw, c}, {kw}, {n, w, c}} for pooling
-  FailureOr<Operation *> generateNwcPooling() {
-    AffineExpr n, w, c, kw;
-    bindDims(ctx, n, w, c, kw);
-    if (!iters({Par(), Par(), Par(), Red()}))
-      return rewriter.notifyMatchFailure(op,
-                                         "failed to match pooling 3-par 1-red");
-
-    // No transposition needed.
-    if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
-                /*rhsIndex*/ {kw},
-                /*resIndex*/ {n, w, c}}))
-      return conv(Conv1DOpOrder::Nwc);
-
-    return rewriter.notifyMatchFailure(op, "not a pooling::Nwc layout");
+  /// Build the canonical (post-transpose) NWC operand shapes.
+  Conv1DShapes computeCanonicalShapes(const Conv1DSizes &sizes) const {
+    int64_t iwSize = config.layout == ConvLayoutKind::Scalar
+                         ? (sizes.w + sizes.kw - 1)
+                         : ((sizes.w - 1) * strideW + 1) +
+                               ((sizes.kw - 1) * dilationW + 1) - 1;
+    Conv1DShapes shapes;
+    switch (config.layout) {
+    case ConvLayoutKind::Scalar:
+      shapes.lhs = {iwSize};
+      shapes.rhs = {sizes.kw};
+      shapes.res = {sizes.w};
+      break;
+    case ConvLayoutKind::Batched:
+      shapes.lhs = {sizes.n, iwSize, sizes.c};
+      shapes.rhs = config.isPooling
+                       ? SmallVector<int64_t>{sizes.kw}
+                       : SmallVector<int64_t>{sizes.kw, sizes.c, sizes.f};
+      shapes.res = {sizes.n, sizes.w, sizes.f};
+      break;
+    case ConvLayoutKind::Batchless:
+      shapes.lhs = {iwSize, sizes.c};
+      shapes.rhs = config.isPooling
+                       ? SmallVector<int64_t>{sizes.kw}
+                       : SmallVector<int64_t>{sizes.kw, sizes.c, sizes.f};
+      shapes.res = {sizes.w, sizes.f};
+      break;
+    }
+    return shapes;
   }
 
-  /// Entry point that transposes into the common form:
-  ///   {{n, c, strideW * w + dilationW * kw}, {kw}, {n, c, w}} for pooling
-  FailureOr<Operation *> generateNcwPooling() {
-    AffineExpr n, w, c, kw;
-    bindDims(ctx, n, c, w, kw);
-    if (!iters({Par(), Par(), Par(), Red()}))
-      return rewriter.notifyMatchFailure(op,
-                                         "failed to match pooling 3-par 1-red");
-
-    if (layout({/*lhsIndex*/ {n, c, strideW * w + dilationW * kw},
-                /*rhsIndex*/ {kw},
-                /*resIndex*/ {n, c, w}}))
-      return conv(Conv1DOpOrder::Ncw);
-
-    return rewriter.notifyMatchFailure(op, "not a pooling::Ncw layout");
+  /// Compute the pre-read (transfer_read) shapes by inverting the
+  /// permutations on the canonical shapes. If a permutation is identity, the
+  /// canonical shape is returned unchanged.
+  Conv1DShapes computeReadShapes(const Conv1DShapes &canonical,
+                                 const Conv1DPerms &perms) const {
+    auto inverseApply = [](ArrayRef<int64_t> canonShape,
+                           ArrayRef<int64_t> perm) -> SmallVector<int64_t> {
+      if (perm.empty())
+        return SmallVector<int64_t>(canonShape);
+      return applyPermutation(canonShape, invertPermutationVector(perm));
+    };
+    return Conv1DShapes{inverseApply(canonical.lhs, perms.lhs),
+                        inverseApply(canonical.rhs, perms.rhs),
+                        inverseApply(canonical.res, perms.res)};
   }
 
-  /// Entry point that transposes into the common form:
-  ///   {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
-  FailureOr<Operation *> generateDilatedConv(uint64_t vecChDimSize = 0,
-                                             bool vecChDimScalableFlag = false,
-                                             bool flatten = false) {
-    AffineExpr n, w, c, kw;
-    bindDims(ctx, n, w, c, kw);
-    if (!iters({Par(), Par(), Par(), Red()}))
-      return rewriter.notifyMatchFailure(
-          op, "failed to match depthwise::Nwc conv 3-par 1-red");
+  /// Read operand tensors and pre-transpose to canonical NWC form. `rhs` is
+  /// nullptr for pooling.
+  Conv1DOperandVecs readAndTranspose(const Conv1DShapes &readShapes,
+                                     const Conv1DPerms &perms) {
+    Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    Type lhsEltType = lhsShapedType.getElementType();
+    Type rhsEltType = rhsShapedType.getElementType();
+    Type resEltType = resShapedType.getElementType();
 
-    // No transposition needed.
-    if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
-                /*rhsIndex*/ {kw, c},
-                /*resIndex*/ {n, w, c}}))
-      return depthwiseConv(vecChDimSize, vecChDimScalableFlag, flatten);
+    SmallVector<Value> lhsIndices(readShapes.lhs.size(), zero);
+    SmallVector<Value> rhsIndices(readShapes.rhs.size(), zero);
+    SmallVector<Value> resIndices(readShapes.res.size(), zero);
 
-    return rewriter.notifyMatchFailure(op, "not a depthwise::Nwc layout");
+    Conv1DOperandVecs vecs;
+    vecs.lhs = vector::TransferReadOp::create(
+        rewriter, loc, VectorType::get(readShapes.lhs, lhsEltType), lhsShaped,
+        lhsIndices, arith::getZeroConstant(rewriter, loc, lhsEltType));
+    if (convKind() == ConvOperationKind::Conv)
+      vecs.rhs = vector::TransferReadOp::create(
+          rewriter, loc, VectorType::get(readShapes.rhs, rhsEltType), rhsShaped,
+          rhsIndices, arith::getZeroConstant(rewriter, loc, rhsEltType));
+    vecs.res = vector::TransferReadOp::create(
+        rewriter, loc, VectorType::get(readShapes.res, resEltType), resShaped,
+        resIndices, arith::getZeroConstant(rewriter, loc, resEltType));
+
+    if (!perms.lhs.empty())
+      vecs.lhs =
+          vector::TransposeOp::create(rewriter, loc, vecs.lhs, perms.lhs);
+    if (!perms.rhs.empty() && vecs.rhs)
+      vecs.rhs =
+          vector::TransposeOp::create(rewriter, loc, vecs.rhs, perms.rhs);
+    if (!perms.res.empty())
+      vecs.res =
+          vector::TransposeOp::create(rewriter, loc, vecs.res, perms.res);
+
+    return vecs;
+  }
+
+  /// Extract slices, perform the contraction/pooling, and re-insert slices.
+  /// All operands must already be in canonical NWC form.
+  Value computeConv1D(const Conv1DOperandVecs &vecs, const Conv1DSizes &sizes,
+                      int64_t wSizeStep) {
+    auto linearIndex = [&](int64_t kw, int64_t w) {
+      return kw * (sizes.w / wSizeStep) + w / wSizeStep;
+    };
+
+    SmallVector<Value> lhsVals = extractConvInputSlices(
+        rewriter, loc, vecs.lhs, sizes.n, sizes.w, sizes.c, sizes.kw, strideW,
+        dilationW, wSizeStep, config.layout);
+    SmallVector<Value> rhsVals;
+    if (convKind() == ConvOperationKind::Conv)
+      rhsVals = extractConvFilterSlices(rewriter, loc, vecs.rhs, sizes.kw);
+    SmallVector<Value> resVals =
+        extractConvResultSlices(rewriter, loc, vecs.res, sizes.n, sizes.w,
+                                sizes.f, wSizeStep, config.layout);
+
+    for (int64_t kw = 0; kw < sizes.kw; ++kw) {
+      for (int64_t w = 0; w < sizes.w; w += wSizeStep) {
+        int64_t idx = linearIndex(kw, w);
+        int64_t wIdx = w / wSizeStep;
+        if (convKind() == ConvOperationKind::Pool) {
+          resVals[wIdx] =
+              pool1dSlice(rewriter, loc, lhsVals[idx], resVals[wIdx]);
+          continue;
+        }
+        switch (config.layout) {
+        case ConvLayoutKind::Scalar:
+          resVals[wIdx] = conv1dSliceAsOuterProduct(rewriter, loc, lhsVals[idx],
+                                                    rhsVals[kw], resVals[wIdx]);
+          break;
+        case ConvLayoutKind::Batched:
+          resVals[wIdx] = conv1dSliceAsContraction(rewriter, loc, lhsVals[idx],
+                                                   rhsVals[kw], resVals[wIdx]);
+          break;
+        case ConvLayoutKind::Batchless:
+          resVals[wIdx] = conv1dBatchlessSliceAsContraction(
+              rewriter, loc, lhsVals[idx], rhsVals[kw], resVals[wIdx]);
+          break;
+        }
+      }
+    }
+
+    return insertConvResultSlices(rewriter, loc, vecs.res, sizes.w, wSizeStep,
+                                  resVals, config.layout);
+  }
+
+  /// Post-transpose the result back to the original layout and write it.
+  FailureOr<Operation *> writeAndPostTranspose(Value res,
+                                               ArrayRef<int64_t> writeShape,
+                                               ArrayRef<int64_t> resPerm) {
+    if (!resPerm.empty()) {
+      SmallVector<int64_t> invResPerm = invertPermutationVector(resPerm);
+      res = vector::TransposeOp::create(rewriter, loc, res, invResPerm);
+    }
+    Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    SmallVector<Value> resIndices(writeShape.size(), zero);
+    return vector::TransferWriteOp::create(rewriter, loc, res, resShaped,
+                                           resIndices)
+        .getOperation();
+  }
+
+  /// Generic entry point that handles any 1D convolution/pooling layout.
+  FailureOr<Operation *> generate(ArrayRef<int64_t> inputVecSizes = {},
+                                  ArrayRef<bool> inputScalableVecDims = {},
+                                  bool flatten1DDepthwiseConv = false) {
+    if (config.isDepthwise)
+      return handleDepthwise(inputVecSizes, inputScalableVecDims,
+                             flatten1DDepthwiseConv);
+
+    LinalgOp linalgOp = cast<LinalgOp>(op);
+    Conv1DSizes sizes = computeConvSizes(linalgOp);
+    Conv1DPerms perms = computeCanonicalPerms(linalgOp, config);
+    Conv1DShapes canonShapes = computeCanonicalShapes(sizes);
+    Conv1DShapes readShapes = computeReadShapes(canonShapes, perms);
+
+    Conv1DOperandVecs vecs = readAndTranspose(readShapes, perms);
+
+    int64_t wSizeStep = strideW == 1 ? sizes.w : 1;
+    Value res = computeConv1D(vecs, sizes, wSizeStep);
+
+    return writeAndPostTranspose(res, readShapes.res, perms.res);
   }
 
 private:
-  ConvOperationKind oper = ConvOperationKind::Conv;
+  Conv1DConfig config;
   StringAttr redOp;
   StringAttr poolExtOp;
   bool isPoolExt = false;
-  int strideW, dilationW;
+  int strideW = 0;
+  int dilationW = 0;
   Value lhsShaped, rhsShaped, resShaped;
   ShapedType lhsShapedType, rhsShapedType, resShapedType;
   vector::CombiningKind reductionKind;
 
-  // Sets oper, poolExtOp and isPoolExt for valid conv/pooling ops.
-  void setConvOperationKind(Operation *reduceOp) {
+  /// Convenience accessors.
+  const ConvolutionDimensions &dims() const { return config.dims; }
+  ConvOperationKind convKind() const { return config.convKind; }
+
+  /// Inspect the reduce op body and set `isPoolExt`/`poolExtOp` if this is a
+  /// pooling op whose value is fed by a cast of a block argument.
+  void setPoolExtFromReduce(Operation *reduceOp) {
     int numBlockArguments =
         llvm::count_if(reduceOp->getOperands(), llvm::IsaPred<BlockArgument>);
-    if (numBlockArguments == 1) {
-      // Will be convolution if feeder is a MulOp.
-      // A strength reduced version of MulOp for i1 type is AndOp which is also
-      // supported. Otherwise, it can be pooling. This strength reduction logic
-      // is in `buildBinaryFn` helper in the Linalg dialect.
-      auto feedValIt = llvm::find_if_not(reduceOp->getOperands(),
-                                         llvm::IsaPred<BlockArgument>);
-      Operation *feedOp = (*feedValIt).getDefiningOp();
-      if (isCastOfBlockArgument(feedOp)) {
-        oper = ConvOperationKind::Pool;
-        isPoolExt = true;
-        poolExtOp = feedOp->getName().getIdentifier();
-        return;
-      }
-      oper = ConvOperationKind::Conv;
+    if (numBlockArguments != 1)
       return;
+    auto feedValIt = llvm::find_if_not(reduceOp->getOperands(),
+                                       llvm::IsaPred<BlockArgument>);
+    Operation *feedOp = (*feedValIt).getDefiningOp();
+    if (isCastOfBlockArgument(feedOp)) {
+      isPoolExt = true;
+      poolExtOp = feedOp->getName().getIdentifier();
     }
-    // numBlockArugments == 2 and this is a pooling op.
-    oper = ConvOperationKind::Pool;
-    isPoolExt = false;
   }
 };
 } // namespace
@@ -4118,44 +4331,8 @@ static FailureOr<Operation *> vectorizeConvolution(
   FailureOr<Conv1DGenerator> conv1dGen = Conv1DGenerator::create(rewriter, op);
   if (failed(conv1dGen))
     return failure();
-  auto res = conv1dGen->generateNonChanneledConv();
-  if (succeeded(res))
-    return res;
-  res = conv1dGen->generateNwcConv();
-  if (succeeded(res))
-    return res;
-  res = conv1dGen->generateNcwConv();
-  if (succeeded(res))
-    return res;
-  res = conv1dGen->generateNwcPooling();
-  if (succeeded(res))
-    return res;
-  res = conv1dGen->generateNcwPooling();
-  if (succeeded(res))
-    return res;
-
-  // Only depthwise 1D NWC convs are left - these can be vectorized using masks
-  // and scalable vectors. Note that ATM the only dim that can be dynamic (i.e.
-  // masked/scalable) is the channel dim (i.e. the trailing dim).
-  uint64_t vecChDimSize = ShapedType::kDynamic;
-  bool vecChDimScalableFlag = false;
-  if (!inputVecSizes.empty()) {
-    // Only use the input vector size corresponding to the channel dim. Other
-    // vector dims will be inferred from the Ops.
-    assert((isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(op) ||
-            isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(op)) &&
-           "Not a 1D depthwise conv!");
-    size_t chDimIdx = 0;
-    if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(op))
-      chDimIdx = 2;
-    if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(op))
-      chDimIdx = 1;
-
-    vecChDimSize = inputVecSizes[chDimIdx];
-    vecChDimScalableFlag = inputScalableVecDims[chDimIdx];
-  }
-  return conv1dGen->generateDilatedConv(vecChDimSize, vecChDimScalableFlag,
-                                        flatten1DDepthwiseConv);
+  return conv1dGen->generate(inputVecSizes, inputScalableVecDims,
+                             flatten1DDepthwiseConv);
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {

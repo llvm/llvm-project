@@ -835,6 +835,56 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Non-canonical depthwise 1D conv (NCW_CW): input (n, c, iw), filter (c, kw),
+// output (n, c, w). The vectorizer reads in the original layout, transposes
+// to canonical NWC for the depthwise compute kernel, and post-transposes the
+// result back to NCW. Static shapes only (masked path stays on the canonical
+// layout).
+func.func @depthwise_conv1d_ncw_cw_tensor(%input: tensor<2x3x6xf32>,
+                                          %filter: tensor<3x2xf32>,
+                                          %output: tensor<2x3x5xf32>) -> tensor<2x3x5xf32> {
+  %0 = linalg.depthwise_conv_1d_ncw_cw
+    {dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
+    ins(%input, %filter : tensor<2x3x6xf32>, tensor<3x2xf32>)
+    outs(%output : tensor<2x3x5xf32>) -> tensor<2x3x5xf32>
+  return %0 : tensor<2x3x5xf32>
+}
+
+// CHECK-LABEL: func.func @depthwise_conv1d_ncw_cw_tensor(
+// CHECK-SAME:    %[[INPUT:.+]]: tensor<2x3x6xf32>, %[[FILTER:.+]]: tensor<3x2xf32>, %[[OUTPUT:.+]]: tensor<2x3x5xf32>
+// CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:   %[[V_INPUT_R:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]], %[[C0]]]{{.*}} : tensor<2x3x6xf32>, vector<2x3x6xf32>
+// CHECK-DAG:   %[[V_FILTER_R:.+]] = vector.transfer_read %[[FILTER]][%[[C0]], %[[C0]]]{{.*}} : tensor<3x2xf32>, vector<3x2xf32>
+// CHECK-DAG:   %[[V_OUTPUT_R:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]{{.*}} : tensor<2x3x5xf32>, vector<2x3x5xf32>
+/// Pre-transpose operands to canonical NWC/KC/NWC form.
+// CHECK:       %[[V_INPUT:.+]] = vector.transpose %[[V_INPUT_R]], [0, 2, 1] : vector<2x3x6xf32> to vector<2x6x3xf32>
+// CHECK:       %[[V_FILTER:.+]] = vector.transpose %[[V_FILTER_R]], [1, 0] : vector<3x2xf32> to vector<2x3xf32>
+// CHECK:       %[[V_OUTPUT:.+]] = vector.transpose %[[V_OUTPUT_R]], [0, 2, 1] : vector<2x3x5xf32> to vector<2x5x3xf32>
+/// kw = 0, 1 input slices (dilation = 1).
+// CHECK:       %[[IN_KW0:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [0, 0, 0], sizes = [2, 5, 3], strides = [1, 1, 1]} : vector<2x6x3xf32> to vector<2x5x3xf32>
+// CHECK:       %[[IN_KW1:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [0, 1, 0], sizes = [2, 5, 3], strides = [1, 1, 1]} : vector<2x6x3xf32> to vector<2x5x3xf32>
+// CHECK:       %[[FLT_KW0:.+]] = vector.extract %[[V_FILTER]][0] : vector<3xf32> from vector<2x3xf32>
+// CHECK:       %[[FLT_KW1:.+]] = vector.extract %[[V_FILTER]][1] : vector<3xf32> from vector<2x3xf32>
+/// Canonical depthwise kernel: broadcast+FMA per kw.
+// CHECK:       %[[B0:.+]] = vector.broadcast %[[FLT_KW0]] : vector<3xf32> to vector<2x5x3xf32>
+// CHECK:       %[[FMA0:.+]] = vector.fma %[[IN_KW0]], %[[B0]], %[[V_OUTPUT]] : vector<2x5x3xf32>
+// CHECK:       %[[B1:.+]] = vector.broadcast %[[FLT_KW1]] : vector<3xf32> to vector<2x5x3xf32>
+// CHECK:       %[[FMA1:.+]] = vector.fma %[[IN_KW1]], %[[B1]], %[[FMA0]] : vector<2x5x3xf32>
+/// Post-transpose the result back to NCW and write.
+// CHECK:       %[[V_RES:.+]] = vector.transpose %[[FMA1]], [0, 2, 1] : vector<2x5x3xf32> to vector<2x3x5xf32>
+// CHECK:       vector.transfer_write %[[V_RES]], %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]{{.*}} : vector<2x3x5xf32>, tensor<2x3x5xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_ncw_cw", "linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @conv_1d_nwc_wcf_mixed_type_memref(%input: memref<1x2x3xf16>, %filter: memref<1x3x2xf16>, %output: memref<1x2x2xf32>) {
   linalg.conv_1d_nwc_wcf
   {dilations = dense<1> : vector<1xi64>, strides = dense<1> : vector<1xi64>}
@@ -1266,6 +1316,352 @@ func.func @pooling_ncw_sum_memref_2_3_2_1(%input: memref<4x2x5xf32>, %filter: me
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.pooling_ncw_sum", "linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Batchless 1D conv (linalg.generic): input (iw, c), filter (kw, c, f),
+// output (w, f). Input is already in canonical WC form so no transposes
+// are required at the vector boundaries.
+func.func @conv1d_wc_wcf_tensor(%input: tensor<6x3xf32>,
+                                %filter: tensor<3x3x8xf32>,
+                                %output: tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %res = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2, d3) -> (d0 + d2, d3)>,
+      affine_map<(d0, d1, d2, d3) -> (d2, d3, d1)>,
+      affine_map<(d0, d1, d2, d3) -> (d0, d1)>
+    ],
+    iterator_types = ["parallel", "parallel", "reduction", "reduction"]
+  } ins(%input, %filter : tensor<6x3xf32>, tensor<3x3x8xf32>)
+    outs(%output : tensor<4x8xf32>) {
+    ^bb0(%in: f32, %filt: f32, %out: f32):
+      %mul = arith.mulf %in, %filt : f32
+      %add = arith.addf %out, %mul : f32
+      linalg.yield %add : f32
+  } -> tensor<4x8xf32>
+  return %res : tensor<4x8xf32>
+}
+
+// CHECK: #[[LHS_MAP_NWC:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[RHS_MAP_NWC:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK: #[[RES_MAP_NWC:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+//      CHECK: func.func @conv1d_wc_wcf_tensor(
+// CHECK-SAME:    %[[INPUT:.+]]: tensor<6x3xf32>, %[[FILTER:.+]]: tensor<3x3x8xf32>, %[[OUTPUT:.+]]: tensor<4x8xf32>
+// CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:   %[[F0:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:   %[[V_INPUT:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true, true]} : tensor<6x3xf32>, vector<6x3xf32>
+// CHECK-DAG:   %[[V_FILTER:.+]] = vector.transfer_read %[[FILTER]][%[[C0]], %[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true, true, true]} : tensor<3x3x8xf32>, vector<3x3x8xf32>
+// CHECK-DAG:   %[[V_OUTPUT:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true, true]} : tensor<4x8xf32>, vector<4x8xf32>
+/// Input slices at offsets kw=0,1,2 (stride=1, dilation=1)
+// CHECK:       %[[IN_KW0:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [0, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+// CHECK:       %[[IN_KW1:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [1, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+// CHECK:       %[[IN_KW2:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [2, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+/// Filter slices at kw=0,1,2
+// CHECK:       %[[FLT_KW0:.+]] = vector.extract %[[V_FILTER]][0] : vector<3x8xf32> from vector<3x3x8xf32>
+// CHECK:       %[[FLT_KW1:.+]] = vector.extract %[[V_FILTER]][1] : vector<3x8xf32> from vector<3x3x8xf32>
+// CHECK:       %[[FLT_KW2:.+]] = vector.extract %[[V_FILTER]][2] : vector<3x8xf32> from vector<3x3x8xf32>
+/// Batchless contractions: {w,c} x {c,f} -> {w,f}
+// CHECK:       %[[CON0:.+]] = vector.contract {indexing_maps = [#[[LHS_MAP_NWC]], #[[RHS_MAP_NWC]], #[[RES_MAP_NWC]]], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %[[IN_KW0]], %[[FLT_KW0]], %[[V_OUTPUT]] : vector<4x3xf32>, vector<3x8xf32> into vector<4x8xf32>
+// CHECK:       %[[CON1:.+]] = vector.contract {indexing_maps = [#[[LHS_MAP_NWC]], #[[RHS_MAP_NWC]], #[[RES_MAP_NWC]]], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %[[IN_KW1]], %[[FLT_KW1]], %[[CON0]] : vector<4x3xf32>, vector<3x8xf32> into vector<4x8xf32>
+// CHECK:       %[[CON2:.+]] = vector.contract {indexing_maps = [#[[LHS_MAP_NWC]], #[[RHS_MAP_NWC]], #[[RES_MAP_NWC]]], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %[[IN_KW2]], %[[FLT_KW2]], %[[CON1]] : vector<4x3xf32>, vector<3x8xf32> into vector<4x8xf32>
+// CHECK:       vector.transfer_write %[[CON2]], %[[OUTPUT]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<4x8xf32>, tensor<4x8xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Batchless 1D conv (linalg.generic): input (c, iw), filter (f, c, kw),
+// output (f, w). All three operands are stored in non-canonical layouts;
+// the vectorizer pre-transposes to canonical WC/KCF/WF for the compute and
+// post-transposes the result back to FW.
+func.func @conv1d_cw_fcw_tensor(%input: tensor<3x6xf32>,
+                                %filter: tensor<8x3x3xf32>,
+                                %output: tensor<8x4xf32>) -> tensor<8x4xf32> {
+  %res = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2, d3) -> (d3, d0 + d2)>,
+      affine_map<(d0, d1, d2, d3) -> (d1, d3, d2)>,
+      affine_map<(d0, d1, d2, d3) -> (d1, d0)>
+    ],
+    iterator_types = ["parallel", "parallel", "reduction", "reduction"]
+  } ins(%input, %filter : tensor<3x6xf32>, tensor<8x3x3xf32>)
+    outs(%output : tensor<8x4xf32>) {
+    ^bb0(%in: f32, %filt: f32, %out: f32):
+      %mul = arith.mulf %in, %filt : f32
+      %add = arith.addf %out, %mul : f32
+      linalg.yield %add : f32
+  } -> tensor<8x4xf32>
+  return %res : tensor<8x4xf32>
+}
+
+// CHECK: #[[LHS_MAP_CW:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[RHS_MAP_CW:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK: #[[RES_MAP_CW:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+//      CHECK: func.func @conv1d_cw_fcw_tensor(
+// CHECK-SAME:    %[[INPUT:.+]]: tensor<3x6xf32>, %[[FILTER:.+]]: tensor<8x3x3xf32>, %[[OUTPUT:.+]]: tensor<8x4xf32>
+// CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:   %[[F0:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:   %[[V_INPUT_R:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true, true]} : tensor<3x6xf32>, vector<3x6xf32>
+// CHECK-DAG:   %[[V_FILTER_R:.+]] = vector.transfer_read %[[FILTER]][%[[C0]], %[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true, true, true]} : tensor<8x3x3xf32>, vector<8x3x3xf32>
+// CHECK-DAG:   %[[V_OUTPUT_R:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true, true]} : tensor<8x4xf32>, vector<8x4xf32>
+/// Pre-transpose to canonical WC/KWCF/WF form
+// CHECK:       %[[V_INPUT:.+]] = vector.transpose %[[V_INPUT_R]], [1, 0] : vector<3x6xf32> to vector<6x3xf32>
+// CHECK:       %[[V_FILTER:.+]] = vector.transpose %[[V_FILTER_R]], [2, 1, 0] : vector<8x3x3xf32> to vector<3x3x8xf32>
+// CHECK:       %[[V_OUTPUT:.+]] = vector.transpose %[[V_OUTPUT_R]], [1, 0] : vector<8x4xf32> to vector<4x8xf32>
+/// Input slices at offsets kw=0,1,2 (stride=1, dilation=1)
+// CHECK:       %[[IN_KW0:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [0, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+// CHECK:       %[[IN_KW1:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [1, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+// CHECK:       %[[IN_KW2:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [2, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+/// Filter slices at kw=0,1,2
+// CHECK:       %[[FLT_KW0:.+]] = vector.extract %[[V_FILTER]][0] : vector<3x8xf32> from vector<3x3x8xf32>
+// CHECK:       %[[FLT_KW1:.+]] = vector.extract %[[V_FILTER]][1] : vector<3x8xf32> from vector<3x3x8xf32>
+// CHECK:       %[[FLT_KW2:.+]] = vector.extract %[[V_FILTER]][2] : vector<3x8xf32> from vector<3x3x8xf32>
+/// Batchless contractions: {w,c} x {c,f} -> {w,f}
+// CHECK:       %[[CON0:.+]] = vector.contract {indexing_maps = [#[[LHS_MAP_CW]], #[[RHS_MAP_CW]], #[[RES_MAP_CW]]], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %[[IN_KW0]], %[[FLT_KW0]], %[[V_OUTPUT]] : vector<4x3xf32>, vector<3x8xf32> into vector<4x8xf32>
+// CHECK:       %[[CON1:.+]] = vector.contract {indexing_maps = [#[[LHS_MAP_CW]], #[[RHS_MAP_CW]], #[[RES_MAP_CW]]], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %[[IN_KW1]], %[[FLT_KW1]], %[[CON0]] : vector<4x3xf32>, vector<3x8xf32> into vector<4x8xf32>
+// CHECK:       %[[CON2:.+]] = vector.contract {indexing_maps = [#[[LHS_MAP_CW]], #[[RHS_MAP_CW]], #[[RES_MAP_CW]]], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %[[IN_KW2]], %[[FLT_KW2]], %[[CON1]] : vector<4x3xf32>, vector<3x8xf32> into vector<4x8xf32>
+/// Post-transpose result back to FW
+// CHECK:       %[[V_RES:.+]] = vector.transpose %[[CON2]], [1, 0] : vector<4x8xf32> to vector<8x4xf32>
+// CHECK:       vector.transfer_write %[[V_RES]], %[[OUTPUT]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x4xf32>, tensor<8x4xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Batchless 1D max pooling (linalg.generic): input (iw, c), kernel (kw),
+// output (w, c). Input is already in canonical WC form so no transposes
+// are required.
+func.func @pooling_wc_max_tensor(%input: tensor<6x3xf32>,
+                                 %kernel: tensor<3xf32>,
+                                 %output: tensor<4x3xf32>) -> tensor<4x3xf32> {
+  %res = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0 + d2, d1)>,
+      affine_map<(d0, d1, d2) -> (d2)>,
+      affine_map<(d0, d1, d2) -> (d0, d1)>
+    ],
+    iterator_types = ["parallel", "parallel", "reduction"]
+  } ins(%input, %kernel : tensor<6x3xf32>, tensor<3xf32>)
+    outs(%output : tensor<4x3xf32>) {
+    ^bb0(%in: f32, %k: f32, %out: f32):
+      %max = arith.maximumf %out, %in : f32
+      linalg.yield %max : f32
+  } -> tensor<4x3xf32>
+  return %res : tensor<4x3xf32>
+}
+
+// CHECK-LABEL: func.func @pooling_wc_max_tensor(
+// CHECK-SAME:    %[[INPUT:.+]]: tensor<6x3xf32>, %[[KERNEL:.+]]: tensor<3xf32>, %[[OUTPUT:.+]]: tensor<4x3xf32>
+// CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:   %[[F0:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:   %[[V_INPUT:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true, true]} : tensor<6x3xf32>, vector<6x3xf32>
+// CHECK-DAG:   %[[V_OUTPUT:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true, true]} : tensor<4x3xf32>, vector<4x3xf32>
+/// Input slices at offsets kw=0,1,2 (stride=1, dilation=1)
+// CHECK:       %[[IN_KW0:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [0, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+// CHECK:       %[[IN_KW1:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [1, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+// CHECK:       %[[IN_KW2:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [2, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+/// Batchless max pooling: element-wise maximumf accumulation
+// CHECK:       %[[MAX0:.+]] = arith.maximumf %[[IN_KW0]], %[[V_OUTPUT]] : vector<4x3xf32>
+// CHECK:       %[[MAX1:.+]] = arith.maximumf %[[IN_KW1]], %[[MAX0]] : vector<4x3xf32>
+// CHECK:       %[[MAX2:.+]] = arith.maximumf %[[IN_KW2]], %[[MAX1]] : vector<4x3xf32>
+// CHECK:       vector.transfer_write %[[MAX2]], %[[OUTPUT]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<4x3xf32>, tensor<4x3xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Batchless 1D max pooling (linalg.generic): input (c, iw), kernel (kw),
+// output (c, w). Input/output are stored in non-canonical CW form; the
+// vectorizer pre-transposes to canonical WC for the compute and
+// post-transposes the result back to CW.
+func.func @pooling_cw_max_tensor(%input: tensor<3x6xf32>,
+                                 %kernel: tensor<3xf32>,
+                                 %output: tensor<3x4xf32>) -> tensor<3x4xf32> {
+  %res = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d1, d0 + d2)>,
+      affine_map<(d0, d1, d2) -> (d2)>,
+      affine_map<(d0, d1, d2) -> (d1, d0)>
+    ],
+    iterator_types = ["parallel", "parallel", "reduction"]
+  } ins(%input, %kernel : tensor<3x6xf32>, tensor<3xf32>)
+    outs(%output : tensor<3x4xf32>) {
+    ^bb0(%in: f32, %k: f32, %out: f32):
+      %max = arith.maximumf %out, %in : f32
+      linalg.yield %max : f32
+  } -> tensor<3x4xf32>
+  return %res : tensor<3x4xf32>
+}
+
+// CHECK-LABEL: func.func @pooling_cw_max_tensor(
+// CHECK-SAME:    %[[INPUT:.+]]: tensor<3x6xf32>, %[[KERNEL:.+]]: tensor<3xf32>, %[[OUTPUT:.+]]: tensor<3x4xf32>
+// CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:   %[[F0:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:   %[[V_INPUT_R:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true, true]} : tensor<3x6xf32>, vector<3x6xf32>
+// CHECK-DAG:   %[[V_OUTPUT_R:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true, true]} : tensor<3x4xf32>, vector<3x4xf32>
+/// Pre-transpose to canonical WC form
+// CHECK:       %[[V_INPUT:.+]] = vector.transpose %[[V_INPUT_R]], [1, 0] : vector<3x6xf32> to vector<6x3xf32>
+// CHECK:       %[[V_OUTPUT:.+]] = vector.transpose %[[V_OUTPUT_R]], [1, 0] : vector<3x4xf32> to vector<4x3xf32>
+/// Input slices at offsets kw=0,1,2 (stride=1, dilation=1)
+// CHECK:       %[[IN_KW0:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [0, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+// CHECK:       %[[IN_KW1:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [1, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+// CHECK:       %[[IN_KW2:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [2, 0], sizes = [4, 3], strides = [1, 1]} : vector<6x3xf32> to vector<4x3xf32>
+/// Batchless max pooling in WC canonical form, then post-transpose back to CW
+// CHECK:       %[[MAX0:.+]] = arith.maximumf %[[IN_KW0]], %[[V_OUTPUT]] : vector<4x3xf32>
+// CHECK:       %[[MAX1:.+]] = arith.maximumf %[[IN_KW1]], %[[MAX0]] : vector<4x3xf32>
+// CHECK:       %[[MAX2:.+]] = arith.maximumf %[[IN_KW2]], %[[MAX1]] : vector<4x3xf32>
+/// Post-transpose result back to CW
+// CHECK:       %[[V_RES:.+]] = vector.transpose %[[MAX2]], [1, 0] : vector<4x3xf32> to vector<3x4xf32>
+// CHECK:       vector.transfer_write %[[V_RES]], %[[OUTPUT]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<3x4xf32>, tensor<3x4xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// 1D NWC max-pool whose loops are declared as (c, n, w, kw) instead of the
+// usual (n, w, c, kw). The LHS/result tensor layout is still NWC, so the
+// vectorizer should produce the canonical vector<NxWxC> shape and no
+// transposes. This exercises the `splitPoolBatchByLhsInnermost` derivation:
+// `inferConvolutionDims` returns `batch = [0, 1]` (sorted by loop index),
+// but `d0` is at the innermost LHS position (2), so it must be picked as
+// the channel-like batch regardless of the `dims.batch` ordering. An
+// ordering-based heuristic (pick `dims.batch.back()`) would instead select
+// `d1` (the N-like loop) and miscompile.
+func.func @pooling_nwc_max_reordered_loops_tensor(%input: tensor<2x6x3xf32>,
+                                                  %filter: tensor<2xf32>,
+                                                  %output: tensor<2x5x3xf32>) -> tensor<2x5x3xf32> {
+  %res = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2, d3) -> (d1, d2 + d3, d0)>,
+      affine_map<(d0, d1, d2, d3) -> (d3)>,
+      affine_map<(d0, d1, d2, d3) -> (d1, d2, d0)>
+    ],
+    iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+  } ins(%input, %filter : tensor<2x6x3xf32>, tensor<2xf32>)
+    outs(%output : tensor<2x5x3xf32>) {
+    ^bb0(%in: f32, %w: f32, %out: f32):
+      %m = arith.maximumf %in, %out : f32
+      linalg.yield %m : f32
+  } -> tensor<2x5x3xf32>
+  return %res : tensor<2x5x3xf32>
+}
+
+// CHECK-LABEL: func.func @pooling_nwc_max_reordered_loops_tensor(
+// CHECK-SAME:    %[[INPUT:.+]]: tensor<2x6x3xf32>, %{{.+}}: tensor<2xf32>, %[[OUTPUT:.+]]: tensor<2x5x3xf32>
+// CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:   %[[V_INPUT:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]], %[[C0]]]{{.*}} : tensor<2x6x3xf32>, vector<2x6x3xf32>
+// CHECK-DAG:   %[[V_OUTPUT:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]{{.*}} : tensor<2x5x3xf32>, vector<2x5x3xf32>
+/// Already in canonical NWC: no pre-transposes.
+// CHECK-NOT:   vector.transpose
+// CHECK:       %[[IN_KW0:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [0, 0, 0], sizes = [2, 5, 3], strides = [1, 1, 1]} : vector<2x6x3xf32> to vector<2x5x3xf32>
+// CHECK:       %[[IN_KW1:.+]] = vector.extract_strided_slice %[[V_INPUT]] {offsets = [0, 1, 0], sizes = [2, 5, 3], strides = [1, 1, 1]} : vector<2x6x3xf32> to vector<2x5x3xf32>
+// CHECK:       %[[MAX0:.+]] = arith.maximumf %[[IN_KW0]], %[[V_OUTPUT]] : vector<2x5x3xf32>
+// CHECK:       %[[MAX1:.+]] = arith.maximumf %[[IN_KW1]], %[[MAX0]] : vector<2x5x3xf32>
+// CHECK-NOT:   vector.transpose
+// CHECK:       vector.transfer_write %[[MAX1]], %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]{{.*}} : vector<2x5x3xf32>, tensor<2x5x3xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Batchless 1D conv (linalg.generic) in canonical WC form with strideW = 2
+// and dilationW = 2. With stride > 1 the W loop is unrolled (one extract per
+// w step, wSizeStep = 1) and the kw loop is unrolled with offsets spaced by
+// dilation. iw = (w - 1) * stride + 1 + (kw - 1) * dilation + 1 - 1 = 11.
+func.func @conv1d_wc_wcf_strided_dilated_tensor(%input: tensor<11x3xf32>,
+                                                %filter: tensor<3x3x8xf32>,
+                                                %output: tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %res = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2, d3) -> (d0 * 2 + d2 * 2, d3)>,
+      affine_map<(d0, d1, d2, d3) -> (d2, d3, d1)>,
+      affine_map<(d0, d1, d2, d3) -> (d0, d1)>
+    ],
+    iterator_types = ["parallel", "parallel", "reduction", "reduction"]
+  } ins(%input, %filter : tensor<11x3xf32>, tensor<3x3x8xf32>)
+    outs(%output : tensor<4x8xf32>) {
+    ^bb0(%in: f32, %filt: f32, %out: f32):
+      %mul = arith.mulf %in, %filt : f32
+      %add = arith.addf %out, %mul : f32
+      linalg.yield %add : f32
+  } -> tensor<4x8xf32>
+  return %res : tensor<4x8xf32>
+}
+
+// CHECK-LABEL: func.func @conv1d_wc_wcf_strided_dilated_tensor(
+// CHECK-SAME:    %[[INPUT:.+]]: tensor<11x3xf32>, %[[FILTER:.+]]: tensor<3x3x8xf32>, %[[OUTPUT:.+]]: tensor<4x8xf32>
+// CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:   %[[V_INPUT:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]]]
+// CHECK-DAG:   %[[V_FILTER:.+]] = vector.transfer_read %[[FILTER]][%[[C0]], %[[C0]], %[[C0]]]
+// CHECK-DAG:   %[[V_OUTPUT:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]]]
+/// kw=0: input slices at offsets 0, 2, 4, 6 (w*strideW with stride=2)
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [0, 0], sizes = [1, 3], strides = [1, 1]}
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [2, 0], sizes = [1, 3], strides = [1, 1]}
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [4, 0], sizes = [1, 3], strides = [1, 1]}
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [6, 0], sizes = [1, 3], strides = [1, 1]}
+/// kw=1: same w-offsets shifted by dilationW=2
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [2, 0], sizes = [1, 3], strides = [1, 1]}
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [4, 0], sizes = [1, 3], strides = [1, 1]}
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [6, 0], sizes = [1, 3], strides = [1, 1]}
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [8, 0], sizes = [1, 3], strides = [1, 1]}
+/// kw=2: w-offsets shifted by 2*dilationW=4 from kw=0
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [4, 0], sizes = [1, 3], strides = [1, 1]}
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [6, 0], sizes = [1, 3], strides = [1, 1]}
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [8, 0], sizes = [1, 3], strides = [1, 1]}
+// CHECK:       vector.extract_strided_slice %[[V_INPUT]] {offsets = [10, 0], sizes = [1, 3], strides = [1, 1]}
+/// Filter slices at kw=0,1,2 and per-w output slices
+// CHECK:       vector.extract %[[V_FILTER]][0]
+// CHECK:       vector.extract %[[V_FILTER]][1]
+// CHECK:       vector.extract %[[V_FILTER]][2]
+// CHECK-COUNT-4: vector.extract_strided_slice %[[V_OUTPUT]]
+/// 12 contractions (4 w * 3 kw); the last 4 produce the per-w results.
+// CHECK-COUNT-12: vector.contract
+// CHECK-COUNT-4: vector.insert_strided_slice
+// CHECK:       vector.transfer_write {{.*}}, %[[OUTPUT]][%[[C0]], %[[C0]]]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
     transform.yield
