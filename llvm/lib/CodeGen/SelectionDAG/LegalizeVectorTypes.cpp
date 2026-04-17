@@ -6146,10 +6146,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_Unary(SDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_InregOp(SDNode *N) {
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  EVT ExtVT = EVT::getVectorVT(*DAG.getContext(),
-                               cast<VTSDNode>(N->getOperand(1))->getVT()
-                                 .getVectorElementType(),
-                               WidenVT.getVectorNumElements());
+  EVT ExtVT = EVT::getVectorVT(
+      *DAG.getContext(),
+      cast<VTSDNode>(N->getOperand(1))->getVT().getVectorElementType(),
+      WidenVT.getVectorElementCount());
   SDValue WidenLHS = GetWidenedVector(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N),
                      WidenVT, WidenLHS, DAG.getValueType(ExtVT));
