@@ -535,7 +535,9 @@ void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
 
 void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
   // Auth GOT entries use IA key, diversity=0, address-diversified.
-  static const AuthInfo defaultAuthInfo = {0, 0, true};
+  static const AuthInfo defaultAuthInfo = {/*diversity=*/0,
+                                           static_cast<uint8_t>(PtrAuthKey::IA),
+                                           /*addrDiv=*/true};
   if (config->emitChainedFixups) {
     for (const auto &[i, entry] : llvm::enumerate(entries)) {
       const AuthInfo *ai = isAuth ? &defaultAuthInfo : nullptr;
