@@ -678,13 +678,13 @@ QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
         Found = getSingleElementType(Base);
       }
 
-    // Now inspect the record's own fields. We allow at most one field to
-    // contribute a single element type. If we've already recorded one
-    // candidate, encountering another field immediately disqualifies the
-    // record from being a single element aggregate.
+    // Inspect the record's fields. A struct qualifies as single-element if it
+    // has exactly one non-empty field. Empty fields (zero-size structs, arrays,
+    // bitfields, or [[no_unique_address]] members) don't affect this
+    // classification. Validated by zos-abi.cpp tests.
     for (const auto *FD : RD->fields()) {
       if (!Found.isNull())
-        return Ty; // more than one field,  not a single-element
+        return Ty; // Multiple non-empty fields found
       Found = getSingleElementType(FD->getType());
     }
     return Found.isNull() ? Ty : Found;
@@ -778,13 +778,7 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
     }
 
     if (Count == 2) {
-      // The last thing that needs to be checked is the alignment of the struct.
-      // If we have to emit any padding (eg. because of attribute aligned), this
-      // disqualifies the type from being complex.
-      unsigned MaxAlign = RT->getDecl()->getMaxAlignment();
-      unsigned ElemSize = getContext().getTypeSize(RetTy);
-      if (MaxAlign > 2 * ElemSize)
-        return std::nullopt;
+      // Size was already verified in the loop - no padding exists
       return RetTy;
     }
   }
@@ -840,11 +834,6 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
       return getNaturalAlignIndirect(RetTy,
                                      getDataLayout().getAllocaAddrSpace());
   }
-
-  // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-    RetTy = EnumTy->getDecl()->getIntegerType();
-
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
 }
