@@ -425,8 +425,8 @@ public:
   }
 
   void clobberNonPreservedRegs(const BitVector &PreservedRegUnits,
-                              const TargetRegisterInfo &TRI,
-                              const TargetInstrInfo &TII, bool UseCopyInstr) {
+                               const TargetRegisterInfo &TRI,
+                               const TargetInstrInfo &TII, bool UseCopyInstr) {
     SmallVector<MCRegUnit, 8> UnitsToClobber;
     for (auto &[Unit, _] : Copies)
       if (!PreservedRegUnits.test(static_cast<unsigned>(Unit)))
@@ -1284,7 +1284,7 @@ void MachineCopyPropagation::backwardCopyPropagateBlock(
 // instruction, we check registers in the operands of this instruction. If this
 // Reg is defined by a COPY, we untrack this Reg via
 // CopyTracker::clobberRegister(Reg, ...).
-void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
+void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
   // ChainLeader maps MI inside a spill-reload chain to its innermost reload COPY.
   // Thus we can track if a MI belongs to an existing spill-reload chain.
   DenseMap<MachineInstr *, MachineInstr *> ChainLeader;
@@ -1374,12 +1374,14 @@ void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
     std::optional<DestSourcePair> CopyOperands =
         isCopyInstr(MaybeCopy, *TII, UseCopyInstr);
     if (!CopyOperands)
-      return false;
-    Register Src = CopyOperands->Source->getReg();
-    Register Def = CopyOperands->Destination->getReg();
-    return Src && Def && !TRI->regsOverlap(Src, Def) &&
-           CopyOperands->Source->isRenamable() &&
-           CopyOperands->Destination->isRenamable();
+      return std::nullopt;
+    auto [Dst, Src] = getDstSrcMCRegs(*CopyOperands);
+    if (Src && Dst && !TRI->regsOverlap(Src, Dst) &&
+        CopyOperands->Source->isRenamable() &&
+        CopyOperands->Destination->isRenamable())
+      return CopyOperands;
+
+    return std::nullopt;
   };
 
   auto IsSpillReloadPair = [&](const MachineInstr &Spill,
@@ -1388,14 +1390,10 @@ void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
     std::optional<DestSourcePair> FoldableReloadCopy = GetFoldableCopy(Reload);
     if (!FoldableReloadCopy || !FoldableSpillCopy)
       return false;
-    std::optional<DestSourcePair> SpillCopy =
-        isCopyInstr(Spill, *TII, UseCopyInstr);
-    std::optional<DestSourcePair> ReloadCopy =
-        isCopyInstr(Reload, *TII, UseCopyInstr);
-    if (!SpillCopy || !ReloadCopy)
-      return false;
-    return SpillCopy->Source->getReg() == ReloadCopy->Destination->getReg() &&
-           SpillCopy->Destination->getReg() == ReloadCopy->Source->getReg();
+    return FoldableSpillCopy->Source->getReg() ==
+               FoldableReloadCopy->Destination->getReg() &&
+           FoldableSpillCopy->Destination->getReg() ==
+               FoldableReloadCopy->Source->getReg();
   };
 
   auto IsChainedCopy = [&](const MachineInstr &Prev,
@@ -1405,13 +1403,8 @@ void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
         GetFoldableCopy(Current);
     if (!FoldablePrevCopy || !FoldableCurrentCopy)
       return false;
-    std::optional<DestSourcePair> PrevCopy =
-        isCopyInstr(Prev, *TII, UseCopyInstr);
-    std::optional<DestSourcePair> CurrentCopy =
-        isCopyInstr(Current, *TII, UseCopyInstr);
-    if (!PrevCopy || !CurrentCopy)
-      return false;
-    return PrevCopy->Source->getReg() == CurrentCopy->Destination->getReg();
+    return FoldablePrevCopy->Source->getReg() ==
+           FoldableCurrentCopy->Destination->getReg();
   };
 
   for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
@@ -1424,7 +1417,8 @@ void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
       for (const MachineOperand &MO : MI.operands()) {
         if (MO.isRegMask()) {
           BitVector &PreservedRegUnits = Tracker.getPreservedRegUnits(MO, *TRI);
-          Tracker.clobberNonPreservedRegs(PreservedRegUnits, *TRI, *TII, UseCopyInstr);
+          Tracker.clobberNonPreservedRegs(PreservedRegUnits, *TRI, *TII,
+                                          UseCopyInstr);
         }
         if (!MO.isReg())
           continue;
