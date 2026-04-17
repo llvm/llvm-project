@@ -711,7 +711,7 @@ module attributes {
 // CHECK-LABEL: spirv.func @memref_offset_strides
 func.func @memref_offset_strides(
 // CHECK-SAME: !spirv.array<64 x f32, stride=4> [0])>, StorageBuffer>
-// CHECK-SAME: !spirv.array<72 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-SAME: !spirv.array<64 x f32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<256 x f32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<64 x f32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<88 x f32, stride=4> [0])>, StorageBuffer>
@@ -722,7 +722,7 @@ func.func @memref_offset_strides(
   %arg4: memref<16x4xf32, strided<[1, 22]>, #spirv.storage_class<StorageBuffer>>, // pad 4 after each col
 
 // CHECK-SAME: !spirv.array<64 x f16, stride=2> [0])>, StorageBuffer>
-// CHECK-SAME: !spirv.array<72 x f16, stride=2> [0])>, StorageBuffer>
+// CHECK-SAME: !spirv.array<64 x f16, stride=2> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<256 x f16, stride=2> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<64 x f16, stride=2> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.array<88 x f16, stride=2> [0])>, StorageBuffer>

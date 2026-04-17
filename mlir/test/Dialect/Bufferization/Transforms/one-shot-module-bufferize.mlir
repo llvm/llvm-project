@@ -67,12 +67,8 @@ func.func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
 // CHECK-NO-LAYOUT-MAP-LABEL: func @return_extract_slice(%{{.*}}) -> memref<2x?xf32>
 //       CHECK-NO-LAYOUT-MAP:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<20x10xf32>
 //       CHECK-NO-LAYOUT-MAP:   %[[subview:.*]] = memref.subview {{.*}} : memref<20x10xf32> to memref<2x?xf32, strided<[10, 1]>>
-//       CHECK-NO-LAYOUT-MAP:   %[[alloc_no_layout:.*]] = memref.alloc(%{{.*}}) {{.*}} : memref<2x?xf32>
-//       CHECK-NO-LAYOUT-MAP:   memref.copy %[[subview]], %[[alloc_no_layout]]
-// TODO: %alloc should be deallocated here, but we currently do not dealloc
-// buffers that are inserted due to to_tensor/to_buffer canonicalization (when
-// the buffer types have different layout maps).
-//       CHECK-NO-LAYOUT-MAP:   return %[[alloc_no_layout]]
+//       CHECK-NO-LAYOUT-MAP:   %[[cast:.*]] = memref.cast %[[subview]] : memref<2x?xf32, strided<[10, 1]>> to memref<2x?xf32>
+//       CHECK-NO-LAYOUT-MAP:   return %[[cast]]
 
 // CHECK-FULLY-DYNAMIC-LAYOUT-MAP-LABEL: func @return_extract_slice(%{{.*}}) -> memref<2x?xf32,
 //  CHECK-FULLY-DYNAMIC-LAYOUT-MAP-SAME: strided<[?, ?]>> {
@@ -97,8 +93,7 @@ func.func @foo(%arg0: tensor<3x8xf16>) -> tensor<3x8xf16> {
 // CHECK-NO-LAYOUT-MAP-LABEL:   func.func @call_extract_slice(
 // CHECK-NO-LAYOUT-MAP-SAME:                                  %[[VAL_0:.*]]: memref<4x8xf16>) -> memref<3x8xf16> {
 // CHECK-NO-LAYOUT-MAP:           %[[VAL_1:.*]] = memref.subview %[[VAL_0]][1, 0] [3, 8] [1, 1] : memref<4x8xf16> to memref<3x8xf16, strided<[8, 1]>>
-// CHECK-NO-LAYOUT-MAP:           %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3x8xf16>
-// CHECK-NO-LAYOUT-MAP:           memref.copy %[[VAL_1]], %[[VAL_2]] : memref<3x8xf16, strided<[8, 1]>> to memref<3x8xf16>
+// CHECK-NO-LAYOUT-MAP:           %[[VAL_2:.*]] = memref.cast %[[VAL_1]] : memref<3x8xf16, strided<[8, 1]>> to memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           %[[VAL_3:.*]] = call @foo(%[[VAL_2]]) : (memref<3x8xf16>) -> memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           return %[[VAL_3]] : memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:         }

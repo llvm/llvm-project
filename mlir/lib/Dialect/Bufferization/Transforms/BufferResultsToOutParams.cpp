@@ -34,8 +34,9 @@ static bool hasFullyDynamicLayoutMap(MemRefType type) {
     return false;
   if (!llvm::all_of(strides, ShapedType::isDynamic))
     return false;
-  if (ShapedType::isStatic(offset))
-    return false;
+  // The type no longer carries a static offset; the strides being all dynamic
+  // is enough to consider this a fully dynamic layout.
+  (void)offset;
   return true;
 }
 

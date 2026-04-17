@@ -345,11 +345,11 @@ func.func @vector_maskedload_i4_arith_constant(%passthru: vector<8xi4>) -> vecto
 // CHECK-SAME:   %[[PASSTHRU:[a-zA-Z0-9]+]]
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<12xi8>
 // CHECK: %[[MASK:.+]] = arith.constant dense<[false, true, true, true, true, false, false, false]> : vector<8xi1>
+// CHECK: %[[C0:.+]] = arith.constant 0 : index
 
 // Emit a new, compressed mask for emulated maskedload:
 // CHECK: %[[COMPRESSED_MASK:.+]] = arith.constant dense<[true, true, true, false]> : vector<4xi1>
 // CHECK: %[[PTHU_UPCAST:.+]] = vector.bitcast %[[PASSTHRU]] : vector<8xi4> to vector<4xi8>
-// CHECK: %[[C0:.+]] = arith.constant 0 : index
 // CHECK: %[[LOAD:.+]] = vector.maskedload %[[ALLOC]][%[[C0]]], %[[COMPRESSED_MASK]], %[[PTHU_UPCAST]]
 // CHECK: %[[LOAD_DOWNCAST:.+]] = vector.bitcast %[[LOAD]] : vector<4xi8> to vector<8xi4>
 // CHECK: %[[SELECT:.+]] = arith.select %[[MASK]], %[[LOAD_DOWNCAST]], %[[PASSTHRU]] : vector<8xi1>, vector<8xi4>
