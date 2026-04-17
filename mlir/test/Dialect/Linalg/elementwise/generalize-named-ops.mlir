@@ -182,7 +182,6 @@ func.func @ternary(%A : tensor<32x16xi1>, %B: tensor<8x16x32xf32>, %C : tensor<8
 func.func @unary_upcast_exp(%A : tensor<8x16x32xf16>, %B : tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
   %r = linalg.elementwise
       kind = #linalg.elementwise_kind<exp>
-      compute_element_type = f32
       ins(%A : tensor<8x16x32xf16>)
       outs(%B : tensor<8x16x32xf32>)
       -> tensor<8x16x32xf32>

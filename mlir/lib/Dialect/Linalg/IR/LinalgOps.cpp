@@ -4821,51 +4821,6 @@ ElementwiseOp::getDefaultIndexingMaps(unsigned numMaps, unsigned numDims,
   return SmallVector<AffineMap>(numMaps, map);
 }
 
-bool ElementwiseOp::needsUserDefinedComputeElementType() {
-  auto getElemType = [](Type t) { return getElementTypeOrSelf(t); };
-
-  auto inputs = getInputs();
-  Type resultElemType = getElemType(getOutputs().front().getType());
-
-  switch (inputs.size()) {
-  case 1: {
-    // One input, must match result element type.
-    Type inputElemType = getElemType(inputs.front().getType());
-    return inputElemType != resultElemType;
-  }
-
-  case 2: {
-    // Both inputs must match result element type.
-    Type lhsElemType = getElemType(inputs[0].getType());
-    Type rhsElemType = getElemType(inputs[1].getType());
-    return lhsElemType != resultElemType || rhsElemType != resultElemType;
-  }
-
-  case 3: {
-    // Second and third inputs must match result element type.
-    // The first operand may be control / predicate / mask.
-    Type secondElemType = getElemType(inputs[1].getType());
-    Type thirdElemType = getElemType(inputs[2].getType());
-    return secondElemType != resultElemType || thirdElemType != resultElemType;
-  }
-  }
-
-  llvm_unreachable("unknown elementwise arity");
-}
-
-Type ElementwiseOp::getDefaultComputeElementType() {
-  auto out = getOutputs().front();
-  if (auto shaped = llvm::dyn_cast<ShapedType>(out.getType()))
-    return shaped.getElementType();
-  return {};
-}
-
-Type ElementwiseOp::getEffectiveComputeElementType() {
-  if (auto attr = getComputeElementTypeAttr())
-    return attr.getValue();
-  return getDefaultComputeElementType();
-}
-
 ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
   // Expect e.g. `kind = #linalg.elemwise_kind<add>`
   Attribute attr;
@@ -4885,16 +4840,6 @@ ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
   }
   result.addAttribute(
       "kind", ElementwiseKindAttr::get(parser.getContext(), elemwiseKindVal));
-
-  // Parse the optional 'compute_element_type = <type>'.
-  if (succeeded(parser.parseOptionalKeyword("compute_element_type"))) {
-    if (parser.parseEqual())
-      return failure();
-    Type compType;
-    if (parser.parseType(compType))
-      return failure();
-    result.addAttribute("compute_element_type", TypeAttr::get(compType));
-  }
 
   // Parse optional `indexing_maps`
   SmallVector<Attribute, 3> indexingMapsAttr;
@@ -4953,14 +4898,8 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
   p << " kind=";
   p.printAttribute(getKindAttr());
 
-  // print `compute element type` only if it cannot be inferred unambiguously.
-  if (needsUserDefinedComputeElementType()) {
-    Type computeType = getEffectiveComputeElementType();
-    p << " compute_element_type=" << computeType;
-  }
-
-  SmallVector<StringRef, 4> elidedAttrs = {
-      "operandSegmentSizes", "kind", "compute_element_type", "indexing_maps"};
+  SmallVector<StringRef, 3> elidedAttrs = {"operandSegmentSizes", "kind",
+                                           "indexing_maps"};
 
   unsigned arity =
       getArityGroupAsUInt(getArityGroupAndKind(getKind()).arityGroup);
@@ -5011,23 +4950,6 @@ void ElementwiseOp::regionBuilder(
   SmallVector<Value> yields;
   Value result;
 
-  // Retreive or infer the `compute element type`.
-  Type resultType = block.getArguments().back().getType();
-  Type computeElementType;
-  for (NamedAttribute na : attrs) {
-    if (na.getName() == "compute_element_type") {
-      if (auto typeAttr = llvm::dyn_cast<TypeAttr>(na.getValue())) {
-        computeElementType = typeAttr.getValue();
-      } else {
-        emitError() << "expected TypeAttr for compute_element_type";
-        return;
-      }
-      break;
-    }
-  }
-  if (!computeElementType)
-    computeElementType = resultType; // inferred.
-
   // Cast input value to dst type.
   // Only same-kind casts are valid (float to float, int to int).
   auto castToDstType = [&](Value v, Type dstType) -> Value {
@@ -5063,18 +4985,21 @@ void ElementwiseOp::regionBuilder(
     return nullptr;
   };
 
+  // Infer the compute element type from result type.
+  Type computeElementType = block.getArguments().back().getType();
+
+  // Create the linalg.generic body.
   if (arityGroup == ElementwiseArityGroup::Unary) {
     Value in0 = castToDstType(block.getArgument(0), computeElementType);
-    result = castToDstType(helper.buildUnaryFn(kind.unaryFn, in0), resultType);
+    result = helper.buildUnaryFn(kind.unaryFn, in0);
 
   } else if (arityGroup == ElementwiseArityGroup::Binary) {
     Value in0 = castToDstType(block.getArgument(0), computeElementType);
     Value in1 = castToDstType(block.getArgument(1), computeElementType);
-    result = castToDstType(helper.buildBinaryFn(kind.binaryFn, in0, in1),
-                           resultType);
+    result = helper.buildBinaryFn(kind.binaryFn, in0, in1);
 
   } else if (arityGroup == ElementwiseArityGroup::Ternary) {
-    // ternary op (select) should be type casted.
+    // ternary op (select) should not be type casted.
     result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
                                    block.getArgument(1), block.getArgument(2));
 
@@ -5101,21 +5026,6 @@ void ElementwiseOp::getEffects(
 
 Speculation::Speculatability ElementwiseOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
-}
-
-LogicalResult ElementwiseOp::verify() {
-  auto attr = getComputeElementTypeAttr();
-  // test validity of `compute element type` if user-defined.
-  if (!attr)
-    return success();
-  Type computeType = attr.getValue();
-
-  // Must be a scalar element type.
-  if (!computeType.isIntOrFloat())
-    return emitOpError() << "compute_element_type must be an integer or "
-                            "floating-point type, got "
-                         << computeType;
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

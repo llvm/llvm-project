@@ -88,19 +88,3 @@ func.func @redundant_maps(%A: tensor<1x2x3x4x5xi32>, %B: tensor<1x2x3x4x5xi32>,
       outs(%C: tensor<1x2x3x4x5xi32>) -> tensor<1x2x3x4x5xi32>
   return %r : tensor<1x2x3x4x5xi32>
 }
-
-// -----
-
-// CHECK: @unary_input_upcast
-// CHECK: %{{.*}} = linalg.elementwise
-// CHECK-SAME:        kind=#linalg.elementwise_kind<exp>
-// CHECK-SAME:        compute_element_type=f32
-//
-func.func @unary_input_upcast(%A : tensor<8x16x32xf16>, %B: tensor<8x16x32xf32>) ->  tensor<8x16x32xf32> {
-  %r = linalg.elementwise
-      kind=#linalg.elementwise_kind<exp>
-      compute_element_type=f32
-      ins(%A : tensor<8x16x32xf16>)
-      outs(%B: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
-  return %r : tensor<8x16x32xf32>
-}
