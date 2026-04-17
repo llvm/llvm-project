@@ -84,11 +84,11 @@ collectPerFieldSGEP(StructuredAllocaInst &SAI) {
 // For each lifetime intrinsic in LifetimeIntrinsics, creates a new one, but
 // uses V as operand.
 void copyLifetimeIntrinsicFor(IRBuilder<> &B, LifetimeIntrinsic *II, Value *V) {
+  B.SetInsertPoint(II);
+
   if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-    B.SetInsertPoint(II);
     B.CreateLifetimeStart(V);
   } else if (II->getIntrinsicID() == Intrinsic::lifetime_end) {
-    B.SetInsertPoint(II);
     B.CreateLifetimeEnd(V);
   } else
     llvm_unreachable("invalid argument: expected a lifetime intrinsic");
