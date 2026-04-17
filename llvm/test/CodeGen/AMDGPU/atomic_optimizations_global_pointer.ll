@@ -5079,8 +5079,7 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9_DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9_DPP-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX9_DPP-NEXT:    v_subrev_u32_e32 v4, s12, v5
-; GFX9_DPP-NEXT:    v_mov_b32_e32 v3, v4
-; GFX9_DPP-NEXT:    v_mov_b32_e32 v4, v5
+; GFX9_DPP-NEXT:    v_swap_b32 v3, v4
 ; GFX9_DPP-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 glc
 ; GFX9_DPP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9_DPP-NEXT:    buffer_wbinvl1_vol
@@ -5151,8 +5150,7 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1064_DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX1064_DPP-NEXT:    v_subrev_nc_u32_e32 v5, s12, v6
-; GFX1064_DPP-NEXT:    v_mov_b32_e32 v4, v5
-; GFX1064_DPP-NEXT:    v_mov_b32_e32 v5, v6
+; GFX1064_DPP-NEXT:    v_swap_b32 v4, v5
 ; GFX1064_DPP-NEXT:    buffer_atomic_cmpswap v[4:5], off, s[4:7], 0 glc
 ; GFX1064_DPP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064_DPP-NEXT:    buffer_gl1_inv
@@ -5214,8 +5212,7 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1032_DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1032_DPP-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX1032_DPP-NEXT:    v_subrev_nc_u32_e32 v5, s9, v6
-; GFX1032_DPP-NEXT:    v_mov_b32_e32 v4, v5
-; GFX1032_DPP-NEXT:    v_mov_b32_e32 v5, v6
+; GFX1032_DPP-NEXT:    v_swap_b32 v4, v5
 ; GFX1032_DPP-NEXT:    buffer_atomic_cmpswap v[4:5], off, s[4:7], 0 glc
 ; GFX1032_DPP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032_DPP-NEXT:    buffer_gl1_inv
@@ -5298,8 +5295,7 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX1164_DPP-NEXT:    v_subrev_nc_u32_e32 v5, s12, v6
 ; GFX1164_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1164_DPP-NEXT:    v_mov_b32_e32 v4, v5
-; GFX1164_DPP-NEXT:    v_mov_b32_e32 v5, v6
+; GFX1164_DPP-NEXT:    v_swap_b32 v4, v5
 ; GFX1164_DPP-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], off, s[4:7], 0 glc
 ; GFX1164_DPP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164_DPP-NEXT:    buffer_gl1_inv
@@ -5372,8 +5368,7 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1132_DPP-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX1132_DPP-NEXT:    v_subrev_nc_u32_e32 v5, s9, v6
 ; GFX1132_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1132_DPP-NEXT:    v_mov_b32_e32 v4, v5
-; GFX1132_DPP-NEXT:    v_mov_b32_e32 v5, v6
+; GFX1132_DPP-NEXT:    v_swap_b32 v4, v5
 ; GFX1132_DPP-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], off, s[4:7], 0 glc
 ; GFX1132_DPP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132_DPP-NEXT:    buffer_gl1_inv
@@ -7406,9 +7401,8 @@ define amdgpu_kernel void @sub_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9_DPP-NEXT:    v_mov_b32_e32 v10, v6
 ; GFX9_DPP-NEXT:    v_subrev_co_u32_e32 v8, vcc, s10, v10
 ; GFX9_DPP-NEXT:    v_subb_co_u32_e32 v9, vcc, v11, v0, vcc
-; GFX9_DPP-NEXT:    v_mov_b32_e32 v6, v8
 ; GFX9_DPP-NEXT:    v_mov_b32_e32 v7, v9
-; GFX9_DPP-NEXT:    v_mov_b32_e32 v8, v10
+; GFX9_DPP-NEXT:    v_swap_b32 v6, v8
 ; GFX9_DPP-NEXT:    v_mov_b32_e32 v9, v11
 ; GFX9_DPP-NEXT:    buffer_atomic_cmpswap_x2 v[6:9], off, s[4:7], 0 glc
 ; GFX9_DPP-NEXT:    s_waitcnt vmcnt(0)
@@ -7528,9 +7522,8 @@ define amdgpu_kernel void @sub_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v12, v8
 ; GFX1064_DPP-NEXT:    v_sub_co_u32 v10, vcc, v12, s8
 ; GFX1064_DPP-NEXT:    v_subrev_co_ci_u32_e32 v11, vcc, s9, v13, vcc
-; GFX1064_DPP-NEXT:    v_mov_b32_e32 v8, v10
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v9, v11
-; GFX1064_DPP-NEXT:    v_mov_b32_e32 v10, v12
+; GFX1064_DPP-NEXT:    v_swap_b32 v8, v10
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v11, v13
 ; GFX1064_DPP-NEXT:    buffer_atomic_cmpswap_x2 v[8:11], off, s[4:7], 0 glc
 ; GFX1064_DPP-NEXT:    s_waitcnt vmcnt(0)
@@ -7631,9 +7624,8 @@ define amdgpu_kernel void @sub_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1032_DPP-NEXT:    v_mov_b32_e32 v13, v9
 ; GFX1032_DPP-NEXT:    v_sub_co_u32 v11, vcc_lo, v13, s8
 ; GFX1032_DPP-NEXT:    v_subrev_co_ci_u32_e32 v12, vcc_lo, s9, v14, vcc_lo
-; GFX1032_DPP-NEXT:    v_mov_b32_e32 v9, v11
 ; GFX1032_DPP-NEXT:    v_mov_b32_e32 v10, v12
-; GFX1032_DPP-NEXT:    v_mov_b32_e32 v11, v13
+; GFX1032_DPP-NEXT:    v_swap_b32 v9, v11
 ; GFX1032_DPP-NEXT:    v_mov_b32_e32 v12, v14
 ; GFX1032_DPP-NEXT:    buffer_atomic_cmpswap_x2 v[9:12], off, s[4:7], 0 glc
 ; GFX1032_DPP-NEXT:    s_waitcnt vmcnt(0)
@@ -7761,10 +7753,9 @@ define amdgpu_kernel void @sub_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1164_DPP-NEXT:    v_sub_co_u32 v8, vcc, v10, s8
 ; GFX1164_DPP-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
 ; GFX1164_DPP-NEXT:    v_subrev_co_ci_u32_e64 v9, null, s9, v11, vcc
-; GFX1164_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1164_DPP-NEXT:    v_mov_b32_e32 v6, v8
+; GFX1164_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v7, v9
-; GFX1164_DPP-NEXT:    v_mov_b32_e32 v8, v10
+; GFX1164_DPP-NEXT:    v_swap_b32 v6, v8
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v9, v11
 ; GFX1164_DPP-NEXT:    buffer_atomic_cmpswap_b64 v[6:9], off, s[4:7], 0 glc
 ; GFX1164_DPP-NEXT:    s_waitcnt vmcnt(0)
@@ -7869,11 +7860,11 @@ define amdgpu_kernel void @sub_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1132_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132_DPP-NEXT:    v_dual_mov_b32 v13, v9 :: v_dual_mov_b32 v12, v8
 ; GFX1132_DPP-NEXT:    v_sub_co_u32 v10, vcc_lo, v12, s8
-; GFX1132_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132_DPP-NEXT:    v_subrev_co_ci_u32_e64 v11, null, s9, v13, vcc_lo
-; GFX1132_DPP-NEXT:    v_mov_b32_e32 v8, v10
-; GFX1132_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1132_DPP-NEXT:    v_dual_mov_b32 v9, v11 :: v_dual_mov_b32 v10, v12
+; GFX1132_DPP-NEXT:    v_mov_b32_e32 v9, v11
+; GFX1132_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1132_DPP-NEXT:    v_swap_b32 v8, v10
 ; GFX1132_DPP-NEXT:    v_mov_b32_e32 v11, v13
 ; GFX1132_DPP-NEXT:    buffer_atomic_cmpswap_b64 v[8:11], off, s[4:7], 0 glc
 ; GFX1132_DPP-NEXT:    s_waitcnt vmcnt(0)

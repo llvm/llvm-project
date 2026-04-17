@@ -3,6 +3,7 @@
 ; CHECK-ERROR: LLVM ERROR: OpCooperativeMatrixConstructCheckedINTEL instructions require the following SPIR-V extension: SPV_INTEL_joint_matrix
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_cooperative_matrix,+SPV_INTEL_joint_matrix %s -o - | FileCheck %s
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_cooperative_matrix,+SPV_INTEL_joint_matrix %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: Capability CooperativeMatrixKHR
 ; CHECK-DAG: Capability CooperativeMatrixCheckedInstructionsINTEL

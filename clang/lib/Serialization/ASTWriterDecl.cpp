@@ -2923,6 +2923,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
   // CXXOperatorCallExpr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Operator Kind
+  Abv->Add(BitCodeAbbrevOp(0));                       // IsReversed
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
   CXXOperatorCallExprAbbrev = Stream.EmitAbbrev(std::move(Abv));
 

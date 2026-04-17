@@ -221,7 +221,7 @@ define i64 @blend_and_sign_different_bbs(i64 %addr, i64 %cond) {
   ; DAGISEL-NEXT:   successors: %bb.2(0x80000000)
   ; DAGISEL-NEXT: {{  $}}
   ; DAGISEL-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY [[COPY2]]
-  ; DAGISEL-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 3866633 /* reguse:GPR64common */, [[COPY3]]
+  ; DAGISEL-NEXT:   INLINEASM &nop, sideeffect attdialect, reguse:GPR64common, [[COPY3]]
   ; DAGISEL-NEXT: {{  $}}
   ; DAGISEL-NEXT: bb.2.exit:
   ; DAGISEL-NEXT:   [[COPY4:%[0-9]+]]:gpr64noip = COPY [[LDRXui]]
@@ -246,7 +246,7 @@ define i64 @blend_and_sign_different_bbs(i64 %addr, i64 %cond) {
   ; GISEL-NEXT:   successors: %bb.3(0x80000000)
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64common = COPY [[MOVKXi]]
-  ; GISEL-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 3866633 /* reguse:GPR64common */, [[COPY2]]
+  ; GISEL-NEXT:   INLINEASM &nop, sideeffect attdialect, reguse:GPR64common, [[COPY2]]
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.3.exit:
   ; GISEL-NEXT:   [[COPY3:%[0-9]+]]:gpr64noip = COPY [[LDRXui]]

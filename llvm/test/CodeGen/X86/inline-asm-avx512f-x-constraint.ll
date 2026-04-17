@@ -6,7 +6,7 @@
 ; CHECK-LABEL: name: mask_Yk_i8
 ; CHECK: %[[REG1:.*]]:vr512_0_15 = COPY %1
 ; CHECK: %[[REG2:.*]]:vr512_0_15 = COPY %2
-; CHECK: INLINEASM &"vpaddq\09$3, $2, $0 {$1}", 0 /* attdialect */, {{.*}}, def %{{.*}}, {{.*}}, %{{.*}}, {{.*}}, %[[REG1]], {{.*}}, %[[REG2]], 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
+; CHECK: INLINEASM &"vpaddq\09$3, $2, $0 {$1}", attdialect, {{.*}}, def %{{.*}}, {{.*}}, %{{.*}}, {{.*}}, %[[REG1]], {{.*}}, %[[REG2]], clobber, implicit-def early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def early-clobber $eflags
 
 define <8 x i64> @mask_Yk_i8(i8 signext %msk, <8 x i64> %x, <8 x i64> %y) {
 entry:
@@ -17,7 +17,7 @@ entry:
 ; FP16-LABEL: name: mask_Yk_f16
 ; FP16: %[[REG1:.*]]:vr512_0_15 = COPY %1
 ; FP16: %[[REG2:.*]]:vr512_0_15 = COPY %2
-; FP16: INLINEASM &"vaddph\09$3, $2, $0 {$1}", 0 /* attdialect */, {{.*}}, def %{{.*}}, {{.*}}, %{{.*}}, {{.*}}, %[[REG1]], {{.*}}, %[[REG2]], 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
+; FP16: INLINEASM &"vaddph\09$3, $2, $0 {$1}", attdialect, {{.*}}, def %{{.*}}, {{.*}}, %{{.*}}, {{.*}}, %[[REG1]], {{.*}}, %[[REG2]], clobber, implicit-def early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def early-clobber $eflags
 ; CHECK-STDERR: couldn't allocate output register for constraint 'x'
 define <32 x half> @mask_Yk_f16(i8 signext %msk, <32 x half> %x, <32 x half> %y) {
 entry:
@@ -28,7 +28,7 @@ entry:
 ; FP16-LABEL: name: mask_Yk_bf16
 ; FP16: %[[REG1:.*]]:vr512_0_15 = COPY %1
 ; FP16: %[[REG2:.*]]:vr512_0_15 = COPY %2
-; FP16: INLINEASM &"vaddph\09$3, $2, $0 {$1}", 0 /* attdialect */, {{.*}}, def %{{.*}}, {{.*}}, %{{.*}}, {{.*}}, %[[REG1]], {{.*}}, %[[REG2]], 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
+; FP16: INLINEASM &"vaddph\09$3, $2, $0 {$1}", attdialect, {{.*}}, def %{{.*}}, {{.*}}, %{{.*}}, {{.*}}, %[[REG1]], {{.*}}, %[[REG2]], clobber, implicit-def early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def early-clobber $eflags
 ; CHECK-STDERR: couldn't allocate output register for constraint 'x'
 define <32 x bfloat> @mask_Yk_bf16(i8 signext %msk, <32 x bfloat> %x, <32 x bfloat> %y) {
 entry:

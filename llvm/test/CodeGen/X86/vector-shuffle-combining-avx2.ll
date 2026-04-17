@@ -77,13 +77,13 @@ define <4 x i64> @combine_permq_pshufb_as_vextracti128(<4 x i64> %a0) {
 ; X86-LABEL: combine_permq_pshufb_as_vextracti128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; X86-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0 # [1,0,1,0,3,0,3,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permq_pshufb_as_vextracti128:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; X64-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,1,3,3]
 ; X64-NEXT:    retq
   %1 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %2 = bitcast <4 x i64> %1 to <32 x i8>
@@ -97,13 +97,13 @@ define <4 x i64> @combine_permq_pshufb_as_vmovdqa(<4 x i64> %a0) {
 ; X86-LABEL: combine_permq_pshufb_as_vmovdqa:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa %xmm0, %xmm0
-; X86-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0 # [1,0,1,0,3,0,3,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permq_pshufb_as_vmovdqa:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa %xmm0, %xmm0
-; X64-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,1,3,3]
 ; X64-NEXT:    retq
   %1 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   %2 = bitcast <4 x i64> %1 to <32 x i8>
@@ -222,13 +222,13 @@ define <16 x i8> @combine_pshufb_as_vpbroadcastd128(<16 x i8> %a) {
 ; X86-LABEL: combine_pshufb_as_vpbroadcastd128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X86-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0 # [0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_as_vpbroadcastd128:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X64-NEXT:    retq
   %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3>)
   %2 = add <16 x i8> %1, <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3>
@@ -239,13 +239,13 @@ define <8 x i32> @combine_permd_as_vpbroadcastd256(<4 x i32> %a) {
 ; X86-LABEL: combine_permd_as_vpbroadcastd256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpbroadcastd %xmm0, %ymm0
-; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0 # [0,1,2,3,0,1,2,3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permd_as_vpbroadcastd256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpbroadcastd %xmm0, %ymm0
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,1,2,3,0,1,2,3]
 ; X64-NEXT:    retq
   %1 = shufflevector <4 x i32> %a, <4 x i32> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %2 = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %1, <8 x i32> zeroinitializer)
@@ -266,13 +266,13 @@ define <8 x i32> @combine_permd_as_vpbroadcastq256(<4 x i32> %a) {
 ; X86-LABEL: combine_permd_as_vpbroadcastq256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0 # [0,1,2,3,0,1,2,3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permd_as_vpbroadcastq256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,1,2,3,0,1,2,3]
 ; X64-NEXT:    retq
   %1 = shufflevector <4 x i32> %a, <4 x i32> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %2 = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %1, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>)

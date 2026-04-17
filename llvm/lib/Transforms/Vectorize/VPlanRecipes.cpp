@@ -1219,14 +1219,10 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::FirstOrderRecurrenceSplice: {
     assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
-    SmallVector<int> Mask(VF.getKnownMinValue());
-    std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
-
-    return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
-                                  cast<VectorType>(VectorTy),
-                                  cast<VectorType>(VectorTy), Mask,
-                                  Ctx.CostKind, VF.getKnownMinValue() - 1);
+    return Ctx.TTI.getShuffleCost(
+        TargetTransformInfo::SK_Splice, cast<VectorType>(VectorTy),
+        cast<VectorType>(VectorTy), {}, Ctx.CostKind, -1);
   }
   case VPInstruction::ActiveLaneMask: {
     Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
@@ -4671,6 +4667,11 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     O << " (VF scaled by 1/" << getVFScaleFactor() << ")";
 }
 #endif
+
+bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  return vputils::onlyFirstLaneUsed(this);
+}
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   Value *Op0 = State.get(getOperand(0));

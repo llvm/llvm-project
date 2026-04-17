@@ -11,7 +11,7 @@
 
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/common.h"
-#include "src/__support/threads/linux/futex_utils.h"
+#include "src/__support/threads/futex_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -105,6 +105,36 @@ transform::AnyParamType::checkPayload(Location loc,
 }
 
 //===----------------------------------------------------------------------===//
+// transform::NormalizedOpType
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::NormalizedOpType::checkPayload(Location loc,
+                                          ArrayRef<Operation *> payload) const {
+  // Only check payloads that are not already guaranteeing the required forms.
+  SmallVector<Operation *> payloadsToCheck =
+      llvm::filter_to_vector(payload, [this](Operation *op) {
+        auto normalFormCheckedOp = dyn_cast<NormalFormCheckedOpInterface>(op);
+        if (!normalFormCheckedOp)
+          return true;
+
+        SmallVector<NormalFormAttrInterface> checkedNormalForms;
+        normalFormCheckedOp.getCheckedNormalForms(checkedNormalForms);
+        return !llvm::all_of(
+            this->getNormalForms(), [&](NormalFormAttrInterface form) {
+              return llvm::is_contained(checkedNormalForms, form);
+            });
+      });
+  return detail::checkNormalForms(getNormalForms(), payloadsToCheck);
+}
+
+LogicalResult transform::NormalizedOpType::verify(
+    function_ref<InFlightDiagnostic()> emitError,
+    ArrayRef<NormalFormAttrInterface> normalForms) {
+  return detail::verifyNormalFormList(emitError, normalForms);
+}
+
+//===----------------------------------------------------------------------===//
 // transform::ParamType
 //===----------------------------------------------------------------------===//
 

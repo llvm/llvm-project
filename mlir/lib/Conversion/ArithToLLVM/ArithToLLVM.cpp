@@ -29,13 +29,20 @@ using namespace mlir;
 
 namespace {
 
-/// Operations whose conversion will depend on whether they are passed a
-/// rounding mode attribute or not.
+/// Lowering pattern that matches only when the source op's rounding mode
+/// presence agrees with `HasRoundingMode`. This allows registering two
+/// instances of the same pattern for one source op: one that handles the
+/// unconstrained case (no rounding mode, lowering to a regular LLVM op) and
+/// one that handles the constrained case (rounding mode present, lowering to
+/// a constrained LLVM intrinsic).
 ///
-/// `SourceOp` is the source operation; `TargetOp`, the operation it will lower
-/// to; `AttrConvert` is the attribute conversion to convert the rounding mode
-/// attribute.
-template <typename SourceOp, typename TargetOp, bool Constrained,
+/// * `HasRoundingMode`: the pattern matches if and only if the source op has
+///   a rounding mode attribute.
+/// * `AttrConvert`: attribute converter to translate source attributes to
+///   target attributes.
+/// * `FailOnUnsupportedFP`: whether to fail if the source op has unsupported
+///   floating point types.
+template <typename SourceOp, typename TargetOp, bool HasRoundingMode,
           template <typename, typename> typename AttrConvert =
               AttrConvertPassThrough,
           bool FailOnUnsupportedFP = false>
@@ -49,7 +56,7 @@ struct ConstrainedVectorConvertToLLVMPattern
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (Constrained != static_cast<bool>(op.getRoundingModeAttr()))
+    if (HasRoundingMode != static_cast<bool>(op.getRoundingModeAttr()))
       return failure();
     return VectorConvertToLLVMPattern<
         SourceOp, TargetOp, AttrConvert,
@@ -81,9 +88,13 @@ struct IdentityBitcastLowering final
 //===----------------------------------------------------------------------===//
 
 using AddFOpLowering =
-    VectorConvertToLLVMPattern<arith::AddFOp, LLVM::FAddOp,
-                               arith::AttrConvertFastMathToLLVM,
-                               /*FailOnUnsupportedFP=*/true>;
+    ConstrainedVectorConvertToLLVMPattern<arith::AddFOp, LLVM::FAddOp,
+                                          /*HasRoundingMode=*/false,
+                                          arith::AttrConvertFastMathToLLVM,
+                                          /*FailOnUnsupportedFP=*/true>;
+using ConstrainedAddFOpLowering = ConstrainedVectorConvertToLLVMPattern<
+    arith::AddFOp, LLVM::ConstrainedFAddIntr, /*HasRoundingMode=*/true,
+    arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using AddIOpLowering =
     VectorConvertToLLVMPattern<arith::AddIOp, LLVM::AddOp,
                                arith::AttrConvertOverflowToLLVM>;
@@ -91,9 +102,13 @@ using AndIOpLowering = VectorConvertToLLVMPattern<arith::AndIOp, LLVM::AndOp>;
 using BitcastOpLowering =
     VectorConvertToLLVMPattern<arith::BitcastOp, LLVM::BitcastOp>;
 using DivFOpLowering =
-    VectorConvertToLLVMPattern<arith::DivFOp, LLVM::FDivOp,
-                               arith::AttrConvertFastMathToLLVM,
-                               /*FailOnUnsupportedFP=*/true>;
+    ConstrainedVectorConvertToLLVMPattern<arith::DivFOp, LLVM::FDivOp,
+                                          /*HasRoundingMode=*/false,
+                                          arith::AttrConvertFastMathToLLVM,
+                                          /*FailOnUnsupportedFP=*/true>;
+using ConstrainedDivFOpLowering = ConstrainedVectorConvertToLLVMPattern<
+    arith::DivFOp, LLVM::ConstrainedFDivIntr, /*HasRoundingMode=*/true,
+    arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using DivSIOpLowering =
     VectorConvertToLLVMPattern<arith::DivSIOp, LLVM::SDivOp>;
 using DivUIOpLowering =
@@ -139,9 +154,13 @@ using MinSIOpLowering =
 using MinUIOpLowering =
     VectorConvertToLLVMPattern<arith::MinUIOp, LLVM::UMinOp>;
 using MulFOpLowering =
-    VectorConvertToLLVMPattern<arith::MulFOp, LLVM::FMulOp,
-                               arith::AttrConvertFastMathToLLVM,
-                               /*FailOnUnsupportedFP=*/true>;
+    ConstrainedVectorConvertToLLVMPattern<arith::MulFOp, LLVM::FMulOp,
+                                          /*HasRoundingMode=*/false,
+                                          arith::AttrConvertFastMathToLLVM,
+                                          /*FailOnUnsupportedFP=*/true>;
+using ConstrainedMulFOpLowering = ConstrainedVectorConvertToLLVMPattern<
+    arith::MulFOp, LLVM::ConstrainedFMulIntr, /*HasRoundingMode=*/true,
+    arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using MulIOpLowering =
     VectorConvertToLLVMPattern<arith::MulIOp, LLVM::MulOp,
                                arith::AttrConvertOverflowToLLVM>;
@@ -170,18 +189,23 @@ using ShRUIOpLowering =
 using SIToFPOpLowering =
     VectorConvertToLLVMPattern<arith::SIToFPOp, LLVM::SIToFPOp>;
 using SubFOpLowering =
-    VectorConvertToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
-                               arith::AttrConvertFastMathToLLVM,
-                               /*FailOnUnsupportedFP=*/true>;
+    ConstrainedVectorConvertToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
+                                          /*HasRoundingMode=*/false,
+                                          arith::AttrConvertFastMathToLLVM,
+                                          /*FailOnUnsupportedFP=*/true>;
+using ConstrainedSubFOpLowering = ConstrainedVectorConvertToLLVMPattern<
+    arith::SubFOp, LLVM::ConstrainedFSubIntr, /*HasRoundingMode=*/true,
+    arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using SubIOpLowering =
     VectorConvertToLLVMPattern<arith::SubIOp, LLVM::SubOp,
                                arith::AttrConvertOverflowToLLVM>;
 using TruncFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::TruncFOp, LLVM::FPTruncOp,
-                                          false, AttrConvertPassThrough,
+                                          /*HasRoundingMode=*/false,
+                                          AttrConvertPassThrough,
                                           /*FailOnUnsupportedFP=*/true>;
 using ConstrainedTruncFOpLowering = ConstrainedVectorConvertToLLVMPattern<
-    arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, true,
+    arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, /*HasRoundingMode=*/true,
     arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using TruncIOpLowering =
     VectorConvertToLLVMPattern<arith::TruncIOp, LLVM::TruncOp,
@@ -700,6 +724,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
   // clang-format off
   patterns.add<
     AddFOpLowering,
+    ConstrainedAddFOpLowering,
     AddIOpLowering,
     AndIOpLowering,
     AddUIExtendedOpLowering,
@@ -708,6 +733,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     CmpFOpLowering,
     CmpIOpLowering,
     DivFOpLowering,
+    ConstrainedDivFOpLowering,
     DivSIOpLowering,
     DivUIOpLowering,
     ExtFOpLowering,
@@ -727,6 +753,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     MinSIOpLowering,
     MinUIOpLowering,
     MulFOpLowering,
+    ConstrainedMulFOpLowering,
     MulIOpLowering,
     MulSIExtendedOpLowering,
     MulUIExtendedOpLowering,
@@ -742,6 +769,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     ShRUIOpLowering,
     SIToFPOpLowering,
     SubFOpLowering,
+    ConstrainedSubFOpLowering,
     SubIOpLowering,
     TruncFOpLowering,
     ConstrainedTruncFOpLowering,

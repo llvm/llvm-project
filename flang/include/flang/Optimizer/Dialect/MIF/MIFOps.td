@@ -17,6 +17,7 @@
 include "flang/Optimizer/Dialect/MIF/MIFDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
+include "mlir/IR/BuiltinAttributes.td"
 
 class mif_Op<string mnemonic, list<Trait> traits>
     : Op<MIFDialect, mnemonic, traits>;
@@ -421,6 +422,62 @@ def mif_TeamNumberOp : mif_Op<"team_number", []> {
 
   let assemblyFormat = [{
     (`team` $team^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Allocation and Deallocation
+//===----------------------------------------------------------------------===//
+
+def mif_AllocCoarrayOp
+    : mif_Op<"alloc_coarray", [AttrSizedOperandSegments,
+                               MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+  let summary = "Perform the allocation of a coarray and provide a "
+                "corresponding coarray descriptor";
+
+  let description = [{
+    This operation allocates a coarray and provides the corresponding 
+    coarray descriptor. This call is collective over the current team.
+    `lcobound` should be a rank-1 array of size equal to `corank`, and 
+    `ucobounds` should be a rank-1 array of size equal to `corank - 1`.
+  }];
+
+  let arguments = (ins StrAttr:$uniq_name,
+      Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+      AnyBoxedArray:$lcobounds, AnyBoxedArray:$ucobounds,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+
+  let builders = [OpBuilder<(ins "mlir::Value":$box, "llvm::StringRef":$symName,
+                      "mlir::Value":$lcobounds, "mlir::Value":$ucobounds,
+                      "mlir::Value":$stat, "mlir::Value":$errmsg)>,
+                  OpBuilder<(ins "mlir::Value":$box, "llvm::StringRef":$symName,
+                      "mlir::Value":$lcobounds, "mlir::Value":$ucobounds)>];
+
+  let hasVerifier = 1;
+  let assemblyFormat = [{
+    $box 
+    `lcobounds` $lcobounds `ucobounds` $ucobounds 
+    (`stat` $stat^ )?
+    (`errmsg` $errmsg^ )? 
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_DeallocCoarrayOp
+    : mif_Op<"dealloc_coarray", [AttrSizedOperandSegments,
+                                 MemoryEffects<[MemFree<DefaultResource>]>]> {
+  let summary = "Perform the deallocation of a coarray";
+  let description = [{
+    This call releases memory allocated by `mif_AllocCoarrayOp` for a coarray.
+  }];
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemFree]>:$coarray,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+
+  let assemblyFormat = [{
+    $coarray (`stat` $stat^ )?  (`errmsg` $errmsg^ )?
     attr-dict `:` functional-type(operands, results)
   }];
 }

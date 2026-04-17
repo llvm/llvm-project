@@ -1544,6 +1544,7 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 bool EndLifetime(InterpState &S, CodePtr OpPC);
 bool EndLifetimePop(InterpState &S, CodePtr OpPC);
 bool StartLifetime(InterpState &S, CodePtr OpPC);
+bool MarkDestroyed(InterpState &S, CodePtr OpPC);
 
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
@@ -2069,7 +2070,7 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
 }
 
 inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  if (S.checkingPotentialConstantExpression())
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;

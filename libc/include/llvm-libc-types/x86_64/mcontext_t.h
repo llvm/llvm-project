@@ -8,8 +8,8 @@
 
 // Note: Definitions in this file are based on the Linux kernel ABI.
 
-#ifndef LLVM_LIBC_TYPES_MCONTEXT_T_H
-#define LLVM_LIBC_TYPES_MCONTEXT_T_H
+#ifndef LLVM_LIBC_TYPES_X86_64_MCONTEXT_T_H
+#define LLVM_LIBC_TYPES_X86_64_MCONTEXT_T_H
 
 // The following definitions correspond to the general purpose registers.
 // The layout of gregset_t and the enum indices must match the layout of
@@ -118,4 +118,4 @@ typedef struct {
   unsigned long long __reserved1[8];
 } mcontext_t;
 
-#endif // LLVM_LIBC_TYPES_MCONTEXT_T_H
+#endif // LLVM_LIBC_TYPES_X86_64_MCONTEXT_T_H

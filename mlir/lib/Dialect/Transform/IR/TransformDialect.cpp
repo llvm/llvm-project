@@ -21,9 +21,6 @@ using namespace mlir;
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.cpp.inc"
 
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
-
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 void transform::detail::checkImplementsTransformOpInterface(
     StringRef name, MLIRContext *context) {
@@ -36,13 +33,15 @@ void transform::detail::checkImplementsTransformOpInterface(
           opName.hasInterface<PatternDescriptorOpInterface>() ||
           opName.hasInterface<ConversionPatternDescriptorOpInterface>() ||
           opName.hasInterface<TypeConverterBuilderOpInterface>() ||
-          opName.hasTrait<OpTrait::IsTerminator>()) &&
+          opName.hasTrait<OpTrait::IsTerminator>() ||
+          opName.hasInterface<NormalFormCheckedOpInterface>()) &&
          "non-terminator ops injected into the transform dialect must "
          "implement TransformOpInterface or PatternDescriptorOpInterface or "
          "ConversionPatternDescriptorOpInterface");
   if (!opName.hasInterface<PatternDescriptorOpInterface>() &&
       !opName.hasInterface<ConversionPatternDescriptorOpInterface>() &&
-      !opName.hasInterface<TypeConverterBuilderOpInterface>()) {
+      !opName.hasInterface<TypeConverterBuilderOpInterface>() &&
+      !opName.hasInterface<NormalFormCheckedOpInterface>()) {
     assert(opName.hasInterface<MemoryEffectOpInterface>() &&
            "ops injected into the transform dialect must implement "
            "MemoryEffectsOpInterface");
@@ -70,12 +69,32 @@ void transform::TransformDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
+  initializeAttributes();
   initializeTypes();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
-      >();
   initializeLibraryModule();
+}
+
+Attribute transform::TransformDialect::parseAttribute(DialectAsmParser &parser,
+                                                      Type type) const {
+  StringRef keyword;
+  SMLoc loc = parser.getCurrentLocation();
+  if (failed(parser.parseKeyword(&keyword)))
+    return nullptr;
+
+  auto it = attributeParsingHooks.find(keyword);
+  if (it == attributeParsingHooks.end()) {
+    parser.emitError(loc) << "unknown attribute mnemonic: " << keyword;
+    return nullptr;
+  }
+
+  return it->getValue()(parser, type);
+}
+
+void transform::TransformDialect::printAttribute(
+    Attribute attribute, DialectAsmPrinter &printer) const {
+  auto it = attributePrintingHooks.find(attribute.getTypeID());
+  assert(it != attributePrintingHooks.end() && "printing unknown attribute");
+  it->getSecond()(attribute, printer);
 }
 
 Type transform::TransformDialect::parseType(DialectAsmParser &parser) const {
@@ -112,6 +131,15 @@ void transform::TransformDialect::initializeLibraryModule() {
   libraryModule = ModuleOp::create(loc, "__transform_library");
   libraryModule.get()->setAttr(TransformDialect::kWithNamedSequenceAttrName,
                                UnitAttr::get(context));
+}
+
+void transform::TransformDialect::reportDuplicateAttributeRegistration(
+    StringRef attrName) {
+  std::string buffer;
+  llvm::raw_string_ostream msg(buffer);
+  msg << "extensible dialect attribute '" << attrName
+      << "' is already registered with a different implementation";
+  llvm::report_fatal_error(StringRef(buffer));
 }
 
 void transform::TransformDialect::reportDuplicateTypeRegistration(

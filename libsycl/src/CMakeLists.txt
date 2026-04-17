@@ -95,6 +95,7 @@ set(LIBSYCL_SOURCES
     "usm_functions.cpp"
     "detail/context_impl.cpp"
     "detail/event_impl.cpp"
+    "detail/device_image_wrapper.cpp"
     "detail/device_impl.cpp"
     "detail/global_objects.cpp"
     "detail/platform_impl.cpp"

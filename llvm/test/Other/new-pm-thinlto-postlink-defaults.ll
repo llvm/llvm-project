@@ -44,7 +44,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-POSTLINK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
-; CHECK-POSTLINK-O-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-POSTLINK-O-NEXT: Running pass: DropTypeTestsPass
 ; CHECK-O-NEXT: Running pass: IPSCCPPass
 ; CHECK-O-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-O-NEXT: Running analysis: AssumptionAnalysis

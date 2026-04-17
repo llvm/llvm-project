@@ -225,6 +225,23 @@ foreach vec = StdVecs in {
                  inst>;
 }
 
+// Match f16x8.splat of a loaded f16 value and fold it into v128.load16_splat.
+def loadf16_any : PatFrags<(ops node:$addr), [
+  (extloadf16 node:$addr),
+  (int_wasm_loadf16_f32 node:$addr)
+]>;
+
+multiclass LoadSplatFP16Pat<SDPatternOperator kind> {
+  def : Pat<(v8f16 (int_wasm_splat_f16x8 (kind (AddrOps32 offset32_op:$offset, I32:$addr)))),
+            (LOAD16_SPLAT_A32 0, offset32_op:$offset, I32:$addr)>,
+        Requires<[HasAddr32]>;
+  def : Pat<(v8f16 (int_wasm_splat_f16x8 (kind (AddrOps64 offset64_op:$offset, I64:$addr)))),
+            (LOAD16_SPLAT_A64 0, offset64_op:$offset, I64:$addr)>,
+        Requires<[HasAddr64]>;
+}
+
+defm : LoadSplatFP16Pat<loadf16_any>;
+
 // Load and extend
 multiclass SIMDLoadExtend<Vec vec, string loadPat, bits<32> simdop> {
   defvar signed = vec.prefix#".load"#loadPat#"_s";

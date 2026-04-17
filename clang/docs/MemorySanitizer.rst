@@ -108,7 +108,7 @@ Interaction of Inlining with Disabling Sanitizer Instrumentation
 * An `always_inline` function will adopt the instrumentation status of the function it is inlined into.
 * Forcibly combining `no_sanitize` and ``__attribute__((always_inline))`` is not supported, and will often lead to unexpected results. To avoid mixing these attributes, use:
 
-. code-block:: c
+.. code-block:: c
 
     // Note, __has_feature test for sanitizers is deprecated, and Clang will support __SANITIZE_<sanitizer>__ similar to GCC.
     #if __has_feature(memory_sanitizer) || defined(__SANITIZE_MEMORY__) || ... <other sanitizers>

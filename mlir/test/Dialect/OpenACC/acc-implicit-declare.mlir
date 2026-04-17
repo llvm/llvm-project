@@ -173,3 +173,24 @@ func.func @test_multiple_constructs() {
 // CHECK: memref.get_global @global_kernels
 // CHECK-NEXT: acc.kernels
 
+// -----
+
+memref.global @global_in_compute_region : memref<f32> = dense<0.0>
+
+func.func @test_scalar_in_compute_region() {
+  acc.compute_region {
+    %addr = memref.get_global @global_in_compute_region : memref<f32>
+    %load = memref.load %addr[] : memref<f32>
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// When hoisting out of acc.compute_region, block arguments must be used to
+// wire the value through.
+// CHECK-LABEL: func.func @test_scalar_in_compute_region
+// CHECK: %[[G:.*]] = memref.get_global @global_in_compute_region
+// CHECK: acc.compute_region ins(%[[INS_ARG:.*]] = %[[G]]) : (memref<f32>) {
+// CHECK: memref.load %[[INS_ARG]][] : memref<f32>
+// CHECK-NOT: memref.load %[[G]][] : memref<f32>
+

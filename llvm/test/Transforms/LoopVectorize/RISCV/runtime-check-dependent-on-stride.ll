@@ -111,10 +111,9 @@ define void @foo(ptr %p, ptr %p.strided, i64 %n, i64 %stride) {
 ; NO-UNIT-STRIDE-MV:       [[MIDDLE_BLOCK]]:
 ; NO-UNIT-STRIDE-MV-NEXT:    br label %[[EXIT:.*]]
 ; NO-UNIT-STRIDE-MV:       [[SCALAR_PH]]:
-; NO-UNIT-STRIDE-MV-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1, %[[VECTOR_SCEVCHECK]] ], [ 1, %[[VECTOR_MEMCHECK]] ]
 ; NO-UNIT-STRIDE-MV-NEXT:    br label %[[HEADER1:.*]]
 ; NO-UNIT-STRIDE-MV:       [[HEADER1]]:
-; NO-UNIT-STRIDE-MV-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[HEADER1]] ]
+; NO-UNIT-STRIDE-MV-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[HEADER1]] ]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; NO-UNIT-STRIDE-MV-NEXT:    [[IDX:%.*]] = mul i64 [[IV]], [[STRIDE]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[GEP_LD:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]

@@ -1511,9 +1511,9 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // attribute.
   if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
       name && name->symbol) {
-    if (Symbol * copy{currScope().CopySymbol(*name->symbol)}) {
+    if (Symbol * copy{currScope().CopySymbol(name->symbol->GetUltimate())}) {
       name->symbol = copy;
-      if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
+      if (auto *object{copy->GetUltimate().detailsIf<ObjectEntityDetails>()}) {
         object->set_cudaDataAttr(common::CUDADataAttr::Device);
       }
     }
@@ -6016,7 +6016,11 @@ bool DeclarationVisitor::Pre(const parser::CUDAAttributesStmt &x) {
       if (!symbol) {
         symbol = &MakeSymbol(name, ObjectEntityDetails{});
       }
-      SetCUDADataAttr(name.source, *symbol, attr);
+      if (attr == common::CUDADataAttr::Value) {
+        SetExplicitAttr(*symbol, Attr::VALUE);
+      } else {
+        SetCUDADataAttr(name.source, *symbol, attr);
+      }
     }
   }
   return false;

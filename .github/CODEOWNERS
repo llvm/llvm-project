@@ -157,6 +157,10 @@
 # MLIR Index Dialect
 /mlir/**/Index* @mogball
 
+# MLIR Shard Dialect
+/mlir/**/*shard* @fschlimb
+/mlir/**/*Shard* @fschlimb
+
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel

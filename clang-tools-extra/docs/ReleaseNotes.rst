@@ -175,6 +175,11 @@ New checks
   Suggests insertion of ``std::move(...)`` to turn copy assignment operator
   calls into move assignment ones, when deemed valid and profitable.
 
+- New :doc:`readability-redundant-lambda-parameter-list
+  <clang-tidy/checks/readability/redundant-lambda-parameter-list>` check.
+
+  Finds lambda expressions with a redundant empty parameter list and removes it.
+
 - New :doc:`readability-redundant-qualified-alias
   <clang-tidy/checks/readability/redundant-qualified-alias>` check.
 
@@ -322,6 +327,10 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
+
+- Fixed :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by excluding
+  Objective-C for-in loop variable declaration.
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check:

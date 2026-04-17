@@ -85,7 +85,7 @@ body:             |
     ; GCN-NEXT: [[DEF64:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF65:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF66:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]], implicit [[DEF9]], implicit [[DEF10]], implicit [[DEF11]], implicit [[DEF12]], implicit [[DEF13]], implicit [[DEF14]], implicit [[DEF15]], implicit [[DEF16]], implicit [[DEF17]], implicit [[DEF18]], implicit [[DEF19]], implicit [[DEF20]], implicit [[DEF21]], implicit [[DEF22]], implicit [[DEF23]], implicit [[DEF24]], implicit [[DEF25]], implicit [[DEF26]], implicit [[DEF27]], implicit [[DEF28]], implicit [[DEF29]], implicit [[DEF30]], implicit [[DEF31]], implicit [[DEF32]], implicit [[DEF33]], implicit [[DEF34]], implicit [[DEF35]], implicit [[DEF36]], implicit [[DEF37]], implicit [[DEF38]], implicit [[DEF39]], implicit [[DEF40]], implicit [[DEF41]], implicit [[DEF42]], implicit [[DEF43]], implicit [[DEF44]], implicit [[DEF45]], implicit [[DEF46]], implicit [[DEF47]], implicit [[DEF48]], implicit [[DEF49]], implicit [[DEF50]], implicit [[DEF51]], implicit [[DEF52]], implicit [[DEF53]], implicit [[DEF54]], implicit [[DEF55]], implicit [[DEF56]], implicit [[DEF57]], implicit [[DEF58]], implicit [[DEF59]], implicit [[DEF60]], implicit [[DEF61]], implicit [[DEF62]], implicit [[DEF63]], implicit [[DEF64]], implicit [[DEF65]], implicit [[DEF66]]
+    ; GCN-NEXT: INLINEASM &"", sideeffect attdialect, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]], implicit [[DEF9]], implicit [[DEF10]], implicit [[DEF11]], implicit [[DEF12]], implicit [[DEF13]], implicit [[DEF14]], implicit [[DEF15]], implicit [[DEF16]], implicit [[DEF17]], implicit [[DEF18]], implicit [[DEF19]], implicit [[DEF20]], implicit [[DEF21]], implicit [[DEF22]], implicit [[DEF23]], implicit [[DEF24]], implicit [[DEF25]], implicit [[DEF26]], implicit [[DEF27]], implicit [[DEF28]], implicit [[DEF29]], implicit [[DEF30]], implicit [[DEF31]], implicit [[DEF32]], implicit [[DEF33]], implicit [[DEF34]], implicit [[DEF35]], implicit [[DEF36]], implicit [[DEF37]], implicit [[DEF38]], implicit [[DEF39]], implicit [[DEF40]], implicit [[DEF41]], implicit [[DEF42]], implicit [[DEF43]], implicit [[DEF44]], implicit [[DEF45]], implicit [[DEF46]], implicit [[DEF47]], implicit [[DEF48]], implicit [[DEF49]], implicit [[DEF50]], implicit [[DEF51]], implicit [[DEF52]], implicit [[DEF53]], implicit [[DEF54]], implicit [[DEF55]], implicit [[DEF56]], implicit [[DEF57]], implicit [[DEF58]], implicit [[DEF59]], implicit [[DEF60]], implicit [[DEF61]], implicit [[DEF62]], implicit [[DEF63]], implicit [[DEF64]], implicit [[DEF65]], implicit [[DEF66]]
     ; GCN-NEXT: KILL [[DEF]]
     ; GCN-NEXT: KILL [[DEF1]]
     ; GCN-NEXT: KILL [[DEF10]]
@@ -98,7 +98,7 @@ body:             |
     ; GCN-NEXT: KILL [[DEF17]]
     ; GCN-NEXT: [[DEF68:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF69:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-    ; GCN-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF69]], implicit [[DEF23]], implicit [[DEF24]], implicit [[DEF25]], implicit [[DEF26]], implicit [[DEF27]], implicit [[DEF28]]
+    ; GCN-NEXT: INLINEASM &"", sideeffect attdialect, implicit [[DEF69]], implicit [[DEF23]], implicit [[DEF24]], implicit [[DEF25]], implicit [[DEF26]], implicit [[DEF27]], implicit [[DEF28]]
     ; GCN-NEXT: KILL [[DEF2]]
     ; GCN-NEXT: KILL [[DEF3]]
     ; GCN-NEXT: KILL [[DEF4]]
@@ -110,7 +110,7 @@ body:             |
     ; GCN-NEXT: KILL [[DEF18]]
     ; GCN-NEXT: KILL [[DEF19]]
     ; GCN-NEXT: [[DEF70:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-    ; GCN-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF70]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]], implicit [[DEF9]]
+    ; GCN-NEXT: INLINEASM &"", sideeffect attdialect, implicit [[DEF70]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]], implicit [[DEF9]]
     ; GCN-NEXT: KILL [[DEF69]], implicit-def %70, implicit-def %71, implicit-def %72, implicit-def %73, implicit-def %74, implicit-def %75, implicit-def %76, implicit-def %77
     ; GCN-NEXT: [[DEF71:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF72:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF

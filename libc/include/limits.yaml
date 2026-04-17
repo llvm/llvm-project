@@ -74,6 +74,16 @@ macros:
     macro_header: limits-macros.h
   - macro_name: ULLONG_MIN
     macro_header: limits-macros.h
+  - macro_name: _POSIX_NAME_MAX
+    macro_header: limits-macros.h
+  - macro_name: _POSIX_PATH_MAX
+    macro_header: limits-macros.h
+  - macro_name: PATH_MAX
+    macro_header: limits-macros.h
+  - macro_name: _POSIX_THREAD_DESTRUCTOR_ITERATIONS
+    macro_header: limits-macros.h
+  - macro_name: PTHREAD_DESTRUCTOR_ITERATIONS
+    macro_header: limits-macros.h
 types: []
 enums: []
 objects: []

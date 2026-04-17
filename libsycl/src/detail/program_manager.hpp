@@ -19,7 +19,9 @@
 
 #include <detail/device_binary_structures.hpp>
 #include <detail/device_image_wrapper.hpp>
-#include <detail/kernel_id.hpp>
+#include <detail/device_kernel_info.hpp>
+
+#include <OffloadAPI.h>
 
 #include <mutex>
 #include <unordered_map>
@@ -69,32 +71,35 @@ public:
   /// data passed to registerFatBin.
   void unregisterFatBin(__sycl_tgt_bin_desc *FatbinDesc);
 
+  /// Creates a liboffload kernel that is ready for execution.
+  /// This method is thread-safe.
+  /// \param KernelInfo a set of kernel specific data: name, corresponding
+  /// device image, etc.
+  /// \param Device the device for which this kernel must be compiled.
+  /// \return a liboffload kernel handle that is ready to be passed to kernel
+  /// execution methods.
+  ol_symbol_handle_t getOrCreateKernel(DeviceKernelInfo &KernelInfo,
+                                       DeviceImpl &Device);
+
 private:
   ProgramAndKernelManager() = default;
   ~ProgramAndKernelManager() = default;
   ProgramAndKernelManager(ProgramAndKernelManager const &) = delete;
   ProgramAndKernelManager &operator=(ProgramAndKernelManager const &) = delete;
 
-  /// Searches for a device image that contains the requested kernel and is
-  /// compatible with the requested device.
-  /// \param KernelName a null-terminated string representing the name of the
-  /// kernel to obtain a device image for.
-  /// \param KernelID a kernel id matching KernelName.
-  /// \param DeviceImpl a device with which device image must be compatible.
-  /// \throw sycl::exception with sycl::errc::runtime if the device image
-  /// validation failed in liboffload or if no compatible image was found.
-  DeviceImageWrapper *getDeviceImage(std::string_view KernelName,
-                                     const kernel_id &KernelID,
-                                     DeviceImpl &Device);
-
   // Filled by registerFatBin(...).
-  std::unordered_map<std::string_view, kernel_id> MKernelNameToID;
-  std::unordered_map<kernel_id, DeviceImageWrapper *> MKernelIDToDevImageJIT;
-  // Controls lifetime of device image ptr and wrapper.
+  // Map for storing device kernel information. Runtime lookup should be avoided
+  // by caching the pointers when possible.
+  std::unordered_map<std::string_view, DeviceKernelInfo> MDeviceKernelInfoMap;
+
+  // Controls lifetime of device images.
   std::unordered_map<const __sycl_tgt_device_image *,
-                     std::unique_ptr<DeviceImageWrapper>>
-      MDeviceImageWrappers;
-  std::mutex MImageCollectionMutex;
+                     std::unique_ptr<DeviceImageManager>>
+      MDeviceImageManagers;
+
+  // All work with device images and data related to it must be wrapped with a
+  // lock of this mutex.
+  std::mutex MDataCollectionMutex;
 };
 
 } // namespace detail

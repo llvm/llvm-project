@@ -67,7 +67,7 @@ struct PointerLikeTypeTraits<mlir::async::FuncOp> {
   static inline mlir::async::FuncOp getFromVoidPointer(void *p) {
     return mlir::async::FuncOp::getFromOpaquePointer(p);
   }
-  static constexpr int numLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 3;
 };
 } // namespace llvm
 

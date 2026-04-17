@@ -557,7 +557,7 @@ body:             |
   %38:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %36:vgpr_32, %8:sgpr_128, 0, 0, 0, 0, implicit $exec
   %39:vgpr_32 = V_ADD_U32_e32 %9:vgpr_32, %37:vgpr_32, implicit $exec
   %40:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %39:vgpr_32, %8:sgpr_128, 0, 0, 0, 0, implicit $exec
-  INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+  INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
   %41:vreg_128_align2 = DS_READ_B128_gfx9 %42:vgpr_32, 0, 0, implicit $exec
   early-clobber %43:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_vgprcd_e64 %41.sub0_sub1:vreg_128_align2, %44.sub0_sub1:vreg_128_align2, 0, 0, 0, 0, implicit $mode, implicit $exec
   %43:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %41.sub2_sub3:vreg_128_align2, %44.sub2_sub3:vreg_128_align2, %43:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
@@ -570,9 +570,9 @@ body:             |
   %50:vreg_128_align2 = DS_READ_B128_gfx9 %48:vgpr_32, 512, 0, implicit $exec
   %46:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %50.sub0_sub1:vreg_128_align2, %49.sub0_sub1:vreg_128_align2, %46:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
   %46:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %50.sub2_sub3:vreg_128_align2, %49.sub2_sub3:vreg_128_align2, %46:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
-  INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+  INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
   DS_WRITE_B128_gfx9 %34:vgpr_32, %35:vreg_128_align2, 0, 0, implicit $exec
-  INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+  INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
   %51:vreg_128_align2 = DS_READ_B128_gfx9 %42:vgpr_32, 0, 0, implicit $exec
   %43:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %51.sub0_sub1:vreg_128_align2, %52.sub0_sub1:vreg_128_align2, %43:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
   %43:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %51.sub2_sub3:vreg_128_align2, %52.sub2_sub3:vreg_128_align2, %43:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
@@ -776,7 +776,7 @@ body:             |
   %245:vgpr_32 = contract nofpexcept V_SUB_F32_e32 %13:vgpr_32, %113:vgpr_32, implicit $mode, implicit $exec
   %246:vgpr_32 = afn nofpexcept V_MUL_F32_e32 1069066811, %245:vgpr_32, implicit $mode, implicit $exec
   undef %247.sub0:vreg_64_align2 = afn nofpexcept V_EXP_F32_e32 %246:vgpr_32, implicit $mode, implicit $exec
-  INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+  INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
   %248:vgpr_32 = V_PERM_B32_e64 %40.sub0:vreg_64_align2, %38.sub0:vreg_64_align2, %14:sreg_32, implicit $exec
   %249:vgpr_32 = V_PERM_B32_e64 %40.sub0:vreg_64_align2, %38.sub0:vreg_64_align2, %15:sreg_32, implicit $exec
   %250:vgpr_32 = V_PERM_B32_e64 %40.sub1:vreg_64_align2, %38.sub1:vreg_64_align2, %14:sreg_32, implicit $exec
@@ -825,12 +825,12 @@ body:             |
   %274:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %273:vgpr_32, %8:sgpr_128, 0, 0, 0, 0, implicit $exec
   %275:vgpr_32 = V_ADD_U32_e32 %23:vgpr_32, %37:vgpr_32, implicit $exec
   %276:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %275:vgpr_32, %8:sgpr_128, 0, 0, 0, 0, implicit $exec
-  INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+  INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
   %277:vreg_128_align2 = DS_READ_B128_gfx9 %24:vgpr_32, 0, 0, implicit $exec
   %278:vreg_128_align2 = DS_READ_B128_gfx9 %24:vgpr_32, 576, 0, implicit $exec
   %279:vreg_128_align2 = DS_READ_B128_gfx9 %25:vgpr_32, 0, 0, implicit $exec
   %280:vreg_128_align2 = DS_READ_B128_gfx9 %25:vgpr_32, 576, 0, implicit $exec
-  INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+  INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
   %281:vgpr_32 = V_PERM_B32_e64 %276.sub0:vreg_64_align2, %274.sub0:vreg_64_align2, %14:sreg_32, implicit $exec
   %282:vgpr_32 = V_PERM_B32_e64 %276.sub0:vreg_64_align2, %274.sub0:vreg_64_align2, %15:sreg_32, implicit $exec
   %283:vgpr_32 = V_PERM_B32_e64 %276.sub1:vreg_64_align2, %274.sub1:vreg_64_align2, %14:sreg_32, implicit $exec
@@ -875,7 +875,7 @@ body:             |
   %306:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %176:vgpr_32, implicit $mode, implicit $exec
   %307:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %170:vgpr_32, implicit $mode, implicit $exec
   %308:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %164:vgpr_32, implicit $mode, implicit $exec
-  INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+  INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
   undef %309.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %307:vgpr_32, 0, %299:vgpr_32, 0, 0, implicit $mode, implicit $exec
   %309.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %308:vgpr_32, 0, %300:vgpr_32, 0, 0, implicit $mode, implicit $exec
   undef %310.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %305:vgpr_32, 0, %297:vgpr_32, 0, 0, implicit $mode, implicit $exec
@@ -896,7 +896,7 @@ body:             |
   %316:vreg_128_align2 = DS_READ_B128_gfx9 %25:vgpr_32, 576, 0, implicit $exec
   %260:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %316.sub0_sub1:vreg_128_align2, %311:vreg_64_align2, %260:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
   %260:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %316.sub2_sub3:vreg_128_align2, %312:vreg_64_align2, %260:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
-  INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+  INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
   %37:vgpr_32 = V_ADD_U32_e32 %26:sreg_32, %37:vgpr_32, implicit $exec
   %29:vgpr_32 = nuw V_ADD_U32_e32 64, %29:vgpr_32, implicit $exec
   S_ENDPGM 0

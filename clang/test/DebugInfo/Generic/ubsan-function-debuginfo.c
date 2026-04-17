@@ -5,67 +5,68 @@
 // RUN:   | FileCheck %s
 
 // CHECK-LABEL: define dso_local void @call_no_prototype(
-// CHECK-SAME: ptr noundef readonly captures(none) [[F:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG5:![0-9]+]] !func_sanitize [[META14:![0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[F:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG9:![0-9]+]] !func_sanitize [[META18:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:      #dbg_value(ptr [[F]], [[META13:![0-9]+]], !DIExpression(), [[META15:![0-9]+]])
-// CHECK-NEXT:    tail call void (...) [[F]]() #[[ATTR2:[0-9]+]], !dbg [[DBG16:![0-9]+]]
-// CHECK-NEXT:    ret void, !dbg [[DBG17:![0-9]+]]
+// CHECK-NEXT:      #dbg_value(ptr [[F]], [[META17:![0-9]+]], !DIExpression(), [[META19:![0-9]+]])
+// CHECK-NEXT:    tail call void (...) [[F]]() #[[ATTR2:[0-9]+]], !dbg [[DBG20:![0-9]+]]
+// CHECK-NEXT:    ret void, !dbg [[DBG21:![0-9]+]]
 //
 void call_no_prototype(void (*f)()) { f(); }
 
 // CHECK-LABEL: define dso_local void @call_prototype(
-// CHECK-SAME: ptr noundef [[F:%.*]]) local_unnamed_addr #[[ATTR0]] !dbg [[DBG18:![0-9]+]] !func_sanitize [[META26:![0-9]+]] {
+// CHECK-SAME: ptr noundef [[F:%.*]]) local_unnamed_addr #[[ATTR0]] !dbg [[DBG22:![0-9]+]] !func_sanitize [[META30:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:      #dbg_value(ptr [[F]], [[META25:![0-9]+]], !DIExpression(), [[META27:![0-9]+]])
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[F]], i64 -8, !dbg [[DBG28:![0-9]+]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4, !dbg [[DBG28]], !nosanitize [[META32:![0-9]+]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], -1056584962, !dbg [[DBG28]], !nosanitize [[META32]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[TYPECHECK:.*]], label %[[CONT1:.*]], !dbg [[DBG28]], !nosanitize [[META32]]
+// CHECK-NEXT:      #dbg_value(ptr [[F]], [[META29:![0-9]+]], !DIExpression(), [[META31:![0-9]+]])
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[F]], i64 -8, !dbg [[DBG32:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4, !dbg [[DBG32]], !nosanitize [[META37:![0-9]+]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], -1056584962, !dbg [[DBG32]], !nosanitize [[META37]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[TYPECHECK:.*]], label %[[CONT1:.*]], !dbg [[DBG32]], !nosanitize [[META37]]
 // CHECK:       [[TYPECHECK]]:
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[F]], i64 -4, !dbg [[DBG28]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 8, !dbg [[DBG28]], !nosanitize [[META32]]
-// CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 905068220, !dbg [[DBG28]], !nosanitize [[META32]]
-// CHECK-NEXT:    br i1 [[TMP5]], label %[[CONT1]], label %[[HANDLER_FUNCTION_TYPE_MISMATCH:.*]], !dbg [[DBG28]], !prof [[PROF33:![0-9]+]], !nosanitize [[META32]]
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[F]], i64 -4, !dbg [[DBG32]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 8, !dbg [[DBG32]], !nosanitize [[META37]]
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 905068220, !dbg [[DBG32]], !nosanitize [[META37]]
+// CHECK-NEXT:    br i1 [[TMP5]], label %[[CONT1]], label %[[HANDLER_FUNCTION_TYPE_MISMATCH:.*]], !dbg [[DBG32]], !prof [[PROF38:![0-9]+]], !nosanitize [[META37]]
 // CHECK:       [[HANDLER_FUNCTION_TYPE_MISMATCH]]:
-// CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[F]] to i64, !dbg [[DBG28]], !nosanitize [[META32]]
-// CHECK-NEXT:    tail call void @__ubsan_handle_function_type_mismatch_abort(ptr nonnull @[[GLOB1:[0-9]+]], i64 [[TMP6]]) #[[ATTR3:[0-9]+]], !dbg [[DBG28]], !nosanitize [[META32]]
-// CHECK-NEXT:    unreachable, !dbg [[DBG28]], !nosanitize [[META32]]
+// CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[F]] to i64, !dbg [[DBG32]], !nosanitize [[META37]]
+// CHECK-NEXT:    tail call void @__ubsan_handle_function_type_mismatch_abort(ptr nonnull @[[GLOB1:[0-9]+]], i64 [[TMP6]]) #[[ATTR3:[0-9]+]], !dbg [[DBG32]], !nosanitize [[META37]]
+// CHECK-NEXT:    unreachable, !dbg [[DBG32]], !nosanitize [[META37]]
 // CHECK:       [[CONT1]]:
-// CHECK-NEXT:    tail call void [[F]]() #[[ATTR2]], !dbg [[DBG31:![0-9]+]]
-// CHECK-NEXT:    ret void, !dbg [[DBG34:![0-9]+]]
+// CHECK-NEXT:    tail call void [[F]]() #[[ATTR2]], !dbg [[DBG36:![0-9]+]]
+// CHECK-NEXT:    ret void, !dbg [[DBG39:![0-9]+]]
 //
 void call_prototype(void (*f)(void)) { f(); }
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 // CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
-// CHECK: [[DBG5]] = distinct !DISubprogram(name: "call_no_prototype", scope: [[META6:![0-9]+]], file: [[META6]], line: 14, type: [[META7:![0-9]+]], scopeLine: 14, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META12:![0-9]+]])
-// CHECK: [[META6]] = !DIFile(filename: "{{.*}}ubsan-function-debuginfo.c", directory: {{.*}})
-// CHECK: [[META7]] = !DISubroutineType(types: [[META8:![0-9]+]])
-// CHECK: [[META8]] = !{null, [[META9:![0-9]+]]}
-// CHECK: [[META9]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META10:![0-9]+]], size: 64)
-// CHECK: [[META10]] = !DISubroutineType(types: [[META11:![0-9]+]])
-// CHECK: [[META11]] = !{null, null}
-// CHECK: [[META12]] = !{[[META13]]}
-// CHECK: [[META13]] = !DILocalVariable(name: "f", arg: 1, scope: [[DBG5]], file: [[META6]], line: 14, type: [[META9]])
-// CHECK: [[META14]] = !{i32 -1056584962, i32 187769638}
-// CHECK: [[META15]] = !DILocation(line: 0, scope: [[DBG5]])
-// CHECK: [[DBG16]] = !DILocation(line: 14, column: 39, scope: [[DBG5]])
-// CHECK: [[DBG17]] = !DILocation(line: 14, column: 44, scope: [[DBG5]])
-// CHECK: [[DBG18]] = distinct !DISubprogram(name: "call_prototype", scope: [[META6]], file: [[META6]], line: 37, type: [[META19:![0-9]+]], scopeLine: 37, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META24:![0-9]+]])
-// CHECK: [[META19]] = !DISubroutineType(types: [[META20:![0-9]+]])
-// CHECK: [[META20]] = !{null, [[META21:![0-9]+]]}
-// CHECK: [[META21]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META22:![0-9]+]], size: 64)
-// CHECK: [[META22]] = !DISubroutineType(types: [[META23:![0-9]+]])
-// CHECK: [[META23]] = !{null}
-// CHECK: [[META24]] = !{[[META25]]}
-// CHECK: [[META25]] = !DILocalVariable(name: "f", arg: 1, scope: [[DBG18]], file: [[META6]], line: 37, type: [[META21]])
-// CHECK: [[META26]] = !{i32 -1056584962, i32 -747727454}
-// CHECK: [[META27]] = !DILocation(line: 0, scope: [[DBG18]])
-// CHECK: [[DBG28]] = !DILocation(line: 0, scope: [[META29:![0-9]+]], inlinedAt: [[DBG31]])
-// CHECK: [[META29]] = distinct !DISubprogram(name: "__ubsan_check_function", scope: [[META6]], file: [[META6]], type: [[META30:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
-// CHECK: [[META30]] = !DISubroutineType(types: null)
-// CHECK: [[DBG31]] = !DILocation(line: 37, column: 40, scope: [[DBG18]])
-// CHECK: [[META32]] = !{}
-// CHECK: [[PROF33]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK: [[DBG34]] = !DILocation(line: 37, column: 45, scope: [[DBG18]])
+// CHECK: [[DBG9]] = distinct !DISubprogram(name: "call_no_prototype", scope: [[META10:![0-9]+]], file: [[META10]], line: 14, type: [[META11:![0-9]+]], scopeLine: 14, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META16:![0-9]+]])
+// CHECK: [[META10]] = !DIFile(filename: "ubsan-function-debuginfo.c", directory: "")
+// CHECK: [[META11]] = !DISubroutineType(types: [[META12:![0-9]+]])
+// CHECK: [[META12]] = !{null, [[META13:![0-9]+]]}
+// CHECK: [[META13]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META14:![0-9]+]], size: 64)
+// CHECK: [[META14]] = !DISubroutineType(types: [[META15:![0-9]+]])
+// CHECK: [[META15]] = !{null, null}
+// CHECK: [[META16]] = !{[[META17]]}
+// CHECK: [[META17]] = !DILocalVariable(name: "f", arg: 1, scope: [[DBG9]], file: [[META10]], line: 14, type: [[META13]])
+// CHECK: [[META18]] = !{i32 -1056584962, i32 187769638}
+// CHECK: [[META19]] = !DILocation(line: 0, scope: [[DBG9]])
+// CHECK: [[DBG20]] = !DILocation(line: 14, column: 39, scope: [[DBG9]])
+// CHECK: [[DBG21]] = !DILocation(line: 14, column: 44, scope: [[DBG9]])
+// CHECK: [[DBG22]] = distinct !DISubprogram(name: "call_prototype", scope: [[META10]], file: [[META10]], line: 37, type: [[META23:![0-9]+]], scopeLine: 37, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META28:![0-9]+]])
+// CHECK: [[META23]] = !DISubroutineType(types: [[META24:![0-9]+]])
+// CHECK: [[META24]] = !{null, [[META25:![0-9]+]]}
+// CHECK: [[META25]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META26:![0-9]+]], size: 64)
+// CHECK: [[META26]] = !DISubroutineType(types: [[META27:![0-9]+]])
+// CHECK: [[META27]] = !{null}
+// CHECK: [[META28]] = !{[[META29]]}
+// CHECK: [[META29]] = !DILocalVariable(name: "f", arg: 1, scope: [[DBG22]], file: [[META10]], line: 37, type: [[META25]])
+// CHECK: [[META30]] = !{i32 -1056584962, i32 -747727454}
+// CHECK: [[META31]] = !DILocation(line: 0, scope: [[DBG22]])
+// CHECK: [[DBG32]] = !DILocation(line: 0, scope: [[META33:![0-9]+]], inlinedAt: [[DBG36]])
+// CHECK: [[META33]] = distinct !DISubprogram(name: "__ubsan_check_function", scope: [[META34:![0-9]+]], file: [[META34]], type: [[META35:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK: [[META34]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
+// CHECK: [[META35]] = !DISubroutineType(types: null)
+// CHECK: [[DBG36]] = !DILocation(line: 37, column: 40, scope: [[DBG22]])
+// CHECK: [[META37]] = !{}
+// CHECK: [[PROF38]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[DBG39]] = !DILocation(line: 37, column: 45, scope: [[DBG22]])
 //.

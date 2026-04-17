@@ -102,8 +102,7 @@ mlir::convertFromAttribute(bool &storage, Attribute attr,
                            function_ref<InFlightDiagnostic()> emitError) {
   auto valueAttr = dyn_cast<BoolAttr>(attr);
   if (!valueAttr)
-    return emitError()
-           << "expected string property to come from string attribute";
+    return emitError() << "expected BoolAttr for key `value`";
   storage = valueAttr.getValue();
   return success();
 }

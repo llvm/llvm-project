@@ -416,6 +416,7 @@ Clang-Tidy Checks
    :doc:`readability-redundant-declaration <readability/redundant-declaration>`, "Yes"
    :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
    :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
+   :doc:`readability-redundant-lambda-parameter-list <readability/redundant-lambda-parameter-list>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
    :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,

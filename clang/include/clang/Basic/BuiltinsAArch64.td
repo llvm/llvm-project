@@ -171,11 +171,6 @@ let Attributes = [NoThrow], Features = "ls64" in {
 	def st64bv0 : AArch64TargetBuiltin<"uint64_t (void *, uint64_t const *)">;
 }
 
-// Atomic store with PCDPHINT
-let Attributes = [CustomTypeChecking] in {
-	def atomic_store_with_stshh : AArch64TargetBuiltin<"void (...)">;
-}
-
 // Armv9.3-A Guarded Control Stack
 let Attributes = [NoThrow], Features = "gcs" in {
 	def gcspopm : AArch64TargetBuiltin<"uint64_t (uint64_t)">;

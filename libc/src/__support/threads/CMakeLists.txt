@@ -24,6 +24,14 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
+  add_header_library(
+    futex_utils
+    HDRS
+      futex_utils.h
+    DEPENDS
+      .${LIBC_TARGET_OS}.futex_utils
+  )
+
   libc_set_definition(rwlock_default_spin_count "LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}")
 
   add_header_library(
@@ -33,7 +41,7 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
     COMPILE_OPTIONS
       ${monotonicity_flags}
     DEPENDS
-      .${LIBC_TARGET_OS}.futex_utils
+      .futex_utils
       libc.src.__support.threads.sleep
       libc.src.__support.time.abs_timeout
       libc.src.__support.time.monotonicity

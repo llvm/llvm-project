@@ -104,8 +104,16 @@ end
 
 ! CHECK-LABEL: func.func @_QPcraypointer()
 ! CHECK: %{{.*}} = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf32>>> {data_attr = #cuf.cuda<device>} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-   ! CHECK: fir.global @_QMcuda_varEmod_a_rc {data_attr = #cuf.cuda<constant>} : f32 
 
+attributes(global) subroutine attr_value(a)
+  integer :: a
+  attributes(value) :: a
+end subroutine
+
+! CHECK-LABEL: func.func @_QPattr_value(%{{.*}}: i32 {fir.bindc_name = "a"})
+! CHECK: hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFattr_valueEa"}
+
+! CHECK: fir.global @_QMcuda_varEmod_a_rc {data_attr = #cuf.cuda<constant>} : f32 
 ! CHECK: fir.global @_QMcuda_varEmod_b_ra {data_attr = #cuf.cuda<device>} : f32
 ! CHECK: fir.global @_QMcuda_varEmod_c_rm {data_attr = #cuf.cuda<managed>} : !fir.box<!fir.heap<f32>>
 

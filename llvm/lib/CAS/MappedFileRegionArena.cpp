@@ -240,7 +240,13 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
 
   // If the size is smaller than capacity, we need to resize the file.
   if (FileSize->Size < Capacity) {
-    assert(MainFile->Locked == sys::fs::LockKind::Exclusive);
+    // Acquire the exclusive lock before resizing the file. In the rare case
+    // when opening a large CAS using a small requested size, a shared lock
+    // needs to switch to an exclusive lock here.
+    if (MainFile->Locked != sys::fs::LockKind::Exclusive) {
+      if (Error E = MainFile->switchLock(sys::fs::LockKind::Exclusive))
+        return std::move(E);
+    }
     if (std::error_code EC =
             sys::fs::resize_file_sparse(MainFile->FD, Capacity))
       return createFileError(Result.Path, EC);

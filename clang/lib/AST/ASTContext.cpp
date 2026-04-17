@@ -943,6 +943,7 @@ void ASTContext::cleanup() {
     Value.second->~PerModuleInitializers();
   ModuleInitializers.clear();
 
+  TUDecl = nullptr;
   XRayFilter.reset();
   NoSanitizeL.reset();
 }

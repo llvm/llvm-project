@@ -350,9 +350,10 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 // Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
+                               KernelExtraArgsTy *KernelExtraArgs,
                                AsyncInfoTy &AsyncInfo) {
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
-                            &KernelArgs, AsyncInfo);
+                            &KernelArgs, KernelExtraArgs, AsyncInfo);
 }
 
 // Run region on device

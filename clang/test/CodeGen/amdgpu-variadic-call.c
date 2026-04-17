@@ -217,10 +217,9 @@ typedef union
 } union_f32_i32;
 
 // CHECK-LABEL: define {{[^@]+}}@one_pair_union_f32_i32
-// CHECK-SAME: (i32 noundef [[F0:%.*]], double noundef [[F1:%.*]], i32 [[V0_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: (i32 noundef [[F0:%.*]], double noundef [[F1:%.*]], float [[V0_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[V0_COERCE]] to float
-// CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [[UNION_UNION_F32_I32:%.*]] poison, float [[TMP0]], 0
+// CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [[UNION_UNION_F32_I32:%.*]] poison, float [[V0_COERCE]], 0
 // CHECK-NEXT:    tail call void (...) @sink_0([[UNION_UNION_F32_I32]] [[DOTFCA_0_INSERT]]) #[[ATTR2]]
 // CHECK-NEXT:    tail call void (i32, ...) @sink_1(i32 noundef [[F0]], [[UNION_UNION_F32_I32]] [[DOTFCA_0_INSERT]]) #[[ATTR2]]
 // CHECK-NEXT:    tail call void (double, i32, ...) @sink_2(double noundef [[F1]], i32 noundef [[F0]], [[UNION_UNION_F32_I32]] [[DOTFCA_0_INSERT]]) #[[ATTR2]]
@@ -273,13 +272,12 @@ void multiple_one(int f0, double f1, int v0, double v1)
 }
 
 // CHECK-LABEL: define {{[^@]+}}@multiple_two
-// CHECK-SAME: (i32 noundef [[F0:%.*]], double noundef [[F1:%.*]], double [[V0_COERCE0:%.*]], double [[V0_COERCE1:%.*]], float noundef [[V1:%.*]], i32 [[V2_COERCE:%.*]], i32 noundef [[V3:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: (i32 noundef [[F0:%.*]], double noundef [[F1:%.*]], double [[V0_COERCE0:%.*]], double [[V0_COERCE1:%.*]], float noundef [[V1:%.*]], float [[V2_COERCE:%.*]], i32 noundef [[V3:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[V2_COERCE]] to float
 // CHECK-NEXT:    [[CONV:%.*]] = fpext float [[V1]] to double
 // CHECK-NEXT:    [[DOTFCA_0_INSERT16:%.*]] = insertvalue [[STRUCT_PAIR_F64:%.*]] poison, double [[V0_COERCE0]], 0
 // CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [[STRUCT_PAIR_F64]] [[DOTFCA_0_INSERT16]], double [[V0_COERCE1]], 1
-// CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [[UNION_UNION_F32_I32:%.*]] poison, float [[TMP0]], 0
+// CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [[UNION_UNION_F32_I32:%.*]] poison, float [[V2_COERCE]], 0
 // CHECK-NEXT:    tail call void (...) @sink_0([[STRUCT_PAIR_F64]] [[DOTFCA_1_INSERT]], double noundef [[CONV]], [[UNION_UNION_F32_I32]] [[DOTFCA_0_INSERT]], i32 noundef [[V3]]) #[[ATTR2]]
 // CHECK-NEXT:    tail call void (i32, ...) @sink_1(i32 noundef [[F0]], [[STRUCT_PAIR_F64]] [[DOTFCA_1_INSERT]], double noundef [[CONV]], [[UNION_UNION_F32_I32]] [[DOTFCA_0_INSERT]], i32 noundef [[V3]]) #[[ATTR2]]
 // CHECK-NEXT:    tail call void (double, i32, ...) @sink_2(double noundef [[F1]], i32 noundef [[F0]], [[STRUCT_PAIR_F64]] [[DOTFCA_1_INSERT]], double noundef [[CONV]], [[UNION_UNION_F32_I32]] [[DOTFCA_0_INSERT]], i32 noundef [[V3]]) #[[ATTR2]]

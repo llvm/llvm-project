@@ -608,6 +608,12 @@ static llvm::Function *emitOutlinedFunctionPrologue(
       llvm::Function::Create(FuncLLVMTy, llvm::GlobalValue::InternalLinkage,
                              FO.FunctionName, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
+
+  // Adjust the calling convention for SPIR-V targets to avoid mismatches
+  // between callee and caller.
+  if (CGM.getTriple().isSPIRV() && !FO.IsDeviceKernel)
+    F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+
   if (CD->isNothrow())
     F->setDoesNotThrow();
   F->setDoesNotRecurse();

@@ -168,6 +168,27 @@ multiclass VPatBinarySDNode_VV_VX_VI<SDPatternOperator vop, string instruction_n
   }
 }
 
+multiclass VPatBinaryMaskedSDNode_VV<SDPatternOperator vop, string instruction_name> {
+  foreach vti = AllIntegerVectors in {
+    def : Pat<(vti.Vector (vop vti.RegClass:$vs2, vti.RegClass:$vs1, VMV0:$vm)),
+              (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX#"_E"#!shl(1, vti.Log2SEW)#"_MASK")
+                 (IMPLICIT_DEF), vti.RegClass:$vs2, vti.RegClass:$vs1, VMV0:$vm,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
+  }
+}
+
+multiclass VPatBinaryMaskedSDNode_VV_VX<SDPatternOperator vop, string instruction_name>
+    : VPatBinaryMaskedSDNode_VV<vop, instruction_name> {
+  foreach vti = AllIntegerVectors in {
+    def : Pat<(vti.Vector (vop vti.RegClass:$vs2,
+                               (SplatPat (XLenVT GPR:$rs1)),
+                               VMV0:$vm)),
+              (!cast<Instruction>(instruction_name#"_VX_"#vti.LMul.MX#"_E"#!shl(1, vti.Log2SEW)#"_MASK")
+                 (IMPLICIT_DEF), vti.RegClass:$vs2, GPR:$rs1, VMV0:$vm,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
+  }
+}
+
 class VPatBinarySDNode_VF<SDPatternOperator vop,
                           string instruction_name,
                           ValueType result_type,
@@ -1100,6 +1121,10 @@ defm : VPatBinarySDNode_VV_VX<udiv, "PseudoVDIVU", isSEWAware=1>;
 defm : VPatBinarySDNode_VV_VX<sdiv, "PseudoVDIV", isSEWAware=1>;
 defm : VPatBinarySDNode_VV_VX<urem, "PseudoVREMU", isSEWAware=1>;
 defm : VPatBinarySDNode_VV_VX<srem, "PseudoVREM", isSEWAware=1>;
+defm : VPatBinaryMaskedSDNode_VV_VX<masked_udiv, "PseudoVDIVU">;
+defm : VPatBinaryMaskedSDNode_VV_VX<masked_sdiv, "PseudoVDIV">;
+defm : VPatBinaryMaskedSDNode_VV_VX<masked_urem, "PseudoVREMU">;
+defm : VPatBinaryMaskedSDNode_VV_VX<masked_srem, "PseudoVREM">;
 
 foreach vtiTowti = AllWidenableIntVectors in {
   defvar vti = vtiTowti.Vti;

@@ -29,6 +29,13 @@ def Arith_Dialect : Dialect {
     Manipulating value with type `i0` isn't supported in this dialect at the
     moment and is considered invalid. This can change in the future if some
     motivating use-cases are presented.
+
+    Some floating-point operations may specify rounding modes and/or fast-math
+    flags. In the absence of an explicit rounding mode, the arith dialect uses
+    this default round mode for internal purposes such as constant folding and
+    canonicalization: round-to-nearest, ties-to-even. The runtime behavior of
+    operations without an explicit rounding mode is deferred to the target
+    backend and may differ from the default arith rounding mode.
   }];
 
   let hasConstantMaterializer = 1;

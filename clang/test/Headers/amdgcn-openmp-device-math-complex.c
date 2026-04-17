@@ -30,8 +30,8 @@ void test_complex_f32(float _Complex a) {
 // CHECK-LABEL: define {{.*}}test_complex_f32
 #pragma omp target
   {
-    // CHECK: call [2 x i32] @__divsc3
-    // CHECK: call [2 x i32] @__mulsc3
+    // CHECK: call { float, float } @__divsc3
+    // CHECK: call { float, float } @__mulsc3
     (void)(a * (a / a));
   }
 }

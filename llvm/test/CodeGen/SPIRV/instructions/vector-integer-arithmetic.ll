@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName [[VECTOR_ADD:%.+]] "vector_add"
 ; CHECK-DAG: OpName [[VECTOR_SUB:%.+]] "vector_sub"

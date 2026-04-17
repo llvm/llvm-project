@@ -1938,12 +1938,12 @@ void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   const parser::OmpDirectiveName &dirName{beginSpec.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
-  ++allocateDirectiveLevel;
+  ++allocateDirectiveLevel_;
 
   bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
 
   unsigned version{context_.langOptions().OpenMPVersion};
-  if (isExecutable && allocateDirectiveLevel == 1 && version >= 52) {
+  if (isExecutable && allocateDirectiveLevel_ == 1 && version >= 52) {
     context_.Warn(common::UsageWarning::OpenMPUsage, dirName.source,
         "The executable form of the OpenMP ALLOCATE directive has been deprecated, please use ALLOCATORS instead"_warn_en_US);
   }
@@ -1984,11 +1984,11 @@ void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
 
 void OmpStructureChecker::Leave(const parser::OmpAllocateDirective &x) {
   bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
-  if (isExecutable && allocateDirectiveLevel == 1) {
+  if (isExecutable && allocateDirectiveLevel_ == 1) {
     CheckExecutableAllocateDirective(x);
   }
 
-  --allocateDirectiveLevel;
+  --allocateDirectiveLevel_;
   dirContext_.pop_back();
 }
 

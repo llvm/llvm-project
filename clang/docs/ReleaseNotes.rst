@@ -133,12 +133,6 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Partially implemented `P2843R3 <https://wg21.link/P2843R3>`_ Preprocessing is
-  never undefined. A macro expansion producing ``defined`` in a conditional
-  expression is now a hard error in C++26; other constructs the paper makes
-  ill-formed (notably embedding a directive within macro arguments) remain a
-  pedantic warning for now and will be promoted separately.
-
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -185,6 +179,15 @@ Non-comprehensive list of changes in this release
   counts are normalized modulo the bit-width and support negative values.
   Usable in constant expressions. Implicit conversion is supported for
   class/struct types with conversion operators.
+- Implemented the following C23 ``<stdbit.h>`` builtins with ``_BitInt``
+  support and constexpr evaluation:
+  ``__builtin_stdc_leading_zeros``, ``__builtin_stdc_leading_ones``,
+  ``__builtin_stdc_trailing_zeros``, ``__builtin_stdc_trailing_ones``,
+  ``__builtin_stdc_first_leading_zero``, ``__builtin_stdc_first_leading_one``,
+  ``__builtin_stdc_first_trailing_zero``, ``__builtin_stdc_first_trailing_one``,
+  ``__builtin_stdc_count_zeros``, ``__builtin_stdc_count_ones``,
+  ``__builtin_stdc_has_single_bit``, ``__builtin_stdc_bit_width``,
+  ``__builtin_stdc_bit_floor``, and ``__builtin_stdc_bit_ceil``.
 
 - A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
   extends bit-reversal support to all standard integers type, including
@@ -281,6 +284,9 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
+  function template instantiations (#64087).
+
 - ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
   internal linkage (``static`` storage class) that are assigned but never used.
   This new coverage is added under the subgroup ``-Wunused-but-set-global``,
@@ -388,9 +394,16 @@ Improvements to Clang's diagnostics
   code can automatically be made portable to other host platforms that don't
   support backslashes.
 
+- No longer emitting a ``-Wpre-c2y-compat`` or extension diagnostic about use
+  of octal literals with a ``0o`` prefix, and no longer emitting a
+  ``-Wdeprecated-octal-literals`` diagnostic for use of octal literals without
+  a ``0o`` prefix, when the literal is expanded from a macro defined in a
+  system header. (#GH192389)
+
 - Improved error recovery for missing semicolons after class members. Clang now avoids
   skipping subsequent valid declarations when their previous decl is missing semicolon.
 
+- Removed the body of lambdas from some diagnostic messages.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -434,6 +447,7 @@ Bug Fixes in This Version
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
+- Clang now emits an error for friend declarations of lambda members. (#GH26540)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -484,6 +498,7 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
+- Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^

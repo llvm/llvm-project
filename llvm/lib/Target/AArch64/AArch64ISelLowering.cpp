@@ -1671,6 +1671,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::OR, VT, Custom);
     }
 
+    for (auto VT : {MVT::nxv4i32, MVT::nxv2i64}) {
+      setOperationAction(ISD::MASKED_UDIV, VT, Legal);
+      setOperationAction(ISD::MASKED_SDIV, VT, Legal);
+    }
+
     // Illegal unpacked integer vector types.
     for (auto VT : {MVT::nxv8i8, MVT::nxv4i16, MVT::nxv2i32}) {
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
@@ -1917,6 +1922,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // NEON but are available in SVE.
     for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
                     MVT::v4i32, MVT::v1i64, MVT::v2i64}) {
+      setOperationAction(ISD::MASKED_SDIV, VT, Custom);
+      setOperationAction(ISD::MASKED_UDIV, VT, Custom);
       setOperationAction(ISD::SDIV, VT, Custom);
       setOperationAction(ISD::UDIV, VT, Custom);
       setOperationAction(ISD::MULHS, VT, Custom);
@@ -2049,11 +2056,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8f16, Legal);
-      // We can use SVE2p1 fdot to emulate the fixed-length variant.
-      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
-                                MVT::v8f16, Custom);
-      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v2f32,
-                                MVT::v4f16, Custom);
+
+      // We can use SVE2p1 fdot or SVE2 fmlalb/t to emulate the fixed-length
+      // variant (unless NEON fdot is natively available).
+      if (!Subtarget->isNeonAvailable() ||
+          (!Subtarget->hasF16F32DOT() && !Subtarget->hasFP16FML())) {
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
+                                  MVT::v8f16, Custom);
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v2f32,
+                                  MVT::v4f16, Custom);
+      }
     }
 
     if (Subtarget->hasBF16())
@@ -2504,6 +2516,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Default);
   setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Default);
   setOperationAction(ISD::LOAD, VT, PreferNEON ? Legal : Default);
+  setOperationAction(ISD::MASKED_UDIV, VT, Default);
+  setOperationAction(ISD::MASKED_SDIV, VT, Default);
   setOperationAction(ISD::MGATHER, VT, PreferSVE ? Default : Expand);
   setOperationAction(ISD::MLOAD, VT, Default);
   setOperationAction(ISD::MSCATTER, VT, PreferSVE ? Default : Expand);
@@ -8191,6 +8205,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerEXTRACT_SUBVECTOR(Op, DAG);
   case ISD::INSERT_SUBVECTOR:
     return LowerINSERT_SUBVECTOR(Op, DAG);
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UDIV:
   case ISD::SDIV:
   case ISD::UDIV:
     return LowerDIV(Op, DAG);
@@ -16780,10 +16796,10 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
   if (useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
     return LowerFixedLengthVectorIntDivideToSVE(Op, DAG);
 
+  unsigned Opc = Op.getOpcode();
+  assert((Opc == ISD::SDIV || Opc == ISD::UDIV) && "Expected a DIV opcode.");
   assert(VT.isScalableVector() && "Expected a scalable vector.");
-
-  bool Signed = Op.getOpcode() == ISD::SDIV;
-  unsigned PredOpcode = Signed ? AArch64ISD::SDIV_PRED : AArch64ISD::UDIV_PRED;
+  bool Signed = Opc == ISD::SDIV;
 
   bool Negated;
   uint64_t SplatVal;
@@ -16800,8 +16816,11 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
     return Res;
   }
 
-  if (VT == MVT::nxv4i32 || VT == MVT::nxv2i64)
-    return LowerToPredicatedOp(Op, DAG, PredOpcode);
+  if (VT == MVT::nxv4i32 || VT == MVT::nxv2i64) {
+    unsigned MaskedOpcode = Signed ? ISD::MASKED_SDIV : ISD::MASKED_UDIV;
+    return DAG.getNode(MaskedOpcode, DL, VT, Op.getOperand(0), Op.getOperand(1),
+                       getPredicateForVector(DAG, DL, VT));
+  }
 
   // SVE doesn't have i8 and i16 DIV operations; widen them to 32-bit
   // operations, and truncate the result.
@@ -16819,8 +16838,8 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
   SDValue Op1Lo = DAG.getNode(UnpkLo, DL, WidenedVT, Op.getOperand(1));
   SDValue Op0Hi = DAG.getNode(UnpkHi, DL, WidenedVT, Op.getOperand(0));
   SDValue Op1Hi = DAG.getNode(UnpkHi, DL, WidenedVT, Op.getOperand(1));
-  SDValue ResultLo = DAG.getNode(Op.getOpcode(), DL, WidenedVT, Op0Lo, Op1Lo);
-  SDValue ResultHi = DAG.getNode(Op.getOpcode(), DL, WidenedVT, Op0Hi, Op1Hi);
+  SDValue ResultLo = DAG.getNode(Opc, DL, WidenedVT, Op0Lo, Op1Lo);
+  SDValue ResultHi = DAG.getNode(Opc, DL, WidenedVT, Op0Hi, Op1Hi);
   SDValue ResultLoCast = DAG.getNode(AArch64ISD::NVCAST, DL, VT, ResultLo);
   SDValue ResultHiCast = DAG.getNode(AArch64ISD::NVCAST, DL, VT, ResultHi);
   return DAG.getNode(AArch64ISD::UZP1, DL, VT, ResultLoCast, ResultHiCast);
@@ -23973,12 +23992,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
     if (SDValue V = convertMergedOpToPredOp(N, ISD::ABDU, DAG, true))
       return V;
     return DAG.getNode(AArch64ISD::ABDU_PRED, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
-  case Intrinsic::aarch64_sve_sdiv_u:
-    return DAG.getNode(AArch64ISD::SDIV_PRED, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
-  case Intrinsic::aarch64_sve_udiv_u:
-    return DAG.getNode(AArch64ISD::UDIV_PRED, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_sqadd:
     return convertMergedOpToPredOp(N, ISD::SADDSAT, DAG, true);
@@ -31514,9 +31527,9 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   EVT EltVT = VT.getVectorElementType();
-
-  bool Signed = Op.getOpcode() == ISD::SDIV;
-  unsigned PredOpcode = Signed ? AArch64ISD::SDIV_PRED : AArch64ISD::UDIV_PRED;
+  unsigned Opc = Op.getOpcode();
+  bool Signed = Opc == ISD::SDIV || Opc == ISD::MASKED_SDIV;
+  bool Masked = Opc == ISD::MASKED_SDIV || Opc == ISD::MASKED_UDIV;
 
   bool Negated;
   uint64_t SplatVal;
@@ -31526,8 +31539,10 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
     SDValue Op1 = convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
     SDValue Op2 = DAG.getTargetConstant(Log2_64(SplatVal), DL, MVT::i32);
+    SDValue Pg = Masked
+                     ? convertFixedMaskToScalableVector(Op.getOperand(2), DAG)
+                     : getPredicateForFixedLengthVector(DAG, DL, VT);
 
-    SDValue Pg = getPredicateForFixedLengthVector(DAG, DL, VT);
     SDValue Res =
         DAG.getNode(AArch64ISD::ASRD_MERGE_OP1, DL, ContainerVT, Pg, Op1, Op2);
     if (Negated)
@@ -31538,8 +31553,23 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
   }
 
   // Scalable vector i32/i64 DIV is supported.
-  if (EltVT == MVT::i32 || EltVT == MVT::i64)
-    return LowerToPredicatedOp(Op, DAG, PredOpcode);
+  if (EltVT == MVT::i32 || EltVT == MVT::i64) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+    SDValue LHS = convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
+    SDValue RHS = convertToScalableVector(DAG, ContainerVT, Op.getOperand(1));
+    SDValue Mask = Masked
+                       ? convertFixedMaskToScalableVector(Op.getOperand(2), DAG)
+                       : getPredicateForFixedLengthVector(DAG, DL, VT);
+
+    unsigned MaskedOpcode = Signed ? ISD::MASKED_SDIV : ISD::MASKED_UDIV;
+    SDValue Div = DAG.getNode(MaskedOpcode, DL, ContainerVT, LHS, RHS, Mask);
+    return convertFromScalableVector(DAG, VT, Div);
+  }
+
+  // Custom lower requires splitting the mask, which increases complexity with
+  // no real improvement to generated code compared to default expansion.
+  if (Masked)
+    return SDValue();
 
   // Scalable vector i8/i16 DIV is not supported. Promote it to i32.
   EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
@@ -31551,7 +31581,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
   if (DAG.getTargetLoweringInfo().isTypeLegal(WideVT)) {
     SDValue Op0 = DAG.getNode(ExtendOpcode, DL, WideVT, Op.getOperand(0));
     SDValue Op1 = DAG.getNode(ExtendOpcode, DL, WideVT, Op.getOperand(1));
-    SDValue Div = DAG.getNode(Op.getOpcode(), DL, WideVT, Op0, Op1);
+    SDValue Div = DAG.getNode(Opc, DL, WideVT, Op0, Op1);
     return DAG.getNode(ISD::TRUNCATE, DL, VT, Div);
   }
 

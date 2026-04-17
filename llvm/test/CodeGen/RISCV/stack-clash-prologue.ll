@@ -650,7 +650,7 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV64I-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub sp, sp, a1
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    blt a0, sp, .LBB11_3
+; RV64I-NEXT:    bltu a0, sp, .LBB11_3
 ; RV64I-NEXT:  # %bb.4:
 ; RV64I-NEXT:    mv sp, a0
 ; RV64I-NEXT:    lbu zero, 0(a0)
@@ -707,7 +707,7 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV32I-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub sp, sp, a1
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    blt a0, sp, .LBB11_3
+; RV32I-NEXT:    bltu a0, sp, .LBB11_3
 ; RV32I-NEXT:  # %bb.4:
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    lbu zero, 0(a0)

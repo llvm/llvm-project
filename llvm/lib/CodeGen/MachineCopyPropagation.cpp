@@ -490,6 +490,12 @@ private:
     // zero).
     return MRI->isReserved(CopyOperand);
   }
+  /// Returns true iff the @p Copy instruction must never be eliminated as
+  /// redundant. This overload does not consider the operands of @p Copy.
+  bool isNeverRedundant(const MachineInstr &Copy) {
+    return Copy.getFlag(MachineInstr::FrameSetup) ||
+           Copy.getFlag(MachineInstr::FrameDestroy);
+  }
   bool hasImplicitOverlap(const MachineInstr &MI, const MachineOperand &Use);
   bool hasOverlappingMultipleDef(const MachineInstr &MI,
                                  const MachineOperand &MODef, MCRegister Def);
@@ -598,7 +604,7 @@ static bool isNopCopy(const MachineInstr &PreviousCopy, MCRegister Src,
 /// copying the super registers.
 bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy,
                                               MCRegister Dst, MCRegister Src) {
-  if (isNeverRedundant(Src) || isNeverRedundant(Dst))
+  if (isNeverRedundant(Copy) || isNeverRedundant(Src) || isNeverRedundant(Dst))
     return false;
 
   // Search for an existing copy.
@@ -659,7 +665,7 @@ bool MachineCopyPropagation::isBackwardPropagatableCopy(
   if (!Dst || !Src)
     return false;
 
-  if (isNeverRedundant(Dst) || isNeverRedundant(Src))
+  if (isNeverRedundant(Copy) || isNeverRedundant(Dst) || isNeverRedundant(Src))
     return false;
 
   return CopyOperands.Source->isRenamable() && CopyOperands.Source->isKill();
@@ -946,7 +952,7 @@ void MachineCopyPropagation::forwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       if (!TRI->regsOverlap(Dst, Src)) {
         // FIXME: Document why this does not consider `RegSrc`, similar to how
         // `backwardCopyPropagateBlock` does.
-        if (!isNeverRedundant(Dst))
+        if (!isNeverRedundant(MI) && !isNeverRedundant(Dst))
           MaybeDeadCopies.insert(&MI);
       }
     }
@@ -991,7 +997,7 @@ void MachineCopyPropagation::forwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         std::optional<DestSourcePair> CopyOperands =
             isCopyInstr(*MaybeDead, *TII, UseCopyInstr);
         MCRegister Reg = CopyOperands->Destination->getReg().asMCReg();
-        assert(!isNeverRedundant(Reg));
+        assert(!isNeverRedundant(*MaybeDead) && !isNeverRedundant(Reg));
 
         if (!RegMask->clobbersPhysReg(Reg)) {
           ++DI;
@@ -1059,7 +1065,7 @@ void MachineCopyPropagation::forwardCopyPropagateBlock(MachineBasicBlock &MBB) {
           *isCopyInstr(*MaybeDead, *TII, UseCopyInstr);
 
       auto [Dst, Src] = getDstSrcMCRegs(CopyOperands);
-      assert(!isNeverRedundant(Dst));
+      assert(!isNeverRedundant(*MaybeDead) && !isNeverRedundant(Dst));
 
       // Update matching debug values, if any.
       const auto &DbgUsers = CopyDbgUsers[MaybeDead];

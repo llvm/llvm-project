@@ -235,6 +235,9 @@ func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memr
 
   // CHECK: memref.cast %{{.*}} : memref<4x?x8xf32, strided<[32, 8, 1]>> to memref<4x1x8xf32, strided<[32, 16, 1]>>
   %7 = memref.cast %arg4 : memref<4x?x8xf32, strided<[32, 8, 1]>> to memref<4x1x8xf32, strided<[32, 16, 1]>>
+
+  // CHECK: memref.cast %{{.*}} : memref<*xf32> to memref<*xf32>
+  %8 = memref.cast %4 : memref<*xf32> to memref<*xf32>
   return
 }
 

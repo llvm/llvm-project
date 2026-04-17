@@ -432,6 +432,7 @@ def SetLocal : AccessOpcode { let HasCustomEval = 1; }
 
 def EndLifetimePop : Opcode;
 def EndLifetime : Opcode;
+def MarkDestroyed : Opcode;
 def StartLifetime : Opcode;
 
 def CheckDecl : Opcode {

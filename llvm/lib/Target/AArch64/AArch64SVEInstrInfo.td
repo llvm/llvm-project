@@ -233,14 +233,12 @@ def AArch64mul_p  : SDNode<"AArch64ISD::MUL_PRED",  SDT_AArch64Arith>;
 def AArch64sabd_p : SDNode<"AArch64ISD::ABDS_PRED", SDT_AArch64Arith>;
 def AArch64shadd_p : SDNode<"AArch64ISD::HADDS_PRED", SDT_AArch64Arith>;
 def AArch64srhadd_p : SDNode<"AArch64ISD::RHADDS_PRED", SDT_AArch64Arith>;
-def AArch64sdiv_p : SDNode<"AArch64ISD::SDIV_PRED", SDT_AArch64Arith>;
 def AArch64smax_p : SDNode<"AArch64ISD::SMAX_PRED", SDT_AArch64Arith>;
 def AArch64smin_p : SDNode<"AArch64ISD::SMIN_PRED", SDT_AArch64Arith>;
 def AArch64smulh_p : SDNode<"AArch64ISD::MULHS_PRED", SDT_AArch64Arith>;
 def AArch64uabd_p : SDNode<"AArch64ISD::ABDU_PRED", SDT_AArch64Arith>;
 def AArch64uhadd_p : SDNode<"AArch64ISD::HADDU_PRED", SDT_AArch64Arith>;
 def AArch64urhadd_p : SDNode<"AArch64ISD::RHADDU_PRED", SDT_AArch64Arith>;
-def AArch64udiv_p : SDNode<"AArch64ISD::UDIV_PRED", SDT_AArch64Arith>;
 def AArch64umax_p : SDNode<"AArch64ISD::UMAX_PRED", SDT_AArch64Arith>;
 def AArch64umin_p : SDNode<"AArch64ISD::UMIN_PRED", SDT_AArch64Arith>;
 def AArch64umulh_p : SDNode<"AArch64ISD::MULHU_PRED", SDT_AArch64Arith>;
@@ -263,6 +261,13 @@ def AArch64fmaxnm_p_nnan : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                    (AArch64fmaxnm_p node:$op1, node:$op2, node:$op3), [{
   return N->getFlags().hasNoNaNs();
 }]>;
+
+def AArch64sdiv_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
+                             [(int_aarch64_sve_sdiv_u node:$op1, node:$op2, node:$op3),
+                              (masked_sdiv node:$op2, node:$op3, node:$op1)]>;
+def AArch64udiv_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
+                             [(int_aarch64_sve_udiv_u node:$op1, node:$op2, node:$op3),
+                              (masked_udiv node:$op2, node:$op3, node:$op1)]>;
 
 def SDT_AArch64Arith_Imm : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3,i32>,

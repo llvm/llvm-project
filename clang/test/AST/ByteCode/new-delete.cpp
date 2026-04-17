@@ -612,6 +612,16 @@ namespace CastedDelete {
   }
   static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
                              // both-note {{in call to}}
+
+  constexpr bool nvdtor() { // both-error {{never produces a constant expression}}
+    struct S {
+      constexpr ~S() {}
+    };
+    struct T : S {};
+    delete (S*)new T; // both-note {{delete of object with dynamic type 'T' through pointer to base class type 'S' with non-virtual destructor}}
+    return true;
+  }
+
 }
 
 constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}

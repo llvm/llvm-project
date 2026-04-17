@@ -147,11 +147,10 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: ir<0> from scalar.ph)
 ; CHECK-NEXT:    IR   %cond0 = icmp ult i64 %iv, 13
 ; CHECK-NEXT:    IR   %s = select i1 %cond0, i32 10, i32 20
 ; CHECK-NEXT:    IR   %gep = getelementptr inbounds i32, ptr %ptr, i64 %iv

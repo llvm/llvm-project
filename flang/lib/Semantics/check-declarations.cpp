@@ -1165,6 +1165,8 @@ void CheckHelper::CheckObjectEntity(
     }
     auto attr{*details.cudaDataAttr()};
     switch (attr) {
+    case common::CUDADataAttr::Value:
+      break; // Nothing to check for VALUE attribute
     case common::CUDADataAttr::Constant:
       if (subpDetails && !inDeviceSubprogram) {
         messages_.Say(

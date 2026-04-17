@@ -5,11 +5,9 @@ define <vscale x 4 x i16> @sdiv_nxv4i16(<vscale x 4 x i16> %x, <vscale x 4 x i16
 ; CHECK-LABEL: sdiv_nxv4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    mov z2.s, #1 // =0x1
 ; CHECK-NEXT:    sxth z1.s, p1/m, z1.s
 ; CHECK-NEXT:    sxth z0.s, p1/m, z0.s
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    sdiv z0.s, p1/m, z0.s, z1.s
+; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i16> @llvm.masked.sdiv(<vscale x 4 x i16> %x, <vscale x 4 x i16> %y, <vscale x 4 x i1> %m)
   ret <vscale x 4 x i16> %res
@@ -18,9 +16,6 @@ define <vscale x 4 x i16> @sdiv_nxv4i16(<vscale x 4 x i16> %x, <vscale x 4 x i16
 define <vscale x 4 x i32> @sdiv_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y, <vscale x 4 x i1> %m) {
 ; CHECK-LABEL: sdiv_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #1 // =0x1
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i32> @llvm.masked.sdiv(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y, <vscale x 4 x i1> %m)
@@ -30,14 +25,10 @@ define <vscale x 4 x i32> @sdiv_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32
 define <vscale x 8 x i32> @sdiv_nxv8i32(<vscale x 8 x i32> %x, <vscale x 8 x i32> %y, <vscale x 8 x i1> %m) {
 ; CHECK-LABEL: sdiv_nxv8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z4.s, #1 // =0x1
 ; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    sel z2.s, p1, z2.s, z4.s
-; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    sdiv z0.s, p1/m, z0.s, z2.s
-; CHECK-NEXT:    sel z2.s, p0, z3.s, z4.s
-; CHECK-NEXT:    sdiv z1.s, p1/m, z1.s, z2.s
+; CHECK-NEXT:    sdiv z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i32> @llvm.masked.sdiv(<vscale x 8 x i32> %x, <vscale x 8 x i32> %y, <vscale x 8 x i1> %m)
   ret <vscale x 8 x i32> %res
@@ -64,9 +55,6 @@ define <vscale x 8 x i16> @sdiv_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16
 define <vscale x 2 x i64> @sdiv_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y, <vscale x 2 x i1> %m) {
 ; CHECK-LABEL: sdiv_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #1 // =0x1
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sdiv z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i64> @llvm.masked.sdiv(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y, <vscale x 2 x i1> %m)

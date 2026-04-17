@@ -110,6 +110,16 @@ getCollapseSizeAndForce(const Fortran::parser::AccClauseList &);
 /// Checks whether the current insertion point is inside OpenACC loop.
 bool isInOpenACCLoop(fir::FirOpBuilder &);
 
+/// Record a DoConstruct as having been absorbed by a collapse clause.
+/// The PFT walker should skip generating a loop for it.
+void markDoConstructAsCollapsed(const Fortran::parser::DoConstruct &);
+
+/// Check whether a DoConstruct was absorbed by a collapse clause.
+bool isCollapsedDoConstruct(const Fortran::parser::DoConstruct &);
+
+/// Clear the collapsed DoConstruct tracking set.
+void clearCollapsedDoConstructs();
+
 /// Checks whether the current insertion point is inside OpenACC compute
 /// construct.
 bool isInsideOpenACCComputeConstruct(fir::FirOpBuilder &);
