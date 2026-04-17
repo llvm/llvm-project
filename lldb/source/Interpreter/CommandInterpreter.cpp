@@ -104,16 +104,11 @@ using namespace lldb_private;
 static const char *k_white_space = " \t\v";
 
 static constexpr const char *InitFileWarning =
-    "There is a .lldbinit file in the current directory which is not being "
-    "read.\n"
-    "To silence this warning without sourcing in the local .lldbinit,\n"
-    "add the following to the lldbinit file in your home directory:\n"
-    "    settings set target.load-cwd-lldbinit false\n"
-    "To allow lldb to source .lldbinit files in the current working "
-    "directory,\n"
-    "set the value of this variable to true.  Only do so if you understand "
-    "and\n"
-    "accept the security risk.";
+    R"(there is a .lldbinit file in the current directory which is not being read.
+To silence this warning without sourcing in the local .lldbinit, add the following to the lldbinit file in your home directory:
+    settings set target.load-cwd-lldbinit false\n"
+To allow lldb to source .lldbinit files in the current working directory, set the value of this variable to true.
+Only do so if you understand and accept the security risk)";
 
 const char *CommandInterpreter::g_no_argument = "<no-argument>";
 const char *CommandInterpreter::g_need_argument = "<need-argument>";

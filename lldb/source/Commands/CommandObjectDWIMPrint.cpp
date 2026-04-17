@@ -126,7 +126,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       result.AppendNote(
           "object description requested, but type doesn't implement "
           "a custom object description. Consider using \"p\" instead of "
-          "\"po\" (this note will only be shown once per debug session).\n");
+          "\"po\" (this note will only be shown once per debug session)");
       note_shown = true;
     }
   };
