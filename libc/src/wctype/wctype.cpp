@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/wctype/wctype.h"
-#include "src/__support/common.h"
-#include "src/__support/wctype_utils.h"
-
 #include "hdr/types/wctype_t.h"
+#include "src/__support/common.h"
+#include "src/__support/wctype_impl.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
