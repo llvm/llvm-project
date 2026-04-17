@@ -170,7 +170,10 @@ LLVM_LIBC_HEADERS = [
     libc_header_info("stdckdint"),
     libc_header_info("stdint"),
     libc_header_info("stdio"),
-    libc_header_info("string"),
+    libc_header_info(
+        "string",
+        has_def_template = True,
+    ),
     libc_header_info("strings"),
     libc_header_info("sys/auxv"),
     libc_header_info("sys/epoll"),
