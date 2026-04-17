@@ -1634,19 +1634,24 @@ void AccVisitor::CopySymbolWithDeviceStructurePath(const parser::Name *baseName,
     return;
   }
   const Symbol &orig{*baseName->symbol};
-  const DeclTypeSpec *origType{orig.GetType()};
-  if (!origType || !origType->AsDerived()) {
+  Symbol *copy{currScope().CopySymbol(orig)};
+  if (!copy) {
+    copy = FindInScope(currScope(), baseName->symbol->name());
+  }
+  if (!copy) {
+    return;
+  }
+  baseName->symbol = copy;
+  const DeclTypeSpec *sourceType{copy->GetType()};
+  if (!sourceType || !sourceType->AsDerived()) {
     return;
   }
   if (const DeclTypeSpec *newType{CloneDerivedTypeForUseDevice(
-          currScope(), context_, *origType, componentPath)}) {
-    if (Symbol * copy{currScope().CopySymbol(orig)}) {
-      baseName->symbol = copy;
-      if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
-        object->ReplaceType(*newType);
-      }
-      RemapUseDeviceDesignator(designator, *newType, componentPath);
+          currScope(), context_, *sourceType, componentPath)}) {
+    if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
+      object->ReplaceType(*newType);
     }
+    RemapUseDeviceDesignator(designator, *newType, componentPath);
   }
 }
 
@@ -1654,28 +1659,25 @@ void AccVisitor::Post(const parser::AccClause::UseDevice &x) {
   // Run after clause acc-objects are walked so Post(Designator) has resolved
   // Name::symbol, then fork types and remap %component symbols for CUDA.
   for (auto &accObject : const_cast<std::list<parser::AccObject> &>(x.v.v)) {
-    common::visit(
-        common::visitors{
-            [&](parser::Designator &designator) {
-              const parser::Name *baseName{nullptr};
-              llvm::SmallVector<SourceName, 4> components;
-              GetUseDeviceStructurePath(designator, baseName, components);
-              if (baseName && baseName->symbol) {
-                if (components.empty()) {
-                  if (const auto *bareName{
-                          parser::GetDesignatorNameIfDataRef(designator)}) {
-                    CopySymbolWithDevice(bareName);
-                  }
-                } else {
-                  CopySymbolWithDeviceStructurePath(
-                      baseName, components, designator);
-                }
-              }
-            },
-            [&](const parser::Name &name) {
-              // TODO: common block in use_device?
-            },
-        },
+    common::visit(common::visitors{
+                      [&](parser::Designator &designator) {
+                        const parser::Name *baseName{nullptr};
+                        llvm::SmallVector<SourceName, 4> components;
+                        GetUseDeviceStructurePath(
+                            designator, baseName, components);
+                        if (baseName && baseName->symbol) {
+                          if (components.empty()) {
+                            CopySymbolWithDevice(baseName);
+                          } else {
+                            CopySymbolWithDeviceStructurePath(
+                                baseName, components, designator);
+                          }
+                        }
+                      },
+                      [&](const parser::Name &name) {
+                        // TODO: common block in use_device?
+                      },
+                  },
         accObject.u);
   }
 }

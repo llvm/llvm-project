@@ -28,6 +28,15 @@ subroutine foo_host(p)
 end subroutine
 end interface
 
+interface foo_array
+  subroutine foo_device_array(x)
+    real, device :: x(:,:)
+  end
+  subroutine foo_host_array(x)
+    real :: x(:,:)
+  end
+end interface
+
 contains
 
   subroutine test(obj)
@@ -36,10 +45,31 @@ contains
     call foo(obj%p1)
     call foo(obj%p2)
     !$acc end host_data
+
+    call foo(obj%p1)
+
+    !$acc host_data use_device(obj%p1, obj%p2)
+    call foo(obj%p1)
+    call foo(obj%p2)
+    !$acc end host_data
   end subroutine
 ! CHECK-LABEL: func.func @_QMmPtest
 ! CHECK: fir.call @_QPfoo_device
 ! CHECK: fir.call @_QPfoo_host
+! CHECK: fir.call @_QPfoo_host
+! CHECK: fir.call @_QPfoo_device
+! CHECK: fir.call @_QPfoo_device
+
+  subroutine test_array(a, i)
+    real :: a(4,4,4)
+    integer :: i
+    !$acc host_data use_device(a(:,:,i))
+    call foo_array(a(:,:,i))
+    !$acc end host_data
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmPtest_array
+! CHECK: fir.call @_QPfoo_device_array
 
   subroutine vectoraddarray(a, b, n)
     implicit none
