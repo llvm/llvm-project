@@ -9257,6 +9257,7 @@ This attribute maps to the 'Location' SPIR-V decoration.
 
 def HLSLMatrixLayoutDocs : Documentation {
   let Category = DocCatVariable;
+  let Heading = "row_major, column_major";
   let Content = [{
 The ``row_major`` and ``column_major`` keywords specify the memory layout 
 of an HLSL matrix type. 
