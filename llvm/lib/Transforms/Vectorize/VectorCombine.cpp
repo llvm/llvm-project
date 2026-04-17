@@ -5606,23 +5606,20 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   assert(MergeInsts.size() == 2);
 
   // Pattern match bottom-up from the merge instructions.
-  bool IsSwapped = false;
-  for (unsigned I = 0U; I < 2; ++I) {
-    if (match(MergeInsts[0],
-              m_c_Or(m_And(m_Specific(OrigFields[0]), m_SpecificInt(LoMask)),
-                     m_Shl(m_Specific(OrigFields[1]),
-                           m_SpecificInt(HalfElementWidth)))) &&
-        match(MergeInsts[1],
-              m_c_Or(m_And(m_Specific(OrigFields[1]), m_SpecificInt(HiMask)),
-                     m_LShr(m_Specific(OrigFields[0]),
-                            m_SpecificInt(HalfElementWidth)))))
-      break;
-
-    if (IsSwapped)
-      return false;
-
+  auto MatchMerge = [&](void) -> bool {
+    return match(MergeInsts[0],
+                 m_c_Or(m_And(m_Specific(OrigFields[0]), m_SpecificInt(LoMask)),
+                        m_Shl(m_Specific(OrigFields[1]),
+                              m_SpecificInt(HalfElementWidth)))) &&
+           match(MergeInsts[1],
+                 m_c_Or(m_And(m_Specific(OrigFields[1]), m_SpecificInt(HiMask)),
+                        m_LShr(m_Specific(OrigFields[0]),
+                               m_SpecificInt(HalfElementWidth))));
+  };
+  if (!MatchMerge()) {
     std::swap(MergeInsts[0], MergeInsts[1]);
-    IsSwapped = true;
+    if (!MatchMerge())
+      return false;
   }
 
   // Profitibility check.
