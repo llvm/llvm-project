@@ -1345,3 +1345,12 @@ namespace ExpandOnOPTEPointers {
   }
   static_assert(test());
 }
+
+namespace ConstIntPotentialConstantExpr {
+  /// NO error about a constexpr function that's never a constant expression.
+  constexpr int Const() {
+    const int a = 10; // both-note {{declared const here}}
+    a = 20; // both-error {{cannot assign to variable 'a' with const-qualified type 'const int'}}
+    return 1;
+  }
+}

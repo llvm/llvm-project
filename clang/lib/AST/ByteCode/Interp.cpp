@@ -579,9 +579,11 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
     return true;
 
-  const QualType Ty = Ptr.getType();
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_modify_const_type) << Ty;
+  if (!S.checkingPotentialConstantExpression()) {
+    const QualType Ty = Ptr.getType();
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_modify_const_type) << Ty;
+  }
   return false;
 }
 
