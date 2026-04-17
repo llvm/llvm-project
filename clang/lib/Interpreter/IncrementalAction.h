@@ -11,6 +11,8 @@
 
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 class Module;
@@ -20,6 +22,7 @@ namespace clang {
 
 class Interpreter;
 class CodeGenerator;
+class FunctionDecl;
 
 /// A custom action enabling the incremental processing functionality.
 ///
@@ -40,6 +43,10 @@ private:
   /// When CodeGen is created the first llvm::Module gets cached in many places
   /// and we must keep it alive.
   std::unique_ptr<llvm::Module> CachedInCodeGenModule;
+
+  /// Implicit instantiations of the current PTU. Tracked for rollback upon
+  /// parsing failure.
+  llvm::SmallVector<FunctionDecl *, 8> InstantiatedDecls;
 
 public:
   IncrementalAction(CompilerInstance &Instance, llvm::LLVMContext &LLVMCtx,
@@ -74,13 +81,21 @@ public:
 
   /// Generate an LLVM module for the most recent parsed input.
   std::unique_ptr<llvm::Module> GenModule();
+
+  void trackInstantiation(FunctionDecl *FD) { InstantiatedDecls.push_back(FD); }
+  llvm::ArrayRef<FunctionDecl *> getInstantiatedDecls() const {
+    return InstantiatedDecls;
+  }
+  void resetInstantiationTracking() { InstantiatedDecls.clear(); }
 };
 
 class InProcessPrintingASTConsumer final : public MultiplexConsumer {
   Interpreter &Interp;
+  IncrementalAction &Act;
 
 public:
-  InProcessPrintingASTConsumer(std::unique_ptr<ASTConsumer> C, Interpreter &I);
+  InProcessPrintingASTConsumer(std::unique_ptr<ASTConsumer> C, Interpreter &I,
+                               IncrementalAction &Act);
 
   bool HandleTopLevelDecl(DeclGroupRef DGR) override;
 };

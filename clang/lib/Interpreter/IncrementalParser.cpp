@@ -15,6 +15,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclContextInternals.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
@@ -56,6 +57,9 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
                                                            /*AtEndOfTU=*/true);
   Sema::LocalEagerInstantiationScope LocalInstantiations(S, /*AtEndOfTU=*/true);
 
+  // Reset the instantiation tracker for the new PTU.
+  Act->resetInstantiationTracking();
+
   // Add a new PTU.
   ASTContext &C = S.getASTContext();
   C.addTranslationUnitDecl();
@@ -85,6 +89,26 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
     CleanUpPTU(C.getTranslationUnitDecl());
+
+    // Roll back implicit instantiations to allow clean re-emission on
+    // subsequent uses.
+    for (FunctionDecl *FD : Act->getInstantiatedDecls()) {
+      if (FD->getTemplateSpecializationKind() != TSK_ImplicitInstantiation)
+        continue;
+
+      if (FD->isLateTemplateParsed() || !FD->hasBody())
+        continue;
+
+      FD->setBody(nullptr);
+      FD->setWillHaveBody(false);
+      FD->setInstantiationIsPending(false);
+
+      if (auto *FTSI = FD->getTemplateSpecializationInfo())
+        FTSI->setPointOfInstantiation(SourceLocation());
+      else if (auto *MSI = FD->getMemberSpecializationInfo())
+        MSI->setPointOfInstantiation(SourceLocation());
+    }
+    Act->resetInstantiationTracking();
 
     Diags.Reset(/*soft=*/true);
     Diags.getClient()->clear();

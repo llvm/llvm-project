@@ -9,6 +9,7 @@
 #include "IncrementalAction.h"
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/Decl.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -68,7 +69,8 @@ IncrementalAction::CreateASTConsumer(CompilerInstance & /*CI*/,
     return std::make_unique<MultiplexConsumer>(std::move(Cs));
   }
 
-  return std::make_unique<InProcessPrintingASTConsumer>(std::move(C), Interp);
+  return std::make_unique<InProcessPrintingASTConsumer>(std::move(C), Interp,
+                                                        *this);
 }
 
 void IncrementalAction::ExecuteAction() {
@@ -128,12 +130,21 @@ CodeGenerator *IncrementalAction::getCodeGen() const {
 }
 
 InProcessPrintingASTConsumer::InProcessPrintingASTConsumer(
-    std::unique_ptr<ASTConsumer> C, Interpreter &I)
-    : MultiplexConsumer(std::move(C)), Interp(I) {}
+    std::unique_ptr<ASTConsumer> C, Interpreter &I, IncrementalAction &Act)
+    : MultiplexConsumer(std::move(C)), Interp(I), Act(Act) {}
 
 bool InProcessPrintingASTConsumer::HandleTopLevelDecl(DeclGroupRef DGR) {
   if (DGR.isNull())
     return true;
+
+  // Track implicit instantiations that just acquired a body. Captured before
+  // the error bail-out so IncrementalParser can roll them back if the PTU
+  // fails.
+  for (Decl *D : DGR)
+    if (auto *FD = llvm::dyn_cast<FunctionDecl>(D))
+      if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation &&
+          FD->hasBody())
+        Act.trackInstantiation(FD);
 
   CompilerInstance *CI = Interp.getCompilerInstance();
   DiagnosticsEngine &Diags = CI->getDiagnostics();
