@@ -70,7 +70,9 @@ func.func private @foo(memref<10xi8>) -> memref<20xi8>
 // BAREPTR-SAME:    %[[in:.*]]: !llvm.ptr) -> !llvm.ptr
 func.func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
   // BAREPTR:         %[[inDesc:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 0]
-  // BAREPTR-NEXT:    %[[barePtr:.*]] = llvm.extractvalue %[[inDesc]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // BAREPTR-NEXT:    %[[inAligned:.*]] = llvm.extractvalue %[[inDesc]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // BAREPTR-NEXT:    %[[inOff:.*]] = llvm.extractvalue %[[inDesc]][2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // BAREPTR-NEXT:    %[[barePtr:.*]] = llvm.getelementptr %[[inAligned]][%[[inOff]]]
   // BAREPTR-NEXT:    %[[call:.*]] = llvm.call @foo(%[[barePtr]]) : (!llvm.ptr) -> !llvm.ptr
   // BAREPTR-NEXT:    %[[desc0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // BAREPTR-NEXT:    %[[desc1:.*]] = llvm.insertvalue %[[call]], %[[desc0]][0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>

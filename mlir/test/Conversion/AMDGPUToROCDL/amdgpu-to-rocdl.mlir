@@ -15,7 +15,10 @@ func.func @fat_raw_buffer_cast(%buf: memref<8xi32, #gpu.address_space<global>>) 
   // CHECK-DAG: %[[offset:.*]] = llvm.extractvalue %[[desc]][2]
   // CHECK-DAG: %[[sizes:.*]] = llvm.extractvalue %[[desc]][3]
   // CHECK-DAG: %[[strides:.*]] = llvm.extractvalue %[[desc]][4]
-  // CHECK-DAG: %[[numRecords:.*]] = llvm.mlir.constant(32 : i64) : i64
+  // CHECK-DAG: %[[staticSize:.*]] = llvm.mlir.constant(32 : i64) : i64
+  // CHECK-DAG: %[[elemBytes:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK-DAG: %[[offBytes:.*]] = llvm.mul %{{.*}}, %[[elemBytes]] : i64
+  // CHECK-DAG: %[[numRecords:.*]] = llvm.add %[[staticSize]], %[[offBytes]] : i64
   // CHECK-DAG: %[[strideArg:.*]] = llvm.mlir.constant(0 : i16) : i16
   // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
   // GFX1250: %[[flags:.*]] = llvm.mlir.constant(0 : i32)
@@ -24,9 +27,9 @@ func.func @fat_raw_buffer_cast(%buf: memref<8xi32, #gpu.address_space<global>>) 
   // CHECK: %[[ret0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<7>, ptr<7>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[ret1:.*]] = llvm.insertvalue %[[fatBuf]], %[[ret0]][0]
   // CHECK: %[[ret2:.*]] = llvm.insertvalue %[[fatBuf]], %[[ret1]][1]
-  // CHECK: %[[ret3:.*]] = llvm.insertvalue %[[offset]], %[[ret2]][2]
-  // CHECK: %[[ret4:.*]] = llvm.insertvalue %[[sizes]], %[[ret3]][3]
-  // CHECK: %[[ret5:.*]] = llvm.insertvalue %[[strides]], %[[ret4]][4]
+  // CHECK: %[[ret3:.*]] = llvm.insertvalue %{{.*}}, %[[ret2]][2]
+  // CHECK: %[[ret4:.*]] = llvm.insertvalue %{{.*}}, %[[ret3]][3]
+  // CHECK: %[[ret5:.*]] = llvm.insertvalue %{{.*}}, %[[ret4]][4]
   // CHECK: builtin.unrealized_conversion_cast %[[ret5]]
   %ret = amdgpu.fat_raw_buffer_cast %buf : memref<8xi32, #gpu.address_space<global>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
   return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
@@ -37,7 +40,10 @@ func.func @fat_raw_buffer_cast_0d(%buf: memref<i32, #gpu.address_space<global>>)
   // CHECK: %[[desc:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<i32, #gpu.address_space<global>> to !llvm.struct<(ptr<1>, ptr<1>, i64)>
   // CHECK-DAG: %[[base:.*]] = llvm.extractvalue %[[desc]][1]
   // CHECK-DAG: %[[offset:.*]] = llvm.extractvalue %[[desc]][2]
-  // CHECK-DAG: %[[numRecords:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK-DAG: %[[staticSize:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK-DAG: %[[elemBytes:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK-DAG: %[[offBytes:.*]] = llvm.mul %{{.*}}, %[[elemBytes]] : i64
+  // CHECK-DAG: %[[numRecords:.*]] = llvm.add %[[staticSize]], %[[offBytes]] : i64
   // CHECK-DAG: %[[strideArg:.*]] = llvm.mlir.constant(0 : i16) : i16
   // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
   // GFX1250: %[[flags:.*]] = llvm.mlir.constant(0 : i32)
@@ -46,7 +52,7 @@ func.func @fat_raw_buffer_cast_0d(%buf: memref<i32, #gpu.address_space<global>>)
   // CHECK: %[[ret0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<7>, ptr<7>, i64)>
   // CHECK: %[[ret1:.*]] = llvm.insertvalue %[[fatBuf]], %[[ret0]][0]
   // CHECK: %[[ret2:.*]] = llvm.insertvalue %[[fatBuf]], %[[ret1]][1]
-  // CHECK: %[[ret3:.*]] = llvm.insertvalue %[[offset]], %[[ret2]][2]
+  // CHECK: %[[ret3:.*]] = llvm.insertvalue %{{.*}}, %[[ret2]][2]
   // CHECK: builtin.unrealized_conversion_cast %[[ret3]]
   %ret = amdgpu.fat_raw_buffer_cast %buf : memref<i32, #gpu.address_space<global>> to memref<i32, #amdgpu.address_space<fat_raw_buffer>>
   return %ret : memref<i32, #amdgpu.address_space<fat_raw_buffer>>
@@ -58,7 +64,11 @@ func.func @fat_raw_buffer_cast_dyn_size_offset(%buf: memref<?xi32, strided<[1]>,
   // CHECK: %[[stride0:.*]] = llvm.extractvalue %{{.*}}[4, 0]
   // CHECK: %[[maxVals:.*]] = llvm.mul %[[size0]], %[[stride0]]
   // CHECK: %[[byteSize:.*]] = llvm.mlir.constant(4 : i64) : i64
-  // CHECK: %[[numRecords:.*]] = llvm.mul %[[maxVals]], %[[byteSize]]
+  // CHECK: %[[regionSize:.*]] = llvm.mul %[[maxVals]], %[[byteSize]]
+  // CHECK: %[[descOff:.*]] = llvm.extractvalue %{{.*}}[2]
+  // CHECK: %[[elemBytes:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK: %[[offBytes:.*]] = llvm.mul %[[descOff]], %[[elemBytes]] : i64
+  // CHECK: %[[numRecords:.*]] = llvm.add %[[regionSize]], %[[offBytes]] : i64
   // CHECK: %[[offset:.*]] = llvm.extractvalue %{{.*}}[2]
   // CHECK: rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %{{.*}}
   // CHECK: llvm.insertvalue %[[offset]], %{{.*}}[2]
@@ -91,11 +101,14 @@ func.func @fat_raw_buffer_cast_valid_bytes(%buf: memref<8xi32, #gpu.address_spac
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_bounds_check
 func.func @fat_raw_buffer_cast_bounds_check(%buf: memref<8xi32, #gpu.address_space<global>>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
-  // GFX9:  %[[numRecords:.*]] = llvm.mlir.constant({{.*}} : i64)
+  // GFX9:  %[[regionSize:.*]] = llvm.mlir.constant({{.*}} : i64)
+  // GFX9:  %[[numRecords:.*]] = llvm.add %[[regionSize]], %{{.*}} : i64
   // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
-  // GFX1250: %[[numRecords:.*]] = llvm.mlir.constant(35184372088831 : i64)
+  // GFX1250: %[[regionSize:.*]] = llvm.mlir.constant(35184372088831 : i64)
+  // GFX1250: %[[numRecords:.*]] = llvm.add %[[regionSize]], %{{.*}} : i64
   // GFX1250: %[[flags:.*]] = llvm.mlir.constant(0 : i32)
-  // RDNA:  %[[numRecords:.*]] = llvm.mlir.constant({{.*}} : i64)
+  // RDNA:  %[[regionSize:.*]] = llvm.mlir.constant({{.*}} : i64)
+  // RDNA:  %[[numRecords:.*]] = llvm.add %[[regionSize]], %{{.*}} : i64
   // RDNA:  %[[flags:.*]] = llvm.mlir.constant(553807872 : i32)
   // CHECK: %[[rsrc:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]]
   %ret = amdgpu.fat_raw_buffer_cast %buf boundsCheck(false) : memref<8xi32, #gpu.address_space<global>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>

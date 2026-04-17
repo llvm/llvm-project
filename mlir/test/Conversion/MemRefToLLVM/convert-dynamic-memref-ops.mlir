@@ -552,7 +552,9 @@ func.func @memref_reshape(%input : memref<2x3xf32>, %shape : memref<?xindex>) {
 // Iterate over shape operand in reverse order and set sizes and strides.
 // CHECK: [[SIZES_PTR:%.*]] = llvm.getelementptr [[UNDERLYING_DESC]]{{\[}}0, 3]
 // CHECK: [[STRIDES_PTR:%.*]] = llvm.getelementptr [[SIZES_PTR]]{{\[}}[[RANK]]]
-// CHECK: [[SHAPE_IN_PTR:%.*]] = llvm.extractvalue [[SHAPE]][1] : [[SHAPE_TY]]
+// CHECK: [[SHAPE_ALIGNED:%.*]] = llvm.extractvalue [[SHAPE]][1] : [[SHAPE_TY]]
+// CHECK: [[SHAPE_OFF:%.*]] = llvm.extractvalue [[SHAPE]][2] : [[SHAPE_TY]]
+// CHECK: [[SHAPE_IN_PTR:%.*]] = llvm.getelementptr [[SHAPE_ALIGNED]][[[SHAPE_OFF]]]
 // CHECK: [[C1_:%.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK: [[RANK_MIN_1:%.*]] = llvm.sub [[RANK]], [[C1_]] : i64
 // CHECK: llvm.br ^bb1([[RANK_MIN_1]], [[C1_]] : i64, i64)

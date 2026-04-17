@@ -763,11 +763,14 @@ SmallVector<Value, 4> LLVMTypeConverter::promoteOperands(
        llvm::zip_equal(opOperands, adaptorOperands)) {
     if (useBarePtrCallConv) {
       // For the bare-ptr calling convention, we only have to extract the
-      // aligned pointer of a memref.
-      if (isa<MemRefType>(operand.getType())) {
+      // buffer pointer of a memref. Use bufferPtr (aligned ptr + runtime
+      // offset) so the descriptor's offset is folded into the pointer; the
+      // bare-ptr ABI cannot carry the offset separately.
+      if (auto memrefType = dyn_cast<MemRefType>(operand.getType())) {
         assert(llvmOperand.size() == 1 && "Expected a single operand");
         MemRefDescriptor desc(llvmOperand.front());
-        promotedOperands.push_back(desc.alignedPtr(builder, loc));
+        promotedOperands.push_back(desc.bufferPtr(builder, loc, *this,
+                                                  memrefType));
         continue;
       }
       if (isa<UnrankedMemRefType>(operand.getType())) {

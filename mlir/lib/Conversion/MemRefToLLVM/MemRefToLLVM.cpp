@@ -1613,7 +1613,10 @@ private:
         rewriter, loc, *getTypeConverter(), underlyingDescPtr, elementPtrType);
     Value targetStridesBase = UnrankedMemRefDescriptor::strideBasePtr(
         rewriter, loc, *getTypeConverter(), targetSizesBase, resultRank);
-    Value shapeOperandPtr = shapeDesc.alignedPtr(rewriter, loc);
+    // Use bufferPtr so the shape memref's runtime offset is folded in;
+    // otherwise the indexed loads below would read at the wrong address.
+    Value shapeOperandPtr =
+        shapeDesc.bufferPtr(rewriter, loc, *getTypeConverter(), shapeMemRefType);
     Value oneIndex = createIndexAttrConstant(rewriter, loc, getIndexType(), 1);
     Value resultRankMinusOne =
         LLVM::SubOp::create(rewriter, loc, resultRank, oneIndex);
