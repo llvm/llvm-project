@@ -382,6 +382,10 @@ Improvements to Clang's diagnostics
   code can automatically be made portable to other host platforms that don't
   support backslashes.
 
+- Clang now errors when a function declaration aliases a variable or vice versa. (#GH192397)
+
+- Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH192397)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
