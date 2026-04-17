@@ -1097,6 +1097,8 @@ cc_library(
 cc_library(
     name = "MLIRBindingsPythonNanobindHeaders",
     hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     includes = ["include"],
     deps = [
         ":CAPIDebugHeaders",
