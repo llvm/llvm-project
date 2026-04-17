@@ -58,12 +58,10 @@
 
 #include <cassert>
 #include <concepts>
-#include <functional>
 #include <type_traits>
 #include <utility>
 
 #include "helpers.h"
-#include "test_macros.h"
 
 struct WithOps {
   int value;
@@ -85,45 +83,45 @@ struct WithOps {
   friend constexpr auto operator||(WithOps l, WithOps r) { return WithOps{l.value || r.value}; }
 };
 
-struct OptsReturnNonStructural {
+struct OpsReturnNonStructural {
   int value;
 
-  constexpr OptsReturnNonStructural(int v) : value(v) {}
+  constexpr OpsReturnNonStructural(int v) : value(v) {}
 
-  friend constexpr auto operator+(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator+(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value + r.value};
   }
-  friend constexpr auto operator-(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator-(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value - r.value};
   }
-  friend constexpr auto operator*(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator*(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value * r.value};
   }
-  friend constexpr auto operator/(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator/(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value / r.value};
   }
-  friend constexpr auto operator%(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator%(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value % r.value};
   }
-  friend constexpr auto operator<<(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator<<(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value << r.value};
   }
-  friend constexpr auto operator>>(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator>>(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value >> r.value};
   }
-  friend constexpr auto operator&(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator&(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value & r.value};
   }
-  friend constexpr auto operator|(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator|(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value | r.value};
   }
-  friend constexpr auto operator^(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator^(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value ^ r.value};
   }
-  friend constexpr auto operator&&(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator&&(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value && r.value};
   }
-  friend constexpr auto operator||(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator||(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value || r.value};
   }
 };
@@ -305,56 +303,34 @@ static_assert(HasNoexceptBitXor<std::constant_wrapper<WithOps{6}>, std::constant
 static_assert(HasNoexceptLogicalAnd<std::constant_wrapper<WithOps{6}>, std::constant_wrapper<WithOps{3}>>);
 static_assert(HasNoexceptLogicalOr<std::constant_wrapper<WithOps{6}>, std::constant_wrapper<WithOps{3}>>);
 
+// clang-format off
 // Non-structural types use implicit conversion to underlying type
-static_assert(
-    HasPlus<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasMinus<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasMultiply<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasDivide<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasModulo<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasShiftLeft<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{1}>>);
-static_assert(HasShiftRight<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                            std::constant_wrapper<OptsReturnNonStructural{1}>>);
-static_assert(
-    HasBitAnd<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasBitOr<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasBitXor<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(HasLogicalAnd<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                            std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasLogicalOr<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
+static_assert(HasPlus<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasMinus<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasMultiply<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasDivide<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasModulo<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasShiftLeft<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{1}>>);
+static_assert(HasShiftRight<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{1}>>);
+static_assert(HasBitAnd<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasBitOr<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasBitXor<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasLogicalAnd<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasLogicalOr<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
 
-static_assert(!HasNoexceptPlus<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                               std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptMinus<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptMultiply<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                   std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptDivide<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                 std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptModulo<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                 std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptShiftLeft<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                    std::constant_wrapper<OptsReturnNonStructural{1}>>);
-static_assert(!HasNoexceptShiftRight<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                     std::constant_wrapper<OptsReturnNonStructural{1}>>);
-static_assert(!HasNoexceptBitAnd<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                 std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptBitOr<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptBitXor<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                 std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptLogicalAnd<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                     std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptLogicalOr<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                    std::constant_wrapper<OptsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptPlus<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptMinus<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptMultiply<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptDivide<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptModulo<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptShiftLeft<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{1}>>);
+static_assert(!HasNoexceptShiftRight<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{1}>>);
+static_assert(!HasNoexceptBitAnd<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptBitOr<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptBitXor<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptLogicalAnd<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptLogicalOr<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+// clang-format on
 
 constexpr bool test() {
   {
@@ -448,8 +424,8 @@ constexpr bool test() {
 
   {
     // Non-structural return types use implicit conversion
-    std::constant_wrapper<OptsReturnNonStructural{6}> cwOpt6;
-    std::constant_wrapper<OptsReturnNonStructural{3}> cwOpt3;
+    std::constant_wrapper<OpsReturnNonStructural{6}> cwOpt6;
+    std::constant_wrapper<OpsReturnNonStructural{3}> cwOpt3;
 
     std::same_as<NonStructural> decltype(auto) result = cwOpt6 + cwOpt3;
     assert(result.get() == 9);

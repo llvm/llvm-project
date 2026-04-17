@@ -13,12 +13,7 @@
 // constexpr cw-fixed-value(T (&arr)[Extent]) noexcept;
 
 #include <cassert>
-#include <concepts>
-#include <type_traits>
 #include <utility>
-
-#include "helpers.h"
-#include "test_macros.h"
 
 template <auto v>
 auto helper(std::constant_wrapper<v>) -> decltype(v);

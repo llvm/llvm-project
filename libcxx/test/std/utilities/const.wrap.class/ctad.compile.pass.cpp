@@ -13,13 +13,8 @@
 // template<class T, size_t Extent>
 //   cw-fixed-value(T (&)[Extent]) -> cw-fixed-value<T[Extent]>;                   // exposition only
 
-#include <cassert>
-#include <concepts>
 #include <type_traits>
 #include <utility>
-
-#include "helpers.h"
-#include "test_macros.h"
 
 constexpr int arr[] = {1, 2, 3};
 using T1            = std::constant_wrapper<arr>;

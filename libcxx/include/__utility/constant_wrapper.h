@@ -32,22 +32,6 @@ struct __cw_fixed_value {
   _Tp __data;
 };
 
-template <__cw_fixed_value _Xp,
-#  ifdef _LIBCPP_COMPILER_GCC
-          // gcc bug:  https://gcc.gnu.org/PR117392
-          class = typename decltype(__cw_fixed_value(_Xp))::__type
-#  else
-          class = typename decltype(_Xp)::__type
-#  endif
-          >
-struct constant_wrapper;
-
-template <class _Tp>
-concept __constexpr_param = requires { typename constant_wrapper<_Tp::value>; };
-
-template <__cw_fixed_value _Xp>
-constexpr auto cw = constant_wrapper<_Xp>{};
-
 template <class _Tp, size_t _Extent>
 struct __cw_fixed_value<_Tp[_Extent]> {
   using __type _LIBCPP_NODEBUG = _Tp[_Extent];
@@ -64,6 +48,22 @@ private:
 
 template <class _Tp, size_t _Extent>
 __cw_fixed_value(_Tp (&)[_Extent]) -> __cw_fixed_value<_Tp[_Extent]>;
+
+template <__cw_fixed_value _Xp,
+#  ifdef _LIBCPP_COMPILER_GCC
+          // gcc bug:  https://gcc.gnu.org/PR117392
+          class = typename decltype(__cw_fixed_value(_Xp))::__type
+#  else
+          class = typename decltype(_Xp)::__type
+#  endif
+          >
+struct constant_wrapper;
+
+template <class _Tp>
+concept __constexpr_param = requires { typename constant_wrapper<_Tp::value>; };
+
+template <__cw_fixed_value _Xp>
+constexpr auto cw = constant_wrapper<_Xp>{};
 
 struct __cw_operators {
   // unary operators
@@ -199,13 +199,13 @@ struct __cw_operators {
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator,(_Lp, _Rp) noexcept = delete;
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator->*(_Lp, _Rp) noexcept
-      -> constant_wrapper<_Lp::value->*(_Rp::value)> {
+      -> constant_wrapper<(_Lp::value->*_Rp::value)> {
     return {};
   }
 
   // pseudo-mutators
   template <__constexpr_param _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator++(this _Tp) noexcept -> constant_wrapper<++(_Tp::value)> {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator++(this _Tp) noexcept -> constant_wrapper<(++_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
@@ -213,7 +213,7 @@ struct __cw_operators {
     return {};
   }
   template <__constexpr_param _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator--(this _Tp) noexcept -> constant_wrapper<--(_Tp::value)> {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator--(this _Tp) noexcept -> constant_wrapper<(--_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>

@@ -31,12 +31,9 @@
 
 #include <cassert>
 #include <concepts>
-#include <functional>
-#include <type_traits>
 #include <utility>
 
 #include "helpers.h"
-#include "test_macros.h"
 
 struct WithOps {
   int value;
@@ -51,17 +48,17 @@ struct WithOps {
   friend constexpr auto operator*(WithOps w) { return WithOps{w.value - 42}; }
 };
 
-struct OptsReturnNonStructural {
+struct OpsReturnNonStructural {
   int value;
 
-  constexpr OptsReturnNonStructural(int v) : value(v) {}
+  constexpr OpsReturnNonStructural(int v) : value(v) {}
 
-  friend constexpr auto operator+(OptsReturnNonStructural o) { return NonStructural{+o.value}; }
-  friend constexpr auto operator-(OptsReturnNonStructural o) { return NonStructural{-o.value}; }
-  friend constexpr auto operator~(OptsReturnNonStructural o) { return NonStructural{~o.value}; }
-  friend constexpr auto operator!(OptsReturnNonStructural o) { return NonStructural{!o.value}; }
-  friend constexpr auto operator&(OptsReturnNonStructural o) { return NonStructural{o.value + 42}; }
-  friend constexpr auto operator*(OptsReturnNonStructural o) { return NonStructural{o.value - 42}; }
+  friend constexpr auto operator+(OpsReturnNonStructural o) { return NonStructural{+o.value}; }
+  friend constexpr auto operator-(OpsReturnNonStructural o) { return NonStructural{-o.value}; }
+  friend constexpr auto operator~(OpsReturnNonStructural o) { return NonStructural{~o.value}; }
+  friend constexpr auto operator!(OpsReturnNonStructural o) { return NonStructural{!o.value}; }
+  friend constexpr auto operator&(OpsReturnNonStructural o) { return NonStructural{o.value + 42}; }
+  friend constexpr auto operator*(OpsReturnNonStructural o) { return NonStructural{o.value - 42}; }
 };
 
 struct NoOps {};
@@ -156,19 +153,19 @@ static_assert(!HasDeref<std::constant_wrapper<NoOps{}>>);
 
 // The operators from constant_wrapper do not exist, but they can be implicited converted
 // to the underlying type and use its operators instead.
-static_assert(HasPlus<std::constant_wrapper<OptsReturnNonStructural{42}>>);
-static_assert(HasMinus<std::constant_wrapper<OptsReturnNonStructural{42}>>);
-static_assert(HasBitNot<std::constant_wrapper<OptsReturnNonStructural{42}>>);
-static_assert(HasNot<std::constant_wrapper<OptsReturnNonStructural{42}>>);
-static_assert(HasBitAnd<std::constant_wrapper<OptsReturnNonStructural{42}>>);
-static_assert(HasDeref<std::constant_wrapper<OptsReturnNonStructural{42}>>);
+static_assert(HasPlus<std::constant_wrapper<OpsReturnNonStructural{42}>>);
+static_assert(HasMinus<std::constant_wrapper<OpsReturnNonStructural{42}>>);
+static_assert(HasBitNot<std::constant_wrapper<OpsReturnNonStructural{42}>>);
+static_assert(HasNot<std::constant_wrapper<OpsReturnNonStructural{42}>>);
+static_assert(HasBitAnd<std::constant_wrapper<OpsReturnNonStructural{42}>>);
+static_assert(HasDeref<std::constant_wrapper<OpsReturnNonStructural{42}>>);
 
-static_assert(!HasNoexceptPlus<std::constant_wrapper<OptsReturnNonStructural{42}>>);
-static_assert(!HasNoexceptMinus<std::constant_wrapper<OptsReturnNonStructural{42}>>);
-static_assert(!HasNoexceptBitNot<std::constant_wrapper<OptsReturnNonStructural{42}>>);
-static_assert(!HasNoexceptNot<std::constant_wrapper<OptsReturnNonStructural{42}>>);
-static_assert(!HasNoexceptBitAnd<std::constant_wrapper<OptsReturnNonStructural{42}>>);
-static_assert(!HasNoexceptDeref<std::constant_wrapper<OptsReturnNonStructural{42}>>);
+static_assert(!HasNoexceptPlus<std::constant_wrapper<OpsReturnNonStructural{42}>>);
+static_assert(!HasNoexceptMinus<std::constant_wrapper<OpsReturnNonStructural{42}>>);
+static_assert(!HasNoexceptBitNot<std::constant_wrapper<OpsReturnNonStructural{42}>>);
+static_assert(!HasNoexceptNot<std::constant_wrapper<OpsReturnNonStructural{42}>>);
+static_assert(!HasNoexceptBitAnd<std::constant_wrapper<OpsReturnNonStructural{42}>>);
+static_assert(!HasNoexceptDeref<std::constant_wrapper<OpsReturnNonStructural{42}>>);
 
 constexpr bool test() {
   {
@@ -217,24 +214,24 @@ constexpr bool test() {
   {
     // Return non-structural type
     // Will use underlying type's runtime operators
-    std::constant_wrapper<OptsReturnNonStructural{42}> cwOptsReturnNonStructural;
+    std::constant_wrapper<OpsReturnNonStructural{42}> cwOpsReturnNonStructural;
 
-    std::same_as<NonStructural> decltype(auto) result = +cwOptsReturnNonStructural;
+    std::same_as<NonStructural> decltype(auto) result = +cwOpsReturnNonStructural;
     assert(result.get() == 42);
 
-    std::same_as<NonStructural> decltype(auto) result2 = -cwOptsReturnNonStructural;
+    std::same_as<NonStructural> decltype(auto) result2 = -cwOpsReturnNonStructural;
     assert(result2.get() == -42);
 
-    std::same_as<NonStructural> decltype(auto) result3 = ~cwOptsReturnNonStructural;
+    std::same_as<NonStructural> decltype(auto) result3 = ~cwOpsReturnNonStructural;
     assert(result3.get() == ~42);
 
-    std::same_as<NonStructural> decltype(auto) result4 = !cwOptsReturnNonStructural;
+    std::same_as<NonStructural> decltype(auto) result4 = !cwOpsReturnNonStructural;
     assert(result4.get() == !42);
 
-    std::same_as<NonStructural> decltype(auto) result5 = &cwOptsReturnNonStructural;
+    std::same_as<NonStructural> decltype(auto) result5 = &cwOpsReturnNonStructural;
     assert(result5.get() == 84);
 
-    std::same_as<NonStructural> decltype(auto) result6 = *cwOptsReturnNonStructural;
+    std::same_as<NonStructural> decltype(auto) result6 = *cwOpsReturnNonStructural;
     assert(result6.get() == 0);
   }
 

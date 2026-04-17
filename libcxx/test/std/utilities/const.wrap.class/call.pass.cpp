@@ -21,7 +21,6 @@
 
 #include "helpers.h"
 #include "MoveOnly.h"
-#include "test_macros.h"
 
 struct MoveOnlyFn {
   constexpr MoveOnly operator()(const MoveOnly& m1, MoveOnly m2, MoveOnly&& m3) const {
@@ -64,6 +63,7 @@ constexpr S s;
 // Constraints: call-expr is a valid expression.
 // Remarks: The exception specification is equivalent to noexcept(call-expr).
 
+// clang-format off
 static_assert(std::is_invocable_v<std::constant_wrapper<[] { return 42; }>>);
 static_assert(!std::is_invocable_v<std::constant_wrapper<[] { return 42; }>, int>);
 static_assert(!std::is_invocable_v<std::constant_wrapper<5>>);
@@ -71,9 +71,7 @@ static_assert(!std::is_invocable_v<std::constant_wrapper<5>>);
 static_assert(!std::is_invocable_v<std::constant_wrapper<std::plus<>{}>, int>);
 static_assert(std::is_nothrow_invocable_v<std::constant_wrapper<std::plus<>{}>, int, int>);
 static_assert(std::is_nothrow_invocable_v<std::constant_wrapper<std::plus<>{}>, std::constant_wrapper<42>, int>);
-static_assert(std::is_nothrow_invocable_v<std::constant_wrapper<std::plus<>{}>,
-                                          std::constant_wrapper<42>,
-                                          std::constant_wrapper<42>>);
+static_assert(std::is_nothrow_invocable_v<std::constant_wrapper<std::plus<>{}>, std::constant_wrapper<42>, std::constant_wrapper<42>>);
 
 static_assert(std::is_nothrow_invocable_v<std::constant_wrapper<nothrow_call>, int>);
 static_assert(std::is_nothrow_invocable_v<std::constant_wrapper<nothrow_call>, std::constant_wrapper<42>>);
@@ -82,6 +80,7 @@ static_assert(std::is_invocable_v<std::constant_wrapper<throwing_call>, int>);
 static_assert(!std::is_nothrow_invocable_v<std::constant_wrapper<throwing_call>, int>);
 static_assert(std::is_nothrow_invocable_v<std::constant_wrapper<throwing_call>, std::constant_wrapper<42>>,
               "the call expression is still nothrow because the constexpr path is taken");
+// clang-format on
 
 constexpr bool test() {
   {

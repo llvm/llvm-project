@@ -34,14 +34,10 @@
 //     { return {}; }
 
 #include <cassert>
-#include <compare>
 #include <concepts>
-#include <functional>
-#include <type_traits>
 #include <utility>
 
 #include "helpers.h"
-#include "test_macros.h"
 
 struct WithOps {
   int value;
@@ -57,30 +53,30 @@ struct WithOps {
   friend constexpr auto operator<=>(WithOps l, WithOps r) { return l.value <=> r.value; }
 };
 
-struct OptsReturnNonStructural {
+struct OpsReturnNonStructural {
   int value;
 
-  constexpr OptsReturnNonStructural(int v) : value(v) {}
+  constexpr OpsReturnNonStructural(int v) : value(v) {}
 
-  friend constexpr auto operator==(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator==(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value == r.value ? 1 : 0};
   }
-  friend constexpr auto operator!=(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator!=(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value != r.value ? 1 : 0};
   }
-  friend constexpr auto operator<(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator<(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value < r.value ? 1 : 0};
   }
-  friend constexpr auto operator<=(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator<=(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value <= r.value ? 1 : 0};
   }
-  friend constexpr auto operator>=(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator>=(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value >= r.value ? 1 : 0};
   }
-  friend constexpr auto operator>(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator>(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{l.value > r.value ? 1 : 0};
   }
-  friend constexpr auto operator<=>(OptsReturnNonStructural l, OptsReturnNonStructural r) {
+  friend constexpr auto operator<=>(OpsReturnNonStructural l, OpsReturnNonStructural r) {
     return NonStructural{(l.value < r.value) ? -1 : (l.value > r.value) ? 1 : 0};
   }
 };
@@ -194,32 +190,22 @@ static_assert(!HasNoexceptSpaceship<std::constant_wrapper<WithOps{6}>, std::cons
               "strong_ordering is not a structural type, so the call falls back to runtime implicit conversion and "
               "operator<=>, which is noexcept(false)");
 
+// clang-format off
 // Non-structural types use implicit conversion to underlying type
-static_assert(
-    HasEqual<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasNotEqual<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasLess<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasLessEqual<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(
-    HasGreater<std::constant_wrapper<OptsReturnNonStructural{6}>, std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(HasGreaterEqual<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                              std::constant_wrapper<OptsReturnNonStructural{3}>>);
+static_assert(HasEqual<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasNotEqual<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasLess<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasLessEqual<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasGreater<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(HasGreaterEqual<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
 
-static_assert(!HasNoexceptEqual<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptNotEqual<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                   std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptLess<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                               std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptLessEqual<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                    std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptGreater<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                  std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasNoexceptGreaterEqual<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                       std::constant_wrapper<OptsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptEqual<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptNotEqual<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptLess<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptLessEqual<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptGreater<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasNoexceptGreaterEqual<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+// clang-format on
 
 constexpr bool test() {
   {
@@ -333,8 +319,8 @@ constexpr bool test() {
 
   {
     // Non-structural return types use implicit conversion
-    std::constant_wrapper<OptsReturnNonStructural{6}> cwOpt6;
-    std::constant_wrapper<OptsReturnNonStructural{3}> cwOpt3;
+    std::constant_wrapper<OpsReturnNonStructural{6}> cwOpt6;
+    std::constant_wrapper<OpsReturnNonStructural{3}> cwOpt3;
 
     std::same_as<NonStructural> decltype(auto) equal = cwOpt6 == cwOpt3;
     assert(equal.get() == 0);

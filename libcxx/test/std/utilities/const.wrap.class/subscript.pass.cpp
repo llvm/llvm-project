@@ -13,16 +13,12 @@
 // template<class... Args>
 // static constexpr decltype(auto) operator[](Args&&... args) noexcept(see below);
 
-#include <array>
 #include <cassert>
 #include <concepts>
-#include <functional>
-#include <type_traits>
 #include <utility>
 
 #include "helpers.h"
 #include "MoveOnly.h"
-#include "test_macros.h"
 
 struct MoveOnlyIndex {
   constexpr MoveOnly operator[](const MoveOnly& m1, MoveOnly m2, MoveOnly&& m3) const {

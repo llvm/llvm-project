@@ -56,12 +56,9 @@
 
 #include <cassert>
 #include <concepts>
-#include <functional>
-#include <type_traits>
 #include <utility>
 
 #include "helpers.h"
-#include "test_macros.h"
 
 struct WithOps {
   int value;
@@ -85,26 +82,26 @@ struct WithOps {
   constexpr auto operator>>=(WithOps r) const { return WithOps{value >> r.value}; }
 };
 
-struct OptsReturnNonStructural {
+struct OpsReturnNonStructural {
   int value;
 
-  constexpr OptsReturnNonStructural(int v) : value(v) {}
+  constexpr OpsReturnNonStructural(int v) : value(v) {}
 
   constexpr auto operator++() const { return NonStructural{value + 1}; }
   constexpr auto operator++(int) const { return NonStructural{value + 1}; }
   constexpr auto operator--() const { return NonStructural{value - 1}; }
   constexpr auto operator--(int) const { return NonStructural{value - 1}; }
 
-  constexpr auto operator+=(OptsReturnNonStructural r) const { return NonStructural{value + r.value}; }
-  constexpr auto operator-=(OptsReturnNonStructural r) const { return NonStructural{value - r.value}; }
-  constexpr auto operator*=(OptsReturnNonStructural r) const { return NonStructural{value * r.value}; }
-  constexpr auto operator/=(OptsReturnNonStructural r) const { return NonStructural{value / r.value}; }
-  constexpr auto operator%=(OptsReturnNonStructural r) const { return NonStructural{value % r.value}; }
-  constexpr auto operator&=(OptsReturnNonStructural r) const { return NonStructural{value & r.value}; }
-  constexpr auto operator|=(OptsReturnNonStructural r) const { return NonStructural{value | r.value}; }
-  constexpr auto operator^=(OptsReturnNonStructural r) const { return NonStructural{value ^ r.value}; }
-  constexpr auto operator<<=(OptsReturnNonStructural r) const { return NonStructural{value << r.value}; }
-  constexpr auto operator>>=(OptsReturnNonStructural r) const { return NonStructural{value >> r.value}; }
+  constexpr auto operator+=(OpsReturnNonStructural r) const { return NonStructural{value + r.value}; }
+  constexpr auto operator-=(OpsReturnNonStructural r) const { return NonStructural{value - r.value}; }
+  constexpr auto operator*=(OpsReturnNonStructural r) const { return NonStructural{value * r.value}; }
+  constexpr auto operator/=(OpsReturnNonStructural r) const { return NonStructural{value / r.value}; }
+  constexpr auto operator%=(OpsReturnNonStructural r) const { return NonStructural{value % r.value}; }
+  constexpr auto operator&=(OpsReturnNonStructural r) const { return NonStructural{value & r.value}; }
+  constexpr auto operator|=(OpsReturnNonStructural r) const { return NonStructural{value | r.value}; }
+  constexpr auto operator^=(OpsReturnNonStructural r) const { return NonStructural{value ^ r.value}; }
+  constexpr auto operator<<=(OpsReturnNonStructural r) const { return NonStructural{value << r.value}; }
+  constexpr auto operator>>=(OpsReturnNonStructural r) const { return NonStructural{value >> r.value}; }
 };
 
 struct NoOps {};
@@ -300,32 +297,24 @@ static_assert(HasNoexceptBitXorAssign<std::constant_wrapper<WithOps{6}>, std::co
 static_assert(HasNoexceptShiftLeftAssign<std::constant_wrapper<WithOps{6}>, std::constant_wrapper<WithOps{1}>>);
 static_assert(HasNoexceptShiftRightAssign<std::constant_wrapper<WithOps{6}>, std::constant_wrapper<WithOps{1}>>);
 
+// clang-format off
 // Non-structural return types cannot use implicit conversions too because they are member functions and cannot be found through ADL
-static_assert(!HasPreIncrement<std::constant_wrapper<OptsReturnNonStructural{6}>>);
-static_assert(!HasPostIncrement<std::constant_wrapper<OptsReturnNonStructural{6}>>);
-static_assert(!HasPreDecrement<std::constant_wrapper<OptsReturnNonStructural{6}>>);
-static_assert(!HasPostDecrement<std::constant_wrapper<OptsReturnNonStructural{6}>>);
+static_assert(!HasPreIncrement<std::constant_wrapper<OpsReturnNonStructural{6}>>);
+static_assert(!HasPostIncrement<std::constant_wrapper<OpsReturnNonStructural{6}>>);
+static_assert(!HasPreDecrement<std::constant_wrapper<OpsReturnNonStructural{6}>>);
+static_assert(!HasPostDecrement<std::constant_wrapper<OpsReturnNonStructural{6}>>);
 
-static_assert(!HasPlusAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                             std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasMinusAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                              std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasMultiplyAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                 std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasDivideAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                               std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasModuloAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                               std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasBitAndAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                               std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasBitOrAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                              std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasBitXorAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                               std::constant_wrapper<OptsReturnNonStructural{3}>>);
-static_assert(!HasShiftLeftAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                  std::constant_wrapper<OptsReturnNonStructural{1}>>);
-static_assert(!HasShiftRightAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
-                                   std::constant_wrapper<OptsReturnNonStructural{1}>>);
+static_assert(!HasPlusAssign<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasMinusAssign<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasMultiplyAssign<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasDivideAssign<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasModuloAssign<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasBitAndAssign<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasBitOrAssign<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasBitXorAssign<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{3}>>);
+static_assert(!HasShiftLeftAssign<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{1}>>);
+static_assert(!HasShiftRightAssign<std::constant_wrapper<OpsReturnNonStructural{6}>, std::constant_wrapper<OpsReturnNonStructural{1}>>);
+// clang-format on
 
 // LWG 4383. constant_wrapper's pseudo-mutators are underconstrained
 // https://cplusplus.github.io/LWG/issue4383

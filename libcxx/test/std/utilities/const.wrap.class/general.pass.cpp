@@ -16,22 +16,17 @@
 // this enables use of constant_wrapper values that are passed as arguments to constexpr
 // functions to be used in constant expressions.
 
-#include <cassert>
-#include <concepts>
-#include <type_traits>
 #include <utility>
-#include <iostream>
-
-#include "helpers.h"
-#include "test_macros.h"
 
 constexpr auto initial_phase(auto quantity_1, auto quantity_2) { return quantity_1 + quantity_2; }
 
 constexpr auto middle_phase(auto tbd) { return tbd; }
 
+constexpr void profit() {}
+
 void final_phase(auto gathered, auto available) {
   if constexpr (gathered == available)
-    std::cout << "Profit!\n";
+    profit();
 }
 
 void impeccable_underground_planning() {

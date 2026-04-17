@@ -15,9 +15,7 @@
 // using value_type = decltype(X)::type;
 
 #include <algorithm>
-#include <cassert>
 #include <concepts>
-#include <type_traits>
 #include <utility>
 
 static_assert(std::constant_wrapper<42>::value == 42);

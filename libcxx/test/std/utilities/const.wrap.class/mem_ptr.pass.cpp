@@ -17,11 +17,9 @@
 
 #include <cassert>
 #include <concepts>
-#include <type_traits>
 #include <utility>
 
 #include "helpers.h"
-#include "test_macros.h"
 
 struct S {
   int member = 42;
@@ -46,11 +44,11 @@ struct WithOps {
   friend constexpr auto operator->*(WithOps w, int WithOps::* pm) { return w.value + (&w)->*pm; }
 };
 
-struct OptsReturnNonStructural {
+struct OpsReturnNonStructural {
   int value;
-  constexpr OptsReturnNonStructural(int v) : value(v) {}
+  constexpr OpsReturnNonStructural(int v) : value(v) {}
 
-  friend constexpr auto operator->*(OptsReturnNonStructural o, int OptsReturnNonStructural::* pm) {
+  friend constexpr auto operator->*(OpsReturnNonStructural o, int OpsReturnNonStructural::* pm) {
     return NonStructural{o.value + (&o)->*pm};
   }
 };
@@ -91,8 +89,8 @@ constexpr bool test() {
   {
     // Return non-structural type
     // Will use underlying type's runtime operators
-    std::constant_wrapper<OptsReturnNonStructural{42}> cwORNS;
-    std::constant_wrapper<&OptsReturnNonStructural::value> cwPM;
+    std::constant_wrapper<OpsReturnNonStructural{42}> cwORNS;
+    std::constant_wrapper<&OpsReturnNonStructural::value> cwPM;
     std::same_as<NonStructural> decltype(auto) result1 = cwORNS->*cwPM;
     assert(result1.get() == 84);
   }

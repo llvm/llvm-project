@@ -16,11 +16,7 @@
 
 #include <cassert>
 #include <concepts>
-#include <functional>
-#include <type_traits>
 #include <utility>
-
-#include "test_macros.h"
 
 struct WithOps {
   int value;

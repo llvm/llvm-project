@@ -15,40 +15,16 @@
 // for which constant_wrapper's wrapped value is a suitable argument, but for which
 // the constant_wrapper itself is not. - end note]
 
-#include <cassert>
-#include <concepts>
-#include <type_traits>
 #include <utility>
 
-#include "helpers.h"
-#include "test_macros.h"
-
 namespace MyNamespace {
-struct MyType {
-  int value;
+struct MyType {};
 
-  constexpr MyType(int v = 0) : value(v) {}
-};
-
-constexpr int adl_function(MyType mt) { return mt.value * 2; }
+void adl_function(MyType) {}
 
 } // namespace MyNamespace
 
-constexpr bool test() {
-  {
-    constexpr MyNamespace::MyType mt{21};
-    std::constant_wrapper<mt> cw_mt;
-
-    std::same_as<int> decltype(auto) result = adl_function(cw_mt);
-    assert(result == 42);
-  }
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-  static_assert(test());
-
-  return 0;
+void test() {
+  std::constant_wrapper<MyNamespace::MyType{}> cw_mt;
+  adl_function(cw_mt);
 }

@@ -14,13 +14,11 @@
 //   constexpr auto operator=(R) const noexcept
 //     -> constant_wrapper<value = R::value> { return {}; }
 
-#include <cassert>
 #include <concepts>
 #include <type_traits>
 #include <utility>
 
 #include "helpers.h"
-#include "test_macros.h"
 
 struct WithOps {
   int value;
@@ -30,10 +28,10 @@ struct WithOps {
   constexpr WithOps operator=(int i) const { return WithOps{value + i}; }
 };
 
-struct OptsReturnNonStructural {
+struct OpsReturnNonStructural {
   int value;
 
-  constexpr OptsReturnNonStructural(int v) : value(v) {}
+  constexpr OpsReturnNonStructural(int v) : value(v) {}
 
   constexpr NonStructural operator=(int i) const { return NonStructural{value + i}; }
 };
@@ -54,7 +52,7 @@ static_assert(!HasNoexceptAssign<std::constant_wrapper<5>, std::constant_wrapper
 static_assert(HasAssign<std::constant_wrapper<WithOps{5}>, std::constant_wrapper<3>>);
 static_assert(HasNoexceptAssign<std::constant_wrapper<WithOps{5}>, std::constant_wrapper<3>>);
 
-static_assert(!HasAssign<std::constant_wrapper<OptsReturnNonStructural{5}>, std::constant_wrapper<5>>);
+static_assert(!HasAssign<std::constant_wrapper<OpsReturnNonStructural{5}>, std::constant_wrapper<5>>);
 
 constexpr bool test() {
   {
