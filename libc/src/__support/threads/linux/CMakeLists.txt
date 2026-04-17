@@ -66,22 +66,6 @@ add_header_library(
 )
 
 add_object_library(
-  CndVar
-  SRCS
-    CndVar.cpp
-  HDRS
-    ../CndVar.h
-  DEPENDS
-    libc.hdr.stdint_proxy
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.threads.linux.futex_word_type
-    libc.src.__support.threads.mutex
-    libc.src.__support.threads.raw_mutex
-    libc.src.__support.CPP.mutex
-)
-
-add_object_library(
   barrier
   HDRS
     barrier.h
