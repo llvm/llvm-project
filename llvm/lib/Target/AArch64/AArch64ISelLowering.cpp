@@ -2056,11 +2056,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8f16, Legal);
-      // We can use SVE2p1 fdot to emulate the fixed-length variant.
-      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
-                                MVT::v8f16, Custom);
-      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v2f32,
-                                MVT::v4f16, Custom);
+
+      // We can use SVE2p1 fdot or SVE2 fmlalb/t to emulate the fixed-length
+      // variant (unless NEON fdot is natively available).
+      if (!Subtarget->isNeonAvailable() ||
+          (!Subtarget->hasF16F32DOT() && !Subtarget->hasFP16FML())) {
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
+                                  MVT::v8f16, Custom);
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v2f32,
+                                  MVT::v4f16, Custom);
+      }
     }
 
     if (Subtarget->hasBF16())
