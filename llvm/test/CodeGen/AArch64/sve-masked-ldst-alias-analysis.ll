@@ -8,14 +8,14 @@ define <vscale x 16 x i8> @reverse_masked_load() nounwind {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    ptrue p0.b, vl6
-; CHECK-NEXT:    add x8, sp, #8
-; CHECK-NEXT:    add x8, x8, #6
-; CHECK-NEXT:    rev p0.b, p0.b
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x8, #-1, mul vl]
 ; CHECK-NEXT:    mov w8, #1799 // =0x707
+; CHECK-NEXT:    add x9, sp, #8
 ; CHECK-NEXT:    strh w8, [sp, #12]
 ; CHECK-NEXT:    mov w8, #117901063 // =0x7070707
+; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    str w8, [sp, #8]
+; CHECK-NEXT:    add x8, x9, #6
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x8, #-1, mul vl]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 entry:
