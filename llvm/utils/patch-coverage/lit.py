@@ -23,9 +23,10 @@ def find_lit_tests(lit_path, test_paths):
     suites_cmd = [lit_path, "--show-suites"] + test_paths
     output = subprocess.check_output(suites_cmd)
 
-    # Above command give large output like this -
+    # `--show-suites` produce output in the following form  -
     #  LLVM - 61914 tests
     #    Source Root: /Users/<username>/llvm-project/llvm/test
+    #
     # Parse it to construct following format -
     # {'LLVM': '/Users/<username>/llvm-project/llvm/test'}
     test_suites = parse_suite_info(output)

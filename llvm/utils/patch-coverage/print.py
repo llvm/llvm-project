@@ -60,8 +60,9 @@ def coverage_percentage(cpp_file, uncovered_lines, modified_lines):
 
     percent = (covered_count * 100 / total) if total else 0
     print(
-        f"\n\033[33mPATCH COVERAGE: {percent:.1f}% ({covered_count}/{total} lines)\033[0m"
+        f"\n\033[33mFILE COVERAGE: {percent:.1f}% ({covered_count}/{total} lines)\033[0m"
     )
+    return total, covered_count
 
 
 def print_coverage_report(cpp_file, uncovered_lines, modified_lines):
@@ -106,7 +107,7 @@ def print_coverage_report(cpp_file, uncovered_lines, modified_lines):
             else:
                 print(f"\033[36m  Line {line:<5}\033[0m: {content}")
 
-    coverage_percentage(cpp_file, uncovered_lines, modified_lines)
+    return coverage_percentage(cpp_file, uncovered_lines, modified_lines)
 
 
 def report_covered_and_uncovered_lines(coverage_files, modified_lines):
@@ -140,10 +141,20 @@ def report_covered_and_uncovered_lines(coverage_files, modified_lines):
                     all_covered,
                 )
 
-        # Print the covered, uncovered and context lines on stanadard output in diff style.
+        # Print the covered, uncovered and context lines on standard output in diff style.
+        total = 0
+        covered_count = 0
         for cpp_path, uncovered_set in common_uncovered_results.items():
             if cpp_path in norm_modified:
-                print_coverage_report(cpp_path, uncovered_set, norm_modified)
+                temp1, temp2 = print_coverage_report(
+                    cpp_path, uncovered_set, norm_modified
+                )
+                total += temp1
+                covered_count += temp2
+        percent = (covered_count * 100 / total) if total else 0
+        print(
+            f"\n\033[33mPATCH COVERAGE: {percent:.1f}% ({covered_count}/{total} lines)\033[0m"
+        )
 
     except Exception as ex:
         log("Error while reporting covered and uncovered lines:", ex)
