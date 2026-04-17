@@ -9,14 +9,14 @@
 #define NUM_LINES 500
 
 int main(int argc, char *argv[]) {
-    if (strcmp(argv[1], "basic") == 0) {
-        printf("Hello from ConPTY\n");
-        fflush(stdout);
-    } else if (strcmp(argv[1], "large") == 0) {
-        for (int i = 0; i < NUM_LINES; i++)
-            printf("line %04d\n", i);
-        fflush(stdout);
-    }
+  if (strcmp(argv[1], "basic") == 0) {
+    printf("Hello from ConPTY\n");
+    fflush(stdout);
+  } else if (strcmp(argv[1], "large") == 0) {
+    for (int i = 0; i < NUM_LINES; i++)
+      printf("line %04d\n", i);
+    fflush(stdout);
+  }
 
-    return 0;
+  return 0;
 }
