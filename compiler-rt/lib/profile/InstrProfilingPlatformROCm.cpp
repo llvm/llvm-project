@@ -30,10 +30,10 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
+static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
                                    const char *Target);
 
-static int IsVerboseMode() {
+static int isVerboseMode() {
   static int IsVerbose = -1;
   if (IsVerbose == -1)
     IsVerbose = getenv("LLVM_PROFILE_VERBOSE") != nullptr;
@@ -78,14 +78,14 @@ static char DeviceArchNames[MAX_DEVICES][256];
 /*  Keep HIP-only to avoid an HSA dependency.                                 */
 /* -------------------------------------------------------------------------- */
 
-static void EnsureHipLoaded(void) {
+static void ensureHipLoaded(void) {
   static int Initialized = 0;
   if (Initialized)
     return;
   Initialized = 1;
 
   if (!__interception::DynamicLoaderAvailable()) {
-    if (IsVerboseMode())
+    if (isVerboseMode())
       PROF_NOTE("%s", "Dynamic library loading not available - "
                       "HIP profiling disabled\n");
     return;
@@ -132,7 +132,7 @@ static void EnsureHipLoaded(void) {
           strncpy(DeviceArchNames[i], Prop.gcnArchName,
                   sizeof(DeviceArchNames[i]) - 1);
           DeviceArchNames[i][sizeof(DeviceArchNames[i]) - 1] = '\0';
-          if (IsVerboseMode())
+          if (isVerboseMode())
             PROF_NOTE("Device %d arch: %s\n", i, DeviceArchNames[i]);
         }
       }
@@ -146,13 +146,13 @@ static void EnsureHipLoaded(void) {
 /* -------------------------------------------------------------------------- */
 
 static int hipGetSymbolAddress(void **devPtr, const void *symbol) {
-  EnsureHipLoaded();
+  ensureHipLoaded();
   return pHipGetSymbolAddress ? pHipGetSymbolAddress(devPtr, symbol) : -1;
 }
 
 static int hipMemcpy(void *dest, const void *src, size_t len,
                      int kind /*2=DToH*/) {
-  EnsureHipLoaded();
+  ensureHipLoaded();
   return pHipMemcpy ? pHipMemcpy(dest, src, len, kind) : -1;
 }
 
@@ -165,18 +165,18 @@ static int memcpyDeviceToHost(void *Dst, const void *Src, size_t Size) {
 
 static int hipModuleGetGlobal(void **DevPtr, size_t *Bytes, void *Module,
                               const char *Name) {
-  EnsureHipLoaded();
+  ensureHipLoaded();
   return pHipModuleGetGlobal ? pHipModuleGetGlobal(DevPtr, Bytes, Module, Name)
                              : -1;
 }
 
 static int hipGetDevice(int *DeviceId) {
-  EnsureHipLoaded();
+  ensureHipLoaded();
   return pHipGetDevice ? pHipGetDevice(DeviceId) : -1;
 }
 
 static int hipSetDevice(int DeviceId) {
-  EnsureHipLoaded();
+  ensureHipLoaded();
   return pHipSetDevice ? pHipSetDevice(DeviceId) : -1;
 }
 
@@ -227,7 +227,7 @@ typedef int (*SymbolCallback)(const char *Name, void *UserData);
 /* If Image is a clang offload bundle (__CLANG_OFFLOAD_BUNDLE__), find the
  * first embedded code object that is a valid ELF and return a pointer to it.
  * Otherwise return Image unchanged. Returns nullptr if no ELF is found. */
-static const void *UnwrapOffloadBundle(const void *Image) {
+static const void *unwrapOffloadBundle(const void *Image) {
   static const char BundleMagic[] = "__CLANG_OFFLOAD_BUNDLE__";
   if (memcmp(Image, BundleMagic, sizeof(BundleMagic) - 1) != 0)
     return Image; /* Not a bundle, return as-is. */
@@ -240,12 +240,12 @@ static const void *UnwrapOffloadBundle(const void *Image) {
   const char *Cursor = Buf + 32;
   for (uint64_t I = 0; I < NumEntries; ++I) {
     uint64_t EntryOffset, EntrySize, IDSize;
-    memcpy(&EntryOffset, Cursor, 8);
-    Cursor += 8;
-    memcpy(&EntrySize, Cursor, 8);
-    Cursor += 8;
-    memcpy(&IDSize, Cursor, 8);
-    Cursor += 8;
+    memcpy(&EntryOffset, Cursor, sizeof(EntryOffset));
+    Cursor += sizeof(EntryOffset);
+    memcpy(&EntrySize, Cursor, sizeof(EntrySize));
+    Cursor += sizeof(EntrySize);
+    memcpy(&IDSize, Cursor, sizeof(IDSize));
+    Cursor += sizeof(IDSize);
     /* Skip the entry ID string. */
     Cursor += IDSize;
 
@@ -267,20 +267,20 @@ static const void *UnwrapOffloadBundle(const void *Image) {
  * name starts with PREFIX.  Image may be nullptr (e.g. hipModuleLoad from file)
  * or a clang offload bundle containing an ELF;
  * in that case the function unwraps the bundle first. */
-static void EnumerateElfSymbols(const void *Image, const char *Prefix,
+static void enumerateElfSymbols(const void *Image, const char *Prefix,
                                 SymbolCallback CB, void *UserData) {
   if (!Image)
     return;
 
   /* Handle clang offload bundle wrapping. */
-  Image = UnwrapOffloadBundle(Image);
+  Image = unwrapOffloadBundle(Image);
   if (!Image)
     return;
 
   const Elf64_Ehdr *Ehdr = (const Elf64_Ehdr *)Image;
   if (Ehdr->e_ident[EI_MAG0] != ELFMAG0 || Ehdr->e_ident[EI_MAG1] != ELFMAG1 ||
       Ehdr->e_ident[EI_MAG2] != ELFMAG2 || Ehdr->e_ident[EI_MAG3] != ELFMAG3) {
-    if (IsVerboseMode())
+    if (isVerboseMode())
       PROF_NOTE("%s", "Image is not a valid ELF, skipping enumeration\n");
     return;
   }
@@ -319,7 +319,7 @@ typedef struct {
 /* Grow the TU array inside a module entry and register one __llvm_offload_prf_*
  * symbol. Also pre-registers the corresponding per-TU section symbols with CLR
  * (needed so hipMemcpy can copy from those device addresses later). */
-static int RegisterPrfSymbol(const char *Name, void *UserData) {
+static int registerPrfSymbol(const char *Name, void *UserData) {
   EnumState *S = (EnumState *)UserData;
   OffloadDynamicModuleInfo *MI = S->ModInfo;
 
@@ -367,7 +367,7 @@ static int RegisterPrfSymbol(const char *Name, void *UserData) {
 extern "C" void
 __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
                                                const void *Image) {
-  if (IsVerboseMode())
+  if (isVerboseMode())
     PROF_NOTE("Registering loaded module %d: rc=%d, module=%p, image=%p\n",
               NumDynamicModules, ModuleLoadRc, *Ptr, Image);
 
@@ -398,17 +398,17 @@ __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
    * profiling is not yet supported. */
 #if __has_include(<elf.h>)
   EnumState State = {*Ptr, MI};
-  EnumerateElfSymbols(Image, "__llvm_offload_prf_", RegisterPrfSymbol, &State);
+  enumerateElfSymbols(Image, "__llvm_offload_prf_", registerPrfSymbol, &State);
 #else
   (void)Image;
-  if (IsVerboseMode())
+  if (isVerboseMode())
     PROF_NOTE("%s",
               "Dynamic module profiling not supported on this platform\n");
 #endif
 
   if (MI->NumTUs == 0) {
     PROF_WARN("no __llvm_offload_prf_* symbols found in module %p\n", *Ptr);
-  } else if (IsVerboseMode()) {
+  } else if (isVerboseMode()) {
     PROF_NOTE("Module %p: registered %d TU(s)\n", *Ptr, MI->NumTUs);
   }
 }
@@ -420,7 +420,7 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
     if (MI->ModulePtr != Ptr)
       continue;
 
-    if (IsVerboseMode())
+    if (isVerboseMode())
       PROF_NOTE("Unregistering module %p (%d TUs)\n", MI->ModulePtr,
                 MI->NumTUs);
 
@@ -428,7 +428,7 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
     for (int t = 0; t < MI->NumTUs; ++t) {
       OffloadDynamicTUInfo *TU = &MI->TUs[t];
       if (TU->Processed) {
-        if (IsVerboseMode())
+        if (isVerboseMode())
           PROF_NOTE("Module %p TU %d already processed, skipping\n", Ptr, t);
         continue;
       }
@@ -438,7 +438,7 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
         int CurDev = 0;
         hipGetDevice(&CurDev);
         const char *ArchName = getDeviceArchName(CurDev);
-        if (ProcessDeviceOffloadPrf(TU->DeviceVar, TUIndex, ArchName) == 0)
+        if (processDeviceOffloadPrf(TU->DeviceVar, TUIndex, ArchName) == 0)
           TU->Processed = 1;
         else
           PROF_WARN("failed to process profile data for module %p TU %d\n", Ptr,
@@ -448,12 +448,12 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
     return;
   }
 
-  if (IsVerboseMode())
+  if (isVerboseMode())
     PROF_WARN("unregister called for unknown module %p\n", Ptr);
 }
 
 /* Grow a void* array, doubling capacity (or starting at InitCap). */
-static int GrowPtrArray(void ***Arr, int *Num, int *Cap, int InitCap) {
+static int growPtrArray(void ***Arr, int *Num, int *Cap, int InitCap) {
   if (*Num < *Cap)
     return 0;
   int NewCap = *Cap ? *Cap * 2 : InitCap;
@@ -470,7 +470,7 @@ static int NumShadowVariables = 0;
 static int CapShadowVariables = 0;
 
 extern "C" void __llvm_profile_offload_register_shadow_variable(void *ptr) {
-  if (GrowPtrArray(&OffloadShadowVariables, &NumShadowVariables,
+  if (growPtrArray(&OffloadShadowVariables, &NumShadowVariables,
                    &CapShadowVariables, 64))
     return;
   OffloadShadowVariables[NumShadowVariables++] = ptr;
@@ -482,7 +482,7 @@ static int CapSectionShadowVariables = 0;
 
 extern "C" void
 __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
-  if (GrowPtrArray(&OffloadSectionShadowVariables, &NumSectionShadowVariables,
+  if (growPtrArray(&OffloadSectionShadowVariables, &NumSectionShadowVariables,
                    &CapSectionShadowVariables, 64))
     return;
   OffloadSectionShadowVariables[NumSectionShadowVariables++] = ptr;
@@ -536,7 +536,7 @@ struct MallocBufferCleanup {
 
 } // namespace
 
-static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
+static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
                                    const char *Target) {
   __llvm_profile_gpu_sections HostSections;
 
@@ -557,7 +557,7 @@ static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
   size_t DataSize = (const char *)DevDataEnd - (const char *)DevDataBegin;
   size_t NamesSize = (const char *)DevNamesEnd - (const char *)DevNamesBegin;
 
-  if (IsVerboseMode())
+  if (isVerboseMode())
     PROF_NOTE("Section pointers: Cnts=[%p,%p]=%zu Data=[%p,%p]=%zu "
               "Names=[%p,%p]=%zu\n",
               DevCntsBegin, DevCntsEnd, CountersSize, DevDataBegin, DevDataEnd,
@@ -591,7 +591,7 @@ static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
       CountersSize == CachedCntsSize) {
     HostCountersBegin = CachedHostCnts;
     CntsReused = 1;
-    if (IsVerboseMode())
+    if (isVerboseMode())
       PROF_NOTE("Reusing cached counters section (%zu bytes)\n", CountersSize);
   } else if (CountersSize > 0) {
     HostCountersBegin = (char *)malloc(CountersSize);
@@ -601,7 +601,7 @@ static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
       DataSize == CachedDataSize) {
     HostDataBegin = CachedHostData;
     DataReused = 1;
-    if (IsVerboseMode())
+    if (isVerboseMode())
       PROF_NOTE("Reusing cached data section (%zu bytes)\n", DataSize);
   } else if (DataSize > 0) {
     HostDataBegin = (char *)malloc(DataSize);
@@ -611,7 +611,7 @@ static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
       NamesSize == CachedNamesSize) {
     HostNamesBegin = CachedHostNames;
     NamesReused = 1;
-    if (IsVerboseMode())
+    if (isVerboseMode())
       PROF_NOTE("Reusing cached names section (%zu bytes)\n", NamesSize);
   } else if (NamesSize > 0) {
     HostNamesBegin = (char *)malloc(NamesSize);
@@ -660,7 +660,7 @@ static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
     CachedNamesSize = NamesSize;
   }
 
-  if (IsVerboseMode())
+  if (isVerboseMode())
     PROF_NOTE("Copied device sections: Counters=%zu, Data=%zu, Names=%zu\n",
               CountersSize, DataSize, NamesSize);
 
@@ -742,14 +742,14 @@ static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
 
   if (ret != 0) {
     PROF_ERR("%s\n", "failed to write device profile using shared API");
-  } else if (IsVerboseMode()) {
+  } else if (isVerboseMode()) {
     PROF_NOTE("%s\n", "Successfully wrote device profile using shared API");
   }
 
   return ret;
 }
 
-static int ProcessShadowVariable(void *ShadowVar, int TUIndex,
+static int processShadowVariable(void *ShadowVar, int TUIndex,
                                  const char *Target) {
   void *DevicePtrVar = nullptr;
   if (hipGetSymbolAddress(&DevicePtrVar, ShadowVar) != 0) {
@@ -766,12 +766,12 @@ static int ProcessShadowVariable(void *ShadowVar, int TUIndex,
               ShadowVar);
     return -1;
   }
-  return ProcessDeviceOffloadPrf(DeviceOffloadPrf, TUIndex, Target);
+  return processDeviceOffloadPrf(DeviceOffloadPrf, TUIndex, Target);
 }
 
 /* Check if HIP runtime is available and loaded */
-static int IsHipAvailable(void) {
-  EnsureHipLoaded();
+static int isHipAvailable(void) {
+  ensureHipLoaded();
   return pHipMemcpy != nullptr && pHipGetSymbolAddress != nullptr;
 }
 
@@ -783,7 +783,7 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
   if (NumShadowVariables == 0 && NumDynamicModules == 0)
     return 0;
 
-  if (!IsHipAvailable())
+  if (!isHipAvailable())
     return 0;
 
   int Ret = 0;
@@ -796,16 +796,16 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
 
     for (int Dev = 0; Dev < NumDevices; ++Dev) {
       if (hipSetDevice(Dev) != 0) {
-        if (IsVerboseMode())
+        if (isVerboseMode())
           PROF_NOTE("Failed to set device %d, skipping\n", Dev);
         continue;
       }
       const char *ArchName = getDeviceArchName(Dev);
-      if (IsVerboseMode())
+      if (isVerboseMode())
         PROF_NOTE("Collecting static profile data from device %d (%s)\n", Dev,
                   ArchName);
       for (int i = 0; i < NumShadowVariables; ++i) {
-        if (ProcessShadowVariable(OffloadShadowVariables[i], i, ArchName) != 0)
+        if (processShadowVariable(OffloadShadowVariables[i], i, ArchName) != 0)
           Ret = -1;
       }
     }
