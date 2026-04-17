@@ -1572,13 +1572,9 @@ ExtractStridedMetadataOp::getConstifiedMixedStrides() {
 OpFoldResult ExtractStridedMetadataOp::getConstifiedMixedOffset() {
   OpFoldResult offsetOfr = getAsOpFoldResult(getOffset());
   SmallVector<OpFoldResult> values(1, offsetOfr);
-  SmallVector<int64_t> staticValues, unused;
-  int64_t offset;
-  LogicalResult status =
-      getSource().getType().getStridesAndOffset(unused, offset);
-  (void)status;
-  assert(succeeded(status) && "could not get offset from type");
-  staticValues.push_back(offset);
+  // The source type does not carry an offset; only constant-fold the operand
+  // itself if it is already a constant.
+  SmallVector<int64_t> staticValues = {ShapedType::kDynamic};
   constifyIndexValues(values, staticValues);
   return values[0];
 }
@@ -2181,12 +2177,9 @@ OpFoldResult ReinterpretCastOp::getConstifiedMixedOffset() {
   SmallVector<OpFoldResult> values = getMixedOffsets();
   assert(values.size() == 1 &&
          "reinterpret_cast must have one and only one offset");
-  SmallVector<int64_t> staticValues, unused;
-  int64_t offset;
-  LogicalResult status = getType().getStridesAndOffset(unused, offset);
-  (void)status;
-  assert(succeeded(status) && "could not get offset from type");
-  staticValues.push_back(offset);
+  // The result type does not carry an offset, so the only source of truth is
+  // the operand itself; try to extract a constant from it.
+  SmallVector<int64_t> staticValues = {ShapedType::kDynamic};
   constifyIndexValues(values, staticValues);
   return values[0];
 }

@@ -2,9 +2,6 @@
 // RUN: mlir-opt %s --mlir-print-op-generic | mlir-opt | FileCheck %s
 
 // CHECK-DAG: #[[$BASE_MAP1:map[0-9]*]] = affine_map<(d0)[s0] -> (d0 + s0)>
-// CHECK-DAG: #[[$SUBVIEW_MAP1:map[0-9]*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-// CHECK-DAG: #[[$SUBVIEW_MAP11:map[0-9]*]] = affine_map<() -> (4)>
-// CHECK-DAG: #[[$SUBVIEW_MAP12:map[0-9]*]] = affine_map<()[s0] -> (s0)>
 
 // CHECK-LABEL: func @memref_subview(%arg0
 func.func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
@@ -24,10 +21,10 @@ func.func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %2 = memref.alloc()[%arg2] : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
   // CHECK: memref.subview %{{.*}}[%[[c1]]] [%{{.*}}] [%[[c1]]] :
   // CHECK-SAME: memref<64xf32, #[[$BASE_MAP1]]>
-  // CHECK-SAME: to memref<?xf32, #[[$SUBVIEW_MAP1]]>
+  // CHECK-SAME: to memref<?xf32, strided<[?]>>
   %3 = memref.subview %2[%c1][%arg0][%c1]
     : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to
-      memref<?xf32, affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>>
+      memref<?xf32, strided<[?]>>
 
   %4 = memref.alloc() : memref<64x22xf32, strided<[22, 1]>>
   // CHECK: memref.subview %{{.*}}[%[[c0]], %[[c1]]] [%{{.*}}, %{{.*}}] [%[[c1]], %[[c0]]] :
@@ -105,21 +102,21 @@ func.func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %26 = memref.subview %24[1, 0][1, 3][1, 1]: memref<5x3xf32> to memref<3xf32, strided<[1]>>
 
   // Corner-case of 0-D rank-reducing subview with an offset.
-  // CHECK: memref.subview %{{.*}}[1, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, #[[$SUBVIEW_MAP11]]>
-  %27 = memref.subview %24[1, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, affine_map<() -> (4)>>
+  // CHECK: memref.subview %{{.*}}[1, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32>
+  %27 = memref.subview %24[1, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32>
 
-  // CHECK: memref.subview %{{.*}}[%{{.*}}, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, #[[$SUBVIEW_MAP12]]>
-  %28 = memref.subview %24[%arg0, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, affine_map<()[s0] -> (s0)>>
+  // CHECK: memref.subview %{{.*}}[%{{.*}}, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32>
+  %28 = memref.subview %24[%arg0, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32>
 
-  // CHECK: memref.subview %{{.*}}[0, %{{.*}}] [%{{.*}}, 1] [1, 1] : memref<?x?xf32> to memref<?xf32, #[[$SUBVIEW_MAP1]]>
+  // CHECK: memref.subview %{{.*}}[0, %{{.*}}] [%{{.*}}, 1] [1, 1] : memref<?x?xf32> to memref<?xf32, strided<[?]>>
   %a30 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
-  %30 = memref.subview %a30[0, %arg1][%arg2, 1][1, 1] : memref<?x?xf32> to memref<?xf32, affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>>
+  %30 = memref.subview %a30[0, %arg1][%arg2, 1][1, 1] : memref<?x?xf32> to memref<?xf32, strided<[?]>>
 
   %c8 = arith.constant 8 : index
   %a40 = memref.alloc() : memref<16x16xf32>
   // CHECK: memref.subview
   %40 = memref.subview %a40[%c8, 8][8, 8][1, 1]  :
-    memref<16x16xf32> to memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + d1 + s0)>>
+    memref<16x16xf32> to memref<8x8xf32, strided<[16, 1]>>
 
   return
 }
