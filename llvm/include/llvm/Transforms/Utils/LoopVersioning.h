@@ -61,11 +61,14 @@ public:
   ///        analyze L
   ///        if versioning is necessary version L
   ///        transform L
-  void versionLoop() { versionLoop(findDefsUsedOutsideOfLoop(VersionedLoop)); }
+  void versionLoop(Instruction *UserRuntimeCheck = nullptr) { versionLoop(findDefsUsedOutsideOfLoop(VersionedLoop), UserRuntimeCheck); }
 
   /// Same but if the client has already precomputed the set of values
   /// used outside the loop, this API will allows passing that.
-  void versionLoop(const SmallVectorImpl<Instruction *> &DefsUsedOutside);
+  /// \p UserMemRuntimeCheck allows the caller to supply a pre-built runtime
+  /// check instruction instead of having LoopVersioning generate one.
+  void versionLoop(const SmallVectorImpl<Instruction *> &DefsUsedOutside,
+                   Instruction *UserMemRuntimeCheck = nullptr);
 
   /// Returns the versioned loop.  Control flows here if pointers in the
   /// loop don't alias (i.e. all memchecks passed).  (This loop is actually the
