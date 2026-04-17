@@ -36,7 +36,7 @@ def _is_static_int_like(i):
 def _infer_memref_subview_result_type(
     source_memref_type, offsets, static_sizes, static_strides
 ):
-    source_strides, _ = source_memref_type.get_strides_and_offset()
+    source_strides = source_memref_type.get_strides()
     # "canonicalize" from tuple|list -> list
     offsets, static_sizes, static_strides, source_strides = map(
         list, (offsets, static_sizes, static_strides, source_strides)
@@ -101,7 +101,7 @@ def subview(
         sizes = []
     if strides is None:
         strides = []
-    source_strides, source_offset = source.type.get_strides_and_offset()
+    source_strides = source.type.get_strides()
     if result_type is None and all(
         all(_is_static_int_like(i) for i in s) for s in [sizes, strides, source_strides]
     ):

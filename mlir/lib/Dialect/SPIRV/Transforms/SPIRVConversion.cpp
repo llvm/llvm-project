@@ -206,11 +206,11 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
 
   if (auto memRefType = dyn_cast<MemRefType>(type)) {
     // TODO: Layout should also be controlled by the ABI attributes. For now
-    // using the layout from MemRef.
-    int64_t offset;
+    // using the layout from MemRef. Offset is no longer carried by the type;
+    // the runtime offset is treated as 0 for sizing purposes here.
     SmallVector<int64_t, 4> strides;
     if (!memRefType.hasStaticShape() ||
-        failed(memRefType.getStridesAndOffset(strides, offset)))
+        failed(memRefType.getStrides(strides)))
       return std::nullopt;
 
     // To get the size of the memref object in memory, the total size is the
@@ -225,7 +225,6 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
 
     auto dims = memRefType.getShape();
     if (llvm::is_contained(dims, ShapedType::kDynamic) ||
-        ShapedType::isDynamic(offset) ||
         llvm::is_contained(strides, ShapedType::kDynamic))
       return std::nullopt;
 
@@ -233,7 +232,7 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
     for (const auto &shape : enumerate(dims))
       memrefSize = std::max(memrefSize, shape.value() * strides[shape.index()]);
 
-    return (offset + memrefSize) * *elementSize;
+    return memrefSize * *elementSize;
   }
 
   if (auto tensorType = dyn_cast<TensorType>(type)) {
@@ -1361,13 +1360,12 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
                                        OpBuilder &builder) {
-  // Get base and offset of the MemRefType and verify they are static.
+  // Get strides of the MemRefType and verify they are static. Offset is no
+  // longer carried by the type and is treated as 0 here.
 
-  int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(baseType.getStridesAndOffset(strides, offset)) ||
-      llvm::is_contained(strides, ShapedType::kDynamic) ||
-      ShapedType::isDynamic(offset)) {
+  if (failed(baseType.getStrides(strides)) ||
+      llvm::is_contained(strides, ShapedType::kDynamic)) {
     return nullptr;
   }
 
@@ -1383,7 +1381,7 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
     linearizedIndices.push_back(zero);
   } else {
     linearizedIndices.push_back(
-        linearizeIndex(indices, strides, offset, indexType, loc, builder));
+        linearizeIndex(indices, strides, /*offset=*/0, indexType, loc, builder));
   }
   return spirv::AccessChainOp::create(builder, loc, basePtr, linearizedIndices);
 }
@@ -1392,13 +1390,12 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
                                        OpBuilder &builder) {
-  // Get base and offset of the MemRefType and verify they are static.
+  // Get strides of the MemRefType and verify they are static. Offset is no
+  // longer carried by the type and is treated as 0 here.
 
-  int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(baseType.getStridesAndOffset(strides, offset)) ||
-      llvm::is_contained(strides, ShapedType::kDynamic) ||
-      ShapedType::isDynamic(offset)) {
+  if (failed(baseType.getStrides(strides)) ||
+      llvm::is_contained(strides, ShapedType::kDynamic)) {
     return nullptr;
   }
 
@@ -1410,7 +1407,7 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
     linearIndex = spirv::ConstantOp::getZero(indexType, loc, builder);
   } else {
     linearIndex =
-        linearizeIndex(indices, strides, offset, indexType, loc, builder);
+        linearizeIndex(indices, strides, /*offset=*/0, indexType, loc, builder);
   }
   Type pointeeType =
       cast<spirv::PointerType>(basePtr.getType()).getPointeeType();

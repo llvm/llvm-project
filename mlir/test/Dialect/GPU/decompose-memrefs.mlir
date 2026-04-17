@@ -1,12 +1,12 @@
 // RUN: mlir-opt -gpu-decompose-memrefs -allow-unregistered-dialect -split-input-file %s | FileCheck %s
 
-//       CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s0 * s1 + s2 * s3 + s4)>
+//       CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0 + s1 * s2 + s3 * s4 + s5)>
 //       CHECK: @decompose_store
 //  CHECK-SAME: (%[[VAL:.*]]: f32, %[[MEM:.*]]: memref<?x?x?xf32>)
 //       CHECK:  %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[MEM]]
 //       CHECK:  gpu.launch
 //  CHECK-SAME:  threads(%[[TX:.*]], %[[TY:.*]], %[[TZ:.*]]) in
-//       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]]]
+//       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[OFFSET]], %[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]]]
 //       CHECK:  %[[PTR:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[IDX]]], sizes: [], strides: [] : memref<f32> to memref<f32, strided<[]>>
 //       CHECK:  memref.store %[[VAL]], %[[PTR]][] : memref<f32, strided<[]>>
 func.func @decompose_store(%arg0 : f32, %arg1 : memref<?x?x?xf32>) {
@@ -26,13 +26,13 @@ func.func @decompose_store(%arg0 : f32, %arg1 : memref<?x?x?xf32>) {
 
 // -----
 
-//       CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0 * s1 + s2 * s3 + s4 * s5)>
+//       CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5, s6] -> (s0 + s1 * s2 + s3 * s4 + s5 * s6)>
 //       CHECK: @decompose_store_strided
 //  CHECK-SAME: (%[[VAL:.*]]: f32, %[[MEM:.*]]: memref<?x?x?xf32, strided<[?, ?, ?]>>)
 //       CHECK:  %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[MEM]]
 //       CHECK:  gpu.launch
 //  CHECK-SAME:  threads(%[[TX:.*]], %[[TY:.*]], %[[TZ:.*]]) in
-//       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]], %[[STRIDES]]#2]
+//       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[OFFSET]], %[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]], %[[STRIDES]]#2]
 //       CHECK:  %[[PTR:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[IDX]]], sizes: [], strides: [] : memref<f32> to memref<f32, strided<[]>>
 //       CHECK:  memref.store %[[VAL]], %[[PTR]][] : memref<f32, strided<[]>>
 func.func @decompose_store_strided(%arg0 : f32, %arg1 : memref<?x?x?xf32, strided<[?, ?, ?]>>) {
@@ -52,13 +52,13 @@ func.func @decompose_store_strided(%arg0 : f32, %arg1 : memref<?x?x?xf32, stride
 
 // -----
 
-//       CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s0 * s1 + s2 * s3 + s4)>
+//       CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0 + s1 * s2 + s3 * s4 + s5)>
 //       CHECK: @decompose_load
 //  CHECK-SAME: (%[[MEM:.*]]: memref<?x?x?xf32>)
 //       CHECK:  %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[MEM]]
 //       CHECK:  gpu.launch
 //  CHECK-SAME:  threads(%[[TX:.*]], %[[TY:.*]], %[[TZ:.*]]) in
-//       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]]]
+//       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[OFFSET]], %[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]]]
 //       CHECK:  %[[PTR:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[IDX]]], sizes: [], strides: [] : memref<f32> to memref<f32, strided<[]>>
 //       CHECK:  %[[RES:.*]] = memref.load %[[PTR]][] : memref<f32, strided<[]>>
 //       CHECK:  "test.test"(%[[RES]]) : (f32) -> ()
@@ -80,13 +80,13 @@ func.func @decompose_load(%arg0 : memref<?x?x?xf32>) {
 
 // -----
 
-//       CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s0 * s1 + s2 * s3 + s4)>
+//       CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0 + s1 * s2 + s3 * s4 + s5)>
 //       CHECK: @decompose_subview
 //  CHECK-SAME: (%[[MEM:.*]]: memref<?x?x?xf32>)
 //       CHECK:  %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[MEM]]
 //       CHECK:  gpu.launch
 //  CHECK-SAME:  threads(%[[TX:.*]], %[[TY:.*]], %[[TZ:.*]]) in
-//       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]]]
+//       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[OFFSET]], %[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]]]
 //       CHECK:  %[[PTR:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[IDX]]], sizes: [%{{.*}}, %{{.*}}, %{{.*}}], strides: [%[[STRIDES]]#0, %[[STRIDES]]#1, 1]
 //       CHECK:  "test.test"(%[[PTR]]) : (memref<?x?x?xf32, strided<[?, ?, ?]>>) -> ()
 func.func @decompose_subview(%arg0 : memref<?x?x?xf32>) {
@@ -109,7 +109,7 @@ func.func @decompose_subview(%arg0 : memref<?x?x?xf32>) {
 
 //       CHECK: #[[MAP:.*]] = affine_map<()[s0] -> (s0 * 2)>
 //       CHECK: #[[MAP1:.*]] = affine_map<()[s0] -> (s0 * 3)>
-//       CHECK: #[[MAP2:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s0 * s1 + s2 * s3 + s4)>
+//       CHECK: #[[MAP2:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0 + s1 * s2 + s3 * s4 + s5)>
 //       CHECK: @decompose_subview_strided
 //  CHECK-SAME: (%[[MEM:.*]]: memref<?x?x?xf32>)
 //       CHECK:  %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[MEM]]
@@ -117,7 +117,7 @@ func.func @decompose_subview(%arg0 : memref<?x?x?xf32>) {
 //  CHECK-SAME:  threads(%[[TX:.*]], %[[TY:.*]], %[[TZ:.*]]) in
 //       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[STRIDES]]#0]
 //       CHECK:  %[[IDX1:.*]] = affine.apply #[[MAP1]]()[%[[STRIDES]]#1]
-//       CHECK:  %[[IDX2:.*]] = affine.apply #[[MAP2]]()[%[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]]]
+//       CHECK:  %[[IDX2:.*]] = affine.apply #[[MAP2]]()[%[[OFFSET]], %[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]]]
 //       CHECK:  %[[PTR:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[IDX2]]], sizes: [%{{.*}}, %{{.*}}, %{{.*}}], strides: [%[[IDX]], %[[IDX1]], 4]
 //       CHECK:  "test.test"(%[[PTR]]) : (memref<?x?x?xf32, strided<[?, ?, 4]>>) -> ()
 func.func @decompose_subview_strided(%arg0 : memref<?x?x?xf32>) {

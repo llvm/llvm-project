@@ -199,17 +199,13 @@ static LogicalResult getStridesAndOffset(AffineMap m, ArrayRef<int64_t> shape,
   return success();
 }
 
-LogicalResult mlir::detail::getAffineMapStridesAndOffset(
-    AffineMap map, ArrayRef<int64_t> shape, SmallVectorImpl<int64_t> &strides,
-    int64_t &offset) {
+LogicalResult
+mlir::detail::getAffineMapStrides(AffineMap map, ArrayRef<int64_t> shape,
+                                  SmallVectorImpl<int64_t> &strides) {
   AffineExpr offsetExpr;
   SmallVector<AffineExpr, 4> strideExprs;
   if (failed(::getStridesAndOffset(map, shape, strideExprs, offsetExpr)))
     return failure();
-  if (auto cst = llvm::dyn_cast<AffineConstantExpr>(offsetExpr))
-    offset = cst.getValue();
-  else
-    offset = ShapedType::kDynamic;
   for (auto e : strideExprs) {
     if (auto c = llvm::dyn_cast<AffineConstantExpr>(e))
       strides.push_back(c.getValue());

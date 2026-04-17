@@ -7,8 +7,13 @@ gpu.module @materializecast {
   // CHECK-LABEL: gpu.func @materialize_memref
   // CHECK-SAME: %[[ARG0:.*]]: memref<128xf32>
   gpu.func @materialize_memref(%src: memref<128xf32>) kernel {
-    // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<128xf32> -> index
-    // CHECK: %[[CASTED:.*]] = arith.index_castui %[[INTPTR]] : index to i64
+    // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %[[ARG0]]
+    // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f32> -> index
+    // CHECK: %[[BASE_I64:.*]] = arith.index_castui %[[INTPTR]] : index to i64
+    // CHECK: %[[OFFSET_I64:.*]] = arith.index_castui %[[OFFSET]] : index to i64
+    // CHECK: %[[ELEM_SIZE:.*]] = arith.constant 4 : i64
+    // CHECK: %[[OFF_BYTES:.*]] = arith.muli %[[OFFSET_I64]], %[[ELEM_SIZE]] : i64
+    // CHECK: %[[CASTED:.*]] = arith.addi %[[BASE_I64]], %[[OFF_BYTES]] : i64
     %offset = arith.constant 0 : index
     %mask = arith.constant 1 : i1
     %val = xegpu.load %src[%offset], %mask : memref<128xf32>, index, i1 -> f32

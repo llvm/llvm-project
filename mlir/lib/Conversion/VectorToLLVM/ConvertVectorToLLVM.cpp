@@ -1385,9 +1385,8 @@ public:
 /// static layout.
 static std::optional<SmallVector<int64_t, 4>>
 computeContiguousStrides(MemRefType memRefType) {
-  int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(memRefType.getStridesAndOffset(strides, offset)))
+  if (failed(memRefType.getStrides(strides)))
     return std::nullopt;
   if (!strides.empty() && strides.back() != 1)
     return std::nullopt;

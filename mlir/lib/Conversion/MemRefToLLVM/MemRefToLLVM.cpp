@@ -1505,18 +1505,16 @@ private:
       desc.setAllocatedPtr(rewriter, loc, allocatedPtr);
       desc.setAlignedPtr(rewriter, loc, alignedPtr);
 
-      // Extract the offset and strides from the type.
-      int64_t offset;
+      // Extract the strides from the type. Offset is no longer carried by the
+      // type; reshape preserves the source descriptor's offset, but here we
+      // reconstruct the descriptor for the target type and conventionally start
+      // the new descriptor at offset 0.
       SmallVector<int64_t> strides;
-      if (failed(targetMemRefType.getStridesAndOffset(strides, offset)))
+      if (failed(targetMemRefType.getStrides(strides)))
         return rewriter.notifyMatchFailure(
-            reshapeOp, "failed to get stride and offset exprs");
+            reshapeOp, "failed to get stride exprs");
 
-      if (!isStaticStrideOrOffset(offset))
-        return rewriter.notifyMatchFailure(reshapeOp,
-                                           "dynamic offset is unsupported");
-
-      desc.setConstantOffset(rewriter, loc, offset);
+      desc.setConstantOffset(rewriter, loc, 0);
 
       assert(targetMemRefType.getLayout().isIdentity() &&
              "Identity layout map is a precondition of a valid reshape op");
@@ -1820,12 +1818,10 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
       return viewOp.emitWarning("Target descriptor type not converted to LLVM"),
              failure();
 
-    int64_t offset;
     SmallVector<int64_t, 4> strides;
-    auto successStrides = viewMemRefType.getStridesAndOffset(strides, offset);
+    auto successStrides = viewMemRefType.getStrides(strides);
     if (failed(successStrides))
       return viewOp.emitWarning("cannot cast to non-strided shape"), failure();
-    assert(offset == 0 && "expected offset to be 0");
 
     // Target memref must be contiguous in memory (innermost stride is 1), or
     // empty (special case when at least one of the memref dimensions is 0).
@@ -1855,9 +1851,8 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
     // Field 3: The offset in the resulting type must be 0. This is
     // because of the type change: an offset on srcType* may not be
     // expressible as an offset on dstType*.
-    targetMemRef.setOffset(
-        rewriter, loc,
-        createIndexAttrConstant(rewriter, loc, indexType, offset));
+    targetMemRef.setOffset(rewriter, loc,
+                           createIndexAttrConstant(rewriter, loc, indexType, 0));
 
     // Early exit for 0-D corner case.
     if (viewMemRefType.getRank() == 0)
@@ -1942,8 +1937,7 @@ struct AtomicRMWOpLowering : public LoadStoreOpLowering<memref::AtomicRMWOp> {
       return failure();
     auto memRefType = atomicOp.getMemRefType();
     SmallVector<int64_t> strides;
-    int64_t offset;
-    if (failed(memRefType.getStridesAndOffset(strides, offset)))
+    if (failed(memRefType.getStrides(strides)))
       return failure();
     auto dataPtr =
         getStridedElementPtr(rewriter, atomicOp.getLoc(), memRefType,

@@ -51,9 +51,9 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
     MemRefType type, Value memory, Value alignedMemory) {
   assert(type.hasStaticShape() && "unexpected dynamic shape");
 
-  // Extract all strides and offsets and verify they are static.
-  auto [strides, offset] = type.getStridesAndOffset();
-  assert(ShapedType::isStatic(offset) && "expected static offset");
+  // Extract all strides and verify they are static. Offset is no longer carried
+  // by the type; static-shape memrefs have offset 0 in the descriptor.
+  SmallVector<int64_t> strides = type.getStrides();
   assert(!llvm::any_of(strides, ShapedType::isDynamic) &&
          "expected static strides");
 
@@ -63,7 +63,7 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
   auto descr = MemRefDescriptor::poison(builder, loc, convertedType);
   descr.setAllocatedPtr(builder, loc, memory);
   descr.setAlignedPtr(builder, loc, alignedMemory);
-  descr.setConstantOffset(builder, loc, offset);
+  descr.setConstantOffset(builder, loc, 0);
 
   // Fill in sizes and strides
   for (unsigned i = 0, e = type.getRank(); i != e; ++i) {

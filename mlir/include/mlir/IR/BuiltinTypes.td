@@ -1026,12 +1026,11 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     /// static or dynamic (encoded with ShapedType::kDynamic). Strides encode
     /// the distance in the number of elements between successive entries along
     /// a particular dimension.
-    LogicalResult getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
-                                      int64_t &offset) const;
+    LogicalResult getStrides(SmallVectorImpl<int64_t> &strides) const;
 
-    /// Wrapper around getStridesAndOffset(SmallVectorImpl<int64_t>, int64_t)
-    /// that will assert if the logical result is not succeeded.
-    std::pair<SmallVector<int64_t>, int64_t> getStridesAndOffset() const;
+    /// Wrapper around getStrides(SmallVectorImpl<int64_t>) that will assert if
+    /// the logical result is not succeeded.
+    SmallVector<int64_t> getStrides() const;
 
     /// Return "true" if the layout is compatible with strided semantics.
     bool isStrided();

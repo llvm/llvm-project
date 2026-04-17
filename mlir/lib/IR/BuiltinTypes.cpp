@@ -799,9 +799,8 @@ int64_t MemRefType::getNumContiguousTrailingDims() {
 
   // Get the strides (if any). Failing to do that, conservatively assume a
   // non-contiguous layout.
-  int64_t offset;
   SmallVector<int64_t> strides;
-  if (!succeeded(getStridesAndOffset(strides, offset)))
+  if (!succeeded(getStrides(strides)))
     return 0;
 
   ArrayRef<int64_t> shape = getShape();
@@ -864,32 +863,27 @@ MemRefType MemRefType::canonicalizeStridedLayout() {
   return MemRefType::Builder(*this).setLayout({});
 }
 
-LogicalResult MemRefType::getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
-                                              int64_t &offset) const {
-  return getLayout().getStridesAndOffset(getShape(), strides, offset);
+LogicalResult MemRefType::getStrides(SmallVectorImpl<int64_t> &strides) const {
+  return getLayout().getStrides(getShape(), strides);
 }
 
-std::pair<SmallVector<int64_t>, int64_t>
-MemRefType::getStridesAndOffset() const {
+SmallVector<int64_t> MemRefType::getStrides() const {
   SmallVector<int64_t> strides;
-  int64_t offset;
-  LogicalResult status = getStridesAndOffset(strides, offset);
+  LogicalResult status = getStrides(strides);
   (void)status;
-  assert(succeeded(status) && "Invalid use of check-free getStridesAndOffset");
-  return {strides, offset};
+  assert(succeeded(status) && "Invalid use of check-free getStrides");
+  return strides;
 }
 
 bool MemRefType::isStrided() {
-  int64_t offset;
   SmallVector<int64_t, 4> strides;
-  auto res = getStridesAndOffset(strides, offset);
+  auto res = getStrides(strides);
   return succeeded(res);
 }
 
 bool MemRefType::isLastDimUnitStride() {
-  int64_t offset;
   SmallVector<int64_t> strides;
-  auto successStrides = getStridesAndOffset(strides, offset);
+  auto successStrides = getStrides(strides);
   return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
 }
 

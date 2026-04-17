@@ -7,10 +7,10 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
   //CHECK-LABEL: load_store_matrix_plain
   gpu.func @load_store_matrix_plain(%arg0: memref<4096xi8, 3>) -> f32 {
 
-    //CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %arg0 : memref<4096xi8, 3> -> index
-    //CHECK: %[[C0:.*]] = arith.constant 0 : index
+    //CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %arg0
+    //CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<i8, 3> -> index
     //CHECK: %[[CAST0:.*]] = arith.index_castui %[[INTPTR]] : index to i32
-    //CHECK: %[[CAST1:.*]] = arith.index_castui %[[C0]] : index to i32
+    //CHECK: %[[CAST1:.*]] = arith.index_castui %[[OFFSET]] : index to i32
     //CHECK: %[[C1_I32:.*]] = arith.constant 1 : i32
     //CHECK: %[[MUL:.*]] = arith.muli %[[CAST1]], %[[C1_I32]] : i32
     //CHECK: %[[ADD:.*]] = arith.addi %[[CAST0]], %[[MUL]] : i32
@@ -41,7 +41,7 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
 
     %subview = memref.subview %view[32, 0] [32, 32] [1, 1] : memref<64x32xf32, 3> to memref<32x32xf32, strided<[32, 1]>, 3>
 
-    //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %[[base_buffer:.*]] : memref<32x32xf32, strided<[32, 1]>, 3> -> index
+    //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %[[base_buffer:.*]] : memref<f32, 3> -> index
     //CHECK: %[[ptr_i32:.*]] = arith.index_castui %[[intptr]] : index to i32
     //CHECK: %[[offset_i32:.*]] = arith.index_castui %[[offset:.*]] : index to i32
     //CHECK: %[[c4_i32:.*]] = arith.constant 4 : i32
@@ -117,10 +117,10 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
   // its memory layout tuple is ([2,4,16,16],[1024,256,16,1])
   //CHECK-LABEL: load_store_matrix_blocked_nostride
   gpu.func @load_store_matrix_blocked_nostride(%arg0: memref<4096xi8, 3>) -> f16 {
-    //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %arg0 : memref<4096xi8, 3> -> index
-    //CHECK: %[[c0:.*]] = arith.constant 0 : index
+    //CHECK: %[[base:.*]], %[[offset:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %arg0
+    //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %[[base]] : memref<i8, 3> -> index
     //CHECK: %[[cast0:.*]] = arith.index_castui %[[intptr]] : index to i32
-    //CHECK: %[[cast1:.*]] = arith.index_castui %[[c0]] : index to i32
+    //CHECK: %[[cast1:.*]] = arith.index_castui %[[offset]] : index to i32
     //CHECK: %[[c1_i32:.*]] = arith.constant 1 : i32
     //CHECK: %[[mul:.*]] = arith.muli %[[cast1]], %[[c1_i32]] : i32
     //CHECK: %[[add:.*]] = arith.addi %[[cast0]], %[[mul]] : i32
@@ -219,10 +219,10 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
   //CHECK-LABEL: load_store_matrix_blocked_subgroupblockio
   gpu.func @load_store_matrix_blocked_subgroupblockio(%arg0: memref<4096xi8, 3>) -> vector<8xf16> {
 
-    //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %arg0 : memref<4096xi8, 3> -> index
-    //CHECK: %[[c0:.*]] = arith.constant 0 : index
+    //CHECK: %[[base:.*]], %[[offset:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %arg0
+    //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %[[base]] : memref<i8, 3> -> index
     //CHECK: %[[cast0:.*]] = arith.index_castui %[[intptr]] : index to i32
-    //CHECK: %[[cast1:.*]] = arith.index_castui %[[c0]] : index to i32
+    //CHECK: %[[cast1:.*]] = arith.index_castui %[[offset]] : index to i32
     //CHECK: %[[c1_i32:.*]] = arith.constant 1 : i32
     //CHECK: %[[mul:.*]] = arith.muli %[[cast1]], %[[c1_i32]] : i32
     //CHECK: %[[add:.*]] = arith.addi %[[cast0]], %[[mul]] : i32
@@ -291,10 +291,10 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
 
   %smem_coop_a = memref.subview %arg0[64, 0][1, 16][1, 1] : memref<256x16xbf16, 3> to memref<1x16xbf16, strided<[16, 1]>, 3>
 
-  //CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %{{.*}} : memref<1x16xbf16, strided<[16, 1]>, 3> -> index
-  //CHECK: %[[C0:.*]] = arith.constant 0 : index
+  //CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %{{.*}}:2, %{{.*}}:2 = memref.extract_strided_metadata
+  //CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<bf16, 3> -> index
   //CHECK: %[[CAST0:.*]] = arith.index_castui %[[INTPTR]] : index to i32
-  //CHECK: %[[CAST1:.*]] = arith.index_castui %[[C0]] : index to i32
+  //CHECK: %[[CAST1:.*]] = arith.index_castui %[[OFFSET]] : index to i32
   //CHECK: %[[C2:.*]] = arith.constant 2 : i32
   //CHECK: %[[MUL:.*]] = arith.muli %[[CAST1]], %[[C2]] : i32
   //CHECK: %{{.*}} = arith.addi %[[CAST0]], %[[MUL]] : i32

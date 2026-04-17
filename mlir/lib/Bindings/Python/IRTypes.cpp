@@ -662,17 +662,16 @@ void PyMemRefType::bindDerived(ClassTy &c) {
           },
           "The layout of the MemRef type.")
       .def(
-          "get_strides_and_offset",
-          [](PyMemRefType &self) -> std::pair<std::vector<int64_t>, int64_t> {
+          "get_strides",
+          [](PyMemRefType &self) -> std::vector<int64_t> {
             std::vector<int64_t> strides(mlirShapedTypeGetRank(self));
-            int64_t offset;
-            if (mlirLogicalResultIsFailure(mlirMemRefTypeGetStridesAndOffset(
-                    self, strides.data(), &offset)))
+            if (mlirLogicalResultIsFailure(
+                    mlirMemRefTypeGetStrides(self, strides.data())))
               throw std::runtime_error(
-                  "Failed to extract strides and offset from memref.");
-            return {strides, offset};
+                  "Failed to extract strides from memref.");
+            return strides;
           },
-          "The strides and offset of the MemRef type.")
+          "The strides of the MemRef type.")
       .def_prop_ro(
           "affine_map",
           [](PyMemRefType &self) -> PyAffineMap {

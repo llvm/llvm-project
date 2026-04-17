@@ -52,10 +52,9 @@ static std::pair<Value, Value> getFlattenMemrefAndOffset(OpBuilder &rewriter,
                                                          Location loc,
                                                          Value source,
                                                          ValueRange indices) {
-  int64_t sourceOffset;
   SmallVector<int64_t, 4> sourceStrides;
   auto sourceType = cast<MemRefType>(source.getType());
-  if (failed(sourceType.getStridesAndOffset(sourceStrides, sourceOffset))) {
+  if (failed(sourceType.getStrides(sourceStrides))) {
     assert(false);
   }
 
@@ -230,12 +229,9 @@ struct AllocLikeFlattenPattern : public OpRewritePattern<AllocLikeOp> {
 
     SmallVector<OpFoldResult> sizes = op.getMixedSizes();
 
-    int64_t staticOffset;
     SmallVector<int64_t> staticStrides;
-    if (failed(memrefType.getStridesAndOffset(staticStrides, staticOffset)))
+    if (failed(memrefType.getStrides(staticStrides)))
       return failure();
-    if (staticOffset == ShapedType::kDynamic)
-      return rewriter.notifyMatchFailure(op, "dynamic offset not supported");
     SmallVector<OpFoldResult> strides;
     strides.reserve(staticStrides.size());
     for (int64_t stride : staticStrides) {
@@ -255,17 +251,10 @@ struct AllocLikeFlattenPattern : public OpRewritePattern<AllocLikeOp> {
             sizes, strides);
     (void)linearizedOffset;
 
-    // The total allocation must cover [0, staticOffset + linearizedExtent).
-    // When the offset is non-zero, add it to the computed extent so that the
-    // buffer is large enough for elements accessed at positions
-    // [staticOffset, staticOffset + linearizedExtent).
+    // Offset is no longer carried by the MemRef type, so the allocation
+    // covers [0, linearizedExtent) and the reinterpret_cast below uses
+    // offset 0.
     OpFoldResult flatSizeOfr = linearizedInfo.linearizedSize;
-    if (staticOffset != 0) {
-      AffineExpr s0;
-      bindSymbols(rewriter.getContext(), s0);
-      flatSizeOfr = affine::makeComposedFoldedAffineApply(
-          rewriter, loc, s0 + staticOffset, {flatSizeOfr});
-    }
 
     // Build the flat 1-D MemRefType. The linearized size may be static or
     // dynamic (OpFoldResult of either IntegerAttr or a Value).
@@ -287,8 +276,8 @@ struct AllocLikeFlattenPattern : public OpRewritePattern<AllocLikeOp> {
     auto newOp = AllocLikeOp::create(rewriter, loc, flatMemrefType, dynSizes,
                                      op.getAlignmentAttr());
     rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        op, cast<MemRefType>(op.getType()), newOp,
-        rewriter.getIndexAttr(staticOffset), sizes, strides);
+        op, cast<MemRefType>(op.getType()), newOp, rewriter.getIndexAttr(0),
+        sizes, strides);
     return success();
   }
 };

@@ -227,9 +227,8 @@ struct FatRawBufferCastLowering
     int64_t elementByteWidth =
         dataLayout.getTypeSizeInBits(memrefType.getElementType()) / 8;
 
-    int64_t unusedOffset = 0;
     SmallVector<int64_t, 5> strideVals;
-    if (failed(memrefType.getStridesAndOffset(strideVals, unusedOffset)))
+    if (failed(memrefType.getStrides(strideVals)))
       return op.emitOpError("Can't lower non-stride-offset memrefs");
 
     Value numRecords = adaptor.getValidBytes();
@@ -398,9 +397,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     }
 
     // Construct buffer descriptor from memref, attributes
-    int64_t offset = 0;
     SmallVector<int64_t, 5> strides;
-    if (failed(memrefType.getStridesAndOffset(strides, offset)))
+    if (failed(memrefType.getStrides(strides)))
       return gpuOp.emitOpError("Can't lower non-stride-offset memrefs");
 
     MemRefDescriptor memrefDescriptor(memref);

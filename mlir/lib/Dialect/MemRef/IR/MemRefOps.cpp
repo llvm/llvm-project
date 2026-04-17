@@ -703,10 +703,9 @@ bool CastOp::canFoldIntoConsumerOp(CastOp castOp) {
     return false;
 
   // Only fold casts between strided memref forms.
-  int64_t sourceOffset, resultOffset;
   SmallVector<int64_t, 4> sourceStrides, resultStrides;
-  if (failed(sourceType.getStridesAndOffset(sourceStrides, sourceOffset)) ||
-      failed(resultType.getStridesAndOffset(resultStrides, resultOffset)))
+  if (failed(sourceType.getStrides(sourceStrides)) ||
+      failed(resultType.getStrides(resultStrides)))
     return false;
 
   // If cast is towards more static sizes along any dimension, don't fold.
@@ -746,23 +745,20 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
     if (aT.getElementType() != bT.getElementType())
       return false;
     if (aT.getLayout() != bT.getLayout()) {
-      int64_t aOffset, bOffset;
       SmallVector<int64_t, 4> aStrides, bStrides;
-      if (failed(aT.getStridesAndOffset(aStrides, aOffset)) ||
-          failed(bT.getStridesAndOffset(bStrides, bOffset)) ||
+      if (failed(aT.getStrides(aStrides)) ||
+          failed(bT.getStrides(bStrides)) ||
           aStrides.size() != bStrides.size())
         return false;
 
-      // Strides along a dimension/offset are compatible if the value in the
-      // source memref is static and the value in the target memref is the
-      // same. They are also compatible if either one is dynamic (see
-      // description of MemRefCastOp for details).
-      // Note that for dimensions of size 1, the stride can differ.
+      // Strides along a dimension are compatible if the value in the source
+      // memref is static and the value in the target memref is the same. They
+      // are also compatible if either one is dynamic (see description of
+      // MemRefCastOp for details). Note that for dimensions of size 1, the
+      // stride can differ. Offset is no longer carried by the type.
       auto checkCompatible = [](int64_t a, int64_t b) {
         return (ShapedType::isDynamic(a) || ShapedType::isDynamic(b) || a == b);
       };
-      if (!checkCompatible(aOffset, bOffset))
-        return false;
       for (const auto &[index, aStride] : enumerate(aStrides)) {
         if (aT.getDimSize(index) == 1 || bT.getDimSize(index) == 1)
           continue;
@@ -1067,11 +1063,8 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
     return unusedDims;
 
   SmallVector<int64_t> originalStrides, candidateStrides;
-  int64_t originalOffset, candidateOffset;
-  if (failed(
-          originalType.getStridesAndOffset(originalStrides, originalOffset)) ||
-      failed(
-          reducedType.getStridesAndOffset(candidateStrides, candidateOffset)))
+  if (failed(originalType.getStrides(originalStrides)) ||
+      failed(reducedType.getStrides(candidateStrides)))
     return failure();
 
   // Try stride-based first when we have meaningful static stride info
@@ -1560,9 +1553,7 @@ SmallVector<OpFoldResult>
 ExtractStridedMetadataOp::getConstifiedMixedStrides() {
   SmallVector<OpFoldResult> values = getAsOpFoldResult(getStrides());
   SmallVector<int64_t> staticValues;
-  int64_t unused;
-  LogicalResult status =
-      getSource().getType().getStridesAndOffset(staticValues, unused);
+  LogicalResult status = getSource().getType().getStrides(staticValues);
   (void)status;
   assert(succeeded(status) && "could not get strides from type");
   constifyIndexValues(values, staticValues);
@@ -2101,12 +2092,10 @@ LogicalResult ReinterpretCastOp::verify() {
   // Match strides in static_strides attribute. The result type no longer
   // carries an offset, so the static_offsets attribute is the sole carrier of
   // offset information for this op and is not cross-checked here.
-  int64_t resultOffset;
   SmallVector<int64_t, 4> resultStrides;
-  if (failed(resultType.getStridesAndOffset(resultStrides, resultOffset)))
+  if (failed(resultType.getStrides(resultStrides)))
     return emitError("expected result type to have strided layout but found ")
            << resultType;
-  (void)resultOffset;
 
   // Match strides in result memref type and in static_strides attribute.
   for (auto [idx, resultStride, expectedStride] :
@@ -2165,8 +2154,7 @@ SmallVector<OpFoldResult> ReinterpretCastOp::getConstifiedMixedSizes() {
 SmallVector<OpFoldResult> ReinterpretCastOp::getConstifiedMixedStrides() {
   SmallVector<OpFoldResult> values = getMixedStrides();
   SmallVector<int64_t> staticValues;
-  int64_t unused;
-  LogicalResult status = getType().getStridesAndOffset(staticValues, unused);
+  LogicalResult status = getType().getStrides(staticValues);
   (void)status;
   assert(succeeded(status) && "could not get strides from type");
   constifyIndexValues(values, staticValues);
@@ -2483,9 +2471,8 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
 static FailureOr<StridedLayoutAttr>
 computeExpandedLayoutMap(MemRefType srcType, ArrayRef<int64_t> resultShape,
                          ArrayRef<ReassociationIndices> reassociation) {
-  int64_t srcOffset;
   SmallVector<int64_t> srcStrides;
-  if (failed(srcType.getStridesAndOffset(srcStrides, srcOffset)))
+  if (failed(srcType.getStrides(srcStrides)))
     return failure();
   assert(srcStrides.size() == reassociation.size() && "invalid reassociation");
 
@@ -2756,10 +2743,9 @@ static FailureOr<StridedLayoutAttr>
 computeCollapsedLayoutMap(MemRefType srcType,
                           ArrayRef<ReassociationIndices> reassociation,
                           bool strict = false) {
-  int64_t srcOffset;
   SmallVector<int64_t> srcStrides;
   auto srcShape = srcType.getShape();
-  if (failed(srcType.getStridesAndOffset(srcStrides, srcOffset)))
+  if (failed(srcType.getStrides(srcStrides)))
     return failure();
 
   // The result stride of a reassociation group is the stride of the last entry
@@ -3091,8 +3077,7 @@ MemRefType SubViewOp::inferResultType(MemRefType sourceMemRefType,
   assert(staticStrides.size() == rank && "staticStrides length mismatch");
 
   // Extract source strides (offset is no longer carried by the type).
-  auto [sourceStrides, sourceOffset] = sourceMemRefType.getStridesAndOffset();
-  (void)sourceOffset;
+  auto sourceStrides = sourceMemRefType.getStrides();
 
   // Compute target stride whose value is:
   //   `sourceStrides_i * staticStrides_i`.
@@ -3275,16 +3260,6 @@ void SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
 /// For ViewLikeOpInterface.
 Value SubViewOp::getViewSource() { return getSource(); }
 
-/// Return true if `t1` and `t2` have equal offsets (both dynamic or of same
-/// static value).
-static bool haveCompatibleOffsets(MemRefType t1, MemRefType t2) {
-  int64_t t1Offset, t2Offset;
-  SmallVector<int64_t> t1Strides, t2Strides;
-  auto res1 = t1.getStridesAndOffset(t1Strides, t1Offset);
-  auto res2 = t2.getStridesAndOffset(t2Strides, t2Offset);
-  return succeeded(res1) && succeeded(res2) && t1Offset == t2Offset;
-}
-
 /// Return true if `t1` and `t2` have equal strides (both dynamic or of same
 /// static value). Dimensions of `t1` may be dropped in `t2`; these must be
 /// marked as dropped in `droppedDims`.
@@ -3294,10 +3269,9 @@ static bool haveCompatibleStrides(MemRefType t1, MemRefType t2,
          "incorrect number of bits");
   assert(size_t(t1.getRank() - t2.getRank()) == droppedDims.count() &&
          "incorrect number of dropped dims");
-  int64_t t1Offset, t2Offset;
   SmallVector<int64_t> t1Strides, t2Strides;
-  auto res1 = t1.getStridesAndOffset(t1Strides, t1Offset);
-  auto res2 = t2.getStridesAndOffset(t2Strides, t2Offset);
+  auto res1 = t1.getStrides(t1Strides);
+  auto res2 = t2.getStrides(t2Strides);
   if (failed(res1) || failed(res2))
     return false;
   for (int64_t i = 0, j = 0, e = t1.getRank(); i < e; ++i) {
@@ -3376,10 +3350,7 @@ LogicalResult SubViewOp::verify() {
     return produceSubViewErrorMsg(SliceVerificationResult::MemSpaceMismatch,
                                   *this, expectedType);
 
-  // Verify the offset of the layout map.
-  if (!haveCompatibleOffsets(expectedType, subViewType))
-    return produceSubViewErrorMsg(SliceVerificationResult::LayoutMismatch,
-                                  *this, expectedType);
+  // Offset is no longer carried by the MemRef type.
 
   // The only thing that's left to verify now are the strides. First, compute
   // the unused dimensions due to rank reductions. We have to look at sizes and
@@ -3643,8 +3614,8 @@ struct SubViewReturnTypeCanonicalizer {
     if (droppedDims.none())
       return nonReducedType;
 
-    // Take the strides and offset from the non-rank reduced type.
-    auto [nonReducedStrides, offset] = nonReducedType.getStridesAndOffset();
+    // Take the strides from the non-rank reduced type.
+    auto nonReducedStrides = nonReducedType.getStrides();
 
     // Drop dims from shape and strides.
     SmallVector<int64_t> targetShape;
@@ -3786,8 +3757,7 @@ void TransposeOp::getAsmResultNames(
 static MemRefType inferTransposeResultType(MemRefType memRefType,
                                            AffineMap permutationMap) {
   auto originalSizes = memRefType.getShape();
-  auto [originalStrides, offset] = memRefType.getStridesAndOffset();
-  (void)offset;
+  auto originalStrides = memRefType.getStrides();
   assert(originalStrides.size() == static_cast<unsigned>(memRefType.getRank()));
 
   // Compute permuted sizes and strides.

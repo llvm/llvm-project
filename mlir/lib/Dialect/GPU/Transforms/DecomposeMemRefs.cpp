@@ -61,15 +61,17 @@ getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
         memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
   }
 
-  auto &&[sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
+  auto sourceStrides = sourceType.getStrides();
 
   auto getDim = [&](int64_t dim, Value dimVal) -> OpFoldResult {
     return ShapedType::isDynamic(dim) ? getAsOpFoldResult(dimVal)
                                       : rewriter.getIndexAttr(dim);
   };
 
+  // Offset is no longer carried by the type; always use the runtime offset
+  // from extract_strided_metadata.
   OpFoldResult origOffset =
-      getDim(sourceOffset, newExtractStridedMetadata.getOffset());
+      getAsOpFoldResult(newExtractStridedMetadata.getOffset());
   ValueRange sourceStridesVals = newExtractStridedMetadata.getStrides();
 
   SmallVector<OpFoldResult> origStrides;

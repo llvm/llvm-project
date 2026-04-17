@@ -1153,35 +1153,26 @@ struct ConvertXeGPUToXeVMPass
         unsigned rank = memrefTy.getRank();
         Type indexType = builder.getIndexType();
 
-        int64_t intOffsets;
-        SmallVector<int64_t> intStrides;
+        // Offset is no longer carried by the type; always read it from
+        // memref.extract_strided_metadata.
         Value addr;
         Value offset;
-        if (succeeded(memrefTy.getStridesAndOffset(intStrides, intOffsets)) &&
-            ShapedType::isStatic(intOffsets)) {
-          addr = memref::ExtractAlignedPointerAsIndexOp::create(builder, loc,
-                                                                input);
-          offset = arith::ConstantOp::create(builder, loc,
-                                             builder.getIndexAttr(intOffsets));
-        } else {
+        // Result types: [base_memref, offset, stride0, stride1, ...,
+        // strideN-1, size0, size1, ..., sizeN-1]
+        SmallVector<Type> resultTypes{
+            MemRefType::get({}, memrefTy.getElementType(),
+                            MemRefLayoutAttrInterface(),
+                            memrefTy.getMemorySpace()),
+            indexType};
+        // strides + sizes
+        resultTypes.append(2 * rank, indexType);
 
-          // Result types: [base_memref, offset, stride0, stride1, ...,
-          // strideN-1, size0, size1, ..., sizeN-1]
-          SmallVector<Type> resultTypes{
-              MemRefType::get({}, memrefTy.getElementType(),
-                              MemRefLayoutAttrInterface(),
-                              memrefTy.getMemorySpace()),
-              indexType};
-          // strides + sizes
-          resultTypes.append(2 * rank, indexType);
+        auto meta = memref::ExtractStridedMetadataOp::create(
+            builder, loc, resultTypes, input);
 
-          auto meta = memref::ExtractStridedMetadataOp::create(
-              builder, loc, resultTypes, input);
-
-          addr = memref::ExtractAlignedPointerAsIndexOp::create(
-              builder, loc, meta.getBaseBuffer());
-          offset = meta.getOffset();
-        }
+        addr = memref::ExtractAlignedPointerAsIndexOp::create(
+            builder, loc, meta.getBaseBuffer());
+        offset = meta.getOffset();
 
         auto addrCasted =
             arith::IndexCastUIOp::create(builder, loc, type, addr);

@@ -265,15 +265,9 @@ LogicalResult StridedLayoutAttr::verifyLayout(
 }
 
 LogicalResult
-StridedLayoutAttr::getStridesAndOffset(ArrayRef<int64_t>,
-                                       SmallVectorImpl<int64_t> &strides,
-                                       int64_t &offset) const {
+StridedLayoutAttr::getStrides(ArrayRef<int64_t>,
+                              SmallVectorImpl<int64_t> &strides) const {
   llvm::append_range(strides, getStrides());
-  // The type no longer pins a static offset. Report zero for back-compat with
-  // identity-layout memrefs (which also report zero), so subview/cast offset
-  // checks remain consistent across both layout forms. The runtime offset, if
-  // any, lives on the producing op.
-  offset = 0;
   return success();
 }
 

@@ -124,11 +124,9 @@ struct CastOpInterface
     }
 
     // Get result strides. Offset is no longer carried by the memref type.
-    int64_t resultOffset;
     SmallVector<int64_t> resultStrides;
-    if (failed(resultType.getStridesAndOffset(resultStrides, resultOffset)))
+    if (failed(resultType.getStrides(resultStrides)))
       return;
-    (void)resultOffset;
 
     // Check strides.
     for (const auto &it : llvm::enumerate(resultStrides)) {

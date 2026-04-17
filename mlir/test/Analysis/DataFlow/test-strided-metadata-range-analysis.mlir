@@ -10,7 +10,7 @@ func.func @memref_subview(%arg0: memref<8x16x4xf32, strided<[64, 4, 1]>>, %arg1:
   // Test subview with unknown sizes, and constant offsets and strides.
   // CHECK: Op:  %[[SV0:.*]] = memref.subview
   // CHECK-NEXT: result[0]: strided_metadata<
-  // CHECK-SAME: offset = [{unsigned : [1, 1] signed : [1, 1]}]
+  // CHECK-SAME: offset = [{unsigned : [0, 18446744073709551615] signed : [-9223372036854775808, 9223372036854775807]}]
   // CHECK-SAME: sizes = [{unsigned : [0, 18446744073709551615] signed : [-9223372036854775808, 9223372036854775807]}, {unsigned : [0, 18446744073709551615] signed : [-9223372036854775808, 9223372036854775807]}, {unsigned : [0, 18446744073709551615] signed : [-9223372036854775808, 9223372036854775807]}]
   // CHECK-SAME: strides = [{unsigned : [64, 64] signed : [64, 64]}, {unsigned : [4, 4] signed : [4, 4]}, {unsigned : [1, 1] signed : [1, 1]}]
   %subview = memref.subview %arg0[%c0, %c0, %c1] [%arg3, %arg4, %arg5] [%c1, %c1, %c1] : memref<8x16x4xf32, strided<[64, 4, 1]>> to memref<?x?x?xf32, strided<[?, ?, ?]>>
@@ -18,7 +18,7 @@ func.func @memref_subview(%arg0: memref<8x16x4xf32, strided<[64, 4, 1]>>, %arg1:
   // Test a subview of a subview, with bounded dynamic offsets.
   // CHECK: Op:  %[[SV1:.*]] = memref.subview
   // CHECK-NEXT: result[0]: strided_metadata<
-  // CHECK-SAME: offset = [{unsigned : [346, 484] signed : [346, 484]}]
+  // CHECK-SAME: offset = [{unsigned : [0, 18446744073709551615] signed : [-9223372036854775808, 9223372036854775807]}]
   // CHECK-SAME: sizes = [{unsigned : [2, 2] signed : [2, 2]}, {unsigned : [2, 2] signed : [2, 2]}, {unsigned : [2, 2] signed : [2, 2]}]
   // CHECK-SAME: strides = [{unsigned : [704, 832] signed : [704, 832]}, {unsigned : [44, 52] signed : [44, 52]}, {unsigned : [11, 13] signed : [11, 13]}]
   %subview_0 = memref.subview %subview[%1, %1, %1] [%c2, %c2, %c2] [%0, %0, %0] : memref<?x?x?xf32, strided<[?, ?, ?]>> to memref<?x?x?xf32, strided<[?, ?, ?]>>
@@ -26,7 +26,7 @@ func.func @memref_subview(%arg0: memref<8x16x4xf32, strided<[64, 4, 1]>>, %arg1:
   // Test a subview of a subview, with constant operands.
   // CHECK: Op:  %[[SV2:.*]] = memref.subview
   // CHECK-NEXT: result[0]: strided_metadata<
-  // CHECK-SAME: offset = [{unsigned : [368, 510] signed : [368, 510]}]
+  // CHECK-SAME: offset = [{unsigned : [0, 18446744073709551615] signed : [-9223372036854775808, 9223372036854775807]}]
   // CHECK-SAME: sizes = [{unsigned : [2, 2] signed : [2, 2]}, {unsigned : [2, 2] signed : [2, 2]}, {unsigned : [2, 2] signed : [2, 2]}]
   // CHECK-SAME: strides = [{unsigned : [704, 832] signed : [704, 832]}, {unsigned : [44, 52] signed : [44, 52]}, {unsigned : [11, 13] signed : [11, 13]}]
   %subview_1 = memref.subview %subview_0[%c0, %c0, %c2] [%c2, %c2, %c2] [%c1, %c1, %c1] : memref<?x?x?xf32, strided<[?, ?, ?]>> to memref<?x?x?xf32, strided<[?, ?, ?]>>
@@ -50,7 +50,7 @@ func.func @memref_subview(%arg0: memref<8x16x4xf32, strided<[64, 4, 1]>>, %arg1:
   // Test a subview with mixed bounded and unbound dynamic sizes.
   // CHECK: Op:  %[[SV5:.*]] = memref.subview
   // CHECK-NEXT: result[0]: strided_metadata<
-  // CHECK-SAME: offset = [{unsigned : [16, 16] signed : [16, 16]}]
+  // CHECK-SAME: offset = [{unsigned : [0, 18446744073709551615] signed : [-9223372036854775808, 9223372036854775807]}]
   // CHECK-SAME: sizes = [{unsigned : [11, 13] signed : [11, 13]}, {unsigned : [5, 7] signed : [5, 7]}, {unsigned : [0, 18446744073709551615] signed : [-9223372036854775808, 9223372036854775807]}]
   // CHECK-SAME: strides = [{unsigned : [1, 1] signed : [1, 1]}, {unsigned : [64, 64] signed : [64, 64]}, {unsigned : [8, 8] signed : [8, 8]}]
   %subview_4 = memref.subview %arg2[%c0, %c0, %c2] [%0, %1, %arg5] [%c1, %c1, %c1] : memref<8x16x4xf32, strided<[1, 64, 8]>> to memref<?x?x?xf32, strided<[?, ?, ?]>>

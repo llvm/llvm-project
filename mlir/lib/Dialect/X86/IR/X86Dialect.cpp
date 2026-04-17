@@ -181,7 +181,7 @@ static Value inferStride(Location loc, MemRefType mType, Value base,
   unsigned width = mType.getElementType().getIntOrFloatBitWidth();
   assert(llvm::isPowerOf2_64(width) && width >= 8);
   unsigned bytes = width >> 3;
-  auto [strides, offset] = mType.getStridesAndOffset();
+  auto strides = mType.getStrides();
   if (strides[preLast] == ShapedType::kDynamic) {
     // Dynamic stride needs code to compute the stride at runtime.
     MemRefDescriptor memrefDescriptor(base);
@@ -221,9 +221,7 @@ static LogicalResult tileTransferVerifier(OpTy op) {
     if (rank < 2)
       return op.emitOpError("requires at least 2D memref");
     SmallVector<int64_t> strides;
-    int64_t offset;
-    if (failed(memrefTy.getStridesAndOffset(strides, offset)) ||
-        strides.back() != 1)
+    if (failed(memrefTy.getStrides(strides)) || strides.back() != 1)
       return op.emitOpError("requires memref with unit innermost stride");
   }
 

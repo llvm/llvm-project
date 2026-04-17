@@ -131,10 +131,8 @@ getStaticallyKnownRowStride(ShapedType type, AffineMap permutationMap) {
   // If the memref is 0 or 1D the horizontal stride is 0.
   if (memrefType.getRank() < 2)
     return 0;
-  int64_t offset = 0;
   SmallVector<int64_t> strides;
-  if (failed(memrefType.getStridesAndOffset(strides, offset)) ||
-      strides.back() != 1)
+  if (failed(memrefType.getStrides(strides)) || strides.back() != 1)
     return std::nullopt;
 
   if (permutationMap.getNumResults() != 2)

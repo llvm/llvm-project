@@ -138,10 +138,8 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
     return aT;
   if (aT.getRank() != bT.getRank())
     return MemRefType();
-  int64_t aOffset, bOffset;
   SmallVector<int64_t, 4> aStrides, bStrides;
-  if (failed(aT.getStridesAndOffset(aStrides, aOffset)) ||
-      failed(bT.getStridesAndOffset(bStrides, bOffset)) ||
+  if (failed(aT.getStrides(aStrides)) || failed(bT.getStrides(bStrides)) ||
       aStrides.size() != bStrides.size())
     return MemRefType();
 

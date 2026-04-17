@@ -92,10 +92,11 @@ createMemRefMetadataType(MemRefType type,
   // Get pointer type (using address space 0 by default)
   auto ptrType = LLVM::LLVMPointerType::get(context, *addressSpace);
 
-  // Get the strides offsets and shape.
+  // Get the strides and shape. Offset is no longer carried by the type but is
+  // always part of the runtime descriptor, so it is always included in the
+  // metadata struct.
   SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(type.getStridesAndOffset(strides, offset)))
+  if (failed(type.getStrides(strides)))
     return failure();
   ArrayRef<int64_t> shape = type.getShape();
 
@@ -105,7 +106,7 @@ createMemRefMetadataType(MemRefType type,
   // For a ranked memref, the descriptor contains:
   // 1. The pointer to the allocated data
   // 2. The pointer to the aligned data
-  // 3. The dynamic offset?
+  // 3. The runtime offset
   // 4. The dynamic sizes?
   // 5. The dynamic strides?
   SmallVector<Type, 5> elements;
@@ -113,9 +114,8 @@ createMemRefMetadataType(MemRefType type,
   // Allocated pointer.
   elements.push_back(ptrType);
 
-  // Potentially add the dynamic offset.
-  if (offset == ShapedType::kDynamic)
-    elements.push_back(indexType);
+  // Runtime offset (always present).
+  elements.push_back(indexType);
 
   // Potentially add the dynamic sizes.
   for (int64_t dim : shape) {
@@ -153,12 +153,11 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   if (!descriptorTy)
     return rewriter.notifyMatchFailure(op, "Failed to convert result type");
 
-  // Get the strides, offsets and shape.
+  // Get the strides and shape. Offset is no longer carried by the type but
+  // always lives in the metadata struct.
   SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(mTy.getStridesAndOffset(strides, offset))) {
-    return rewriter.notifyMatchFailure(op,
-                                       "Failed to get the strides and offset");
+  if (failed(mTy.getStrides(strides))) {
+    return rewriter.notifyMatchFailure(op, "Failed to get the strides");
   }
   ArrayRef<int64_t> shape = mTy.getShape();
 
@@ -175,14 +174,10 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   // Extract metadata from the passed struct.
   unsigned fieldIdx = 1;
 
-  // Set dynamic offset if needed.
-  if (offset == ShapedType::kDynamic) {
-    Value offsetValue = LLVM::ExtractValueOp::create(
-        rewriter, loc, adaptor.getMetadata(), fieldIdx++);
-    desc.setOffset(rewriter, loc, offsetValue);
-  } else {
-    desc.setConstantOffset(rewriter, loc, offset);
-  }
+  // Set the offset (always present in the metadata struct).
+  Value offsetValue = LLVM::ExtractValueOp::create(
+      rewriter, loc, adaptor.getMetadata(), fieldIdx++);
+  desc.setOffset(rewriter, loc, offsetValue);
 
   // Set dynamic sizes if needed.
   for (auto [i, dim] : llvm::enumerate(shape)) {
@@ -232,12 +227,11 @@ LogicalResult GetMetadataOpConversion::matchAndRewrite(
   // Get the memref descriptor.
   MemRefDescriptor descriptor(adaptor.getPtr());
 
-  // Get the strides offsets and shape.
+  // Get the strides and shape. Offset is no longer carried by the type but
+  // always lives in the metadata struct.
   SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(mTy.getStridesAndOffset(strides, offset))) {
-    return rewriter.notifyMatchFailure(op,
-                                       "Failed to get the strides and offset");
+  if (failed(mTy.getStrides(strides))) {
+    return rewriter.notifyMatchFailure(op, "Failed to get the strides");
   }
   ArrayRef<int64_t> shape = mTy.getShape();
 
@@ -253,11 +247,9 @@ LogicalResult GetMetadataOpConversion::matchAndRewrite(
   // Track the current field index.
   unsigned fieldIdx = 1;
 
-  // Add dynamic offset if needed.
-  if (offset == ShapedType::kDynamic) {
-    sV = LLVM::InsertValueOp::create(
-        rewriter, loc, sV, descriptor.offset(rewriter, loc), fieldIdx++);
-  }
+  // Add the offset (always present).
+  sV = LLVM::InsertValueOp::create(
+      rewriter, loc, sV, descriptor.offset(rewriter, loc), fieldIdx++);
 
   // Add dynamic sizes if needed.
   for (auto [i, dim] : llvm::enumerate(shape)) {

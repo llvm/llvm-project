@@ -68,10 +68,9 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   auto newExtractStridedMetadata =
       memref::ExtractStridedMetadataOp::create(rewriter, origLoc, source);
 
-  auto [sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
-  (void)sourceOffset;
+  auto sourceStrides = sourceType.getStrides();
 #ifndef NDEBUG
-  auto [resultStrides, resultOffset] = subview.getType().getStridesAndOffset();
+  auto resultStrides = subview.getType().getStrides();
 #endif // NDEBUG
 
   // Compute the new strides and offset from the base strides and offset:
@@ -115,7 +114,6 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   // Compute the offset.
   OpFoldResult finalOffset =
       makeComposedFoldedAffineApply(rewriter, origLoc, expr, values);
-  (void)resultOffset;
 
   // The final result is  <baseBuffer, offset, sizes, strides>.
   // Thus we need 1 + 1 + subview.getRank() + subview.getRank(), to hold all
@@ -314,7 +312,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
   // Collect the statically known information about the original stride.
   Value source = expandShape.getSrc();
   auto sourceType = cast<MemRefType>(source.getType());
-  auto [strides, offset] = sourceType.getStridesAndOffset();
+  auto strides = sourceType.getStrides();
 
   OpFoldResult origStride = ShapedType::isDynamic(strides[groupId])
                                 ? origStrides[groupId]
@@ -430,7 +428,7 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
   Value source = collapseShape.getSrc();
   auto sourceType = cast<MemRefType>(source.getType());
 
-  auto [strides, offset] = sourceType.getStridesAndOffset();
+  auto strides = sourceType.getStrides();
 
   ArrayRef<int64_t> srcShape = sourceType.getShape();
 
@@ -453,8 +451,7 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
     // We're dealing with a 1x1x...x1 shape. The stride is meaningless,
     // but we still have to make the type system happy.
     MemRefType collapsedType = collapseShape.getResultType();
-    auto [collapsedStrides, collapsedOffset] =
-        collapsedType.getStridesAndOffset();
+    auto collapsedStrides = collapsedType.getStrides();
     int64_t finalStride = collapsedStrides[groupId];
     if (ShapedType::isDynamic(finalStride)) {
       // Look for a dynamic stride. At this point we don't know which one is
@@ -507,8 +504,7 @@ static FailureOr<StridedMetadata> resolveReshapeStridedMetadata(
       memref::ExtractStridedMetadataOp::create(rewriter, origLoc, source);
 
   // Collect statically known information.
-  auto [strides, offset] = sourceType.getStridesAndOffset();
-  (void)offset;
+  auto strides = sourceType.getStrides();
   MemRefType reshapeType = reshape.getResultType();
   unsigned reshapeRank = reshapeType.getRank();
 

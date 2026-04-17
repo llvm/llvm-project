@@ -513,18 +513,17 @@ def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
 
     InterfaceMethod<
       [{Return the strides (using ShapedType::kDynamic for the dynamic case)
-      that this layout corresponds to into `strides` and `offset` if such exist
-      and can be determined from a combination of the layout and the given
-      `shape`. If these strides cannot be inferred, return failure().
-      The values of `strides` and `offset` are undefined on failure.}],
-      "::llvm::LogicalResult", "getStridesAndOffset",
+      that this layout corresponds to into `strides` if such exist and can be
+      determined from a combination of the layout and the given `shape`. If
+      these strides cannot be inferred, return failure().
+      The values of `strides` are undefined on failure.}],
+      "::llvm::LogicalResult", "getStrides",
       (ins "::llvm::ArrayRef<int64_t>":$shape,
-           "::llvm::SmallVectorImpl<int64_t>&":$strides,
-           "int64_t&":$offset),
+           "::llvm::SmallVectorImpl<int64_t>&":$strides),
            [{}],
            [{
-            return ::mlir::detail::getAffineMapStridesAndOffset(
-              $_attr.getAffineMap(), shape, strides, offset);
+            return ::mlir::detail::getAffineMapStrides(
+              $_attr.getAffineMap(), shape, strides);
            }]
     >
   ];

@@ -43,17 +43,12 @@ static StridedMetadataRange getEntryStateImpl(Value v, int32_t indexBitwidth) {
   auto metadata =
       StridedMetadataRange::getMaxRanges(indexBitwidth, mTy.getRank());
 
-  // Compute the offset and strides.
-  int64_t offset;
+  // Compute the strides. Offset is no longer carried by the type; runtime
+  // offset comes from extract_strided_metadata.
   SmallVector<int64_t> strides;
-  if (failed(cast<MemRefType>(mTy).getStridesAndOffset(strides, offset)))
+  if (failed(cast<MemRefType>(mTy).getStrides(strides)))
     return metadata;
 
-  // Refine the metadata if we know it from the type.
-  if (!ShapedType::isDynamic(offset)) {
-    metadata.getOffsets()[0] =
-        ConstantIntRanges::constant(APInt(indexBitwidth, offset));
-  }
   for (auto &&[size, range] :
        llvm::zip_equal(mTy.getShape(), metadata.getSizes())) {
     if (ShapedType::isDynamic(size))

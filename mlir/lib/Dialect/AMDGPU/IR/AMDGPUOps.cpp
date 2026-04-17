@@ -227,11 +227,11 @@ static bool staticallyOutOfBounds(OpType op) {
   MemRefType bufferType = op.getMemref().getType();
   if (!bufferType.hasStaticShape())
     return false;
-  int64_t offset;
+  // Offset is no longer carried by the MemRef type; treat as 0 here.
   SmallVector<int64_t> strides;
-  if (failed(bufferType.getStridesAndOffset(strides, offset)))
+  if (failed(bufferType.getStrides(strides)))
     return false;
-  int64_t result = offset + op.getIndexOffset().value_or(0);
+  int64_t result = op.getIndexOffset().value_or(0);
   if (op.getSgprOffset()) {
     std::optional<uint32_t> sgprOffset = getConstantUint32(op.getSgprOffset());
     if (!sgprOffset)

@@ -28,15 +28,13 @@ using AllocDynamicSizesMap =
 
 /// Return `true` if the given MemRef type has a fully dynamic layout.
 static bool hasFullyDynamicLayoutMap(MemRefType type) {
-  int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(type.getStridesAndOffset(strides, offset)))
+  if (failed(type.getStrides(strides)))
     return false;
   if (!llvm::all_of(strides, ShapedType::isDynamic))
     return false;
   // The type no longer carries a static offset; the strides being all dynamic
   // is enough to consider this a fully dynamic layout.
-  (void)offset;
   return true;
 }
 

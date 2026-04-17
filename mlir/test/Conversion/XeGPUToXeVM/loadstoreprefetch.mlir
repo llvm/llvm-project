@@ -98,10 +98,14 @@ gpu.func @prefetch_memref_src_value_offset(%src: memref<256xf32>, %offset: vecto
   // CHECK: %[[C4_I64:.*]] = arith.constant 4 : i64
   // CHECK: %[[VAR0:.*]] = vector.extract %[[ARG1]][0] : index from vector<1xindex>
   // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] : index to i64
-  // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<256xf32> -> index
+  // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %[[ARG0]]
+  // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f32> -> index
   // CHECK: %[[VAR2:.*]] = arith.index_castui %[[INTPTR]] : index to i64
+  // CHECK: %[[OFF_I64:.*]] = arith.index_castui %[[OFFSET]] : index to i64
+  // CHECK: %[[OFF_BYTES:.*]] = arith.muli %[[OFF_I64]], %[[C4_I64]] : i64
+  // CHECK: %[[BASE_ADDR:.*]] = arith.addi %[[VAR2]], %[[OFF_BYTES]] : i64
   // CHECK: %[[VAR3:.*]] = arith.muli %[[VAR1]], %[[C4_I64]] : i64
-  // CHECK: %[[VAR4:.*]] = arith.addi %[[VAR2]], %[[VAR3]] : i64
+  // CHECK: %[[VAR4:.*]] = arith.addi %[[BASE_ADDR]], %[[VAR3]] : i64
   // CHECK: %[[VAR5:.*]] = llvm.inttoptr %[[VAR4]] : i64 to !llvm.ptr<1>
   // CHECK: xevm.prefetch %[[VAR5]] <{cache_control = #xevm.load_cache_control<L1c_L2uc_L3c>}> : (!llvm.ptr<1>)
   xegpu.prefetch %src[%offset] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
@@ -119,11 +123,15 @@ gpu.func @load_gather_from_dyn_memref_subview(%dyn: memref<?xf16>, %offset: vect
   %id = gpu.subgroup_id : index
   %src = memref.subview %dyn[%id][16][1] : memref<?xf16> to memref<16xf16, strided<[1]>>
 
-  // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %{{.*}} : memref<16xf16, strided<[1]>> -> index
+  // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %{{.*}} : memref<16xf16, strided<[1]>>
+  // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
   // CHECK: %[[CAST1:.*]] = arith.index_castui %[[INTPTR]] : index to i64
-  // CHECK: %[[MUL1:.*]] = arith.muli %{{.*}}, %{{.*}} : i64
-  // CHECK: %[[ADD1:.*]] = arith.addi %[[CAST1]], %[[MUL1]] : i64
-  // CHECK: %{{.*}} = llvm.inttoptr %[[ADD1]] : i64 to !llvm.ptr<1>
+  // CHECK: %[[OFF_I64:.*]] = arith.index_castui %[[OFFSET]] : index to i64
+  // CHECK: %[[OFF_BYTES:.*]] = arith.muli %[[OFF_I64]], %{{.*}} : i64
+  // CHECK: %[[ADD1:.*]] = arith.addi %[[CAST1]], %[[OFF_BYTES]] : i64
+  // CHECK: %[[MUL2:.*]] = arith.muli %{{.*}}, %{{.*}} : i64
+  // CHECK: %[[ADD2:.*]] = arith.addi %[[ADD1]], %[[MUL2]] : i64
+  // CHECK: %{{.*}} = llvm.inttoptr %[[ADD2]] : i64 to !llvm.ptr<1>
 
   %0 = xegpu.load %src[%offset], %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
       : memref<16xf16, strided<[1]>>, vector<1xindex>, vector<1xi1> -> vector<1xf16>

@@ -595,22 +595,21 @@ bool LLVMTypeConverter::canConvertToBarePtr(BaseMemRefType type) {
     // Unranked memref is not supported in the bare pointer calling convention.
     return false;
 
-  // Check that the memref has static shape, strides and offset. Otherwise, it
-  // cannot be lowered to a bare pointer.
+  // Check that the memref has static shape and strides. Offset is no longer
+  // carried by the type. Otherwise, it cannot be lowered to a bare pointer.
   auto memrefTy = cast<MemRefType>(type);
   if (!memrefTy.hasStaticShape())
     return false;
 
-  int64_t offset = 0;
   SmallVector<int64_t, 4> strides;
-  if (failed(memrefTy.getStridesAndOffset(strides, offset)))
+  if (failed(memrefTy.getStrides(strides)))
     return false;
 
   for (int64_t stride : strides)
     if (ShapedType::isDynamic(stride))
       return false;
 
-  return ShapedType::isStatic(offset);
+  return true;
 }
 
 /// Convert a memref type to a bare pointer to the memref element type.

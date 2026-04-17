@@ -1025,7 +1025,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 
 def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
     [DeclareAttrInterfaceMethods<MemRefLayoutAttrInterface,
-                                 ["verifyLayout", "getStridesAndOffset"]>]> {
+                                 ["verifyLayout", "getStrides"]>]> {
   let summary = "An Attribute representing a strided layout of a shaped type";
   let description = [{
     Syntax:
