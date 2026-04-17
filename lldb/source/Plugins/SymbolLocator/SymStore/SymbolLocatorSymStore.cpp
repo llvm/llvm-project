@@ -342,21 +342,42 @@ std::optional<FileSpec> MoveToLocalSymStore(llvm::StringRef cache,
   return FileSpec(dest.str());
 }
 
+std::string SelectSymStoreCache(std::optional<std::string> sympath_cache) {
+  llvm::SmallVector<std::string, 2> candidates;
+
+  // Prefer user cache from symbol path.
+  if (sympath_cache) {
+    assert(!cache->empty() && "Empty entries resolve to the default cache");
+    candidates.push_back(*sympath_cache);
+  }
+
+  // Fallback to configured cache from settings.
+  candidates.push_back(GetGlobalPluginProperties().GetCachePath());
+
+  Log *log = GetLog(LLDBLog::Symbols);
+  for (const auto &path : candidates) {
+    if (llvm::sys::fs::is_directory(path))
+      return path;
+    if (std::error_code ec = llvm::sys::fs::create_directories(path)) {
+      LLDB_LOG(log, "Ignoring invalid SymStore cache directory '{0}': {1}",
+                    path, ec.message());
+      continue;
+    }
+    return path;
+  }
+
+  // Last resort is the system default location.
+  return SymbolLocatorSymStore::GetSystemDefaultCachePath();
+}
+
 std::optional<FileSpec>
 LocateSymStoreEntry(const SymbolLocatorSymStore::LookupEntry &entry,
                     llvm::StringRef key, llvm::StringRef pdb_name) {
   Log *log = GetLog(LLDBLog::Symbols);
   llvm::StringRef url = entry.source;
   if (url.starts_with("http://") || url.starts_with("https://")) {
-    // Use the configured default cache as fallback. After all, once the files
-    // have been successfully downloaded, we want to save them somewhere.
-    std::string cache_path = GetGlobalPluginProperties().GetCachePath();
-
-    // Override, if the entry has a valid cache path.
-    if (entry.cache && llvm::sys::path::is_absolute(*entry.cache))
-      cache_path = *entry.cache;
-
     // Check cache first.
+    std::string cache_path = SelectSymStoreCache(entry.cache);
     if (auto spec = FindFileInLocalSymStore(cache_path, key, pdb_name)) {
       LLDB_LOG(log, "Found {0} in SymStore cache {1}", pdb_name, cache_path);
       return *spec;
