@@ -1404,84 +1404,85 @@ MaybeExpr EvaluateExpr(
 
 void AccAttributeVisitor::AddRoutineInfoToSymbol(
     Symbol &symbol, const parser::OpenACCRoutineConstruct &x) {
-  if (symbol.has<SubprogramDetails>()) {
-    Fortran::semantics::OpenACCRoutineInfo info;
-    std::vector<OpenACCRoutineDeviceTypeInfo *> currentDevices;
-    currentDevices.push_back(&info);
-    const auto &clauses{std::get<Fortran::parser::AccClauseList>(x.t)};
-    for (const Fortran::parser::AccClause &clause : clauses.v) {
-      if (const auto *dTypeClause{
-              std::get_if<Fortran::parser::AccClause::DeviceType>(&clause.u)}) {
-        currentDevices.clear();
-        for (const auto &deviceTypeExpr : dTypeClause->v.v) {
-          currentDevices.push_back(&info.add_deviceTypeInfo(deviceTypeExpr.v));
-        }
-      } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
-        info.set_isNohost();
-      } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-        for (auto &device : currentDevices) {
-          device->set_isSeq();
-        }
-      } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
-        for (auto &device : currentDevices) {
-          device->set_isVector();
-        }
-      } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
-        for (auto &device : currentDevices) {
-          device->set_isWorker();
-        }
-      } else if (const auto *gangClause{
-                     std::get_if<Fortran::parser::AccClause::Gang>(
-                         &clause.u)}) {
-        for (auto &device : currentDevices) {
-          device->set_isGang();
-        }
-        if (gangClause->v) {
-          const Fortran::parser::AccGangArgList &x = *gangClause->v;
-          int numArgs{0};
-          for (const Fortran::parser::AccGangArg &gangArg : x.v) {
-            CHECK(numArgs <= 1 && "expecting 0 or 1 gang dim args");
-            if (const auto *dim{std::get_if<Fortran::parser::AccGangArg::Dim>(
-                    &gangArg.u)}) {
-              if (const auto v{EvaluateInt64(context_, dim->v)}) {
-                for (auto &device : currentDevices) {
-                  device->set_gangDim(*v);
-                }
+  if (!symbol.has<SubprogramDetails>() && !symbol.has<ProcEntityDetails>())
+    return;
+  Fortran::semantics::OpenACCRoutineInfo info;
+  std::vector<OpenACCRoutineDeviceTypeInfo *> currentDevices;
+  currentDevices.push_back(&info);
+  const auto &clauses{std::get<Fortran::parser::AccClauseList>(x.t)};
+  for (const Fortran::parser::AccClause &clause : clauses.v) {
+    if (const auto *dTypeClause{
+            std::get_if<Fortran::parser::AccClause::DeviceType>(&clause.u)}) {
+      currentDevices.clear();
+      for (const auto &deviceTypeExpr : dTypeClause->v.v) {
+        currentDevices.push_back(&info.add_deviceTypeInfo(deviceTypeExpr.v));
+      }
+    } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
+      info.set_isNohost();
+    } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
+      for (auto &device : currentDevices) {
+        device->set_isSeq();
+      }
+    } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
+      for (auto &device : currentDevices) {
+        device->set_isVector();
+      }
+    } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
+      for (auto &device : currentDevices) {
+        device->set_isWorker();
+      }
+    } else if (const auto *gangClause{
+                   std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)}) {
+      for (auto &device : currentDevices) {
+        device->set_isGang();
+      }
+      if (gangClause->v) {
+        const Fortran::parser::AccGangArgList &x = *gangClause->v;
+        int numArgs{0};
+        for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+          CHECK(numArgs <= 1 && "expecting 0 or 1 gang dim args");
+          if (const auto *dim{
+                  std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)}) {
+            if (const auto v{EvaluateInt64(context_, dim->v)}) {
+              for (auto &device : currentDevices) {
+                device->set_gangDim(*v);
               }
             }
-            numArgs++;
           }
+          numArgs++;
         }
-      } else if (const auto *bindClause{
-                     std::get_if<Fortran::parser::AccClause::Bind>(
-                         &clause.u)}) {
-        if (const auto *name{
-                std::get_if<Fortran::parser::Name>(&bindClause->v.u)}) {
-          if (Symbol * sym{ResolveFctName(*name)}) {
-            Symbol &ultimate{sym->GetUltimate()};
-            for (auto &device : currentDevices) {
-              device->set_bindName(SymbolRef{ultimate});
-            }
-          } else {
-            context_.Say((*name).source,
-                "No function or subroutine declared for '%s'"_err_en_US,
-                (*name).source);
-          }
-        } else if (const auto charExpr{
-                       std::get_if<Fortran::parser::ScalarDefaultCharExpr>(
-                           &bindClause->v.u)}) {
-          auto *charConst{
-              Fortran::parser::Unwrap<Fortran::parser::CharLiteralConstant>(
-                  *charExpr)};
-          std::string str{std::get<std::string>(charConst->t)};
+      }
+    } else if (const auto *bindClause{
+                   std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)}) {
+      if (const auto *name{
+              std::get_if<Fortran::parser::Name>(&bindClause->v.u)}) {
+        if (Symbol * sym{ResolveFctName(*name)}) {
+          Symbol &ultimate{sym->GetUltimate()};
           for (auto &device : currentDevices) {
-            device->set_bindName(std::string(str));
+            device->set_bindName(SymbolRef{ultimate});
           }
+        } else {
+          context_.Say((*name).source,
+              "No function or subroutine declared for '%s'"_err_en_US,
+              (*name).source);
+        }
+      } else if (const auto charExpr{
+                     std::get_if<Fortran::parser::ScalarDefaultCharExpr>(
+                         &bindClause->v.u)}) {
+        auto *charConst{
+            Fortran::parser::Unwrap<Fortran::parser::CharLiteralConstant>(
+                *charExpr)};
+        std::string str{std::get<std::string>(charConst->t)};
+        for (auto &device : currentDevices) {
+          device->set_bindName(std::string(str));
         }
       }
     }
-    symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);
   }
+  if (symbol.has<SubprogramDetails>())
+    symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);
+  else
+    symbol.get<ProcEntityDetails>().add_openACCRoutineInfo(info);
 }
 
 bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {

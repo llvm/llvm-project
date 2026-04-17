@@ -718,12 +718,18 @@ void Fortran::lower::CallInterface<T>::declare() {
       setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
 
       if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
-        if (const auto &info{
-                sym->GetUltimate()
-                    .detailsIf<Fortran::semantics::SubprogramDetails>()}) {
-          if (!info->openACCRoutineInfos().empty()) {
+        const Fortran::semantics::Symbol &ultimate{sym->GetUltimate()};
+        if (const auto *subpDetails{
+                ultimate.detailsIf<Fortran::semantics::SubprogramDetails>()}) {
+          if (!subpDetails->openACCRoutineInfos().empty()) {
             genOpenACCRoutineConstruct(converter, module, func,
-                                       info->openACCRoutineInfos());
+                                       subpDetails->openACCRoutineInfos());
+          }
+        } else if (const auto *procDetails{ultimate.detailsIf<
+                       Fortran::semantics::ProcEntityDetails>()}) {
+          if (!procDetails->openACCRoutineInfos().empty()) {
+            genOpenACCRoutineConstruct(converter, module, func,
+                                       procDetails->openACCRoutineInfos());
           }
         }
       }
