@@ -737,6 +737,8 @@ bool CastOp::canFoldIntoConsumerOp(CastOp castOp) {
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (inputs.size() != 1 || outputs.size() != 1)
     return false;
+  if (inputs == outputs)
+    return true;
   Type a = inputs.front(), b = outputs.front();
   auto aT = llvm::dyn_cast<MemRefType>(a);
   auto bT = llvm::dyn_cast<MemRefType>(b);
