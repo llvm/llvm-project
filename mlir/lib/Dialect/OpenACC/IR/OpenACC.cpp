@@ -327,8 +327,8 @@ struct LLVMPointerPointerLikeModel
     if (dstPtrTy) {
       Value intVal = value;
       if (isa<IndexType>(value.getType()))
-        intVal = arith::IndexCastUIOp::create(builder, loc, builder.getI64Type(),
-                                              value);
+        intVal = arith::IndexCastUIOp::create(builder, loc,
+                                              builder.getI64Type(), value);
       if (isa<IntegerType>(intVal.getType()))
         return LLVM::IntToPtrOp::create(builder, loc, resultType, intVal);
     }

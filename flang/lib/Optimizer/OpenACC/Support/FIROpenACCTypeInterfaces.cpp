@@ -1604,9 +1604,11 @@ template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
     mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
 
 template <typename Ty>
-mlir::Value OpenACCPointerLikeModel<Ty>::genCast(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value value, mlir::Type resultType) const {
+mlir::Value OpenACCPointerLikeModel<Ty>::genCast(mlir::Type pointer,
+                                                 mlir::OpBuilder &builder,
+                                                 mlir::Location loc,
+                                                 mlir::Value value,
+                                                 mlir::Type resultType) const {
   (void)pointer;
   if (value.getType() == resultType)
     return value;

@@ -56,9 +56,9 @@ protected:
       IntegerType::attachInterface<TestReducibleIntegerModel>(*ctx);
     });
     context.appendDialectRegistry(registry);
-    context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
-                        memref::MemRefDialect, func::FuncDialect,
-                        LLVMDialect>();
+    context
+        .loadDialect<acc::OpenACCDialect, arith::ArithDialect,
+                     memref::MemRefDialect, func::FuncDialect, LLVMDialect>();
   }
 
   MLIRContext context;
