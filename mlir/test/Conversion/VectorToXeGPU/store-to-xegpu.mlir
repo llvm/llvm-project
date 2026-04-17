@@ -11,17 +11,10 @@ func.func @store_1D_vector(%vec: vector<8xf32>,
 // CHECK-SAME:  %[[VEC:.+]]: vector<8xf32>,
 // CHECK-SAME:  %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK-SAME:  %[[OFFSET:.+]]: index
-// CHECK:       %[[ELEM_BYTES:.*]] = arith.constant 4 : index
-// CHECK:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], %[[OFFSET]], 0]
-// CHECK:       %[[BASE_BUFFER:.+]], %[[OFFSET1:.+]], %[[SIZES:.+]], %[[STRIDES:.+]] = memref.extract_strided_metadata %[[COLLAPSED]]
-// CHECK-SAME:    : memref<32xf32, strided<[1]>> -> memref<f32>, index, index, index
-// CHECK:       %[[INTPTR:.+]] = memref.extract_aligned_pointer_as_index %[[BASE_BUFFER]]
-// CHECK-SAME:    : memref<f32> -> index
-// CHECK:       %[[MUL:.+]] = arith.muli %[[OFFSET1]], %[[ELEM_BYTES]] : index
-// CHECK:       %[[ADD:.+]] = arith.addi %[[INTPTR]], %[[MUL]] : index
-// CHECK:       %[[I64PTR:.+]] = arith.index_cast %[[ADD]] : index to i64
-// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[I64PTR]], shape : [32],
-// CHECK-SAME:                   strides : [1] : i64  -> !xegpu.tensor_desc<8xf32,
+// CHECK:       %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFFSET]], %[[OFFSET]], 0]
+// CHECK-SAME:    : memref<8x16x32xf32> to memref<32xf32, strided<[1]>>
+// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SUBVIEW]]
+// CHECK-SAME:    : memref<32xf32, strided<[1]>> -> !xegpu.tensor_desc<8xf32,
 // CHECK-SAME:    boundary_check = false
 // CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]]] : vector<8xf32>
 

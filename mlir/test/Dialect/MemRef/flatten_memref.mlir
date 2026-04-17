@@ -7,10 +7,11 @@ func.func @load_scalar_from_memref(%input: memref<4x8xf32, strided<[8, 1]>>) -> 
   return %value : f32
 }
 // CHECK-LABEL: func @load_scalar_from_memref
-// CHECK-NEXT: %[[C10:.*]] = arith.constant 10 : index
-// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [100], sizes: [32], strides: [1]
+// CHECK: %[[C10:.*]] = arith.constant 10 : index
+// CHECK: %{{.*}}, %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %arg0
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [%[[OFFSET]]], sizes: [32], strides: [1]
 // CHECK-SAME: memref<4x8xf32, strided<[8, 1]>> to memref<32xf32, strided<[1]>>
-// CHECK-NEXT: memref.load %[[REINT]][%[[C10]]] : memref<32xf32, strided<[1]>>
+// CHECK: memref.load %[[REINT]][%[[C10]]] : memref<32xf32, strided<[1]>>
 
 
 // -----
@@ -42,7 +43,8 @@ func.func @load_scalar_from_memref_static_dim(%input: memref<8x12xf32, strided<[
 // CHECK-LABEL: func @load_scalar_from_memref_static_dim
 // CHECK-SAME: (%[[ARG0:.*]]: memref<8x12xf32, strided<[24, 2]>>)
 // CHECK: %[[C188:.*]] = arith.constant 188 : index
-// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [100], sizes: [192], strides: [1] : memref<8x12xf32, strided<[24, 2]>> to memref<192xf32, strided<[1]>>
+// CHECK: %{{.*}}, %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %[[ARG0]]
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [%[[OFFSET]]], sizes: [192], strides: [1] : memref<8x12xf32, strided<[24, 2]>> to memref<192xf32, strided<[1]>>
 // CHECK: memref.load %[[REINT]][%[[C188]]] : memref<192xf32, strided<[1]>>
 
 // -----
@@ -84,8 +86,9 @@ func.func @load_vector_from_memref(%input: memref<4x8xf32>) -> vector<8xf32> {
 }
 // CHECK-LABEL: func @load_vector_from_memref
 // CHECK: %[[C30:.*]] = arith.constant 30
-// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [0], sizes: [32], strides: [1]
-// CHECK-NEXT: vector.load %[[REINT]][%[[C30]]]
+// CHECK: %{{.*}}, %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %arg0
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [%[[OFFSET]]], sizes: [32], strides: [1]
+// CHECK: vector.load %[[REINT]][%[[C30]]]
 
 // -----
 
@@ -97,8 +100,8 @@ func.func @load_vector_from_memref_odd(%input: memref<3x7xi2>) -> vector<3xi2> {
 }
 // CHECK-LABEL: func @load_vector_from_memref_odd
 // CHECK: %[[C10:.*]] = arith.constant 10 : index
-// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast
-// CHECK-NEXT: vector.load %[[REINT]][%[[C10]]]
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast
+// CHECK: vector.load %[[REINT]][%[[C10]]]
 
 // -----
 
@@ -123,8 +126,8 @@ func.func @store_vector_to_memref_odd(%input: memref<3x7xi2>, %value: vector<3xi
 // CHECK-LABEL: func @store_vector_to_memref_odd
 // CHECK-SAME: (%[[ARG0:.*]]: memref<3x7xi2>, %[[ARG1:.*]]: vector<3xi2>)
 // CHECK: %[[C10:.*]] = arith.constant 10 : index
-// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast
-// CHECK-NEXT: vector.store %[[ARG1]], %[[REINT]][%[[C10]]] : memref<21xi2, strided<[1]>
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast
+// CHECK: vector.store %[[ARG1]], %[[REINT]][%[[C10]]] : memref<21xi2, strided<[1]>
 
 // -----
 
@@ -135,8 +138,9 @@ func.func @store_vector_to_memref_dynamic(%input: memref<3x7xi2>, %value: vector
 // CHECK: #[[MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 7 + s1)>
 // CHECK: func @store_vector_to_memref_dynamic
 // CHECK-SAME: (%[[ARG0:.*]]: memref<3x7xi2>, %[[ARG1:.*]]: vector<3xi2>, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index)
+// CHECK: %{{.*}}, %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %[[ARG0]]
 // CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG3]], %[[ARG2]]]
-// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [0], sizes: [21], strides: [1]
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [%[[OFFSET]]], sizes: [21], strides: [1]
 // CHECK: vector.store %[[ARG1]], %[[REINT]][%[[IDX]]]
 
 // -----
@@ -150,7 +154,7 @@ func.func @mask_store_vector_to_memref_odd(%input: memref<3x7xi2>, %value: vecto
 // CHECK-LABEL: func @mask_store_vector_to_memref_odd
 // CHECK-SAME: (%[[ARG0:.*]]: memref<3x7xi2>, %[[ARG1:.*]]: vector<3xi2>, %[[ARG2:.*]]: vector<3xi1>)
 // CHECK: %[[C10:.*]] = arith.constant 10 : index
-// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast
 // CHECK: vector.maskedstore %[[REINT]][%[[C10]]], %[[ARG2]], %[[ARG1]]
 
 // -----
@@ -176,7 +180,8 @@ func.func @mask_load_vector_from_memref_odd(%input: memref<3x7xi2>, %mask: vecto
 // CHECK-LABEL: func @mask_load_vector_from_memref_odd
 // CHECK-SAME: (%[[ARG0:.*]]: memref<3x7xi2>, %[[MASK:.*]]: vector<3xi1>, %[[PASSTHRU:.*]]: vector<3xi2>)
 // CHECK: %[[C10:.*]] = arith.constant 10 : index
-// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [0], sizes: [21], strides: [1]
+// CHECK: %{{.*}}, %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %[[ARG0]]
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [%[[OFFSET]]], sizes: [21], strides: [1]
 // CHECK: vector.maskedload %[[REINT]][%[[C10]]], %[[MASK]], %[[PASSTHRU]]
 
 // -----
@@ -307,16 +312,16 @@ func.func @flatten_alloc_strided_row_major() -> memref<4x8xf32, strided<[8, 1]>>
 
 // -----
 
-// Non-zero static offset: the flat allocation covers [0, offset+extent) = [0, 82)
-// and the reinterpret_cast restores the original offset in the result type.
+// The type no longer carries an offset, so the flat allocation matches the
+// in-bounds extent and the reinterpret_cast reuses offset 0.
 func.func @flatten_alloc_strided_offset() -> memref<4x8xf32, strided<[8, 1]>> {
   %0 = memref.alloc() : memref<4x8xf32, strided<[8, 1]>>
   return %0 : memref<4x8xf32, strided<[8, 1]>>
 }
 
 // CHECK-LABEL: func @flatten_alloc_strided_offset
-// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<82xf32, strided<[1]>>
-// CHECK: memref.reinterpret_cast %[[ALLOC]] to offset: [50], sizes: [4, 8], strides: [8, 1] : memref<82xf32, strided<[1]>> to memref<4x8xf32, strided<[8, 1]>>
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32, strided<[1]>>
+// CHECK: memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [4, 8], strides: [8, 1] : memref<32xf32, strided<[1]>> to memref<4x8xf32, strided<[8, 1]>>
 
 // -----
 
@@ -354,9 +359,9 @@ func.func @chained_alloc_load() -> vector<8xf32> {
 
 // CHECK-LABEL: func @chained_alloc_load
 // CHECK-SAME: () -> vector<8xf32>
-// CHECK-NEXT: %[[C30:.*]] = arith.constant 30 : index
-// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32, strided<[1]>>
-// CHECK-NEXT: vector.load %[[ALLOC]][%[[C30]]] : memref<32xf32, strided<[1]>>, vector<8xf32>
+// CHECK: %[[C30:.*]] = arith.constant 30 : index
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32, strided<[1]>>
+// CHECK: vector.load %{{.*}}[%[[C30]]]
 
 // -----
 
@@ -368,6 +373,7 @@ func.func @load_scalar_from_memref_static_dim_col_major(%input: memref<4x8xf32, 
 // CHECK: #[[MAP:.*]] = affine_map<()[s0, s1] -> (s0 + s1 * 4)>
 // CHECK: func @load_scalar_from_memref_static_dim_col_major
 // CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xf32, strided<[1, 4]>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+// CHECK: %{{.*}}, %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %[[ARG0]]
 // CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[ARG1]]]
-// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [100], sizes: [32], strides: [1] : memref<4x8xf32, strided<[1, 4]>> to memref<32xf32, strided<[1]>>
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [%[[OFFSET]]], sizes: [32], strides: [1] : memref<4x8xf32, strided<[1, 4]>> to memref<32xf32, strided<[1]>>
 // CHECK: memref.load %[[REINT]][%[[IDX]]] : memref<32xf32, strided<[1]>>

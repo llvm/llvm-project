@@ -461,7 +461,7 @@ func.func @tensor.collapse_shape_to_scalar(%t1: tensor<1x1x1xf32>) -> tensor<f32
 func.func @tensor.collapse_shape_of_slice(%arg0: tensor<2xi32>) -> tensor<i32> {
   // CHECK: memref.subview %{{.*}}[1] [1] [1] : memref<2xi32> to memref<1xi32, strided<[1]>>
   %0 = tensor.extract_slice %arg0[1] [1] [1] : tensor<2xi32> to tensor<1xi32>
-  // CHECK: memref.collapse_shape %{{.*}} [] : memref<1xi32, strided<[1]>> into memref<i32, strided<[]>>
+  // CHECK: memref.collapse_shape %{{.*}} [] : memref<1xi32, strided<[1]>> into memref<i32>
   %1 = tensor.collapse_shape %0 [] : tensor<1xi32> into tensor<i32>
   return %1 : tensor<i32>
 }
