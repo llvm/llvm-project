@@ -60,12 +60,12 @@ public:
                  AddBufferFn AddBufferArg, bool SaveTempsArg)
       : Base(std::move(Conf), Backend, ParallelCodeGenParallelismLevel,
              LTOMode),
-        OnWriteCb(OnWrite), ShouldEmitIndexFiles(EmitIndexFiles),
-        ShouldEmitImportFiles(EmitImportsFiles),
+        AddBuffer(AddBufferArg), SaveTemps(SaveTempsArg),
+        ShouldEmitIndexFiles(EmitIndexFiles),
+        ShouldEmitImportFiles(EmitImportsFiles), OnWriteCb(OnWrite),
         DistributorParams{Distributor,        DistributorArgs,
                           RemoteCompiler,     RemoteCompilerPrependArgs,
-                          RemoteCompilerArgs, LinkerOutputFile},
-        AddBuffer(AddBufferArg), SaveTemps(SaveTempsArg) {
+                          RemoteCompilerArgs, LinkerOutputFile} {
     assert(!LinkerOutputFile.empty() && "expected a valid linker output file");
   }
 
@@ -109,7 +109,7 @@ private:
   LLVM_ABI Error handleArchiveInputs();
 
   // Remove temporary files created to enable distribution.
-  LLVM_ABI void cleanup();
+  LLVM_ABI void cleanup() override;
 
 public:
   // Mutable and const accessors to the LTO configuration object.
@@ -321,11 +321,10 @@ public:
                              ArrayRef<StringRef> RemoteCompilerPrependArgsArg,
                              ArrayRef<StringRef> RemoteCompilerArgsArg,
                              StringRef LinkerOutputFileArg)
-        : DistributorPath(DistributorArg), DistributorArgs(DistributorArgsArg),
-          RemoteCompiler(RemoteCompilerArg),
+        : LinkerOutputFile(LinkerOutputFileArg), DistributorPath(DistributorArg),
+          DistributorArgs(DistributorArgsArg), RemoteCompiler(RemoteCompilerArg),
           RemoteCompilerPrependArgs(RemoteCompilerPrependArgsArg),
-          RemoteCompilerArgs(RemoteCompilerArgsArg),
-          LinkerOutputFile(LinkerOutputFileArg) {}
+          RemoteCompilerArgs(RemoteCompilerArgsArg) {}
 
     // Output linker file path.
     SString LinkerOutputFile;
@@ -372,8 +371,8 @@ public:
   DistributionDriver(DTLTO::DistributionDriverParams &ParamsArg,
                      ArrayRef<DTLTO::Job> JobsArg, bool SaveTempsArg,
                      std::function<void(StringRef)> AddToClenupArg)
-      : Params{ParamsArg}, Jobs{JobsArg}, SaveTemps{SaveTempsArg},
-        AddToCleanup{AddToClenupArg} {};
+      : Params{ParamsArg}, SaveTemps{SaveTempsArg},
+        AddToCleanup{AddToClenupArg}, Jobs{JobsArg} {};
 
 private:
   DTLTO::DistributionDriverParams &Params;

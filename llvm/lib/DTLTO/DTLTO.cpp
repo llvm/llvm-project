@@ -247,7 +247,7 @@ void lto::DTLTO::cleanup() {
       removeFile(Name);
     }
   }
-  // Base::cleanup();
+  Base::cleanup();
 }
 
 // Runs the DTLTO thin link phase, producing per-module summary indices,
