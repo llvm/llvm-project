@@ -7247,6 +7247,14 @@ bool DeclarationVisitor::Pre(const parser::NamelistStmt::Group &x) {
     groupSymbol = &MakeSymbol(groupName, NamelistDetails{});
     groupSymbol->ReplaceName(groupName.source);
   }
+  // don't defer namelist processing with -pedantic
+  if(context().ShouldWarn(common::UsageWarning::NamelistNoDefer)) {
+    context().Warn(common::UsageWarning::NamelistNoDefer, "Namelist processing not deferred"_port_en_US);
+    for (const auto &name : std::get<std::list<parser::Name>>(x.t)) {
+      ResolveName(name);
+    }
+  }
+  
   // Name resolution of group items is deferred to FinishNamelists()
   // so that host association is handled correctly.
   GetDeferredDeclarationState(true)->namelistGroups.emplace_back(&x);

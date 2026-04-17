@@ -828,7 +828,8 @@ end module
   has resolved all of the names in that scope.  This means that names
   that appear before their local declarations do not resolve to host
   associated objects and do not elicit errors about improper redeclarations
-  of implicitly typed entities.
+  of implicitly typed entities. This can be disabled with `-Wno-namelist-no-defer`,
+  which is implicitly enabled under `-pedantic`.
 
 * Standard Fortran allows forward references to derived types, which
   can lead to ambiguity when combined with host association.

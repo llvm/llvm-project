@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Wno-namelist-no-defer
 module m
   real mobj
  contains

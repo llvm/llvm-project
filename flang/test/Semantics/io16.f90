@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Wno-namelist-no-defer
 subroutine assumedRank(x, y)
   real x(..), y(*)
   !PORTABILITY: Assumed-rank object 'x' should not be a namelist group item [-Wassumed-rank-io-item]
