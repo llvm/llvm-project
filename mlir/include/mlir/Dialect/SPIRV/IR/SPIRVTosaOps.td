@@ -2661,11 +2661,57 @@ def SPIRV_TosaResizeOp : SPIRV_TosaOpWithResult<"Resize", 63, [Pure,
 
 
 def SPIRV_TosaCastOp : SPIRV_TosaOpWithResult<"Cast", 64, [Pure,
-  AllShapesMatch<["input", "output"]>]> {
+  AllShapesMatch<["input", "output"]>,
+  TypeConstraintImplicationOn<"input", F16, "output", [F32, I16, I32, I8]>,
+  TypeConstraintImplicationOn<"input", F32, "output", [F16, I16, I32, I8, BF16]>,
+  TypeConstraintImplicationOn<"input", I16, "output", [F16, F32, I32, I8, SPIRV_Bool, BF16]>,
+  TypeConstraintImplicationOn<"input", I32, "output", [F16, F32, I16, I8, SPIRV_Bool, BF16]>,
+  TypeConstraintImplicationOn<"input", I8, "output", [F16, F32, I16, I32, SPIRV_Bool, BF16]>,
+  TypeConstraintImplicationOn<"input", SPIRV_Bool, "output", [I16, I32, I8]>,
+  TypeConstraintImplicationOn<"input", BF16, "output", [F32, I16, I32, I8]>]> {
   let summary = "Cast operation.";
 
   let description = [{
     Casts a tensor from one data type to another.
+
+    Valid casting combinations are defined in the following table:
+
+    | From    | To      |
+    |---------|---------|
+    | float16 | float32 |
+    | float16 | int16   |
+    | float16 | int32   |
+    | float16 | int8    |
+    | float32 | float16 |
+    | float32 | int16   |
+    | float32 | int32   |
+    | float32 | int8    |
+    | int16   | float16 |
+    | int16   | float32 |
+    | int32   | float16 |
+    | int32   | float32 |
+    | int8    | float16 |
+    | int8    | float32 |
+    | Boolean | int16   |
+    | Boolean | int32   |
+    | Boolean | int8    |
+    | int16   | Boolean |
+    | int16   | int32   |
+    | int16   | int8    |
+    | int32   | Boolean |
+    | int32   | int16   |
+    | int32   | int8    |
+    | int8    | Boolean |
+    | int8    | int16   |
+    | int8    | int32   |
+    | bf16    | float32 |
+    | bf16    | int16   |
+    | bf16    | int32   |
+    | bf16    | int8    |
+    | float32 | bf16    |
+    | int16   | bf16    |
+    | int32   | bf16    |
+    | int8    | bf16    |
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_cast
