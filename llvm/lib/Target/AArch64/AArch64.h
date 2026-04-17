@@ -101,6 +101,13 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AArch64PostSelectOptimizePass
+    : public PassInfoMixin<AArch64PostSelectOptimizePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createAArch64O0PreLegalizerCombiner();
 FunctionPass *createAArch64PreLegalizerCombiner();
 FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone);
@@ -132,7 +139,7 @@ void initializeAArch64O0PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PostCoalescerLegacyPass(PassRegistry &);
 void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PostLegalizerLoweringPass(PassRegistry &);
-void initializeAArch64PostSelectOptimizePass(PassRegistry &);
+void initializeAArch64PostSelectOptimizeLegacyPass(PassRegistry &);
 void initializeAArch64PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationPass(PassRegistry&);

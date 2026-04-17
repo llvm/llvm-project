@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -29,19 +28,9 @@
 using namespace llvm;
 
 namespace {
-class AArch64PostSelectOptimize : public MachineFunctionPass {
+class AArch64PostSelectOptimizeImpl {
 public:
-  static char ID;
-
-  AArch64PostSelectOptimize() : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override {
-    return "AArch64 Post Select Optimizer";
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool run(MachineFunction &MF);
 
 private:
   bool optimizeNZCVDefs(MachineBasicBlock &MBB);
@@ -50,10 +39,25 @@ private:
   bool foldSimpleCrossClassCopies(MachineInstr &MI);
   bool foldCopyDup(MachineInstr &MI);
 };
+
+class AArch64PostSelectOptimizeLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AArch64PostSelectOptimizeLegacy() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "AArch64 Post Select Optimizer";
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
 } // end anonymous namespace
 
-void AArch64PostSelectOptimize::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
+void AArch64PostSelectOptimizeLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -98,7 +102,7 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
   }
 }
 
-bool AArch64PostSelectOptimize::doPeepholeOpts(MachineBasicBlock &MBB) {
+bool AArch64PostSelectOptimizeImpl::doPeepholeOpts(MachineBasicBlock &MBB) {
   bool Changed = false;
   for (auto &MI : make_early_inc_range(MBB)) {
     bool CurrentIterChanged = foldSimpleCrossClassCopies(MI);
@@ -109,7 +113,8 @@ bool AArch64PostSelectOptimize::doPeepholeOpts(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-bool AArch64PostSelectOptimize::foldSimpleCrossClassCopies(MachineInstr &MI) {
+bool AArch64PostSelectOptimizeImpl::foldSimpleCrossClassCopies(
+    MachineInstr &MI) {
   auto *MF = MI.getMF();
   auto &MRI = MF->getRegInfo();
 
@@ -157,7 +162,7 @@ bool AArch64PostSelectOptimize::foldSimpleCrossClassCopies(MachineInstr &MI) {
   return true;
 }
 
-bool AArch64PostSelectOptimize::foldCopyDup(MachineInstr &MI) {
+bool AArch64PostSelectOptimizeImpl::foldCopyDup(MachineInstr &MI) {
   if (!MI.isCopy())
     return false;
 
@@ -219,7 +224,7 @@ bool AArch64PostSelectOptimize::foldCopyDup(MachineInstr &MI) {
                      AArch64::DUPi64, AArch64::UMOVvi64);
 }
 
-bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
+bool AArch64PostSelectOptimizeImpl::optimizeNZCVDefs(MachineBasicBlock &MBB) {
   // If we find a dead NZCV implicit-def, we
   // - try to convert the operation to a non-flag-setting equivalent
   // - or mark the def as dead to aid later peephole optimizations.
@@ -291,7 +296,7 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-bool AArch64PostSelectOptimize::runOnMachineFunction(MachineFunction &MF) {
+bool AArch64PostSelectOptimizeImpl::run(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
   assert(MF.getProperties().hasSelected() && "Expected a selected MF");
@@ -304,16 +309,30 @@ bool AArch64PostSelectOptimize::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-char AArch64PostSelectOptimize::ID = 0;
-INITIALIZE_PASS_BEGIN(AArch64PostSelectOptimize, DEBUG_TYPE,
-                      "Optimize AArch64 selected instructions",
-                      false, false)
-INITIALIZE_PASS_END(AArch64PostSelectOptimize, DEBUG_TYPE,
-                    "Optimize AArch64 selected instructions", false,
-                    false)
+bool AArch64PostSelectOptimizeLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return AArch64PostSelectOptimizeImpl().run(MF);
+}
+
+char AArch64PostSelectOptimizeLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(AArch64PostSelectOptimizeLegacy, DEBUG_TYPE,
+                      "Optimize AArch64 selected instructions", false, false)
+INITIALIZE_PASS_END(AArch64PostSelectOptimizeLegacy, DEBUG_TYPE,
+                    "Optimize AArch64 selected instructions", false, false)
 
 namespace llvm {
 FunctionPass *createAArch64PostSelectOptimize() {
-  return new AArch64PostSelectOptimize();
+  return new AArch64PostSelectOptimizeLegacy();
+}
+
+PreservedAnalyses
+AArch64PostSelectOptimizePass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  const bool Changed = AArch64PostSelectOptimizeImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 } // end namespace llvm
