@@ -25,6 +25,7 @@ define fastcc void @callee_no_fp() #0 {
 ; CHECK-LABEL: callee_no_fp:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s18, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s33 ; 4-byte Folded Spill

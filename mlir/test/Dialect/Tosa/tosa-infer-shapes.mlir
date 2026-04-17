@@ -771,6 +771,26 @@ func.func @gather_minimum_info(%arg0 : tensor<3x?x5xi32>, %arg1 : tensor<?x6xi32
 
 // -----
 
+// CHECK-LABEL: @row_gather_block_scaled_static
+func.func @row_gather_block_scaled_static(%arg0 : tensor<3x4x5xi32>, %arg1 : tensor<3x6xi32>) {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK: tosa.row_gather_block_scaled %arg0, %arg1, %[[ROW_COUNT:.+]] {block_size = #tosa.block_size<BLOCK_SIZE_1>} : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<3x12x5xi32>
+  %0 = tosa.row_gather_block_scaled %arg0, %arg1, %row_count {block_size = #tosa.block_size<BLOCK_SIZE_1>} : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> (tensor<?x?x?xi32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @row_gather_block_scaled_mxfp_static
+func.func @row_gather_block_scaled_mxfp_static(%arg0 : tensor<3x4x32xf4E2M1FN>, %arg1 : tensor<3x4x1xf8E8M0FNU>, %arg2 : tensor<3x6xi32>) {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK: tosa.row_gather_block_scaled %arg0, %arg1, %arg2, %[[ROW_COUNT:.+]] {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<3x4x32xf4E2M1FN>, tensor<3x4x1xf8E8M0FNU>, tensor<3x6xi32>, tensor<1xi32>) -> (tensor<3x12x32xf4E2M1FN>, tensor<3x12x1xf8E8M0FNU>)
+  %0:2 = tosa.row_gather_block_scaled %arg0, %arg1, %arg2, %row_count {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<3x4x32xf4E2M1FN>, tensor<3x4x1xf8E8M0FNU>, tensor<3x6xi32>, tensor<1xi32>) -> (tensor<?x?x?xf4E2M1FN>, tensor<?x?x?xf8E8M0FNU>)
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @scatter_static
 func.func @scatter_static(%arg0 : tensor<3x8x5xi32>, %arg1 : tensor<3x6xi32>, %arg2 : tensor<3x6x5xi32>) {
   // CHECK: tosa.scatter %arg0, %arg1, %arg2 : (tensor<3x8x5xi32>, tensor<3x6xi32>, tensor<3x6x5xi32>) -> tensor<3x8x5xi32>

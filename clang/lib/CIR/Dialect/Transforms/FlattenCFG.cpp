@@ -537,7 +537,10 @@ public:
     mlir::Operation *trueTerminator = trueRegion.back().getTerminator();
     rewriter.setInsertionPointToEnd(&trueRegion.back());
 
-    // Handle both yield and unreachable terminators (throw expressions)
+    // Handle both yield and unreachable terminators (throw expressions).
+    // Note: IR has already been modified (splitBlock, createBlock above), so
+    // we must not return failure() from this point onward per the MLIR pattern
+    // rewriter contract.
     if (auto trueYieldOp = dyn_cast<cir::YieldOp>(trueTerminator)) {
       rewriter.replaceOpWithNewOp<cir::BrOp>(trueYieldOp, trueYieldOp.getArgs(),
                                              continueBlock);
@@ -547,7 +550,9 @@ public:
       trueTerminator->emitError("unexpected terminator in ternary true region, "
                                 "expected yield or unreachable, got: ")
           << trueTerminator->getName();
-      return mlir::failure();
+      // Return success because IR was already modified
+      // (splitBlock/createBlock).
+      return mlir::success();
     }
     rewriter.inlineRegionBefore(trueRegion, continueBlock);
 
@@ -568,7 +573,9 @@ public:
       falseTerminator->emitError("unexpected terminator in ternary false "
                                  "region, expected yield or unreachable, got: ")
           << falseTerminator->getName();
-      return mlir::failure();
+      // Return success because IR was already modified
+      // (splitBlock/createBlock).
+      return mlir::success();
     }
     rewriter.inlineRegionBefore(falseRegion, continueBlock);
 
@@ -914,7 +921,7 @@ public:
       if (shouldSinkReturnOperand(operand, returnOp)) {
         // Sink the defining op to the dispatch block.
         mlir::Operation *defOp = operand.getDefiningOp();
-        defOp->moveBefore(destBlock, destBlock->end());
+        rewriter.moveOpBefore(defOp, destBlock, destBlock->end());
         returnValues.push_back(operand);
       } else {
         // Create an alloca in the function entry block.
@@ -1385,7 +1392,13 @@ public:
     // Erase the original cleanup scope op.
     rewriter.eraseOp(cleanupOp);
 
-    return result;
+    // Always return success because the IR has been modified (blocks split,
+    // regions inlined, ops erased, etc.). The MLIR pattern rewriter contract
+    // requires that if a pattern modifies IR, it must return success(). Any
+    // errors from unsupported exit operations (e.g. goto) have already been
+    // reported via emitError and an unreachable terminator was placed as a
+    // placeholder.
+    return mlir::success();
   }
 
   mlir::LogicalResult
