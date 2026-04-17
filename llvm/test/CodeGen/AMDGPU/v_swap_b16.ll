@@ -110,3 +110,160 @@ loop:
 ret:
   ret half %x
 }
+
+define { i32, i32 } @swap16_hi_lo(i32 %a, i32 %b) {
+; GFX11-TRUE16-LABEL: swap16_hi_lo:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_swap_b16 v1.l, v0.h
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: swap16_hi_lo:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v2, v0, v1, 0x1000504
+; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v0, v1, 0x3020706
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: swap16_hi_lo:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_swap_b16 v1.l, v0.h
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: swap16_hi_lo:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_perm_b32 v2, v0, v1, 0x1000504
+; GFX12-FAKE16-NEXT:    v_perm_b32 v1, v0, v1, 0x3020706
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %aV = bitcast i32 %a to <4 x i8>
+  %bV = bitcast i32 %b to <4 x i8>
+  %loV = shufflevector <4 x i8> %aV, <4 x i8> %bV, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %hiV = shufflevector <4 x i8> %aV, <4 x i8> %bV, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  %lo = bitcast <4 x i8> %loV to i32
+  %hi = bitcast <4 x i8> %hiV to i32
+  %r0 = insertvalue { i32, i32 } poison, i32 %lo, 0
+  %r1 = insertvalue { i32, i32 } %r0, i32 %hi, 1
+  ret { i32, i32 } %r1
+}
+
+define { i32, i32 } @swap16_hi_hi(i32 %a, i32 %b) {
+; GFX11-TRUE16-LABEL: swap16_hi_hi:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_swap_b16 v2.h, v1.h
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v2
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: swap16_hi_hi:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v2, v0, v1, 0x7060100
+; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v1, v0, 0x7060100
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: swap16_hi_hi:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v2, v0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_swap_b16 v2.h, v1.h
+; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v2
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: swap16_hi_hi:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_perm_b32 v2, v0, v1, 0x7060100
+; GFX12-FAKE16-NEXT:    v_perm_b32 v1, v1, v0, 0x7060100
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %c = call i32 @llvm.amdgcn.perm(i32 %a, i32 %b, i32 u0x7060100)
+  %d = call i32 @llvm.amdgcn.perm(i32 %b, i32 %a, i32 u0x7060100)
+  %r0 = insertvalue { i32, i32 } poison, i32 %c, 0
+  %r1 = insertvalue { i32, i32 } %r0, i32 %d, 1
+  ret { i32, i32 } %r1
+}
+
+define { i32, i32, i32 } @swap16_reuse(i32 %a, i32 %b) {
+; GFX11-TRUE16-LABEL: swap16_reuse:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_perm_b32 v2, v3, v1, 0x7060302
+; GFX11-TRUE16-NEXT:    v_swap_b16 v3.h, v1.l
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: swap16_reuse:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v4, v0, v1, 0x3020706
+; GFX11-FAKE16-NEXT:    v_perm_b32 v3, v1, v0, 0x5040100
+; GFX11-FAKE16-NEXT:    v_perm_b32 v2, v0, v1, 0x7060302
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v3
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: swap16_reuse:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_perm_b32 v2, v3, v1, 0x7060302
+; GFX12-TRUE16-NEXT:    v_swap_b16 v3.h, v1.l
+; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: swap16_reuse:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_perm_b32 v4, v0, v1, 0x3020706
+; GFX12-FAKE16-NEXT:    v_perm_b32 v3, v1, v0, 0x5040100
+; GFX12-FAKE16-NEXT:    v_perm_b32 v2, v0, v1, 0x7060302
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v3
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %x = call i32 @llvm.amdgcn.perm(i32 %a, i32 %b, i32 u0x7060302)
+  %c = call i32 @llvm.amdgcn.perm(i32 %a, i32 %b, i32 u0x3020706)
+  %d = call i32 @llvm.amdgcn.perm(i32 %b, i32 %a, i32 u0x5040100)
+  %r0 = insertvalue { i32, i32, i32 } poison, i32 %c, 0
+  %r1 = insertvalue { i32, i32, i32 } %r0, i32 %d, 1
+  %r2 = insertvalue { i32, i32, i32 } %r1, i32 %x, 2
+  ret { i32, i32, i32 } %r2
+}
