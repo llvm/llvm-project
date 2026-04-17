@@ -1804,7 +1804,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
         break;
       Register NewAgprDst = MRI.createVirtualRegister({AgprRB, Ty});
       Op.setReg(NewAgprDst);
-      if (!MRI.use_empty(Reg))
+      if (!MRI.use_nodbg_empty(Reg))
         B.buildCopy(Reg, NewAgprDst);
       break;
     }
