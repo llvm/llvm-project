@@ -8046,7 +8046,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                    "reduction");
             // For integer sub-reductions, verify start value is zero.
             // For FP sub-reductions, verify start value is negative zero.
-            auto StartValueIsIdentity = [&] {
+            [[maybe_unused]] auto StartValueIsIdentity = [&] {
               Value *IdentityValue = getRecurrenceIdentity(
                   PhiR->getRecurrenceKind(), ResumeV->getType(), {});
               auto *StartValue = dyn_cast<VPIRValue>(VPI->getOperand(0));
