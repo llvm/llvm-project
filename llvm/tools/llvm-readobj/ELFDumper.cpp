@@ -8247,8 +8247,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     return;
   }
   if (MapOrErr->empty()) {
-    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found" +
-                              toString(MapOrErr.takeError())),
+    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found"),
                   this->FileName);
     return;
   }

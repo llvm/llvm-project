@@ -2157,6 +2157,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_threads_futex_utils",
+    hdrs = ["src/__support/threads/futex_utils.h"],
+    deps = select({
+        "@platforms//os:linux": [":__support_threads_linux_futex_utils"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
     name = "__support_threads_linux_futex_utils",
     hdrs = ["src/__support/threads/linux/futex_utils.h"],
     target_compatible_with = select({
@@ -2167,6 +2176,7 @@ libc_support_library(
         ":__support_cpp_atomic",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
+        ":__support_error_or",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_osutil_syscall",
@@ -2222,6 +2232,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_threads_futex_utils",
         ":__support_threads_linux_futex_utils",
         ":__support_threads_sleep",
         ":__support_time",
@@ -2253,6 +2264,7 @@ libc_support_library(
     deps = [
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_threads_futex_utils",
         ":__support_threads_linux_futex_utils",
     ],
 )

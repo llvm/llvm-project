@@ -112,9 +112,10 @@ insertPrefetchHints(MachineFunction &MF,
   // Sort prefetch hints by their callsite index so we can insert them by one
   // pass over the block's instructions.
   for (auto &[SiteBBID, Hints] : PrefetchHintsBySiteBBID) {
-    llvm::sort(Hints, [](const PrefetchHint &H1, const PrefetchHint &H2) {
-      return H1.SiteID.CallsiteIndex < H2.SiteID.CallsiteIndex;
-    });
+    llvm::stable_sort(
+        Hints, [](const PrefetchHint &H1, const PrefetchHint &H2) {
+          return H1.SiteID.CallsiteIndex < H2.SiteID.CallsiteIndex;
+        });
   }
   auto PtrTy =
       PointerType::getUnqual(MF.getFunction().getParent()->getContext());

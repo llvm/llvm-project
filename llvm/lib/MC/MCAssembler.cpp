@@ -811,16 +811,15 @@ void MCAssembler::relaxPrefAlign(MCFragment &F) {
   const MCFragment *EndFrag = End.getFragment();
   if (EndFrag->getLayoutOrder() <= F.getLayoutOrder())
     return;
-  uint64_t BodySize = 0;
-  for (const MCFragment *Cur = F.getNext();; Cur = Cur->getNext()) {
-    if (Cur == EndFrag) {
-      BodySize += End.getOffset();
-      break;
-    }
+  uint64_t BodySize = End.getOffset();
+  for (auto *Cur = F.getNext(); Cur != EndFrag; Cur = Cur->getNext())
     BodySize += computeFragmentSize(*Cur);
-  }
+  // Intervening FT_Align's padding depends on where this prefalign lands, so
+  // `BodySize` depends on this prefalign's own padding and may not reach a
+  // fixed point. Break the cycle with a monotone value.
   Align NewAlign =
       std::min(Align(llvm::bit_ceil(BodySize)), F.getPrefAlignPreferred());
+  NewAlign = std::max(NewAlign, F.getPrefAlignComputed());
   F.setPrefAlignComputed(NewAlign);
   uint64_t NewPadSize = offsetToAlignment(RawStart, NewAlign);
   F.VarContentStart = F.getFixedSize();

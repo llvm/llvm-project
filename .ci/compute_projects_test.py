@@ -268,7 +268,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-libclc-amdgcn-amd-amdhsa-llvm",
+            "check-libclc",
         )
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
 
@@ -310,7 +310,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc-amdgcn-amd-amdhsa-llvm",
+            "check-compiler-rt check-flang-rt check-libc check-libclc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -335,7 +335,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-libclc-amdgcn-amd-amdhsa-llvm",
+            "check-compiler-rt check-libclc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -384,7 +384,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc-amdgcn-amd-amdhsa-llvm",
+            "check-compiler-rt check-flang-rt check-libc check-libclc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -419,7 +419,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc-amdgcn-amd-amdhsa-llvm",
+            "check-compiler-rt check-flang-rt check-libc check-libclc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
