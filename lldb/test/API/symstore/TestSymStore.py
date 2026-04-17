@@ -59,6 +59,8 @@ class MockedSymStore:
             self._test.getBuildArtifact(self._pdb),
             os.path.join(pdb_dir, self._pdb),
         )
+        # We always configure a valid fallback cache, because we might not have
+        # permission to write outside the test directory.
         self._test.runCmd(
             f"settings set plugin.symbol-locator.symstore.cache {self.cache_dir}"
         )
@@ -251,6 +253,63 @@ class SymStoreTests(TestBase):
             cache_file = os.path.join(symstore.cache_dir, sym, key, sym)
             self.assertTrue(os.path.isfile(cache_file))
             self.assertFiles(symstore.cache_dir, 1)
+
+    def test_sympath_cache_explicit(self):
+        """
+        Check PDB storage with explicit cache in _NT_SYMBOL_PATH.
+        """
+        exe, sym = self.build_inferior()
+        symstore = MockedSymStore(self, exe, sym)
+        with symstore as dir:
+            with HTTPServer(dir) as url:
+                explicit_cache = self.getBuildArtifact("explicit_cache")
+                with NtSymbolPath(f"srv*{explicit_cache}*{url}"):
+                    self.try_breakpoint(exe, should_have_loc=True)
+                self.assertFiles(symstore.cache_dir, 0)
+                self.assertFiles(explicit_cache, 1)
+
+    def test_sympath_cache_implicit(self):
+        """
+        Check PDB storage with implicit cache in _NT_SYMBOL_PATH.
+        """
+        exe, sym = self.build_inferior()
+        symstore = MockedSymStore(self, exe, sym)
+        with symstore as dir:
+            with HTTPServer(dir) as url:
+                implicit_cache = self.getBuildArtifact("implicit_cache")
+                with NtSymbolPath(f"cache*{implicit_cache};srv*{url}"):
+                    self.try_breakpoint(exe, should_have_loc=True)
+                self.assertFiles(symstore.cache_dir, 0)
+                self.assertFiles(implicit_cache, 1)
+
+    def test_sympath_cache_invalid(self):
+        """
+        Check that PDB is stored in configured default cache
+        if path in _NT_SYMBOL_PATH is invalid.
+        """
+        exe, sym = self.build_inferior()
+        symstore = MockedSymStore(self, exe, sym)
+        with symstore as dir:
+            with HTTPServer(dir) as url:
+                invalid_cache = ":\\<invalid_path>"
+                self.assertFiles(symstore.cache_dir, 0)
+                with NtSymbolPath(f"cache*{invalid_cache};srv*{url}"):
+                    self.try_breakpoint(exe, should_have_loc=True)
+                self.assertFiles(symstore.cache_dir, 1)
+
+    def test_sympath_cache_empty(self):
+        """
+        Check that PDB is stored in configured default cache
+        if path in _NT_SYMBOL_PATH is empty.
+        """
+        exe, sym = self.build_inferior()
+        symstore = MockedSymStore(self, exe, sym)
+        with symstore as dir:
+            with HTTPServer(dir) as url:
+                self.assertFiles(symstore.cache_dir, 0)
+                with NtSymbolPath(f"cache*;srv*{url}"):
+                    self.try_breakpoint(exe, should_have_loc=True)
+                self.assertFiles(symstore.cache_dir, 1)
 
     def test_lookup_order(self):
         """
