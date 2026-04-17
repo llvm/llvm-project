@@ -48,16 +48,18 @@ int main() {
   pseudo_barrier_wait(g_barrier2);
 
   // Wait for the first thread to finish
+  mach_port_t mach_thread_1 = get_mach_thread(thread_1);
   thread_1.join();
-  wait_for_thread_cleanup(2);
+  wait_for_thread_cleanup(mach_thread_1);
 
   // Synchronize with the remaining thread
   int dummy = 47; // Set third breakpoint here
   pseudo_barrier_wait(g_barrier3);
 
   // Wait for the second thread to finish
+  mach_port_t mach_thread_2 = get_mach_thread(thread_2);
   thread_2.join();
-  wait_for_thread_cleanup(1);
+  wait_for_thread_cleanup(mach_thread_2);
 
   return 0; // Set fourth breakpoint here
 }
