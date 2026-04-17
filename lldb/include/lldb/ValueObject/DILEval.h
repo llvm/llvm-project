@@ -149,7 +149,7 @@ private:
   bool m_check_ptr_vs_member;
   // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
   [[maybe_unused]] bool m_allow_var_updates;
-  bool m_allow_all_globals;
+  bool m_allow_all_globals = false;
 };
 
 } // namespace lldb_private::dil

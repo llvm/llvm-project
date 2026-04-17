@@ -444,9 +444,9 @@ Interpreter::Visit(const IdentifierNode &node) {
       LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
   if (!identifier)
-    identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
-                                        m_target, use_dynamic,
-                                        m_allow_all_globals);
+    identifier =
+        LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope, m_target,
+                               use_dynamic, m_allow_all_globals);
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());
