@@ -319,12 +319,15 @@ LogicalResult
 ToPtrOpConversion::matchAndRewrite(ptr::ToPtrOp op, OpAdaptor adaptor,
                                    ConversionPatternRewriter &rewriter) const {
   // Bail if it's not a memref.
-  if (!isa<MemRefType>(op.getPtr().getType()))
+  auto memrefTy = dyn_cast<MemRefType>(op.getPtr().getType());
+  if (!memrefTy)
     return rewriter.notifyMatchFailure(op, "Expected a memref input");
 
-  // Extract the aligned pointer from the memref descriptor.
+  // Extract the buffer pointer (aligned ptr + runtime offset) so the
+  // resulting raw pointer refers to the first logical element of the memref.
+  MemRefDescriptor desc(adaptor.getPtr());
   rewriter.replaceOp(
-      op, MemRefDescriptor(adaptor.getPtr()).alignedPtr(rewriter, op.getLoc()));
+      op, desc.bufferPtr(rewriter, op.getLoc(), *getTypeConverter(), memrefTy));
   return success();
 }
 

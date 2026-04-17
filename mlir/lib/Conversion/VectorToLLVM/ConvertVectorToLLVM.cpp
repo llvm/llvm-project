@@ -1458,10 +1458,12 @@ public:
     Value allocated = sourceMemRef.allocatedPtr(rewriter, loc);
     desc.setAllocatedPtr(rewriter, loc, allocated);
 
-    // Set aligned ptr.
-    Value ptr = sourceMemRef.alignedPtr(rewriter, loc);
+    // Set aligned ptr. Element type changes between source and target, so
+    // bake the source's runtime offset (in source-element units) into the
+    // aligned pointer and leave the target descriptor's offset at 0.
+    Value ptr = sourceMemRef.bufferPtr(rewriter, loc, *getTypeConverter(),
+                                       sourceMemRefType);
     desc.setAlignedPtr(rewriter, loc, ptr);
-    // Fill offset 0.
     auto attr = rewriter.getIntegerAttr(rewriter.getIndexType(), 0);
     auto zero = LLVM::ConstantOp::create(rewriter, loc, int64Ty, attr);
     desc.setOffset(rewriter, loc, zero);

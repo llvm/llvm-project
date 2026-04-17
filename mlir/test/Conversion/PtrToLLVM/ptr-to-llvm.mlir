@@ -56,8 +56,10 @@ func.func @test_type_offset() -> (index, index, index) {
 // CHECK:           %[[VAL_3:.*]] = llvm.insertvalue %[[ARG2]], %[[VAL_2]][2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
 // CHECK:           %[[VAL_4:.*]] = llvm.insertvalue %[[ARG3]], %[[VAL_3]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
 // CHECK:           %[[VAL_5:.*]] = llvm.insertvalue %[[ARG4]], %[[VAL_4]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK:           %[[VAL_6:.*]] = llvm.extractvalue %[[VAL_5]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK:           llvm.return %[[VAL_6]] : !llvm.ptr
+// CHECK:           %[[VAL_ALIGNED:.*]] = llvm.extractvalue %[[VAL_5]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK:           %[[VAL_OFF:.*]] = llvm.extractvalue %[[VAL_5]][2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK:           %[[VAL_PTR:.*]] = llvm.getelementptr %[[VAL_ALIGNED]][%[[VAL_OFF]]]
+// CHECK:           llvm.return %[[VAL_PTR]] : !llvm.ptr
 // CHECK:         }
 func.func @test_to_ptr(%arg0: memref<10xf32, #ptr.generic_space>) -> !ptr.ptr<#ptr.generic_space> {
   %0 = ptr.to_ptr %arg0 : memref<10xf32, #ptr.generic_space> -> <#ptr.generic_space>
@@ -231,7 +233,9 @@ func.func @test_memref_strided(%arg0: memref<10x20xf32, strided<[40, 2]>, #ptr.g
 // CHECK:           %[[VAL_5:.*]] = llvm.insertvalue %[[ARG5]], %[[VAL_4]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[VAL_6:.*]] = llvm.insertvalue %[[ARG4]], %[[VAL_5]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[VAL_7:.*]] = llvm.insertvalue %[[ARG6]], %[[VAL_6]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK:           %[[VAL_8:.*]] = llvm.extractvalue %[[VAL_7]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[VAL_ALIGNED:.*]] = llvm.extractvalue %[[VAL_7]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[VAL_BUFOFF:.*]] = llvm.extractvalue %[[VAL_7]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[VAL_8:.*]] = llvm.getelementptr %[[VAL_ALIGNED]][%[[VAL_BUFOFF]]]
 // CHECK:           %[[VAL_9:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i64, i64, i64, i64)>
 // CHECK:           %[[VAL_10:.*]] = llvm.extractvalue %[[VAL_7]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[VAL_11:.*]] = llvm.insertvalue %[[VAL_10]], %[[VAL_9]][0] : !llvm.struct<(ptr, i64, i64, i64, i64, i64)>
@@ -307,7 +311,9 @@ func.func @test_memref_0d(%arg0: memref<f32, #ptr.generic_space>) -> memref<f32,
 // CHECK:           %[[VAL_7:.*]] = llvm.insertvalue %[[ARG7]], %[[VAL_6]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
 // CHECK:           %[[VAL_8:.*]] = llvm.insertvalue %[[ARG5]], %[[VAL_7]][3, 2] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
 // CHECK:           %[[VAL_9:.*]] = llvm.insertvalue %[[ARG8]], %[[VAL_8]][4, 2] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
-// CHECK:           %[[VAL_10:.*]] = llvm.extractvalue %[[VAL_9]][1] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
+// CHECK:           %[[VAL_ALIGNED:.*]] = llvm.extractvalue %[[VAL_9]][1] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
+// CHECK:           %[[VAL_BUFOFF:.*]] = llvm.extractvalue %[[VAL_9]][2] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
+// CHECK:           %[[VAL_10:.*]] = llvm.getelementptr %[[VAL_ALIGNED]][%[[VAL_BUFOFF]]]
 // CHECK:           %[[VAL_11:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK:           %[[VAL_12:.*]] = llvm.getelementptr %[[VAL_11]][1] : (!llvm.ptr) -> !llvm.ptr, f32
 // CHECK:           %[[VAL_13:.*]] = llvm.ptrtoint %[[VAL_12]] : !llvm.ptr to i64

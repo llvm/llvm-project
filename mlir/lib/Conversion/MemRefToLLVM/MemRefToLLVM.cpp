@@ -1497,18 +1497,21 @@ private:
       auto desc =
           MemRefDescriptor::poison(rewriter, loc, llvmTargetDescriptorTy);
 
-      // Set allocated and aligned pointers.
-      Value allocatedPtr, alignedPtr;
+      // Set allocated and aligned pointers. Bake the source descriptor's
+      // runtime offset into the target's aligned pointer so we can start the
+      // new descriptor at offset 0 without losing addressing information.
+      Value allocatedPtr, alignedPtr, srcOffset;
       extractPointersAndOffset(loc, rewriter, *getTypeConverter(),
                                reshapeOp.getSource(), adaptor.getSource(),
-                               &allocatedPtr, &alignedPtr);
+                               &allocatedPtr, &alignedPtr, &srcOffset);
+      Type elemLLVMTy =
+          typeConverter->convertType(targetMemRefType.getElementType());
+      alignedPtr = LLVM::GEPOp::create(rewriter, loc, alignedPtr.getType(),
+                                       elemLLVMTy, alignedPtr, srcOffset);
       desc.setAllocatedPtr(rewriter, loc, allocatedPtr);
       desc.setAlignedPtr(rewriter, loc, alignedPtr);
 
-      // Extract the strides from the type. Offset is no longer carried by the
-      // type; reshape preserves the source descriptor's offset, but here we
-      // reconstruct the descriptor for the target type and conventionally start
-      // the new descriptor at offset 0.
+      // Extract the strides from the type.
       SmallVector<int64_t> strides;
       if (failed(targetMemRefType.getStrides(strides)))
         return rewriter.notifyMatchFailure(
@@ -1838,8 +1841,11 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
     auto srcMemRefType = cast<MemRefType>(viewOp.getSource().getType());
     targetMemRef.setAllocatedPtr(rewriter, loc, allocatedPtr);
 
-    // Field 2: Copy the actual aligned pointer to payload.
-    Value alignedPtr = sourceMemRef.alignedPtr(rewriter, loc);
+    // Field 2: Compute the target aligned pointer. Start from the source's
+    // runtime buffer pointer (aligned ptr + source offset) so any non-zero
+    // source offset is preserved, then apply the byteShift.
+    Value alignedPtr = sourceMemRef.bufferPtr(rewriter, loc, *getTypeConverter(),
+                                              srcMemRefType);
     alignedPtr = LLVM::GEPOp::create(
         rewriter, loc, alignedPtr.getType(),
         typeConverter->convertType(srcMemRefType.getElementType()), alignedPtr,
