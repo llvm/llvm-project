@@ -492,9 +492,8 @@ static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
 }
 
 static void setDXILMetadata(CallInst *CI, const OpCodeProperty *Prop) {
-  if (OpPreciseEnabled &&
-      Prop->Precise &
-          CI->getFunctionType()->getReturnType()->isFloatingPointTy()) {
+  if (OpPreciseEnabled && Prop->Precise &&
+      CI->getFunctionType()->getReturnType()->isFloatingPointTy()) {
 
     const StringRef Key = "dx.precise";
     Module *M = CI->getModule();

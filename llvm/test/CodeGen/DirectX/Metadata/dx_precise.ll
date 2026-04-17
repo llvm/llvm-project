@@ -1,5 +1,5 @@
-; RUN: llc %s -enable-precise --filetype=asm -o - < %s 2>&1 | FileCheck %s --check-prefixes=ENABLED
-; RUN: llc %s --filetype=asm -o - < %s 2>&1 | FileCheck %s --check-prefixes=DISABLED
+; RUN: llc %s -enable-precise --filetype=asm -o - 2>&1 | FileCheck %s --check-prefixes=ENABLED
+; RUN: llc %s --filetype=asm -o - 2>&1 | FileCheck %s --check-prefixes=DISABLED
 
 
 
