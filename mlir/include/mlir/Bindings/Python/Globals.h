@@ -169,8 +169,8 @@ public:
     nanobind::ft_mutex mutex;
     bool locTracebackEnabled_ = false;
     size_t locTracebackFramesLimit_ = 10;
-    OnExplicitAction onExplicitAction_ = OnExplicitAction::UseExplicit;
-    CurrentLocAction currentLocAction_ = CurrentLocAction::Fallback;
+    OnExplicitAction onExplicitAction = OnExplicitAction::UseExplicit;
+    CurrentLocAction currentLocAction = CurrentLocAction::Fallback;
     std::unordered_set<std::string> userTracebackIncludeFiles;
     std::unordered_set<std::string> userTracebackExcludeFiles;
     std::regex userTracebackIncludeRegex;
