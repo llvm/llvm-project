@@ -804,10 +804,7 @@ struct ValueEquivalenceCache {
     };
     auto lhsSorted = sortValues({lhsIt, lhsRange.end()});
     auto rhsSorted = sortValues({rhsIt, rhsRange.end()});
-    if (lhsSorted == rhsSorted) {
-      return success();
-    }
-    return failure();
+    return success(lhsSorted == rhsSorted);
   }
   void markEquivalent(Value lhsResult, Value rhsResult) {
     auto insertion = equivalentValues.insert({lhsResult, rhsResult});
