@@ -9792,6 +9792,7 @@ libc_function(
         ":__support_common",
         ":__support_ctype_utils",
         ":__support_macros_config",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )
@@ -9804,6 +9805,7 @@ libc_function(
         ":__support_common",
         ":__support_ctype_utils",
         ":__support_macros_config",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )
