@@ -15,8 +15,6 @@ struct S {
 
 void sink(struct S *__single p);
 
-// XFAIL: *
-// FIXME: crash/assert
 void test(S_ptr __bidi_indexable p) {
     sink(p);
 }

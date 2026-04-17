@@ -3547,7 +3547,8 @@ RecordDecl *FlexibleArrayMemberUtils::GetFlexibleRecord(QualType QT) {
 bool FlexibleArrayMemberUtils::Find(
     RecordDecl *RD, SmallVectorImpl<FieldDecl *> &PathToFlex,
     ArrayRef<TypeCoupledDeclRefInfo> &CountDecls) {
-  if (!RD->hasFlexibleArrayMember())
+  RD = RD->getDefinition();
+  if (!RD || !RD->hasFlexibleArrayMember())
     return false;
 
   const CountAttributedType *DCPTy = nullptr;
