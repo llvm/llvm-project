@@ -26990,7 +26990,8 @@ ExprResult BoundsCheckBuilder::CheckFlexibleArrayMemberSizeImpl(
   ArrayRef<TypeCoupledDeclRefInfo> CountDecls;
   auto *RT = FAMPtr->getType()->getPointeeType()->getAs<RecordType>();
   bool Found = FlexUtils.Find(RT->getDecl(), PathToFlex, CountDecls);
-  assert(Found); (void)Found;
+  assert(Found);
+  (void)Found;
 
   Expr *FlexibleObj = FlexUtils.SelectFlexibleObject(PathToFlex, OpaqueRoot);
 
