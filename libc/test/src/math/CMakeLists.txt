@@ -3633,3 +3633,15 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   add_subdirectory(exhaustive)
   add_subdirectory(performance_testing)
 endif()
+
+add_fp_unittest(
+  tgammaf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    tgammaf16_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.math.tgammaf16
+)

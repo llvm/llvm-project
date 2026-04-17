@@ -6686,3 +6686,14 @@ add_fp_unittest(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.properties.os
 )
+
+add_fp_unittest(
+  tgammaf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tgammaf16_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.math.tgammaf16
+)

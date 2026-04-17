@@ -237,6 +237,7 @@ public:
   MPFRNumber tan() const;
   MPFRNumber tanh() const;
   MPFRNumber tanpi() const;
+  MPFRNumber tgamma() const;
   MPFRNumber trunc() const;
   MPFRNumber fma(const MPFRNumber &b, const MPFRNumber &c);
   MPFRNumber mul(const MPFRNumber &b);
