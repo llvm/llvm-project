@@ -197,17 +197,22 @@ int main(int argc, char **argv) {
               const_cast<char *>(DeviceMemoryMB.get()->getBuffer().data()),
               DeviceMemoryMB.get()->getBufferSize());
 
+  KernelReplayOutcomeTy ReplayOutcome;
+
   Rc = __tgt_target_kernel_replay(
       /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
       (char *)RecordedData, DeviceMemoryMB.get()->getBufferSize(),
       NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
-      SharedMemorySize, LoopTripCount.value());
+      SharedMemorySize, LoopTripCount.value(), &ReplayOutcome);
   if (Rc != OMP_TGT_SUCCESS)
     reportFatalUsageError("Error replaying kernel");
 
   int ErrorDetected = 0;
   if (VerifyOpt) {
+    if (ReplayOutcome.OutputFilepath.empty())
+      reportFatalUsageError("Replay output file was not generated");
+
     Filepath.replace_extension("record_output");
     ErrorOr<std::unique_ptr<MemoryBuffer>> OriginalOutputMB =
         MemoryBuffer::getFile(Filepath.string(),
@@ -218,9 +223,8 @@ int main(int argc, char **argv) {
           "Error reading the kernel record output file. Make sure "
           "LIBOMPTARGET_RECORD_OUTPUT is set when recording");
 
-    Filepath.replace_extension("replay_output");
     ErrorOr<std::unique_ptr<MemoryBuffer>> ReplayOutputMB =
-        MemoryBuffer::getFile(Filepath.string(),
+        MemoryBuffer::getFile(ReplayOutcome.OutputFilepath.c_str(),
                               /*isText=*/false,
                               /*RequiresNullTerminator=*/false);
     if (!ReplayOutputMB)
