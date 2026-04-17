@@ -339,8 +339,6 @@ std::optional<FileSpec>
 LocateSymStoreEntry(const SymbolLocatorSymStore::LookupEntry &entry,
                     llvm::StringRef key, llvm::StringRef pdb_name) {
   Log *log = GetLog(LLDBLog::Symbols);
-  std::string default_cache = GetGlobalPluginProperties().GetCachePath();
-
   llvm::StringRef url = entry.source;
   if (url.starts_with("http://") || url.starts_with("https://")) {
     // Always fall back LLDB default cache. After all, once the files have been
