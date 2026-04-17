@@ -88,7 +88,7 @@ class Dumper {
 
 protected:
   llvm::raw_ostream &OS;
-  std::function<Error(const Twine &Msg)> WarningHandler;
+  std::function<Error(Error E)> WarningHandler;
 
 public:
   Dumper(const object::ObjectFile &O);

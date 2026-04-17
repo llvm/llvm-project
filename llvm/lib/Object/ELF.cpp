@@ -690,8 +690,8 @@ ELFFile<ELFT>::toMappedAddr(uint64_t VAddr, WarningHandler WarnHandler) const {
     return A->p_vaddr < B->p_vaddr;
   };
   if (!llvm::is_sorted(LoadSegments, SortPred)) {
-    if (Error E =
-            WarnHandler("loadable segments are unsorted by virtual address"))
+    if (Error E = WarnHandler(
+            createError("loadable segments are unsorted by virtual address")))
       return std::move(E);
     llvm::stable_sort(LoadSegments, SortPred);
   }

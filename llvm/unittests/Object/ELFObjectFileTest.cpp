@@ -389,9 +389,9 @@ ProgramHeaders:
   std::string WarnString;
   auto ToMappedAddr = [&](uint64_t Addr) -> const uint8_t * {
     Expected<const uint8_t *> DataOrErr =
-        ExpectedFile->getELFFile().toMappedAddr(Addr, [&](const Twine &Msg) {
+        ExpectedFile->getELFFile().toMappedAddr(Addr, [&](Error E) {
           EXPECT_TRUE(WarnString.empty());
-          WarnString = Msg.str();
+          WarnString = toString(std::move(E));
           return Error::success();
         });
 

@@ -355,19 +355,20 @@ static StringRef ToolName;
 std::unique_ptr<BuildIDFetcher> BIDFetcher;
 
 Dumper::Dumper(const object::ObjectFile &O) : O(O), OS(outs()) {
-  WarningHandler = [this](const Twine &Msg) {
-    if (Warnings.insert(Msg.str()).second)
+  WarningHandler = [this](Error Err) {
+    std::string Msg = toString(std::move(Err));
+    if (Warnings.insert(Msg).second)
       reportWarning(Msg, this->O.getFileName());
     return Error::success();
   };
 }
 
 void Dumper::reportUniqueWarning(Error Err) {
-  reportUniqueWarning(toString(std::move(Err)));
+  cantFail(WarningHandler(std::move(Err)));
 }
 
 void Dumper::reportUniqueWarning(const Twine &Msg) {
-  cantFail(WarningHandler(Msg));
+  cantFail(WarningHandler(createError(Msg)));
 }
 
 static Expected<std::unique_ptr<Dumper>> createDumper(const ObjectFile &Obj) {

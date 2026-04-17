@@ -187,7 +187,7 @@ public:
   void printSectionsAsHex(const object::ObjectFile &Obj,
                           ArrayRef<std::string> Sections, bool Decompress);
 
-  std::function<Error(const Twine &Msg)> WarningHandler;
+  std::function<Error(Error)> WarningHandler;
   void reportUniqueWarning(Error Err) const;
   void reportUniqueWarning(const Twine &Msg) const;
   void printOffloading(const object::ObjectFile &Obj);

@@ -33,8 +33,9 @@ static inline Error createError(const Twine &Msg) {
 ObjDumper::ObjDumper(ScopedPrinter &Writer, StringRef ObjName) : W(Writer) {
   // Dumper reports all non-critical errors as warnings.
   // It does not print the same warning more than once.
-  WarningHandler = [=](const Twine &Msg) {
-    if (Warnings.insert(Msg.str()).second)
+  WarningHandler = [=](Error E) {
+    std::string Msg = toString(std::move(E));
+    if (Warnings.insert(Msg).second)
       reportWarning(createError(Msg), ObjName);
     return Error::success();
   };
@@ -47,7 +48,7 @@ void ObjDumper::reportUniqueWarning(Error Err) const {
 }
 
 void ObjDumper::reportUniqueWarning(const Twine &Msg) const {
-  cantFail(WarningHandler(Msg),
+  cantFail(WarningHandler(createError(Msg)),
            "WarningHandler should always return ErrorSuccess");
 }
 
