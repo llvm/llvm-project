@@ -1186,6 +1186,17 @@ multiclass PatXrUimm5<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_DU") LASX256:$xj, uimm5:$imm)>;
 }
 
+multiclass PatXrNimm5<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v32i8 LASX256:$xj), (v32i8 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_BU") LASX256:$xj, uimm5:$imm)>;
+  def : Pat<(OpNode (v16i16 LASX256:$xj), (v16i16 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_HU") LASX256:$xj, uimm5:$imm)>;
+  def : Pat<(OpNode (v8i32 LASX256:$xj), (v8i32 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_WU") LASX256:$xj, uimm5:$imm)>;
+  def : Pat<(OpNode (v4i64 LASX256:$xj), (v4i64 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_DU") LASX256:$xj, uimm5:$imm)>;
+}
+
 multiclass PatXrXrXr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v32i8 LASX256:$xd), (v32i8 LASX256:$xj),
                     (v32i8 LASX256:$xk)),
@@ -1342,8 +1353,10 @@ defm : PatXrXr<add, "XVADD">;
 defm : PatXrXr<sub, "XVSUB">;
 
 // XVADDI_{B/H/W/D}U
+defm : PatXrNimm5<sub, "XVADDI">;
 defm : PatXrUimm5<add, "XVADDI">;
 // XVSUBI_{B/H/W/D}U
+defm : PatXrNimm5<add, "XVSUBI">;
 defm : PatXrUimm5<sub, "XVSUBI">;
 
 // XVNEG_{B/H/W/D}
@@ -2472,6 +2485,8 @@ defm : PatXrF<fceil, "XVFRINTRP">;
 defm : PatXrF<ffloor, "XVFRINTRM">;
 defm : PatXrF<ftrunc, "XVFRINTRZ">;
 defm : PatXrF<froundeven, "XVFRINTRNE">;
+def : Pat<(v8f32 (loongarch_vfcvt_s_d (v4f64 LASX256:$xj), (v4f64 LASX256:$xk))),
+          (XVFCVT_S_D LASX256:$xj, LASX256:$xk)>;
 
 // load
 def : Pat<(int_loongarch_lasx_xvld GPR:$rj, timm:$imm),
