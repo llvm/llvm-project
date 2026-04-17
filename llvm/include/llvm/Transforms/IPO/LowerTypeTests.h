@@ -193,13 +193,6 @@ struct ByteArrayBuilder {
 
 LLVM_ABI bool isJumpTableCanonical(Function *F);
 
-/// Specifies how to drop type tests.
-enum class DropTestKind {
-  None,   /// Do not drop type tests (default).
-  Assume, /// Drop only llvm.assumes using type test value.
-  All,    /// Drop the type test and all uses.
-};
-
 } // end namespace lowertypetests
 
 class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
@@ -207,19 +200,25 @@ class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
 
   ModuleSummaryIndex *ExportSummary = nullptr;
   const ModuleSummaryIndex *ImportSummary = nullptr;
-  lowertypetests::DropTestKind DropTypeTests =
-      lowertypetests::DropTestKind::None;
 
 public:
   LowerTypeTestsPass() : UseCommandLine(true) {}
   LowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
-                     const ModuleSummaryIndex *ImportSummary,
-                     lowertypetests::DropTestKind DropTypeTests =
-                         lowertypetests::DropTestKind::None)
-      : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-        DropTypeTests(DropTypeTests) {}
+                     const ModuleSummaryIndex *ImportSummary)
+      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {}
   static bool isRequired() { return true; }
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+class DropTypeTestsPass : public PassInfoMixin<DropTypeTestsPass> {
+public:
+  bool All = false;
+  explicit DropTypeTestsPass(bool All = false) : All(All) {}
+  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 class SimplifyTypeTestsPass : public PassInfoMixin<SimplifyTypeTestsPass> {

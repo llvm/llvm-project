@@ -122,17 +122,6 @@ static cl::opt<std::string> ClWriteSummary(
     cl::desc("Write summary to given YAML file after running pass"),
     cl::Hidden);
 
-static cl::opt<DropTestKind>
-    ClDropTypeTests("lowertypetests-drop-type-tests",
-                    cl::desc("Simply drop type test sequences"),
-                    cl::values(clEnumValN(DropTestKind::None, "none",
-                                          "Do not drop any type tests"),
-                               clEnumValN(DropTestKind::Assume, "assume",
-                                          "Drop type test assume sequences"),
-                               clEnumValN(DropTestKind::All, "all",
-                                          "Drop all type test sequences")),
-                    cl::Hidden, cl::init(DropTestKind::None));
-
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
     return false;
@@ -427,9 +416,6 @@ class LowerTypeTestsModule {
 
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
-  // Set when the client has invoked this to simply drop all type test assume
-  // sequences.
-  DropTestKind DropTypeTests;
 
   Triple::ArchType Arch;
   Triple::OSType OS;
@@ -563,8 +549,7 @@ class LowerTypeTestsModule {
 public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
                        ModuleSummaryIndex *ExportSummary,
-                       const ModuleSummaryIndex *ImportSummary,
-                       DropTestKind DropTypeTests);
+                       const ModuleSummaryIndex *ImportSummary);
 
   bool lower();
 
@@ -1874,10 +1859,8 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 /// Lower all type tests in this module.
 LowerTypeTestsModule::LowerTypeTestsModule(
     Module &M, ModuleAnalysisManager &AM, ModuleSummaryIndex *ExportSummary,
-    const ModuleSummaryIndex *ImportSummary, DropTestKind DropTypeTests)
-    : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-      DropTypeTests(ClDropTypeTests > DropTypeTests ? ClDropTypeTests
-                                                    : DropTypeTests) {
+    const ModuleSummaryIndex *ImportSummary)
+    : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
@@ -1930,8 +1913,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
       LowerTypeTestsModule(
           M, AM,
           ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
-          ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr,
-          /*DropTypeTests=*/DropTestKind::None)
+          ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr)
           .lower();
 
   if (!ClWriteSummary.empty()) {
@@ -2017,31 +1999,32 @@ static void dropTypeTests(Module &M, Function &TypeTestFunc,
   }
 }
 
+static bool dropTypeTests(Module &M, bool ShouldDropAll) {
+  Function *TypeTestFunc =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
+  if (TypeTestFunc)
+    dropTypeTests(M, *TypeTestFunc, ShouldDropAll);
+  // Normally we'd have already removed all @llvm.public.type.test calls,
+  // except for in the case where we originally were performing ThinLTO but
+  // decided not to in the backend.
+  Function *PublicTypeTestFunc =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
+  if (PublicTypeTestFunc)
+    dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
+  if (TypeTestFunc || PublicTypeTestFunc) {
+    // We have deleted the type intrinsics, so we no longer have enough
+    // information to reason about the liveness of virtual function pointers
+    // in GlobalDCE.
+    for (GlobalVariable &GV : M.globals())
+      GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
+    return true;
+  }
+  return false;
+}
+
 bool LowerTypeTestsModule::lower() {
   Function *TypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
-
-  if (DropTypeTests != DropTestKind::None) {
-    bool ShouldDropAll = DropTypeTests == DropTestKind::All;
-    if (TypeTestFunc)
-      dropTypeTests(M, *TypeTestFunc, ShouldDropAll);
-    // Normally we'd have already removed all @llvm.public.type.test calls,
-    // except for in the case where we originally were performing ThinLTO but
-    // decided not to in the backend.
-    Function *PublicTypeTestFunc =
-        Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
-    if (PublicTypeTestFunc)
-      dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
-    if (TypeTestFunc || PublicTypeTestFunc) {
-      // We have deleted the type intrinsics, so we no longer have enough
-      // information to reason about the liveness of virtual function pointers
-      // in GlobalDCE.
-      for (GlobalVariable &GV : M.globals())
-        GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
-      return true;
-    }
-    return false;
-  }
 
   // If only some of the modules were split, we cannot correctly perform
   // this transformation. We already checked for the presense of type tests
@@ -2502,12 +2485,25 @@ PreservedAnalyses LowerTypeTestsPass::run(Module &M,
   if (UseCommandLine)
     Changed = LowerTypeTestsModule::runForTesting(M, AM);
   else
-    Changed =
-        LowerTypeTestsModule(M, AM, ExportSummary, ImportSummary, DropTypeTests)
-            .lower();
+    Changed = LowerTypeTestsModule(M, AM, ExportSummary, ImportSummary).lower();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
+}
+
+PreservedAnalyses DropTypeTestsPass::run(Module &M, ModuleAnalysisManager &AM) {
+  return dropTypeTests(M, All) ? PreservedAnalyses::none()
+                               : PreservedAnalyses::all();
+}
+
+void DropTypeTestsPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<DropTypeTestsPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  if (All)
+    OS << "all";
+  OS << '>';
 }
 
 PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
