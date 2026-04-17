@@ -2051,11 +2051,6 @@ def TunePreferVsetvliOverReadVLENB
           "prefer-vsetvli-over-read-vlenb", "PreferVsetvliOverReadVLENB",
           "true", "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
 
-def TuneJumpIsExpensive
-    : RISCVTuneFeature<"jump-is-expensive", "jump-is-expensive",
-                       "jump-is-cheap", "IsJumpExpensive",
-                       "true", "Jump is expensive">;
-
 //===----------------------------------------------------------------------===//
 // CPU Families (alphabetized by vendor).
 //===----------------------------------------------------------------------===//
