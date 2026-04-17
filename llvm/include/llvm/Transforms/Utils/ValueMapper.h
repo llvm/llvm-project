@@ -114,11 +114,9 @@ enum RemapFlags {
   /// to save some compile-time.
   RF_DoNotRemapAtoms = 16,
 
-  /// Ignore metadata that references globals. In ThinLTO this is used because
-  /// metadata references to functions are not tracked and may cause referenced
-  /// functions to be incorrectly imported. Currently all metadata references
-  /// to functions are droppable.
-  RF_IgnoreMetadataReferencesToGlobals = 32,
+  /// Indicate that we are importing functions, specifically in the context of
+  /// ThinLTO. There is some ad-hoc behavior required in this mode.
+  RF_Importing = 32,
 };
 
 inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {

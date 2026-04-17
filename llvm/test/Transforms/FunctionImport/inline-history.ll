@@ -1,3 +1,7 @@
+; Test to ensure that we don't import !inline_history metadata on calls since
+; doing so may end up importing other function declarations in a way that isn't
+; tracked by ThinLTO, breaking IR semantics.
+
 ; RUN: opt -module-summary %s -o %t.bc
 ; RUN: opt -module-summary %p/Inputs/inline-history.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc

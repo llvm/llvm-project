@@ -448,8 +448,7 @@ public:
         IsPerformingImport(IsPerformingImport),
         Mapper(ValueMap,
                RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals |
-                   (IsPerformingImport ? RF_IgnoreMetadataReferencesToGlobals
-                                       : RF_None),
+                   (IsPerformingImport ? RF_Importing : RF_None),
                &TypeMap, &GValMaterializer),
         IndirectSymbolMCID(Mapper.registerAlternateMappingContext(
             IndirectSymbolValueMap, &LValMaterializer)) {
