@@ -230,6 +230,13 @@
 // STATIC_LIBSTDCXX: "--pop-state"
 // STATIC_LIBSTDCXX: "-lc" "crtendS.o"
 
+// RUN: %clangxx -### %s --target=x86_64-unknown-serenity --sysroot="" -resource-dir= \
+// RUN:   -nostdlib++ 2>&1 | FileCheck %s --check-prefix=NO_LIBCXX
+// NO_LIBCXX: "-z" "pack-relative-relocs"
+// NO_LIBCXX: "crt0.o" "crtbeginS.o"
+// NO_LIBCXX-NOT: "-lc++"
+// NO_LIBCXX-SAME: "-lc" "crtendS.o"
+
 /// Check that unwind tables are enabled.
 // RUN: %clang --target=x86_64-unknown-serenity -### -S %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=UNWIND-TABLES %s
