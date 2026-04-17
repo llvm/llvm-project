@@ -6232,17 +6232,14 @@ define i64 @vreduce_mul_v32i64_vscale4_exact(ptr %x) nounwind vscale_range(4,4) 
 ; RV32-LABEL: vreduce_mul_v32i64_vscale4_exact:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vl8re64.v v8, (a0)
-; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV32-NEXT:    vmv1r.v v16, v12
-; RV32-NEXT:    vmv1r.v v17, v13
-; RV32-NEXT:    vmv1r.v v18, v14
-; RV32-NEXT:    vmv1r.v v19, v15
-; RV32-NEXT:    vmul.vv v8, v8, v16
-; RV32-NEXT:    vmv1r.v v16, v10
 ; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vmv1r.v v17, v11
-; RV32-NEXT:    vmul.vv v8, v8, v16
 ; RV32-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; RV32-NEXT:    vmul.vv v8, v8, v9
+; RV32-NEXT:    vmul.vv v9, v10, v11
+; RV32-NEXT:    vmul.vv v10, v12, v13
+; RV32-NEXT:    vmul.vv v11, v14, v15
+; RV32-NEXT:    vmul.vv v8, v8, v9
+; RV32-NEXT:    vmul.vv v9, v10, v11
 ; RV32-NEXT:    vmul.vv v8, v8, v9
 ; RV32-NEXT:    vslidedown.vi v9, v8, 2
 ; RV32-NEXT:    vmul.vv v8, v8, v9
@@ -6257,16 +6254,13 @@ define i64 @vreduce_mul_v32i64_vscale4_exact(ptr %x) nounwind vscale_range(4,4) 
 ; RV64-LABEL: vreduce_mul_v32i64_vscale4_exact:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vl8re64.v v8, (a0)
-; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv1r.v v16, v12
-; RV64-NEXT:    vmv1r.v v17, v13
-; RV64-NEXT:    vmv1r.v v18, v14
-; RV64-NEXT:    vmv1r.v v19, v15
-; RV64-NEXT:    vmul.vv v8, v8, v16
-; RV64-NEXT:    vmv1r.v v16, v10
-; RV64-NEXT:    vmv1r.v v17, v11
-; RV64-NEXT:    vmul.vv v8, v8, v16
 ; RV64-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v9
+; RV64-NEXT:    vmul.vv v9, v10, v11
+; RV64-NEXT:    vmul.vv v10, v12, v13
+; RV64-NEXT:    vmul.vv v11, v14, v15
+; RV64-NEXT:    vmul.vv v8, v8, v9
+; RV64-NEXT:    vmul.vv v9, v10, v11
 ; RV64-NEXT:    vmul.vv v8, v8, v9
 ; RV64-NEXT:    vslidedown.vi v9, v8, 2
 ; RV64-NEXT:    vmul.vv v8, v8, v9
@@ -6283,12 +6277,10 @@ define i64 @vreduce_mul_v32i64_vscale8_exact(ptr %x) nounwind vscale_range(8,8) 
 ; RV32-LABEL: vreduce_mul_v32i64_vscale8_exact:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vl4re64.v v8, (a0)
-; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; RV32-NEXT:    vmv1r.v v12, v10
 ; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vmv1r.v v13, v11
-; RV32-NEXT:    vmul.vv v8, v8, v12
 ; RV32-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV32-NEXT:    vmul.vv v8, v8, v9
+; RV32-NEXT:    vmul.vv v9, v10, v11
 ; RV32-NEXT:    vmul.vv v8, v8, v9
 ; RV32-NEXT:    vslidedown.vi v9, v8, 4
 ; RV32-NEXT:    vmul.vv v8, v8, v9
@@ -6305,11 +6297,9 @@ define i64 @vreduce_mul_v32i64_vscale8_exact(ptr %x) nounwind vscale_range(8,8) 
 ; RV64-LABEL: vreduce_mul_v32i64_vscale8_exact:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vl4re64.v v8, (a0)
-; RV64-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; RV64-NEXT:    vmv1r.v v12, v10
-; RV64-NEXT:    vmv1r.v v13, v11
-; RV64-NEXT:    vmul.vv v8, v8, v12
 ; RV64-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v9
+; RV64-NEXT:    vmul.vv v9, v10, v11
 ; RV64-NEXT:    vmul.vv v8, v8, v9
 ; RV64-NEXT:    vslidedown.vi v9, v8, 4
 ; RV64-NEXT:    vmul.vv v8, v8, v9
