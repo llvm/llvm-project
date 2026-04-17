@@ -95,21 +95,6 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
       printAnnotation(O, Annot);
       return;
     }
-
-    // Preserve the historic SYSP short form for the XZR/XZR encoding, but
-    // only when aliases are enabled. In no-alias mode we must print the full
-    // canonical operand list.
-    if (PrintAliases && MI->getOperand(4).getReg() == AArch64::XZR) {
-      O << "\tsysp\t";
-      markup(O, Markup::Immediate) << "#" << formatImm(MI->getOperand(0).getImm());
-      O << ", c" << MI->getOperand(1).getImm();
-      O << ", c" << MI->getOperand(2).getImm();
-      O << ", ";
-      markup(O, Markup::Immediate) << "#"
-                                   << formatImm(MI->getOperand(3).getImm());
-      printAnnotation(O, Annot);
-      return;
-    }
   }
 
   // RPRFM overlaps PRFM (reg), so try to print it as RPRFM here.
@@ -1166,7 +1151,23 @@ bool AArch64InstPrinter::printSyslAlias(const MCInst *MI,
 bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  return printSysAlias(MI, STI, O, /*PairOperand=*/true);
+  if (printSysAlias(MI, STI, O, /*PairOperand=*/true))
+    return true;
+
+  // Preserve SYSP short form for XZR/XZR encoding:
+  //   sysp #op1, cN, cM, #op2
+  // instead of:
+  //   sysp #op1, cN, cM, #op2, xzr, xzr
+  if (MI->getOperand(4).getReg() != AArch64::XZR)
+    return false;
+
+  O << "\tsysp\t";
+  markup(O, Markup::Immediate) << "#" << formatImm(MI->getOperand(0).getImm());
+  O << ", c" << MI->getOperand(1).getImm();
+  O << ", c" << MI->getOperand(2).getImm();
+  O << ", ";
+  markup(O, Markup::Immediate) << "#" << formatImm(MI->getOperand(3).getImm());
+  return true;
 }
 
 template <int EltSize>
