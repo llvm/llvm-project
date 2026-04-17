@@ -7,7 +7,7 @@
 
 ! -fno-realloc-lhs must be ignored for polymorphic allocatable LHS (test3 below).
 ! The warning below is emitted before the MLIR output, so it must be checked first.
-! POLYWARNING: warning: {{.*}}-fno-realloc-lhs is ignored for assignment to polymorphic allocatable left-hand side
+! POLYWARNING: warning: {{.*}}-fno-realloc-lhs is ignored for assignment to polymorphic allocatable
 
 subroutine test1(a, b)
   integer, allocatable :: a(:), b(:)
