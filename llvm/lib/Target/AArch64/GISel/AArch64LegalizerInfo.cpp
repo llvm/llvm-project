@@ -698,6 +698,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_ICMP)
       .legalFor({{s32, s32}, {s32, s64}, {s32, p0}})
       .widenScalarOrEltToNextPow2(1)
+      .minScalarOrElt(1, s8)
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s32)
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
@@ -1063,6 +1064,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(0, s64, 2)
       .lower();
 
   getActionDefinitionsBuilder(G_VASTART).legalFor({p0});
@@ -1260,6 +1262,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
       .legalFor({{v16s8, v8s8}, {v8s16, v4s16}, {v4s32, v2s32}})
+      .customIf([=](const LegalityQuery &Query) {
+        return Query.Types[0].isFixedVector() &&
+               Query.Types[0].getScalarSizeInBits() < 8;
+      })
       .bitcastIf(
           [=](const LegalityQuery &Query) {
             return Query.Types[0].isFixedVector() &&
@@ -1500,6 +1506,8 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return legalizeICMP(MI, MRI, MIRBuilder);
   case TargetOpcode::G_BITCAST:
     return legalizeBitcast(MI, Helper);
+  case TargetOpcode::G_CONCAT_VECTORS:
+    return legalizeConcatVectors(MI, MRI, MIRBuilder);
   case TargetOpcode::G_FPTRUNC:
     // In order to lower f16 to f64 properly, we need to use f32 as an
     // intermediary
@@ -2562,6 +2570,34 @@ bool AArch64LegalizerInfo::legalizePrefetch(MachineInstr &MI,
   unsigned PrfOp = (IsWrite << 4) | (!IsData << 3) | (Locality << 1) | IsStream;
 
   MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(PrfOp).add(AddrVal);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeConcatVectors(
+    MachineInstr &MI, MachineRegisterInfo &MRI,
+    MachineIRBuilder &MIRBuilder) const {
+  // Widen sub-byte element vectors to byte-sized elements before concatenating.
+  // This is analogous to SDAG's integer type promotion for sub-byte types.
+  auto &Concat = cast<GConcatVectors>(MI);
+  Register DstReg = Concat.getReg(0);
+  LLT DstTy = MRI.getType(DstReg);
+  assert(DstTy.getScalarSizeInBits() < 8 && "Expected dst ty to be < 8b");
+
+  unsigned WideEltSize =
+      std::max(8u, (unsigned)PowerOf2Ceil(DstTy.getScalarSizeInBits()));
+  LLT SrcTy = MRI.getType(Concat.getSourceReg(0));
+  LLT WideSrcTy = SrcTy.changeElementSize(WideEltSize);
+  LLT WideDstTy = DstTy.changeElementSize(WideEltSize);
+
+  SmallVector<Register> WideSrcs;
+  for (unsigned I = 0; I < Concat.getNumSources(); ++I) {
+    auto Wide = MIRBuilder.buildAnyExt(WideSrcTy, Concat.getSourceReg(I));
+    WideSrcs.push_back(Wide.getReg(0));
+  }
+
+  auto WideConcat = MIRBuilder.buildConcatVectors(WideDstTy, WideSrcs);
+  MIRBuilder.buildTrunc(DstReg, WideConcat);
   MI.eraseFromParent();
   return true;
 }

@@ -373,7 +373,7 @@ entry:
   %cmp1 = fcmp ogt float %0, 5.000000e-01
   br i1 %cmp1, label %for.body, label %for.end
 
-for.body:                                      ; preds = %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %res.014 = phi float [ 0.000000e+00, %entry ], [ %rdx, %for.body ]
   %arrayidx2 = getelementptr inbounds float, ptr %a, i64 %iv
@@ -386,7 +386,7 @@ for.body:                                      ; preds = %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !2
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   %res = phi float [ 0.000000e+00, %entry ], [ %rdx, %for.body ]
   ret float %res
 }
@@ -451,7 +451,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
   %res = phi float [ 1.000000e+00, %entry ], [ %fadd, %for.inc ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %iv
@@ -459,7 +459,7 @@ for.body:                                      ; preds = %for.body
   %tobool = fcmp une float %0, 0.000000e+00
   br i1 %tobool, label %if.then, label %for.inc
 
-if.then:                                      ; preds = %for.body
+if.then:
   %arrayidx2 = getelementptr inbounds float, ptr %a, i64 %iv
   %1 = load float, ptr %arrayidx2, align 4
   br label %for.inc
@@ -515,7 +515,7 @@ define float @fadd_predicated(ptr noalias nocapture %a, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                           ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %sum.02 = phi float [ %l7, %for.body ], [ 0.000000e+00, %entry ]
   %l2 = getelementptr inbounds float, ptr %a, i64 %iv
@@ -525,7 +525,7 @@ for.body:                                           ; preds = %entry, %for.body
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !3
 
-for.end:                                            ; preds = %for.body
+for.end:
   %sum.0.lcssa = phi float [ %l7, %for.body ]
   ret float %sum.0.lcssa
 }
@@ -560,7 +560,7 @@ define float @fadd_multiple(ptr noalias nocapture %a, ptr noalias nocapture %b, 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum = phi float [ -0.000000e+00, %entry ], [ %add3, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
@@ -573,7 +573,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                         ; preds = %for.body
+for.end:
   %rdx = phi float [ %add3, %for.body ]
   ret float %rdx
 }
@@ -609,7 +609,7 @@ define float @fadd_multiple_one_flag(ptr noalias nocapture %a, ptr noalias nocap
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum = phi float [ -0.000000e+00, %entry ], [ %add3, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
@@ -622,7 +622,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                         ; preds = %for.body
+for.end:
   %rdx = phi float [ %add3, %for.body ]
   ret float %rdx
 }
@@ -1349,7 +1349,6 @@ for.end:
   ret float %muladd2
 }
 
-declare float @llvm.fmuladd.f32(float, float, float)
 
 ; Test case with invariant store where fadd is strict.
 define void @reduction_store_to_invariant_address(ptr %dst, ptr readonly %src) {

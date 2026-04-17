@@ -4223,12 +4223,12 @@ SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
   EVT NewVT = getEquivalentMemType(*DAG.getContext(), VT);
   SDValue Val = SN->getValue();
 
-  //DCI.AddToWorklist(Val.getNode());
+  // DCI.AddToWorklist(Val.getNode());
 
   bool OtherUses = !Val.hasOneUse();
-  SDValue CastVal = DAG.getNode(ISD::BITCAST, SL, NewVT, Val);
+  SDValue CastVal = DAG.getBitcast(NewVT, Val);
   if (OtherUses) {
-    SDValue CastBack = DAG.getNode(ISD::BITCAST, SL, VT, CastVal);
+    SDValue CastBack = DAG.getBitcast(VT, CastVal);
     DAG.ReplaceAllUsesOfValueWith(Val, CastBack);
   }
 
@@ -5813,7 +5813,10 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
   switch (Op.getOpcode()) {
   case ISD::INTRINSIC_WO_CHAIN: {
     switch (Op.getConstantOperandVal(0)) {
-    case Intrinsic::amdgcn_readfirstlane: {
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_set_inactive:
+    case Intrinsic::amdgcn_wwm: {
       if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
                                OriginalDemandedElts, Known, TLO, Depth + 1))
         return true;

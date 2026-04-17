@@ -34,7 +34,6 @@ TEST(GDBRemoteCommunicationServerLLGSTest, LLGSArgToURL) {
   // LLGS listen host:port pairs should be converted to listen://
   EXPECT_EQ(LLGSArgToURL("127.0.0.1:1234", false), "listen://127.0.0.1:1234");
   EXPECT_EQ(LLGSArgToURL("[::1]:1234", false), "listen://[::1]:1234");
-  EXPECT_EQ(LLGSArgToURL("[[::1]:1234]", false), "listen://[[::1]:1234]");
   EXPECT_EQ(LLGSArgToURL("localhost:1234", false), "listen://localhost:1234");
   EXPECT_EQ(LLGSArgToURL("*:1234", false), "listen://*:1234");
 
@@ -45,19 +44,20 @@ TEST(GDBRemoteCommunicationServerLLGSTest, LLGSArgToURL) {
   EXPECT_EQ(LLGSArgToURL("/tmp/foo", false), "unix-accept:///tmp/foo");
   EXPECT_EQ(LLGSArgToURL("127.0.0.1", false), "unix-accept://127.0.0.1");
   EXPECT_EQ(LLGSArgToURL("[::1]", false), "unix-accept://[::1]");
+  EXPECT_EQ(LLGSArgToURL("[[::1]:1234]", false), "unix-accept://[[::1]:1234]");
   EXPECT_EQ(LLGSArgToURL("localhost", false), "unix-accept://localhost");
   EXPECT_EQ(LLGSArgToURL(":frobnicate", false), "unix-accept://:frobnicate");
 
   // LLGS reverse connect host:port pairs should be converted to connect://
   EXPECT_EQ(LLGSArgToURL("127.0.0.1:1234", true), "connect://127.0.0.1:1234");
   EXPECT_EQ(LLGSArgToURL("[::1]:1234", true), "connect://[::1]:1234");
-  EXPECT_EQ(LLGSArgToURL("[[::1]:1234]", true), "connect://[[::1]:1234]");
   EXPECT_EQ(LLGSArgToURL("localhost:1234", true), "connect://localhost:1234");
 
   // with LLGS reverse connect, anything else goes as unix-connect://
   EXPECT_EQ(LLGSArgToURL("/tmp/foo", true), "unix-connect:///tmp/foo");
   EXPECT_EQ(LLGSArgToURL("127.0.0.1", true), "unix-connect://127.0.0.1");
   EXPECT_EQ(LLGSArgToURL("[::1]", true), "unix-connect://[::1]");
+  EXPECT_EQ(LLGSArgToURL("[[::1]:1234]", true), "unix-connect://[[::1]:1234]");
   EXPECT_EQ(LLGSArgToURL("localhost", true), "unix-connect://localhost");
   EXPECT_EQ(LLGSArgToURL(":frobnicate", true), "unix-connect://:frobnicate");
 }

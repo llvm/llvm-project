@@ -436,8 +436,8 @@ protected:
         }
       }
       if (!context_found_for_symbol)
-        result.AppendWarningWithFormatv("Unable to find line information"
-                                        " for matching symbol '{0}'.\n",
+        result.AppendWarningWithFormatv("unable to find line information"
+                                        " for matching symbol '{0}'\n",
                                         sc.GetFunctionName());
     }
     if (sc_list_lines.GetSize() == 0) {
@@ -497,7 +497,7 @@ protected:
         displayed_something = true;
     }
     if (!displayed_something) {
-      result.AppendErrorWithFormat("No source filenames matched '%s'.\n",
+      result.AppendErrorWithFormat("no source filenames matched '%s'",
                                    filename);
       return false;
     }
@@ -543,8 +543,8 @@ protected:
           ModuleSpec module_spec(module_file_spec);
           target.GetImages().FindModules(module_spec, m_module_list);
           if (m_module_list.IsEmpty())
-            result.AppendWarningWithFormat("No module found for '%s'.\n",
-                                           m_options.modules[i].c_str());
+            result.AppendWarningWithFormatv("no module found for '{0}'",
+                                            m_options.modules[i]);
         }
       }
       if (!m_module_list.GetSize()) {
@@ -1068,7 +1068,7 @@ protected:
                 "Reached {0} of the file, no more to page",
                 m_options.reverse ? "beginning" : "end");
           } else {
-            result.AppendNote("No source available");
+            result.AppendNote("no source available");
           }
         }
 

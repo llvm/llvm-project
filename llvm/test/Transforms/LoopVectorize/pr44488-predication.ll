@@ -47,28 +47,28 @@ define i16 @test_true_and_false_branch_equal() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.latch
+for.body:
   %i.07 = phi i16 [ 99, %entry ], [ %inc7, %for.latch ]
   %lv = load i16, ptr @v_38, align 1
   %cmp1 = icmp eq i16 %lv, 32767
   br i1 %cmp1, label %cond.end, label %cond.end
 
-cond.end:                                         ; preds = %for.body, %for.body
+cond.end:
   %cmp2 = icmp eq i16 %lv, 0
   br i1 %cmp2, label %for.latch, label %cond.false4
 
-cond.false4:                                      ; preds = %cond.end
+cond.false4:
   %rem = srem i16 5786, %lv
   br label %for.latch
 
-for.latch:                                        ; preds = %cond.end, %cond.false4
+for.latch:
   %cond6 = phi i16 [ %rem, %cond.false4 ], [ 5786, %cond.end ]
   store i16 %cond6, ptr @v_39, align 1
   %inc7 = add nsw i16 %i.07, 1
   %cmp = icmp slt i16 %inc7, 111
   br i1 %cmp, label %for.body, label %exit
 
-exit:                                 ; preds = %for.latch
+exit:
   %rv = load i16, ptr @v_39, align 1
   ret i16 %rv
 }

@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -vplan-print-after="optimize$" -disable-output %s 2>&1 | FileCheck --check-prefix=DBG %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -vplan-print-after=printOptimizedVPlan -disable-output %s 2>&1 | FileCheck --check-prefix=DBG %s
 ; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -S %s | FileCheck %s
 
 ; DBG-LABEL: 'test_scalarize_call'
@@ -62,7 +62,6 @@ exit:
   ret void
 }
 
-declare i32 @llvm.smin.i32(i32, i32)
 
 
 ; DBG-LABEL: 'test_scalarize_with_branch_cond'

@@ -12,7 +12,7 @@ define void @fc(ptr nocapture %p, i32 %n, i32 %size) {
 entry:
   br label %do.body
 
-do.body:                                          ; preds = %cond.end, %entry
+do.body:
   %n.addr.0 = phi i32 [ %n, %entry ], [ %dec, %cond.end ]
   %p.addr.0 = phi ptr [ %p, %entry ], [ %incdec.ptr, %cond.end ]
   %incdec.ptr = getelementptr inbounds i16, ptr %p.addr.0, i64 -1
@@ -21,19 +21,19 @@ do.body:                                          ; preds = %cond.end, %entry
   %cmp = icmp ult i32 %conv, %size
   br i1 %cmp, label %cond.end, label %cond.true
 
-cond.true:                                        ; preds = %do.body
+cond.true:
   %sub = sub i32 %conv, %size
   %phitmp = trunc i32 %sub to i16
   br label %cond.end
 
-cond.end:                                         ; preds = %do.body, %cond.true
+cond.end:
   %cond = phi i16 [ %phitmp, %cond.true ], [ 0, %do.body ]
   store i16 %cond, ptr %incdec.ptr, align 2
   %dec = add i32 %n.addr.0, -1
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %do.end, label %do.body
 
-do.end:                                           ; preds = %cond.end
+do.end:
   ret void
 }
 
@@ -48,7 +48,7 @@ define void @example1(ptr nocapture %a, i32 %n, i32 %wsize) {
 entry:
   br label %do.body
 
-do.body:                                          ; preds = %do.body, %entry
+do.body:
   %n.addr.0 = phi i32 [ %n, %entry ], [ %dec, %do.body ]
   %p.0 = phi ptr [ %a, %entry ], [ %incdec.ptr, %do.body ]
   %incdec.ptr = getelementptr inbounds i32, ptr %p.0, i64 -1
@@ -61,6 +61,6 @@ do.body:                                          ; preds = %do.body, %entry
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %do.end, label %do.body
 
-do.end:                                           ; preds = %do.body
+do.end:
   ret void
 }

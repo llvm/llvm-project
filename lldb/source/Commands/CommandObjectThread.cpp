@@ -766,7 +766,7 @@ protected:
       if (m_options.m_step_count > 1) {
         if (!new_plan_sp->SetIterationCount(m_options.m_step_count)) {
           result.AppendWarning(
-              "step operation does not support iteration count.");
+              "step operation does not support iteration count");
         }
       }
 
@@ -877,10 +877,11 @@ public:
           result.AppendError("no valid thread indexes were specified");
           return;
         } else {
+          Stream &strm = result.GetOutputStream();
           if (resume_threads.size() == 1)
-            result.AppendMessageWithFormat("Resuming thread: ");
+            strm << "Resuming thread: ";
           else
-            result.AppendMessageWithFormat("Resuming threads: ");
+            strm << "Resuming threads: ";
 
           for (uint32_t idx = 0; idx < num_threads; ++idx) {
             Thread *thread =
@@ -891,9 +892,9 @@ public:
             if (this_thread_pos != resume_threads.end()) {
               resume_threads.erase(this_thread_pos);
               if (!resume_threads.empty())
-                result.AppendMessageWithFormat("%u, ", thread->GetIndexID());
+                strm << llvm::formatv("{0}, ", thread->GetIndexID());
               else
-                result.AppendMessageWithFormat("%u ", thread->GetIndexID());
+                strm << llvm::formatv("{0} ", thread->GetIndexID());
 
               const bool override_suspend = true;
               thread->SetResumeState(eStateRunning, override_suspend);
@@ -1721,7 +1722,7 @@ protected:
     // "thread return -- -5".
     if (command.starts_with("-x")) {
       if (command.size() != 2U)
-        result.AppendWarning("Return values ignored when returning from user "
+        result.AppendWarning("return values ignored when returning from user "
                              "called expressions");
 
       Thread *thread = m_exe_ctx.GetThreadPtr();
@@ -1910,7 +1911,7 @@ protected:
 
       if (!file) {
         result.AppendErrorWithFormat(
-            "No source file available for the current location.");
+            "no source file available for the current location");
         return;
       }
 

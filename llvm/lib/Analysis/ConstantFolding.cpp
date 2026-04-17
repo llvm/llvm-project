@@ -3408,22 +3408,14 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
           IsFMax = true;
           break;
         }
-        APFloat Res = IsFMax ? maximum(A, B) : minimum(A, B);
+        APFloat Res =
+            IsFMax ? (IsNaNPropagating ? maximum(A, B) : maximumnum(A, B))
+                   : (IsNaNPropagating ? minimum(A, B) : minimumnum(A, B));
 
-        if (ShouldCanonicalizeNaNs) {
+        if (ShouldCanonicalizeNaNs && Res.isNaN()) {
           APFloat NVCanonicalNaN(Res.getSemantics(), APInt(32, 0x7fffffff));
-          if (A.isNaN() && B.isNaN())
-            return ConstantFP::get(Ty, NVCanonicalNaN);
-          else if (IsNaNPropagating && (A.isNaN() || B.isNaN()))
-            return ConstantFP::get(Ty, NVCanonicalNaN);
+          return ConstantFP::get(Ty, NVCanonicalNaN);
         }
-
-        if (A.isNaN() && B.isNaN())
-          return Operands[1];
-        else if (A.isNaN())
-          Res = B;
-        else if (B.isNaN())
-          Res = A;
 
         if (IsXorSignAbs && XorSign != Res.isNegative())
           Res.changeSign();
