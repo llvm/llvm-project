@@ -28,17 +28,6 @@
 using namespace llvm;
 
 namespace {
-class AArch64PostSelectOptimizeImpl {
-public:
-  bool run(MachineFunction &MF);
-
-private:
-  bool optimizeNZCVDefs(MachineBasicBlock &MBB);
-  bool doPeepholeOpts(MachineBasicBlock &MBB);
-  /// Look for cross regclass copies that can be trivially eliminated.
-  bool foldSimpleCrossClassCopies(MachineInstr &MI);
-  bool foldCopyDup(MachineInstr &MI);
-};
 
 class AArch64PostSelectOptimizeLegacy : public MachineFunctionPass {
 public:
@@ -102,19 +91,8 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
   }
 }
 
-bool AArch64PostSelectOptimizeImpl::doPeepholeOpts(MachineBasicBlock &MBB) {
-  bool Changed = false;
-  for (auto &MI : make_early_inc_range(MBB)) {
-    bool CurrentIterChanged = foldSimpleCrossClassCopies(MI);
-    if (!CurrentIterChanged)
-      CurrentIterChanged |= foldCopyDup(MI);
-    Changed |= CurrentIterChanged;
-  }
-  return Changed;
-}
-
-bool AArch64PostSelectOptimizeImpl::foldSimpleCrossClassCopies(
-    MachineInstr &MI) {
+/// Look for cross regclass copies that can be trivially eliminated.
+bool foldSimpleCrossClassCopies(MachineInstr &MI) {
   auto *MF = MI.getMF();
   auto &MRI = MF->getRegInfo();
 
@@ -162,7 +140,7 @@ bool AArch64PostSelectOptimizeImpl::foldSimpleCrossClassCopies(
   return true;
 }
 
-bool AArch64PostSelectOptimizeImpl::foldCopyDup(MachineInstr &MI) {
+bool foldCopyDup(MachineInstr &MI) {
   if (!MI.isCopy())
     return false;
 
@@ -224,7 +202,18 @@ bool AArch64PostSelectOptimizeImpl::foldCopyDup(MachineInstr &MI) {
                      AArch64::DUPi64, AArch64::UMOVvi64);
 }
 
-bool AArch64PostSelectOptimizeImpl::optimizeNZCVDefs(MachineBasicBlock &MBB) {
+bool doPeepholeOpts(MachineBasicBlock &MBB) {
+  bool Changed = false;
+  for (auto &MI : make_early_inc_range(MBB)) {
+    bool CurrentIterChanged = foldSimpleCrossClassCopies(MI);
+    if (!CurrentIterChanged)
+      CurrentIterChanged |= foldCopyDup(MI);
+    Changed |= CurrentIterChanged;
+  }
+  return Changed;
+}
+
+bool optimizeNZCVDefs(MachineBasicBlock &MBB) {
   // If we find a dead NZCV implicit-def, we
   // - try to convert the operation to a non-flag-setting equivalent
   // - or mark the def as dead to aid later peephole optimizations.
@@ -296,7 +285,7 @@ bool AArch64PostSelectOptimizeImpl::optimizeNZCVDefs(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-bool AArch64PostSelectOptimizeImpl::run(MachineFunction &MF) {
+bool runAArch64PostSelectOptimize(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
   assert(MF.getProperties().hasSelected() && "Expected a selected MF");
@@ -311,7 +300,7 @@ bool AArch64PostSelectOptimizeImpl::run(MachineFunction &MF) {
 
 bool AArch64PostSelectOptimizeLegacy::runOnMachineFunction(
     MachineFunction &MF) {
-  return AArch64PostSelectOptimizeImpl().run(MF);
+  return runAArch64PostSelectOptimize(MF);
 }
 
 char AArch64PostSelectOptimizeLegacy::ID = 0;
@@ -328,7 +317,7 @@ FunctionPass *createAArch64PostSelectOptimize() {
 PreservedAnalyses
 AArch64PostSelectOptimizePass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
-  const bool Changed = AArch64PostSelectOptimizeImpl().run(MF);
+  const bool Changed = runAArch64PostSelectOptimize(MF);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
