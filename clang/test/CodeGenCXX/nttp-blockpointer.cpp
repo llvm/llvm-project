@@ -68,3 +68,5 @@ void test_variadic() {
   // CHECK: call void @_Z10f_variadicIJXcvU13block_pointerFvvEadUb4_EXcvS1_adUb5_EEEvv()
   f_variadic<^{}, ^{}>();
 }
+
+// CHECK: define internal void @_Z1fIXcvU13block_pointerFvvEadUb_EEvv()
