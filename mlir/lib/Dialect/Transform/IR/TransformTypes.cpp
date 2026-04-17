@@ -111,36 +111,27 @@ transform::AnyParamType::checkPayload(Location loc,
 DiagnosedSilenceableFailure
 transform::NormalizedOpType::checkPayload(Location loc,
                                           ArrayRef<Operation *> payload) const {
-  // Return any definite failure or the first silenceable failure.
-  auto overallResult = DiagnosedSilenceableFailure::success();
-  for (Operation *op : payload) {
-    for (NormalFormAttrInterface normalForm : getNormalForms()) {
-      DiagnosedSilenceableFailure result = normalForm.checkOperation(op);
-      if (result.isDefiniteFailure())
-        return result;
-      if (result.isSilenceableFailure() && overallResult.succeeded())
-        overallResult = std::move(result);
-    }
-  }
-  return overallResult;
+  // Only check payloads that are not already guaranteeing the required forms.
+  SmallVector<Operation *> payloadsToCheck =
+      llvm::filter_to_vector(payload, [this](Operation *op) {
+        auto normalFormCheckedOp = dyn_cast<NormalFormCheckedOpInterface>(op);
+        if (!normalFormCheckedOp)
+          return true;
+
+        SmallVector<NormalFormAttrInterface> checkedNormalForms;
+        normalFormCheckedOp.getCheckedNormalForms(checkedNormalForms);
+        return !llvm::all_of(
+            this->getNormalForms(), [&](NormalFormAttrInterface form) {
+              return llvm::is_contained(checkedNormalForms, form);
+            });
+      });
+  return detail::checkNormalForms(getNormalForms(), payloadsToCheck);
 }
 
 LogicalResult transform::NormalizedOpType::verify(
     function_ref<InFlightDiagnostic()> emitError,
     ArrayRef<NormalFormAttrInterface> normalForms) {
-  llvm::DenseMap<TypeID, NormalFormAttrInterface> seen;
-  for (NormalFormAttrInterface normalForm : normalForms) {
-    auto [previous, inserted] =
-        seen.try_emplace(normalForm.getTypeID(), normalForm);
-    if (!inserted) {
-      InFlightDiagnostic diag = emitError()
-                                << "duplicate normal form: " << normalForm;
-      diag.attachNote() << "previous instance: " << previous->second;
-      return diag;
-    }
-  }
-
-  return success();
+  return detail::verifyNormalFormList(emitError, normalForms);
 }
 
 //===----------------------------------------------------------------------===//
