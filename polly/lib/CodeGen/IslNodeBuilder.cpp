@@ -587,7 +587,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   ScalarEvolution *CallerSE = GenSE;
   ValueMapT CallerGlobals = ValueMap;
   IslExprBuilder::IDToValueTy IDToValueCopy = IDToValue;
-  MapVector<const Loop *, const SCEV *> CallerOutsideLoopIterations =
+  MapVector<const Loop *, const SCEV *> OutsideLoopIterationsCopy =
       OutsideLoopIterations;
 
   // Get the analyses for the subfunction. ParallelLoopGenerator already create
@@ -695,7 +695,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   GenSE = CallerSE;
   IDToValue = std::move(IDToValueCopy);
   ValueMap = std::move(CallerGlobals);
-  OutsideLoopIterations = std::move(CallerOutsideLoopIterations);
+  OutsideLoopIterations = std::move(OutsideLoopIterationsCopy);
   ExprBuilder.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   RegionGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   BlockGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
