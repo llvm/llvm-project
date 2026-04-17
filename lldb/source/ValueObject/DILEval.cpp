@@ -16,6 +16,7 @@
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
 
@@ -290,10 +291,10 @@ static lldb::VariableSP DILFindVariable(ConstString name,
   return nullptr;
 }
 
-lldb::ValueObjectSP
-LookupGlobalIdentifier(llvm::StringRef name_ref,
-                       std::shared_ptr<StackFrame> stack_frame,
-                       lldb::DynamicValueType use_dynamic) {
+lldb::ValueObjectSP LookupGlobalIdentifier(
+    llvm::StringRef name_ref, std::shared_ptr<StackFrame> stack_frame,
+    lldb::TargetSP target_sp, lldb::DynamicValueType use_dynamic,
+    bool search_all_modules) {
   // Get a global variables list without the locals from the current frame
   SymbolContext symbol_context =
       stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
@@ -311,7 +312,28 @@ LookupGlobalIdentifier(llvm::StringRef name_ref,
           stack_frame->GetValueObjectForFrameVariable(var_sp, use_dynamic);
   }
 
-  return value_sp;
+  if (value_sp)
+    return value_sp;
+
+  if (!search_all_modules)
+    return nullptr;
+
+  // Check for match in modules global variables.
+  VariableList modules_var_list;
+  target_sp->GetImages().FindGlobalVariables(
+      ConstString(name_ref), std::numeric_limits<uint32_t>::max(),
+      modules_var_list);
+
+  if (!modules_var_list.Empty()) {
+    lldb::VariableSP var_sp =
+        DILFindVariable(ConstString(name_ref), modules_var_list);
+    if (var_sp)
+      value_sp = ValueObjectVariable::Create(stack_frame.get(), var_sp);
+
+    if (value_sp)
+      return value_sp;
+  }
+  return nullptr;
 }
 
 lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
@@ -376,11 +398,14 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
       (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
   const bool allow_var_updates =
       (options & StackFrame::eExpressionPathOptionsAllowVarUpdates) != 0;
+  const bool allow_all_globals =
+      (options & StackFrame::eExpressionPathOptionsAllowAllGlobals) != 0;
 
   m_use_synthetic = !no_synth_child;
   m_fragile_ivar = !no_fragile_ivar;
   m_check_ptr_vs_member = check_ptr_vs_member;
   m_allow_var_updates = allow_var_updates;
+  m_allow_all_globals = allow_all_globals;
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
@@ -419,8 +444,9 @@ Interpreter::Visit(const IdentifierNode &node) {
       LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
   if (!identifier)
-    identifier =
-        LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
+    identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
+                                        m_target, use_dynamic,
+                                        m_allow_all_globals);
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());

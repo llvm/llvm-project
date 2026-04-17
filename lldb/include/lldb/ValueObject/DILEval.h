@@ -28,12 +28,15 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
                                      lldb::DynamicValueType use_dynamic);
 
 /// Given the name of an identifier, check to see if it matches the name of a
-/// global variable in the current compile unit. If so, find the ValueObject for
-/// that global variable, and create and return an IdentifierInfo object
-/// containing all the relevant information about it.
+/// global variable. If so, find the ValueObject for that global variable, and
+/// create and return an IdentifierInfo object containing all the relevant
+/// information about it. If \p search_all_modules is true, also search global
+/// variables from all loaded modules (not just the current compile unit).
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            std::shared_ptr<StackFrame> frame_sp,
-                                           lldb::DynamicValueType use_dynamic);
+                                           lldb::TargetSP target_sp,
+                                           lldb::DynamicValueType use_dynamic,
+                                           bool search_all_modules = false);
 
 class Interpreter : Visitor {
 public:
@@ -146,6 +149,7 @@ private:
   bool m_check_ptr_vs_member;
   // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
   [[maybe_unused]] bool m_allow_var_updates;
+  bool m_allow_all_globals;
 };
 
 } // namespace lldb_private::dil
