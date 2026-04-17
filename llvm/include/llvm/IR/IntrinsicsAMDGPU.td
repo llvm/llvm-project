@@ -2723,8 +2723,8 @@ def int_amdgcn_cs_chain:
 // Waterfall intrinsics are used to mark a region as requiring waterfall loops to
 // activate and deactivate lanes in a loop (and sometimes transform VGPR values
 // into SGPR values).
-// Best case (uniform index in VGPR) the loop will execute once, worst case (all
-// values in the index are different) the loop will execute wave-size times.
+// Best case (all lanes have the same values) the loop will execute once, worst case (all lanes
+// have different values) the loop will execute wave-size times.
 // The waterfall.begin intrinsic returns a new token that must be threaded through the
 // corresponding waterfall.readfirstlane and waterfall.end or
 // waterfall.last_use intrinsics, forming a waterfall group of intrinsics that together
