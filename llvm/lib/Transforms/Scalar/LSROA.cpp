@@ -117,19 +117,18 @@ bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
     return false;
 
   auto PerFieldSGEP = collectPerFieldSGEP(SAI);
-  if (PerFieldSGEP.size() == 0)
+  if (PerFieldSGEP.empty())
     return false;
 
   auto LifetimeIntrinsics = collectLifetimeIntrinsicsUsing(SAI);
   IRBuilder B(&SAI);
-  for (size_t I = 0; I < PerFieldSGEP.size(); ++I) {
-    auto &Users = PerFieldSGEP[I];
-    if (Users.size() == 0)
+  for (const auto &[FieldIndex, Users] : llvm::enumerate(PerFieldSGEP)) {
+    if (Users.empty())
       continue;
 
     B.SetInsertPoint(&SAI);
     StructuredAllocaInst *FieldAlloca = cast<StructuredAllocaInst>(
-        B.CreateStructuredAlloca(ST->getElementType(I)));
+        B.CreateStructuredAlloca(ST->getElementType(FieldIndex)));
 
     for (auto II : LifetimeIntrinsics)
       copyLifetimeIntrinsicFor(B, II, FieldAlloca);
