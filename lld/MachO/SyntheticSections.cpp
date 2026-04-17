@@ -408,7 +408,7 @@ void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA,
         targetValue = targetVA;
       }
       rebase->target = targetValue & 0x7ff'ffff'ffff;
-      rebase->high8 = (targetVA >> 56);
+      rebase->high8 = (targetValue >> 56);
       rebase->next = 0;
       rebase->bind = 0;
       rebase->auth = 0;
