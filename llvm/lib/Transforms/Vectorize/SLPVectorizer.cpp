@@ -2410,7 +2410,7 @@ public:
   bool analyzeConstantStrideCandidate(
       const ArrayRef<Value *> PointerOps, Type *ElemTy, Align Alignment,
       const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff,
-      Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const;
+      Value *Ptr0, StridedPtrInfo &SPtrInfo) const;
 
   /// Return true if an array of scalar loads can be replaced with a strided
   /// load (with run-time stride).
@@ -7307,7 +7307,7 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
 bool BoUpSLP::analyzeConstantStrideCandidate(
     const ArrayRef<Value *> PointerOps, Type *ScalarTy, Align Alignment,
     const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff,
-    Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const {
+    Value *Ptr0, StridedPtrInfo &SPtrInfo) const {
   const size_t Sz = PointerOps.size();
   SmallVector<int64_t> SortedOffsetsFromBase(Sz);
   // Go through `PointerOps` in sorted order and record offsets from
@@ -7700,7 +7700,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
         cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
             ->getAlign();
     if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, Alignment, Order,
-                                       Diff, Ptr0, PtrN, SPtrInfo))
+                                       Diff, Ptr0, SPtrInfo))
       return LoadsState::StridedVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
@@ -10833,9 +10833,9 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       // Check that the sorted pointer operands are consecutive.
       if (static_cast<uint64_t>(*Dist) == VL.size() - 1)
         return TreeEntry::Vectorize;
-      if (EnableStridedStores && analyzeConstantStrideCandidate(
-                                     PointerOps, ScalarTy, CommonAlignment,
-                                     CurrentOrder, *Dist, Ptr0, PtrN, SPtrInfo))
+      if (EnableStridedStores &&
+          analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                         CurrentOrder, *Dist, Ptr0, SPtrInfo))
         return TreeEntry::StridedVectorize;
     }
 
@@ -12029,12 +12029,70 @@ public:
     if (S.areInstructionsWithCopyableElements()) {
       MainOp = S.getMainOp();
       MainOpcode = S.getOpcode();
+      const bool IsCommutative =
+          isCommutative(MainOp) && MainOp->getNumOperands() == 2;
       Operands.assign(MainOp->getNumOperands(),
                       BoUpSLP::ValueList(VL.size(), nullptr));
+      // Build operands and simultaneously count (ID0, ID1) pair
+      // frequencies for commutative operand normalization. Pairs and
+      // their inverses are tracked under a canonical key so that
+      // (Load, Add) and (Add, Load) contribute to the same bucket.
+      struct PairInfo {
+        unsigned FwdCount = 0;
+        unsigned RevCount = 0;
+      };
+      SmallMapVector<std::pair<unsigned, unsigned>, PairInfo, 8> PairCounts;
+      unsigned MajID0 = 0, MajID1 = 0;
       for (auto [Idx, V] : enumerate(VL)) {
         SmallVector<Value *> OperandsForValue = getOperands(S, V);
         for (auto [OperandIdx, Operand] : enumerate(OperandsForValue))
           Operands[OperandIdx][Idx] = Operand;
+        if (!IsCommutative || S.isCopyableElement(V) || isa<PoisonValue>(V))
+          continue;
+        unsigned ID0 = OperandsForValue[0]->getValueID();
+        unsigned ID1 = OperandsForValue[1]->getValueID();
+        if (ID0 == ID1)
+          continue;
+        unsigned MinID = std::min(ID0, ID1);
+        unsigned MaxID = std::max(ID0, ID1);
+        auto [It, Inserted] =
+            PairCounts.try_emplace(std::make_pair(MinID, MaxID));
+        PairInfo &Info = It->second;
+        if (ID0 < ID1)
+          ++Info.FwdCount;
+        else
+          ++Info.RevCount;
+      }
+      // Find the most frequent (ID0, ID1) pair across non-copyable
+      // lanes. Select the orientation (original or inverse) that has
+      // more votes as the majority pattern.
+      unsigned BestCount = 0;
+      for (const auto &P : PairCounts) {
+        const PairInfo &Info = P.second;
+        unsigned Total = Info.FwdCount + Info.RevCount;
+        if (Total > BestCount) {
+          BestCount = Total;
+          if (Info.FwdCount >= Info.RevCount) {
+            MajID0 = P.first.first;
+            MajID1 = P.first.second;
+          } else {
+            MajID0 = P.first.second;
+            MajID1 = P.first.first;
+          }
+        }
+      }
+      // For commutative ops, swap lanes whose operand types are the
+      // exact inverse of the majority pattern, making the non-copyable
+      // lanes consistent.
+      if (BestCount > 0) {
+        for (auto [Idx, V] : enumerate(VL)) {
+          if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+            continue;
+          unsigned ID0 = Operands[0][Idx]->getValueID();
+          unsigned ID1 = Operands[1][Idx]->getValueID();
+          if (ID0 == MajID1 && ID1 == MajID0)
+            std::swap(Operands[0][Idx], Operands[1][Idx]);
+        }
       }
     } else {
       buildOriginalOperands(S, VL, Operands);
@@ -17660,7 +17718,10 @@ InstructionCost BoUpSLP::getSpillCost() {
   };
   while (!LiveEntries.empty()) {
     const TreeEntry *Entry = LiveEntries.pop_back_val();
-    SmallVector<const TreeEntry *> Operands = EntriesToOperands.lookup(Entry);
+    const auto OpIt = EntriesToOperands.find(Entry);
+    if (OpIt == EntriesToOperands.end())
+      continue;
+    ArrayRef<const TreeEntry *> Operands = OpIt->second;
     if (Operands.empty())
       continue;
     if (ScalarOrPseudoEntries.contains(Entry)) {

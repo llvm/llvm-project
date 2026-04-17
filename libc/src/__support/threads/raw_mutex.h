@@ -15,16 +15,11 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/threads/futex_utils.h"
 #include "src/__support/threads/sleep.h"
 #include "src/__support/time/abs_timeout.h"
 
 #include <stdio.h>
-
-#if defined(__linux__)
-#include "src/__support/threads/linux/futex_utils.h"
-#elif defined(__APPLE__)
-#include "src/__support/threads/darwin/futex_utils.h"
-#endif
 
 #ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1
@@ -91,8 +86,10 @@ private:
           futex.exchange(IN_CONTENTION, cpp::MemoryOrder::ACQUIRE) == UNLOCKED)
         return true;
       // Contention persists. Park the thread and wait for further notification.
-      if (ETIMEDOUT == -futex.wait(IN_CONTENTION, timeout, is_pshared))
+      if (!futex.wait(IN_CONTENTION, timeout, is_pshared).has_value() &&
+          timeout.has_value())
         return false;
+
       // Continue to spin after waking up.
       state = spin(spin_count);
     }

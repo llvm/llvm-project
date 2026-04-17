@@ -7,5 +7,5 @@
 name: foo
 body: |
   bb.0:
-    INLINEASM &"", 0 /* attdialect */, mem:badmem
+    INLINEASM &"", attdialect, mem:badmem
 ...
