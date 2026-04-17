@@ -207,6 +207,10 @@ foreach N = [5] in
   def SplatPat_simm#N : ComplexPattern<vAny, 1, "selectVSplatImm<"#N#", true>",
                                        [build_vector, bitconvert]>;
 
+foreach N = [5] in
+  def SplatPat_nimm#N : ComplexPattern<vAny, 1, "selectVSplatImmNeg<"#N#">",
+                                       [build_vector, bitconvert]>;
+
 def vsplat_uimm_inv_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmInvPow2",
                                           [build_vector, bitconvert]>;
 
@@ -1374,6 +1378,17 @@ multiclass PatVrUimm5<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_DU") LSX128:$vj, uimm5:$imm)>;
 }
 
+multiclass PatVrNimm5<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_BU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_HU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_WU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 (SplatPat_nimm5 uimm5:$imm))),
+            (!cast<LAInst>(Inst#"_DU") LSX128:$vj, uimm5:$imm)>;
+}
+
 multiclass PatVrVrVr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v16i8 LSX128:$vd), (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
             (!cast<LAInst>(Inst#"_B") LSX128:$vd, LSX128:$vj, LSX128:$vk)>;
@@ -1556,8 +1571,10 @@ defm : PatVrVr<add, "VADD">;
 defm : PatVrVr<sub, "VSUB">;
 
 // VADDI_{B/H/W/D}U
+defm : PatVrNimm5<sub, "VADDI">;
 defm : PatVrUimm5<add, "VADDI">;
 // VSUBI_{B/H/W/D}U
+defm : PatVrNimm5<add, "VSUBI">;
 defm : PatVrUimm5<sub, "VSUBI">;
 
 // VNEG_{B/H/W/D}
