@@ -38,7 +38,7 @@ void ProgramAndKernelManager::registerFatBin(__sycl_tgt_bin_desc *FatbinDesc) {
   if (!FatbinDesc->NumDeviceBinaries)
     return;
 
-  std::lock_guard<std::mutex> Guard(MImageCollectionMutex);
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
   for (uint16_t I = 0; I < FatbinDesc->NumDeviceBinaries; ++I) {
     const auto &RawDeviceImage = FatbinDesc->DeviceImages[I];
     if (!checkDeviceImageValidity(RawDeviceImage))
@@ -51,26 +51,24 @@ void ProgramAndKernelManager::registerFatBin(__sycl_tgt_bin_desc *FatbinDesc) {
     if (EntriesB == EntriesE)
       continue;
 
-    std::unique_ptr<DeviceImageWrapper> NewImageWrapper =
-        std::make_unique<DeviceImageWrapper>(RawDeviceImage);
+    std::unique_ptr<DeviceImageManager> NewImageWrapper =
+        std::make_unique<DeviceImageManager>(RawDeviceImage);
 
     for (auto EntriesIt = EntriesB; EntriesIt != EntriesE; ++EntriesIt) {
       auto Name = EntriesIt->SymbolName;
-      auto KernelIDIt = MKernelNameToID.find(Name);
-      if (KernelIDIt == MKernelNameToID.end()) {
-        sycl::kernel_id KernelID =
-            detail::createSyclObjFromImpl<sycl::kernel_id>(
-                std::make_shared<detail::KernelIdImpl>(Name));
-        KernelIDIt = MKernelNameToID.insert(
-            MKernelNameToID.end(),
-            std::make_pair(std::string_view(Name), KernelID));
-      }
 
-      MKernelIDToDevImageJIT.insert(
-          std::make_pair(KernelIDIt->second, NewImageWrapper.get()));
+      auto It = MDeviceKernelInfoMap.find(std::string_view(Name));
+      if (It == MDeviceKernelInfoMap.end()) {
+
+        [[maybe_unused]] auto [Iterator, EmplaceSucceeded] =
+            MDeviceKernelInfoMap.emplace(
+                std::piecewise_construct, std::forward_as_tuple(Name),
+                std::forward_as_tuple(Name, *NewImageWrapper));
+        assert(EmplaceSucceeded && "Kernel name found in multiple images");
+      }
     }
 
-    MDeviceImageWrappers.insert(
+    MDeviceImageManagers.insert(
         std::make_pair(&RawDeviceImage, std::move(NewImageWrapper)));
   }
 }
@@ -82,12 +80,12 @@ void ProgramAndKernelManager::unregisterFatBin(
   if (!checkFatBinVersion(*FatbinDesc) || FatbinDesc->NumDeviceBinaries == 0)
     return;
 
-  std::lock_guard<std::mutex> Guard(MImageCollectionMutex);
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
   for (uint16_t I = 0; I < FatbinDesc->NumDeviceBinaries; ++I) {
     const auto &RawDeviceImage = FatbinDesc->DeviceImages[I];
 
-    auto DevImageIt = MDeviceImageWrappers.find(&RawDeviceImage);
-    if (DevImageIt == MDeviceImageWrappers.end())
+    auto DevImageIt = MDeviceImageManagers.find(&RawDeviceImage);
+    if (DevImageIt == MDeviceImageManagers.end())
       continue;
 
     const llvm::offloading::EntryTy *EntriesB = RawDeviceImage.EntriesBegin;
@@ -97,49 +95,58 @@ void ProgramAndKernelManager::unregisterFatBin(
       continue;
 
     for (auto EntriesIt = EntriesB; EntriesIt != EntriesE; ++EntriesIt) {
-      if (auto KernelIDIt = MKernelNameToID.find(EntriesIt->SymbolName);
-          KernelIDIt != MKernelNameToID.end()) {
-        MKernelIDToDevImageJIT.erase(KernelIDIt->second);
-        MKernelNameToID.erase(KernelIDIt);
+      if (auto KernelIt = MDeviceKernelInfoMap.find(EntriesIt->SymbolName);
+          KernelIt != MDeviceKernelInfoMap.end()) {
+        // Programs are attached to image and will be released with image
+        // destruction. Clear only kernel specific data by destroying its kernel
+        // info object.
+        MDeviceKernelInfoMap.erase(KernelIt);
       }
     }
 
-    MDeviceImageWrappers.erase(DevImageIt);
+    MDeviceImageManagers.erase(DevImageIt);
   }
 }
 
-static bool isImageTargetCompatible(const DeviceImageWrapper &Image,
-                                    const DeviceImpl &Device) {
+static bool isImageCompatible(const DeviceImageManager &Image,
+                              const DeviceImpl &Device) {
   sycl::backend BE = Device.getBackend();
   const char *Target = Image.getRawData().TripleString;
 
-  return (strcmp(Target, DeviceBinaryTripleSPIRV64) == 0) &&
-         (BE == sycl::backend::level_zero);
+  if (!(strcmp(Target, DeviceBinaryTripleSPIRV64) == 0 &&
+        BE == sycl::backend::level_zero))
+    return false;
+
+  bool IsValid{};
+  callAndThrow(olIsValidBinary, Device.getOLHandle(),
+               Image.getRawData().ImageStart, Image.getSize(), &IsValid);
+  return IsValid;
 }
 
-DeviceImageWrapper *
-ProgramAndKernelManager::getDeviceImage(std::string_view KernelName,
-                                        const kernel_id &KernelID,
-                                        DeviceImpl &Device) {
-  std::lock_guard<std::mutex> Guard(MImageCollectionMutex);
-  auto [Begin, End] = MKernelIDToDevImageJIT.equal_range(KernelID);
-  if (Begin != End) {
-    bool IsValid{};
-    // TODO: with AOT (not implemented yet), we need to analyze and check
-    // olIsValidBinary for AOT binaries first.
-    for (auto It = Begin; It != End; ++It) {
-      if (isImageTargetCompatible(*It->second, Device)) {
-        callAndThrow(olIsValidBinary, Device.getOLHandle(),
-                     It->second->getRawData().ImageStart, It->second->getSize(),
-                     &IsValid);
-        if (IsValid)
-          return It->second;
-      }
-    }
-  }
+ol_symbol_handle_t
+ProgramAndKernelManager::getOrCreateKernel(DeviceKernelInfo &KernelInfo,
+                                           DeviceImpl &Device) {
 
-  throw exception(make_error_code(errc::runtime),
-                  "No kernel named " + std::string(KernelName) + " was found");
+  std::lock_guard<std::mutex> KernelGuard(MDataCollectionMutex);
+
+  if (auto Kernel = KernelInfo.getKernel(Device.getOLHandle()))
+    return Kernel;
+
+  auto &DeviceImage = KernelInfo.getDeviceImage();
+
+  if (!isImageCompatible(DeviceImage, Device))
+    throw exception(make_error_code(errc::runtime),
+                    std::string("No compatible image for ") +
+                        KernelInfo.getName().data() + " was found");
+
+  auto DeviceHandle = Device.getOLHandle();
+  auto Program = DeviceImage.getOrCreateProgram(DeviceHandle);
+
+  ol_symbol_handle_t Kernel{};
+  callAndThrow(olGetSymbol, Program, KernelInfo.getName().data(),
+               OL_SYMBOL_KIND_KERNEL, &Kernel);
+  KernelInfo.addKernel(DeviceHandle, Kernel);
+  return Kernel;
 }
 
 } // namespace detail

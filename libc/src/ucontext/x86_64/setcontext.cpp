@@ -18,7 +18,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 __attribute__((naked)) LLVM_LIBC_FUNCTION(int, setcontext,
-                                          (const ucontext_t *ucp)) {
+                                          (const ucontext_t *ucp)) noexcept {
   asm(R"(
       # ucp is in rdi
       

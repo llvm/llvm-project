@@ -973,6 +973,26 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
   return Result;
 }
 
+Expected<lowertypetests::DropTestKind>
+parseDropTypeTestsPassOptions(StringRef Params) {
+  lowertypetests::DropTestKind Result = lowertypetests::DropTestKind::Assume;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "all") {
+      Result = lowertypetests::DropTestKind::All;
+    } else if (ParamName == "assume") {
+      Result = lowertypetests::DropTestKind::Assume;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid DropTypeTestsPass parameter '{}'", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
 Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
   EmbedBitcodeOptions Result;
   while (!Params.empty()) {

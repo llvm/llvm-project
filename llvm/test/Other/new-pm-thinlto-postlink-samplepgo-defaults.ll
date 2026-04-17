@@ -38,7 +38,7 @@
 ; CHECK-O-NEXT: Running pass: PGOIndirectCallPromotion
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
-; CHECK-O-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-O-NEXT: Running pass: DropTypeTestsPass
 ; CHECK-O-NEXT: Running pass: IPSCCPPass
 ; CHECK-O-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-O-NEXT: Running analysis: AssumptionAnalysis
