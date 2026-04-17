@@ -486,6 +486,75 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
       ST->canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
 
+  if (!IsExtendedInts) {
+    // Without arbitrary precision integer extensions, SPIR-V only supports
+    // integer widths of 8, 16, 32, 64. Non-standard widths (e.g., i24, i40)
+    // must be widened to the next power of two.
+    //
+    // G_TRUNC requires special handling because its semantics depend on the
+    // original destination width. For example:
+    //   %dst:s24 = G_TRUNC %src:s64
+    // After widening s24 to s32, we cannot simply do:
+    //   %dst:s32 = G_TRUNC %src:s64
+    // because this would keep 32 bits instead of 24. Instead, we insert a
+    // G_AND to mask the value to the original width:
+    //   %mask:s64 = G_CONSTANT 0xFFFFFF      ; 24-bit mask
+    //   %masked:s64 = G_AND %src:s64, %mask
+    //   %dst:s32 = G_TRUNC %masked:s64
+    // If src and dst widen to the same size, G_TRUNC is replaced entirely:
+    //   %mask:s64 = G_CONSTANT 0xFFFFFFFFFF  ; 40-bit mask
+    //   %dst:s64 = G_AND %src:s64, %mask
+    SmallVector<MachineInstr *, 8> TruncToRemove;
+    for (MachineBasicBlock &MBB : MF) {
+      for (MachineInstr &MI : MBB) {
+        unsigned MIOp = MI.getOpcode();
+        if (MIOp != TargetOpcode::G_TRUNC)
+          continue;
+        assert(MI.getNumOperands() == 2);
+        assert(MI.getOperand(0).isReg());
+        assert(MI.getOperand(1).isReg());
+
+        Register DstReg = MI.getOperand(0).getReg();
+        Register SrcReg = MI.getOperand(1).getReg();
+
+        // TODO: handle vector types.
+        if (!MRI.getType(DstReg).isScalar()) {
+          assert(!MRI.getType(SrcReg).isScalar());
+          continue;
+        }
+
+        unsigned OriginalDstWidth = MRI.getType(DstReg).getScalarSizeInBits();
+        unsigned OriginalSrcWidth = MRI.getType(SrcReg).getScalarSizeInBits();
+
+        unsigned NewDstWidth = widenBitWidthToNextPow2(OriginalDstWidth);
+        unsigned NewSrcWidth = widenBitWidthToNextPow2(OriginalSrcWidth);
+
+        // No Dst width change means no truncation semantics change.
+        if (OriginalDstWidth == NewDstWidth)
+          continue;
+
+        MRI.setType(SrcReg, LLT::scalar(NewSrcWidth));
+        MRI.setType(DstReg, LLT::scalar(NewDstWidth));
+
+        MIB.setInsertPt(MBB, MI.getIterator());
+        APInt Mask = APInt::getLowBitsSet(NewSrcWidth, OriginalDstWidth);
+        auto MaskReg = MIB.buildConstant(LLT::scalar(NewSrcWidth), Mask);
+        Register MaskedReg =
+            MRI.createGenericVirtualRegister(LLT::scalar(NewSrcWidth));
+        MIB.buildAnd(MaskedReg, SrcReg, MaskReg);
+
+        if (NewSrcWidth == NewDstWidth) {
+          MRI.replaceRegWith(DstReg, MaskedReg);
+          TruncToRemove.push_back(&MI);
+        } else {
+          MI.getOperand(1).setReg(MaskedReg);
+        }
+      }
+    }
+    for (MachineInstr *MI : TruncToRemove)
+      MI->eraseFromParent();
+  }
+
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     if (MBB->empty())
       continue;
