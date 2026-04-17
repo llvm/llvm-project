@@ -151,6 +151,9 @@ class EnumTypesTestCase(TestBase):
             self.assertEqual(
                 member.signed, value_matches[idx], "Value matches for %d" % (idx)
             )
+            member_type_flags = member.GetType().GetTypeFlags()
+            is_scalar = (member_type_flags & lldb.eTypeIsScalar) == lldb.eTypeIsScalar
+            self.assertTrue(is_scalar, f"expects enum: {member.name} is a scalar value")
 
     def test_api(self):
         """Test that the SBTypeEnumMember API's work correctly for enum_test_days"""
