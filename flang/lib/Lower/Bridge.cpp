@@ -5606,9 +5606,8 @@ private:
         lhsType.has_value() && lhsType->IsPolymorphic();
     if (lhsIsWholeAllocatable && lhsIsPolymorphic &&
         !bridge.getLoweringOptions().getReallocateLHS())
-      mlir::emitWarning(loc,
-                        "-fno-realloc-lhs is ignored for assignment to "
-                        "polymorphic allocatable");
+      mlir::emitWarning(loc, "-fno-realloc-lhs is ignored for assignment to "
+                             "polymorphic allocatable");
     const bool isWholeAllocatableAssignment =
         lhsIsWholeAllocatable &&
         (bridge.getLoweringOptions().getReallocateLHS() || lhsIsPolymorphic);
