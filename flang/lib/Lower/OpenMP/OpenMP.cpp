@@ -1895,8 +1895,10 @@ static void genTaskwaitClauses(lower::AbstractConverter &converter,
                                const List<Clause> &clauses, mlir::Location loc,
                                mlir::omp::TaskwaitOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processTODO<clause::Depend, clause::Nowait>(
-      loc, llvm::omp::Directive::OMPD_taskwait);
+  lower::StatementContext stmtCtx;
+  lower::SymMap &symTable = converter.getSymbolMap();
+  cp.processDepend(symTable, stmtCtx, clauseOps);
+  cp.processTODO<clause::Nowait>(loc, llvm::omp::Directive::OMPD_taskwait);
 }
 
 static void genWorkshareClauses(lower::AbstractConverter &converter,

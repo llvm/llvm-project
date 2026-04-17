@@ -1928,25 +1928,6 @@ void OpenMPIRBuilder::createFlush(const LocationDescription &Loc) {
   emitFlush(Loc);
 }
 
-void OpenMPIRBuilder::emitTaskwaitImpl(const LocationDescription &Loc) {
-  // Build call kmp_int32 __kmpc_omp_taskwait(ident_t *loc, kmp_int32
-  // global_tid);
-  uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
-  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
-  Value *Args[] = {Ident, getOrCreateThreadID(Ident)};
-
-  // Ignore return result until untied tasks are supported.
-  createRuntimeFunctionCall(
-      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_taskwait), Args);
-}
-
-void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc) {
-  if (!updateToLocation(Loc))
-    return;
-  emitTaskwaitImpl(Loc);
-}
-
 void OpenMPIRBuilder::emitTaskyieldImpl(const LocationDescription &Loc) {
   // Build call __kmpc_omp_taskyield(loc, thread_id, 0);
   uint32_t SrcLocStrSize;
@@ -2035,6 +2016,46 @@ static Value *emitTaskDependencies(
     OMPBuilder.emitTaskDependency(Builder, Base, Dep);
   }
   return DepArray;
+}
+
+void OpenMPIRBuilder::emitTaskwaitImpl(const LocationDescription &Loc) {
+  // Build call kmp_int32 __kmpc_omp_taskwait(ident_t *loc, kmp_int32
+  // global_tid);
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Value *Args[] = {Ident, getOrCreateThreadID(Ident)};
+
+  // Ignore return result until untied tasks are supported.
+  createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_taskwait), Args);
+}
+
+void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc,
+                                     SmallVector<DependData> Dependencies) {
+  if (!updateToLocation(Loc))
+    return;
+
+  if (Dependencies.size()) {
+    uint32_t SrcLocStrSize;
+    Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+    Value *DepArray = emitTaskDependencies(*this, Dependencies);
+    Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+    Value *Args[] = {
+        Ident,
+        getOrCreateThreadID(Ident),
+        Builder.getInt32(Dependencies.size()),
+        DepArray,
+        ConstantInt::get(Builder.getInt32Ty(), 0),
+        ConstantPointerNull::get(PointerType::getUnqual(M.getContext())),
+        ConstantInt::get(Builder.getInt32Ty(), false)};
+    createRuntimeFunctionCall(
+        getOrCreateRuntimeFunctionPtr(
+            omp::RuntimeFunction::OMPRTL___kmpc_omp_taskwait_deps_51),
+        Args);
+  } else {
+    emitTaskwaitImpl(Loc);
+  }
 }
 
 /// Create the task duplication function passed to kmpc_taskloop.
