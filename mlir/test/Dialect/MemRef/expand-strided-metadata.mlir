@@ -1127,6 +1127,31 @@ func.func @extract_strided_metadata_of_extract_strided_metadata(%arg : memref<i3
 
 // -----
 
+// Check that a reinterpret_cast with a static offset folds into an
+// extract_strided_metadata whose offset result is an arith.constant. This
+// exercises the replacement coverage for type-level static-offset inference
+// (which previously lived in `memref-stride-calculation.mlir`).
+// CHECK-LABEL: func @extract_strided_metadata_of_reinterpret_cast_static_offset
+//  CHECK-SAME: %[[ARG:.*]]: memref<?x?xi32, strided<[?, ?]>>, %[[SZ:.*]]: index, %[[STR:.*]]: index
+//   CHECK-DAG: %[[C42:.*]] = arith.constant 42 : index
+//   CHECK-DAG: %[[BASE:.*]], %{{.*}}, %{{.*}}:2, %{{.*}}:2 = memref.extract_strided_metadata %[[ARG]]
+//       CHECK: return %[[BASE]], %[[C42]]
+func.func @extract_strided_metadata_of_reinterpret_cast_static_offset(
+  %arg : memref<?x?xi32, strided<[?, ?]>>,
+  %sz : index, %str : index)
+  -> (memref<i32>, index, index, index, index, index) {
+  %cast = memref.reinterpret_cast %arg to offset: [42], sizes: [%sz, %sz],
+      strides: [%str, %str] : memref<?x?xi32, strided<[?, ?]>> to
+      memref<?x?xi32, strided<[?, ?]>>
+  %base, %off, %sizes:2, %strides:2 =
+    memref.extract_strided_metadata %cast : memref<?x?xi32, strided<[?, ?]>>
+    -> memref<i32>, index, index, index, index, index
+  return %base, %off, %sizes#0, %sizes#1, %strides#0, %strides#1
+    : memref<i32>, index, index, index, index, index
+}
+
+// -----
+
 // Check that we simplify extract_strided_metadata of reinterpret_cast
 // when the source of the reinterpret_cast is compatible with what
 // `extract_strided_metadata`s accept.
