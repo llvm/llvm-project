@@ -347,7 +347,7 @@ std::string SelectSymStoreCache(std::optional<std::string> sympath_cache) {
 
   // Prefer user cache from symbol path.
   if (sympath_cache) {
-    assert(!cache->empty() && "Empty entries resolve to the default cache");
+    assert(!sympath_cache->empty() && "Empty entries resolve to default cache");
     candidates.push_back(*sympath_cache);
   }
 
