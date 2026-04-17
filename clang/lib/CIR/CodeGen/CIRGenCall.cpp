@@ -738,9 +738,8 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
   if (auto *cd = dyn_cast<CXXConstructorDecl>(md)) {
     // A base class inheriting constructor doesn't get forwarded arguments
     // needed to construct a virtual base (or base class thereof)
-    if (cd->getInheritedConstructor())
-      cgm.errorNYI(cd->getSourceRange(),
-                   "arrangeCXXStructorDeclaration: inheriting constructor");
+    if (auto inherited = cd->getInheritedConstructor())
+      passParams = inheritingCtorHasParams(inherited, gd.getCtorType());
   }
 
   CanQual<FunctionProtoType> fpt = getFormalType(md);
@@ -1428,4 +1427,15 @@ void CIRGenFunction::emitCallArgs(
     if (!leftToRight)
       std::reverse(args.begin() + callArgsStart, args.end());
   }
+}
+
+// FIXME(cir): This is identical to the version from classic-codegen, we should
+// figure out how to move this to a common location.
+bool CIRGenTypes::inheritingCtorHasParams(const InheritedConstructor &inherited,
+                                          CXXCtorType type) {
+  // Parameters are unnecessary if we're constructing a base class subobject
+  // and the inherited constructor lives in a virtual base.
+  return type == Ctor_Complete ||
+         !inherited.getShadowDecl()->constructsVirtualBase() ||
+         !getASTContext().getTargetInfo().getCXXABI().hasConstructorVariants();
 }
