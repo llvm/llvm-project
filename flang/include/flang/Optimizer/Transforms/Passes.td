@@ -512,6 +512,11 @@ def CUFDeviceGlobal :
   let dependentDialects = [
     "cuf::CUFDialect", "mlir::gpu::GPUDialect", "mlir::NVVM::NVVMDialect"
   ];
+  let options = [
+    Option<"skipDeadDeclares", "skip-dead-declares", "bool",
+           /*default=*/"true",
+           "Skip globals whose only use is a dead fir.declare">
+  ];
 }
 
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
