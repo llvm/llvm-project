@@ -84,16 +84,6 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::fixed_vector(3, 32);
   case V4S32:
     return MRI.getType(Reg) == LLT::fixed_vector(4, 32);
-  case V8S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(8, 32);
-  case V9S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(9, 32);
-  case V10S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(10, 32);
-  case V11S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(11, 32);
-  case V12S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(12, 32);
   case B32:
     return MRI.getType(Reg).getSizeInBits() == 32;
   case B64:
@@ -142,10 +132,6 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isUniform(Reg);
   case UniV2S32:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 32) && MUI.isUniform(Reg);
-  case UniV4S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(4, 32) && MUI.isUniform(Reg);
-  case UniV10S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(10, 32) && MUI.isUniform(Reg);
   case UniB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isUniform(Reg);
   case UniB64:
@@ -207,13 +193,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::fixed_vector(3, 32) && MUI.isDivergent(Reg);
   case DivV4S16:
     return MRI.getType(Reg) == LLT::fixed_vector(4, 16) && MUI.isDivergent(Reg);
-  case DivV4S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(4, 32) && MUI.isDivergent(Reg);
   case DivV6S32:
     return MRI.getType(Reg) == LLT::fixed_vector(6, 32) && MUI.isDivergent(Reg);
-  case DivV10S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(10, 32) &&
-           MUI.isDivergent(Reg);
   case DivB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isDivergent(Reg);
   case DivB64:
@@ -750,119 +731,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivBRC, BRC, B64, DivS32},
             {{VgprBRC}, {VgprBRC, VgprB64, Vgpr32}, InsVecEltToSel}});
 
-  addRulesForGOpcs({G_AMDGPU_BVH_INTERSECT_RAY})
-      // GFX11+, f32 ray, i64 (3x V3S32)
-      .Any({{UniV4S32, _, S64, S32, V3S32, V3S32, V3S32, V4S32},
-            {{UniInVgprV4S32},
-             {Imm, Vgpr64, Vgpr32, VgprV3S32, VgprV3S32, VgprV3S32,
-              SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, S64, S32, V3S32, V3S32, V3S32, V4S32},
-            {{VgprV4S32},
-             {Imm, Vgpr64, Vgpr32, VgprV3S32, VgprV3S32, VgprV3S32,
-              SgprV4S32_WF}}})
-      // GFX11+, f32 ray, i32 (3x V3S32)
-      .Any({{UniV4S32, _, S32, S32, V3S32, V3S32, V3S32, V4S32},
-            {{UniInVgprV4S32},
-             {Imm, Vgpr32, Vgpr32, VgprV3S32, VgprV3S32, VgprV3S32,
-              SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, S32, S32, V3S32, V3S32, V3S32, V4S32},
-            {{VgprV4S32},
-             {Imm, Vgpr32, Vgpr32, VgprV3S32, VgprV3S32, VgprV3S32,
-              SgprV4S32_WF}}})
-      // GFX11+, f16 ray, i64 (2x V3S32)
-      .Any({{UniV4S32, _, S64, S32, V3S32, V3S32, V4S32},
-            {{UniInVgprV4S32},
-             {Imm, Vgpr64, Vgpr32, VgprV3S32, VgprV3S32, SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, S64, S32, V3S32, V3S32, V4S32},
-            {{VgprV4S32},
-             {Imm, Vgpr64, Vgpr32, VgprV3S32, VgprV3S32, SgprV4S32_WF}}})
-      // GFX11+, f16 ray, i32 (2x V3S32)
-      .Any({{UniV4S32, _, S32, S32, V3S32, V3S32, V4S32},
-            {{UniInVgprV4S32},
-             {Imm, Vgpr32, Vgpr32, VgprV3S32, VgprV3S32, SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, S32, S32, V3S32, V3S32, V4S32},
-            {{VgprV4S32},
-             {Imm, Vgpr32, Vgpr32, VgprV3S32, VgprV3S32, SgprV4S32_WF}}})
-      // GFX10 scalarized, f32 ray, i64 (12 S32)
-      .Any({{UniV4S32, _, S32, S32, S32, S32, S32, S32, S32, S32, S32, S32, S32,
-             S32, V4S32},
-            {{UniInVgprV4S32},
-             {Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32,
-              Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, S32, S32, S32, S32, S32, S32, S32, S32, S32, S32, S32,
-             S32, V4S32},
-            {{VgprV4S32},
-             {Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32,
-              Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, SgprV4S32_WF}}})
-      // GFX10 scalarized, f32 ray, i32 (11 S32)
-      .Any({{UniV4S32, _, S32, S32, S32, S32, S32, S32, S32, S32, S32, S32, S32,
-             V4S32},
-            {{UniInVgprV4S32},
-             {Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32,
-              Vgpr32, Vgpr32, Vgpr32, Vgpr32, SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, S32, S32, S32, S32, S32, S32, S32, S32, S32, S32, S32,
-             V4S32},
-            {{VgprV4S32},
-             {Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32,
-              Vgpr32, Vgpr32, Vgpr32, Vgpr32, SgprV4S32_WF}}})
-      // GFX10 scalarized, f16 ray, i64 (9 S32)
-      .Any({{UniV4S32, _, S32, S32, S32, S32, S32, S32, S32, S32, S32, V4S32},
-            {{UniInVgprV4S32},
-             {Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32,
-              Vgpr32, Vgpr32, SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, S32, S32, S32, S32, S32, S32, S32, S32, S32, V4S32},
-            {{VgprV4S32},
-             {Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32,
-              Vgpr32, Vgpr32, SgprV4S32_WF}}})
-      // GFX10 scalarized, f16 ray, i32 (8 S32)
-      .Any({{UniV4S32, _, S32, S32, S32, S32, S32, S32, S32, S32, V4S32},
-            {{UniInVgprV4S32},
-             {Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32,
-              Vgpr32, SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, S32, S32, S32, S32, S32, S32, S32, S32, V4S32},
-            {{VgprV4S32},
-             {Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32,
-              Vgpr32, SgprV4S32_WF}}})
-      // GFX10 merged, f32 ray, i64 (V12S32)
-      .Any({{UniV4S32, _, V12S32, V4S32},
-            {{UniInVgprV4S32}, {Imm, VgprV12S32, SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, V12S32, V4S32},
-            {{VgprV4S32}, {Imm, VgprV12S32, SgprV4S32_WF}}})
-      // GFX10 merged, f32 ray, i32 (V11S32)
-      .Any({{UniV4S32, _, V11S32, V4S32},
-            {{UniInVgprV4S32}, {Imm, VgprV11S32, SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, V11S32, V4S32},
-            {{VgprV4S32}, {Imm, VgprV11S32, SgprV4S32_WF}}})
-      // GFX10 merged, f16 ray, i64 (V9S32)
-      .Any({{UniV4S32, _, V9S32, V4S32},
-            {{UniInVgprV4S32}, {Imm, VgprV9S32, SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, V9S32, V4S32},
-            {{VgprV4S32}, {Imm, VgprV9S32, SgprV4S32_WF}}})
-      // GFX10 merged, f16 ray, i32 (V8S32)
-      .Any({{UniV4S32, _, V8S32, V4S32},
-            {{UniInVgprV4S32}, {Imm, VgprV8S32, SgprV4S32_WF}}})
-      .Any({{DivV4S32, _, V8S32, V4S32},
-            {{VgprV4S32}, {Imm, VgprV8S32, SgprV4S32_WF}}});
-
-  addRulesForGOpcs({G_AMDGPU_BVH_DUAL_INTERSECT_RAY})
-      .Any({{UniV10S32, V3S32, V3S32},
-            {{UniInVgprV10S32, UniInVgprV3S32, UniInVgprV3S32},
-             {Imm, Vgpr64, VgprV2S32, VgprV3S32, VgprV3S32, VgprV2S32,
-              SgprV4S32_WF}}})
-      .Any({{DivV10S32, V3S32, V3S32},
-            {{VgprV10S32, VgprV3S32, VgprV3S32},
-             {Imm, Vgpr64, VgprV2S32, VgprV3S32, VgprV3S32, VgprV2S32,
-              SgprV4S32_WF}}});
-
-  addRulesForGOpcs({G_AMDGPU_BVH8_INTERSECT_RAY})
-      .Any({{UniV10S32, V3S32, V3S32},
-            {{UniInVgprV10S32, UniInVgprV3S32, UniInVgprV3S32},
-             {Imm, Vgpr64, VgprV2S32, VgprV3S32, VgprV3S32, Vgpr32,
-              SgprV4S32_WF}}})
-      .Any({{DivV10S32, V3S32, V3S32},
-            {{VgprV10S32, VgprV3S32, VgprV3S32},
-             {Imm, Vgpr64, VgprV2S32, VgprV3S32, VgprV3S32, Vgpr32,
-              SgprV4S32_WF}}});
+  // INTERSECT_RAY {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  // INTERSECT_RAY {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  addRulesForGOpcs({G_AMDGPU_BVH_INTERSECT_RAY, G_AMDGPU_BVH_DUAL_INTERSECT_RAY,
+                    G_AMDGPU_BVH8_INTERSECT_RAY})
+      .Any({{}, {{}, {}, ApplyBVH_INTERSECT_RAY}});
 
   // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}

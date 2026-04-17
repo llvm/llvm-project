@@ -1407,6 +1407,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
   case ApplyINTRIN_IMAGE:
     return applyRegisterBanksINTRIN_IMAGE(MI);
+  case ApplyBVH_INTERSECT_RAY:
+    return applyRegisterBanksBVH_INTERSECT_RAY(MI);
   case SplitBitCount64To32:
     return lowerSplitBitCount64To32(MI);
   case ExtrVecEltToSel:
@@ -1492,7 +1494,6 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprV2S32:
     return LLT::fixed_vector(2, 32);
   case VgprV3S32:
-  case UniInVgprV3S32:
     return LLT::fixed_vector(3, 32);
   case VgprV4S16:
     return LLT::fixed_vector(4, 16);
@@ -1504,15 +1505,6 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
     return LLT::fixed_vector(4, 32);
   case VgprV8S32:
     return LLT::fixed_vector(8, 32);
-  case VgprV9S32:
-    return LLT::fixed_vector(9, 32);
-  case VgprV10S32:
-  case UniInVgprV10S32:
-    return LLT::fixed_vector(10, 32);
-  case VgprV11S32:
-    return LLT::fixed_vector(11, 32);
-  case VgprV12S32:
-    return LLT::fixed_vector(12, 32);
   case VgprV2S64:
   case UniInVgprV2S64:
     return LLT::fixed_vector(2, 64);
@@ -1649,9 +1641,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprS64:
   case UniInVgprV2S16:
   case UniInVgprV2S32:
-  case UniInVgprV3S32:
   case UniInVgprV4S32:
-  case UniInVgprV10S32:
   case UniInVgprV2S64:
   case UniInVgprB32:
   case UniInVgprB64:
@@ -1687,10 +1677,6 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprV4S32:
   case VgprV6S32:
   case VgprV8S32:
-  case VgprV9S32:
-  case VgprV10S32:
-  case VgprV11S32:
-  case VgprV12S32:
   case VgprV32S16:
   case VgprB32:
   case VgprB64:
@@ -1757,10 +1743,6 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprV4S32:
     case VgprV6S32:
     case VgprV8S32:
-    case VgprV9S32:
-    case VgprV10S32:
-    case VgprV11S32:
-    case VgprV12S32:
     case VgprV32S16: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
@@ -1821,9 +1803,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case UniInVgprS64:
     case UniInVgprV2S16:
     case UniInVgprV2S32:
-    case UniInVgprV3S32:
     case UniInVgprV4S32:
-    case UniInVgprV10S32:
     case UniInVgprV2S64: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == SgprRB);
@@ -1958,10 +1938,6 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprV4S32:
     case VgprV6S32:
     case VgprV8S32:
-    case VgprV9S32:
-    case VgprV10S32:
-    case VgprV11S32:
-    case VgprV12S32:
     case VgprV32S16:
     case VgprV32S32: {
       assert(Ty == getTyFromID(MethodIDs[i]));
@@ -2186,6 +2162,67 @@ bool RegBankLegalizeHelper::applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI) {
     if (MRI.getRegBank(Reg) != SgprRB)
       OpsToWaterfall.insert(Reg);
   }
+
+  if (!OpsToWaterfall.empty()) {
+    MachineBasicBlock::iterator MII = MI.getIterator();
+    executeInWaterfallLoop(B, {OpsToWaterfall, MII, std::next(MII)});
+  }
+
+  return true;
+}
+
+bool RegBankLegalizeHelper::applyRegisterBanksBVH_INTERSECT_RAY(
+    MachineInstr &MI) {
+  const unsigned NumDefs = MI.getNumExplicitDefs();
+
+  // Rsrc is the last register operand. Base BVH trails an A16 immediate after
+  // rsrc; dual/BVH8 do not. Scan backwards for the last virtual register.
+  unsigned RsrcIdx = MI.getNumOperands();
+  while (RsrcIdx-- > NumDefs) {
+    const MachineOperand &Op = MI.getOperand(RsrcIdx);
+    if (Op.isReg() && Op.getReg().isVirtual())
+      break;
+  }
+
+  MachineBasicBlock *MBB = MI.getParent();
+  B.setInsertPt(*MBB, MBB->SkipPHIsAndLabels(std::next(MI.getIterator())));
+
+  // Defs are vgpr.
+  for (unsigned i = 0; i < NumDefs; ++i) {
+    Register Reg = MI.getOperand(i).getReg();
+    if (MRI.getRegBank(Reg) == VgprRB)
+      continue;
+
+    Register NewVgprDst = MRI.createVirtualRegister({VgprRB, MRI.getType(Reg)});
+    MI.getOperand(i).setReg(NewVgprDst);
+    buildReadAnyLane(B, Reg, NewVgprDst, RBI);
+  }
+
+  B.setInstrAndDebugLoc(MI);
+
+  // Register uses(before RsrcIdx) are vgpr.
+  for (unsigned i = NumDefs + 1; i < RsrcIdx; ++i) {
+    MachineOperand &Op = MI.getOperand(i);
+    if (!Op.isReg())
+      continue;
+
+    Register Reg = Op.getReg();
+    if (!Reg.isVirtual())
+      continue;
+
+    if (MRI.getRegBank(Reg) == VgprRB)
+      continue;
+
+    auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
+    Op.setReg(Copy.getReg(0));
+  }
+
+  SmallSet<Register, 4> OpsToWaterfall;
+
+  // Register use RsrcIdx is sgpr.
+  Register RsrcReg = MI.getOperand(RsrcIdx).getReg();
+  if (MRI.getRegBank(RsrcReg) != SgprRB)
+    OpsToWaterfall.insert(RsrcReg);
 
   if (!OpsToWaterfall.empty()) {
     MachineBasicBlock::iterator MII = MI.getIterator();
