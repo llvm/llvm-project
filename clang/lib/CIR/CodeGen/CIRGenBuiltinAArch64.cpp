@@ -140,9 +140,10 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
     [[fallthrough]];
   case NeonTypeFlags::Float16:
     if (hasLegalHalfType)
-      return cir::VectorType::get(cgf->getCIRGenModule().fP16Ty,
-                                  v1Ty ? 1 : (4 << isQuad));
-    return cir::VectorType::get(cgf->uInt16Ty, v1Ty ? 1 : (4 << isQuad));
+      cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: Float16"));
+    else
+      cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: Float16"));
+    [[fallthrough]];
   case NeonTypeFlags::Int32:
     return cir::VectorType::get(typeFlags.isUnsigned() ? cgf->uInt32Ty
                                                        : cgf->sInt32Ty,
@@ -2268,11 +2269,21 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return emitNeonCall(cgm, builder, {ty, ty, ty}, fmaOps, "fma", ty, loc);
   }
   case NEON::BI__builtin_neon_vfmah_lane_f16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vfmas_lane_f32:
   case NEON::BI__builtin_neon_vfmah_laneq_f16:
   case NEON::BI__builtin_neon_vfmas_laneq_f32:
   case NEON::BI__builtin_neon_vfmad_lane_f64:
   case NEON::BI__builtin_neon_vfmad_laneq_f64: {
+    if (builtinID == NEON::BI__builtin_neon_vfmah_laneq_f16) {
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+      return mlir::Value{};
+    }
     mlir::Type scalarTy = convertType(expr->getType());
     mlir::Value acc = ops[0];
     mlir::Value lhs = ops[1];

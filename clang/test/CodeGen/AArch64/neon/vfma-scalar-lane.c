@@ -1,37 +1,33 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -disable-O0-optnone -flax-vector-conversions=none -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -disable-O0-optnone -flax-vector-conversions=none -DCIR_SCALAR_F32_F64_ONLY -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=CIRLLVM %}
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -disable-O0-optnone -flax-vector-conversions=none -DCIR_SCALAR_F32_F64_ONLY -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=CIR %}
+// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=CIRLLVM %}
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=CIR %}
+
+//=============================================================================
+// NOTES
+//
+// This file contains tests that were originally located in:
+//  * clang/test/CodeGen/AArch64/neon-2velem.c
+//  * clang/test/CodeGen/AArch64/neon-scalar-x-indexed-elem.c
+// The main difference is the use of RUN lines that enable ClangIR lowering;
+// therefore only the non-f16 forms currently supported by ClangIR are tested
+// here.
+// Once ClangIR support is complete, this file is intended to replace the
+// original test coverage in those legacy files.
+//
+// ACLE section headings based on v2025Q2 of the ACLE specification:
+//  * https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#fused-multiply-accumulate
+//
+//=============================================================================
 
 #include <arm_neon.h>
 
-#ifndef CIR_SCALAR_F32_F64_ONLY
-// LLVM-LABEL: define {{[^@]+}}@test_vfmah_lane_f16
-float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
-
-// LLVM-SAME: (half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-NEXT:  [[ENTRY:.*:]]
-// LLVM-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x half> [[C]], i32 3
-// LLVM-NEXT:    [[TMP0:%.*]] = call half @llvm.fma.f16(half [[B]], half [[EXTRACT]], half [[A]])
-// LLVM-NEXT:    ret half [[TMP0]]
-  return vfmah_lane_f16(a, b, c, 3);
-}
-
-// LLVM-LABEL: define {{[^@]+}}@test_vfmah_laneq_f16
-float16_t test_vfmah_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
-
-// LLVM-SAME: (half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-NEXT:  [[ENTRY:.*:]]
-// LLVM-NEXT:    [[EXTRACT:%.*]] = extractelement <8 x half> [[C]], i32 7
-// LLVM-NEXT:    [[TMP0:%.*]] = call half @llvm.fma.f16(half [[B]], half [[EXTRACT]], half [[A]])
-// LLVM-NEXT:    ret half [[TMP0]]
-  return vfmah_laneq_f16(a, b, c, 7);
-}
-#endif
-
-// LLVM-LABEL: define dso_local float @test_vfmas_lane_f32(
-// CIRLLVM-LABEL: define dso_local float @test_vfmas_lane_f32(
+//===------------------------------------------------------===//
+// Fused multiply-accumulate lane/laneq, scalar forms
+//===------------------------------------------------------===//
+// LLVM-LABEL: @test_vfmas_lane_f32(
+// CIRLLVM-LABEL: @test_vfmas_lane_f32(
 // CIR-LABEL: @test_vfmas_lane_f32(
 float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // CIR: cir.vec.extract
@@ -48,8 +44,8 @@ float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
   return vfmas_lane_f32(a, b, c, 1);
 }
 
-// LLVM-LABEL: define dso_local float @test_vfmas_laneq_f32(
-// CIRLLVM-LABEL: define dso_local float @test_vfmas_laneq_f32(
+// LLVM-LABEL: @test_vfmas_laneq_f32(
+// CIRLLVM-LABEL: @test_vfmas_laneq_f32(
 // CIR-LABEL: @test_vfmas_laneq_f32(
 float32_t test_vfmas_laneq_f32(float32_t a, float32_t b, float32x4_t c) {
 // CIR: cir.vec.extract
@@ -66,8 +62,8 @@ float32_t test_vfmas_laneq_f32(float32_t a, float32_t b, float32x4_t c) {
   return vfmas_laneq_f32(a, b, c, 3);
 }
 
-// LLVM-LABEL: define dso_local double @test_vfmad_lane_f64(
-// CIRLLVM-LABEL: define dso_local double @test_vfmad_lane_f64(
+// LLVM-LABEL: @test_vfmad_lane_f64(
+// CIRLLVM-LABEL: @test_vfmad_lane_f64(
 // CIR-LABEL: @test_vfmad_lane_f64(
 float64_t test_vfmad_lane_f64(float64_t a, float64_t b, float64x1_t c) {
 // CIR: cir.vec.extract
@@ -84,8 +80,8 @@ float64_t test_vfmad_lane_f64(float64_t a, float64_t b, float64x1_t c) {
   return vfmad_lane_f64(a, b, c, 0);
 }
 
-// LLVM-LABEL: define dso_local double @test_vfmad_laneq_f64(
-// CIRLLVM-LABEL: define dso_local double @test_vfmad_laneq_f64(
+// LLVM-LABEL: @test_vfmad_laneq_f64(
+// CIRLLVM-LABEL: @test_vfmad_laneq_f64(
 // CIR-LABEL: @test_vfmad_laneq_f64(
 float64_t test_vfmad_laneq_f64(float64_t a, float64_t b, float64x2_t c) {
 // CIR: cir.vec.extract

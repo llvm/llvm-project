@@ -1,115 +1,31 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -disable-O0-optnone -flax-vector-conversions=none -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=CIRLLVM %}
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=CIR %}
+// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=CIRLLVM %}
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=CIR %}
+
+//=============================================================================
+// NOTES
+//
+// This file contains tests that were originally located in:
+//  * clang/test/CodeGen/AArch64/neon-2velem.c
+//  * clang/test/CodeGen/AArch64/neon-scalar-x-indexed-elem.c
+// The main difference is the use of RUN lines that enable ClangIR lowering;
+// therefore only the non-f16 forms currently supported by ClangIR are tested
+// here.
+// Once ClangIR support is complete, this file is intended to replace the
+// original test coverage in those legacy files.
+//
+// ACLE section headings based on v2025Q2 of the ACLE specification:
+//  * https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#fused-multiply-accumulate
+//
+//=============================================================================
 
 #include <arm_neon.h>
 
-// LLVM-LABEL: define {{[^@]+}}@test_vfma_lane_f16
-// CIR-LABEL: @test_vfma_lane_f16(
-float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
-// CIR: cir.vec.shuffle
-// CIR: cir.call_llvm_intrinsic "fma"
-
-// CIRLLVM:      shufflevector <4 x half> {{.*}} <i32 3, i32 3, i32 3, i32 3>
-// CIRLLVM-NEXT: {{.*}}call <4 x half> @llvm.fma.v4f16({{.*}}
-
-// LLVM-SAME: (<4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-NEXT:  entry:
-// LLVM-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
-// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B]] to <4 x i16>
-// LLVM-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[C]] to <4 x i16>
-// LLVM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// LLVM-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP1]] to <8 x i8>
-// LLVM-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP2]] to <8 x i8>
-// LLVM-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP5]] to <4 x half>
-// LLVM-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[TMP6]], <4 x half> [[TMP6]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-// LLVM-NEXT:    [[FMLA:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
-// LLVM-NEXT:    [[FMLA1:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
-// LLVM-NEXT:    [[FMLA2:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[FMLA]], <4 x half> [[LANE]], <4 x half> [[FMLA1]])
-// LLVM-NEXT:    ret <4 x half> [[FMLA2]]
-  return vfma_lane_f16(a, b, c, 3);
-}
-
-// LLVM-LABEL: define {{[^@]+}}@test_vfmaq_lane_f16
-// CIR-LABEL: @test_vfmaq_lane_f16(
-float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b, float16x4_t c) {
-// CIR: cir.vec.shuffle
-// CIR: cir.call_llvm_intrinsic "fma"
-
-// CIRLLVM:      shufflevector <4 x half> {{.*}} <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-// CIRLLVM-NEXT: {{.*}}call <8 x half> @llvm.fma.v8f16({{.*}}
-
-// LLVM-SAME: (<8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-NEXT:  entry:
-// LLVM-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B]] to <8 x i16>
-// LLVM-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[C]] to <4 x i16>
-// LLVM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
-// LLVM-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP1]] to <16 x i8>
-// LLVM-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP2]] to <8 x i8>
-// LLVM-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP5]] to <4 x half>
-// LLVM-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[TMP6]], <4 x half> [[TMP6]], <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-// LLVM-NEXT:    [[FMLA:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
-// LLVM-NEXT:    [[FMLA1:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
-// LLVM-NEXT:    [[FMLA2:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[FMLA]], <8 x half> [[LANE]], <8 x half> [[FMLA1]])
-// LLVM-NEXT:    ret <8 x half> [[FMLA2]]
-  return vfmaq_lane_f16(a, b, c, 3);
-}
-
-// LLVM-LABEL: define {{[^@]+}}@test_vfma_laneq_f16
-// CIR-LABEL: @test_vfma_laneq_f16(
-float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b, float16x8_t c) {
-// CIR: cir.vec.shuffle
-// CIR: cir.call_llvm_intrinsic "fma"
-
-// CIRLLVM:      shufflevector <8 x half> {{.*}} <i32 7, i32 7, i32 7, i32 7>
-// CIRLLVM-NEXT: {{.*}}call <4 x half> @llvm.fma.v4f16({{.*}}
-
-// LLVM-SAME: (<4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-NEXT:  entry:
-// LLVM-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
-// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B]] to <4 x i16>
-// LLVM-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[C]] to <8 x i16>
-// LLVM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// LLVM-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP1]] to <8 x i8>
-// LLVM-NEXT:    [[TMP5:%.*]] = bitcast <8 x i16> [[TMP2]] to <16 x i8>
-// LLVM-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
-// LLVM-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
-// LLVM-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
-// LLVM-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[TMP8]], <8 x half> [[TMP8]], <4 x i32> <i32 7, i32 7, i32 7, i32 7>
-// LLVM-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[TMP7]], <4 x half> [[TMP6]])
-// LLVM-NEXT:    ret <4 x half> [[TMP9]]
-  return vfma_laneq_f16(a, b, c, 7);
-}
-
-// LLVM-LABEL: define {{[^@]+}}@test_vfmaq_laneq_f16
-// CIR-LABEL: @test_vfmaq_laneq_f16(
-float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
-// CIR: cir.vec.shuffle
-// CIR: cir.call_llvm_intrinsic "fma"
-
-// CIRLLVM:      shufflevector <8 x half> {{.*}} <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// CIRLLVM-NEXT: {{.*}}call <8 x half> @llvm.fma.v8f16({{.*}}
-
-// LLVM-SAME: (<8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-NEXT:  entry:
-// LLVM-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B]] to <8 x i16>
-// LLVM-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[C]] to <8 x i16>
-// LLVM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
-// LLVM-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP1]] to <16 x i8>
-// LLVM-NEXT:    [[TMP5:%.*]] = bitcast <8 x i16> [[TMP2]] to <16 x i8>
-// LLVM-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
-// LLVM-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
-// LLVM-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
-// LLVM-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[TMP8]], <8 x half> [[TMP8]], <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// LLVM-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[LANE]], <8 x half> [[TMP7]], <8 x half> [[TMP6]])
-// LLVM-NEXT:    ret <8 x half> [[TMP9]]
-  return vfmaq_laneq_f16(a, b, c, 7);
-}
-
+//===------------------------------------------------------===//
+// Fused multiply-accumulate lane/laneq, vector forms
+//===------------------------------------------------------===//
 // LLVM-LABEL: @test_vfma_lane_f32(
 // CIRLLVM-LABEL: @test_vfma_lane_f32(
 // CIR-LABEL: @test_vfma_lane_f32(
@@ -218,7 +134,8 @@ float32x4_t test_vfmaq_laneq_f32(float32x4_t a, float32x4_t b, float32x4_t v) {
   return vfmaq_laneq_f32(a, b, v, 3);
 }
 
-// LLVM-LABEL: define dso_local <1 x double> @test_vfma_lane_f64(
+// LLVM-LABEL: @test_vfma_lane_f64(
+// CIRLLVM-LABEL: @test_vfma_lane_f64(
 // CIR-LABEL: @test_vfma_lane_f64(
 float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // CIR: cir.vec.shuffle
@@ -275,7 +192,8 @@ float64x2_t test_vfmaq_lane_f64(float64x2_t a, float64x2_t b, float64x1_t v) {
   return vfmaq_lane_f64(a, b, v, 0);
 }
 
-// LLVM-LABEL: define dso_local <1 x double> @test_vfma_laneq_f64(
+// LLVM-LABEL: @test_vfma_laneq_f64(
+// CIRLLVM-LABEL: @test_vfma_laneq_f64(
 // CIR-LABEL: @test_vfma_laneq_f64(
 float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 // CIR: cir.vec.extract
