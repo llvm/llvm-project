@@ -620,7 +620,7 @@ func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
 // CHECK-SAME: ins(%[[R]]#0, %[[R]]#1, %{{.*}} : {{.*}}) outs(%[[CV]] :
 
 
-#map = affine_map<(d0)[s0]->(d0 + s0)>
+#map = strided<[1]>
 #map1 = affine_map<(d0)->(d0)>
 #map2 = affine_map<(d0)->()>
 #linalg_attrs = {

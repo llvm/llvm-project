@@ -34,7 +34,6 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 
 // CHECK-LABEL: func @multi_buffer
 func.func @multi_buffer(%in: memref<16xf32>) {
@@ -52,9 +51,9 @@ func.func @multi_buffer(%in: memref<16xf32>) {
   scf.for %i0 = %c0 to %c16 step %c4 {
     // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]])
     // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1]>>
-    %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, #[[$MAP1]]> to memref<4xf32, strided<[1]>>
-    memref.copy %1, %tmp :  memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<4xf32>
+    %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, strided<[1]>>
+    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, strided<[1]>> to memref<4xf32, strided<[1]>>
+    memref.copy %1, %tmp :  memref<4xf32, strided<[1]>> to memref<4xf32>
 
     "some_use"(%tmp) : (memref<4xf32>) ->()
   }
@@ -74,7 +73,6 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 
 // CHECK-LABEL: func @multi_buffer_on_affine_loop
 func.func @multi_buffer_on_affine_loop(%in: memref<16xf32>) {
@@ -89,9 +87,9 @@ func.func @multi_buffer_on_affine_loop(%in: memref<16xf32>) {
   affine.for %i0 = 0 to 16 step 4 {
     // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]])
     // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1]>>
-    %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, #[[$MAP1]]> to memref<4xf32, strided<[1]>>
-    memref.copy %1, %tmp :  memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<4xf32>
+    %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, strided<[1]>>
+    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, strided<[1]>> to memref<4xf32, strided<[1]>>
+    memref.copy %1, %tmp :  memref<4xf32, strided<[1]>> to memref<4xf32>
 
     "some_use"(%tmp) : (memref<4xf32>) ->()
   }
@@ -122,16 +120,16 @@ func.func @multi_buffer_uses_with_no_loop_dominator(%in: memref<16xf32>, %cond: 
   %c16 = arith.constant 16 : index
   scf.if %cond {
     scf.for %i0 = %c0 to %c16 step %c4 {
-      %var = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-      memref.copy %var, %tmp :  memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<4xf32>
+      %var = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, strided<[1]>>
+      memref.copy %var, %tmp :  memref<4xf32, strided<[1]>> to memref<4xf32>
 
       "some_use"(%tmp) : (memref<4xf32>) ->()
     }
   }
 
   scf.for %i0 = %c0 to %c16 step %c4 {
-    %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-    memref.copy %1, %tmp :  memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<4xf32>
+    %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, strided<[1]>>
+    memref.copy %1, %tmp :  memref<4xf32, strided<[1]>> to memref<4xf32>
 
     "some_use"(%tmp) : (memref<4xf32>) ->()
   }
@@ -159,16 +157,16 @@ func.func @multi_buffer_reject_alloca(%in: memref<16xf32>, %cond: i1) {
   %c16 = arith.constant 16 : index
   scf.if %cond {
     scf.for %i0 = %c0 to %c16 step %c4 {
-      %var = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-      memref.copy %var, %tmp :  memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<4xf32>
+      %var = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, strided<[1]>>
+      memref.copy %var, %tmp :  memref<4xf32, strided<[1]>> to memref<4xf32>
 
       "some_use"(%tmp) : (memref<4xf32>) ->()
     }
   }
 
   scf.for %i0 = %c0 to %c16 step %c4 {
-    %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-    memref.copy %1, %tmp :  memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<4xf32>
+    %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, strided<[1]>>
+    memref.copy %1, %tmp :  memref<4xf32, strided<[1]>> to memref<4xf32>
 
     "some_use"(%tmp) : (memref<4xf32>) ->()
   }
@@ -187,7 +185,6 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 
 // CHECK-LABEL: func @multi_buffer_one_alloc_with_use_outside_of_loop
 // Make sure we manage to apply multi_buffer to the memref that is used in
@@ -210,9 +207,9 @@ func.func @multi_buffer_one_alloc_with_use_outside_of_loop(%in: memref<16xf32>) 
   scf.for %i0 = %c0 to %c16 step %c4 {
     // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]])
     // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1]>>
-    %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, #[[$MAP1]]> to memref<4xf32, strided<[1]>>
-    memref.copy %1, %tmp :  memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<4xf32>
+    %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, strided<[1]>>
+    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, strided<[1]>> to memref<4xf32, strided<[1]>>
+    memref.copy %1, %tmp :  memref<4xf32, strided<[1]>> to memref<4xf32>
 
     "some_use"(%tmp) : (memref<4xf32>) ->()
   }
@@ -402,9 +399,9 @@ module attributes {transform.with_named_sequence} {
 func.func @dead_store_through_subview(%arg: vector<4xf32>) {
   %c0 = arith.constant 0 : index
   %alloc = memref.alloc() {alignment = 64 : i64} : memref<64xf32>
-  %subview = memref.subview %alloc[%c0] [4] [1] : memref<64xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
+  %subview = memref.subview %alloc[%c0] [4] [1] : memref<64xf32> to memref<4xf32, strided<[1]>>
   vector.transfer_write %arg, %subview[%c0] {in_bounds = [true]}
-    : vector<4xf32>, memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
+    : vector<4xf32>, memref<4xf32, strided<[1]>>
   return
 }
 

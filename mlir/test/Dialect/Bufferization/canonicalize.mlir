@@ -57,9 +57,7 @@ func.func @canonicalize_buffer_cast_of_tensor_load_different_address_space(%arg0
 //  CHECK-SAME:     -> memref<?xf32, strided<[1]>> {
 //   CHECK-NOT: bufferization.to_tensor
 //   CHECK-NOT: bufferization.to_buffer
-//       CHECK: %[[R:.*]] = memref.cast %[[M]]
-//  CHECK-SAME:   memref<?xf32, strided<[1]>> to memref<?xf32, strided<[1]>>
-//       CHECK: return %[[R]]
+//       CHECK: return %[[M]]
 func.func @canonicalize_buffer_cast_of_tensor_load(
   %arg0: memref<?xf32, strided<[1]>>)
   -> memref<?xf32, strided<[1]>>
@@ -85,12 +83,7 @@ func.func @canonicalize_buffer_cast_of_tensor_load_to_copy(
 // CHECK-SAME:     -> memref<?xf32, strided<[1]>> {
 //  CHECK-NOT: bufferization.to_tensor
 //  CHECK-NOT: bufferization.to_buffer
-//      CHECK: %[[C0:.*]] = arith.constant 0 : index
-//      CHECK: %[[DIM:.*]] = memref.dim %[[M]], %[[C0]] : memref<?xf32, strided<[1]>>
-//      CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]]) : memref<?xf32, strided<[1]>>
-//      CHECK: memref.copy %[[M]], %[[ALLOC]]
-// CHECK-SAME:   memref<?xf32, strided<[1]>> to memref<?xf32, strided<[1]>>
-//      CHECK: return %[[ALLOC]]
+//      CHECK: return %[[M]]
 
 // -----
 

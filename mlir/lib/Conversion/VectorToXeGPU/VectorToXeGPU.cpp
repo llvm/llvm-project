@@ -116,21 +116,18 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
   MemRefType srcTy = src.getType();
   assert(srcTy.isStrided() && "Expected strided memref type");
   auto [strides, offset] = srcTy.getStridesAndOffset();
-  bool isStatic = true;
-
-  // Memref is dynamic if any of its shape, offset or strides is dynamic.
-  if (!srcTy.hasStaticShape())
-    isStatic = false;
-
-  if (!ShapedType::isStatic(offset))
-    isStatic = false;
-
+  // Pass the memref directly only when shape and strides are static and the
+  // layout is identity. The type no longer pins a static offset, so any
+  // explicit strided layout may carry a runtime offset that has to be
+  // materialized through extract_strided_metadata.
+  bool isStatic = srcTy.hasStaticShape() && srcTy.getLayout().isIdentity();
   for (auto stride : strides) {
     if (!ShapedType::isStatic(stride)) {
       isStatic = false;
       break;
     }
   }
+  (void)offset;
 
   xegpu::CreateNdDescOp ndDesc;
   if (isStatic) {

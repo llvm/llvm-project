@@ -191,8 +191,8 @@ func.func @reinterpret_cast_non_zero_offset(%arg0: index, %arg1: memref<1x10x17x
   %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x10x17xf32>
   cf.br ^bb3
 ^bb3:  // pred: ^bb1
-  // CHECK: %[[REINTERPRET_CAST:.*]] = memref.reinterpret_cast %{{.*}} to offset: [0], sizes: [32], strides: [1] : memref<2x17xf32> to memref<32xf32>
-  // CHECK: return %[[REINTERPRET_CAST]], %[[REINTERPRET_CAST]], %{{.*}}, %{{.*}}, %{{.*}} : memref<32xf32>, memref<32xf32>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>
+  // CHECK: %[[REINTERPRET_CAST:.*]] = memref.reinterpret_cast %{{.*}} to offset: [0], sizes: [5], strides: [1] : memref<2x17xf32> to memref<5xf32>
+  // CHECK: return %[[REINTERPRET_CAST]], %[[REINTERPRET_CAST]], %{{.*}}, %{{.*}}, %{{.*}} : memref<5xf32>, memref<5xf32>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>
   %reinterpret_cast = memref.reinterpret_cast %alloc_0 to offset: [27], sizes: [1, 5], strides: [17, 1] : memref<2x17xf32> to memref<1x5xf32, strided<[17, 1]>>
   return %reinterpret_cast, %reinterpret_cast, %alloc_0, %alloc, %alloc_1 : memref<1x5xf32, strided<[17, 1]>>, memref<1x5xf32, strided<[17, 1]>>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>
 }
