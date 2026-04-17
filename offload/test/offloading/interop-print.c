@@ -1,9 +1,7 @@
-// RUN: %libomptarget-compile-amdgcn-amd-amdhsa
-// RUN:   %libomptarget-run-generic 2>&1 | \
+// RUN: %libomptarget-compile-and-run-amdgcn-amd-amdhsa 2>&1 | \
 // RUN:   %fcheck-amdgcn-amd-amdhsa -check-prefixes=AMD
 
-// RUN: %libomptarget-compile-nvptx64-nvidia-cuda
-// RUN:   %libomptarget-run-generic 2>&1 | \
+// RUN: %libomptarget-compile-and-run-nvptx64-nvidia-cuda 2>&1 | \
 // RUN:   %fcheck-nvptx64-nvidia-cuda -check-prefixes=NVIDIA
 
 // RUN: %libomptarget-compile-and-run-spirv64-intel 2>&1 | \
