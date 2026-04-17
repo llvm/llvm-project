@@ -33,13 +33,15 @@ void transform::detail::checkImplementsTransformOpInterface(
           opName.hasInterface<PatternDescriptorOpInterface>() ||
           opName.hasInterface<ConversionPatternDescriptorOpInterface>() ||
           opName.hasInterface<TypeConverterBuilderOpInterface>() ||
-          opName.hasTrait<OpTrait::IsTerminator>()) &&
+          opName.hasTrait<OpTrait::IsTerminator>() ||
+          opName.hasInterface<NormalFormCheckedOpInterface>()) &&
          "non-terminator ops injected into the transform dialect must "
          "implement TransformOpInterface or PatternDescriptorOpInterface or "
          "ConversionPatternDescriptorOpInterface");
   if (!opName.hasInterface<PatternDescriptorOpInterface>() &&
       !opName.hasInterface<ConversionPatternDescriptorOpInterface>() &&
-      !opName.hasInterface<TypeConverterBuilderOpInterface>()) {
+      !opName.hasInterface<TypeConverterBuilderOpInterface>() &&
+      !opName.hasInterface<NormalFormCheckedOpInterface>()) {
     assert(opName.hasInterface<MemoryEffectOpInterface>() &&
            "ops injected into the transform dialect must implement "
            "MemoryEffectsOpInterface");

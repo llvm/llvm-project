@@ -2760,6 +2760,16 @@ LogicalResult transform::SplitHandleOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// PayloadOp
+//===----------------------------------------------------------------------===//
+
+void transform::PayloadOp::getCheckedNormalForms(
+    SmallVectorImpl<NormalFormAttrInterface> &normalForms) {
+  llvm::append_range(normalForms,
+                     getNormalForms().getAsRange<NormalFormAttrInterface>());
+}
+
+//===----------------------------------------------------------------------===//
 // ReplicateOp
 //===----------------------------------------------------------------------===//
 

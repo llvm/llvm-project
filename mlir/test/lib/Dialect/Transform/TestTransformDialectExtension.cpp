@@ -929,6 +929,22 @@ mlir::transform::TestSingleBlockNormalFormAttr::checkOperation(
   return wrapResult(loc, failure(walkResult.wasInterrupted()));
 }
 
+DiagnosedSilenceableFailure
+mlir::transform::TestCountingNormalFormAttr::checkOperation(
+    Operation *op) const {
+  // Record the number of invocations of this check on `op` as a discardable
+  // integer attribute. Tests that need to detect redundant checks can simply
+  // `FileCheck` the printed IR for the expected count.
+  Builder builder(op->getContext());
+  StringAttr counterName =
+      builder.getStringAttr("test.counting_normal_form_count");
+  unsigned count = 0;
+  if (auto prev = op->getAttrOfType<IntegerAttr>(counterName))
+    count = prev.getValue().getZExtValue();
+  op->setDiscardableAttr(counterName, builder.getI64IntegerAttr(count + 1));
+  return DiagnosedSilenceableFailure::success();
+}
+
 namespace {
 /// Test extension of the Transform dialect. Registers additional ops and
 /// declares PDL as dependent dialect since the additional ops are using PDL
