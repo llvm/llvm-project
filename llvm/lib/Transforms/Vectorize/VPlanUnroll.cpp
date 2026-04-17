@@ -180,9 +180,9 @@ void UnrollState::unrollWidenInductionByUF(
       IV->getParent()->getEnclosingLoopRegion()->getSinglePredecessor());
   Type *IVTy = TypeInfo.inferScalarType(IV);
   auto &ID = IV->getInductionDescriptor();
-  VPIRFlags Flags;
+  VPIRFlags IVFlags;
   if (auto *IntOrFPInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(IV))
-    Flags = *IntOrFPInd;
+    IVFlags = *IntOrFPInd;
 
   VPValue *ScalarStep = IV->getStepValue();
   VPBuilder Builder(PH);
@@ -190,7 +190,7 @@ void UnrollState::unrollWidenInductionByUF(
       IVTy->isPointerTy() ? TypeInfo.inferScalarType(ScalarStep) : IVTy;
   VPInstruction *VectorStep = Builder.createNaryOp(
       VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, VectorStepTy,
-      Flags, IV->getDebugLoc());
+      IVFlags, IV->getDebugLoc());
 
   ToSkip.insert(VectorStep);
 
@@ -209,7 +209,7 @@ void UnrollState::unrollWidenInductionByUF(
   VPValue *Prev = IV;
   Builder.setInsertPoint(IV->getParent(), InsertPtForPhi);
   unsigned AddOpc;
-  VPIRFlags AddFlags = Flags;
+  VPIRFlags AddFlags = IVFlags;
   if (IVTy->isPointerTy()) {
     AddOpc = VPInstruction::WidePtrAdd;
     AddFlags = GEPNoWrapFlags::none();
