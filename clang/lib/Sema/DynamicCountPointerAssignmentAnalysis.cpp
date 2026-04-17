@@ -3515,8 +3515,8 @@ RecordDecl *FlexibleArrayMemberUtils::GetFlexibleRecord(QualType QT) {
   if (!RT)
     return nullptr;
 
-  auto *RD = RT->getDecl();
-  if (!RD->hasFlexibleArrayMember())
+  auto *RD = RT->getDecl()->getDefinition();
+  if (!RD || !RD->hasFlexibleArrayMember())
     return nullptr;
 
   const CountAttributedType *DCPTy = nullptr;
