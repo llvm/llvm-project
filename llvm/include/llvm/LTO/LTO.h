@@ -287,8 +287,8 @@ public:
   virtual bool isSensitiveToInputOrder() { return false; }
 
   // Write sharded indices and (optionally) imports to disk
-  LLVM_ABI Error emitFiles(const FunctionImporter::ImportMapTy &ImportList, unsigned Task,
-                           StringRef ModulePath,
+  LLVM_ABI Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
+                           unsigned Task, StringRef ModulePath,
                            const std::string &NewModulePath) const;
 
   // Write sharded indices to SummaryPath, (optionally) imports to disk, and
@@ -296,15 +296,15 @@ public:
   // provided and GetCacheKeysListRefFunc is set, also computes and stores the
   // LTO cache key for the module.
   LLVM_ABI Error emitFiles(
-      const FunctionImporter::ImportMapTy &ImportList, unsigned Task, StringRef ModulePath,
-      const std::string &NewModulePath, StringRef SummaryPath,
+      const FunctionImporter::ImportMapTy &ImportList, unsigned Task,
+      StringRef ModulePath, const std::string &NewModulePath,
+      StringRef SummaryPath,
       std::optional<std::reference_wrapper<ImportsFilesContainer>> ImportsFiles,
       const FunctionImporter::ExportSetTy *ExportList = nullptr,
-      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> *ResolvedODR =
-          nullptr,
+      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
+          *ResolvedODR = nullptr,
       const DenseSet<GlobalValue::GUID> *CfiFunctionDefs = nullptr,
-      const DenseSet<GlobalValue::GUID> *CfiFunctionDecls = nullptr)
-      const;
+      const DenseSet<GlobalValue::GUID> *CfiFunctionDecls = nullptr) const;
 };
 
 /// This callable defines the behavior of a ThinLTO backend after the thin-link
@@ -664,8 +664,6 @@ public:
   addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     return std::shared_ptr<lto::InputFile>(InputPtr.release());
   }
-
-
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

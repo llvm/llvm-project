@@ -54,12 +54,6 @@ Error save(StringRef Buffer, StringRef Path) {
   return Error::success();
 }
 
-// Saves the content of Input to Path overwriting any existing file.
-Error save(lto::InputFile *Input, StringRef Path) {
-  MemoryBufferRef MB = Input->getFileBuffer();
-  return save(MB.getBuffer(), Path);
-}
-
 // Normalize and save a path. Aside from expanding Windows 8.3 short paths,
 // no other normalization is currently required here. These paths are
 // machine-local and break distribution systems; other normalization is

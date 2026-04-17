@@ -321,8 +321,9 @@ public:
                              ArrayRef<StringRef> RemoteCompilerPrependArgsArg,
                              ArrayRef<StringRef> RemoteCompilerArgsArg,
                              StringRef LinkerOutputFileArg)
-        : LinkerOutputFile(LinkerOutputFileArg), DistributorPath(DistributorArg),
-          DistributorArgs(DistributorArgsArg), RemoteCompiler(RemoteCompilerArg),
+        : LinkerOutputFile(LinkerOutputFileArg),
+          DistributorPath(DistributorArg), DistributorArgs(DistributorArgsArg),
+          RemoteCompiler(RemoteCompilerArg),
           RemoteCompilerPrependArgs(RemoteCompilerPrependArgsArg),
           RemoteCompilerArgs(RemoteCompilerArgsArg) {}
 
@@ -356,8 +357,8 @@ private:
 
   // Record a file for cleanup and register signal-time removal if requested.
   void addToCleanup(StringRef Filename) {
-      CleanupList.push_back(Filename.str());
-      sys::RemoveFileOnSignal(Filename);
+    CleanupList.push_back(Filename.str());
+    sys::RemoveFileOnSignal(Filename);
   }
 };
 
