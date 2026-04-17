@@ -101,13 +101,6 @@ Changes to LLVM infrastructure
     this may fail if symlink permissions are not available.
   * Added ``readlink``, which reads the target of a symbolic link.
 
-* Bitcode libraries can now implement compiler-managed library functions
-  (libcalls) without causing incorrect API manipulation or undefined references
-  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
-  there are still issues with invalid compiler reasoning about some functions
-  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
-  distributed ThinLTO. 
-
 Changes to building LLVM
 ------------------------
 
