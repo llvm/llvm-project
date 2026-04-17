@@ -1680,7 +1680,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       return {genTypeStrideInBytes(loc, i64Ty, rewriter, ptrTy, dataLayout),
               typeCodeVal};
     }
-    if (mlir::isa<fir::RecordType>(boxEleTy))
+    if (mlir::isa<fir::RecordType>(boxEleTy) ||
+        mlir::isa<fir::VectorType>(boxEleTy))
       return {genTypeStrideInBytes(loc, i64Ty, rewriter,
                                    this->convertType(boxEleTy), dataLayout),
               typeCodeVal};

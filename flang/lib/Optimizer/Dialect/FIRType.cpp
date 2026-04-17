@@ -570,7 +570,7 @@ int getTypeCode(mlir::Type ty, const fir::KindMapping &kindMap) {
   }
   if (fir::isa_ref_type(ty))
     return CFI_type_cptr;
-  if (mlir::isa<fir::RecordType>(ty))
+  if (mlir::isa<fir::RecordType>(ty) || mlir::isa<fir::VectorType>(ty))
     return CFI_type_struct;
   llvm_unreachable("unsupported type");
 }
