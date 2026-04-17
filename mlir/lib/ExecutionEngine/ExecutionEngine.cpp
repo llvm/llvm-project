@@ -10,19 +10,21 @@
 // JIT engine.
 //
 //===----------------------------------------------------------------------===//
-#include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
 #include "llvm/ExecutionEngine/JITEventListener.h"
+#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -316,27 +318,57 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
                                            &IgnoredMemMgr) {
     // Needed to respect AArch64 ABI requirements on the distance between
     // TEXT and GOT sections.
-    bool reserveAlloc = llvmModule->getTargetTriple().isAArch64();
-    auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, [sectionMemoryMapper = options.sectionMemoryMapper,
-                  reserveAlloc](const MemoryBuffer &) {
-          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper,
-                                                        reserveAlloc);
-        });
 
-    // Register JIT event listeners if they are enabled.
-    if (engine->gdbListener)
-      objectLayer->registerJITEventListener(*engine->gdbListener);
-    if (engine->perfListener)
-      objectLayer->registerJITEventListener(*engine->perfListener);
+    // Check if we should use ObjectLinkingLayer (JITLink)
+    // JITLink supports modern architectures like RISC-V, AArch64
+    // RuntimeDyld is older and provides better compatibility with legacy
+    // platforms
+
+    // Decide which layer to use
+    bool useJITLink = llvmModule->getTargetTriple().isAArch64() ||
+                      llvmModule->getTargetTriple().isRISCV();
+
+    std::unique_ptr<llvm::orc::ObjectLayer> objectLayer;
+
+    if (useJITLink) {
+      // JITLink path
+      objectLayer = std::make_unique<llvm::orc::ObjectLinkingLayer>(session);
+
+      LLVM_DEBUG(llvm::dbgs() << "Using ObjectLinkingLayer (JITLink)\n");
+
+    } else {
+      // RuntimeDyld path
+      auto rtDyldLayer = std::make_unique<llvm::orc::RTDyldObjectLinkingLayer>(
+          session,
+          [sectionMemoryMapper =
+               options.sectionMemoryMapper](const llvm::MemoryBuffer &)
+              -> std::unique_ptr<llvm::RuntimeDyld::MemoryManager> {
+            return std::make_unique<SectionMemoryManager>(sectionMemoryMapper);
+          });
+
+      // Only RTDyld supports listener
+      if (engine->gdbListener)
+        rtDyldLayer->registerJITEventListener(*engine->gdbListener);
+
+      if (engine->perfListener)
+        rtDyldLayer->registerJITEventListener(*engine->perfListener);
+
+      LLVM_DEBUG(llvm::dbgs() << "Using RTDyldObjectLinkingLayer\n");
+
+      // Upcast
+      objectLayer = std::move(rtDyldLayer);
+    }
 
     // COFF format binaries (Windows) need special handling to deal with
     // exported symbol visibility.
     // cf llvm/lib/ExecutionEngine/Orc/LLJIT.cpp LLJIT::createObjectLinkingLayer
     const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
-    if (targetTriple.isOSBinFormatCOFF()) {
-      objectLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
-      objectLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+    if (!useJITLink && targetTriple.isOSBinFormatCOFF()) {
+      if (auto *rtDyldLayer = dyn_cast<llvm::orc::RTDyldObjectLinkingLayer>(
+              objectLayer.get())) {
+        rtDyldLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+        rtDyldLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+      }
     }
 
     // Resolve symbols from shared libraries.

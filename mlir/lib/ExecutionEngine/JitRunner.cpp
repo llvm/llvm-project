@@ -31,6 +31,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassNameParser.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileUtilities.h"
@@ -359,6 +360,11 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
 
   if (!options.mArch.empty()) {
     tmBuilderOrError->getTargetTriple().setArchName(options.mArch);
+  }
+
+  if (tmBuilderOrError->getTargetTriple().isRISCV()){
+    tmBuilderOrError->setRelocationModel(llvm::Reloc::PIC_);
+    tmBuilderOrError->setCodeModel(llvm::CodeModel::Medium);
   }
 
   // Build TargetMachine
