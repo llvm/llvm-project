@@ -175,6 +175,11 @@ New checks
   Suggests insertion of ``std::move(...)`` to turn copy assignment operator
   calls into move assignment ones, when deemed valid and profitable.
 
+- New :doc:`readability-redundant-lambda-parameter-list
+  <clang-tidy/checks/readability/redundant-lambda-parameter-list>` check.
+
+  Finds lambda expressions with a redundant empty parameter list and removes it.
+
 - New :doc:`readability-redundant-qualified-alias
   <clang-tidy/checks/readability/redundant-qualified-alias>` check.
 
