@@ -319,7 +319,7 @@ std::optional<FileSpec> MoveToLocalSymStore(llvm::StringRef cache,
     Debugger::ReportWarning(
         llvm::formatv("failed to create SymStore cache directory '{0}': {1}",
                       dest_dir, ec.message()));
-    return tmp_file;
+    return {};
   }
 
   llvm::SmallString<256> dest;
@@ -336,7 +336,7 @@ std::optional<FileSpec> MoveToLocalSymStore(llvm::StringRef cache,
     Debugger::ReportWarning(
         llvm::formatv("failed to move '{0}' to SymStore cache '{1}': {2}",
                       tmp_file.GetPath(), dest, ec.message()));
-    return tmp_file;
+    return {};
   }
 
   return FileSpec(dest.str());
@@ -384,9 +384,17 @@ LocateSymStoreEntry(const SymbolLocatorSymStore::LookupEntry &entry,
     }
 
     // Download and move to cache.
-    if (auto spec = RequestFileFromSymStoreServerHTTP(url, key, pdb_name)) {
+    if (auto tmp_file = RequestFileFromSymStoreServerHTTP(url, key, pdb_name)) {
       LLDB_LOG(log, "Downloaded {0} from SymStore {1}", pdb_name, url);
-      spec = MoveToLocalSymStore(cache_path, key, pdb_name, *spec);
+      auto spec = MoveToLocalSymStore(cache_path, key, pdb_name, *tmp_file);
+      if (!spec) {
+        // Try the fallback and eventually rather cancel than loading the tmp
+        // file, since it might disappear or get overwritten.
+        cache_path = SymbolLocatorSymStore::GetSystemDefaultCachePath();
+        spec = MoveToLocalSymStore(cache_path, key, pdb_name, *tmp_file);
+        if (!spec)
+          return {};
+      }
       LLDB_LOG(log, "Added {0} to SymStore cache {1}", pdb_name, cache_path);
       return *spec;
     }
