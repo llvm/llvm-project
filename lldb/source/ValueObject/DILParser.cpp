@@ -103,9 +103,9 @@ CompilerType ResolveTypeByName(const std::string &name,
 llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
                                            DILLexer lexer,
                                            std::shared_ptr<StackFrame> frame_sp,
-
                                            lldb::DynamicValueType use_dynamic,
-                                           uint32_t options) {
+                                           uint32_t options,
+                                           lldb::DILMode mode) {
   const bool check_ptr_vs_member =
       (options & StackFrame::eExpressionPathOptionCheckPtrVsMember) != 0;
   const bool no_fragile_ivar =
@@ -116,7 +116,7 @@ llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
   llvm::Error error = llvm::Error::success();
   DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic,
                    !no_synth_child, !no_fragile_ivar, check_ptr_vs_member,
-                   error);
+                   error, mode);
 
   ASTNodeUP node_up = parser.Run();
   assert(node_up && "ASTNodeUP must not contain a nullptr");
@@ -131,11 +131,11 @@ DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
                      std::shared_ptr<StackFrame> frame_sp,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
                      bool fragile_ivar, bool check_ptr_vs_member,
-                     llvm::Error &error)
+                     llvm::Error &error, lldb::DILMode mode)
     : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr),
       m_dil_lexer(std::move(lexer)), m_error(error), m_use_dynamic(use_dynamic),
       m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
-      m_check_ptr_vs_member(check_ptr_vs_member) {}
+      m_check_ptr_vs_member(check_ptr_vs_member), m_mode(mode) {}
 
 ASTNodeUP DILParser::Run() {
   ASTNodeUP expr = ParseExpression();
@@ -155,14 +155,42 @@ ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
 // Parse an additive_expression.
 //
 //  additive_expression:
-//    cast_expression {"+" cast_expression}
+//    multiplicative_expression {"+" multiplicative_expression}
 //
 ASTNodeUP DILParser::ParseAdditiveExpression() {
-  auto lhs = ParseCastExpression();
+  auto lhs = ParseMultiplicativeExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
   while (CurToken().IsOneOf({Token::plus, Token::minus})) {
     Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseMultiplicativeExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a multiplicative_expression.
+//
+//  multiplicative_expression:
+//    cast_expression {"*" cast_expression}
+//    cast_expression {"/" cast_expression}
+//    cast_expression {"%" cast_expression}
+//
+ASTNodeUP DILParser::ParseMultiplicativeExpression() {
+  auto lhs = ParseCastExpression();
+
+  while (CurToken().IsOneOf({Token::star, Token::slash, Token::percent})) {
+    Token token = CurToken();
+    if (token.Is(Token::star) && m_mode != lldb::eDILModeFull) {
+      BailOut("binary multiplication (*) is allowed only in DIL full mode",
+              token.GetLocation(), token.GetSpelling().length());
+      return std::make_unique<ErrorNode>();
+    }
     m_dil_lexer.Advance();
     auto rhs = ParseCastExpression();
     assert(rhs && "ASTNodeUP must not contain a nullptr");

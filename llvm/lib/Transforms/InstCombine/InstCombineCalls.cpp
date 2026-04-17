@@ -3294,25 +3294,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::ptrauth_auth:
   case Intrinsic::ptrauth_resign: {
-    // We don't support this optimization on intrinsic calls with deactivation
-    // symbols, which are represented using operand bundles.
-    if (II->hasOperandBundles())
-      break;
-
     // (sign|resign) + (auth|resign) can be folded by omitting the middle
     // sign+auth component if the key and discriminator match.
     bool NeedSign = II->getIntrinsicID() == Intrinsic::ptrauth_resign;
     Value *Ptr = II->getArgOperand(0);
     Value *Key = II->getArgOperand(1);
     Value *Disc = II->getArgOperand(2);
+    Value *DS = nullptr;
+    if (auto Bundle = II->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+      DS = Bundle->Inputs[0];
 
     // AuthKey will be the key we need to end up authenticating against in
     // whatever we replace this sequence with.
     Value *AuthKey = nullptr, *AuthDisc = nullptr, *BasePtr;
     if (const auto *CI = dyn_cast<CallBase>(Ptr)) {
-      // We don't support this optimization on intrinsic calls with deactivation
-      // symbols, which are represented using operand bundles.
-      if (CI->hasOperandBundles())
+      Value *OtherDS = nullptr;
+      if (auto Bundle =
+              CI->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+        OtherDS = Bundle->Inputs[0];
+      if (DS != OtherDS)
         break;
 
       BasePtr = CI->getArgOperand(0);
@@ -3320,6 +3320,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
           break;
       } else if (CI->getIntrinsicID() == Intrinsic::ptrauth_resign) {
+        // The resign intrinsic does not support deactivation symbols.
+        assert(!DS);
         if (CI->getArgOperand(3) != Key || CI->getArgOperand(4) != Disc)
           break;
         AuthKey = CI->getArgOperand(1);
@@ -3330,7 +3332,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // ptrauth constants are equivalent to a call to @llvm.ptrauth.sign for
       // our purposes, so check for that too.
       const auto *CPA = dyn_cast<ConstantPtrAuth>(PtrToInt->getOperand(0));
-      if (!CPA || !CPA->isKnownCompatibleWith(Key, Disc, DL))
+      if (!CPA || DS || !CPA->isKnownCompatibleWith(Key, Disc, DL))
         break;
 
       // resign(ptrauth(p,ks,ds),ks,ds,kr,dr) -> ptrauth(p,kr,dr)
@@ -3379,9 +3381,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       CallArgs.push_back(II->getArgOperand(4));
     }
 
+    std::vector<OperandBundleDef> Bundles;
+    if (DS)
+      Bundles.push_back(OperandBundleDef("deactivation-symbol", DS));
+
     Function *NewFn =
         Intrinsic::getOrInsertDeclaration(II->getModule(), NewIntrin);
-    return CallInst::Create(NewFn, CallArgs);
+    return CallInst::Create(NewFn, CallArgs, Bundles);
   }
   case Intrinsic::arm_neon_vtbl1:
   case Intrinsic::arm_neon_vtbl2:
@@ -4240,6 +4246,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::fptoui_sat:
+  case Intrinsic::fptosi_sat:
+    if (Instruction *I = foldItoFPtoI(*II))
+      return I;
+    break;
   case Intrinsic::frexp: {
     Value *X;
     // The first result is idempotent with the added complication of the struct

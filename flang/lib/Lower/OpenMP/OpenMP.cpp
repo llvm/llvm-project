@@ -778,9 +778,12 @@ static void getDeclareTargetInfo(
     if (clauses.empty()) {
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
           eval.getOwningProcedure();
-      if (owningProc && (!owningProc->isMainProgram() ||
-                         owningProc->getMainProgramSymbol())) {
-        // Case: declare target, implicit capture of function
+      // Main programs are never device routines. Skip them so that a bare
+      // '!$omp declare target' inside an interface body that lives in a named
+      // main program does not incorrectly mark _QQmain as a device function.
+      if (owningProc && !owningProc->isMainProgram()) {
+        // Case: declare target, implicit capture of enclosing
+        // function/subroutine.
         symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
                                      owningProc->getSubprogramSymbol());
       }
@@ -980,6 +983,20 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
     mlir::Operation *op = mod.lookupSymbol(converter.mangleName(sym));
     auto declareTargetOp =
         llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
+
+    // Double check it's not part of a common block, and that the common block
+    // isn't marked declare target.
+    if (!declareTargetOp) {
+      if (const semantics::Symbol *common =
+              semantics::FindCommonBlockContaining(sym.GetUltimate())) {
+        mlir::Operation *commonOp =
+            mod.lookupSymbol(converter.mangleName(*common));
+        declareTargetOp =
+            llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(
+                commonOp);
+      }
+    }
+
     if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
       if (declareTargetOp.getDeclareTargetCaptureClause() ==
               mlir::omp::DeclareTargetCaptureClause::link &&
@@ -1414,6 +1431,16 @@ static void genBodyOfTargetOp(
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter))
     hostEvalInfo->bindOperands(argIface.getHostEvalBlockArgs());
 
+  // If we map a common block using it's symbol e.g. map(tofrom: /common_block/)
+  // and accessing its members within the target region, there is a large
+  // chance we will end up with uses external to the region accessing the common
+  // resolve these, we do so by generating new common block member accesses
+  // within the region, binding them to the member symbol for the scope of the
+  // region so that subsequent code generation within the region will utilise
+  // our new member accesses we have created.
+  genIntermediateCommonBlockAccessors(
+      converter, currentLocation, argIface.getMapBlockArgs(), args.map.syms);
+
   // Check if cloning the bounds introduced any dependency on the outer region.
   // If so, then either clone them as well if they are MemoryEffectFree, or else
   // copy them to a new temporary and add them to the map and block_argument
@@ -1439,16 +1466,6 @@ static void genBodyOfTargetOp(
 
   // Create the insertion point after the marker.
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
-
-  // If we map a common block using it's symbol e.g. map(tofrom: /common_block/)
-  // and accessing its members within the target region, there is a large
-  // chance we will end up with uses external to the region accessing the common
-  // resolve these, we do so by generating new common block member accesses
-  // within the region, binding them to the member symbol for the scope of the
-  // region so that subsequent code generation within the region will utilise
-  // our new member accesses we have created.
-  genIntermediateCommonBlockAccessors(
-      converter, currentLocation, argIface.getMapBlockArgs(), args.map.syms);
 
   if (ConstructQueue::const_iterator next = std::next(item);
       next != queue.end()) {
@@ -1492,6 +1509,21 @@ static OpTy genWrapperOp(lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 // Code generation functions for clauses
 //===----------------------------------------------------------------------===//
+
+static void genAllocateClauses(lower::AbstractConverter &converter,
+                               semantics::SemanticsContext &semaCtx,
+                               lower::StatementContext &stmtCtx,
+                               const ObjectList &objects,
+                               const List<Clause> &clauses, mlir::Location loc,
+                               llvm::SmallVectorImpl<mlir::Value> &operandRange,
+                               mlir::omp::AllocateDirOperands &clauseOps) {
+  if (!objects.empty())
+    genObjectList(objects, converter, operandRange);
+
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAlign(clauseOps);
+  cp.processAllocator(stmtCtx, clauseOps);
+}
 
 static void genCancelClauses(lower::AbstractConverter &converter,
                              semantics::SemanticsContext &semaCtx,
@@ -1840,7 +1872,7 @@ static void genTaskgroupClauses(
 static void genTaskloopClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::StatementContext &stmtCtx, const List<Clause> &clauses,
-    mlir::Location loc, mlir::omp::TaskloopOperands &clauseOps,
+    mlir::Location loc, mlir::omp::TaskloopContextOperands &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms,
     llvm::SmallVectorImpl<const semantics::Symbol *> &inReductionSyms) {
 
@@ -1913,6 +1945,30 @@ static void genWsloopClauses(
 //===----------------------------------------------------------------------===//
 // Code generation functions for leaf constructs
 //===----------------------------------------------------------------------===//
+static mlir::omp::AllocateDirOp genAllocateDirOp(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    lower::StatementContext &stmtCtx, lower::pft::Evaluation &eval,
+    mlir::Location loc, const ObjectList &objects, const ConstructQueue &queue,
+    ConstructQueue::const_iterator item) {
+  llvm::SmallVector<mlir::Value> operandRange;
+  mlir::omp::AllocateDirOperands clauseOps;
+  genAllocateClauses(converter, semaCtx, stmtCtx, objects, item->clauses, loc,
+                     operandRange, clauseOps);
+
+  auto allocDirOp = mlir::omp::AllocateDirOp::create(
+      converter.getFirOpBuilder(), loc, operandRange, clauseOps.align,
+      clauseOps.allocator);
+
+  // Register a cleanup at the Fortran scope exit.
+  fir::FirOpBuilder *builder = &converter.getFirOpBuilder();
+  mlir::Value allocator = clauseOps.allocator;
+  converter.getFctCtx().attachCleanup([builder, loc, operandRange,
+                                       allocator]() {
+    mlir::omp::AllocateFreeOp::create(*builder, loc, operandRange, allocator);
+  });
+
+  return allocDirOp;
+}
 
 static mlir::omp::BarrierOp
 genBarrierOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -3260,12 +3316,12 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
   return simdOp;
 }
 
-static mlir::omp::TaskloopOp genStandaloneTaskloop(
+static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
     const ConstructQueue &queue, ConstructQueue::const_iterator item) {
-  mlir::omp::TaskloopOperands taskloopClauseOps;
+  mlir::omp::TaskloopContextOperands taskloopClauseOps;
   llvm::SmallVector<const semantics::Symbol *> reductionSyms;
   llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
 
@@ -3289,13 +3345,26 @@ static mlir::omp::TaskloopOp genStandaloneTaskloop(
   taskloopArgs.inReduction.syms = inReductionSyms;
   taskloopArgs.inReduction.vars = taskloopClauseOps.inReductionVars;
 
-  auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopOp>(
-      converter, loc, taskloopClauseOps, taskloopArgs);
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  auto taskLoopContextOp = mlir::omp::TaskloopContextOp::create(
+      firOpBuilder, loc, taskloopClauseOps);
+  // Create entry block with arguments.
+  genEntryBlock(firOpBuilder, taskloopArgs, taskLoopContextOp.getRegion());
+
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+  firOpBuilder.setInsertionPointToStart(&taskLoopContextOp.getRegion().front());
+  mlir::omp::TaskloopWrapperOperands wrapperClauseOps;
+  EntryBlockArgs wrapperEntryBlockArgs;
+  auto taskLoopWrapperOp = genWrapperOp<mlir::omp::TaskloopWrapperOp>(
+      converter, loc, wrapperClauseOps, wrapperEntryBlockArgs);
 
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
-                loopNestClauseOps, iv, {{taskLoopOp, taskloopArgs}},
+                loopNestClauseOps, iv, {{taskLoopContextOp, taskloopArgs}},
                 llvm::omp::Directive::OMPD_taskloop, dsp);
-  return taskLoopOp;
+
+  firOpBuilder.setInsertionPointAfter(taskLoopWrapperOp);
+  mlir::omp::TerminatorOp::create(firOpBuilder, loc);
+  return taskLoopContextOp;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3590,7 +3659,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   return wsloopOp;
 }
 
-static mlir::omp::TaskloopOp genCompositeTaskloopSimd(
+static mlir::omp::TaskloopWrapperOp genCompositeTaskloopSimd(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
@@ -3814,8 +3883,18 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAllocateDirective &allocate) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OmpAllocateDirective");
+  lower::StatementContext stmtCtx;
+  ObjectList objects = makeObjects((allocate.BeginDir().Arguments()), semaCtx);
+  const auto &clauseList = (allocate.BeginDir().Clauses());
+  List<Clause> clauses = makeClauses(clauseList, semaCtx);
+  mlir::Location loc = converter.genLocation(allocate.source);
+
+  ConstructQueue queue{buildConstructQueue(
+      converter.getFirOpBuilder().getModule(), semaCtx, eval, allocate.source,
+      llvm::omp::Directive::OMPD_allocate, clauses)};
+
+  genAllocateDirOp(converter, semaCtx, stmtCtx, eval, loc, objects, queue,
+                   queue.begin());
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

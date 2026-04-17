@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}
 // RUN: split-file %s %t
 //--- foo.h
 //--- tu.c

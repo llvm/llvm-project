@@ -590,15 +590,14 @@ struct SgToWiMultiDimReduction
         result = vector::makeArithReduction(rewriter, op.getLoc(), op.getKind(),
                                             result, adaptor.getAcc());
     } else if (isReductionLaneLocal(op)) {
-      auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
-      VectorType resVecTy = dyn_cast<VectorType>(op.getType());
-      auto resDistVecTyOrFailure =
-          getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
-      // For lane local reduction, simply create a new MultiDimReductionOp using
-      // adaptor operands and the new result type.
-      result = vector::MultiDimReductionOp::create(
-          rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
-          adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
+      // For lane-local reduction, lower to a sequence of vector.reduction ops
+      // over 1D slices extracted from the distributed source vector. This is
+      // required so we dont have 2D source vectors at xegpu-linearize.
+      auto reductionDim = reductionDims[0];
+      result = xegpu::lowerToVectorReductions(
+          cast<TypedValue<VectorType>>(adaptor.getSource()),
+          cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
+          reductionDim, op.getLoc(), rewriter);
     } else {
       auto reductionDim = reductionDims[0];
       VectorType sourceType = op.getSourceVectorType();

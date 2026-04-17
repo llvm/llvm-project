@@ -217,10 +217,10 @@ class ElementTypeMatchesScale32<string tensor> :
           "isInteger(getScale32() ? 32 : 16)">>;
 
 class TensorLengthMatchesPerChannel<string tensor> :
-  PredOpTrait<tensor # " must have length rank(input) - 1 when per_channel is true, otherwise length 1",
+  PredOpTrait<tensor # " must have length input_shape[rank(input) - 1] when per_channel is true, otherwise length 1",
     CPred<"::llvm::cast<::mlir::ShapedType>($" # tensor # ".getType()).getShape()[0] == "
           "(getPerChannel() ? "
-          "::llvm::cast<::mlir::ShapedType>($input.getType()).getRank() - 1 : 1)">>;
+          "::llvm::cast<::mlir::ShapedType>($input.getType()).getShape().back() : 1)">>;
 
 
 #endif // MLIR_DIALECT_SPIRV_IR_TOSA_TYPES
