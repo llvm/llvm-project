@@ -6,7 +6,11 @@
 // Test that using a default-initialized (unbound) local resource produces
 // valid IR in clang. No warnings or errors from clang.
 //
-// DXC: passes (both sema and codegen).
+// DXC: error (codegen) — "local resource not guaranteed to map to unique
+// global resource".
+//
+// Note: full DXIL codegen (not tested here) crashes in DXILOpLowering.
+// Bug: https://github.com/llvm/llvm-project/issues/192551
 
 [numthreads(1,1,1)]
 void main(uint3 tid : SV_DispatchThreadID) {
