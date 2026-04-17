@@ -4736,14 +4736,14 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
         S.OpenMP().setOpenMPCaptureKind(Field, Cap.getVariable(),
                                         RSI->OpenMPLevel);
 
-      ValueDecl* CapVar = Cap.getVariable();
-      if (auto* BD = dyn_cast<BindingDecl>(CapVar))
+      ValueDecl *CapVar = Cap.getVariable();
+      if (auto *BD = dyn_cast<BindingDecl>(CapVar))
         CapVar = cast<VarDecl>(BD->getDecomposedDecl());
-      Captures.push_back(CapturedStmt::Capture(
-          Cap.getLocation(),
-          Cap.isReferenceCapture() ? CapturedStmt::VCK_ByRef
-                                   : CapturedStmt::VCK_ByCopy,
-          cast<VarDecl>(CapVar)));
+      Captures.push_back(CapturedStmt::Capture(Cap.getLocation(),
+                                               Cap.isReferenceCapture()
+                                                   ? CapturedStmt::VCK_ByRef
+                                                   : CapturedStmt::VCK_ByCopy,
+                                               cast<VarDecl>(CapVar)));
     }
     CaptureInits.push_back(Init.get());
   }

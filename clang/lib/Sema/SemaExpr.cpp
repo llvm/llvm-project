@@ -19772,7 +19772,7 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
     ByRef = (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByref);
   }
 
-  if (auto* BD = dyn_cast<BindingDecl>(Var)) {
+  if (auto *BD = dyn_cast<BindingDecl>(Var)) {
     // For structured bindings, capture the individual element type,
     // not the full decomposed type.
     CaptureType = BD->getType();
