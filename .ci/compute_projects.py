@@ -98,6 +98,12 @@ EXCLUDE_LINUX = {
     "openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
 }
 
+# Runtimes configured for cross-compilation using LLVM_RUNTIME_TARGETS.
+# The same build may also use LLVM_ENABLE_RUNTIMES for other runtimes.
+CROSS_COMPILATION_RUNTIMES = {
+    "libclc",
+}
+
 EXCLUDE_WINDOWS = {
     "cross-project-tests",  # TODO(issues/132797): Tests are failing.
     "openmp",  # TODO(issues/132799): Does not detect perl installation.
@@ -147,7 +153,7 @@ PROJECT_CHECK_TARGETS = {
     "flang": "check-flang",
     "flang-rt": "check-flang-rt",
     "libc": "check-libc",
-    "libclc": "check-libclc",
+    "libclc": "check-libclc-amdgcn-amd-amdhsa-llvm",
     "lld": "check-lld",
     "lldb": "check-lldb",
     "mlir": "check-mlir",
@@ -276,7 +282,9 @@ def _compute_runtimes_to_build(
     for modified_project in modified_projects:
         if modified_project in DEPENDENT_RUNTIMES_TO_BUILD:
             runtimes_to_build.update(DEPENDENT_RUNTIMES_TO_BUILD[modified_project])
-    return _exclude_projects(runtimes_to_build, platform)
+    runtimes_to_build = _exclude_projects(runtimes_to_build, platform)
+    runtimes_to_build -= CROSS_COMPILATION_RUNTIMES
+    return runtimes_to_build
 
 
 def _path_matches(matcher: tuple[str], file_path: tuple[str]) -> bool:
@@ -320,7 +328,10 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     runtimes_to_build = _compute_runtimes_to_build(
         runtimes_to_test | runtimes_to_test_needs_reconfig, modified_projects, platform
     )
-    projects_to_build = _compute_projects_to_build(projects_to_test, runtimes_to_build)
+    cross_runtimes_to_test = runtimes_to_test & CROSS_COMPILATION_RUNTIMES
+    projects_to_build = _compute_projects_to_build(
+        projects_to_test, runtimes_to_build | cross_runtimes_to_test
+    )
     projects_check_targets = _compute_project_check_targets(projects_to_test)
     runtimes_check_targets = _compute_project_check_targets(runtimes_to_test)
     runtimes_check_targets_needs_reconfig = _compute_project_check_targets(

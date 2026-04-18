@@ -81,7 +81,6 @@ exit:
   ret void
 }
 
-declare float @llvm.sqrt.f32(float)
 
 define void @test_intrinsic_with_metadata(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-LABEL: VPlan for loop in 'test_intrinsic_with_metadata'

@@ -151,7 +151,7 @@ static std::string ParseAndGenerateDWARF(llvm::StringRef expr) {
   }
 
   const size_t addr_size = 4;
-  StreamString dwarf(Stream::eBinary, addr_size, lldb::eByteOrderLittle);
+  StreamString dwarf(Stream::eBinary, lldb::eByteOrderLittle);
   ToDWARF(*ast, dwarf);
 
   // print dwarf expression to comparable textual representation

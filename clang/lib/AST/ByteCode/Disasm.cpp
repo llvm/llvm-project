@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Boolean.h"
+#include "Char.h"
 #include "Context.h"
 #include "EvaluationResult.h"
 #include "FixedPoint.h"

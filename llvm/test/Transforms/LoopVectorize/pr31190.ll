@@ -40,12 +40,12 @@ entry:
   %c.promoted = load i32, ptr @c, align 1
   br label %for.cond1.preheader
 
-for.cond1.preheader:                              ; preds = %for.cond1.for.inc4_crit_edge, %entry
+for.cond1.preheader:
   %inc54 = phi i32 [ %inc5, %for.cond1.for.inc4_crit_edge ], [ %c.promoted, %entry ]
   %inc.lcssa3 = phi i32 [ %inc.lcssa, %for.cond1.for.inc4_crit_edge ], [ %a.promoted2, %entry ]
   br label %for.body3
 
-for.body3:                                        ; preds = %for.body3, %for.cond1.preheader
+for.body3:
   %inc1 = phi i32 [ %inc.lcssa3, %for.cond1.preheader ], [ %inc, %for.body3 ]
   %0 = phi i32 [ poison, %for.cond1.preheader ], [ %inc54, %for.body3 ]
   %idxprom = sext i32 %0 to i64
@@ -55,7 +55,7 @@ for.body3:                                        ; preds = %for.body3, %for.con
   %tobool2 = icmp eq i32 %inc, 0
   br i1 %tobool2, label %for.cond1.for.inc4_crit_edge, label %for.body3
 
-for.cond1.for.inc4_crit_edge:                     ; preds = %for.body3
+for.cond1.for.inc4_crit_edge:
   %inc.lcssa = phi i32 [ %inc, %for.body3 ]
   %.lcssa = phi i32 [ %inc54, %for.body3 ]
   %inc5 = add nsw i32 %.lcssa, 1

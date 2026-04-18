@@ -1695,10 +1695,21 @@ public:
                                          size_t byte_size, uint64_t fail_value,
                                          Status &error);
 
+  /// Use Process::ReadMemoryRanges to efficiently read multiple unsigned
+  /// integers from memory at once.
+  llvm::SmallVector<std::optional<uint64_t>>
+  ReadUnsignedIntegersFromMemory(llvm::ArrayRef<lldb::addr_t> addresses,
+                                 unsigned byte_size);
+
   int64_t ReadSignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size,
                                       int64_t fail_value, Status &error);
 
   lldb::addr_t ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error);
+
+  /// Use Process::ReadMemoryRanges to efficiently read multiple pointers from
+  /// memory at once.
+  llvm::SmallVector<std::optional<lldb::addr_t>>
+  ReadPointersFromMemory(llvm::ArrayRef<lldb::addr_t> ptr_locs);
 
   bool WritePointerToMemory(lldb::addr_t vm_addr, lldb::addr_t ptr_value,
                             Status &error);
@@ -3291,7 +3302,7 @@ protected:
   bool SetPrivateRunLockToRunning() {
     assert(m_current_private_state_thread_sp);
     if (m_current_private_state_thread_sp)
-      return m_current_private_state_thread_sp->SetPrivateRunLockToStopped();
+      return m_current_private_state_thread_sp->SetPrivateRunLockToRunning();
     return false;
   }
   bool SetPublicRunLockToStopped() {

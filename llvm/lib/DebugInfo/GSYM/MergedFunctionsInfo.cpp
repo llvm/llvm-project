@@ -83,7 +83,7 @@ MergedFunctionsInfo::getFuncsDataExtractors(DataExtractor &Data) {
 
     // Extract the function data.
     Results.emplace_back(Data.getData().substr(Offset, FnSize),
-                         Data.isLittleEndian(), Data.getAddressSize());
+                         Data.isLittleEndian());
 
     Offset += FnSize;
   }

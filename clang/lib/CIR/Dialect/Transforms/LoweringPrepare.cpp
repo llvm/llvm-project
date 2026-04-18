@@ -320,8 +320,7 @@ cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         g, mlir::SymbolTable::Visibility::Private);
-    g.setGlobalVisibilityAttr(
-        cir::VisibilityAttr::get(builder.getContext(), visibility));
+    g.setGlobalVisibility(visibility);
   }
   return g;
 }
@@ -1370,13 +1369,16 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   cir::ReturnOp::create(builder, f.getLoc());
 }
 
+/// Lower a cir.array.ctor or cir.array.dtor into a do-while loop that
+/// iterates over every element.  For cir.array.ctor ops whose partial_dtor
+/// region is non-empty, the ctor loop is wrapped in a cir.cleanup.scope whose
+/// EH cleanup performs a reverse destruction loop using the partial dtor body.
 static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
                                        clang::ASTContext *astCtx,
                                        mlir::Operation *op, mlir::Type eltTy,
                                        mlir::Value addr,
                                        mlir::Value numElements,
                                        uint64_t arrayLen, bool isCtor) {
-  // Generate loop to call into ctor/dtor for every element.
   mlir::Location loc = op->getLoc();
   bool isDynamic = numElements != nullptr;
 
@@ -1385,19 +1387,16 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   const unsigned sizeTypeSize =
       astCtx->getTypeSize(astCtx->getSignedSizeType());
 
+  // Both constructors and destructors use end = begin + numElements.
+  // Constructors iterate forward [begin, end).  Destructors iterate backward
+  // from end, decrementing before calling the destructor on each element.
   mlir::Value begin, end;
   if (isDynamic) {
-    assert(!isCtor && "Unexpected dynamic ctor loop");
-    mlir::Value one = builder.getUnsignedInt(loc, 1, sizeTypeSize);
-    mlir::Value endOffsetVal = builder.createSub(loc, numElements, one);
     begin = addr;
-    end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, endOffsetVal);
+    end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, numElements);
   } else {
-    // Static: emit endOffset const first, then array_to_ptrdecay, matching
-    // the expected IR ordering.
-    uint64_t endOffset = isCtor ? arrayLen : arrayLen - 1;
     mlir::Value endOffsetVal =
-        builder.getUnsignedInt(loc, endOffset, sizeTypeSize);
+        builder.getUnsignedInt(loc, arrayLen, sizeTypeSize);
     begin = cir::CastOp::create(builder, loc, eltTy,
                                 cir::CastKind::array_to_ptrdecay, addr);
     end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, endOffsetVal);
@@ -1410,9 +1409,18 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   // This places the destructor loop emitted below inside the if block.
   cir::IfOp ifOp;
   if (isDynamic) {
-    mlir::Value isEmpty =
-        cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, start, stop);
-    ifOp = cir::IfOp::create(builder, loc, isEmpty,
+    mlir::Value guardCond;
+    if (isCtor) {
+      mlir::Value zero = builder.getUnsignedInt(loc, 0, sizeTypeSize);
+      guardCond = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
+                                     numElements, zero);
+    } else {
+      // We could check for numElements != 0 in this case too, but this matches
+      // what classic codegen does.
+      guardCond =
+          cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, start, stop);
+    }
+    ifOp = cir::IfOp::create(builder, loc, guardCond,
                              /*withElseRegion=*/false,
                              [&](mlir::OpBuilder &, mlir::Location) {});
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
@@ -1423,45 +1431,102 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
       /*var type*/ eltTy, "__array_idx", builder.getAlignmentAttr(1));
   builder.createStore(loc, start, tmpAddr);
 
-  builder.createDoWhile(
-      loc,
-      /*condBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
-        auto cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
-                                      currentElement, stop);
-        builder.createCondition(cmp);
-      },
-      /*bodyBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+  mlir::Block *bodyBlock = &op->getRegion(0).front();
 
-        // Clone the region body (ctor/dtor call and any setup ops like
-        // per-element zero-init) into the loop, remapping the block argument
-        // to the current element pointer.
-        mlir::Block *oldBlock = &op->getRegion(0).front();
-        mlir::BlockArgument oldArg = oldBlock->getArgument(0);
-        mlir::IRMapping map;
-        map.map(oldArg, currentElement);
-        for (mlir::Operation &regionOp : *oldBlock) {
-          if (!mlir::isa<cir::YieldOp>(&regionOp))
-            builder.clone(regionOp, map);
-        }
+  // Clone the region body (ctor/dtor call and any setup ops like per-element
+  // zero-init) into the loop, remapping the block argument to the current
+  // element pointer.
+  auto cloneRegionBodyInto = [&](mlir::Block *srcBlock,
+                                 mlir::Value replacement) {
+    mlir::IRMapping map;
+    map.map(srcBlock->getArgument(0), replacement);
+    for (mlir::Operation &regionOp : *srcBlock) {
+      if (!mlir::isa<cir::YieldOp>(&regionOp))
+        builder.clone(regionOp, map);
+    }
+  };
 
-        // Array elements get constructed in order but destructed in reverse.
-        mlir::Value stride;
-        if (isCtor)
-          stride = builder.getUnsignedInt(loc, 1, sizeTypeSize);
-        else
-          stride = builder.getSignedInt(loc, -1, sizeTypeSize);
+  mlir::Block *partialDtorBlock = nullptr;
+  if (auto arrayCtor = mlir::dyn_cast<cir::ArrayCtor>(op)) {
+    mlir::Region &partialDtor = arrayCtor.getPartialDtor();
+    if (!partialDtor.empty())
+      partialDtorBlock = &partialDtor.front();
+  }
 
-        auto nextElement = cir::PtrStrideOp::create(builder, loc, eltTy,
-                                                    currentElement, stride);
+  auto emitCtorDtorLoop = [&]() {
+    builder.createDoWhile(
+        loc,
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+          auto cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
+                                        currentElement, stop);
+          builder.createCondition(cmp);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+          if (isCtor) {
+            cloneRegionBodyInto(bodyBlock, currentElement);
+            mlir::Value stride = builder.getUnsignedInt(loc, 1, sizeTypeSize);
+            auto nextElement = cir::PtrStrideOp::create(builder, loc, eltTy,
+                                                        currentElement, stride);
+            builder.createStore(loc, nextElement, tmpAddr);
+          } else {
+            mlir::Value stride = builder.getSignedInt(loc, -1, sizeTypeSize);
+            auto prevElement = cir::PtrStrideOp::create(builder, loc, eltTy,
+                                                        currentElement, stride);
+            builder.createStore(loc, prevElement, tmpAddr);
+            cloneRegionBodyInto(bodyBlock, prevElement);
+          }
 
-        // Store the element pointer to the temporary variable
-        builder.createStore(loc, nextElement, tmpAddr);
-        builder.createYield(loc);
-      });
+          cir::YieldOp::create(b, loc);
+        });
+  };
+
+  if (partialDtorBlock) {
+    cir::CleanupScopeOp::create(
+        builder, loc, cir::CleanupKind::EH,
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          emitCtorDtorLoop();
+          cir::YieldOp::create(b, loc);
+        },
+        /*cleanupBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto cur = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+          auto cmp =
+              cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, cur, begin);
+          cir::IfOp::create(
+              builder, loc, cmp, /*withElseRegion=*/false,
+              [&](mlir::OpBuilder &b, mlir::Location loc) {
+                builder.createDoWhile(
+                    loc,
+                    /*condBuilder=*/
+                    [&](mlir::OpBuilder &b, mlir::Location loc) {
+                      auto el = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+                      auto neq = cir::CmpOp::create(
+                          builder, loc, cir::CmpOpKind::ne, el, begin);
+                      builder.createCondition(neq);
+                    },
+                    /*bodyBuilder=*/
+                    [&](mlir::OpBuilder &b, mlir::Location loc) {
+                      auto el = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+                      mlir::Value negOne =
+                          builder.getSignedInt(loc, -1, sizeTypeSize);
+                      auto prev = cir::PtrStrideOp::create(builder, loc, eltTy,
+                                                           el, negOne);
+                      builder.createStore(loc, prev, tmpAddr);
+                      cloneRegionBodyInto(partialDtorBlock, prev);
+                      builder.createYield(loc);
+                    });
+                cir::YieldOp::create(builder, loc);
+              });
+          cir::YieldOp::create(b, loc);
+        });
+  } else {
+    emitCtorDtorLoop();
+  }
 
   if (ifOp)
     cir::YieldOp::create(builder, loc);
@@ -1482,7 +1547,6 @@ void LoweringPreparePass::lowerArrayDtor(cir::ArrayDtor op) {
     return;
   }
 
-  assert(!cir::MissingFeatures::vlas());
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
@@ -1495,7 +1559,14 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
   builder.setInsertionPointAfter(op.getOperation());
 
   mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
-  assert(!cir::MissingFeatures::vlas());
+
+  if (op.getNumElements()) {
+    lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
+                               op.getNumElements(), /*arrayLen=*/0,
+                               /*isCtor=*/true);
+    return;
+  }
+
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),

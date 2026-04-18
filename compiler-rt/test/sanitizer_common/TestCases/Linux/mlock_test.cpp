@@ -5,7 +5,7 @@
 // XFAIL: ubsan, lsan
 
 // FIXME: Implement.
-// XFAIL: hwasan
+// XFAIL: hwasan, tysan
 
 #include <assert.h>
 #include <sys/mman.h>

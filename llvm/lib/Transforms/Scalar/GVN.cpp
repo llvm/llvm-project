@@ -789,26 +789,25 @@ void GVNPass::ValueTable::verifyRemoved(const Value *V) const {
 
 /// Push a new Value to the LeaderTable onto the list for its value number.
 void GVNPass::LeaderMap::insert(uint32_t N, Value *V, const BasicBlock *BB) {
-  LeaderListNode &Curr = NumToLeaders[N];
-  if (!Curr.Entry.Val) {
-    Curr.Entry.Val = V;
-    Curr.Entry.BB = BB;
-    return;
+  const auto &[It, Inserted] = NumToLeaders.try_emplace(N, V, BB, nullptr);
+  if (!Inserted) {
+    // Key already exists: insert new node after the head.
+    auto *NewSlot = TableAllocator.Allocate<LeaderListNode>();
+    new (NewSlot) LeaderListNode(V, BB, It->second.Next);
+    It->second.Next = NewSlot;
   }
-
-  LeaderListNode *Node = TableAllocator.Allocate<LeaderListNode>();
-  Node->Entry.Val = V;
-  Node->Entry.BB = BB;
-  Node->Next = Curr.Next;
-  Curr.Next = Node;
 }
 
 /// Scan the list of values corresponding to a given
 /// value number, and remove the given instruction if encountered.
 void GVNPass::LeaderMap::erase(uint32_t N, Instruction *I,
                                const BasicBlock *BB) {
+  auto It = NumToLeaders.find(N);
+  if (It == NumToLeaders.end())
+    return;
+
   LeaderListNode *Prev = nullptr;
-  LeaderListNode *Curr = &NumToLeaders[N];
+  LeaderListNode *Curr = &It->second;
 
   while (Curr && (Curr->Entry.Val != I || Curr->Entry.BB != BB)) {
     Prev = Curr;
@@ -819,30 +818,24 @@ void GVNPass::LeaderMap::erase(uint32_t N, Instruction *I,
     return;
 
   if (Prev) {
+    // Non-head node: unlink and destroy.
     Prev->Next = Curr->Next;
+    Curr->~LeaderListNode();
+    TableAllocator.Deallocate<LeaderListNode>(Curr);
   } else {
+    // Head node (stored by value in DenseMap).
     if (!Curr->Next) {
-      Curr->Entry.Val = nullptr;
-      Curr->Entry.BB = nullptr;
+      // Only node; erase from map (DenseMap calls the destructor).
+      NumToLeaders.erase(It);
     } else {
+      // Move second node's data into head, then destroy second node.
       LeaderListNode *Next = Curr->Next;
-      Curr->Entry.Val = Next->Entry.Val;
+      Curr->Entry.Val = std::move(Next->Entry.Val);
       Curr->Entry.BB = Next->Entry.BB;
       Curr->Next = Next->Next;
+      Next->~LeaderListNode();
+      TableAllocator.Deallocate<LeaderListNode>(Next);
     }
-  }
-}
-
-void GVNPass::LeaderMap::verifyRemoved(const Value *V) const {
-  // Walk through the value number scope to make sure the instruction isn't
-  // ferreted away in it.
-  for (const auto &I : NumToLeaders) {
-    (void)I;
-    assert(I.second.Entry.Val != V && "Inst still in value numbering scope!");
-    assert(
-        std::none_of(leader_iterator(&I.second), leader_iterator(nullptr),
-                     [=](const LeaderTableEntry &E) { return E.Val == V; }) &&
-        "Inst still in value numbering scope!");
   }
 }
 
@@ -2287,7 +2280,7 @@ bool GVNPass::ValueTable::areCallValsEqual(uint32_t Num, uint32_t NewNum,
   CallInst *Call = nullptr;
   auto Leaders = GVN.LeaderTable.getLeaders(Num);
   for (const auto &Entry : Leaders) {
-    Call = dyn_cast<CallInst>(Entry.Val);
+    Call = dyn_cast<CallInst>(&*Entry.Val);
     if (Call && Call->getParent() == PhiBlock)
       break;
   }
@@ -2969,12 +2962,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
       return false;
   }
 
-  // Protected pointer field loads/stores should be paired with the intrinsic
-  // to avoid unnecessary address escapes.
-  if (auto *II = dyn_cast<IntrinsicInst>(CurInst))
-    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
-      return false;
-
   uint32_t ValNo = VN.lookup(CurInst);
 
   // Look for the predecessors for PRE opportunities.  We're
@@ -3211,7 +3198,6 @@ void GVNPass::removeInstruction(Instruction *I) {
 /// internal data structures.
 void GVNPass::verifyRemoved(const Instruction *Inst) const {
   VN.verifyRemoved(Inst);
-  LeaderTable.verifyRemoved(Inst);
 }
 
 /// BB is declared dead, which implied other blocks become dead as well. This

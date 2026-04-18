@@ -713,11 +713,22 @@ add_entrypoint_object(
     ${exit_deps}
 )
 
+add_header_library(
+  abort_utils
+  HDRS
+    abort_utils.h
+  DEPENDS
+    .${LIBC_TARGET_OS}.abort_utils
+)
+
 add_entrypoint_object(
   abort
-  ALIAS
+  SRCS
+    abort.cpp
+  HDRS
+    abort.h
   DEPENDS
-    .${LIBC_TARGET_OS}.abort
+    .abort_utils
 )
 
 add_entrypoint_object(

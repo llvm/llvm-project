@@ -23,7 +23,7 @@
 # RUN:   -o 'target create %t/TestModule.out' 2>&1 \
 # RUN:   | FileCheck %s --implicit-check-not=warning --check-prefix=CHECK-LOADED
 
-# CHECK-WARN:      warning: 'TestModule' contains a debug script. To run this script in this debug session:
+# CHECK-WARN:      warning: 'TestModule' contains an untrusted debug script. To run this script in this debug session:
 # CHECK-WARN-EMPTY:
 # CHECK-WARN-NEXT:{{^}}    command script import "{{.*}}/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py"
 # CHECK-WARN-EMPTY:

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenBuilder.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Builders.h"
@@ -303,7 +304,19 @@ public:
                      "AggExprEmitter: VisitSubstNonTypeTemplateParmExpr");
   }
   void VisitConstantExpr(ConstantExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitConstantExpr");
+    ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
+
+    if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e)) {
+      mlir::Value resultVal = cgf.getBuilder().getConstant(
+          cgf.getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+      cgf.emitStoreThroughLValue(RValue::get(resultVal), destLVal);
+      return;
+    }
+
+    // It isn't clear that it is possible to get to here,  but this branch is
+    // present in classic codegen, so we leave it here too.
+    return Visit(e->getSubExpr());
   }
   void VisitMemberExpr(MemberExpr *e) { emitAggLoadOfLValue(e); }
   void VisitUnaryDeref(UnaryOperator *e) { emitAggLoadOfLValue(e); }
@@ -1090,8 +1103,35 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
   LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
 
   if (record->isUnion()) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "visitCXXParenListOrInitListExpr union type");
+    // Only initialize one field of a union. The field itself is
+    // specified by the initializer list.
+    if (!initializedFieldInUnion) {
+      // Empty union; we have nothing to do.
+
+      // Make sure that it's really an empty and not a failure of
+      // semantic analysis.
+      assert(llvm::all_of(record->fields(),
+                          [](const FieldDecl *f) {
+                            return f->isUnnamedBitField() ||
+                                   f->isAnonymousStructOrUnion();
+                          }) &&
+             "Only unnamed bitfields or anonymous class allowed");
+      return;
+    }
+
+    // FIXME: volatility
+    FieldDecl *initedField = initializedFieldInUnion;
+
+    LValue fieldLV = cgf.emitLValueForFieldInitialization(
+        destLV, initedField, initedField->getName());
+
+    if (numInitElements) {
+      // Store the initializer into the field
+      emitInitializationToLValue(args[0], fieldLV);
+    } else {
+      // Default-initialize to null.
+      emitNullInitializationToLValue(loc, fieldLV);
+    }
     return;
   }
 
@@ -1217,16 +1257,21 @@ void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
 
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
 
-  // NOTE(cir): original codegen would normally convert destPtr and srcPtr to
-  // i8* since memcpy operates on bytes. We don't need that in CIR because
-  // cir.copy will operate on any CIR pointer that points to a sized type.
-
   // Don't do any of the memmove_collectable tests if GC isn't set.
   if (cgm.getLangOpts().getGC() != LangOptions::NonGC)
     cgm.errorNYI("emitAggregateCopy: GC");
 
-  [[maybe_unused]] cir::CopyOp copyOp =
-      builder.createCopy(destPtr.getPointer(), srcPtr.getPointer(), isVolatile);
+  // If the data size (excluding tail padding) differs from the full type size,
+  // use skip_tail_padding to avoid clobbering tail padding that may be occupied
+  // by other objects (e.g. fields marked with [[no_unique_address]]).
+  CharUnits dataSize = typeInfo.Width;
+  bool skipTailPadding =
+      mayOverlap && dataSize != getContext().getTypeSizeInChars(ty);
+  // NOTE(cir): original codegen would normally convert destPtr and srcPtr to
+  // i8* since memcpy operates on bytes. We don't need that in CIR because
+  // cir.copy will operate on any CIR pointer that points to a sized type.
+  builder.createCopy(destPtr.getPointer(), srcPtr.getPointer(), isVolatile,
+                     skipTailPadding);
 
   assert(!cir::MissingFeatures::opTBAA());
 }

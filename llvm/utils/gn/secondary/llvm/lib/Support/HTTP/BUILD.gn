@@ -7,5 +7,6 @@ static_library("HTTP") {
   sources = [
     "HTTPClient.cpp",
     "HTTPServer.cpp",
+    "StreamedHTTPResponseHandler.cpp",
   ]
 }

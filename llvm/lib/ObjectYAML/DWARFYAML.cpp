@@ -280,6 +280,10 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapOptional("Format", LineTable.Format, dwarf::DWARF32);
   IO.mapOptional("Length", LineTable.Length);
   IO.mapRequired("Version", LineTable.Version);
+  if (LineTable.Version >= 5) {
+    IO.mapRequired("AddressSize", LineTable.AddressSize);
+    IO.mapOptional("SegmentSelectorSize", LineTable.SegmentSelectorSize, 0);
+  }
   IO.mapOptional("PrologueLength", LineTable.PrologueLength);
   IO.mapRequired("MinInstLength", LineTable.MinInstLength);
   if(LineTable.Version >= 4)
@@ -289,8 +293,12 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapRequired("LineRange", LineTable.LineRange);
   IO.mapOptional("OpcodeBase", LineTable.OpcodeBase);
   IO.mapOptional("StandardOpcodeLengths", LineTable.StandardOpcodeLengths);
-  IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
-  IO.mapOptional("Files", LineTable.Files);
+  if (LineTable.Version >= 5) {
+    // TODO
+  } else {
+    IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
+    IO.mapOptional("Files", LineTable.Files);
+  }
   IO.mapOptional("Opcodes", LineTable.Opcodes);
 }
 

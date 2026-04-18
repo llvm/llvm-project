@@ -5,6 +5,7 @@ include_directories(${MLIR_TABLEGEN_OUTPUT_DIR})
 
 add_distinct_clang_unittest(CIRUnitTests
   PointerLikeTest.cpp
+  RecordTypeMetadataTest.cpp
   LLVM_COMPONENTS
   Core
 

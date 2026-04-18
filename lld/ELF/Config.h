@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_CONFIG_H
 #define LLD_ELF_CONFIG_H
 
+#include "lld/Common/BPSectionOrdererBase.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -305,6 +306,7 @@ struct Config {
   bool bpCompressionSortStartupFunctions = false;
   bool bpFunctionOrderForCompression = false;
   bool bpDataOrderForCompression = false;
+  llvm::SmallVector<BPCompressionSortSpec> bpCompressionSortSpecs;
   bool bpVerboseSectionOrderer = false;
   bool branchToBranch = false;
   bool checkSections;

@@ -44,6 +44,31 @@ private:
   // Read a block of records into a single Info struct, calls readRecord on each
   // record found.
   template <typename T> llvm::Error readBlock(unsigned ID, T I);
+  template <typename T> llvm::Error readBlockWithNamespace(unsigned ID, T I);
+
+  template <typename T, typename BlockBeginHandler, typename BlockEndHandler,
+            typename RecordHandler>
+  llvm::Error parseBlock(unsigned ID, T I, BlockBeginHandler &&BBH,
+                         BlockEndHandler &&BEH, RecordHandler &&RH);
+
+  template <typename T, typename BlockBeginHandler, typename BlockEndHandler>
+  llvm::Error parseBlock(unsigned ID, T I, BlockBeginHandler &&BBH,
+                         BlockEndHandler &&BEH);
+
+  template <typename ChildType>
+  llvm::Expected<bool> readSubBlockIfMatch(unsigned ID, unsigned TargetID,
+                                           llvm::SmallVectorImpl<ChildType> &V);
+
+  struct ReferenceMap {
+    FieldId Field;
+    llvm::SmallVectorImpl<Reference> *Vec;
+  };
+
+  template <typename InfoT>
+  llvm::Expected<bool>
+  routeReferenceBlock(unsigned ID, llvm::SmallVectorImpl<Reference> &Namespaces,
+                      InfoT *I,
+                      std::initializer_list<ReferenceMap> Mappings = {});
 
   // Step through a block of records to find the next data field.
   template <typename T> llvm::Error readSubBlock(unsigned ID, T I);

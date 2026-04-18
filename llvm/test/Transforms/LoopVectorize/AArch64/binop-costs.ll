@@ -17,12 +17,6 @@ define void @udiv_rhs_opt_cost(ptr %dst) #0 {
 ; CHECK:  Cost of 0 for VF vscale x 2: IR %div = udiv i8 %iv.trunc, 3
 ; CHECK:  Cost of 5 for VF vscale x 4: CLONE ir<%div> = udiv vp<[[VP7]]>, ir<3>
 ; CHECK:  Cost of 0 for VF vscale x 4: IR %div = udiv i8 %iv.trunc, 3
-; CHECK:  LV: Found an estimated cost of 5 for VF 1 For instruction: %div = udiv i8 %iv.trunc, 3
-; CHECK:  LV: Found an estimated cost of 5 for VF 2 For instruction: %div = udiv i8 %iv.trunc, 3
-; CHECK:  LV: Found an estimated cost of 5 for VF 4 For instruction: %div = udiv i8 %iv.trunc, 3
-; CHECK:  LV: Found an estimated cost of 5 for VF vscale x 1 For instruction: %div = udiv i8 %iv.trunc, 3
-; CHECK:  LV: Found an estimated cost of 5 for VF vscale x 2 For instruction: %div = udiv i8 %iv.trunc, 3
-; CHECK:  LV: Found an estimated cost of 5 for VF vscale x 4 For instruction: %div = udiv i8 %iv.trunc, 3
 ;
 entry:
   br label %loop

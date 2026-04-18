@@ -20,10 +20,21 @@
 
 #include "rpc_util.h"
 
-namespace rpc {
-
 /// Use scoped atomic variants if they are available for the target.
 #if !__has_builtin(__scoped_atomic_load_n)
+#ifdef _MSC_VER // MSVC atomic support.
+#include <intrin.h>
+#define __scoped_atomic_load_n(src, ord, scp)                                  \
+  __iso_volatile_load32((const volatile int32_t *)(src))
+#define __scoped_atomic_store_n(dst, src, ord, scp)                            \
+  (sizeof(*(dst)) == 4                                                         \
+       ? __iso_volatile_store32((volatile int32_t *)(dst), (__int32)(src))     \
+       : __iso_volatile_store64((volatile int64_t *)(dst), (__int64)(src)))
+#define __scoped_atomic_fetch_or(src, val, ord, scp)                           \
+  _InterlockedOr((volatile long *)(src), (long)(val))
+#define __scoped_atomic_fetch_and(src, val, ord, scp)                          \
+  _InterlockedAnd((volatile long *)(src), (long)(val))
+#else // GNU atomic support.
 #define __scoped_atomic_load_n(src, ord, scp) __atomic_load_n(src, ord)
 #define __scoped_atomic_store_n(dst, src, ord, scp)                            \
   __atomic_store_n(dst, src, ord)
@@ -36,12 +47,19 @@ namespace rpc {
 #define __scoped_atomic_fetch_sub(src, val, ord, scp)                          \
   __atomic_fetch_sub(src, val, ord)
 #endif
+#endif
 #if !__has_builtin(__scoped_atomic_thread_fence)
+#ifdef _MSC_VER
+#define __scoped_atomic_thread_fence(ord, scp) _ReadWriteBarrier()
+#else
 #define __scoped_atomic_thread_fence(ord, scp) __atomic_thread_fence(ord)
 #endif
+#endif
+
+namespace rpc {
 
 /// Generic codes that can be used when implementing the server.
-enum Status {
+enum RPCStatus {
   RPC_SUCCESS = 0x0,
   RPC_ERROR = 0x1000,
   RPC_UNHANDLED_OPCODE = 0x1001,
@@ -132,6 +150,7 @@ template <bool Invert> struct Process {
 
   /// Ring the doorbell if the protocol was configured with one.
   RPC_ATTRS void notify(uint64_t lane_mask) const {
+#ifndef _MSC_VER
     if (!doorbell->value)
       return;
 
@@ -139,23 +158,26 @@ template <bool Invert> struct Process {
     if (rpc::is_first_lane(lane_mask)) {
       if (!__scoped_atomic_fetch_add(doorbell->value, 1UL, __ATOMIC_RELAXED,
                                      __MEMORY_SCOPE_SYSTEM)) {
-        __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
         __scoped_atomic_store_n(doorbell->mailbox,
                                 static_cast<uint64_t>(doorbell->event_id),
                                 __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+        __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
         signal_interrupt(event_id);
       }
     }
+#endif
   }
 
   /// Decrement the doorbell signal if the protocol is using one.
   RPC_ATTRS void finish(uint64_t lane_mask) const {
+#ifndef _MSC_VER
     if (!doorbell->value)
       return;
 
     if (rpc::is_first_lane(lane_mask))
       __scoped_atomic_fetch_sub(doorbell->value, 1UL, __ATOMIC_RELAXED,
                                 __MEMORY_SCOPE_SYSTEM);
+#endif
   }
 
   /// Retrieve the inbox state from memory shared between processes.
@@ -395,7 +417,7 @@ private:
     if (owns_buffer && T)
       out = process.invert_outbox(lane_mask, index, out);
     process.unlock(lane_mask, index);
-    if constexpr (!T)
+    if constexpr (T)
       process.finish(lane_mask);
   }
 

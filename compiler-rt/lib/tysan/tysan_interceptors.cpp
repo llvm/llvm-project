@@ -22,12 +22,44 @@
 #define TYSAN_INTERCEPT___STRDUP 0
 #endif
 
+#define TYSAN_INTERCEPT_FUNC(name)                                             \
+  do {                                                                         \
+    if (!INTERCEPT_FUNCTION(name))                                             \
+      VReport(1, "TypeSanitizer: failed to intercept '%s'\n", #name);          \
+  } while (0)
+
 #if SANITIZER_LINUX
 extern "C" int mallopt(int param, int value);
 #endif
 
 using namespace __sanitizer;
 using namespace __tysan;
+namespace __tysan {
+// Defined in tysan.cpp
+void OnStackUnwind(const SignalContext &sig, const void *,
+                   BufferedStackTrace *stack);
+
+static void TysanOnDeadlySignal(int signo, void *siginfo, void *context) {
+  HandleDeadlySignal(siginfo, context, GetTid(), &OnStackUnwind, nullptr);
+}
+
+static bool tysanSignalsInitialized = false;
+void InitializeDeadlySignals();
+} // namespace __tysan
+
+#define SIGNAL_INTERCEPTOR_ENTER() __tysan::InitializeDeadlySignals()
+#define COMMON_INTERCEPT_FUNCTION(name) TYSAN_INTERCEPT_FUNC(name)
+#include "sanitizer_common/sanitizer_signal_interceptors.inc"
+
+namespace __tysan {
+void InitializeDeadlySignals() {
+  if (tysanSignalsInitialized)
+    return;
+  InitializeSignalInterceptors();
+  InstallDeadlySignalHandlers(&TysanOnDeadlySignal);
+  tysanSignalsInitialized = true;
+}
+} // namespace __tysan
 
 namespace {
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
@@ -233,7 +265,7 @@ void InitializeInterceptors() {
   TYSAN_MAYBE_INTERCEPT_MEMALIGN;
   TYSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN;
   TYSAN_MAYBE_INTERCEPT_PVALLOC;
-  TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC
+  TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
   INTERCEPT_FUNCTION(posix_memalign);
 
   INTERCEPT_FUNCTION(memset);

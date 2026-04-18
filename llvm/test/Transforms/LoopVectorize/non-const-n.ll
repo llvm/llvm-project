@@ -7,9 +7,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @c = common global [2048 x i32] zeroinitializer, align 16
 @a = common global [2048 x i32] zeroinitializer, align 16
 
-define void @example1(i32 %n) nounwind uwtable ssp {
+define void @example1(i32 %n) {
 ; CHECK-LABEL: define void @example1(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N4:%.*]] = shl i32 [[N]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N4]], -4

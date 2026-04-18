@@ -101,6 +101,9 @@ private:
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
+  /// Accumulated record layout entries, materialized in release().
+  llvm::SmallVector<mlir::NamedAttribute> recordLayoutEntries;
+
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
   /// A queue of (optional) vtables to consider emitting.
@@ -132,6 +135,11 @@ private:
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
+
+  /// Queue a record layout entry for materialization in release().
+  void addRecordLayout(mlir::StringAttr name, cir::RecordLayoutAttr attr) {
+    recordLayoutEntries.push_back(mlir::NamedAttribute(name, attr));
+  }
   clang::ASTContext &getASTContext() const { return astContext; }
   const clang::TargetInfo &getTarget() const { return target; }
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
@@ -798,11 +806,6 @@ private:
   llvm::MapVector<StringRef, mlir::Operation *> replacements;
   /// Call replaceAllUsesWith on all pairs in replacements.
   void applyReplacements();
-
-  /// A helper function to replace all uses of OldF to NewF that replace
-  /// the type of pointer arguments. This is not needed to tradtional
-  /// pipeline since LLVM has opaque pointers but CIR not.
-  void replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF);
 
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 

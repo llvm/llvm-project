@@ -1945,12 +1945,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
 
 static bool isDirectCall(Use& U) {
   auto *Usr = dyn_cast<CallInst>(U.getUser());
-  if (Usr) {
-    auto *CB = dyn_cast<CallBase>(Usr);
-    if (CB && CB->isCallee(&U))
-      return true;
-  }
-  return false;
+  return Usr && Usr->isCallee(&U);
 }
 
 void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,

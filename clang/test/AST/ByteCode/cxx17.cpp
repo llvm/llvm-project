@@ -149,3 +149,29 @@ namespace NonConstexprStructuredBinding {
     static_assert(&a != &b);
   }
 }
+
+
+
+
+int d, m;
+struct C {
+  constexpr C() {}
+  constexpr C(const C &) {}
+  template <int I> int &get() const {
+    // static_assert(d == 1 + I);
+    ++d;
+    return m;
+  }
+};
+
+template <> struct std::tuple_size<const C> {
+  static const int value = 3;
+};
+template <int I> struct std::tuple_element<I, const C> {
+  using type = int;
+};
+
+namespace ZeroInCheckInvoke {
+  constexpr C foo(const C &) { return C{}; }
+  thread_local const auto &[s, t, u] = foo(C{}); // both-warning {{thread_local}}
+}

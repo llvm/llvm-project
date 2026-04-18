@@ -1086,7 +1086,12 @@ public:
 
 Expected<std::unique_ptr<Session::LazyLinkingSupport>>
 createLazyLinkingSupport(Session &S) {
-  auto RSMgr = JITLinkRedirectableSymbolManager::Create(S.ObjLayer);
+  auto MemAccess = S.ES.getExecutorProcessControl().createDefaultMemoryAccess();
+  if (!MemAccess)
+    return MemAccess.takeError();
+
+  auto RSMgr =
+      JITLinkRedirectableSymbolManager::Create(S.ObjLayer, **MemAccess);
   if (!RSMgr)
     return RSMgr.takeError();
 
@@ -1113,7 +1118,8 @@ createLazyLinkingSupport(Session &S) {
     return LRMgr.takeError();
 
   return std::make_unique<Session::LazyLinkingSupport>(
-      std::move(*RSMgr), std::move(Speculator), std::move(*LRMgr), S.ObjLayer);
+      std::move(*MemAccess), std::move(*RSMgr), std::move(Speculator),
+      std::move(*LRMgr), S.ObjLayer);
 }
 
 static Error writeLazyExecOrder(Session &S) {

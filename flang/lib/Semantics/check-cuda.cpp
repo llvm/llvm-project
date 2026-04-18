@@ -115,6 +115,22 @@ struct DeviceExprChecker
   SemanticsContext &context_;
 };
 
+static bool IsHostArray(const Symbol &symbol) {
+  const Symbol &resolved{GetAssociationRoot(symbol)};
+  if (const auto *details{
+          resolved.detailsIf<semantics::ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Constant ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 struct FindHostArray
     : public evaluate::AnyTraverse<FindHostArray, const Symbol *> {
   using Result = const Symbol *;
@@ -122,10 +138,28 @@ struct FindHostArray
   FindHostArray() : Base(*this) {}
   using Base::operator();
   Result operator()(const evaluate::Component &x) const {
-    const Symbol &symbol{x.GetLastSymbol()};
+    const Symbol &symbol{x.GetLastSymbol().GetUltimate()};
+    const Symbol &baseSymbol{GetAssociationRoot(x.base().GetFirstSymbol())};
+    if (symbol.IsFuncResult() || baseSymbol.IsFuncResult()) {
+      return nullptr;
+    }
+    if (!IsHostArray(symbol)) {
+      return nullptr;
+    }
+    if (IsDummy(baseSymbol) && IsCUDADeviceContext(&baseSymbol.owner())) {
+      return nullptr;
+    }
     if (IsAllocatableOrPointer(symbol)) {
       if (Result hostArray{(*this)(symbol)}) {
         return hostArray;
+      }
+    } else if (const auto *details{symbol.GetUltimate()
+                       .detailsIf<semantics::ObjectEntityDetails>()}) {
+      if (details->IsArray()) {
+        if (!IsHostArray(baseSymbol)) {
+          return nullptr;
+        }
+        return &symbol;
       }
     }
     return (*this)(x.base());
@@ -404,6 +438,9 @@ private:
   template <typename A>
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
     if (isHostDevice)
+      return;
+    if (context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaUnified))
       return;
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,

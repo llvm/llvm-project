@@ -610,6 +610,8 @@ let Predicates = [HasFutureVector, PairedVectorMemops] in {
 let Predicates = [HasFutureVector] in {
   def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
                                                      v4i32:$vB))>;
+  def : Pat<(v4i32 (int_ppc_altivec_vrlw v4i32:$vA, v4i32:$vB)),
+            (v4i32 (XVRLW v4i32:$vA, v4i32:$vB))>;
 }
 
 //---------------------------- Instruction aliases ---------------------------//

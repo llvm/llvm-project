@@ -53,10 +53,10 @@ char32_t c32;
 // CHECK: cir.global external @c32 = #cir.int<0> : !u32i
 
 _BitInt(20) sb20;
-// CHECK: cir.global external @sb20 = #cir.int<0> : !cir.int<s, 20>
+// CHECK: cir.global external @sb20 = #cir.int<0> : !cir.int<s, 20, bitint>
 
 unsigned _BitInt(48) ub48;
-// CHECK: cir.global external @ub48 = #cir.int<0> : !cir.int<u, 48>
+// CHECK: cir.global external @ub48 = #cir.int<0> : !cir.int<u, 48, bitint>
 
 bool boolfalse = false;
 // CHECK: cir.global external @boolfalse = #false

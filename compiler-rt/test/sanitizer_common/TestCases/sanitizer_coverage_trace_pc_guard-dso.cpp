@@ -2,7 +2,7 @@
 
 // REQUIRES: has_sancovcc
 // Doesn't work on big-endian targets.
-// UNSUPPORTED: ubsan,target={{(powerpc64|s390x|sparc|thumb).*}}
+// UNSUPPORTED: tysan,ubsan,target={{(powerpc64|s390x|sparc|thumb).*}}
 // XFAIL: tsan,darwin
 // XFAIL: android && asan
 

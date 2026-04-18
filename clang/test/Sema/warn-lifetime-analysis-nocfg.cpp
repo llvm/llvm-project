@@ -576,12 +576,13 @@ struct FooView {
   FooView(const Foo& foo [[clang::lifetimebound]]);
 };
 FooView test3(int i, std::optional<Foo> a) {
-  // FIXME: Detect this using the CFG-based lifetime analysis.
-  //        Origin tracking for non-pointers type retured from lifetimebound fn is missing.
-  //        https://github.com/llvm/llvm-project/issues/163600
   if (i)
-    return *a; // expected-warning {{address of stack memory}}
-  return a.value(); // expected-warning {{address of stack memory}}
+    return *a; // expected-warning {{address of stack memory}} \
+               // cfg-warning {{address of stack memory is returned later}} \
+               // cfg-note {{returned here}}
+  return a.value(); // expected-warning {{address of stack memory}} \
+                    // cfg-warning {{address of stack memory is returned later}} \
+                    // cfg-note {{returned here}}
 }
 } // namespace GH93386
 
@@ -591,11 +592,10 @@ struct UrlAnalyzed {
 };
 std::string StrCat(std::string_view, std::string_view);
 void test1() {
-  // FIXME: Detect this using the CFG-based lifetime analysis.
-  //        Origin tracking for non-pointers type retured from lifetimebound fn is missing.
-  //        https://github.com/llvm/llvm-project/issues/163600
-  UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}}
-  use(url);
+  UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}} \
+                                         // cfg-warning {{object whose reference is captured does not live long enough}} \
+                                         // cfg-note {{destroyed here}}
+  use(url);                              // cfg-note {{later used here}}
 }
 
 std::string_view ReturnStringView(std::string_view abc [[clang::lifetimebound]]);
@@ -931,13 +931,11 @@ struct [[gsl::Pointer]] Pointer {
   Pointer(const Bar & bar [[clang::lifetimebound]]);
 };
 Pointer test3(Bar bar) {
-  // FIXME: Detect this using the CFG-based lifetime analysis (constructor of a pointer).
-  //        https://github.com/llvm/llvm-project/issues/175898
-  Pointer p = Pointer(Bar()); // expected-warning {{temporary}}
-  use(p);
-  p = Pointer(Bar()); // expected-warning {{object backing}}
-  use(p);
-  return bar; // expected-warning {{address of stack}}
+  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(p);                     // cfg-note {{later used here}}
+  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(p);                     // cfg-note {{later used here}}
+  return bar;                 // expected-warning {{address of stack}} cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
 }
 
 template<typename T>

@@ -246,6 +246,7 @@ public:
       : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
 
   const OriginList *getUsedOrigins() const { return OList; }
+  void setUsedOrigins(const OriginList *NewList) { OList = NewList; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }
@@ -317,8 +318,7 @@ public:
 
 class FactManager {
 public:
-  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg)
-      : OriginMgr(AC.getASTContext(), AC.getDecl()) {
+  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg) : OriginMgr(AC) {
     BlockToFacts.resize(Cfg.getNumBlockIDs());
   }
 

@@ -256,7 +256,7 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     auto descOp = operand->get().getDefiningOp<xegpu::CreateNdDescOp>();
     unsigned operandIdx = operand->getOperandNumber();
 
-    xegpu::LayoutAttr layout = descOp.getType().getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = descOp.getType().getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           descOp, "the tensor descriptor lacks layout attribute");
@@ -342,7 +342,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Type> offsetTypes = llvm::map_to_vector(
         offsetsAsValues, [](Value v) { return v.getType(); });
     xegpu::TensorDescType tensorDescTy = storeOp.getTensorDescType();
-    xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           storeOp, "the source tensor descriptor lacks layout attribute");
@@ -474,7 +474,7 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         offsetsAsValues, [](Value v) { return v.getType(); });
 
     xegpu::TensorDescType tensorDescTy = loadOp.getTensorDescType();
-    xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           loadOp, "the source tensor descriptor lacks layout attribute");
@@ -709,7 +709,8 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Type> offsetTypes = llvm::map_to_vector(
         offsetsAsValues, [](Value v) { return v.getType(); });
 
-    xegpu::LayoutAttr layout = prefetchOp.getTensorDescType().getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout =
+        prefetchOp.getTensorDescType().getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           prefetchOp, "the source tensor descriptor lacks layout attribute");

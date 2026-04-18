@@ -1252,6 +1252,11 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
 
     setOperationAction(ISD::MSTORE, VT, Expand);
+
+    setOperationAction(ISD::MASKED_UDIV, VT, Expand);
+    setOperationAction(ISD::MASKED_SDIV, VT, Expand);
+    setOperationAction(ISD::MASKED_UREM, VT, Expand);
+    setOperationAction(ISD::MASKED_SREM, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -1347,7 +1352,7 @@ bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
 }
 
 unsigned TargetLoweringBase::getBitWidthForCttzElements(
-    Type *RetTy, ElementCount EC, bool ZeroIsPoison,
+    EVT RetVT, ElementCount EC, bool ZeroIsPoison,
     const ConstantRange *VScaleRange) const {
   // Find the smallest "sensible" element type to use for the expansion.
   ConstantRange CR(APInt(64, EC.getKnownMinValue()));
@@ -1357,7 +1362,7 @@ unsigned TargetLoweringBase::getBitWidthForCttzElements(
   if (ZeroIsPoison)
     CR = CR.subtract(APInt(64, 1));
 
-  unsigned EltWidth = RetTy->getScalarSizeInBits();
+  unsigned EltWidth = RetVT.getScalarSizeInBits();
   EltWidth = std::min(EltWidth, CR.getActiveBits());
   EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
 
@@ -1939,6 +1944,13 @@ void TargetLoweringBase::computeRegisterProperties(
     RepRegClassForVT[i] = RRC;
     RepRegClassCostForVT[i] = Cost;
   }
+
+  // Compute minimum known-legal store size.
+  MaximumLegalStoreInBits = 0;
+  for (MVT VT : MVT::all_valuetypes())
+    if (VT != MVT::Other && isTypeLegal(VT) &&
+        VT.getSizeInBits().getKnownMinValue() >= MaximumLegalStoreInBits)
+      MaximumLegalStoreInBits = VT.getSizeInBits().getKnownMinValue();
 }
 
 EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,
