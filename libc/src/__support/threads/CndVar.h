@@ -11,6 +11,7 @@
 
 #include "hdr/stdint_proxy.h" // uint32_t
 #include "src/__support/CPP/mutex.h"
+#include "src/__support/CPP/new.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/futex_utils.h" // Futex
 #include "src/__support/threads/mutex.h"       // Mutex
@@ -22,9 +23,16 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-class CndVar {
+enum class CndVarResult {
+  Success,
+  MutexError,
+  Timeout,
+};
+
+class PrivateCndVar {
   LIBC_INLINE_VAR static constexpr size_t SPIN_LIMIT = 100;
   LIBC_INLINE_VAR static constexpr size_t CANCEL_STEP = 2;
+
   enum WaiterState : uint8_t {
     // Initial state after entering the wait queue.
     Waiting = 0,
@@ -87,27 +95,22 @@ class CndVar {
     }
   };
 
-  union {
-    struct {
-      WaiterHeader waiter_queue;
-      RawMutex queue_lock;
-    };
-    struct {
-      cpp::Atomic<size_t> shared_waiters;
-      Futex shared_futex;
-    };
-  };
+  /*
+  Layout:
+
+  struct {
+    void * __wait_queue_prev;
+    void * __wait_queue_next;
+    __futex_word __futex;
+  }
+  */
+  WaiterHeader waiter_queue;
+  RawMutex queue_lock;
 
 public:
-  enum class CndVarResult {
-    Success,
-    MutexError,
-    Timeout,
-  };
-
   using Timeout = internal::AbsTimeout;
 
-  LIBC_INLINE constexpr CndVar() : waiter_queue{}, queue_lock{} {}
+  LIBC_INLINE constexpr PrivateCndVar() : waiter_queue{}, queue_lock{} {}
 
   LIBC_INLINE void reset() {
     queue_lock.reset();
@@ -117,26 +120,11 @@ public:
 
   // TODO: register callback for pthread cancellation
   LIBC_INLINE CndVarResult wait(Mutex *mutex,
-                                cpp::optional<Timeout> timeout = cpp::nullopt,
-                                bool is_shared = false) {
+                                cpp::optional<Timeout> timeout = cpp::nullopt) {
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
     if (timeout)
       ensure_monotonicity(*timeout);
 #endif
-
-    if (is_shared) {
-      shared_waiters.fetch_add(1);
-      FutexWordType old_val = shared_futex.load();
-      mutex->unlock();
-      ErrorOr<int> result =
-          shared_futex.wait(old_val, timeout, /*is_pshared=*/true);
-      shared_waiters.fetch_sub(1);
-      MutexError mutex_result = mutex->lock();
-      if (!result.has_value() && result.error() == ETIMEDOUT)
-        return CndVarResult::Timeout;
-      return mutex_result == MutexError::NONE ? CndVarResult::Success
-                                              : CndVarResult::MutexError;
-    }
 
     CndWaiter waiter{};
     // Register the waiter to the queue.
@@ -202,18 +190,7 @@ public:
   }
 
 private:
-  LIBC_INLINE void notify(bool broadcast, bool is_shared = false) {
-    if (is_shared) {
-      if (shared_waiters.load() == 0)
-        return;
-      shared_futex.fetch_add(1);
-      if (broadcast)
-        shared_futex.notify_all();
-      else
-        shared_futex.notify_one();
-      return;
-    }
-
+  LIBC_INLINE void notify(size_t limit) {
     Futex sender_futex{0};
     auto wait_unregisteration_finish = [&]() {
       size_t spin = 0;
@@ -231,7 +208,6 @@ private:
     };
     CndWaiter *head = nullptr;
     CndWaiter *cursor = nullptr;
-    size_t limit = broadcast ? cpp::numeric_limits<size_t>::max() : 1;
     {
       cpp::lock_guard lock(queue_lock);
       waiter_queue.ensure_queue_initialization();
@@ -266,12 +242,108 @@ private:
   }
 
 public:
-  LIBC_INLINE void notify_one(bool is_shared = false) {
-    notify(/*broadcast=*/false, is_shared);
+  LIBC_INLINE void notify_one() { notify(1); }
+  LIBC_INLINE void broadcast() { notify(cpp::numeric_limits<size_t>::max()); }
+};
+
+class SharedCndVar {
+  /*
+  Layout:
+    struct {
+      cpp::Atomic<size_t> shared_waiters;
+      Futex shared_futex;
+    };
+  */
+  cpp::Atomic<size_t> shared_waiters;
+  Futex shared_futex;
+
+public:
+  using Timeout = internal::AbsTimeout;
+
+  LIBC_INLINE constexpr SharedCndVar() : shared_waiters(0), shared_futex{0} {}
+
+  LIBC_INLINE void reset() {
+    shared_waiters.store(0);
+    shared_futex.store(0);
   }
 
-  LIBC_INLINE void broadcast(bool is_shared = false) {
-    notify(/*broadcast=*/true, is_shared);
+  // TODO: register callback for pthread cancellation
+  LIBC_INLINE CndVarResult wait(Mutex *mutex,
+                                cpp::optional<Timeout> timeout = cpp::nullopt) {
+#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+    if (timeout)
+      ensure_monotonicity(*timeout);
+#endif
+
+    shared_waiters.fetch_add(1);
+    FutexWordType old_val = shared_futex.load();
+    mutex->unlock();
+    ErrorOr<int> result =
+        shared_futex.wait(old_val, timeout, /*is_pshared=*/true);
+    shared_waiters.fetch_sub(1);
+    MutexError mutex_result = mutex->lock();
+    if (!result.has_value() && result.error() == ETIMEDOUT)
+      return CndVarResult::Timeout;
+    return mutex_result == MutexError::NONE ? CndVarResult::Success
+                                            : CndVarResult::MutexError;
+  }
+
+private:
+  LIBC_INLINE void notify(bool broadcast) {
+    if (shared_waiters.load() == 0)
+      return;
+    shared_futex.fetch_add(1);
+    if (broadcast)
+      shared_futex.notify_all();
+    else
+      shared_futex.notify_one();
+    return;
+  }
+
+public:
+  LIBC_INLINE void notify_one() { notify(/*broadcast=*/false); }
+  LIBC_INLINE void broadcast() { notify(/*broadcast=*/true); }
+};
+
+class CndVar {
+  union {
+    PrivateCndVar private_cnd_var{};
+    SharedCndVar shared_cnd_var;
+  } storage;
+  bool is_shared;
+
+public:
+  using Timeout = internal::AbsTimeout;
+  LIBC_INLINE constexpr CndVar(bool is_shared) : is_shared(is_shared) {
+    if (is_shared)
+      new (&storage.shared_cnd_var) SharedCndVar();
+    else
+      new (&storage.private_cnd_var) PrivateCndVar();
+  }
+  LIBC_INLINE void reset() {
+    if (is_shared)
+      storage.shared_cnd_var.reset();
+    else
+      storage.private_cnd_var.reset();
+  }
+  LIBC_INLINE CndVarResult wait(Mutex *mutex,
+                                cpp::optional<Timeout> timeout = cpp::nullopt) {
+    if (is_shared)
+      return storage.shared_cnd_var.wait(mutex, timeout);
+    else
+      return storage.private_cnd_var.wait(mutex, timeout);
+  }
+  LIBC_INLINE void notify_one() {
+    if (is_shared)
+      storage.shared_cnd_var.notify_one();
+    else
+      storage.private_cnd_var.notify_one();
+  }
+  LIBC_INLINE void broadcast() {
+    if (is_shared)
+      storage.shared_cnd_var.broadcast();
+    else
+      storage.private_cnd_var.broadcast();
   }
 };
 
