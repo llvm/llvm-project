@@ -54,14 +54,14 @@ class PrivateCndVar {
     LIBC_INLINE void wait() {
       size_t spin = 0;
       while (auto remaining = futex.load(cpp::MemoryOrder::RELAXED)) {
-        if (spin > SPIN_LIMIT) {
-          // Set LSB to 1 to indicate that the waiter is entering sleeping
-          // state.
-          remaining = futex.fetch_add(1) + 1;
-          futex.wait(remaining, /*timeout=*/cpp::nullopt, /*is_pshared=*/false);
+        // Set LSB to 1 to indicate that the waiter is entering sleeping
+        // state.
+        FutexWordType new_val = remaining | SLEEPING_BIT;
+        if (spin > SPIN_LIMIT &&
+            futex.compare_exchange_strong(remaining, new_val)) {
+          futex.wait(new_val, /*timeout=*/cpp::nullopt, /*is_pshared=*/false);
           futex.fetch_sub(1);
           spin = 0;
-          continue;
         }
         sleep_briefly();
         spin++;
