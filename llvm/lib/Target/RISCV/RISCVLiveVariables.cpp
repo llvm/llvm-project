@@ -35,7 +35,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <set>
-#include <unordered_map>
 
 using namespace llvm;
 
@@ -151,6 +150,7 @@ private:
   // PreRA can have large number of registers and basic block
   // level liveness may be expensive without a bitvector representation.
   std::unordered_map<unsigned, unsigned> TrackedRegisters;
+  DenseMap<Register, unsigned> TrackedRegisters;
 
   /// Liveness information for each basic block
   DenseMap<const MachineBasicBlock *, LivenessInfo> BlockLiveness;
@@ -202,6 +202,9 @@ void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
     Register Reg = MO.getReg();
 
     TrackedRegisters.insert(std::pair(Reg, RegCounter++));
+    auto [It, Inserted] = TrackedRegisters.insert({Reg, RegCounter});
+    if (Inserted)
+      RegCounter++;
 
     // Skip non-trackable registers
     if (!isTrackableRegister(Reg, TRI, MRI))
@@ -212,22 +215,18 @@ void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
       if (Info.Gen.find(Reg) == Info.Gen.end()) {
         Info.Use.insert(Reg);
 
-        // Also handle sub-registers for physical registers
         if (Reg.isPhysical()) {
+          // Also handle sub-registers for physical registers
           for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/false);
                SubRegs.isValid(); ++SubRegs) {
             if (Info.Gen.find(*SubRegs) == Info.Gen.end()) {
               Info.Use.insert(*SubRegs);
             }
           }
+          // Implicit operands (like condition codes, stack pointer updates)
+          if (MO.isImplicit())
+            Info.Use.insert(Reg); // no sub-registers added.
         }
-      }
-    }
-
-    // Handle implicit operands (like condition codes, stack pointer updates)
-    if (MO.isImplicit() && MO.isUse() && Reg.isPhysical()) {
-      if (Info.Gen.find(Reg) == Info.Gen.end()) {
-        Info.Use.insert(Reg);
       }
     }
 
