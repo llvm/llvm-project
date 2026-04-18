@@ -1,4 +1,4 @@
-//===- llvm/unittest/MC/DwarfDebugFrameCIE.cpp ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -172,7 +172,7 @@ TEST_F(DwarfDebugFrameCIE, DistinctReturnColumnsGetDistinctCIEs) {
   // Collect CIEs and their return-address registers.
   SmallVector<uint64_t, 4> CIEReturnRegs;
   unsigned FDECount = 0;
-  for (const auto &Entry : DebugFrame) {
+  for (const dwarf::FrameEntry &Entry : DebugFrame) {
     if (const auto *CIEp = dyn_cast<dwarf::CIE>(&Entry))
       CIEReturnRegs.push_back(CIEp->getReturnAddressRegister());
     else if (isa<dwarf::FDE>(Entry))
@@ -238,7 +238,7 @@ TEST_F(DwarfDebugFrameCIE, SameReturnColumnsShareCIE) {
 
   unsigned CIECount = 0;
   unsigned FDECount = 0;
-  for (const auto &Entry : DebugFrame) {
+  for (const dwarf::FrameEntry &Entry : DebugFrame) {
     if (isa<dwarf::CIE>(Entry))
       ++CIECount;
     else if (isa<dwarf::FDE>(Entry))
