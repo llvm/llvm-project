@@ -654,6 +654,8 @@ TARGET_BUILTIN(__builtin_altivec_vmulhsd, "V2LLiV2LLiV2LLi", "",
                "power10-vector")
 TARGET_BUILTIN(__builtin_altivec_vmulhud, "V2ULLiV2ULLiV2ULLi", "",
                "power10-vector")
+TARGET_BUILTIN(__builtin_altivec_vmulhsh, "V8SsV8SsV8Ss", "", "future-vector")
+TARGET_BUILTIN(__builtin_altivec_vmulhuh, "V8UsV8UsV8Us", "", "future-vector")
 
 // P10 Vector Expand with Mask built-ins.
 TARGET_BUILTIN(__builtin_altivec_vexpandbm, "V16UcV16Uc", "", "power10-vector")
@@ -1161,6 +1163,55 @@ UNALIASED_CUSTOM_MMA_BUILTIN(mma_dmxvf16gerx2, "vW1024*W256V",
                              "mma,isa-future-instructions")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmdmxvf16gerx2, "vW1024*W256Vi255i15i3",
                              "mma,isa-future-instructions")
+
+// Elliptic Curve Cryptography Builtins
+UNALIASED_CUSTOM_BUILTIN(xxmulmul, "VVVi7", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xxmulmulhiadd, "VVVi1i1i1", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xxmulmulloadd, "VVVi1i1", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xxssumudm, "VVVi1", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xxssumudmc, "VVVi1", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xxssumudmcext, "VVVVi1", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsaddadduqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsaddaddsuqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsaddsubuqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsaddsubsuqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsmerge2t1uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsmerge2t2uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsmerge2t3uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsmerge3t1uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t1uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t2uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t3uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t4uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase3t1uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase3t2uqm, "VVV", false, "future-vector")
+UNALIASED_CUSTOM_BUILTIN(xsrebase3t3uqm, "VVV", false, "future-vector")
+
+// Deeply Compressed Weights built-ins.
+TARGET_BUILTIN(__builtin_altivec_vucmprhn, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprln, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprhb, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprlb, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprhh, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vucmprlh, "V16UcV16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkhsntob, "V16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupklsntob, "V16UcV16Uc", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint4tobf16, "V16UcV16UcIi", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint8tobf16, "V16UcV16UcIi", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint4tofp32, "V16UcV16UcIi", "",
+               "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vupkint8tofp32, "V16UcV16UcIi", "",
+               "isa-future-instructions")
 
 // FIXME: Obviously incomplete.
 

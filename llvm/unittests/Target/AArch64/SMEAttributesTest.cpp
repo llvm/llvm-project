@@ -72,14 +72,6 @@ TEST(SMEAttributes, Constructors) {
                       ->getFunction("foo"))
                   .isNewZT0());
 
-  auto CallModule = parseIR("declare void @callee()\n"
-                            "define void @foo() {"
-                            "call void @callee() \"aarch64_zt0_undef\"\n"
-                            "ret void\n}");
-  CallBase &Call =
-      cast<CallBase>((CallModule->getFunction("foo")->begin()->front()));
-  ASSERT_TRUE(SMECallAttrs(Call, nullptr).callsite().hasUndefZT0());
-
   // Invalid combinations.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled | SA::SM_Compatible),
                      "SM_Enabled and SM_Compatible are mutually exclusive");
@@ -225,18 +217,6 @@ TEST(SMEAttributes, Basics) {
   ASSERT_FALSE(ZT0_New.hasSharedZAInterface());
   ASSERT_TRUE(ZT0_New.hasPrivateZAInterface());
 
-  SA ZT0_Undef = SA(SA::ZT0_Undef | SA::encodeZT0State(SA::StateValue::New));
-  ASSERT_TRUE(ZT0_Undef.isNewZT0());
-  ASSERT_FALSE(ZT0_Undef.isInZT0());
-  ASSERT_FALSE(ZT0_Undef.isOutZT0());
-  ASSERT_FALSE(ZT0_Undef.isInOutZT0());
-  ASSERT_FALSE(ZT0_Undef.isPreservesZT0());
-  ASSERT_FALSE(ZT0_Undef.sharesZT0());
-  ASSERT_TRUE(ZT0_Undef.hasZT0State());
-  ASSERT_FALSE(ZT0_Undef.hasSharedZAInterface());
-  ASSERT_TRUE(ZT0_Undef.hasPrivateZAInterface());
-  ASSERT_TRUE(ZT0_Undef.hasUndefZT0());
-
   ASSERT_FALSE(SA(SA::Normal).isInZT0());
   ASSERT_FALSE(SA(SA::Normal).isOutZT0());
   ASSERT_FALSE(SA(SA::Normal).isInOutZT0());
@@ -305,7 +285,6 @@ TEST(SMEAttributes, Transitions) {
   SA ZT0_Shared = SA(SA::encodeZT0State(SA::StateValue::In));
   SA ZA_ZT0_Shared = SA(SA::encodeZAState(SA::StateValue::In) |
                         SA::encodeZT0State(SA::StateValue::In));
-  SA Undef_ZT0 = SA(SA::ZT0_Undef);
 
   // Shared ZA -> Private ZA Interface
   ASSERT_FALSE(CA(ZA_Shared, Private_ZA).requiresDisablingZABeforeCall());
@@ -315,15 +294,6 @@ TEST(SMEAttributes, Transitions) {
   ASSERT_TRUE(CA(ZT0_Shared, Private_ZA).requiresDisablingZABeforeCall());
   ASSERT_TRUE(CA(ZT0_Shared, Private_ZA).requiresPreservingZT0());
   ASSERT_TRUE(CA(ZT0_Shared, Private_ZA).requiresEnablingZAAfterCall());
-
-  // Shared Undef ZT0 -> Private ZA Interface
-  // Note: "Undef ZT0" is a callsite attribute that means ZT0 is undefined at
-  // point the of the call.
-  ASSERT_TRUE(
-      CA(ZT0_Shared, Private_ZA, Undef_ZT0).requiresDisablingZABeforeCall());
-  ASSERT_FALSE(CA(ZT0_Shared, Private_ZA, Undef_ZT0).requiresPreservingZT0());
-  ASSERT_TRUE(
-      CA(ZT0_Shared, Private_ZA, Undef_ZT0).requiresEnablingZAAfterCall());
 
   // Shared ZA & ZT0 -> Private ZA Interface
   ASSERT_FALSE(CA(ZA_ZT0_Shared, Private_ZA).requiresDisablingZABeforeCall());

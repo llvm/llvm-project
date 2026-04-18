@@ -37069,7 +37069,7 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
 
   BuildMI(testMBB, MIMD, TII->get(X86::JCC_1))
       .addMBB(tailMBB)
-      .addImm(X86::COND_GE);
+      .addImm(X86::COND_AE);
   testMBB->addSuccessor(blockMBB);
   testMBB->addSuccessor(tailMBB);
 
@@ -53176,6 +53176,35 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+static SDValue combineOrWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
+                                          SelectionDAG &DAG, EVT VT) {
+  using namespace SDPatternMatch;
+  assert(N->getOpcode() == ISD::OR && "Expected OR node");
+
+  if (!N->getFlags().hasDisjoint() &&
+      !DAG.haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1)))
+    return SDValue();
+
+  SDValue X, Y, SplatOp;
+  APInt Imm, SplatVal;
+
+  // Fold: (GF2P8AFFINEQB(X, Y, Imm) or_disjoint SplatVal)
+  //     -> GF2P8AFFINEQB(X, Y, Imm ^ SplatVal)
+  // When OR is disjoint (no common bits), the splat constant can be folded
+  //  directly into the GF2P8AFFINEQB immediate via XOR.
+
+  if (sd_match(N, m_Or(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X),
+                                            m_Value(Y), m_ConstInt(Imm))),
+                       m_Value(SplatOp))) &&
+      X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false)) {
+    uint64_t NewImm = (Imm.getZExtValue() ^ SplatVal.getZExtValue()) & 0xFF;
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, Y,
+                       DAG.getTargetConstant(NewImm, DL, MVT::i8));
+  }
+
+  return SDValue();
+}
+
 static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
                                      SDValue N0, SDValue N1,
                                      SelectionDAG &DAG) {
@@ -53267,6 +53296,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue FPLogic = convertIntLogicToFPLogic(N->getOpcode(), dl, VT, N0, N1,
                                                  DAG, DCI, Subtarget))
     return FPLogic;
+
+  if (SDValue R = combineOrWithGF2P8AFFINEQB(N, dl, DAG, VT))
+    return R;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
@@ -60903,6 +60935,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   MVT SubVecVT = SubVec.getSimpleValueType();
   int VecNumElts = OpVT.getVectorNumElements();
   int SubVecNumElts = SubVecVT.getVectorNumElements();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (Vec.isUndef() && SubVec.isUndef())
     return DAG.getUNDEF(OpVT);
@@ -60939,6 +60972,19 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
           return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
                              getZeroVector(OpVT, Subtarget, DAG, dl),
                              Ins.getOperand(1), N->getOperand(2));
+    }
+
+    // See if were inserting into a zero vXi1 vector and the subvector was
+    // bitcast from a gpr that could be zero-extended directly.
+    if (IsI1Vector && TLI.isTypeLegal(OpVT)) {
+      SDValue SubInt = peekThroughBitcasts(SubVec);
+      EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VecNumElts);
+      if (TLI.isTypeLegal(IntVT) && SubInt.getValueType().isScalarInteger()) {
+        SubInt = DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, SubInt);
+        SubInt = DAG.getNode(ISD::SHL, dl, IntVT, SubInt,
+                             DAG.getShiftAmountConstant(IdxVal, IntVT, dl));
+        return DAG.getBitcast(OpVT, SubInt);
+      }
     }
   }
 
