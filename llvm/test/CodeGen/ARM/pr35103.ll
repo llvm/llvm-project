@@ -9,10 +9,10 @@ define i32 @foo(i32 %vreg0, i32 %vreg1, i32 %vreg2, i32 %vreg3, i32 %vreg4) loca
 ; CHECK-NEXT:    adds r2, r2, r0
 ; CHECK-NEXT:    mov r12, #0
 ; CHECK-NEXT:    adc lr, r12, #0
-; CHECK-NEXT:    adds r0, r2, r0
+; CHECK-NEXT:    cmn r2, r0
 ; CHECK-NEXT:    ldr r2, [sp, #8]
 ; CHECK-NEXT:    adc r0, r12, #0
-; CHECK-NEXT:    adds r1, r3, r1
+; CHECK-NEXT:    cmn r3, r1
 ; CHECK-NEXT:    adcs r1, r2, #0
 ; CHECK-NEXT:    adc r0, r0, lr
 ; CHECK-NEXT:    pop {r11, lr}

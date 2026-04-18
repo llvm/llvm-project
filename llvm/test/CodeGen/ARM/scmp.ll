@@ -39,12 +39,12 @@ define i8 @scmp_8_64(i64 %x, i64 %y) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    subs lr, r0, r2
+; CHECK-NEXT:    cmp r0, r2
 ; CHECK-NEXT:    mov r12, #0
 ; CHECK-NEXT:    sbcs lr, r1, r3
 ; CHECK-NEXT:    mov lr, #0
 ; CHECK-NEXT:    movwlt lr, #1
-; CHECK-NEXT:    subs r0, r2, r0
+; CHECK-NEXT:    cmp r2, r0
 ; CHECK-NEXT:    sbcs r0, r3, r1
 ; CHECK-NEXT:    movwlt r12, #1
 ; CHECK-NEXT:    sub r0, r12, lr
@@ -61,7 +61,7 @@ define i8 @scmp_8_128(i128 %x, i128 %y) nounwind {
 ; CHECK-NEXT:    ldr r4, [sp, #24]
 ; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    ldr r6, [sp, #28]
-; CHECK-NEXT:    subs r7, r0, r4
+; CHECK-NEXT:    cmp r0, r4
 ; CHECK-NEXT:    ldr r12, [sp, #32]
 ; CHECK-NEXT:    sbcs r7, r1, r6
 ; CHECK-NEXT:    ldr lr, [sp, #36]
@@ -69,7 +69,7 @@ define i8 @scmp_8_128(i128 %x, i128 %y) nounwind {
 ; CHECK-NEXT:    sbcs r7, r3, lr
 ; CHECK-NEXT:    mov r7, #0
 ; CHECK-NEXT:    movwlt r7, #1
-; CHECK-NEXT:    subs r0, r4, r0
+; CHECK-NEXT:    cmp r4, r0
 ; CHECK-NEXT:    sbcs r0, r6, r1
 ; CHECK-NEXT:    sbcs r0, r12, r2
 ; CHECK-NEXT:    sbcs r0, lr, r3
@@ -108,12 +108,12 @@ define i32 @scmp_32_64(i64 %x, i64 %y) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    subs lr, r0, r2
+; CHECK-NEXT:    cmp r0, r2
 ; CHECK-NEXT:    mov r12, #0
 ; CHECK-NEXT:    sbcs lr, r1, r3
 ; CHECK-NEXT:    mov lr, #0
 ; CHECK-NEXT:    movwlt lr, #1
-; CHECK-NEXT:    subs r0, r2, r0
+; CHECK-NEXT:    cmp r2, r0
 ; CHECK-NEXT:    sbcs r0, r3, r1
 ; CHECK-NEXT:    movwlt r12, #1
 ; CHECK-NEXT:    sub r0, r12, lr
@@ -127,12 +127,12 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    subs lr, r0, r2
+; CHECK-NEXT:    cmp r0, r2
 ; CHECK-NEXT:    mov r12, #0
 ; CHECK-NEXT:    sbcs lr, r1, r3
 ; CHECK-NEXT:    mov lr, #0
 ; CHECK-NEXT:    movwlt lr, #1
-; CHECK-NEXT:    subs r0, r2, r0
+; CHECK-NEXT:    cmp r2, r0
 ; CHECK-NEXT:    sbcs r0, r3, r1
 ; CHECK-NEXT:    movwlt r12, #1
 ; CHECK-NEXT:    sub r0, r12, lr
