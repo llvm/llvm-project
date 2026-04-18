@@ -42,6 +42,11 @@ def XeGPU_Dialect : Dialect {
       /// and data factors provided by the LayoutAttr.
       static bool isEvenlyDistributable(llvm::ArrayRef<int64_t> shape, xegpu::DistributeLayoutAttr attr);
 
+      /// Checks if the given memref type represents shared local memory (SLM).
+      /// Returns true if the memory space is address space 3, MemorySpace::SLM,
+      /// xevm::AddrSpace::SHARED, or a GPU workgroup memory address space.
+      static bool isSharedMemory(const MemRefType &memrefTy);
+
       /// drops/slices the shape in the specified dims, and return the rest. e.g.,
       /// for shape = [32, 64, 8], dims = [0, 2], it will return [64]
       template<typename T, typename U>
