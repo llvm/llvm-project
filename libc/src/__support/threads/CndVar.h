@@ -89,12 +89,12 @@ class CndVar {
 
   union {
     struct {
-      RawMutex queue_lock;
       WaiterHeader waiter_queue;
+      RawMutex queue_lock;
     };
     struct {
-      Futex shared_futex;
       cpp::Atomic<size_t> shared_waiters;
+      Futex shared_futex;
     };
   };
 
@@ -107,7 +107,7 @@ public:
 
   using Timeout = internal::AbsTimeout;
 
-  LIBC_INLINE constexpr CndVar() : queue_lock{}, waiter_queue{} {}
+  LIBC_INLINE constexpr CndVar() : waiter_queue{}, queue_lock{} {}
 
   LIBC_INLINE void reset() {
     queue_lock.reset();
