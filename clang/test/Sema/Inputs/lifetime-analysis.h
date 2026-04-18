@@ -290,5 +290,5 @@ public:
 
 }
 
-void *operator new(unsigned long, void *) noexcept;
-void *operator new[](unsigned long, void *) noexcept;
+void *operator new(std::size_t, void *) noexcept;
+void *operator new[](std::size_t, void *) noexcept;
