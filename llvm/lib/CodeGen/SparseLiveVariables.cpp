@@ -1,15 +1,22 @@
+//===-- SparseLiveVariables.cpp - Sparse Live Variable Analysis -----------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "llvm/CodeGen/SparseLiveVariables.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -17,7 +24,8 @@ using namespace llvm;
 #define DEBUG_TYPE "sparse-live-variables"
 
 char SparseLiveVariables::ID = 0;
-INITIALIZE_PASS(SparseLiveVariables, DEBUG_TYPE, "Sparse Live Variable Analysis", false, false)
+INITIALIZE_PASS(SparseLiveVariables, DEBUG_TYPE,
+                "Sparse Live Variable Analysis", false, false)
 
 bool SparseLiveVariables::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()) || MF.empty())
@@ -25,7 +33,7 @@ bool SparseLiveVariables::runOnMachineFunction(MachineFunction &MF) {
 
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  
+
   BlockLiveness.clear();
 
   SmallPtrSet<MachineBasicBlock *, 16> Reachable;
@@ -36,7 +44,8 @@ bool SparseLiveVariables::runOnMachineFunction(MachineFunction &MF) {
   while (Changed) {
     Changed = false;
     for (MachineBasicBlock *MBB : llvm::post_order(&MF)) {
-      if (!Reachable.count(MBB)) continue;
+      if (!Reachable.count(MBB))
+        continue;
 
       SparseBitVector<> OldLiveIn = BlockLiveness[MBB].LiveIn;
       SparseBitVector<> OldLiveOut = BlockLiveness[MBB].LiveOut;
@@ -66,22 +75,74 @@ bool SparseLiveVariables::runOnMachineFunction(MachineFunction &MF) {
 
 
 
-
-
-
 void SparseLiveVariables::verifyLiveness(const MachineFunction &MF) const {
   for (const MachineBasicBlock &MBB : MF) {
     auto It = BlockLiveness.find(&MBB);
-    if (It == BlockLiveness.end()) continue;
+    if (It == BlockLiveness.end())
+      continue;
 
     const SparseBitVector<> &LiveIn = It->second.LiveIn;
     for (const auto &LI : MBB.liveins()) {
       if (!LiveIn.test(LI.PhysReg.id())) {
-        LLVM_DEBUG(dbgs() << "Warning: Live-in register " << printReg(LI.PhysReg, TRI)
+        LLVM_DEBUG(dbgs() << "Warning: Live-in register "
+                          << printReg(LI.PhysReg, TRI)
                           << " missing from computed live-in set of block "
                           << printMBBReference(MBB) << "\n");
       }
     }
   }
 }
+void SparseLiveVariables::updateLiveIns(MachineFunction &MF) const {
+  for (MachineBasicBlock &MBB : MF) {
+    auto It = BlockLiveness.find(&MBB);
+    if (It == BlockLiveness.end())
+      continue;
+
+    MBB.clearLiveIns();
+    const SparseBitVector<> &LiveIn = It->second.LiveIn;
+    for (unsigned RegID : LiveIn) {
+      Register Reg(RegID);
+      // MBB.addLiveIn only takes physical registers.
+      if (Reg.isPhysical())
+        MBB.addLiveIn(Reg);
+    }
+    MBB.sortUniqueLiveIns();
+  }
+}
+
+void SparseLiveVariables::updateKillFlags(MachineFunction &MF) const {
+  for (MachineBasicBlock &MBB : MF) {
+    auto It = BlockLiveness.find(&MBB);
+    if (It == BlockLiveness.end())
+      continue;
+
+    LivenessTracker Tracker(It->second.LiveOut, MRI);
+    for (MachineInstr &MI : llvm::reverse(MBB)) {
+      if (MI.isDebugInstr() || MI.isMetaInstruction())
+        continue;
+
+      // Check uses and update their kill flags based on whether they are live
+      // BEFORE stepBackward. (Tracker currently represents the liveness state
+      // AFTER this instruction).
+      for (MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg() || !MO.isUse())
+          continue;
+        Register Reg = MO.getReg();
+        if (!Tracker.isTrackableRegister(Reg))
+          continue;
+
+        if (!Tracker.isLive(Reg)) {
+          // If the register is not live after this instruction, it is a kill.
+          MO.setIsKill(true);
+        } else {
+          // Otherwise, clear the kill flag if it was set incorrectly.
+          MO.setIsKill(false);
+        }
+      }
+
+      Tracker.stepBackward(MI);
+    }
+  }
+}
+
 char &llvm::SparseLiveVariablesID = SparseLiveVariables::ID;

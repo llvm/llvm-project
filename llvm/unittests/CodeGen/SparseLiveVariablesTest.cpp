@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SparseLiveVariables.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -77,6 +77,19 @@ TEST(SparseLiveVariablesTest, APITests) {
   EXPECT_FALSE(LiveOut.test(Reg0.id()));
   EXPECT_FALSE(LiveOut.test(Reg1.id()));
   EXPECT_FALSE(LiveOut.test(Reg2.id()));
+
+  // Test the mutation APIs
+  LV.updateKillFlags(*MF);
+
+  // Reg0 should have a kill flag on MI1
+  EXPECT_TRUE(MI1->getOperand(1).isKill());
+
+  // Reg1 should have a kill flag on MI2
+  EXPECT_TRUE(MI2->getOperand(1).isKill());
+
+  // Test updateLiveIns (won't add virtual registers, but shouldn't crash)
+  LV.updateLiveIns(*MF);
+  EXPECT_TRUE(MBB->livein_empty());
 }
 
 } // end namespace
