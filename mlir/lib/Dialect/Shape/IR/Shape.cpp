@@ -48,6 +48,9 @@ bool shape::isExtentTensorType(Type type) {
 
 LogicalResult shape::getShapeVec(Value input,
                                  SmallVectorImpl<int64_t> &shapeValues) {
+  // Look through tensor.cast operations to find the underlying shape.
+  if (auto castOp = input.getDefiningOp<tensor::CastOp>())
+    return getShapeVec(castOp.getSource(), shapeValues);
   if (auto inputOp = input.getDefiningOp<ShapeOfOp>()) {
     auto type = llvm::cast<ShapedType>(inputOp.getArg().getType());
     if (!type.hasRank())
@@ -799,27 +802,27 @@ struct CanonicalizeCastExtentTensorOperandsPattern
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    // Canonicalize operands.
+    // Canonicalize operands by stripping information-losing tensor.cast ops.
+    SmallVector<Value, 8> newOperands;
     bool anyChange = false;
-    auto canonicalizeOperand = [&](Value operand) -> Value {
+    for (Value operand : op.getShapes()) {
       if (auto castOp = operand.getDefiningOp<tensor::CastOp>()) {
         // Only eliminate the cast if it holds no shape information.
-        bool isInformationLoosingCast =
-            llvm::cast<RankedTensorType>(castOp.getType()).isDynamicDim(0);
-        if (isInformationLoosingCast) {
+        if (llvm::cast<RankedTensorType>(castOp.getType()).isDynamicDim(0)) {
           anyChange = true;
-          return castOp.getSource();
+          newOperands.push_back(castOp.getSource());
+          continue;
         }
       }
-      return operand;
-    };
-    auto newOperands =
-        llvm::map_to_vector<8>(op.getOperands(), canonicalizeOperand);
+      newOperands.push_back(operand);
+    }
 
     // Rewrite op if any change required.
     if (!anyChange)
       return failure();
-    rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), newOperands);
+    rewriter.modifyOpInPlace(op, [&]() {
+      op.getShapesMutable().assign(newOperands);
+    });
     return success();
   }
 };
@@ -1014,6 +1017,22 @@ OpFoldResult CstrBroadcastableOp::fold(FoldAdaptor adaptor) {
             return false;
         }
         return OpTrait::util::staticallyKnownBroadcastable(extents);
+      }())
+    return BoolAttr::get(getContext(), true);
+
+  // No broadcasting is needed if all operands but one are scalar, using
+  // getShapeVec to look through tensor.cast and shape_of ops.
+  if ([&] {
+        bool nonScalarSeen = false;
+        for (auto shapeValue : getShapes()) {
+          SmallVector<int64_t, 6> extents;
+          if (failed(getShapeVec(shapeValue, extents)) || !extents.empty()) {
+            if (nonScalarSeen)
+              return false;
+            nonScalarSeen = true;
+          }
+        }
+        return true;
       }())
     return BoolAttr::get(getContext(), true);
 

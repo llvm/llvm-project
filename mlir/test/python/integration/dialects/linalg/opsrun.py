@@ -19,6 +19,11 @@ def log(*args):
     sys.stderr.flush()
 
 
+def run(f):
+    f()
+    return f
+
+
 fill_boiler = """
 func.func @main() -> i32 attributes {llvm.emit_c_interface} {
   %O0 = memref.alloc() : memref<i32>
@@ -177,7 +182,7 @@ def test_fill_builtin():
         # CHECK: RESULT: 6
 
 
-test_fill_builtin()
+run(test_fill_builtin)
 
 
 def test_fill_generic():
@@ -211,7 +216,7 @@ def test_fill_generic():
         # CHECK: RESULT: 6
 
 
-test_fill_generic()
+run(test_fill_generic)
 
 
 def test_fill_rng_builtin():
@@ -238,7 +243,7 @@ def test_fill_rng_builtin():
         # CHECK: RESULT: -480
 
 
-test_fill_rng_builtin()
+run(test_fill_rng_builtin)
 
 
 def test_fill_rng_generic():
@@ -265,7 +270,7 @@ def test_fill_rng_generic():
         # CHECK: RESULT: -480
 
 
-test_fill_rng_generic()
+run(test_fill_rng_generic)
 
 
 def test_max_pooling_builtin():
@@ -299,7 +304,7 @@ def test_max_pooling_builtin():
         # CHECK: RESULT: 42
 
 
-test_max_pooling_builtin()
+run(test_max_pooling_builtin)
 
 
 def test_max_pooling_generic():
@@ -338,7 +343,7 @@ def test_max_pooling_generic():
         # CHECK: RESULT: 42
 
 
-test_max_pooling_generic()
+run(test_max_pooling_generic)
 
 
 def test_min_pooling_builtin():
@@ -370,7 +375,7 @@ def test_min_pooling_builtin():
         # CHECK: RESULT: -13
 
 
-test_min_pooling_builtin()
+run(test_min_pooling_builtin)
 
 
 def test_min_pooling_generic():
@@ -404,4 +409,4 @@ def test_min_pooling_generic():
         # CHECK: RESULT: -13
 
 
-test_min_pooling_generic()
+run(test_min_pooling_generic)
