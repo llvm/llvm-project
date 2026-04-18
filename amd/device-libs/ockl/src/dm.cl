@@ -934,27 +934,53 @@ block_find(__global sdata_t *sdp, kind_t k, gmask_t gm)
     uint ll = leader(gm);
 
     __global slab_t *sp = 0;
-    uint i = 0;
+    uint start = 0;
     if (l == ll) {
         sp = (__global slab_t *)AL(&sdp->saddr, memory_order_relaxed);
-        i = AFA(&sp->start, members(gm), memory_order_relaxed);
+        start = AFA(&sp->start, members(gm), memory_order_relaxed);
     }
     sp = gcast(sp, ll);
-    i = gcast(i, ll);
-    i = (((i + position(gm)) << 5) % num_blocks(k)) >> 5;
+    start = gcast(start, ll);
 
     uint n = (num_blocks(k) + 31) >> 5;
+    uint i = ((start << 5) % num_blocks(k)) >> 5;
+
     for (;;) {
-        __global atomic_uint *p = sp->in_use + i;
-        uint m = AL(p, memory_order_relaxed);
-        if (m != ~0) {
-            uint b = BUILTIN_CTZ_U32(~m);
-            uint mm = AFO(p, 1 << b, memory_order_relaxed);
-            if ((mm & (1 << b)) == 0) {
-                uint ii = (i << 5) + b;
-                return (__global void *)((__global char *)sp + block_offset(k) + kind_to_size(k)*ii);
+        gmask_t am = __builtin_amdgcn_ballot_w64(1) & gm;
+        uint lll = leader(am);
+        uint b = 0;
+        uint w = 0;
+        uint u = 0;
+
+        if (l == lll) {
+            __global atomic_uint *p = sp->in_use + i;
+            u = AL(p, memory_order_relaxed);
+            if (~u) {
+                b = BUILTIN_CTZ_U32(~u);
+                uint nam = members(am);
+                w = 32 - b;
+                w = w > nam ? nam : w;
+                uint addu = (w == 32) ? ~0U : ((1U << w) - 1U);
+                addu <<= b;
+                u = AFO(p, addu, memory_order_relaxed);
             }
         }
+
+        b = gcast(b, lll);
+        w = gcast(w, lll);
+        u = gcast(u, lll);
+
+        if (w) {
+            uint al = position(am);
+            if (al < w) {
+                uint bit = b + al;
+                if ((u & (1u << bit)) == 0) {
+                    uint ii = (i << 5) + bit;
+                    return (__global void *)((__global char *)sp + block_offset(k) + kind_to_size(k)*ii);
+                }
+            }
+        }
+
         i = (i + 1) % n;
     }
 }
