@@ -15,8 +15,8 @@ typedef struct __attribute__((aligned(8 /* alignof (Barrier) */))) {
   unsigned expected;
   unsigned waiting;
   bool blocking;
-  char entering[24 /* sizeof (CndVar) */];
-  char exiting[24 /* sizeof (CndVar) */];
+  char entering[32 /* sizeof (CndVar) */];
+  char exiting[32 /* sizeof (CndVar) */];
   char mutex[24 /* sizeof (Mutex) */];
 } __barrier_type;
 

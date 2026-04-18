@@ -25,10 +25,11 @@ int Barrier::init(Barrier *b,
   b->waiting = 0;
   b->blocking = true;
 
-  new (&b->entering) CndVar();
-  new (&b->exiting) CndVar();
+  new (&b->entering) CndVar(attr ? attr->pshared : false);
+  new (&b->exiting) CndVar(attr ? attr->pshared : false);
 
-  auto mutex_err = Mutex::init(&b->m, false, false, false, false);
+  auto mutex_err = Mutex::init(&b->m, false, false, false,
+                               /*pshared=*/attr ? attr->pshared : false);
   if (mutex_err != MutexError::NONE)
     return EAGAIN;
 

@@ -30,7 +30,7 @@ class Mutex final : private RawMutex {
   pid_t owner;
   unsigned long long lock_count;
 
-  friend class CndVar;
+  friend class PrivateCndVar;
 
   LIBC_INLINE bool can_be_requeued() const {
     return !this->pshared && !this->robust;

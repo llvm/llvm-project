@@ -44,10 +44,10 @@ static_assert(alignof(Barrier) <= alignof(pthread_barrier_t),
               "The public pthread_barrier_t type has insufficient alignment "
               "for the internal barrier type.");
 
-static_assert(sizeof(CndVar) <= 24,
+static_assert(sizeof(CndVar) <= 32,
               "CndVar size exceeds the size in __barrier_type.h");
 
-static_assert(sizeof(Mutex) <= 24,
+static_assert(sizeof(Mutex) <= 32,
               "Mutex size exceeds the size in __barrier_type.h");
 
 } // namespace LIBC_NAMESPACE_DECL

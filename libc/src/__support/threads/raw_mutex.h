@@ -45,7 +45,7 @@ protected:
   LIBC_INLINE_VAR static constexpr FutexWordType UNLOCKED = 0b00;
   LIBC_INLINE_VAR static constexpr FutexWordType LOCKED = 0b01;
   LIBC_INLINE_VAR static constexpr FutexWordType IN_CONTENTION = 0b10;
-  friend class CndVar;
+  friend class PrivateCndVar;
 
 private:
   LIBC_INLINE FutexWordType spin(unsigned spin_count) {
