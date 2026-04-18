@@ -707,8 +707,11 @@ define <4 x float> @bitcast_constexpr_2b64_4f32_poison() {
 }
 
 define i128 @bitcast_constexpr_2b64_i128() {
-; CHECK-LABEL: @bitcast_constexpr_2b64_i128(
-; CHECK-NEXT:    ret i128 bitcast (<2 x b64> <b64 2, b64 1> to i128)
+; LE-LABEL: @bitcast_constexpr_2b64_i128(
+; LE-NEXT:    ret i128 18446744073709551618
+;
+; BE-LABEL: @bitcast_constexpr_2b64_i128(
+; BE-NEXT:    ret i128 36893488147419103233
 ;
   %res = bitcast <2 x b64> <b64 2, b64 1> to i128
   ret i128 %res
@@ -716,15 +719,18 @@ define i128 @bitcast_constexpr_2b64_i128() {
 
 define i128 @bitcast_constexpr_2b64_i128_poison() {
 ; CHECK-LABEL: @bitcast_constexpr_2b64_i128_poison(
-; CHECK-NEXT:    ret i128 bitcast (<2 x b64> <b64 poison, b64 1> to i128)
+; CHECK-NEXT:    ret i128 poison
 ;
   %res = bitcast <2 x b64> <b64 poison, b64 1> to i128
   ret i128 %res
 }
 
 define double @bitcast_constexpr_2b32_f64() {
-; CHECK-LABEL: @bitcast_constexpr_2b32_f64(
-; CHECK-NEXT:    ret double bitcast (<2 x b32> <b32 2, b32 1> to double)
+; LE-LABEL: @bitcast_constexpr_2b32_f64(
+; LE-NEXT:    ret double 0x100000002
+;
+; BE-LABEL: @bitcast_constexpr_2b32_f64(
+; BE-NEXT:    ret double 0x200000001
 ;
   %res = bitcast <2 x b32> <b32 2, b32 1> to double
   ret double %res
@@ -732,7 +738,7 @@ define double @bitcast_constexpr_2b32_f64() {
 
 define double @bitcast_constexpr_2b32_f64_poison() {
 ; CHECK-LABEL: @bitcast_constexpr_2b32_f64_poison(
-; CHECK-NEXT:    ret double bitcast (<2 x b32> <b32 poison, b32 1> to double)
+; CHECK-NEXT:    ret double poison
 ;
   %res = bitcast <2 x b32> <b32 poison, b32 1> to double
   ret double %res

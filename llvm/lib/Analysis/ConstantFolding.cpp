@@ -152,12 +152,17 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       unsigned NumSrcElts = cast<FixedVectorType>(VTy)->getNumElements();
       Type *SrcEltTy = VTy->getElementType();
 
-      // If the vector is a vector of floating point, convert it to vector of int
-      // to simplify things.
-      if (SrcEltTy->isFloatingPointTy()) {
-        unsigned FPWidth = SrcEltTy->getPrimitiveSizeInBits();
+      // Bitcasting a byte containing any poison bit to an integer or fp type
+      // yields poison.
+      if (SrcEltTy->isByteTy() && C->containsPoisonElement())
+        return PoisonValue::get(DestTy);
+
+      // If the vector is a vector of floating point or bytes, convert it to a
+      // vector of int to simplify things.
+      if (SrcEltTy->isFloatingPointTy() || SrcEltTy->isByteTy()) {
+        unsigned Width = SrcEltTy->getPrimitiveSizeInBits();
         auto *SrcIVTy = FixedVectorType::get(
-            IntegerType::get(C->getContext(), FPWidth), NumSrcElts);
+            IntegerType::get(C->getContext(), Width), NumSrcElts);
         // Ask IR to do the conversion now that #elts line up.
         C = ConstantExpr::getBitCast(C, SrcIVTy);
       }
