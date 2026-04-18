@@ -887,6 +887,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.wint_t
+    .llvm-libc-types.wctype_t
 )
 
 add_header_macro(

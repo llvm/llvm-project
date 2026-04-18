@@ -1,4 +1,4 @@
-//===- FoldMemRefAliasOps.cpp - Fold memref alias ops -----===//
+//===- FoldMemRefAliasOps.cpp - Fold memref alias ops ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -176,34 +176,16 @@ public:
     if (!srcSubView)
       return failure();
 
-    // TODO: relax unit stride assumption.
-    if (!subView.hasUnitStride()) {
-      return rewriter.notifyMatchFailure(subView, "requires unit strides");
-    }
-    if (!srcSubView.hasUnitStride()) {
-      return rewriter.notifyMatchFailure(srcSubView, "requires unit strides");
-    }
-
-    // Resolve sizes according to dropped dims.
-    SmallVector<OpFoldResult> resolvedSizes;
-    llvm::SmallBitVector srcDroppedDims = srcSubView.getDroppedDims();
-    affine::resolveSizesIntoOpWithSizes(srcSubView.getMixedSizes(),
-                                        subView.getMixedSizes(), srcDroppedDims,
-                                        resolvedSizes);
-
-    // Resolve offsets according to source offsets and strides.
-    SmallVector<Value> resolvedOffsets;
-    affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-        rewriter, subView.getLoc(), srcSubView.getMixedOffsets(),
-        srcSubView.getMixedStrides(), srcDroppedDims, subView.getMixedOffsets(),
-        resolvedOffsets);
+    SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
+    if (failed(affine::mergeOffsetsSizesAndStrides(
+            rewriter, subView.getLoc(), srcSubView, subView,
+            srcSubView.getDroppedDims(), newOffsets, newSizes, newStrides)))
+      return failure();
 
     // Replace original op.
     rewriter.replaceOpWithNewOp<memref::SubViewOp>(
-        subView, subView.getType(), srcSubView.getSource(),
-        getAsOpFoldResult(resolvedOffsets), resolvedSizes,
-        srcSubView.getMixedStrides());
-
+        subView, subView.getType(), srcSubView.getSource(), newOffsets,
+        newSizes, newStrides);
     return success();
   }
 };

@@ -47,6 +47,7 @@
 #include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
+#include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -205,8 +206,6 @@ static std::optional<unsigned> getCUFAddrSpace(fir::GlobalOp global) {
       return static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Constant);
     if (*dataAttr == cuf::DataAttribute::Shared)
       return static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared);
-    if (*dataAttr == cuf::DataAttribute::Managed)
-      return static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Global);
   }
   return std::nullopt;
 }
@@ -4679,6 +4678,7 @@ public:
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::index::populateIndexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateVectorToLLVMConversionPatterns(typeConverter, pattern);
+    mlir::ub::populateUBToLLVMConversionPatterns(typeConverter, pattern);
 
     // Flang specific overloads for OpenMP operations, to allow for special
     // handling of things like Box types.
