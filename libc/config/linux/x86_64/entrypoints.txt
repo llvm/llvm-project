@@ -440,6 +440,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswxdigit
     libc.src.wctype.iswpunct
     libc.src.wctype.iswprint
+    libc.src.wctype.iswctype
+    libc.src.wctype.wctype
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -1251,6 +1253,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.setjmp.siglongjmp
     libc.src.setjmp.sigsetjmp
 
+    # ucontext.h entrypoints
+    libc.src.ucontext.getcontext
+    libc.src.ucontext.setcontext
+
     # stdio.h entrypoints
     libc.src.stdio.clearerr
     libc.src.stdio.clearerr_unlocked
@@ -1419,8 +1425,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
+    libc.src.sys.socket.getsockopt
     libc.src.sys.socket.listen
     libc.src.sys.socket.socketpair
+    libc.src.sys.socket.setsockopt
     libc.src.sys.socket.send
     libc.src.sys.socket.sendto
     libc.src.sys.socket.sendmsg

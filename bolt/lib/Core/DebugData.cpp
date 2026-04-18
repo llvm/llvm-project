@@ -1174,7 +1174,7 @@ static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,
                                          MCDwarfLineStr &LineStr,
                                          BinaryContext &BC) {
   DataExtractor StrData(LineStrSection.getContents(),
-                        BC.DwCtx->isLittleEndian(), 0);
+                        BC.DwCtx->isLittleEndian());
   uint64_t Offset = 0;
   while (StrData.isValidOffset(Offset)) {
     const uint64_t StrOffset = Offset;

@@ -208,13 +208,17 @@ public:
   }
 
   /// Get the execution context representing the selected entities in the
-  /// selected target.
-  ExecutionContext GetSelectedExecutionContext();
+  /// selected target. If no target is selected, the execution context will
+  /// contain the dummy target if adopt_dummy_target is true.
+  ///
+  // Ideally, adopt_dummy_target would be the default. However, there are a
+  // bunch of operations that don't make sense on the dummy target but we lack
+  // a mechanism to enforce that. The explicit argument forces the caller to
+  // consider the dummy target.
+  ExecutionContext GetSelectedExecutionContext(bool adopt_dummy_target);
 
-  /// Similar to GetSelectedExecutionContext but returns a
-  /// ExecutionContextRef, and will hold the dummy target if no target is
-  /// currently selected.
-  ExecutionContextRef GetSelectedExecutionContextRef();
+  /// Like GetSelectedExecutionContext but returns an ExecutionContextRef.
+  ExecutionContextRef GetSelectedExecutionContextRef(bool adopt_dummy_target);
 
   /// Get accessor for the target list.
   ///
@@ -456,6 +460,9 @@ public:
 
   /// Redraw the statusline if enabled.
   void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
+
+  /// Flush cached state (e.g. stale execution context in the statusline).
+  void FlushStatusLine();
 
   /// This is the correct way to query the state of Interruption.
   /// If you are on the RunCommandInterpreter thread, it will check the

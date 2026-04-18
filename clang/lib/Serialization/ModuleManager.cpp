@@ -59,11 +59,14 @@ ModuleFile *ModuleManager::lookup(ModuleFileKey Key) const {
 }
 
 std::unique_ptr<llvm::MemoryBuffer>
-ModuleManager::lookupBuffer(StringRef Name) {
+ModuleManager::lookupBuffer(StringRef Name, off_t &Size, time_t &ModTime) {
   auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
-                                          /*CacheFailure=*/false);
+                                          /*CacheFailure=*/false,
+                                          /*IsText=*/false);
   if (!Entry)
     return nullptr;
+  Size = Entry->getSize();
+  ModTime = Entry->getModificationTime();
   return std::move(InMemoryBuffers[*Entry]);
 }
 
@@ -165,32 +168,15 @@ AddModuleResult ModuleManager::addModule(
   time_t ModTime = ExpectedModTime;
   llvm::MemoryBuffer *ModuleBuffer = nullptr;
   std::unique_ptr<llvm::MemoryBuffer> NewFileBuffer = nullptr;
-  if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
+  if (std::unique_ptr<llvm::MemoryBuffer> Buffer =
+          lookupBuffer(FileName, Size, ModTime)) {
     // The buffer was already provided for us.
     ModuleBuffer = &getModuleCache().getInMemoryModuleCache().addBuiltPCM(
-        FileName, std::move(Buffer));
+        FileName, std::move(Buffer), Size, ModTime);
   } else if (llvm::MemoryBuffer *Buffer =
                  getModuleCache().getInMemoryModuleCache().lookupPCM(
-                     FileName)) {
+                     FileName, Size, ModTime)) {
     ModuleBuffer = Buffer;
-    if (!FileName.getImplicitModuleSuffixLength()) {
-      // Explicitly-built PCM files maintain consistency via mtime/size
-      // expectations on their imports. Even if we've previously successfully
-      // loaded a PCM file and stored it in the in-memory module cache, that
-      // does not mean its mtime/size matches current importer's expectations.
-      // Get that information so that it can be checked below.
-      // FIXME: Even though this FileManager access is likely already cached, we
-      // should store this directly in the in-memory module cache.
-      OptionalFileEntryRef Entry =
-          FileMgr.getOptionalFileRef(FileName, /*OpenFile=*/true,
-                                     /*CacheFailure=*/false);
-      if (!Entry) {
-        Result.K = AddModuleResult::Missing;
-        return Result;
-      }
-      ModTime = Entry->getModificationTime();
-      Size = Entry->getSize();
-    }
   } else if (getModuleCache().getInMemoryModuleCache().shouldBuildPCM(
                  FileName)) {
     // Report that the module is out of date, since we tried (and failed) to
@@ -212,7 +198,8 @@ AddModuleResult ModuleManager::addModule(
           FileName == StringRef("-")
               ? FileMgr.getSTDIN()
               : FileMgr.getFileRef(FileName, /*OpenFile=*/true,
-                                   /*CacheFailure=*/false);
+                                   /*CacheFailure=*/false,
+                                   /*IsText=*/false);
       if (!Entry)
         return Entry.takeError();
 
@@ -223,7 +210,9 @@ AddModuleResult ModuleManager::addModule(
       // this allows the file to still be mmapped.
       return llvm::errorOrToExpected(
           FileMgr.getBufferForFile(*Entry, /*IsVolatile=*/false,
-                                   /*RequiresNullTerminator=*/false));
+                                   /*RequiresNullTerminator=*/false,
+                                   /*MaybeLimit=*/std::nullopt,
+                                   /*IsText=*/false));
     }();
 
     if (!Buf) {
@@ -264,8 +253,8 @@ AddModuleResult ModuleManager::addModule(
   }
 
   if (NewFileBuffer)
-    getModuleCache().getInMemoryModuleCache().addPCM(FileName,
-                                                     std::move(NewFileBuffer));
+    getModuleCache().getInMemoryModuleCache().addPCM(
+        FileName, std::move(NewFileBuffer), Size, ModTime);
 
   // We're keeping this module. Store it in the map.
   Result.Module = Modules[*FileKey] = NewModule.get();
