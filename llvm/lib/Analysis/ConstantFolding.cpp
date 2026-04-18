@@ -306,8 +306,37 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
            "Constant folding cannot fail for plain fp->int bitcast!");
   }
 
-  // Handle byte source type by folding through integers.
+  // Handle byte source type by folding through integers. Byte types track
+  // poison per bit, so any poison bit makes the destination lane poison.
+  // Record which destination lanes contain poison bits, before the generic
+  // fold below refines them to undef/zero, so they can be restored.
+  SmallBitVector PoisonDstElts(NumDstElt);
   if (SrcEltTy->isByteTy()) {
+    Constant *OrigC = C;
+    if (NumDstElt < NumSrcElt) {
+      unsigned Ratio = NumSrcElt / NumDstElt;
+      for (unsigned i = 0; i != NumDstElt; ++i) {
+        for (unsigned j = 0; j != Ratio; ++j) {
+          Constant *Src = C->getAggregateElement(i * Ratio + j);
+          if (!Src)
+            return ConstantExpr::getBitCast(OrigC, DestTy);
+          if (isa<PoisonValue>(Src)) {
+            PoisonDstElts[i] = true;
+            break;
+          }
+        }
+      }
+    } else {
+      unsigned Ratio = NumDstElt / NumSrcElt;
+      for (unsigned i = 0; i != NumSrcElt; ++i) {
+        Constant *Src = C->getAggregateElement(i);
+        if (!Src)
+          return ConstantExpr::getBitCast(OrigC, DestTy);
+        if (isa<PoisonValue>(Src))
+          PoisonDstElts.set(i * Ratio, (i + 1) * Ratio);
+      }
+    }
+
     unsigned ByteWidth = SrcEltTy->getPrimitiveSizeInBits();
     auto *SrcIVTy = FixedVectorType::get(
         IntegerType::get(C->getContext(), ByteWidth), NumSrcElt);
@@ -393,6 +422,12 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       BufferBitSize -= DstBitSize;
     }
   }
+
+  // Restore destination lanes whose source bytes contained poison bits.
+  if (PoisonDstElts.any())
+    for (unsigned i = 0; i != NumDstElt; ++i)
+      if (PoisonDstElts[i])
+        Result[i] = PoisonValue::get(DstEltTy);
 
   return ConstantVector::get(Result);
 }
