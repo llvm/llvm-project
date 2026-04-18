@@ -262,7 +262,10 @@ public:
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
         if (Warning.InvalidatedByExpr) {
-          if (IssueExpr)
+          if (const CXXNewExpr *NE = dyn_cast<CXXNewExpr>(IssueExpr); NE)
+            SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(),
+                                           Warning.InvalidatedByExpr);
+          else if (IssueExpr)
             // Use-after-invalidation of an object on stack.
             SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
                                                    Warning.InvalidatedByExpr);
@@ -273,8 +276,8 @@ public:
 
         } else
           // Scope-based expiry (use-after-scope).
-          SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
-                                         ExpiryLoc);
+          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
+                                          MovedExpr, ExpiryLoc);
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))

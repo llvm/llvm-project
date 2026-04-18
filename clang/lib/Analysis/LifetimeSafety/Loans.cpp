@@ -28,6 +28,10 @@ void AccessPath::dump(llvm::raw_ostream &OS) const {
   case Kind::PlaceholderThis:
     OS << "$this";
     break;
+  case Kind::HeapAllocation:
+    if (const auto *E = getAsHeapAllocation())
+      OS << "HeapAllocation at " << E;
+    break;
   }
 }
 

@@ -43,9 +43,9 @@ class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
-  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                          const Expr *MovedExpr,
-                          SourceLocation FreeLoc) override {
+  void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
+                           const Expr *MovedExpr,
+                           SourceLocation FreeLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
                      : diag::warn_lifetime_safety_use_after_scope)
@@ -54,6 +54,16 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
+        << UseExpr->getSourceRange();
+  }
+
+  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                          const Expr *FreedExpr) override {
+    S.Diag(IssueExpr->getExprLoc(), diag::warn_lifetime_safety_use_after_free)
+        << IssueExpr->getSourceRange();
+    S.Diag(FreedExpr->getExprLoc(), diag::note_lifetime_safety_freed_here)
+        << FreedExpr->getSourceRange();
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }

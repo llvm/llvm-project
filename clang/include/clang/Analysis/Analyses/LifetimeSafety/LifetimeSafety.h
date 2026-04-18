@@ -60,14 +60,17 @@ public:
   LifetimeSafetySemaHelper() = default;
   virtual ~LifetimeSafetySemaHelper() = default;
 
-  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                                  const Expr *MovedExpr,
-                                  SourceLocation FreeLoc) {}
+  virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
+                                   const Expr *MovedExpr,
+                                   SourceLocation FreeLoc) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
                                     const Expr *MovedExpr,
                                     SourceLocation ExpiryLoc) {}
+
+  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                                  const Expr *FreedExpr) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,

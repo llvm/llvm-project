@@ -94,6 +94,14 @@ static const Loan *createLoan(FactManager &FactMgr,
   return FactMgr.getLoanMgr().createLoan(Path, MTE);
 }
 
+/// Creates a loan for the heap allocation
+/// \param NE The CXXNewExpr that represents the allocation
+/// \return The new Loan on success, nullptr otherwise
+static const Loan *createLoan(FactManager &FactMgr, const CXXNewExpr *NE) {
+  AccessPath Path(NE);
+  return FactMgr.getLoanMgr().createLoan(Path, NE);
+}
+
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -605,6 +613,10 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
     }
   }
 
+  const Loan *L = createLoan(FactMgr, NE);
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));
+
   NewList = NewList->peelOuterOrigin();
 
   if (!NewList)
@@ -624,12 +636,10 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
 }
 
 void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
-  OriginList *List = getOriginsList(*DE->getArgument())->peelOuterOrigin();
-  while (List) {
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<DestroyOriginFact>(List->getOuterOriginID(), DE));
-    List = List->peelOuterOrigin();
-  }
+  OriginList *List =
+      getOriginsList(*DE->getArgument()->IgnoreImpCasts())->peelOuterOrigin();
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<DestroyOriginFact>(List->getOuterOriginID(), DE));
 }
 
 bool FactsGenerator::escapesViaReturn(OriginID OID) const {

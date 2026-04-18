@@ -301,6 +301,7 @@ public:
             const OriginManager &OM) const override;
 };
 
+// Inner origin has been destroyed, e.g. via `delete`, manaul destructor call.
 class DestroyOriginFact : public Fact {
   OriginID OID;
   const Expr *DestroyExpr;

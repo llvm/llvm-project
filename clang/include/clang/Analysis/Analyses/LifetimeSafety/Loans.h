@@ -47,20 +47,22 @@ public:
     ValueDecl,
     MaterializeTemporary,
     PlaceholderParam,
-    PlaceholderThis
+    PlaceholderThis,
+    HeapAllocation,
   };
 
 private:
   Kind K;
-  const llvm::PointerUnion<const clang::ValueDecl *,
-                           const clang::MaterializeTemporaryExpr *,
-                           const ParmVarDecl *, const CXXMethodDecl *>
+  const llvm::PointerUnion<
+      const clang::ValueDecl *, const clang::MaterializeTemporaryExpr *,
+      const ParmVarDecl *, const CXXMethodDecl *, const CXXNewExpr *>
       Root;
 
 public:
   AccessPath(const clang::ValueDecl *D) : K(Kind::ValueDecl), Root(D) {}
   AccessPath(const clang::MaterializeTemporaryExpr *MTE)
       : K(Kind::MaterializeTemporary), Root(MTE) {}
+  AccessPath(const CXXNewExpr *New) : K(Kind::HeapAllocation), Root(New) {}
   static AccessPath Placeholder(const ParmVarDecl *PVD) {
     return AccessPath(Kind::PlaceholderParam, PVD);
   }
@@ -87,6 +89,10 @@ public:
   const CXXMethodDecl *getAsPlaceholderThis() const {
     return K == Kind::PlaceholderThis ? Root.dyn_cast<const CXXMethodDecl *>()
                                       : nullptr;
+  }
+  const CXXNewExpr *getAsHeapAllocation() const {
+    return K == Kind::HeapAllocation ? Root.dyn_cast<const CXXNewExpr *>()
+                                     : nullptr;
   }
 
   bool operator==(const AccessPath &RHS) const {
