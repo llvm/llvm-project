@@ -208,6 +208,34 @@
             "Automatically restart the server",
             "Do nothing"
           ]
+        },
+        "mlir.litSuites": {
+          "scope": "resource",
+          "type": "array",
+          "markdownDescription": "Required for **mlir: Run Test**. Ordered list of suites: the first entry whose `source` directory contains the open `.mlir` file supplies the `build` directory (lit cwd). Paths are absolute or relative to the workspace root.",
+          "items": {
+            "type": "object",
+            "required": [
+              "source",
+              "build"
+            ],
+            "properties": {
+              "source": {
+                "type": "string",
+                "description": "Source tree d irectory for this suite (e.g. mlir/test)."
+              },
+              "build": {
+                "type": "string",
+                "description": "Corresponding build output directory for lit cwd (e.g. build/tools/mlir/test)."
+              }
+            }
+          },
+          "default": []
+        },
+        "mlir.litExecutablePath": {
+          "scope": "resource",
+          "type": "string",
+          "description": "Full path to the lit or llvm-lit executable (file path, not a directory). Can be absolute or relative to the workspace root. If unset, the extension looks for lit or llvm-lit on PATH, then prompts for a path."
         }
       }
     },
@@ -219,6 +247,14 @@
       {
         "command": "mlir.viewPDLLOutput",
         "title": "mlir-pdll: View PDLL output"
+      },
+      {
+        "command": "mlir.runTest",
+        "title": "mlir:Run Test"
+      },
+      {
+        "command": "mlir.dumpOutput",
+        "title": "mlir: Dump output"
       }
     ],
     "menus": {
@@ -227,6 +263,16 @@
           "command": "mlir.viewPDLLOutput",
           "group": "z_commands",
           "when": "editorLangId == pdll"
+        },
+        {
+          "command": "mlir.runTest",
+          "group": "z_commands",
+          "when": "editorLangId == mlir"
+        },
+        {
+          "command": "mlir.dumpOutput",
+          "group": "z_commands",
+          "when": "editorLangId == mlir"
         }
       ]
     }
