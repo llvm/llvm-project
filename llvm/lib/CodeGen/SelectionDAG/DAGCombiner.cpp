@@ -12747,14 +12747,14 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   case ISD::SETUGT:
   case ISD::SETUGE:
     if (sd_match(True, m_AnyOf(m_Sub(LHSPat, RHSPat),
-                               m_Add(LHSPat, m_SpecificNeg(RHS, true)))) &&
+                               m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
         sd_match(False, m_AnyOf(m_Sub(RHSPat, LHSPat),
-                                m_Add(RHSPat, m_SpecificNeg(LHS, true)))))
+                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))))
       return GetAbdNode();
     if (sd_match(True, m_AnyOf(m_Sub(RHSPat, LHSPat),
-                               m_Add(RHSPat, m_SpecificNeg(LHS, true)))) &&
+                               m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
         sd_match(False, m_AnyOf(m_Sub(LHSPat, RHSPat),
-                                m_Add(LHSPat, m_SpecificNeg(RHS, true)))) &&
+                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
         IsTypeLegalOrPromote)
       return DAG.getNegative(GetAbdNode(), DL, VT);
     break;
@@ -12763,14 +12763,14 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   case ISD::SETULT:
   case ISD::SETULE:
     if (sd_match(True, m_AnyOf(m_Sub(RHSPat, LHSPat),
-                               m_Add(RHSPat, m_SpecificNeg(LHS, true)))) &&
+                               m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
         sd_match(False, m_AnyOf(m_Sub(LHSPat, RHSPat),
-                                m_Add(LHSPat, m_SpecificNeg(RHS, true)))))
+                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))))
       return GetAbdNode();
     if (sd_match(True, m_AnyOf(m_Sub(LHSPat, RHSPat),
-                               m_Add(LHSPat, m_SpecificNeg(RHS, true)))) &&
+                               m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
         sd_match(False, m_AnyOf(m_Sub(RHSPat, LHSPat),
-                                m_Add(RHSPat, m_SpecificNeg(LHS, true)))) &&
+                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
         IsTypeLegalOrPromote)
       return DAG.getNegative(GetAbdNode(), DL, VT);
     break;
