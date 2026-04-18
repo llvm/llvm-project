@@ -30,8 +30,44 @@ enum class CndVarResult {
 };
 
 class PrivateCndVar {
-  LIBC_INLINE_VAR static constexpr size_t SPIN_LIMIT = 100;
-  LIBC_INLINE_VAR static constexpr size_t CANCEL_STEP = 2;
+  class CancellationBarrier {
+    LIBC_INLINE_VAR static constexpr size_t SPIN_LIMIT = 100;
+    LIBC_INLINE_VAR static constexpr size_t CANCEL_STEP = 2;
+    LIBC_INLINE_VAR static constexpr size_t SLEEPING_BIT = 1;
+
+    // LSB indicates whether the waiter is in sleeping state.
+    Futex futex;
+
+  public:
+    LIBC_INLINE CancellationBarrier() : futex(0) {}
+    // Add one more notification request.
+    LIBC_INLINE void add_one() {
+      futex.fetch_add(CANCEL_STEP, cpp::MemoryOrder::RELAXED);
+    }
+    // Send notification to one waiter.
+    LIBC_INLINE void notify() {
+      FutexWordType res = futex.fetch_sub(CANCEL_STEP);
+      // Only need to goto syscall if waiter is sleep and we are the last one
+      if (res <= (CANCEL_STEP | SLEEPING_BIT) && (res & SLEEPING_BIT) != 0)
+        futex.notify_one();
+    }
+    LIBC_INLINE void wait() {
+      size_t spin = 0;
+      while (auto remaining = futex.load(cpp::MemoryOrder::RELAXED)) {
+        if (spin > SPIN_LIMIT) {
+          // Set LSB to 1 to indicate that the waiter is entering sleeping
+          // state.
+          remaining = futex.fetch_add(1) + 1;
+          futex.wait(remaining, /*timeout=*/cpp::nullopt, /*is_pshared=*/false);
+          futex.fetch_sub(1);
+          spin = 0;
+          continue;
+        }
+        sleep_briefly();
+        spin++;
+      }
+    }
+  };
 
   enum WaiterState : uint8_t {
     // Initial state after entering the wait queue.
@@ -75,7 +111,7 @@ class PrivateCndVar {
     }
   };
   struct CndWaiter : WaiterHeader {
-    cpp::Atomic<Futex *> sender_futex;
+    cpp::Atomic<CancellationBarrier *> sender_futex;
     RawMutex barrier;
     cpp::Atomic<uint8_t> state;
 
@@ -86,12 +122,8 @@ class PrivateCndVar {
     }
 
     LIBC_INLINE void confirm_cancellation() {
-      Futex *sender = sender_futex.load();
-      if (sender) {
-        FutexWordType res = sender->fetch_sub(CANCEL_STEP);
-        if (res <= CANCEL_STEP + 1 && (res & 1) != 0)
-          sender->notify_one();
-      }
+      if (CancellationBarrier *sender = sender_futex.load())
+        sender->notify();
     }
   };
 
@@ -191,21 +223,7 @@ public:
 
 private:
   LIBC_INLINE void notify(size_t limit) {
-    Futex sender_futex{0};
-    auto wait_unregisteration_finish = [&]() {
-      size_t spin = 0;
-      while (auto remaining = sender_futex.load(cpp::MemoryOrder::RELAXED)) {
-        if (spin > SPIN_LIMIT) {
-          remaining = sender_futex.fetch_add(1) + 1;
-          sender_futex.wait(remaining, cpp::nullopt, /*is_pshared=*/false);
-          sender_futex.fetch_sub(1);
-          spin = 0;
-          continue;
-        }
-        sleep_briefly();
-        spin++;
-      }
-    };
+    CancellationBarrier cancellation_barrier{};
     CndWaiter *head = nullptr;
     CndWaiter *cursor = nullptr;
     {
@@ -220,8 +238,8 @@ private:
           break;
         uint8_t expected = Waiting;
         if (!cursor->state.compare_exchange_strong(expected, Signalled)) {
-          sender_futex.fetch_add(CANCEL_STEP);
-          cursor->sender_futex.store(&sender_futex);
+          cancellation_barrier.add_one();
+          cursor->sender_futex.store(&cancellation_barrier);
           continue;
         }
         if (!head)
@@ -236,7 +254,7 @@ private:
       removed_tail->next = removed_head;
       removed_head->prev = removed_tail;
     }
-    wait_unregisteration_finish();
+    cancellation_barrier.wait();
     if (head)
       head->barrier.unlock();
   }
