@@ -36,14 +36,18 @@ template <class _Tp>
 [[nodiscard]]
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
   using _Up                = make_unsigned_t<_Tp>;
-  constexpr _Up __bitshift = numeric_limits<_Up>::digits - 1;
+  if constexpr (sizeof(_Tp) < sizeof(unsigned)) {
+    return (static_cast<unsigned>(__a) + static_cast<unsigned>(__b)) / 2;
+  } else {
+    constexpr _Up __bitshift = numeric_limits<_Up>::digits - 1;
 
-  _Up __diff     = _Up(__b) - _Up(__a);
-  _Up __sign_bit = __b < __a;
+    _Up __diff     = _Up(__b) - _Up(__a);
+    _Up __sign_bit = __b < __a;
 
-  _Up __half_diff = (__diff / 2) + (__sign_bit << __bitshift) + (__sign_bit & __diff);
+    _Up __half_diff = (__diff / 2) + (__sign_bit << __bitshift) + (__sign_bit & __diff);
 
-  return __a + __half_diff;
+    return __a + __half_diff;
+  }
 }
 
 template <class _Tp>
