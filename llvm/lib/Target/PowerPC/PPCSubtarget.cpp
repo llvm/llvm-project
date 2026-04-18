@@ -29,7 +29,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
-#include <cstdlib>
 
 using namespace llvm;
 

@@ -59,7 +59,6 @@
 #define LLVM_PROFILEDATA_CTXINSTRCONTEXTNODE_H
 
 #include <stdint.h>
-#include <stdlib.h>
 
 namespace llvm {
 namespace ctx_profile {

@@ -25,7 +25,6 @@
 #endif
 
 #if defined(_MSC_VER) && !defined(_DEBUG)
-#include <cstdlib>  // for _byteswap_{ushort,ulong,uint64}
 #endif
 
 #if defined(__linux__) || defined(__GNU__) || defined(__HAIKU__) ||            \

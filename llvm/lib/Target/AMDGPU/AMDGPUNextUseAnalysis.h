@@ -32,7 +32,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
 #include <limits>
-#include <optional>
 
 namespace llvm {
 

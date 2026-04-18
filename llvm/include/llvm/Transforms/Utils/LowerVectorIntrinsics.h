@@ -13,8 +13,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOWERVECTORINTRINSICS_H
 #define LLVM_TRANSFORMS_UTILS_LOWERVECTORINTRINSICS_H
 
-#include <cstdint>
-
 namespace llvm {
 
 class CallInst;

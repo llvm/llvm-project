@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include <algorithm>
 #include <cstdint>
 #include <list>
 

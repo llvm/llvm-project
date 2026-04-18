@@ -31,7 +31,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
-#include <string>
 
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 

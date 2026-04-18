@@ -20,7 +20,6 @@
 #include "llvm/MC/MCWinCOFFObjectWriter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cassert>
 
 using namespace llvm;
 

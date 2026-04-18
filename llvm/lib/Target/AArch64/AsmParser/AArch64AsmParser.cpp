@@ -54,7 +54,6 @@
 #include <cassert>
 #include <cctype>
 #include <cstdint>
-#include <cstdio>
 #include <optional>
 #include <string>
 #include <tuple>

@@ -30,7 +30,6 @@
 #include <cstring>
 #include <initializer_list>
 #include <iterator>
-#include <limits>
 #include <utility>
 
 namespace llvm {

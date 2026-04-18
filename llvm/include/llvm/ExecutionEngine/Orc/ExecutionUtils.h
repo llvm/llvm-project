@@ -24,7 +24,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include <algorithm>
-#include <cstdint>
 #include <utility>
 #include <vector>
 

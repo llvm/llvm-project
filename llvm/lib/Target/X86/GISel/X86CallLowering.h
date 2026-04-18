@@ -15,7 +15,6 @@
 #define LLVM_LIB_TARGET_X86_X86CALLLOWERING_H
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include <functional>
 
 namespace llvm {
 

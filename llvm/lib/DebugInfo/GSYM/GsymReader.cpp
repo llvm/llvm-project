@@ -10,8 +10,6 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"

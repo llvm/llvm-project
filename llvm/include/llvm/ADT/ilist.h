@@ -26,7 +26,6 @@
 
 #include "llvm/ADT/simple_ilist.h"
 #include <cassert>
-#include <cstddef>
 #include <iterator>
 
 namespace llvm {

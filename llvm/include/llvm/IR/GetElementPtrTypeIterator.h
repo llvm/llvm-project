@@ -22,7 +22,6 @@
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
 #include <cstddef>
-#include <cstdint>
 #include <iterator>
 
 namespace llvm {

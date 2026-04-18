@@ -18,7 +18,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <set>
 #include <string>

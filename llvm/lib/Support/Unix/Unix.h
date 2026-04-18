@@ -24,9 +24,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <assert.h>
 #include <cerrno>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <string>
 #include <sys/types.h>
 #include <sys/wait.h>

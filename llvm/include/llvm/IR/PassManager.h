@@ -47,7 +47,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
-#include <cstring>
 #include <list>
 #include <memory>
 #include <tuple>

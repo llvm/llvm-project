@@ -15,7 +15,6 @@
 #define LLVM_MC_MACHINELOCATION_H
 
 #include <cstdint>
-#include <cassert>
 
 namespace llvm {
 

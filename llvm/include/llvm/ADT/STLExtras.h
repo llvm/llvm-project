@@ -28,7 +28,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <initializer_list>

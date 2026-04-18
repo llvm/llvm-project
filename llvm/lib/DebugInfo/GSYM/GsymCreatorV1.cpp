@@ -9,8 +9,6 @@
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 
-#include <cassert>
-
 using namespace llvm;
 using namespace gsym;
 

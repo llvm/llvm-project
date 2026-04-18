@@ -12,8 +12,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "XCOFFObject.h"
 
-#include <cstdint>
-
 namespace llvm {
 namespace objcopy {
 namespace xcoff {

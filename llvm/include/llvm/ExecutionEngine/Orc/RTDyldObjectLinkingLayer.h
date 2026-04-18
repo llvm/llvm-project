@@ -24,7 +24,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
-#include <cassert>
 #include <functional>
 #include <memory>
 #include <utility>

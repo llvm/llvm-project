@@ -18,7 +18,6 @@
 #include "llvm/Demangle/Utility.h"
 
 #include <cctype>
-#include <cstring>
 #include <limits>
 #include <string_view>
 

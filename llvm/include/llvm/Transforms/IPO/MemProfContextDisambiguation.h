@@ -20,7 +20,6 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <functional>
 
 namespace llvm {
 class GlobalValueSummary;

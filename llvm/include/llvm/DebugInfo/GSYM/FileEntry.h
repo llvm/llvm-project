@@ -12,7 +12,6 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/DebugInfo/GSYM/GsymTypes.h"
-#include <functional>
 #include <stdint.h>
 
 namespace llvm {

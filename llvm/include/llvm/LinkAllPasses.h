@@ -47,7 +47,6 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
-#include <cstdlib>
 
 namespace llvm {
 class Triple;

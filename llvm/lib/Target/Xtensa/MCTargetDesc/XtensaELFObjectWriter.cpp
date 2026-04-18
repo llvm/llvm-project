@@ -18,7 +18,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cassert>
 #include <cstdint>
 
 using namespace llvm;

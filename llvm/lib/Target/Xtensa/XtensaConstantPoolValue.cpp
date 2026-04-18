@@ -18,7 +18,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdlib>
 using namespace llvm;
 
 XtensaConstantPoolValue::XtensaConstantPoolValue(

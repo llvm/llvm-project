@@ -16,7 +16,6 @@
 #include "llvm/Support/TypeSize.h"
 
 #include <memory>
-#include <stdint.h>
 
 namespace llvm {
 class DataLayout;

@@ -30,8 +30,6 @@
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
-#include <cassert>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "coro-annotation-elide"

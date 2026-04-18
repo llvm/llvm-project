@@ -17,7 +17,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/IR/CallingConv.h"
-#include <cstdint>
 #include <functional>
 
 namespace llvm {

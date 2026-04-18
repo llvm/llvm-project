@@ -21,7 +21,6 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Printable.h"
-#include <cassert>
 #include <vector>
 
 namespace llvm {

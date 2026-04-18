@@ -30,7 +30,6 @@
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cassert>
 #include <cstdlib>
 #include <functional>
 #include <memory>

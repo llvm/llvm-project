@@ -42,7 +42,6 @@
 #include "llvm/Support/StringSaver.h"
 #include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>

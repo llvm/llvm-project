@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Compiler.h"
-#include <limits>
 
 namespace llvm {
 

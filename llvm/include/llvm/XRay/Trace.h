@@ -12,7 +12,6 @@
 #ifndef LLVM_XRAY_TRACE_H
 #define LLVM_XRAY_TRACE_H
 
-#include <cstdint>
 #include <vector>
 
 #include "llvm/ADT/StringRef.h"

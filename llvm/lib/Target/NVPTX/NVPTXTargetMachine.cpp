@@ -38,7 +38,6 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
-#include <cassert>
 #include <optional>
 #include <string>
 

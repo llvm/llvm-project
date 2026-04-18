@@ -41,7 +41,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/VersionTuple.h"
-#include <cassert>
 #include <string>
 #include <system_error>
 #include <windows.h>

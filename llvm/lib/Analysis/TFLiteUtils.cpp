@@ -29,7 +29,6 @@
 #include "tensorflow/lite/op_resolver.h"
 #include "tensorflow/lite/logger.h"
 
-#include <cassert>
 #include <optional>
 
 using namespace llvm;

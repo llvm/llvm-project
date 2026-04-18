@@ -11,7 +11,6 @@
 
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Support/Compiler.h"
-#include <utility>
 
 namespace llvm {
 class CallBase;

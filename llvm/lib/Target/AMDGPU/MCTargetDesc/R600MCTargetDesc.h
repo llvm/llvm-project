@@ -15,8 +15,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_R600MCTARGETDESC_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_R600MCTARGETDESC_H
 
-#include <cstdint>
-
 namespace llvm {
 class MCCodeEmitter;
 class MCContext;

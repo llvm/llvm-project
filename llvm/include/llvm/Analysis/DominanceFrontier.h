@@ -27,7 +27,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/GenericDomTree.h"
-#include <cassert>
 
 namespace llvm {
 

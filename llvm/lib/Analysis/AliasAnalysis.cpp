@@ -47,7 +47,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include <cassert>
-#include <functional>
 #include <iterator>
 
 #define DEBUG_TYPE "aa"

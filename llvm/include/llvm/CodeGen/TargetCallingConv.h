@@ -19,7 +19,6 @@
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <climits>
-#include <cstdint>
 
 namespace llvm {
 namespace ISD {

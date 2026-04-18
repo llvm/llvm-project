@@ -17,7 +17,6 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/AllocToken.h"
-#include <optional>
 
 namespace llvm {
 

@@ -20,9 +20,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Compiler.h"
-#include <cassert>
 #include <cstdint>
-#include <limits>
 #include <string>
 
 namespace llvm {
