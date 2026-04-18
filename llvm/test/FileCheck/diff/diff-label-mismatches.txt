@@ -1,0 +1,20 @@
+; RUN: split-file %s %t
+; RUN: not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DIFF
+
+;--- input.txt
+START_FUNCTION_BASE:
+  mov eax, 1
+END_FUNCTION
+
+;--- check.txt
+; CHECK-LABEL: START_FUNCTION_HILL:
+; CHECK: mov eax, 1
+
+; DIFF:      --- {{.*}}check.txt
+; DIFF-NEXT: +++ {{.*}}input.txt
+; DIFF:      @@ -1 +1 @@
+; DIFF-NEXT: -START_FUNCTION_HILL:
+; DIFF-NEXT: +START_FUNCTION_BASE:
+; DIFF-NEXT:  mov eax, 1
+; DIFF:      FileCheck: Found 1 unique textual mismatch.

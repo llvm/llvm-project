@@ -3069,10 +3069,17 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
       size_t MatchLabelLen = 0;
       size_t MatchLabelPos =
           CheckLabelStr.Check(SM, Buffer, true, MatchLabelLen, Req, Diags);
-      if (MatchLabelPos == StringRef::npos)
-        // Immediately bail if CHECK-LABEL fails, nothing else we can do.
+      if (MatchLabelPos == StringRef::npos) {
+        // If we are in Diff Mode, we want to handle the error visually
+        // before bailing out.
+        if (IsDiffFormat) {
+          handleDiffFailure(CheckStrings[j], Buffer, SM, Req, Diags, OS,
+                            HeaderPrinted, TotalMismatches);
+          ChecksFailed = true;
+          break;
+        }
         return false;
-
+      }
       CheckRegion = Buffer.substr(0, MatchLabelPos + MatchLabelLen);
       Buffer = Buffer.substr(MatchLabelPos + MatchLabelLen);
       ++j;
