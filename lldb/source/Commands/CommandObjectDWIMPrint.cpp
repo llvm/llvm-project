@@ -75,9 +75,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   auto verbosity = GetDebugger().GetDWIMPrintVerbosity();
 
-  Target *target_ptr = m_exe_ctx.GetTargetPtr();
-  // Fallback to the dummy target, which can allow for expression evaluation.
-  Target &target = target_ptr ? *target_ptr : GetDummyTarget();
+  Target &target = m_exe_ctx.GetTargetRef();
 
   EvaluateExpressionOptions eval_options =
       m_expr_options.GetEvaluateExpressionOptions(target, m_varobj_options);
@@ -118,7 +116,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     static const std::regex swift_class_regex(
         "^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
 
-    if (GetDebugger().GetShowDontUsePoHint() && target_ptr &&
+    if (GetDebugger().GetShowDontUsePoHint() && !target.IsDummyTarget() &&
         (language.AsLanguageType() == lldb::eLanguageTypeSwift ||
          language.IsObjC()) &&
         std::regex_match(output.data(), swift_class_regex)) {
