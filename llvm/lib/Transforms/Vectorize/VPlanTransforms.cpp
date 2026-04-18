@@ -288,7 +288,7 @@ collectGroupedReplicateMemOps(
 }
 
 /// Return true if we do not know how to (mechanically) hoist or sink \p R out
-/// of a loop region.
+/// of a loop region. When sinking, \p Sinking must be true.
 static bool cannotHoistOrSinkRecipe(const VPRecipeBase &R,
                                     bool Sinking = false) {
   // Assumes don't alias anything or throw; as long as they're guaranteed to
@@ -2763,7 +2763,7 @@ static void licm(VPlan &Plan) {
               return true;
             SinkBB = Parent;
             // TODO: If the user is a PHI node, we should check the block of
-            // incoming value.
+            // incoming value. Support PHI node users if needed.
             return UserR->isPhi() || Parent->getEnclosingLoopRegion() ||
                    Parent->getSinglePredecessor() != LoopRegion;
           }))
@@ -2775,11 +2775,12 @@ static void licm(VPlan &Plan) {
                            LoopRegion->getSingleSuccessor())))
         continue;
 
-      // This will need to be a check instead of a assert after conditional
-      // branches in vectorized loops are supported.
+      // TODO: This will need to be a check instead of a assert after
+      // conditional branches in vectorized loops are supported.
       assert(VPDT.properlyDominates(VPBB, SinkBB) &&
              "Defining block must dominate sink block");
-      // TODO: Clone the recipe if users are on multiple exit paths.
+      // TODO: Clone the recipe if users are on multiple exit paths, instead of
+      // just moving.
       Def->moveBefore(*SinkBB, SinkBB->getFirstNonPhi());
     }
   }
