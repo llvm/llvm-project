@@ -23,6 +23,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 class CndVar {
+  LIBC_INLINE_VAR static constexpr size_t SPIN_LIMIT = 100;
   enum WaiterState : uint8_t {
     // Initial state after entering the wait queue.
     Waiting = 0,
@@ -211,14 +212,16 @@ private:
 
     Futex sender_futex{0};
     auto wait_unregisteration_finish = [&]() {
-      constexpr size_t LIMIT = 100;
-      for (size_t i = 0; i < LIMIT; ++i) {
-        if (sender_futex.load(cpp::MemoryOrder::RELAXED) == 0)
-          break;
+      size_t spin = 0;
+      while (auto remaining = sender_futex.load(cpp::MemoryOrder::RELAXED)) {
+        if (spin > SPIN_LIMIT) {
+          sender_futex.wait(remaining, cpp::nullopt, /*is_pshared=*/false);
+          spin = 0;
+          continue;
+        }
         sleep_briefly();
+        spin++;
       }
-      while (auto remaining = sender_futex.load(cpp::MemoryOrder::RELAXED))
-        sender_futex.wait(remaining, cpp::nullopt, /*is_pshared=*/false);
     };
     CndWaiter *head = nullptr;
     CndWaiter *cursor = nullptr;
