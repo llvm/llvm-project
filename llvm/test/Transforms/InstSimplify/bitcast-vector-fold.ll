@@ -672,3 +672,36 @@ define <2 x b64> @bitcast_constexpr_4b32_2b64_all_poison() {
   %res = bitcast <4 x b32> splat (b32 poison) to <2 x b64>
   ret <2 x b64> %res
 }
+
+define <4 x i32> @bitcast_constexpr_2b64_4i32_poison() {
+; LE-LABEL: @bitcast_constexpr_2b64_4i32_poison(
+; LE-NEXT:    ret <4 x i32> <i32 poison, i32 poison, i32 1, i32 0>
+;
+; BE-LABEL: @bitcast_constexpr_2b64_4i32_poison(
+; BE-NEXT:    ret <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
+;
+  %res = bitcast <2 x b64> <b64 poison, b64 1> to <4 x i32>
+  ret <4 x i32> %res
+}
+
+define <2 x double> @bitcast_constexpr_4b32_2f64_poison() {
+; LE-LABEL: @bitcast_constexpr_4b32_2f64_poison(
+; LE-NEXT:    ret <2 x double> <double 0x100000000, double 0x300000002>
+;
+; BE-LABEL: @bitcast_constexpr_4b32_2f64_poison(
+; BE-NEXT:    ret <2 x double> <double 4.940660e-324, double 0x200000003>
+;
+  %res = bitcast <4 x b32> <b32 poison, b32 1, b32 2, b32 3> to <2 x double>
+  ret <2 x double> %res
+}
+
+define <4 x float> @bitcast_constexpr_2b64_4f32_poison() {
+; LE-LABEL: @bitcast_constexpr_2b64_4f32_poison(
+; LE-NEXT:    ret <4 x float> <float poison, float poison, float 0x36A0000000000000, float 0.000000e+00>
+;
+; BE-LABEL: @bitcast_constexpr_2b64_4f32_poison(
+; BE-NEXT:    ret <4 x float> <float poison, float poison, float 0.000000e+00, float 0x36A0000000000000>
+;
+  %res = bitcast <2 x b64> <b64 poison, b64 1> to <4 x float>
+  ret <4 x float> %res
+}
