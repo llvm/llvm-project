@@ -135,6 +135,39 @@ static bool foldMixesPoisonBits(Constant *C, unsigned NumSrcElt,
   return false;
 }
 
+/// Track which destination lanes of a bitcast are produced from poison bytes.
+/// A destination lane is marked if any source element mapped to it is poison.
+/// Returns false if an aggregate element cannot be inspected. The caller should
+/// bail out of folding.
+static bool computePoisonDstLanes(Constant *C, unsigned NumSrcElt,
+                                  unsigned NumDstElt,
+                                  SmallBitVector &PoisonDstElts) {
+  if (NumDstElt < NumSrcElt) {
+    unsigned Ratio = NumSrcElt / NumDstElt;
+    for (unsigned i = 0; i != NumDstElt; ++i) {
+      for (unsigned j = 0; j != Ratio; ++j) {
+        Constant *Src = C->getAggregateElement(i * Ratio + j);
+        if (!Src)
+          return false;
+        if (isa<PoisonValue>(Src)) {
+          PoisonDstElts[i] = true;
+          break;
+        }
+      }
+    }
+  } else {
+    unsigned Ratio = NumDstElt / NumSrcElt;
+    for (unsigned i = 0; i != NumSrcElt; ++i) {
+      Constant *Src = C->getAggregateElement(i);
+      if (!Src)
+        return false;
+      if (isa<PoisonValue>(Src))
+        PoisonDstElts.set(i * Ratio, (i + 1) * Ratio);
+    }
+  }
+  return true;
+}
+
 /// Constant fold bitcast, symbolically evaluating it with DataLayout.
 /// This always returns a non-null constant, but it may be a
 /// ConstantExpr if unfoldable.
@@ -242,60 +275,12 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     if (NumDstElt < NumSrcElt && foldMixesPoisonBits(C, NumSrcElt, NumDstElt))
       return ConstantExpr::getBitCast(C, DestTy);
 
-    // The recursive call folds poison to undef/zero.
-    // Track which destination lanes are poison, so these can be restored.
-    Constant *OrigC = C;
-    SmallBitVector PoisonDstElts(NumDstElt);
-    if (NumDstElt < NumSrcElt) {
-      // A destination lane is poison iff all source elements in its group are
-      // poison. Mixed groups were already rejected above.
-      unsigned Ratio = NumSrcElt / NumDstElt;
-      for (unsigned i = 0; i != NumDstElt; ++i) {
-        bool AllPoison = true;
-        for (unsigned j = 0; j != Ratio; ++j) {
-          Constant *Src = C->getAggregateElement(i * Ratio + j);
-          if (!Src)
-            return ConstantExpr::getBitCast(OrigC, DestTy);
-          if (!isa<PoisonValue>(Src))
-            AllPoison = false;
-        }
-        PoisonDstElts[i] = AllPoison;
-      }
-    } else if (NumDstElt > NumSrcElt) {
-      // Destination elements are poison iff their source element is poison.
-      unsigned Ratio = NumDstElt / NumSrcElt;
-      for (unsigned i = 0; i != NumSrcElt; ++i) {
-        Constant *Src = C->getAggregateElement(i);
-        if (!Src)
-          return ConstantExpr::getBitCast(OrigC, DestTy);
-        if (isa<PoisonValue>(Src))
-          PoisonDstElts.set(i * Ratio, (i + 1) * Ratio);
-      }
-    }
-
     // Fold to a vector of integers with same size as the byte type.
     unsigned ByteWidth = DstEltTy->getPrimitiveSizeInBits();
     auto *DestIVTy = FixedVectorType::get(
         IntegerType::get(C->getContext(), ByteWidth), NumDstElt);
-    // Recursively handle this integer conversion, if possible.
     C = FoldBitCast(C, DestIVTy, DL);
-
-    if (PoisonDstElts.none())
-      return ConstantExpr::getBitCast(C, DestTy);
-
-    // Restore poison lanes that the integer fold refined to undef/zero.
-    SmallVector<Constant *, 32> Elts;
-    for (unsigned i = 0; i != NumDstElt; ++i) {
-      if (PoisonDstElts[i]) {
-        Elts.push_back(PoisonValue::get(DstEltTy));
-      } else {
-        Constant *E = C->getAggregateElement(i);
-        if (!E)
-          return ConstantExpr::getBitCast(OrigC, DestTy);
-        Elts.push_back(ConstantExpr::getBitCast(E, DstEltTy));
-      }
-    }
-    return ConstantVector::get(Elts);
+    return ConstantExpr::getBitCast(C, DestTy);
   }
 
   // Okay, we know the destination is integer, if the input is FP, convert
@@ -317,30 +302,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   // fold below refines them to undef/zero, so they can be restored.
   SmallBitVector PoisonDstElts(NumDstElt);
   if (SrcEltTy->isByteTy()) {
-    Constant *OrigC = C;
-    if (NumDstElt < NumSrcElt) {
-      unsigned Ratio = NumSrcElt / NumDstElt;
-      for (unsigned i = 0; i != NumDstElt; ++i) {
-        for (unsigned j = 0; j != Ratio; ++j) {
-          Constant *Src = C->getAggregateElement(i * Ratio + j);
-          if (!Src)
-            return ConstantExpr::getBitCast(OrigC, DestTy);
-          if (isa<PoisonValue>(Src)) {
-            PoisonDstElts[i] = true;
-            break;
-          }
-        }
-      }
-    } else {
-      unsigned Ratio = NumDstElt / NumSrcElt;
-      for (unsigned i = 0; i != NumSrcElt; ++i) {
-        Constant *Src = C->getAggregateElement(i);
-        if (!Src)
-          return ConstantExpr::getBitCast(OrigC, DestTy);
-        if (isa<PoisonValue>(Src))
-          PoisonDstElts.set(i * Ratio, (i + 1) * Ratio);
-      }
-    }
+    if (!computePoisonDstLanes(C, NumSrcElt, NumDstElt, PoisonDstElts))
+      return ConstantExpr::getBitCast(C, DestTy);
 
     unsigned ByteWidth = SrcEltTy->getPrimitiveSizeInBits();
     auto *SrcIVTy = FixedVectorType::get(
@@ -429,10 +392,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   }
 
   // Restore destination lanes whose source bytes contained poison bits.
-  if (PoisonDstElts.any())
-    for (unsigned i = 0; i != NumDstElt; ++i)
-      if (PoisonDstElts[i])
-        Result[i] = PoisonValue::get(DstEltTy);
+  for (unsigned I : PoisonDstElts.set_bits())
+    Result[I] = PoisonValue::get(DstEltTy);
 
   return ConstantVector::get(Result);
 }
