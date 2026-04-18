@@ -279,6 +279,7 @@ add_fp_unittest(
     libc.src.__support.math.ceilf16
     libc.src.__support.math.ceill
     libc.src.__support.math.log
+    libc.src.__support.math.logbbf16
 )
 
 add_fp_unittest(
