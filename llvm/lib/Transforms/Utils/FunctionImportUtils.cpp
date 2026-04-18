@@ -317,6 +317,10 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     Summary = ImportIndex.findSummaryInModule(
         VI, GV.getParent()->getModuleIdentifier());
 
+  assert((!Summary || !Summary->noRenameOnPromotion() ||
+          shouldPromoteLocalToGlobal(&GV, Summary)) &&
+         "noRenameOnPromotion requires promotion to external linkage");
+
   if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV, Summary)) {
     // Save the original name string before we rename GV below.
     auto Name = GV.getName().str();

@@ -1620,8 +1620,10 @@ void llvm::gatherImportedSummariesForModule(
     if (It == ModuleToDefinedGVSummaries.end())
       continue;
     for (const auto &[GUID, Summary] : It->second) {
-      if (Summary->noRenameOnPromotion())
+      if (Summary->noRenameOnPromotion()) {
+        DecSummaries.insert(Summary);
         SummariesForIndex.try_emplace(GUID, Summary);
+      }
     }
   }
 }
