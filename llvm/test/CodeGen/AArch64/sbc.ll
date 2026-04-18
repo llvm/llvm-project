@@ -150,6 +150,27 @@ define i32 @test_ugt(i32 %a, i32 %b, i32 %x, i32 %y) {
   ret i32 %res
 }
 
+define i64 @test_ugt_mixed_i32_i64(i32 %a, i32 %b, i64 %x, i64 %y) {
+; CHECK-SD-LABEL: test_ugt_mixed_i32_i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmp w1, w0
+; CHECK-SD-NEXT:    sbc x0, x2, x3
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ugt_mixed_i32_i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmp w0, w1
+; CHECK-GI-NEXT:    sub x9, x2, x3
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    sub x0, x9, x8
+; CHECK-GI-NEXT:    ret
+  %cc = icmp ugt i32 %a, %b
+  %carry = zext i1 %cc to i64
+  %sub = sub i64 %x, %y
+  %res = sub i64 %sub, %carry
+  ret i64 %res
+}
+
 define i32 @test_unsupported_cc_slt(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-SD-LABEL: test_unsupported_cc_slt:
 ; CHECK-SD:       // %bb.0:
