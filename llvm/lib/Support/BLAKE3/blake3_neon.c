@@ -10,6 +10,8 @@
 // and stores right, but step zero would be finding a way to test it in CI.
 #endif
 
+#include <cstring>
+
 INLINE uint32x4_t loadu_128(const uint8_t src[16]) {
   // vld1q_u32 has alignment requirements. Don't use it.
   return vreinterpretq_u32_u8(vld1q_u8(src));
