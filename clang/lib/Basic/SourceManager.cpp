@@ -812,7 +812,6 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   assert(SLocOffset >= LocalSLocEntryTable[0].getOffset() && SLocOffset > 0 &&
          "Invalid SLocOffset");
   assert(LocalSLocEntryTable.size() == LocalLocOffsetTable.size());
-  assert(LastFileIDLookup.ID >= 0 && "Only cache local file sloc entry");
 
   // After the first and second level caches, I see two common sorts of
   // behavior: 1) a lot of searched FileID's are "near" the cached file
@@ -833,10 +832,12 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   // upper bound of the search range.
   unsigned GreaterIndex = LocalLocOffsetTable.size();
   // Use the LastFileIDLookup to prune the search space.
-  if (LastLookupStartOffset < SLocOffset)
-    LessIndex = LastFileIDLookup.ID;
-  else
-    GreaterIndex = LastFileIDLookup.ID;
+  if (LastFileIDLookup.ID >= 0) {
+    if (LastLookupStartOffset < SLocOffset)
+      LessIndex = LastFileIDLookup.ID;
+    else
+      GreaterIndex = LastFileIDLookup.ID;
+  }
 
   // Find the FileID that contains this.
   unsigned NumProbes = 0;
@@ -887,7 +888,13 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
     return FileID();
   }
 
-  return FileID::get(ExternalSLocEntries->getSLocEntryID(SLocOffset));
+  FileID FID = FileID::get(ExternalSLocEntries->getSLocEntryID(SLocOffset));
+  LastFileIDLookup = FID;
+  LastLookupStartOffset = getSLocEntry(FID).getOffset();
+  FileID NextFID = getNextFileID(FID);
+  LastLookupEndOffset =
+      NextFID.isValid() ? getSLocEntry(NextFID).getOffset() : MaxLoadedOffset;
+  return FID;
 }
 
 SourceLocation SourceManager::

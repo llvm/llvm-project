@@ -69,6 +69,9 @@ class CGDebugInfo {
   ModuleMap *ClangModuleMap = nullptr;
   ASTSourceDescriptor PCHDescriptor;
   SourceLocation CurLoc;
+  mutable SourceLocation CachedLineColLoc;
+  mutable unsigned CachedLine = 0;
+  mutable unsigned CachedColumn = 0;
   llvm::MDNode *CurInlinedAt = nullptr;
   llvm::DIType *VTablePtrType = nullptr;
   llvm::DIType *ClassTy = nullptr;
@@ -165,6 +168,12 @@ class CGDebugInfo {
   /// using declarations and global alias variables) that aren't covered
   /// by other more specific caches.
   llvm::DenseMap<const Decl *, llvm::TrackingMDRef> DeclCache;
+  struct ClassNameCacheEntry {
+    StringRef Name;
+    bool NameIsSimplified;
+  };
+  llvm::DenseMap<const RecordDecl *, ClassNameCacheEntry> ClassNameCache;
+  llvm::DenseMap<const TagDecl *, StringRef> TypeIdentifierCache;
   llvm::DenseMap<const Decl *, llvm::TrackingMDRef> ImportedDeclCache;
   llvm::DenseMap<const NamespaceDecl *, llvm::TrackingMDRef> NamespaceCache;
   llvm::DenseMap<const NamespaceAliasDecl *, llvm::TrackingMDRef>
@@ -740,6 +749,8 @@ private:
   /// Return current directory name.
   StringRef getCurrentDirname();
 
+  void cacheLineAndColumn(SourceLocation Loc) const;
+
   /// Create new compile unit.
   void CreateCompileUnit();
 
@@ -856,6 +867,8 @@ private:
   /// Get class name including template argument list.
   StringRef getClassName(const RecordDecl *RD,
                          bool *NameIsSimplified = nullptr);
+
+  StringRef getTypeIdentifier(const TagType *Ty);
 
   /// Get the vtable name for the given class.
   StringRef getVTableName(const CXXRecordDecl *Decl);

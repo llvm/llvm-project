@@ -471,58 +471,71 @@ StringRef CGDebugInfo::getSelectorName(Selector S) {
 
 StringRef CGDebugInfo::getClassName(const RecordDecl *RD,
                                     bool *NameIsSimplified) {
-  if (isa<ClassTemplateSpecializationDecl>(RD)) {
-    // Copy this name on the side and use its reference.
-    return internString(GetName(RD, false, NameIsSimplified));
-  }
-
   // quick optimization to avoid having to intern strings that are already
   // stored reliably elsewhere
   if (const IdentifierInfo *II = RD->getIdentifier())
     return II->getName();
 
-  // The CodeView printer in LLVM wants to see the names of unnamed types
-  // because they need to have a unique identifier.
-  // These names are used to reconstruct the fully qualified type names.
-  if (CGM.getCodeGenOpts().EmitCodeView) {
+  const auto *CanonicalRD = cast<RecordDecl>(RD->getCanonicalDecl());
+  if (auto It = ClassNameCache.find(CanonicalRD); It != ClassNameCache.end()) {
+    if (NameIsSimplified)
+      *NameIsSimplified = It->second.NameIsSimplified;
+    return It->second.Name;
+  }
+
+  StringRef Name;
+  bool Simplified = false;
+  if (isa<ClassTemplateSpecializationDecl>(RD)) {
+    // Copy this name on the side and use its reference.
+    Name = internString(GetName(RD, false, &Simplified));
+  } else if (CGM.getCodeGenOpts().EmitCodeView) {
+    // The CodeView printer in LLVM wants to see the names of unnamed types
+    // because they need to have a unique identifier.
+    // These names are used to reconstruct the fully qualified type names.
     if (const TypedefNameDecl *D = RD->getTypedefNameForAnonDecl()) {
       assert(RD->getDeclContext() == D->getDeclContext() &&
              "Typedef should not be in another decl context!");
       assert(D->getDeclName().getAsIdentifierInfo() &&
              "Typedef was not named!");
-      return D->getDeclName().getAsIdentifierInfo()->getName();
-    }
-
-    if (CGM.getLangOpts().CPlusPlus) {
-      StringRef Name;
+      Name = D->getDeclName().getAsIdentifierInfo()->getName();
+    } else if (CGM.getLangOpts().CPlusPlus) {
+      StringRef UnnamedName;
 
       ASTContext &Context = CGM.getContext();
       if (const DeclaratorDecl *DD = Context.getDeclaratorForUnnamedTagDecl(RD))
         // Anonymous types without a name for linkage purposes have their
         // declarator mangled in if they have one.
-        Name = DD->getName();
+        UnnamedName = DD->getName();
       else if (const TypedefNameDecl *TND =
                    Context.getTypedefNameForUnnamedTagDecl(RD))
         // Anonymous types without a name for linkage purposes have their
         // associate typedef mangled in if they have one.
-        Name = TND->getName();
+        UnnamedName = TND->getName();
 
       // Give lambdas a display name based on their name mangling.
-      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
-        if (CXXRD->isLambda())
-          return internString(
+      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        if (CXXRD->isLambda()) {
+          Name = internString(
               CGM.getCXXABI().getMangleContext().getLambdaString(CXXRD));
-
-      if (!Name.empty()) {
+        } else if (!UnnamedName.empty()) {
+          SmallString<256> UnnamedType("<unnamed-type-");
+          UnnamedType += UnnamedName;
+          UnnamedType += '>';
+          Name = internString(UnnamedType);
+        }
+      } else if (!UnnamedName.empty()) {
         SmallString<256> UnnamedType("<unnamed-type-");
-        UnnamedType += Name;
+        UnnamedType += UnnamedName;
         UnnamedType += '>';
-        return internString(UnnamedType);
+        Name = internString(UnnamedType);
       }
     }
   }
 
-  return StringRef();
+  ClassNameCache[CanonicalRD] = {Name, Simplified};
+  if (NameIsSimplified)
+    *NameIsSimplified = Simplified;
+  return Name;
 }
 
 std::optional<llvm::DIFile::ChecksumKind>
@@ -661,11 +674,30 @@ std::string CGDebugInfo::remapDIPath(StringRef Path) const {
   return P.str().str();
 }
 
+void CGDebugInfo::cacheLineAndColumn(SourceLocation Loc) const {
+  if (Loc == CachedLineColLoc)
+    return;
+
+  CachedLineColLoc = Loc;
+  CachedLine = 0;
+  CachedColumn = 0;
+  if (Loc.isInvalid())
+    return;
+
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+  if (!PLoc.isValid())
+    return;
+
+  CachedLine = PLoc.getLine();
+  CachedColumn = PLoc.getColumn();
+}
+
 unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
-  SourceManager &SM = CGM.getContext().getSourceManager();
-  return SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc)).getLine();
+  cacheLineAndColumn(getMacroDebugLoc(CGM, Loc));
+  return CachedLine;
 }
 
 unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
@@ -676,10 +708,8 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
   // If the location is invalid then use the current column.
   if (Loc.isInvalid() && CurLoc.isInvalid())
     return 0;
-  SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc =
-      SM.getPresumedLoc(Loc.isValid() ? getMacroDebugLoc(CGM, Loc) : CurLoc);
-  return PLoc.isValid() ? PLoc.getColumn() : 0;
+  cacheLineAndColumn(Loc.isValid() ? getMacroDebugLoc(CGM, Loc) : CurLoc);
+  return CachedColumn;
 }
 
 StringRef CGDebugInfo::getCurrentDirname() {
@@ -1413,23 +1443,29 @@ static bool needsTypeIdentifier(const TagDecl *TD, CodeGenModule &CGM,
 }
 
 // Returns a unique type identifier string if one exists, or an empty string.
-static SmallString<256> getTypeIdentifier(const TagType *Ty, CodeGenModule &CGM,
-                                          llvm::DICompileUnit *TheCU) {
-  SmallString<256> Identifier;
+StringRef CGDebugInfo::getTypeIdentifier(const TagType *Ty) {
   const TagDecl *TD = Ty->getDecl()->getDefinitionOrSelf();
+  const auto *CanonicalTD = cast<TagDecl>(TD->getCanonicalDecl());
+  if (auto It = TypeIdentifierCache.find(CanonicalTD);
+      It != TypeIdentifierCache.end())
+    return It->second;
 
+  StringRef Identifier;
   if (!needsTypeIdentifier(TD, CGM, TheCU))
-    return Identifier;
+    return TypeIdentifierCache[CanonicalTD] = Identifier;
   if (const auto *RD = dyn_cast<CXXRecordDecl>(TD))
     if (RD->getDefinition())
       if (RD->isDynamicClass() &&
           CGM.getVTableLinkage(RD) == llvm::GlobalValue::ExternalLinkage)
-        return Identifier;
+        return TypeIdentifierCache[CanonicalTD] = Identifier;
 
   // TODO: This is using the RTTI name. Is there a better way to get
   // a unique string for a type?
-  llvm::raw_svector_ostream Out(Identifier);
+  SmallString<256> IdentifierStorage;
+  llvm::raw_svector_ostream Out(IdentifierStorage);
   CGM.getCXXABI().getMangleContext().mangleCXXRTTIName(QualType(Ty, 0), Out);
+  Identifier = internString(IdentifierStorage);
+  TypeIdentifierCache[CanonicalTD] = Identifier;
   return Identifier;
 }
 
@@ -1478,10 +1514,10 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
       Flags |= llvm::DINode::FlagNonTrivial;
 
   // Create the type.
-  SmallString<256> Identifier;
+  StringRef Identifier;
   // Don't include a linkage name in line tables only.
   if (CGM.getCodeGenOpts().hasReducedDebugInfo())
-    Identifier = getTypeIdentifier(Ty, CGM, TheCU);
+    Identifier = getTypeIdentifier(Ty);
   llvm::DICompositeType *RetTy = DBuilder.createReplaceableCompositeType(
       getTagForRecord(RD), RDName, Ctx, DefUnit, Line, 0, Size, Align, Flags,
       Identifier);
@@ -3936,8 +3972,7 @@ llvm::DIType *CGDebugInfo::CreateType(const HLSLInlineSpirvType *Ty,
   return nullptr;
 }
 
-static auto getEnumInfo(CodeGenModule &CGM, llvm::DICompileUnit *TheCU,
-                        const EnumType *Ty) {
+static auto getEnumInfo(CodeGenModule &CGM, const EnumType *Ty) {
   const EnumDecl *ED = Ty->getDecl()->getDefinitionOrSelf();
 
   uint64_t Size = 0;
@@ -3946,11 +3981,12 @@ static auto getEnumInfo(CodeGenModule &CGM, llvm::DICompileUnit *TheCU,
     Size = CGM.getContext().getTypeSize(QualType(Ty, 0));
     Align = getDeclAlignIfRequired(ED, CGM.getContext());
   }
-  return std::make_tuple(ED, Size, Align, getTypeIdentifier(Ty, CGM, TheCU));
+  return std::make_tuple(ED, Size, Align);
 }
 
 llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
-  auto [ED, Size, Align, Identifier] = getEnumInfo(CGM, TheCU, Ty);
+  auto [ED, Size, Align] = getEnumInfo(CGM, Ty);
+  StringRef Identifier = getTypeIdentifier(Ty);
 
   bool isImportedFromModule =
       DebugTypeExtRefs && ED->isFromASTFile() && ED->getDefinition();
@@ -3985,7 +4021,8 @@ llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
 }
 
 llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
-  auto [ED, Size, Align, Identifier] = getEnumInfo(CGM, TheCU, Ty);
+  auto [ED, Size, Align] = getEnumInfo(CGM, Ty);
+  StringRef Identifier = getTypeIdentifier(Ty);
 
   SmallVector<llvm::Metadata *, 16> Enumerators;
   ED = ED->getDefinition();
@@ -4378,7 +4415,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   // to be used.
   auto Align = getTypeAlignIfRequired(Ty, CGM.getContext());
 
-  SmallString<256> Identifier = getTypeIdentifier(Ty, CGM, TheCU);
+  StringRef Identifier = getTypeIdentifier(Ty);
 
   // Explicitly record the calling convention and export symbols for C++
   // records.
