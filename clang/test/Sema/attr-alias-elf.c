@@ -93,7 +93,7 @@ void test9() {}
 int test9_alias() __attribute__((alias("test9")));
 // expected-warning@-1 {{alias and aliasee have different types 'int ()' and 'void ()'}}
 
-// No warning for an alias with unspecified parameters if the return types match
+// No warning for an alias with unspecified parameters if the return types match.
 int test10(int x, int y) { return x + y; }
 int test10_alias() __attribute__((alias("test10")));
 
@@ -101,3 +101,8 @@ int test11(int x, int y) { return x + y; }
 // expected-note@-1 {{aliasee is declared here}}
 int test11_alias(int x, ...) __attribute__((alias("test11")));
 // expected-warning@-1 {{alias and aliasee have different types 'int (int, ...)' and 'int (int, int)'}}
+
+// No warnings expected when using typedef equivalents.
+typedef int Integer;
+Integer test12(int x) { return x; }
+int test12_alias(Integer) __attribute__((alias("test12")));

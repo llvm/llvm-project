@@ -805,11 +805,12 @@ void CodeGenModule::checkAliases() {
     }
 
     if (!IsIFunc) {
+      GlobalDecl AliaseeGD;
+      lookupRepresentativeDecl(GV->getName(), AliaseeGD);
+      assert(AliaseeGD);
       // Function declarations can only alias functions (including IFUNCs).
       // Similarly, variable declarations can only alias variables.
       if (isa<FunctionDecl>(D) != isa<llvm::Function, llvm::GlobalIFunc>(GV)) {
-        GlobalDecl AliaseeGD = getMangledNameDecl(GV->getName());
-        assert(AliaseeGD);
         Diags.Report(Location, diag::err_alias_between_function_and_variable)
             << isa<FunctionDecl>(D);
         Diags.Report(AliaseeGD.getDecl()->getLocation(),
@@ -819,26 +820,26 @@ void CodeGenModule::checkAliases() {
       }
 
       auto shouldReportTypeMismatch = [&]() {
-        llvm::Type *AliasTy = Alias->getValueType();
-        llvm::Type *AliaseeTy = GV->getValueType();
+        QualType AliasQTy = D->getType().getCanonicalType();
+        QualType AliaseeQTy =
+            cast<ValueDecl>(AliaseeGD.getDecl())->getType().getCanonicalType();
+
         // Same types, nothing to report.
-        if (AliasTy == AliaseeTy)
+        if (AliasQTy == AliaseeQTy)
           return false;
         // Only report functions.
         // Type mismatches for variables can be intentional.
-        auto *AliasFTy = dyn_cast<llvm::FunctionType>(AliasTy);
-        auto *AliaseeFTy = dyn_cast<llvm::FunctionType>(AliaseeTy);
+        auto *AliasFTy = dyn_cast<FunctionType>(AliasQTy.getTypePtr());
+        auto *AliaseeFTy = dyn_cast<FunctionType>(AliaseeQTy.getTypePtr());
         if (!AliasFTy || !AliaseeFTy)
           return false;
         // Only report aliases with unspecified parameter lists if the return
         // types do not match.
-        if (isa<FunctionNoProtoType>(D->getType().getTypePtr()))
+        if (isa<FunctionNoProtoType>(AliasFTy))
           return AliasFTy->getReturnType() != AliaseeFTy->getReturnType();
         return true;
       };
       if (shouldReportTypeMismatch()) {
-        GlobalDecl AliaseeGD = getMangledNameDecl(GV->getName());
-        assert(AliaseeGD);
         Diags.Report(Location, diag::warn_alias_type_mismatch)
             << D->getType() << cast<ValueDecl>(AliaseeGD.getDecl())->getType();
         Diags.Report(AliaseeGD.getDecl()->getLocation(),
