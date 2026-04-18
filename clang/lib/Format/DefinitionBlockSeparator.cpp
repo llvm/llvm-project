@@ -146,7 +146,7 @@ void DefinitionBlockSeparator::separateBlocks(
       if (LikelyDefinition(OperateLine))
         return false;
 
-      AnnotatedLine *NextLine =
+      const auto *NextLine =
           OperateIndex + 1 < Lines.size() ? Lines[OperateIndex + 1] : nullptr;
       if (const auto *Tok = OperateLine->First;
           Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText)) {
