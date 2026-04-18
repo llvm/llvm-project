@@ -106,6 +106,36 @@ Error processIntegerArray(const json::Object *Obj, StringRef Key,
   return Error::success();
 }
 
+/// Verify that the replay output is the same as the record output.
+Error verifyReplayOutput(StringRef RecordOutputFilename,
+                         StringRef ReplayOutputFilename) {
+  // Load the record output file.
+  auto RecordOutputBufferOrErr =
+      MemoryBuffer::getFile(RecordOutputFilename,
+                            /*isText=*/false,
+                            /*RequiresNullTerminator=*/false);
+  if (!RecordOutputBufferOrErr)
+    return createErr("failed to read the kernel record output file");
+
+  // Load the replay output file.
+  auto ReplayOutputBufferOrErr =
+      MemoryBuffer::getFile(ReplayOutputFilename,
+                            /*isText=*/false,
+                            /*RequiresNullTerminator=*/false);
+  if (!ReplayOutputBufferOrErr)
+    return createErr("failed to read the kernel replay output file");
+
+  // Compare record and replay outputs to verify they match.
+  StringRef RecordOutput = RecordOutputBufferOrErr.get()->getBuffer();
+  StringRef ReplayOutput = ReplayOutputBufferOrErr.get()->getBuffer();
+  if (RecordOutput != ReplayOutput)
+    return createErr("replay device memory failed to verify");
+
+  // Sucessfully verified.
+  outs() << TOOL_PREFIX << "Replay device memory verified\n";
+  return Error::success();
+}
+
 /// Replay the kernel and return whether verification occurred.
 Error replayKernel() {
   // Load the kernel descriptor JSON file.
@@ -177,7 +207,7 @@ Error replayKernel() {
   // Load the recorded globals file.
   Filepath.replace_extension("globals");
   auto GlobalsBufferOrErr =
-      MemoryBuffer::getFile(Filepath.string(), /*isText=*/false,
+      MemoryBuffer::getFile(Filepath.c_str(), /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
   if (!GlobalsBufferOrErr)
     return createErr("failed to read the globals file");
@@ -225,7 +255,7 @@ Error replayKernel() {
   // Load the device image file.
   Filepath.replace_extension("image");
   auto ImageBufferOrErr =
-      MemoryBuffer::getFile(Filepath.string(), /*isText=*/false,
+      MemoryBuffer::getFile(Filepath.c_str(), /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
   if (!ImageBufferOrErr)
     return createErr("failed to read the kernel image file");
@@ -257,7 +287,7 @@ Error replayKernel() {
   // Load the record input file.
   Filepath.replace_extension("record_input");
   auto RecordInputBufferOrErr =
-      MemoryBuffer::getFile(Filepath.string(), /*isText=*/false,
+      MemoryBuffer::getFile(Filepath.c_str(), /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
   if (!RecordInputBufferOrErr)
     return createErr("failed to read the kernel record input file");
@@ -270,52 +300,28 @@ Error replayKernel() {
               const_cast<char *>(RecordInputBuffer->getBuffer().data()),
               RecordInputBuffer->getBufferSize());
 
-  KernelReplayOutcomeTy ReplayOutcome;
+  KernelReplayOutcomeTy Outcome;
   Rc = __tgt_target_kernel_replay(
       /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
       (char *)RecordedData, RecordInputBuffer->getBufferSize(),
       NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
-      LoopTripCount, &ReplayOutcome);
+      LoopTripCount, &Outcome);
   if (Rc != OMP_TGT_SUCCESS)
     return createErr("failed to replay kernel");
 
   delete[] RecordedData;
 
-  // Nothing else to do if no verification was required.
-  if (!VerifyOpt) {
-    outs() << TOOL_PREFIX << "Replay finished (verification skipped)\n";
-    return Error::success();
+  // Verify the replay output if requested.
+  if (VerifyOpt) {
+    if (Outcome.OutputFilepath.empty())
+      return createErr("replay output file was not generated");
+
+    Filepath.replace_extension("record_output");
+    return verifyReplayOutput(Filepath.c_str(), Outcome.OutputFilepath.c_str());
   }
 
-  if (ReplayOutcome.OutputFilepath.empty())
-    return createErr("replay output file was not generated");
-
-  // Load the record output file.
-  Filepath.replace_extension("record_output");
-  auto RecordOutputBufferOrErr =
-      MemoryBuffer::getFile(Filepath.string(),
-                            /*isText=*/false,
-                            /*RequiresNullTerminator=*/false);
-  if (!RecordOutputBufferOrErr)
-    return createErr("failed to read the kernel record output file");
-
-  // Load the replay output file.
-  auto ReplayOutputBufferOrErr =
-      MemoryBuffer::getFile(ReplayOutcome.OutputFilepath.c_str(),
-                            /*isText=*/false,
-                            /*RequiresNullTerminator=*/false);
-  if (!ReplayOutputBufferOrErr)
-    return createErr("failed to read the kernel replay output file");
-
-  // Compare record and replay outputs to verify they match.
-  StringRef RecordOutput = RecordOutputBufferOrErr.get()->getBuffer();
-  StringRef ReplayOutput = ReplayOutputBufferOrErr.get()->getBuffer();
-  if (RecordOutput != ReplayOutput)
-    return createErr("replay device memory failed to verify");
-
-  // Sucessfully verified.
-  outs() << TOOL_PREFIX << "Replay device memory verified\n";
+  outs() << TOOL_PREFIX << "Replay finished (verification skipped)\n";
   return Error::success();
 }
 
