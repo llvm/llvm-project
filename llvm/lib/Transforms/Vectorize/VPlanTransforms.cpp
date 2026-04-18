@@ -5151,11 +5151,10 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
-                                                 VPBasicBlock *VectorPHVPBB,
-                                                 bool TailByMasking,
-                                                 bool RequiresScalarEpilogue,
-                                                 VPValue *Step) {
+void VPlanTransforms::materializeVectorTripCount(
+    VPlan &Plan, VPBasicBlock *VectorPHVPBB, bool TailByMasking,
+    bool RequiresScalarEpilogue, VPValue *Step,
+    std::optional<uint64_t> MaxRuntimeStep) {
   VPSymbolicValue &VectorTC = Plan.getVectorTripCount();
   // There's nothing to do if there are no users of the vector trip count or its
   // IR value has already been set.
@@ -5190,6 +5189,17 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   // iterations are not required for correctness, or N - Step, otherwise. Step
   // is equal to the vectorization factor (number of SIMD elements) times the
   // unroll factor (number of SIMD instructions).
+
+  // For scalable steps, if TC is a constant and is divisible by the maximum
+  // possible runtime step, then TC % Step == 0 for all valid vscale values
+  // and the vector trip count equals TC directly.
+  const APInt *TCVal;
+  if (!TailByMasking && !RequiresScalarEpilogue && match(TC, m_APInt(TCVal)) &&
+      MaxRuntimeStep && TCVal->getZExtValue() % *MaxRuntimeStep == 0) {
+    VectorTC.replaceAllUsesWith(TC);
+    return;
+  }
+
   VPValue *R =
       Builder.createNaryOp(Instruction::URem, {TC, Step},
                            DebugLoc::getCompilerGenerated(), "n.mod.vf");
