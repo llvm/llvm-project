@@ -192,6 +192,7 @@ entry:
   ret void
 }
 
+; ENABLED-LABEL: define void @wave_rla_i32
 ; ENABLED-NOT: @dx.op.waveReadLaneAt.i32(i32 117, i32 %expr, i32 %idx), !dx.precise ![[SM]]
 define void @wave_rla_i32(i32 %expr, i32 %idx) {
 entry:
