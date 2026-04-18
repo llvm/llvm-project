@@ -4454,7 +4454,7 @@ public:
     // we just use the one from this instance.
     if (exe_ctx) {
       Target *target = exe_ctx->GetTargetPtr();
-      if (target) {
+      if (target && !target->IsDummyTarget()) {
         TargetOptionValueProperties *target_properties =
             static_cast<TargetOptionValueProperties *>(
                 target->GetValueProperties().get());

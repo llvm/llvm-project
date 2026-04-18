@@ -328,7 +328,8 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       std::lock_guard<std::mutex> guard(m_statusline_mutex);
       if (StatuslineSupported()) {
         m_statusline.emplace(*this);
-        m_statusline->Enable(GetSelectedExecutionContextRef());
+        m_statusline->Enable(
+            GetSelectedExecutionContextRef(/*adopt_dummy_target=*/true));
       } else {
         m_statusline.reset();
       }
@@ -1270,7 +1271,8 @@ void Debugger::RestoreInputTerminalState() {
   {
     std::lock_guard<std::mutex> guard(m_statusline_mutex);
     if (m_statusline)
-      m_statusline->Enable(GetSelectedExecutionContext());
+      m_statusline->Enable(
+          GetSelectedExecutionContext(/*adopt_dummy_target=*/true));
   }
 }
 
@@ -1293,17 +1295,22 @@ void Debugger::FlushStatusLine() {
   m_statusline->ClearExecutionContext();
 }
 
-ExecutionContext Debugger::GetSelectedExecutionContext() {
-  bool adopt_selected = true;
-  ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
-  return ExecutionContext(exe_ctx_ref);
+ExecutionContext
+Debugger::GetSelectedExecutionContext(bool adopt_dummy_target) {
+  return ExecutionContext(GetSelectedExecutionContextRef(adopt_dummy_target));
 }
 
-ExecutionContextRef Debugger::GetSelectedExecutionContextRef() {
+ExecutionContextRef
+Debugger::GetSelectedExecutionContextRef(bool adopt_dummy_target) {
   if (TargetSP selected_target_sp = GetSelectedTarget())
     return ExecutionContextRef(selected_target_sp.get(),
                                /*adopt_selected=*/true);
-  return ExecutionContextRef(m_dummy_target_sp.get(), /*adopt_selected=*/false);
+
+  if (adopt_dummy_target)
+    return ExecutionContextRef(m_dummy_target_sp.get(),
+                               /*adopt_selected=*/false);
+
+  return ExecutionContextRef();
 }
 
 void Debugger::DispatchInputInterrupt() {
@@ -2240,7 +2247,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
     std::lock_guard<std::mutex> guard(m_statusline_mutex);
     if (!m_statusline) {
       m_statusline.emplace(*this);
-      m_statusline->Enable(GetSelectedExecutionContextRef());
+      m_statusline->Enable(
+          GetSelectedExecutionContextRef(/*adopt_dummy_target=*/true));
     }
   }
 
