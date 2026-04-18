@@ -58,6 +58,25 @@ A b = {3, 4, 5};
 
 } // namespace cwg2707
 
+namespace cwg2708 { // cwg2708: yes
+#if __cplusplus >= 202002L
+void f() {
+  const int a[2](1, 2);
+  (void)a;
+}
+#endif
+} // namespace cwg2708
+
+namespace cwg2713 { // cwg2713: yes
+#if __cplusplus >= 202002L
+struct A { int x; int y; };
+void f() {
+  A const& r = {.x = 1, .y = 2};
+  (void)r;
+}
+#endif
+} // namespace cwg2713
+
 namespace cwg2718 { // cwg2718: 2.7
 struct B {};
 struct D;
@@ -225,6 +244,8 @@ void test() {
 }
 #endif
 } // namespace cwg2789
+
+// cwg2792: na
 
 namespace cwg2798 { // cwg2798: 17
 #if __cplusplus > 202302L
