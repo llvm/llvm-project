@@ -1,6 +1,8 @@
 ; RUN: split-file %s %t
 ; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=DIFF
+; RUN:   | FileCheck %s --check-prefix=UNI
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=split 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=SPLIT
 
 ;--- input.txt
 HEADER
@@ -23,8 +25,13 @@ Noise6
 ; CHECK-NEXT: WRONG_NEXT
 ; CHECK:       END_OF_FUNCTION
 
-; DIFF:      @@ -[[#]] +[[#]] @@
-; DIFF-NEXT:  MATCH_ME
-; DIFF-NEXT: -WRONG_NEXT
-; DIFF-NEXT: +NEXT_LINE
-; DIFF-NEXT:  Noise5
+; UNI:      @@ -[[#]] +[[#]] @@
+; UNI-NEXT:  MATCH_ME
+; UNI-NEXT: -WRONG_NEXT
+; UNI-NEXT: +NEXT_LINE
+; UNI-NEXT:  Noise5
+
+; SPLIT:      @@ -[[#]] +[[#]] @@
+; SPLIT-NEXT: MATCH_ME              | MATCH_ME
+; SPLIT-NEXT: {{.*}}WRONG_NEXT{{.*}}!{{.*}}NEXT_LINE
+; SPLIT-NEXT: Noise5                | Noise5
