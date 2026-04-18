@@ -224,14 +224,8 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
 
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
-#if GTEST_HAS_STREAM_REDIRECTION
-  ::testing::internal::CaptureStderr();
-#endif
-  EXPECT_FALSE(verifyVPlanIsValid(Plan));
-#if GTEST_HAS_STREAM_REDIRECTION
-  EXPECT_STREQ("Multiple instances of the same successor.\n",
-               ::testing::internal::GetCapturedStderr().c_str());
-#endif
+  // Duplicate successors are allowed for blocks with conditional terminators.
+  EXPECT_TRUE(verifyVPlanIsValid(Plan));
 }
 
 TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
@@ -263,14 +257,8 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
-#if GTEST_HAS_STREAM_REDIRECTION
-  ::testing::internal::CaptureStderr();
-#endif
-  EXPECT_FALSE(verifyVPlanIsValid(Plan));
-#if GTEST_HAS_STREAM_REDIRECTION
-  EXPECT_STREQ("Multiple instances of the same successor.\n",
-               ::testing::internal::GetCapturedStderr().c_str());
-#endif
+  // Duplicate successors are allowed for blocks with conditional terminators.
+  EXPECT_TRUE(verifyVPlanIsValid(Plan));
 }
 
 TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
