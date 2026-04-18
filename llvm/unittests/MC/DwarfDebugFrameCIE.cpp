@@ -77,13 +77,11 @@ public:
     StreamerContext Res;
     Res.Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(),
                                           /*MSTI=*/nullptr);
-    Res.MOFI.reset(
-        TheTarget->createMCObjectFileInfo(*Res.Ctx, /*PIC=*/false));
+    Res.MOFI.reset(TheTarget->createMCObjectFileInfo(*Res.Ctx, /*PIC=*/false));
     Res.Ctx->setObjectFileInfo(Res.MOFI.get());
 
     Res.MII.reset(TheTarget->createMCInstrInfo());
-    MCCodeEmitter *MCE =
-        TheTarget->createMCCodeEmitter(*Res.MII, *Res.Ctx);
+    MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*Res.MII, *Res.Ctx);
     MCAsmBackend *MAB =
         TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
     std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);
@@ -138,8 +136,8 @@ TEST_F(DwarfDebugFrameCIE, DistinctReturnColumnsGetDistinctCIEs) {
   C.Streamer->finish();
 
   // Parse the emitted ELF and find .debug_frame.
-  std::unique_ptr<MemoryBuffer> MB =
-      MemoryBuffer::getMemBuffer(ObjContents.str(), "", /*RequiresNullTerminator=*/false);
+  std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
+      ObjContents.str(), "", /*RequiresNullTerminator=*/false);
   auto BinOrErr = llvm::object::createBinary(MB->getMemBufferRef());
   ASSERT_TRUE(static_cast<bool>(BinOrErr));
   auto *ELF = dyn_cast<llvm::object::ELFObjectFileBase>(&**BinOrErr);
