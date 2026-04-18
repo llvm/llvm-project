@@ -9862,7 +9862,7 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
   if (RHSOp0->getType()->getScalarType()->isIntOrPtrTy()) {
     CmpPredicate LHSPred;
     Value *LHSOp0, *LHSOp1;
-    if (match(LHS, m_IcmpLike(LHSPred, m_Value(LHSOp0), m_Value(LHSOp1))))
+    if (match(LHS, m_ICmpLike(LHSPred, m_Value(LHSOp0), m_Value(LHSOp1))))
       return isImpliedCondICmps(LHSPred, LHSOp0, LHSOp1, RHSPred, RHSOp0,
                                 RHSOp1, DL, LHSIsTrue);
   } else {
@@ -9904,7 +9904,7 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
 
   CmpPredicate RHSPred;
   Value *RHSOp0, *RHSOp1;
-  if (match(RHS, m_IcmpLike(RHSPred, m_Value(RHSOp0), m_Value(RHSOp1)))) {
+  if (match(RHS, m_ICmpLike(RHSPred, m_Value(RHSOp0), m_Value(RHSOp1)))) {
     if (auto Implied = isImpliedCondition(LHS, RHSPred, RHSOp0, RHSOp1, DL,
                                           LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;

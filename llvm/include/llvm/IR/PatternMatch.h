@@ -2314,12 +2314,12 @@ template <typename OpTy> inline auto m_ZExtOrTruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExt(Op), m_Trunc(Op), Op);
 }
 
-template <typename LHS_t, typename RHS_t> struct IcmpLike_match {
+template <typename LHS_t, typename RHS_t> struct ICmpLike_match {
   CmpPredicate &Pred;
   LHS_t L;
   RHS_t R;
 
-  IcmpLike_match(CmpPredicate &P, const LHS_t &Left, const RHS_t &Right)
+  ICmpLike_match(CmpPredicate &P, const LHS_t &Left, const RHS_t &Right)
       : Pred(P), L(Left), R(Right) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
@@ -2338,9 +2338,9 @@ template <typename LHS_t, typename RHS_t> struct IcmpLike_match {
 };
 
 template <typename LHS, typename RHS>
-inline IcmpLike_match<LHS, RHS> m_IcmpLike(CmpPredicate &Pred, const LHS &L,
+inline ICmpLike_match<LHS, RHS> m_ICmpLike(CmpPredicate &Pred, const LHS &L,
                                            const RHS &R) {
-  return IcmpLike_match<LHS, RHS>(Pred, L, R);
+  return ICmpLike_match<LHS, RHS>(Pred, L, R);
 }
 
 template <typename CondTy, typename LTy, typename RTy> struct SelectLike_match {
