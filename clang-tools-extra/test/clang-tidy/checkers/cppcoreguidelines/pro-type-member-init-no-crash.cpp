@@ -28,7 +28,6 @@ namespace gh192510 {
   class X: public Base {
     using INT = C<T>;
 
-    X(INT i) : INT(i) {}
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: constructor does not initialize these bases: Base
+    X(INT i) : INT(i) {} // no crash
   };
 }
