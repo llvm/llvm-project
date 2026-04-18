@@ -130,6 +130,7 @@ static void applyPatterns(Region &region,
                           const FrozenRewritePatternSet &patterns,
                           ArrayRef<ReductionNode::Range> rangeToApply) {
   size_t rangeIndex = 0;
+  std::vector<Operation *> opsInRange;
   for (const auto &op : enumerate(region.getOps())) {
     int index = op.index();
     if (rangeIndex < rangeToApply.size() &&
@@ -137,13 +138,16 @@ static void applyPatterns(Region &region,
       ++rangeIndex;
     if (rangeIndex < rangeToApply.size() &&
         index >= rangeToApply[rangeIndex].first)
-      // `applyOpPatternsGreedily` with folding returns whether the op is
-      // converted. Omit it because we don't have expectation this reduction
-      // will be success or not.
-      (void)applyOpPatternsGreedily(&op.value(), patterns,
-                                    GreedyRewriteConfig().setStrictness(
-                                        GreedyRewriteStrictness::ExistingOps));
+      opsInRange.push_back(&op.value());
   }
+
+  for (auto *op : opsInRange)
+    // `applyOpPatternsGreedily` with folding returns whether the op is
+    // converted. Omit it because we don't have expectation this reduction
+    // will be success or not.
+    (void)applyOpPatternsGreedily(op, patterns,
+                                  GreedyRewriteConfig().setStrictness(
+                                      GreedyRewriteStrictness::ExistingOps));
 }
 
 template <typename IteratorType>
