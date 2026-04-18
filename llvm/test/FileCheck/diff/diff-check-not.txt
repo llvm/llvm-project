@@ -1,0 +1,23 @@
+; RUN: split-file %s %t
+; RUN: not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DIFF
+
+;--- input.txt
+START
+This is a forbidden string
+END
+
+;--- check.txt
+START
+; CHECK-NOT: forbidden string
+END
+
+; DIFF:      --- {{.*}}check.txt
+; DIFF-NEXT: +++ {{.*}}input.txt
+; DIFF-NEXT:  @@ -2 +2 @@
+; DIFF-NEXT:  START
+; DIFF-NEXT: -forbidden string
+; DIFF-NEXT: +This is a forbidden string
+; DIFF-NEXT:  END
+; DIFF-EMPTY:
+; DIFF-NEXT: FileCheck: Found 1 unique textual mismatch.

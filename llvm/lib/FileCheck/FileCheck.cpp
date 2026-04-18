@@ -2032,6 +2032,11 @@ bool FileCheck::readCheckFile(
   return false;
 }
 
+static bool printDiff(DiffFormatType Mode, const Pattern &Pat,
+                      StringRef ActualLine, SourceMgr &SM,
+                      std::vector<FileCheckDiag> *Diags, bool &HeaderPrinted,
+                      unsigned OverwriteActualLine = 0);
+
 /// Returns either (1) \c ErrorSuccess if there was no error or (2)
 /// \c ErrorReported if an error was reported, such as an unexpected match.
 static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
@@ -2061,6 +2066,28 @@ static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
   SMRange MatchRange = ProcessMatchResult(MatchTy, SM, Loc, Pat.getCheckTy(),
                                           Buffer, MatchResult.TheMatch->Pos,
                                           MatchResult.TheMatch->Len, Diags);
+
+  if (!ExpectedMatch && Req.DiffFormat != DiffFormatType::None) {
+    size_t Pos = MatchResult.TheMatch->Pos;
+    // Extract full line containing the match
+    size_t LineStart = Buffer.rfind('\n', Pos);
+    LineStart = (LineStart == StringRef::npos) ? 0 : LineStart + 1;
+
+    size_t LineEnd = Buffer.find('\n', Pos);
+    LineEnd = (LineEnd == StringRef::npos) ? Buffer.size() : LineEnd;
+
+    StringRef ActualLine = Buffer.substr(LineStart, LineEnd - LineStart);
+
+    bool DummyHeaderPrinted = false;
+    printDiff(Req.DiffFormat, Pat, ActualLine, const_cast<SourceMgr &>(SM),
+              Diags, DummyHeaderPrinted);
+
+    handleAllErrors(std::move(MatchResult.TheError),
+                    [](const ErrorInfoBase &) {});
+
+    return ErrorReported::reportedOrSuccess(true);
+  }
+
   if (Diags) {
     Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, Diags, Req);
     Pat.printVariableDefs(SM, MatchTy, Diags);
@@ -2895,11 +2922,29 @@ static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
   }
 }
 
-static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
+static bool printDiff(DiffFormatType Mode, const Pattern &Pat,
                       StringRef ActualLine, SourceMgr &SM,
-                      std::vector<FileCheckDiag> *Diags,
-                      unsigned OverwriteActualLine = 0) {
-  SMLoc PatternLoc = CheckStr.Pat.getLoc();
+                      std::vector<FileCheckDiag> *Diags, bool &HeaderPrinted,
+                      unsigned OverwriteActualLine) {
+  // Print headers once per file.
+  if (!HeaderPrinted) {
+    StringRef CheckFile =
+        SM.getMemoryBuffer(SM.getMainFileID())->getBufferIdentifier();
+
+    unsigned InputBufID =
+        SM.FindBufferContainingLoc(SMLoc::getFromPointer(ActualLine.data()));
+    StringRef InputFile = SM.getMemoryBuffer(InputBufID)->getBufferIdentifier();
+
+    auto &OS = llvm::errs();
+    OS.changeColor(raw_ostream::WHITE, true);
+    OS << "--- " << CheckFile << "\n";
+    OS << "+++ " << InputFile << "\n";
+    OS.resetColor();
+
+    HeaderPrinted = true;
+  }
+
+  SMLoc PatternLoc = Pat.getLoc();
   unsigned ExpectedLineNo = SM.getLineAndColumn(PatternLoc).first;
   const char *PatPtr = PatternLoc.getPointer();
   StringRef ExpectedLine = StringRef(PatPtr).split('\n').first.rtrim();
@@ -2909,7 +2954,7 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
       Mode == DiffFormatType::UnifiedNoSubstitution)
     ExpectedText = ExpectedLine.str();
   else
-    ExpectedText = CheckStr.Pat.getSubstitutedRegex(ExpectedLine);
+    ExpectedText = Pat.getSubstitutedRegex(ExpectedLine);
 
   // Resolve the Actual (Input) line number.
   // Priority: 1. OverwriteActualLine (Found via Fuzzy match)
@@ -2987,7 +3032,8 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
     TargetLineNo = SM.getLineAndColumn(CurrentLoc).first;
   }
 
-  printDiff(Req.DiffFormat, CheckStr, TargetLine, SM, Diags, TargetLineNo);
+  printDiff(Req.DiffFormat, CheckStr.Pat, TargetLine, SM, Diags, HeaderPrinted,
+            TargetLineNo);
   TotalMismatches++;
 
   // Advance CheckRegion past the current line to recover for the next CHECK.
@@ -3043,12 +3089,25 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
     for (; i != j; ++i) {
       const FileCheckString &CheckStr = CheckStrings[i];
 
+      size_t OldDiagSize = Diags ? Diags->size() : 0;
+
       bool IsStrict = CheckStr.Pat.getCheckTy() == Check::CheckNext ||
                       CheckStr.Pat.getCheckTy() == Check::CheckEmpty;
 
       size_t MatchLen = 0;
       size_t MatchPos =
           CheckStr.Check(SM, CheckRegion, false, MatchLen, Req, Diags);
+
+      if (Diags && Diags->size() > OldDiagSize) {
+        // Check if the last diagnostic was a forbidden string match
+        if (Diags->back().MatchTy == FileCheckDiag::MatchFoundButExcluded) {
+          ChecksFailed = true;
+          TotalMismatches++;
+          HeaderPrinted = true;
+          i = j;
+          break;
+        }
+      }
 
       // Handle failure
       if (MatchPos == StringRef::npos) {
