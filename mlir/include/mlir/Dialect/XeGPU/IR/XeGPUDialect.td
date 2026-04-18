@@ -38,10 +38,6 @@ def XeGPU_Dialect : Dialect {
     let useDefaultAttributePrinterParser = true;
 
     let extraClassDeclaration = [{
-      /// Checks if the given shape can be evenly distributed based on the layout
-      /// and data factors provided by the LayoutAttr.
-      static bool isEvenlyDistributable(llvm::ArrayRef<int64_t> shape, xegpu::DistributeLayoutAttr attr);
-
       /// Checks if the given memref type represents shared local memory (SLM).
       /// Returns true if the memory space is address space 3, MemorySpace::SLM,
       /// xevm::AddrSpace::SHARED, or a GPU workgroup memory address space.
