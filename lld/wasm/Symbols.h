@@ -62,6 +62,7 @@ public:
     LazyKind,
     SharedFunctionKind,
     SharedDataKind,
+    SharedTagKind,
   };
 
   Kind kind() const { return symbolKind; }
@@ -77,7 +78,8 @@ public:
 
   bool isLazy() const { return symbolKind == LazyKind; }
   bool isShared() const {
-    return symbolKind == SharedFunctionKind || symbolKind == SharedDataKind;
+    return symbolKind == SharedFunctionKind || symbolKind == SharedDataKind ||
+           symbolKind == SharedTagKind;
   }
 
   bool isLocal() const;
@@ -461,7 +463,8 @@ public:
 class TagSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
-    return s->kind() == DefinedTagKind || s->kind() == UndefinedTagKind;
+    return s->kind() == DefinedTagKind || s->kind() == UndefinedTagKind ||
+           s->kind() == SharedTagKind;
   }
 
   // Get/set the tag index
@@ -499,6 +502,15 @@ public:
   }
 
   static bool classof(const Symbol *s) { return s->kind() == UndefinedTagKind; }
+};
+
+class SharedTagSymbol : public TagSymbol {
+public:
+  SharedTagSymbol(StringRef name, uint32_t flags, InputFile *f,
+                  const WasmSignature *sig)
+      : TagSymbol(name, SharedTagKind, flags, f, sig) {}
+
+  static bool classof(const Symbol *s) { return s->kind() == SharedTagKind; }
 };
 
 class SharedFunctionSymbol : public FunctionSymbol {
@@ -553,6 +565,7 @@ union SymbolUnion {
   alignas(UndefinedTable) char j[sizeof(UndefinedTable)];
   alignas(SectionSymbol) char k[sizeof(SectionSymbol)];
   alignas(SharedFunctionSymbol) char l[sizeof(SharedFunctionSymbol)];
+  alignas(SharedTagSymbol) char m[sizeof(SharedTagSymbol)];
 };
 
 // It is important to keep the size of SymbolUnion small for performance and

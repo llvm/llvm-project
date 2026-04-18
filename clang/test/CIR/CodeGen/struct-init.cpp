@@ -60,6 +60,19 @@ StructWithFieldInitFromConst swfifc2 = { 2 };
 // LLVM: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
 // OGCG: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
 
+
+struct StructWithBoolField {
+  int a;
+  bool b;
+  int c;
+};
+
+StructWithBoolField sbf = {1, true, 3};
+
+// CIR: cir.global external @sbf = #cir.const_record<{#cir.int<1> : !s32i, #true, #cir.int<3> : !s32i}> : !rec_StructWithBoolField
+// LLVM: @sbf = global %struct.StructWithBoolField { i32 1, i8 1, i32 3 }, align 4
+// OGCG: @sbf = global %struct.StructWithBoolField { i32 1, i8 1, i32 3 }, align 4
+
 void init() {
   S s1 = {1, 2, 3};
   S s2 = {4, 5};
@@ -151,17 +164,17 @@ void init_expr(int a, int b, int c) {
 // CIR:   %[[S_A:.*]] = cir.get_member %[[S]][0] {name = "a"}
 // CIR:   %[[A:.*]] = cir.load{{.*}} %[[A_PTR]]
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
-// CIR:   %[[A_PLUS_ONE:.*]] = cir.binop(add, %[[A]], %[[ONE]])
+// CIR:   %[[A_PLUS_ONE:.*]] = cir.add nsw %[[A]], %[[ONE]]
 // CIR:   cir.store{{.*}} %[[A_PLUS_ONE]], %[[S_A]]
 // CIR:   %[[S_B:.*]] = cir.get_member %[[S]][1] {name = "b"}
 // CIR:   %[[B:.*]] = cir.load{{.*}} %[[B_PTR]]
 // CIR:   %[[TWO:.*]] = cir.const #cir.int<2>
-// CIR:   %[[B_PLUS_TWO:.*]] = cir.binop(add, %[[B]], %[[TWO]]) nsw : !s32i
+// CIR:   %[[B_PLUS_TWO:.*]] = cir.add nsw %[[B]], %[[TWO]] : !s32i
 // CIR:   cir.store{{.*}} %[[B_PLUS_TWO]], %[[S_B]]
 // CIR:   %[[S_C:.*]] = cir.get_member %[[S]][2] {name = "c"}
 // CIR:   %[[C:.*]] = cir.load{{.*}} %[[C_PTR]]
 // CIR:   %[[THREE:.*]] = cir.const #cir.int<3>
-// CIR:   %[[C_PLUS_THREE:.*]] = cir.binop(add, %[[C]], %[[THREE]]) nsw : !s32i
+// CIR:   %[[C_PLUS_THREE:.*]] = cir.add nsw %[[C]], %[[THREE]] : !s32i
 // CIR:   cir.store{{.*}} %[[C_PLUS_THREE]], %[[S_C]]
 // CIR:   cir.return
 

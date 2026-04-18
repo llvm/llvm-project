@@ -6,24 +6,30 @@ set(ORC_RT_HEADERS
     orc-rt-c/orc-rt.h
     orc-rt/AllocAction.h
     orc-rt/BitmaskEnum.h
+    orc-rt/BootstrapInfo.h
     orc-rt/Compiler.h
+    orc-rt/SimpleSymbolTable.h
     orc-rt/Error.h
     orc-rt/ExecutorAddress.h
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
+    orc-rt/LockedAccess.h
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
     orc-rt/QueueingTaskDispatcher.h
-    orc-rt/ResourceManager.h
     orc-rt/RTTI.h
     orc-rt/ScopeExit.h
+    orc-rt/Service.h
     orc-rt/Session.h
     orc-rt/SimpleNativeMemoryMap.h
     orc-rt/SimplePackedSerialization.h
     orc-rt/SPSAllocAction.h
+    orc-rt/sps-ci/AllSPSCI.h
+    orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h
     orc-rt/SPSMemoryFlags.h
     orc-rt/SPSWrapperFunction.h
     orc-rt/SPSWrapperFunctionBuffer.h
+    orc-rt/TaskGroup.h
     orc-rt/TaskDispatcher.h
     orc-rt/ThreadPoolTaskDispatcher.h
     orc-rt/WrapperFunction.h

@@ -47,6 +47,8 @@ using namespace llvm;
 
 namespace opts {
 
+extern cl::opt<bool> LargeCodeModel;
+
 static cl::opt<bool>
     NoHugePages("no-huge-pages",
                 cl::desc("use regular size pages for code alignment"),
@@ -155,6 +157,9 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       STI(std::move(STI)), InstPrinter(std::move(InstPrinter)),
       MIA(std::move(MIA)), MIB(std::move(MIB)), MRI(std::move(MRI)),
       DisAsm(std::move(DisAsm)), Logger(Logger), InitialDynoStats(isAArch64()) {
+  // createMCAsmInfo stored a pointer to a local MCTargetOptions in MCAsmInfo.
+  // Update it to point to our member that will outlive MCAsmInfo.
+  const_cast<MCAsmInfo *>(this->AsmInfo.get())->setTargetOptions(MCOptions);
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
@@ -256,16 +261,6 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(*Ctx, IsPIC));
   Ctx->setObjectFileInfo(MOFI.get());
-  // We do not support X86 Large code model. Change this in the future.
-  bool Large = false;
-  if (TheTriple.getArch() == llvm::Triple::aarch64)
-    Large = true;
-  unsigned LSDAEncoding =
-      Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
-  if (IsPIC) {
-    LSDAEncoding = dwarf::DW_EH_PE_pcrel |
-                   (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
-  }
 
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, *Ctx));
@@ -303,7 +298,13 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
       std::move(InstructionPrinter), std::move(MIA), nullptr, std::move(MRI),
       std::move(DisAsm), Logger);
 
-  BC->LSDAEncoding = LSDAEncoding;
+  // Use large code model encoding for AArch64 (always). For X86, this is
+  // updated after detecting .ltext if unset.
+  // Otherwise allow the user to force it via `--large-code-model` flag.
+  if (TheTriple.getArch() == llvm::Triple::aarch64)
+    BC->UseLargeCodeModel = true;
+  else if (opts::LargeCodeModel.getNumOccurrences())
+    BC->UseLargeCodeModel = opts::LargeCodeModel;
 
   BC->MAB = std::unique_ptr<MCAsmBackend>(
       BC->TheTarget->createMCAsmBackend(*BC->STI, *BC->MRI, MCTargetOptions()));
@@ -314,6 +315,8 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   BC->SymbolicDisAsm = std::unique_ptr<MCDisassembler>(
       BC->TheTarget->createMCDisassembler(*BC->STI, *BC->Ctx));
+
+  BC->updateLSDAEncoding();
 
   if (!BC->SymbolicDisAsm)
     return createStringError(
@@ -388,6 +391,14 @@ bool BinaryContext::validateHoles() const {
     }
   }
   return Valid;
+}
+
+void BinaryContext::updateLSDAEncoding() {
+  LSDAEncoding = HasFixedLoadAddress
+                     ? dwarf::DW_EH_PE_absptr
+                     : (dwarf::DW_EH_PE_pcrel |
+                        (this->UseLargeCodeModel ? dwarf::DW_EH_PE_sdata8
+                                                 : dwarf::DW_EH_PE_sdata4));
 }
 
 void BinaryContext::updateObjectNesting(BinaryDataMapType::iterator GAI) {
@@ -1870,7 +1881,7 @@ void BinaryContext::preprocessDebugInfo() {
   uint64_t NumMissingDWOs = 0;
 
   // Populate MCContext with DWARF files from all units.
-  StringRef GlobalPrefix = AsmInfo->getPrivateGlobalPrefix();
+  StringRef GlobalPrefix = AsmInfo->getInternalSymbolPrefix();
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     const uint64_t CUID = CU->getOffset();
     DwarfLineTable &BinaryLineTable = getDwarfLineTable(CUID);
@@ -2039,33 +2050,38 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
   }
 }
 
-MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
+MarkerSymType BinaryContext::getMarkerType(unsigned SymbolType,
+                                           uint64_t SymbolSize,
+                                           StringRef SymbolName) const {
   // For aarch64 and riscv, the ABI defines mapping symbols so we identify data
   // in the code section (see IHI0056B). $x identifies a symbol starting code or
   // the end of a data chunk inside code, $d identifies start of data.
-  if (isX86() || ELFSymbolRef(Symbol).getSize())
+  if (isX86() || SymbolSize)
     return MarkerSymType::NONE;
 
-  Expected<StringRef> NameOrError = Symbol.getName();
-  Expected<object::SymbolRef::Type> TypeOrError = Symbol.getType();
-
-  if (!TypeOrError || !NameOrError)
+  if (SymbolType != ELF::STT_NOTYPE)
     return MarkerSymType::NONE;
 
-  if (*TypeOrError != SymbolRef::ST_Unknown)
-    return MarkerSymType::NONE;
-
-  if (*NameOrError == "$x" || NameOrError->starts_with("$x."))
+  if (SymbolName == "$x" || SymbolName.starts_with("$x."))
     return MarkerSymType::CODE;
 
   // $x<ISA>
-  if (isRISCV() && NameOrError->starts_with("$x"))
+  if (isRISCV() && SymbolName.starts_with("$x"))
     return MarkerSymType::CODE;
 
-  if (*NameOrError == "$d" || NameOrError->starts_with("$d."))
+  if (SymbolName == "$d" || SymbolName.starts_with("$d."))
     return MarkerSymType::DATA;
 
   return MarkerSymType::NONE;
+}
+
+MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
+  Expected<StringRef> NameOrError = Symbol.getName();
+  if (!NameOrError)
+    return MarkerSymType::NONE;
+
+  return getMarkerType(ELFSymbolRef(Symbol).getELFType(),
+                       ELFSymbolRef(Symbol).getSize(), *NameOrError);
 }
 
 bool BinaryContext::isMarker(const SymbolRef &Symbol) const {
@@ -2120,8 +2136,7 @@ ArrayRef<uint8_t> BinaryContext::extractData(uint64_t Address,
 
 void BinaryContext::printData(raw_ostream &OS, ArrayRef<uint8_t> Data,
                               uint64_t Offset) const {
-  DataExtractor DE(Data, AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Data, AsmInfo->isLittleEndian());
   uint64_t DataOffset = 0;
   while (DataOffset + 4 <= Data.size()) {
     OS << format("    %08" PRIx64 ": \t.word\t0x", Offset + DataOffset);
@@ -2417,8 +2432,7 @@ ErrorOr<uint64_t> BinaryContext::getUnsignedValueAtAddress(uint64_t Address,
   if (Section->isVirtual())
     return 0;
 
-  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian());
   auto ValueOffset = static_cast<uint64_t>(Address - Section->getAddress());
   return DE.getUnsigned(&ValueOffset, Size);
 }
@@ -2432,8 +2446,7 @@ ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
   if (Section->isVirtual())
     return 0;
 
-  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian());
   auto ValueOffset = static_cast<uint64_t>(Address - Section->getAddress());
   return DE.getSigned(&ValueOffset, Size);
 }
@@ -2518,8 +2531,10 @@ BinaryFunction *BinaryContext::getFunctionForSymbol(const MCSymbol *Symbol,
     return nullptr;
 
   BinaryFunction *BF = BFI->second;
-  if (EntryDesc)
-    *EntryDesc = BF->getEntryIDForSymbol(Symbol);
+  if (EntryDesc) {
+    std::optional<uint64_t> EntryID = BF->getEntryIDForSymbol(Symbol);
+    *EntryDesc = EntryID.value_or(0);
+  }
 
   return BF;
 }
@@ -2621,7 +2636,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
       *TheTriple, *LocalCtx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
       std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI));
 
-  Streamer->initSections(false, *STI);
+  Streamer->initSections(*STI);
 
   MCSection *Section = MCEInstance.LocalMOFI->getTextSection();
   Section->setHasInstructions(true);

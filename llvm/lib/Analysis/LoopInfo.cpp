@@ -38,6 +38,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/GenericLoopInfoImpl.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -196,9 +197,8 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 /// Get the latch condition instruction.
 ICmpInst *Loop::getLatchCmpInst() const {
   if (BasicBlock *Latch = getLoopLatch())
-    if (BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator()))
-      if (BI->isConditional())
-        return dyn_cast<ICmpInst>(BI->getCondition());
+    if (CondBrInst *BI = dyn_cast_or_null<CondBrInst>(Latch->getTerminator()))
+      return dyn_cast<ICmpInst>(BI->getCondition());
 
   return nullptr;
 }
@@ -256,8 +256,7 @@ ICmpInst::Predicate Loop::LoopBounds::getCanonicalPredicate() const {
   BasicBlock *Latch = L.getLoopLatch();
   assert(Latch && "Expecting valid latch");
 
-  BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator());
-  assert(BI && BI->isConditional() && "Expecting conditional latch branch");
+  CondBrInst *BI = cast<CondBrInst>(Latch->getTerminator());
 
   ICmpInst *LatchCmpInst = dyn_cast<ICmpInst>(BI->getCondition());
   assert(LatchCmpInst &&
@@ -387,7 +386,7 @@ bool Loop::isAuxiliaryInductionVariable(PHINode &AuxIndVar,
   return SE.isLoopInvariant(IndDesc.getStep(), this);
 }
 
-BranchInst *Loop::getLoopGuardBranch() const {
+CondBrInst *Loop::getLoopGuardBranch() const {
   if (!isLoopSimplifyForm())
     return nullptr;
 
@@ -411,8 +410,8 @@ BranchInst *Loop::getLoopGuardBranch() const {
 
   assert(GuardBB->getTerminator() && "Expecting valid guard terminator");
 
-  BranchInst *GuardBI = dyn_cast<BranchInst>(GuardBB->getTerminator());
-  if (!GuardBI || GuardBI->isUnconditional())
+  CondBrInst *GuardBI = dyn_cast<CondBrInst>(GuardBB->getTerminator());
+  if (!GuardBI)
     return nullptr;
 
   BasicBlock *GuardOtherSucc = (GuardBI->getSuccessor(0) == Preheader)
@@ -1285,8 +1284,6 @@ PreservedAnalyses LoopVerifierPass::run(Function &F,
 /// visit blocks during the initial traversal.
 void LoopBlocksDFS::perform(const LoopInfo *LI) {
   LoopBlocksTraversal Traversal(*this, LI);
-  for (LoopBlocksTraversal::POTIterator POI = Traversal.begin(),
-                                        POE = Traversal.end();
-       POI != POE; ++POI)
+  for ([[maybe_unused]] BasicBlock *BB : Traversal)
     ;
 }

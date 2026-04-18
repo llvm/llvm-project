@@ -96,72 +96,29 @@ genCoordinates(OpBuilder &builder, Location loc,
   return coordinates;
 }
 
-// Checks if the given shape can be evenly distributed based on the layout
-// and data factors provided by the LayoutAttr.
-bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
-                                         xegpu::DistributeLayoutAttr attr) {
-  assert(attr && "Layout attribute is missing.");
+static SmallVector<SmallVector<int64_t>> genStaticCoordinates(
+    llvm::ArrayRef<int64_t> canonicalIds, llvm::ArrayRef<int64_t> layout,
+    llvm::ArrayRef<int64_t> subShape, llvm::ArrayRef<int64_t> shape) {
+  // Compute distribution unit shape (clamped to srcShape).
+  SmallVector<int64_t> distUnitShape(shape.size());
+  for (size_t i = 0; i < shape.size(); ++i)
+    distUnitShape[i] = std::min(shape[i], layout[i] * subShape[i]);
 
-  // Checks whether the given shape can be evenly distributed using the
-  // specified layout and data attributes. If successful, it returns the work
-  // size for each compute unit; otherwise, it returns `std::nullopt`. The work
-  // size per compute unit is calculated as follows:
-  //   - If `data` is null: newShape[i] = shape[i] / layout[i]
-  //   - If `data` is not null: newShape[i] = data[i]
-  // When round-robin distribution (`rr`) is enabled, `shape[i]` can be
-  // smaller than `layout[i] * data[i]`, allowing multiple compute units to
-  // share the data.
-  auto tryDistribute = [&](llvm::ArrayRef<int64_t> shape,
-                           SmallVector<int64_t> layout,
-                           SmallVector<int64_t> data,
-                           bool rr = true) -> optional<SmallVector<int64_t>> {
-    llvm::SmallVector<int64_t> newShape(shape);
-    if (layout.size()) {
-      if (layout.size() != shape.size())
-        return std::nullopt;
-      auto ratio = computeShapeRatio(shape, layout);
-      if (ratio.has_value()) {
-        newShape = ratio.value();
-      } else if (!rr || !computeShapeRatio(layout, shape).has_value()) {
-        return std::nullopt;
-      }
-      // Round-robin case: continue with original newShape
-    }
+  // Compute local offset of this ID within a distribution unit.
+  SmallVector<int64_t> localOffset(shape.size());
+  for (size_t i = 0; i < shape.size(); ++i)
+    localOffset[i] = canonicalIds[i] * subShape[i];
 
-    if (data.size()) {
-      if (data.size() != shape.size())
-        return std::nullopt;
-      auto ratio = computeShapeRatio(newShape, data);
-      if (!ratio.has_value() && rr)
-        ratio = computeShapeRatio(data, newShape);
-      if (!ratio.has_value())
-        return std::nullopt;
-
-      // if data is not null, we always return it for next phase.
-      newShape = data;
-    }
-    return newShape;
-  };
-
-  // check the sgLayout and sgData
-  auto maybeSgShape = tryDistribute(shape, attr.getEffectiveSgLayoutAsInt(),
-                                    attr.getEffectiveSgDataAsInt());
-  if (!maybeSgShape)
-    return false;
-  auto sgShape = maybeSgShape.value();
-
-  // check InstData, it neither have layout nor need round-robin
-  auto maybeInstShape =
-      tryDistribute(sgShape, {}, attr.getEffectiveInstDataAsInt(), false);
-  if (!maybeInstShape)
-    return false;
-  auto instShape = maybeInstShape.value();
-
-  // check LaneLayout and LaneData
-  auto maybeLaneShape =
-      tryDistribute(instShape, attr.getEffectiveLaneLayoutAsInt(),
-                    attr.getEffectiveLaneDataAsInt(), false);
-  return maybeLaneShape.has_value();
+  // Enumerate all distribution units and compute coordinates.
+  SmallVector<SmallVector<int64_t>> coordinates;
+  for (SmallVector<int64_t> unitOffs :
+       StaticTileOffsetRange(shape, distUnitShape)) {
+    SmallVector<int64_t> coord(shape.size());
+    for (size_t i = 0; i < shape.size(); ++i)
+      coord[i] = (unitOffs[i] + localOffset[i]) % shape[i];
+    coordinates.push_back(coord);
+  }
+  return coordinates;
 }
 
 //===----------------------------------------------------------------------===//
@@ -181,28 +138,6 @@ BlockTensorDescAttr BlockTensorDescAttr::get(mlir::MLIRContext *context,
 bool BlockTensorDescAttr::hasDefaultsOnly() {
   return getMemorySpace().getValue() == xegpu::MemorySpace::Global &&
          getArrayLength().getInt() == 1 && getBoundaryCheck().getValue();
-}
-
-//===----------------------------------------------------------------------===//
-// XeGPU_ScatterTensorDescAttr
-//===----------------------------------------------------------------------===//
-ScatterTensorDescAttr
-ScatterTensorDescAttr::get(mlir::MLIRContext *context,
-                           xegpu::MemorySpace memory_space, int chunk_size) {
-  auto scopeAttr = MemorySpaceAttr::get(context, memory_space);
-  auto chunkSizeAttr =
-      IntegerAttr::get(IntegerType::get(context, 64), chunk_size);
-  return Base::get(context, scopeAttr, chunkSizeAttr);
-}
-
-LogicalResult ScatterTensorDescAttr::verify(
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    MemorySpaceAttr memory_space, IntegerAttr chunk_size) {
-  int64_t chunkSize = chunk_size.getInt();
-  if (chunkSize <= 0)
-    return emitError() << "invalid chunk size";
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -238,25 +173,17 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                        << lane_layout.size();
   }
 
-  // sg_data is optional for Workgroup layout, but its presence requires
-  // sg_layout.
-  if (sg_data) {
-    if (!sg_layout)
-      return emitError() << "expected sg_layout being used with sg_data";
-    if (sg_data.size() != sg_layout.size())
-      return emitError()
-             << "expected sg_data and sg_layout to have the same rank";
-  }
+  if ((sg_layout && !sg_data) || (!sg_layout && sg_data))
+    return emitError() << "sg_layout and sg_data must be used together";
+  if (sg_layout && sg_data && sg_layout.size() != sg_data.size())
+    return emitError()
+           << "expected sg_data and sg_layout to have the same rank";
 
-  // lane_data is optional for Subgroup layout, but its presence requires
-  // lane_layout.
-  if (lane_data) {
-    if (!lane_layout)
-      return emitError() << "expected lane_layout being used with lane_data";
-    if (lane_data.size() != lane_layout.size())
-      return emitError()
-             << "expected lane_data and lane_layout to have the same rank";
-  }
+  if ((lane_layout && !lane_data) || (!lane_layout && lane_data))
+    return emitError() << "lane_layout and lane_data must be used together";
+  if (lane_layout && lane_data && lane_layout.size() != lane_data.size())
+    return emitError()
+           << "expected lane_data and lane_layout to have the same rank";
 
   if (order) {
     if (!sg_layout && !lane_layout)
@@ -373,12 +300,8 @@ LayoutAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
   } else {
     return failure();
   }
-  if (subShape.empty()) {
-    if (auto derivedShape = computeShapeRatio(shape, layout))
-      subShape = derivedShape.value();
-    else
-      return failure();
-  }
+  assert(!subShape.empty() && "sgdata or lanedata cannot be empty for "
+                              "distributed coordinates computation");
 
   // delinearize Ids
   auto maybeIds = delinearizeId(builder, loc, linearId);
@@ -394,6 +317,42 @@ bool LayoutAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
     return false;
 
   return *this == dyn_cast<xegpu::LayoutAttr>(other);
+}
+
+/// Implements DistributeLayoutAttr::computeStaticDistributedCoords to
+/// compute multi-dimensional offsets for a given linear ID when distributed by
+/// LayoutAttr.
+SmallVector<SmallVector<int64_t>>
+LayoutAttr::computeStaticDistributedCoords(int64_t linearId,
+                                           ArrayRef<int64_t> shape) {
+  SmallVector<int64_t> layoutVec;
+  SmallVector<int64_t> subShape;
+  SmallVector<int64_t> instData;
+  if (isForWorkgroup()) {
+    layoutVec = getEffectiveSgLayoutAsInt();
+    subShape = getEffectiveSgDataAsInt();
+  } else if (isForSubgroup()) {
+    instData = getEffectiveInstDataAsInt();
+    layoutVec = getEffectiveLaneLayoutAsInt();
+    subShape = getEffectiveLaneDataAsInt();
+  }
+  if (!instData.empty()) {
+    linearId = 0;
+    subShape = instData;
+  }
+  assert(!subShape.empty() && "sgdata or lanedata cannot be empty");
+
+  // Delinearize the linear ID using the order attribute.
+  SmallVector<int64_t> order = getEffectiveOrderAsInt();
+  SmallVector<int64_t> delinearizedId(layoutVec.size());
+  int64_t remaining = linearId;
+  for (size_t i = 0; i < order.size(); ++i) {
+    int64_t dimIdx = order[i];
+    delinearizedId[dimIdx] = remaining % layoutVec[dimIdx];
+    remaining = remaining / layoutVec[dimIdx];
+  }
+
+  return genStaticCoordinates(delinearizedId, layoutVec, subShape, shape);
 }
 
 // set the layout for unit dims: sg_data, inst_data and lane_data to 1
@@ -501,6 +460,56 @@ DistributeLayoutAttr LayoutAttr::setDimData(int64_t dim, int64_t sgData,
       getOrder());
 }
 
+// Derive a new layout by removing dimensions.
+// `dimGroup` specifies a group of dimensions to be removed in the derived
+// layout.
+DistributeLayoutAttr LayoutAttr::dropDims(SmallVector<int64_t> dimGroup) {
+
+  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgData = getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneLayout = getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
+  SmallVector<int64_t> origOrder = getEffectiveOrderAsInt();
+
+  SmallVector<int64_t> sortedDimGroup = dimGroup;
+  llvm::sort(sortedDimGroup);
+
+  for (auto dimIdx : llvm::reverse(sortedDimGroup)) {
+    if (!sgLayout.empty()) {
+      sgLayout.erase(sgLayout.begin() + dimIdx);
+      sgData.erase(sgData.begin() + dimIdx);
+    }
+    if (!instData.empty())
+      instData.erase(instData.begin() + dimIdx);
+    if (!laneLayout.empty()) {
+      laneLayout.erase(laneLayout.begin() + dimIdx);
+      laneData.erase(laneData.begin() + dimIdx);
+    }
+  }
+
+  SmallVector<int64_t> newOrder;
+  for (int64_t d : origOrder) {
+    if (llvm::is_contained(dimGroup, d))
+      continue;
+    int64_t offset = llvm::count_if(dimGroup, [&](int64_t s) { return s < d; });
+    newOrder.push_back(d - offset);
+  }
+  if ((sgLayout.empty() && laneLayout.empty()) || newOrder.size() == 1)
+    newOrder.clear();
+
+  auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
+    if (v.empty())
+      return DenseI32ArrayAttr();
+    SmallVector<int32_t> v32(v.begin(), v.end());
+    return DenseI32ArrayAttr::get(getContext(), v32);
+  };
+  auto droppedLayout = xegpu::LayoutAttr::get(
+      getContext(), toAttr(sgLayout), toAttr(sgData), toAttr(instData),
+      toAttr(laneLayout), toAttr(laneData), toAttr(newOrder));
+  return droppedLayout;
+}
+
 // Derive a new layout by collapsing dimensions.
 // `dimGroup` specifies a group of adjacent dimensions
 // that are collapsed into a single dimension in the derived layout.
@@ -511,26 +520,19 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
   SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneLayout = getEffectiveLaneLayoutAsInt();
   SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
-
-  DenseI32ArrayAttr orderAttr = getOrder();
-  SmallVector<int32_t> orderVec;
-  if (orderAttr && !orderAttr.empty()) {
-    orderVec = llvm::to_vector(
-        llvm::map_range(orderAttr.asArrayRef(),
-                        [](int32_t idx) { return static_cast<int32_t>(idx); }));
-  }
+  SmallVector<int64_t> origOrder = getEffectiveOrderAsInt();
 
   SmallVector<int64_t> sortedDimGroup = dimGroup;
   llvm::sort(sortedDimGroup);
   int64_t dimBeforeCurrent = -1;
   for (auto dimIdx : sortedDimGroup) {
-    // when order is present, adjacency dims are on order values like [3, 2, 1,
-    // 0] in decreasing order otherwise based on dim indices like [0, 1, 2, 3]
+    // when order attr is present, adjacency dims are values like [3, 2, 1, 0]
+    // in decreasing order; otherwise based on dim indices like [0, 1, 2, 3]
     // in increasing order
     if (dimBeforeCurrent >= 0) {
-      if (!orderVec.empty()) {
-        int64_t orderBefore = orderVec[dimBeforeCurrent];
-        int64_t orderCurrent = orderVec[dimIdx];
+      if (getOrder() && !getOrder().empty()) {
+        int64_t orderBefore = origOrder[dimBeforeCurrent];
+        int64_t orderCurrent = origOrder[dimIdx];
         if (orderBefore != (orderCurrent - 1))
           llvm::report_fatal_error(
               "dimensions being collapsed must be adjacent in order");
@@ -586,54 +588,160 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
     laneData.insert(laneData.begin() + firstDim, collapsedLaneData);
   }
 
-  // go through the values inside collapsedOrder, and re-map the order values
-  // to be in range of [0, N-1] where N is the number of dimensions in
-  // collapsed shape for exmaple, collapse dim group {2, 3} of order[1, 2, 3,
-  // 4] to new order[1, 3, 4]. the loop below remaps it to [1, 2, 3].
-  SmallVector<int32_t> collapsedOrder;
-  if (!orderVec.empty()) {
+  SmallVector<int64_t> newOrder;
+  DenseI32ArrayAttr orderAttr = getOrder();
+  if (orderAttr && !orderAttr.empty()) {
 
     for (auto dimIdx : llvm::reverse(sortedDimGroup)) {
       if (dimIdx != firstDim)
-        orderVec.erase(orderVec.begin() + dimIdx,
-                       orderVec.begin() + dimIdx + 1);
+        origOrder.erase(origOrder.begin() + dimIdx);
     }
-
     // say we have orderVec = {5, 3, 2, 1, 0}
     // Create indices [0, 1, 2, 3, 4]
     SmallVector<size_t> indices =
-        llvm::to_vector(llvm::seq<size_t>(0, orderVec.size()));
+        llvm::to_vector(llvm::seq<size_t>(0, orderAttr.size()));
 
     // Sort indices based on corresponding values
     llvm::sort(indices,
-               [&](size_t a, size_t b) { return orderVec[a] < orderVec[b]; });
-    collapsedOrder = llvm::to_vector(llvm::map_range(
-        indices, [&](size_t i) { return static_cast<int32_t>(i); }));
+               [&](size_t a, size_t b) { return origOrder[a] < origOrder[b]; });
+
+    newOrder = llvm::to_vector(llvm::map_range(
+        indices, [&](size_t i) { return static_cast<int64_t>(i); }));
   }
 
-  // Create collapsed layout
-  SmallVector<int32_t> sgLayout32(sgLayout.begin(), sgLayout.end());
-  SmallVector<int32_t> sgData32(sgData.begin(), sgData.end());
-  SmallVector<int32_t> instData32(instData.begin(), instData.end());
-  SmallVector<int32_t> laneLayout32(laneLayout.begin(), laneLayout.end());
-  SmallVector<int32_t> laneData32(laneData.begin(), laneData.end());
-
+  auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
+    if (v.empty())
+      return DenseI32ArrayAttr();
+    SmallVector<int32_t> v32(v.begin(), v.end());
+    return DenseI32ArrayAttr::get(getContext(), v32);
+  };
   auto collapsedLayout = xegpu::LayoutAttr::get(
-      getContext(),
-      sgLayout32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), sgLayout32),
-      sgData32.empty() ? DenseI32ArrayAttr()
-                       : DenseI32ArrayAttr::get(getContext(), sgData32),
-      instData32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), instData32),
-      laneLayout32.empty() ? DenseI32ArrayAttr()
-                           : DenseI32ArrayAttr::get(getContext(), laneLayout32),
-      laneData32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), laneData32),
-      collapsedOrder.empty()
-          ? DenseI32ArrayAttr()
-          : DenseI32ArrayAttr::get(getContext(), collapsedOrder));
+      getContext(), toAttr(sgLayout), toAttr(sgData), toAttr(instData),
+      toAttr(laneLayout), toAttr(laneData), toAttr(newOrder));
   return collapsedLayout;
+}
+
+// Derive a new layout by transpose the layout using `permutation`.
+DistributeLayoutAttr LayoutAttr::transposeDims(ArrayRef<int64_t> permutation) {
+
+  SmallVector<int64_t> origSgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> origSgData = getEffectiveSgDataAsInt();
+  SmallVector<int64_t> origInstData = getEffectiveInstDataAsInt();
+  SmallVector<int64_t> origLaneLayout = getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> origLaneData = getEffectiveLaneDataAsInt();
+  SmallVector<int64_t> origOrder = getEffectiveOrderAsInt();
+
+  SmallVector<int32_t> sgLayout;
+  SmallVector<int32_t> sgData;
+  SmallVector<int32_t> instData;
+  SmallVector<int32_t> laneLayout;
+  SmallVector<int32_t> laneData;
+  SmallVector<int32_t> order;
+
+  for (int64_t idx : permutation) {
+    if (!origLaneLayout.empty()) {
+      laneLayout.push_back(static_cast<int32_t>(origLaneLayout[idx]));
+      laneData.push_back(static_cast<int32_t>(origLaneData[idx]));
+    }
+    if (!origInstData.empty())
+      instData.push_back(static_cast<int32_t>(origInstData[idx]));
+    if (!origSgLayout.empty()) {
+      sgLayout.push_back(static_cast<int32_t>(origSgLayout[idx]));
+      sgData.push_back(static_cast<int32_t>(origSgData[idx]));
+    }
+    order.push_back(static_cast<int32_t>(origOrder[idx]));
+  }
+  if (origLaneLayout.empty() && origSgLayout.empty())
+    order.clear();
+
+  auto toAttr = [&](ArrayRef<int32_t> v) -> DenseI32ArrayAttr {
+    return v.empty() ? nullptr : DenseI32ArrayAttr::get(getContext(), v);
+  };
+  return xegpu::LayoutAttr::get(getContext(), toAttr(sgLayout), toAttr(sgData),
+                                toAttr(instData), toAttr(laneLayout),
+                                toAttr(laneData), toAttr(order));
+}
+
+/// Check if this layout is a transpose of another layout.
+bool LayoutAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
+                               ArrayRef<int64_t> perm,
+                               const xegpu::LayoutKind kind) {
+  if (!other)
+    return false;
+  if (getRank() != other.getRank() ||
+      perm.size() != static_cast<size_t>(getRank()))
+    return false;
+  if (!isPermutationVector(perm))
+    return false;
+  auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src,
+                           ArrayRef<int64_t> perm) {
+    for (const auto &ta : llvm::enumerate(perm)) {
+      if (src[ta.index()] != dst[ta.value()])
+        return false;
+    }
+    return true;
+  };
+  if (kind == xegpu::LayoutKind::Subgroup)
+    return checkTranspose(getEffectiveSgLayoutAsInt(),
+                          other.getEffectiveSgLayoutAsInt(), perm) &&
+           checkTranspose(getEffectiveSgDataAsInt(),
+                          other.getEffectiveSgDataAsInt(), perm) &&
+           checkTranspose(getEffectiveOrderAsInt(),
+                          other.getEffectiveOrderAsInt(), perm);
+  if (kind == xegpu::LayoutKind::InstData)
+    return checkTranspose(getEffectiveInstDataAsInt(),
+                          other.getEffectiveInstDataAsInt(), perm);
+  if (kind == xegpu::LayoutKind::Lane)
+    return checkTranspose(getEffectiveLaneLayoutAsInt(),
+                          other.getEffectiveLaneLayoutAsInt(), perm) &&
+           checkTranspose(getEffectiveLaneDataAsInt(),
+                          other.getEffectiveLaneDataAsInt(), perm) &&
+           checkTranspose(getEffectiveOrderAsInt(),
+                          other.getEffectiveOrderAsInt(), perm);
+
+  return false;
+}
+
+bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
+                                  SmallVector<int64_t> shape,
+                                  xegpu::LayoutKind level) {
+  if (!other)
+    return false;
+  if (getEffectiveOrderAsInt() == other.getEffectiveOrderAsInt()) {
+    // short cut when order is the same, no need to compute coords and compare
+    if (level == xegpu::LayoutKind::Subgroup)
+      if (getEffectiveSgLayoutAsInt() == other.getEffectiveSgLayoutAsInt() &&
+          getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt())
+        return true;
+    if (level == xegpu::LayoutKind::Lane)
+      if (getEffectiveLaneLayoutAsInt() ==
+              other.getEffectiveLaneLayoutAsInt() &&
+          getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt())
+        return true;
+  }
+
+  auto compareCoordsForAllIds = [&](int64_t size) {
+    for (int64_t id : llvm::seq<int64_t>(0, size)) {
+      auto coords = computeStaticDistributedCoords(id, shape);
+      auto otherCoords = other.computeStaticDistributedCoords(id, shape);
+      if (coords != otherCoords)
+        return false;
+    }
+    return true;
+  };
+
+  if (level == xegpu::LayoutKind::Subgroup) {
+    int64_t wgSize = computeProduct(getEffectiveSgLayoutAsInt());
+    return compareCoordsForAllIds(wgSize);
+  }
+  if (level == xegpu::LayoutKind::InstData) {
+    return (getEffectiveInstDataAsInt() == other.getEffectiveInstDataAsInt());
+  }
+  if (level == xegpu::LayoutKind::Lane) {
+    int64_t subgroupSize = computeProduct(getEffectiveLaneLayoutAsInt());
+    return compareCoordsForAllIds(subgroupSize);
+  }
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -712,12 +820,8 @@ SliceAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
     return failure();
   }
 
-  if (subShape.empty()) {
-    if (auto derivedShape = computeShapeRatio(shape, layout))
-      subShape = derivedShape.value();
-    else
-      return failure();
-  }
+  if (subShape.empty())
+    return failure();
 
   // delinearize Ids
   auto maybeIds = delinearizeId(builder, loc, linearId);
@@ -727,10 +831,65 @@ SliceAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
   // The effective sgIds for offsets computing correspond
   // to the dims that are not sliced.
   ArrayRef<int64_t> dims = flatten().getDims().asArrayRef();
-  SmallVector<Value> sgIds =
+  SmallVector<Value> canonicalIds =
       XeGPUDialect::slice(ArrayRef<Value>(*maybeIds), dims);
 
-  return genCoordinates(builder, loc, sgIds, layout, subShape, shape);
+  return genCoordinates(builder, loc, canonicalIds, layout, subShape, shape);
+}
+
+/// Implements DistributeLayoutAttr::computeStaticDistributedCoords to
+/// compute multi-dimensional offsets for a given linear ID when distributed by
+/// SliceAttr. Delegates delinearization to the parent LayoutAttr, then uses
+/// only the non-sliced dimensions for coordinate computation.
+SmallVector<SmallVector<int64_t>>
+SliceAttr::computeStaticDistributedCoords(int64_t linearId,
+                                          ArrayRef<int64_t> shape) {
+  assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
+
+  SmallVector<int64_t> layout;
+  SmallVector<int64_t> subShape;
+  SmallVector<int64_t> instData;
+  if (isForWorkgroup()) {
+    layout = getEffectiveSgLayoutAsInt();
+    subShape = getEffectiveSgDataAsInt();
+  } else if (isForSubgroup()) {
+    instData = getEffectiveInstDataAsInt();
+    layout = getEffectiveLaneLayoutAsInt();
+    subShape = getEffectiveLaneDataAsInt();
+  }
+  if (!instData.empty()) {
+    linearId = 0;
+    subShape = instData;
+  }
+
+  assert(!subShape.empty() && "sgdata or lanedata cannot be empty");
+
+  // Delinearize the ID using the parent layout (same as the IR version).
+  SliceAttr flattened = flatten();
+  auto parent = dyn_cast<LayoutAttr>(flattened.getParent());
+  SmallVector<int64_t> parentLayoutVec;
+  if (parent.isForWorkgroup())
+    parentLayoutVec = parent.getEffectiveSgLayoutAsInt();
+  else
+    parentLayoutVec = parent.getEffectiveLaneLayoutAsInt();
+
+  SmallVector<int64_t> order = parent.getEffectiveOrderAsInt();
+  SmallVector<int64_t> allIds(parentLayoutVec.size());
+  int64_t remaining = linearId;
+  for (size_t i = 0; i < order.size(); ++i) {
+    int64_t dimIdx = order[i];
+    allIds[dimIdx] = remaining % parentLayoutVec[dimIdx];
+    if (i < order.size() - 1)
+      remaining = remaining / parentLayoutVec[dimIdx];
+  }
+
+  // The effective IDs for coordinate computation correspond
+  // to the dims that are not sliced.
+  ArrayRef<int64_t> dims = flattened.getDims().asArrayRef();
+  SmallVector<int64_t> canonicalIds =
+      XeGPUDialect::slice(ArrayRef<int64_t>(allIds), dims);
+
+  return genStaticCoordinates(canonicalIds, layout, subShape, shape);
 }
 
 bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
@@ -762,6 +921,50 @@ bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
 
   return ((flattenedThis.getParent() == flattenedOther.getParent()) &&
           (flattenedThis.getDims() == flattenedOther.getDims()));
+}
+
+bool SliceAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
+                                 SmallVector<int64_t> shape,
+                                 xegpu::LayoutKind level) {
+  if (!other)
+    return false;
+  if (getEffectiveOrderAsInt() == other.getEffectiveOrderAsInt()) {
+    // short cut when order is the same, no need to compute coords and compare
+    if (level == xegpu::LayoutKind::Subgroup)
+      if (getEffectiveSgLayoutAsInt() == other.getEffectiveSgLayoutAsInt() &&
+          getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt())
+        return true;
+    if (level == xegpu::LayoutKind::Lane)
+      if (getEffectiveLaneLayoutAsInt() ==
+              other.getEffectiveLaneLayoutAsInt() &&
+          getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt())
+        return true;
+  }
+
+  auto compareCoordsForAllIds = [&](int64_t size) {
+    for (int64_t id : llvm::seq<int64_t>(0, size)) {
+      auto coords = computeStaticDistributedCoords(id, shape);
+      auto otherCoords = other.computeStaticDistributedCoords(id, shape);
+      if (coords != otherCoords)
+        return false;
+    }
+    return true;
+  };
+
+  auto flattenedThis = flatten();
+  auto parent = dyn_cast<LayoutAttr>(flattenedThis.getParent());
+  if (level == xegpu::LayoutKind::Subgroup) {
+    int64_t wgSize = computeProduct(parent.getEffectiveSgLayoutAsInt());
+    return compareCoordsForAllIds(wgSize);
+  }
+  if (level == xegpu::LayoutKind::InstData) {
+    return (getEffectiveInstDataAsInt() == other.getEffectiveInstDataAsInt());
+  }
+  if (level == xegpu::LayoutKind::Lane) {
+    int64_t subgroupSize = computeProduct(parent.getEffectiveLaneLayoutAsInt());
+    return compareCoordsForAllIds(subgroupSize);
+  }
+  return true;
 }
 
 xegpu::SliceAttr SliceAttr::dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop) {
@@ -864,6 +1067,46 @@ DistributeLayoutAttr SliceAttr::setDimData(int64_t dim, int64_t sgData,
       parent.setDimData(adjustDims[0], sgData, instData, laneData), getDims());
 }
 
+// Derive a new layout by removing dimensions. `dimGroup` specifies a group of
+// dimensions to be removed in the derived layout.
+//
+// Example: drop the 2nd dimension from a rank-3 sliced view.
+//
+// Suppose:
+//   xegpu.layout = slice<layout<[V0, V1, V2, V3, V4]>, [1, 3]>
+//
+// The slice removes parent dims [1, 3], so the sliced-space dims map to
+// parent dims [V0, V2, V4].
+//
+// If we drop sliced-space dim 1 (the 2nd dim), that corresponds to dropping
+// parent dim 2, result in parent layout [V0, V1, V3, V4] after dropping.
+// After parent dim 2 is removed, sliced dims [1, 3] must be reindexed to [1,
+// 2].
+//
+// Result:
+//   xegpu.layout = slice<layout<[0, 1, 3, 4]>, [1, 2]>
+DistributeLayoutAttr SliceAttr::dropDims(SmallVector<int64_t> dimGroup) {
+  // Map the sliced dims from parent space to collapsed space
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
+  SmallVector<int64_t> dimsInParentSpace =
+      mapSlicedDimsToParentSpace(dimGroup, sliceDims);
+
+  auto droppedParent = getParent().dropDims(dimsInParentSpace);
+
+  // Adjust the sliced dims after dropping dims in parent space. For example, if
+  // we drop dim 2 in parent space, the dims after dim 2 will all be shifted by
+  // 1, so sliced dim 3 will be adjusted to 2.
+  SmallVector<int64_t> newSliceDims;
+  for (int64_t d : sliceDims) {
+    int64_t offset =
+        llvm::count_if(dimsInParentSpace, [&](int64_t s) { return s < d; });
+    newSliceDims.push_back(d - offset);
+  }
+
+  return SliceAttr::get(getContext(), droppedParent,
+                        DenseI64ArrayAttr::get(getContext(), newSliceDims));
+}
+
 // Derive a new layout by collapsing dimensions.
 // `dimGroup` specifies a group of adjacent dimensions
 // that are collapsed into a single dimension in the derived layout.
@@ -871,14 +1114,72 @@ DistributeLayoutAttr SliceAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 
   // Map the sliced dims from parent space to collapsed space
   SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
-
+  assert("expect sliceDims not being collapsed" &&
+         llvm::none_of(dimGroup, [&](int64_t dim) {
+           return llvm::is_contained(sliceDims, dim);
+         }));
   SmallVector<int64_t> dimsInParentSpace =
       mapSlicedDimsToParentSpace(dimGroup, sliceDims);
 
   auto collapsedParent = getParent().collapseDims(dimsInParentSpace);
-
   return SliceAttr::get(getContext(), collapsedParent,
                         DenseI64ArrayAttr::get(getContext(), sliceDims));
+}
+
+SmallVector<int64_t> getPermForParentLayout(ArrayRef<int64_t> sliceDims,
+                                            ArrayRef<int64_t> permutation) {
+  SmallVector<int64_t> sortedSliceDims = llvm::to_vector(sliceDims);
+  llvm::sort(sortedSliceDims);
+
+  for (size_t i = 1; i < sortedSliceDims.size(); ++i) {
+    assert((sortedSliceDims[i] == sortedSliceDims[i - 1] + 1) &&
+           "slice dims non consecutive, cannot be transposed");
+  }
+
+  SmallVector<int64_t> permForParent;
+  if (sortedSliceDims.front() == 0) {
+    // Example: sliceDims.size() = 2, permutation= {1, 0}
+    // result: {3, 2, 1, 0}.
+    for (int64_t dim : permutation)
+      permForParent.push_back(dim + sortedSliceDims.size());
+    for (int64_t i = sortedSliceDims.size() - 1; i >= 0; --i)
+      permForParent.push_back(i);
+  } else {
+    // Example: sliceDims.size() = 2, permutation = {0, 1}
+    // result: {3, 2, 0, 1}.
+    for (int64_t i = sortedSliceDims.size() - 1; i >= 0; --i)
+      permForParent.push_back(i + permutation.size());
+    for (int64_t dim : permutation)
+      permForParent.push_back(dim);
+  }
+  return permForParent;
+}
+
+// Derive a new layout by transpose the layout using `permutation`.
+DistributeLayoutAttr SliceAttr::transposeDims(ArrayRef<int64_t> permutation) {
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
+  DistributeLayoutAttr parent = getParent();
+  SmallVector<int64_t> permForParent =
+      getPermForParentLayout(sliceDims, permutation);
+  auto transposedParent = parent.transposeDims(permForParent);
+  return SliceAttr::get(getContext(), transposedParent,
+                        DenseI64ArrayAttr::get(getContext(), sliceDims));
+}
+
+/// Check if this layout is a transpose of another layout.
+bool SliceAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
+                              ArrayRef<int64_t> perm,
+                              const xegpu::LayoutKind kind) {
+  // other must be a SliceAttr with the same slice dims.
+  auto otherSlice = dyn_cast<xegpu::SliceAttr>(other);
+  if (!otherSlice || getDims() != otherSlice.getDims())
+    return false;
+  // check whether the parent layout is transpose of each other.
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
+  DistributeLayoutAttr parent = getParent();
+  SmallVector<int64_t> permForParent = getPermForParentLayout(sliceDims, perm);
+  auto otherParent = otherSlice.getParent();
+  return parent.isTransposeOf(otherParent, permForParent, kind);
 }
 
 //===----------------------------------------------------------------------===//
@@ -927,11 +1228,11 @@ mlir::Type TensorDescType::parse(AsmParser &parser) {
     mlir::Attribute attr;
     ParseResult res = parser.parseAttribute(attr);
     if (mlir::succeeded(res)) {
-      if (mlir::isa<LayoutAttr>(attr)) {
+      if (mlir::isa<DistributeLayoutAttr>(attr)) {
         layout = attr;
         continue;
       }
-      if (mlir::isa<BlockTensorDescAttr, ScatterTensorDescAttr>(attr)) {
+      if (mlir::isa<BlockTensorDescAttr>(attr)) {
         encoding = attr;
         continue;
       }
@@ -986,15 +1287,6 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
   return Base::get(context, shape, elementType, attr, layout);
 }
 
-TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
-                                   mlir::Type elementType, int chunk_size,
-                                   MemorySpace memory_space,
-                                   mlir::Attribute layout) {
-  auto *context = elementType.getContext();
-  auto attr = ScatterTensorDescAttr::get(context, memory_space, chunk_size);
-  return Base::get(context, shape, elementType, attr, layout);
-}
-
 LogicalResult
 TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
                        llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
@@ -1016,49 +1308,12 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "unsupported element type " << elementType
                        << ": expected integer or float";
 
-  // for gather and scatter ops, Low-precision types are packed in 32-bit
-  // units.
-  unsigned bitWidth = elementType.getIntOrFloatBitWidth();
-  int chunkAlignmentFactor =
-      bitWidth < xegpu::uArch::generalPackedFormatBitSize
-          ? xegpu::uArch::generalPackedFormatBitSize / bitWidth
-          : 1;
-  auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
-  if (scatterAttr) {
-    int64_t chunkSize = scatterAttr.getChunkSizeAsInt();
-    if (rank == 1 && chunkSize != 1)
-      return emitError() << "expected non-contiguous elements for 1D tensor";
-
-    // If chunk size > 1, the second dimension of the tensor shape must be
-    // equal to chunk size and it must be a multiple of the
-    // chunkAlignmentFactor.
-    if (chunkSize > 1) {
-      if (shape.back() != chunkSize)
-        return emitError() << "expected last dim of tensor to match chunk size";
-      if (shape.back() % chunkAlignmentFactor != 0)
-        return emitError() << "expected last dim of tensor to be a multiple of "
-                           << chunkAlignmentFactor;
-    }
-  }
-
-  auto layoutAttr = llvm::dyn_cast_if_present<LayoutAttr>(layout);
-  if (layoutAttr) {
+  if (auto layoutAttr =
+          mlir::dyn_cast_if_present<DistributeLayoutAttr>(layout)) {
     if (rank != (size_t)layoutAttr.getRank())
       return emitError() << "expected layout rank to match tensor rank";
 
-    auto laneData = layoutAttr.getLaneData();
-    if (scatterAttr && laneData) {
-      // Validate subgroup mapping rules for scattered tensors.
-      // if chunkSize > 1, the last dimension of the tensor should
-      // be distributed in the units divisible by chunkAlignmentFactor.
-      int64_t chunkSize = scatterAttr.getChunkSizeAsInt();
-      if (chunkSize > 1 && laneData[rank - 1] % chunkAlignmentFactor)
-        return emitError()
-               << "expected last dim of lane_data to be a multiple of: "
-               << chunkAlignmentFactor;
-    }
-
-    if (!XeGPUDialect::isEvenlyDistributable(shape, layoutAttr)) {
+    if (!layoutAttr.isDistributable(SmallVector<int64_t>(shape))) {
       std::string shapeStr;
       llvm::raw_string_ostream stream(shapeStr);
       llvm::interleaveComma(shape, stream);
@@ -1066,6 +1321,7 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
                          << layoutAttr;
     }
   }
+
   return success();
 }
 

@@ -30,7 +30,7 @@ The following requirements are shared on all platforms.
 If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
-* `Python <http://www.python.org/>`_ 3.8 or later.
+* `Python <http://www.python.org/>`_ 3.8 or later (3.11 or later on Windows).
 * `SWIG <http://swig.org/>`_ 4 or later.
 
 If you are on FreeBSD or NetBSD, you will need to install ``gmake`` for building
@@ -62,7 +62,7 @@ CMake configuration error.
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Libxml2           | XML                                                          | ``LLDB_ENABLE_LIBXML2``  |
 +-------------------+--------------------------------------------------------------+--------------------------+
-| Python            | Python scripting. >= 3.8 is required.                        | ``LLDB_ENABLE_PYTHON``   |
+| Python            | Python scripting. 3.8 or later (3.11 or later on Windows).   | ``LLDB_ENABLE_PYTHON``   |
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Lua               | Lua scripting. Lua 5.3 and 5.4 are supported.                | ``LLDB_ENABLE_LUA``      |
 +-------------------+--------------------------------------------------------------+--------------------------+
@@ -112,10 +112,20 @@ Please follow the steps below if you only want to **build** lldb.
    ``dirname`` are available from your terminal.
 3. Install `make <https://sourceforge.net/projects/ezwinports/files/>`_ and
    verify that it's in your ``PATH``.
-4. Install `Python 3 <https://www.python.org/downloads/windows/>`_ from the
-   GUI installer. If you will be building LLDB in Debug mode, **include the
-   debug libraries** during the install. Make sure ``python`` is added to your
-   ``PATH``.
+4. Install `Python 3.11 <https://www.python.org/downloads/windows/>`_ or later.
+   Either using the "Windows Installer" or "Python Install Manager". Make sure
+   ``python`` is added to your ``PATH``.
+
+   .. note::
+      Building LLDB in debug mode requires a debug version of Python (because
+      all parts of a debug build must use the debug C runtime).
+
+      If you use the "Windows installer", **include the debug libraries** during
+      the install.
+
+      The "Python Install Manager" has no way to install debug libraries, so you
+      must `build <https://devguide.python.org/getting-started/setup-building/>`_
+      a debug version of Python yourself.
 5. Install `SWIG for Windows <http://www.swig.org/download.html>`_. Make sure
    ``swig`` is added to your ``PATH`` and that ``swig -swiglib`` points to the
    correct directory.
@@ -652,6 +662,40 @@ arm64 build:
 
 Note that currently only lldb-server is functional on android. The lldb client
 is not supported and unlikely to work.
+
+Example 4: Cross-compiling for FreeBSD arm64 on FreeBSD host using distset
+**************************************************************************
+
+Start by identifying the FreeBSD version you want to target — in this case,
+FreeBSD 15.0.
+
+Download and decompress the FreeBSD 15.0 distset:
+
+::
+
+  fetch https://download.freebsd.org/releases/arm64/15.0-RELEASE/base.txz
+  sudo mkdir -p /path/to/sysroot/arm64
+  sudo tar -xJf base.txz -C /path/to/sysroot/arm64
+
+Then configure with CMake as follows:
+
+::
+
+  cmake <path-to-monorepo>/llvm-project/llvm -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;lldb" \
+    -DCMAKE_SYSTEM_NAME=FreeBSD \
+    -DCMAKE_SYSTEM_PROCESSOR=AArch64 \
+    -DCMAKE_ASM_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_C_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_CXX_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_FIND_ROOT_PATH="/path/to/sysroot/arm64" \
+    -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+    -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+    -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+    -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-unknown-freebsd15.0 \
+    -DLLVM_HOST_TRIPLE=aarch64-unknown-freebsd15.0 \
+    -DLLVM_TARGET_ARCH=AArch64
 
 Verifying Python Support
 ------------------------

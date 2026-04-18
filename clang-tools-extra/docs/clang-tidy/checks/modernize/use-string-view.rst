@@ -83,6 +83,7 @@ Limitations
   * ``auto Trailing() -> std::string { return "Trailing"; }`` warns, doesn't fix
   * returnings from lambda
   * complicated macro and templated code
+  * overloaded functions and methods
 
 In some cases the fixed code will not compile due to lack of conversion from
 ``std::string_view`` to ``std::string``. It can be fixed (preferably) by

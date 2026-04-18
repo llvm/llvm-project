@@ -93,11 +93,16 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
 // Get a nested loc for inlined functions.
 static Location getNestedLoc(Operation *op, LLVM::DIScopeAttr scopeAttr,
                              Location calleeLoc) {
-  auto calleeFileName = extractFileLoc(calleeLoc).getFilename();
   auto *context = op->getContext();
-  LLVM::DIFileAttr calleeFileAttr =
-      LLVM::DIFileAttr::get(context, llvm::sys::path::filename(calleeFileName),
-                            llvm::sys::path::parent_path(calleeFileName));
+  LLVM::DIFileAttr calleeFileAttr;
+  if (auto calleeFileLoc = extractFileLoc(calleeLoc)) {
+    auto calleeFileName = calleeFileLoc.getFilename();
+    calleeFileAttr = LLVM::DIFileAttr::get(
+        context, llvm::sys::path::filename(calleeFileName),
+        llvm::sys::path::parent_path(calleeFileName));
+  } else {
+    calleeFileAttr = LLVM::DIFileAttr::get(context, "<unknown>", "");
+  }
   auto lexicalBlockFileAttr = LLVM::DILexicalBlockFileAttr::get(
       context, scopeAttr, calleeFileAttr, /*discriminator=*/0);
   Location loc = calleeLoc;

@@ -284,7 +284,7 @@ FuncOp FuncOp::clone() {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult FuncOp::verify() {
+LogicalResult FuncOp::verifyRegions() {
   // External declarations have no body to check.
   if (isDeclaration())
     return success();
@@ -298,21 +298,20 @@ LogicalResult FuncOp::verify() {
     auto returnOp = dyn_cast<RegionBranchTerminatorOpInterface>(&block.back());
     if (!returnOp)
       continue;
-
-    if (returnOp->getNumOperands() != resultTypes.size())
+    auto operands =
+        returnOp.getMutableSuccessorOperands(RegionSuccessor::parent());
+    if (operands.size() != resultTypes.size())
       return returnOp->emitOpError("has ")
-             << returnOp->getNumOperands()
-             << " operands, but enclosing function (@" << getName()
-             << ") returns " << resultTypes.size();
+             << operands.size() << " operands, but enclosing function (@"
+             << getName() << ") returns " << resultTypes.size();
 
-    for (auto [i, opType] :
-         llvm::enumerate(llvm::zip(returnOp->getOperandTypes(), resultTypes))) {
-      auto [opTy, resTy] = opType;
-      if (opTy != resTy)
-        return returnOp->emitError()
-               << "type of return operand " << i << " (" << opTy
-               << ") doesn't match function result type (" << resTy
-               << ") in function @" << getName();
+    for (auto [i, opType] : llvm::enumerate(llvm::zip(operands, resultTypes))) {
+      auto [operand, resTy] = opType;
+      if (operand.get().getType() != resTy)
+        return returnOp->emitError() << "type of return operand " << i << " ("
+                                     << operand.get().getType()
+                                     << ") doesn't match function result type ("
+                                     << resTy << ") in function @" << getName();
     }
   }
 

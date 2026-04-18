@@ -48,3 +48,18 @@ define void @f4(i32 %a, i32 %b) {
   tail call void @llvm.cond.loop(i1 %overflow)
   ret void
 }
+
+define void @f5(ptr %p) {
+; CHECK-LABEL: f5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $4, 10(%rdi)
+; CHECK-NEXT:  .Ltmp4:
+; CHECK-NEXT:    jne .Ltmp4
+; CHECK-NEXT:    retq
+  %gep = getelementptr inbounds nuw i8, ptr %p, i64 10
+  %load = load i8, ptr %gep, align 2
+  %and = and i8 %load, 4
+  %cmp = icmp ne i8 %and, 0
+  call void @llvm.cond.loop(i1 %cmp)
+  ret void
+}

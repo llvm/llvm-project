@@ -109,3 +109,22 @@ TEST(NativeSessionTest, TestAddressForRVA) {
   EXPECT_EQ(3U, Section);
   EXPECT_EQ(83616U, Offset);
 }
+
+TEST(NativeSessionTest, TestModuleIndexLookupForGaps) {
+  std::unique_ptr<IPDBSession> S;
+  Error E = pdb::loadDataForEXE(PDB_ReaderType::Native, getExePath(), S);
+  ASSERT_THAT_ERROR(std::move(E), Succeeded());
+
+  auto &NS = static_cast<NativeSession &>(*S);
+  // Populate section contributions.
+  S->findSymbolByAddress(0, PDB_SymType::Function);
+
+  // SimpleTest.pdb leaves a gap between two mods in section 1 at [10, 16).
+  uint16_t ModuleIndex;
+  EXPECT_TRUE(NS.moduleIndexForSectOffset(1, 9, ModuleIndex));
+  EXPECT_TRUE(NS.moduleIndexForVA(NS.getVAFromSectOffset(1, 9), ModuleIndex));
+  EXPECT_FALSE(NS.moduleIndexForSectOffset(1, 10, ModuleIndex));
+  EXPECT_FALSE(NS.moduleIndexForVA(NS.getVAFromSectOffset(1, 10), ModuleIndex));
+  EXPECT_TRUE(NS.moduleIndexForSectOffset(1, 16, ModuleIndex));
+  EXPECT_TRUE(NS.moduleIndexForVA(NS.getVAFromSectOffset(1, 16), ModuleIndex));
+}

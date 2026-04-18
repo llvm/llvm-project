@@ -288,7 +288,7 @@ void unOp(S* s) {
 // CIR:   [[TMP1:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "d"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_d, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i
-// CIR:   [[TMP4:%.*]] = cir.unary(inc, [[TMP3]]) nsw : !s32i, !s32i
+// CIR:   [[TMP4:%.*]] = cir.inc nsw [[TMP3]] : !s32i
 // CIR:   cir.set_bitfield align(4) (#bfi_d, [[TMP2]] : !cir.ptr<!u64i>, [[TMP4]] : !s32i)
 
 // LLVM: define {{.*@unOp}}
@@ -335,7 +335,7 @@ void binOp(S* s) {
 // CIR:   [[TMP0:%.*]] = cir.const #cir.int<42> : !s32i
 // CIR:   [[TMP1:%.*]] = cir.get_member {{.*}}[0] {name = "d"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR:   [[TMP2:%.*]] = cir.get_bitfield align(4) (#bfi_d, [[TMP1]] : !cir.ptr<!u64i>) -> !s32i
-// CIR:   [[TMP3:%.*]] = cir.binop(or, [[TMP2]], [[TMP0]]) : !s32i
+// CIR:   [[TMP3:%.*]] = cir.or [[TMP2]], [[TMP0]] : !s32i
 // CIR:   cir.set_bitfield align(4) (#bfi_d, [[TMP1]] : !cir.ptr<!u64i>, [[TMP3]] : !s32i)
 
 // LLVM: define {{.*@binOp}}

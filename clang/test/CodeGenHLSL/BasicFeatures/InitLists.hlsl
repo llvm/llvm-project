@@ -110,15 +110,15 @@ TwoFloats case3(int Val) {
 // CHECK-LABEL: define hidden void @_Z5case4Dv2_i(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], <2 x i32> noundef [[TWOVALS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TWOVALS_ADDR:%.*]] = alloca <2 x i32>, align 8
-// CHECK-NEXT:    store <2 x i32> [[TWOVALS]], ptr [[TWOVALS_ADDR]], align 8
+// CHECK-NEXT:    [[TWOVALS_ADDR:%.*]] = alloca <2 x i32>, align 4
+// CHECK-NEXT:    store <2 x i32> [[TWOVALS]], ptr [[TWOVALS_ADDR]], align 4
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[TWOVALS_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[TWOVALS_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
 // CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[VECEXT]] to float
 // CHECK-NEXT:    store float [[CONV]], ptr [[X]], align 1
 // CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[TWOVALS_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[TWOVALS_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 // CHECK-NEXT:    [[CONV2:%.*]] = sitofp i32 [[VECEXT1]] to float
 // CHECK-NEXT:    store float [[CONV2]], ptr [[Y]], align 1
@@ -133,14 +133,14 @@ TwoFloats case4(int2 TwoVals) {
 // CHECK-LABEL: define hidden void @_Z5case5Dv2_i(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], <2 x i32> noundef [[TWOVALS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TWOVALS_ADDR:%.*]] = alloca <2 x i32>, align 8
-// CHECK-NEXT:    store <2 x i32> [[TWOVALS]], ptr [[TWOVALS_ADDR]], align 8
+// CHECK-NEXT:    [[TWOVALS_ADDR:%.*]] = alloca <2 x i32>, align 4
+// CHECK-NEXT:    store <2 x i32> [[TWOVALS]], ptr [[TWOVALS_ADDR]], align 4
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[AGG_RESULT]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[TWOVALS_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[TWOVALS_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
 // CHECK-NEXT:    store i32 [[VECEXT]], ptr [[Z]], align 1
 // CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[AGG_RESULT]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[TWOVALS_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[TWOVALS_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 // CHECK-NEXT:    store i32 [[VECEXT1]], ptr [[W]], align 1
 // CHECK-NEXT:    ret void
@@ -771,41 +771,41 @@ FourFloats case10(TwoFloats TF1, TwoFloats TF2) {
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    [[REF_TMP:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    [[REF_TMP1:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    [[REF_TMP4:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca <4 x float>, align 16
+// CHECK-NEXT:    [[REF_TMP:%.*]] = alloca <4 x float>, align 4
+// CHECK-NEXT:    [[REF_TMP1:%.*]] = alloca <4 x float>, align 4
+// CHECK-NEXT:    [[REF_TMP4:%.*]] = alloca <4 x float>, align 4
+// CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS:%.*]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[CAST_SPLAT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x float> [[CAST_SPLAT]], <1 x float> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[REF_TMP]], align 16
-// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[REF_TMP]], align 16
+// CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[REF_TMP]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[REF_TMP]], align 4
 // CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
 // CHECK-NEXT:    store float [[VECEXT]], ptr [[X]], align 1
 // CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[CAST_SPLAT2:%.*]] = insertelement <1 x float> poison, float [[TMP3]], i64 0
 // CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <1 x float> [[CAST_SPLAT2]], <1 x float> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[REF_TMP1]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[REF_TMP1]], align 16
+// CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[REF_TMP1]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[REF_TMP1]], align 4
 // CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[TMP5]], i64 1
 // CHECK-NEXT:    store float [[VECEXT3]], ptr [[Y]], align 1
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_FOURFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[CAST_SPLAT5:%.*]] = insertelement <1 x float> poison, float [[TMP6]], i64 0
 // CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <1 x float> [[CAST_SPLAT5]], <1 x float> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[REF_TMP4]], align 16
-// CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[REF_TMP4]], align 16
+// CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[REF_TMP4]], align 4
+// CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[REF_TMP4]], align 4
 // CHECK-NEXT:    [[VECEXT6:%.*]] = extractelement <4 x float> [[TMP8]], i64 2
 // CHECK-NEXT:    store float [[VECEXT6]], ptr [[Z]], align 1
 // CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_FOURFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[CAST_SPLAT8:%.*]] = insertelement <1 x float> poison, float [[TMP9]], i64 0
 // CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <1 x float> [[CAST_SPLAT8]], <1 x float> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[REF_TMP7]], align 16
-// CHECK-NEXT:    [[TMP11:%.*]] = load <4 x float>, ptr [[REF_TMP7]], align 16
+// CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[REF_TMP7]], align 4
+// CHECK-NEXT:    [[TMP11:%.*]] = load <4 x float>, ptr [[REF_TMP7]], align 4
 // CHECK-NEXT:    [[VECEXT9:%.*]] = extractelement <4 x float> [[TMP11]], i64 3
 // CHECK-NEXT:    store float [[VECEXT9]], ptr [[W]], align 1
 // CHECK-NEXT:    ret void
@@ -976,12 +976,12 @@ int case17Helper(int x) {
 // CHECK-LABEL: define hidden void @_Z6case17v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[X:%.*]] = alloca <2 x i32>, align 8
+// CHECK-NEXT:    [[X:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z12case17Helperi(i32 noundef 0) #[[ATTR2]]
 // CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z12case17Helperi(i32 noundef 1) #[[ATTR2]]
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <2 x i32> poison, i32 [[CALL]], i32 0
 // CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <2 x i32> [[VECINIT]], i32 [[CALL1]], i32 1
-// CHECK-NEXT:    store <2 x i32> [[VECINIT2]], ptr [[X]], align 8
+// CHECK-NEXT:    store <2 x i32> [[VECINIT2]], ptr [[X]], align 4
 // CHECK-NEXT:    ret void
 //
 void case17() {
@@ -1098,8 +1098,8 @@ void case25(EmptyDerived ED, UnnamedDerived UD) {
 // CHECK-LABEL: define hidden void @_Z6case267TwoInts(
 // CHECK-SAME: ptr noundef byval([[STRUCT_TWOINTS:%.*]]) align 1 [[TI:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[F:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    [[F2:%.*]] = alloca <3 x float>, align 16
+// CHECK-NEXT:    [[F:%.*]] = alloca <4 x float>, align 4
+// CHECK-NEXT:    [[F2:%.*]] = alloca <3 x float>, align 4
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Z]], align 1
 // CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
@@ -1110,7 +1110,7 @@ void case25(EmptyDerived ED, UnnamedDerived UD) {
 // CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x float> [[VECINIT]], float [[CONV1]], i32 1
 // CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x float> [[VECINIT2]], float 1.000000e+00, i32 2
 // CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x float> [[VECINIT3]], float 2.000000e+00, i32 3
-// CHECK-NEXT:    store <4 x float> [[VECINIT4]], ptr [[F]], align 16
+// CHECK-NEXT:    store <4 x float> [[VECINIT4]], ptr [[F]], align 4
 // CHECK-NEXT:    [[Z5:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z5]], align 1
 // CHECK-NEXT:    [[CONV6:%.*]] = sitofp i32 [[TMP2]] to float
@@ -1119,12 +1119,195 @@ void case25(EmptyDerived ED, UnnamedDerived UD) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[W8]], align 1
 // CHECK-NEXT:    [[CONV9:%.*]] = sitofp i32 [[TMP3]] to float
 // CHECK-NEXT:    [[VECINIT10:%.*]] = insertelement <3 x float> [[VECINIT7]], float [[CONV9]], i32 2
-// CHECK-NEXT:    store <3 x float> [[VECINIT10]], ptr [[F2]], align 16
+// CHECK-NEXT:    store <3 x float> [[VECINIT10]], ptr [[F2]], align 4
 // CHECK-NEXT:    ret void
 //
 void case26(TwoInts TI) {
   float4 F = float4(TI, 1, 2);
   float3 F2 = float3(3, TI);
+}
+
+using handle_float_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(float)]];
+
+struct CustomResource {
+  handle_float_t h;
+};
+
+// CHECK-LABEL: define hidden void @_Z6case2714CustomResource(
+// CHECK-SAME: ptr noundef byval([[STRUCT_CUSTOMRESOURCE:%.*]]) align 1 [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_CUSTOMRESOURCE]], align 1
+// CHECK-NEXT:    [[H:%.*]] = getelementptr inbounds nuw [[STRUCT_CUSTOMRESOURCE]], ptr [[B]], i32 0, i32 0
+// CHECK-NEXT:    [[H1:%.*]] = getelementptr inbounds nuw [[STRUCT_CUSTOMRESOURCE]], ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = load target("dx.TypedBuffer", float, 1, 0, 0), ptr [[H1]], align 1
+// CHECK-NEXT:    store target("dx.TypedBuffer", float, 1, 0, 0) [[TMP0]], ptr [[H]], align 1
+// CHECK-NEXT:    ret void
+//
+void case27(CustomResource a) {
+  CustomResource b = {a};
+}
+
+// Check cases with explicit casts
+
+// CHECK-LABEL: define hidden void @_Z6case289TwoFloats(
+// CHECK-SAME: ptr noundef byval([[STRUCT_TWOFLOATS:%.*]]) align 1 [[TF:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TI:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
+// CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
+// CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_TWOFLOATS]], align 1
+// CHECK-NEXT:    [[REF_TMP6:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
+// CHECK-NEXT:    [[AGG_TEMP7:%.*]] = alloca [[STRUCT_TWOFLOATS]], align 1
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[TF]], i32 8, i1 false)
+// CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [[STRUCT_TWOFLOATS]], ptr [[AGG_TEMP]], i32 0, i32 0
+// CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [[STRUCT_TWOFLOATS]], ptr [[AGG_TEMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[GEP2]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[TMP0]] to i32
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[GEP]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[GEP3]], align 4
+// CHECK-NEXT:    [[CONV4:%.*]] = fptosi float [[TMP1]] to i32
+// CHECK-NEXT:    store i32 [[CONV4]], ptr [[GEP1]], align 4
+// CHECK-NEXT:    [[Z5:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z5]], align 1
+// CHECK-NEXT:    store i32 [[TMP2]], ptr [[Z]], align 1
+// CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP7]], ptr align 1 [[TF]], i32 8, i1 false)
+// CHECK-NEXT:    [[GEP8:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP6]], i32 0, i32 0
+// CHECK-NEXT:    [[GEP9:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP6]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds [[STRUCT_TWOFLOATS]], ptr [[AGG_TEMP7]], i32 0, i32 0
+// CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds [[STRUCT_TWOFLOATS]], ptr [[AGG_TEMP7]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP10]], align 4
+// CHECK-NEXT:    [[CONV12:%.*]] = fptosi float [[TMP3]] to i32
+// CHECK-NEXT:    store i32 [[CONV12]], ptr [[GEP8]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP11]], align 4
+// CHECK-NEXT:    [[CONV13:%.*]] = fptosi float [[TMP4]] to i32
+// CHECK-NEXT:    store i32 [[CONV13]], ptr [[GEP9]], align 4
+// CHECK-NEXT:    [[W14:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP6]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W14]], align 1
+// CHECK-NEXT:    store i32 [[TMP5]], ptr [[W]], align 1
+// CHECK-NEXT:    ret void
+//
+void case28(TwoFloats TF) {
+  TwoInts TI = {(TwoInts)TF};
+}
+
+// CHECK-LABEL: define hidden void @_Z6case2910FourFloats(
+// CHECK-SAME: ptr noundef byval([[STRUCT_FOURFLOATS:%.*]]) align 1 [[FF:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[INTS:%.*]] = alloca [2 x i32], align 4
+// CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [2 x i32], align 4
+// CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_FOURFLOATS]], align 1
+// CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca [2 x i32], align 4
+// CHECK-NEXT:    [[AGG_TEMP8:%.*]] = alloca [[STRUCT_FOURFLOATS]], align 1
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[FF]], i32 16, i1 false)
+// CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP]], i32 0, i32 0, i32 0
+// CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP]], i32 0, i32 0, i32 1
+// CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[GEP2]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[TMP0]] to i32
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[GEP]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[GEP3]], align 4
+// CHECK-NEXT:    [[CONV6:%.*]] = fptosi float [[TMP1]] to i32
+// CHECK-NEXT:    store i32 [[CONV6]], ptr [[GEP1]], align 4
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK-NEXT:    store i32 [[TMP2]], ptr [[INTS]], align 4
+// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds i32, ptr [[INTS]], i32 1
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP8]], ptr align 1 [[FF]], i32 16, i1 false)
+// CHECK-NEXT:    [[GEP9:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP7]], i32 0, i32 0
+// CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP7]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 0, i32 0
+// CHECK-NEXT:    [[GEP12:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 0, i32 1
+// CHECK-NEXT:    [[GEP13:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP14:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP11]], align 4
+// CHECK-NEXT:    [[CONV15:%.*]] = fptosi float [[TMP3]] to i32
+// CHECK-NEXT:    store i32 [[CONV15]], ptr [[GEP9]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP12]], align 4
+// CHECK-NEXT:    [[CONV16:%.*]] = fptosi float [[TMP4]] to i32
+// CHECK-NEXT:    store i32 [[CONV16]], ptr [[GEP10]], align 4
+// CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[REF_TMP7]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX17]], align 4
+// CHECK-NEXT:    store i32 [[TMP5]], ptr [[ARRAYINIT_ELEMENT]], align 4
+// CHECK-NEXT:    ret void
+//
+void case29(FourFloats FF) {
+  int Ints[2] = {(int[2])FF};
+}
+
+// CHECK-LABEL: define hidden void @_Z6case30v(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARR:%.*]] = alloca [4 x float], align 4
+// CHECK-NEXT:    [[TI:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
+// CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
+// CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [4 x float], align 4
+// CHECK-NEXT:    [[REF_TMP8:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
+// CHECK-NEXT:    [[AGG_TEMP9:%.*]] = alloca [4 x float], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z6case30v.Arr, i32 16, i1 false)
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TEMP]], ptr align 4 [[ARR]], i32 16, i1 false)
+// CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP]], i32 0, i32 0
+// CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP]], i32 0, i32 2
+// CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[GEP2]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[TMP0]] to i32
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[GEP]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[GEP3]], align 4
+// CHECK-NEXT:    [[CONV6:%.*]] = fptosi float [[TMP1]] to i32
+// CHECK-NEXT:    store i32 [[CONV6]], ptr [[GEP1]], align 4
+// CHECK-NEXT:    [[Z7:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z7]], align 1
+// CHECK-NEXT:    store i32 [[TMP2]], ptr [[Z]], align 1
+// CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TEMP9]], ptr align 4 [[ARR]], i32 16, i1 false)
+// CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP8]], i32 0, i32 0
+// CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP8]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP12:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 0
+// CHECK-NEXT:    [[GEP13:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP14:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 2
+// CHECK-NEXT:    [[GEP15:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP12]], align 4
+// CHECK-NEXT:    [[CONV16:%.*]] = fptosi float [[TMP3]] to i32
+// CHECK-NEXT:    store i32 [[CONV16]], ptr [[GEP10]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP13]], align 4
+// CHECK-NEXT:    [[CONV17:%.*]] = fptosi float [[TMP4]] to i32
+// CHECK-NEXT:    store i32 [[CONV17]], ptr [[GEP11]], align 4
+// CHECK-NEXT:    [[W18:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP8]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W18]], align 1
+// CHECK-NEXT:    store i32 [[TMP5]], ptr [[W]], align 1
+// CHECK-NEXT:    ret void
+//
+void case30() {
+  float Arr[4] = {1.0,2.0,3.0,4.0};
+  TwoInts TI = {(TwoInts)Arr};
+}
+
+// CHECK-LABEL: define hidden void @_Z6case31v(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[F:%.*]] = alloca float, align 4
+// CHECK-NEXT:    [[SB:%.*]] = alloca [[STRUCT_SLICYBITS:%.*]], align 1
+// CHECK-NEXT:    store float 1.000000e+00, ptr [[F]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[TMP0]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[CONV]] to i8
+// CHECK-NEXT:    store i8 [[TMP1]], ptr [[SB]], align 1
+// CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_SLICYBITS]], ptr [[SB]], i32 0, i32 1
+// CHECK-NEXT:    store i8 2, ptr [[W]], align 1
+// CHECK-NEXT:    ret void
+//
+void case31() {
+  float F = 1.0;
+  SlicyBits SB = {(int)F, 2};
 }
 //.
 // CHECK: [[META3]] = !{}

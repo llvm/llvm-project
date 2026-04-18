@@ -48,6 +48,16 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
   }
 }
 
+// Verify kernel environment has correct ReductionDataSize for by-ref array
+// reduction.  The by-ref element type is [4 x i32] = 16 bytes, so the
+// struct should be {[4 x i32]} = 16 bytes.  Failing to account for the by-ref
+// indirection would result in a struct of {ptr} = 8 bytes.
+// AMDGCN: @{{.*}}_kernel_environment = {{.*}} %struct.ConfigurationEnvironmentTy { {{.*}}i32 16, i32 1024 }
+
+// Verify the reduce_data_size argument to __kmpc_nvptx_teams_reduce_nowait_v2
+// matches the by-ref element type size (16), not the pointer size (8).
+// AMDGCN: call i32 @__kmpc_nvptx_teams_reduce_nowait_v2({{.*}}, i32 1024, i64 16,
+
 // Verify descriptor is copied via memcpy and base_ptr is updated in all helpers
 // AMDGCN-LABEL: define internal void @_omp_reduction_shuffle_and_reduce_func
 // AMDGCN: call void @llvm.memcpy{{.*}}(ptr {{.*}}, ptr {{.*}}, i64 {{[0-9]+}}, i1 false)
@@ -110,6 +120,9 @@ module attributes {llvm.target_triple = "nvptx64-nvidia-cuda", omp.is_gpu = true
     llvm.return
   }
 }
+
+// NVPTX: @{{.*}}_kernel_environment = {{.*}} %struct.ConfigurationEnvironmentTy { {{.*}}i32 16, i32 1024 }
+// NVPTX: call i32 @__kmpc_nvptx_teams_reduce_nowait_v2({{.*}}, i32 1024, i64 16,
 
 // Verify descriptor is copied via memcpy and base_ptr is updated in all helpers
 // NVPTX-LABEL: define internal void @_omp_reduction_shuffle_and_reduce_func

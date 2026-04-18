@@ -1,0 +1,32 @@
+; RUN: split-file %s %t
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DIFF
+
+;--- input.txt
+define void @func_a() {
+  %result = add i32 %1, %2
+  ret void
+}
+define void @func_b() {
+  %val = load i32, ptr %p
+  store i32 %val, ptr %q
+  ret void
+}
+
+;--- check.txt
+; CHECK-LABEL: define void @func_a()
+; CHECK-NEXT:  %result = mul i32 %1, %2
+; CHECK-LABEL: define void @func_b()
+; CHECK-NEXT:  store i32 %val, ptr %q
+
+; DIFF:      --- {{.*}}check.txt
+; DIFF-NEXT: +++ {{.*}}input.txt
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  define void @func_a() {
+; DIFF-NEXT: -%result = mul i32 %1, %2
+; DIFF-NEXT: +%result = add i32 %1, %2
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  define void @func_b() {
+; DIFF-NEXT: -store i32 %val, ptr %q
+; DIFF-NEXT: +%val = load i32, ptr %p
+; DIFF:      FileCheck: Found 2 unique textual mismatches.

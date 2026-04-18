@@ -147,6 +147,18 @@ func.func @affine_apply_mod_variable_divisor() -> index {
   func.return %1 : index
 }
 
+// CHECK-LABEL: func @affine_apply_mod_cross_boundary
+// CHECK: test.reflect_bounds {smax = 7 : index, smin = 0 : index, umax = 7 : index, umin = 0 : index}
+func.func @affine_apply_mod_cross_boundary() -> index {
+  %d0 = test.with_bounds { umin = 14 : index, umax = 17 : index,
+                           smin = 14 : index, smax = 17 : index } : index
+  // Range [14, 17] spans a mod-8 boundary (at 16): 14%8=6, 17%8=1.
+  // Span 3 < 8 but the range wraps, so we fall back to [0, 7].
+  %0 = affine.apply affine_map<(d0) -> (d0 mod 8)>(%d0)
+  %1 = test.reflect_bounds %0 : index
+  func.return %1 : index
+}
+
 // CHECK-LABEL: func @affine_apply_mod_negative_dividend
 // CHECK: test.reflect_bounds {smax = 3 : index, smin = 0 : index, umax = 3 : index, umin = 0 : index}
 func.func @affine_apply_mod_negative_dividend() -> index {

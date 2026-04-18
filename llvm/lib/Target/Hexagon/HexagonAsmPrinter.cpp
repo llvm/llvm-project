@@ -802,28 +802,35 @@ void HexagonAsmPrinter::emitAttributes() {
 }
 
 void HexagonAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
-  static const int8_t NoopsInSledCount = 4;
+  static const int8_t NoopsInSledCount = 6;
   // We want to emit the following pattern:
   //
   // .L_xray_sled_N:
   // <xray_sled_base>:
-  // { 	jump .Ltmp0 }
-  // {  nop
-  //    nop
-  //    nop
-  //    nop }
+  // { jump .Ltmp0 }
+  // { nop }
+  // { nop }
+  // { nop }
+  // { nop }
+  // { nop }
+  // { nop }
   // .Ltmp0:
   //
-  // We need the 4 nop words because at runtime, we'd be patching over the
-  // full 5 words with the following pattern:
+  // We need the 6 nop words because at runtime, we'd be patching over the
+  // full 7 words with the following pattern:
   //
   // <xray_sled_n>:
-  // { 	immext(#...) // upper 26-bits of trampoline
-  //    r6 = ##...   // lower  6-bits of trampoline
-  //    immext(#...) // upper 26-bits of func id
-  //    r7 = ##... }  // lower 6 bits of func id
-  // { 	callr r6 }
+  // { allocframe(#0) }
+  // { immext(#...) // upper 26-bits of func id
+  //   r7 = ##...   // lower  6-bits of func id
+  //   immext(#...) // upper 26-bits of trampoline
+  //   r6 = ##... } // lower  6-bits of trampoline
+  // { callr r6 }
+  // { deallocframe }
   //
+  // allocframe saves r31:30 (LR:FP) before the call, and deallocframe
+  // restores them after the trampoline returns, ensuring the caller's
+  // return address in r31 is preserved across the sled.
   //
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
