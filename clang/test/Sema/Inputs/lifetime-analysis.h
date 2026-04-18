@@ -269,3 +269,6 @@ template<class T> struct is_pointer : false_type {};
 template<class T> struct is_pointer<T*> : true_type {};
 template<class T> struct is_pointer<T* const> : true_type {};
 }
+
+void *operator new(unsigned long, void *) noexcept;
+void *operator new[](unsigned long, void *) noexcept;

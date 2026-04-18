@@ -319,6 +319,12 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   case CK_BuiltinFnToFnPtr:
     // Ignore function-to-pointer decays.
     return;
+  case CK_BitCast:
+    // Only flow if the shapes are the same (e.g. casting from int** to void*
+    // will not flow here)
+    if (Src && Dest && Dest->getLength() == Src->getLength())
+      flow(Dest, Src, /*Kill=*/true);
+    return;
   default:
     return;
   }
@@ -611,11 +617,11 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
           NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
           true));
     }
+  } else {
+    const Loan *L = createLoan(FactMgr, NE);
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));
   }
-
-  const Loan *L = createLoan(FactMgr, NE);
-  CurrentBlockFacts.push_back(
-      FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));
 
   NewList = NewList->peelOuterOrigin();
 
@@ -636,8 +642,9 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
 }
 
 void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
-  OriginList *List =
-      getOriginsList(*DE->getArgument()->IgnoreImpCasts())->peelOuterOrigin();
+  OriginList *List = getOriginsList(*DE->getArgument()->IgnoreImpCasts());
+  if (List = List->peelOuterOrigin(); !List)
+    return;
   CurrentBlockFacts.push_back(
       FactMgr.createFact<DestroyOriginFact>(List->getOuterOriginID(), DE));
 }
