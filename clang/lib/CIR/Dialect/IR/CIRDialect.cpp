@@ -918,6 +918,10 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     return ::mlir::failure();
   }
 
+  if (parser.parseOptionalKeyword("musttail").succeeded())
+    result.addAttribute(CIRDialect::getMustTailAttrName(),
+                        mlir::UnitAttr::get(parser.getContext()));
+
   if (parser.parseOptionalKeyword("nothrow").succeeded())
     result.addAttribute(CIRDialect::getNoThrowAttrName(),
                         mlir::UnitAttr::get(parser.getContext()));
@@ -1020,6 +1024,9 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
     printer << tryCall.getUnwindDest();
   }
 
+  if (op->hasAttr(CIRDialect::getMustTailAttrName()))
+    printer << " musttail";
+
   if (isNothrow)
     printer << " nothrow";
 
@@ -1031,6 +1038,7 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
 
   llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
       CIRDialect::getCalleeAttrName(),
+      CIRDialect::getMustTailAttrName(),
       CIRDialect::getNoThrowAttrName(),
       CIRDialect::getSideEffectAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName(),

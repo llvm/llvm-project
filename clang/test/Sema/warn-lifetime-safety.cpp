@@ -936,6 +936,33 @@ void lifetimebound_ctor() {
   (void)v;   // expected-note {{later used here}}
 }
 
+void lifetimebound_ctor_functional_cast() {
+  LifetimeBoundCtor v;
+  {
+    MyObj obj;
+    v = LifetimeBoundCtor(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                             // expected-note {{destroyed here}}
+  (void)v;                      // expected-note {{later used here}}
+}
+
+void lifetimebound_ctor_c_style_cast() {
+  LifetimeBoundCtor v;
+  {
+    MyObj obj;
+    v = (LifetimeBoundCtor)(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                               // expected-note {{destroyed here}}
+  (void)v;                        // expected-note {{later used here}}
+}
+
+void lifetimebound_ctor_static_cast() {
+  LifetimeBoundCtor v;
+  {
+    MyObj obj;
+    v = static_cast<LifetimeBoundCtor>(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                                          // expected-note {{destroyed here}}
+  (void)v;                                   // expected-note {{later used here}}
+}
+
 View lifetimebound_return_of_local() {
   MyObj stack;
   return Identity(stack); // expected-warning {{address of stack memory is returned later}}
@@ -2275,8 +2302,8 @@ void from_template_instantiation() {
 }
 
 struct FieldInitFromLifetimebound {
-  S value; // function-note {{this field dangles}}
-  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // function-warning {{address of stack memory escapes to a field}}
+  S value; // expected-note {{this field dangles}}
+  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{address of stack memory escapes to a field}}
 };
 
 S S::return_self_after_registration() const {
@@ -2467,13 +2494,13 @@ void nested_local_pointer() {
 }
 
 struct PFieldFromParam {
-  Pointer<Bar> value;                      // function-note {{this field dangles}}
-  PFieldFromParam(Bar bar) : value(bar) {} // function-warning {{address of stack memory escapes to a field}}
+  Pointer<Bar> value;                      // expected-note {{this field dangles}}
+  PFieldFromParam(Bar bar) : value(bar) {} // expected-warning {{address of stack memory escapes to a field}}
 };
 
 struct PFieldFromTemp {
-  Pointer<Bar> value;                // function-note {{this field dangles}}
-  PFieldFromTemp() : value(Bar{}) {} // function-warning {{address of stack memory escapes to a field}}
+  Pointer<Bar> value;                // expected-note {{this field dangles}}
+  PFieldFromTemp() : value(Bar{}) {} // expected-warning {{address of stack memory escapes to a field}}
 };
 
 } // namespace gslpointer_construction_from_lifetimebound
@@ -2531,3 +2558,198 @@ int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
 }
 
 } // namespace conditional_operator_control_flow
+
+namespace method_call_uses_field_origins {
+int GLOBAL_INT;
+std::string GLOBAL_STRING{"123"};
+
+struct S {
+  int* p_;
+  void bar();
+  void foo() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar();             // expected-note {{later used here}}
+    this->p_ = &GLOBAL_INT;
+  }
+  void baz() {
+    {
+      int num;
+      this->p_ = &num;
+    }
+    this->p_ = &GLOBAL_INT;
+    bar();
+  }
+};
+
+struct T {
+  std::string_view v;
+  void bar();
+  void foo() {
+    v = std::string("tmp"); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+    bar();                  // expected-note {{later used here}}
+  }
+};
+
+// FIXME: false-negative
+void foo() {
+  S s;
+  {
+    int num;
+    s.p_ = &num; // does not warn
+  }
+  s.bar();
+  s.p_ = &GLOBAL_INT;
+}
+
+struct S2 : S {
+  void bar2();
+  void foo2() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar();             // expected-note {{later used here}}
+    this->p_ = &GLOBAL_INT;
+  }
+  void baz2() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar2();            // expected-note {{later used here}}
+    this->p_ = nullptr;
+  }
+};
+
+} // namespace method_call_uses_field_origins
+
+namespace CXXDefaultInitExprTests {
+struct Holder {
+  std::string_view view = std::string("temporary"); // expected-warning {{address of stack memory escapes to a field}} expected-note {{this field dangles}}
+  Holder() {}
+};
+} // namespace CXXDefaultInitExprTests
+
+namespace base_class_fields {
+struct X { int* x; }; // expected-note {{this field dangles}}
+struct Y : X {
+  int* y;
+  void bar() {
+    {
+      int a;
+      x = &a; // expected-warning {{address of stack memory escapes to a field}}
+    }
+    (void)x;
+  }
+};
+} // namespace base_class_fields
+
+namespace callable_wrappers {
+
+std::function<void()> direct_return() {
+  int x;
+  return [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{returned here}}
+}
+
+std::function<void()> copy_function() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}}
+  std::function<void()> f2 = f;
+  return f2; // expected-note {{returned here}}
+}
+
+std::function<void()> copy_assign() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}}
+  std::function<void()> f2 = []() {};
+  f2 = f;
+  return f2; // expected-note {{returned here}}
+}
+
+// FIXME: False negative. std::move's lifetimebound handling in
+// `handleFunctionCall` only flows the outermost origin, missing inner origins
+// that carry the lambda's loans.
+std::function<void()> move_assign() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // Should warn.
+  std::function<void()> f2 = []() {};
+  f2 = std::move(f);
+  return f2;
+}
+
+std::function<void()> reassign_safe_then_unsafe() {
+  static int safe = 1;
+  int local = 2;
+  std::function<void()> f = []() { (void)safe; };
+  f = [&local]() { (void)local; }; // expected-warning {{address of stack memory is returned later}}
+  return f; // expected-note {{returned here}}
+}
+
+std::function<void()> reassign_unsafe_then_safe() {
+  static int safe = 1;
+  int local = 2;
+  std::function<void()> f = [&local]() { (void)local; };
+  f = []() { (void)safe; };
+  return f;
+}
+
+std::function<void()> non_capturing_lambda() {
+  return []() {};
+}
+
+void free_function();
+
+std::function<void()> reassign_lambda_to_function_pointer() {
+  int local;
+  std::function<void()> f = [&local]() { (void)local; };
+  f = &free_function;
+  return f;
+}
+
+struct Functor { void operator()() const; };
+
+std::function<void()> reassign_lambda_to_functor() {
+  int local;
+  Functor c;
+  std::function<void()> f = [&local]() { (void)local; };
+  f = c;
+  return f;
+}
+
+std::function<void()> capture_lifetimebound_param(int &x [[clang::lifetimebound]]) {
+  return [&]() { (void)x; };
+}
+
+void uaf_via_lifetimebound() {
+  std::function<void()> f = []() {};
+  {
+    int local;
+    f = capture_lifetimebound_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)f; // expected-note {{later used here}}
+}
+
+} // namespace callable_wrappers
+
+namespace GH126600 {
+struct [[gsl::Pointer]] function_ref {
+  template <typename Callable>
+  function_ref(Callable &&callable [[clang::lifetimebound]]) : ref(callable) {}
+  void (*ref)();
+};
+
+// FIXME: The lifetimebound annotation tracks the outer callable object's
+// storage rather than what the callable captures. A mechanism like
+// lifetimebound(2) could enable tracking inner lifetimes, which would
+// avoid this warning for non-capturing lambdas.
+void assign_non_capturing_to_function_ref(function_ref &r) {
+  r = []() {}; // expected-warning {{object whose reference is captured does not live long enough}} \
+               // expected-note {{destroyed here}}
+  (void)r; // expected-note {{later used here}}
+}
+
+} // namespace GH126600

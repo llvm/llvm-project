@@ -44,6 +44,7 @@
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -160,6 +161,38 @@ static mlir::Location genLocation(Fortran::lower::AbstractConverter &converter,
   return converter.getCurrentLocation();
 }
 
+/// If \p sym has acc declare flags, attach the acc.declare attribute to
+/// \p global so that the variable is recognized as already managed by
+/// OpenACC declare directives (and should not be implicitly copied to
+/// the device).
+static void attachAccDeclareAttribute(fir::FirOpBuilder &builder,
+                                      fir::GlobalOp global,
+                                      const Fortran::semantics::Symbol &sym) {
+  using Flag = Fortran::semantics::Symbol::Flag;
+  const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+  if (!ultimate.test(Flag::AccDeclare))
+    return;
+  mlir::acc::DataClause clause = mlir::acc::DataClause::acc_create;
+  if (ultimate.test(Flag::AccCopy))
+    clause = mlir::acc::DataClause::acc_copy;
+  else if (ultimate.test(Flag::AccCopyIn))
+    clause = mlir::acc::DataClause::acc_copyin;
+  else if (ultimate.test(Flag::AccCopyOut))
+    clause = mlir::acc::DataClause::acc_copyout;
+  else if (ultimate.test(Flag::AccCreate))
+    clause = mlir::acc::DataClause::acc_create;
+  else if (ultimate.test(Flag::AccPresent))
+    clause = mlir::acc::DataClause::acc_present;
+  else if (ultimate.test(Flag::AccDeviceResident))
+    clause = mlir::acc::DataClause::acc_declare_device_resident;
+  else if (ultimate.test(Flag::AccLink))
+    clause = mlir::acc::DataClause::acc_declare_link;
+  global->setAttr(mlir::acc::getDeclareAttrName(),
+                  mlir::acc::DeclareAttr::get(
+                      builder.getContext(), mlir::acc::DataClauseAttr::get(
+                                                builder.getContext(), clause)));
+}
+
 /// Create the global op declaration without any initializer
 static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
                                    const Fortran::lower::pft::Variable &var,
@@ -185,9 +218,11 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       !Fortran::semantics::IsProcedurePointer(ultimate))
     mlir::emitError(loc, "processing global declaration: symbol '")
         << toStringRef(sym.name()) << "' has unexpected details\n";
-  return builder.createGlobal(loc, converter.genType(var), globalName, linkage,
-                              mlir::Attribute{}, isConstant(ultimate),
-                              var.isTarget(), dataAttr);
+  fir::GlobalOp global = builder.createGlobal(
+      loc, converter.genType(var), globalName, linkage, mlir::Attribute{},
+      isConstant(ultimate), var.isTarget(), dataAttr);
+  attachAccDeclareAttribute(builder, global, sym);
+  return global;
 }
 
 /// Temporary helper to catch todos in initial data target lowering.

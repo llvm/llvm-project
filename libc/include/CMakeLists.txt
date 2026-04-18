@@ -265,6 +265,7 @@ add_header_macro(
   string.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.annex_k_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-types.errno_t
     .llvm-libc-types.rsize_t
@@ -459,6 +460,20 @@ add_header_macro(
     .llvm-libc-types.pthread_t
     .llvm_libc_common_h
 )
+
+if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+  add_header_macro(
+    ucontext
+    ../libc/include/ucontext.yaml
+    ucontext.h
+    DEPENDS
+      .llvm_libc_common_h
+      .llvm-libc-types.mcontext_t
+      .llvm-libc-types.ucontext_t
+      .llvm-libc-types.sigset_t
+      .llvm-libc-types.stack_t
+  )
+endif()
 
 add_header_macro(
   sched

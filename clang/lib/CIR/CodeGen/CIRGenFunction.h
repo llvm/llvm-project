@@ -94,22 +94,65 @@ public:
 
   typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
 
-  /// An entry in the lifetime-extended cleanup stack. Each entry represents a
-  /// cleanup that was deferred past a full-expression boundary (e.g.,
-  /// destroying a temporary bound to a local reference). When the enclosing
-  /// scope exits, these entries are promoted to the EH scope stack.
+  /// A cleanup entry that will be promoted onto the EH scope stack at a later
+  /// point. Used by both the lifetime-extended cleanup stack (promoted when
+  /// the enclosing scope exits) and the deferred conditional cleanup stack
+  /// (promoted at the enclosing full-expression level).
   ///
-  /// Currently only DestroyObject cleanups are lifetime-extended. When other
-  /// cleanup types are needed (e.g., CallLifetimeEnd), this struct can be
-  /// extended with a std::variant of cleanup data types.
-  struct LifetimeExtendedCleanupEntry {
+  /// Currently only DestroyObject cleanups use this. When other cleanup types
+  /// are needed (e.g., CallLifetimeEnd), this struct can be extended with a
+  /// std::variant of cleanup data types.
+  struct PendingCleanupEntry {
     CleanupKind kind;
     Address addr;
     QualType type;
     Destroyer *destroyer;
+    Address activeFlag = Address::invalid();
   };
 
-  llvm::SmallVector<LifetimeExtendedCleanupEntry> lifetimeExtendedCleanupStack;
+  llvm::SmallVector<PendingCleanupEntry> lifetimeExtendedCleanupStack;
+
+  llvm::SmallVector<PendingCleanupEntry> deferredConditionalCleanupStack;
+
+  /// A cleanup that was pushed to the EH stack but whose deactivation is
+  /// deferred until the enclosing CleanupDeactivationScope exits. Used to
+  /// protect partially-constructed aggregates (e.g. lambda captures) so that
+  /// already-initialized sub-objects are destroyed if a later initializer
+  /// throws, while avoiding double-destruction after full construction.
+  struct DeferredDeactivateCleanup {
+    EHScopeStack::stable_iterator cleanup;
+    mlir::Operation *dominatingIP;
+  };
+  llvm::SmallVector<DeferredDeactivateCleanup> deferredDeactivationCleanupStack;
+
+  /// Scope that deactivates all enclosed deferred cleanups on exit.
+  /// Mirrors CodeGenFunction::CleanupDeactivationScope in classic codegen.
+  struct CleanupDeactivationScope {
+    CIRGenFunction &cgf;
+    size_t oldDeactivateCleanupStackSize;
+    bool deactivated = false;
+
+    CleanupDeactivationScope(CIRGenFunction &cgf)
+        : cgf(cgf), oldDeactivateCleanupStackSize(
+                        cgf.deferredDeactivationCleanupStack.size()) {}
+
+    void forceDeactivate() {
+      assert(!deactivated && "Deactivating already deactivated scope");
+      auto &stack = cgf.deferredDeactivationCleanupStack;
+      for (size_t i = stack.size(); i > oldDeactivateCleanupStackSize; i--) {
+        cgf.deactivateCleanupBlock(stack[i - 1].cleanup,
+                                   stack[i - 1].dominatingIP);
+        stack[i - 1].dominatingIP->erase();
+      }
+      stack.resize(oldDeactivateCleanupStackSize);
+      deactivated = true;
+    }
+
+    ~CleanupDeactivationScope() {
+      if (!deactivated)
+        forceDeactivate();
+    }
+  };
 
   GlobalDecl curSEHParent;
 
@@ -126,6 +169,7 @@ public:
   ImplicitParamDecl *cxxabiThisDecl = nullptr;
   mlir::Value cxxabiThisValue = nullptr;
   mlir::Value cxxThisValue = nullptr;
+  clang::CharUnits cxxabiThisAlignment;
   clang::CharUnits cxxThisAlignment;
 
   /// When generating code for a constructor or destructor, this will hold the
@@ -137,11 +181,20 @@ public:
   /// expression.
   Address cxxDefaultInitExprThis = Address::invalid();
 
+  /// The values of function arguments to use when evaluating
+  /// CXXInheritedCtorInitExprs within this context.
+  CallArgList cxxInheritedCtorInitExprArgs;
+
+  /// The current array initialization index when evaluating an
+  /// ArrayInitIndexExpr within an ArrayInitLoopExpr.
+  mlir::Value arrayInitIndex = nullptr;
+
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
   /// This is the inner-most code context, which includes blocks.
   const clang::Decl *curCodeDecl = nullptr;
   const CIRGenFunctionInfo *curFnInfo = nullptr;
+  QualType fnRetTy;
 
   /// The current function or global initializer that is generated code for.
   /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
@@ -839,6 +892,33 @@ public:
         : SourceLocExprScopeGuard(e, cfg.curSourceLocExprScope) {}
   };
 
+  /// The scope of an ArrayInitLoopExpr. Within this scope, the value of the
+  /// current loop index is overridden. In order to encourage re-use of existing
+  /// array initialization, this uses a flag to determine if it is a 'no-op' or
+  /// not.
+  class ArrayInitLoopExprScope {
+  public:
+    ArrayInitLoopExprScope(CIRGenFunction &cgf, bool setIdx, mlir::Value index)
+        : cgf(cgf),
+          oldArrayInitIndex(setIdx
+                                ? std::optional<mlir::Value>(cgf.arrayInitIndex)
+                                : std::nullopt) {
+      if (setIdx)
+        cgf.arrayInitIndex = index;
+    }
+    ~ArrayInitLoopExprScope() {
+      if (oldArrayInitIndex.has_value())
+        cgf.arrayInitIndex = *oldArrayInitIndex;
+    }
+
+  private:
+    CIRGenFunction &cgf;
+    std::optional<mlir::Value> oldArrayInitIndex;
+  };
+
+  /// Get the index of the current ArrayInitLoopExpr, if any.
+  mlir::Value getArrayInitIndex() { return arrayInitIndex; }
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
   LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
@@ -995,7 +1075,7 @@ public:
   void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
                         size_t oldLifetimeExtendedSize,
                         ArrayRef<mlir::Value *> valuesToReload = {});
-  void popCleanupBlock();
+  void popCleanupBlock(bool forDeactivation = false);
 
   void terminateStructuredRegionBody(mlir::Region &r, mlir::Location loc);
 
@@ -1009,18 +1089,48 @@ public:
   void deactivateCleanupBlock(EHScopeStack::stable_iterator cleanup,
                               mlir::Operation *dominatingIP);
 
+  /// Create an active flag variable for use with conditional cleanups. The
+  /// flag is initialized to false before the outermost conditional and set to
+  /// true at the current insertion point (inside the conditional branch).
+  Address createCleanupActiveFlag();
+
+  /// Promote a single pending cleanup entry onto the EH scope stack. If the
+  /// entry has a valid activeFlag, the cleanup is configured as conditional.
+  /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
+  void pushPendingCleanupToEHStack(const PendingCleanupEntry &entry);
+
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
   /// conditionally-evaluated expression.
   template <class T, class... As>
   void pushFullExprCleanup(CleanupKind kind, As... a) {
-    // If we're not in a conditional branch, or if none of the
-    // arguments requires saving, then use the unconditional cleanup.
     if (!isInConditionalBranch())
       return ehStack.pushCleanup<T>(kind, a...);
 
-    cgm.errorNYI("pushFullExprCleanup in conditional branch");
+    // Defer the cleanup until the FullExprCleanupScope exits. We can't push
+    // to the EH stack now because the ternary's inner LexicalScope would pop
+    // it prematurely.
+    Address activeFlag = createCleanupActiveFlag();
+    deferredConditionalCleanupStack.push_back(
+        PendingCleanupEntry{kind, a..., activeFlag});
   }
+
+  /// Push a cleanup and record it for deferred deactivation. The cleanup will
+  /// be deactivated when the enclosing CleanupDeactivationScope exits.
+  template <class T, class... As>
+  void pushCleanupAndDeferDeactivation(CleanupKind kind, As... a) {
+    mlir::Location loc = builder.getUnknownLoc();
+    mlir::Operation *dominatingIP = builder.getBool(false, loc).getOperation();
+    ehStack.pushCleanup<T>(kind, a...);
+    deferredDeactivationCleanupStack.push_back(
+        {ehStack.stable_begin(), dominatingIP});
+  }
+
+  void pushDestroyAndDeferDeactivation(QualType::DestructionKind dtorKind,
+                                       Address addr, QualType type);
+  void pushDestroyAndDeferDeactivation(CleanupKind cleanupKind, Address addr,
+                                       QualType type, Destroyer *destroyer,
+                                       bool useEHCleanupForArray);
 
   /// Queue a cleanup to be pushed after finishing the current full-expression.
   /// When the enclosing RunCleanupsScope exits, popCleanupBlocks promotes these
@@ -1035,6 +1145,7 @@ public:
   class RunCleanupsScope {
     EHScopeStack::stable_iterator cleanupStackDepth, oldCleanupStackDepth;
     size_t lifetimeExtendedCleanupStackSize;
+    CleanupDeactivationScope deactivateCleanups;
 
   protected:
     bool performCleanup;
@@ -1050,7 +1161,7 @@ public:
   public:
     /// Enter a new cleanup scope.
     explicit RunCleanupsScope(CIRGenFunction &cgf)
-        : performCleanup(true), cgf(cgf) {
+        : deactivateCleanups(cgf), performCleanup(true), cgf(cgf) {
       cleanupStackDepth = cgf.ehStack.stable_begin();
       lifetimeExtendedCleanupStackSize =
           cgf.lifetimeExtendedCleanupStack.size();
@@ -1071,6 +1182,7 @@ public:
     void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
+      deactivateCleanups.forceDeactivate();
       cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize,
                            valuesToReload);
       performCleanup = false;
@@ -1086,6 +1198,28 @@ public:
 
   // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
   EHScopeStack::stable_iterator currentCleanupStackDepth = ehStack.stable_end();
+
+  class FullExprCleanupScope {
+    CIRGenFunction &cgf;
+    RunCleanupsScope cleanups;
+    cir::CleanupScopeOp scope;
+    size_t deferredCleanupStackSize;
+    bool exited = false;
+
+  public:
+    FullExprCleanupScope(CIRGenFunction &cgf, const Expr *subExpr);
+
+    void exit(ArrayRef<mlir::Value *> valuesToReload = {});
+
+    ~FullExprCleanupScope() {
+      if (!exited)
+        exit();
+    }
+
+  private:
+    FullExprCleanupScope(const FullExprCleanupScope &) = delete;
+    void operator=(const FullExprCleanupScope &) = delete;
+  };
 
 public:
   /// Represents a scope, including function bodies, compound statements, and
@@ -1271,12 +1405,13 @@ public:
                                    QualType type, Destroyer *destroyer,
                                    bool useEHCleanupForArray);
 
-  /// Promote a single lifetime-extended cleanup entry onto the EH scope stack.
-  /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
-  void pushLifetimeExtendedCleanupToEHStack(
-      const LifetimeExtendedCleanupEntry &entry);
-
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
+
+  void pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
+                                        Address arrayEndPointer,
+                                        QualType elementType,
+                                        CharUnits elementAlign,
+                                        Destroyer *destroyer);
 
   /// Start generating a thunk function.
   void startThunk(cir::FuncOp fn, GlobalDecl gd,
@@ -1412,6 +1547,8 @@ public:
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
+
+  LValue emitPseudoObjectLValue(const PseudoObjectExpr *E);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
   /// register, or no storage class specifier. These turn into simple stack
@@ -1563,6 +1700,15 @@ public:
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
+
+  void emitInheritedCXXConstructorCall(const CXXConstructorDecl *d,
+                                       bool forVirtualBase, Address thisAddr,
+                                       bool inheritedFromVBase,
+                                       const CXXInheritedCtorInitExpr *e);
+
+  void emitInlinedInheritingCXXConstructorCall(
+      SourceLocation loc, const CXXConstructorDecl *d, CXXCtorType ctorType,
+      bool forVirtualBase, bool delegating, CallArgList &args);
 
   void emitCXXDeleteExpr(const CXXDeleteExpr *e);
 
@@ -2249,6 +2395,7 @@ public:
   mlir::LogicalResult
   emitOMPGenericLoopDirective(const OMPGenericLoopDirective &s);
   mlir::LogicalResult emitOMPReverseDirective(const OMPReverseDirective &s);
+  mlir::LogicalResult emitOMPSplitDirective(const OMPSplitDirective &s);
   mlir::LogicalResult
   emitOMPInterchangeDirective(const OMPInterchangeDirective &s);
   mlir::LogicalResult emitOMPAssumeDirective(const OMPAssumeDirective &s);
@@ -2395,6 +2542,62 @@ public:
 
 private:
   QualType getVarArgType(const Expr *arg);
+
+  class InlinedInheritingConstructorScope {
+  public:
+    InlinedInheritingConstructorScope(CIRGenFunction &cgf, GlobalDecl gd)
+        : cgf(cgf), oldCurGD(cgf.curGD), oldCurFuncDecl(cgf.curFuncDecl),
+          oldCurCodeDecl(cgf.curCodeDecl),
+          oldCxxabiThisDecl(cgf.cxxabiThisDecl),
+          oldCxxThisValue(cgf.cxxThisValue),
+          oldCxxabiThisAlignment(cgf.cxxabiThisAlignment),
+          oldCxxThisAlignment(cgf.cxxThisAlignment),
+          oldReturnValue(cgf.returnValue), oldFnRetTy(cgf.fnRetTy),
+          oldCxxInheritedCtorInitExprArgs(
+              std::move(cgf.cxxInheritedCtorInitExprArgs)) {
+      cgf.curGD = gd;
+      cgf.curFuncDecl = cast<CXXConstructorDecl>(gd.getDecl());
+      cgf.curCodeDecl = cgf.curFuncDecl;
+      cgf.cxxabiThisDecl = nullptr;
+      cgf.cxxabiThisValue = nullptr;
+      cgf.cxxThisValue = nullptr;
+      cgf.cxxThisAlignment = CharUnits();
+      cgf.cxxabiThisAlignment = CharUnits();
+      cgf.returnValue = Address::invalid();
+      cgf.fnRetTy = QualType();
+      cgf.cxxInheritedCtorInitExprArgs.clear();
+      // FIXME: at one point when we want to call one of these, we'll need
+      // CXXInheritedCtorInitExprArgs here too.
+    }
+    ~InlinedInheritingConstructorScope() {
+      cgf.curGD = oldCurGD;
+      cgf.curFuncDecl = oldCurFuncDecl;
+      cgf.curCodeDecl = oldCurCodeDecl;
+      cgf.cxxabiThisDecl = oldCxxabiThisDecl;
+      cgf.cxxabiThisValue = oldCxxabiThisValue;
+      cgf.cxxThisValue = oldCxxThisValue;
+      cgf.cxxThisAlignment = oldCxxThisAlignment;
+      cgf.cxxabiThisAlignment = oldCxxabiThisAlignment;
+      cgf.returnValue = oldReturnValue;
+      cgf.fnRetTy = oldFnRetTy;
+      cgf.cxxInheritedCtorInitExprArgs =
+          std::move(oldCxxInheritedCtorInitExprArgs);
+    }
+
+  private:
+    CIRGenFunction &cgf;
+    GlobalDecl oldCurGD;
+    const Decl *oldCurFuncDecl;
+    const Decl *oldCurCodeDecl;
+    ImplicitParamDecl *oldCxxabiThisDecl;
+    mlir::Value oldCxxabiThisValue;
+    mlir::Value oldCxxThisValue;
+    clang::CharUnits oldCxxabiThisAlignment;
+    clang::CharUnits oldCxxThisAlignment;
+    Address oldReturnValue;
+    QualType oldFnRetTy;
+    CallArgList oldCxxInheritedCtorInitExprArgs;
+  };
 };
 
 } // namespace clang::CIRGen

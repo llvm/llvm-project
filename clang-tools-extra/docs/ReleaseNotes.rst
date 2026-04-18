@@ -211,6 +211,11 @@ New check aliases
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
   name is kept as an alias.
 
+- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
+  to :doc:`bugprone-signed-bitwise
+  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
+  name is kept as an alias.
+
 - Renamed :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` to
   :doc:`performance-prefer-single-char-overloads
@@ -261,6 +266,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
+
+- Improved :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing a false
+  positive when converting a ``bool`` to a signed integer type.
 
 - Improved :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check

@@ -378,9 +378,17 @@ static LogicalResult getFuncOpsOrderedByCalls(
 
 /// Helper function that extracts the source from a memref.cast. If the given
 /// value is not a memref.cast result, simply returns the given value.
+/// Only unpacks casts where the source is at least as specific as the result
+/// (i.e., does not unpack casts from unranked to ranked memref, which would
+/// downgrade the type).
 static Value unpackCast(Value v) {
   auto castOp = v.getDefiningOp<memref::CastOp>();
   if (!castOp)
+    return v;
+  // Do not unpack a cast from unranked to ranked memref: folding would
+  // downgrade the function return type from ranked to unranked.
+  if (isa<UnrankedMemRefType>(castOp.getSource().getType()) &&
+      isa<MemRefType>(v.getType()))
     return v;
   return castOp.getSource();
 }

@@ -1186,6 +1186,9 @@ static bool builtinMayNeedPromotionToVec(uint32_t BuiltinNumber) {
   case SPIRV::OpenCLExtInst::mix:
   case SPIRV::OpenCLExtInst::step:
   case SPIRV::OpenCLExtInst::smoothstep:
+  case SPIRV::OpenCLExtInst::ldexp:
+  case SPIRV::OpenCLExtInst::pown:
+  case SPIRV::OpenCLExtInst::rootn:
     return true;
   default:
     break;
@@ -1214,11 +1217,15 @@ getBuiltinCallArguments(const SPIRV::IncomingCall *Call, uint32_t BuiltinNumber,
   for (Register Argument : Call->Arguments) {
     Register VecArg = Argument;
     SPIRVTypeInst ArgumentType = GR->getSPIRVTypeForVReg(Argument);
-    if (ArgumentType != Call->ReturnType) {
-      VecArg = createVirtualRegister(Call->ReturnType, GR, MIRBuilder);
+    if (GR->getScalarOrVectorComponentCount(ArgumentType) == 1 &&
+        ArgumentType != Call->ReturnType) {
+      SPIRVTypeInst VecType = GR->getOrCreateSPIRVVectorType(
+          ArgumentType, ResultElementCount, MIRBuilder, /*EmitIR=*/true);
+      VecArg = createVirtualRegister(VecType, GR, MIRBuilder);
+      Register VecTypeId = GR->getSPIRVTypeID(VecType);
       auto VecSplat = MIRBuilder.buildInstr(SPIRV::OpCompositeConstruct)
                           .addDef(VecArg)
-                          .addUse(ReturnTypeId);
+                          .addUse(VecTypeId);
       for (unsigned I = 0; I != ResultElementCount; ++I)
         VecSplat.addUse(Argument);
     }
@@ -1320,12 +1327,35 @@ static bool generateRelationalInst(const SPIRV::IncomingCall *Call,
   std::tie(CompareRegister, RelationType) =
       buildBoolRegister(MIRBuilder, Call->ReturnType, GR);
 
+  // OpAny/OpAll require a boolean vector input, but OpenCL any()/all()
+  // builtins receive integer vectors. Convert via OpINotEqual against zero.
+  SmallVector<Register> Arguments(Call->Arguments.begin(),
+                                  Call->Arguments.end());
+  if ((Opcode == SPIRV::OpAny || Opcode == SPIRV::OpAll) &&
+      !GR->isScalarOrVectorOfType(Arguments[0], SPIRV::OpTypeBool)) {
+    SPIRVTypeInst ArgType = GR->getSPIRVTypeForVReg(Arguments[0]);
+    unsigned NumElts = ArgType->getOperand(2).getImm();
+    SPIRVTypeInst BoolVecTy = GR->getOrCreateSPIRVVectorType(
+        GR->getOrCreateSPIRVBoolType(MIRBuilder, /*EmitIR=*/true), NumElts,
+        MIRBuilder, /*EmitIR=*/true);
+    Register ZeroReg =
+        GR->getOrCreateConsIntVector(uint64_t(0), MIRBuilder, ArgType,
+                                     /*EmitIR=*/true);
+    Register BoolVecReg = createVirtualRegister(BoolVecTy, GR, MIRBuilder);
+    MIRBuilder.buildInstr(SPIRV::OpINotEqual)
+        .addDef(BoolVecReg)
+        .addUse(GR->getSPIRVTypeID(BoolVecTy))
+        .addUse(Arguments[0])
+        .addUse(ZeroReg);
+    Arguments[0] = BoolVecReg;
+  }
+
   // Build relational instruction.
   auto MIB = MIRBuilder.buildInstr(Opcode)
                  .addDef(CompareRegister)
                  .addUse(GR->getSPIRVTypeID(RelationType));
 
-  for (auto Argument : Call->Arguments)
+  for (auto Argument : Arguments)
     MIB.addUse(Argument);
 
   // Build select instruction.

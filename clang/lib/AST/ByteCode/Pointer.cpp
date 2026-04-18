@@ -669,6 +669,11 @@ void Pointer::activate() const {
   };
 
   Pointer B = *this;
+  // Primitive array elements can't be activated individually, so
+  // look at the array root instead.
+  if (B.getFieldDesc()->isPrimitiveArray() && B.isArrayElement())
+    B = B.getArray();
+
   while (!B.isRoot() && B.inUnion()) {
     activate(B);
 

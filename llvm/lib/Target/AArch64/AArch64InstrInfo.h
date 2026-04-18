@@ -580,6 +580,12 @@ public:
   static int
   findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr);
 
+  /// Insert a `PAUTH_EPILOGUE` pseudo before the first terminator in \p MBB to
+  /// authenticate the return address. Adds an implicit def of X16 when the
+  /// branch protection uses PAuthLR but the subtarget lacks PAuthLR
+  /// instructions.
+  void createPauthEpilogueInstr(MachineBasicBlock &MBB, DebugLoc DL) const;
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
@@ -848,6 +854,7 @@ static inline unsigned getBranchOpcodeForKey(bool IsCall, AArch64PACKey::ID K,
 
 namespace AArch64 {
 
+// clang-format off
 enum ElementSizeType {
   ElementSizeMask = TSFLAG_ELEMENT_SIZE_TYPE(0x7),
   ElementSizeNone = TSFLAG_ELEMENT_SIZE_TYPE(0x0),
@@ -870,6 +877,7 @@ enum DestructiveInstType {
   DestructiveTernaryCommWithRev = TSFLAG_DESTRUCTIVE_INST_TYPE(0x8),
   Destructive2xRegImmUnpred     = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
   DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0xa),
+  DestructivePredicate          = TSFLAG_DESTRUCTIVE_INST_TYPE(0xb),
 };
 
 enum FalseLaneType {
@@ -877,6 +885,8 @@ enum FalseLaneType {
   FalseLanesZero  = TSFLAG_FALSE_LANE_TYPE(0x1),
   FalseLanesUndef = TSFLAG_FALSE_LANE_TYPE(0x2),
 };
+
+// clang-format on
 
 // NOTE: This is a bit field.
 static const uint64_t InstrFlagIsWhile     = TSFLAG_INSTR_FLAGS(0x1);

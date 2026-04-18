@@ -7260,6 +7260,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   // Quick detour: at this point we can say what the type of strided load would
   // be if all the checks pass. Check if this type is legal for the target.
   bool NeedsWidening = Sz != GroupSize;
+  const uint64_t UnitBitWidth = DL->getTypeSizeInBits(ScalarTy).getFixedValue();
   if (NeedsWidening) {
     if (Sz % GroupSize != 0)
       return false;
@@ -7267,9 +7268,9 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
     if (StrideWithinGroup != 1)
       return false;
     VecSz = Sz / GroupSize;
-    NewScalarTy = Type::getIntNTy(
-        SE->getContext(),
-        DL->getTypeSizeInBits(ScalarTy).getFixedValue() * GroupSize);
+    NewScalarTy = Type::getIntNTy(SE->getContext(), UnitBitWidth * GroupSize);
+  } else if (ScalarTy->isVectorTy()) {
+    NewScalarTy = Type::getIntNTy(SE->getContext(), UnitBitWidth);
   }
 
   if (!isStridedLoad(PointerOps, NewScalarTy, Alignment, Diff, VecSz))
@@ -18075,20 +18076,18 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       Worklist.pop();
       continue;
     }
-    const unsigned Sz = TE->Scalars.size();
-    APInt DemandedElts = APInt::getAllOnes(Sz);
+    const unsigned EntryVF = TE->getVectorFactor();
+    APInt DemandedElts = APInt::getZero(EntryVF);
     for (auto [Idx, V] : enumerate(TE->Scalars)) {
-      if (isConstant(V))
-        DemandedElts.clearBit(Idx);
+      if (!isConstant(V))
+        DemandedElts.setBit(Idx);
     }
 
     Type *ScalarTy = getValueType(TE->Scalars.front());
     auto It = MinBWs.find(TE);
     if (It != MinBWs.end())
       ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
-    auto *VecTy = getWidenedType(ScalarTy, Sz);
-    const unsigned EntryVF = TE->getVectorFactor();
-    auto *FinalVecTy = getWidenedType(ScalarTy, EntryVF);
+    auto *VecTy = getWidenedType(ScalarTy, EntryVF);
     InstructionCost GatherCost = ::getScalarizationOverhead(
         *TTI, ScalarTy, VecTy, DemandedElts,
         /*Insert=*/true, /*Extract=*/false, CostKind);
@@ -18111,7 +18110,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       ::addMask(Mask, TE->ReuseShuffleIndices);
     if (!Mask.empty() && !ShuffleVectorInst::isIdentityMask(Mask, EntryVF))
       GatherCost +=
-          ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, FinalVecTy, Mask);
+          ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, VecTy, Mask);
     // If all scalars are reused in gather node(s) or other vector nodes, there
     // might be extra cost for inserting them.
     if ((!TE->hasState() || !TE->isAltShuffle()) &&
