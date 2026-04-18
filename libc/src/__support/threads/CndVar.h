@@ -225,6 +225,9 @@ private:
     size_t limit = broadcast ? cpp::numeric_limits<size_t>::max() : 1;
     {
       cpp::lock_guard lock(queue_lock);
+      waiter_queue.ensure_queue_initialization();
+      if (waiter_queue.next == &waiter_queue)
+        return;
       for (cursor = static_cast<CndWaiter *>(waiter_queue.next);
            cursor != &waiter_queue;
            cursor = static_cast<CndWaiter *>(cursor->next)) {
@@ -254,7 +257,9 @@ private:
   }
 
 public:
-  LIBC_INLINE void notify_one(bool is_shared = false) { notify(1, is_shared); }
+  LIBC_INLINE void notify_one(bool is_shared = false) {
+    notify(/*broadcast=*/false, is_shared);
+  }
 
   LIBC_INLINE void broadcast(bool is_shared = false) {
     notify(cpp::numeric_limits<size_t>::max(), is_shared);
