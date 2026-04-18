@@ -540,11 +540,11 @@ entry:
 define double @fsub_zero_zero_dynamic() #0 {
 ; CHECK-LABEL: @fsub_zero_zero_dynamic(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double 0.000000e+00, double 0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double 0.000000e+00, double 0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret double [[RESULT]]
 ;
 entry:
-  %result = call double @llvm.experimental.constrained.fsub.f64(double 0.0, double 0.0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %result = call double @llvm.experimental.constrained.fsub.f64(double 0.0, double 0.0, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %result
 }
 
@@ -552,11 +552,11 @@ entry:
 define double @fsub_zero_zero_tonearest() #0 {
 ; CHECK-LABEL: @fsub_zero_zero_tonearest(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double 0.000000e+00, double 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double 0.000000e+00, double 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret double 0.000000e+00
 ;
 entry:
-  %result = call double @llvm.experimental.constrained.fsub.f64(double 0.0, double 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %result = call double @llvm.experimental.constrained.fsub.f64(double 0.0, double 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret double %result
 }
 
@@ -564,11 +564,11 @@ entry:
 define double @fadd_one_one_dynamic() #0 {
 ; CHECK-LABEL: @fadd_one_one_dynamic(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret double 2.000000e+00
 ;
 entry:
-  %result = call double @llvm.experimental.constrained.fadd.f64(double 1.0, double 1.0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %result = call double @llvm.experimental.constrained.fadd.f64(double 1.0, double 1.0, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %result
 }
 
