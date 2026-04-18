@@ -131,7 +131,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPostLegalizerCombinerPass(*PR);
   initializeMachineKCFILegacyPass(*PR);
   initializeRISCVDeadRegisterDefinitionsPass(*PR);
-  initializeRISCVLiveVariablesPass(*PR);
   initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
@@ -623,7 +622,7 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());
   if (EnableRISCVLiveVariables)
-    addPass(createRISCVLiveVariablesPass(getRISCVTargetMachine(), true));
+    addPass(&SparseLiveVariablesID);
 
   TargetPassConfig::addMachineSSAOptimization();
 
@@ -662,7 +661,7 @@ void RISCVPassConfig::addPostRegAlloc() {
       addPass(createRISCVRedundantCopyEliminationPass());
 
     if (EnableRISCVLiveVariables)
-      addPass(createRISCVLiveVariablesPass(getRISCVTargetMachine(), false));
+      addPass(&SparseLiveVariablesID);
   }
 }
 
