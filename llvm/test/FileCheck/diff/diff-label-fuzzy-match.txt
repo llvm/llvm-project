@@ -1,6 +1,8 @@
 ; RUN: split-file %s %t
 ; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=DIFF
+; RUN:   | FileCheck %s --check-prefix=UNI
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=split 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=SPLIT
 
 ;--- input.txt
 define void @foo() {
@@ -11,8 +13,13 @@ define void @foo() {
 ; CHECK-LABEL: define void @foo()
 ; CHECK:        call void @work_test()
 
-; DIFF:      @@ -[[#]] +[[#]] @@
-; DIFF:      define void @foo() {
-; DIFF-NEXT: -call void @work_test()
-; DIFF-NEXT: +call void @work_task()
-; DIFF-NEXT:  }
+; UNI:      @@ -[[#]] +[[#]] @@
+; UNI:      define void @foo() {
+; UNI-NEXT: -call void @work_test()
+; UNI-NEXT: +call void @work_task()
+; UNI-NEXT:  }
+
+; SPLIT:      @@ -[[#]] +[[#]] @@
+; SPLIT-NEXT: define void @foo() {              | define void @foo() {
+; SPLIT-NEXT: {{.*}}call void @work_test(){{.*}}|{{.*}}call void @work_task()
+; SPLIT-NEXT: }
