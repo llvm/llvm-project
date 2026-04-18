@@ -23125,8 +23125,8 @@ static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
   if (CC == AArch64CC::HI) {
     EVT SubsVT = Flags.getNode()->getValueType(0);
     Flags = DAG.getNode(AArch64ISD::SUBS, SDLoc(Flags),
-                        DAG.getVTList(SubsVT, FlagsVT),
-                        Flags.getOperand(1), Flags.getOperand(0));
+                        DAG.getVTList(SubsVT, FlagsVT), Flags.getOperand(1),
+                        Flags.getOperand(0));
     Flags = Flags.getValue(1);
   }
 
