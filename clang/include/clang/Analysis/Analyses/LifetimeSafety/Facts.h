@@ -55,7 +55,7 @@ public:
     OriginEscapes,
     /// An origin is invalidated (e.g. vector resized).
     InvalidateOrigin,
-    // An origin is manually destroyed (e.g. `delete`, manual destructor call).
+    // An origin is manually destroyed (e.g. via `delete`).
     DestroyOrigin,
   };
 
@@ -301,7 +301,7 @@ public:
             const OriginManager &OM) const override;
 };
 
-// Inner origin has been destroyed, e.g. via `delete`, manaul destructor call.
+// Inner origin has been destroyed, e.g. via `delete`.
 class DestroyOriginFact : public Fact {
   OriginID OID;
   const Expr *DestroyExpr;
