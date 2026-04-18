@@ -12,16 +12,10 @@ from lldbsuite.test import lldbutil
 
 class TestPtrAuthVTableExpressions(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-    SHARED_BUILD_TESTCASE = False
-
-    def build_arm64e(self):
-        self.build(
-            dictionary={"TRIPLE": configuration.triple.replace("arm64", "arm64e")}
-        )
 
     @skipUnlessArm64eSupported
     def test_virtual_call_on_debuggee_object(self):
-        self.build_arm64e()
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )
@@ -31,7 +25,7 @@ class TestPtrAuthVTableExpressions(TestBase):
 
     @skipUnlessArm64eSupported
     def test_virtual_call_through_base_pointer(self):
-        self.build_arm64e()
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )
@@ -40,7 +34,7 @@ class TestPtrAuthVTableExpressions(TestBase):
 
     @skipUnlessArm64eSupported
     def test_virtual_call_via_helper(self):
-        self.build_arm64e()
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )

@@ -32,11 +32,12 @@ def create_parser():
     # C and Python toolchain options
     group = parser.add_argument_group("Toolchain options")
     group.add_argument(
-        "--triple",
-        metavar="triple",
-        dest="triple",
+        "-A",
+        "--arch",
+        metavar="arch",
+        dest="arch",
         help=textwrap.dedent(
-            """Specify the target triple to test with (e.g. x86_64-unknown-linux-gnu, arm64-apple-macosx)."""
+            """Specify the architecture(s) to test. This option can be specified more than once"""
         ),
     )
     group.add_argument(
@@ -55,6 +56,14 @@ def create_parser():
         default="",
         help=textwrap.dedent(
             """Specify the path to sysroot. This overrides apple_sdk sysroot."""
+        ),
+    )
+    group.add_argument(
+        "--triple",
+        metavar="triple",
+        dest="triple",
+        help=textwrap.dedent(
+            """Specify the target triple. Used for cross compilation."""
         ),
     )
     if sys.platform == "darwin":
@@ -85,12 +94,13 @@ def create_parser():
             "Specify the path to a custom libc++ library directory. Must be used in conjunction with --libcxx-include-dir."
         ),
     )
-    # FIXME? This won't work for different extra flags according to each triple.
+    # FIXME? This won't work for different extra flags according to each arch.
     group.add_argument(
         "-E",
         metavar="extra-flags",
         help=textwrap.dedent(
-            """Specify the extra flags to be passed to the toolchain when building the inferior programs to be debugged."""
+            """Specify the extra flags to be passed to the toolchain when building the inferior programs to be debugged
+                                                           suggestions: do not lump the "-A arch1 -A arch2" together such that the -E option applies to only one of the architectures"""
         ),
     )
 

@@ -39,8 +39,7 @@ lldb_framework_path = None
 # Test suite repeat count.  Can be overwritten with '-# count'.
 count = 1
 
-# The 'arch' is derived from the triple. The 'compiler' can be specified via
-# command line.
+# The 'arch' and 'compiler' can be specified via command line.
 arch = None
 compiler = None
 dsymutil = None
