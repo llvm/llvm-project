@@ -102,6 +102,13 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AArch64PostSelectOptimizePass
+    : public PassInfoMixin<AArch64PostSelectOptimizePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 class AArch64PostLegalizerLoweringPass
     : public PassInfoMixin<AArch64PostLegalizerLoweringPass> {
   std::unique_ptr<AArch64PostLegalizerLoweringImplRuleConfig> RuleConfig;
@@ -150,12 +157,12 @@ void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PostCoalescerLegacyPass(PassRegistry &);
 void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
+void initializeAArch64PostSelectOptimizeLegacyPass(PassRegistry &);
 void initializeAArch64PostLegalizerLoweringLegacyPass(PassRegistry &);
-void initializeAArch64PostSelectOptimizePass(PassRegistry &);
 void initializeAArch64PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationLegacyPass(PassRegistry &);
-void initializeAArch64RedundantCondBranchPass(PassRegistry &);
+void initializeAArch64RedundantCondBranchLegacyPass(PassRegistry &);
 void initializeAArch64SIMDInstrOptPass(PassRegistry &);
 void initializeAArch64SLSHardeningPass(PassRegistry &);
 void initializeAArch64SpeculationHardeningPass(PassRegistry &);
@@ -192,6 +199,13 @@ public:
 
 class AArch64BranchTargetsPass
     : public PassInfoMixin<AArch64BranchTargetsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64RedundantCondBranchPass
+    : public PassInfoMixin<AArch64RedundantCondBranchPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
