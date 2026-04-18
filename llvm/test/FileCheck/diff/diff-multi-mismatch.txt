@@ -1,0 +1,36 @@
+; RUN: split-file %s %t
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DIFF
+
+;--- input.txt
+BLOCK1_FAIL
+MATCH 1
+MATCH 2
+MATCH 3
+MATCH 4
+MATCH 5
+MATCH 6
+MATCH 7
+BLOCK2_FAIL
+
+;--- check.txt
+; CHECK: BLOCK1_PASS
+; CHECK: MATCH 1
+; CHECK: MATCH 2
+; CHECK: MATCH 3
+; CHECK: MATCH 4
+; CHECK: MATCH 5
+; CHECK: MATCH 6
+; CHECK: MATCH 7
+; CHECK: BLOCK2_PASS
+
+; First Hunk
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT: -BLOCK1_PASS
+; DIFF-NEXT: +BLOCK1_FAIL
+; DIFF-NEXT:  MATCH 1
+
+; FIXME: We should continue to report failure even after first.
+; Second Hunk
+; DIFF-NOT: -BLOCK2_PASS
+; DIFF-NOT: +BLOCK2_FAIL
