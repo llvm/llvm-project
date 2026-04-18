@@ -20,5 +20,6 @@ ANCHOR(AnalysisRegistryAnchorSource)
 ANCHOR(CallGraphExtractorAnchorSource)
 ANCHOR(CallGraphJSONFormatAnchorSource)
 ANCHOR(JSONFormatAnchorSource)
+ANCHOR(UnsafeBufferUsageJSONFormatAnchorSource)
 
 #undef ANCHOR

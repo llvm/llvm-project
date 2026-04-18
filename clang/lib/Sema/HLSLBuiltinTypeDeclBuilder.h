@@ -126,6 +126,7 @@ public:
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
   BuiltinTypeDeclBuilder &addGetDimensionsMethodForBuffer();
+  BuiltinTypeDeclBuilder &addGetDimensionsMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addMipsMember(ResourceDimension Dim);
 
 private:

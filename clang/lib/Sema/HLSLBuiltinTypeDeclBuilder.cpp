@@ -1886,6 +1886,53 @@ BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim) {
 }
 
 BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addGetDimensionsMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType UIntTy = AST.UnsignedIntTy;
+
+  assert(Dim != ResourceDimension::Unknown);
+
+  QualType FloatTy = AST.FloatTy;
+  // Add overloads for uint and float.
+  QualType Params[] = {UIntTy, FloatTy};
+
+  for (QualType OutTy : Params) {
+    if (Dim == ResourceDimension::Dim2D) {
+      StringRef XYName = "__builtin_hlsl_resource_getdimensions_xy";
+      StringRef LevelsXYName =
+          "__builtin_hlsl_resource_getdimensions_levels_xy";
+
+      if (OutTy == FloatTy) {
+        XYName = "__builtin_hlsl_resource_getdimensions_xy_float";
+        LevelsXYName = "__builtin_hlsl_resource_getdimensions_levels_xy_float";
+      }
+
+      // void GetDimensions(out [uint|float] width, out [uint|float] height)
+      BuiltinTypeMethodBuilder(*this, "GetDimensions", AST.VoidTy)
+          .addParam("width", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .addParam("height", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .callBuiltin(XYName, QualType(), PH::Handle, PH::_0, PH::_1)
+          .finalize();
+
+      // void GetDimensions(uint mipLevel, out [uint|float] width, out
+      // [uint|float] height, out [uint|float] numberOfLevels)
+      BuiltinTypeMethodBuilder(*this, "GetDimensions", AST.VoidTy)
+          .addParam("mipLevel", UIntTy)
+          .addParam("width", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .addParam("height", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .addParam("numberOfLevels", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .callBuiltin(LevelsXYName, QualType(), PH::Handle, PH::_0, PH::_1,
+                       PH::_2, PH::_3)
+          .finalize();
+    }
+  }
+
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addCalculateLodMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();

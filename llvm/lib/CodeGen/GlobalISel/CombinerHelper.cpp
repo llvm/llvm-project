@@ -2358,9 +2358,22 @@ void CombinerHelper::applyCombineUnmergeConstant(
   assert((MI.getNumOperands() - 1 == Csts.size()) &&
          "Not enough operands to replace all defs");
   unsigned NumElems = MI.getNumOperands() - 1;
-  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
-    Register DstReg = MI.getOperand(Idx).getReg();
-    Builder.buildConstant(DstReg, Csts[Idx]);
+
+  Register SrcReg = MI.getOperand(NumElems).getReg();
+
+  if (MRI.getType(SrcReg).isFloat()) {
+    APFloat Val(getFltSemanticForLLT(MRI.getType(MI.getOperand(0).getReg())));
+
+    for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+      Register DstReg = MI.getOperand(Idx).getReg();
+      Val.convertFromAPInt(Csts[Idx], false, detail::rmTowardZero);
+      Builder.buildFConstant(DstReg, Val);
+    }
+  } else {
+    for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+      Register DstReg = MI.getOperand(Idx).getReg();
+      Builder.buildConstant(DstReg, Csts[Idx]);
+    }
   }
 
   MI.eraseFromParent();
@@ -7080,8 +7093,8 @@ unsigned CombinerHelper::getFPMinMaxOpcForSelect(
 CombinerHelper::SelectPatternNaNBehaviour
 CombinerHelper::computeRetValAgainstNaN(Register LHS, Register RHS,
                                         bool IsOrderedComparison) const {
-  bool LHSSafe = isKnownNeverNaN(LHS, MRI);
-  bool RHSSafe = isKnownNeverNaN(RHS, MRI);
+  bool LHSSafe = VT->isKnownNeverNaN(LHS);
+  bool RHSSafe = VT->isKnownNeverNaN(RHS);
   // Completely unsafe.
   if (!LHSSafe && !RHSSafe)
     return SelectPatternNaNBehaviour::NOT_APPLICABLE;

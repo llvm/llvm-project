@@ -202,6 +202,8 @@ enum IIT_Info {
 #include "llvm/IR/IntrinsicImpl.inc"
 };
 
+static_assert(IIT_Done == 0, "IIT_Done expected to be 0");
+
 static void
 DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
               IIT_Info LastInfo,
@@ -354,42 +356,39 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::Pointer, Infos[NextElt++]));
     return;
   case IIT_ANY: {
-    unsigned OverloadInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadInfo = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Overloaded, OverloadInfo));
     return;
   }
   case IIT_EXTEND_ARG: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Extend, OverloadIndex));
     return;
   }
   case IIT_TRUNC_ARG: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Trunc, OverloadIndex));
     return;
   }
   case IIT_ONE_NTH_ELTS_VEC_ARG: {
-    unsigned short OverloadIndex =
-        (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
-    unsigned short N = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned short OverloadIndex = Infos[NextElt++];
+    unsigned short N = Infos[NextElt++];
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::OneNthEltsVec,
                                              /*Hi=*/N, /*Lo=*/OverloadIndex));
     return;
   }
   case IIT_SAME_VEC_WIDTH_ARG: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::SameVecWidth, OverloadIndex));
     return;
   }
   case IIT_VEC_OF_ANYPTRS_TO_ELT: {
-    unsigned short OverloadIndex =
-        (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
-    unsigned short RefOverloadIndex =
-        (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned short OverloadIndex = Infos[NextElt++];
+    unsigned short RefOverloadIndex = Infos[NextElt++];
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::VecOfAnyPtrsToElt,
                                              /*Hi=*/RefOverloadIndex,
                                              /*Lo=*/OverloadIndex));
@@ -409,19 +408,19 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   }
   case IIT_SUBDIVIDE2_ARG: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Subdivide2, OverloadIndex));
     return;
   }
   case IIT_SUBDIVIDE4_ARG: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Subdivide4, OverloadIndex));
     return;
   }
   case IIT_VEC_ELEMENT: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::VecElement, OverloadIndex));
     return;
@@ -431,7 +430,7 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   }
   case IIT_VEC_OF_BITCASTS_TO_INT: {
-    unsigned OverloadIndex = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::VecOfBitcastsToInt, OverloadIndex));
     return;
@@ -457,8 +456,13 @@ void Intrinsic::getIntrinsicInfoTableEntries(
 
   // Array to hold the inlined fixed encoding values expanded from nibbles to
   // bytes. Its size can be be atmost FixedEncodingBits / 4 i.e., number
-  // of nibbles that can fit in `FixedEncodingTy`.
-  unsigned char IITValues[FixedEncodingBits / 4];
+  // of nibbles that can fit in `FixedEncodingTy` + 1 (the IIT_Done terminator
+  // that is not explicitly encoded). Note that if there are trailing 0 bytes
+  // in the encoding (for example, payload following one of the IIT tokens),
+  // the inlined encoding does not encode the actual size of the encoding, so
+  // we always assume its size of this maximum length possible, followed by the
+  // IIT_Done terminator token (whose value is 0).
+  unsigned char IITValues[FixedEncodingBits / 4 + 1] = {0};
 
   ArrayRef<unsigned char> IITEntries;
   unsigned NextElt = 0;
@@ -478,13 +482,13 @@ void Intrinsic::getIntrinsicInfoTableEntries(
       TableVal >>= 4;
     } while (TableVal);
 
-    IITEntries = ArrayRef(IITValues).take_front(NextElt);
+    IITEntries = IITValues;
     NextElt = 0;
   }
 
   // Okay, decode the table into the output vector of IITDescriptors.
   DecodeIITType(NextElt, IITEntries, IIT_Done, T);
-  while (NextElt != IITEntries.size() && IITEntries[NextElt] != 0)
+  while (IITEntries[NextElt] != IIT_Done)
     DecodeIITType(NextElt, IITEntries, IIT_Done, T);
 }
 
@@ -493,8 +497,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              LLVMContext &Context) {
   using namespace Intrinsic;
 
-  IITDescriptor D = Infos.front();
-  Infos = Infos.slice(1);
+  IITDescriptor D = Infos.consume_front();
 
   switch (D.Kind) {
   case IITDescriptor::Void:
@@ -846,7 +849,7 @@ using DeferredIntrinsicMatchPair =
 
 static bool
 matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                   SmallVectorImpl<Type *> &ArgTys,
+                   SmallVectorImpl<Type *> &OverloadTys,
                    SmallVectorImpl<DeferredIntrinsicMatchPair> &DeferredChecks,
                    bool IsDeferredCheck) {
   using namespace Intrinsic;
@@ -862,8 +865,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return false;
   };
 
-  IITDescriptor D = Infos.front();
-  Infos = Infos.slice(1);
+  IITDescriptor D = Infos.consume_front();
 
   switch (D.Kind) {
   case IITDescriptor::Void:
@@ -901,7 +903,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
     return !VT || VT->getElementCount() != D.VectorWidth ||
-           matchIntrinsicType(VT->getElementType(), Infos, ArgTys,
+           matchIntrinsicType(VT->getElementType(), Infos, OverloadTys,
                               DeferredChecks, IsDeferredCheck);
   }
   case IITDescriptor::Pointer: {
@@ -916,7 +918,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       return true;
 
     for (unsigned i = 0, e = D.StructNumElements; i != e; ++i)
-      if (matchIntrinsicType(ST->getElementType(i), Infos, ArgTys,
+      if (matchIntrinsicType(ST->getElementType(i), Infos, OverloadTys,
                              DeferredChecks, IsDeferredCheck))
         return true;
     return false;
@@ -925,16 +927,16 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Overloaded:
     // If this is the second occurrence of an argument,
     // verify that the later instance matches the previous instance.
-    if (D.getOverloadIndex() < ArgTys.size())
-      return Ty != ArgTys[D.getOverloadIndex()];
+    if (D.getOverloadIndex() < OverloadTys.size())
+      return Ty != OverloadTys[D.getOverloadIndex()];
 
-    if (D.getOverloadIndex() > ArgTys.size() ||
+    if (D.getOverloadIndex() > OverloadTys.size() ||
         D.getOverloadKind() == IITDescriptor::AK_MatchType)
       return IsDeferredCheck || DeferCheck(Ty);
 
-    assert(D.getOverloadIndex() == ArgTys.size() && !IsDeferredCheck &&
+    assert(D.getOverloadIndex() == OverloadTys.size() && !IsDeferredCheck &&
            "Table consistency error");
-    ArgTys.push_back(Ty);
+    OverloadTys.push_back(Ty);
 
     switch (D.getOverloadKind()) {
     case IITDescriptor::AK_Any:
@@ -954,10 +956,10 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
   case IITDescriptor::Extend: {
     // If this is a forward reference, defer the check for later.
-    if (D.getOverloadIndex() >= ArgTys.size())
+    if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = ArgTys[D.getOverloadIndex()];
+    Type *NewTy = OverloadTys[D.getOverloadIndex()];
     if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
       NewTy = VectorType::getExtendedElementVectorType(VTy);
     else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
@@ -969,10 +971,10 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   }
   case IITDescriptor::Trunc: {
     // If this is a forward reference, defer the check for later.
-    if (D.getOverloadIndex() >= ArgTys.size())
+    if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = ArgTys[D.getOverloadIndex()];
+    Type *NewTy = OverloadTys[D.getOverloadIndex()];
     if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
       NewTy = VectorType::getTruncatedElementVectorType(VTy);
     else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
@@ -984,9 +986,9 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   }
   case IITDescriptor::OneNthEltsVec: {
     // If this is a forward reference, defer the check for later.
-    if (D.getOverloadIndex() >= ArgTys.size())
+    if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
-    auto *VTy = dyn_cast<VectorType>(ArgTys[D.getOverloadIndex()]);
+    auto *VTy = dyn_cast<VectorType>(OverloadTys[D.getOverloadIndex()]);
     if (!VTy)
       return true;
     if (!VTy->getElementCount().isKnownMultipleOf(D.getVectorDivisor()))
@@ -995,12 +997,13 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
            Ty;
   }
   case IITDescriptor::SameVecWidth: {
-    if (D.getOverloadIndex() >= ArgTys.size()) {
+    if (D.getOverloadIndex() >= OverloadTys.size()) {
       // Defer check and subsequent check for the vector element type.
-      Infos = Infos.slice(1);
+      Infos.consume_front();
       return IsDeferredCheck || DeferCheck(Ty);
     }
-    auto *ReferenceType = dyn_cast<VectorType>(ArgTys[D.getOverloadIndex()]);
+    auto *ReferenceType =
+        dyn_cast<VectorType>(OverloadTys[D.getOverloadIndex()]);
     auto *ThisArgType = dyn_cast<VectorType>(Ty);
     // Both must be vectors of the same number of elements or neither.
     if ((ReferenceType != nullptr) != (ThisArgType != nullptr))
@@ -1011,30 +1014,30 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
         return true;
       EltTy = ThisArgType->getElementType();
     }
-    return matchIntrinsicType(EltTy, Infos, ArgTys, DeferredChecks,
+    return matchIntrinsicType(EltTy, Infos, OverloadTys, DeferredChecks,
                               IsDeferredCheck);
   }
   case IITDescriptor::VecOfAnyPtrsToElt: {
     unsigned RefOverloadIndex = D.getRefOverloadIndex();
-    if (RefOverloadIndex >= ArgTys.size()) {
+    if (RefOverloadIndex >= OverloadTys.size()) {
       if (IsDeferredCheck)
         return true;
       // If forward referencing, already add the pointer-vector type and
       // defer the checks for later.
-      ArgTys.push_back(Ty);
+      OverloadTys.push_back(Ty);
       return DeferCheck(Ty);
     }
 
     if (!IsDeferredCheck) {
-      assert(D.getOverloadIndex() == ArgTys.size() &&
+      assert(D.getOverloadIndex() == OverloadTys.size() &&
              "Table consistency error");
-      ArgTys.push_back(Ty);
+      OverloadTys.push_back(Ty);
     }
 
     // Verify the overloaded type "matches" the Ref type.
     // i.e. Ty is a vector with the same width as Ref.
     // Composed of pointers to the same element type as Ref.
-    auto *ReferenceType = dyn_cast<VectorType>(ArgTys[RefOverloadIndex]);
+    auto *ReferenceType = dyn_cast<VectorType>(OverloadTys[RefOverloadIndex]);
     auto *ThisArgVecTy = dyn_cast<VectorType>(Ty);
     if (!ThisArgVecTy || !ReferenceType ||
         (ReferenceType->getElementCount() != ThisArgVecTy->getElementCount()))
@@ -1042,18 +1045,19 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return !ThisArgVecTy->getElementType()->isPointerTy();
   }
   case IITDescriptor::VecElement: {
-    if (D.getOverloadIndex() >= ArgTys.size())
+    if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck ? true : DeferCheck(Ty);
-    auto *ReferenceType = dyn_cast<VectorType>(ArgTys[D.getOverloadIndex()]);
+    auto *ReferenceType =
+        dyn_cast<VectorType>(OverloadTys[D.getOverloadIndex()]);
     return !ReferenceType || Ty != ReferenceType->getElementType();
   }
   case IITDescriptor::Subdivide2:
   case IITDescriptor::Subdivide4: {
     // If this is a forward reference, defer the check for later.
-    if (D.getOverloadIndex() >= ArgTys.size())
+    if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = ArgTys[D.getOverloadIndex()];
+    Type *NewTy = OverloadTys[D.getOverloadIndex()];
     if (auto *VTy = dyn_cast<VectorType>(NewTy)) {
       int SubDivs = D.Kind == IITDescriptor::Subdivide2 ? 1 : 2;
       NewTy = VectorType::getSubdividedVectorType(VTy, SubDivs);
@@ -1062,9 +1066,10 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return true;
   }
   case IITDescriptor::VecOfBitcastsToInt: {
-    if (D.getOverloadIndex() >= ArgTys.size())
+    if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
-    auto *ReferenceType = dyn_cast<VectorType>(ArgTys[D.getOverloadIndex()]);
+    auto *ReferenceType =
+        dyn_cast<VectorType>(OverloadTys[D.getOverloadIndex()]);
     auto *ThisArgVecTy = dyn_cast<VectorType>(Ty);
     if (!ThisArgVecTy || !ReferenceType)
       return true;
@@ -1077,22 +1082,22 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 Intrinsic::MatchIntrinsicTypesResult
 Intrinsic::matchIntrinsicSignature(FunctionType *FTy,
                                    ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                                   SmallVectorImpl<Type *> &ArgTys) {
+                                   SmallVectorImpl<Type *> &OverloadTys) {
   SmallVector<DeferredIntrinsicMatchPair, 2> DeferredChecks;
-  if (matchIntrinsicType(FTy->getReturnType(), Infos, ArgTys, DeferredChecks,
-                         false))
+  if (matchIntrinsicType(FTy->getReturnType(), Infos, OverloadTys,
+                         DeferredChecks, false))
     return MatchIntrinsicTypes_NoMatchRet;
 
   unsigned NumDeferredReturnChecks = DeferredChecks.size();
 
   for (auto *Ty : FTy->params())
-    if (matchIntrinsicType(Ty, Infos, ArgTys, DeferredChecks, false))
+    if (matchIntrinsicType(Ty, Infos, OverloadTys, DeferredChecks, false))
       return MatchIntrinsicTypes_NoMatchArg;
 
   for (unsigned I = 0, E = DeferredChecks.size(); I != E; ++I) {
     DeferredIntrinsicMatchPair &Check = DeferredChecks[I];
-    if (matchIntrinsicType(Check.first, Check.second, ArgTys, DeferredChecks,
-                           true))
+    if (matchIntrinsicType(Check.first, Check.second, OverloadTys,
+                           DeferredChecks, true))
       return I < NumDeferredReturnChecks ? MatchIntrinsicTypes_NoMatchRet
                                          : MatchIntrinsicTypes_NoMatchArg;
   }
@@ -1111,8 +1116,7 @@ bool Intrinsic::matchIntrinsicVarArg(
     return true;
 
   // Check and verify the descriptor.
-  IITDescriptor D = Infos.front();
-  Infos = Infos.slice(1);
+  IITDescriptor D = Infos.consume_front();
   if (D.Kind == IITDescriptor::VarArg)
     return !isVarArg;
 
@@ -1120,7 +1124,7 @@ bool Intrinsic::matchIntrinsicVarArg(
 }
 
 bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
-                                      SmallVectorImpl<Type *> &ArgTys) {
+                                      SmallVectorImpl<Type *> &OverloadTys) {
   if (!ID)
     return false;
 
@@ -1128,7 +1132,7 @@ bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
   getIntrinsicInfoTableEntries(ID, Table);
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
-  if (Intrinsic::matchIntrinsicSignature(FT, TableRef, ArgTys) !=
+  if (Intrinsic::matchIntrinsicSignature(FT, TableRef, OverloadTys) !=
       Intrinsic::MatchIntrinsicTypesResult::MatchIntrinsicTypes_Match) {
     return false;
   }
@@ -1138,20 +1142,20 @@ bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
 }
 
 bool Intrinsic::getIntrinsicSignature(Function *F,
-                                      SmallVectorImpl<Type *> &ArgTys) {
+                                      SmallVectorImpl<Type *> &OverloadTys) {
   return getIntrinsicSignature(F->getIntrinsicID(), F->getFunctionType(),
-                               ArgTys);
+                               OverloadTys);
 }
 
 std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
-  SmallVector<Type *, 4> ArgTys;
-  if (!getIntrinsicSignature(F, ArgTys))
+  SmallVector<Type *, 4> OverloadTys;
+  if (!getIntrinsicSignature(F, OverloadTys))
     return std::nullopt;
 
   Intrinsic::ID ID = F->getIntrinsicID();
   StringRef Name = F->getName();
   std::string WantedName =
-      Intrinsic::getName(ID, ArgTys, F->getParent(), F->getFunctionType());
+      Intrinsic::getName(ID, OverloadTys, F->getParent(), F->getFunctionType());
   if (Name == WantedName)
     return std::nullopt;
 
@@ -1167,7 +1171,7 @@ std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
       // invalid and we'll get an error.
       ExistingGV->setName(WantedName + ".renamed");
     }
-    return Intrinsic::getOrInsertDeclaration(F->getParent(), ID, ArgTys);
+    return Intrinsic::getOrInsertDeclaration(F->getParent(), ID, OverloadTys);
   }();
 
   NewDecl->setCallingConv(F->getCallingConv());
