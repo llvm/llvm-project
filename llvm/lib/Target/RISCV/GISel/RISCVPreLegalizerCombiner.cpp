@@ -55,7 +55,6 @@ public:
   static const char *getName() { return "RISCV00PreLegalizerCombiner"; }
 
   bool tryCombineAll(MachineInstr &I) const override;
-  bool tryCombineAllImpl(MachineInstr &I) const;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -153,19 +152,6 @@ bool RISCVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   RISCVPreLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, ST,
                                      MDT, LI);
   return Impl.combineMachineInstrs();
-}
-
-bool RISCVPreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
-  if (tryCombineAllImpl(MI))
-    return true;
-
-  unsigned Opc = MI.getOpcode();
-  switch (Opc) {
-  case TargetOpcode::G_MEMCPY_INLINE:
-    return Helper.tryEmitMemcpyInline(MI);
-  }
-
-  return false;
 }
 
 char RISCVPreLegalizerCombiner::ID = 0;
