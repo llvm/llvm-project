@@ -705,3 +705,35 @@ define <4 x float> @bitcast_constexpr_2b64_4f32_poison() {
   %res = bitcast <2 x b64> <b64 poison, b64 1> to <4 x float>
   ret <4 x float> %res
 }
+
+define i128 @bitcast_constexpr_2b64_i128() {
+; CHECK-LABEL: @bitcast_constexpr_2b64_i128(
+; CHECK-NEXT:    ret i128 bitcast (<2 x b64> <b64 2, b64 1> to i128)
+;
+  %res = bitcast <2 x b64> <b64 2, b64 1> to i128
+  ret i128 %res
+}
+
+define i128 @bitcast_constexpr_2b64_i128_poison() {
+; CHECK-LABEL: @bitcast_constexpr_2b64_i128_poison(
+; CHECK-NEXT:    ret i128 bitcast (<2 x b64> <b64 poison, b64 1> to i128)
+;
+  %res = bitcast <2 x b64> <b64 poison, b64 1> to i128
+  ret i128 %res
+}
+
+define double @bitcast_constexpr_2b32_f64() {
+; CHECK-LABEL: @bitcast_constexpr_2b32_f64(
+; CHECK-NEXT:    ret double bitcast (<2 x b32> <b32 2, b32 1> to double)
+;
+  %res = bitcast <2 x b32> <b32 2, b32 1> to double
+  ret double %res
+}
+
+define double @bitcast_constexpr_2b32_f64_poison() {
+; CHECK-LABEL: @bitcast_constexpr_2b32_f64_poison(
+; CHECK-NEXT:    ret double bitcast (<2 x b32> <b32 poison, b32 1> to double)
+;
+  %res = bitcast <2 x b32> <b32 poison, b32 1> to double
+  ret double %res
+}
