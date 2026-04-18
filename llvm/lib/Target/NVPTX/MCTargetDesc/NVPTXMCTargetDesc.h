@@ -13,6 +13,8 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXMCTARGETDESC_H
 #define LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXMCTARGETDESC_H
 
+#include <cstdint> // required by NVPTXGenInstrInfo.inc
+
 // Defines symbolic names for PTX registers.
 #define GET_REGINFO_ENUM
 #include "NVPTXGenRegisterInfo.inc"
