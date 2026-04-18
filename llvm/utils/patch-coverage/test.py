@@ -53,7 +53,18 @@ def run_modified_lit_tests(llvm_lit_path, patch_path, tests, inst_build_dir):
                 continue
 
             if not file_path.endswith(
-                (".ll", ".mir", ".mlir", ".fir", ".test", ".s", ".c", ".cpp", ".f90")
+                (
+                    ".ll",
+                    ".mir",
+                    ".mlir",
+                    ".fir",
+                    ".test",
+                    ".s",
+                    ".c",
+                    ".cpp",
+                    ".f90",
+                    ".py",
+                )
             ):
                 continue
 

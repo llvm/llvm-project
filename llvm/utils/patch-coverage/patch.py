@@ -31,7 +31,7 @@ def extract_source_files_from_patch(patch_path):
             patch_diff = patch_file.read().decode("utf-8", "ignore")
 
         file_matches = re.findall(r"\+{3} b/(\S+)", patch_diff)
-        known_source_file_extension = (".cpp", ".c")
+        known_source_file_extension = (".cpp", ".c", ".mm")
 
         for file in file_matches:
             if any(keyword in file.lower() for keyword in ["test", "unittest"]):

@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import subprocess
 
@@ -29,6 +30,10 @@ def configure_llvm_build(build_dir, projects):
 
     if projects:
         cmake_cmd.append(f"-DLLVM_ENABLE_PROJECTS={projects}")
+
+    if projects and "lldb" in projects:
+        cmake_cmd.append(f"-DLLVM_ENABLE_RUNTIMES=libcxx")
+        cmake_cmd.append(f"-DPYTHON_EXECUTABLE={shutil.which('python3')}")
 
     print("CMake cmd:", " ".join(cmake_cmd))
     subprocess.check_call(cmake_cmd)
@@ -70,6 +75,11 @@ def ensure_llvm_tools(build_dir, projects, binary):
         if not os.path.exists(clang_path):
             extra_targets.append("clang")
 
+    if binary == "lldb":
+        lldb_path = os.path.join(build_dir, "bin", "lldb")
+        if not os.path.exists(lldb_path):
+            extra_targets.append("lldb")
+
     if extra_targets:
         print("Building required targets to parse testsuite info:", extra_targets)
         subprocess.check_call(["ninja", "-C", build_dir] + extra_targets)
@@ -103,6 +113,10 @@ def build_llvm(inst_build_dir, build_dir, binary, projects, allowlist_path):
             if projects:
                 cmake_cmd.append(f"-DLLVM_ENABLE_PROJECTS={projects}")
 
+            if projects and "lldb" in projects:
+                cmake_cmd.append(f"-DLLVM_ENABLE_RUNTIMES=libcxx")
+                cmake_cmd.append(f"-DPYTHON_EXECUTABLE={shutil.which('python3')}")
+
             print("CMake cmd:", " ".join(cmake_cmd))
             subprocess.check_call(cmake_cmd)
 
@@ -120,6 +134,10 @@ def build_llvm(inst_build_dir, build_dir, binary, projects, allowlist_path):
 
         if binary == "clang-tidy":
             target.append("clang")
+
+        if binary == "lldb":
+            target.extend(["clang", "lldb", "dsymutil"])
+
         try:
             print("Building the instrumented target")
             subprocess.check_call(["ninja", "-C", inst_build_dir] + target)

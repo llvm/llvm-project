@@ -83,7 +83,6 @@ def parse_args():
     parser.add_argument(
         "--projects",
         help="LLVM projects to enable (semicolon-separated, e.g. clang;mlir)",
-        default="llvm",
     )
 
     args = parser.parse_args()
