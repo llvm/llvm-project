@@ -10253,6 +10253,8 @@ TEST(APFloatTest, expf) {
                       .convertToFloat());
   // exp(-1)
   EXPECT_EQ(0x1.78b564p-2f, llvm::exp(APFloat(-1.0f)).convertToFloat());
+  // exp(-90)
+  EXPECT_EQ(0x1.1d85p-130f, llvm::exp(APFloat(-90.0f)).convertToFloat());
 }
 
 TEST(APFloatTest, exp) {
@@ -10279,6 +10281,9 @@ TEST(APFloatTest, exp) {
                      .convertToDouble());
   // exp(-1)
   EXPECT_EQ(0x1.78b56362cef38p-2, llvm::exp(APFloat(-1.0)).convertToDouble());
+  // exp(-710)
+  EXPECT_EQ(0x1.9c017e9459e18p-1025,
+            llvm::exp(APFloat(-710.0)).convertToDouble());
 }
 
 } // namespace
