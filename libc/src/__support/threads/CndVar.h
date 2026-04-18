@@ -37,9 +37,8 @@ class CndVar {
     WaiterHeader *next;
 
     LIBC_INLINE void ensure_queue_initialization() {
-      if (LIBC_UNLIKELY(prev == nullptr)) {
+      if (LIBC_UNLIKELY(prev == nullptr))
         prev = next = this;
-      }
     }
 
     LIBC_INLINE void push_back(WaiterHeader *waiter) {
@@ -143,7 +142,7 @@ public:
 
     // Unlock the mutex and wait for the signal.
     mutex->unlock();
-    // Notice that lock is already initialized as lock. We abuse the LOCKED
+    // Notice that lock is already initialized as LOCKED. We abuse the LOCKED
     // state to indicate that the waiter is pending.
     bool locked = waiter.barrier.lock(timeout, /*is_shared=*/false);
 
@@ -176,14 +175,21 @@ public:
       // but with requeue instead of wake if it is possible.
       FutexWordType prev = next_barrier_futex.exchange(
           RawMutex::UNLOCKED, cpp::MemoryOrder::RELEASE);
-      if (prev == RawMutex::IN_CONTENTION)
-        if (!mutex->can_be_requeued() ||
-            !next_barrier_futex
-                 .requeue_to(mutex_futex, cpp::nullopt, /*wake_limit=*/0,
-                             /*requeue_limit=*/1,
-                             /*is_shared=*/false)
-                 .has_value())
+      if (prev == RawMutex::IN_CONTENTION) {
+        if (mutex->can_be_requeued()) {
+          ErrorOr<int> res = next_barrier_futex.requeue_to(
+              mutex_futex, cpp::nullopt, /*wake_limit=*/0,
+              /*requeue_limit=*/1,
+              /*is_shared=*/false);
+          if (!res.has_value()) // cannot requeue on this system
+            next_waiter->barrier.wake(/*is_shared=*/false);
+          else if (res.value() >
+                   0) // requeue succeeded, the lock needs to be waked up
+            mutex->get_raw_futex().store(RawMutex::IN_CONTENTION);
+        } else { // cannot requeue under special lock mode
           next_waiter->barrier.wake(/*is_shared=*/false);
+        }
+      }
     }
     if (mutex_result != MutexError::NONE)
       return CndVarResult::MutexError;
