@@ -13,3 +13,22 @@ template <typename T> class NoCrash {
     template <typename U> B(U u) {}
   };
 };
+
+namespace gh192510 {
+  template<typename T>
+  struct C {
+
+  };
+
+  struct Base {  
+    int x;
+  };
+
+  template<typename T>
+  class X: public Base {
+    using INT = C<T>;
+
+    X(INT i) : INT(i) {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: constructor does not initialize these bases: Base
+  };
+}

@@ -344,9 +344,12 @@ Changes in existing checks
     lambda captures such as ``[t{std::forward<T>(t)}]``.
 
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
-  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by fixing
-  a false positive when a base class has a forward declaration before its
-  definition.
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check:
+
+  - Fixed a false positive when a base class has a forward declaration before
+    its definition.
+
+  - Fixed a crash with alias template in constructor initializer.
 
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
