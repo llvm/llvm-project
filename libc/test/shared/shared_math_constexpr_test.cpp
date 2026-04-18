@@ -71,5 +71,7 @@ static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::ceilbf16(bfloat16(0.0)));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::copysignbf16(bfloat16(0.0),
                                                    bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::logbbf16(bfloat16(1.0f)));
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}
