@@ -479,10 +479,14 @@ static bool emitEnumDecls(ArrayRef<const Record *> records, raw_ostream &os) {
   for (const auto *rec : records) {
     EnumInfo enumInfo(*rec);
 
-    // JEG: I've seen both className being fully qualified and cppNamespace being blank, and
-    // cppNamespace not being empty and className not being qualified. This should cover both.
+    // cppNamespace cannot being empty when generating the CAPI disambiguated enums, so 
+    // error out if it is missing
     std::string enum_class_name = "";
     enum_class_name += enumInfo.getCppNamespace();
+    if (enum_class_name == "") {
+      PrintFatalNote(formatv("enumInfo for {0} is missing a cppNamespace value", 
+                      enumInfo.getEnumClassName()));
+    }
     enum_class_name += enumInfo.getEnumClassName();
 
     llvm::IfNDefGuardEmitter scope(os, "NO_" + cppNamespaceToUpper(enum_class_name) +
@@ -561,11 +565,11 @@ bool CAPIDefGenerator::emitDeclsOrDefs(StringRef selectedDialect, bool isDeclGen
     emitAttrTypeHeader(name, os);
     if (!def.skipDefaultBuilders() && !llvm::any_of(params, isUnsupportedParam))
       emitGettorDeclOrDef(def, getGettorParams(params), os, isAttrGenerator, isDeclGenerator, 0);
-    /* unsigned altNum = 1;
+    unsigned altNum = 1;
     for (const AttrOrTypeBuilder &builder : def.getBuilders()) {
       emitGettorDeclOrDef(def, getGettorParams(builder.getParameters()), os, isAttrGenerator, isDeclGenerator, altNum);
       altNum++;
-    } */
+    }
     emitTypeIDDecl(def, os);
     emitIsADecl(def, os, isAttrGenerator);
     if (def.genAccessors() && !params.empty())
