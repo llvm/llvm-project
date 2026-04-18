@@ -2784,6 +2784,41 @@ static std::string getCenteredView(StringRef S, size_t DiffPos, size_t Width) {
   return View;
 }
 
+std::string Pattern::getSubstitutedRegex(StringRef PatternText) const {
+  std::string Result = PatternText.str();
+
+  // Iterate through substitutions and replace tags from left to right.
+  for (const auto &Substitution : Substitutions) {
+    Expected<std::string> ValueOrErr = Substitution->getResultForDiagnostics();
+    std::string CleanValue;
+
+    if (!ValueOrErr) {
+      consumeError(ValueOrErr.takeError());
+      CleanValue = "<UNDEFINED>";
+    } else {
+      CleanValue = *ValueOrErr;
+      // Numeric substitutions arrive wrapped in quotes so we need to strip
+      // them.
+      if (CleanValue.size() >= 2 && CleanValue.front() == '"' &&
+          CleanValue.back() == '"')
+        CleanValue = CleanValue.substr(1, CleanValue.size() - 2);
+    }
+
+    // Find the first occurrence of a variable tag
+    size_t Start = Result.find("[[");
+    if (Start == std::string::npos)
+      break;
+
+    size_t End = Result.find("]]", Start);
+    if (End == std::string::npos)
+      break;
+
+    size_t TagLen = (End + 2) - Start;
+    Result.replace(Start, TagLen, CleanValue);
+  }
+  return Result;
+}
+
 // Renders a diagnostic diff via llvm::errs().
 static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
                        unsigned ActualLineNo, StringRef ExpectedLine,
@@ -2791,6 +2826,8 @@ static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
   auto &OS = errs();
   constexpr unsigned ColWidth = 45;
   constexpr StringRef Sep = " | ";
+
+  bool IsSplit = (Mode == Split || Mode == SplitNoSubstitution);
 
   // Find the index from where the expected and actual text diverge.
   size_t DiffPos = 0;
@@ -2809,7 +2846,7 @@ static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
 
   // Before Context
   if (!Ctx.LineBefore.empty()) {
-    if (Mode == Split)
+    if (IsSplit)
       OS << "  " << GetView(Ctx.LineBefore) << Sep << GetView(Ctx.LineBefore)
          << "\n";
     else
@@ -2817,7 +2854,7 @@ static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
   }
 
   // Mismatch
-  if (Mode == Split) {
+  if (IsSplit) {
     OS << "  ";
 
     OS.changeColor(raw_ostream::RED);
@@ -2867,6 +2904,13 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
   const char *PatPtr = PatternLoc.getPointer();
   StringRef ExpectedLine = StringRef(PatPtr).split('\n').first.rtrim();
 
+  std::string ExpectedText;
+  if (Mode == DiffFormatType::SplitNoSubstitution ||
+      Mode == DiffFormatType::UnifiedNoSubstitution)
+    ExpectedText = ExpectedLine.str();
+  else
+    ExpectedText = CheckStr.Pat.getSubstitutedRegex(ExpectedLine);
+
   // Resolve the Actual (Input) line number.
   // Priority: 1. OverwriteActualLine (Found via Fuzzy match)
   //           2. Direct pointer resolution via SourceMgr.
@@ -2887,7 +2931,7 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
   unsigned BufID = SM.FindBufferContainingLoc(InputLoc);
   DiffContext Context = getDiffContext(SM, ActualLineNo, BufID);
 
-  renderDiff(Mode, ExpectedLineNo, ActualLineNo, ExpectedLine, ActualLine,
+  renderDiff(Mode, ExpectedLineNo, ActualLineNo, ExpectedText, ActualLine,
              Context);
 
   errs() << '\n';
