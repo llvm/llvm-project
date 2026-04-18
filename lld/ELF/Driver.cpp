@@ -241,10 +241,10 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     loadJobs.push_back({mbref,
                         path,
                         LoadJob::Binary,
-                        false,
-                        false,
-                        false,
-                        false,
+                        /*inWholeArchive=*/false,
+                        /*lazy=*/false,
+                        /*asNeeded=*/false,
+                        /*withLOption=*/false,
                         nextGroupId,
                         {},
                         {}});
@@ -2154,8 +2154,10 @@ void LinkerDriver::loadFiles() {
         break;
       case LoadJob::Archive: {
         // Scan all archive members rather than using the archive symbol
-        // index. Most archives see high utilization rates and this is a net
-        // win. All members within one archive share the same group ID.
+        // index. We assume the archive symbol table order matches the order
+        // of symbols in the member symbol tables. All files within the
+        // archive share the same group ID to allow mutual references for
+        // --warn-backrefs.
         auto members = getArchiveMembers(ctx, job);
         job.out.reserve(members.size());
         bool lazy = !job.inWholeArchive;
@@ -2172,6 +2174,9 @@ void LinkerDriver::loadFiles() {
         break;
       }
       case LoadJob::Shared: {
+        // Shared objects are identified by soname. soname is (if specified)
+        // DT_SONAME and falls back to filename. If a file was specified by
+        // -lfoo, the directory part is ignored.
         StringRef bufPath = job.mbref.getBufferIdentifier();
         auto f = std::make_unique<SharedFile>(
             ctx, job.mbref,
