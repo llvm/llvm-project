@@ -76,13 +76,13 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
     if (isa<VectorType>(DestTy) && !isa<VectorType>(SrcTy))
       return ConstantExpr::getBitCast(ConstantVector::get(V), DestTy);
 
-    if (DestTy->isByteTy() &&
+    if (DestTy->isByteOrByteVectorTy() &&
         DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
-      return ConstantByte::get(DestTy->getContext(), CI->getValue());
+      return ConstantByte::get(DestTy, CI->getValue());
 
     // Make sure dest type is compatible with the folded fp constant.
     // See note below regarding the PPC_FP128 restriction.
-    if (DestTy->isFloatingPointTy() && !DestTy->isPPC_FP128Ty() &&
+    if (DestTy->isFPOrFPVectorTy() && !DestTy->isPPC_FP128Ty() &&
         DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
       return ConstantFP::get(
           DestTy,
@@ -99,13 +99,13 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
     if (isa<VectorType>(DestTy) && !isa<VectorType>(SrcTy))
       return ConstantExpr::getBitCast(ConstantVector::get(V), DestTy);
 
-    if (DestTy->isIntegerTy() &&
+    if (DestTy->isIntOrIntVectorTy() &&
         DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
-      return ConstantInt::get(DestTy->getContext(), CB->getValue());
+      return ConstantInt::get(DestTy, CB->getValue());
 
     // Make sure dest type is compatible with the folded fp constant.
     // See note below regarding the PPC_FP128 restriction.
-    if (DestTy->isFloatingPointTy() && !DestTy->isPPC_FP128Ty() &&
+    if (DestTy->isFPOrFPVectorTy() && !DestTy->isPPC_FP128Ty() &&
         DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
       return ConstantFP::get(
           DestTy,
@@ -143,7 +143,7 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
       return ConstantInt::get(DestTy, FP->getValueAPF().bitcastToAPInt());
 
     // Make sure dest type is compatible with the folded byte constant.
-    if (DestTy->isByteTy() &&
+    if (DestTy->isByteOrByteVectorTy() &&
         DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
       return ConstantByte::get(DestTy, FP->getValueAPF().bitcastToAPInt());
 
