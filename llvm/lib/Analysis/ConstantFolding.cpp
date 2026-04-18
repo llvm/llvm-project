@@ -381,6 +381,21 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
 
       if (CastInst::castIsValid(Cast, C, DestTy))
         return ConstantFoldCastOperand(Cast, C, DestTy, DL);
+
+      // Fold [N x T] array to <N x T> vector.
+      auto *FVTy = dyn_cast<FixedVectorType>(DestTy);
+      auto *ArrTy = dyn_cast<ArrayType>(SrcTy);
+      if (FVTy && ArrTy && ArrTy->getNumElements() == FVTy->getNumElements() &&
+          ArrTy->getElementType() == FVTy->getElementType()) {
+        SmallVector<Constant *, 16> Elems;
+        for (unsigned I = 0, E = ArrTy->getNumElements(); I != E; ++I) {
+          Constant *Elt = C->getAggregateElement(I);
+          if (!Elt)
+            return nullptr;
+          Elems.push_back(Elt);
+        }
+        return ConstantVector::get(Elems);
+      }
     }
 
     // If this isn't an aggregate type, there is nothing we can do to drill down
