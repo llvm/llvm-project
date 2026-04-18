@@ -3280,7 +3280,8 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
 ExecutionContext CommandInterpreter::GetExecutionContext() const {
   return !m_overriden_exe_contexts.empty()
              ? m_overriden_exe_contexts.top()
-             : m_debugger.GetSelectedExecutionContext();
+             : m_debugger.GetSelectedExecutionContext(
+                   /*adopt_dummy_target=*/true);
 }
 
 void CommandInterpreter::OverrideExecutionContext(
@@ -3406,7 +3407,8 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
   StartHandlingCommand();
 
-  ExecutionContext exe_ctx = m_debugger.GetSelectedExecutionContext();
+  ExecutionContext exe_ctx =
+      m_debugger.GetSelectedExecutionContext(/*adopt_dummy_target=*/true);
   bool pushed_exe_ctx = false;
   if (exe_ctx.HasTargetScope()) {
     OverrideExecutionContext(exe_ctx);

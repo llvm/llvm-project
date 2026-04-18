@@ -208,11 +208,17 @@ public:
   }
 
   /// Get the execution context representing the selected entities in the
-  /// selected target, or the dummy target if no target is selected.
-  ExecutionContext GetSelectedExecutionContext();
+  /// selected target. If no target is selected, the execution context will
+  /// contain the dummy target if adopt_dummy_target is true.
+  ///
+  // Ideally, adopt_dummy_target would be the default. However, there are a
+  // bunch of operations that don't make sense on the dummy target but we lack
+  // a mechanism to enforce that. The explicit argument forces the caller to
+  // consider the dummy target.
+  ExecutionContext GetSelectedExecutionContext(bool adopt_dummy_target);
 
   /// Like GetSelectedExecutionContext but returns an ExecutionContextRef.
-  ExecutionContextRef GetSelectedExecutionContextRef();
+  ExecutionContextRef GetSelectedExecutionContextRef(bool adopt_dummy_target);
 
   /// Get accessor for the target list.
   ///

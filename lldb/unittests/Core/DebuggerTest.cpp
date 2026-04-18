@@ -61,14 +61,27 @@ TEST_F(DebuggerTest,
 
   Target &dummy_target = debugger_sp->GetDummyTarget();
 
-  // GetSelectedExecutionContextRef should fall back to the dummy target.
-  ExecutionContextRef exe_ctx_ref =
-      debugger_sp->GetSelectedExecutionContextRef();
-  EXPECT_EQ(exe_ctx_ref.GetTargetSP().get(), &dummy_target);
+  {
+    ExecutionContextRef exe_ctx_ref =
+        debugger_sp->GetSelectedExecutionContextRef(
+            /*adopt_dummy_target=*/true);
+    EXPECT_EQ(exe_ctx_ref.GetTargetSP().get(), &dummy_target);
 
-  // GetSelectedExecutionContext should also contain the dummy target.
-  ExecutionContext exe_ctx = debugger_sp->GetSelectedExecutionContext();
-  EXPECT_EQ(exe_ctx.GetTargetPtr(), &dummy_target);
+    ExecutionContext exe_ctx =
+        debugger_sp->GetSelectedExecutionContext(/*adopt_dummy_target=*/true);
+    EXPECT_EQ(exe_ctx.GetTargetPtr(), &dummy_target);
+  }
+
+  {
+    ExecutionContextRef exe_ctx_ref =
+        debugger_sp->GetSelectedExecutionContextRef(
+            /*adopt_dummy_target=*/false);
+    EXPECT_EQ(exe_ctx_ref.GetTargetSP().get(), nullptr);
+
+    ExecutionContext exe_ctx =
+        debugger_sp->GetSelectedExecutionContext(/*adopt_dummy_target=*/false);
+    EXPECT_EQ(exe_ctx.GetTargetPtr(), nullptr);
+  }
 
   Debugger::Destroy(debugger_sp);
 }
