@@ -12487,8 +12487,8 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
 
   QualType LHSType = LHS->getType();
   QualType RHSType = RHS->getType();
-  if (LHSType->hasFloatingRepresentation() ||
-      (LHSType->isBlockPointerType() && !BinaryOperator::isEqualityOp(Opc)))
+  if ((LHSType->isBlockPointerType() && !BinaryOperator::isEqualityOp(Opc)) ||
+      S.inTemplateInstantiation())
     return;
 
   // WebAssembly Tables cannot be compared, therefore shouldn't emit
@@ -12837,14 +12837,6 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     return Ty->isPointerType() || Ty->isMemberPointerType();
   };
 
-  // If types are arrays, skip this check so we can throw an error later.
-  if (this->inTemplateInstantiation()) {
-    QualType LHSType = LHS.get()->getType();
-    QualType RHSType = RHS.get()->getType();
-    if (!LHSType->isArrayType() && !RHSType->isArrayType())
-      return QualType();
-  }
-
   // C++1a [array.comp]:
   //   Equality and relational comparisons ([expr.eq], [expr.rel]) between two
   //   operands of array type.
@@ -12853,21 +12845,17 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   //   operands of array type are deprecated.
   Expr *LHSStripped = LHS.get()->IgnoreParenImpCasts();
   Expr *RHSStripped = RHS.get()->IgnoreParenImpCasts();
-  if (this->getLangOpts().CPlusPlus && LHSStripped->getType()->isArrayType() &&
+  if (getLangOpts().CPlusPlus && LHSStripped->getType()->isArrayType() &&
       RHSStripped->getType()->isArrayType()) {
     auto IsDeprArrayComparionIgnored =
-        this->getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
-    auto DiagID =
-        this->getLangOpts().CPlusPlus26 ? diag::warn_array_comparison_cxx26
-        : !this->getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored
-            ? diag::warn_array_comparison
-            : diag::warn_depr_array_comparison;
+        getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
+    auto DiagID = getLangOpts().CPlusPlus26 ? diag::warn_array_comparison_cxx26
+                  : !getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored
+                      ? diag::warn_array_comparison
+                      : diag::warn_depr_array_comparison;
     this->Diag(Loc, DiagID)
         << LHS.get()->getSourceRange() << RHS.get()->getSourceRange()
         << LHSStripped->getType() << RHSStripped->getType();
-    // Carry on to produce the tautological comparison warning, if this
-    // expression is potentially-evaluated, we can resolve the array to a
-    // non-weak declaration, and so on.
   }
 
   // C++2a [expr.spaceship]p6: If at least one of the operands is of pointer
