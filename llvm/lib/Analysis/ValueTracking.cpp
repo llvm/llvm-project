@@ -9860,15 +9860,11 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
 
   // Both LHS and RHS are icmps.
   if (RHSOp0->getType()->getScalarType()->isIntOrPtrTy()) {
-    if (const auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
-      return isImpliedCondICmps(LHSCmp->getCmpPredicate(),
-                                LHSCmp->getOperand(0), LHSCmp->getOperand(1),
-                                RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue);
-    const Value *V;
-    if (match(LHS, m_NUWTrunc(m_Value(V))))
-      return isImpliedCondICmps(CmpInst::ICMP_NE, V,
-                                ConstantInt::get(V->getType(), 0), RHSPred,
-                                RHSOp0, RHSOp1, DL, LHSIsTrue);
+    CmpPredicate LHSPred;
+    Value *LHSOp0, *LHSOp1;
+    if (match(LHS, m_ICmpLike(LHSPred, m_Value(LHSOp0), m_Value(LHSOp1))))
+      return isImpliedCondICmps(LHSPred, LHSOp0, LHSOp1, RHSPred, RHSOp0,
+                                RHSOp1, DL, LHSIsTrue);
   } else {
     assert(RHSOp0->getType()->isFPOrFPVectorTy() &&
            "Expected floating point type only!");
@@ -9906,10 +9902,11 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     InvertRHS = true;
   }
 
-  if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS)) {
-    if (auto Implied = isImpliedCondition(
-            LHS, RHSCmp->getCmpPredicate(), RHSCmp->getOperand(0),
-            RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
+  CmpPredicate RHSPred;
+  Value *RHSOp0, *RHSOp1;
+  if (match(RHS, m_ICmpLike(RHSPred, m_Value(RHSOp0), m_Value(RHSOp1)))) {
+    if (auto Implied = isImpliedCondition(LHS, RHSPred, RHSOp0, RHSOp1, DL,
+                                          LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;
     return std::nullopt;
   }
@@ -9917,15 +9914,6 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     if (auto Implied = isImpliedCondition(
             LHS, RHSCmp->getPredicate(), RHSCmp->getOperand(0),
             RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
-      return InvertRHS ? !*Implied : *Implied;
-    return std::nullopt;
-  }
-
-  const Value *V;
-  if (match(RHS, m_NUWTrunc(m_Value(V)))) {
-    if (auto Implied = isImpliedCondition(LHS, CmpInst::ICMP_NE, V,
-                                          ConstantInt::get(V->getType(), 0), DL,
-                                          LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;
     return std::nullopt;
   }
