@@ -599,10 +599,9 @@ define <8 x i16> @foov8i16(<16 x i8> %a1, <2 x i64> %b1) {
 ;
 ; CHECK-GI-LABEL: foov8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    shrn v1.4h, v1.4s, #5
 ; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #5
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    shrn v1.4h, v1.4s, #5
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
   %a0 = bitcast <16 x i8> %a1 to <4 x i32>
   %b0 = bitcast <2 x i64> %b1 to <4 x i32>

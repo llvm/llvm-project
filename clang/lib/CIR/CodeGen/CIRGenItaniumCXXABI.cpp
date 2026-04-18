@@ -1610,6 +1610,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   cir::GlobalOp gv =
       CIRGenModule::createGlobalOp(cgm, loc, name, init.getType(),
                                    /*isConstant=*/true);
+  gv.setLinkage(linkage);
 
   // Export the typeinfo in the same circumstances as the vtable is
   // exported.
@@ -1629,11 +1630,8 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     oldGV->erase();
   }
 
-  if (cgm.supportsCOMDAT() && cir::isWeakForLinker(gv.getLinkage())) {
-    assert(!cir::MissingFeatures::setComdat());
-    cgm.errorNYI("buildTypeInfo: supportsCOMDAT & isWeakForLinker");
-    return {};
-  }
+  if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
+    gv.setComdat(true);
 
   CharUnits align = cgm.getASTContext().toCharUnitsFromBits(
       cgm.getTarget().getPointerAlign(LangAS::Default));

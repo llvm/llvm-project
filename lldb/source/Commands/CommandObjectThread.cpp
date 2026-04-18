@@ -1911,7 +1911,7 @@ protected:
 
       if (!file) {
         result.AppendErrorWithFormat(
-            "No source file available for the current location.");
+            "no source file available for the current location");
         return;
       }
 

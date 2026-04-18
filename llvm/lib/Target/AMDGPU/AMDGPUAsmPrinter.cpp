@@ -20,6 +20,7 @@
 #include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPUMCResourceInfo.h"
 #include "AMDGPUResourceUsageAnalysis.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
@@ -330,10 +331,18 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       return;
     }
 
-    // LDS variables aren't emitted in HSA or PAL yet.
     const Triple::OSType OS = TM.getTargetTriple().getOS();
-    if (OS == Triple::AMDHSA || OS == Triple::AMDPAL)
-      return;
+    if (OS == Triple::AMDHSA || OS == Triple::AMDPAL) {
+      if (!AMDGPUTargetMachine::EnableObjectLinking)
+        return;
+      // With object linking, LDS definitions should have been externalized
+      // by earlier passes (e.g. LDS lowering, named barrier lowering).
+      // Only declarations reach here, emitted as SHN_AMDGPU_LDS symbols
+      // so the linker can assign their offsets.
+      assert(GV->isDeclaration() &&
+             "LDS definitions should have been externalized when object "
+             "linking is enabled");
+    }
 
     MCSymbol *GVSym = getSymbol(GV);
 

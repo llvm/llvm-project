@@ -195,10 +195,6 @@ static void thinLTOCreateEmptyIndexFiles() {
   }
 }
 
-void BitcodeCompiler::setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs) {
-  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
-}
-
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
 SmallVector<InputFile *, 0> BitcodeCompiler::compile() {

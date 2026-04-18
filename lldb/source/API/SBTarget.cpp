@@ -334,6 +334,9 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
     if (getenv("LLDB_LAUNCH_FLAG_DISABLE_ASLR"))
       launch_flags |= eLaunchFlagDisableASLR;
 
+    if (getenv("LLDB_LAUNCH_FLAG_USE_PIPES"))
+      launch_flags |= eLaunchFlagUsePipes;
+
     StateType state = eStateInvalid;
     process_sp = target_sp->GetProcessSP();
     if (process_sp) {

@@ -66,23 +66,32 @@ static bool runNVVMIntrRange(Function &F) {
   if (!isKernelFunction(F))
     return false;
 
-  const auto OverallReqNTID = getOverallReqNTID(F);
+  auto ReqNTID = getReqNTID(F);
   const auto OverallMaxNTID = getOverallMaxNTID(F);
   const auto OverallClusterRank = getOverallClusterRank(F);
 
   // If this function lacks any range information, do nothing.
-  if (!(OverallReqNTID || OverallMaxNTID || OverallClusterRank))
+  if (!(!ReqNTID.empty() || OverallMaxNTID || OverallClusterRank))
     return false;
 
-  const unsigned FunctionNTID = OverallReqNTID.value_or(
-      OverallMaxNTID.value_or(std::numeric_limits<unsigned>::max()));
+  const unsigned MaxNTID =
+      OverallMaxNTID.value_or(std::numeric_limits<unsigned>::max());
 
   const unsigned FunctionClusterRank =
       OverallClusterRank.value_or(std::numeric_limits<unsigned>::max());
 
-  const Vector3 MaxBlockSize{std::min(1024u, FunctionNTID),
-                             std::min(1024u, FunctionNTID),
-                             std::min(64u, FunctionNTID)};
+  // When reqntid is specified, block dimensions are exact compile-time
+  // constants. Otherwise, use maxntid (capped at hardware limits) as upper
+  // bounds.
+  Vector3 MinBlockDim, MaxBlockDim;
+  if (!ReqNTID.empty()) {
+    ReqNTID.resize(3, 1);
+    MinBlockDim = MaxBlockDim = {ReqNTID[0], ReqNTID[1], ReqNTID[2]};
+  } else {
+    MinBlockDim = {1, 1, 1};
+    MaxBlockDim = {std::min(1024u, MaxNTID), std::min(1024u, MaxNTID),
+                   std::min(64u, MaxNTID)};
+  }
 
   // We conservatively use the maximum grid size as an upper bound for the
   // cluster rank.
@@ -90,23 +99,24 @@ static bool runNVVMIntrRange(Function &F) {
                                std::min(0xffffu, FunctionClusterRank),
                                std::min(0xffffu, FunctionClusterRank)};
 
-  const auto ProccessIntrinsic = [&](IntrinsicInst *II) -> bool {
+  const auto ProcessIntrinsic = [&](IntrinsicInst *II) -> bool {
     switch (II->getIntrinsicID()) {
     // Index within block
     case Intrinsic::nvvm_read_ptx_sreg_tid_x:
-      return addRangeAttr(0, MaxBlockSize.X, II);
+      return addRangeAttr(0, MaxBlockDim.X, II);
     case Intrinsic::nvvm_read_ptx_sreg_tid_y:
-      return addRangeAttr(0, MaxBlockSize.Y, II);
+      return addRangeAttr(0, MaxBlockDim.Y, II);
     case Intrinsic::nvvm_read_ptx_sreg_tid_z:
-      return addRangeAttr(0, MaxBlockSize.Z, II);
+      return addRangeAttr(0, MaxBlockDim.Z, II);
 
-    // Block size
+    // Block size: use single-value range when reqntid is specified;
+    // InstCombine will fold these to constants later.
     case Intrinsic::nvvm_read_ptx_sreg_ntid_x:
-      return addRangeAttr(1, MaxBlockSize.X + 1, II);
+      return addRangeAttr(MinBlockDim.X, MaxBlockDim.X + 1, II);
     case Intrinsic::nvvm_read_ptx_sreg_ntid_y:
-      return addRangeAttr(1, MaxBlockSize.Y + 1, II);
+      return addRangeAttr(MinBlockDim.Y, MaxBlockDim.Y + 1, II);
     case Intrinsic::nvvm_read_ptx_sreg_ntid_z:
-      return addRangeAttr(1, MaxBlockSize.Z + 1, II);
+      return addRangeAttr(MinBlockDim.Z, MaxBlockDim.Z + 1, II);
 
     // Cluster size
     case Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_x:
@@ -140,7 +150,7 @@ static bool runNVVMIntrRange(Function &F) {
   bool Changed = false;
   for (Instruction &I : instructions(F))
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
-      Changed |= ProccessIntrinsic(II);
+      Changed |= ProcessIntrinsic(II);
 
   return Changed;
 }

@@ -1071,7 +1071,9 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
 
 void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
-  for (VPBlockBase *HeaderVPB : vp_post_order_shallow(Plan.getEntry()))
+  PostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> POT(
+      Plan.getEntry());
+  for (VPBlockBase *HeaderVPB : POT)
     if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
       createLoopRegion(Plan, HeaderVPB);
 

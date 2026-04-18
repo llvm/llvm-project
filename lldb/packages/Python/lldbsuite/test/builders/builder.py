@@ -24,7 +24,8 @@ class Builder:
         compiler = lldbutil.which(compiler)
         return os.path.abspath(compiler)
 
-    def getTriple(self):
+    def getTriple(self, arch):
+        """Returns the triple for the given architecture or None."""
         return configuration.triple
 
     def getExtraMakeArgs(self):
@@ -34,15 +35,11 @@ class Builder:
         """
         return []
 
-    def getTripleSpec(self):
-        """Returns the TRIPLE for the make system."""
-        triple = self.getTriple()
-        if triple:
-            return ["TRIPLE=" + triple]
-        return []
-
-    def getArchCFlags(self):
+    def getArchCFlags(self, architecture):
         """Returns the ARCH_CFLAGS for the make system."""
+        triple = self.getTriple(architecture)
+        if triple:
+            return ["ARCH_CFLAGS=-target {}".format(triple)]
         return []
 
     def getMake(self, test_subdir, test_name):
@@ -97,6 +94,13 @@ class Builder:
         cmdline = [setOrAppendVariable(k, v) for k, v in list(d.items())]
 
         return cmdline
+
+    def getArchSpec(self, architecture):
+        """
+        Helper function to return the key-value string to specify the architecture
+        used for the make system.
+        """
+        return ["ARCH=" + architecture] if architecture else []
 
     def getToolchainSpec(self, compiler):
         """
@@ -290,8 +294,8 @@ class Builder:
             self.getMake(testdir, testname),
             debug_info_args,
             make_targets,
-            self.getArchCFlags(),
-            self.getTripleSpec(),
+            self.getArchCFlags(architecture),
+            self.getArchSpec(architecture),
             self.getToolchainSpec(compiler),
             self.getExtraMakeArgs(),
             self.getSDKRootSpec(),

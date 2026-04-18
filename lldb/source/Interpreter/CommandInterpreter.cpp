@@ -104,16 +104,11 @@ using namespace lldb_private;
 static const char *k_white_space = " \t\v";
 
 static constexpr const char *InitFileWarning =
-    "There is a .lldbinit file in the current directory which is not being "
-    "read.\n"
-    "To silence this warning without sourcing in the local .lldbinit,\n"
-    "add the following to the lldbinit file in your home directory:\n"
-    "    settings set target.load-cwd-lldbinit false\n"
-    "To allow lldb to source .lldbinit files in the current working "
-    "directory,\n"
-    "set the value of this variable to true.  Only do so if you understand "
-    "and\n"
-    "accept the security risk.";
+    R"(there is a .lldbinit file in the current directory which is not being read.
+To silence this warning without sourcing in the local .lldbinit, add the following to the lldbinit file in your home directory:
+    settings set target.load-cwd-lldbinit false\n"
+To allow lldb to source .lldbinit files in the current working directory, set the value of this variable to true.
+Only do so if you understand and accept the security risk)";
 
 const char *CommandInterpreter::g_no_argument = "<no-argument>";
 const char *CommandInterpreter::g_need_argument = "<need-argument>";
@@ -1981,11 +1976,7 @@ Status CommandInterpreter::PreprocessToken(std::string &expr_str) {
   Status error;
   ExecutionContext exe_ctx(GetExecutionContext());
 
-  // Get a dummy target to allow for calculator mode while processing
-  // backticks. This also helps break the infinite loop caused when target is
-  // null.
-  Target *exe_target = exe_ctx.GetTargetPtr();
-  Target &target = exe_target ? *exe_target : m_debugger.GetDummyTarget();
+  Target &target = exe_ctx.GetTargetRef();
 
   ValueObjectSP expr_result_valobj_sp;
 
@@ -3284,7 +3275,8 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
 ExecutionContext CommandInterpreter::GetExecutionContext() const {
   return !m_overriden_exe_contexts.empty()
              ? m_overriden_exe_contexts.top()
-             : m_debugger.GetSelectedExecutionContext();
+             : m_debugger.GetSelectedExecutionContext(
+                   /*adopt_dummy_target=*/true);
 }
 
 void CommandInterpreter::OverrideExecutionContext(
@@ -3410,7 +3402,8 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
   StartHandlingCommand();
 
-  ExecutionContext exe_ctx = m_debugger.GetSelectedExecutionContext();
+  ExecutionContext exe_ctx =
+      m_debugger.GetSelectedExecutionContext(/*adopt_dummy_target=*/true);
   bool pushed_exe_ctx = false;
   if (exe_ctx.HasTargetScope()) {
     OverrideExecutionContext(exe_ctx);

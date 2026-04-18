@@ -143,8 +143,7 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-NEXT:    mov v3.b[3], v0.b[0]
 ; CHECK-GI-NEXT:    mov v5.b[3], v1.b[0]
 ; CHECK-GI-NEXT:    uqsub v0.8b, v3.8b, v5.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x2]
+; CHECK-GI-NEXT:    str s0, [x2]
 ; CHECK-GI-NEXT:    ret
   %x = load <4 x i8>, ptr %px
   %y = load <4 x i8>, ptr %py

@@ -59,7 +59,6 @@
     {
       "id": 2,
       "name": {
-        "namespace": [],
         "suffix": "",
         "usr": "c:@F@foo#***I#*S0_#I#"
       }
@@ -67,7 +66,6 @@
     {
       "id": 0,
       "name": {
-        "namespace": [],
         "suffix": "1",
         "usr": "c:@F@foo#***I#*S0_#I#"
       }
@@ -75,7 +73,6 @@
     {
       "id": 1,
       "name": {
-        "namespace": [],
         "suffix": "2",
         "usr": "c:@F@foo#***I#*S0_#I#"
       }

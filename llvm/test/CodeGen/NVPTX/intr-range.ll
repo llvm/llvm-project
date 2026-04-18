@@ -36,17 +36,17 @@ define ptx_kernel i32 @test_reqntid() "nvvm.reqntid"="20" {
 ; CHECK-LABEL: define ptx_kernel i32 @test_reqntid(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 20) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-; CHECK-NEXT:    [[TMP5:%.*]] = call range(i32 0, 20) i32 @llvm.nvvm.read.ptx.sreg.tid.y()
-; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 20) i32 @llvm.nvvm.read.ptx.sreg.tid.z()
-; CHECK-NEXT:    [[TMP4:%.*]] = call range(i32 1, 21) i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-; CHECK-NEXT:    [[TMP3:%.*]] = call range(i32 1, 21) i32 @llvm.nvvm.read.ptx.sreg.ntid.y()
-; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 1, 21) i32 @llvm.nvvm.read.ptx.sreg.ntid.z()
+; CHECK-NEXT:    [[TMP5:%.*]] = call range(i32 0, 1) i32 @llvm.nvvm.read.ptx.sreg.tid.y()
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 1) i32 @llvm.nvvm.read.ptx.sreg.tid.z()
+; CHECK-NEXT:    [[TMP4:%.*]] = call range(i32 20, 21) i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+; CHECK-NEXT:    [[TMP12:%.*]] = call range(i32 1, 2) i32 @llvm.nvvm.read.ptx.sreg.ntid.y()
+; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 1, 2) i32 @llvm.nvvm.read.ptx.sreg.ntid.z()
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP8]], [[TMP4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[TMP6]]
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    ret i32 [[TMP12]]
 ;
   %1 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %2 = call i32 @llvm.nvvm.read.ptx.sreg.tid.y()

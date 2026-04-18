@@ -146,21 +146,25 @@ void DefinitionBlockSeparator::separateBlocks(
       if (LikelyDefinition(OperateLine))
         return false;
 
+      const auto *NextLine =
+          OperateIndex + 1 < Lines.size() ? Lines[OperateIndex + 1] : nullptr;
+
       if (const auto *Tok = OperateLine->First;
           Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText)) {
-        return true;
+        const bool IsEndComment = Tok->NewlinesBefore == 1 && NextLine &&
+                                  NextLine->First->NewlinesBefore > 1;
+        if (!IsEndComment)
+          return true;
       }
 
       // A single line identifier that is not in the last line.
       if (OperateLine->First->is(tok::identifier) &&
-          OperateLine->First == OperateLine->Last &&
-          OperateIndex + 1 < Lines.size()) {
+          OperateLine->First == OperateLine->Last && NextLine) {
         // UnwrappedLineParser's recognition of free-standing macro like
         // Q_OBJECT may also recognize some uppercased type names that may be
         // used as return type as that kind of macros, which is a bit hard to
         // distinguish one from another purely from token patterns. Here, we
         // try not to add new lines below those identifiers.
-        AnnotatedLine *NextLine = Lines[OperateIndex + 1];
         if (NextLine->MightBeFunctionDecl &&
             NextLine->mightBeFunctionDefinition() &&
             NextLine->First->NewlinesBefore == 1 &&

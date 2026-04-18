@@ -291,6 +291,22 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                "struct E {};",
                Style);
 
+  constexpr StringRef Code("// NOLINTBEGIN\n"
+                           "int x = 1;\n"
+                           "int y = 2;\n"
+                           "// NOLINTEND\n"
+                           "\n"
+                           "void some_function() {}");
+  verifyFormat(Code, Style, Code);
+
+  constexpr StringRef Code2("int x = 0;\n"
+                            "int y = 0;\n"
+                            "// trailing comment 1\n"
+                            "// trailing comment 2\n"
+                            "\n"
+                            "void some_function() {}");
+  verifyFormat(Code2, Style, Code2);
+
   std::string Prefix = "namespace {\n";
   std::string Infix = "\n"
                       "// Enum test1\n"
