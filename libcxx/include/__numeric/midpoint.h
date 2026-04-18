@@ -35,11 +35,18 @@ template <class _Tp>
   requires(is_integral_v<_Tp> && !is_same_v<remove_cv_t<_Tp>, bool>)
 [[nodiscard]]
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
-  if constexpr (is_unsigned_v<_Tp>) {
-    return ((__a ^ __b) >> 1) + (__a & __b);
+  if constexpr (is_unsigned_v<_Tp> && sizeof(_Tp) < sizeof(unsigned)) {
+    return ((unsigned)__a + (unsigned)__b) / 2;
   } else {
-    _Tp __t = ((__a ^ __b) >> 1) + (__a & __b);
-    return __t + (_Tp(__t < 0) & (__a ^ __b) & _Tp(1));
+    using _Up                = make_unsigned_t<_Tp>;
+    constexpr _Up __bitshift = numeric_limits<_Up>::digits - 1;
+
+    _Up __diff     = _Up(__b) - _Up(__a);
+    _Up __sign_bit = __b < __a;
+
+    _Up __half_diff = (__diff / 2) + (__sign_bit << __bitshift) + (__sign_bit & __diff);
+
+    return __a + __half_diff;
   }
 }
 
