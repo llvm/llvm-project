@@ -24,6 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 class CndVar {
   LIBC_INLINE_VAR static constexpr size_t SPIN_LIMIT = 100;
+  LIBC_INLINE_VAR static constexpr size_t CANCEL_STEP = 2;
   enum WaiterState : uint8_t {
     // Initial state after entering the wait queue.
     Waiting = 0,
@@ -78,8 +79,11 @@ class CndVar {
 
     LIBC_INLINE void confirm_cancellation() {
       Futex *sender = sender_futex.load();
-      if (sender && sender->fetch_sub(1) == 1)
-        sender->notify_one();
+      if (sender) {
+        FutexWordType res = sender->fetch_sub(CANCEL_STEP);
+        if (res <= CANCEL_STEP + 1 && (res & 1) != 0)
+          sender->notify_one();
+      }
     }
   };
 
@@ -215,7 +219,9 @@ private:
       size_t spin = 0;
       while (auto remaining = sender_futex.load(cpp::MemoryOrder::RELAXED)) {
         if (spin > SPIN_LIMIT) {
+          sender_futex.fetch_add(1);
           sender_futex.wait(remaining, cpp::nullopt, /*is_pshared=*/false);
+          sender_futex.fetch_sub(1);
           spin = 0;
           continue;
         }
@@ -238,7 +244,7 @@ private:
           break;
         uint8_t expected = Waiting;
         if (!cursor->state.compare_exchange_strong(expected, Signalled)) {
-          sender_futex.fetch_add(1);
+          sender_futex.fetch_add(CANCEL_STEP);
           cursor->sender_futex.store(&sender_futex);
           continue;
         }
