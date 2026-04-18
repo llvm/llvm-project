@@ -893,9 +893,9 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
 
   // 4. Compare regions.
   for (auto regionPair : llvm::zip(lhs->getRegions(), rhs->getRegions()))
-    if (!isRegionEquivalentTo(&std::get<0>(regionPair),
-                              &std::get<1>(regionPair), checkEquivalent,
-                              markEquivalent, flags))
+    if (!isRegionEquivalentTo(
+            &std::get<0>(regionPair), &std::get<1>(regionPair), checkEquivalent,
+            markEquivalent, flags, checkCommutativeEquivalent))
       return false;
 
   return true;

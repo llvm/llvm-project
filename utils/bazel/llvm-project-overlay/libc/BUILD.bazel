@@ -170,7 +170,10 @@ LLVM_LIBC_HEADERS = [
     libc_header_info("stdckdint"),
     libc_header_info("stdint"),
     libc_header_info("stdio"),
-    libc_header_info("string"),
+    libc_header_info(
+        "string",
+        has_def_template = True,
+    ),
     libc_header_info("strings"),
     libc_header_info("sys/auxv"),
     libc_header_info("sys/epoll"),
@@ -489,6 +492,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_wctype_overlay",
+    hdrs = ["hdr/wctype_overlay.h"],
+)
+
+libc_support_library(
     name = "hdr_stdint_proxy",
     hdrs = ["hdr/stdint_proxy.h"],
 )
@@ -672,6 +680,14 @@ libc_support_library(
     hdrs = ["hdr/types/wchar_t.h"],
     deps = [
         ":hdr_wchar_overlay",
+    ],
+)
+
+libc_support_library(
+    name = "types_wctype_t",
+    hdrs = ["hdr/types/wctype_t.h"],
+    deps = [
+        ":hdr_wctype_overlay",
     ],
 )
 
@@ -2157,6 +2173,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_threads_futex_utils",
+    hdrs = ["src/__support/threads/futex_utils.h"],
+    deps = select({
+        "@platforms//os:linux": [":__support_threads_linux_futex_utils"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
     name = "__support_threads_linux_futex_utils",
     hdrs = ["src/__support/threads/linux/futex_utils.h"],
     target_compatible_with = select({
@@ -2167,6 +2192,7 @@ libc_support_library(
         ":__support_cpp_atomic",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
+        ":__support_error_or",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_osutil_syscall",
@@ -2222,6 +2248,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_threads_futex_utils",
         ":__support_threads_linux_futex_utils",
         ":__support_threads_sleep",
         ":__support_time",
@@ -2253,6 +2280,7 @@ libc_support_library(
     deps = [
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_threads_futex_utils",
         ":__support_threads_linux_futex_utils",
     ],
 )
@@ -2307,9 +2335,12 @@ libc_support_library(
     name = "__support_wctype_utils",
     hdrs = ["src/__support/wctype_utils.h"],
     deps = [
+        ":__support_cpp_array",
+        ":__support_cpp_string_view",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":types_wchar_t",
+        ":types_wctype_t",
     ],
 )
 
@@ -9761,6 +9792,7 @@ libc_function(
         ":__support_common",
         ":__support_ctype_utils",
         ":__support_macros_config",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )
@@ -9773,6 +9805,7 @@ libc_function(
         ":__support_common",
         ":__support_ctype_utils",
         ":__support_macros_config",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )

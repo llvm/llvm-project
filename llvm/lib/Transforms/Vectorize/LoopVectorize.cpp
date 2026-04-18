@@ -6033,12 +6033,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
 
     // First-order recurrences are replaced by vector shuffles inside the loop.
     if (VF.isVector() && Legal->isFixedOrderRecurrence(Phi)) {
-      SmallVector<int> Mask(VF.getKnownMinValue());
-      std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
       return TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
                                 cast<VectorType>(VectorTy),
-                                cast<VectorType>(VectorTy), Mask, CostKind,
-                                VF.getKnownMinValue() - 1);
+                                cast<VectorType>(VectorTy), {}, CostKind, -1);
     }
 
     // Phi nodes in non-header blocks (not inductions, reductions, etc.) are
@@ -7094,8 +7091,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
-  replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
-                        State.CFG.PrevBB->getSingleSuccessor(), &BestVPlan);
+  if (VPBasicBlock *ScalarPH = BestVPlan.getScalarPreheader())
+    replaceVPBBWithIRVPBB(ScalarPH, State.CFG.PrevBB->getSingleSuccessor(),
+                          &BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   assert(verifyVPlanIsValid(BestVPlan) && "final VPlan is invalid");
@@ -7923,6 +7921,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Create whole-vector selects for find-last recurrences.
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
+
+  VPlanTransforms::removeBranchOnConst(*Plan);
 
   // Create partial reduction recipes for scaled reductions and transform
   // recipes to abstract recipes if it is legal and beneficial and clamp the
