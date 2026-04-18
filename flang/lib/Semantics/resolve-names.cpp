@@ -1511,9 +1511,9 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // attribute.
   if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
       name && name->symbol) {
-    if (Symbol * copy{currScope().CopySymbol(*name->symbol)}) {
+    if (Symbol * copy{currScope().CopySymbol(name->symbol->GetUltimate())}) {
       name->symbol = copy;
-      if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
+      if (auto *object{copy->GetUltimate().detailsIf<ObjectEntityDetails>()}) {
         object->set_cudaDataAttr(common::CUDADataAttr::Device);
       }
     }
@@ -4687,6 +4687,10 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
           "Name '%s' from host scope should have a type declaration before its local statement function definition"_port_en_US,
           name.source);
       MakeSymbol(name, Attrs{}, UnknownDetails{});
+      // 'name' may still point to a host-associated SubprogramNameDetails
+      // symbol. Reset it so statement-function processing
+      // re-resolves to the new local SubprogramDetails.
+      name.symbol = nullptr;
     } else if (auto *entity{ultimate.detailsIf<EntityDetails>()};
                entity && !ultimate.has<ProcEntityDetails>()) {
       resultType = entity->type();
@@ -6012,7 +6016,11 @@ bool DeclarationVisitor::Pre(const parser::CUDAAttributesStmt &x) {
       if (!symbol) {
         symbol = &MakeSymbol(name, ObjectEntityDetails{});
       }
-      SetCUDADataAttr(name.source, *symbol, attr);
+      if (attr == common::CUDADataAttr::Value) {
+        SetExplicitAttr(*symbol, Attr::VALUE);
+      } else {
+        SetCUDADataAttr(name.source, *symbol, attr);
+      }
     }
   }
   return false;

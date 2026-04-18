@@ -51,7 +51,6 @@ class CoreEngine {
   friend class ExprEngine;
   friend class NodeBuilder;
   friend class NodeBuilderContext;
-  friend class SwitchNodeBuilder;
 
 public:
   using BlocksExhausted =
@@ -330,23 +329,6 @@ public:
 
   ExplodedNode *generateNode(ProgramStateRef State, bool branch,
                              ExplodedNode *Pred);
-};
-
-class SwitchNodeBuilder : public NodeBuilder {
-public:
-  SwitchNodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
-      : NodeBuilder(DstSet, Ctx) {}
-
-  using iterator = CFGBlock::const_succ_reverse_iterator;
-
-  iterator begin() { return C.getBlock()->succ_rbegin() + 1; }
-  iterator end() { return C.getBlock()->succ_rend(); }
-
-  ExplodedNode *generateCaseStmtNode(const CFGBlock *Block,
-                                     ProgramStateRef State, ExplodedNode *Pred);
-
-  ExplodedNode *generateDefaultCaseNode(ProgramStateRef State,
-                                        ExplodedNode *Pred);
 };
 
 } // namespace ento

@@ -177,20 +177,18 @@ define i32 @bitmask_v32i8(<32 x i8> %v) {
 ; CHECK:         .functype bitmask_v32i8 (v128, v128) -> (i32)
 ; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i8x16.eq
 ; CHECK-NEXT:    i8x16.bitmask
 ; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i32.shl
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i8x16.eq
 ; CHECK-NEXT:    i8x16.bitmask
-; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.or
 ; CHECK-NEXT:    # fallthrough-return
   %cmp = icmp eq <32 x i8> %v, zeroinitializer
   %bitmask = bitcast <32 x i1> %cmp to i32
@@ -269,15 +267,13 @@ define i32 @manual_bitmask_v32i8(<32 x i8> %v) {
 ; CHECK-LABEL: manual_bitmask_v32i8:
 ; CHECK:         .functype manual_bitmask_v32i8 (v128, v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.bitmask
 ; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i32.shl
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.bitmask
-; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.or
 ; CHECK-NEXT:    # fallthrough-return
   %1 = icmp slt <32 x i8> %v, zeroinitializer
   %2 = bitcast <32 x i1> %1 to i32
@@ -288,29 +284,26 @@ define i64 @manual_bitmask_v64i8(<64 x i8> %v) {
 ; CHECK-LABEL: manual_bitmask_v64i8:
 ; CHECK:         .functype manual_bitmask_v64i8 (v128, v128, v128, v128) -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i64.const 16
-; CHECK-NEXT:    i64.const 16
-; CHECK-NEXT:    i64.const 16
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.bitmask
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 16
-; CHECK-NEXT:    i64.add
-; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.shl
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.bitmask
+; CHECK-NEXT:    i32.or
 ; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.add
+; CHECK-NEXT:    i64.const 32
 ; CHECK-NEXT:    i64.shl
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i8x16.bitmask
 ; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.add
+; CHECK-NEXT:    i64.const 16
 ; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i8x16.bitmask
 ; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.add
+; CHECK-NEXT:    i64.or
 ; CHECK-NEXT:    # fallthrough-return
   %1 = icmp slt <64 x i8> %v, zeroinitializer
   %2 = bitcast <64 x i1> %1 to i64

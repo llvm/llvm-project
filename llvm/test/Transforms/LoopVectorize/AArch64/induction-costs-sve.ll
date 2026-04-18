@@ -284,7 +284,7 @@ entry:
   %mul.x = add i32 %x, 1
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %trunc.iv = trunc i64 %iv to i32
   %add.i = mul i32 %mul.x, %trunc.iv

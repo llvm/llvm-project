@@ -88,10 +88,18 @@ static void checkAndSetWeakAlias(SymbolTable &symtab, InputFile *f,
         // Weak aliases as produced by GCC are named in the form
         // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
         // of another symbol emitted near the weak symbol.
-        // Just use the definition from the first object file that defined
-        // this weak symbol.
-        if (symtab.ctx.config.allowDuplicateWeak)
+        if (symtab.ctx.config.allowDuplicateWeak) {
+          auto isAbsZero = [](Symbol *sym) -> bool {
+            return isa<DefinedAbsolute>(sym) &&
+                   dyn_cast<DefinedAbsolute>(sym)->getVA() == 0;
+          };
+          // If the alias we had points at absolute zero, and we get another
+          // weak symbol which isn't absolute zero, prefer that one.
+          if (isAbsZero(u->weakAlias) && !isAbsZero(target)) {
+            u->setWeakAlias(target, isAntiDep);
+          }
           return;
+        }
         symtab.reportDuplicate(source, f);
       }
     }
@@ -403,6 +411,9 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     callgraphSec = sec;
     return nullptr;
   }
+
+  if (symtab.ctx.config.discardSection.contains(name))
+    return nullptr;
 
   // Object files may have DWARF debug info or MS CodeView debug info
   // (or both).

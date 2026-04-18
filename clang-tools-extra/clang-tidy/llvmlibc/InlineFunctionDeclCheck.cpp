@@ -35,8 +35,7 @@ getLastTemplateParameterList(const FunctionDecl *FuncDecl) {
 
 InlineFunctionDeclCheck::InlineFunctionDeclCheck(StringRef Name,
                                                  ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+    : ClangTidyCheck(Name, Context) {}
 
 void InlineFunctionDeclCheck::registerMatchers(MatchFinder *Finder) {
   // Ignore functions that have been deleted.
@@ -67,7 +66,7 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Consider functions only in header files.
   if (!utils::isSpellingLocInHeaderFile(SrcBegin, *Result.SourceManager,
-                                        HeaderFileExtensions))
+                                        getHeaderFileExtensions()))
     return;
 
   // Ignore lambda functions as they are internal and implicit.

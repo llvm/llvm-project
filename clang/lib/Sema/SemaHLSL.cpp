@@ -2954,14 +2954,15 @@ DiagnoseHLSLAvailability::FindAvailabilityAttr(const Decl *D) {
   // environment.
   for (const auto *A : D->attrs()) {
     if (const auto *Avail = dyn_cast<AvailabilityAttr>(A)) {
-      StringRef AttrPlatform = Avail->getPlatform()->getName();
+      const AvailabilityAttr *EffectiveAvail = Avail->getEffectiveAttr();
+      StringRef AttrPlatform = EffectiveAvail->getPlatform()->getName();
       StringRef TargetPlatform =
           SemaRef.getASTContext().getTargetInfo().getPlatformName();
 
       // Match the platform name.
       if (AttrPlatform == TargetPlatform) {
         // Find the best matching attribute for this environment
-        if (HasMatchingEnvironmentOrNone(Avail))
+        if (HasMatchingEnvironmentOrNone(EffectiveAvail))
           return Avail;
         PartialMatch = Avail;
       }
@@ -3066,6 +3067,50 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     SemaRef.Consumer.HandleTopLevelDecl(DG);
   }
   diagnoseAvailabilityViolations(TU);
+}
+
+// For resource member access through a global struct array, verify that the
+// array index selecting the struct element is a constant integer expression.
+// Returns false if the member expression is invalid.
+bool SemaHLSL::ActOnResourceMemberAccessExpr(MemberExpr *ME) {
+  assert((ME->getType()->isHLSLResourceRecord() ||
+          ME->getType()->isHLSLResourceRecordArray()) &&
+         "expected member expr to have resource record type or array of them");
+
+  // Walk the AST from MemberExpr to the VarDecl of the parent struct instance
+  // and take note of any non-constant array indexing along the way. If the
+  // VarDecl we find is a global variable, report error if there was any
+  // non-constant array index in the resource member access along the way.
+  const Expr *NonConstIndexExpr = nullptr;
+  const Expr *E = ME->getBase();
+  while (E) {
+    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+      if (!NonConstIndexExpr)
+        return true;
+
+      const VarDecl *VD = cast<VarDecl>(DRE->getDecl());
+      if (!VD->hasGlobalStorage())
+        return true;
+
+      SemaRef.Diag(NonConstIndexExpr->getExprLoc(),
+                   diag::err_hlsl_resource_member_array_access_not_constant);
+      return false;
+    }
+
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      const Expr *IdxExpr = ASE->getIdx();
+      if (!IdxExpr->isIntegerConstantExpr(SemaRef.getASTContext()))
+        NonConstIndexExpr = IdxExpr;
+      E = ASE->getBase();
+    } else if (const auto *SubME = dyn_cast<MemberExpr>(E)) {
+      E = SubME->getBase();
+    } else if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+      E = ICE->getSubExpr();
+    } else {
+      llvm_unreachable("unexpected expr type in resource member access");
+    }
+  }
+  return true;
 }
 
 void SemaHLSL::diagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
@@ -3522,6 +3567,17 @@ static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckCalculateLodBuiltin(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 3))
+    return true;
+
+  if (CheckTextureSamplerAndLocation(S, TheCall))
+    return true;
+
+  TheCall->setType(S.Context.FloatTy);
+  return false;
+}
+
 static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
   if (S.checkArgCountRange(TheCall, IsCmp ? 5 : 4, IsCmp ? 6 : 5))
     return true;
@@ -3882,6 +3938,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Cmp);
   case Builtin::BI__builtin_hlsl_resource_sample_cmp_level_zero:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::CmpLevelZero);
+  case Builtin::BI__builtin_hlsl_resource_calculate_lod:
+  case Builtin::BI__builtin_hlsl_resource_calculate_lod_unclamped:
+    return CheckCalculateLodBuiltin(SemaRef, TheCall);
   case Builtin::BI__builtin_hlsl_resource_gather:
     return CheckGatherBuiltin(SemaRef, TheCall, /*IsCmp=*/false);
   case Builtin::BI__builtin_hlsl_resource_gather_cmp:
