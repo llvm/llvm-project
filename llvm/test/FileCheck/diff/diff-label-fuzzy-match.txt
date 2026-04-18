@@ -1,0 +1,18 @@
+; RUN: split-file %s %t
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DIFF
+
+;--- input.txt
+define void @foo() {
+  call void @work_task()
+}
+
+;--- check.txt
+; CHECK-LABEL: define void @foo()
+; CHECK:        call void @work_test()
+
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF:      define void @foo() {
+; DIFF-NEXT: -call void @work_test()
+; DIFF-NEXT: +call void @work_task()
+; DIFF-NEXT:  }
