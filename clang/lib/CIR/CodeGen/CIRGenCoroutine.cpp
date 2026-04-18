@@ -145,7 +145,6 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     mlir::Value isPtrNotNull = builder.createPtrIsNotNull(coroFree.getResult());
 
     llvm::SmallVector<mlir::Operation *> opsToMove;
-    builder.getInsertionBlock();
     mlir::Block *block = builder.getInsertionBlock();
     mlir::Block::iterator it(isPtrNotNull.getDefiningOp());
 
@@ -408,7 +407,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
     curCoro.data->currentAwaitKind = cir::AwaitKind::User;
 
     mlir::OpBuilder::InsertPoint userBody;
-    auto coroBodOp =
+    auto coroBodyOp =
         cir::CoroBodyOp::create(builder, openCurlyLoc, /*scopeBuilder=*/
                                 [&](mlir::OpBuilder &b, mlir::Location loc) {
                                   userBody = b.saveInsertionPoint();
@@ -426,7 +425,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       }
     }
 
-    mlir::Block &coroBodyBlock = coroBodOp.getBody().back();
+    mlir::Block &coroBodyBlock = coroBodyOp.getBody().back();
     if (!coroBodyBlock.mightHaveTerminator()) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointToEnd(&coroBodyBlock);
