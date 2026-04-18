@@ -38,8 +38,8 @@ using namespace llvm;
 #define DEBUG_TYPE "si-pre-emit-peephole"
 
 static cl::opt<bool> EnableReorderBufferLoadAndMFMA(
-    "amdgpu-enable-bufferload-and-mfma", cl::Hidden,
-    cl::desc("Enable BufferLoad and MFMA in post-RA peephole."),
+    "amdgpu-enable-reorder-bufferload-and-mfma", cl::Hidden,
+    cl::desc("Enable Reorder BufferLoad and MFMA in post-RA peephole."),
     cl::init(false));
 
 static cl::opt<bool> MFMABufferLoadRatio(
@@ -808,9 +808,10 @@ bool SIPreEmitPeephole::optimizeBufferLoadM0(MachineBasicBlock &MBB) {
 
     // The cycles of buffer_load varies wildly and cycles of MFMA varies
     // depending on the shape. Option amdgpu-bufferload-mfma-ratio is exposed to
-    // user to set it in perf-tuning if amdgpu-enable-bufferload-and-mfma is
-    // enabled. For example, on GFX950, if mfma is v_mfma_f32_16x16x32_f16, then
-    // ratio with 4 is best to hide latency.
+    // user to set it in perf-tuning if
+    // amdgpu-enable-reorder-bufferload-and-mfma is enabled. For example, on
+    // GFX950, if mfma is v_mfma_f32_16x16x32_f16, then ratio with 4 is best to
+    // hide latency.
     if (!isContinuousMFMA(TII, MFMA, NumberMFMA))
       continue;
 

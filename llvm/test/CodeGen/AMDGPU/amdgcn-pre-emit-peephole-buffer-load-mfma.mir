@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx950 -run-pass=si-pre-emit-peephole --amdgpu-enable-bufferload-and-mfma=true --amdgpu-bufferload-mfma-ratio=1 %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx950 -run-pass=si-pre-emit-peephole --amdgpu-enable-reorder-bufferload-and-mfma=true --amdgpu-bufferload-mfma-ratio=1 %s -o - | FileCheck %s
 # RUN: llc -march=amdgcn -mcpu=gfx950 -run-pass=si-pre-emit-peephole %s -o - | FileCheck %s --check-prefix=DISABLE-REORDER
 
 ---
