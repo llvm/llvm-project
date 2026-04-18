@@ -58,6 +58,7 @@
 #ifndef LLVM_PROFILEDATA_CTXINSTRCONTEXTNODE_H
 #define LLVM_PROFILEDATA_CTXINSTRCONTEXTNODE_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 namespace llvm {
