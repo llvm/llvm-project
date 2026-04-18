@@ -30,9 +30,9 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Arith, arith);
 }
 #endif
 
-#include "mlir/Dialect/Arith/IR/ArithOpsCAPIEnumAttrs.h.inc"
-#include "mlir/Dialect/Arith/IR/ArithOpsCAPITypes.h.inc"
-#include "mlir/Dialect/Arith/IR/ArithOpsCAPIAttrs.h.inc"
+// #include "mlir/Dialect/Arith/IR/ArithOpsCAPIEnumAttrs.h.inc"
+// #include "mlir/Dialect/Arith/IR/ArithOpsCAPITypes.h.inc"
+// #include "mlir/Dialect/Arith/IR/ArithOpsCAPIAttrs.h.inc"
 
 #include "mlir/Dialect/Arith/Transforms/Passes.capi.h.inc"
 

@@ -13,4 +13,4 @@
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Arith, arith, mlir::arith::ArithDialect)
 
-#include "mlir/Dialect/Arith/IR/ArithOpsCAPIAttrs.cpp.inc"
+// #include "mlir/Dialect/Arith/IR/ArithOpsCAPIAttrs.cpp.inc"
