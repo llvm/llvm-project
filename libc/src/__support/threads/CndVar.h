@@ -219,7 +219,7 @@ private:
       size_t spin = 0;
       while (auto remaining = sender_futex.load(cpp::MemoryOrder::RELAXED)) {
         if (spin > SPIN_LIMIT) {
-          sender_futex.fetch_add(1);
+          remaining = sender_futex.fetch_add(1) + 1;
           sender_futex.wait(remaining, cpp::nullopt, /*is_pshared=*/false);
           sender_futex.fetch_sub(1);
           spin = 0;
