@@ -915,7 +915,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           DefaultMappingID, 0,
           getCopyMapping(SrcRB->getID(), SrcRB->getID(), Size),
           // We only care about the mapping of the destination.
-          /*NumOperands*/ 2);
+          /*NumOperands=*/2);
     }
     [[fallthrough]];
   }

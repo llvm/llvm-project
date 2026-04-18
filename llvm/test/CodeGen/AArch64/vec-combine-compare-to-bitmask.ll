@@ -867,8 +867,7 @@ define i8 @no_direct_convert_for_bad_concat(<4 x i32> %vec) {
 ; CHECK-GI-NEXT:    cmtst.4s v0, v0, v0
 ; CHECK-GI-NEXT:    xtn.4h v0, v0
 ; CHECK-GI-NEXT:    uzp1.8b v0, v0, v0
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov.s v0[1], w8
+; CHECK-GI-NEXT:    mov.s v0[1], v0[0]
 ; CHECK-GI-NEXT:    umov.b w8, v0[1]
 ; CHECK-GI-NEXT:    umov.b w9, v0[0]
 ; CHECK-GI-NEXT:    umov.b w10, v0[2]
