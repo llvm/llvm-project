@@ -717,8 +717,8 @@ PromoteBoundsSafetyFlexibleArrayMember(Sema &S, MemberExpr *M, Expr *ArrayBase) 
   if (auto *PT = BasePtr->getType()->getAs<PointerType>()) {
     if (!PT->getPointerAttributes().hasUpperBound()) {
       auto *RecordPointee = PT->getPointeeType()->getAs<RecordType>();
-      auto *RD = RecordPointee->getDecl();
-      assert(RD->hasFlexibleArrayMember() &&
+      auto *RD = RecordPointee->getDecl()->getDefinition();
+      assert(RD && RD->hasFlexibleArrayMember() &&
              RD->getTagKind() != TagTypeKind::Union);
       // Skipping the null check for the struct base because it must have been
       // explicitly dereferenced (e.g., base->array) to get here.
@@ -914,8 +914,8 @@ static RecordDecl *getImmediateDeclForFlexibleArrayPromotion(QualType T) {
   if (T->isSinglePointerType() && !T->isBoundsAttributedType()) {
     auto *PT = T->getAs<PointerType>();
     if (auto *RecordPointee = PT->getPointeeType()->getAs<RecordType>()) {
-      auto *RD = RecordPointee->getDecl();
-      if (RD->hasFlexibleArrayMember() &&
+      auto *RD = RecordPointee->getDecl()->getDefinition();
+      if (RD && RD->hasFlexibleArrayMember() &&
           RD->getTagKind() != TagTypeKind::Union) {
         return RD;
       }
@@ -26990,7 +26990,8 @@ ExprResult BoundsCheckBuilder::CheckFlexibleArrayMemberSizeImpl(
   ArrayRef<TypeCoupledDeclRefInfo> CountDecls;
   auto *RT = FAMPtr->getType()->getPointeeType()->getAs<RecordType>();
   bool Found = FlexUtils.Find(RT->getDecl(), PathToFlex, CountDecls);
-  assert(Found); (void)Found;
+  assert(Found);
+  (void)Found;
 
   Expr *FlexibleObj = FlexUtils.SelectFlexibleObject(PathToFlex, OpaqueRoot);
 
