@@ -1979,8 +1979,7 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
       continue;
 
     CIEKey Key(Frame);
-    if (!LastCIEStart ||
-        (Key != LastKey && (IsEH || AsmInfo->usePerFunctionDebugFrameCIE()))) {
+    if (!LastCIEStart || Key != LastKey) {
       LastKey = Key;
       LastCIEStart = &Emitter.EmitCIE(Frame);
     }
