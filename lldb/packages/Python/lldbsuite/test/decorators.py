@@ -512,6 +512,50 @@ def add_test_categories(cat):
     return impl
 
 
+def unicode_test(func):
+    """Decorate the item as a test which requires Unicode to be enabled.
+
+    lldb checks the value of the `LANG` environment variable for the substring "utf-8"
+    to determine if the terminal supports Unicode (except on Windows, where stdout
+    being connected to an interactive console is used as the signal instead).
+    This decorator sets LANG to `utf-8` before running the test and resets it to its
+    previous value afterwards.
+    """
+
+    if sys.platform == "win32":
+        import ctypes
+
+        STD_OUTPUT_HANDLE = -11
+        FILE_TYPE_CHAR = 0x0002
+        handle = ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+        file_type = ctypes.windll.kernel32.GetFileType(handle)
+        # Mirror Terminal::SupportsUnicode(): Unicode is supported only when
+        # stdout is connected to a real console.
+        if file_type != FILE_TYPE_CHAR:
+            return unittest.skip(
+                "Unicode test requires an interactive console (stderr is redirected)"
+            )
+        return func
+
+    def unicode_wrapped(*args, **kwargs):
+        import os
+
+        previous_lang = os.environ.get("LANG", None)
+        os.environ["LANG"] = "en_US.UTF-8"
+        try:
+            func(*args, **kwargs)
+        except Exception as err:
+            raise err
+        finally:
+            # Reset the value, whether the test failed or not.
+            if previous_lang is not None:
+                os.environ["LANG"] = previous_lang
+            else:
+                del os.environ["LANG"]
+
+    return unicode_wrapped
+
+
 def no_debug_info_test(func):
     """Decorate the item as a test what don't use any debug info. If this annotation is specified
     then the test runner won't generate a separate test for each debug info format."""
