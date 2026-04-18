@@ -175,7 +175,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
       LiveInterval &SrcLI = LIS.getInterval(R);
       LIS.shrinkToUses(&SrcLI);
     } else {
-      LIS.removeAllRegUnitsForPhysReg(R.asMCReg());
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
     }
   }
   return true;

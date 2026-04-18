@@ -1111,7 +1111,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       LiveInterval &LI = LIS.getInterval(R);
       LIS.shrinkToUses(&LI);
     } else {
-      LIS.removeAllRegUnitsForPhysReg(R.asMCReg());
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
     }
   }
 
