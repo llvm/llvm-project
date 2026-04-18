@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/WithColor.h"
 #include <cstdint>
 #include <list>
 #include <set>
@@ -1261,7 +1262,8 @@ unsigned Pattern::computeMatchDistance(StringRef Buffer) const {
 void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
                                  SMRange Range,
                                  FileCheckDiag::MatchType MatchTy,
-                                 std::vector<FileCheckDiag> *Diags) const {
+                                 std::vector<FileCheckDiag> *Diags,
+                                 const FileCheckRequest &Req) const {
   // Print what we know about substitutions.
   if (!Substitutions.empty()) {
     for (const auto &Substitution : Substitutions) {
@@ -1287,8 +1289,9 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       if (Diags)
         Diags->emplace_back(SM, CheckTy, getLoc(), MatchTy,
                             SMRange(Range.Start, Range.Start), OS.str());
-      else
+      else if (Req.DiffFormat == DiffFormatType::None) {
         SM.PrintMessage(Range.Start, SourceMgr::DK_Note, OS.str());
+      }
     }
   }
 }
@@ -1368,7 +1371,8 @@ static SMRange ProcessMatchResult(FileCheckDiag::MatchType MatchTy,
 }
 
 void Pattern::printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
-                              std::vector<FileCheckDiag> *Diags) const {
+                              std::vector<FileCheckDiag> *Diags,
+                              const FileCheckRequest &Req) const {
   // Attempt to find the closest/best fuzzy match.  Usually an error happens
   // because some string in the output didn't exactly match. In these cases, we
   // would like to show the user a best guess at what "should have" matched, to
@@ -1411,8 +1415,9 @@ void Pattern::printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
     SMRange MatchRange =
         ProcessMatchResult(FileCheckDiag::MatchFuzzy, SM, getLoc(),
                            getCheckTy(), Buffer, Best, 0, Diags);
-    SM.PrintMessage(MatchRange.Start, SourceMgr::DK_Note,
-                    "possible intended match here");
+    if (Req.DiffFormat == DiffFormatType::None)
+      SM.PrintMessage(MatchRange.Start, SourceMgr::DK_Note,
+                      "possible intended match here");
 
     // FIXME: If we wanted to be really friendly we would show why the match
     // failed, as it can be hard to spot simple one character differences.
@@ -2057,7 +2062,7 @@ static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
                                           Buffer, MatchResult.TheMatch->Pos,
                                           MatchResult.TheMatch->Len, Diags);
   if (Diags) {
-    Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, Diags);
+    Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, Diags, Req);
     Pat.printVariableDefs(SM, MatchTy, Diags);
   }
   if (!PrintDiag) {
@@ -2078,7 +2083,7 @@ static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
                   {MatchRange});
 
   // Print additional information, which can be useful even if there are errors.
-  Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, nullptr);
+  Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, nullptr, Req);
   Pat.printVariableDefs(SM, MatchTy, nullptr);
 
   // Print errors and add them to Diags.  We report these errors after the match
@@ -2102,7 +2107,7 @@ static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
 static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
                           StringRef Prefix, SMLoc Loc, const Pattern &Pat,
                           int MatchedCount, StringRef Buffer, Error MatchError,
-                          bool VerboseVerbose,
+                          bool VerboseVerbose, const FileCheckRequest &Req,
                           std::vector<FileCheckDiag> *Diags) {
   // Print any pattern errors, and record them to be added to Diags later.
   bool HasError = ExpectedMatch;
@@ -2148,7 +2153,7 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
     for (StringRef ErrorMsg : ErrorMsgs)
       Diags->emplace_back(SM, Pat.getCheckTy(), Loc, MatchTy, NoteRange,
                           ErrorMsg);
-    Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, Diags);
+    Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, Diags, Req);
   }
   if (!PrintDiag) {
     assert(!HasError && "expected to report more diagnostics for error");
@@ -2165,18 +2170,20 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
     if (Pat.getCount() > 1)
       Message +=
           formatv(" ({0} out of {1})", MatchedCount, Pat.getCount()).str();
-    SM.PrintMessage(Loc,
-                    ExpectedMatch ? SourceMgr::DK_Error : SourceMgr::DK_Remark,
-                    Message);
-    SM.PrintMessage(SearchRange.Start, SourceMgr::DK_Note,
-                    "scanning from here");
+    if (Req.DiffFormat == DiffFormatType::None) {
+      SM.PrintMessage(
+          Loc, ExpectedMatch ? SourceMgr::DK_Error : SourceMgr::DK_Remark,
+          Message);
+      SM.PrintMessage(SearchRange.Start, SourceMgr::DK_Note,
+                      "scanning from here");
+    }
   }
 
   // Print additional information, which can be useful even after a pattern
   // error.
-  Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, nullptr);
+  Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, nullptr, Req);
   if (ExpectedMatch)
-    Pat.printFuzzyMatch(SM, Buffer, Diags);
+    Pat.printFuzzyMatch(SM, Buffer, Diags, Req);
   return ErrorReported::reportedOrSuccess(HasError);
 }
 
@@ -2192,7 +2199,7 @@ static Error reportMatchResult(bool ExpectedMatch, const SourceMgr &SM,
     return printMatch(ExpectedMatch, SM, Prefix, Loc, Pat, MatchedCount, Buffer,
                       std::move(MatchResult), Req, Diags);
   return printNoMatch(ExpectedMatch, SM, Prefix, Loc, Pat, MatchedCount, Buffer,
-                      std::move(MatchResult.TheError), Req.VerboseVerbose,
+                      std::move(MatchResult.TheError), Req.VerboseVerbose, Req,
                       Diags);
 }
 
@@ -2275,7 +2282,7 @@ size_t FileCheckString::Check(const SourceMgr &SM, StringRef Buffer,
 
     // If this check is a "CHECK-NEXT", verify that the previous match was on
     // the previous line (i.e. that there is one newline between them).
-    if (CheckNext(SM, SkippedRegion)) {
+    if (CheckNext(SM, SkippedRegion, Req)) {
       ProcessMatchResult(FileCheckDiag::MatchFoundButWrongLine, SM, Loc,
                          Pat.getCheckTy(), MatchBuffer, MatchPos, MatchLen,
                          Diags, Req.Verbose);
@@ -2300,7 +2307,8 @@ size_t FileCheckString::Check(const SourceMgr &SM, StringRef Buffer,
   return FirstMatchPos;
 }
 
-bool FileCheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
+bool FileCheckString::CheckNext(const SourceMgr &SM, StringRef Buffer,
+                                const FileCheckRequest &Req) const {
   if (Pat.getCheckTy() != Check::CheckNext &&
       Pat.getCheckTy() != Check::CheckEmpty)
     return false;
@@ -2312,8 +2320,7 @@ bool FileCheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
   // Count the number of newlines between the previous match and this one.
   const char *FirstNewLine = nullptr;
   unsigned NumNewLines = CountNumNewlinesBetween(Buffer, FirstNewLine);
-
-  if (NumNewLines == 0) {
+  if (NumNewLines == 0 && Req.DiffFormat == DiffFormatType::None) {
     SM.PrintMessage(Loc, SourceMgr::DK_Error,
                     CheckName + ": is on the same line as previous match");
     SM.PrintMessage(SMLoc::getFromPointer(Buffer.end()), SourceMgr::DK_Note,
@@ -2323,7 +2330,7 @@ bool FileCheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
     return true;
   }
 
-  if (NumNewLines != 1) {
+  if (NumNewLines != 1 && Req.DiffFormat == DiffFormatType::None) {
     SM.PrintMessage(Loc, SourceMgr::DK_Error,
                     CheckName +
                         ": is not on the line after the previous match");
@@ -2724,9 +2731,168 @@ void FileCheckPatternContext::clearLocalVars() {
     GlobalNumericVariableTable.erase(Var);
 }
 
+struct DiffContext {
+  StringRef Line;
+  StringRef LineBefore;
+  StringRef LineAfter;
+};
+
+// Provides the "surrounding context" for diff output.
+static DiffContext getDiffContext(SourceMgr &SM, unsigned LineNo,
+                                  unsigned BufID) {
+  const MemoryBuffer *Buffer = SM.getMemoryBuffer(BufID);
+  StringRef BufText = Buffer->getBuffer();
+
+  auto getLineText = [&](unsigned L) -> StringRef {
+    if (L == 0)
+      return "";
+
+    SMLoc LineLoc = SM.FindLocForLineAndColumn(BufID, L, 1);
+    if (!LineLoc.isValid())
+      return "";
+
+    StringRef FromLineStart(LineLoc.getPointer(),
+                            BufText.end() - LineLoc.getPointer());
+    return FromLineStart
+        .take_while([](char C) { return C != '\n' && C != '\r'; })
+        .trim();
+  };
+
+  return {getLineText(LineNo), getLineText(LineNo - 1),
+          getLineText(LineNo + 1)};
+}
+
+// Renders a diagnostic diff via llvm::errs().
+static void renderDiff(unsigned ExpectedLineNo, unsigned ActualLineNo,
+                       StringRef ExpectedLine, StringRef ActualLine,
+                       const DiffContext &Ctx) {
+  auto &OS = errs();
+
+  // Header
+  OS.changeColor(raw_ostream::CYAN);
+  OS << "@@ -" << ExpectedLineNo << " +" << ActualLineNo << " @@\n";
+  OS.resetColor();
+
+  // Before Context
+  if (!Ctx.LineBefore.empty()) {
+    OS << " " << Ctx.LineBefore << "\n";
+  }
+
+  // Mismatch
+  OS.changeColor(raw_ostream::RED);
+  OS << "-" << ExpectedLine << "\n";
+
+  OS.changeColor(raw_ostream::GREEN);
+  OS << "+" << ActualLine.ltrim() << "\n";
+  OS.resetColor();
+
+  // After Context
+  if (!Ctx.LineAfter.empty()) {
+    OS << " " << Ctx.LineAfter << "\n";
+  }
+}
+
+static bool printDiff(const FileCheckString &CheckStr, StringRef ActualLine,
+                      SourceMgr &SM, std::vector<FileCheckDiag> *Diags,
+                      unsigned OverwriteActualLine = 0) {
+  SMLoc PatternLoc = CheckStr.Pat.getLoc();
+  unsigned ExpectedLineNo = SM.getLineAndColumn(PatternLoc).first;
+  const char *PatPtr = PatternLoc.getPointer();
+  StringRef ExpectedLine = StringRef(PatPtr).split('\n').first.rtrim();
+
+  // Resolve the Actual (Input) line number.
+  // Priority: 1. OverwriteActualLine (Found via Fuzzy match)
+  //           2. Direct pointer resolution via SourceMgr.
+  SMLoc InputLoc = SMLoc::getFromPointer(ActualLine.data());
+
+  unsigned ActualLineNo = OverwriteActualLine;
+
+  // If no Fuzzy match was found, calculate the line number directly
+  // from the InputLoc pointer using the SourceManager.
+  if (ActualLineNo == 0)
+    ActualLineNo = SM.getLineAndColumn(InputLoc).first;
+
+  // if we are at an empty line (and not from fuzzy), usually the relevant
+  // context is the line just before it.
+  if (ActualLine.empty() && ActualLineNo > 1)
+    ActualLineNo--;
+
+  unsigned BufID = SM.FindBufferContainingLoc(InputLoc);
+  DiffContext Context = getDiffContext(SM, ActualLineNo, BufID);
+
+  renderDiff(ExpectedLineNo, ActualLineNo, ExpectedLine, ActualLine, Context);
+
+  errs() << '\n';
+  return true;
+}
+
+// Report the mismatch on the current line and advance to the next line.
+static bool handleDiffFailure(const FileCheckString &CheckStr,
+                              StringRef &CheckRegion, SourceMgr &SM,
+                              std::vector<FileCheckDiag> *Diags,
+                              raw_ostream &OS, bool &HeaderPrinted,
+                              unsigned &TotalMismatches) {
+  // Print headers once per CheckRegion.
+  if (!HeaderPrinted) {
+    StringRef CheckFile =
+        SM.getMemoryBuffer(SM.getMainFileID())->getBufferIdentifier();
+    unsigned InputBufID =
+        SM.FindBufferContainingLoc(SMLoc::getFromPointer(CheckRegion.data()));
+    StringRef InputFile = SM.getMemoryBuffer(InputBufID)->getBufferIdentifier();
+
+    OS.changeColor(raw_ostream::WHITE, true);
+    OS << "--- " << CheckFile << "\n";
+    OS << "+++ " << InputFile << "\n";
+    OS.resetColor();
+    HeaderPrinted = true;
+  }
+
+  size_t EOL = CheckRegion.find('\n');
+
+  SMLoc CurrentLoc = SMLoc::getFromPointer(CheckRegion.data());
+  StringRef TargetLine;
+  unsigned TargetLineNo = 0;
+
+  // Check if the existing diagnostics already found a fuzzy match.
+  if (Diags) {
+    for (const auto &D : llvm::reverse(*Diags)) {
+      if (D.CheckLoc == CheckStr.Pat.getLoc() &&
+          D.MatchTy == FileCheckDiag::MatchFuzzy) {
+        TargetLineNo = D.InputStartLine;
+        // Get the actual text of that fuzzy match from the SourceMgr
+        unsigned BufID = SM.FindBufferContainingLoc(CurrentLoc);
+        SMLoc FuzzyLoc = SM.FindLocForLineAndColumn(BufID, TargetLineNo, 1);
+        TargetLine = StringRef(FuzzyLoc.getPointer()).split('\n').first;
+        break;
+      }
+    }
+  }
+
+  // If no fuzzy match was found by the engine, just use the next line.
+  if (TargetLine.empty()) {
+    TargetLine = CheckRegion.substr(0, EOL);
+    TargetLineNo = SM.getLineAndColumn(CurrentLoc).first;
+  }
+
+  printDiff(CheckStr, TargetLine, SM, Diags, TargetLineNo);
+  TotalMismatches++;
+
+  // Advance CheckRegion past the current line to recover for the next CHECK.
+  if (EOL != StringRef::npos)
+    CheckRegion = CheckRegion.substr(EOL + 1);
+  else
+    CheckRegion = "";
+
+  return true;
+}
+
 bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
                            std::vector<FileCheckDiag> *Diags) {
   bool ChecksFailed = false;
+  unsigned TotalMismatches = 0;
+  bool HeaderPrinted = false;
+  bool IsDiffFormat = Req.DiffFormat != DiffFormatType::None;
+  auto &OS = errs();
 
   unsigned i = 0, j = 0, e = CheckStrings.size();
   while (true) {
@@ -2759,16 +2925,40 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
     if (i != 0 && Req.EnableVarScope)
       PatternContext->clearLocalVars();
 
+    // Check each string within the scanned region, including a second check
+    // of any final CHECK-LABEL (to verify CHECK-NOT and CHECK-DAG)
     for (; i != j; ++i) {
       const FileCheckString &CheckStr = CheckStrings[i];
 
-      // Check each string within the scanned region, including a second check
-      // of any final CHECK-LABEL (to verify CHECK-NOT and CHECK-DAG)
+      bool IsStrict = CheckStr.Pat.getCheckTy() == Check::CheckNext ||
+                      CheckStr.Pat.getCheckTy() == Check::CheckEmpty;
+
       size_t MatchLen = 0;
       size_t MatchPos =
           CheckStr.Check(SM, CheckRegion, false, MatchLen, Req, Diags);
 
+      // Handle failure
       if (MatchPos == StringRef::npos) {
+        if (IsDiffFormat) {
+          handleDiffFailure(CheckStr, CheckRegion, SM, Diags, OS, HeaderPrinted,
+                            TotalMismatches);
+        }
+        ChecksFailed = true;
+        i = j;
+        break;
+      }
+      // In Diff Mode, while doing strick checking even if we found a match
+      // later i.e. MatchPos > 0, we must stop processing this block and print
+      // the gap as mismatch.
+      if (IsDiffFormat && IsStrict && MatchPos > 0) {
+        // Create a temporary view that starts with next new line.
+        size_t CurrentLineEnd = CheckRegion.find_first_of("\n\r");
+        StringRef NextLineRegion =
+            (CurrentLineEnd != StringRef::npos)
+                ? CheckRegion.drop_front(CurrentLineEnd + 1)
+                : CheckRegion;
+        handleDiffFailure(CheckStr, NextLineRegion, SM, Diags, OS,
+                          HeaderPrinted, TotalMismatches);
         ChecksFailed = true;
         i = j;
         break;
@@ -2781,6 +2971,12 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
       break;
   }
 
+  if (Req.DiffFormat != DiffFormatType::None && TotalMismatches > 0) {
+    OS.changeColor(llvm::raw_ostream::YELLOW, true);
+    OS << "FileCheck: Found " << TotalMismatches << " unique textual mismatch"
+       << (TotalMismatches > 1 ? "es." : ".") << "\n";
+    OS.resetColor();
+  }
   // Success if no checks failed.
   return !ChecksFailed;
 }

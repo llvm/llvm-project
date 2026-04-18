@@ -1,0 +1,15 @@
+; RUN: split-file %s %t
+; RUN: %python -c "for i in range(5000): print(f'DATA_{i}')" > %t/input.txt
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DIFF
+
+;--- check.txt
+; CHECK: DATA_0
+; CHECK: DATA_2500_WRONG
+; CHECK: DATA_4999
+
+; DIFF:      @@ -2 +21 @@
+; DIFF-NEXT:  DATA_19
+; DIFF-NEXT: -DATA_2500_WRONG
+; DIFF-NEXT: +DATA_20
+; DIFF-NEXT:  DATA_21

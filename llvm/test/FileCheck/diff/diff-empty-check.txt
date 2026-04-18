@@ -1,0 +1,19 @@
+; RUN: split-file %s %t
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DIFF
+
+;--- input.txt
+START_TRANS
+  [LOG] Transaction initiated...
+END_TRANS
+
+;--- check.txt
+; CHECK:       START_TRANS
+; CHECK-EMPTY:
+; CHECK:       END_TRANS
+
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  START_TRANS
+; DIFF-NEXT:  -
+; DIFF-NEXT:  +[LOG] Transaction initiated...
+; DIFF-NEXT:  END_TRANS
