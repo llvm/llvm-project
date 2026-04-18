@@ -251,8 +251,9 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   return true;
 }
 
-/// Collect either replicated Loads or Stores grouped by their address SCEV, in
-/// a deep-traversal of the vector loop region in \p Plan.
+/// Collect either replicated Loads or Stores grouped by their address SCEV and
+/// their load-store type, in a deep-traversal of the vector loop region in \p
+/// Plan.
 template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
 collectGroupedReplicateMemOps(
@@ -261,8 +262,13 @@ collectGroupedReplicateMemOps(
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
   constexpr bool IsLoad = (Opcode == Instruction::Load);
-  SmallDenseMap<const SCEV *, SmallVector<VPReplicateRecipe *, 4>>
-      RecipesByAddress;
+  SmallDenseMap<std::pair<const SCEV *, const Type *>,
+                SmallVector<VPReplicateRecipe *, 4>>
+      RecipesByAddressAndType;
+  VPTypeAnalysis TypeInfo(Plan);
+  auto GetLoadStoreValueType = [&](VPReplicateRecipe *R) {
+    return TypeInfo.inferScalarType(IsLoad ? R : R->getOperand(0));
+  };
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
@@ -272,12 +278,13 @@ collectGroupedReplicateMemOps(
 
       // For loads, operand 0 is address; for stores, operand 1 is address.
       VPValue *Addr = RepR->getOperand(IsLoad ? 0 : 1);
+      const Type *LoadStoreTy = GetLoadStoreValueType(RepR);
       const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
-        RecipesByAddress[AddrSCEV].push_back(RepR);
+        RecipesByAddressAndType[{AddrSCEV, LoadStoreTy}].push_back(RepR);
     }
   }
-  auto Groups = to_vector(RecipesByAddress.values());
+  auto Groups = to_vector(RecipesByAddressAndType.values());
   VPDominatorTree VPDT(Plan);
   for (auto &Group : Groups) {
     // Sort mem ops by dominance order, with earliest (most dominating) first.
@@ -4731,13 +4738,9 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
   constexpr bool IsLoad = (Opcode == Instruction::Load);
-  VPTypeAnalysis TypeInfo(Plan);
 
   // For each address, collect operations with the same or complementary masks.
   SmallVector<SmallVector<VPReplicateRecipe *, 4>> AllGroups;
-  auto GetLoadStoreValueType = [&](VPReplicateRecipe *Recipe) {
-    return TypeInfo.inferScalarType(IsLoad ? Recipe : Recipe->getOperand(0));
-  };
   auto Groups = collectGroupedReplicateMemOps<Opcode>(
       Plan, PSE, L,
       [](VPReplicateRecipe *RepR) { return RepR->isPredicated(); });
@@ -4745,13 +4748,19 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
     if (Recipes.size() < 2)
       continue;
 
+    assert(all_equal(map_range(Recipes,
+                               [&](VPReplicateRecipe *R) {
+                                 return VPTypeAnalysis(Plan).inferScalarType(
+                                     IsLoad ? R : R->getOperand(0));
+                               })) &&
+           "Expected all recipes in group to have the same load-store type");
+
     // Collect groups with the same or complementary masks.
     for (VPReplicateRecipe *&RecipeI : Recipes) {
       if (!RecipeI)
         continue;
 
       VPValue *MaskI = RecipeI->getMask();
-      Type *TypeI = GetLoadStoreValueType(RecipeI);
       SmallVector<VPReplicateRecipe *, 4> Group;
       Group.push_back(RecipeI);
       RecipeI = nullptr;
@@ -4763,15 +4772,12 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
           continue;
 
         VPValue *MaskJ = RecipeJ->getMask();
-        Type *TypeJ = GetLoadStoreValueType(RecipeJ);
-        if (TypeI == TypeJ) {
-          // Check if any operation in the group has a complementary mask with
-          // another, that is M1 == NOT(M2) or M2 == NOT(M1).
-          HasComplementaryMask |= match(MaskI, m_Not(m_Specific(MaskJ))) ||
-                                  match(MaskJ, m_Not(m_Specific(MaskI)));
-          Group.push_back(RecipeJ);
-          RecipeJ = nullptr;
-        }
+        // Check if any operation in the group has a complementary mask with
+        // another, that is M1 == NOT(M2) or M2 == NOT(M1).
+        HasComplementaryMask |= match(MaskI, m_Not(m_Specific(MaskJ))) ||
+                                match(MaskJ, m_Not(m_Specific(MaskI)));
+        Group.push_back(RecipeJ);
+        RecipeJ = nullptr;
       }
 
       if (HasComplementaryMask) {
