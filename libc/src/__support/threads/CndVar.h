@@ -262,7 +262,7 @@ public:
   }
 
   LIBC_INLINE void broadcast(bool is_shared = false) {
-    notify(cpp::numeric_limits<size_t>::max(), is_shared);
+    notify(/*broadcast=*/true, is_shared);
   }
 };
 
