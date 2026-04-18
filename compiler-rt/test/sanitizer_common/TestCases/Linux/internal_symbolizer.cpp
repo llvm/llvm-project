@@ -2,9 +2,6 @@
 
 // REQUIRES: internal_symbolizer
 
-// Look into this
-// XFAIL: tysan
-
 #include <assert.h>
 #include <dlfcn.h>
 #include <link.h>

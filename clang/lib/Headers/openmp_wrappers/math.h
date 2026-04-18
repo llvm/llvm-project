@@ -67,4 +67,14 @@
 #include <__clang_hip_math.h>
 #pragma omp end declare variant
 
+#ifdef __SPIRV__
+#pragma omp begin declare variant match(device = {arch(spirv64)})
+
+#define __OPENMP_SPIRV__
+#include <__clang_spirv_math.h>
+#undef __OPENMP_SPIRV__
+
+#pragma omp end declare variant
+#endif
+
 #endif // __CLANG_OPENMP_MATH_H__
