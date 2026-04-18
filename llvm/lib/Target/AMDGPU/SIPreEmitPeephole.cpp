@@ -37,6 +37,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
 
+static cl::opt<bool> EnableReorderBufferLoadAndMFMA(
+    "amdgpu-enable-bufferload-and-mfma", cl::Hidden,
+    cl::desc("Enable BufferLoad and MFMA in post-RA peephole."),
+    cl::init(false));
+
+static cl::opt<bool> MFMABufferLoadRatio(
+    "amdgpu-bufferload-mfma-ratio", cl::Hidden,
+    cl::desc("Ratio of MFMA and BufferLoad Ratio to trigger reorder"),
+    cl::init(4));
+
 namespace {
 
 class SIPreEmitPeephole {
@@ -767,22 +777,45 @@ static bool canBeReordered(MachineInstr *BufferLoad, MachineInstr *MFMA,
   return !HasFlowDep && !HasAntiDep && !HasOutputDep;
 }
 
-// pattern 1: s_mov_b32 m0 --> s_nop 0 --> buffer_load --> mfma
-// pattern 2: s_mov_b32 m0 --> buffer_load --> mfma
-// swap buffer_load and mfma, the remove s_nop 0
+static bool isContinuousMFMA(const SIInstrInfo *TII, MachineInstr *MFMA,
+                             unsigned NumMFMA) {
+  unsigned Num = 0;
+  for (MachineInstr *I = MFMA; I; I = I->getNextNode()) {
+    if (TII->isMFMA(I->getOpcode())) {
+      if (++Num == NumMFMA)
+        return true;
+    } else {
+      // There is no continuous MFMA, so false is returned.
+      return false;
+    }
+  }
+  return false;
+}
+
+// pattern 2: s_mov_b32 m0 --> buffer_load --> mfma --> ... -->mfma
+// swap buffer_load and the 1st mfma
 bool SIPreEmitPeephole::optimizeBufferLoadM0(MachineBasicBlock &MBB) {
   if (MBB.empty())
     return false;
 
   bool Changed = false;
   using InstrIt = MachineBasicBlock::iterator;
+  unsigned NumberMFMA = MFMABufferLoadRatio;
   for (InstrIt I = MBB.begin(), E = MBB.end(); I != E; ++I) {
     if (!TII->isMFMA(I->getOpcode()) || I == MBB.begin())
       continue;
     MachineInstr *MFMA = &*I;
 
+    // The cycles of buffer_load varies wildly and cycles of MFMA varies
+    // depending on the shape. Option amdgpu-bufferload-mfma-ratio is exposed to
+    // user to set it in perf-tuning if amdgpu-enable-bufferload-and-mfma is
+    // enabled. For example, on GFX950, if mfma is v_mfma_f32_16x16x32_f16, then
+    // ratio with 4 is best to hide latency.
+    if (!isContinuousMFMA(TII, MFMA, NumberMFMA))
+      continue;
+
     MachineInstr *Prev = getPrevNonDebugInst(&*I);
-    if (!Prev || !IsVecBufferLoad(TII, *Prev) ||
+    if (!Prev || !isVecBufferLoad(TII, *Prev) ||
         !Prev->readsRegister(AMDGPU::M0, TRI))
       continue;
 
@@ -961,7 +994,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
     }
   }
 
-  if (ST.hasGFX950Insts()) {
+  if (ST.hasGFX950Insts() && EnableReorderBufferLoadAndMFMA) {
     for (MachineBasicBlock &MBB : MF)
       Changed |= optimizeBufferLoadM0(MBB);
   }

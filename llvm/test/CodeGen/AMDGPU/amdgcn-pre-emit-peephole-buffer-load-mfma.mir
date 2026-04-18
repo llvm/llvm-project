@@ -1,4 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx950 -run-pass=si-pre-emit-peephole %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx950 -run-pass=si-pre-emit-peephole --amdgpu-enable-bufferload-and-mfma=true --amdgpu-bufferload-mfma-ratio=1 %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx950 -run-pass=si-pre-emit-peephole %s -o - | FileCheck %s --check-prefix=DISABLE-REORDER
 
 ---
 name: test_m0_sched_basic
@@ -12,6 +13,10 @@ body: |
     ; CHECK: V_MFMA_F32
     ; CHECK: BUFFER_LOAD_DWORD_IDXEN
 
+    ; DISABLE-REORDER-LABEL: bb.0:
+    ; DISABLE-REORDER: S_MOV_B32
+    ; DISABLE-REORDER: BUFFER_LOAD_DWORD_IDXEN
+    ; DISABLE-REORDER: V_MFMA_F32
     $m0 = S_MOV_B32 $sgpr4
     S_NOP 0
     $vgpr32 = BUFFER_LOAD_DWORD_IDXEN $vgpr64, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $m0, implicit $exec
