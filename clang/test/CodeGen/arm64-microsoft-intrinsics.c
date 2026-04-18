@@ -157,6 +157,17 @@ unsigned __int64 check__getReg(void) {
 // CHECK-MSCOMPAT: call i64 @llvm.read_register.i64(metadata ![[MD2:.*]])
 // CHECK-MSCOMPAT: call i64 @llvm.read_register.i64(metadata ![[MD3:.*]])
 
+void test__setReg(unsigned __int64 v)
+{
+  __setReg(18, v);
+  __setReg(31, v);
+}
+
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @test__setReg(i64{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       call void @llvm.write_register.i64(metadata ![[MD2]], i64
+// CHECK-MSCOMPAT:       call void @llvm.write_register.i64(metadata ![[MD3]], i64
+// CHECK-LINUX: error: call to undeclared function '__setReg'
+
 #ifdef __LP64__
 #define LONG __int32
 #else

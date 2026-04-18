@@ -4803,7 +4803,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return CI;
   }
 
-  if (BuiltinID == clang::AArch64::BI__getReg) {
+  if (BuiltinID == clang::AArch64::BI__getReg ||
+      BuiltinID == clang::AArch64::BI__setReg) {
     Expr::EvalResult Result;
     if (!E->getArg(0)->EvaluateAsInt(Result, CGM.getContext()))
       llvm_unreachable("Sema will ensure that the parameter is constant");
@@ -4816,9 +4817,16 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
     llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
 
-    llvm::Function *F =
-        CGM.getIntrinsic(Intrinsic::read_register, {Int64Ty});
-    return Builder.CreateCall(F, Metadata);
+    CallInst *CI;
+    if (BuiltinID == clang::AArch64::BI__getReg) {
+      llvm::Function *F = CGM.getIntrinsic(Intrinsic::read_register, {Int64Ty});
+      CI = Builder.CreateCall(F, Metadata);
+    } else {
+      llvm::Function *F =
+          CGM.getIntrinsic(Intrinsic::write_register, {Int64Ty});
+      CI = Builder.CreateCall(F, {Metadata, EmitScalarExpr(E->getArg(1))});
+    }
+    return CI;
   }
 
   if (BuiltinID == clang::AArch64::BI__break) {
