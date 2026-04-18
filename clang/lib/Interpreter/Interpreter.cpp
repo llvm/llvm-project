@@ -66,7 +66,7 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
   // We expect to get back exactly one Command job, if we didn't something
   // failed. Extract that job from the Compilation.
   const driver::JobList &Jobs = Compilation->getJobs();
-  if (!Jobs.size() || !isa<driver::Command>(*Jobs.begin()))
+  if (!Jobs.size())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Driver initialization failed. "
                                    "Unable to create a driver job");
