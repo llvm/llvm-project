@@ -191,9 +191,13 @@ public:
     }
 
     MutexError mutex_result = mutex->lock();
-    // If we did consume the signal (old_state != Waiting) and there
-    // are other in the queue after us, we need to wake the next waiter.
-    if (old_state != Waiting && waiter.next != &waiter) {
+    // We need to establish contention after lock, otherwise
+    // requeued thread may clear the contention bit even though
+    // there are still waiters behind it.
+    mutex->get_raw_futex().store(RawMutex::IN_CONTENTION);
+    // If there is other in the queue after us, we need to wake the next waiter.
+    // If we cancelled, we should naturally have waiter.next == &waiter
+    if (waiter.next != &waiter) {
       auto *next_waiter = static_cast<CndWaiter *>(waiter.next);
       WaiterHeader::remove(&waiter);
       auto &next_barrier_futex = next_waiter->barrier.get_raw_futex();
@@ -202,6 +206,8 @@ public:
       // but with requeue instead of wake if it is possible.
       FutexWordType prev = next_barrier_futex.exchange(
           RawMutex::UNLOCKED, cpp::MemoryOrder::RELEASE);
+      // If next waiter in queue sleeps, it will establish contention its own
+      // barrier
       if (prev == RawMutex::IN_CONTENTION) {
         if (mutex->can_be_requeued()) {
           ErrorOr<int> res = next_barrier_futex.requeue_to(
@@ -210,9 +216,6 @@ public:
               /*is_shared=*/false);
           if (!res.has_value()) // cannot requeue on this system
             next_waiter->barrier.wake(/*is_shared=*/false);
-          else if (res.value() >
-                   0) // requeue succeeded, the lock needs to be waked up
-            mutex->get_raw_futex().store(RawMutex::IN_CONTENTION);
         } else { // cannot requeue under special lock mode
           next_waiter->barrier.wake(/*is_shared=*/false);
         }
