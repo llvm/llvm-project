@@ -24,12 +24,19 @@
 namespace LIBC_NAMESPACE_DECL {
 
 enum class CndVarResult {
+  // The waiter successfully received a signal.
   Success,
+  // Error occurs during mutex acquisition.
   MutexError,
+  // Timeout occurs.
   Timeout,
 };
 
 class PrivateCndVar {
+  // A single-waiter multiple-notifier barrier used to keep
+  // track of cancellation threads. We use this barrier to
+  // ensure in-queue threads that have posted their cancellation
+  // request have finished dequeue themselves.
   class CancellationBarrier {
     LIBC_INLINE_VAR static constexpr size_t SPIN_LIMIT = 100;
     LIBC_INLINE_VAR static constexpr size_t CANCEL_STEP = 2;
@@ -82,11 +89,13 @@ class PrivateCndVar {
     WaiterHeader *prev;
     WaiterHeader *next;
 
+    // We use cyclic dummy node to avoid handing corner cases.
     LIBC_INLINE void ensure_queue_initialization() {
       if (LIBC_UNLIKELY(prev == nullptr))
         prev = next = this;
     }
 
+    // Assume `this` the dummy node of queue. Push back `waiter` to the queue.
     LIBC_INLINE void push_back(WaiterHeader *waiter) {
       ensure_queue_initialization();
       waiter->next = this;
@@ -95,12 +104,15 @@ class PrivateCndVar {
       waiter->prev->next = waiter;
     }
 
+    // Remove `waiter` from the queue.
     LIBC_INLINE static void remove(WaiterHeader *waiter) {
       waiter->next->prev = waiter->prev;
       waiter->prev->next = waiter->next;
       waiter->prev = waiter->next = waiter;
     }
 
+    // Assume `this` the dummy node of queue. Pop the first waiter from the
+    // queue.
     LIBC_INLINE WaiterHeader *pop_front() {
       ensure_queue_initialization();
       if (next == this)
@@ -110,19 +122,22 @@ class PrivateCndVar {
       return first;
     }
   };
+
+  // This node will be on the per-thread stack.
   struct CndWaiter : WaiterHeader {
-    cpp::Atomic<CancellationBarrier *> sender_futex;
+    cpp::Atomic<CancellationBarrier *> cancellation_barrier;
     RawMutex barrier;
     cpp::Atomic<uint8_t> state;
 
     LIBC_INLINE CndWaiter()
-        : WaiterHeader{}, sender_futex(nullptr), barrier{}, state{Waiting} {
+        : WaiterHeader{}, cancellation_barrier(nullptr), barrier{},
+          state{Waiting} {
       // this lock should always success as no contention is possible
       (void)barrier.try_lock();
     }
 
     LIBC_INLINE void confirm_cancellation() {
-      if (CancellationBarrier *sender = sender_futex.load())
+      if (CancellationBarrier *sender = cancellation_barrier.load())
         sender->notify();
     }
   };
@@ -231,6 +246,13 @@ private:
     CancellationBarrier cancellation_barrier{};
     CndWaiter *head = nullptr;
     CndWaiter *cursor = nullptr;
+    // Go through the queue, try send signal to waiters.
+    // 1. if signal is sent, we reduce the number of pending signals
+    // 2. if waiter cancelled before signal is sent, we add it
+    //    to cancellation barrier and continue
+    // Notice that cancelled sender will not continue before
+    // we release the queue lock, because they also need to
+    // acquire the lock and dequeue themselves.
     {
       cpp::lock_guard lock(queue_lock);
       waiter_queue.ensure_queue_initialization();
@@ -244,7 +266,7 @@ private:
         uint8_t expected = Waiting;
         if (!cursor->state.compare_exchange_strong(expected, Signalled)) {
           cancellation_barrier.add_one();
-          cursor->sender_futex.store(&cancellation_barrier);
+          cursor->cancellation_barrier.store(&cancellation_barrier);
           continue;
         }
         if (!head)
@@ -259,7 +281,14 @@ private:
       removed_tail->next = removed_head;
       removed_head->prev = removed_tail;
     }
+    // We want to make sure the propagation queue contain only threads
+    // that have consumed the signal. So we wait until all cancelled
+    // finishing their dequeue operation.
     cancellation_barrier.wait();
+    // Start propagate notification to the first waiter in the queue.
+    // Waiters in the queue will acquire the lock in strict FIFO order:
+    // Only when the predecessor has acquired the lock can the successor
+    // be waken up to compete for the mutex.
     if (head)
       head->barrier.unlock();
   }
