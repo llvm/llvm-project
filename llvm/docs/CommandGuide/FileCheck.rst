@@ -117,6 +117,11 @@ and from the command line.
 
   * ``none`` – Use the standard FileCheck diagnostic messages.
   * ``unidiff`` – Display mismatches using a unified diff format.
+  * ``split`` – Display mismatches using a side-by-side split diff view.
+  * ``unidiff-no-substitutions`` – Same as ``unidiff`` but shows the raw
+    pattern without applying variable substitutions.
+  * ``split-no-substitutions`` – Same as ``split`` but shows the raw
+    pattern without applying variable substitutions.
 
 .. option:: --dump-input <value>
 

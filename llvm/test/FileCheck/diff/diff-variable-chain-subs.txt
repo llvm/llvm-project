@@ -1,0 +1,18 @@
+; RUN: split-file %s %t
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DIFF
+
+;--- input.txt
+ID: 0x100
+TYPE: apple
+USE: 0x100 (orange)
+
+;--- check.txt
+; CHECK: ID: [[ID:0x[0-9a-f]+]]
+; CHECK: TYPE: [[TYPE:[a-z]+]]
+; CHECK: USE: [[ID]] ([[TYPE]])
+
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  TYPE: apple
+; DIFF-NEXT: -USE: 0x100 (apple)
+; DIFF-NEXT: +USE: 0x100 (orange)

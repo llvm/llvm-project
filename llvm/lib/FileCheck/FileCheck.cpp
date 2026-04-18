@@ -2762,11 +2762,82 @@ static DiffContext getDiffContext(SourceMgr &SM, unsigned LineNo,
           getLineText(LineNo + 1)};
 }
 
+// Extracts a fixed-width "window" from string S, centered around DiffPos.
+static std::string getCenteredView(StringRef S, size_t DiffPos, size_t Width) {
+  if (S.size() <= Width)
+    return S.str() + std::string(Width - S.size(), ' ');
+
+  size_t HalfWidth = Width / 2;
+  size_t Start = (DiffPos > HalfWidth) ? DiffPos - HalfWidth : 0;
+
+  if (Start + Width > S.size())
+    Start = (S.size() > Width) ? S.size() - Width : 0;
+
+  std::string View = S.substr(Start, Width).str();
+
+  if (Start > 0 && Width > 3)
+    View.replace(0, 3, "...");
+
+  if (Start + Width < S.size() && View.size() > 3)
+    View.replace(View.size() - 3, 3, "...");
+
+  return View;
+}
+
+std::string Pattern::getSubstitutedRegex(StringRef PatternText) const {
+  std::string Result = PatternText.str();
+
+  // Iterate through substitutions and replace tags from left to right.
+  for (const auto &Substitution : Substitutions) {
+    Expected<std::string> ValueOrErr = Substitution->getResultForDiagnostics();
+    std::string CleanValue;
+
+    if (!ValueOrErr) {
+      consumeError(ValueOrErr.takeError());
+      CleanValue = "<UNDEFINED>";
+    } else {
+      CleanValue = *ValueOrErr;
+      // Numeric substitutions arrive wrapped in quotes so we need to strip
+      // them.
+      if (CleanValue.size() >= 2 && CleanValue.front() == '"' &&
+          CleanValue.back() == '"')
+        CleanValue = CleanValue.substr(1, CleanValue.size() - 2);
+    }
+
+    // Find the first occurrence of a variable tag
+    size_t Start = Result.find("[[");
+    if (Start == std::string::npos)
+      break;
+
+    size_t End = Result.find("]]", Start);
+    if (End == std::string::npos)
+      break;
+
+    size_t TagLen = (End + 2) - Start;
+    Result.replace(Start, TagLen, CleanValue);
+  }
+  return Result;
+}
+
 // Renders a diagnostic diff via llvm::errs().
-static void renderDiff(unsigned ExpectedLineNo, unsigned ActualLineNo,
-                       StringRef ExpectedLine, StringRef ActualLine,
-                       const DiffContext &Ctx) {
+static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
+                       unsigned ActualLineNo, StringRef ExpectedLine,
+                       StringRef ActualLine, const DiffContext &Ctx) {
   auto &OS = errs();
+  constexpr unsigned ColWidth = 45;
+  constexpr StringRef Sep = " | ";
+
+  bool IsSplit = (Mode == Split || Mode == SplitNoSubstitution);
+
+  // Find the index from where the expected and actual text diverge.
+  size_t DiffPos = 0;
+  size_t MinLen = std::min(ExpectedLine.size(), ActualLine.size());
+  while (DiffPos < MinLen && ExpectedLine[DiffPos] == ActualLine[DiffPos])
+    ++DiffPos;
+
+  auto GetView = [&](StringRef S) {
+    return getCenteredView(S, DiffPos, ColWidth - 1);
+  };
 
   // Header
   OS.changeColor(raw_ostream::CYAN);
@@ -2775,30 +2846,70 @@ static void renderDiff(unsigned ExpectedLineNo, unsigned ActualLineNo,
 
   // Before Context
   if (!Ctx.LineBefore.empty()) {
-    OS << " " << Ctx.LineBefore << "\n";
+    if (IsSplit)
+      OS << "  " << GetView(Ctx.LineBefore) << Sep << GetView(Ctx.LineBefore)
+         << "\n";
+    else
+      OS << " " << Ctx.LineBefore << "\n";
   }
 
   // Mismatch
-  OS.changeColor(raw_ostream::RED);
-  OS << "-" << ExpectedLine << "\n";
+  if (IsSplit) {
+    OS << "  ";
 
-  OS.changeColor(raw_ostream::GREEN);
-  OS << "+" << ActualLine.ltrim() << "\n";
-  OS.resetColor();
+    OS.changeColor(raw_ostream::RED);
+    OS << GetView(ExpectedLine);
+    OS.resetColor();
+
+    // Use a bold yellow '!' to signify that the text might match,
+    // but it was found on the wrong line.
+    bool IsMoved = (ExpectedLineNo != ActualLineNo);
+
+    if (IsMoved) {
+      OS.changeColor(raw_ostream::YELLOW, true);
+      OS << " ! ";
+    } else {
+      OS << " | ";
+    }
+    OS.resetColor();
+
+    OS.changeColor(raw_ostream::GREEN);
+    OS << StringRef(GetView(ActualLine)).ltrim() << "\n";
+    OS.resetColor();
+  } else {
+    OS.changeColor(raw_ostream::RED);
+    OS << "-" << ExpectedLine << "\n";
+
+    OS.changeColor(raw_ostream::GREEN);
+    OS << "+" << ActualLine.ltrim() << "\n";
+    OS.resetColor();
+  }
 
   // After Context
   if (!Ctx.LineAfter.empty()) {
-    OS << " " << Ctx.LineAfter << "\n";
+    if (Mode == Split)
+      OS << "  " << GetView(Ctx.LineAfter) << Sep << GetView(Ctx.LineAfter)
+         << "\n";
+    else
+      OS << " " << Ctx.LineAfter << "\n";
   }
 }
 
-static bool printDiff(const FileCheckString &CheckStr, StringRef ActualLine,
-                      SourceMgr &SM, std::vector<FileCheckDiag> *Diags,
+static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
+                      StringRef ActualLine, SourceMgr &SM,
+                      std::vector<FileCheckDiag> *Diags,
                       unsigned OverwriteActualLine = 0) {
   SMLoc PatternLoc = CheckStr.Pat.getLoc();
   unsigned ExpectedLineNo = SM.getLineAndColumn(PatternLoc).first;
   const char *PatPtr = PatternLoc.getPointer();
   StringRef ExpectedLine = StringRef(PatPtr).split('\n').first.rtrim();
+
+  std::string ExpectedText;
+  if (Mode == DiffFormatType::SplitNoSubstitution ||
+      Mode == DiffFormatType::UnifiedNoSubstitution)
+    ExpectedText = ExpectedLine.str();
+  else
+    ExpectedText = CheckStr.Pat.getSubstitutedRegex(ExpectedLine);
 
   // Resolve the Actual (Input) line number.
   // Priority: 1. OverwriteActualLine (Found via Fuzzy match)
@@ -2820,7 +2931,8 @@ static bool printDiff(const FileCheckString &CheckStr, StringRef ActualLine,
   unsigned BufID = SM.FindBufferContainingLoc(InputLoc);
   DiffContext Context = getDiffContext(SM, ActualLineNo, BufID);
 
-  renderDiff(ExpectedLineNo, ActualLineNo, ExpectedLine, ActualLine, Context);
+  renderDiff(Mode, ExpectedLineNo, ActualLineNo, ExpectedText, ActualLine,
+             Context);
 
   errs() << '\n';
   return true;
@@ -2829,6 +2941,7 @@ static bool printDiff(const FileCheckString &CheckStr, StringRef ActualLine,
 // Report the mismatch on the current line and advance to the next line.
 static bool handleDiffFailure(const FileCheckString &CheckStr,
                               StringRef &CheckRegion, SourceMgr &SM,
+                              FileCheckRequest &Req,
                               std::vector<FileCheckDiag> *Diags,
                               raw_ostream &OS, bool &HeaderPrinted,
                               unsigned &TotalMismatches) {
@@ -2874,7 +2987,7 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
     TargetLineNo = SM.getLineAndColumn(CurrentLoc).first;
   }
 
-  printDiff(CheckStr, TargetLine, SM, Diags, TargetLineNo);
+  printDiff(Req.DiffFormat, CheckStr, TargetLine, SM, Diags, TargetLineNo);
   TotalMismatches++;
 
   // Advance CheckRegion past the current line to recover for the next CHECK.
@@ -2940,8 +3053,8 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
       // Handle failure
       if (MatchPos == StringRef::npos) {
         if (IsDiffFormat) {
-          handleDiffFailure(CheckStr, CheckRegion, SM, Diags, OS, HeaderPrinted,
-                            TotalMismatches);
+          handleDiffFailure(CheckStr, CheckRegion, SM, Req, Diags, OS,
+                            HeaderPrinted, TotalMismatches);
         }
         ChecksFailed = true;
         i = j;
@@ -2957,7 +3070,7 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
             (CurrentLineEnd != StringRef::npos)
                 ? CheckRegion.drop_front(CurrentLineEnd + 1)
                 : CheckRegion;
-        handleDiffFailure(CheckStr, NextLineRegion, SM, Diags, OS,
+        handleDiffFailure(CheckStr, NextLineRegion, SM, Req, Diags, OS,
                           HeaderPrinted, TotalMismatches);
         ChecksFailed = true;
         i = j;
