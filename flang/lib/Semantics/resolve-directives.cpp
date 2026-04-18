@@ -1114,8 +1114,7 @@ private:
   }
 
   // Predetermined DSA rules
-  void PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
-      const parser::OpenMPLoopConstruct &);
+  void PrivatizeAssociatedLoopIndex(const parser::OpenMPLoopConstruct &);
   void ResolveSeqLoopIndexInParallelOrTaskConstruct(const parser::Name &);
 
   bool IsNestedInDirective(llvm::omp::Directive directive);
@@ -2068,7 +2067,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
     }
   }
 
-  PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
+  PrivatizeAssociatedLoopIndex(x);
   return true;
 }
 
@@ -2162,13 +2161,16 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
 //     increment of the associated do-loop (only for OpenMP versions <= 4.5)
 //   - The loop iteration variables in the associated do-loops of a simd
 //     construct with multiple associated do-loops are lastprivate.
-void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
+void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     const parser::OpenMPLoopConstruct &x) {
+  const parser::OmpDirectiveSpecification &spec{x.BeginDir()};
   unsigned version{context_.langOptions().OpenMPVersion};
+
   auto [depth, _]{
-      omp::GetAffectedNestDepthWithReason(x.BeginDir(), version, &context_)};
-  // If there was a problem obtaining the depth, it will be diagnosed in
-  // the semantic checks.
+      omp::GetAffectedNestDepthWithReason(spec, version, &context_)};
+
+  // If depth is absent, then there is some issue. Leave it alone here,
+  // and let the semantic checks diagnose the problem.
   if (!depth || *depth.value <= 0) {
     return;
   }
@@ -2183,35 +2185,30 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     ivDSA = Symbol::Flag::OmpLastPrivate;
   }
 
-  for (auto &construct : std::get<parser::Block>(x.t)) {
-    if (const auto *innermostConstruct{parser::omp::GetOmpLoop(construct)}) {
-      PrivatizeAssociatedLoopIndexAndCheckLoopLevel(*innermostConstruct);
-    } else if (const auto *doConstruct{
-                   parser::omp::GetDoConstruct(construct)}) {
-      for (const parser::DoConstruct *loop{&*doConstruct}; loop && level > 0;
-          --level) {
-        // go through all the nested do-loops and resolve index variables
-        if (const parser::Name *iv{GetLoopIndex(*loop)}) {
-          if (!iv->symbol || !IsLocalInsideScope(*iv->symbol, currScope())) {
-            if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
-              if (const auto *details{
-                      iv->symbol->detailsIf<HostAssocDetails>()}) {
-                const Symbol *tpSymbol = &details->symbol();
-                if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
-                  context_.Say(iv->source,
-                      "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
-                      iv->ToString());
-                }
-              }
-              SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
-              iv->symbol = symbol; // adjust the symbol within region
-              AddToContextObjectWithDSA(*symbol, ivDSA);
-            }
-          }
-          const auto &block{std::get<parser::Block>(loop->t)};
-          const auto it{block.begin()};
-          loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
-        }
+  auto checkThreadprivate{[&](const parser::Name &iv) {
+    if (const auto *details{iv.symbol->detailsIf<HostAssocDetails>()}) {
+      if (details->symbol().test(Symbol::Flag::OmpThreadprivate)) {
+        context_.Say(iv.source,
+            "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
+            iv.ToString());
+      }
+    }
+  }};
+
+  Scope &scope{currScope()};
+
+  if (auto doLoops{omp::CollectAffectedDoLoops(x, version, &context_)}) {
+    for (const parser::DoConstruct *loop : *doLoops) {
+      const parser::Name *iv{GetLoopIndex(*loop)};
+      if (!iv || (iv->symbol && IsLocalInsideScope(*iv->symbol, scope))) {
+        continue;
+      }
+
+      if (auto *symbol{ResolveOmp(*iv, ivDSA, scope)}) {
+        checkThreadprivate(*iv);
+        SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
+        iv->symbol = symbol; // adjust the symbol within region
+        AddToContextObjectWithDSA(*symbol, ivDSA);
       }
     }
   }

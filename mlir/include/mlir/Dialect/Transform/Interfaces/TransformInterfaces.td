@@ -117,6 +117,40 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
   }];
 }
 
+def NormalFormAttrInterface : AttrInterface<"NormalFormAttrInterface"> {
+  let description = [{
+    Interface for attributes that define normal form constraints on IR.
+
+    A normal form attribute specifies additional invariants beyond those
+    enforced by the verifiers that types, attributes, and operations may satisfy
+    to enable certain transformations. This can be seen as a transformation
+    pre/post-conditions.
+
+    Implementers should override one or more of `verifyType`, `verifyAttribute`,
+    or `verifyOperation` to define custom verification logic. The default
+    implementations return success.
+  }];
+  let cppNamespace = "::mlir::transform";
+
+  // Note: we can also consider dedicated methods for attributes and types.
+  let methods = [InterfaceMethod<
+                     /*desc=*/[{
+       Check that the given operation satisfies the constraints defined by this
+       normal form attribute.
+
+       Produce a silenceable error at the operation's location if constraints are not
+       satisfied.
+      }],
+                     /*returnType=*/"::mlir::DiagnosedSilenceableFailure",
+                     /*name=*/"checkOperation",
+                     /*arguments=*/(ins "::mlir::Operation*":$op),
+                     /*methodBody=*/"",
+                     /*defaultImplementation=*/[{
+        return ::mlir::DiagnosedSilenceableFailure::success();
+      }]>,
+  ];
+}
+
 class TransformTypeInterfaceBase<string cppClass, string cppObjectType>
     : TypeInterface<cppClass> {
   let cppNamespace = "::mlir::transform";

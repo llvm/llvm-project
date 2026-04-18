@@ -1,8 +1,9 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
-// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -fixit %t/test_source.cpp
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -Werror=lifetime-safety-suggestions %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -I%S -Werror=lifetime-safety-suggestions %t/test_source.cpp
 
 View definition_before_header(View a);
 
@@ -67,6 +68,7 @@ struct ReturnThisPointer {
 //--- test_source.cpp
 
 #include "test_header.h"
+#include "Inputs/lifetime-analysis.h"
 
 View definition_before_header(View a) {
   return a;                               // expected-note {{param returned here}}
@@ -529,3 +531,42 @@ CaptureRefToBaseView test_ref_to_base_view() {
   return x; // expected-note {{returned here}}
 }
 } // namespace capturing_constructor
+
+namespace callable_wrappers {
+
+std::function<void()> return_lambda_capturing_param(int &x) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return [&]() { (void)x; }; // expected-note {{param returned here}}
+}
+
+void uaf_via_inferred_lifetimebound() {
+  std::function<void()> f = []() {};
+  {
+    int local;
+    f = return_lambda_capturing_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)f; // expected-note {{later used here}}
+}
+
+} // namespace callable_wrappers
+
+namespace make_unique_suggestion {
+
+struct LifetimeBoundCtor {
+  View v;
+  // FIXME: This test fails to propagate the lifetimebound in ctor if this is inferred (instead of the current explicit annotation).
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]): v(obj) {}
+};
+
+std::unique_ptr<LifetimeBoundCtor> create_target(const MyObj& obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return std::make_unique<LifetimeBoundCtor>(obj); // expected-note {{param returned here}}
+}
+
+void test_inference() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  {
+    MyObj obj;
+    ptr = create_target(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)ptr; // expected-note {{later used here}}
+}
+} // namespace make_unique_suggestion

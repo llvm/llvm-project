@@ -2023,5 +2023,6 @@ LogicalResult transform::applyTransforms(
 // Generated interface implementation.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Transform/Interfaces/TransformAttrInterfaces.cpp.inc"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.cpp.inc"
 #include "mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.cpp.inc"

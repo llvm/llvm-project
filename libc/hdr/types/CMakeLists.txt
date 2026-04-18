@@ -443,6 +443,15 @@ add_proxy_header_library(
     libc.include.wchar
 )
 
+
+add_proxy_header_library(
+  wctype_t
+  HDRS
+    wctype_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.wctype_t
+)
+
 add_proxy_header_library(
   uid_t
   HDRS

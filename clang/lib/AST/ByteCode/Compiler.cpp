@@ -5601,12 +5601,15 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   SmallVector<const Expr *, 8> Args(ArrayRef(E->getArgs(), E->getNumArgs()));
 
   bool IsAssignmentOperatorCall = false;
+  bool ActivateLHS = false;
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
       OCE && OCE->isAssignmentOp()) {
     // Just like with regular assignments, we need to special-case assignment
     // operators here and evaluate the RHS (the second arg) before the LHS (the
     // first arg). We fix this by using a Flip op later.
     assert(Args.size() == 2);
+    const CXXRecordDecl *LHSRecord = Args[0]->getType()->getAsCXXRecordDecl();
+    ActivateLHS = LHSRecord && LHSRecord->hasTrivialDefaultConstructor();
     IsAssignmentOperatorCall = true;
     std::reverse(Args.begin(), Args.end());
   }
@@ -5684,7 +5687,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return false;
   }
 
-  if (!this->visitCallArgs(Args, FuncDecl, IsAssignmentOperatorCall,
+  if (!this->visitCallArgs(Args, FuncDecl, ActivateLHS,
                            isa<CXXOperatorCallExpr>(E)))
     return false;
 
@@ -6909,6 +6912,9 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
     if (!this->emitRecordDestructionPop(Base.R, {}))
       return false;
   }
+
+  if (!this->emitMarkDestroyed(Dtor))
+    return false;
 
   // FIXME: Virtual bases.
   return this->emitPopPtr(Dtor) && this->emitRetVoid(Dtor);
