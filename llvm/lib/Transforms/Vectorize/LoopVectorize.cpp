@@ -4319,7 +4319,7 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     MaxTripCount = SE.getUnsignedRangeMax(RemainingIterations).getZExtValue();
   LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: " << MaxTripCount
                     << "\n");
-  
+
   VectorizationFactor Result = VectorizationFactor::Disabled();
   VPlan *BestPlan = nullptr;
   for (auto &NextVF : ProfitableVFs) {
