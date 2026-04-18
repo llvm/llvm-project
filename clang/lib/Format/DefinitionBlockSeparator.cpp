@@ -148,6 +148,7 @@ void DefinitionBlockSeparator::separateBlocks(
 
       const auto *NextLine =
           OperateIndex + 1 < Lines.size() ? Lines[OperateIndex + 1] : nullptr;
+
       if (const auto *Tok = OperateLine->First;
           Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText)) {
         const bool IsEndComment = Tok->NewlinesBefore == 1 && NextLine &&
