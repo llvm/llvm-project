@@ -143,6 +143,8 @@ public:
 
     // Unlock the mutex and wait for the signal.
     mutex->unlock();
+    // Notice that lock is already initialized as lock. We abuse the LOCKED
+    // state to indicate that the waiter is pending.
     bool locked = waiter.barrier.lock(timeout, /*is_shared=*/false);
 
     // if we wake up and find that we are still waiting, this means
@@ -158,7 +160,9 @@ public:
       waiter.confirm_cancellation();
     } else if (!locked) {
       // Whenever a signal is already consumed, we compete for the mutex
-      // in the FIFO order of the queue.
+      // in the FIFO order of the queue. We only relock if we previously
+      // wake up due to timeout. Otherwise, it means that our turn has
+      // come, so we don't need to relock.
       waiter.barrier.lock();
     }
 
@@ -168,12 +172,15 @@ public:
       WaiterHeader::remove(&waiter);
       auto &next_barrier_futex = next_waiter->barrier.get_raw_futex();
       auto &mutex_futex = mutex->get_raw_futex();
+      // the following is basically an inlined version of mutex::unlock
+      // but with requeue instead of wake if it is possible.
       FutexWordType prev = next_barrier_futex.exchange(
           RawMutex::UNLOCKED, cpp::MemoryOrder::RELEASE);
       if (prev == RawMutex::IN_CONTENTION)
         if (!mutex->can_be_requeued() ||
             !next_barrier_futex
-                 .requeue_to(mutex_futex, cpp::nullopt, 0, 1,
+                 .requeue_to(mutex_futex, cpp::nullopt, /*wake_limit=*/0,
+                             /*requeue_limit=*/1,
                              /*is_shared=*/false)
                  .has_value())
           next_waiter->barrier.wake(/*is_shared=*/false);
