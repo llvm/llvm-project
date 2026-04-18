@@ -1299,17 +1299,6 @@ private:
           continue;
         ModuleList to_remove = RemoveOrphansFromVector(vec);
         remove_count += to_remove.GetSize();
-        // BEGIN CAS
-        to_remove.ForEach([&](auto &m) {
-          auto it = m_module_configs.find(m.get());
-          if (it != m_module_configs.end())
-            if (auto config = it->second) {
-              m_cas_cache.erase(config);
-              m_module_configs.erase(it);
-            }
-          return IterationAction::Continue;
-        });
-        // END CAS
         m_list.Remove(to_remove);
       }
       // Break when fixed-point is reached.
@@ -1326,15 +1315,18 @@ private:
 
   // BEGIN CAS
 public:
-  /// Each module may have a CAS config associated with it.
-  /// Often many modules share the same CAS.
-  llvm::DenseMap<const Module *, llvm::cas::CASConfiguration> m_module_configs;
+  struct CAS {
+    std::weak_ptr<llvm::cas::ObjectStore> object_store;
+    std::weak_ptr<llvm::cas::ActionCache> action_cache;
+    CAS(std::shared_ptr<llvm::cas::ObjectStore> os,
+        std::shared_ptr<llvm::cas::ActionCache> ac)
+        : object_store(std::move(os)), action_cache(std::move(ac)) {}
+  };
 
-  /// Each CAS config has a CAS associated with it.
-  llvm::DenseMap<llvm::cas::CASConfiguration,
-                 std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
-                           std::shared_ptr<llvm::cas::ActionCache>>>
-      m_cas_cache;
+  /// Holds all currently loaded CAS for each configuration. If the
+  /// weak_ptr is null, the CAS was previously created, but has been
+  /// garbage collected.
+  llvm::DenseMap<llvm::cas::CASConfiguration, std::optional<CAS>> m_cas_cache;
 
 private:
   // END CAS
@@ -1785,54 +1777,63 @@ ModuleList::GetOrCreateCAS(const ModuleSP &module_sp) {
   if (!module_sp)
     return llvm::createStringError("no lldb::Module available");
 
-  // Look in cache first.
-  auto &shared_module_list = GetSharedModuleListInfo();
-  std::scoped_lock<std::mutex> lock(shared_module_list.shared_lock);
-  auto &module_configs = shared_module_list.module_list.m_module_configs;
-  auto &cas_cache = shared_module_list.module_list.m_cas_cache;
-
-  llvm::cas::CASConfiguration cas_config;
-  {
-    auto cached_config = module_configs.find(module_sp.get());
-    if (cached_config != module_configs.end()) {
-      cas_config = cached_config->second;
-      if (!cas_config)
-        return llvm::createStringError("no CAS available (cached)");
-    }
+  // Already initialized?
+  std::optional<llvm::cas::CASConfiguration> &cas_config =
+      module_sp->m_cas_config;
+  if (cas_config) {
+    if (!*cas_config)
+      return llvm::createStringError("no CAS associated with module (cached)");
+    if (!module_sp->m_cas_object_store)
+      return llvm::createStringError(
+          "CAS config created, but CAS not available (cached)");
   }
 
-  if (!cas_config) {
-    cas_config = FindCASConfiguration(module_sp);
-    // Cache the config or lack thereof.
-    module_configs.insert({module_sp.get(), cas_config});
-  }
-
-  if (!cas_config)
-    return llvm::createStringError("no CAS available");
+  cas_config = FindCASConfiguration(module_sp);
+  if (!*cas_config)
+    return llvm::createStringError("no CAS associated with module");
 
   // Look in the cache.
+  auto &shared_module_list = GetSharedModuleListInfo();
+  std::scoped_lock<std::mutex> lock(shared_module_list.shared_lock);
+  auto &cas_cache = shared_module_list.module_list.m_cas_cache;
   {
-    auto cached = cas_cache.find(cas_config);
-    if (cached != cas_cache.end()) {
-      if (!cached->second.first)
+    auto weak_cached = cas_cache.find(*cas_config);
+    if (weak_cached != cas_cache.end()) {
+      if (!weak_cached->second)
         return llvm::createStringError(
             "CAS config created, but CAS not available (cached)");
-      return ModuleList::CAS{cas_config, cached->second.first,
-                             cached->second.second};
+      auto cached_object_store_sp = weak_cached->second->object_store.lock();
+      auto cached_action_cache_sp = weak_cached->second->action_cache.lock();
+      if (cached_object_store_sp && cached_action_cache_sp) {
+        module_sp->m_cas_object_store = cached_object_store_sp;
+        module_sp->m_cas_action_cache = cached_action_cache_sp;
+        return ModuleList::CAS{*cas_config, cached_object_store_sp,
+                               cached_action_cache_sp};
+      } else {
+        cas_cache.erase(*cas_config);
+        LLDB_LOG(GetLog(LLDBLog::Modules | LLDBLog::Symbols),
+                 "CAS at {0} was garbage-collected", cas_config->CASPath);
+      }
     }
   }
 
   // Create the CAS.
-  auto cas = cas_config.createDatabases();
+  auto cas = cas_config->createDatabases();
   if (!cas) {
-    cas_cache.insert({cas_config, {}});
+    cas_cache.insert({*cas_config, {}});
     return cas.takeError();
   }
 
   LLDB_LOG(GetLog(LLDBLog::Modules | LLDBLog::Symbols),
-           "Initialized CAS at {0}", cas_config.CASPath);
-  cas_cache.insert({cas_config, {cas->first, cas->second}});
-  return ModuleList::CAS{cas_config, cas->first, cas->second};
+           "Initialized CAS at {0}", cas_config->CASPath);
+
+  // Cache the CAS.
+  module_sp->m_cas_object_store = cas->first;
+  module_sp->m_cas_action_cache = cas->second;
+  cas_cache.insert(
+      {*cas_config, SharedModuleList::CAS(cas->first, cas->second)});
+
+  return ModuleList::CAS{*cas_config, cas->first, cas->second};
 }
 
 bool ModuleList::IsCASID(const ModuleSP &module_sp, llvm::StringRef id) {
@@ -1870,15 +1871,13 @@ llvm::Expected<bool> ModuleList::GetSharedModuleFromCAS(
                                 /*always_create=*/false);
   if (status.Success()) {
     if (module_sp) {
-      // Enter the new module into the config cache.
-      auto &shared_module_list = GetSharedModuleListInfo();
-      std::scoped_lock<std::mutex> lock(shared_module_list.shared_lock);
-      auto &module_configs = shared_module_list.module_list.m_module_configs;
-      auto config = module_configs.lookup(nearby.get());
-      module_configs.insert({module_sp.get(), config});
+      module_sp->m_cas_config = nearby->m_cas_config;
+      module_sp->m_cas_object_store = nearby->m_cas_object_store;
+      module_sp->m_cas_action_cache = nearby->m_cas_action_cache;
     }
     return true;
   }
+
   return status.takeError();
 }
 
