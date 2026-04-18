@@ -978,11 +978,11 @@ bool AArch64ConditionalComparesLegacy::runOnMachineFunction(
   if (skipFunction(MF.getFunction()))
     return false;
 
-  auto *MBPI =
+  const MachineBranchProbabilityInfo *MBPI =
       &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  auto *DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  auto *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  auto *Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
+  MachineDominatorTree *DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachineLoopInfo *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MachineTraceMetrics *Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
 
   AArch64ConditionalComparesImpl Impl(MBPI, DomTree, Loops, Traces);
   return Impl.run(MF);
@@ -991,10 +991,10 @@ bool AArch64ConditionalComparesLegacy::runOnMachineFunction(
 PreservedAnalyses
 AArch64ConditionalComparesPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
-  auto *MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
-  auto *DomTree = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  auto *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
-  auto *Traces = &MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
+  const MachineBranchProbabilityInfo *MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  MachineDominatorTree *DomTree = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MachineLoopInfo *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  MachineTraceMetrics *Traces = &MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
 
   AArch64ConditionalComparesImpl Impl(MBPI, DomTree, Loops, Traces);
   bool Changed = Impl.run(MF);
