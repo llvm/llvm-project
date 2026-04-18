@@ -375,6 +375,6 @@ template <typename T>
 struct BaseClass {};
 
 template <typename T>
-struct SubClass : BaseClass</* This used to be a false positive. */ typename T::R> {};
+struct SubClass : BaseClass<typename T::R> {};
 
 template struct SubClass<Int>;
