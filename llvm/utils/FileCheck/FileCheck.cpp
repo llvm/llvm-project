@@ -118,7 +118,12 @@ static cl::opt<DiffFormatType> DiffFormat(
     cl::ValueOptional,
     cl::values(clEnumValN(None, "none", "Standard FileCheck diagnostics"),
                clEnumValN(Unified, "unidiff", "Outputs a Unified diff"),
-               clEnumValN(Unified, "", "")));
+               clEnumValN(Unified, "", ""),
+               clEnumValN(Split, "split", "Outputs a Split diff"),
+               clEnumValN(UnifiedNoSubstitution, "unidiff-no-substitutions",
+                          "Outputs a Unified diff with no substitutions"),
+               clEnumValN(SplitNoSubstitution, "split-no-substitutions",
+                          "Outputs a Split diff with no substitutions")));
 
 // The order of DumpInputValue members affects their precedence, as documented
 // for -dump-input below.
