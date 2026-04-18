@@ -113,13 +113,6 @@ static cl::opt<bool> VerboseVerbose(
              "issues, or add it to the input dump if enabled.  Implies\n"
              "-v.\n"));
 
-static cl::opt<DiffFormatType> DiffFormat(
-    "diff", cl::desc("Show mismatches using a diff-style format.\n"),
-    cl::ValueOptional,
-    cl::values(clEnumValN(None, "none", "Standard FileCheck diagnostics"),
-               clEnumValN(Unified, "unidiff", "Outputs a Unified diff"),
-               clEnumValN(Unified, "", "")));
-
 // The order of DumpInputValue members affects their precedence, as documented
 // for -dump-input below.
 enum DumpInputValue {
@@ -794,7 +787,6 @@ int main(int argc, char **argv) {
   if (GlobalDefineError)
     return 2;
 
-  Req.DiffFormat = DiffFormat;
   Req.AllowEmptyInput = AllowEmptyInput;
   Req.AllowUnusedPrefixes = AllowUnusedPrefixes;
   Req.EnableVarScope = EnableVarScope;
@@ -866,9 +858,8 @@ int main(int argc, char **argv) {
                                DumpInput == DumpInputNever ? nullptr : &Diags)
                      ? EXIT_SUCCESS
                      : 1;
-  if ((DumpInput == DumpInputAlways ||
-       (ExitCode == 1 && DumpInput == DumpInputFail)) &&
-      Req.DiffFormat == DiffFormatType::None) {
+  if (DumpInput == DumpInputAlways ||
+      (ExitCode == 1 && DumpInput == DumpInputFail)) {
     errs() << "\n"
            << "Input file: " << InputFilename << "\n"
            << "Check file: " << CheckFilename << "\n"

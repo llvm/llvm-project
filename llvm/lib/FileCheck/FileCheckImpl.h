@@ -734,11 +734,9 @@ public:
   /// Prints the value of successful substitutions.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
                           SMRange MatchRange, FileCheckDiag::MatchType MatchTy,
-                          std::vector<FileCheckDiag> *Diags,
-                          const FileCheckRequest &Req) const;
+                          std::vector<FileCheckDiag> *Diags) const;
   void printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
-                       std::vector<FileCheckDiag> *Diags,
-                       const FileCheckRequest &Req) const;
+                       std::vector<FileCheckDiag> *Diags) const;
 
   bool hasVariable() const {
     return !(Substitutions.empty() && VariableDefs.empty());
@@ -876,8 +874,7 @@ struct FileCheckString {
 
   /// Verifies that there is a single line in the given \p Buffer. Errors are
   /// reported against \p SM.
-  bool CheckNext(const SourceMgr &SM, StringRef Buffer,
-                 const FileCheckRequest &Req) const;
+  bool CheckNext(const SourceMgr &SM, StringRef Buffer) const;
   /// Verifies that there is no newline in the given \p Buffer. Errors are
   /// reported against \p SM.
   bool CheckSame(const SourceMgr &SM, StringRef Buffer) const;
