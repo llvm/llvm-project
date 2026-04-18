@@ -556,6 +556,54 @@ func.func @test_avgpool2d_stride_x(%arg0: tensor<1x32x8194x8xf32>, %arg1: tensor
 
 // -----
 
+func.func @test_avgpool2d_adaptive_kernel_y(%arg0: tensor<1x8194x32x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x2x32x8xf32> {
+  %kernel = tosa.const_shape {values = dense<[8193, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op failed level check: kernel <= MAX_KERNEL (8192), got 8193}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %arg1, %arg2, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x8194x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x32x8xf32>
+  return %0 : tensor<1x2x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_kernel_x(%arg0: tensor<1x32x8194x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x32x2x8xf32> {
+  %kernel = tosa.const_shape {values = dense<[1, 8193]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op failed level check: kernel <= MAX_KERNEL (8192), got 8193}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %arg1, %arg2, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x8194x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x2x8xf32>
+  return %0 : tensor<1x32x2x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_stride_y(%arg0: tensor<1x8194x32x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x2x32x8xf32> {
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[8193, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %arg1, %arg2, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x8194x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x32x8xf32>
+  return %0 : tensor<1x2x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_stride_x(%arg0: tensor<1x32x8194x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x32x2x8xf32> {
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 8193]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %arg1, %arg2, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x8194x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x2x8xf32>
+  return %0 : tensor<1x32x2x8xf32>
+}
+
+// -----
+
 func.func @test_conv2d_dilation_y(%arg0: tensor<1x8192x8192x1xf32>, %arg1: tensor<16x1025x1024x1xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>) -> tensor<1x1x7170x16xf32> {
   // expected-error@+1 {{'tosa.conv2d' op failed level check: dilation_y * KH <= MAX_KERNEL (8192), got 8200}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg3 {acc_type = f32, dilation = array<i64: 8, 1>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 1>} :
@@ -881,6 +929,122 @@ func.func @test_maxpool2d_stride_x(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x3
 
 // -----
 
+func.func @test_maxpool2d_adaptive_kernel_y(%arg0: tensor<1x8194x32x8xf32>) -> tensor<1x2x32x8xf32> {
+  %kernel = tosa.const_shape {values = dense<[8193, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: kernel <= MAX_KERNEL (8192), got 8193}}
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad :
+         (tensor<1x8194x32x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x32x8xf32>
+  return %0 : tensor<1x2x32x8xf32>
+}
+
+// -----
+
+func.func @test_maxpool2d_adaptive_kernel_x(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32> {
+  %kernel = tosa.const_shape {values = dense<[1, 8193]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: kernel <= MAX_KERNEL (8192), got 8193}}
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad :
+         (tensor<1x32x8194x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x2x8xf32>
+  return %0 : tensor<1x32x2x8xf32>
+}
+
+// -----
+
+func.func @test_maxpool2d_adaptive_stride_y(%arg0: tensor<1x8194x32x8xf32>) -> tensor<1x2x32x8xf32> {
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[8193, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad :
+         (tensor<1x8194x32x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x32x8xf32>
+  return %0 : tensor<1x2x32x8xf32>
+}
+
+// -----
+
+func.func @test_maxpool2d_adaptive_stride_x(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32> {
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 8193]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad :
+         (tensor<1x32x8194x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x2x8xf32>
+  return %0 : tensor<1x32x2x8xf32>
+}
+
+// -----
+
+func.func @test_maxpool2d_adaptive_pad_first(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32> {
+  // If the source of the kernel passed to max_pool2d_adaptive is a const_shape then pad < kernel check is applied.
+  // This is a workaround for the above so that we can level check the padding.
+  %a = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %b = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %kernel = tosa.add_shape %a, %b : (!tosa.shape<2>, !tosa.shape<2>) -> !tosa.shape<2>
+  
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[8193, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad :
+         (tensor<1x32x8194x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x2x8xf32>
+  return %0 : tensor<1x32x2x8xf32>
+}
+
+// -----
+
+func.func @test_maxpool2d_adaptive_pad_second(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32> {
+  // If the source of the kernel passed to max_pool2d_adaptive is a const_shape then pad < kernel check is applied.
+  // This is a workaround for the above so that we can level check the padding.
+  %a = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %b = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %kernel = tosa.add_shape %a, %b : (!tosa.shape<2>, !tosa.shape<2>) -> !tosa.shape<2>
+
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 8193, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad :
+         (tensor<1x32x8194x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x2x8xf32>
+  return %0 : tensor<1x32x2x8xf32>
+}
+
+// -----
+
+func.func @test_maxpool2d_adaptive_pad_third(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32> {
+  // If the source of the kernel passed to max_pool2d_adaptive is a const_shape then pad < kernel check is applied.
+  // This is a workaround for the above so that we can level check the padding.
+  %a = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %b = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %kernel = tosa.add_shape %a, %b : (!tosa.shape<2>, !tosa.shape<2>) -> !tosa.shape<2>
+
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 8193, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad :
+         (tensor<1x32x8194x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x2x8xf32>
+  return %0 : tensor<1x32x2x8xf32>
+}
+
+// -----
+
+func.func @test_maxpool2d_adaptive_pad_forth(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32> {
+  // If the source of the kernel passed to max_pool2d_adaptive is a const_shape then pad < kernel check is applied.
+  // This is a workaround for the above so that we can level check the padding.
+  %a = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %b = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %kernel = tosa.add_shape %a, %b : (!tosa.shape<2>, !tosa.shape<2>) -> !tosa.shape<2>
+
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 8193]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad :
+         (tensor<1x32x8194x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x2x8xf32>
+  return %0 : tensor<1x32x2x8xf32>
+}
+
+// -----
+
 func.func @test_rfft2d_input_h(%arg0: tensor<13x16384x16xf32>) -> (tensor<13x16384x9xf32>, tensor<13x16384x9xf32>) {
   // expected-error@+1 {{'tosa.rfft2d' op failed level check: H <= MAX_KERNEL (8192), got 16384}}
   %0, %1 = "tosa.rfft2d"(%arg0) {} : (tensor<13x16384x16xf32>) -> (tensor<13x16384x9xf32>, tensor<13x16384x9xf32>)
@@ -1032,6 +1196,18 @@ func.func @test_avg_pool2d_tensor_size_invalid(%arg0: tensor<1x23178x23178x9xf32
 
 // -----
 
+func.func @test_avg_pool2d_adaptive_tensor_size_invalid(%arg0: tensor<1x23178x23178x9xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x23178x23178x9xf32> {
+  %kernel = tosa.const_shape {values = dense<[2, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 1, 0, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %arg1, %arg2, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x23178x23178x9xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x23178x23178x9xf32>
+  return %0 : tensor<1x23178x23178x9xf32>
+}
+
+// -----
+
 func.func @test_conv2d_tensor_size_invalid(%arg0: tensor<1x23178x23178x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x23178x23178x8xf32> {
   // expected-error@+1 {{'tosa.conv2d' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x23178x23178x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x23178x23178x8xf32>
@@ -1134,9 +1310,9 @@ func.func @test_while_loop_tensor_size_invalid(%arg0: tensor<536870912xi32>, %ar
 
 // -----
 
-func.func @test_const_shape() -> !tosa.shape<4> {
+func.func @test_const_shape() {
   %cst = tosa.const_shape {values = dense<[1, 1, 536870912, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  return %cst : !tosa.shape<4>
+  return
 }
 
 // -----
@@ -1665,67 +1841,67 @@ func.func @test_cast_to_block_scaled_invalid_rank(%arg0: tensor<1x2x3x4x5x6x7x32
 
 // -----
 
-func.func @test_add_shape_invalid_rank() -> !tosa.shape<17> {
+func.func @test_add_shape_invalid_rank() {
   %a = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
   %b = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
   // expected-error@+1 {{'tosa.add_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
   %c = tosa.add_shape %a, %b : (!tosa.shape<17>, !tosa.shape<17>) -> !tosa.shape<17>
-  return %c : !tosa.shape<17>
+  return
 }
 
 // -----
 
-func.func @test_div_floor_shape_invalid_rank() -> !tosa.shape<17> {
+func.func @test_div_floor_shape_invalid_rank() {
   %a = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
   %b = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
   // expected-error@+1 {{'tosa.div_floor_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
   %c = tosa.div_floor_shape %a, %b : (!tosa.shape<17>, !tosa.shape<17>) -> !tosa.shape<17>
-  return %c : !tosa.shape<17>
+  return
 }
 
 // -----
 
-func.func @test_dim(%arg0: tensor<1x2x3x4x5x6x7x8xi32>) -> !tosa.shape<1> {
+func.func @test_dim(%arg0: tensor<1x2x3x4x5x6x7x8xi32>) {
   // expected-error@+1 {{'tosa.dim' op failed level check: operand rank(shape) <= MAX_RANK}}
   %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<1x2x3x4x5x6x7x8xi32>) -> !tosa.shape<1>
-  return %0 : !tosa.shape<1>
+  return
 }
 
 // -----
 
-func.func @test_exp2_shape_invalid_rank() -> !tosa.shape<17> {
+func.func @test_exp2_shape_invalid_rank() {
   %0 = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
   // expected-error@+1 {{'tosa.exp2_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
   %1 = tosa.exp2_shape %0 : (!tosa.shape<17>) -> !tosa.shape<17>
-  return %1 : !tosa.shape<17>
+  return
 }
 
 // -----
 
-func.func @test_log2_floor_shape_invalid_rank() -> !tosa.shape<17> {
+func.func @test_log2_floor_shape_invalid_rank() {
   %0 = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
   // expected-error@+1 {{'tosa.log2_floor_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
   %1 = tosa.log2_floor_shape %0 : (!tosa.shape<17>) -> !tosa.shape<17>
-  return %1 : !tosa.shape<17>
+  return
 }
 
 // -----
 
-func.func @test_log2_ceil_shape_invalid_rank() -> !tosa.shape<17> {
+func.func @test_log2_ceil_shape_invalid_rank() {
   %0 = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
   // expected-error@+1 {{'tosa.log2_ceil_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
   %1 = tosa.log2_ceil_shape %0 : (!tosa.shape<17>) -> !tosa.shape<17>
-  return %1 : !tosa.shape<17>
+  return
 }
 
 // -----
 
-func.func @test_mod_shape_invalid_rank() -> !tosa.shape<17> {
+func.func @test_mod_shape_invalid_rank() {
   %a = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
   %b = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
   // expected-error@+1 {{'tosa.mod_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
   %c = tosa.mod_shape %a, %b : (!tosa.shape<17>, !tosa.shape<17>) -> !tosa.shape<17>
-  return %c : !tosa.shape<17>
+  return
 }
 
 // -----

@@ -537,13 +537,15 @@ public:
 
   bool shouldTreatInstructionLikeSelect(const Instruction *I) const override;
 
-  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                             Type *ScalarValTy) const override {
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy, Type *ScalarValTy,
+                             Align Alignment,
+                             unsigned AddrSpace) const override {
     // We can vectorize store v4i8.
     if (ScalarMemTy->isIntegerTy(8) && isPowerOf2_32(VF) && VF >= 4)
       return 4;
 
-    return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+    return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy, Alignment,
+                                    AddrSpace);
   }
 
   std::optional<unsigned> getMinPageSize() const override { return 4096; }

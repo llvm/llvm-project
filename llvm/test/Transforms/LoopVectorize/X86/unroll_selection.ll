@@ -10,11 +10,11 @@ target triple = "x86_64-apple-macosx10.8.0"
 ;CHECK: store <4 x double>
 ;CHECK-NOT: store <4 x double>
 ;CHECK: ret
-define void @reg_pressure(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
+define void @reg_pressure(ptr nocapture %A, i32 %n) {
   %1 = sext i32 %n to i64
   br label %2
 
-; <label>:2                                       ; preds = %2, %0
+; <label>:
   %indvars.iv = phi i64 [ %indvars.iv.next, %2 ], [ %1, %0 ]
   %3 = getelementptr inbounds double, ptr %A, i64 %indvars.iv
   %4 = load double, ptr %3, align 8
@@ -43,7 +43,7 @@ define void @reg_pressure(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
   %25 = icmp eq i32 %24, 0
   br i1 %25, label %26, label %2
 
-; <label>:26                                      ; preds = %2
+; <label>:
   ret void
 }
 
@@ -52,11 +52,11 @@ define void @reg_pressure(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
 ;CHECK: xor
 ;CHECK: xor
 ;CHECK: ret
-define void @small_loop(ptr nocapture %A, i64 %n) nounwind uwtable ssp {
+define void @small_loop(ptr nocapture %A, i64 %n) {
   %1 = icmp eq i64 %n, 0
   br i1 %1, label %._crit_edge, label %.lr.ph
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %i.01 = phi i64 [ %5, %.lr.ph ], [ 0, %0 ]
   %2 = getelementptr inbounds i16, ptr %A, i64 %i.01
   %3 = load i16, ptr %2, align 2
@@ -66,6 +66,6 @@ define void @small_loop(ptr nocapture %A, i64 %n) nounwind uwtable ssp {
   %exitcond = icmp eq i64 %5, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   ret void
 }

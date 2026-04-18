@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of USM allocation functions.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL___IMPL_USM_FUNCTIONS_HPP
 #define _LIBSYCL___IMPL_USM_FUNCTIONS_HPP

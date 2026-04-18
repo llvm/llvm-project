@@ -1082,7 +1082,6 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
             PP.RevertCachedTokens(2);
             ConsumeToken(); // the semi.
             EndLoc = ConsumeAnyToken();
-            assert(Tok.is(tok::semi));
           } else {
             EndLoc = Tok.getLocation();
           }

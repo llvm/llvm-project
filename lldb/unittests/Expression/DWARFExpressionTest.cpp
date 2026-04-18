@@ -74,7 +74,7 @@ public:
     return LLDB_INVALID_OFFSET;
   }
 
-  bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+  bool ParseVendorDWARFOpcode(uint8_t op, const llvm::DataExtractor &opcodes,
                               lldb::offset_t &offset, RegisterContext *reg_ctx,
                               lldb::RegisterKind reg_kind,
                               DWARFExpression::Stack &stack) const override {
@@ -629,7 +629,7 @@ TEST(DWARFExpression, DW_OP_unknown) {
   EXPECT_THAT_EXPECTED(
       Evaluate({0xff}),
       llvm::FailedWithMessage(
-          "Unhandled opcode DW_OP_unknown_ff in DWARFExpression"));
+          "unhandled opcode DW_OP_unknown_ff in DWARFExpression"));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
@@ -802,8 +802,7 @@ public:
   }
 
   virtual bool ParseVendorDWARFOpcode(
-      uint8_t op, const lldb_private::DataExtractor &opcodes,
-      lldb::offset_t &offset,
+      uint8_t op, const llvm::DataExtractor &opcodes, lldb::offset_t &offset,
 
       RegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
       std::vector<lldb_private::Value> &stack) const override {
@@ -814,12 +813,12 @@ public:
     // DW_OP_WASM_location WASM_GLOBAL:0x03 index:u32
     // Called with "arguments" 0x03 and  0x04
     // Location type:
-    if (opcodes.GetU8(&offset) != /* global */ 0x03) {
+    if (opcodes.getU8(&offset) != /* global */ 0x03) {
       return false;
     }
 
     // Index:
-    if (opcodes.GetU32(&offset) != 0x04) {
+    if (opcodes.getU32(&offset) != 0x04) {
       return false;
     }
 

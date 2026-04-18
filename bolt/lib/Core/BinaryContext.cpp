@@ -155,6 +155,9 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       STI(std::move(STI)), InstPrinter(std::move(InstPrinter)),
       MIA(std::move(MIA)), MIB(std::move(MIB)), MRI(std::move(MRI)),
       DisAsm(std::move(DisAsm)), Logger(Logger), InitialDynoStats(isAArch64()) {
+  // createMCAsmInfo stored a pointer to a local MCTargetOptions in MCAsmInfo.
+  // Update it to point to our member that will outlive MCAsmInfo.
+  const_cast<MCAsmInfo *>(this->AsmInfo.get())->setTargetOptions(MCOptions);
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
@@ -2125,8 +2128,7 @@ ArrayRef<uint8_t> BinaryContext::extractData(uint64_t Address,
 
 void BinaryContext::printData(raw_ostream &OS, ArrayRef<uint8_t> Data,
                               uint64_t Offset) const {
-  DataExtractor DE(Data, AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Data, AsmInfo->isLittleEndian());
   uint64_t DataOffset = 0;
   while (DataOffset + 4 <= Data.size()) {
     OS << format("    %08" PRIx64 ": \t.word\t0x", Offset + DataOffset);
@@ -2422,8 +2424,7 @@ ErrorOr<uint64_t> BinaryContext::getUnsignedValueAtAddress(uint64_t Address,
   if (Section->isVirtual())
     return 0;
 
-  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian());
   auto ValueOffset = static_cast<uint64_t>(Address - Section->getAddress());
   return DE.getUnsigned(&ValueOffset, Size);
 }
@@ -2437,8 +2438,7 @@ ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
   if (Section->isVirtual())
     return 0;
 
-  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian());
   auto ValueOffset = static_cast<uint64_t>(Address - Section->getAddress());
   return DE.getSigned(&ValueOffset, Size);
 }

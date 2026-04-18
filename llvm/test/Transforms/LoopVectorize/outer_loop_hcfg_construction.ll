@@ -270,7 +270,7 @@ outermost.loop.k.cleanup:
   %exitcond71.not = icmp eq i64 %k.next, %n
   br i1 %exitcond71.not, label %return, label %outermost.loop.k
 
-innermost.loop.j1.lr.ph:                                 ; preds = %middle.loop.j0.cleanup
+innermost.loop.j1.lr.ph:
   %1 = load ptr, ptr %invariant.gep, align 8
   br label %innermost.loop.j1
 

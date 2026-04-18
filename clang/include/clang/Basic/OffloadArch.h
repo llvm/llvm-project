@@ -104,6 +104,8 @@ enum class OffloadArch {
   GFX1152,
   GFX1153,
   GFX1170,
+  GFX1171,
+  GFX1172,
   GFX12_GENERIC,
   GFX1200,
   GFX1201,
@@ -152,8 +154,8 @@ const char *OffloadArchToVirtualArchString(OffloadArch A);
 // OffloadArch::Unknown if the string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
 
-llvm::StringRef OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
-                                    OffloadArch ID);
+llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
+                                 OffloadArch ID);
 
 } // namespace clang
 

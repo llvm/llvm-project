@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def GPRIdxMode : CustomOperand<i32>;
+def GPRIdxMode : CustomOperand;
 
 class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
                   list<dag> pattern=[]> :
@@ -1727,7 +1727,7 @@ def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
    let hasSideEffects = 0;
 }
 
-let SubtargetPredicate = HasVMemToLDSLoad in {
+let SubtargetPredicate = HasAsyncMark in {
 def ASYNCMARK : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_asyncmark)]> {
    let maybeAtomic = 0;

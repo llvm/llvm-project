@@ -809,6 +809,12 @@ install(
   COMPONENT hlsl-resource-headers)
 
 install(
+  FILES ${hlsl_generated_files}
+  DESTINATION ${header_install_dir}/hlsl
+  ${EXCLUDE_HLSL}
+  COMPONENT hlsl-resource-headers)
+
+install(
   FILES ${spirv_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL

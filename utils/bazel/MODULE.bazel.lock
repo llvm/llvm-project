@@ -234,7 +234,7 @@
   "moduleExtensions": {
     "//:extensions.bzl%llvm_repos_extension": {
       "general": {
-        "bzlTransitiveDigest": "rTcAYj9/bbplfywX07/EVPa4ovMYVYbNSlREdk0XNSI=",
+        "bzlTransitiveDigest": "YRuiz8qImVT8uVV8Sn8qLFmHoDJtHSxaYC6osnuKKh4=",
         "usagesDigest": "X0yUkkWyxQ2Y5oZVDkRSE/K4YkDWo1IjhHsL+1weKyU=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -306,15 +306,6 @@
               "sha256": "d18b97764c755528c1051d376e33545d0eb60c6ebf85680436813fa5b04cc3d1",
               "strip_prefix": "libpfm-4.13.0",
               "build_file": "@@+llvm_repos_extension+llvm-raw//utils/bazel/third_party_build:pfm.BUILD"
-            }
-          },
-          "pybind11": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
-            "attributes": {
-              "url": "https://github.com/pybind/pybind11/archive/v2.10.3.zip",
-              "sha256": "201966a61dc826f1b1879a24a3317a1ec9214a918c8eb035be2f30c3e9cfbdcb",
-              "strip_prefix": "pybind11-2.10.3",
-              "build_file": "@@+llvm_repos_extension+llvm-raw//utils/bazel/third_party_build:pybind.BUILD"
             }
           },
           "pyyaml": {

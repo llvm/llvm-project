@@ -1069,7 +1069,7 @@ TEST(APIntTest, divrem_big3) {
 }
 
 TEST(APIntTest, divrem_big4) {
-  // Tests heap allocation in divide() enfoced by huge numbers
+  // Tests heap allocation in divide() enforced by huge numbers
   testDiv(APInt{4096, 5}.shl(2001),
           APInt{4096, 1}.shl(2000),
           APInt{4096, 4219*13});
@@ -1184,6 +1184,29 @@ TEST(APIntTest, divrem_simple) {
   APInt::udivrem(A, I, Q, R);
   EXPECT_EQ(Q, A);
   EXPECT_EQ(R, APInt(65, 0));
+}
+
+TEST(APIntTest, URemUint64PowerOf2Wide) {
+  // Edge case tests for urem with power of two arguments
+  APInt V(128, "80000000000000000000000000000FFF", 16);
+
+  EXPECT_EQ(15u, V.urem(16));
+  EXPECT_EQ(255u, V.urem(256));
+  EXPECT_EQ(4095u, V.urem(4096));
+
+  EXPECT_EQ(APInt(128, 15), V.urem(APInt(128, 16)));
+  EXPECT_EQ(APInt(128, 255), V.urem(APInt(128, 256)));
+  EXPECT_EQ(APInt(128, 4095), V.urem(APInt(128, 4096)));
+
+  APInt AllOnes = APInt::getAllOnes(128);
+
+  EXPECT_EQ(63u, AllOnes.urem(64));
+  EXPECT_EQ(255u, AllOnes.urem(256));
+  EXPECT_EQ(4095u, AllOnes.urem(4096));
+
+  EXPECT_EQ(APInt(128, 63), AllOnes.urem(APInt(128, 64)));
+  EXPECT_EQ(APInt(128, 255), AllOnes.urem(APInt(128, 256)));
+  EXPECT_EQ(APInt(128, 4095), AllOnes.urem(APInt(128, 4096)));
 }
 
 TEST(APIntTest, fromString) {
@@ -2622,6 +2645,26 @@ TEST(APIntTest, clearBits) {
   EXPECT_EQ(32u, i64hi32.countl_zero());
   EXPECT_EQ(0u, i64hi32.countl_one());
   EXPECT_EQ(32u, i64hi32.popcount());
+
+  APInt i65top = APInt::getAllOnes(65);
+  i65top.clearBits(64, 65);
+  EXPECT_EQ(64u, i65top.countr_one());
+  EXPECT_EQ(0u, i65top.countr_zero());
+  EXPECT_EQ(64u, i65top.getActiveBits());
+  EXPECT_EQ(1u, i65top.countl_zero());
+  EXPECT_EQ(0u, i65top.countl_one());
+  EXPECT_EQ(64u, i65top.popcount());
+  EXPECT_FALSE(i65top[64]);
+  EXPECT_EQ(APInt(65, UINT64_MAX), i65top);
+
+  APInt i128hi64 = APInt::getAllOnes(128);
+  i128hi64.clearBits(64, 128);
+  EXPECT_EQ(64u, i128hi64.countr_one());
+  EXPECT_EQ(0u, i128hi64.countr_zero());
+  EXPECT_EQ(64u, i128hi64.getActiveBits());
+  EXPECT_EQ(64u, i128hi64.countl_zero());
+  EXPECT_EQ(0u, i128hi64.countl_one());
+  EXPECT_EQ(64u, i128hi64.popcount());
 }
 
 TEST(APIntTest, getLoBits) {

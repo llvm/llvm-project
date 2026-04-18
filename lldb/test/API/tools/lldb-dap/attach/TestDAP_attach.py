@@ -6,6 +6,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbdap_testcase
+import os
 import subprocess
 import threading
 import time
@@ -90,6 +91,30 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.spawn_thread.start()
         try:
             self.attach(program=program, waitFor=True)
+            self.continue_and_verify_pid()
+        finally:
+            self.spawn_event.set()
+            if self.spawn_thread.is_alive():
+                self.spawn_thread.join(timeout=10)
+
+    @expectedFailureWindows
+    def test_by_partial_name_waitFor(self):
+        """
+        Tests waiting for and attaching to a process by partial process name
+        that doesn't exist yet.
+        """
+        program = self.build_and_create_debug_adapter_for_attach()
+        self.spawn_event = threading.Event()
+        self.spawn_thread = threading.Thread(
+            target=self.spawn_and_wait,
+            args=(
+                program,
+                1.0,
+            ),
+        )
+        self.spawn_thread.start()
+        try:
+            self.attach(program=os.path.basename(program), waitFor=True)
             self.continue_and_verify_pid()
         finally:
             self.spawn_event.set()

@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
@@ -422,17 +423,21 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
 
     // Add all VPValues for all parts to AnyOf, FirstActiveLaneMask and
-    // Compute*Result which combine all parts to compute the final value.
+    // ComputeReductionResult which combine all parts to compute the final
+    // value.
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
         match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
-        match(&R,
-              m_ComputeAnyOfResult(m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_ComputeReductionResult(m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
+      continue;
+    }
+    if (match(&R,
+              m_ComputeAnyOfResult(m_VPValue(), m_VPValue(), m_VPValue()))) {
+      addUniformForAllParts(cast<VPInstruction>(&R));
       continue;
     }
     VPValue *Op0;
@@ -669,27 +674,33 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
 /// VPReplicateRecipes are converted to single-scalar ones, branch-on-mask is
 /// converted into BranchOnCond and extracts are created as needed.
 static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
-                                                       VPBlockBase *Entry) {
+                                                       VPBlockBase *Entry,
+                                                       ElementCount VF) {
   VPValue *Idx0 = Plan.getZero(IdxTy);
+  VPTypeAnalysis TypeInfo(Plan);
   for (VPBlockBase *VPB : vp_depth_first_shallow(Entry)) {
     for (VPRecipeBase &OldR : make_early_inc_range(cast<VPBasicBlock>(*VPB))) {
       VPBuilder Builder(&OldR);
       assert(!match(&OldR, m_ExtractElement(m_VPValue(), m_VPValue())) &&
              "must not contain extracts before conversion");
-      for (const auto &[I, Op] : enumerate(OldR.operands())) {
-        // Skip operands that don't need extraction: values defined in the
-        // same block (already scalar), or values that are already single
-        // scalars.
-        auto *DefR = Op->getDefiningRecipe();
-        if ((isa_and_present<VPScalarIVStepsRecipe>(DefR) &&
-             DefR->getParent() == VPB) ||
-            vputils::isSingleScalar(Op))
-          continue;
 
-        // Extract lane zero from values defined outside the region.
-        VPValue *Extract = Builder.createNaryOp(Instruction::ExtractElement,
-                                                {Op, Idx0}, OldR.getDebugLoc());
-        OldR.setOperand(I, Extract);
+      // For scalar VF, operands are already scalar; no extraction needed.
+      if (!VF.isScalar()) {
+        for (const auto &[I, Op] : enumerate(OldR.operands())) {
+          // Skip operands that don't need extraction: values defined in the
+          // same block (already scalar), or values that are already single
+          // scalars.
+          auto *DefR = Op->getDefiningRecipe();
+          if ((isa_and_present<VPScalarIVStepsRecipe>(DefR) &&
+               DefR->getParent() == VPB) ||
+              vputils::isSingleScalar(Op))
+            continue;
+
+          // Extract lane zero from values defined outside the region.
+          VPValue *Extract = Builder.createNaryOp(
+              Instruction::ExtractElement, {Op, Idx0}, OldR.getDebugLoc());
+          OldR.setOperand(I, Extract);
+        }
       }
 
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&OldR)) {
@@ -705,6 +716,15 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
                              {BranchOnMask->getOperand(0)},
                              BranchOnMask->getDebugLoc());
         BranchOnMask->eraseFromParent();
+      } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
+        VPValue *PredOp = PredPhi->getOperand(0);
+        Type *PredTy = TypeInfo.inferScalarType(PredOp);
+        VPValue *PoisonVal = Plan.getOrAddLiveIn(PoisonValue::get(PredTy));
+
+        VPPhi *NewPhi = Builder.createScalarPhi({PoisonVal, PredOp},
+                                                PredPhi->getDebugLoc());
+        PredPhi->replaceAllUsesWith(NewPhi);
+        PredPhi->eraseFromParent();
       } else {
         assert((isa<VPScalarIVStepsRecipe>(OldR) ||
                 (isa<VPInstruction>(OldR) &&
@@ -768,7 +788,7 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
 
   // Process the original blocks for lane 0: converting their recipes to
   // single-scalar.
-  convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneEntry);
+  convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneEntry, VF);
 
   // Clone converted blocks for remaining lanes and process each in reverse
   // order, connecting each lane's Exiting block to the subsequent lane's entry.
@@ -802,9 +822,10 @@ static void replicateReplicateRegionsByVF(VPlan &Plan, ElementCount VF,
   SmallVector<VPRegionBlock *> ReplicateRegions;
   for (VPRegionBlock *Region : VPBlockUtils::blocksOnly<VPRegionBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
-    // Skip regions with live-outs as packing scalar results back into vectors
-    // is not yet implemented.
-    if (Region->isReplicator() && Region->getExitingBasicBlock()->empty())
+    // Skip regions with live-outs when vectorizing as packing scalar results
+    // back into vectors is not yet implemented.
+    if (Region->isReplicator() &&
+        (VF.isScalar() || Region->getExitingBasicBlock()->empty()))
       ReplicateRegions.push_back(Region);
   }
 
@@ -819,11 +840,15 @@ static void replicateReplicateRegionsByVF(VPlan &Plan, ElementCount VF,
 }
 
 void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
-  if (Plan.hasScalarVFOnly())
-    return;
-
   Type *IdxTy = IntegerType::get(
       Plan.getScalarHeader()->getIRBasicBlock()->getContext(), 32);
+
+  if (Plan.hasScalarVFOnly()) {
+    // When Plan is only unrolled by UF, replicating by VF amounts to dissolving
+    // replicate regions.
+    replicateReplicateRegionsByVF(Plan, VF, IdxTy);
+    return;
+  }
 
   // Visit all VPBBs outside the loop region and directly inside the top-level
   // loop region.

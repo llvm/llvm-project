@@ -11,7 +11,7 @@ void struct_test(void) {
   auto normal_struct2 = (struct S1) { .x = 1, .y = 2 };
   auto underspecified_struct = (struct S2 { int x, y; }){ 1, 2 };
   auto underspecified_struct_redef = (struct S1 { char x, y; }){ 'A', 'B'}; // expected-error {{type 'struct S1' has incompatible definitions}} \
-                                                                               expected-error {{cannot use 'auto' with array in C}} \
+                                                                               expected-error {{cannot use 'auto' with initializer list in C}} \
                                                                                expected-note {{field 'x' has type 'char' here}}
   auto underspecified_empty_struct = (struct S3 { }){ };
   auto zero_init_struct = (struct S4 { int x; }){ 0 };
@@ -25,7 +25,7 @@ void union_test(void) {
   auto normal_union_double = (union U1){ .b = 2.4 };
   auto underspecified_union = (union U2 { int a; double b; }){ .a = 34 };
   auto underspecified_union_redef = (union U1 { char a; double b; }){ .a = 'A' }; // expected-error {{type 'union U1' has incompatible definitions}} \
-                                                                                     expected-error {{cannot use 'auto' with array in C}} \
+                                                                                     expected-error {{cannot use 'auto' with initializer list in C}} \
                                                                                      expected-note {{field 'a' has type 'char' here}}
   auto underspecified_empty_union = (union U3 {  }){  };
 }
@@ -37,7 +37,7 @@ void enum_test(void) {
   auto normal_enum_bar = (enum E1){ BAR };
   auto underspecified_enum = (enum E2 { BAZ, QUX }){ BAZ };
   auto underspecified_enum_redef = (enum E1 { ONE, TWO }){ ONE }; // expected-error {{type 'enum E1' has incompatible definitions}} \
-                                                                     expected-error {{cannot use 'auto' with array in C}} \
+                                                                     expected-error {{cannot use 'auto' with initializer list in C}} \
                                                                      expected-note {{enumerator 'ONE' with value 0 here}}
   auto underspecified_empty_enum = (enum E3 {  }){ };             // expected-error {{use of empty enum}}
   auto underspecified_undeclared_enum = (enum E4){ FOO };         // expected-error {{variable has incomplete type 'enum E4'}} \

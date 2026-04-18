@@ -723,17 +723,19 @@ bool HexagonOptAddrMode::processAddUses(NodeAddr<StmtNode *> AddSN,
     int64_t newOffset = OffsetOp.getImm() + AddMI->getOperand(2).getImm();
     if (!isValidOffset(MI, newOffset))
       return false;
-
-    // Since we'll be extending the live range of Rt in the following example,
-    // make sure that is safe. another definition of Rt doesn't exist between 'add'
-    // and load/store instruction.
-    //
-    // Ex: Rx= add(Rt,#10)
-    //     memw(Rx+#0) = Rs
-    // will be replaced with =>  memw(Rt+#10) = Rs
-    if (!isSafeToExtLR(AddSN, AddMI, BaseReg, UNodeList))
-      return false;
   }
+
+  // Since we'll be extending the live range of Rt in the following example,
+  // make sure that is safe. another definition of Rt doesn't exist between
+  // 'add' and load/store instruction.
+  //
+  // Ex: Rx= add(Rt,#10)
+  //     memw(Rx+#0) = Rs
+  // will be replaced with =>  memw(Rt+#10) = Rs
+  // Note: isSafeToExtLR arguments are loop-invariant; call it once after
+  // validating all uses to avoid O(N^2) behavior when UNodeList is large.
+  if (!isSafeToExtLR(AddSN, AddMI, BaseReg, UNodeList))
+    return false;
 
   NodeId LRExtRegRD = 0;
   // Iterate through all the UseNodes in SN and find the reaching def

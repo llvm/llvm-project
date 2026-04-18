@@ -1682,7 +1682,7 @@ public:
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                       ArrayRef<unsigned> Ops,
                                       MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex,
+                                      int FrameIndex, MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
@@ -1692,11 +1692,9 @@ public:
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
-  InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const final;
+  ValueUniformity getValueUniformity(const MachineInstr &MI) const final;
 
-  InstructionUniformity
-  getGenericInstructionUniformity(const MachineInstr &MI) const;
+  ValueUniformity getGenericValueUniformity(const MachineInstr &MI) const;
 
   const MIRFormatter *getMIRFormatter() const override;
 
