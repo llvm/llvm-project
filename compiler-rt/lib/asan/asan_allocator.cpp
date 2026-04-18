@@ -815,10 +815,13 @@ struct Allocator {
       // If realloc() races with free(), we may start copying freed memory.
       // However, we will report racy double-free later anyway.
 #if SANITIZER_WINDOWS64
-      // When memcpy/memmove are aliased in the CRT, REAL(memcpy) may
-      // re-enter the interceptor after thunk + runtime patching.
-      // Use internal_memcpy to avoid false positives in that case.
-      if (win64_memcpy_memmove_are_disjoint)
+      // When memcpy/memmove are aliased, REAL(memcpy) may re-enter the
+      // interceptor. Zero-size allocations upgraded to 1 byte keep that byte
+      // shadow-poisoned (from_zero_alloc / asan_mark_zero_allocation); copying
+      // it via intercepted libc hits a spurious READ error. Use internal_memcpy
+      // in those cases, otherwise REAL(memcpy) is typically faster.
+      if (memcpy_size && win64_memcpy_memmove_are_disjoint &&
+          !m->from_zero_alloc)
         REAL(memcpy)(new_ptr, old_ptr, memcpy_size);
       else
         internal_memcpy(new_ptr, old_ptr, memcpy_size);
