@@ -5289,20 +5289,17 @@ multiclass BranchSimpleMnemonic2<string name, string pm, int bo>
   : BranchSimpleMnemonic1<name, pm, bo> {
   def : InstAlias<"b"#name#"ctr"#pm#" $bi", (gBCCTR bo, crbitrc:$bi, 0)>;
   def : InstAlias<"b"#name#"ctrl"#pm#" $bi", (gBCCTRL bo, crbitrc:$bi, 0)>;
-}
-multiclass BranchSimpleMnemonic3<string name, string pm, int bo>
-  : BranchSimpleMnemonic2<name, pm, bo> {
   let Predicates = [IsISA2_07] in {
-  def : InstAlias<"b"#name#"tar"#pm#" $bi", (gBCTAR bo, crbitrc:$bi, 0)>;
-  def : InstAlias<"b"#name#"tarl"#pm#" $bi", (gBCTARL bo, crbitrc:$bi, 0)>;
+    def : InstAlias<"b"#name#"tar"#pm#" $bi", (gBCTAR bo, crbitrc:$bi, 0)>;
+    def : InstAlias<"b"#name#"tarl"#pm#" $bi", (gBCTARL bo, crbitrc:$bi, 0)>;
   }
 }
-defm : BranchSimpleMnemonic3<"t", "", 12>;
-defm : BranchSimpleMnemonic3<"f", "", 4>;
-defm : BranchSimpleMnemonic3<"t", "-", 14>;
-defm : BranchSimpleMnemonic3<"f", "-", 6>;
-defm : BranchSimpleMnemonic3<"t", "+", 15>;
-defm : BranchSimpleMnemonic3<"f", "+", 7>;
+defm : BranchSimpleMnemonic2<"t", "", 12>;
+defm : BranchSimpleMnemonic2<"f", "", 4>;
+defm : BranchSimpleMnemonic2<"t", "-", 14>;
+defm : BranchSimpleMnemonic2<"f", "-", 6>;
+defm : BranchSimpleMnemonic2<"t", "+", 15>;
+defm : BranchSimpleMnemonic2<"f", "+", 7>;
 defm : BranchSimpleMnemonic1<"dnzt", "", 8>;
 defm : BranchSimpleMnemonic1<"dnzf", "", 0>;
 defm : BranchSimpleMnemonic1<"dzt", "", 10>;
