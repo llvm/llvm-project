@@ -191,7 +191,9 @@ public:
     }
 
     MutexError mutex_result = mutex->lock();
-    if (waiter.next != &waiter) {
+    // If we did consume the signal (old_state != Waiting) and there
+    // are other in the queue after us, we need to wake the next waiter.
+    if (old_state != Waiting && waiter.next != &waiter) {
       auto *next_waiter = static_cast<CndWaiter *>(waiter.next);
       WaiterHeader::remove(&waiter);
       auto &next_barrier_futex = next_waiter->barrier.get_raw_futex();
