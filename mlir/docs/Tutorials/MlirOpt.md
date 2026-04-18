@@ -131,13 +131,13 @@ module {
 ```
 
 This pass has options that allow the user to configure its behavior.
-For example, the `fusion-compute-tolerance` option
+For example, the `compute-tolerance` option
 is described as the "fractional increase in additional computation tolerated while fusing."
 If this value is set to zero on the command line,
 the pass will not fuse the loops.
 
 ```bash
-build/bin/mlir-opt --pass-pipeline="builtin.module(affine-loop-fusion{fusion-compute-tolerance=0})" \
+build/bin/mlir-opt --pass-pipeline="builtin.module(affine-loop-fusion{compute-tolerance=0})" \
 mlir/test/Examples/mlir-opt/loop_fusion.mlir
 ```
 
