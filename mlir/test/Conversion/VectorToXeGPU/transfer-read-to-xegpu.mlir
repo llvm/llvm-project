@@ -528,6 +528,13 @@ gpu.func @load_2D_vector_addrspace3(%source: memref<16x32xf32, 3>,
 // LOAD-ND: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : !xegpu.mem_desc<16x32xf32>, index, index -> vector<8x16xf32>
 // LOAD-ND: gpu.return %[[DATA]] : vector<8x16xf32>
 
+// LOAD-GATHER-LABEL: @load_2D_vector_addrspace3
+// LOAD-GATHER-SAME: %[[SOURCE:.+]]: memref<16x32xf32, 3>
+// LOAD-GATHER-SAME: %[[OFFSET:.+]]: index
+// LOAD-GATHER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
+// LOAD-GATHER: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : !xegpu.mem_desc<16x32xf32>, index, index -> vector<8x16xf32>
+// LOAD-GATHER: gpu.return %[[DATA]] : vector<8x16xf32>
+
 }
 
 // -----
