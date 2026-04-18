@@ -5443,7 +5443,7 @@ FileSpecList Target::GetSafeAutoLoadPaths() const {
     else
       LLDB_LOG_ERROR(GetLog(LLDBLog::Modules | LLDBLog::Platform),
                      platform_fspecs_or_err.takeError(),
-                     "Skipping safe auto-load path: {0}");
+                     "Skipping safe auto-load: {0}");
   }
 
   // Properties for testing get added last so they take priority.
