@@ -3341,9 +3341,9 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
     } else
       return ValueObjectConstResult::Create(
           exe_ctx.GetBestExecutionContextScope(),
-          Status::FromErrorStringWithFormat(
-              "cannot get value as APFloat: %s",
-              llvm::toString(value_or_err.takeError()).c_str()));
+          Status::FromErrorStringWithFormatv(
+              "cannot get value as APFloat: {0}",
+              llvm::toString(value_or_err.takeError())));
   } else {
     // Get the value as APSInt and extend or truncate it to the requested size.
     auto value_or_err = GetValueAsAPSInt();
