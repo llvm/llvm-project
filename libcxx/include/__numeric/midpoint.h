@@ -37,7 +37,8 @@ template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
   using _Up                = make_unsigned_t<_Tp>;
   if constexpr (sizeof(_Tp) < sizeof(unsigned)) {
-    return (static_cast<unsigned>(__a) + static_cast<unsigned>(__b)) / 2;
+    using _Ip = conditional_t<is_signed_v<_Tp>, signed, unsigned>;
+    return (static_cast<_Ip>(__a) + static_cast<_Ip>(__b)) / 2;
   } else {
     constexpr _Up __bitshift = numeric_limits<_Up>::digits - 1;
 
