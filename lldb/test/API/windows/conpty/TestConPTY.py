@@ -36,6 +36,8 @@ class ConPTYTestCase(TestBase):
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
+        self.dbg.SetAsync(False)
+
         process = target.LaunchSimple(
             [mode], None, self.get_process_working_directory()
         )
