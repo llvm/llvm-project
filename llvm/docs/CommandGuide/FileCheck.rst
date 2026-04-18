@@ -110,14 +110,6 @@ and from the command line.
   -verify``. With this option FileCheck will verify that input does not contain
   warnings not covered by any ``CHECK:`` patterns.
 
-.. option:: --diff <value>
-
-  Controls how mismatches between the check patterns and the input are
-  reported. If ``--diff`` is specified without a value, it defaults to ``unidiff``.
-
-  * ``none`` – Use the standard FileCheck diagnostic messages.
-  * ``unidiff`` – Display mismatches using a unified diff format.
-
 .. option:: --dump-input <value>
 
   Dump input to stderr, adding annotations representing currently enabled
