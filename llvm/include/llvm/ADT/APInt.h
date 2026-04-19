@@ -1268,7 +1268,7 @@ public:
     return isSubsetOfSlowCase(RHS);
   }
 
-  /// This operation checks if valid bits exclusively set in this APInt or RHS.
+  /// This operation checks if all bits are set in either this or RHS.
   bool isExhaustive(const APInt &RHS) const {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
     if (isSingleWord())
