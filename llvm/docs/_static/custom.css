@@ -4,9 +4,13 @@
   --content-width: none;
 }
 
-/* Allow the top-level container to fill the entire browser width. */
-.page {
-  max-width: none;
+/* These settings seem to reasonably balance between readability and content
+ * density for wide screens. */
+.page .sidebar-drawer {
+  width: unset;
+}
+.main .toc-drawer {
+  min-width: 15em;
 }
 
 /* Ensure the main content area is allowed to shrink/not-overflow
@@ -19,6 +23,17 @@
   width: unset;
 }
 
+/* Disable small margin added by various UA stylesheets to prevent
+ * scrolling artifacts. */
+body {
+  margin: 0;
+}
+
+/* Allow the top-level container to fill the entire browser width. */
+.page {
+  max-width: none;
+}
+
 /* Ensure wide tables and code blocks have their own scrollbars
    instead of forcing the container to expand beyond the viewport. */
 .content table,
@@ -29,15 +44,19 @@
   display: block;
 }
 
-.page .sidebar-drawer {
-  width: unset;
-}
-
-.main .toc-drawer {
-  min-width: 15em;
-}
-
 /* Ensure paragraphs wrap within the content area. */
 .content p {
   overflow-wrap: break-word;
+}
+
+/* Printing support. */
+@media print {
+    pre {
+        white-space: pre-wrap !important;
+    }
+    .content-icon-container,
+    .skip-to-content,
+    .back-to-top {
+        display: none !important;
+    }
 }
