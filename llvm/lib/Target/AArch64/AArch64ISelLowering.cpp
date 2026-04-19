@@ -25963,25 +25963,20 @@ static bool getBoolVectorBitcastCompare(SDValue Vec, SDValue RHS,
   if (CompareBitsSize != 64 && CompareBitsSize != 128)
     return false;
 
+  bool IsNull = isNullConstant(RHS);
   if (CompareBitsSize == 64) {
     CompareLHS = DAG.getBitcast(MVT::i64, CompareBits);
-  } else if (isNullConstant(RHS)) {
+    CompareRHS = IsNull ? DAG.getConstant(0, DL, MVT::i64)
+                        : DAG.getAllOnesConstant(DL, MVT::i64);
+  } else {
     SDValue PairwiseBits = DAG.getBitcast(MVT::v2i64, CompareBits);
     SDValue Lo = DAG.getExtractVectorElt(DL, MVT::i64, PairwiseBits, 0);
     SDValue Hi = DAG.getExtractVectorElt(DL, MVT::i64, PairwiseBits, 1);
     CompareLHS = DAG.getNode(ISD::ADD, DL, MVT::i64, Lo, Hi);
-  } else {
-    SDValue Lo, Hi;
-    std::tie(Lo, Hi) = DAG.SplitVector(CompareBits, DL);
-
-    unsigned CombineOpc = isNullConstant(RHS) ? ISD::OR : ISD::AND;
-    CompareLHS =
-        DAG.getNode(CombineOpc, DL, MVT::i64, DAG.getBitcast(MVT::i64, Lo),
-                    DAG.getBitcast(MVT::i64, Hi));
+    CompareRHS = IsNull ? DAG.getConstant(0, DL, MVT::i64)
+                        : DAG.getSignedConstant(-2, DL, MVT::i64);
   }
 
-  CompareRHS = isNullConstant(RHS) ? DAG.getConstant(0, DL, MVT::i64)
-                                   : DAG.getAllOnesConstant(DL, MVT::i64);
   return true;
 }
 
