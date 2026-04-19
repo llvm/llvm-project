@@ -1269,11 +1269,11 @@ public:
   }
 
   /// This operation checks if all bits are set in either this or RHS.
-  bool isExhaustive(const APInt &RHS) const {
+  bool isInverseOf(const APInt &RHS) const {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
     if (isSingleWord())
-      return (U.VAL | RHS.U.VAL) == llvm::maskTrailingOnes<WordType>(BitWidth);
-    return isExhaustiveSlowCase(RHS);
+      return (U.VAL ^ RHS.U.VAL) == llvm::maskTrailingOnes<WordType>(BitWidth);
+    return isInverseOfSlowCase(RHS);
   }
 
   /// @}
@@ -2102,8 +2102,8 @@ private:
   /// out-of-line slow case for isSubsetOf.
   LLVM_ABI bool isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
 
-  /// out-of-line slow case for isExhaustive.
-  LLVM_ABI bool isExhaustiveSlowCase(const APInt &RHS) const LLVM_READONLY;
+  /// out-of-line slow case for isInverseOf.
+  LLVM_ABI bool isInverseOfSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for setBits.
   LLVM_ABI void setBitsSlowCase(unsigned loBit, unsigned hiBit);
