@@ -118,7 +118,7 @@ And the hard way:
 .. code-block:: llvm
 
     %0 = add i32 %X, %X           ; yields i32:%0
-    %1 = add i32 %0, %0           /* yields i32:%1 */
+    %1 = add i32 %0, %0           ; yields i32:%1
     %result = add i32 %1, %1
 
 This last way of multiplying ``%X`` by 8 illustrates several important
@@ -783,8 +783,8 @@ be performed as loads and stores of the correct type since stores of other
 types may not propagate the external data.
 Therefore it is not legal to convert an existing load/store (or a
 ``llvm.memcpy`` / ``llvm.memmove`` intrinsic) of pointer types with external
-state to a load/store of an integer type with the same bitwidth, as that may drop
-the external state.
+state to a load/store of an integer or byte type with the same bitwidth, as that
+may drop the external state.
 
 
 .. _globalvars:
@@ -1453,10 +1453,11 @@ Currently, only the following parameter attributes are defined:
     present and assign it particular semantics. This will be documented on
     individual intrinsics.
 
-    The attribute may only be applied to pointer typed arguments of intrinsic
-    calls. It cannot be applied to non-intrinsic calls, and cannot be applied
-    to parameters on function declarations. For non-opaque pointers, the type
-    passed to ``elementtype`` must match the pointer element type.
+    The attribute may only be applied to pointer typed arguments or return
+    values of intrinsic calls. It cannot be applied to non-intrinsic calls,
+    and cannot be applied to parameters on function declarations.
+    For non-opaque pointers, the type passed to ``elementtype`` must match
+    the pointer element type.
 
 .. _attr_align:
 
@@ -2393,7 +2394,7 @@ For example:
     occurs inside a cycle in the dynamic call graph.
     For example:
 
-.. code-block:: llvm
+.. code-block:: text
 
     fn -> other_fn -> fn       ; fn is not norecurse
     other_fn -> fn -> other_fn ; fn is not norecurse
@@ -3404,6 +3405,9 @@ as follows:
 ``v<size>:<abi>[:<pref>]``
     This specifies the alignment for a vector type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
+``ve``
+    Specifies that vectors are element-aligned by default, rather than having
+    natural alignment.
 ``f<size>:<abi>[:<pref>]``
     This specifies the alignment for a floating-point type of a given bit
     ``<size>``. Only values of ``<size>`` that are supported by the target
@@ -4464,6 +4468,53 @@ Examples:
 | ``i1942652``   | a really big integer of over 1 million bits.   |
 +----------------+------------------------------------------------+
 
+.. _t_byte:
+
+Byte Type
+"""""""""
+
+:Overview:
+
+The byte type represents raw memory data in SSA registers. It should be used
+when it cannot be determined whether a value holds a pointer or another type at
+run time, or if the value contains uninitialized or poison data. Frontends are
+expected to use a byte type when:
+
+#. Lowering memory operations like `memcpy` and `memmove` to load/store pairs
+   without knowing the underlying type being copied.
+
+#. Working with union types that can hold a pointer alongside a non-pointer
+   type.
+
+#. Working with possibly uninitialized data.
+
+Otherwise, when known, the specific type should be used. Each bit can be:
+
+* An integer bit (0 or 1)
+* Part of a pointer value
+* ``poison``
+
+Any bit width from 1 bit to 2\ :sup:`23`\ (about 8 million) can be specified.
+
+:Syntax:
+
+::
+
+      bN
+
+The number of bits the byte occupies is specified by the ``N`` value.
+
+Examples:
+*********
+
++----------------+------------------------------------------------+
+| ``b1``         | a single-bit byte value.                       |
++----------------+------------------------------------------------+
+| ``b32``        | a 32-bit byte value.                           |
++----------------+------------------------------------------------+
+| ``b128``       | a 128-bit byte value.                          |
++----------------+------------------------------------------------+
+
 .. _t_floating:
 
 Floating-Point Types
@@ -4897,6 +4948,10 @@ Simple Constants
     Note that hexadecimal integers are sign extended from the number
     of active bits, i.e., the bit width minus the number of leading
     zeros. So '``s0x0001``' of type '``i16``' will be -1, not 1.
+**Byte constants**
+    Byte constants are used to initialize global variables of the :ref:`byte
+    <t_byte>` type. These are strictly equivalent to integer constants:
+    ``store b8 42, ptr %p`` is equivalent to ``store i8 42, ptr %p``.
 **Floating-point constants**
     Floating-point constants use standard decimal notation (e.g.
     123.421), exponential notation (e.g., 1.23421e+2), or a more precise
@@ -7815,13 +7870,15 @@ This metadata selectively enables or disables creating predicated instructions
 for the loop, which can enable folding of the scalar epilogue loop into the
 main loop. The first operand is the string
 ``llvm.loop.vectorize.predicate.enable`` and the second operand is a bit. If
-the bit operand value is 1 vectorization is enabled. A value of 0 disables
-vectorization:
+the bit operand value is 1 predication is enabled. A value of 0 disables
+predication:
 
 .. code-block:: llvm
 
    !0 = !{!"llvm.loop.vectorize.predicate.enable", i1 0}
    !1 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
+
+Additionally, enabling predication implicitly enables vectorization.
 
 '``llvm.loop.vectorize.scalable.enable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8793,6 +8850,25 @@ Example:
     !0 = !{ptr @a}
     !1 = !{ptr @b}
 
+'``inline_history``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The ``inline_history`` metadata may be attached to a call instruction. It
+indicates that the call instruction has been inlined from the referenced
+functions. The call itself should not be inlined if it is a call to any of the
+referenced functions since that could result in infinite inlining as we
+continually inline through mutually recursive functions.
+
+This is intended to be added by and used by inliner passes.
+
+The metadata operands must all be function pointers or ``null``. ``null`` can
+appear when the referenced function is erased from the module, e.g. an internal
+function that has had all calls to it inlined.
+
+.. code-block:: text
+
+    call void @foo(), !inline_history !0
+
+    !0 = !{ptr @bar, null, ptr @baz}
 
 Module Flags Metadata
 =====================
@@ -9042,6 +9118,36 @@ For example:
     !0 = !{i32 1, !"override-stack-alignment", i32 8}
 
 This will change the stack alignment to 8B.
+
+Windows Control Flow Guard Metadata
+-----------------------------------
+
+Controls what Control Flow Guard (CFG) checks are performed, how they are
+performed, and what metadata is emitted. There are multiple flags that can be
+used to control different aspects of CFG. Using two different values for the
+same flag will raise a warning when linking.
+
+To pass this information to the backend, these options are encoded in module
+flags metadata, using the following key-value pairs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Key
+     - Value
+
+   * - cfguard
+     - * 0 --- CFG is completely disabled.
+       * 1 --- The CFG table is emitted, but no checks are performed.
+       * 2 --- The CFG table is emitted and checks are performed.
+
+   * - cfguard-mechanism
+     - * 0 --- CFG uses the default mechanism for the architecture.
+       * 1 --- CFG uses the "check" mechanism. This will result in a separate
+         call to the checker function and then one to the target.
+       * 2 --- CFG uses the "dispatch" mechanism. This calls a dispatcher
+         function which both checks and then calls the target.
 
 Embedded Objects Names Metadata
 ===============================
@@ -11758,12 +11864,17 @@ is of scalar type then the number of bytes read does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
 example, loading an ``i24`` reads at most three bytes. When loading a
 value of a type like ``i20`` with a size that is not an integral number
-of bytes, the result is undefined if the value was not originally
-written using a store of the same type.
+of bytes, the load will be performed on the next larger multiple of the byte
+size (here ``i24``) and truncated. If any of the truncated bits are non-zero,
+the result is a poison value. As such, a non-byte-sized load behaves like a
+byte-sized load followed by a ``trunc nuw`` operation.
+
 If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
 padding from the loaded aggregate value.
 If ``<pointer>`` is not a well-defined value, the behavior is undefined.
+The behavior of loading a value of a type that differs from the type used to
+store it is described in the :ref:`bitcast <i_bitcast>` section.
 
 Examples:
 """""""""
@@ -11852,8 +11963,10 @@ of scalar type then the number of bytes written does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
 example, storing an ``i24`` writes at most three bytes. When writing a
 value of a type like ``i20`` with a size that is not an integral number
-of bytes, it is unspecified what happens to the extra bits that do not
-belong to the type, but they will typically be overwritten.
+of bytes, the value will be zero extended to the next larger multiple of the
+byte size (here ``i24``) and then stored. As such, a non-byte-sized store
+behaves like a ``zext`` followed by a byte-sized store.
+
 If ``<value>`` is of aggregate type, padding is filled with
 :ref:`undef <undefvalues>`.
 If ``<pointer>`` is not a well-defined value, the behavior is undefined.
@@ -12063,6 +12176,8 @@ operation. The operation must be one of the following keywords:
 -  fmin
 -  fmaximum
 -  fminimum
+-  fmaximumnum
+-  fminimumnum
 -  uinc_wrap
 -  udec_wrap
 -  usub_cond
@@ -12072,7 +12187,7 @@ For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight.
 For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum, this must be a floating-point
+as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point
 or fixed vector of floating-point type.  The type of the '``<pointer>``'
 operand must be a pointer to that type. If the ``atomicrmw`` is marked
 as ``volatile``, then the optimizer is not allowed to modify the
@@ -12117,6 +12232,8 @@ operation argument:
 -  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*` intrinsic)
 -  fmaximum: ``*ptr = maximum(*ptr, val)`` (match the `llvm.maximum.*` intrinsic)
 -  fminimum: ``*ptr = minimum(*ptr, val)`` (match the `llvm.minimum.*` intrinsic)
+-  fmaximumnum: ``*ptr = maximumnum(*ptr, val)`` (match the `llvm.maximumnum.*` intrinsic)
+-  fminimumnum: ``*ptr = minimumnum(*ptr, val)`` (match the `llvm.minimumnum.*` intrinsic)
 -  uinc_wrap: ``*ptr = (*ptr u>= val) ? 0 : (*ptr + 1)`` (increment value with wraparound to zero when incremented above input value)
 -  udec_wrap: ``*ptr = ((*ptr == 0) || (*ptr u> val)) ? val : (*ptr - 1)`` (decrement with wraparound to input value when decremented below zero).
 -  usub_cond: ``*ptr = (*ptr u>= val) ? *ptr - val : *ptr`` (subtract only if no unsigned overflow).
@@ -13020,10 +13137,10 @@ The '``bitcast``' instruction takes a value to cast, which must be a
 non-aggregate first class value, and a type to cast it to, which must
 also be a non-aggregate :ref:`first class <t_firstclass>` type. The
 bit sizes of ``value`` and the destination type, ``ty2``, must be
-identical. If the source type is a pointer, the destination type must
-also be a pointer of the same size. This instruction supports bitwise
-conversion of vectors to integers and to vectors of other types (as
-long as they have the same size).
+identical. If the source type is a pointer, the destination type must also be a
+pointer or a byte (vector of bytes) of the same size. This instruction supports
+bitwise conversion of vectors to integers and to vectors of other types (as long
+as they have the same size).
 
 Semantics:
 """"""""""
@@ -13033,14 +13150,43 @@ is always a *no-op cast* because no bits change with this
 conversion. The conversion is done as if the ``value`` had been stored
 to memory and read back as type ``ty2``. Pointer (or vector of
 pointers) types may only be converted to other pointer (or vector of
-pointers) types with the same address space through this instruction.
-To convert pointers to other types, use the :ref:`inttoptr <i_inttoptr>`
-or :ref:`ptrtoint <i_ptrtoint>` instructions first.
+pointers) types with the same address space or byte (or vector of bytes) types
+through this instruction. To convert pointers to other types, use the
+:ref:`inttoptr <i_inttoptr>` or :ref:`ptrtoint <i_ptrtoint>` instructions first.
 
 There is a caveat for bitcasts involving vector types in relation to
 endianness. For example ``bitcast <2 x i8> <value> to i16`` puts element zero
 of the vector in the least significant bits of the i16 for little-endian while
 element zero ends up in the most significant bits for big-endian.
+
+If ``value`` is of the :ref:`byte type <t_byte>`:
+
+* If ``ty2`` is a scalar type:
+
+    * If ``ty2`` is a byte type, the original bits are unchanged.
+
+    * If ``ty2`` is a pointer type:
+
+        * If at least one bit of ``value`` is ``poison``, the result is
+          ``poison``.
+
+        * If all bits of ``value`` are from the same pointer and are correctly
+          ordered (there were no pointer bit swaps), the result is that pointer.
+
+        * Otherwise, the result is a pointer with the address given by the
+          integer value of the input, and without provenance.
+
+    * If ``ty2`` is an integer or floating-point type:
+
+        * If at least one bit of ``value`` is ``poison``, the result is
+          ``poison``.
+
+        * Otherwise, the result is the value encoded by the input bits with
+          their provenance stripped without being exposed.
+
+* If ``ty2`` is a vector type, the input bits get sliced into chunks
+  corresponding to lanes of the output. Each lane is then converted using the
+  rules for scalar types above.
 
 Example:
 """"""""
@@ -13051,6 +13197,17 @@ Example:
       %Y = bitcast i32* %x to i16*      ; yields i16*:%x
       %Z = bitcast <2 x i32> %V to i64; ; yields i64: %V (depends on endianness)
       %Z = bitcast <2 x i32*> %V to <2 x i64*> ; yields <2 x i64*>
+
+      ; considering %bi to hold an integer and %bp to hold a pointer,
+      %a = bitcast b64 %bi to i64       ; returns an integer, no-op cast
+      %b = bitcast b64 %bp to i64       ; reinterprets the pointer as an integer, returning its address without exposing provenance
+      %c = bitcast b64 %bp to ptr       ; returns a pointer, no-op cast
+      %d = bitcast b64 %bi to ptr       ; reinterprets the integer as a pointer, returning a pointer with no provenance
+
+      %e = bitcast <2 x b32> %v to i64  ; reinterprets the raw bytes as an integer
+      %f = bitcast <2 x b32> %v to ptr  ; reinterprets the raw bytes as a pointer
+
+      %g = bitcast <2 x b32> %v to <4 x i16> ; reinterprets the raw bytes as integers
 
 .. _i_addrspacecast:
 
@@ -13483,6 +13640,7 @@ instructions may yield different values.
 While ``undef`` and ``poison`` pointers can be frozen, the result is a
 non-dereferenceable pointer. See the
 :ref:`Pointer Aliasing Rules <pointeraliasing>` section for more information.
+Values of the :ref:`byte type <t_byte>` are frozen on a per-bit basis.
 If an aggregate value or vector is frozen, the operand is frozen element-wise.
 The padding of an aggregate isn't considered, since it isn't visible
 without storing it into memory and loading it with a different type.
@@ -13510,6 +13668,9 @@ Example:
       %v.fr = freeze <2 x i32> %v                ; element-wise freeze
       %d = extractelement <2 x i32> %v.fr, i32 0 ; not undef
       %add.f = add i32 %d, %d                    ; even number
+
+      %l = load b32, ptr %p                      ; may be uninitialized
+      %f = freeze b32 %l                         ; freezes on a per-bit basis
 
       ; branching on frozen value
       %poison = add nsw i1 %k, undef   ; poison
@@ -13899,8 +14060,9 @@ ensures that each ``catchpad`` has exactly one predecessor block, and it always
 terminates in a ``catchswitch``.
 
 The ``args`` correspond to whatever information the personality routine
-requires to determine if this is an appropriate handler for the exception. Control
-will transfer to the ``catchpad`` if this is the first appropriate handler for
+requires to determine if this is an appropriate handler for the exception.
+Each operand must be an alloca or a constant.
+Control will transfer to the ``catchpad`` if this is the first appropriate handler for
 the exception.
 
 The ``resultval`` has the type :ref:`token <t_token>` and is used to match the
@@ -15211,6 +15373,86 @@ Or:
 
 This is, however, dependent on context that codegen has an insight on. The
 fact that `[ i32 x 4 ]` and `%S` are equivalent depends on the target.
+
+
+.. _i_structured_alloca:
+
+'``llvm.structured.alloca``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare elementtype(<allocated_type>) ptr
+      @llvm.structured.alloca()
+
+Overview:
+"""""""""
+
+The '``llvm.structured.alloca``' intrinsic allocates uninitialized memory on
+the stack for a logical type, such as an aggregate, an array, or a scalar.
+
+Unlike the standard :ref:`alloca <i_alloca>` instruction, the physical memory
+layout of a ``llvm.structured.alloca`` is completely opaque to the IR.
+Exact padding, size, alignment and subtype offsets is target-dependent and
+may differ from the standard ``DataLayout``.
+
+Arguments:
+""""""""""
+
+The intrinsic must be annotated with an :ref:`elementtype <attr_elementtype>`
+attribute at the call-site on the return value. This attribute specifies the
+type of the allocated element.
+
+Semantics:
+""""""""""
+
+The ``llvm.structured.alloca`` intrinsic allocates uninitialized memory for a
+logical type. Loading from uninitialized memory produces an undefined value.
+This intrinsic does not guarantee that the allocated memory will store a value
+of the given type, only that it allocates enough space for it on the destination
+target. While the type's size and layout are constant (independent of location),
+the exact padding and offsets between subtypes are opaque to the IR and are
+determined by the target's backend.
+
+The resulting pointer is in the :ref:`alloca address space <alloca_addrspace>`
+defined in the :ref:`datalayout string <langref_datalayout>`.
+
+Standard pointer arithmetic (``getelementptr``, ``ptradd``) and lifetime
+intrinsics (:ref:`llvm.lifetime.start <int_lifestart>`,
+:ref:`llvm.lifetime.end <int_lifeend>`) are permitted on the returned pointer.
+However, because the physical layout is opaque, using physical pointer
+arithmetic requires the frontend or emitting pass to have explicit knowledge of
+the backend's layout rules.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+    %S = type { i32, i32, i32, i32 }
+
+    ; Allocate one instance of %S on the stack
+    %ptr = call elementtype(%S) ptr @llvm.structured.alloca()
+
+    ; Access the second field of the allocated struct
+    %field_ptr = call ptr @llvm.structured.gep(ptr elementtype(%S) %ptr, i32 1)
+    %val = load i32, ptr %field_ptr
+
+    ; Allocate an array of 10 i32s on the stack
+    %array_ptr = call elementtype([10 x i32]) ptr @llvm.structured.alloca()
+
+    ; Allocate a single i32 on the stack
+    %scalar_ptr = call elementtype(i32) ptr @llvm.structured.alloca()
+
+    ; Although the exact size of 'i32' or '%S' is opaque, it is constant
+    ; for the duration of the module. This allows, for example, reusing
+    ; an allocation slot for two different values of the same type.
+    %a = call elementtype(float) ptr @llvm.structured.alloca()
+    %b = call elementtype(float) ptr @llvm.structured.alloca()
+    ; %a and %b are guaranteed to have the same allocation size.
 
 
 .. _int_get_dynamic_area_offset:
@@ -18297,15 +18539,15 @@ support all types however.
 
       declare i32 @llvm.lround.i32.f32(float %Val)
       declare i32 @llvm.lround.i32.f64(double %Val)
-      declare i32 @llvm.lround.i32.f80(float %Val)
-      declare i32 @llvm.lround.i32.f128(double %Val)
-      declare i32 @llvm.lround.i32.ppcf128(double %Val)
+      declare i32 @llvm.lround.i32.f80(x86_fp80 %Val)
+      declare i32 @llvm.lround.i32.f128(fp128 %Val)
+      declare i32 @llvm.lround.i32.ppcf128(ppc_fp128 %Val)
 
       declare i64 @llvm.lround.i64.f32(float %Val)
       declare i64 @llvm.lround.i64.f64(double %Val)
-      declare i64 @llvm.lround.i64.f80(float %Val)
-      declare i64 @llvm.lround.i64.f128(double %Val)
-      declare i64 @llvm.lround.i64.ppcf128(double %Val)
+      declare i64 @llvm.lround.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.lround.i64.f128(fp128 %Val)
+      declare i64 @llvm.lround.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -18341,9 +18583,9 @@ floating-point type. Not all targets support all types however.
 
       declare i64 @llvm.llround.i64.f32(float %Val)
       declare i64 @llvm.llround.i64.f64(double %Val)
-      declare i64 @llvm.llround.i64.f80(float %Val)
-      declare i64 @llvm.llround.i64.f128(double %Val)
-      declare i64 @llvm.llround.i64.ppcf128(double %Val)
+      declare i64 @llvm.llround.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.llround.i64.f128(fp128 %Val)
+      declare i64 @llvm.llround.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -18381,15 +18623,15 @@ support all types however.
 
       declare i32 @llvm.lrint.i32.f32(float %Val)
       declare i32 @llvm.lrint.i32.f64(double %Val)
-      declare i32 @llvm.lrint.i32.f80(float %Val)
-      declare i32 @llvm.lrint.i32.f128(double %Val)
-      declare i32 @llvm.lrint.i32.ppcf128(double %Val)
+      declare i32 @llvm.lrint.i32.f80(x86_fp80 %Val)
+      declare i32 @llvm.lrint.i32.f128(fp128 %Val)
+      declare i32 @llvm.lrint.i32.ppcf128(ppc_fp128 %Val)
 
       declare i64 @llvm.lrint.i64.f32(float %Val)
       declare i64 @llvm.lrint.i64.f64(double %Val)
-      declare i64 @llvm.lrint.i64.f80(float %Val)
-      declare i64 @llvm.lrint.i64.f128(double %Val)
-      declare i64 @llvm.lrint.i64.ppcf128(double %Val)
+      declare i64 @llvm.lrint.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.lrint.i64.f128(fp128 %Val)
+      declare i64 @llvm.lrint.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -18428,9 +18670,9 @@ support all types however.
 
       declare i64 @llvm.llrint.i64.f32(float %Val)
       declare i64 @llvm.llrint.i64.f64(double %Val)
-      declare i64 @llvm.llrint.i64.f80(float %Val)
-      declare i64 @llvm.llrint.i64.f128(double %Val)
-      declare i64 @llvm.llrint.i64.ppcf128(double %Val)
+      declare i64 @llvm.llrint.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.llrint.i64.f128(fp128 %Val)
+      declare i64 @llvm.llrint.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -27700,6 +27942,116 @@ The '``llvm.masked.compressstore``' intrinsic is designed for compressing data i
 
 Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
 
+Masked Vector Arithmetic Intrinsics
+-----------------------------------
+
+'``llvm.masked.udiv.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <8 x i32> @llvm.masked.udiv.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
+      declare <vscale x 2 x i64> @llvm.masked.udiv.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Performs unsigned division (:ref:`udiv <i_udiv>`) of two vectors of integers, but only on enabled lanes.
+
+Arguments:
+""""""""""
+
+The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+
+Semantics:
+""""""""""
+
+Follows the same semantics as :ref:`udiv <i_udiv>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
+
+'``llvm.masked.sdiv.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <8 x i32> @llvm.masked.sdiv.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
+      declare <vscale x 2 x i64> @llvm.masked.sdiv.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Performs signed division (:ref:`sdiv <i_sdiv>`) of two vectors of integers, but only on enabled lanes.
+
+Arguments:
+""""""""""
+
+The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+
+Semantics:
+""""""""""
+
+Follows the same semantics as :ref:`sdiv <i_sdiv>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
+
+'``llvm.masked.urem.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <8 x i32> @llvm.masked.urem.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
+      declare <vscale x 2 x i64> @llvm.masked.urem.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Computes the remainder from the unsigned division (:ref:`urem <i_urem>`) of two vectors of integers, but only on enabled lanes.
+
+Arguments:
+""""""""""
+
+The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+
+Semantics:
+""""""""""
+
+Follows the same semantics as :ref:`urem <i_urem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
+
+'``llvm.masked.srem.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <8 x i32> @llvm.masked.srem.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
+      declare <vscale x 2 x i64> @llvm.masked.srem.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Computes the remainder from the signed division (:ref:`srem <i_srem>`) of two vectors of integers, but only on enabled lanes.
+
+Arguments:
+""""""""""
+
+The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+
+Semantics:
+""""""""""
+
+Follows the same semantics as :ref:`srem <i_srem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
 
 Memory Use Markers
 ------------------
@@ -27729,8 +28081,8 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or a ``poison``
-value.
+The argument is either a pointer to an ``alloca`` instruction or an
+``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
 
 Semantics:
 """"""""""
@@ -27741,8 +28093,8 @@ Otherwise, the stack-allocated object that ``ptr`` points to is initially
 marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
 alive and has an uninitialized value.
 The stack object is marked as dead when either
-:ref:`llvm.lifetime.end <int_lifeend>` to the alloca is executed or the
-function returns.
+:ref:`llvm.lifetime.end <int_lifeend>` to the alloca/structured.alloca is
+executed or the function returns.
 
 After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 '``llvm.lifetime.start``' on the stack object can be called again.
@@ -27770,8 +28122,8 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or a ``poison``
-value.
+The argument is either a pointer to an ``alloca`` instruction or an
+``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
 
 Semantics:
 """"""""""
@@ -27781,7 +28133,8 @@ If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
 Otherwise, the stack-allocated object that ``ptr`` points to becomes dead after
 the call to this intrinsic.
 
-Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
+Calling ``llvm.lifetime.end`` on an already dead alloca/structured.alloca is
+no-op.
 
 '``llvm.invariant.start``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

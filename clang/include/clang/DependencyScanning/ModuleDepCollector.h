@@ -42,7 +42,7 @@ struct PrebuiltModuleDep {
 
   explicit PrebuiltModuleDep(const Module *M)
       : ModuleName(M->getTopLevelModuleName()),
-        PCMFile(M->getASTFile()->getName()),
+        PCMFile(M->getASTFileName()->str()),
         ModuleMapFile(M->PresumedModuleMapFile) {}
 };
 
@@ -162,6 +162,9 @@ struct ModuleDeps {
   /// External paths, as opposed to virtual file paths, are always used
   /// for computing this value.
   bool IsInStableDirectories;
+
+  /// Whether current working directory is ignored.
+  bool IgnoreCWD;
 
   /// The path to the modulemap file which defines this module.
   ///
@@ -382,7 +385,7 @@ private:
 
   /// Compute the context hash for \p Deps, and create the mapping
   /// \c ModuleDepsByID[Deps.ID] = &Deps.
-  void associateWithContextHash(const CowCompilerInvocation &CI, bool IgnoreCWD,
+  void associateWithContextHash(const CowCompilerInvocation &CI,
                                 ModuleDeps &Deps);
 };
 

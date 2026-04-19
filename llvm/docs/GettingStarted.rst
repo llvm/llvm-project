@@ -171,7 +171,7 @@ Once llvm is installed, to configure a project for a stand-alone build, invoke C
 Notice that:
 
 * The stand-alone build needs to happen in a folder that is not the
-  original folder where LLVMN was built
+  original folder where LLVM was built
   (`$builddir!=$builddir_subproj`).
 * ``LLVM_ROOT`` should point to the prefix of your llvm installation,
   so for example, if llvm is installed into ``/usr/bin`` and

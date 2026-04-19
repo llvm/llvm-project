@@ -362,17 +362,13 @@ Below are some guidelines about the format of the message itself:
 
 * Separate the commit message into title and body separated by a blank line.
 
-* If you're not the original author, ensure the 'Author' property of the commit is
-  set to the original author and the 'Committer' property is set to yourself.
-  You can use a command similar to
-  ``git commit --amend --author="John Doe <jdoe@llvm.org>"`` to correct the
-  author property if it is incorrect. See `Attribution of Changes`_ for more
-  information including the method we used for attribution before the project
-  migrated to git.
-
-  In the rare situation where there are multiple authors, please use the `git
+* In the situation where there are multiple authors, or in the rare situation
+  you are submitting a change for someone else (e.g., after putting an old
+  patch from someone else through review yourself),  please use the `git
   tag 'Co-authored-by:' to list the additional authors
   <https://github.blog/2018-01-29-commit-together-with-co-authors/>`_.
+  See `Attribution of Changes`_ for more information including the method we
+  used for attribution before the project migrated to git.
 
 * The title should be concise. Because all commits are emailed to the list with
   the first line as the subject, long titles are frowned upon.  Short titles
@@ -715,23 +711,23 @@ Attribution of Changes
 ----------------------
 
 When contributors submit a patch to an LLVM project, other developers with
-commit access may commit it for the author once appropriate (based on the
-progression of code review, etc.). When doing so, it is important to retain
-correct attribution of contributions to their contributors. However, we do not
-want the source code to be littered with random attributions "this code written
-by J. Random Hacker" (this is noisy and distracting). In practice, the revision
-control system keeps a perfect history of who changed what, and the CREDITS.txt
-file describes higher-level contributions. If you commit a patch for someone
-else, please follow the attribution of changes in the simple manner as outlined
-by the `commit messages`_ section. Overall, please do not add contributor names
-to the source code.
+commit access may merge the PR for the author (based on the
+progression of code review, etc.). GitHub will automatically ensure that
+authorship is preserved, and one does not need to take any further action. We
+do not want the source code to be littered with random attributions "this code
+written by J. Random Hacker" (this is noisy and distracting). In practice, the
+revision control system keeps a perfect history of who changed what, and the
+CREDITS.txt file describes higher-level contributions. If you need to adjust
+authorship for any reason, please follow the attribution of changes in the
+simple manner as outlined by the `commit messages`_ section. Overall, please do
+not add contributor names to the source code.
 
 Also, don't commit patches authored by others unless they have submitted the
 patch to the project or you have been authorized to submit them on their behalf
 (you work together and your company authorized you to contribute the patches,
-etc.). The author should first submit them to the relevant project's commit
-list, development list, or LLVM bug tracker component. If someone sends you
-a patch privately, encourage them to submit it to the appropriate list first.
+etc.). The author should first submit them as a GitHub issue, to the relevant
+category on Discourse, or ideally as a GitHub Pull Request. If someone sends you
+a patch privately, encourage them to submit it as a GitHub PR first.
 
 Our previous version control system (subversion) did not distinguish between the
 author and the committer like git does. As such, older commits used a different

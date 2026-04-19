@@ -391,7 +391,14 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
 
-FunctionPass *createX86PostLegalizerCombiner();
+class X86PostLegalizerCombinerPass
+    : public PassInfoMixin<X86PostLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86PostLegalizerCombinerLegacy();
 FunctionPass *createX86PreLegalizerCombiner();
 
 class X86LoadValueInjectionLoadHardeningPass
@@ -478,7 +485,7 @@ void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86WinEHUnwindV2LegacyPass(PassRegistry &);
 void initializeX86PreLegalizerCombinerPass(PassRegistry &);
-void initializeX86PostLegalizerCombinerPass(PassRegistry &);
+void initializeX86PostLegalizerCombinerLegacyPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

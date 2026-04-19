@@ -73,6 +73,7 @@ jobs:
 
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          persist-credentials: false
           ref: ${{ steps.vars.outputs.pr_head }}
           fetch-depth: 0
           fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main

@@ -119,7 +119,7 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : NoNaNsFPMath(false), NoTrappingFPMath(true), NoSignedZerosFPMath(false),
+      : NoTrappingFPMath(true), NoSignedZerosFPMath(false),
         EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
@@ -154,12 +154,6 @@ public:
   /// If greater than 0, override the default value of
   /// MCAsmInfo::BinutilsVersion.
   std::pair<int, int> BinutilsVersion{0, 0};
-
-  /// NoNaNsFPMath - This flag is enabled when the
-  /// -enable-no-nans-fp-math flag is specified on the command line. When
-  /// this flag is off (the default), the code generator is not allowed to
-  /// assume the FP arithmetic arguments and results are never NaNs.
-  unsigned NoNaNsFPMath : 1;
 
   /// NoTrappingFPMath - This flag is enabled when the
   /// -enable-no-trapping-fp-math is specified on the command line. This

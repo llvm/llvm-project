@@ -66,34 +66,6 @@ else()
 endif()
 set(LIBC_GPU_TARGET_ARCHITECTURE "${gpu_test_architecture}")
 
-# Identify the GPU loader utility used to run tests.
-set(LIBC_GPU_LOADER_EXECUTABLE "" CACHE STRING "Executable for the GPU loader.")
-if(LIBC_GPU_LOADER_EXECUTABLE)
-  set(gpu_loader_executable ${LIBC_GPU_LOADER_EXECUTABLE})
-elseif(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  find_program(LIBC_AMDHSA_LOADER_EXECUTABLE
-               NAMES amdhsa-loader NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  if(LIBC_AMDHSA_LOADER_EXECUTABLE)
-    set(gpu_loader_executable ${LIBC_AMDHSA_LOADER_EXECUTABLE})
-  endif()
-elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  find_program(LIBC_NVPTX_LOADER_EXECUTABLE
-               NAMES nvptx-loader NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  if(LIBC_NVPTX_LOADER_EXECUTABLE)
-    set(gpu_loader_executable ${LIBC_NVPTX_LOADER_EXECUTABLE})
-  endif()
-endif()
-if(NOT TARGET libc.utils.gpu.loader AND gpu_loader_executable)
-  add_custom_target(libc.utils.gpu.loader)
-  set_target_properties(
-    libc.utils.gpu.loader
-    PROPERTIES
-      EXECUTABLE "${gpu_loader_executable}"
-  )
-endif()
-
 # The AMDGPU environment uses different code objects to encode the ABI for
 # kernel calls and intrinsic functions. We want to expose this to conform to
 # whatever the test suite was built to handle.

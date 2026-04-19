@@ -27,8 +27,6 @@
 
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 
-#include <mutex>
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -146,12 +144,8 @@ ScriptedProcess::~ScriptedProcess() {
 }
 
 void ScriptedProcess::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 void ScriptedProcess::Terminate() {
@@ -426,7 +420,8 @@ bool ScriptedProcess::GetProcessInfo(ProcessInstanceInfo &info) {
 }
 
 lldb_private::StructuredData::ObjectSP
-ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
+ScriptedProcess::GetLoadedDynamicLibrariesInfos(
+    BinaryInformationLevel info_level) {
   Status error;
   auto error_with_message = [&error](llvm::StringRef message) {
     return ScriptedInterface::ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,

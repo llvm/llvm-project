@@ -869,6 +869,8 @@ the coroutine destroy function. Otherwise it is replaced with an indirect call
 based on the function pointer for the destroy function stored in the coroutine
 frame. Destroying a coroutine that is not suspended leads to undefined behavior.
 
+This intrinsic implies `coro.dead`.
+
 .. _coro.resume:
 
 'llvm.coro.resume' Intrinsic
@@ -1165,6 +1167,48 @@ Example (standard deallocation functions):
     call void @free(ptr %mem)
     ret void
 
+.. _coro.dead:
+
+'llvm.coro.dead' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare void @llvm.coro.dead(ptr <frame>)
+
+Overview:
+"""""""""
+
+The 'llvm.coro.dead' intrinsic is an optimization hint to help Heap Allocation eLision Optimization (HALO)
+mark the end of lifetime of the coroutine frame.
+
+Arguments:
+""""""""""
+
+The argument is a pointer to the coroutine frame. This should be the same
+pointer that was returned by prior `coro.begin` call.
+
+Semantics:
+""""""""""
+
+A frontend can delegate this intrinsic to indicate that the coroutine frame is dead, allowing
+coroutines that are not explicitly destroyed via `coro.destroy` to be elided.
+
+Example:
+"""""""""""""""""""""""""""""""""""""""
+
+.. code-block:: llvm
+
+  cleanup:
+    %mem = call ptr @llvm.coro.free(token %id, ptr %frame)
+    %mem_not_null = icmp ne ptr %mem, null
+    br i1 %mem_not_null, label %if.then, label %if.end
+  if.then:
+    call void @CustomFree(ptr %mem)
+    br label %if.end
+  if.end:
+    call void @llvm.coro.dead(ptr %frame)
+    ret void
+
 .. _coro.alloc:
 
 'llvm.coro.alloc' Intrinsic
@@ -1445,9 +1489,7 @@ A frontend should emit function attribute `presplitcoroutine` for the coroutine.
 Overview:
 """""""""
 
-The '``llvm.coro.end``' marks the point where execution of the resume part of
-the coroutine should end and control should return to the caller.
-
+The '``llvm.coro.end``' marks the point where access to the coroutine frame ends.
 
 Arguments:
 """"""""""
@@ -1469,9 +1511,14 @@ Only none token is allowed for coro.end calls in unwind sections
 
 Semantics:
 """"""""""
-The purpose of this intrinsic is to allow frontends to mark the cleanup and
-other code that is only relevant during the initial invocation of the coroutine
-and should not be present in resume and destroy parts.
+The purposes of `coro.end` are:
+
+- Allow frontends to mark the cleanup and other code that is only relevant during
+  the initial invocation of the coroutine and should not be present in resume and
+  destroy parts.
+
+- Coroutine frame typically escapes. The call to `coro.end` prevents other
+  optimizations from erasing stores to frame before returning.
 
 In returned-continuation lowering, ``llvm.coro.end`` fully destroys the
 coroutine frame.  If the second argument is `false`, it also returns from
@@ -2145,8 +2192,7 @@ CoroEarly
 The CoroEarly pass ensures later middle end passes correctly interpret coroutine 
 semantics and lowers coroutine intrinsics that not needed to be preserved to 
 help later coroutine passes. This pass lowers `coro.promise`_, `coro.frame`_ and 
-`coro.done`_ intrinsics. Afterwards, it replaces uses of promise alloca with 
-`coro.promise`_ intrinsic.
+`coro.done`_ intrinsics.
 
 .. _CoroSplit:
 
@@ -2247,5 +2293,8 @@ Areas Requiring Attention
 
 #. Make required changes to make sure that coroutine optimizations work with
    LTO.
+
+#. In Windows EH, exception objects must be allocated on the stack (see :ref:wineh for details).
+   We identify an exception object as an alloca that has `catchpad` users.
 
 #. More tests, more tests, more tests

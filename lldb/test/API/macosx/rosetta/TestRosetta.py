@@ -59,6 +59,14 @@ class TestRosetta(TestBase):
 
             event = lldb.SBEvent()
             os_version = get_os_version()
+            if self.TraceOn():
+                self.runCmd("image list")
+                self.runCmd("target list")
+                self.runCmd("platform shell ls ~/Library/Developer/Xcode")
+                self.runCmd(
+                    'platform shell ls ~/Library/Developer/Xcode/"macOS DeviceSupport/"'
+                )
+                self.runCmd("process plugin packet send jGetSharedCacheInfo:{}")
             if not has_rosetta_shared_cache(os_version):
                 self.assertTrue(listener.GetNextEvent(event))
             else:

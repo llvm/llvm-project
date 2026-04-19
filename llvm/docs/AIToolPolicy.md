@@ -143,6 +143,18 @@ contributors are responsible for ensuring that such material does not appear in
 their contributions. Contributions found to violate this policy will be removed
 just like any other offending contribution.
 
+## Exceptions
+
+We have one exception to this policy for the Bazel-fixer bot. The project
+council approved [this RFC][bazel-rfc] proposing to use a combination of
+[dwyu][dwyu] and LLMs to maintain the Bazel build files.
+
+[bazel-rfc]: https://discourse.llvm.org/t/rfc-ai-assisted-bazel-fixer-bot/89178/93
+[dwyu]: https://github.com/hzeller/bant?tab=readme-ov-file#dwyu--depend-on-what-you-use
+
+Any future exception will be considered individually on its own merits as to
+whether it is useful to the project or extracts work from maintainers.
+
 ## Examples
 
 Here are some examples of contributions that demonstrate how to apply

@@ -24,11 +24,11 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @dep_constraint_crash_test(i32 %k, i32 %N) {
 ; CHECK-LABEL: 'dep_constraint_crash_test'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent input [S S]!
+; CHECK-NEXT:    da analyze - input [S S]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr @S, align 4
 ; CHECK-NEXT:    da analyze - anti [S S|<]!
 ; CHECK-NEXT:  Src: store i32 %0, ptr @S, align 4 --> Dst: store i32 %0, ptr @S, align 4
-; CHECK-NEXT:    da analyze - consistent output [S S]!
+; CHECK-NEXT:    da analyze - output [S S]!
 ;
 entry:
   %cmp12 = icmp sgt i32 %N, 0

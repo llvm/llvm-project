@@ -273,16 +273,16 @@ bool ObjectFileWasm::DecodeSections() {
   return true;
 }
 
-size_t ObjectFileWasm::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  if (!ValidateModuleHeader(extractor_sp->GetData())) {
-    return 0;
-  }
+ModuleSpecList
+ObjectFileWasm::GetModuleSpecifications(const FileSpec &file,
+                                        DataExtractorSP &extractor_sp,
+                                        offset_t file_offset, offset_t length) {
+  if (!ValidateModuleHeader(extractor_sp->GetData()))
+    return {};
 
-  ModuleSpec spec(file, ArchSpec("wasm32-unknown-unknown-wasm"));
-  specs.Append(spec);
-  return 1;
+  ModuleSpecList specs;
+  specs.Append(ModuleSpec(file, ArchSpec("wasm32-unknown-unknown-wasm")));
+  return specs;
 }
 
 ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp,
@@ -308,8 +308,17 @@ bool ObjectFileWasm::ParseHeader() {
 }
 
 struct WasmFunction {
+  /// Offset from the section to the start of the function. This points past the
+  /// function size, which some other tools consider part of the function.
   lldb::offset_t section_offset = LLDB_INVALID_OFFSET;
+
+  /// Function size, which includes the function header, but not the size ULEB
+  /// that proceeds it.
   uint32_t size = 0;
+
+  /// Offset from section_offset to the first instruction in the function, past
+  /// the local variable declarations.
+  uint32_t code_offset = 0;
 };
 
 static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
@@ -353,6 +362,22 @@ static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
   return function_imports;
 }
 
+/// Get the offset in the function to the first instruction.
+static llvm::Expected<uint32_t> GetFunctionCodeOffset(DataExtractor &data,
+                                                      lldb::offset_t offset) {
+  // Wasm function bodies start with:
+  //   [local_count: ULEB128]
+  //   [local_decl: {count: ULEB128, type: byte}] × local_count
+  //   [instructions...]
+  const lldb::offset_t locals_start = offset;
+  const uint32_t local_count = data.GetULEB128(&offset);
+  for (uint32_t i = 0; i < local_count; ++i) {
+    data.GetULEB128(&offset); // count
+    data.GetU8(&offset);      // valtype
+  }
+  return offset - locals_start;
+}
+
 static llvm::Expected<std::vector<WasmFunction>>
 ParseFunctions(DataExtractor &data) {
   lldb::offset_t offset = 0;
@@ -365,13 +390,21 @@ ParseFunctions(DataExtractor &data) {
   functions.reserve(*function_count);
 
   for (uint32_t i = 0; i < *function_count; ++i) {
+    // llvm-objdump considers the ULEB with the function size to be part of the
+    // function. We can't do that here because that would not match the DWARF,
+    // which considers the function to start with the local variable
+    // declarations (the header).
     llvm::Expected<uint32_t> function_size = GetULEB32(data, offset);
     if (!function_size)
       return function_size.takeError();
-    // llvm-objdump considers the ULEB with the function size to be part of the
-    // function. We can't do that here because that would break symbolic
-    // breakpoints, as that address is never executed.
-    functions.push_back({offset, *function_size});
+
+    // Functions start with with a number of local variable declarations.
+    // They're part of the function but they're not instructions.
+    llvm::Expected<uint32_t> code_offset = GetFunctionCodeOffset(data, offset);
+    if (!code_offset)
+      return code_offset.takeError();
+
+    functions.push_back({offset, *function_size, *code_offset});
 
     std::optional<lldb::offset_t> next_offset =
         llvm::checkedAddUnsigned<lldb::offset_t>(offset, *function_size);
@@ -503,6 +536,8 @@ ParseNames(SectionSP code_section_sp, DataExtractor &name_data,
                                /*size_is_valid=*/true,
                                /*contains_linker_annotations=*/false,
                                /*flags=*/0);
+          if (func.code_offset)
+            symbols.back().SetPrologueByteSize(func.code_offset);
         }
       }
     } break;

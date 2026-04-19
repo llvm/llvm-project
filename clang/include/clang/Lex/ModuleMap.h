@@ -219,6 +219,18 @@ private:
   /// header.
   llvm::DenseMap<const DirectoryEntry *, Module *> UmbrellaDirs;
 
+  /// Mapping from (header, (sub)module) pairs to the source location where
+  /// the header was added to the module (the header directive location).
+  /// TODO: Consider moving this into Module::Header and serializing it into
+  /// PCMs so that locations are available for headers deserialized from
+  /// modules. Need to evaluate size/perf overhead of adding a SourceLocation
+  /// to the serialization format for this diagnostic.
+  llvm::DenseMap<std::pair<const FileEntry *, const Module *>, SourceLocation>
+      HeaderOwnerLocs;
+
+  /// Headers for which we've already diagnosed duplicate ownership.
+  llvm::DenseSet<const FileEntry *> DiagnosedDuplicateHeaders;
+
   /// A generation counter that is used to test whether modules of the
   /// same name may shadow or are illegal redefinitions.
   ///
@@ -354,6 +366,11 @@ private:
   /// directory, this also loads all of the module maps to see if it will get
   /// associated with a specific module (e.g. in /usr/include).
   HeadersMap::iterator findKnownHeader(FileEntryRef File);
+
+  /// Warn if a header is owned by multiple top-level modules.
+  void diagnoseDuplicateHeaderOwnership(SourceLocation FilenameLoc,
+                                        StringRef Filename, FileEntryRef File,
+                                        HeadersMap::iterator Known);
 
   /// Searches for a module whose umbrella directory contains \p File.
   ///
@@ -712,21 +729,24 @@ public:
   void
   setUmbrellaHeaderAsWritten(Module *Mod, FileEntryRef UmbrellaHeader,
                              const Twine &NameAsWritten,
-                             const Twine &PathRelativeToRootModuleDirectory);
+                             const Twine &PathRelativeToRootModuleDirectory,
+                             SourceLocation Loc = SourceLocation());
 
   /// Sets the umbrella directory of the given module to the given directory.
   void setUmbrellaDirAsWritten(Module *Mod, DirectoryEntryRef UmbrellaDir,
                                const Twine &NameAsWritten,
-                               const Twine &PathRelativeToRootModuleDirectory);
+                               const Twine &PathRelativeToRootModuleDirectory,
+                               SourceLocation Loc = SourceLocation());
 
   /// Adds this header to the given module.
   /// \param Role The role of the header wrt the module.
-  void addHeader(Module *Mod, Module::Header Header,
-                 ModuleHeaderRole Role, bool Imported = false);
+  void addHeader(Module *Mod, Module::Header Header, ModuleHeaderRole Role,
+                 bool Imported = false, SourceLocation Loc = SourceLocation());
 
   /// Parse a module map without creating `clang::Module` instances.
   bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
-                          DirectoryEntryRef Dir, FileID ID = FileID(),
+                          bool ImplicitlyDiscovered, DirectoryEntryRef Dir,
+                          FileID ID = FileID(),
                           SourceLocation ExternModuleLoc = SourceLocation());
 
   void loadAllParsedModules();
@@ -738,6 +758,9 @@ public:
   ///
   /// \param IsSystem Whether this module map file is in a system header
   /// directory, and therefore should be considered a system module.
+  ///
+  /// \param ImplicitlyDiscovered Whether this module map file was found via
+  ///        module map search.
   ///
   /// \param HomeDir The directory in which relative paths within this module
   ///        map file will be resolved.
@@ -753,6 +776,7 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool
   parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
+                            bool ImplicitlyDiscovered,
                             DirectoryEntryRef HomeDir, FileID ID = FileID(),
                             unsigned *Offset = nullptr,
                             SourceLocation ExternModuleLoc = SourceLocation());

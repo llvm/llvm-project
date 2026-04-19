@@ -82,9 +82,9 @@ public:
   }
 
   MCSymbol *getSymbol(StringRef FuncName, ResourceInfoKind RIK,
-                      MCContext &OutContext, bool IsLocal);
+                      MCContext &OutContext);
   const MCExpr *getSymRefExpr(StringRef FuncName, ResourceInfoKind RIK,
-                              MCContext &Ctx, bool IsLocal);
+                              MCContext &Ctx);
 
   void reset();
 

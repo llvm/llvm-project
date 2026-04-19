@@ -597,6 +597,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__algorithm/remove_if.h>
 #  include <__assert>
 #  include <__config>
+#  include <__cstddef/size_t.h>
 #  include <__debug_utils/sanitizers.h>
 #  include <__format/enable_insertable.h>
 #  include <__functional/hash.h>
@@ -625,9 +626,11 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__string/char_traits.h>
 #  include <__string/extern_template_lists.h>
 #  include <__type_traits/conditional.h>
+#  include <__type_traits/desugars_to.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_array.h>
+#  include <__type_traits/is_constant_evaluated.h>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_generic_transparent_comparator.h>
 #  include <__type_traits/is_nothrow_assignable.h>
@@ -637,6 +640,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_copyable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
+#  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__utility/default_three_way_comparator.h>
 #  include <__utility/exception_guard.h>
@@ -770,30 +774,6 @@ public:
       void>;
 #  endif
 
-#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __asan_volatile_wrapper(pointer const& __ptr) const {
-    if (__libcpp_is_constant_evaluated())
-      return __ptr;
-
-    pointer volatile __copy_ptr = __ptr;
-
-    return const_cast<pointer&>(__copy_ptr);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer
-  __asan_volatile_wrapper(const_pointer const& __ptr) const {
-    if (__libcpp_is_constant_evaluated())
-      return __ptr;
-
-    const_pointer volatile __copy_ptr = __ptr;
-
-    return const_cast<const_pointer&>(__copy_ptr);
-  }
-#    define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) __asan_volatile_wrapper(PTR)
-#  else
-#    define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) PTR
-#  endif
-
   static_assert(!is_array<value_type>::value, "Character type of basic_string must not be an array");
   static_assert(is_standard_layout<value_type>::value, "Character type of basic_string must be standard-layout");
   static_assert(is_trivially_default_constructible<value_type>::value,
@@ -809,8 +789,8 @@ public:
   // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
   // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
   // considered contiguous.
-  using iterator       = __bounded_iter<__wrap_iter<pointer> >;
-  using const_iterator = __bounded_iter<__wrap_iter<const_pointer> >;
+  using iterator       = __bounded_iter<pointer>;
+  using const_iterator = __bounded_iter<const_pointer>;
 #  else
   using iterator       = __wrap_iter<pointer>;
   using const_iterator = __wrap_iter<const_pointer>;
@@ -955,10 +935,7 @@ private:
     // regardless of whether reallocation occurs. This allows us to check for out-of-bounds accesses using logical size,
     // a stricter check, since correct code can never rely on being able to access newly-added elements via an existing
     // iterator.
-    return std::__make_bounded_iter(
-        std::__wrap_iter<pointer>(__p),
-        std::__wrap_iter<pointer>(__get_pointer()),
-        std::__wrap_iter<pointer>(__get_pointer() + size()));
+    return std::__make_bounded_iter(__p, __get_pointer(), __get_pointer() + size());
 #  else
     return iterator(__p);
 #  endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
@@ -967,10 +944,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator __make_const_iterator(const_pointer __p) const {
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
     // Bound the iterator according to the size (and not the capacity, unlike vector).
-    return std::__make_bounded_iter(
-        std::__wrap_iter<const_pointer>(__p),
-        std::__wrap_iter<const_pointer>(__get_pointer()),
-        std::__wrap_iter<const_pointer>(__get_pointer() + size()));
+    return std::__make_bounded_iter(__p, __get_pointer(), __get_pointer() + size());
 #  else
     return const_iterator(__p);
 #  endif                    // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
@@ -1456,7 +1430,7 @@ public:
       if (__cap - __sz < __n)
         __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
       __annotate_increase(__n);
-      auto __end = __copy_non_overlapping_range(__first, __last, std::__to_address(__get_pointer() + __sz));
+      auto __end = __copy_non_overlapping_range(__first, __last, __data() + __sz);
       traits_type::assign(*__end, value_type());
       __set_size(__sz + __n);
       return *this;
@@ -1812,6 +1786,13 @@ public:
     return std::__to_address(__get_pointer());
   }
 #  endif
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const value_type* __data() const _NOEXCEPT {
+    return std::__to_address(__get_pointer());
+  }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 value_type* __data() _NOEXCEPT {
+    return std::__to_address(__get_pointer());
+  }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator_type get_allocator() const _NOEXCEPT {
     return __alloc_;
@@ -2171,7 +2152,7 @@ private:
     value_type* __p;
     if (__cap - __sz >= __n) {
       __annotate_increase(__n);
-      __p                = std::__to_address(__get_pointer());
+      __p                = __data();
       size_type __n_move = __sz - __ip;
       if (__n_move != 0)
         traits_type::move(__p + __ip + __n, __p + __ip, __n_move);
@@ -2204,6 +2185,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS size_type
   __get_short_size() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(!__rep_.__s.__is_long_, "String has to be short when trying to get the short size");
+    __annotate_memory_barrier();
     return __rep_.__s.__size_;
   }
 
@@ -2213,6 +2195,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __get_long_size() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long size");
+    __annotate_memory_barrier();
     return __rep_.__l.__size_;
   }
 
@@ -2225,27 +2208,32 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __get_long_cap() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long capacity");
+    __annotate_memory_barrier();
     return __rep_.__l.__cap_ * __endian_factor;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __get_long_pointer() _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long pointer");
-    return _LIBCPP_ASAN_VOLATILE_WRAPPER(__rep_.__l.__data_);
+    __annotate_memory_barrier();
+    return __rep_.__l.__data_;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer __get_long_pointer() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long pointer");
-    return _LIBCPP_ASAN_VOLATILE_WRAPPER(__rep_.__l.__data_);
+    __annotate_memory_barrier();
+    return __rep_.__l.__data_;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS pointer
   __get_short_pointer() _NOEXCEPT {
-    return _LIBCPP_ASAN_VOLATILE_WRAPPER(pointer_traits<pointer>::pointer_to(__rep_.__s.__data_[0]));
+    __annotate_memory_barrier();
+    return pointer_traits<pointer>::pointer_to(__rep_.__s.__data_[0]);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS const_pointer
   __get_short_pointer() const _NOEXCEPT {
-    return _LIBCPP_ASAN_VOLATILE_WRAPPER(pointer_traits<const_pointer>::pointer_to(__rep_.__s.__data_[0]));
+    __annotate_memory_barrier();
+    return pointer_traits<const_pointer>::pointer_to(__rep_.__s.__data_[0]);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __get_pointer() _NOEXCEPT {
@@ -2326,6 +2314,16 @@ private:
       return;
 #    endif
     std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity() + 1, __old_mid, __new_mid);
+#  endif
+  }
+
+  // Prevents speculative load before short/long state is determined.
+  // The following functions are no-ops outside of AddressSanitizer mode.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_memory_barrier() const {
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
+    if (__libcpp_is_constant_evaluated())
+      return;
+    asm volatile("" ::: "memory");
 #  endif
   }
 
@@ -2456,7 +2454,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __erase_to_end(size_type __pos) {
     _LIBCPP_ASSERT_INTERNAL(__pos <= capacity(), "Trying to erase at position outside the strings capacity!");
-    __null_terminate_at(std::__to_address(__get_pointer()), __pos);
+    __null_terminate_at(__data(), __pos);
   }
 
   // __erase_external_with_move is invoked for erase() invocations where
@@ -2608,19 +2606,29 @@ struct __default_three_way_comparator<basic_string<_CharT, _Traits, _Alloc>, bas
 };
 #  endif
 
-template <class _Comparator, class _CharT, class _Traits, class _Alloc>
-inline const bool __is_transparently_comparable_v<_Comparator,
-                                                  basic_string<_CharT, _Traits, _Alloc>,
-                                                  const _CharT*,
-                                                  __enable_if_t<__is_generic_transparent_comparator_v<_Comparator> > > =
-    true;
+template <class _Comparator, class _CharT2, class _CharT, class _Traits, class _Alloc>
+inline const bool __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, _CharT2*> =
+    is_same<_CharT, __remove_cv_t<_CharT2> >::value &&
+    (__desugars_to_v<__less_tag,
+                     _Comparator,
+                     basic_string<_CharT, _Traits, _Alloc>,
+                     basic_string<_CharT, _Traits, _Alloc> > ||
+     __desugars_to_v<__greater_tag,
+                     _Comparator,
+                     basic_string<_CharT, _Traits, _Alloc>,
+                     basic_string<_CharT, _Traits, _Alloc> >);
+
+template <class _Comparator, class _CharT2, class _CharT, class _Traits, class _Alloc>
+inline const bool __is_transparently_comparable_v<_Comparator, _CharT2*, basic_string<_CharT, _Traits, _Alloc> > =
+    __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, _CharT2*>;
 
 template <class _Comparator, class _CharT, class _Traits, class _Alloc, size_t _Np>
-inline const bool __is_transparently_comparable_v<_Comparator,
-                                                  basic_string<_CharT, _Traits, _Alloc>,
-                                                  _CharT[_Np],
-                                                  __enable_if_t<__is_generic_transparent_comparator_v<_Comparator> > > =
-    true;
+inline const bool __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, _CharT[_Np]> =
+    __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, const _CharT*>;
+
+template <class _Comparator, class _CharT, class _Traits, class _Alloc, size_t _Np>
+inline const bool __is_transparently_comparable_v<_Comparator, _CharT[_Np], basic_string<_CharT, _Traits, _Alloc> > =
+    __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, const _CharT*>;
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
@@ -2726,19 +2734,18 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
     size_type __n_del,
     size_type __n_add,
     const value_type* __p_new_stuff) {
-  __long __buffer = __allocate_long_buffer(__alloc_, 0, __get_amortized_growth_capacity(__old_cap + __delta_cap));
-  pointer __old_p = __get_pointer();
+  __long __buffer     = __allocate_long_buffer(__alloc_, 0, __get_amortized_growth_capacity(__old_cap + __delta_cap));
+  value_type* __old_p = __data();
   __annotate_delete();
   auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
   if (__n_copy != 0)
-    traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__old_p), __n_copy);
+    traits_type::copy(std::__to_address(__buffer.__data_), __old_p, __n_copy);
   if (__n_add != 0)
     traits_type::copy(std::__to_address(__buffer.__data_) + __n_copy, __p_new_stuff, __n_add);
   size_type __sec_cp_sz = __old_sz - __n_del - __n_copy;
   if (__sec_cp_sz != 0)
-    traits_type::copy(std::__to_address(__buffer.__data_) + __n_copy + __n_add,
-                      std::__to_address(__old_p) + __n_copy + __n_del,
-                      __sec_cp_sz);
+    traits_type::copy(
+        std::__to_address(__buffer.__data_) + __n_copy + __n_add, __old_p + __n_copy + __n_del, __sec_cp_sz);
   __buffer.__size_ = __n_copy + __n_add + __sec_cp_sz;
   traits_type::assign(__buffer.__data_[__buffer.__size_], value_type());
   __reset_internal_buffer(__buffer);
@@ -2759,15 +2766,14 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
     size_type __n_copy,
     size_type __n_del,
     size_type __n_add) {
-  __long __buffer = __allocate_long_buffer(__alloc_, 0, __get_amortized_growth_capacity(__old_cap + __delta_cap));
-  pointer __old_p = __get_pointer();
+  __long __buffer     = __allocate_long_buffer(__alloc_, 0, __get_amortized_growth_capacity(__old_cap + __delta_cap));
+  value_type* __old_p = __data();
   if (__n_copy != 0)
-    traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__old_p), __n_copy);
+    traits_type::copy(std::__to_address(__buffer.__data_), __old_p, __n_copy);
   size_type __sec_cp_sz = __old_sz - __n_del - __n_copy;
   if (__sec_cp_sz != 0)
-    traits_type::copy(std::__to_address(__buffer.__data_) + __n_copy + __n_add,
-                      std::__to_address(__old_p) + __n_copy + __n_del,
-                      __sec_cp_sz);
+    traits_type::copy(
+        std::__to_address(__buffer.__data_) + __n_copy + __n_add, __old_p + __n_copy + __n_del, __sec_cp_sz);
   // This is -1 to make sure the caller sets the size properly, since old versions of this function didn't set the size
   // at all.
   __buffer.__size_ = -1;
@@ -2828,7 +2834,7 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_external(const value_type* _
   if (__cap >= __n) {
     if (__n > __size)
       __annotate_increase(__n - __size);
-    value_type* __p = std::__to_address(__get_pointer());
+    value_type* __p = __data();
     traits_type::move(__p, __s, __n);
     return __null_terminate_at(__p, __n);
   } else {
@@ -2854,7 +2860,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(size_type __n, value_type __c)
     __annotate_increase(__n);
   } else if (__n > __old_size)
     __annotate_increase(__n - __old_size);
-  value_type* __p = std::__to_address(__get_pointer());
+  value_type* __p = __data();
   traits_type::assign(__p, __n, __c);
   return __null_terminate_at(__p, __n);
 }
@@ -3039,7 +3045,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(const value_type* __s, size_ty
     return *this;
 
   __annotate_increase(__n);
-  value_type* __p = std::__to_address(__get_pointer());
+  value_type* __p = __data();
   traits_type::copy(__p + __sz, __s, __n);
   __sz += __n;
   __set_size(__sz);
@@ -3058,7 +3064,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(size_type __n, value_type __c)
   if (__cap - __sz < __n)
     __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
   __annotate_increase(__n);
-  pointer __p = __get_pointer();
+  value_type* __p = __data();
   traits_type::assign(std::__to_address(__p) + __sz, __n, __c);
   __sz += __n;
   __set_size(__sz);
@@ -3131,7 +3137,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, const value_t
     return *this;
 
   __annotate_increase(__n);
-  value_type* __p    = std::__to_address(__get_pointer());
+  value_type* __p    = __data();
   size_type __n_move = __sz - __pos;
   if (__n_move != 0) {
     if (std::__is_pointer_in_range(__p + __pos, __p + __sz, __s))
@@ -3159,7 +3165,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, size_type __n
   value_type* __p;
   if (__cap - __sz >= __n) {
     __annotate_increase(__n);
-    __p                = std::__to_address(__get_pointer());
+    __p                = __data();
     size_type __n_move = __sz - __pos;
     if (__n_move != 0)
       traits_type::move(__p + __pos + __n, __p + __pos, __n_move);
@@ -3220,7 +3226,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, value_ty
     __p = std::__to_address(__get_long_pointer());
   } else {
     __annotate_increase(1);
-    __p                = std::__to_address(__get_pointer());
+    __p                = __data();
     size_type __n_move = __sz - __ip;
     if (__n_move != 0)
       traits_type::move(__p + __ip + 1, __p + __ip, __n_move);
@@ -3249,7 +3255,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(
     return *this;
   }
 
-  value_type* __p = std::__to_address(__get_pointer());
+  value_type* __p = __data();
   if (__n1 != __n2) {
     if (__n2 > __n1)
       __annotate_increase(__n2 - __n1);
@@ -3288,7 +3294,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
   size_type __cap = capacity();
   value_type* __p;
   if (__cap - __sz + __n1 >= __n2) {
-    __p = std::__to_address(__get_pointer());
+    __p = __data();
     if (__n1 != __n2) {
       if (__n2 > __n1)
         __annotate_increase(__n2 - __n1);
@@ -3332,7 +3338,7 @@ basic_string<_CharT, _Traits, _Allocator>::__erase_external_with_move(size_type 
     return;
 
   size_type __sz     = size();
-  value_type* __p    = std::__to_address(__get_pointer());
+  value_type* __p    = __data();
   __n                = std::min(__n, __sz - __pos);
   size_type __n_move = __sz - __pos - __n;
   if (__n_move != 0)
@@ -3713,7 +3719,7 @@ __concatenate_strings(const _Allocator& __alloc,
   _String __r(__uninitialized_size_tag(),
               __str1.size() + __str2.size(),
               _String::__alloc_traits::select_on_container_copy_construction(__alloc));
-  auto __ptr = std::__to_address(__r.__get_pointer());
+  auto __ptr = __r.__data();
   _Traits::copy(__ptr, __str1.data(), __str1.size());
   _Traits::copy(__ptr + __str1.size(), __str2.data(), __str2.size());
   _Traits::assign(__ptr[__str1.size() + __str2.size()], _CharT());

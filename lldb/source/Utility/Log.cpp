@@ -181,21 +181,6 @@ void Log::VAFormatf(llvm::StringRef file, llvm::StringRef function,
   Format(file, function, llvm::formatv("{0}", Content));
 }
 
-// Printing of errors that are not fatal.
-void Log::Error(const char *format, ...) {
-  va_list args;
-  va_start(args, format);
-  VAError(format, args);
-  va_end(args);
-}
-
-void Log::VAError(const char *format, va_list args) {
-  llvm::SmallString<64> Content;
-  VASprintf(Content, format, args);
-
-  Printf("error: %s", Content.c_str());
-}
-
 // Printing of warnings that are not fatal only if verbose mode is enabled.
 void Log::Verbose(const char *format, ...) {
   if (!GetVerbose())
@@ -205,17 +190,6 @@ void Log::Verbose(const char *format, ...) {
   va_start(args, format);
   VAPrintf(format, args);
   va_end(args);
-}
-
-// Printing of warnings that are not fatal.
-void Log::Warning(const char *format, ...) {
-  llvm::SmallString<64> Content;
-  va_list args;
-  va_start(args, format);
-  VASprintf(Content, format, args);
-  va_end(args);
-
-  Printf("warning: %s", Content.c_str());
 }
 
 void Log::Register(llvm::StringRef name, Channel &channel) {

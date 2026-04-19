@@ -38,10 +38,12 @@ public:
     l_paren,
     l_square,
     minus,
+    percent,
     period,
     plus,
     r_paren,
     r_square,
+    slash,
     star,
   };
 

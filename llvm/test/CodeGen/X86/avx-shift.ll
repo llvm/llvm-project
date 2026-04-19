@@ -149,11 +149,12 @@ define <32 x i8> @vshift11(<32 x i8> %a) {
 define <32 x i8> @vshift12(<32 x i8> %a) {
 ; CHECK-LABEL: vshift12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllw $2, %xmm0, %xmm1
+; CHECK-NEXT:    vpaddb %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vpsllw $2, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; CHECK-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %s = shl <32 x i8> %a, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
   ret <32 x i8> %s

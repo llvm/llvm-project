@@ -290,6 +290,71 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
 
 // -----
 
+def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", []> {
+  let summary = [{
+    Declare an execution mode for an entry point, using <id>s as Extra
+    Operands.
+  }];
+
+  let description = [{
+    Entry Point must be the Entry Point <id> operand of an OpEntryPoint
+    instruction.
+
+    Mode is the execution mode. See Execution Mode.
+
+    This instruction is only valid if the Mode operand is an execution mode
+    that takes Extra Operands that are <id> operands. Otherwise, use
+    OpExecutionMode.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    execution-mode ::= "Invocations" | "SpacingEqual" |
+                           <and other SPIR-V execution modes...>
+    execution-mode-id-op ::= `spirv.ExecutionMode ` ssa-use execution-mode
+                              symbol-reference (`, ` symbol-reference)*
+    ```
+
+    #### Example:
+
+    ```mlir
+    spirv.ExecutionModeId @foo "LocalSizeId" @var0, @var1, @var2
+    spirv.ExecutionModeId @bar "LocalSizeHintId" @x, @y, @z
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_2>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$fn,
+    SPIRV_ExecutionModeAttr:$execution_mode, 
+    SymbolRefArrayAttr:$values
+  );
+
+  let results = (outs);
+  
+  let hasVerifier = 1;
+  
+  let autogenSerialization = 0;
+
+  let builders = [OpBuilder<(ins "spirv::FuncOp":$function,
+                                 "spirv::ExecutionMode":$executionMode,
+                                 "ArrayRef<Attribute>":$params),
+                            [{
+      build($_builder, $_state,
+            SymbolRefAttr::get(function),
+            ExecutionModeAttr::get($_builder.getContext(), executionMode),
+            $_builder.getArrayAttr(params));
+    }]>];
+}
+
+// -----
+
 def SPIRV_FuncOp : SPIRV_Op<"func", [
     AutomaticAllocationScope, FunctionOpInterface,
     InModuleScope, IsolatedFromAbove

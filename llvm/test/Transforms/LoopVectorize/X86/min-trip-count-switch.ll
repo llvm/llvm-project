@@ -4,11 +4,11 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: <4 x float>
-define void @trivial_loop(ptr nocapture %a) nounwind uwtable optsize {
+define void @trivial_loop(ptr nocapture %a) optsize {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -19,6 +19,6 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 8
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }

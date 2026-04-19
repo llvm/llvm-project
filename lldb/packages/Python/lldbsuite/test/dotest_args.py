@@ -279,6 +279,18 @@ def create_parser():
         metavar="A plugin whose tests will be enabled",
         help="A plugin whose tests will be enabled. The only currently supported plugin is intel-pt.",
     )
+    group.add_argument(
+        "--enable-mte",
+        dest="enable_mte",
+        action="store_true",
+        help="Indicate that the test suite is running with MTE (Memory Tagging Extension) enabled.",
+    )
+    group.add_argument(
+        "--arm64e-debugserver",
+        dest="arm64e_debugserver",
+        action="store_true",
+        help="Indicate that debugserver is built with arm64e support.",
+    )
 
     # Configuration options
     group = parser.add_argument_group("Remote platform options")

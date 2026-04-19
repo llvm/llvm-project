@@ -937,7 +937,7 @@ private:
 
   bool processNode(DomTreeNode *Node);
 
-  bool handleBranchCondition(Instruction *CondInst, const BranchInst *BI,
+  bool handleBranchCondition(Instruction *CondInst, const CondBrInst *BI,
                              const BasicBlock *BB, const BasicBlock *Pred);
 
   Value *getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
@@ -1166,9 +1166,8 @@ bool EarlyCSE::isOperatingOnInvariantMemAt(Instruction *I, unsigned GenAt) {
 }
 
 bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
-                                     const BranchInst *BI, const BasicBlock *BB,
+                                     const CondBrInst *BI, const BasicBlock *BB,
                                      const BasicBlock *Pred) {
-  assert(BI->isConditional() && "Should be a conditional branch!");
   assert(BI->getCondition() == CondInst && "Wrong condition?");
   assert(BI->getSuccessor(0) == BB || BI->getSuccessor(1) == BB);
   auto *TorF = (BI->getSuccessor(0) == BB)
@@ -1358,8 +1357,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
   // value.  Since we're adding this to the scoped hash table (like any other
   // def), it will have been popped if we encounter a future merge block.
   if (BasicBlock *Pred = BB->getSinglePredecessor()) {
-    auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
-    if (BI && BI->isConditional()) {
+    if (auto *BI = dyn_cast<CondBrInst>(Pred->getTerminator())) {
       auto *CondInst = dyn_cast<Instruction>(BI->getCondition());
       if (CondInst && SimpleValue::canHandle(CondInst))
         Changed |= handleBranchCondition(CondInst, BI, BB, Pred);

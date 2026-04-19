@@ -630,12 +630,21 @@ calculateMemoryRequirements(Value accessedPtr, bool isNontemporal,
 
   // PhysicalStorageBuffers require the `Aligned` attribute.
   // Other storage types may show an `Aligned` attribute.
-  auto pointeeType = dyn_cast<spirv::ScalarType>(ptrType.getPointeeType());
-  if (!pointeeType)
-    return failure();
+  std::optional<int64_t> sizeInBytes;
+  Type rawPointeeType = ptrType.getPointeeType();
+  if (auto scalarType = dyn_cast<spirv::ScalarType>(rawPointeeType)) {
+    // For scalar types, the alignment is determined by their size.
+    sizeInBytes = scalarType.getSizeInBytes();
+  } else if (auto vecType = dyn_cast<VectorType>(rawPointeeType)) {
+    // For vector element types, the alignment should equal the total size of
+    // the vector.
+    if (auto scalarElem =
+            dyn_cast<spirv::ScalarType>(vecType.getElementType())) {
+      if (auto elemSize = scalarElem.getSizeInBytes())
+        sizeInBytes = *elemSize * vecType.getNumElements();
+    }
+  }
 
-  // For scalar types, the alignment is determined by their size.
-  std::optional<int64_t> sizeInBytes = pointeeType.getSizeInBytes();
   if (!sizeInBytes.has_value())
     return failure();
 

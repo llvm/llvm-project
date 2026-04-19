@@ -46,6 +46,10 @@ C/C++-level ACLE attributes:
 ``aarch64_expanded_pstate_za``
   is used for functions with ``__arm_new_za``
 
+``aarch64_zt0_undef``
+  Deprecated. Previously used internally to prevent spills/reloads of ZT0 in
+  some cases.
+
 Clang must ensure that the above attributes are added both to the
 function's declaration/definition as well as to their call-sites. This is
 important for calls to attributed function pointers, where no

@@ -46,8 +46,7 @@ Prescanner::Prescanner(const Prescanner &that, Preprocessor &prepro,
       prescannerNesting_{that.prescannerNesting_ + 1},
       skipLeadingAmpersand_{that.skipLeadingAmpersand_},
       compilerDirectiveBloomFilter_{that.compilerDirectiveBloomFilter_},
-      compilerDirectiveSentinels_{that.compilerDirectiveSentinels_},
-      maxSentinelLength_{that.maxSentinelLength_} {}
+      compilerDirectiveSentinels_{that.compilerDirectiveSentinels_} {}
 
 // Returns number of bytes to skip
 static inline int IsSpace(const char *p) {
@@ -1731,10 +1730,6 @@ Prescanner &Prescanner::AddCompilerDirectiveSentinel(const std::string &dir) {
   compilerDirectiveBloomFilter_.set(packed % prime1);
   compilerDirectiveBloomFilter_.set(packed % prime2);
   compilerDirectiveSentinels_.insert(dir);
-  int len{static_cast<int>(dir.size())};
-  if (len > maxSentinelLength_) {
-    maxSentinelLength_ = len;
-  }
   return *this;
 }
 
@@ -1789,19 +1784,15 @@ const char *Prescanner::IsCompilerDirectiveSentinel(CharBlock token) const {
   while (end > p && (end[-1] == ' ' || end[-1] == '\t')) {
     --end;
   }
-  if (end > p + maxSentinelLength_) {
-    end = p + maxSentinelLength_;
-  }
   return end > p && IsCompilerDirectiveSentinel(p, end - p) ? p : nullptr;
 }
 
 std::optional<std::pair<const char *, const char *>>
 Prescanner::IsCompilerDirectiveSentinel(const char *p) const {
   char sentinel[8];
-  std::size_t maxLen{static_cast<std::size_t>(maxSentinelLength_)};
   for (std::size_t j{0}; j + 1 < sizeof sentinel; ++p, ++j) {
     if (int n{IsSpaceOrTab(p)};
-        n || j >= maxLen || !(IsLetter(*p) || *p == '$' || *p == '@')) {
+        n || !(IsLetter(*p) || *p == '$' || *p == '@')) {
       if (j <= 1 && sentinel[0] == '$' && n == 0 && *p != '&' && *p != '\n') {
         // Free form OpenMP conditional compilation line sentinels have to
         // be immediately followed by a space or &, not a digit
