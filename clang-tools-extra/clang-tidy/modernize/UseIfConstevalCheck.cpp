@@ -26,22 +26,18 @@ struct BraceFix {
 
 } // namespace
 
-static const Stmt *ignoreAttributedStmt(const Stmt *S) {
-  while (const auto *AS = dyn_cast_or_null<AttributedStmt>(S))
-    S = AS->getSubStmt();
-  return S;
-}
-
-static std::optional<CharSourceRange>
-getHeaderRange(const IfStmt *If, const SourceManager &SM,
-               const LangOptions &LangOpts) {
+static std::optional<SourceRange> getHeaderRange(const IfStmt *If,
+                                                 const SourceManager &SM,
+                                                 const LangOptions &LangOpts) {
   if (If->getLParenLoc().isMacroID() || If->getRParenLoc().isMacroID())
     return std::nullopt;
 
-  const CharSourceRange HeaderRange = Lexer::makeFileCharRange(
-      CharSourceRange::getTokenRange(If->getLParenLoc(), If->getRParenLoc()),
-      SM, LangOpts);
-  if (HeaderRange.isInvalid())
+  const SourceRange HeaderRange(If->getLParenLoc(), If->getRParenLoc());
+  // Validate that the token range is safely rewriteable in file source before
+  // offering a fix-it.
+  if (Lexer::makeFileCharRange(CharSourceRange::getTokenRange(HeaderRange), SM,
+                               LangOpts)
+          .isInvalid())
     return std::nullopt;
   return HeaderRange;
 }
@@ -50,7 +46,8 @@ static std::optional<BraceFix>
 getBraceFix(const Stmt *S, const LangOptions &LangOpts, const SourceManager &SM,
             SourceLocation StartLoc,
             SourceLocation EndLocHint = SourceLocation()) {
-  S = ignoreAttributedStmt(S);
+  if (S)
+    S = S->stripLabelLikeStatements();
   if (!S || isa<CompoundStmt>(S))
     return BraceFix();
 
@@ -109,7 +106,7 @@ void UseIfConstevalCheck::check(const MatchFinder::MatchResult &Result) {
   if (If->hasInitStorage() || If->hasVarStorage())
     return;
 
-  std::optional<CharSourceRange> HeaderRange =
+  std::optional<SourceRange> HeaderRange =
       getHeaderRange(If, *Result.SourceManager, getLangOpts());
   if (!HeaderRange)
     return;
@@ -121,7 +118,9 @@ void UseIfConstevalCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   std::optional<BraceFix> ElseBraceFix = BraceFix();
-  const Stmt *Else = ignoreAttributedStmt(If->getElse());
+  const Stmt *Else = If->getElse();
+  if (Else)
+    Else = Else->stripLabelLikeStatements();
   if (Else && !isa<IfStmt>(Else)) {
     ElseBraceFix = getBraceFix(If->getElse(), getLangOpts(),
                                *Result.SourceManager, If->getElseLoc());

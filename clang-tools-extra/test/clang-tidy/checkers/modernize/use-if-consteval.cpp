@@ -137,6 +137,30 @@ auto Lambda = [] {
   // CHECK-FIXES-NEXT:   return 2;
 };
 
+int attributed_then() {
+  if (std::is_constant_evaluated())
+    [[likely]] return 1;
+  return 0;
+  // CHECK-MESSAGES: :[[@LINE-3]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
+  // CHECK-FIXES-NEXT:   {{[[][[]}}likely{{[]][]]}} return 1;
+  // CHECK-FIXES-NEXT: }
+  // CHECK-FIXES-NEXT:   return 0;
+}
+
+int labeled_then() {
+  if (std::is_constant_evaluated())
+  labeled_then:
+    return 1;
+  return 0;
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
+  // CHECK-FIXES-NEXT:   labeled_then:
+  // CHECK-FIXES-NEXT:     return 1;
+  // CHECK-FIXES-NEXT: }
+  // CHECK-FIXES-NEXT:   return 0;
+}
+
 int else_if_chain(int Value) {
   if (Value == 0)
     return 0;
