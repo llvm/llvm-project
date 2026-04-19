@@ -187,54 +187,15 @@ public:
     }
   }
 
-  /// Checks for use-after-invalidation errors when a container is modified.
-  ///
-  /// This method identifies origins that are live at the point of invalidation
-  /// and checks if they hold loans that are invalidated by the operation
-  /// (e.g., iterators into a vector that is being pushed to).
-  void checkInvalidation(const InvalidateOriginFact *IOF) {
-    OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
-    /// Get loans directly pointing to the invalidated container
-    LoanSet DirectlyInvalidatedLoans =
-        LoanPropagation.getLoans(InvalidatedOrigin, IOF);
-    auto IsInvalidated = [&](const Loan *L) {
-      for (LoanID InvalidID : DirectlyInvalidatedLoans) {
-        const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-        if (InvalidL->getAccessPath() == L->getAccessPath())
-          return true;
-      }
-      return false;
-    };
-    // For each live origin, check if it holds an invalidated loan and report.
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
+  template <typename OriginFact, typename Predicate>
+  void recordWarningsForMatchingLoans(const Expr *InvalidationExpr,
+                                      LoanSet &DirectlyAffectedLoans,
+                                      LivenessMap &Origins, OriginFact OF,
+                                      Predicate Pred) {
     for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
-      for (LoanID LiveLoanID : HeldLoans)
-        if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
-          bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
-          bool LastDomination =
-              FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
-          if (!LastDomination) {
-            FinalWarningsMap[LiveLoanID] = {
-                /*ExpiryLoc=*/{},
-                /*CausingFact=*/LiveInfo.CausingFact,
-                /*MovedExpr=*/nullptr,
-                /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
-                /*CausingFactDominatesExpiry=*/CurDomination};
-          }
-        }
-    }
-  }
-
-  void checkDestroyed(const DestroyOriginFact *DOF) {
-    OriginID DestroyedOrigin = DOF->getDestroyedOrigin();
-    LoanSet DirectlyDestroyedLoans =
-        LoanPropagation.getLoans(DestroyedOrigin, DOF);
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(DOF);
-    for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, DOF);
+      LoanSet HeldLoans = LoanPropagation.getLoans(OID, OF);
       for (LoanID DestroyedLoanID : HeldLoans) {
-        if (!DirectlyDestroyedLoans.contains(DestroyedLoanID))
+        if (!Pred(DestroyedLoanID))
           continue;
 
         bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
@@ -245,11 +206,53 @@ public:
               /*ExpiryLoc=*/{},
               /*CausingFact=*/LiveInfo.CausingFact,
               /*MovedExpr=*/nullptr,
-              /*InvalidatedByExpr=*/DOF->getDestroyExpr(),
+              /*InvalidatedByExpr=*/InvalidationExpr,
               /*CausingFactDominatesExpiry=*/CurDomination};
         }
       }
     }
+  }
+
+  /// Checks for use-after-invalidation errors when a container is modified.
+  ///
+  /// This method identifies origins that are live at the point of invalidation
+  /// and checks if they hold loans that are invalidated by the operation
+  /// (e.g., iterators into a vector that is being pushed to).
+  void checkInvalidation(const InvalidateOriginFact *IOF) {
+    OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
+    /// Get loans directly pointing to the invalidated container
+    LoanSet DirectlyInvalidatedLoans =
+        LoanPropagation.getLoans(InvalidatedOrigin, IOF);
+    auto IsInvalidated = [&](const LoanID &LID) {
+      for (LoanID InvalidID : DirectlyInvalidatedLoans) {
+        const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
+        const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+
+        if (InvalidL->getAccessPath() == L->getAccessPath())
+          return true;
+      }
+      return false;
+    };
+    // For each live origin, check if it holds an invalidated loan and report.
+    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
+    recordWarningsForMatchingLoans(IOF->getInvalidationExpr(),
+                                   DirectlyInvalidatedLoans, Origins, IOF,
+                                   IsInvalidated);
+  }
+
+  void checkDestroyed(const DestroyOriginFact *DOF) {
+    OriginID DestroyedOrigin = DOF->getDestroyedOrigin();
+    LoanSet DirectlyDestroyedLoans =
+        LoanPropagation.getLoans(DestroyedOrigin, DOF);
+    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(DOF);
+
+    auto IsDestroyed = [&DirectlyDestroyedLoans](const LoanID &LID) {
+      return DirectlyDestroyedLoans.contains(LID);
+    };
+
+    recordWarningsForMatchingLoans(DOF->getDestroyExpr(),
+                                   DirectlyDestroyedLoans, Origins, DOF,
+                                   IsDestroyed);
   }
 
   void issuePendingWarnings() {
@@ -305,7 +308,8 @@ public:
   }
 
   /// Returns the declaration of a function that is visible across translation
-  /// units, if such a declaration exists and is different from the definition.
+  /// units, if such a declaration exists and is different from the
+  /// definition.
   static const FunctionDecl *getCrossTUDecl(const FunctionDecl &FD,
                                             SourceManager &SM) {
     if (!FD.isExternallyVisible())
