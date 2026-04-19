@@ -114,9 +114,6 @@ struct MissingFeatures {
   static bool opCallChain() { return false; }
   static bool opCallExceptionAttr() { return false; }
 
-  // CXXNewExpr
-  static bool exprNewNullCheck() { return false; }
-
   // FnInfoOpts -- This is used to track whether calls are chain calls or
   // instance methods. Classic codegen uses chain call to track and extra free
   // register for x86 and uses instance method as a condition for a thunk

@@ -1617,9 +1617,22 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   // interesting initializer will be running sanitizers on the initialization.
   bool nullCheck = e->shouldNullCheckAllocation() &&
                    (!allocType.isPODType(getContext()) || e->hasInitializer());
-  assert(!cir::MissingFeatures::exprNewNullCheck());
-  if (nullCheck)
-    cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: null check");
+
+  mlir::Location loc = getLoc(e->getSourceRange());
+  cir::IfOp nullCheckOp;
+  cir::YieldOp nullCheckYield;
+  if (nullCheck) {
+    mlir::Value isNotNull = builder.createPtrIsNotNull(allocation.getPointer());
+    nullCheckOp = cir::IfOp::create(builder, loc, isNotNull,
+                                    /*withElseRegion=*/false,
+                                    /*thenBuilder=*/
+                                    [&](mlir::OpBuilder &, mlir::Location loc) {
+                                      nullCheckYield = builder.createYield(loc);
+                                    });
+
+    // Emit initialization inside the if-op's then region.
+    builder.setInsertionPoint(nullCheckYield);
+  }
 
   // If there's an operator delete, enter a cleanup to call it if an
   // exception is thrown. If we do this, we'll be creating the result pointer
@@ -1693,9 +1706,34 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
     result = result.withPointer(loadResult.getResult());
   }
 
-  assert(!cir::MissingFeatures::exprNewNullCheck());
+  mlir::Value resultValue = result.getPointer();
 
-  return result.getPointer();
+  if (nullCheck) {
+    // Restore insertion point to after the IfOp.
+    builder.setInsertionPointAfter(nullCheckOp);
+
+    mlir::Type resultTy = resultValue.getType();
+
+    // If we needed a NewDeleteCleanup, allocation may have been modified
+    // inside the cir.if (e.g. by cookie adjustment). Use the result stored
+    // in the alloca instead, since the alloca dominates this point.
+    mlir::Value trueVal;
+    if (useNewDeleteCleanup) {
+      trueVal = builder.createLoad(getLoc(e->getSourceRange()), resultPtr)
+                    .getResult();
+    } else {
+      trueVal = allocation.getPointer();
+    }
+    if (trueVal.getType() != resultTy)
+      trueVal = builder.createBitcast(trueVal, resultTy);
+    mlir::Value nullPtr =
+        builder.getNullPtr(resultTy, getLoc(e->getSourceRange())).getResult();
+    resultValue =
+        builder.createSelect(getLoc(e->getSourceRange()),
+                             nullCheckOp.getCondition(), trueVal, nullPtr);
+  }
+
+  return resultValue;
 }
 
 void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
