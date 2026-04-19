@@ -433,7 +433,8 @@ public:
     populateTestReductionPatterns(patterns);
   }
 
-  void populateReductionPatternsWithTester(RewritePatternSet &patterns, Tester &tester) const final {
+  void populateReductionPatternsWithTester(RewritePatternSet &patterns,
+                                           Tester &tester) const final {
     patterns.add<ReplaceOperandsPattern>(getContext(), tester);
   }
 };
