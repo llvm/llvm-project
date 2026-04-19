@@ -7681,12 +7681,12 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, &LVer);
 
   // Create recipes for header phis.
-  VPlanTransforms::createHeaderPhiRecipes(
-      *VPlan0, PSE, *OrigLoop, Legal->getInductionVars(),
-      Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
-      CM.getInLoopReductions(), Hints.allowReordering());
+  RUN_VPLAN_PASS(VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE,
+                 *OrigLoop, Legal->getInductionVars(),
+                 Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
+                 CM.getInLoopReductions(), Hints.allowReordering());
 
-  VPlanTransforms::simplifyRecipes(*VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
@@ -7698,15 +7698,16 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                   ? UncountableExitStyle::MaskedHandleExitInScalarLoop
                   : UncountableExitStyle::ReadOnly;
 
-  if (!VPlanTransforms::handleEarlyExits(*VPlan0, EEStyle, OrigLoop, PSE, *DT,
-                                         Legal->getAssumptionCache()))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleEarlyExits, *VPlan0, EEStyle,
+                      OrigLoop, PSE, *DT, Legal->getAssumptionCache()))
     return;
-  VPlanTransforms::addMiddleCheck(*VPlan0, CM.foldTailByMasking());
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *VPlan0);
+
+  RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
+                 CM.foldTailByMasking());
+  RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0);
   if (CM.foldTailByMasking())
-    RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *VPlan0);
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize,
-                           *VPlan0);
+    RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -7831,8 +7832,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     if (CM.blockNeedsPredicationForAnyReason(BB))
       BlocksNeedingPredication.insert(BB);
 
-  VPlanTransforms::createInLoopReductionRecipes(*Plan, BlocksNeedingPredication,
-                                                Range.Start);
+  RUN_VPLAN_PASS(VPlanTransforms::createInLoopReductionRecipes, *Plan,
+                 BlocksNeedingPredication, Range.Start);
 
   VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
                         OrigLoop);
@@ -7891,9 +7892,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
-  // TODO: We can't call runPass on these transforms yet, due to verifier
-  // failures.
-  VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
+  RUN_VPLAN_PASS(VPlanTransforms::addExitUsersForFirstOrderRecurrences, *Plan,
+                 Range);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -7922,7 +7922,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
 
-  VPlanTransforms::removeBranchOnConst(*Plan);
+  RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
 
   // Create partial reduction recipes for scaled reductions and transform
   // recipes to abstract recipes if it is legal and beneficial and clamp the
