@@ -203,6 +203,7 @@
 #include "math/log2p1f16.h"
 #include "math/log_bf16.h"
 #include "math/logb.h"
+#include "math/logbbf16.h"
 #include "math/logbf.h"
 #include "math/logbf128.h"
 #include "math/logbf16.h"

@@ -1,4 +1,5 @@
 # RUN: llc -o - %s -mtriple=aarch64--linux-gnu -mcpu=falkor -run-pass=aarch64-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64--linux-gnu -mcpu=falkor -passes=aarch64-ccmp | FileCheck %s
 ---
 # This test checks that successor probabilties are properly updated after a
 # ccmp-conversion.

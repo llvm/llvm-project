@@ -623,9 +623,9 @@ void t17(void) {
 //
 // Because we go through get_member, the codegen here is slightly different.
 // CIRLLVMONLY: store { i32, i32 } %[[ASM_RES]], ptr %[[ASM_RES_VAR]]
-// CIRLLVMONLY: %[[GEP_FIRST:.*]] = getelementptr { i32, i32 }, ptr %[[ASM_RES_VAR]], i32 0, i32 0
+// CIRLLVMONLY: %[[GEP_FIRST:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[ASM_RES_VAR]], i32 0, i32 0
 // CIRLLVMONLY: %[[GEP_FIRST_LOAD:.*]] = load i32, ptr %[[GEP_FIRST]]
-// CIRLLVMONLY: %[[GEP_SECOND:.*]] = getelementptr { i32, i32 }, ptr %[[ASM_RES_VAR]], i32 0, i32 1
+// CIRLLVMONLY: %[[GEP_SECOND:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[ASM_RES_VAR]], i32 0, i32 1
 // CIRLLVMONLY: %[[GEP_SECOND_LOAD:.*]] = load i32, ptr %[[GEP_SECOND]]
 //
 // LLVMONLY: %[[GEP_FIRST_LOAD:.*]] = extractvalue { i32, i32 } %[[ASM_RES]], 0

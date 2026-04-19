@@ -61,14 +61,14 @@ struct ZeroInit {
 // LLVM:   %[[THIS_ALLOCA:.*]] = alloca ptr
 // LLVM:   %[[ITER:.*]] = alloca ptr
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM:   %[[I:.*]] = getelementptr %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[I:.*]] = getelementptr inbounds nuw %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 0
 // LLVM:   store i32 0, ptr %[[I]]
-// LLVM:   %[[P:.*]] = getelementptr %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 1
-// LLVM:   %[[P_A:.*]] = getelementptr %struct.Pair, ptr %[[P]], i32 0, i32 0
+// LLVM:   %[[P:.*]] = getelementptr inbounds nuw %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 1
+// LLVM:   %[[P_A:.*]] = getelementptr inbounds nuw %struct.Pair, ptr %[[P]], i32 0, i32 0
 // LLVM:   store i32 0, ptr %[[P_A]]
-// LLVM:   %[[P_B:.*]] = getelementptr %struct.Pair, ptr %[[P]], i32 0, i32 1
+// LLVM:   %[[P_B:.*]] = getelementptr inbounds nuw %struct.Pair, ptr %[[P]], i32 0, i32 1
 // LLVM:   store i32 0, ptr %[[P_B]]
-// LLVM:   %[[ARR:.*]] = getelementptr %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 2
+// LLVM:   %[[ARR:.*]] = getelementptr inbounds nuw %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 2
 // LLVM:   %[[ARR_BEGIN:.*]] = getelementptr i32, ptr %[[ARR]], i32 0
 // LLVM:   store ptr %[[ARR_BEGIN]], ptr %[[ITER]]
 // LLVM:   %[[ARR_END:.*]] = getelementptr i32, ptr %[[ARR_BEGIN]], i64 4
@@ -84,9 +84,9 @@ struct ZeroInit {
 // LLVM:   store ptr %[[NEXT]], ptr %[[ITER]]
 // LLVM:   br label %[[LOOP_COND]]
 // LLVM: [[LOOP_END]]:
-// LLVM:   %[[C:.*]] = getelementptr %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 3
+// LLVM:   %[[C:.*]] = getelementptr inbounds nuw %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 3
 // LLVM:   store { float, float } zeroinitializer, ptr %[[C]]
-// LLVM:   %[[BF:.*]] = getelementptr %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 4
+// LLVM:   %[[BF:.*]] = getelementptr inbounds nuw %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 4
 // LLVM:   store i8 0, ptr %[[BF]]
 
 // OGCG: define{{.*}} void @_ZN8ZeroInitC2Ev(ptr {{.*}} %[[THIS_ARG:.*]])
@@ -175,14 +175,14 @@ struct ValueInit {
 // LLVM:   %[[THIS_ALLOCA:.*]] = alloca ptr
 // LLVM:   %[[ITER:.*]] = alloca ptr
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM:   %[[I:.*]] = getelementptr %struct.ValueInit, ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[I:.*]] = getelementptr inbounds nuw %struct.ValueInit, ptr %[[THIS]], i32 0, i32 0
 // LLVM:   store i32 1, ptr %[[I]]
-// LLVM:   %[[P:.*]] = getelementptr %struct.ValueInit, ptr %[[THIS]], i32 0, i32 1
-// LLVM:   %[[P_A:.*]] = getelementptr %struct.Pair, ptr %[[P]], i32 0, i32 0
+// LLVM:   %[[P:.*]] = getelementptr inbounds nuw %struct.ValueInit, ptr %[[THIS]], i32 0, i32 1
+// LLVM:   %[[P_A:.*]] = getelementptr inbounds nuw %struct.Pair, ptr %[[P]], i32 0, i32 0
 // LLVM:   store i32 2, ptr %[[P_A]]
-// LLVM:   %[[P_B:.*]] = getelementptr %struct.Pair, ptr %[[P]], i32 0, i32 1
+// LLVM:   %[[P_B:.*]] = getelementptr inbounds nuw %struct.Pair, ptr %[[P]], i32 0, i32 1
 // LLVM:   store i32 3, ptr %[[P_B]]
-// LLVM:   %[[ARR:.*]] = getelementptr %struct.ValueInit, ptr %[[THIS]], i32 0, i32 2
+// LLVM:   %[[ARR:.*]] = getelementptr inbounds nuw %struct.ValueInit, ptr %[[THIS]], i32 0, i32 2
 // LLVM:   %[[ARR_BEGIN:.*]] = getelementptr i32, ptr %[[ARR]], i32 0
 // LLVM:   store i32 4, ptr %[[ARR_BEGIN]]
 // LLVM:   %[[ARR_1:.*]] = getelementptr i32, ptr %[[ARR_BEGIN]], i64 1
@@ -202,9 +202,9 @@ struct ValueInit {
 // LLVM:   store ptr %[[NEXT]], ptr %[[ITER]]
 // LLVM:   br label %[[LOOP_COND]]
 // LLVM: [[LOOP_END]]:
-// LLVM:   %[[C:.*]] = getelementptr %struct.ValueInit, ptr %[[THIS]], i32 0, i32 3
+// LLVM:   %[[C:.*]] = getelementptr inbounds nuw %struct.ValueInit, ptr %[[THIS]], i32 0, i32 3
 // LLVM:   store { float, float } { float 6.000000e+00, float 7.000000e+00 }, ptr %[[C]]
-// LLVM:   %[[BF:.*]] = getelementptr %struct.ValueInit, ptr %[[THIS]], i32 0, i32 4
+// LLVM:   %[[BF:.*]] = getelementptr inbounds nuw %struct.ValueInit, ptr %[[THIS]], i32 0, i32 4
 // LLVM:   store i8 -1, ptr %[[BF]]
 
 // OGCG: define{{.*}} void @_ZN9ValueInitC2Ev(ptr {{.*}} %[[THIS_ARG:.*]])

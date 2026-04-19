@@ -31,7 +31,7 @@ int init(S* s) {
 //LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 //LLVM:   [[TMP1:%.*]] = alloca i32, i64 1, align 4
 //LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
-//LLVM:   [[TMP3:%.*]] = getelementptr %struct.S, ptr [[TMP2]], i32 0, i32 0
+//LLVM:   [[TMP3:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP2]], i32 0, i32 0
 //LLVM:   [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 //LLVM:   [[TMP5:%.*]] = shl i32 [[TMP4]], 15
 //LLVM:   [[TMP6:%.*]] = ashr i32 [[TMP5]], 15
@@ -60,7 +60,7 @@ void load(S* s) {
 
 // LLVM: define dso_local void @load{{.*}}{{.*}}
 // LLVM:   %[[PTR0:.*]] = load ptr
-// LLVM:   %[[GET0:.*]] = getelementptr %struct.S, ptr %[[PTR0]], i32 0, i32 0
+// LLVM:   %[[GET0:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[PTR0]], i32 0, i32 0
 // LLVM:   %[[VAL0:.*]] = load i32, ptr %[[GET0]], align 4
 // LLVM:   %[[AND0:.*]] = and i32 %[[VAL0]], 268435455
 // LLVM:   %[[OR0:.*]] = or i32 %[[AND0]], -1073741824
@@ -80,7 +80,7 @@ void load(S* s) {
 // CIR:    %[[SET1:.*]] = cir.set_bitfield align(4) (#bfi_b, %[[GET1]] : !cir.ptr<!u32i>, %[[CONST2]] : !s32i) -> !s32i
 
 // LLVM:  %[[PTR1:.*]] = load ptr
-// LLVM:  %[[GET1:.*]] = getelementptr %struct.S, ptr %[[PTR1]], i32 0, i32 0
+// LLVM:  %[[GET1:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[PTR1]], i32 0, i32 0
 // LLVM:  %[[VAL1:.*]] = load i32, ptr %[[GET1]], align 4
 // LLVM:  %[[AND1:.*]] = and i32 %[[VAL1]], -268304385
 // LLVM:  %[[OR1:.*]] = or i32 %[[AND1]], 5505024
@@ -99,7 +99,7 @@ void load(S* s) {
 // CIR:    %[[SET2:.*]] = cir.set_bitfield align(4) (#bfi_c, %[[GET2]] : !cir.ptr<!u32i>, %[[CONST3]] : !s32i) -> !s32i
 
 // LLVM:  %[[PTR2:.*]] = load ptr
-// LLVM:  %[[GET2:.*]] = getelementptr %struct.S, ptr  %[[PTR2]], i32 0, i32 0
+// LLVM:  %[[GET2:.*]] = getelementptr inbounds nuw %struct.S, ptr  %[[PTR2]], i32 0, i32 0
 // LLVM:  %[[VAL2:.*]] = load i32, ptr %[[GET2]], align 4
 // LLVM:  %[[AND2:.*]] = and i32 %[[VAL2]], -131072
 // LLVM:  %[[OR2:.*]] = or i32 %[[AND2]], 118727

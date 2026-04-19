@@ -28,6 +28,7 @@
 #endif
 MACHINE_FUNCTION_PASS("aarch64-a57-fp-load-balancing", AArch64A57FPLoadBalancingPass())
 MACHINE_FUNCTION_PASS("aarch64-branch-targets", AArch64BranchTargetsPass())
+MACHINE_FUNCTION_PASS("aarch64-ccmp", AArch64ConditionalComparesPass())
 MACHINE_FUNCTION_PASS("aarch64-collect-loh", AArch64CollectLOHPass())
 MACHINE_FUNCTION_PASS("aarch64-condopt", AArch64ConditionOptimizerPass())
 MACHINE_FUNCTION_PASS("aarch64-copyelim", AArch64RedundantCopyEliminationPass())

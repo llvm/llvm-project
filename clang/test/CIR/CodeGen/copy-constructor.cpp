@@ -31,9 +31,9 @@ HasScalarArrayMember::HasScalarArrayMember(const HasScalarArrayMember &) = defau
 // LLVM-NEXT:    store ptr %[[ARG0]], ptr %[[THIS]]
 // LLVM-NEXT:    store ptr %[[ARG1]], ptr %[[OTHER]]
 // LLVM-NEXT:    %[[THIS_LOAD:.*]] = load ptr, ptr %[[THIS]]
-// LLVM-NEXT:    %[[THIS_ARR:.*]] = getelementptr %struct.HasScalarArrayMember, ptr %[[THIS_LOAD]], i32 0, i32 0
+// LLVM-NEXT:    %[[THIS_ARR:.*]] = getelementptr inbounds nuw %struct.HasScalarArrayMember, ptr %[[THIS_LOAD]], i32 0, i32 0
 // LLVM-NEXT:    %[[OTHER_LOAD:.*]] = load ptr, ptr %[[OTHER]]
-// LLVM-NEXT:    %[[OTHER_ARR:.*]] = getelementptr %struct.HasScalarArrayMember, ptr %[[OTHER_LOAD]], i32 0, i32 0
+// LLVM-NEXT:    %[[OTHER_ARR:.*]] = getelementptr inbounds nuw %struct.HasScalarArrayMember, ptr %[[OTHER_LOAD]], i32 0, i32 0
 // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr %[[THIS_ARR]], ptr %[[OTHER_ARR]], i64 16, i1 false)
 // LLVM-NEXT:    ret void
 

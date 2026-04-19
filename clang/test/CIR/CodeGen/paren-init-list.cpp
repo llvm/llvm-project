@@ -59,10 +59,10 @@ void test_init_list_with_dtor() {
 
 // LLVM: define {{.*}} void @_Z24test_init_list_with_dtorv
 // LLVM:   %[[O:.*]] = alloca %struct.Outer
-// LLVM:   %[[O_ADDR:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 0
-// LLVM:   %[[H_ADDR:.*]] = getelementptr %struct.HasDtor, ptr %[[O_ADDR]], i32 0, i32 0
+// LLVM:   %[[O_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 0
+// LLVM:   %[[H_ADDR:.*]] = getelementptr inbounds nuw %struct.HasDtor, ptr %[[O_ADDR]], i32 0, i32 0
 // LLVM:   store i32 1, ptr %[[H_ADDR]]
-// LLVM:   %[[X_ADDR:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 1
+// LLVM:   %[[X_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 1
 // LLVM:   store i32 2, ptr %[[X_ADDR]]
 // LLVM:   call void @_ZN5OuterD1Ev(ptr{{.*}} %[[O]])
 // LLVM:   ret void

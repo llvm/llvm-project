@@ -255,7 +255,7 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr %[[VAR3]], ptr %[[VAR1]], i64 4, i1 false)
 // LLVM:     br label %[[LBL6:.+]]
 // LLVM: [[LBL6]]:
-// LLVM:     %[[GEP_VAR3:.+]] = getelementptr %struct.S, ptr %[[VAR3]], i32 0, i32 0
+// LLVM:     %[[GEP_VAR3:.+]] = getelementptr inbounds nuw %struct.S, ptr %[[VAR3]], i32 0, i32 0
 // LLVM:     %[[LOAD_X:.+]] = load i32, ptr %[[GEP_VAR3]]
 // LLVM:     store i32 %[[LOAD_X]], ptr %[[VAR2]]
 // LLVM:     %[[RES:.+]] = load i32, ptr %[[VAR2]]

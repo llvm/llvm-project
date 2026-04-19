@@ -59,7 +59,7 @@ int use(Derived *d) { return d->b; }
 // CIR:  %[[D_B:.*]] = cir.load align(4) %[[D_B_ADDR]]
 
 // LLVM: define{{.*}} i32 @_Z3useP7Derived
-// LLVM:   getelementptr %class.Derived, ptr %{{.*}}, i32 0, i32 1
+// LLVM:   getelementptr inbounds nuw %class.Derived, ptr %{{.*}}, i32 0, i32 1
 
 // OGCG: define{{.*}} i32 @_Z3useP7Derived
 // OGCG:   getelementptr inbounds nuw %class.Derived, ptr %{{.*}}, i32 0, i32 1
@@ -77,7 +77,7 @@ int use_base() {
 
 // LLVM: define{{.*}} i32 @_Z8use_basev
 // LLVM:   %[[D:.*]] = alloca %class.Derived
-// LLVM:   %[[D_A_ADDR:.*]] = getelementptr %class.Base, ptr %[[D]], i32 0, i32 0
+// LLVM:   %[[D_A_ADDR:.*]] = getelementptr inbounds nuw %class.Base, ptr %[[D]], i32 0, i32 0
 
 // OGCG: define{{.*}} i32 @_Z8use_basev
 // OGCG:   %[[D:.*]] = alloca %class.Derived
@@ -96,7 +96,7 @@ int use_base_via_pointer(Derived *d) {
 // CIR:   %[[D_A:.*]] = cir.load align(4) %[[D_A_ADDR]]
 
 // LLVM: define{{.*}} i32 @_Z20use_base_via_pointerP7Derived
-// LLVM:   %[[D_A_ADDR:.*]] = getelementptr %class.Base, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[D_A_ADDR:.*]] = getelementptr inbounds nuw %class.Base, ptr %{{.*}}, i32 0, i32 0
 
 // OGCG: define{{.*}} i32 @_Z20use_base_via_pointerP7Derived
 // OGCG:   %[[D_A_ADDR:.*]] = getelementptr inbounds nuw %class.Base, ptr %{{.*}}, i32 0, i32 0

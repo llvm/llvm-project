@@ -111,11 +111,11 @@ void l0() {
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// LLVM:   %[[I_ADDR_ADDR:.*]] = getelementptr %[[REC_LAM_L0_A:.*]], ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[I_ADDR_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_L0_A:.*]], ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[I_ADDR:.*]] = load ptr, ptr %[[I_ADDR_ADDR]]
 // LLVM:   %[[I:.*]] = load i32, ptr %[[I_ADDR]]
 // LLVM:   %[[ADD:.*]] = add nsw i32 %[[I]], 1
-// LLVM:   %[[I_ADDR_ADDR:.*]] = getelementptr %[[REC_LAM_L0_A]], ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[I_ADDR_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_L0_A]], ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[I_ADDR:.*]] = load ptr, ptr %[[I_ADDR_ADDR]]
 // LLVM:   store i32 %[[ADD]], ptr %[[I_ADDR]]
 // LLVM:   ret void
@@ -123,7 +123,7 @@ void l0() {
 // LLVM: define {{.*}} void @_Z2l0v()
 // LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   %[[A:.*]] = alloca %[[REC_LAM_L0_A]]
-// LLVM:   %[[I_ADDR:.*]] = getelementptr %[[REC_LAM_L0_A]], ptr %[[A]], i32 0, i32 0
+// LLVM:   %[[I_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_L0_A]], ptr %[[A]], i32 0, i32 0
 // LLVM:   store ptr %[[I]], ptr %[[I_ADDR]]
 // LLVM:   call void @"_ZZ2l0vENK3$_0clEv"(ptr {{.*}} %[[A]])
 // LLVM:   ret void
@@ -174,7 +174,7 @@ auto g() {
 // LLVM:   %[[RETVAL:.*]] = alloca %[[REC_LAM_G]]
 // LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   store i32 12, ptr %[[I]]
-// LLVM:   %[[I_ADDR:.*]] = getelementptr %[[REC_LAM_G]], ptr %[[RETVAL]], i32 0, i32 0
+// LLVM:   %[[I_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_G]], ptr %[[RETVAL]], i32 0, i32 0
 // LLVM:   store ptr %[[I]], ptr %[[I_ADDR]]
 // LLVM:   %[[RET:.*]] = load %[[REC_LAM_G]], ptr %[[RETVAL]]
 // LLVM:   ret %[[REC_LAM_G]] %[[RET]]
@@ -213,7 +213,7 @@ auto g2() {
 // LLVM:   %[[RETVAL:.*]] = alloca %[[REC_LAM_G]]
 // LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   store i32 12, ptr %[[I]]
-// LLVM:   %[[I_ADDR:.*]] = getelementptr %[[REC_LAM_G]], ptr %[[RETVAL]], i32 0, i32 0
+// LLVM:   %[[I_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_G]], ptr %[[RETVAL]], i32 0, i32 0
 // LLVM:   store ptr %[[I]], ptr %[[I_ADDR]]
 // LLVM:   %[[RET:.*]] = load %[[REC_LAM_G]], ptr %[[RETVAL]]
 // LLVM:   ret %[[REC_LAM_G]] %[[RET]]
@@ -265,12 +265,12 @@ int f() {
 // LLVM:   %[[I_ALLOCA:.*]] = alloca i32
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM:   %[[I_ADDR_ADDR:.*]] = getelementptr %[[REC_LAM_G2:.*]], ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[I_ADDR_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_G2:.*]], ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[I_ADDR:.*]] = load ptr, ptr %[[I_ADDR_ADDR]]
 // LLVM:   %[[I:.*]] = load i32, ptr %[[I_ADDR]]
 // LLVM:   %[[ADD:.*]] = add nsw i32 %[[I]], 100
 // LLVM:   store i32 %[[ADD]], ptr %[[I_ADDR]]
-// LLVM:   %[[I_ADDR_ADDR:.*]] = getelementptr %[[REC_LAM_G2]], ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[I_ADDR_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_G2]], ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[I_ADDR:.*]] = load ptr, ptr %[[I_ADDR_ADDR]]
 // LLVM:   %[[I:.*]] = load i32, ptr %[[I_ADDR]]
 // LLVM:   store i32 %[[I]], ptr %[[I_ALLOCA]]
@@ -343,8 +343,8 @@ struct A {
 // LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM:   %[[PTR_A:.*]] = getelementptr %[[REC_LAM_A:.*]], ptr %[[THIS]], i32 0, i32 0
-// LLVM:   %[[A_A_ADDR:.*]] = getelementptr %struct.A, ptr %[[PTR_A]], i32 0, i32 0
+// LLVM:   %[[PTR_A:.*]] = getelementptr inbounds nuw %[[REC_LAM_A:.*]], ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[A_A_ADDR:.*]] = getelementptr inbounds nuw %struct.A, ptr %[[PTR_A]], i32 0, i32 0
 // LLVM:   %[[A_A:.*]] = load i32, ptr %[[A_A_ADDR]]
 // LLVM:   store i32 %[[A_A]], ptr %[[RETVAL]]
 // LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
@@ -372,7 +372,7 @@ struct A {
 // LLVM:   %[[LAM_ALLOCA:.*]] = alloca %[[REC_LAM_A]]
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM:   %[[STRUCT_A:.*]] = getelementptr %[[REC_LAM_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
+// LLVM:   %[[STRUCT_A:.*]] = getelementptr inbounds nuw %[[REC_LAM_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[STRUCT_A]], ptr %[[THIS]], i64 4, i1 false)
 // LLVM:   %[[LAM_RET:.*]] = call noundef i32 @_ZZN1A3fooEvENKUlvE_clEv(ptr {{.*}} %[[LAM_ALLOCA]])
 // LLVM:   store i32 %[[LAM_RET]], ptr %[[RETVAL]]
@@ -408,9 +408,9 @@ struct A {
 // LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM:   %[[STRUCT_A_ADDRR_ADDR:.*]] = getelementptr %[[REC_LAM_PTR_A:.*]], ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[STRUCT_A_ADDRR_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_PTR_A:.*]], ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[STRUCT_A_ADDR:.*]] = load ptr, ptr %[[STRUCT_A_ADDRR_ADDR]]
-// LLVM:   %[[A_A_ADDR:.*]] = getelementptr %struct.A, ptr %[[STRUCT_A_ADDR]], i32 0, i32 0
+// LLVM:   %[[A_A_ADDR:.*]] = getelementptr inbounds nuw %struct.A, ptr %[[STRUCT_A_ADDR]], i32 0, i32 0
 // LLVM:   %[[A_A:.*]] = load i32, ptr %[[A_A_ADDR]]
 // LLVM:   store i32 %[[A_A]], ptr %[[RETVAL]]
 // LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
@@ -438,7 +438,7 @@ struct A {
 // LLVM:   %[[LAM_ALLOCA:.*]] = alloca %[[REC_LAM_PTR_A]]
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM:   %[[A_ADDR_ADDR:.*]] = getelementptr %[[REC_LAM_PTR_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
+// LLVM:   %[[A_ADDR_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_PTR_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
 // LLVM:   store ptr %[[THIS]], ptr %[[A_ADDR_ADDR]]
 // LLVM:   %[[LAM_RET:.*]] = call noundef i32 @_ZZN1A3barEvENKUlvE_clEv(ptr {{.*}} %[[LAM_ALLOCA]])
 // LLVM:   store i32 %[[LAM_RET]], ptr %[[RETVAL]]

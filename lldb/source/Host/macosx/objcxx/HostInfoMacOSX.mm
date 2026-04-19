@@ -14,6 +14,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
