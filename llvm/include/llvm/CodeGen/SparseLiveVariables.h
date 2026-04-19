@@ -121,6 +121,11 @@ public:
     const SparseBitVector<> &getLiveSet() const { return LiveRegs; }
   };
 
+  /// Returns true if the given MachineBasicBlock has been analyzed.
+  bool hasAnalyzed(const MachineBasicBlock *MBB) const {
+    return BlockLiveness.count(MBB);
+  }
+
   /// Returns the computed Live-In set for the given MachineBasicBlock.
   const SparseBitVector<> &getLiveInSet(const MachineBasicBlock *MBB) const {
     auto It = BlockLiveness.find(MBB);
@@ -137,6 +142,35 @@ public:
 
   /// Validates the computed block liveness against existing MachineBasicBlock
   /// live-ins.
+  /// \brief Incrementally recomputes liveness for a specific register.
+  ///
+  /// This performs a highly localized $O(V + E)$ recomputation of liveness for
+  /// the given register. It instantly clears the register's liveness from all
+  /// blocks, then reseeds and propagates it from its remaining uses. This
+  /// safely bypasses the "phantom live range" problem where loops artificially
+  /// keep a register alive even after its uses have been deleted.
+  ///
+  /// \param Reg The virtual register to recompute.
+  /// \param IgnoreMI An optional instruction to ignore during recomputation
+  ///                 (useful for removing liveness before an instruction is
+  ///                 physically deleted).
+  void recomputeRegisterLiveness(Register Reg, MachineInstr *IgnoreMI = nullptr);
+
+  /// \brief Update liveness after a pass adds a new instruction.
+  void addInstruction(MachineInstr &MI, MachineBasicBlock *MBB);
+
+  /// \brief Update liveness before a pass removes an instruction.
+  ///
+  /// The pass must call this *before* calling MI.eraseFromParent().
+  void removeInstruction(MachineInstr &MI);
+
+  /// \brief Update liveness after a pass moves an instruction.
+  void handleMove(MachineInstr &MI, MachineBasicBlock *OldBB, MachineBasicBlock *NewBB);
+
+  /// \brief Update the live-in list of each MachineBasicBlock.
+  ///
+  /// This mutates the underlying `MachineBasicBlock` structures to sync their
+  /// state.
   void verifyLiveness(const MachineFunction &MF) const;
 
   /// Update the live-ins of all basic blocks in MF based on computed liveness.

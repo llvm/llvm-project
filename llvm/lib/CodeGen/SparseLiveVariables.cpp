@@ -145,4 +145,264 @@ void SparseLiveVariables::updateKillFlags(MachineFunction &MF) const {
   }
 }
 
+void SparseLiveVariables::recomputeRegisterLiveness(Register Reg, MachineInstr *IgnoreMI) {
+  if (!Reg.isVirtual())
+    return;
+
+  // 1. Clear Reg from all blocks
+  for (auto &KV : BlockLiveness) {
+    KV.second.LiveIn.reset(Reg.id());
+    KV.second.LiveOut.reset(Reg.id());
+  }
+
+  // 2. Propagate from all uses
+  SmallVector<MachineBasicBlock *, 8> WorkList;
+
+  for (MachineInstr &UseMI : MRI->use_instructions(Reg)) {
+    if (&UseMI == IgnoreMI)
+      continue;
+
+    MachineBasicBlock *MBB = UseMI.getParent();
+
+    if (UseMI.isPHI()) {
+      // For PHI nodes, the register is live-out of the corresponding predecessor
+      for (unsigned i = 1; i < UseMI.getNumOperands(); i += 2) {
+        if (UseMI.getOperand(i).isReg() && UseMI.getOperand(i).getReg() == Reg) {
+          MachineBasicBlock *Pred = UseMI.getOperand(i + 1).getMBB();
+          auto PredIt = BlockLiveness.find(Pred);
+          if (PredIt != BlockLiveness.end()) {
+            if (!PredIt->second.LiveOut.test(Reg.id())) {
+              PredIt->second.LiveOut.set(Reg.id());
+              WorkList.push_back(Pred);
+            }
+          }
+        }
+      }
+      continue;
+    }
+
+    bool FoundDef = false;
+    for (auto I = MachineBasicBlock::reverse_iterator(&UseMI), E = MBB->rend();
+         I != E; ++I) {
+      if (&*I == IgnoreMI)
+        continue;
+      if (I->definesRegister(Reg, TRI)) {
+        FoundDef = true;
+        break;
+      }
+    }
+
+    if (!FoundDef) {
+      auto It = BlockLiveness.find(MBB);
+      if (It != BlockLiveness.end()) {
+        if (!It->second.LiveIn.test(Reg.id())) {
+          It->second.LiveIn.set(Reg.id());
+          WorkList.push_back(MBB);
+        }
+      }
+    }
+  }
+
+  // 3. Propagate backwards
+  while (!WorkList.empty()) {
+    MachineBasicBlock *Curr = WorkList.pop_back_val();
+
+    for (MachineBasicBlock *Pred : Curr->predecessors()) {
+      auto PredIt = BlockLiveness.find(Pred);
+      if (PredIt == BlockLiveness.end())
+        continue;
+
+      if (!PredIt->second.LiveOut.test(Reg.id())) {
+        PredIt->second.LiveOut.set(Reg.id());
+
+        bool FoundDef = false;
+        for (const MachineInstr &MI : llvm::reverse(*Pred)) {
+          if (&MI == IgnoreMI)
+            continue;
+          if (MI.definesRegister(Reg, TRI)) {
+            FoundDef = true;
+            break;
+          }
+        }
+
+        if (!FoundDef) {
+          if (!PredIt->second.LiveIn.test(Reg.id())) {
+            PredIt->second.LiveIn.set(Reg.id());
+            WorkList.push_back(Pred);
+          }
+        }
+      }
+    }
+  }
+}
+
+void SparseLiveVariables::addInstruction(MachineInstr &MI, MachineBasicBlock *MBB) {
+  if (!MBB)
+    MBB = MI.getParent();
+
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.getReg().isVirtual())
+      continue;
+
+    Register Reg = MO.getReg();
+
+    auto PropagateGrowth = [&](MachineBasicBlock *StartBB) {
+      SmallVector<MachineBasicBlock *, 8> WorkList;
+      WorkList.push_back(StartBB);
+
+      while (!WorkList.empty()) {
+        MachineBasicBlock *Curr = WorkList.pop_back_val();
+        for (MachineBasicBlock *Pred : Curr->predecessors()) {
+          auto PredIt = BlockLiveness.find(Pred);
+          if (PredIt == BlockLiveness.end())
+            continue;
+
+          if (!PredIt->second.LiveOut.test(Reg.id())) {
+            PredIt->second.LiveOut.set(Reg.id());
+
+            bool PredDef = false;
+            for (const MachineInstr &PredMI : llvm::reverse(*Pred)) {
+              if (PredMI.definesRegister(Reg, TRI)) {
+                PredDef = true;
+                break;
+              }
+            }
+
+            if (!PredDef && !PredIt->second.LiveIn.test(Reg.id())) {
+              PredIt->second.LiveIn.set(Reg.id());
+              WorkList.push_back(Pred);
+            }
+          }
+        }
+      }
+    };
+
+    if (MO.isUse()) {
+      if (MI.isPHI()) {
+        MachineBasicBlock *Pred = nullptr;
+        for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+          if (&MI.getOperand(i) == &MO) {
+            Pred = MI.getOperand(i + 1).getMBB();
+            break;
+          }
+        }
+
+        if (Pred) {
+          auto PredIt = BlockLiveness.find(Pred);
+          if (PredIt != BlockLiveness.end() && !PredIt->second.LiveOut.test(Reg.id())) {
+            PredIt->second.LiveOut.set(Reg.id());
+
+            bool PredDef = false;
+            for (const MachineInstr &PredMI : llvm::reverse(*Pred)) {
+              if (PredMI.definesRegister(Reg, TRI)) {
+                PredDef = true;
+                break;
+              }
+            }
+
+            if (!PredDef && !PredIt->second.LiveIn.test(Reg.id())) {
+              PredIt->second.LiveIn.set(Reg.id());
+              PropagateGrowth(Pred);
+            }
+          }
+        }
+        continue;
+      }
+
+      if (BlockLiveness[MBB].LiveIn.test(Reg.id()))
+        continue;
+
+      bool FoundDef = false;
+      for (auto I = MachineBasicBlock::reverse_iterator(&MI), E = MBB->rend(); I != E; ++I) {
+        if (I->definesRegister(Reg, TRI)) {
+          FoundDef = true;
+          break;
+        }
+      }
+
+      if (!FoundDef) {
+        BlockLiveness[MBB].LiveIn.set(Reg.id());
+        PropagateGrowth(MBB);
+      }
+    } else if (MO.isDef()) {
+      if (!BlockLiveness[MBB].LiveIn.test(Reg.id()))
+        continue;
+
+      bool HasUseAbove = false;
+      for (auto I = MachineBasicBlock::reverse_iterator(&MI), E = MBB->rend(); I != E; ++I) {
+        if (I->readsRegister(Reg, TRI)) {
+          HasUseAbove = true;
+          break;
+        }
+      }
+
+      if (!HasUseAbove) {
+        BlockLiveness[MBB].LiveIn.reset(Reg.id());
+
+        SmallVector<MachineBasicBlock *, 8> WorkList;
+        WorkList.push_back(MBB);
+
+        while (!WorkList.empty()) {
+          MachineBasicBlock *Curr = WorkList.pop_back_val();
+          for (MachineBasicBlock *Pred : Curr->predecessors()) {
+            auto PredIt = BlockLiveness.find(Pred);
+            if (PredIt == BlockLiveness.end())
+              continue;
+
+            if (!PredIt->second.LiveOut.test(Reg.id()))
+              continue;
+
+            bool StillLiveOut = false;
+            for (MachineBasicBlock *Succ : Pred->successors()) {
+              auto SuccIt = BlockLiveness.find(Succ);
+              if (SuccIt != BlockLiveness.end() && SuccIt->second.LiveIn.test(Reg.id())) {
+                StillLiveOut = true;
+                break;
+              }
+            }
+
+            if (!StillLiveOut) {
+              PredIt->second.LiveOut.reset(Reg.id());
+
+              if (PredIt->second.LiveIn.test(Reg.id())) {
+                bool HasUse = false;
+                for (const MachineInstr &PredMI : *Pred) {
+                  if (PredMI.readsRegister(Reg, TRI)) {
+                    HasUse = true;
+                    break;
+                  }
+                  if (PredMI.definesRegister(Reg, TRI)) {
+                    break;
+                  }
+                }
+
+                if (!HasUse) {
+                  PredIt->second.LiveIn.reset(Reg.id());
+                  WorkList.push_back(Pred);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+void SparseLiveVariables::removeInstruction(MachineInstr &MI) {
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.getReg().isVirtual()) {
+      recomputeRegisterLiveness(MO.getReg(), &MI);
+    }
+  }
+}
+
+void SparseLiveVariables::handleMove(MachineInstr &MI, MachineBasicBlock * /*OldBB*/, MachineBasicBlock * /*NewBB*/) {
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.getReg().isVirtual()) {
+      recomputeRegisterLiveness(MO.getReg());
+    }
+  }
+}
+
 char &llvm::SparseLiveVariablesID = SparseLiveVariables::ID;
