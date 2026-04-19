@@ -200,6 +200,96 @@ class ShellCommandResult(object):
         self.outputFiles = list(outputFiles)
 
 
+class PipelineStageState(object):
+    """Runtime state for one command within a pipeline."""
+
+    def __init__(self, cmd_index, command):
+        self.cmd_index = cmd_index
+        self.command = command
+        self.stdin_source = None
+        self.result = None
+        self.exit_code = None
+        self.launched_proc = None
+        self.not_count = 0
+        self.not_fail_if_crash = False
+
+
+class LaunchedPipelineProcess(object):
+    """Tracks one subprocess launched for a pipeline stage."""
+
+    def __init__(self, stage, proc):
+        self.stage = stage
+        self.proc = proc
+        self.stdout = None
+        self.stderr = None
+        self.stderr_temp_file = None
+
+
+class PipelineExecutionState(object):
+    """Owns the mutable runtime state for a single pipeline execution."""
+
+    def __init__(self, pipeline):
+        self.pipeline = pipeline
+        self.stages = [
+            PipelineStageState(i, command) for i, command in enumerate(pipeline.commands)
+        ]
+        self.current_stdin_source = subprocess.PIPE
+        self.staged_inputs = []
+        self.launched_processes = []
+
+    def begin_stage(self, cmd_index):
+        stage = self.stages[cmd_index]
+        stage.stdin_source = self.current_stdin_source
+        return stage
+
+    def stage_input(self, output):
+        input_file = tempfile.TemporaryFile(mode="w+t", encoding="utf-8", newline="")
+        input_file.write(output)
+        input_file.seek(0, 0)
+        self.staged_inputs.append(input_file)
+        return input_file
+
+    def advance_stdin_source(self, stdin_source):
+        self.current_stdin_source = stdin_source
+
+    def record_result(self, stage, result):
+        stage.result = result
+        stage.exit_code = result.exitCode
+
+    def register_process(self, stage, proc):
+        launched_proc = LaunchedPipelineProcess(stage, proc)
+        stage.launched_proc = launched_proc
+        self.launched_processes.append(launched_proc)
+        return launched_proc
+
+    def append_results_in_order(self, results):
+        for stage in self.stages:
+            if stage.result is not None:
+                results.append(stage.result)
+
+    def compute_exit_code(self, pipe_err):
+        exit_code = None
+        for stage in self.stages:
+            if stage.exit_code is None:
+                continue
+            if pipe_err:
+                # Take the last failing exit code from the pipeline.
+                if exit_code is None or stage.exit_code != 0:
+                    exit_code = stage.exit_code
+            else:
+                exit_code = stage.exit_code
+        if exit_code is None:
+            exit_code = 0
+        return exit_code
+
+    def close_staged_inputs(self):
+        for input_file in self.staged_inputs:
+            try:
+                input_file.close()
+            except Exception:
+                pass
+
+
 def executeShCmd(cmd, shenv, results, timeout=0):
     """
     Wrapper around _executeShCmd that handles
@@ -786,11 +876,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         raise ValueError("Unknown shell command: %r" % cmd.op)
     assert isinstance(cmd, ShUtil.Pipeline)
 
-    procs = []
-    proc_not_counts = []
-    proc_not_fail_if_crash = []
-    default_stdin = subprocess.PIPE
-    stderrTempFiles = []
+    pipeline_state = PipelineExecutionState(cmd)
     opened_files = []
     named_temp_files = []
     builtin_commands = set(["cat", "diff"])
@@ -810,206 +896,286 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         "umask": executeBuiltinUmask,
         ":": executeBuiltinColon,
     }
-    # To avoid deadlock, we use a single stderr stream for piped
-    # output. This is null until we have seen some output using
-    # stderr.
-    for i, j in enumerate(cmd.commands):
-        # Reference the global environment by default.
-        cmd_shenv = shenv
-        args = list(j.args)
-        not_args = []
-        not_count = 0
-        not_crash = False
 
-        # Expand all late substitutions.
-        args = _expandLateSubstitutions(
-            j, args, cmd_shenv.cwd, cmd_shenv.normalize_slashes
-        )
+    def applyNotResult(exit_code, not_count, not_fail_if_crash):
+        if not_count % 2:
+            if not_fail_if_crash:
+                return int(exit_code <= 0)
+            return 1 if exit_code == 0 else 0
+        if not_count > 1:
+            return 1 if exit_code != 0 else 0
+        return exit_code
 
-        while True:
-            if args[0] == "env":
-                # Create a copy of the global environment and modify it for
-                # this one command. There might be multiple envs in a pipeline,
-                # and there might be multiple envs in a command (usually when
-                # one comes from a substitution):
-                #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
-                #   env FOO=1 %{another_env_plus_cmd} | FileCheck %s
-                if cmd_shenv is shenv:
-                    cmd_shenv = ShellEnvironment(
-                        shenv.cwd,
-                        shenv.env,
-                        shenv.umask,
-                        normalize_slashes=shenv.normalize_slashes,
-                    )
-                args = updateEnv(cmd_shenv, args)
-                if not args:
-                    # Return the environment variables if no argument is provided.
-                    env_str = "\n".join(
-                        f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
-                    )
-                    results.append(
-                        ShellCommandResult(
-                            j, env_str, "", 0, timeoutHelper.timeoutReached(), []
-                        )
-                    )
-                    return 0
-            elif args[0] == "not":
-                not_args.append(args.pop(0))
-                not_count += 1
-                if args and args[0] == "--crash":
-                    not_args.append(args.pop(0))
-                    not_crash = True
-                if not args:
-                    raise InternalShellError(j, "Error: 'not' requires a" " subcommand")
-            elif args[0] == "!":
-                not_args.append(args.pop(0))
-                not_count += 1
-                if not args:
-                    raise InternalShellError(j, "Error: '!' requires a" " subcommand")
-            else:
-                break
+    def closeOpenedFiles():
+        for (name, mode, f, path) in opened_files:
+            if f is None or getattr(f, "closed", False):
+                continue
+            try:
+                f.close()
+            except Exception:
+                pass
 
-        # Handle in-process builtins.
-        #
-        # Handle "echo" as a builtin if it is not part of a pipeline. This
-        # greatly speeds up tests that construct input files by repeatedly
-        # echo-appending to a file.
-        # FIXME: Standardize on the builtin echo implementation. We can use a
-        # temporary file to sidestep blocking pipe write issues.
+    def removeNamedTempFiles():
+        for f in named_temp_files:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
 
-        # Ensure args[0] is hashable.
-        args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
-
-        inproc_builtin = inproc_builtins.get(args[0], None)
-        if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
-            # env calling an in-process builtin is useless, so we take the safe
-            # approach of complaining.
-            if not cmd_shenv is shenv:
-                raise InternalShellError(
-                    j, "Error: 'env' cannot call '{}'".format(args[0])
-                )
-            if not_crash:
-                raise InternalShellError(
-                    j, "Error: 'not --crash' cannot call" " '{}'".format(args[0])
-                )
-            if len(cmd.commands) != 1:
-                raise InternalShellError(
-                    j,
-                    "Unsupported: '{}' cannot be part" " of a pipeline".format(args[0]),
-                )
-            result = inproc_builtin(Command(args, j.redirects), cmd_shenv)
-            if not_count % 2:
-                result.exitCode = int(not result.exitCode)
-            result.command.args = j.args
-            results.append(result)
-            return result.exitCode
-
-        # Resolve any out-of-process builtin command before adding back 'not'
-        # commands.
-        if args[0] in builtin_commands:
-            args.insert(0, sys.executable)
-            cmd_shenv.env["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
-            args[1] = os.path.join(builtin_commands_dir, args[1] + ".py")
-
-        # We had to search through the 'not' commands to find all the 'env'
-        # commands and any other in-process builtin command.  We don't want to
-        # reimplement 'not' and its '--crash' here, so just push all 'not'
-        # commands back to be called as external commands.  Because this
-        # approach effectively moves all 'env' commands up front, it relies on
-        # the assumptions that (1) environment variables are not intended to be
-        # relevant to 'not' commands and (2) the 'env' command should always
-        # blindly pass along the status it receives from any command it calls.
-
-        # For plain negations, either 'not' without '--crash', or the shell
-        # operator '!', leave them out from the command to execute and
-        # invert the result code afterwards. If we have a plain not, pass the
-        # args along so we can recognize it later and still fail if the
-        # executed command returns a signal.
-        if not_crash:
-            args = not_args + args
-            not_count = 0
-        elif not_args == ["not"]:
-            pass
-        else:
-            not_args = []
-
-        stdin, stdout, stderr = processRedirects(
-            j, default_stdin, cmd_shenv, opened_files
-        )
-
-        # If stderr wants to come from stdout, but stdout isn't a pipe, then put
-        # stderr on a pipe and treat it as stdout.
-        if stderr == subprocess.STDOUT and stdout != subprocess.PIPE:
-            stderr = subprocess.PIPE
-            stderrIsStdout = True
-        else:
-            stderrIsStdout = False
-
-            # Don't allow stderr on a PIPE except for the last
-            # process, this could deadlock.
-            #
-            # FIXME: This is slow, but so is deadlock.
-            if stderr == subprocess.PIPE and j != cmd.commands[-1]:
-                stderr = tempfile.TemporaryFile(mode="w+b")
-                stderrTempFiles.append((i, stderr))
-
-        # Resolve the executable path ourselves.
-        executable = None
-        # For paths relative to cwd, use the cwd of the shell environment.
-        if args[0].startswith("."):
-            exe_in_cwd = os.path.join(cmd_shenv.cwd, args[0])
-            if os.path.isfile(exe_in_cwd):
-                executable = exe_in_cwd
-        if not executable:
-            # Use the path from cmd_shenv by default, but if the environment variable
-            # is unset (like if the user is using env -i), use the standard path.
-            path = (
-                cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
-            )
-            executable = lit.util.which(args[0], path)
-        if not executable:
-            raise InternalShellError(j, "%r: command not found" % args[0])
-
-        # Replace uses of /dev/null with temporary files.
-        if kAvoidDevNull:
-            for i, arg in enumerate(args):
-                if isinstance(arg, str) and kDevNull in arg:
-                    f = tempfile.NamedTemporaryFile(delete=False)
-                    f.close()
-                    named_temp_files.append(f.name)
-                    args[i] = arg.replace(kDevNull, f.name)
-
-        # Expand all glob expressions
-        args = expand_glob_expressions(args, cmd_shenv.cwd)
-
-        # On Windows, do our own command line quoting for better compatibility
-        # with some core utility distributions.
-        if kIsWindows:
-            args = quote_windows_command(args)
-
-        # Handle any resource limits. We do this by launching the command with
-        # a wrapper that sets the necessary limits. We use a wrapper rather than
-        # setting the limits in process as we cannot reraise the limits back to
-        # their defaults without elevated permissions.
-        if cmd_shenv.ulimit:
-            executable = sys.executable
-            args.insert(0, sys.executable)
-            args.insert(1, os.path.join(builtin_commands_dir, "_launch_with_limit.py"))
-            for limit in cmd_shenv.ulimit:
-                cmd_shenv.env["LIT_INTERNAL_ULIMIT_" + limit] = str(
-                    cmd_shenv.ulimit[limit]
-                )
-
+    def ensureText(data):
         try:
-            # TODO(boomanaiden154): We currently wrap the subprocess.Popen with
-            # os.umask as the umask argument in subprocess.Popen is not
-            # available before Python 3.9. Once LLVM requires at least Python
-            # 3.9, this code should be updated to use umask argument.
-            old_umask = -1
-            if cmd_shenv.umask != -1:
-                old_umask = os.umask(cmd_shenv.umask)
-            procs.append(
-                subprocess.Popen(
+            if data is None:
+                return ""
+            return data.decode("utf-8", errors="replace")
+        except Exception:
+            return str(data)
+
+    def getFailedOutputFiles(res):
+        output_files = []
+        if res != 0:
+            for (name, mode, f, path) in sorted(opened_files):
+                if path is not None and mode in ("w", "a"):
+                    try:
+                        with open(path, "rb") as f:
+                            data = f.read()
+                    except Exception:
+                        data = None
+                    if data is not None:
+                        output_files.append((name, path, data))
+        return output_files
+
+    try:
+        # To avoid deadlock, we use a single stderr stream for piped
+        # output. This is null until we have seen some output using
+        # stderr.
+        for cmd_index, j in enumerate(cmd.commands):
+            stage = pipeline_state.begin_stage(cmd_index)
+
+            # Reference the global environment by default.
+            cmd_shenv = shenv
+            args = list(j.args)
+            not_args = []
+            not_count = 0
+            not_crash = False
+
+            # Expand all late substitutions.
+            args = _expandLateSubstitutions(
+                j, args, cmd_shenv.cwd, cmd_shenv.normalize_slashes
+            )
+
+            while True:
+                if args[0] == "env":
+                    # Create a copy of the global environment and modify it for
+                    # this one command. There might be multiple envs in a pipeline,
+                    # and there might be multiple envs in a command (usually when
+                    # one comes from a substitution):
+                    #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
+                    #   env FOO=1 %{another_env_plus_cmd} | FileCheck %s
+                    if cmd_shenv is shenv:
+                        cmd_shenv = ShellEnvironment(
+                            shenv.cwd,
+                            shenv.env,
+                            shenv.umask,
+                            normalize_slashes=shenv.normalize_slashes,
+                        )
+                    args = updateEnv(cmd_shenv, args)
+                    if not args:
+                        if not_crash:
+                            raise InternalShellError(
+                                j, "Error: 'not --crash' cannot call 'env'"
+                            )
+
+                        env_str = "\n".join(
+                            f"{key}={value}"
+                            for key, value in sorted(cmd_shenv.env.items())
+                        )
+                        if len(cmd.commands) == 1:
+                            out = env_str
+                        else:
+                            # Keep one trailing newline even when the environment is
+                            # empty so downstream tools like FileCheck still see input.
+                            out = env_str if env_str else "\n"
+                            if cmd_index != len(cmd.commands) - 1:
+                                pipeline_state.advance_stdin_source(
+                                    pipeline_state.stage_input(out)
+                                )
+
+                        stage.not_count = not_count
+                        exit_code = applyNotResult(0, not_count, False)
+                        pipeline_state.record_result(
+                            stage,
+                            ShellCommandResult(
+                                j, out, "", exit_code, timeoutHelper.timeoutReached(), []
+                            ),
+                        )
+                        break
+                elif args[0] == "not":
+                    not_args.append(args.pop(0))
+                    not_count += 1
+                    if args and args[0] == "--crash":
+                        not_args.append(args.pop(0))
+                        not_crash = True
+                    if not args:
+                        raise InternalShellError(j, "Error: 'not' requires a" " subcommand")
+                elif args[0] == "!":
+                    not_args.append(args.pop(0))
+                    not_count += 1
+                    if not args:
+                        raise InternalShellError(j, "Error: '!' requires a" " subcommand")
+                else:
+                    break
+
+            if stage.result is not None:
+                continue
+
+            # Handle in-process builtins.
+            #
+            # Handle "echo" as a builtin if it is not part of a pipeline. This
+            # greatly speeds up tests that construct input files by repeatedly
+            # echo-appending to a file.
+            # FIXME: Standardize on the builtin echo implementation. We can use a
+            # temporary file to sidestep blocking pipe write issues.
+
+            # Ensure args[0] is hashable.
+            args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
+
+            inproc_builtin = inproc_builtins.get(args[0], None)
+            if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
+                # env calling an in-process builtin is useless, so we take the safe
+                # approach of complaining.
+                if not cmd_shenv is shenv:
+                    raise InternalShellError(
+                        j, "Error: 'env' cannot call '{}'".format(args[0])
+                    )
+                if not_crash:
+                    raise InternalShellError(
+                        j, "Error: 'not --crash' cannot call" " '{}'".format(args[0])
+                    )
+                if len(cmd.commands) != 1:
+                    raise InternalShellError(
+                        j,
+                        "Unsupported: '{}' cannot be part" " of a pipeline".format(args[0]),
+                    )
+                result = inproc_builtin(Command(args, j.redirects), cmd_shenv)
+                if not_count % 2:
+                    result.exitCode = int(not result.exitCode)
+                result.command.args = j.args
+                stage.not_count = not_count
+                pipeline_state.record_result(stage, result)
+                continue
+
+            # Resolve any out-of-process builtin command before adding back 'not'
+            # commands.
+            if args[0] in builtin_commands:
+                args.insert(0, sys.executable)
+                cmd_shenv.env["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
+                args[1] = os.path.join(builtin_commands_dir, args[1] + ".py")
+
+            # We had to search through the 'not' commands to find all the 'env'
+            # commands and any other in-process builtin command.  We don't want to
+            # reimplement 'not' and its '--crash' here, so just push all 'not'
+            # commands back to be called as external commands.  Because this
+            # approach effectively moves all 'env' commands up front, it relies on
+            # the assumptions that (1) environment variables are not intended to be
+            # relevant to 'not' commands and (2) the 'env' command should always
+            # blindly pass along the status it receives from any command it calls.
+
+            # For plain negations, either 'not' without '--crash', or the shell
+            # operator '!', leave them out from the command to execute and
+            # invert the result code afterwards. If we have a plain not, pass the
+            # args along so we can recognize it later and still fail if the
+            # executed command returns a signal.
+            if not_crash:
+                args = not_args + args
+                not_count = 0
+                not_fail_if_crash = False
+            elif not_args == ["not"]:
+                not_fail_if_crash = True
+            else:
+                not_args = []
+                not_fail_if_crash = False
+
+            stage.not_count = not_count
+            stage.not_fail_if_crash = not_fail_if_crash
+
+            stdin, stdout, stderr = processRedirects(
+                j, stage.stdin_source, cmd_shenv, opened_files
+            )
+
+            # If stderr wants to come from stdout, but stdout isn't a pipe, then put
+            # stderr on a pipe and treat it as stdout.
+            if stderr == subprocess.STDOUT and stdout != subprocess.PIPE:
+                stderr = subprocess.PIPE
+                stderrIsStdout = True
+                stderrTempFile = None
+            else:
+                stderrIsStdout = False
+                stderrTempFile = None
+
+                # Don't allow stderr on a PIPE except for the last
+                # process, this could deadlock.
+                #
+                # FIXME: This is slow, but so is deadlock.
+                if stderr == subprocess.PIPE and j != cmd.commands[-1]:
+                    stderrTempFile = tempfile.TemporaryFile(mode="w+b")
+                    stderr = stderrTempFile
+
+            # Resolve the executable path ourselves.
+            executable = None
+            # For paths relative to cwd, use the cwd of the shell environment.
+            if args[0].startswith("."):
+                exe_in_cwd = os.path.join(cmd_shenv.cwd, args[0])
+                if os.path.isfile(exe_in_cwd):
+                    executable = exe_in_cwd
+            if not executable:
+                # Use the path from cmd_shenv by default, but if the environment variable
+                # is unset (like if the user is using env -i), use the standard path.
+                path = (
+                    cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
+                )
+                executable = lit.util.which(args[0], path)
+            if not executable:
+                raise InternalShellError(j, "%r: command not found" % args[0])
+
+            # Replace uses of /dev/null with temporary files.
+            if kAvoidDevNull:
+                for i, arg in enumerate(args):
+                    if isinstance(arg, str) and kDevNull in arg:
+                        f = tempfile.NamedTemporaryFile(delete=False)
+                        f.close()
+                        named_temp_files.append(f.name)
+                        args[i] = arg.replace(kDevNull, f.name)
+
+            # Expand all glob expressions
+            args = expand_glob_expressions(args, cmd_shenv.cwd)
+
+            # On Windows, do our own command line quoting for better compatibility
+            # with some core utility distributions.
+            if kIsWindows:
+                args = quote_windows_command(args)
+
+            # Handle any resource limits. We do this by launching the command with
+            # a wrapper that sets the necessary limits. We use a wrapper rather than
+            # setting the limits in process as we cannot reraise the limits back to
+            # their defaults without elevated permissions.
+            if cmd_shenv.ulimit:
+                executable = sys.executable
+                args.insert(0, sys.executable)
+                args.insert(1, os.path.join(builtin_commands_dir, "_launch_with_limit.py"))
+                for limit in cmd_shenv.ulimit:
+                    cmd_shenv.env["LIT_INTERNAL_ULIMIT_" + limit] = str(
+                        cmd_shenv.ulimit[limit]
+                    )
+
+            try:
+                # TODO(boomanaiden154): We currently wrap the subprocess.Popen with
+                # os.umask as the umask argument in subprocess.Popen is not
+                # available before Python 3.9. Once LLVM requires at least Python
+                # 3.9, this code should be updated to use umask argument.
+                old_umask = -1
+                if cmd_shenv.umask != -1:
+                    old_umask = os.umask(cmd_shenv.umask)
+                proc = subprocess.Popen(
                     args,
                     cwd=cmd_shenv.cwd,
                     executable=executable,
@@ -1021,128 +1187,95 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     universal_newlines=True,
                     errors="replace",
                 )
-            )
-            if old_umask != -1:
-                os.umask(old_umask)
-            proc_not_counts.append(not_count)
-            if not not_crash and not_args == ["not"]:
-                proc_not_fail_if_crash.append(True)
+                if old_umask != -1:
+                    os.umask(old_umask)
+                launched_proc = pipeline_state.register_process(stage, proc)
+                launched_proc.stderr_temp_file = stderrTempFile
+                # Let the helper know about this process
+                timeoutHelper.addProcess(proc)
+            except OSError as e:
+                raise InternalShellError(
+                    j, "Could not create process ({}) due to {}".format(executable, e)
+                )
+
+            # Immediately close stdin for any process taking stdin from us.
+            if stdin in pipeline_state.staged_inputs:
+                try:
+                    stdin.close()
+                except Exception:
+                    pass
+
+            if stdin == subprocess.PIPE:
+                proc.stdin.close()
+                proc.stdin = None
+
+            # Update the current stdin source.
+            if stdout == subprocess.PIPE:
+                pipeline_state.advance_stdin_source(proc.stdout)
+            elif stderrIsStdout:
+                pipeline_state.advance_stdin_source(proc.stderr)
             else:
-                proc_not_fail_if_crash.append(False)
-            # Let the helper know about this process
-            timeoutHelper.addProcess(procs[-1])
-        except OSError as e:
-            raise InternalShellError(
-                j, "Could not create process ({}) due to {}".format(executable, e)
-            )
+                pipeline_state.advance_stdin_source(subprocess.PIPE)
 
-        # Immediately close stdin for any process taking stdin from us.
-        if stdin == subprocess.PIPE:
-            procs[-1].stdin.close()
-            procs[-1].stdin = None
+        # Explicitly close any redirected files. We need to do this now because we
+        # need to release any handles we may have on the temporary files (important
+        # on Win32, for example). Since we have already spawned the subprocess, our
+        # handles have already been transferred so we do not need them anymore.
+        closeOpenedFiles()
 
-        # Update the current stdin source.
-        if stdout == subprocess.PIPE:
-            default_stdin = procs[-1].stdout
-        elif stderrIsStdout:
-            default_stdin = procs[-1].stderr
-        else:
-            default_stdin = subprocess.PIPE
+        # FIXME: There is probably still deadlock potential here. Yawn.
+        if pipeline_state.launched_processes:
+            last_proc = pipeline_state.launched_processes[-1]
+            last_proc.stdout, last_proc.stderr = last_proc.proc.communicate()
 
-    # Explicitly close any redirected files. We need to do this now because we
-    # need to release any handles we may have on the temporary files (important
-    # on Win32, for example). Since we have already spawned the subprocess, our
-    # handles have already been transferred so we do not need them anymore.
-    for (name, mode, f, path) in opened_files:
-        f.close()
+            for launched_proc in pipeline_state.launched_processes[:-1]:
+                if launched_proc.proc.stdout is not None:
+                    out = launched_proc.proc.stdout.read()
+                else:
+                    out = ""
+                if launched_proc.proc.stderr is not None:
+                    err = launched_proc.proc.stderr.read()
+                else:
+                    err = ""
+                launched_proc.stdout = out
+                launched_proc.stderr = err
 
-    # FIXME: There is probably still deadlock potential here. Yawn.
-    procData = [None] * len(procs)
-    procData[-1] = procs[-1].communicate()
+            for launched_proc in pipeline_state.launched_processes:
+                if launched_proc.stderr_temp_file is None:
+                    continue
+                launched_proc.stderr_temp_file.seek(0, 0)
+                launched_proc.stderr = launched_proc.stderr_temp_file.read()
+                launched_proc.stderr_temp_file.close()
 
-    for i in range(len(procs) - 1):
-        if procs[i].stdout is not None:
-            out = procs[i].stdout.read()
-        else:
-            out = ""
-        if procs[i].stderr is not None:
-            err = procs[i].stderr.read()
-        else:
-            err = ""
-        procData[i] = (out, err)
+            for launched_proc in pipeline_state.launched_processes:
+                res = launched_proc.proc.wait()
+                # Detect Ctrl-C in subprocess.
+                if res == -signal.SIGINT:
+                    raise KeyboardInterrupt
+                res = applyNotResult(
+                    res,
+                    launched_proc.stage.not_count,
+                    launched_proc.stage.not_fail_if_crash,
+                )
 
-    # Read stderr out of the temp files.
-    for i, f in stderrTempFiles:
-        f.seek(0, 0)
-        procData[i] = (procData[i][0], f.read())
-        f.close()
+                pipeline_state.record_result(
+                    launched_proc.stage,
+                    ShellCommandResult(
+                        launched_proc.stage.command,
+                        ensureText(launched_proc.stdout),
+                        ensureText(launched_proc.stderr),
+                        res,
+                        timeoutHelper.timeoutReached(),
+                        getFailedOutputFiles(res),
+                    ),
+                )
 
-    exitCode = None
-    for i, (out, err) in enumerate(procData):
-        res = procs[i].wait()
-        # Detect Ctrl-C in subprocess.
-        if res == -signal.SIGINT:
-            raise KeyboardInterrupt
-        if proc_not_counts[i] % 2:
-            if proc_not_fail_if_crash[i]:
-                res = int(res <= 0)
-            else:
-                res = 1 if res == 0 else 0
-        elif proc_not_counts[i] > 1:
-            res = 1 if res != 0 else 0
-
-        # Ensure the resulting output is always of string type.
-        try:
-            if out is None:
-                out = ""
-            else:
-                out = out.decode("utf-8", errors="replace")
-        except:
-            out = str(out)
-        try:
-            if err is None:
-                err = ""
-            else:
-                err = err.decode("utf-8", errors="replace")
-        except:
-            err = str(err)
-
-        # Gather the redirected output files for failed commands.
-        output_files = []
-        if res != 0:
-            for (name, mode, f, path) in sorted(opened_files):
-                if path is not None and mode in ("w", "a"):
-                    try:
-                        with open(path, "rb") as f:
-                            data = f.read()
-                    except:
-                        data = None
-                    if data is not None:
-                        output_files.append((name, path, data))
-
-        results.append(
-            ShellCommandResult(
-                cmd.commands[i],
-                out,
-                err,
-                res,
-                timeoutHelper.timeoutReached(),
-                output_files,
-            )
-        )
-        if cmd.pipe_err:
-            # Take the last failing exit code from the pipeline.
-            if not exitCode or res != 0:
-                exitCode = res
-        else:
-            exitCode = res
-
-    # Remove any named temporary files we created.
-    for f in named_temp_files:
-        try:
-            os.remove(f)
-        except OSError:
-            pass
+        pipeline_state.append_results_in_order(results)
+        exitCode = pipeline_state.compute_exit_code(cmd.pipe_err)
+    finally:
+        closeOpenedFiles()
+        pipeline_state.close_staged_inputs()
+        removeNamedTempFiles()
 
     if cmd.negate:
         exitCode = not exitCode
