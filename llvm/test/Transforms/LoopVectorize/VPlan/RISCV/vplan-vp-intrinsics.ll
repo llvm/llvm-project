@@ -19,8 +19,9 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 ; IF-EVL-EMPTY:
 ; IF-EVL-NEXT: <x1> vector loop: {
-; IF-EVL-NEXT:  vector.body:
-; IF-EVL-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
+; IF-EVL-NEXT:   vector.body:
 ; IF-EVL-NEXT:    CURRENT-ITERATION-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:    EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -53,8 +54,9 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT: Successor(s): vector loop
 ; NO-VP-EMPTY:
 ; NO-VP-NEXT: <x1> vector loop: {
-; NO-VP-NEXT:  vector.body:
-; NO-VP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
+; NO-VP-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; NO-VP-EMPTY:
+; NO-VP-NEXT:   vector.body:
 ; NO-VP-NEXT:    vp<[[ST:%[0-9]+]]>    = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; NO-VP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; NO-VP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>
@@ -102,8 +104,9 @@ define void @safe_dep(ptr %p) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:  vector.body:
-; CHECK-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:    vp<[[ST:%[0-9]+]]>    = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr ir<%p>, vp<[[ST]]>
 ; CHECK-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
