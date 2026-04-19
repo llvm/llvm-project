@@ -2696,6 +2696,13 @@ void new_int_braces() {
   (void)*p;           // expected-note {{later used here}}
 }
 
+void conditional_delete(bool cond) {
+  int *p1 = new int;       // expected-warning {{allocated object does not live long enough}}
+  int *p2 = new int;
+  delete (cond ? p1 : p2); // expected-note {{freed here}}
+  (void)*p1;               // expected-note {{later used here}}
+}
+
 void new_pointer_from_pointer() {
   MyObj **p;
   {
@@ -2713,6 +2720,20 @@ void new_pointer_from_dead_object() {
     p = new MyObj *(&obj); // expected-warning {{object whose reference is captured does not live long enough}}
   }                        // expected-note {{destroyed here}}
   (void)**p;               // expected-note {{later used here}}
+}
+
+struct MultiView {
+  MultiView(MyObj& a [[clang::lifetimebound]], MyObj& b [[clang::lifetimebound]]);
+};
+
+void new_multiview_from_mixed_scope() {
+  MyObj obj1;
+  MultiView *p;
+  {
+    MyObj obj2;
+    p = new MultiView(obj1, obj2); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                                        // expected-note {{destroyed here}}
+  (void)p;                                 // expected-note {{later used here}}
 }
 
 void new_array_basic() {
@@ -2916,6 +2937,7 @@ void delete_stack_object() {
 }
 
 } // namespace heap_allocation
+
 namespace method_call_uses_field_origins {
 int GLOBAL_INT;
 std::string GLOBAL_STRING{"123"};

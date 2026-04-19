@@ -55,7 +55,7 @@ public:
     OriginEscapes,
     /// An origin is invalidated (e.g. vector resized).
     InvalidateOrigin,
-    // An origin is manually destroyed (e.g. via `delete`).
+    // An origin is explicitly destroyed (e.g. via `delete`).
     DestroyOrigin,
     /// All loans of an origin are cleared.
     KillOrigin,

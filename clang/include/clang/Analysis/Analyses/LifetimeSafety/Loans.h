@@ -35,12 +35,13 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
 ///   - MaterializeTemporaryExpr: a temporary object
 ///   - ParmVarDecl: a function parameter (placeholder)
 ///   - CXXMethodDecl: the implicit 'this' object (placeholder)
+///   - CXXNewExpr: a heap allocation made by `new`
 ///
 /// Placeholder paths never expire within the function scope, as they represent
 /// storage from the caller's scope.
 ///
 /// TODO: Model access paths of other types, e.g. field, array subscript, heap
-/// and globals.
+/// allocation not through `new`, and globals.
 class AccessPath {
 public:
   enum class Kind : uint8_t {
@@ -48,7 +49,7 @@ public:
     MaterializeTemporary,
     PlaceholderParam,
     PlaceholderThis,
-    HeapAllocation,
+    NewAllocation,
   };
 
 private:
@@ -62,7 +63,7 @@ public:
   AccessPath(const clang::ValueDecl *D) : K(Kind::ValueDecl), Root(D) {}
   AccessPath(const clang::MaterializeTemporaryExpr *MTE)
       : K(Kind::MaterializeTemporary), Root(MTE) {}
-  AccessPath(const CXXNewExpr *New) : K(Kind::HeapAllocation), Root(New) {}
+  AccessPath(const CXXNewExpr *New) : K(Kind::NewAllocation), Root(New) {}
   static AccessPath Placeholder(const ParmVarDecl *PVD) {
     return AccessPath(Kind::PlaceholderParam, PVD);
   }
@@ -91,8 +92,8 @@ public:
                                       : nullptr;
   }
   const CXXNewExpr *getAsHeapAllocation() const {
-    return K == Kind::HeapAllocation ? Root.dyn_cast<const CXXNewExpr *>()
-                                     : nullptr;
+    return K == Kind::NewAllocation ? Root.dyn_cast<const CXXNewExpr *>()
+                                    : nullptr;
   }
 
   bool operator==(const AccessPath &RHS) const {

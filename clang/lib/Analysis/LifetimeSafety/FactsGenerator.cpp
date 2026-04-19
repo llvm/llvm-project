@@ -334,7 +334,7 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     return;
   case CK_BitCast:
     // Only flow if the shapes are the same (e.g. casting from int** to void*
-    // will not flow here)
+    // will not flow here).
     if (Src && Dest && Dest->getLength() == Src->getLength())
       flow(Dest, Src, /*Kill=*/true);
     return;
@@ -634,7 +634,7 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
 
   // Check if we have a placement new where the second argument is void*, to
   // avoid flowing from std::nothrow and the placement parameter amount is 1,
-  // that is to mostly limit to standard library placement new
+  // that is to mostly limit to standard library placement new.
   if (NE->getNumPlacementArgs() == 1) {
     if (const auto *Arg = NE->getOperatorNew()
                               ->getParamDecl(1)
