@@ -194,6 +194,18 @@ public:
 private:
   const MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
+
+  void propagateGrowth(Register Reg, MachineBasicBlock *StartBB,
+                       MachineInstr *IgnoreMI = nullptr);
+  void propagateShrinkage(Register Reg, MachineBasicBlock *StartBB,
+                          MachineInstr *IgnoreMI = nullptr);
+
+  bool evaluateLiveIn(Register Reg, MachineBasicBlock *MBB,
+                      MachineInstr *IgnoreMI = nullptr) const;
+  bool isLiveOut(Register Reg, MachineBasicBlock *MBB,
+                 MachineInstr *IgnoreMI = nullptr) const;
+  void reevaluateLiveIn(Register Reg, MachineBasicBlock *MBB,
+                        MachineInstr *IgnoreMI = nullptr);
 };
 
 } // end namespace llvm
