@@ -2501,6 +2501,16 @@ private:
     Fortran::lower::pft::Evaluation &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
 
+    // If this do-loop was absorbed by a collapse clause on a parent acc.loop,
+    // skip generating any loop — just lower the body.  The IV value is
+    // already available from the parent acc.loop's block argument.
+    if (Fortran::lower::isCollapsedDoConstruct(doConstruct)) {
+      auto iter = eval.getNestedEvaluations().begin();
+      for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
+        genFIR(*iter, unstructuredContext);
+      return;
+    }
+
     // Loops with induction variables inside OpenACC compute constructs
     // need special handling to ensure that the IVs are privatized.
     if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
@@ -3591,6 +3601,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
+    Fortran::lower::clearCollapsedDoConstructs();
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
 
     // Cache constructs should not push/pop a scope because they need to update
@@ -3649,8 +3660,11 @@ private:
 
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
-        for (uint64_t i = 1; i < loopCount; i++)
+        for (uint64_t i = 1; i < loopCount; i++) {
+          if (!curEval->hasNestedEvaluations())
+            break;
           curEval = &*std::next(curEval->getNestedEvaluations().begin());
+        }
       }
     }
 
@@ -3677,9 +3691,8 @@ private:
           }
           prologue.push_back(&*it);
         }
-        // Semantics guarantees collapseDepth does not exceed nest depth
-        // so childLoop must be found here.
-        assert(childLoop && "Expected inner DoConstruct for collapse");
+        if (!childLoop)
+          break;
         parent = childLoop;
         innermostLoopEval = childLoop;
       }
@@ -3700,16 +3713,19 @@ private:
       sink(prologue);
 
       // Lower innermost loop body, skipping sunk
-      for (Fortran::lower::pft::Evaluation &e :
-           innermostLoopEval->getNestedEvaluations())
-        if (!sunk.contains(&e))
-          genFIR(e);
+      if (innermostLoopEval && innermostLoopEval->hasNestedEvaluations())
+        for (Fortran::lower::pft::Evaluation &e :
+             innermostLoopEval->getNestedEvaluations())
+          if (!sunk.contains(&e))
+            genFIR(e);
 
       sink(epilogue);
     } else {
       // Normal lowering
-      for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
-        genFIR(e);
+      if (curEval->hasNestedEvaluations())
+        for (Fortran::lower::pft::Evaluation &e :
+             curEval->getNestedEvaluations())
+          genFIR(e);
     }
     if (!isCacheConstruct)
       localSymbols.popScope();
@@ -6903,8 +6919,14 @@ private:
         if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
             DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
-      }
 
+        if (Fortran::evaluate::IsCoarray(sym) &&
+            !Fortran::semantics::IsAllocatable(sym) &&
+            Fortran::semantics::IsSaved(sym)) {
+          mlir::Location loc = toLocation();
+          TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
+        }
+      }
       Fortran::lower::defineModuleVariable(*this, var);
     }
     for (auto &eval : mod.evaluationList)
