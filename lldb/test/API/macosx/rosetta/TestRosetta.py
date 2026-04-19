@@ -3,6 +3,7 @@ import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
+from lldbsuite.test import configuration
 from os.path import exists
 
 
@@ -38,13 +39,18 @@ def has_rosetta_shared_cache(os_version):
 
 class TestRosetta(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     @skipUnlessAppleSilicon
     @skipIfLLVMTargetMissing("X86")
     @skipIfDarwinEmbedded
     def test_rosetta(self):
         """There can be many tests in a test case - describe this test here."""
-        self.build()
+        self.build(
+            dictionary={
+                "TRIPLE": configuration.triple.replace(self.getArchitecture(), "x86_64")
+            }
+        )
         self.main_source_file = lldb.SBFileSpec("main.c")
 
         if rosetta_debugserver_installed():

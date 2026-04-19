@@ -109,24 +109,32 @@ else
 endif
 
 #----------------------------------------------------------------------
-# If TRIPLE is not defined try to set the ARCH, CC, CFLAGS, and more
-# from the triple alone
+# Determine the target triple. The triple is the canonical way to
+# specify the target. When only ARCH is provided we query the compiler
+# for its default triple and replace the arch component.
 #----------------------------------------------------------------------
 ARCH_CFLAGS :=
 ifeq "$(OS)" "Android"
 	include $(THIS_FILE_DIR)/Android.rules
 endif
 
-#----------------------------------------------------------------------
-# If ARCH is not defined, default to x86_64.
-#----------------------------------------------------------------------
+ifeq "$(TRIPLE)" ""
+  ifeq "$(ARCH)" ""
+    # No triple, no arch: query the compiler for its default triple.
+    TRIPLE := $(shell $(CC) --print-target-triple)
+  else
+    # ARCH but no TRIPLE: replace the arch in the compiler's default triple.
+    TRIPLE := $(shell $(CC) --print-target-triple | sed 's/^[^-]*/$(ARCH)/')
+  endif
+endif
+
+# Derive ARCH from the first component of the triple if not already set.
 ifeq "$(ARCH)" ""
-ifeq "$(OS)" "Windows_NT"
-	ARCH = x86
-else
-	ARCH = x86_64
+  ARCH := $(firstword $(subst -, ,$(TRIPLE)))
 endif
-endif
+
+# Use -target to pass the triple to the compiler.
+ARCH_CFLAGS := -target $(TRIPLE)
 
 #----------------------------------------------------------------------
 # CC defaults to clang.
@@ -182,12 +190,10 @@ ifeq "$(HOST_OS)" "Darwin"
 	endif
 endif
 
-
-#----------------------------------------------------------------------
-# ARCHFLAG is the flag used to tell the compiler which architecture
-# to compile for. The default is the flag that clang accepts.
-#----------------------------------------------------------------------
-ARCHFLAG ?= -arch
+# Detect x86 from ARCH.
+ifneq (,$(filter amd64 x86_64 x64 x86 i386 i686,$(ARCH)))
+	IS_X86 := 1
+endif
 
 #----------------------------------------------------------------------
 # Change any build/tool options needed
@@ -198,68 +204,6 @@ ifeq "$(OS)" "Darwin"
 	DSYM = $(EXE).dSYM
 	ARFLAGS := -static -o
 else
-	# On non-Apple platforms, -arch becomes -m
-	ARCHFLAG := -m
-
-	# i386, i686, x86 -> 32
-	# amd64, x86_64, x64 -> 64
-	ifeq "$(ARCH)" "amd64"
-		override ARCH := $(subst amd64,64,$(ARCH))
-		IS_X86 := 1
-	endif
-	ifeq "$(ARCH)" "x86_64"
-		override ARCH := $(subst x86_64,64,$(ARCH))
-		IS_X86 := 1
-	endif
-	ifeq "$(ARCH)" "x64"
-		override ARCH := $(subst x64,64,$(ARCH))
-		IS_X86 := 1
-	endif
-	ifeq "$(ARCH)" "x86"
-		override ARCH := $(subst x86,32,$(ARCH))
-		IS_X86 := 1
-	endif
-	ifeq "$(ARCH)" "i386"
-		override ARCH := $(subst i386,32,$(ARCH))
-		IS_X86 := 1
-	endif
-	ifeq "$(ARCH)" "i686"
-		override ARCH := $(subst i686,32,$(ARCH))
-		IS_X86 := 1
-	endif
-	ifeq "$(ARCH)" "powerpc"
-		override ARCH := $(subst powerpc,32,$(ARCH))
-	endif
-	ifeq "$(ARCH)" "powerpc64"
-		override ARCH := $(subst powerpc64,64,$(ARCH))
-	endif
-	ifeq "$(ARCH)" "powerpc64le"
-		override ARCH := $(subst powerpc64le,64,$(ARCH))
-	endif
-	ifeq "$(ARCH)" "aarch64"
-		override ARCH :=
-		override ARCHFLAG :=
-	endif
-	ifeq "$(findstring arm,$(ARCH))" "arm"
-		override ARCH :=
-		override ARCHFLAG :=
-	endif
-	ifeq "$(ARCH)" "s390x"
-		override ARCH :=
-		override ARCHFLAG :=
-	endif
-	ifeq "$(ARCH)" "riscv"
-		override ARCH :=
-		override ARCHFLAG :=
-	endif
-	ifeq "$(findstring mips,$(ARCH))" "mips"
-		override ARCHFLAG := -
-	endif
-	ifeq "$(findstring loongarch,$(ARCH))" "loongarch"
-		override ARCH :=
-		override ARCHFLAG :=
-	endif
-
 	ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 		DSYM = $(EXE).debug
 	endif
@@ -296,9 +240,7 @@ CFLAGS ?= $(DEBUG_INFO_FLAG) -O0
 CFLAGS += $(SYSROOT_FLAGS)
 
 ifeq "$(OS)" "Darwin"
-	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES)
-else
-	CFLAGS += $(ARCHFLAG)$(ARCH)
+	CFLAGS += $(FRAMEWORK_INCLUDES)
 endif
 
 CFLAGS += -I$(LLDB_BASE_DIR)/include -I$(LLDB_OBJ_ROOT)/include
@@ -311,11 +253,7 @@ endif
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS)
 
 # Use this one if you want to build one part of the result without debug information:
-ifeq "$(OS)" "Darwin"
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS) $(SYSROOT_FLAGS)
-else
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS) $(SYSROOT_FLAGS)
-endif
+CFLAGS_NO_DEBUG = -O0 $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS) $(SYSROOT_FLAGS)
 
 ifeq "$(MAKE_DWO)" "YES"
 	CFLAGS += -gsplit-dwarf
