@@ -108,3 +108,73 @@ jobs:
         --build build 
         --parallel 
         --target check-libc
+
+  qemu-riscv64:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cmake ninja-build clang lld qemu-user-static \
+            libc6-dev-riscv64-cross libstdc++6-riscv64-cross \
+            gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+
+      - name: Setup GMP
+        run: |
+          mkdir build
+          cd build
+          wget https://gmplib.org/download/gmp/gmp-6.3.0.tar.xz
+          tar -xf gmp-6.3.0.tar.xz
+          cd gmp-6.3.0
+          ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu
+          make -j8
+          sudo make install
+          cd ../..
+      
+      - name: Setup MPFR
+        run: |
+          cd build
+          wget https://www.mpfr.org/mpfr-current/mpfr-4.2.1.tar.xz
+          tar -xf mpfr-4.2.1.tar.xz
+          cd mpfr-4.2.1
+          ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu \
+                      --with-gmp=/usr/riscv64-linux-gnu
+          make -j8
+          sudo make install
+          cd ../..
+      
+      - name: Configure CMake - Clang
+        run: |
+          cmake -B build/clang -S runtimes -G Ninja \
+            -DLLVM_ENABLE_RUNTIMES=libc \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLIBC_TARGET_TRIPLE=riscv64-linux-gnu
+
+      - name: Build and Run - Clang
+        env:
+          QEMU_LD_PREFIX: /usr/riscv64-linux-gnu
+        run: |
+          cmake --build build/clang --target libc-shared-tests
+
+      - name: Configure CMake - gcc
+        run: |
+          cmake -B build/gcc -S runtimes -G Ninja \
+            -DLLVM_ENABLE_RUNTIMES=libc \
+            -DCMAKE_C_COMPILER=riscv64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=riscv64-linux-gnu-g++ \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLIBC_TARGET_TRIPLE=riscv64-linux-gnu
+
+      - name: Build and Run - gcc
+        env:
+          QEMU_LD_PREFIX: /usr/riscv64-linux-gnu
+        run: |
+          cmake --build build/gcc --target libc-shared-tests
