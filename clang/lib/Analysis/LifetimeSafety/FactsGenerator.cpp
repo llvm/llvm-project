@@ -635,17 +635,8 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   if (!NewList)
     return;
 
-  if (auto *CE = NE->getConstructExpr(); CE) {
-    if (OriginList *ArgList = getOriginsList(*CE); ArgList)
-      flow(NewList, ArgList, true);
-  } else if (const Expr *E = NE->getInitializer(); E) {
-    if (const auto *ILE = dyn_cast<InitListExpr>(E); NE->isArray() && ILE) {
-      if (OriginList *InitList = getOriginsList(*ILE); InitList)
-        flow(NewList, InitList, true);
-    } else if (OriginList *ArgList = getOriginsList(*E); ArgList) {
-      flow(NewList, ArgList, true);
-    }
-  }
+  if (OriginList *Init = getOriginsList(*NE->getInitializer()); Init)
+    flow(NewList, Init, true);
 }
 
 void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
