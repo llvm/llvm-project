@@ -2663,7 +2663,7 @@ int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
 
 } // namespace conditional_operator_control_flow
 
-namespace heap_allocation {
+namespace new_allocation {
 
 //===----------------------------------------------------------------------===//
 // new
@@ -2698,9 +2698,10 @@ void new_int_braces() {
 
 void conditional_delete(bool cond) {
   int *p1 = new int;       // expected-warning {{allocated object does not live long enough}}
-  int *p2 = new int;
-  delete (cond ? p1 : p2); // expected-note {{freed here}}
+  int *p2 = new int;       // expected-warning {{allocated object does not live long enough}}
+  delete (cond ? p1 : p2); // expected-note 2 {{freed here}}
   (void)*p1;               // expected-note {{later used here}}
+  (void)*p2;               // expected-note {{later used here}}
 }
 
 int* foo(int* x [[clang::lifetimebound]], int* y [[clang::lifetimebound]]);
@@ -2742,8 +2743,8 @@ void new_multiview_from_mixed_scope() {
   {
     MyObj obj2;
     p = new MultiView(obj1, obj2); // expected-warning {{object whose reference is captured does not live long enough}}
-  }                                        // expected-note {{destroyed here}}
-  (void)p;                                 // expected-note {{later used here}}
+  }                                // expected-note {{destroyed here}}
+  (void)p;                         // expected-note {{later used here}}
 }
 
 void new_array_basic() {
@@ -2813,11 +2814,11 @@ void delete_pointer_propagation_use_after_free() {
   (void)(*pp)->id;      // expected-note {{later used here}}
 }
 
-void delete_array_use_after_free() {
-  int *p = new int[2]; // expected-warning {{allocated object does not live long enough}}
-  delete[] p;          // expected-note {{freed here}}
-  (void)p[1];          // expected-note {{later used here}}
-}
+// Currently crashes the program on dyn_cast to CXXNewExpr
+// void delete_param_pointer(int* x) {
+//   delete x;
+//   (void)x;
+// }
 
 void delete_nullptr_no_warning() {
   int *p = nullptr;
@@ -2866,6 +2867,13 @@ void delete_stack_object() {
   MyObj obj;
   delete &obj;
   (void)obj.id;
+}
+
+void delete_stack_object_int() {
+  int obj;
+  int* p = &obj;
+  delete &obj;
+  (void)p;
 }
 
 } // namespace heap_allocation

@@ -221,10 +221,10 @@ public:
     /// Get loans directly pointing to the invalidated container
     LoanSet DirectlyInvalidatedLoans =
         LoanPropagation.getLoans(InvalidatedOrigin, IOF);
-    auto IsInvalidated = [&](const LoanID &LID) {
+    auto IsInvalidated = [&](const LoanID LID) {
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
       for (LoanID InvalidID : DirectlyInvalidatedLoans) {
         const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-        const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
 
         if (InvalidL->getAccessPath() == L->getAccessPath())
           return true;
@@ -243,8 +243,15 @@ public:
         LoanPropagation.getLoans(DestroyedOrigin, DOF);
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(DOF);
 
-    auto IsDestroyed = [&DirectlyDestroyedLoans](const LoanID &LID) {
-      return DirectlyDestroyedLoans.contains(LID);
+    auto IsDestroyed = [&](const LoanID LID) {
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+      for (LoanID InvalidID : DirectlyDestroyedLoans) {
+        const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
+
+        if (InvalidL->getAccessPath() == L->getAccessPath())
+          return true;
+      }
+      return false;
     };
 
     recordWarningsForMatchingLoans(DOF->getDestroyExpr(), DOF, IsDestroyed);
@@ -265,7 +272,8 @@ public:
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
         if (Warning.InvalidatedByExpr) {
-          if (const CXXNewExpr *NE = dyn_cast<CXXNewExpr>(IssueExpr); NE)
+          if (const CXXNewExpr *NE = dyn_cast_or_null<CXXNewExpr>(IssueExpr);
+              NE)
             SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(),
                                            Warning.InvalidatedByExpr);
           else if (IssueExpr)
@@ -303,8 +311,7 @@ public:
   }
 
   /// Returns the declaration of a function that is visible across translation
-  /// units, if such a declaration exists and is different from the
-  /// definition.
+  /// units, if such a declaration exists and is different from the definition.
   static const FunctionDecl *getCrossTUDecl(const FunctionDecl &FD,
                                             SourceManager &SM) {
     if (!FD.isExternallyVisible())
