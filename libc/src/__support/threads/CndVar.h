@@ -83,6 +83,8 @@ class PrivateCndVar {
     Signalled = 1,
     // A cancellation has been requested.
     Cancelled = 2,
+    // The thread has been requeued to the mutex.
+    Requeued = 3,
   };
 
   struct WaiterHeader {
@@ -206,10 +208,11 @@ public:
     }
 
     MutexError mutex_result = mutex->lock();
-    // We need to establish contention after lock, otherwise
+    // If we are requeued, we need to establish contention after lock, otherwise
     // requeued thread may clear the contention bit even though
     // there are still waiters behind it.
-    mutex->get_raw_futex().store(RawMutex::IN_CONTENTION);
+    if (waiter.state.load(cpp::MemoryOrder::RELAXED) == Requeued)
+      mutex->get_raw_futex().store(RawMutex::IN_CONTENTION);
     // If there is other in the queue after us, we need to wake the next waiter.
     // If we cancelled, we should naturally have waiter.next == &waiter
     if (waiter.next != &waiter) {
@@ -231,6 +234,10 @@ public:
               /*is_shared=*/false);
           if (!res.has_value()) // cannot requeue on this system
             next_waiter->barrier.wake(/*is_shared=*/false);
+          else if (res.value() > 0) {
+            next_waiter->state.store(Requeued, cpp::MemoryOrder::RELAXED);
+            mutex->get_raw_futex().store(RawMutex::IN_CONTENTION);
+          }
         } else { // cannot requeue under special lock mode
           next_waiter->barrier.wake(/*is_shared=*/false);
         }
