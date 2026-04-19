@@ -1746,7 +1746,7 @@ bool SemaARM::checkTargetClonesAttr(
     NewParams.push_back(NewParam);
     HasNonDefault = true;
   }
-  
+
   return !HasNonDefault;
 }
 
