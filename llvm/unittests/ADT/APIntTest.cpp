@@ -3057,32 +3057,6 @@ TEST(APIntTest, isSubsetOf) {
   EXPECT_TRUE(i128_3.isSubsetOf(i128_3));
 }
 
-TEST(APIntTest, isExhaustive) {
-  APInt i4_0(4, 0);
-  APInt i4_1(4, 1);
-  APInt i4_12(4, 12);
-  APInt i4_14(4, 14);
-  APInt i4_15(4, 15);
-  EXPECT_TRUE(i4_1.isExhaustive(i4_14));
-  EXPECT_TRUE(i4_14.isExhaustive(i4_1));
-  EXPECT_FALSE(i4_1.isExhaustive(i4_12));
-  EXPECT_FALSE(i4_0.isExhaustive(i4_0));
-  EXPECT_TRUE(i4_15.isExhaustive(i4_0));
-
-  APInt i128Lo64 = APInt::getLowBitsSet(128, 64);
-  APInt i128Hi64 = APInt::getHighBitsSet(128, 64);
-  APInt i128Hi63 = APInt::getHighBitsSet(128, 63);
-  EXPECT_TRUE(i128Lo64.isExhaustive(i128Hi64));
-  EXPECT_TRUE(i128Hi64.isExhaustive(i128Lo64));
-  EXPECT_FALSE(i128Lo64.isExhaustive(i128Hi63));
-
-  APInt i65Lo64 = APInt::getLowBitsSet(65, 64);
-  APInt i65Hi1 = APInt::getHighBitsSet(65, 1);
-  EXPECT_TRUE(i65Lo64.isExhaustive(i65Hi1));
-  EXPECT_TRUE(i65Hi1.isExhaustive(i65Lo64));
-  EXPECT_FALSE(i65Lo64.isExhaustive(APInt(65, 0)));
-}
-
 TEST(APIntTest, sext) {
   EXPECT_EQ(0, APInt(1, 0).sext(64));
   EXPECT_EQ(~uint64_t(0), APInt(1, 1).sext(64));
