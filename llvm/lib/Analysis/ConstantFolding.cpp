@@ -1328,6 +1328,31 @@ Constant *llvm::ConstantFoldInstOperands(const Instruction *I,
                                       AllowNonDeterministic);
 }
 
+// Try to decide if an inbounds GEP is entirely inside the object it points to.
+// Return std::nullopt if not possible.
+static std::optional<bool> isGEPInObject(const GEPOperator *GEP,
+                                         const DataLayout &DL) {
+  if (!GEP->isInBounds() || !GEP->hasAllConstantIndices()) {
+    return std::nullopt;
+  }
+  if (const auto *GVar = dyn_cast<GlobalVariable>(GEP->getPointerOperand())) {
+    if (GVar->isInterposable() || GVar->hasGlobalUnnamedAddr() ||
+        isa<GlobalAlias>(GVar))
+      return std::nullopt;
+    Type *GVType = GVar->getValueType();
+    if (!GVType->isSized() || GVType->isEmptyTy())
+      return std::nullopt;
+    const auto Bitwidth = DL.getIndexTypeSizeInBits(GEP->getType());
+    APInt ObjectSize(Bitwidth, GVar->getGlobalSize(DL));
+    APInt GEPOffset(Bitwidth, 0);
+    GEP->accumulateConstantOffset(DL, GEPOffset);
+    if (GEPOffset.ult(ObjectSize))
+      return true;
+    return false;
+  }
+  return false;
+}
+
 Constant *llvm::ConstantFoldCompareInstOperands(
     unsigned IntPredicate, Constant *Ops0, Constant *Ops1, const DataLayout &DL,
     const TargetLibraryInfo *TLI, const Instruction *I) {
@@ -1420,6 +1445,39 @@ Constant *llvm::ConstantFoldCompareInstOperands(
             Ops0->getContext(),
             ICmpInst::compare(Offset0, Offset1,
                               ICmpInst::getSignedPredicate(Predicate)));
+
+      // Try to fold a GEP/GlobalVariable comparison.
+      if (IsEqPred && isa<GlobalVariable>(Stripped0) &&
+          isa<GlobalVariable>(Stripped1)) {
+        const auto CanFoldPtr = [](Constant *Op) -> bool {
+          if (const auto *GV = dyn_cast<GlobalVariable>(Op)) {
+            if (GV->isInterposable() || GV->hasGlobalUnnamedAddr() ||
+                isa<GlobalAlias>(GV))
+              return false;
+            Type *GVType = GV->getValueType();
+            if (GVType->isSized() && !GVType->isEmptyTy())
+              return true;
+          }
+          return false;
+        };
+        bool InObject0 = CanFoldPtr(Ops0);
+        if (const auto *GEP = dyn_cast<GEPOperator>(Ops0)) {
+          if (auto CanDecide = isGEPInObject(GEP, DL))
+            InObject0 = *CanDecide;
+          else
+            InObject0 = false;
+        }
+        bool InObject1 = CanFoldPtr(Ops1);
+        if (const auto *GEP = dyn_cast<GEPOperator>(Ops1)) {
+          if (auto CanDecide = isGEPInObject(GEP, DL))
+            InObject1 = *CanDecide;
+          else
+            InObject1 = false;
+        }
+        if (InObject0 && InObject1)
+          return ConstantInt::getBool(Ops0->getContext(),
+                                      Predicate == CmpInst::ICMP_NE);
+      }
     }
   } else if (isa<ConstantExpr>(Ops1)) {
     // If RHS is a constant expression, but the left side isn't, swap the
