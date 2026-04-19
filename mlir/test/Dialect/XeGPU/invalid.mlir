@@ -352,7 +352,7 @@ func.func @store_scatter_offset_wi_4(%src: !xegpu.tensor_desc<1x1xf32>) {
   %val = arith.constant dense<2.9>: vector<1xf16>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   %mask = arith.constant dense<1>: vector<1xi1>
-  // expected-error@+1 {{offsets are required, tensor_desc source is not supported for scatter store}}
+  // expected-error@+1 {{tensor_desc source is not supported for scatter store}}
   xegpu.store %val, %src[%offsets], %mask
         : vector<1xf16>, !xegpu.tensor_desc<1x1xf32>, vector<1xindex>, vector<1xi1>
   return
@@ -362,7 +362,7 @@ func.func @store_scatter_offset_wi_4(%src: !xegpu.tensor_desc<1x1xf32>) {
 func.func @load_gather_offset_wi_4(%src: !xegpu.tensor_desc<1x2xf16>) {
   %mask = arith.constant dense<1>: vector<1xi1>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
-  // expected-error@+1 {{offsets are required, tensor_desc source is not supported for scatter load}}
+  // expected-error@+1 {{tensor_desc source is not supported for scatter load}}
   %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : !xegpu.tensor_desc<1x2xf16>, vector<1xindex>, vector<1xi1> -> vector<2xf16>
   return
 }

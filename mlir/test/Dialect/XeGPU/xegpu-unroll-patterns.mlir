@@ -13,8 +13,7 @@ gpu.module @test {
     gpu.return %tdesc : !xegpu.tensor_desc<24x32xf32, #xegpu.layout<inst_data = [8, 16]>>
   }
 
-  //-----
-
+//-----
   // CHECK-LABEL: create_nd_tdesc_1d
   // CHECK-SAME: [[arg0:%.+]]: memref<64xf32>
   // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<64xf32> -> !xegpu.tensor_desc<16xf32>
@@ -26,8 +25,7 @@ gpu.module @test {
     gpu.return %tdesc : !xegpu.tensor_desc<32xf32, #xegpu.layout<inst_data = [16]>>
   }
 
-  //-----
-
+//-----
   // CHECK-LABEL: prefetch_nd_tdesc
   // CHECK-SAME: [[arg0:%.+]]: memref<24x32xf32>
   // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>
@@ -38,8 +36,7 @@ gpu.module @test {
     gpu.return
   }
 
-  //-----
-
+//-----
   // CHECK-LABEL: prefetch_nd_tdesc_1d
   // CHECK-SAME: [[arg0:%.+]]: memref<64xf32>
   // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<64xf32> -> !xegpu.tensor_desc<16xf32>
@@ -50,7 +47,7 @@ gpu.module @test {
     gpu.return
   }
 
-  //-----
+//-----
   // CHECK-LABEL: load_nd
   // CHECK-SAME: [[arg0:%.+]]: memref<24x32xf32>
   // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>
@@ -62,8 +59,7 @@ gpu.module @test {
     gpu.return %ld : vector<24x32xf32>
   }
 
-  //-----
-
+//-----
   // CHECK-LABEL: load_nd_1d
   // CHECK-SAME: [[arg0:%.+]]: memref<64xf32>
   // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<64xf32> -> !xegpu.tensor_desc<16xf32>
@@ -75,8 +71,7 @@ gpu.module @test {
     gpu.return %data : vector<64xf32>
   }
 
-  //-----
-
+//-----
   // CHECK-LABEL: store_nd
   // CHECK-SAME: [[arg0:%.+]]: memref<24x32xf32>
   // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>
@@ -88,8 +83,7 @@ gpu.module @test {
     gpu.return
   }
 
-  //-----
-
+//-----
   // CHECK-LABEL: store_nd_1d
   // CHECK-SAME: [[arg0:%.+]]: memref<64xf32>
   // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<64xf32> -> !xegpu.tensor_desc<16xf32>
@@ -101,8 +95,7 @@ gpu.module @test {
     gpu.return
   }
 
-  //-----
-
+//-----
   // CHECK-LABEL: createNd_loadNd_storeNd
   // CHECK-SAME: [[arg0:%.+]]: memref<24x32xf32>
   //CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>
@@ -120,8 +113,7 @@ gpu.module @test {
     gpu.return
   }
 
-  //-----
-
+//-----
   // CHECK-LABEL: dpas
   // CHECK-SAME: [[arg0:%.+]]: vector<32x32xf16>, [[arg1:%.+]]: vector<32x32xf16>
   //CHECK-COUNT-8: [[extract1:%.+]] = vector.extract_strided_slice [[arg0]] {{.*}} : vector<32x32xf16> to vector<8x16xf16>
@@ -134,13 +126,6 @@ gpu.module @test {
   }
 
 //-----
-
-//-----
-
-//-----
-
-//-----
-
   // CHECK-LABEL: load_with_offsets
   // CHECK-SAME: [[arg0:%.+]]: ui64
   // CHECK-COUNT-2: xegpu.load  {{.*}}[{{.*}}], {{.*}} <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}> : ui64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
@@ -160,11 +145,6 @@ gpu.module @test {
   }
 
 //-----
-
-//-----
-  
-  //-----
-
   // CHECK-LABEL: store_with_offsets
   // CHECK-SAME: [[arg0:%.+]]: ui64
   // CHECK-COUNT-2: xegpu.store  {{.*}}[{{.*}}], {{.*}} <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}> : vector<16xf32>, ui64, vector<16xindex>, vector<16xi1>
@@ -184,12 +164,6 @@ gpu.module @test {
 
       gpu.return
   }
-
-//-----
-
-//-----
-
-//-----
 
 //-----
   // CHECK-LABEL: load_with_offsets_chunk
@@ -213,8 +187,6 @@ gpu.module @test {
     %ld = xegpu.load %src[%cst], %mask {chunk_size = 4, layout = #xegpu.layout<inst_data = [16, 2]>, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<32xindex>, vector<32xi1> -> vector<32x4xf32>
     gpu.return %ld : vector<32x4xf32>
    }
-
-//-----
 
 //-----
   // CHECK-LABEL: store_with_offsets_chunk
@@ -242,7 +214,6 @@ gpu.module @test {
   }
 
 //-----
-
   // CHECK-LABEL: load_nd_store_nd
   // CHECK-SAME: [[arg0:%.+]]: memref<256x318xf32>
   // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<256x318xf32> -> !xegpu.tensor_desc<8x16xf32>
@@ -253,18 +224,6 @@ gpu.module @test {
     %ld = xegpu.load_nd %tdesc[8, 16]: !xegpu.tensor_desc<24x32xf32, #xegpu.layout<inst_data = [8, 16]>> -> vector<24x32xf32>
     xegpu.store_nd %ld, %tdesc[0, 0] : vector<24x32xf32>, !xegpu.tensor_desc<24x32xf32, #xegpu.layout<inst_data = [8, 16]>>
     gpu.return
-  }
-
-//-----
-
-  // CHECK-LABEL: load_nd_offsets_at_both_places
-  // CHECK: xegpu.create_nd_tdesc
-  // CHECK-COUNT-6: xegpu.load_nd {{.*}}[{{.*}}]  : !xegpu.tensor_desc<8x16xf32> -> vector<8x16xf32>
-  // CHECK-COUNT-6: vector.insert_strided_slice
-  gpu.func @load_nd_offsets_at_both_places(%src: memref<256x318xf32>) -> vector<24x32xf32> {
-    %tdesc = xegpu.create_nd_tdesc %src : memref<256x318xf32> -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<inst_data = [8, 16]>>
-    %ld = xegpu.load_nd %tdesc[8, 16]: !xegpu.tensor_desc<24x32xf32, #xegpu.layout<inst_data = [8, 16]>> -> vector<24x32xf32>
-    gpu.return %ld : vector<24x32xf32>
   }
 
 }

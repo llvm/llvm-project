@@ -1,8 +1,8 @@
 // RUN: mlir-opt --xegpu-wg-to-sg-distribute -split-input-file %s | FileCheck %s
 gpu.module @test_distribution {
-  // CHECK-LABEL: create_nd_tdesc_no_offset
+  // CHECK-LABEL: create_nd_tdesc
   // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>
-  gpu.func @create_nd_tdesc_no_offset(%src: memref<256x128xf32>) {
+  gpu.func @create_nd_tdesc(%src: memref<256x128xf32>) {
     // CHECK: xegpu.create_nd_tdesc %[[ARG_0]] : memref<256x128xf32>
     // CHECK-SAME: -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32>
@@ -21,8 +21,8 @@ gpu.module @test_distribution {
       gpu.return
   }
 
-  // CHECK-LABEL: load_nd_tdesc_with_offset
-  gpu.func @load_nd_tdesc_with_offset(%src: memref<256x128xf32>) {
+  // CHECK-LABEL: load_nd
+  gpu.func @load_nd(%src: memref<256x128xf32>) {
     //CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     //CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
     //CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
@@ -46,9 +46,9 @@ gpu.module @test_distribution {
     gpu.return
   }
 
-  // CHECK-LABEL: store_nd_with_offsets
+  // CHECK-LABEL: store_nd
   // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>
-  gpu.func @store_nd_with_offsets(%src: memref<256x128xf32>) {
+  gpu.func @store_nd(%src: memref<256x128xf32>) {
     //CHECK: xegpu.store_nd %{{.*}}, {{%.*}}[{{%.*}}, {{%.*}}] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>  : vector<32x32xf32>, !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     %tdesc = xegpu.create_nd_tdesc %src: memref<256x128xf32>
       -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -60,9 +60,9 @@ gpu.module @test_distribution {
     gpu.return
 }
 
-  // CHECK-LABEL: prefetch_nd_tdesc_with_offset
+  // CHECK-LABEL: prefetch_nd
   // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>
-  gpu.func @prefetch_nd_tdesc_with_offset(%src: memref<256x128xf32>) {
+  gpu.func @prefetch_nd(%src: memref<256x128xf32>) {
     //CHECK: xegpu.prefetch_nd %{{.*}}[{{%.*}}, {{%.*}}] : !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     %cst0 = arith.constant 0 : index
     %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32>

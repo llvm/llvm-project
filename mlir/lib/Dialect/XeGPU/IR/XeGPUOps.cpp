@@ -549,8 +549,8 @@ LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
 
   if (tdescTy)
-    return emitOpError("offsets are required, tensor_desc source is not "
-                       "supported for scatter prefetch.");
+    return emitOpError("tensor_desc source is not supported for scatter "
+                       "prefetch.");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -588,8 +588,8 @@ LogicalResult LoadGatherOp::verify() {
   auto valueTy = getValueType();
 
   if (tdescTy)
-    return emitOpError("offsets are required, tensor_desc source is not "
-                       "supported for scatter load.");
+    return emitOpError("tensor_desc source is not supported for scatter "
+                       "load.");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -659,8 +659,8 @@ LogicalResult StoreScatterOp::verify() {
   auto valueTy = getValueType();
 
   if (tdescTy)
-    return emitOpError("offsets are required, tensor_desc source is not "
-                       "supported for scatter store.");
+    return emitOpError("tensor_desc source is not supported for scatter "
+                       "store.");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();

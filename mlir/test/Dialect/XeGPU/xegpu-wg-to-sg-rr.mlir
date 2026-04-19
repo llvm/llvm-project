@@ -1,9 +1,9 @@
 // RUN: mlir-opt --xegpu-wg-to-sg-distribute -split-input-file %s | FileCheck %s
 
 gpu.module @test_distribution {
-  // CHECK-LABEL: create_nd_tdesc_no_offset
+  // CHECK-LABEL: create_nd_tdesc
   // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>
-  gpu.func @create_nd_tdesc_no_offset(%src: memref<256x128xf32>) {
+  gpu.func @create_nd_tdesc(%src: memref<256x128xf32>) {
       // CHECK-COUNT-4: xegpu.create_nd_tdesc %[[ARG_0]] : memref<256x128xf32>
       // CHECK-SAME: -> !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
       // CHECK-NOT: xegpu.create_nd_tdesc
@@ -12,8 +12,8 @@ gpu.module @test_distribution {
       gpu.return
   }
 
-  // CHECK-LABEL: load_nd_tdesc_with_offset
-  gpu.func @load_nd_tdesc_with_offset(%src: memref<256x128xf32>) {
+  // CHECK-LABEL: load_nd
+  gpu.func @load_nd(%src: memref<256x128xf32>) {
     // CHECK-COUNT-4: xegpu.load_nd {{%.*}}[{{%.*}}, {{%.*}}] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<16x16xf32>
     // CHECK-NOT: xegpu.load_nd
     %tdesc = xegpu.create_nd_tdesc %src: memref<256x128xf32>
@@ -38,8 +38,8 @@ gpu.module @test_distribution {
     gpu.return
   }
 
-  // CHECK-LABEL: prefetch_nd_tdesc_with_offset
-  gpu.func @prefetch_nd_tdesc_with_offset(%src: memref<256x128xf32>) {
+  // CHECK-LABEL: prefetch_nd
+  gpu.func @prefetch_nd(%src: memref<256x128xf32>) {
     // CHECK-COUNT-4: xegpu.prefetch_nd {{%.*}}[{{%.*}}, {{%.*}}] : !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     // CHECK-NOT: xegpu.prefetch_nd
     %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32>

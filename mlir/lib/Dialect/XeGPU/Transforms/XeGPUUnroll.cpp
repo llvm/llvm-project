@@ -414,8 +414,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
 /// load).
 /// It unrolls the offsets and mask operands accordingly, and creates multiple
 /// LoadGatherOp with the unrolled operands.
-struct UnrollLoadGatherOpWithOffset
-    : public UnrollPattern<xegpu::LoadGatherOp> {
+struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
   using UnrollPattern<xegpu::LoadGatherOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::LoadGatherOp op,
                                 PatternRewriter &rewriter) const override {
@@ -509,8 +508,7 @@ struct UnrollLoadGatherOpWithOffset
 /// store).
 /// It unrolls the offsets and mask operands accordingly, and creates multiple
 /// StoreScatterOp with the unrolled operands.
-struct UnrollStoreScatterOpWithOffsets
-    : public UnrollPattern<xegpu::StoreScatterOp> {
+struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
   using UnrollPattern<xegpu::StoreScatterOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::StoreScatterOp op,
                                 PatternRewriter &rewriter) const override {
@@ -742,7 +740,6 @@ void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
   patterns.add<UnrollCreateNdOp, UnrollPrefetchNdOp, UnrollLoadNdOp,
                UnrollStoreNdOp, UnrollDpasOp, UnrollLoadMatrixOp,
-               UnrollStoreMatrixOp, UnrollLoadGatherOpWithOffset,
-               UnrollStoreScatterOpWithOffsets, UnrollConvertLayoutOp>(
-      patterns.getContext(), options);
+               UnrollStoreMatrixOp, UnrollLoadGatherOp, UnrollStoreScatterOp,
+               UnrollConvertLayoutOp>(patterns.getContext(), options);
 }

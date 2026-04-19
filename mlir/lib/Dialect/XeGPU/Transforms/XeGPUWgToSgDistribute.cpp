@@ -812,7 +812,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
 
 // This pattern transforms the LoadGatherOp with explicit offsets to load
 // subgroup data
-struct WgToSgLoadGatherOpWithOffset
+struct WgToSgLoadGatherOp
     : public OpConversionPattern<xegpu::LoadGatherOp> {
   using OpConversionPattern<xegpu::LoadGatherOp>::OpConversionPattern;
   LogicalResult
@@ -863,7 +863,7 @@ struct WgToSgLoadGatherOpWithOffset
 
 // This pattern transforms the StoreScatterOp with explicit offsets to store
 // subgroup data
-struct WgToSgStoreScatterOpWithOffset
+struct WgToSgStoreScatterOp
     : public OpConversionPattern<xegpu::StoreScatterOp> {
   using OpConversionPattern<xegpu::StoreScatterOp>::OpConversionPattern;
   LogicalResult
@@ -1427,8 +1427,8 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
       .add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp, WgToSgDpasOp,
            WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
            WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
-           WgToSgArithConstantOp, WgToSgLoadGatherOpWithOffset,
-           WgToSgStoreScatterOpWithOffset, WgToSgLoadMatrixOp,
+           WgToSgArithConstantOp, WgToSgLoadGatherOp,
+           WgToSgStoreScatterOp, WgToSgLoadMatrixOp,
            WgToSgStoreMatrixOp, WgToSgVectorStepOp, WgToSgVectorShapeCastOp,
            WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp,
            WgToSgVectorConstantMaskOp, WgToSgVectorCreateMaskOp>(
