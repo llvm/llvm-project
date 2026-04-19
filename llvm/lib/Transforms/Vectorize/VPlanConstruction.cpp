@@ -930,6 +930,16 @@ void VPlanTransforms::createInLoopReductionRecipes(
         LinkVPBB->appendRecipe(RedRecipe);
 
       CurrentLink->replaceAllUsesWith(RedRecipe);
+      // Move any store recipes using the RedRecipe that appear before it in the
+      // same block to just after the RedRecipe.
+      for (VPUser *U : make_early_inc_range(RedRecipe->users())) {
+        auto *UserR = dyn_cast<VPRecipeBase>(U);
+        if (!UserR || UserR->getParent() != LinkVPBB)
+          continue;
+        if (!match(UserR, m_VPInstruction<Instruction::Store>()))
+          continue;
+        UserR->moveAfter(RedRecipe);
+      }
       ToDelete.push_back(CurrentLink);
       PreviousLink = RedRecipe;
     }
@@ -1071,7 +1081,9 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
 
 void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
-  for (VPBlockBase *HeaderVPB : vp_post_order_shallow(Plan.getEntry()))
+  PostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> POT(
+      Plan.getEntry());
+  for (VPBlockBase *HeaderVPB : POT)
     if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
       createLoopRegion(Plan, HeaderVPB);
 

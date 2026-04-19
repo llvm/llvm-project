@@ -3,7 +3,8 @@
 
 [[clang::require_constant_initialization]] int cc = cc; // both-error {{variable does not have a constant initializer}} \
                                                         // both-note {{attribute here}} \
-                                                        // both-note {{ead of object outside its lifetime}}
+                                                        // both-note {{ead of object outside its lifetime}} \
+                                                        // both-note {{declared here}}
 
 
 struct F { int a; int b;};

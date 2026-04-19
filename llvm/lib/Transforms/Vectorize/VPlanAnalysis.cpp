@@ -106,8 +106,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
                inferScalarType(R->getOperand(1)) &&
            "different types inferred for different operands");
     return IntegerType::get(Ctx, 1);
-  case VPInstruction::ComputeAnyOfResult:
-    return inferScalarType(R->getOperand(1));
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -139,6 +137,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case Instruction::Store:
+  case Instruction::Switch:
     return Type::getVoidTy(Ctx);
   case Instruction::Load:
     return cast<LoadInst>(R->getUnderlyingValue())->getType();

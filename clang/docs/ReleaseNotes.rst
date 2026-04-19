@@ -179,6 +179,15 @@ Non-comprehensive list of changes in this release
   counts are normalized modulo the bit-width and support negative values.
   Usable in constant expressions. Implicit conversion is supported for
   class/struct types with conversion operators.
+- Implemented the following C23 ``<stdbit.h>`` builtins with ``_BitInt``
+  support and constexpr evaluation:
+  ``__builtin_stdc_leading_zeros``, ``__builtin_stdc_leading_ones``,
+  ``__builtin_stdc_trailing_zeros``, ``__builtin_stdc_trailing_ones``,
+  ``__builtin_stdc_first_leading_zero``, ``__builtin_stdc_first_leading_one``,
+  ``__builtin_stdc_first_trailing_zero``, ``__builtin_stdc_first_trailing_one``,
+  ``__builtin_stdc_count_zeros``, ``__builtin_stdc_count_ones``,
+  ``__builtin_stdc_has_single_bit``, ``__builtin_stdc_bit_width``,
+  ``__builtin_stdc_bit_floor``, and ``__builtin_stdc_bit_ceil``.
 
 - A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
   extends bit-reversal support to all standard integers type, including
@@ -275,6 +284,9 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
+  function template instantiations (#64087).
+
 - ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
   internal linkage (``static`` storage class) that are assigned but never used.
   This new coverage is added under the subgroup ``-Wunused-but-set-global``,
@@ -382,6 +394,17 @@ Improvements to Clang's diagnostics
   code can automatically be made portable to other host platforms that don't
   support backslashes.
 
+- No longer emitting a ``-Wpre-c2y-compat`` or extension diagnostic about use
+  of octal literals with a ``0o`` prefix, and no longer emitting a
+  ``-Wdeprecated-octal-literals`` diagnostic for use of octal literals without
+  a ``0o`` prefix, when the literal is expanded from a macro defined in a
+  system header. (#GH192389)
+
+- Improved error recovery for missing semicolons after class members. Clang now avoids
+  skipping subsequent valid declarations when their previous decl is missing semicolon.
+
+- Removed the body of lambdas from some diagnostic messages.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -421,9 +444,11 @@ Bug Fixes in This Version
   to "lambda" instead of "block". (#GH188661)
 - Fixed a crash on _BitInt(N) arrays where 129 ≤ N ≤ 192 due to incorrect array filler lowering. (#GH189643)
 - Fixed the behavior in C23 of ``auto``, by emitting an error when an array type is specified for a ``char *``. (#GH162694)
+- Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with ``--triple spirv``. (#GH189964)
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
+- Clang now emits an error for friend declarations of lambda members. (#GH26540)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -474,6 +499,7 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
+- Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -500,7 +526,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when explicitly casting a scalar to an atomic complex. (#GH114885)
 - Fixed an assertion failure when parsing an invalid out-of-line enum definition with template parameters. (#GH187909)
 - Fixed an assertion failure on invalid template template parameter during typo correction. (#GH183983)
-- Fixed an assertion failure when using CTAD for alias templates where the RHS resolves to a non-dependent class template specialization. (#GH190517)
+- Fixed an assertion failure in ``isAtEndOfMacroExpansion`` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
 
 OpenACC Specific Changes
 ------------------------

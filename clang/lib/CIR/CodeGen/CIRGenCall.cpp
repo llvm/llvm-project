@@ -1126,6 +1126,18 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       if (argType != v.getType() && mlir::isa<cir::IntType>(v.getType()))
         cgm.errorNYI(loc, "emitCall: widening integer call argument");
 
+      // If we have a pointer argument and there's an address space mismatch,
+      // insert an address_space cast to match the expected function signature.
+      if (argType != v.getType()) {
+        auto argPtrTy = mlir::dyn_cast<cir::PointerType>(argType);
+        auto vPtrTy = mlir::dyn_cast<cir::PointerType>(v.getType());
+        if (argPtrTy && vPtrTy &&
+            argPtrTy.getPointee() == vPtrTy.getPointee() &&
+            argPtrTy.getAddrSpace() != vPtrTy.getAddrSpace()) {
+          v = performAddrSpaceCast(v, argPtrTy);
+        }
+      }
+
       // If the argument doesn't match, perform a bitcast to coerce it. This
       // can happen due to trivial type mismatches.
       // TODO(cir): When getFunctionType is added, assert that this isn't
@@ -1329,13 +1341,28 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
 
   bool hasAggregateEvalKind = hasAggregateEvaluationKind(argType);
 
-  // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
-  // However, we still have to push an EH-only cleanup in case we unwind before
-  // we make it to the call.
+  // For callee-destructed parameters (trivial_abi, MS ABI), create an
+  // aggregate temp and let the callee destroy it.
   if (argType->isRecordType() &&
       argType->castAsRecordDecl()->isParamDestroyedInCallee()) {
-    assert(!cir::MissingFeatures::msabi());
-    cgm.errorNYI(e->getSourceRange(), "emitCallArg: msabi is NYI");
+    AggValueSlot slot = createAggTemp(argType, getLoc(e->getSourceRange()),
+                                      getCounterAggTmpAsString());
+
+    bool destroyedInCallee = true;
+    if (const auto *rd = argType->getAsCXXRecordDecl())
+      destroyedInCallee = rd->hasNonTrivialDestructor();
+
+    if (destroyedInCallee)
+      slot.setExternallyDestructed();
+
+    emitAggExpr(e, slot);
+    RValue rv = slot.asRValue();
+    args.add(rv, argType);
+
+    if (destroyedInCallee && getLangOpts().Exceptions)
+      cgm.errorNYI(e->getSourceRange(),
+                   "callee-destructed param with exceptions");
+    return;
   }
 
   if (hasAggregateEvalKind && isa<ImplicitCastExpr>(e) &&

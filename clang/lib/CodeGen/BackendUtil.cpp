@@ -25,7 +25,6 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
@@ -189,9 +188,6 @@ class EmitAssemblyHelper {
   void RunCodegenPipeline(BackendAction Action,
                           std::unique_ptr<raw_pwrite_stream> &OS,
                           std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
-  void RunCodegenPipelineNewPM(BackendAction Action,
-                               std::unique_ptr<raw_pwrite_stream> &OS,
-                               std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
 
   /// Check whether we should emit a module summary for regular LTO.
   /// The module summary should be emitted by default for regular LTO
@@ -1035,10 +1031,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (IsThinLTOPostLink)
       PB.registerPipelineStartEPCallback(
           [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(LowerTypeTestsPass(
-                /*ExportSummary=*/nullptr,
-                /*ImportSummary=*/nullptr,
-                /*DropTypeTests=*/lowertypetests::DropTestKind::Assume));
+            MPM.addPass(DropTypeTestsPass());
           });
 
     // Register callbacks to schedule sanitizer passes at the appropriate part
@@ -1284,51 +1277,6 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   }
 }
 
-void EmitAssemblyHelper::RunCodegenPipelineNewPM(
-    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
-    std::unique_ptr<llvm::ToolOutputFile> &DwoOS) {
-  if (!actionRequiresCodeGen(Action))
-    return;
-
-  // Normal mode, emit a .s or .o file by running the code generator. Note,
-  // this also adds codegenerator level optimization passes.
-  CodeGenFileType CGFT = getCodeGenFileType(Action);
-
-  // Invoke pre-codegen callback from plugin, which might want to take over the
-  // entire code generation itself.
-  for (const std::unique_ptr<llvm::PassPlugin> &Plugin : CI.getPassPlugins()) {
-    if (Plugin->invokePreCodeGenCallback(*TheModule, *TM, CGFT, *OS))
-      return;
-  }
-
-  ModulePassManager MPM;
-  MachineFunctionAnalysisManager MFAM;
-  LoopAnalysisManager LAM;
-  FunctionAnalysisManager FAM;
-  CGSCCAnalysisManager CGAM;
-  ModuleAnalysisManager MAM;
-  CGPassBuilderOption Opt = getCGPassBuilderOption();
-  MachineModuleInfo MMI(TM.get());
-  PassInstrumentationCallbacks PIC;
-  PipelineTuningOptions PTOptions;
-  TargetMachine *TMPointer = TM.get();
-  PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC,
-                 CI.getVirtualFileSystemPtr());
-  PB.registerModuleAnalyses(MAM);
-  PB.registerCGSCCAnalyses(CGAM);
-  PB.registerFunctionAnalyses(FAM);
-  PB.registerLoopAnalyses(LAM);
-  PB.registerMachineFunctionAnalyses(MFAM);
-  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-
-  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
-
-  cantFail(TM->buildCodeGenPipeline(MPM, MAM, *OS,
-                                    DwoOS ? &DwoOS->os() : nullptr, CGFT, Opt,
-                                    MMI.getContext(), &PIC));
-  MPM.run(*TheModule, MAM);
-}
-
 void EmitAssemblyHelper::emitAssembly(BackendAction Action,
                                       std::unique_ptr<raw_pwrite_stream> OS,
                                       BackendConsumer *BC) {
@@ -1347,11 +1295,7 @@ void EmitAssemblyHelper::emitAssembly(BackendAction Action,
 
   std::unique_ptr<llvm::ToolOutputFile> ThinLinkOS, DwoOS;
   RunOptimizationPipeline(Action, OS, ThinLinkOS, BC);
-  if (CodeGenOpts.EnableNewPMCodeGen) {
-    RunCodegenPipelineNewPM(Action, OS, DwoOS);
-  } else {
-    RunCodegenPipeline(Action, OS, DwoOS);
-  }
+  RunCodegenPipeline(Action, OS, DwoOS);
 
   if (ThinLinkOS)
     ThinLinkOS->keep();
@@ -1463,14 +1407,12 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
 
   // FIXME: Both ExecuteAction and thinBackend set up optimization remarks for
   // the same context.
-  // FIXME: This does not yet set the list of bitcode libfuncs that it isn't
-  // safe to call. This precludes bitcode libc in distributed ThinLTO.
   finalizeLLVMOptimizationRemarks(M->getContext());
-  if (Error E = thinBackend(
-          Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
-          ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
-          /*ModuleMap=*/nullptr, Conf.CodeGenOnly, /*BitcodeLibFuncs=*/{},
-          /*IRAddStream=*/nullptr, CGOpts.CmdArgs)) {
+  if (Error E =
+          thinBackend(Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
+                      ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
+                      /*ModuleMap=*/nullptr, Conf.CodeGenOnly,
+                      /*IRAddStream=*/nullptr, CGOpts.CmdArgs)) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       errs() << "Error running ThinLTO backend: " << EIB.message() << '\n';
     });

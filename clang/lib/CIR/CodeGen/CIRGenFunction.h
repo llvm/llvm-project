@@ -1395,6 +1395,9 @@ public:
 
   static Destroyer destroyCXXObject;
 
+  void pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind, Address addr,
+                             QualType type);
+
   void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
                    QualType type);
 
@@ -1519,6 +1522,7 @@ public:
   mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+  LValue emitInitListLValue(const InitListExpr *e);
 
   LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
 
