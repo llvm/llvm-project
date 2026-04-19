@@ -21,7 +21,7 @@
 
 namespace toy {
 
-/// Structure definition of a location in a file.
+/// Structure definition a location in a file.
 struct Location {
   std::shared_ptr<std::string> file; ///< filename.
   int line;                          ///< line number.
