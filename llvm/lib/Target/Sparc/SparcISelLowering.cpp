@@ -3013,26 +3013,28 @@ SDValue SparcTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  MVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Chain = DAG.getEntryNode();
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
   SDLoc DL(Op);
 
   SDValue BSwapOp = Op.getOperand(0);
-  EVT BSwapVT = BSwapOp.getValueType();
+  EVT VT = BSwapOp.getValueType();
+  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
+  Align Al = DAG.getDataLayout().getABITypeAlign(Ty);
 
   // Create a stack object to serve as temporary storage.
-  int BSwapFI = MFI.CreateStackObject(BSwapVT.getStoreSize(), Align(8), false);
-  SDValue BSwapPtr = DAG.getFrameIndex(BSwapFI, PtrVT);
+  int TmpFI = MFI.CreateStackObject(VT.getStoreSize(), Al, false);
+  SDValue TmpPtr = DAG.getFrameIndex(TmpFI, PtrVT);
 
   // Store-swap the value, then load it back.
-  SDValue Ops[] = {Chain, BSwapOp, BSwapPtr, DAG.getValueType(BSwapVT)};
-  SDValue SwappedMem = DAG.getMemIntrinsicNode(
+  SDValue Ops[] = {Chain, BSwapOp, TmpPtr, DAG.getValueType(VT)};
+  SDValue ST = DAG.getMemIntrinsicNode(
       IsLittleEndian ? SPISD::STORE_BIG : SPISD::STORE_LITTLE, DL,
-      DAG.getVTList(MVT::Other), Ops, BSwapVT, MachinePointerInfo(), Align(8),
-      MachineMemOperand::MOStore);
-  return DAG.getLoad(BSwapVT, DL, SwappedMem, BSwapPtr, MachinePointerInfo(),
-                     Align(8));
+      DAG.getVTList(MVT::Other), Ops, VT,
+      MachinePointerInfo::getFixedStack(MF, TmpFI));
+  return DAG.getLoad(VT, DL, ST, TmpPtr,
+                     MachinePointerInfo::getFixedStack(MF, TmpFI));
 }
 
 static SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG)
@@ -3288,16 +3290,7 @@ SDValue SparcTargetLowering::PerformBSWAPCombine(SDNode *N,
     if (Op0VT == MVT::i16)
       ResVal = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, BSLoad);
 
-    // First, combine the bswap away.  This makes the value produced by the
-    // load dead.
-    DCI.CombineTo(N, ResVal);
-
-    // Next, combine the load away, we give it a bogus result value but a real
-    // chain result.  The result value is dead because the bswap is dead.
-    DCI.CombineTo(Load.getNode(), ResVal, BSLoad.getValue(1));
-
-    // Return N so it doesn't get rechecked!
-    return SDValue(N, 0);
+    return DCI.CombineTo(N, ResVal);
   }
 
   return SDValue();
