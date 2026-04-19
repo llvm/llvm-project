@@ -140,7 +140,7 @@ jobs:
       - name: Setup MPFR
         run: |
           cd build
-          wget https://www.mpfr.org/mpfr-current/mpfr-4.2.1.tar.xz
+          wget https://www.mpfr.org/mpfr-4.2.1/mpfr-4.2.1.tar.xz
           tar -xf mpfr-4.2.1.tar.xz
           cd mpfr-4.2.1
           ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu \
