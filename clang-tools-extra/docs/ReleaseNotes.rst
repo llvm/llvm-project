@@ -175,6 +175,11 @@ New checks
   Suggests insertion of ``std::move(...)`` to turn copy assignment operator
   calls into move assignment ones, when deemed valid and profitable.
 
+- New :doc:`readability-redundant-lambda-parameter-list
+  <clang-tidy/checks/readability/redundant-lambda-parameter-list>` check.
+
+  Finds lambda expressions with a redundant empty parameter list and removes it.
+
 - New :doc:`readability-redundant-qualified-alias
   <clang-tidy/checks/readability/redundant-qualified-alias>` check.
 
@@ -286,6 +291,11 @@ Changes in existing checks
   string constructor calls when the string class constructor has a default
   allocator argument.
 
+- Improved :doc:`bugprone-throwing-static-initialization
+  <clang-tidy/checks/bugprone/throwing-static-initialization>` check by adding
+  the `AllowedTypes` option. With this option it is possible to exclude
+  static declarations with specific types from the check.
+
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
   GoogleTest macros such as ``ASSERT_TRUE`` and ``ASSERT_FALSE``, reducing the
@@ -308,6 +318,9 @@ Changes in existing checks
 
   - Do not report explicit call to destructor after move as an invalid use.
 
+  - Avoid false positives when moving object to a base type then accessing
+    non-base members.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,
@@ -317,6 +330,10 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
+
+- Fixed :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by excluding
+  Objective-C for-in loop variable declaration.
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check:

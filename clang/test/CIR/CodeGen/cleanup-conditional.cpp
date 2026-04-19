@@ -238,42 +238,40 @@ int test_return_ternary(bool c) {
 // CIR:   %[[ACTA:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
 // CIR:   %[[TMPB:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
 // CIR:   %[[ACTB:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
-// CIR:   cir.scope {
-// CIR:     cir.cleanup.scope {
-// CIR:       %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
-// CIR:       %[[FALSE_A:.*]] = cir.const #false
-// CIR:       cir.store %[[FALSE_A]], %[[ACTA]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:       %[[FALSE_B:.*]] = cir.const #false
-// CIR:       cir.store %[[FALSE_B]], %[[ACTB]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:       %{{.*}} = cir.ternary(%[[COND]], true {
-// CIR:         cir.call @_ZN1AC1Ev(%[[TMPA]])
-// CIR:         %[[TRUE_A:.*]] = cir.const #true
-// CIR:         cir.store %[[TRUE_A]], %[[ACTA]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:         %[[GET_A:.*]] = cir.call @_ZN1A3getEv(%[[TMPA]])
-// CIR:         cir.yield %[[GET_A]] : !s32i
-// CIR:       }, false {
-// CIR:         cir.call @_ZN1BC1Ev(%[[TMPB]])
-// CIR:         %[[TRUE_B:.*]] = cir.const #true
-// CIR:         cir.store %[[TRUE_B]], %[[ACTB]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:         %[[GET_B:.*]] = cir.call @_ZN1B3getEv(%[[TMPB]])
-// CIR:         cir.yield %[[GET_B]] : !s32i
-// CIR:       })
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:     %[[FALSE_A:.*]] = cir.const #false
+// CIR:     cir.store %[[FALSE_A]], %[[ACTA]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     %[[FALSE_B:.*]] = cir.const #false
+// CIR:     cir.store %[[FALSE_B]], %[[ACTB]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     %{{.*}} = cir.ternary(%[[COND]], true {
+// CIR:       cir.call @_ZN1AC1Ev(%[[TMPA]])
+// CIR:       %[[TRUE_A:.*]] = cir.const #true
+// CIR:       cir.store %[[TRUE_A]], %[[ACTA]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       %[[GET_A:.*]] = cir.call @_ZN1A3getEv(%[[TMPA]])
+// CIR:       cir.yield %[[GET_A]] : !s32i
+// CIR:     }, false {
+// CIR:       cir.call @_ZN1BC1Ev(%[[TMPB]])
+// CIR:       %[[TRUE_B:.*]] = cir.const #true
+// CIR:       cir.store %[[TRUE_B]], %[[ACTB]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       %[[GET_B:.*]] = cir.call @_ZN1B3getEv(%[[TMPB]])
+// CIR:       cir.yield %[[GET_B]] : !s32i
+// CIR:     })
 // The result is stored to __retval inside the cleanup scope body.
-// CIR:       cir.store %{{.*}}, %{{.*}} : !s32i, !cir.ptr<!s32i>
-// CIR:       cir.yield
-// CIR:     } cleanup normal {
-// CIR:       %[[FLAG_B:.*]] = cir.load {{.*}} %[[ACTB]]
-// CIR:       cir.if %[[FLAG_B]] {
-// CIR:         cir.call @_ZN1BD1Ev(%[[TMPB]])
-// CIR:       }
-// CIR:       %[[FLAG_A:.*]] = cir.load {{.*}} %[[ACTA]]
-// CIR:       cir.if %[[FLAG_A]] {
-// CIR:         cir.call @_ZN1AD1Ev(%[[TMPA]])
-// CIR:       }
-// CIR:       cir.yield
+// CIR:     cir.store %{{.*}}, %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     %[[FLAG_B:.*]] = cir.load {{.*}} %[[ACTB]]
+// CIR:     cir.if %[[FLAG_B]] {
+// CIR:       cir.call @_ZN1BD1Ev(%[[TMPB]])
 // CIR:     }
+// CIR:     %[[FLAG_A:.*]] = cir.load {{.*}} %[[ACTA]]
+// CIR:     cir.if %[[FLAG_A]] {
+// CIR:       cir.call @_ZN1AD1Ev(%[[TMPA]])
+// CIR:     }
+// CIR:     cir.yield
 // CIR:   }
-// Value loaded from __retval after the scope and returned.
+// Value loaded from __retval and returned.
 // CIR:   %[[RET:.*]] = cir.load %{{.*}} : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[RET]] : !s32i
 
@@ -284,8 +282,6 @@ int test_return_ternary(bool c) {
 // LLVM:         %[[ACTA:.*]] = alloca i8
 // LLVM:         %[[TMPB:.*]] = alloca %struct.B
 // LLVM:         %[[ACTB:.*]] = alloca i8
-// LLVM:         br label %[[SCOPE:.*]]
-// LLVM:       [[SCOPE]]:
 // LLVM:         br label %[[INIT:.*]]
 // LLVM:       [[INIT]]:
 // LLVM:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
@@ -370,31 +366,27 @@ int test_false_positive_conditional(bool c) {
 }
 // No cleanup.cond alloca — the destructor is unconditional.
 // CIR-NOT:   cir.alloca {{.*}} ["cleanup.cond"]
-// CIR:   cir.scope {
-// CIR:     %[[TMP:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["ref.tmp0"]
-// CIR:     cir.call @_ZN1SC1Ev(%[[TMP]])
-// The LexicalScope's cleanup scope wraps the get() + select + store.
-// CIR:     cir.cleanup.scope {
-// CIR:       %[[VAL:.*]] = cir.call @_ZN1S3getEv(%[[TMP]])
-// CIR:       %[[BOOL:.*]] = cir.cast int_to_bool %[[VAL]]
+// CIR:   %[[TMP:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["ref.tmp0"]
+// CIR:   cir.call @_ZN1SC1Ev(%[[TMP]])
+// The cleanup scope wraps the get() + select + store.
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[VAL:.*]] = cir.call @_ZN1S3getEv(%[[TMP]])
+// CIR:     %[[BOOL:.*]] = cir.cast int_to_bool %[[VAL]]
 // No cir.ternary — both arms are constants, so this lowers to cir.select.
-// CIR:       %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:       %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CIR:       %[[SEL:.*]] = cir.select if %[[BOOL]] then %[[ONE]] else %[[TWO]]
-// CIR:       cir.store %[[SEL]], %{{.*}} : !s32i, !cir.ptr<!s32i>
-// CIR:       cir.yield
+// CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:     %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:     %[[SEL:.*]] = cir.select if %[[BOOL]] then %[[ONE]] else %[[TWO]]
+// CIR:     cir.store %[[SEL]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:     cir.yield
 // S destructor runs unconditionally — no active-flag guard.
-// CIR:     } cleanup normal {
-// CIR:       cir.call @_ZN1SD1Ev(%[[TMP]])
-// CIR:       cir.yield
-// CIR:     }
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN1SD1Ev(%[[TMP]])
+// CIR:     cir.yield
 // CIR:   }
 
 // LLVM-LABEL: define dso_local noundef i32 @_Z31test_false_positive_conditionalb(
-// LLVM:         %[[TMP:.*]] = alloca %struct.S
 // LLVM:         %[[RETVAL:.*]] = alloca i32
-// LLVM:         br label %[[SCOPE:.*]]
-// LLVM:       [[SCOPE]]:
+// LLVM:         %[[TMP:.*]] = alloca %struct.S
 // LLVM:         call void @_ZN1SC1Ev({{.*}} %[[TMP]])
 // LLVM:         br label %[[BODY:.*]]
 // LLVM:       [[BODY]]:
@@ -444,53 +436,48 @@ void test_nested_ewc(bool c1, bool c2) {
 
 // CIR-LABEL: @_Z15test_nested_ewcbb
 // CIR:   %[[RESULT:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["result", init]
-// Outer cir.scope wraps the entire expression including the statement expr.
+// CIR:   %[[REF_TMP:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["ref.tmp0"]
+// cir.scope for the statement expression.
 // CIR:   cir.scope {
-// CIR:     %[[REF_TMP:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["ref.tmp0"]
-// Inner cir.scope for the statement expression.
-// CIR:     cir.scope {
-// CIR:       %[[S:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["s", init]
+// CIR:     %[[S:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["s", init]
 // Inner ternary: c1 ? T(1) : T(2) — no cleanup scope needed (no deferred dtors).
-// CIR:       cir.scope {
-// CIR:         %[[C1:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
-// CIR:         cir.if %[[C1]] {
-// CIR:           %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:           cir.call @_ZN1TC1Ei(%[[S]], %[[ONE]])
-// CIR:         } else {
-// CIR:           %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CIR:           cir.call @_ZN1TC1Ei(%[[S]], %[[TWO]])
-// CIR:         }
-// CIR:       }
-// Statement expression result: copy s into ref.tmp, then destroy s.
-// CIR:       cir.cleanup.scope {
-// CIR:         cir.call @_ZN1TC1ERKS_(%[[REF_TMP]], %[[S]])
-// CIR:         cir.yield
-// CIR:       } cleanup normal {
-// CIR:         cir.call @_ZN1TD1Ev(%[[S]])
-// CIR:         cir.yield
-// CIR:       }
+// CIR:     %[[C1:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:     cir.if %[[C1]] {
+// CIR:       %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:       cir.call @_ZN1TC1Ei(%[[S]], %[[ONE]])
+// CIR:     } else {
+// CIR:       %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:       cir.call @_ZN1TC1Ei(%[[S]], %[[TWO]])
 // CIR:     }
-// Outer cleanup scope: wraps operator bool() + outer ternary + destroys ref.tmp.
+// Statement expression result: copy s into ref.tmp, then destroy s.
 // CIR:     cir.cleanup.scope {
-// CIR:       %[[BOOL:.*]] = cir.call @_ZN1TcvbEv(%[[REF_TMP]])
-// CIR:       cir.if %[[BOOL]] {
-// CIR:         %[[C2:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
-// CIR:         cir.if %[[C2]] {
-// CIR:           %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-// CIR:           cir.call @_ZN1TC1Ei(%[[RESULT]], %[[THREE]])
-// CIR:         } else {
-// CIR:           %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
-// CIR:           cir.call @_ZN1TC1Ei(%[[RESULT]], %[[FOUR]])
-// CIR:         }
-// CIR:       } else {
-// CIR:         %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
-// CIR:         cir.call @_ZN1TC1Ei(%[[RESULT]], %[[FIVE]])
-// CIR:       }
+// CIR:       cir.call @_ZN1TC1ERKS_(%[[REF_TMP]], %[[S]])
 // CIR:       cir.yield
 // CIR:     } cleanup normal {
-// CIR:       cir.call @_ZN1TD1Ev(%[[REF_TMP]])
+// CIR:       cir.call @_ZN1TD1Ev(%[[S]])
 // CIR:       cir.yield
 // CIR:     }
+// CIR:   }
+// Cleanup scope: wraps operator bool() + outer ternary + destroys ref.tmp.
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[BOOL:.*]] = cir.call @_ZN1TcvbEv(%[[REF_TMP]])
+// CIR:     cir.if %[[BOOL]] {
+// CIR:       %[[C2:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:       cir.if %[[C2]] {
+// CIR:         %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CIR:         cir.call @_ZN1TC1Ei(%[[RESULT]], %[[THREE]])
+// CIR:       } else {
+// CIR:         %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
+// CIR:         cir.call @_ZN1TC1Ei(%[[RESULT]], %[[FOUR]])
+// CIR:       }
+// CIR:     } else {
+// CIR:       %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
+// CIR:       cir.call @_ZN1TC1Ei(%[[RESULT]], %[[FIVE]])
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN1TD1Ev(%[[REF_TMP]])
+// CIR:     cir.yield
 // CIR:   }
 // result destructor runs unconditionally after the outer scope.
 // CIR:   cir.cleanup.scope {

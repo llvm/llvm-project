@@ -5930,20 +5930,6 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
             BB = NewBB;
             i = PN->getBasicBlockIndex(BB);
 
-            for (Instruction &I : *Parent) {
-              if (!isa<PHINode>(I))
-                continue;
-              for (const Use &U : cast<PHINode>(I).incoming_values()) {
-                if (!isa<Instruction>(U.get()))
-                  continue;
-                if (LI.getLoopFor(cast<Instruction>(U.get())->getParent())) {
-                  // This phi node references a value inside the loop. We will need
-                  // to update LCSSA maybe.
-                  InsertedNonLCSSAInsts.insert(cast<Instruction>(U.get()));
-                }
-              }
-            }
-
             needUpdateFixups = true;
           }
         }
@@ -6179,7 +6165,7 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       MSSAU(MSSAU), AMK(PreferredAddresingMode.getNumOccurrences() > 0
                             ? PreferredAddresingMode
                             : TTI.getPreferredAddressingMode(L, &SE)),
-      Rewriter(SE, "lsr"), BaselineCost(L, SE, TTI, AMK) {
+      Rewriter(SE, "lsr", false), BaselineCost(L, SE, TTI, AMK) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;

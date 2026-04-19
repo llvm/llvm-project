@@ -3936,6 +3936,42 @@ an event.
 For more information on the pmevent instructions, refer to the `PTX ISA
 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`__.
 
+Warp-level Matrix Transpose Intrinsics
+---------------------------------------
+
+'``llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i32 @llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16(i32 %src)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16``' intrinsic
+transposes an 8x8 matrix of 16-bit elements distributed across all 32
+threads of a warp. Each thread provides a 32-bit register containing two
+packed ``.b16`` elements, and receives back two packed ``.b16`` elements
+from the transposed matrix in the same format.
+
+The mandatory ``.sync`` qualifier indicates that ``movmatrix`` causes the
+executing thread to wait until all threads in the warp execute the same
+``movmatrix`` intrinsic before resuming execution.
+
+The mandatory ``.aligned`` qualifier indicates that all threads in the warp
+must execute the same ``movmatrix`` intrinsic. In conditionally executed
+code, a ``movmatrix`` intrinsic should only be used if it is known that
+all threads in the warp evaluate the condition identically, otherwise the
+behavior is undefined.
+
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-instructions-movmatrix>`__.
+
+
 Other Intrinsics
 ----------------
 
