@@ -10,7 +10,9 @@
 #include "TestOps.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "mlir/Reducer/Patterns/ReplaceOperands.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
+#include "mlir/Reducer/Tester.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -429,6 +431,10 @@ public:
 
   void populateReductionPatterns(RewritePatternSet &patterns) const final {
     populateTestReductionPatterns(patterns);
+  }
+
+  void populateReductionPatternsWithTester(RewritePatternSet &patterns, Tester &tester) const final {
+    patterns.add<ReplaceOperandsPattern>(getContext(), tester);
   }
 };
 
