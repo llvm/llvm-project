@@ -160,11 +160,11 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=riscv64-linux-gnu
 
-      - name: Build and Run - Clang
+      - name: Build and Test - Clang
         env:
           QEMU_LD_PREFIX: /usr/riscv64-linux-gnu
         run: |
-          cmake --build build/clang --target libc-shared-tests
+          cmake --build build/clang --target libc check-libc
 
       - name: Configure CMake - gcc
         run: |
@@ -179,4 +179,4 @@ jobs:
         env:
           QEMU_LD_PREFIX: /usr/riscv64-linux-gnu
         run: |
-          cmake --build build/gcc --target libc-shared-tests
+          cmake --build build/gcc --target libc check-libc
