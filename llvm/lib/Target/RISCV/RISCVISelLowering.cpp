@@ -24352,6 +24352,18 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   MVT XLenVT = Subtarget.getXLenVT();
   unsigned XLenInBytes = Subtarget.getXLen() / 8;
+
+  // Check if this function has any musttail calls. If so, incoming indirect
+  // arg pointers must be saved in virtual registers so they survive across
+  // basic blocks (the SelectionDAG is cleared between BBs). Only do this
+  // when needed to avoid adding register pressure to non-musttail functions.
+  bool HasMusttail = llvm::any_of(Func, [](const BasicBlock &BB) {
+    return llvm::any_of(BB, [](const Instruction &I) {
+      if (const auto *CI = dyn_cast<CallInst>(&I))
+        return CI->isMustTailCall();
+      return false;
+    });
+  });
   // Used with vargs to accumulate store chains.
   std::vector<SDValue> OutChains;
 
@@ -24383,6 +24395,13 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       InVals.push_back(DAG.getLoad(VA.getValVT(), DL, Chain, ArgValue,
                                    MachinePointerInfo()));
       unsigned ArgIndex = Ins[InsIdx].OrigArgIndex;
+      if (HasMusttail) {
+        RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+        Register VReg =
+            MF.getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
+        Chain = DAG.getCopyToReg(Chain, DL, VReg, ArgValue);
+        RVFI->setIncomingIndirectArg(ArgIndex, VReg);
+      }
       unsigned ArgPartOffset = Ins[InsIdx].PartOffset;
       assert(VA.getValVT().isVector() || ArgPartOffset == 0);
       while (i + 1 != e && Ins[InsIdx + 1].OrigArgIndex == ArgIndex) {
@@ -24491,18 +24510,20 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   if (Caller.hasFnAttribute("interrupt"))
     return false;
 
+  // musttail calls must always be tail-called. The remaining checks are
+  // for optional tail call optimization of regular (non-musttail) calls.
+  if (CLI.CB && CLI.CB->isMustTailCall())
+    return true;
+
   // Do not tail call opt if the stack is used to pass parameters.
   if (CCInfo.getStackSize() != 0)
     return false;
 
   // Do not tail call opt if any parameters need to be passed indirectly.
   // Since long doubles (fp128) and i128 are larger than 2*XLEN, they are
-  // passed indirectly. So the address of the value will be passed in a
-  // register, or if not available, then the address is put on the stack. In
-  // order to pass indirectly, space on the stack often needs to be allocated
-  // in order to store the value. In this case the CCInfo.getNextStackOffset()
-  // != 0 check is not enough and we need to check if any CCValAssign ArgsLocs
-  // are passed CCValAssign::Indirect.
+  // passed indirectly. The caller allocates stack space for the value and
+  // passes a pointer. On a tail call the caller's frame is deallocated
+  // before the callee executes, leaving the pointer dangling.
   for (auto &VA : ArgLocs)
     if (VA.getLocInfo() == CCValAssign::Indirect)
       return false;
@@ -24665,51 +24686,132 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Promote the value if needed.
     // For now, only handle fully promoted and indirect arguments.
     if (VA.getLocInfo() == CCValAssign::Indirect) {
-      // Store the argument in a stack slot and pass its address.
-      Align StackAlign =
-          std::max(getPrefTypeAlign(Outs[OutIdx].ArgVT, DAG),
-                   getPrefTypeAlign(ArgValue.getValueType(), DAG));
-      TypeSize StoredSize = ArgValue.getValueType().getStoreSize();
-      // If the original argument was split (e.g. i128), we need
-      // to store the required parts of it here (and pass just one address).
-      // Vectors may be partly split to registers and partly to the stack, in
-      // which case the base address is partly offset and subsequent stores are
-      // relative to that.
-      unsigned ArgIndex = Outs[OutIdx].OrigArgIndex;
-      unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
-      assert(VA.getValVT().isVector() || ArgPartOffset == 0);
-      // Calculate the total size to store. We don't have access to what we're
-      // actually storing other than performing the loop and collecting the
-      // info.
-      SmallVector<std::pair<SDValue, SDValue>> Parts;
-      while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == ArgIndex) {
-        SDValue PartValue = OutVals[OutIdx + 1];
-        unsigned PartOffset = Outs[OutIdx + 1].PartOffset - ArgPartOffset;
-        SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
-        EVT PartVT = PartValue.getValueType();
-        if (PartVT.isScalableVector())
-          Offset = DAG.getNode(ISD::VSCALE, DL, XLenVT, Offset);
-        StoredSize += PartVT.getStoreSize();
-        StackAlign = std::max(StackAlign, getPrefTypeAlign(PartVT, DAG));
-        Parts.push_back(std::make_pair(PartValue, Offset));
-        ++i;
-        ++OutIdx;
-      }
-      SDValue SpillSlot = DAG.CreateStackTemporary(StoredSize, StackAlign);
-      int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
-      MemOpChains.push_back(
-          DAG.getStore(Chain, DL, ArgValue, SpillSlot,
-                       MachinePointerInfo::getFixedStack(MF, FI)));
-      for (const auto &Part : Parts) {
-        SDValue PartValue = Part.first;
-        SDValue PartOffset = Part.second;
-        SDValue Address =
-            DAG.getNode(ISD::ADD, DL, PtrVT, SpillSlot, PartOffset);
+      // For musttail calls, reuse incoming indirect pointers instead of
+      // creating new stack temporaries. The incoming pointers point to the
+      // caller's caller's frame, which remains valid after a tail call.
+      if (IsTailCall && CLI.CB && CLI.CB->isMustTailCall()) {
+        RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+        unsigned CallArgIdx = Outs[OutIdx].OrigArgIndex;
+
+        // Resolve which formal parameter is being passed at this call
+        // position. Outs[].OrigArgIndex indexes the filtered arg list
+        // (empty types removed), but IncomingIndirectArgs is keyed by
+        // Argument::getArgNo() (unfiltered position). We need to:
+        // 1. Find the call operand at filtered position CallArgIdx
+        // 2. Check if it's a forwarded formal param (dyn_cast<Argument>)
+        // 3. Resolve the unfiltered formal param index for the map lookup
+        const Argument *FormalArg = nullptr;
+        unsigned FilteredIdx = 0;
+        for (const auto &CallArg : CLI.CB->args()) {
+          if (CallArg->getType()->isEmptyTy())
+            continue;
+          if (FilteredIdx == CallArgIdx) {
+            FormalArg = dyn_cast<Argument>(CallArg);
+            break;
+          }
+          ++FilteredIdx;
+        }
+
+        // For forwarded args, getArgNo() gives the unfiltered index directly.
+        // For computed args, walk the caller's formals to resolve it.
+        unsigned FormalArgIdx = CallArgIdx;
+        if (FormalArg) {
+          FormalArgIdx = FormalArg->getArgNo();
+        } else {
+          const Function *CallerFn = CLI.CB->getFunction();
+          FilteredIdx = 0;
+          for (const auto &Arg : CallerFn->args()) {
+            if (Arg.getType()->isEmptyTy())
+              continue;
+            if (FilteredIdx == CallArgIdx) {
+              FormalArgIdx = Arg.getArgNo();
+              break;
+            }
+            ++FilteredIdx;
+          }
+        }
+
+        if (FormalArg) {
+          // Forwarded formal parameter: reuse its incoming indirect pointer.
+          Register VReg = RVFI->getIncomingIndirectArg(FormalArgIdx);
+          ArgValue = DAG.getCopyFromReg(Chain, DL, VReg, PtrVT);
+        } else {
+          // Computed value: store into the incoming indirect pointer for the
+          // same-position formal parameter (musttail guarantees matching
+          // prototypes, so types match). The pointer survives the tail call
+          // since it points to the caller's caller's frame.
+          Register VReg = RVFI->getIncomingIndirectArg(FormalArgIdx);
+          SDValue IncomingPtr = DAG.getCopyFromReg(Chain, DL, VReg, PtrVT);
+          MemOpChains.push_back(DAG.getStore(Chain, DL, ArgValue, IncomingPtr,
+                                             MachinePointerInfo()));
+          // Store any split parts at their respective offsets.
+          unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
+          while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
+            SDValue PartValue = OutVals[OutIdx + 1];
+            unsigned PartOffset = Outs[OutIdx + 1].PartOffset - ArgPartOffset;
+            SDValue Addr = DAG.getNode(ISD::ADD, DL, PtrVT, IncomingPtr,
+                                       DAG.getIntPtrConstant(PartOffset, DL));
+            MemOpChains.push_back(
+                DAG.getStore(Chain, DL, PartValue, Addr, MachinePointerInfo()));
+            ++i;
+            ++OutIdx;
+          }
+          ArgValue = IncomingPtr;
+        }
+
+        // Skip any remaining split parts (for forwarded args, they are
+        // covered by the forwarded pointer).
+        while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
+          ++i;
+          ++OutIdx;
+        }
+      } else {
+        // Store the argument in a stack slot and pass its address.
+        Align StackAlign =
+            std::max(getPrefTypeAlign(Outs[OutIdx].ArgVT, DAG),
+                     getPrefTypeAlign(ArgValue.getValueType(), DAG));
+        TypeSize StoredSize = ArgValue.getValueType().getStoreSize();
+        // If the original argument was split (e.g. i128), we need
+        // to store the required parts of it here (and pass just one address).
+        // Vectors may be partly split to registers and partly to the stack, in
+        // which case the base address is partly offset and subsequent stores
+        // are relative to that.
+        unsigned ArgIndex = Outs[OutIdx].OrigArgIndex;
+        unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
+        assert(VA.getValVT().isVector() || ArgPartOffset == 0);
+        // Calculate the total size to store. We don't have access to what
+        // we're actually storing other than performing the loop and collecting
+        // the info.
+        SmallVector<std::pair<SDValue, SDValue>> Parts;
+        while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == ArgIndex) {
+          SDValue PartValue = OutVals[OutIdx + 1];
+          unsigned PartOffset = Outs[OutIdx + 1].PartOffset - ArgPartOffset;
+          SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
+          EVT PartVT = PartValue.getValueType();
+          if (PartVT.isScalableVector())
+            Offset = DAG.getNode(ISD::VSCALE, DL, XLenVT, Offset);
+          StoredSize += PartVT.getStoreSize();
+          StackAlign = std::max(StackAlign, getPrefTypeAlign(PartVT, DAG));
+          Parts.push_back(std::make_pair(PartValue, Offset));
+          ++i;
+          ++OutIdx;
+        }
+        SDValue SpillSlot = DAG.CreateStackTemporary(StoredSize, StackAlign);
+        int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
         MemOpChains.push_back(
-            DAG.getStore(Chain, DL, PartValue, Address,
+            DAG.getStore(Chain, DL, ArgValue, SpillSlot,
                          MachinePointerInfo::getFixedStack(MF, FI)));
+        for (const auto &Part : Parts) {
+          SDValue PartValue = Part.first;
+          SDValue PartOffset = Part.second;
+          SDValue Address =
+              DAG.getNode(ISD::ADD, DL, PtrVT, SpillSlot, PartOffset);
+          MemOpChains.push_back(
+              DAG.getStore(Chain, DL, PartValue, Address,
+                           MachinePointerInfo::getFixedStack(MF, FI)));
+        }
+        ArgValue = SpillSlot;
       }
-      ArgValue = SpillSlot;
     } else {
       ArgValue = convertValVTToLocVT(DAG, ArgValue, VA, DL, Subtarget);
     }
@@ -24727,8 +24829,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
         CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
-      assert(!IsTailCall && "Tail call not allowed if stack is used "
-                            "for passing parameters");
+      assert((!IsTailCall || (CLI.CB && CLI.CB->isMustTailCall())) &&
+             "Tail call not allowed if stack is used for passing parameters");
 
       // Work out the address of the stack slot.
       if (!StackPtr.getNode())
