@@ -115,6 +115,10 @@ static Constant *foldConstVectorToAPInt(APInt &Result, Type *DestTy,
 /// any group contains both poison and non-poison elements.
 static bool foldMixesPoisonBits(Constant *C, unsigned NumSrcElt,
                                 unsigned NumDstElt) {
+  // If element counts don't divide evenly, bail out if a poison source element
+  // might span multiple destination lanes.
+  if (NumSrcElt % NumDstElt != 0)
+    return C->containsPoisonElement();
   unsigned Ratio = NumSrcElt / NumDstElt;
   for (unsigned i = 0; i != NumSrcElt; i += Ratio) {
     bool HasPoison = false;
@@ -142,6 +146,10 @@ static bool foldMixesPoisonBits(Constant *C, unsigned NumSrcElt,
 static bool computePoisonDstLanes(Constant *C, unsigned NumSrcElt,
                                   unsigned NumDstElt,
                                   SmallBitVector &PoisonDstElts) {
+  // If element counts don't divide evenly, bail out if a poison source element
+  // might span multiple destination lanes.
+  if ((NumDstElt < NumSrcElt ? NumSrcElt % NumDstElt : NumDstElt % NumSrcElt))
+    return !C->containsPoisonElement();
   if (NumDstElt < NumSrcElt) {
     unsigned Ratio = NumSrcElt / NumDstElt;
     for (unsigned i = 0; i != NumDstElt; ++i) {
