@@ -1,5 +1,4 @@
-//===- XeGPUOps.td - XeGPU dialect operations definition ----*- tablegen
-//-*-===//
+//===- XeGPUOps.td - XeGPU dialect operations definition ----*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,13 +17,14 @@ include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
+
 // Base class for dialect operations. This operation inherits from the base
 // `Op` class in OpBase.td, and provides:
 //   * The parent dialect of the operation.
 //   * The mnemonic for the operation, or the name without the dialect prefix.
 //   * A list of traits for the operation.
-class XeGPU_Op<string mnemonic, list<Trait> traits = []>
-    : Op<XeGPU_Dialect, mnemonic, traits> {
+class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
+          Op<XeGPU_Dialect, mnemonic, traits> {
 
   code extraBaseClassDeclaration = [{
     void printProperties(::mlir::MLIRContext *ctx,
@@ -60,9 +60,8 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>
   }];
 }
 
-def XeGPU_CreateNdDescOp
-    : XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface,
-                                   AttrSizedOperandSegments]> {
+
+def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface, AttrSizedOperandSegments]> {
 
   let summary = "Create nd-tensor descriptor operation";
   let description = [{
@@ -114,9 +113,13 @@ def XeGPU_CreateNdDescOp
     ```
   }];
 
-  let arguments = (ins XeGPU_BaseAddrType:$source, Variadic<Index>:$shape,
-      Variadic<Index>:$strides, OptionalAttr<DenseI64ArrayAttr>:$const_shape,
-      OptionalAttr<DenseI64ArrayAttr>:$const_strides);
+  let arguments = (ins
+    XeGPU_BaseAddrType: $source,
+    Variadic<Index>: $shape,
+    Variadic<Index>: $strides,
+    OptionalAttr<DenseI64ArrayAttr>: $const_shape,
+    OptionalAttr<DenseI64ArrayAttr>: $const_strides
+  );
 
   let assemblyFormat = [{
     $source ``
@@ -125,18 +128,19 @@ def XeGPU_CreateNdDescOp
     attr-dict `:` type($source) `->` qualified(type($TensorDesc))
   }];
 
-  let results = (outs XeGPU_TensorDesc:$TensorDesc);
+  let results = (outs XeGPU_TensorDesc: $TensorDesc);
 
   let hasVerifier = 1;
 
-  let builders = [OpBuilder<(ins "Type":$tdesc,
-                      "TypedValue<MemRefType>":$source)>,
+  let builders = [
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source)>,
 
-                  OpBuilder<(ins "Type":$tdesc, "Value ":$source,
-                      "llvm::ArrayRef<OpFoldResult>":$shape,
-                      "llvm::ArrayRef<OpFoldResult>":$strides)>];
+    OpBuilder<(ins "Type": $tdesc, "Value ": $source,
+                   "llvm::ArrayRef<OpFoldResult>": $shape,
+                   "llvm::ArrayRef<OpFoldResult>": $strides)>
+  ];
 
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
     /// Returns the type of the source memref operand.
     Type getSourceType() {
       return getSource().getType();
@@ -252,14 +256,15 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
 
   }];
 
-  let arguments = (ins XeGPU_TensorDesc:$TensorDesc, Variadic<Index>:$offsets,
-      DenseI64ArrayAttr:$const_offsets,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<DistributeLayoutAttr>:$layout);
+  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
+                       Variadic<Index>: $offsets,
+                       DenseI64ArrayAttr: $const_offsets,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
+                       OptionalAttr<DistributeLayoutAttr>:$layout);
 
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
     xegpu::TensorDescType getTensorDescType() {
       return getTensorDesc().getType();
     }
@@ -292,17 +297,22 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
     prop-dict attr-dict `:` qualified(type($TensorDesc))
   }];
 
-  let builders = [OpBuilder<(ins "Value":$TensorDesc,
-      "ArrayRef<OpFoldResult>":$offsets, "xegpu::CachePolicyAttr":$l1_hint,
-      "xegpu::CachePolicyAttr":$l2_hint, "xegpu::CachePolicyAttr":$l3_hint,
-      "xegpu::DistributeLayoutAttr":$layout)>];
+  let builders = [
+    OpBuilder<(ins "Value": $TensorDesc,
+                   "ArrayRef<OpFoldResult>": $offsets,
+                   "xegpu::CachePolicyAttr": $l1_hint,
+                   "xegpu::CachePolicyAttr": $l2_hint,
+                   "xegpu::CachePolicyAttr": $l3_hint,
+                   "xegpu::DistributeLayoutAttr": $layout)>
+  ];
 
   let hasVerifier = 1;
 }
 
-def XeGPU_LoadNdOp
-    : XeGPU_Op<"load_nd", [AllElementTypesMatch<["value", "TensorDesc"]>,
-                           MemoryEffects<[MemRead]>, AnchorLayoutInterface]> {
+
+def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
+  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemRead]>, AnchorLayoutInterface
+  ]> {
   let summary = "loads a n-D block from memory (represented by TensorDesc)"
                 "to registers (represented by vector)";
   let description = [{
@@ -361,17 +371,19 @@ def XeGPU_LoadNdOp
 
   }];
 
-  let arguments = (ins XeGPU_TensorDesc:$TensorDesc, Variadic<Index>:$offsets,
-      DenseI64ArrayAttr:$const_offsets, OptionalAttr<UnitAttr>:$packed,
-      OptionalAttr<DenseI64ArrayAttr>:$transpose,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<DistributeLayoutAttr>:$layout);
+  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
+                       Variadic<Index>: $offsets,
+                       DenseI64ArrayAttr: $const_offsets,
+                       OptionalAttr<UnitAttr>: $packed,
+                       OptionalAttr<DenseI64ArrayAttr>: $transpose,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
+                       OptionalAttr<DistributeLayoutAttr>:$layout);
 
-  let results = (outs XeGPU_ValueType:$value);
+  let results = (outs XeGPU_ValueType: $value);
 
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
     VectorType getType() {
       return llvm::dyn_cast<VectorType>(getValue().getType());
     }
@@ -408,20 +420,23 @@ def XeGPU_LoadNdOp
     prop-dict attr-dict `:` qualified(type($TensorDesc)) `->` type($value)
   }];
 
-  let builders = [OpBuilder<(ins "Type":$value, "Value":$TensorDesc,
-      "ArrayRef<OpFoldResult>":$offsets, "UnitAttr":$packed,
-      "DenseI64ArrayAttr":$transpose, "xegpu::CachePolicyAttr":$l1_hint,
-      "xegpu::CachePolicyAttr":$l2_hint, "xegpu::CachePolicyAttr":$l3_hint,
-      "xegpu::DistributeLayoutAttr":$layout)>];
+  let builders = [
+    OpBuilder<(ins "Type": $value, "Value": $TensorDesc,
+                    "ArrayRef<OpFoldResult>": $offsets,
+                    "UnitAttr": $packed, "DenseI64ArrayAttr": $transpose,
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
+                    "xegpu::CachePolicyAttr": $l3_hint,
+                    "xegpu::DistributeLayoutAttr": $layout)>
+  ];
 
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreNdOp
-    : XeGPU_Op<"store_nd", [AllElementTypesMatch<["value", "TensorDesc"]>,
-                            MemoryEffects<[MemWrite]>, AnchorLayoutInterface]> {
-  let summary = "stores a n-D block register region back to memory, currently "
-                "only supports 2D";
+def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
+  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemWrite]>, AnchorLayoutInterface
+  ]> {
+  let summary = "stores a n-D block register region back to memory, currently only supports 2D";
 
   let description = [{
     StoreNdOp essentially mimics the hardware block write instruction io
@@ -471,14 +486,16 @@ def XeGPU_StoreNdOp
 
   }];
 
-  let arguments = (ins XeGPU_ValueType:$value, XeGPU_TensorDesc:$TensorDesc,
-      Variadic<Index>:$offsets, DenseI64ArrayAttr:$const_offsets,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<DistributeLayoutAttr>:$layout);
+  let arguments = (ins XeGPU_ValueType: $value,
+                       XeGPU_TensorDesc: $TensorDesc,
+                       Variadic<Index>: $offsets,
+                       DenseI64ArrayAttr: $const_offsets,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
+                       OptionalAttr<DistributeLayoutAttr>:$layout);
 
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
     VectorType getValueType() {
       return llvm::dyn_cast<VectorType>(getValue().getType());
     }
@@ -509,17 +526,22 @@ def XeGPU_StoreNdOp
 
   }];
 
-  let assemblyFormat = [{
+   let assemblyFormat = [{
     $value `,`
     $TensorDesc ``
     custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `:`  type($value) `,` qualified(type($TensorDesc))
   }];
 
-  let builders = [OpBuilder<(ins "Value":$value, "Value":$TensorDesc,
-      "ArrayRef<OpFoldResult>":$offsets, "xegpu::CachePolicyAttr":$l1_hint,
-      "xegpu::CachePolicyAttr":$l2_hint, "xegpu::CachePolicyAttr":$l3_hint,
-      "xegpu::DistributeLayoutAttr":$layout)>];
+  let builders = [
+    OpBuilder<(ins "Value": $value, "Value": $TensorDesc,
+                  "ArrayRef<OpFoldResult>": $offsets,
+                  "xegpu::CachePolicyAttr": $l1_hint,
+                  "xegpu::CachePolicyAttr": $l2_hint,
+                  "xegpu::CachePolicyAttr": $l3_hint,
+                  "xegpu::DistributeLayoutAttr": $layout)>
+  ];
+
 
   let hasVerifier = 1;
 }
@@ -604,7 +626,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
       OptionalAttr<I64Attr>:$offset_align_byte,
       OptionalAttr<DistributeLayoutAttr>:$layout);
 
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
     Type getSourceType() {
       return getSource().getType();
     }
@@ -639,8 +661,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
   let hasVerifier = 1;
 }
 
-def XeGPU_LoadGatherOp
-    : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayoutInterface]> {
+def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayoutInterface]> {
   let summary = "load a set of scattered data points from memory.";
 
   let description = [{ It (aka. load) load data per each lane. The output
@@ -715,7 +736,7 @@ def XeGPU_LoadGatherOp
       OptionalAttr<DistributeLayoutAttr>:$layout);
   let results = (outs XeGPU_ValueOrScalarType:$value);
 
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
 
     Type getSourceType() {
       return getSource().getType();
@@ -761,23 +782,26 @@ def XeGPU_LoadGatherOp
     attr-dict `:` type(operands) `->` type($value)
   }];
 
-  let builders =
-      [OpBuilder<(ins "Type":$value, "Value":$source,
-           "ArrayRef<OpFoldResult>":$offsets, "Value":$mask,
-           "IntegerAttr":$chunk_size, "xegpu::CachePolicyAttr":$l1_hint,
-           "xegpu::CachePolicyAttr":$l2_hint,
-           "xegpu::CachePolicyAttr":$l3_hint)>,
-       OpBuilder<(ins "Type":$value, "Value":$source,
-           "ArrayRef<OpFoldResult>":$offsets, "Value":$mask,
-           "IntegerAttr":$chunk_size, "xegpu::CachePolicyAttr":$l1_hint,
-           "xegpu::CachePolicyAttr":$l2_hint, "xegpu::CachePolicyAttr":$l3_hint,
-           "xegpu::DistributeLayoutAttr":$layout)>];
+  let builders = [
+    OpBuilder<(ins "Type": $value, "Value": $source,
+                    "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
+                    "IntegerAttr": $chunk_size,
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
+                    "xegpu::CachePolicyAttr": $l3_hint)>,
+    OpBuilder<(ins "Type": $value, "Value": $source,
+                    "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
+                    "IntegerAttr": $chunk_size,
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
+                    "xegpu::CachePolicyAttr": $l3_hint,
+                    "xegpu::DistributeLayoutAttr": $layout)>
+   ];
 
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreScatterOp
-    : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorLayoutInterface]> {
+def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorLayoutInterface]> {
   let summary = "store data to scattered memory locations.";
   let description =
       [{ It (aka. store) stores data to scattered memory locations. The value is
@@ -898,23 +922,26 @@ def XeGPU_StoreScatterOp
     attr-dict `:`  type(operands)
   }];
 
-  let builders =
-      [OpBuilder<(ins "Value":$value, "Value":$dest,
-           "ArrayRef<OpFoldResult>":$offsets, "Value":$mask,
-           "IntegerAttr":$chunk_size, "xegpu::CachePolicyAttr":$l1_hint,
-           "xegpu::CachePolicyAttr":$l2_hint,
-           "xegpu::CachePolicyAttr":$l3_hint)>,
-       OpBuilder<(ins "Value":$value, "Value":$dest,
-           "ArrayRef<OpFoldResult>":$offsets, "Value":$mask,
-           "IntegerAttr":$chunk_size, "xegpu::CachePolicyAttr":$l1_hint,
-           "xegpu::CachePolicyAttr":$l2_hint, "xegpu::CachePolicyAttr":$l3_hint,
-           "xegpu::DistributeLayoutAttr":$layout)>];
+  let builders = [
+    OpBuilder<(ins "Value": $value, "Value": $dest,
+                    "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
+                    "IntegerAttr": $chunk_size,
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
+                    "xegpu::CachePolicyAttr": $l3_hint)>,
+    OpBuilder<(ins "Value": $value, "Value": $dest,
+                    "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
+                    "IntegerAttr": $chunk_size,
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
+                    "xegpu::CachePolicyAttr": $l3_hint,
+                    "xegpu::DistributeLayoutAttr": $layout)>
+   ];
 
   let hasVerifier = 1;
 }
 
-def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
-                                     AnchorLayoutInterface]> {
+def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>, AnchorLayoutInterface]> {
   let summary = "It performs mma computation";
 
   let description = [{DPAS performs matrix multiplication on matrix A of `mxk`
@@ -964,12 +991,15 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
     ```
   }];
 
-  let arguments = (ins XeGPU_DpasOprType:$lhs, XeGPU_DpasOprType:$rhs,
-      Optional<XeGPU_DpasResType>:$acc,
-      OptionalAttr<DistributeLayoutAttr>:$layout_a,
-      OptionalAttr<DistributeLayoutAttr>:$layout_b,
-      OptionalAttr<DistributeLayoutAttr>:$layout_cd);
-  let results = (outs XeGPU_DpasResType:$result);
+  let arguments = (ins
+    XeGPU_DpasOprType : $lhs,
+    XeGPU_DpasOprType : $rhs,
+    Optional<XeGPU_DpasResType>: $acc,
+    OptionalAttr<DistributeLayoutAttr>:$layout_a,
+    OptionalAttr<DistributeLayoutAttr>:$layout_b,
+    OptionalAttr<DistributeLayoutAttr>:$layout_cd
+  );
+  let results = (outs XeGPU_DpasResType: $result);
 
   let extraClassDeclaration = [{
 
@@ -1011,12 +1041,11 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
   let hasVerifier = 1;
 }
 
-def XeGPU_AtomicRMWOp
-    : XeGPU_Op<"atomic_rmw", [Pure, MemoryEffects<[MemRead, MemWrite]>,
-                              AllElementTypesMatch<["tensorDesc", "value",
-                                                    "result"]>,
-                              AllShapesMatch<["tensorDesc", "value", "result"]>,
-                              AnchorLayoutInterface]> {
+def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
+      MemoryEffects<[MemRead, MemWrite]>,
+      AllElementTypesMatch<["tensorDesc", "value", "result"]>,
+      AllShapesMatch<["tensorDesc", "value", "result"]>,
+      AnchorLayoutInterface]> {
   let summary = "Atomic read-modify-write operation on the TensorDesc. ";
 
   let description = [{
@@ -1049,9 +1078,12 @@ def XeGPU_AtomicRMWOp
       and/or lane level. Only valid at workgroup and subgroup levels.
   }];
 
-  let arguments = (ins AtomicRMWKindAttr:$kind, XeGPU_TensorDesc:$tensorDesc,
-      XeGPU_MaskType:$mask, XeGPU_ValueType:$value,
-      OptionalAttr<DistributeLayoutAttr>:$layout);
+  let arguments = (ins
+    AtomicRMWKindAttr:$kind,
+    XeGPU_TensorDesc:$tensorDesc,
+    XeGPU_MaskType:$mask,
+    XeGPU_ValueType:$value,
+    OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = [{
     xegpu::DistributeLayoutAttr getAnchorLayout() {
@@ -1072,7 +1104,7 @@ def XeGPU_AtomicRMWOp
   }];
 }
 
-def XeGPU_AllocNbarrierOp : XeGPU_Op<"alloc_nbarrier", []> {
+def XeGPU_AllocNbarrierOp: XeGPU_Op<"alloc_nbarrier", []> {
   let summary = "It allocates a set of named barriers.";
   let description = [{AllocNbarrier is to create a set of named barriers as
   specified by `nbarrier_num`. Named barriers are workgroup level resources,
@@ -1081,48 +1113,48 @@ def XeGPU_AllocNbarrierOp : XeGPU_Op<"alloc_nbarrier", []> {
     is that a workgroup is partitioned into N subgroups of threads (N <= 32),
     and each subgroup coordinating their work with a separate barrier with id
     range from 0 to N respectively.}];
-  let arguments = (ins I64Attr:$nbarrier_num);
+  let arguments = (ins I64Attr: $nbarrier_num);
   let assemblyFormat = "$nbarrier_num attr-dict";
 }
 
-def XeGPU_InitNbarrierOp : XeGPU_Op<"init_nbarrier", []> {
+def XeGPU_InitNbarrierOp: XeGPU_Op<"init_nbarrier", []> {
   let summary = "It assigns a named barrier to the current thread.";
-  let description =
-      [{InitNbarrierOp assigns the named barrier with the specified
+  let description = [{InitNbarrierOp assigns the named barrier with the specified
       barrier ID (0~31) to the current thread. Multiple threads may bind to the
       same named barrier, and the `participant_thread_num` specifies the total
       number of threads associated with the nbarrier. It returns an object of
       NbarrierType representing the barrier}];
 
-  let arguments = (ins I8:$nbarrier_id, I8:$participant_thread_num);
-  let results = (outs XeGPU_Nbarrier:$result);
+  let arguments = (ins I8: $nbarrier_id,
+                       I8: $participant_thread_num);
+  let results = (outs XeGPU_Nbarrier: $result);
   let assemblyFormat = [{
     $nbarrier_id `,` $participant_thread_num attr-dict `:`
     type($nbarrier_id) `,` type($participant_thread_num) `->` qualified(type($result))
   }];
 }
 
-def XeGPU_NbarrierArriveOp : XeGPU_Op<"nbarrier_arrive", []> {
+def XeGPU_NbarrierArriveOp: XeGPU_Op<"nbarrier_arrive", []> {
   let summary = "It signals the arrival at the named barrier.";
   let description = [{NbarrierArriveOp signals the hardware (or other threads)
     that the current thread has produced its data for the consumer threads. When
     the hardware signalled by `participant_thread_num` threads for the named barrier,
     it will notify the threads waiting for the named barrier to continue their work.}];
 
-  let arguments = (ins XeGPU_Nbarrier:$nbarrier);
+  let arguments = (ins XeGPU_Nbarrier: $nbarrier);
   let assemblyFormat = [{ $nbarrier attr-dict `:` qualified(type($nbarrier))}];
 }
 
-def XeGPU_NbarrierWaitOp : XeGPU_Op<"nbarrier_wait", []> {
+def XeGPU_NbarrierWaitOp: XeGPU_Op<"nbarrier_wait", []> {
   let summary = "It waits for a named barrier.";
   let description = [{NbarrierWaitOp signals the hardware which named barrier
     the current thread is waiting for, such that it can get notified when the
     named barrier is completed.}];
-  let arguments = (ins XeGPU_Nbarrier:$nbarrier);
+  let arguments = (ins XeGPU_Nbarrier: $nbarrier);
   let assemblyFormat = [{ $nbarrier attr-dict `:` qualified(type($nbarrier)) }];
 }
 
-def XeGPU_FenceOp : XeGPU_Op<"fence", []> {
+def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
   let summary = "It synchronizes memory accesses.";
   let description = [{It synchronizes the memory access between
     write and following read or write.
@@ -1131,19 +1163,17 @@ def XeGPU_FenceOp : XeGPU_Op<"fence", []> {
     2. `Fence_scope` describes the scope of fence. "Workgroup" means that the scope would be
         within each workgroup. "GPU" means the scope would be across workgroups within the GPU.
   }];
-  let arguments = (ins XeGPU_MemorySpaceAttr:$memory_kind,
-      XeGPU_FenceScopeAttr:$fence_scope);
-  let assemblyFormat =
-      [{`memory_kind` `=` $memory_kind `,` `fence_scope` `=` $fence_scope attr-dict}];
+  let arguments = (ins XeGPU_MemorySpaceAttr: $memory_kind,
+                       XeGPU_FenceScopeAttr: $fence_scope);
+  let assemblyFormat = [{`memory_kind` `=` $memory_kind `,` `fence_scope` `=` $fence_scope attr-dict}];
   let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
-def XeGPU_ConvertLayoutOp
-    : XeGPU_Op<"convert_layout", [AllTypesMatch<["source", "result"]>,
-                                  MemoryEffects<[MemRead, MemWrite]>,
-                                  AnchorLayoutInterface]> {
+def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", "result"]>, 
+      MemoryEffects<[MemRead, MemWrite]>, 
+      AnchorLayoutInterface]> {    
   let summary = "Convert the layout of the input operand";
-  let description = [{
+    let description = [{
       `convert_layout` redistribute data across subgroups and/or lanes from the `input_layout` to
       the `target_layout`. Both `input_layout` and `target_layout` must correspond to the same programming
       scope, such as workgroup level (wg) or subgroup level (sg) code. This operation is not valid once
@@ -1168,13 +1198,14 @@ def XeGPU_ConvertLayoutOp
             : vector<128x128xf16>
         ```
     }];
-  let arguments = (ins XeGPU_VectorOrScalarType:$source,
-      DistributeLayoutAttr:$input_layout, DistributeLayoutAttr:$target_layout);
-  let results = (outs XeGPU_VectorOrScalarType:$result);
-  let assemblyFormat = [{
+    let arguments = (ins XeGPU_VectorOrScalarType: $source,
+                         DistributeLayoutAttr: $input_layout,
+                         DistributeLayoutAttr: $target_layout);
+    let results = (outs XeGPU_VectorOrScalarType: $result);
+    let assemblyFormat = [{
         $source prop-dict attr-dict `:` type($source)
     }];
-  let extraClassDeclaration = [{
+    let extraClassDeclaration = [{
       xegpu::DistributeLayoutAttr getAnchorLayout() {
         return getTargetLayout();
       }
@@ -1185,21 +1216,18 @@ def XeGPU_ConvertLayoutOp
 
     }];
 
-  let hasVerifier = 1;
+    let hasVerifier = 1;
 }
 
-class SizeInBits<string name>
-    : StrFunc<
-          "llvm::cast<mlir::ShapedType>($"#name#".getType()).getNumElements()"
-          "*llvm::cast<mlir::ShapedType>($"#name#".getType())."
-                                                 "getElementTypeBitWidth()">;
-class AllMemSizesMatch<list<string> names>
-    : AllMatchSameOperatorTrait<names, SizeInBits<"_self">.result,
-                                "size in bits">;
+class SizeInBits<string name> :
+  StrFunc<"llvm::cast<mlir::ShapedType>($" # name # ".getType()).getNumElements()"
+          "*llvm::cast<mlir::ShapedType>($" # name # ".getType()).getElementTypeBitWidth()">;
+class AllMemSizesMatch<list<string> names> :
+    AllMatchSameOperatorTrait<names, SizeInBits<"_self">.result,
+                              "size in bits">;
 
-def XeGPU_CreateMemDescOp
-    : XeGPU_Op<"create_mem_desc", [Pure,
-                                   AllMemSizesMatch<["source", "mem_desc"]>]> {
+def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
+      AllMemSizesMatch<["source", "mem_desc"]>]>  {
   let summary = "Create a memory descriptor.";
   let description = [{
     Creates a memory descriptor from a shared local memory (SLM) buffer, and xegpu
@@ -1220,22 +1248,19 @@ def XeGPU_CreateMemDescOp
     ```
 
   }];
-  let arguments =
-      (ins AnyTypeOf<[StaticShared1DMemRefOf<[XeGPU_ScalarType]>,
-                      StaticShared2DMemRefOf<[XeGPU_ScalarType]>]>:$source);
+  let arguments = (ins AnyTypeOf<[StaticShared1DMemRefOf<[XeGPU_ScalarType]>, StaticShared2DMemRefOf<[XeGPU_ScalarType]>]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
-  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` "
-                       "qualified(type($mem_desc))";
+  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
 }
 
-def XeGPU_LoadMatrixOp
-    : XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
-                               AllElementTypesMatch<["mem_desc", "res"]>,
-                               AnchorLayoutInterface]> {
-  let arguments = (ins XeGPU_MemDesc:$mem_desc, Variadic<Index>:$offsets,
-      DenseI64ArrayAttr:$const_offsets,
-      OptionalAttr<UnitAttr>:$subgroup_block_io,
-      OptionalAttr<DistributeLayoutAttr>:$layout);
+def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
+                              AllElementTypesMatch<["mem_desc", "res"]>, AnchorLayoutInterface]>  {
+  let arguments = (ins XeGPU_MemDesc:$mem_desc,
+    Variadic<Index>: $offsets,
+    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<UnitAttr>:$subgroup_block_io,
+    OptionalAttr<DistributeLayoutAttr>:$layout
+  );
   let results = (outs XeGPU_ValueOrScalarType:$res);
   let assemblyFormat = [{
     $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
@@ -1272,10 +1297,9 @@ def XeGPU_LoadMatrixOp
     ```
   }];
 
-  let builders = [OpBuilder<(ins "Type":$res,
-                      "TypedValue<MemDescType>":$mem_desc,
-                      "llvm::ArrayRef<OpFoldResult>":$offsets,
-                      "DistributeLayoutAttr":$layout)>,
+  let builders = [
+    OpBuilder<(ins "Type":$res, "TypedValue<MemDescType>": $mem_desc,
+                    "llvm::ArrayRef<OpFoldResult>": $offsets, "DistributeLayoutAttr": $layout)>,
   ];
   let extraClassDeclaration = [{
     SmallVector<OpFoldResult> getMixedOffsets() {
@@ -1302,16 +1326,17 @@ def XeGPU_LoadMatrixOp
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreMatrixOp
-    : XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
-                                AllElementTypesMatch<["mem_desc", "data"]>,
-                                AnchorLayoutInterface]> {
-  let arguments = (ins XeGPU_ValueOrScalarType:$data, XeGPU_MemDesc:$mem_desc,
-      Variadic<Index>:$offsets, DenseI64ArrayAttr:$const_offsets,
-      OptionalAttr<UnitAttr>:$subgroup_block_io,
-      OptionalAttr<DistributeLayoutAttr>:$layout);
-  let assemblyFormat =
-      [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
+def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
+                              AllElementTypesMatch<["mem_desc", "data"]>, AnchorLayoutInterface]> {
+  let arguments = (ins
+    XeGPU_ValueOrScalarType:$data,
+    XeGPU_MemDesc:$mem_desc,
+    Variadic<Index>: $offsets,
+    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<UnitAttr>:$subgroup_block_io,
+    OptionalAttr<DistributeLayoutAttr>:$layout
+  );
+  let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
                           prop-dict attr-dict `` `:` type(operands)}];
   let description = [{
     This operation stores an nD `data` fragment into the shared local memory region
@@ -1338,10 +1363,9 @@ def XeGPU_StoreMatrixOp
           : vector<128x128xf16>, !xegpu.mem_desc<128x128xf16>>, index, index
     ```
   }];
-  let builders = [OpBuilder<(ins "Value":$data,
-                      "TypedValue<MemDescType>":$mem_desc,
-                      "llvm::ArrayRef<OpFoldResult>":$offsets,
-                      "DistributeLayoutAttr":$layout)>,
+  let builders = [
+    OpBuilder<(ins "Value" : $data, "TypedValue<MemDescType>": $mem_desc,
+                   "llvm::ArrayRef<OpFoldResult>": $offsets, "DistributeLayoutAttr": $layout)>,
   ];
   let extraClassDeclaration = [{
     SmallVector<OpFoldResult> getMixedOffsets() {
