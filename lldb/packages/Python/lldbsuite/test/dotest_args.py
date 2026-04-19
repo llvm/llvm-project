@@ -111,7 +111,9 @@ def create_parser():
         metavar="dir",
         dest="resource_dir",
         default="",
-        help=textwrap.dedent("Specify the clang resource directory for cross-compiling test inferiors."),
+        help=textwrap.dedent(
+            "Specify the clang resource directory for cross-compiling test inferiors."
+        ),
     )
     group.add_argument(
         "--llvm-tools-dir",

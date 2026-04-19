@@ -112,7 +112,9 @@ def finalize_build_dictionary(dictionary):
     if configuration.triple:
         # When cross-compiling with an explicit triple, derive OS from it
         # rather than from the selected platform.
-        triple_os = configuration.triple.split("-")[1] if "-" in configuration.triple else ""
+        triple_os = (
+            configuration.triple.split("-")[1] if "-" in configuration.triple else ""
+        )
         if triple_os.startswith("wasi"):
             dictionary["OS"] = "Wasm"
         elif triple_os == "linux" or triple_os.startswith("linux"):
