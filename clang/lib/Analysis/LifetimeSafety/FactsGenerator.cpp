@@ -632,25 +632,9 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
 void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   OriginList *NewList = getOriginsList(*NE);
 
-  // Check if we have a placement new where the second argument is void*, to
-  // avoid flowing from std::nothrow and the placement parameter amount is 1,
-  // that is to mostly limit to standard library placement new.
-  if (NE->getNumPlacementArgs() == 1) {
-    if (const auto *Arg = NE->getOperatorNew()
-                              ->getParamDecl(1)
-                              ->getType()
-                              ->getAs<PointerType>();
-        Arg && Arg->isVoidPointerType()) {
-      OriginList *PlacementList = getOriginsList(*NE->getPlacementArg(0));
-      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-          NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
-          true));
-    }
-  } else {
-    const Loan *L = createLoan(FactMgr, NE);
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));
-  }
+  const Loan *L = createLoan(FactMgr, NE);
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));
 
   NewList = NewList->peelOuterOrigin();
 
