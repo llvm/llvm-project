@@ -30,9 +30,8 @@ int direct() {
   // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
   // CHECK-FIXES:      if consteval {
   // CHECK-FIXES-NEXT:   return 1;
-  // CHECK-FIXES-NEXT: } else {
+  // CHECK-FIXES-NEXT: } else
   // CHECK-FIXES-NEXT:   return 2;
-  // CHECK-FIXES-NEXT: }
 }
 
 int direct_global() {
@@ -171,9 +170,8 @@ int else_if_chain(int Value) {
   // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
   // CHECK-FIXES:      else if consteval {
   // CHECK-FIXES-NEXT:   return 1;
-  // CHECK-FIXES-NEXT: } else {
+  // CHECK-FIXES-NEXT: } else
   // CHECK-FIXES-NEXT:   return 2;
-  // CHECK-FIXES-NEXT: }
 }
 
 int macro_header_safe() {
