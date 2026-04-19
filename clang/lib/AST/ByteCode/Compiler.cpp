@@ -2726,16 +2726,27 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   assert(Initializing);
   assert(!DiscardResult);
 
+  const Expr *Common = E->getCommonExpr();
+  const Expr *SubExpr = E->getSubExpr();
+  OptPrimType SubExprT = classify(SubExpr);
+  size_t Size = E->getArraySize().getZExtValue();
+
+  if (SubExprT) {
+    // Unwrap the OpaqueValueExpr so we don't cache something we won't reuse.
+    Common = cast<OpaqueValueExpr>(Common)->getSourceExpr();
+
+    if (!this->visit(Common))
+      return false;
+    return this->emitCopyArray(*SubExprT, 0, 0, Size, E);
+  }
+
   // We visit the common opaque expression here once so we have its value
   // cached.
-  if (!this->discard(E->getCommonExpr()))
+  if (!this->discard(Common))
     return false;
 
   // TODO: This compiles to quite a lot of bytecode if the array is larger.
   //   Investigate compiling this to a loop.
-  const Expr *SubExpr = E->getSubExpr();
-  size_t Size = E->getArraySize().getZExtValue();
-  OptPrimType SubExprT = classify(SubExpr);
 
   // So, every iteration, we execute an assignment here
   // where the LHS is on the stack (the target array)
@@ -4754,7 +4765,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
     const Descriptor *D = Field.Desc;
     if (D->isPrimitive()) {
       QualType QT = D->getType();
-      PrimType T = classifyPrim(D->getType());
+      PrimType T = D->getPrimType();
       if (!this->visitZeroInitializer(T, QT, E))
         return false;
       if (R->isUnion()) {
@@ -4772,7 +4783,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
 
     if (D->isPrimitiveArray()) {
       QualType ET = D->getElemQualType();
-      PrimType T = classifyPrim(ET);
+      PrimType T = D->getPrimType();
       for (uint32_t I = 0, N = D->getNumElems(); I != N; ++I) {
         if (!this->visitZeroInitializer(T, ET, E))
           return false;
@@ -5590,12 +5601,15 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   SmallVector<const Expr *, 8> Args(ArrayRef(E->getArgs(), E->getNumArgs()));
 
   bool IsAssignmentOperatorCall = false;
+  bool ActivateLHS = false;
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
       OCE && OCE->isAssignmentOp()) {
     // Just like with regular assignments, we need to special-case assignment
     // operators here and evaluate the RHS (the second arg) before the LHS (the
     // first arg). We fix this by using a Flip op later.
     assert(Args.size() == 2);
+    const CXXRecordDecl *LHSRecord = Args[0]->getType()->getAsCXXRecordDecl();
+    ActivateLHS = LHSRecord && LHSRecord->hasTrivialDefaultConstructor();
     IsAssignmentOperatorCall = true;
     std::reverse(Args.begin(), Args.end());
   }
@@ -5673,7 +5687,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return false;
   }
 
-  if (!this->visitCallArgs(Args, FuncDecl, IsAssignmentOperatorCall,
+  if (!this->visitCallArgs(Args, FuncDecl, ActivateLHS,
                            isa<CXXOperatorCallExpr>(E)))
     return false;
 
@@ -6898,6 +6912,9 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
     if (!this->emitRecordDestructionPop(Base.R, {}))
       return false;
   }
+
+  if (!this->emitMarkDestroyed(Dtor))
+    return false;
 
   // FIXME: Virtual bases.
   return this->emitPopPtr(Dtor) && this->emitRetVoid(Dtor);

@@ -121,7 +121,7 @@ public:
   bool enableScalableVectorization() const override {
     return ST->hasVInstructions();
   }
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override {
     return ST->hasVInstructions();
   }
   TailFoldingStyle getPreferredTailFoldingStyle() const override {
@@ -223,6 +223,11 @@ public:
   InstructionCost
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
                          TTI::TargetCostKind CostKind) const override;
+
+  std::optional<InstructionCost> getCombinedArithmeticInstructionCost(
+      unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
+      ArrayRef<const Value *> Args, const Instruction *CxtI) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
@@ -373,16 +378,10 @@ public:
         Intrinsic::vp_add,
         Intrinsic::vp_and,
         Intrinsic::vp_ashr,
-        Intrinsic::vp_bitreverse,
-        Intrinsic::vp_bswap,
         Intrinsic::vp_cttz_elts,
         Intrinsic::vp_fadd,
         Intrinsic::vp_fcmp,
-        Intrinsic::vp_fma,
         Intrinsic::vp_fmul,
-        Intrinsic::vp_fmuladd,
-        Intrinsic::vp_fneg,
-        Intrinsic::vp_fpext,
         Intrinsic::vp_fptrunc,
         Intrinsic::vp_frem,
         Intrinsic::vp_fshl,
@@ -414,26 +413,18 @@ public:
         Intrinsic::vp_reduce_umax,
         Intrinsic::vp_reduce_umin,
         Intrinsic::vp_reduce_xor,
-        Intrinsic::vp_sadd_sat,
         Intrinsic::vp_scatter,
         Intrinsic::vp_sdiv,
         Intrinsic::vp_select,
         Intrinsic::vp_sext,
         Intrinsic::vp_shl,
-        Intrinsic::vp_smax,
-        Intrinsic::vp_smin,
         Intrinsic::vp_sqrt,
         Intrinsic::vp_srem,
-        Intrinsic::vp_ssub_sat,
         Intrinsic::vp_store,
         Intrinsic::vp_sub,
         Intrinsic::vp_trunc,
-        Intrinsic::vp_uadd_sat,
         Intrinsic::vp_udiv,
-        Intrinsic::vp_umax,
-        Intrinsic::vp_umin,
         Intrinsic::vp_urem,
-        Intrinsic::vp_usub_sat,
         Intrinsic::vp_xor,
         Intrinsic::vp_zext};
     if (!ST->hasVInstructions() ||
@@ -468,6 +459,7 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::FindLast:
       return true;
     case RecurKind::AnyOf:
     case RecurKind::FAdd:

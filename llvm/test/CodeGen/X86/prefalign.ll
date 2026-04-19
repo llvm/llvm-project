@@ -23,3 +23,18 @@ define void @f2() prefalign(1) {
 define void @f3() align 2 prefalign(4) {
   ret void
 }
+
+;; When align >= prefalign, the .prefalign would be redundant.
+; CHECK: .globl f4
+; CHECK-NEXT: .p2align 5
+; CHECK-NOT: .prefalign
+define void @f4() align 32 prefalign(16) {
+  ret void
+}
+
+; CHECK: .globl f5
+; CHECK-NEXT: .p2align 4
+; CHECK-NOT: .prefalign
+define void @f5() align 16 prefalign(16) {
+  ret void
+}

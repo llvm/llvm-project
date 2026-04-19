@@ -190,9 +190,8 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     return;
   }
   // For defaulted (implicit or `= default`) copy/move constructors, propagate
-  // origins directly. User-defined copy/move constructors have opaque semantics
-  // and fall through to `handleFunctionCall`, where [[clang::lifetimebound]] is
-  // needed to propagate origins.
+  // origins directly. User-defined copy/move constructors are not handled here
+  // as they have opaque semantics.
   if (CCE->getConstructor()->isCopyOrMoveConstructor() &&
       CCE->getConstructor()->isDefaulted() && CCE->getNumArgs() == 1 &&
       hasOrigins(CCE->getType())) {
@@ -202,9 +201,24 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       return;
     }
   }
+  // Standard library callable wrappers (e.g., std::function) propagate the
+  // stored lambda's origins.
+  if (const auto *RD = CCE->getType()->getAsCXXRecordDecl();
+      RD && isStdCallableWrapperType(RD) && CCE->getNumArgs() == 1) {
+    const Expr *Arg = CCE->getArg(0);
+    if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
+      flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
+      return;
+    }
+  }
   handleFunctionCall(CCE, CCE->getConstructor(),
                      {CCE->getArgs(), CCE->getNumArgs()},
                      /*IsGslConstruction=*/false);
+}
+
+void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
+  if (const Expr *Init = DIE->getExpr())
+    killAndFlowOrigin(*DIE, *Init);
 }
 
 void FactsGenerator::handleCXXCtorInitializer(const CXXCtorInitializer *CII) {
@@ -265,17 +279,16 @@ void FactsGenerator::VisitCXXNullPtrLiteralExpr(
   getOriginsList(*N);
 }
 
-void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
-  OriginList *Dest = getOriginsList(*ICE);
+void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
+  OriginList *Dest = getOriginsList(*CE);
   if (!Dest)
     return;
-  const Expr *SubExpr = ICE->getSubExpr();
+  const Expr *SubExpr = CE->getSubExpr();
   OriginList *Src = getOriginsList(*SubExpr);
 
-  switch (ICE->getCastKind()) {
+  switch (CE->getCastKind()) {
   case CK_LValueToRValue:
-    // TODO: Decide what to do for x-values here.
-    if (!SubExpr->isLValue())
+    if (!SubExpr->isGLValue())
       return;
 
     assert(Src && "LValue being cast to RValue has no origin list");
@@ -283,11 +296,11 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     // `int *p, *q; p = q;`) should propagate the inner origin (what the pointer
     // points to), not the outer origin (the pointer's storage location). Strip
     // the outer lvalue origin.
-    flow(getOriginsList(*ICE), getRValueOrigins(SubExpr, Src),
+    flow(getOriginsList(*CE), getRValueOrigins(SubExpr, Src),
          /*Kill=*/true);
     return;
   case CK_NullToPointer:
-    getOriginsList(*ICE);
+    getOriginsList(*CE);
     // TODO: Flow into them a null origin.
     return;
   case CK_NoOp:
@@ -395,6 +408,15 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
     } else
       markUseAsWrite(DRE_LHS);
   }
+  if (!RHSList) {
+    // RHS has no tracked origins (e.g., assigning a callable without origins
+    // to std::function). Clear loans of the destination.
+    for (OriginList *LHSInner = LHSList->peelOuterOrigin(); LHSInner;
+         LHSInner = LHSInner->peelOuterOrigin())
+      CurrentBlockFacts.push_back(
+          FactMgr.createFact<KillOriginFact>(LHSInner->getOuterOriginID()));
+    return;
+  }
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
@@ -484,7 +506,15 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
       hasOrigins(OCE->getArg(0)->getType())) {
     // Pointer-like types: assignment inherently propagates origins.
     QualType LHSTy = OCE->getArg(0)->getType();
-    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy)) {
+    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy) ||
+        isGslOwnerType(LHSTy)) {
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      return;
+    }
+    // Standard library callable wrappers (e.g., std::function) can propagate
+    // the stored lambda's origins.
+    if (const auto *RD = LHSTy->getAsCXXRecordDecl();
+        RD && isStdCallableWrapperType(RD)) {
       handleAssignment(OCE->getArg(0), OCE->getArg(1));
       return;
     }
@@ -512,8 +542,7 @@ void FactsGenerator::VisitCXXFunctionalCastExpr(
   // expression.
   if (handleTestPoint(FCE))
     return;
-  if (isGslPointerType(FCE->getType()))
-    killAndFlowOrigin(*FCE, *FCE->getSubExpr());
+  VisitCastExpr(FCE);
 }
 
 void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
@@ -723,6 +752,38 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
         ThisList->getOuterOriginID(), Call));
 }
 
+void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
+                                                   const FunctionDecl *FD) {
+  const auto *MemberCall = dyn_cast_or_null<CXXMemberCallExpr>(Call);
+  if (!MemberCall)
+    return;
+
+  if (!isa_and_present<CXXThisExpr>(
+          MemberCall->getImplicitObjectArgument()->IgnoreImpCasts()))
+    return;
+
+  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  assert(MD && "Function must be a CXXMethodDecl for member calls");
+
+  const auto *ClassDecl = MD->getParent()->getDefinition();
+  if (!ClassDecl)
+    return;
+
+  const auto UseFields = [&](const CXXRecordDecl *RD) {
+    for (const auto *Field : RD->fields())
+      if (auto *FieldList = getOriginsList(*Field))
+        CurrentBlockFacts.push_back(
+            FactMgr.createFact<UseFact>(Call, FieldList));
+  };
+
+  UseFields(ClassDecl);
+
+  ClassDecl->forallBases([&](const CXXRecordDecl *Base) {
+    UseFields(Base);
+    return true;
+  });
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -737,6 +798,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     handleUse(Arg);
   handleInvalidatingCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
+  handleImplicitObjectFieldUses(Call, FD);
   if (!CallList)
     return;
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {

@@ -33,7 +33,7 @@ public:
   public:
     AsmPrinter &getPrinter() { return Printer; }
 
-    bool invalidate(Module &, const PreservedAnalyses,
+    bool invalidate(Module &, const PreservedAnalyses &,
                     ModuleAnalysisManager::Invalidator &) {
       return false;
     }

@@ -374,7 +374,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
                                      all_of(Rep->operands(), isSingleScalar));
   }
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
+  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
     return preservesUniformity(WidenR->getOpcode()) &&
@@ -386,7 +386,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(VPV))
+  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe>(
+          VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isSingleScalar();
@@ -657,11 +658,11 @@ bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
 
 bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
                            const VPDominatorTree &VPDT) {
-  // A latch has a header as its second successor, with its other successor
+  // A latch has a header as its last successor, with its other successors
   // leaving the loop. A preheader OTOH has a header as its first (and only)
   // successor.
-  return VPB->getNumSuccessors() == 2 &&
-         VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
+  return VPB->getNumSuccessors() >= 2 &&
+         VPBlockUtils::isHeader(VPB->getSuccessors().back(), VPDT);
 }
 
 std::optional<MemoryLocation>
@@ -679,7 +680,10 @@ vputils::getMemoryLocation(const VPRecipeBase &R) {
 }
 
 VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
-  VPInstruction *Increment = nullptr;
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPRegionValue *CanIV = LoopRegion->getCanonicalIV();
+  assert(CanIV && "Expected loop region to have a canonical IV");
+
   VPSymbolicValue &VFxUF = Plan.getVFxUF();
 
   // Check if \p Step matches the expected increment step, accounting for
@@ -687,29 +691,31 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
   auto IsIncrementStep = [&](VPValue *Step) -> bool {
     if (!VFxUF.isMaterialized())
       return Step == &VFxUF;
+
     VPSymbolicValue &UF = Plan.getUF();
     if (!UF.isMaterialized())
       return Step == &UF;
+
     unsigned ConcreteUF = Plan.getConcreteUF();
-    if (ConcreteUF == 1 &&
-        match(Step, m_VPInstruction<VPInstruction::VScale>()))
+    // Fixed VF: step is just the concrete UF.
+    if (match(Step, m_SpecificInt(ConcreteUF)))
       return true;
+
+    // Scalable VF: step involves VScale.
+    if (ConcreteUF == 1)
+      return match(Step, m_VPInstruction<VPInstruction::VScale>());
     if (match(Step, m_c_Mul(m_SpecificInt(ConcreteUF),
                             m_VPInstruction<VPInstruction::VScale>())))
       return true;
-    // Also match shl(VScale, log2(ConcreteUF)) which is the result of
-    // simplifying mul(VScale, ConcreteUF) when ConcreteUF is a power of 2.
-    if (isPowerOf2_32(ConcreteUF) &&
-        match(Step, m_Binary<Instruction::Shl>(
-                        m_VPInstruction<VPInstruction::VScale>(),
-                        m_SpecificInt(Log2_32(ConcreteUF)))))
-      return true;
-    return match(Step, m_SpecificInt(ConcreteUF));
+    // mul(VScale, ConcreteUF) may have been simplified to
+    // shl(VScale, log2(ConcreteUF)) when ConcreteUF is a power of 2.
+    return isPowerOf2_32(ConcreteUF) &&
+           match(Step, m_Binary<Instruction::Shl>(
+                           m_VPInstruction<VPInstruction::VScale>(),
+                           m_SpecificInt(Log2_32(ConcreteUF))));
   };
 
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPRegionValue *CanIV = LoopRegion->getCanonicalIV();
-  assert(CanIV && "Expected loop region to have a canonical IV");
+  VPInstruction *Increment = nullptr;
   for (VPUser *U : CanIV->users()) {
     VPValue *Step;
     if (match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))) &&
