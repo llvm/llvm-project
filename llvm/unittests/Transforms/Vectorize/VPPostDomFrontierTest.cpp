@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/VPlanDominatorTree.h"
 
 #include "VPlanTestBase.h"
 #include "llvm/Analysis/DominanceFrontier.h"
@@ -49,8 +50,7 @@ TEST_F(VPPostDomFrontierTest, SingleExitTest) {
   VPBlockUtils::connectBlocks(VPBB5, VPBB6);
   VPBlockUtils::connectBlocks(VPBB6, VPBB7);
 
-  PostDomTreeBase<VPBlockBase> VPPDT;
-  VPPDT.recalculate(Plan);
+  VPPostDominatorTree VPPDT(Plan);
   DominanceFrontierBase<VPBlockBase, true> VPPDF;
   VPPDF.analyze(VPPDT);
 
@@ -116,8 +116,7 @@ TEST_F(VPPostDomFrontierTest, MultipleExitsTest) {
   VPBlockUtils::connectBlocks(VPBB4, VPBB6);
   VPBlockUtils::connectBlocks(VPBB5, VPBB6);
 
-  PostDomTreeBase<VPBlockBase> VPPDT;
-  VPPDT.recalculate(Plan);
+  VPPostDominatorTree VPPDT(Plan);
   DominanceFrontierBase<VPBlockBase, true> VPPDF;
   VPPDF.analyze(VPPDT);
 

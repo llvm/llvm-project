@@ -682,19 +682,16 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     MSSA->verifyMemorySSA();
 
   if (LI) {
+    SmallPtrSet<BasicBlock *, 8> Blocks(llvm::from_range, L->blocks());
+
     // Erase the instructions and the blocks without having to worry
     // about ordering because we already dropped the references.
-    // NOTE: This iteration is safe because erasing the block does not remove
-    // its entry from the loop's block list.  We do that in the next section.
-    for (BasicBlock *BB : L->blocks())
-      BB->eraseFromParent();
-
-    // Finally, the blocks from loopinfo.  This has to happen late because
-    // otherwise our loop iterators won't work.
-
-    SmallPtrSet<BasicBlock *, 8> blocks(llvm::from_range, L->blocks());
-    for (BasicBlock *BB : blocks)
+    // Remove blocks from loopinfo before erasing them, otherwise the loopinfo
+    // cannot find the loop using block numbers.
+    for (BasicBlock *BB : Blocks) {
       LI->removeBlock(BB);
+      BB->eraseFromParent();
+    }
 
     // The last step is to update LoopInfo now that we've eliminated this loop.
     // Note: LoopInfo::erase remove the given loop and relink its subloops with
@@ -730,14 +727,12 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   // Update the CFG and domtree.  We chose to special case a couple of
   // of common cases for code quality and test readability reasons.
   [&]() -> void {
-    if (auto *BI = dyn_cast<BranchInst>(Latch->getTerminator())) {
-      if (!BI->isConditional()) {
-        DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
-        (void)changeToUnreachable(BI, /*PreserveLCSSA*/ true, &DTU,
-                                  MSSAU.get());
-        return;
-      }
-
+    if (auto *BI = dyn_cast<UncondBrInst>(Latch->getTerminator())) {
+      DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
+      (void)changeToUnreachable(BI, /*PreserveLCSSA*/ true, &DTU, MSSAU.get());
+      return;
+    }
+    if (auto *BI = dyn_cast<CondBrInst>(Latch->getTerminator())) {
       // Conditional latch/exit - note that latch can be shared by inner
       // and outer loop so the other target doesn't need to an exit
       if (L->isLoopExiting(Latch)) {
@@ -793,13 +788,13 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 /// Checks if \p L has an exiting latch branch.  There may also be other
 /// exiting blocks.  Returns branch instruction terminating the loop
 /// latch if above check is successful, nullptr otherwise.
-static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
+static CondBrInst *getExpectedExitLoopLatchBranch(Loop *L) {
   BasicBlock *Latch = L->getLoopLatch();
   if (!Latch)
     return nullptr;
 
-  BranchInst *LatchBR = dyn_cast<BranchInst>(Latch->getTerminator());
-  if (!LatchBR || LatchBR->getNumSuccessors() != 2 || !L->isLoopExiting(Latch))
+  CondBrInst *LatchBR = dyn_cast<CondBrInst>(Latch->getTerminator());
+  if (!LatchBR || !L->isLoopExiting(Latch))
     return nullptr;
 
   assert((LatchBR->getSuccessor(0) == L->getHeader() ||
@@ -827,7 +822,7 @@ static std::optional<unsigned> estimateLoopTripCount(Loop *L) {
   // ignoring other exiting blocks.  This can overestimate the trip count
   // if we exit through another exit, but can never underestimate it.
   // TODO: incorporate information from other exits
-  BranchInst *ExitingBranch = getExpectedExitLoopLatchBranch(L);
+  CondBrInst *ExitingBranch = getExpectedExitLoopLatchBranch(L);
   if (!ExitingBranch) {
     LLVM_DEBUG(dbgs() << "estimateLoopTripCount: Failed to find exiting "
                       << "latch branch of required form in " << DbgLoop(L)
@@ -895,7 +890,7 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // - To satsify the condition for the outer loop, the latch must have a third
   //   successor that is an exit for the outer loop.  But that violates the
   //   condition for both loops.
-  BranchInst *ExitingBranch = getExpectedExitLoopLatchBranch(L);
+  CondBrInst *ExitingBranch = getExpectedExitLoopLatchBranch(L);
   if (!ExitingBranch)
     return std::nullopt;
 
@@ -952,7 +947,7 @@ bool llvm::setLoopEstimatedTripCount(
   //
   // FIXME: See comments in getLoopEstimatedTripCount for why this is required
   // here regardless of EstimatedLoopInvocationWeight.
-  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  CondBrInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
   if (!LatchBranch)
     return false;
 
@@ -990,7 +985,7 @@ bool llvm::setLoopEstimatedTripCount(
 }
 
 BranchProbability llvm::getLoopProbability(Loop *L) {
-  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  CondBrInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
   if (!LatchBranch)
     return BranchProbability::getUnknown();
   bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
@@ -998,17 +993,16 @@ BranchProbability llvm::getLoopProbability(Loop *L) {
 }
 
 bool llvm::setLoopProbability(Loop *L, BranchProbability P) {
-  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  CondBrInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
   if (!LatchBranch)
     return false;
   bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
-  return setBranchProbability(LatchBranch, P, FirstTargetIsLoop);
+  setBranchProbability(LatchBranch, P, FirstTargetIsLoop);
+  return true;
 }
 
-BranchProbability llvm::getBranchProbability(BranchInst *B,
+BranchProbability llvm::getBranchProbability(CondBrInst *B,
                                              bool ForFirstTarget) {
-  if (B->getNumSuccessors() != 2)
-    return BranchProbability::getUnknown();
   uint64_t Weight0, Weight1;
   if (!extractBranchWeights(*B, Weight0, Weight1))
     return BranchProbability::getUnknown();
@@ -1054,17 +1048,14 @@ BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
   return BranchProbability(Numerator, Total);
 }
 
-bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,
+void llvm::setBranchProbability(CondBrInst *B, BranchProbability P,
                                 bool ForFirstTarget) {
-  if (B->getNumSuccessors() != 2)
-    return false;
   BranchProbability Prob0 = P;
   BranchProbability Prob1 = P.getCompl();
   if (!ForFirstTarget)
     std::swap(Prob0, Prob1);
   setBranchWeights(*B, {Prob0.getNumerator(), Prob1.getNumerator()},
                    /*IsExpected=*/false);
-  return true;
 }
 
 bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
@@ -1742,7 +1733,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                                 SmallVector<WeakTrackingVH, 16> &DeadInsts) {
   // Check a pre-condition.
   assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
-         "Indvars did not preserve LCSSA!");
+         "Caller did not preserve LCSSA!");
 
   SmallVector<BasicBlock*, 8> ExitBlocks;
   L->getUniqueExitBlocks(ExitBlocks);
@@ -2244,8 +2235,8 @@ Value *llvm::addDiffRuntimeChecks(
 std::optional<IVConditionInfo>
 llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
                             const MemorySSA &MSSA, AAResults &AA) {
-  auto *TI = dyn_cast<BranchInst>(L.getHeader()->getTerminator());
-  if (!TI || !TI->isConditional())
+  auto *TI = dyn_cast<CondBrInst>(L.getHeader()->getTerminator());
+  if (!TI)
     return {};
 
   auto *CondI = dyn_cast<Instruction>(TI->getCondition());

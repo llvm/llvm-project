@@ -67,7 +67,6 @@ inverted_macros = {
     "_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS": "libcpp-has-no-availability-markup",
     "_LIBCPP_HAS_RANDOM_DEVICE": "no-random-device",
     "_LIBCPP_HAS_UNICODE": "libcpp-has-no-unicode",
-    "_LIBCPP_HAS_TERMINAL": "no-terminal",
 }
 for macro, feature in inverted_macros.items():
     features.append(

@@ -91,7 +91,6 @@ static std::string CompilationDB;
 static std::optional<std::string> ModuleNames;
 static std::vector<std::string> ModuleDepTargets;
 static std::string TranslationUnitFile;
-static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
 static bool AsyncScanModules;
@@ -215,8 +214,6 @@ static void ParseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_tu_buffer_path_EQ))
     TranslationUnitFile = A->getValue();
-
-  DeprecatedDriverCommand = Args.hasArg(OPT_deprecated_driver_command);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_resource_dir_recipe_EQ)) {
     auto Kind =
@@ -1072,7 +1069,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
             HadErrors = true;
         } else {
           auto CIWithCtx = CompilerInstanceWithContext::initializeOrError(
-              WorkerTool, CWD, Input->CommandLine);
+              WorkerTool, CWD, Input->CommandLine, LookupOutput);
           if (llvm::Error Err = CIWithCtx.takeError()) {
             handleErrorWithInfoString(
                 "Compiler instance with context setup error", std::move(Err),

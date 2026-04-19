@@ -228,16 +228,28 @@ public:
   /// Requires the basic block to have a parent module.
   LLVM_ABI const DataLayout &getDataLayout() const;
 
-  /// Returns the terminator instruction if the block is well formed or
-  /// null if the block is not well formed.
+  /// Returns whether the block has a terminator.
+  bool hasTerminator() const LLVM_READONLY {
+    return !InstList.empty() && InstList.back().isTerminator();
+  }
+
+  /// Returns the terminator instruction; assumes that the block is well-formed.
   const Instruction *getTerminator() const LLVM_READONLY {
-    if (InstList.empty() || !InstList.back().isTerminator())
-      return nullptr;
+    assert(hasTerminator() && "cannot get terminator of non-well-formed block");
     return &InstList.back();
   }
   Instruction *getTerminator() {
     return const_cast<Instruction *>(
         static_cast<const BasicBlock *>(this)->getTerminator());
+  }
+
+  /// Returns the terminator instruction if the block is well formed or
+  /// null if the block is not well formed.
+  const Instruction *getTerminatorOrNull() const LLVM_READONLY {
+    return hasTerminator() ? getTerminator() : nullptr;
+  }
+  Instruction *getTerminatorOrNull() {
+    return hasTerminator() ? getTerminator() : nullptr;
   }
 
   /// Returns the call instruction calling \@llvm.experimental.deoptimize
@@ -362,27 +374,6 @@ public:
     return const_cast<Instruction *>(
         static_cast<const BasicBlock *>(this)->getFirstMayFaultInst());
   }
-
-  /// Return a const iterator range over the instructions in the block, skipping
-  /// any debug instructions. Skip any pseudo operations as well if \c
-  /// SkipPseudoOp is true.
-  LLVM_ABI
-  iterator_range<filter_iterator<BasicBlock::const_iterator,
-                                 std::function<bool(const Instruction &)>>>
-  instructionsWithoutDebug(bool SkipPseudoOp = true) const;
-
-  /// Return an iterator range over the instructions in the block, skipping any
-  /// debug instructions. Skip and any pseudo operations as well if \c
-  /// SkipPseudoOp is true.
-  LLVM_ABI iterator_range<
-      filter_iterator<BasicBlock::iterator, std::function<bool(Instruction &)>>>
-  instructionsWithoutDebug(bool SkipPseudoOp = true);
-
-  /// Return the size of the basic block ignoring debug instructions
-  LLVM_ABI
-  filter_iterator<BasicBlock::const_iterator,
-                  std::function<bool(const Instruction &)>>::difference_type
-  sizeWithoutDebug() const;
 
   /// Unlink 'this' from the containing function, but do not delete it.
   LLVM_ABI void removeFromParent();

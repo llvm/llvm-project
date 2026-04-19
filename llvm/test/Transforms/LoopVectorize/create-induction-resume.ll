@@ -16,7 +16,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_NEXT:%.*]], [[L1_BACKEDGE]] ], [ 0, [[L1_PREHEADER]] ]
 ; CHECK-NEXT:    [[L1_SUM:%.*]] = phi i32 [ [[ARG]], [[L1_PREHEADER]] ], [ [[L1_SUM_NEXT:%.*]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    [[L1_IV:%.*]] = phi i32 [ 1, [[L1_PREHEADER]] ], [ [[L1_IV_NEXT:%.*]], [[L1_BACKEDGE]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[INDVAR]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -2
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[L1_BACKEDGE]], label [[L1_EARLY_EXIT:%.*]]
 ; CHECK:       L1.backedge:
@@ -73,31 +73,31 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 L1.preheader:
   br label %L1.header
 
-L1.header:                                        ; preds = %L1.preheader, %L1.backedge
+L1.header:
   %L1.sum = phi i32 [ %arg, %L1.preheader ], [ %L1.sum.next, %L1.backedge ]
   %L1.iv = phi i32 [ 1, %L1.preheader ], [ %L1.iv.next, %L1.backedge ]
   br i1 %c, label %L1.backedge, label %L1.early.exit
 
-L1.backedge:                                      ; preds = %L1.header
+L1.backedge:
   %L1.sum.next = add i32 %L1.iv, %L1.sum
   %L1.iv.next = add nuw nsw i32 %L1.iv, 1
   %L1.exit.cond = icmp ult i32 %L1.iv.next, %L1.limit
   br i1 %L1.exit.cond, label %L1.header, label %L1.exit
 
-L1.early.exit:                                    ; preds = %L1.header
+L1.early.exit:
   ret void
 
-L1.exit:                                          ; preds = %L1.backedge
+L1.exit:
   %L1.exit.val = phi i32 [ %L1.sum.next, %L1.backedge ]
   br label %L2.header
 
-L2.header:                                        ; preds = %L2.Inner.header, %L1.exit, %L2.header
+L2.header:
   switch i32 %L2.switch, label %L2.header [
   i32 8, label %L2.exit
   i32 20, label %L2.Inner.header
   ]
 
-L2.Inner.header:                                  ; preds = %L2.Inner.header, %L2.header
+L2.Inner.header:
   %L2.accum = phi i32 [ %L2.accum.next, %L2.Inner.header ], [ 1, %L2.header ]
   %L2.iv = phi i64 [ %L2.iv.next, %L2.Inner.header ], [ 1, %L2.header ]
   %L2.accum.next = sub i32 %L2.accum, %L1.exit.val
@@ -108,7 +108,7 @@ L2.Inner.header:                                  ; preds = %L2.Inner.header, %L
   %L2.exit_cond = icmp ugt i64 %L2.iv, 11
   br i1 %L2.exit_cond, label %L2.header, label %L2.Inner.header
 
-L2.exit:                                          ; preds = %L2.header
+L2.exit:
   ret void
 }
 

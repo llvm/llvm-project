@@ -9,13 +9,11 @@
 
 ; YAML: --- !Missed
 ; YAML: Pass:            slp-vectorizer
-; YAML: Name:            NotBeneficial
+; YAML: Name:            NotPossible
 ; YAML: Function:        test
 ; YAML: Args:
-; YAML:   - String:          'List vectorization was possible but not beneficial with cost '
-; YAML:   - Cost:            '0'
-; YAML:   - String:          ' >= '
-; YAML:   - Treshold:        '0'
+; YAML:   - String:          'Cannot SLP vectorize list: vectorization was impossible'
+; YAML:   - String:          ' with available vectorization factors'
 ; YAML: ...
 define void @test(<4 x float> %vec, float %a, float %b, ptr %ptr) {
 ; CHECK-LABEL: define void @test

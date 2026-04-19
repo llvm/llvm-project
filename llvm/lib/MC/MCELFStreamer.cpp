@@ -22,6 +22,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
@@ -29,6 +30,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
@@ -48,14 +50,11 @@ ELFObjectWriter &MCELFStreamer::getWriter() {
   return static_cast<ELFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
+void MCELFStreamer::initSections(const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
   emitCodeAlignment(Align(Ctx.getObjectFileInfo()->getTextSectionAlignment()),
                     &STI);
-
-  if (NoExecStack)
-    switchSection(Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
 }
 
 void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
@@ -359,12 +358,24 @@ void MCELFStreamer::finalizeCGProfile() {
 }
 
 void MCELFStreamer::finishImpl() {
+  // Emit .note.GNU-stack, similar to AsmPrinter::doFinalization.
+  MCContext &Ctx = getContext();
+  if (const MCTargetOptions *TO = Ctx.getTargetOptions()) {
+    auto *StackSec = Ctx.getAsmInfo()->getStackSection(Ctx,
+                                                       /*Exec=*/false);
+    if (StackSec && TO->MCNoExecStack)
+      switchSection(StackSec);
+  }
+
   // Emit the .gnu attributes section if any attributes have been added.
   if (!GNUAttributes.empty()) {
     MCSection *DummyAttributeSection = nullptr;
     createAttributesSection("gnu", ".gnu.attributes", ELF::SHT_GNU_ATTRIBUTES,
                             DummyAttributeSection, GNUAttributes);
   }
+
+  if (Ctx.getTargetTriple().isLFI())
+    emitLFINoteSection(*this, Ctx);
 
   finalizeCGProfile();
   emitFrames();

@@ -147,7 +147,6 @@ exit:
   ret void
 }
 
-declare double @llvm.sin.f64(double)
 
 declare <2 x double> @__simd_sin_v2f64(<2 x double>)
 

@@ -538,7 +538,7 @@ define <4 x float> @maxnum_intrinsic_nnan_fmf_f432(<4 x float> %a, <4 x float> %
 
 ; Current (but legacy someday): a function-level attribute should also enable the fold.
 
-define float @maxnum_intrinsic_nnan_attr_f32(float %a, float %b) #0 {
+define float @maxnum_intrinsic_nnan_attr_f32(float %a, float %b) {
 ; SSE-LABEL: maxnum_intrinsic_nnan_attr_f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    maxss %xmm1, %xmm0
@@ -548,7 +548,7 @@ define float @maxnum_intrinsic_nnan_attr_f32(float %a, float %b) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %r = tail call float @llvm.maxnum.f32(float %a, float %b)
+  %r = tail call nnan float @llvm.maxnum.f32(float %a, float %b)
   ret float %r
 }
 
@@ -564,7 +564,7 @@ define <2 x double> @maxnum_intrinsic_nnan_attr_f64(<2 x double> %a, <2 x double
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %r = tail call <2 x double> @llvm.maxnum.v2f64(<2 x double> %a, <2 x double> %b)
+  %r = tail call nnan <2 x double> @llvm.maxnum.v2f64(<2 x double> %a, <2 x double> %b)
   ret <2 x double> %r
 }
 
@@ -639,6 +639,3 @@ define float @test_maxnum_snan(float %x) {
   %r = call float @llvm.maxnum.f32(float 0x7ff4000000000000, float %x)
   ret float %r
 }
-
-attributes #0 = { "no-nans-fp-math"="true" }
-

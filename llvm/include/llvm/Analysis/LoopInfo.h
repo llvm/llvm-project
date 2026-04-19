@@ -18,7 +18,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/GenericLoopInfoImpl.h"
+#include "llvm/Support/GenericLoopInfo.h"
 #include <optional>
 #include <utility>
 
@@ -288,7 +288,7 @@ public:
   ///   br ExitSucc
   /// ExitSucc:
   /// \endcode
-  BranchInst *getLoopGuardBranch() const;
+  CondBrInst *getLoopGuardBranch() const;
 
   /// Return true iff the loop is
   /// - in simplify rotated form, and

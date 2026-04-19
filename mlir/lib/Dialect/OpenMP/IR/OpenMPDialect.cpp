@@ -18,10 +18,12 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -419,41 +421,112 @@ static void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
 /// linear ::= `linear` `(` linear-list `)`
 /// linear-list := linear-val | linear-val linear-list
 /// linear-val := ssa-id-and-type `=` ssa-id-and-type
+///           | `val` `(` ssa-id-and-type `=` ssa-id-and-type `)`
+///           | `ref` `(` ssa-id-and-type `=` ssa-id-and-type `)`
+///           | `uval` `(` ssa-id-and-type `=` ssa-id-and-type `)`
 static ParseResult parseLinearClause(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearVars,
     SmallVectorImpl<Type> &linearTypes,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearStepVars,
-    SmallVectorImpl<Type> &linearStepTypes) {
-  return parser.parseCommaSeparatedList([&]() {
+    SmallVectorImpl<Type> &linearStepTypes, ArrayAttr &linearModifiers) {
+  SmallVector<Attribute> modifiers;
+  auto result = parser.parseCommaSeparatedList([&]() {
     OpAsmParser::UnresolvedOperand var;
     Type type, stepType;
     OpAsmParser::UnresolvedOperand stepVar;
+
+    std::optional<omp::LinearModifier> linearModifier;
+    if (succeeded(parser.parseOptionalKeyword("val"))) {
+      linearModifier = omp::LinearModifier::val;
+    } else if (succeeded(parser.parseOptionalKeyword("ref"))) {
+      linearModifier = omp::LinearModifier::ref;
+    } else if (succeeded(parser.parseOptionalKeyword("uval"))) {
+      linearModifier = omp::LinearModifier::uval;
+    }
+
+    bool hasLinearModifierParens = linearModifier.has_value();
+    if (hasLinearModifierParens && parser.parseLParen())
+      return failure();
+
     if (parser.parseOperand(var) || parser.parseColonType(type) ||
         parser.parseEqual() || parser.parseOperand(stepVar) ||
         parser.parseColonType(stepType))
+      return failure();
+
+    if (hasLinearModifierParens && parser.parseRParen())
       return failure();
 
     linearVars.push_back(var);
     linearTypes.push_back(type);
     linearStepVars.push_back(stepVar);
     linearStepTypes.push_back(stepType);
+    if (linearModifier) {
+      modifiers.push_back(
+          omp::LinearModifierAttr::get(parser.getContext(), *linearModifier));
+    } else {
+      modifiers.push_back(UnitAttr::get(parser.getContext()));
+    }
     return success();
   });
+  if (failed(result))
+    return failure();
+  linearModifiers = ArrayAttr::get(parser.getContext(), modifiers);
+  return success();
 }
 
 /// Print Linear Clause
 static void printLinearClause(OpAsmPrinter &p, Operation *op,
                               ValueRange linearVars, TypeRange linearTypes,
-                              ValueRange linearStepVars,
-                              TypeRange stepVarTypes) {
+                              ValueRange linearStepVars, TypeRange stepVarTypes,
+                              ArrayAttr linearModifiers) {
   size_t linearVarsSize = linearVars.size();
   for (unsigned i = 0; i < linearVarsSize; ++i) {
-    std::string separator = i == linearVarsSize - 1 ? "" : ", ";
+    if (i != 0)
+      p << ", ";
+    // Print modifier keyword wrapper if present.
+    Attribute modAttr = linearModifiers ? linearModifiers[i] : nullptr;
+    auto mod = modAttr ? dyn_cast<omp::LinearModifierAttr>(modAttr) : nullptr;
+    if (mod) {
+      p << omp::stringifyLinearModifier(mod.getValue()) << "(";
+    }
     p << linearVars[i] << " : " << linearTypes[i];
     p << " = " << linearStepVars[i] << " : " << stepVarTypes[i];
-    p << separator;
+    if (mod)
+      p << ")";
   }
+}
+
+//===----------------------------------------------------------------------===//
+// Verifier for Linear modifier
+//===----------------------------------------------------------------------===//
+
+/// OpenMP 5.2, Section 5.4.6: "A linear-modifier may be specified as ref or
+/// uval only on a declare simd directive."
+/// Also verifies that modifier count matches variable count.
+static LogicalResult
+verifyLinearModifiers(Operation *op, std::optional<ArrayAttr> linearModifiers,
+                      OperandRange linearVars, bool isDeclareSimd = false) {
+  if (!linearModifiers)
+    return success();
+  if (linearModifiers->size() != linearVars.size())
+    return op->emitOpError()
+           << "expected as many linear modifiers as linear variables";
+  if (!isDeclareSimd) {
+    for (Attribute attr : *linearModifiers) {
+      if (!attr)
+        continue;
+      auto modAttr = dyn_cast<omp::LinearModifierAttr>(attr);
+      if (!modAttr)
+        continue;
+      omp::LinearModifier mod = modAttr.getValue();
+      if (mod == omp::LinearModifier::ref || mod == omp::LinearModifier::uval)
+        return op->emitOpError()
+               << "linear modifier '" << omp::stringifyLinearModifier(mod)
+               << "' may only be specified on a declare simd directive";
+    }
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1434,6 +1507,56 @@ static void printUseDeviceAddrUseDevicePtrRegion(OpAsmPrinter &p, Operation *op,
   printBlockArgRegion(p, op, region, args);
 }
 
+template <typename ParsePrefixFn>
+static ParseResult parseSplitIteratedList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &iteratedVars,
+    SmallVectorImpl<Type> &iteratedTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &plainVars,
+    SmallVectorImpl<Type> &plainTypes, ParsePrefixFn &&parsePrefix) {
+
+  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+    if (failed(parsePrefix()))
+      return failure();
+
+    OpAsmParser::UnresolvedOperand v;
+    Type ty;
+    if (parser.parseOperand(v) || parser.parseColonType(ty))
+      return failure();
+
+    if (llvm::isa<mlir::omp::IteratedType>(ty)) {
+      iteratedVars.push_back(v);
+      iteratedTypes.push_back(ty);
+    } else {
+      plainVars.push_back(v);
+      plainTypes.push_back(ty);
+    }
+    return success();
+  });
+}
+
+template <typename PrintPrefixFn>
+static void printSplitIteratedList(OpAsmPrinter &p, ValueRange iteratedVars,
+                                   TypeRange iteratedTypes,
+                                   ValueRange plainVars, TypeRange plainTypes,
+                                   PrintPrefixFn &&printPrefixForPlain,
+                                   PrintPrefixFn &&printPrefixForIterated) {
+
+  bool first = true;
+  auto emit = [&](Value v, Type t, auto &&printPrefix) {
+    if (!first)
+      p << ", ";
+    printPrefix(v, t);
+    p << v << " : " << t;
+    first = false;
+  };
+
+  for (unsigned i = 0; i < iteratedVars.size(); ++i)
+    emit(iteratedVars[i], iteratedTypes[i], printPrefixForIterated);
+  for (unsigned i = 0; i < plainVars.size(); ++i)
+    emit(plainVars[i], plainTypes[i], printPrefixForPlain);
+}
+
 /// Verifies Reduction Clause
 static LogicalResult
 verifyReductionVarList(Operation *op, std::optional<ArrayAttr> reductionSyms,
@@ -1590,50 +1713,77 @@ verifyCopyprivateVarList(Operation *op, OperandRange copyprivateVars,
 /// depend-entry-list ::= depend-entry
 ///                     | depend-entry-list `,` depend-entry
 /// depend-entry ::= depend-kind `->` ssa-id `:` type
-static ParseResult
-parseDependVarList(OpAsmParser &parser,
-                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dependVars,
-                   SmallVectorImpl<Type> &dependTypes, ArrayAttr &dependKinds) {
+///                | depend-kind `->` ssa-id `:` iterated-type
+static ParseResult parseDependVarList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dependVars,
+    SmallVectorImpl<Type> &dependTypes, ArrayAttr &dependKinds,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &iteratedVars,
+    SmallVectorImpl<Type> &iteratedTypes, ArrayAttr &iteratedKinds) {
   SmallVector<ClauseTaskDependAttr> kindsVec;
+  SmallVector<ClauseTaskDependAttr> iterKindsVec;
   if (failed(parser.parseCommaSeparatedList([&]() {
         StringRef keyword;
+        OpAsmParser::UnresolvedOperand operand;
+        Type ty;
         if (parser.parseKeyword(&keyword) || parser.parseArrow() ||
-            parser.parseOperand(dependVars.emplace_back()) ||
-            parser.parseColonType(dependTypes.emplace_back()))
+            parser.parseOperand(operand) || parser.parseColonType(ty))
           return failure();
-        if (std::optional<ClauseTaskDepend> keywordDepend =
-                (symbolizeClauseTaskDepend(keyword)))
-          kindsVec.emplace_back(
-              ClauseTaskDependAttr::get(parser.getContext(), *keywordDepend));
-        else
+        std::optional<ClauseTaskDepend> keywordDepend =
+            symbolizeClauseTaskDepend(keyword);
+        if (!keywordDepend)
           return failure();
+        auto kindAttr =
+            ClauseTaskDependAttr::get(parser.getContext(), *keywordDepend);
+        if (llvm::isa<mlir::omp::IteratedType>(ty)) {
+          iteratedVars.push_back(operand);
+          iteratedTypes.push_back(ty);
+          iterKindsVec.push_back(kindAttr);
+        } else {
+          dependVars.push_back(operand);
+          dependTypes.push_back(ty);
+          kindsVec.push_back(kindAttr);
+        }
         return success();
       })))
     return failure();
   SmallVector<Attribute> kinds(kindsVec.begin(), kindsVec.end());
   dependKinds = ArrayAttr::get(parser.getContext(), kinds);
+  SmallVector<Attribute> iterKinds(iterKindsVec.begin(), iterKindsVec.end());
+  iteratedKinds = ArrayAttr::get(parser.getContext(), iterKinds);
   return success();
 }
 
 /// Print Depend clause
 static void printDependVarList(OpAsmPrinter &p, Operation *op,
                                OperandRange dependVars, TypeRange dependTypes,
-                               std::optional<ArrayAttr> dependKinds) {
-
-  for (unsigned i = 0, e = dependKinds->size(); i < e; ++i) {
-    if (i != 0)
-      p << ", ";
-    p << stringifyClauseTaskDepend(
-             llvm::cast<mlir::omp::ClauseTaskDependAttr>((*dependKinds)[i])
-                 .getValue())
-      << " -> " << dependVars[i] << " : " << dependTypes[i];
-  }
+                               std::optional<ArrayAttr> dependKinds,
+                               OperandRange iteratedVars,
+                               TypeRange iteratedTypes,
+                               std::optional<ArrayAttr> iteratedKinds) {
+  bool first = true;
+  auto printEntries = [&](OperandRange vars, TypeRange types,
+                          std::optional<ArrayAttr> kinds) {
+    for (unsigned i = 0, e = vars.size(); i < e; ++i) {
+      if (!first)
+        p << ", ";
+      p << stringifyClauseTaskDepend(
+               llvm::cast<mlir::omp::ClauseTaskDependAttr>((*kinds)[i])
+                   .getValue())
+        << " -> " << vars[i] << " : " << types[i];
+      first = false;
+    }
+  };
+  printEntries(dependVars, dependTypes, dependKinds);
+  printEntries(iteratedVars, iteratedTypes, iteratedKinds);
 }
 
 /// Verifies Depend clause
 static LogicalResult verifyDependVarList(Operation *op,
                                          std::optional<ArrayAttr> dependKinds,
-                                         OperandRange dependVars) {
+                                         OperandRange dependVars,
+                                         std::optional<ArrayAttr> iteratedKinds,
+                                         OperandRange iteratedVars) {
   if (!dependVars.empty()) {
     if (!dependKinds || dependKinds->size() != dependVars.size())
       return op->emitOpError() << "expected as many depend values"
@@ -1641,7 +1791,15 @@ static LogicalResult verifyDependVarList(Operation *op,
   } else {
     if (dependKinds && !dependKinds->empty())
       return op->emitOpError() << "unexpected depend values";
-    return success();
+  }
+
+  if (!iteratedVars.empty()) {
+    if (!iteratedKinds || iteratedKinds->size() != iteratedVars.size())
+      return op->emitOpError() << "expected as many depend iterated values"
+                                  " as depend iterated variables";
+  } else {
+    if (iteratedKinds && !iteratedKinds->empty())
+      return op->emitOpError() << "unexpected depend iterated values";
   }
 
   return success();
@@ -2144,15 +2302,17 @@ void TargetEnterDataOp::build(
     OpBuilder &builder, OperationState &state,
     const TargetEnterExitUpdateDataOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TargetEnterDataOp::build(builder, state,
-                           makeArrayAttr(ctx, clauses.dependKinds),
-                           clauses.dependVars, clauses.device, clauses.ifExpr,
-                           clauses.mapVars, clauses.nowait);
+  TargetEnterDataOp::build(
+      builder, state, makeArrayAttr(ctx, clauses.dependKinds),
+      clauses.dependVars, makeArrayAttr(ctx, clauses.dependIteratedKinds),
+      clauses.dependIterated, clauses.device, clauses.ifExpr, clauses.mapVars,
+      clauses.nowait);
 }
 
 LogicalResult TargetEnterDataOp::verify() {
   LogicalResult verifyDependVars =
-      verifyDependVarList(*this, getDependKinds(), getDependVars());
+      verifyDependVarList(*this, getDependKinds(), getDependVars(),
+                          getDependIteratedKinds(), getDependIterated());
   return failed(verifyDependVars) ? verifyDependVars
                                   : verifyMapClause(*this, getMapVars());
 }
@@ -2164,15 +2324,17 @@ LogicalResult TargetEnterDataOp::verify() {
 void TargetExitDataOp::build(OpBuilder &builder, OperationState &state,
                              const TargetEnterExitUpdateDataOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TargetExitDataOp::build(builder, state,
-                          makeArrayAttr(ctx, clauses.dependKinds),
-                          clauses.dependVars, clauses.device, clauses.ifExpr,
-                          clauses.mapVars, clauses.nowait);
+  TargetExitDataOp::build(
+      builder, state, makeArrayAttr(ctx, clauses.dependKinds),
+      clauses.dependVars, makeArrayAttr(ctx, clauses.dependIteratedKinds),
+      clauses.dependIterated, clauses.device, clauses.ifExpr, clauses.mapVars,
+      clauses.nowait);
 }
 
 LogicalResult TargetExitDataOp::verify() {
   LogicalResult verifyDependVars =
-      verifyDependVarList(*this, getDependKinds(), getDependVars());
+      verifyDependVarList(*this, getDependKinds(), getDependVars(),
+                          getDependIteratedKinds(), getDependIterated());
   return failed(verifyDependVars) ? verifyDependVars
                                   : verifyMapClause(*this, getMapVars());
 }
@@ -2185,13 +2347,16 @@ void TargetUpdateOp::build(OpBuilder &builder, OperationState &state,
                            const TargetEnterExitUpdateDataOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   TargetUpdateOp::build(builder, state, makeArrayAttr(ctx, clauses.dependKinds),
-                        clauses.dependVars, clauses.device, clauses.ifExpr,
+                        clauses.dependVars,
+                        makeArrayAttr(ctx, clauses.dependIteratedKinds),
+                        clauses.dependIterated, clauses.device, clauses.ifExpr,
                         clauses.mapVars, clauses.nowait);
 }
 
 LogicalResult TargetUpdateOp::verify() {
   LogicalResult verifyDependVars =
-      verifyDependVarList(*this, getDependKinds(), getDependVars());
+      verifyDependVarList(*this, getDependKinds(), getDependVars(),
+                          getDependIteratedKinds(), getDependIterated());
   return failed(verifyDependVars) ? verifyDependVars
                                   : verifyMapClause(*this, getMapVars());
 }
@@ -2205,20 +2370,24 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: allocateVars, allocatorVars, inReductionVars,
   // inReductionByref, inReductionSyms.
-  TargetOp::build(builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
-                  clauses.bare, makeArrayAttr(ctx, clauses.dependKinds),
-                  clauses.dependVars, clauses.device, clauses.hasDeviceAddrVars,
-                  clauses.hostEvalVars, clauses.ifExpr,
-                  /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
-                  /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars,
-                  clauses.mapVars, clauses.nowait, clauses.privateVars,
-                  makeArrayAttr(ctx, clauses.privateSyms),
-                  clauses.privateNeedsBarrier, clauses.threadLimitVars,
-                  /*private_maps=*/nullptr);
+  TargetOp::build(
+      builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{}, clauses.bare,
+      makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+      makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
+      clauses.device, clauses.hasDeviceAddrVars, clauses.hostEvalVars,
+      clauses.ifExpr,
+      /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
+      /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars, clauses.mapVars,
+      clauses.nowait, clauses.privateVars,
+      makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
+      clauses.threadLimitVars,
+      /*private_maps=*/nullptr);
 }
 
 LogicalResult TargetOp::verify() {
-  if (failed(verifyDependVarList(*this, getDependKinds(), getDependVars())))
+  if (failed(verifyDependVarList(*this, getDependKinds(), getDependVars(),
+                                 getDependIteratedKinds(),
+                                 getDependIterated())))
     return failure();
 
   if (failed(verifyMapInfoDefinedArgs(*this, "has_device_addr",
@@ -2846,7 +3015,7 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
                      ArrayRef<NamedAttribute> attributes) {
   build(builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
         /*linear_vars=*/ValueRange(), /*linear_step_vars=*/ValueRange(),
-        /*linear_var_types*/ nullptr,
+        /*linear_var_types*/ nullptr, /*linear_modifiers=*/nullptr,
         /*nowait=*/false, /*order=*/nullptr, /*order_mod=*/nullptr,
         /*ordered=*/nullptr, /*private_vars=*/{}, /*private_syms=*/nullptr,
         /*private_needs_barrier=*/false,
@@ -2865,16 +3034,19 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
   WsloopOp::build(
       builder, state,
       /*allocate_vars=*/{}, /*allocator_vars=*/{}, clauses.linearVars,
-      clauses.linearStepVars, clauses.linearVarTypes, clauses.nowait,
-      clauses.order, clauses.orderMod, clauses.ordered, clauses.privateVars,
-      makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
-      clauses.reductionMod, clauses.reductionVars,
+      clauses.linearStepVars, clauses.linearVarTypes, clauses.linearModifiers,
+      clauses.nowait, clauses.order, clauses.orderMod, clauses.ordered,
+      clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
+      clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.scheduleKind,
       clauses.scheduleChunk, clauses.scheduleMod, clauses.scheduleSimd);
 }
 
 LogicalResult WsloopOp::verify() {
+  if (failed(
+          verifyLinearModifiers(*this, getLinearModifiers(), getLinearVars())))
+    return failure();
   if (getLinearVars().size() &&
       getLinearVarTypes().value().size() != getLinearVars().size())
     return emitError() << "Ill-formed type attributes for linear variables";
@@ -2914,16 +3086,17 @@ LogicalResult WsloopOp::verifyRegions() {
 void SimdOp::build(OpBuilder &builder, OperationState &state,
                    const SimdOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  SimdOp::build(
-      builder, state, clauses.alignedVars,
-      makeArrayAttr(ctx, clauses.alignments), clauses.ifExpr,
-      clauses.linearVars, clauses.linearStepVars, clauses.linearVarTypes,
-      clauses.nontemporalVars, clauses.order, clauses.orderMod,
-      clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
-      clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.safelen,
-      clauses.simdlen);
+  SimdOp::build(builder, state, clauses.alignedVars,
+                makeArrayAttr(ctx, clauses.alignments), clauses.ifExpr,
+                clauses.linearVars, clauses.linearStepVars,
+                clauses.linearVarTypes, clauses.linearModifiers,
+                clauses.nontemporalVars, clauses.order, clauses.orderMod,
+                clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
+                clauses.privateNeedsBarrier, clauses.reductionMod,
+                clauses.reductionVars,
+                makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+                makeArrayAttr(ctx, clauses.reductionSyms), clauses.safelen,
+                clauses.simdlen);
 }
 
 LogicalResult SimdOp::verify() {
@@ -2937,6 +3110,10 @@ LogicalResult SimdOp::verify() {
     return failure();
 
   if (verifyNontemporalClause(*this, getNontemporalVars()).failed())
+    return failure();
+
+  if (failed(
+          verifyLinearModifiers(*this, getLinearModifiers(), getLinearVars())))
     return failure();
 
   bool isCompositeChildLeaf =
@@ -3140,21 +3317,23 @@ LogicalResult DeclareReductionOp::verifyRegions() {
 void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskOp::build(builder, state, clauses.affinityVars, clauses.allocateVars,
-                clauses.allocatorVars, makeArrayAttr(ctx, clauses.dependKinds),
-                clauses.dependVars, clauses.final, clauses.ifExpr,
-                clauses.inReductionVars,
-                makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
-                makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
-                clauses.priority, /*private_vars=*/clauses.privateVars,
-                /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
-                clauses.privateNeedsBarrier, clauses.untied,
-                clauses.eventHandle);
+  TaskOp::build(
+      builder, state, clauses.iterated, clauses.affinityVars,
+      clauses.allocateVars, clauses.allocatorVars,
+      makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+      makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
+      clauses.final, clauses.ifExpr, clauses.inReductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
+      makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
+      clauses.priority, /*private_vars=*/clauses.privateVars,
+      /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
+      clauses.privateNeedsBarrier, clauses.untied, clauses.eventHandle);
 }
 
 LogicalResult TaskOp::verify() {
   LogicalResult verifyDependVars =
-      verifyDependVarList(*this, getDependKinds(), getDependVars());
+      verifyDependVarList(*this, getDependKinds(), getDependVars(),
+                          getDependIteratedKinds(), getDependIterated());
   return failed(verifyDependVars)
              ? verifyDependVars
              : verifyReductionVarList(*this, getInReductionSyms(),
@@ -3182,13 +3361,13 @@ LogicalResult TaskgroupOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// TaskloopOp
+// TaskloopContextOp
 //===----------------------------------------------------------------------===//
 
-void TaskloopOp::build(OpBuilder &builder, OperationState &state,
-                       const TaskloopOperands &clauses) {
+void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
+                              const TaskloopContextOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskloopOp::build(
+  TaskloopContextOp::build(
       builder, state, clauses.allocateVars, clauses.allocatorVars,
       clauses.final, clauses.grainsizeMod, clauses.grainsize, clauses.ifExpr,
       clauses.inReductionVars,
@@ -3202,7 +3381,14 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
 }
 
-LogicalResult TaskloopOp::verify() {
+TaskloopWrapperOp TaskloopContextOp::getLoopOp() {
+  return cast<TaskloopWrapperOp>(
+      *llvm::find_if(getRegion().front(), [](mlir::Operation &op) {
+        return isa<TaskloopWrapperOp>(op);
+      }));
+}
+
+LogicalResult TaskloopContextOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
@@ -3231,7 +3417,78 @@ LogicalResult TaskloopOp::verify() {
   return success();
 }
 
-LogicalResult TaskloopOp::verifyRegions() {
+LogicalResult TaskloopContextOp::verifyRegions() {
+  Region &region = getRegion();
+  if (region.empty())
+    return emitOpError() << "expected non-empty region";
+
+  auto count = llvm::count_if(region.front(), [](mlir::Operation &op) {
+    return isa<TaskloopWrapperOp>(op);
+  });
+  if (count != 1)
+    return emitOpError()
+           << "expected exactly 1 TaskloopWrapperOp directly nested in "
+              "the region, but "
+           << count << " were found";
+  TaskloopWrapperOp loopWrapperOp = getLoopOp();
+
+  auto loopNestOp = dyn_cast<LoopNestOp>(loopWrapperOp.getWrappedLoop());
+  // This will fail the verifier for TaskloopWrapperOp and print an error
+  // message there.
+  if (!loopNestOp)
+    return failure();
+
+  std::function<bool(Value)> isValidBoundValue = [&](Value value) -> bool {
+    Region *valueRegion = value.getParentRegion();
+    // A loop bound value defined outside of the taskloop context region is
+    // valid. A region is considered an ancestor of itself.
+    if (!region.isAncestor(valueRegion))
+      return true;
+
+    Operation *defOp = value.getDefiningOp();
+    if (!defOp || defOp->getNumRegions() != 0 || !isPure(defOp))
+      return false;
+
+    return llvm::all_of(defOp->getOperands(), isValidBoundValue);
+  };
+  auto hasUnsupportedTaskloopLocalBound = [&](OperandRange range) -> bool {
+    return llvm::any_of(range,
+                        [&](Value value) { return !isValidBoundValue(value); });
+  };
+
+  if (hasUnsupportedTaskloopLocalBound(loopNestOp.getLoopLowerBounds()) ||
+      hasUnsupportedTaskloopLocalBound(loopNestOp.getLoopUpperBounds()) ||
+      hasUnsupportedTaskloopLocalBound(loopNestOp.getLoopSteps())) {
+    return emitOpError()
+           << "expects loop bounds and steps to be defined outside of the "
+              "taskloop.context region or by pure, regionless operations "
+              "that do not depend on block arguments";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TaskloopWrapperOp
+//===----------------------------------------------------------------------===//
+
+void TaskloopWrapperOp::build(OpBuilder &builder, OperationState &state,
+                              const TaskloopWrapperOperands &clauses) {
+  TaskloopWrapperOp::build(builder, state);
+}
+
+TaskloopContextOp TaskloopWrapperOp::getTaskloopContext() {
+  return dyn_cast<TaskloopContextOp>(getOperation()->getParentOp());
+}
+
+LogicalResult TaskloopWrapperOp::verify() {
+  TaskloopContextOp context = getTaskloopContext();
+  if (!context)
+    return emitOpError() << "expected to be nested in a taskloop context op";
+  return success();
+}
+
+LogicalResult TaskloopWrapperOp::verifyRegions() {
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
       return emitError()
@@ -3752,41 +4009,46 @@ static ParseResult parseLoopTransformClis(
   return success();
 }
 
-LogicalResult TileOp::verify() {
-  if (getApplyees().empty())
-    return emitOpError() << "must apply to at least one loop";
-
-  if (getSizes().size() != getApplyees().size())
-    return emitOpError() << "there must be one tile size for each applyee";
-
-  if (!getGeneratees().empty() &&
-      2 * getSizes().size() != getGeneratees().size())
-    return emitOpError()
-           << "expecting two times the number of generatees than applyees";
-
-  DenseSet<Value> parentIVs;
-
-  Value parent = getApplyees().front();
-  for (auto &&applyee : llvm::drop_begin(getApplyees())) {
-    auto [parentCreate, parentGen, parentCons] = decodeCli(parent);
+/// Check properties of the loop nest consisting of the transformation's
+/// applyees:
+/// 1. They are nested inside each other
+/// 2. They are perfectly nested
+///    (no code with side-effects in-between the loops)
+/// 3. They are rectangular
+///    (loop bounds are invariant in respect to the outer loops)
+///
+/// TODO: Generalize for LoopTransformationInterface.
+static LogicalResult checkApplyeesNesting(TileOp op) {
+  // Collect the loops from the nest
+  bool isOnlyCanonLoops = true;
+  SmallVector<CanonicalLoopOp> canonLoops;
+  for (Value applyee : op.getApplyees()) {
     auto [create, gen, cons] = decodeCli(applyee);
 
-    if (!parentGen)
-      return emitOpError() << "applyee CLI has no generator";
+    if (!gen)
+      return op.emitOpError() << "applyee CLI has no generator";
 
-    auto parentLoop = dyn_cast_or_null<CanonicalLoopOp>(parentGen->getOwner());
-    if (!parentGen)
-      return emitOpError()
-             << "currently only supports omp.canonical_loop as applyee";
+    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    canonLoops.push_back(loop);
+    if (!loop)
+      isOnlyCanonLoops = false;
+  }
+
+  // FIXME: We currently can only verify non-rectangularity and perfect nest of
+  // omp.canonical_loop.
+  if (!isOnlyCanonLoops)
+    return success();
+
+  DenseSet<Value> parentIVs;
+  for (auto i : llvm::seq<int>(1, canonLoops.size())) {
+    auto parentLoop = canonLoops[i - 1];
+    auto loop = canonLoops[i];
+
+    if (parentLoop.getOperation() != loop.getOperation()->getParentOp())
+      return op.emitOpError()
+             << "tiled loop nest must be nested within each other";
 
     parentIVs.insert(parentLoop.getInductionVar());
-
-    if (!gen)
-      return emitOpError() << "applyee CLI has no generator";
-    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
-    if (!loop)
-      return emitOpError()
-             << "currently only supports omp.canonical_loop as applyee";
 
     // Canonical loop must be perfectly nested, i.e. the body of the parent must
     // only contain the omp.canonical_loop of the nested loops, and
@@ -3812,12 +4074,10 @@ LogicalResult TileOp::verify() {
       return true;
     }();
     if (!isPerfectlyNested)
-      return emitOpError() << "tiled loop nest must be perfectly nested";
+      return op.emitOpError() << "tiled loop nest must be perfectly nested";
 
     if (parentIVs.contains(loop.getTripCount()))
-      return emitOpError() << "tiled loop nest must be rectangular";
-
-    parent = applyee;
+      return op.emitOpError() << "tiled loop nest must be rectangular";
   }
 
   // TODO: The tile sizes must be computed before the loop, but checking this
@@ -3832,6 +4092,21 @@ LogicalResult TileOp::verify() {
   //      omp.tile <- (%canonloop) sizes(%ts : i32)
 
   return success();
+}
+
+LogicalResult TileOp::verify() {
+  if (getApplyees().empty())
+    return emitOpError() << "must apply to at least one loop";
+
+  if (getSizes().size() != getApplyees().size())
+    return emitOpError() << "there must be one tile size for each applyee";
+
+  if (!getGeneratees().empty() &&
+      2 * getSizes().size() != getGeneratees().size())
+    return emitOpError()
+           << "expecting two times the number of generatees than applyees";
+
+  return checkApplyeesNesting(*this);
 }
 
 std::pair<unsigned, unsigned> TileOp ::getApplyeesODSOperandIndexAndLength() {
@@ -3994,7 +4269,8 @@ void TaskwaitOp::build(OpBuilder &builder, OperationState &state,
                        const TaskwaitOperands &clauses) {
   // TODO Store clauses in op: dependKinds, dependVars, nowait.
   TaskwaitOp::build(builder, state, /*depend_kinds=*/nullptr,
-                    /*depend_vars=*/{}, /*nowait=*/nullptr);
+                    /*depend_vars=*/{}, /*depend_iterated_kinds=*/nullptr,
+                    /*depend_iterated=*/{}, /*nowait=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4174,7 +4450,7 @@ LogicalResult CancelOp::verify() {
   }
   if ((cct == ClauseCancellationConstructType::Taskgroup) &&
       (!mlir::isa<omp::TaskOp>(structuralParent) &&
-       !mlir::isa<omp::TaskloopOp>(structuralParent->getParentOp()))) {
+       !mlir::isa<omp::TaskloopWrapperOp>(structuralParent->getParentOp()))) {
     return emitOpError() << "cancel taskgroup must appear "
                          << "inside a task region";
   }
@@ -4216,7 +4492,7 @@ LogicalResult CancellationPointOp::verify() {
   }
   if ((cct == ClauseCancellationConstructType::Taskgroup) &&
       (!mlir::isa<omp::TaskOp>(structuralParent) &&
-       !mlir::isa<omp::TaskloopOp>(structuralParent->getParentOp()))) {
+       !mlir::isa<omp::TaskloopWrapperOp>(structuralParent->getParentOp()))) {
     return emitOpError() << "cancellation point taskgroup must appear "
                          << "inside a task region";
   }
@@ -4559,6 +4835,10 @@ LogicalResult DeclareSimdOp::verify() {
   if (getInbranch() && getNotinbranch())
     return emitOpError("cannot have both 'inbranch' and 'notinbranch'");
 
+  if (failed(verifyLinearModifiers(*this, getLinearModifiers(), getLinearVars(),
+                                   /*isDeclareSimd=*/true)))
+    return failure();
+
   return verifyAlignedClause(*this, getAlignments(), getAlignedVars());
 }
 
@@ -4568,8 +4848,9 @@ void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
   DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
                        makeArrayAttr(ctx, clauses.alignments), clauses.inbranch,
                        clauses.linearVars, clauses.linearStepVars,
-                       clauses.linearVarTypes, clauses.notinbranch,
-                       clauses.simdlen, clauses.uniformVars);
+                       clauses.linearVarTypes, clauses.linearModifiers,
+                       clauses.notinbranch, clauses.simdlen,
+                       clauses.uniformVars);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4607,24 +4888,26 @@ static void printUniformClause(OpAsmPrinter &p, Operation *op,
 
 static ParseResult parseAffinityClause(
     OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &iterated,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &affinityVars,
-    SmallVectorImpl<Type> &affinityTypes) {
-  return parser.parseCommaSeparatedList([&]() -> ParseResult {
-    if (parser.parseOperand(affinityVars.emplace_back()) ||
-        parser.parseColonType(affinityTypes.emplace_back()))
-      return failure();
-    return success();
-  });
+    SmallVectorImpl<Type> &iteratedTypes,
+    SmallVectorImpl<Type> &affinityVarTypes) {
+  if (failed(parseSplitIteratedList(
+          parser, iterated, iteratedTypes, affinityVars, affinityVarTypes,
+          /*parsePrefix=*/[&]() -> ParseResult { return success(); })))
+    return failure();
+  return success();
 }
 
 static void printAffinityClause(OpAsmPrinter &p, Operation *op,
-                                ValueRange affinityVars,
-                                TypeRange affinityTypes) {
-  for (unsigned i = 0; i < affinityVars.size(); ++i) {
-    if (i)
-      p << ", ";
-    p << affinityVars[i] << " : " << affinityTypes[i];
-  }
+                                ValueRange iterated, ValueRange affinityVars,
+                                TypeRange iteratedTypes,
+                                TypeRange affinityVarTypes) {
+  auto nop = [&](Value, Type) {};
+  printSplitIteratedList(p, iterated, iteratedTypes, affinityVars,
+                         affinityVarTypes,
+                         /*plain prefix*/ nop,
+                         /*iterated prefix*/ nop);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4725,6 +5008,30 @@ LogicalResult IteratorOp::verify() {
   auto iteratedTy = llvm::dyn_cast<omp::IteratedType>(getIterated().getType());
   if (!iteratedTy)
     return emitOpError() << "result must be omp.iterated<entry_ty>";
+
+  for (auto [lb, ub, step] : llvm::zip_equal(
+           getLoopLowerBounds(), getLoopUpperBounds(), getLoopSteps())) {
+    if (matchPattern(step, m_Zero()))
+      return emitOpError() << "loop step must not be zero";
+
+    IntegerAttr lbAttr;
+    IntegerAttr ubAttr;
+    IntegerAttr stepAttr;
+    if (!matchPattern(lb, m_Constant(&lbAttr)) ||
+        !matchPattern(ub, m_Constant(&ubAttr)) ||
+        !matchPattern(step, m_Constant(&stepAttr)))
+      continue;
+
+    const APInt &lbVal = lbAttr.getValue();
+    const APInt &ubVal = ubAttr.getValue();
+    const APInt &stepVal = stepAttr.getValue();
+    if (stepVal.isStrictlyPositive() && lbVal.sgt(ubVal))
+      return emitOpError() << "positive loop step requires lower bound to be "
+                              "less than or equal to upper bound";
+    if (stepVal.isNegative() && lbVal.slt(ubVal))
+      return emitOpError() << "negative loop step requires lower bound to be "
+                              "greater than or equal to upper bound";
+  }
 
   Block &b = getRegion().front();
   auto yield = llvm::dyn_cast<omp::YieldOp>(b.getTerminator());

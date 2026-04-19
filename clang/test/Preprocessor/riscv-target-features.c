@@ -180,6 +180,7 @@
 
 // Experimental extensions
 
+// CHECK-NOT: __riscv_p {{.*$}}
 // CHECK-NOT: __riscv_zicfilp {{.*$}}
 // CHECK-NOT: __riscv_zicfiss {{.*$}}
 // CHECK-NOT: __riscv_zvbc32e {{.*$}}
@@ -1480,6 +1481,17 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNG %s
 // CHECK-COMBINE-INTO-ZVKNG: __riscv_zvkn 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKNG: __riscv_zvkng 1000000{{$}}
+// CHECK-COMBINE-INTO-ZVKNG: __riscv_zvknha 1000000{{$}}
+// CHECK-COMBINE-INTO-ZVKNG: __riscv_zvknhb 1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32iv_zvknhb1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNHB %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64iv_zvknhb1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNHB %s
+// CHECK-COMBINE-INTO-ZVKNHB: __riscv_zvknha 1000000{{$}}
+// CHECK-COMBINE-INTO-ZVKNHB: __riscv_zvknhb 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_zve32x_zvknha1p0 -E -dM %s \
@@ -1572,6 +1584,15 @@
 // CHECK-ZVKT-EXT: __riscv_zvkt 1000000{{$}}
 
 // Experimental extensions
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_p0p21 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-P-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_p0p21 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-P-EXT %s
+// CHECK-P-EXT: __riscv_p 21000{{$}}
+//
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izfbfmin1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZFBFMIN-EXT %s
@@ -1651,6 +1672,14 @@
 // RUN:   -march=rv64i_zve32x_zvdot4a8i0p1 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVDOT4A8I-EXT %s
 // CHECK-ZVDOT4A8I-EXT: __riscv_zvdot4a8i 1000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_zve32x_zvzip0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVZVIP-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_zve32x_zvzip0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVZVIP-EXT %s
+// CHECK-ZVZVIP-EXT: __riscv_zvzip 1000{{$}}
 
 // RUN: %clang -target riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izicfiss1p0 -E -dM %s \

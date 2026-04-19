@@ -80,6 +80,8 @@ jobs:
 
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+          persist-credentials: false
 
     - name: Install Dependencies
       shell: bash
@@ -248,6 +250,7 @@ jobs:
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       with:
+        persist-credentials: false
         ref: ${{ needs.prepare.outputs.ref }}
 
     - name: Set Build Prefix
@@ -312,7 +315,7 @@ jobs:
           fi
           echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
-    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+    - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       id: artifact-upload
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
@@ -347,6 +350,7 @@ jobs:
       - name: Checkout Release Scripts
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/workflows/upload-release-artifact
             llvm/utils/release/github-upload-release.py

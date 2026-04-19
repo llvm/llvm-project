@@ -49,11 +49,11 @@ llvm.func @use_private_var1(!llvm.ptr) -> ()
 // CHECK: %[[DESC_ALLOC0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1
 // CHECK: %[[DESC_ALLOC1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1
 // CHECK: call void @__omp_offloading_[[OFFLOADED_FUNCTION:.*]](ptr {{[^,]+}},
-// CHECK-SAME: ptr %[[DESC_ALLOC0]], ptr %[[DESC_ALLOC1]])
+// CHECK-SAME: ptr %[[DESC_ALLOC0]], ptr %[[DESC_ALLOC1]], ptr null)
 
 // CHECK: define internal void @__omp_offloading_[[OFFLOADED_FUNCTION]]
 // CHECK-SAME: (ptr {{[^,]+}}, ptr %[[DESCRIPTOR_ARG0:[^,]+]],
-// CHECK-SAME: ptr %[[DESCRIPTOR_ARG1:.*]]) {
+// CHECK-SAME: ptr %[[DESCRIPTOR_ARG1:[^,]+]], ptr %{{.*}}) {
 
 // `var0` privatrizer `alloc`
 // CHECK: %[[PRIV_DESC0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }

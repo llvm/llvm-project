@@ -18,23 +18,21 @@ namespace clang::tidy::modernize {
 
 /// Find if the passed type is the actual "char" type,
 /// not applicable to explicit "signed char" or "unsigned char" types.
-static bool isActualCharType(const clang::QualType &Ty) {
+static bool isActualCharType(const QualType &Ty) {
   using namespace clang;
   const Type *DesugaredType = Ty->getUnqualifiedDesugaredType();
-  if (const auto *BT = llvm::dyn_cast<BuiltinType>(DesugaredType))
+  if (const auto *BT = dyn_cast<BuiltinType>(DesugaredType))
     return (BT->getKind() == BuiltinType::Char_U ||
             BT->getKind() == BuiltinType::Char_S);
   return false;
 }
 
 namespace {
-AST_MATCHER(clang::QualType, isActualChar) {
-  return clang::tidy::modernize::isActualCharType(Node);
-}
+AST_MATCHER(QualType, isActualChar) { return isActualCharType(Node); }
 } // namespace
 
-static BindableMatcher<clang::Stmt>
-intCastExpression(bool IsSigned, StringRef CastBindName = {}) {
+static BindableMatcher<Stmt> intCastExpression(bool IsSigned,
+                                               StringRef CastBindName = {}) {
   // std::cmp_{} functions trigger a compile-time error if either LHS or RHS
   // is a non-integer type, char, enum or bool
   // (unsigned char/ signed char are Ok and can be used).
@@ -134,13 +132,13 @@ void UseIntegerSignComparisonCheck::check(
   SourceRange R2(BinaryOp->getOperatorLoc());
   SourceRange R3(Lexer::getLocForEndOfToken(
       RHS->getEndLoc(), 0, *Result.SourceManager, getLangOpts()));
-  if (const auto *LHSCast = llvm::dyn_cast<ExplicitCastExpr>(LHS)) {
+  if (const auto *LHSCast = dyn_cast<ExplicitCastExpr>(LHS)) {
     SubExprLHS = LHSCast->getSubExpr();
     R1.setEnd(SubExprLHS->getBeginLoc().getLocWithOffset(-1));
     R2.setBegin(Lexer::getLocForEndOfToken(
         SubExprLHS->getEndLoc(), 0, *Result.SourceManager, getLangOpts()));
   }
-  if (const auto *RHSCast = llvm::dyn_cast<ExplicitCastExpr>(RHS)) {
+  if (const auto *RHSCast = dyn_cast<ExplicitCastExpr>(RHS)) {
     SubExprRHS = RHSCast->getSubExpr();
     R2.setEnd(SubExprRHS->getBeginLoc().getLocWithOffset(-1));
     R3.setBegin(Lexer::getLocForEndOfToken(

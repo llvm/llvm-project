@@ -142,6 +142,8 @@ tools = [
         command=FindTool("clang-extdef-mapping"),
         unresolved="ignore",
     ),
+    "clang-ssaf-linker",
+    "clang-ssaf-format",
 ]
 
 if config.clang_examples:
@@ -265,6 +267,10 @@ if config.clang_staticanalyzer:
 # ClangIR support
 if config.clang_enable_cir:
     config.available_features.add("cir-support")
+
+# SPIRV-Tools validator availability (e.g. built with -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+if lit.util.which("spirv-val", config.llvm_tools_dir):
+    config.available_features.add("spirv-val")
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
@@ -426,6 +432,25 @@ if config.have_llvm_driver:
 
 if config.clang_enable_cir:
     config.available_features.add("cir-enabled")
+
+if config.use_xcselect:
+    config.available_features.add("xcselect")
+
+# Tests that rely on chmod to restrict file permissions (e.g. write-permission
+# checks) are unreliable when run as root, since root bypasses file permissions.
+def user_is_root():
+    # os.getuid() is not available on all platforms
+    try:
+        if os.getuid() == 0:
+            return True
+    except:
+        pass
+
+    return False
+
+
+if not user_is_root():
+    config.available_features.add("non-root-user")
 
 # Some tests perform deep recursion, which requires a larger pthread stack size
 # than the relatively low default of 192 KiB for 64-bit processes on AIX. The

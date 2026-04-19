@@ -34,7 +34,8 @@ class TensorDescType;
 namespace xegpu {
 
 LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
-                               LayoutKind layoutKind, bool printOnly = false);
+                               LayoutKind layoutKind, unsigned indexBitWidth,
+                               bool printOnly = false);
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 
@@ -81,6 +82,10 @@ DistributeLayoutAttr
 inferMultiReductionSourceLayout(DistributeLayoutAttr resLayout,
                                 SmallVector<int64_t> reduceDims);
 
+/// Infers the source layout attribute for a reduction operation given the
+/// result layout attribute and reduced dims.
+DistributeLayoutAttr inferReductionSourceLayout(DistributeLayoutAttr resLayout);
+
 /// Infers the source layout attribute for a transpose operation given the
 /// result layout attribute and permutation.
 DistributeLayoutAttr inferTransposeSourceLayout(DistributeLayoutAttr resLayout,
@@ -107,8 +112,14 @@ inferInsertStridedSliceSourceLayout(DistributeLayoutAttr resLayout,
                                     ArrayRef<int64_t> resShape,
                                     ArrayRef<int64_t> srcShape);
 
-/// Sets up layout for reduction operations by creating a SliceAttr for the
-/// result.
+/// Infers the layout attribute for mask and offset operand for Chunked load
+/// and store, given the anchor layout attribute for the value being load/store.
+DistributeLayoutAttr
+inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
+                                  int chunkSize);
+
+/// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
+/// the result.
 ///
 /// This function first attempts to construct a source layout that, when
 /// sliced along reduction dimensions, produces a result layout compatible
@@ -119,7 +130,13 @@ SliceAttr setupMultiReductionResultLayout(LayoutKind layoutKind,
                                           VectorType srcVectorTy,
                                           DistributeLayoutAttr consumerLayout,
                                           SmallVector<int64_t> reductionDims,
-                                          const uArch::uArch *uArch);
+                                          int numSg, const uArch::uArch *uArch);
+
+/// Sets up layout for Reduction operations by creating a SliceAttr for the
+/// result.
+SliceAttr setupReductionResultLayout(LayoutKind layoutKind,
+                                     VectorType srcVectorTy,
+                                     const uArch::uArch *uArch);
 
 /// Setup the result layout attribute for a bitcast operation based on element
 /// type bitwidths. This ensures the source layout can always be derived from
@@ -169,8 +186,8 @@ DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
 std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
                          DistributeLayoutAttr>>
 setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
-                VectorType cdTy, DistributeLayoutAttr consumerLayout,
-                const uArch::uArch *uArch, int numSg);
+                VectorType cdTy, DistributeLayoutAttr consumerLayout, int numSg,
+                const uArch::uArch *uArch);
 
 /// Gets the expected layout for a given consumer operand. This will check if
 /// the owning operation of the consumer operand is one of the special layout

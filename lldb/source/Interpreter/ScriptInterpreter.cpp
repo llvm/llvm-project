@@ -214,6 +214,31 @@ ScriptInterpreter::AcquireInterpreterLock() {
   return std::make_unique<ScriptInterpreterLocker>();
 }
 
+ScriptInterpreter::SanitizedScriptingModuleName
+ScriptInterpreter::GetSanitizedScriptingModuleName(llvm::StringRef name) {
+  std::string sanitized_name(name);
+  std::string conflicting_keyword;
+
+  // FIXME: for Python, don't allow certain characters in imported module
+  // filenames. Theoretically, different scripting languages may have
+  // different sets of forbidden tokens in filenames, and that should
+  // be dealt with by each ScriptInterpreter. For now, just replace dots
+  // with underscores. In order to support anything other than Python
+  // this will need to be reworked.
+  llvm::replace(sanitized_name, '.', '_');
+  llvm::replace(sanitized_name, ' ', '_');
+  llvm::replace(sanitized_name, '-', '_');
+  llvm::replace(sanitized_name, '+', 'x');
+
+  if (IsReservedWord(sanitized_name.c_str())) {
+    conflicting_keyword = sanitized_name;
+    sanitized_name.insert(sanitized_name.begin(), '_');
+  }
+
+  return ScriptInterpreter::SanitizedScriptingModuleName(
+      name.str(), std::move(sanitized_name), std::move(conflicting_keyword));
+}
+
 static void ReadThreadBytesReceived(void *baton, const void *src,
                                     size_t src_len) {
   if (src && src_len) {

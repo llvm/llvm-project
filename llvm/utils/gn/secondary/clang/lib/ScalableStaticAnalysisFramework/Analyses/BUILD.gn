@@ -1,0 +1,18 @@
+static_library("Analyses") {
+  output_name = "clangScalableStaticAnalysisFrameworkAnalyses"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Analysis",
+    "//clang/lib/Basic",
+    "//clang/lib/ScalableStaticAnalysisFramework/Core",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "CallGraph/CallGraphExtractor.cpp",
+    "CallGraph/CallGraphJSONFormat.cpp",
+    "EntityPointerLevel/EntityPointerLevel.cpp",
+    "UnsafeBufferUsage/UnsafeBufferUsage.cpp",
+    "UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp",
+  ]
+}

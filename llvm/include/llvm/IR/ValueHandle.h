@@ -46,6 +46,15 @@ protected:
       AddToExistingUseList(RHS.getPrevPtr());
   }
 
+  ValueHandleBase(HandleBaseKind Kind, ValueHandleBase &&RHS)
+      : PrevPair(nullptr, Kind), Val(RHS.getValPtr()) {
+    if (isValid(getValPtr())) {
+      AddToExistingUseList(RHS.getPrevPtr());
+      RHS.RemoveFromUseList();
+      RHS.clearValPtr();
+    }
+  }
+
 private:
   PointerIntPair<ValueHandleBase**, 2, HandleBaseKind> PrevPair;
   ValueHandleBase *Next = nullptr;
@@ -86,6 +95,26 @@ public:
     setValPtr(RHS.getValPtr());
     if (isValid(getValPtr()))
       AddToExistingUseList(RHS.getPrevPtr());
+    return getValPtr();
+  }
+
+  Value *operator=(ValueHandleBase &&RHS) {
+    if (getValPtr() == RHS.getValPtr()) {
+      if (this != &RHS) {
+        if (isValid(RHS.getValPtr()))
+          RHS.RemoveFromUseList();
+        RHS.clearValPtr();
+      }
+      return getValPtr();
+    }
+    if (isValid(getValPtr()))
+      RemoveFromUseList();
+    setValPtr(RHS.getValPtr());
+    if (isValid(getValPtr())) {
+      AddToExistingUseList(RHS.getPrevPtr());
+      RHS.RemoveFromUseList();
+      RHS.clearValPtr();
+    }
     return getValPtr();
   }
 
@@ -285,10 +314,12 @@ public:
   AssertingVH() : ValueHandleBase(Assert) {}
   AssertingVH(ValueTy *P) : ValueHandleBase(Assert, GetAsValue(P)) {}
   AssertingVH(const AssertingVH &RHS) : ValueHandleBase(Assert, RHS) {}
+  AssertingVH(AssertingVH &&RHS) : ValueHandleBase(Assert, std::move(RHS)) {}
 #else
   AssertingVH() : ThePtr(nullptr) {}
   AssertingVH(ValueTy *P) : ThePtr(GetAsValue(P)) {}
   AssertingVH(const AssertingVH &) = default;
+  AssertingVH(AssertingVH &&RHS) : ThePtr(std::exchange(RHS.ThePtr, nullptr)) {}
 #endif
 
   operator ValueTy*() const {
@@ -303,6 +334,17 @@ public:
     setValPtr(RHS.getValPtr());
     return getValPtr();
   }
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  ValueTy *operator=(AssertingVH<ValueTy> &&RHS) {
+    ValueHandleBase::operator=(std::move(RHS));
+    return getValPtr();
+  }
+#else
+  ValueTy *operator=(AssertingVH<ValueTy> &&RHS) {
+    ThePtr = std::exchange(RHS.ThePtr, nullptr);
+    return getValPtr();
+  }
+#endif
 
   ValueTy *operator->() const { return getValPtr(); }
   ValueTy &operator*() const { return *getValPtr(); }

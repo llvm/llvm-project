@@ -14,6 +14,7 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
@@ -26,6 +27,12 @@ namespace {
 class VPPredicator {
   /// Builder to construct recipes to compute masks.
   VPBuilder Builder;
+
+  /// Dominator tree for the VPlan.
+  VPDominatorTree VPDT;
+
+  /// Post-dominator tree for the VPlan.
+  VPPostDominatorTree VPPDT;
 
   /// When we if-convert we need to create edge masks. We have to cache values
   /// so that we don't end up with exponential recursion/IR.
@@ -63,6 +70,8 @@ class VPPredicator {
   }
 
 public:
+  VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan) {}
+
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
     return BlockMaskCache.lookup(VPBB);
@@ -126,6 +135,16 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // Start inserting after the block's phis, which be replaced by blends later.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
+
+  // Reuse the mask of the immediate dominator if the VPBB post-dominates the
+  // immediate dominator.
+  auto *IDom = VPDT.getNode(VPBB)->getIDom();
+  assert(IDom && "Block in loop must have immediate dominator");
+  auto *IDomBB = cast<VPBasicBlock>(IDom->getBlock());
+  if (VPPDT.properlyDominates(VPBB, IDomBB)) {
+    setBlockInMask(VPBB, getBlockInMask(IDomBB));
+    return;
+  }
   // All-one mask is modelled as no-mask following the convention for masked
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
@@ -229,7 +248,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
       OperandsWithMask.push_back(InVPV);
-      OperandsWithMask.push_back(getEdgeMask(InVPBB, VPBB));
+      OperandsWithMask.push_back(createEdgeMask(InVPBB, VPBB));
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
     auto *Blend =
@@ -247,7 +266,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
-  VPPredicator Predicator;
+  VPPredicator Predicator(Plan);
   for (VPBlockBase *VPB : RPOT) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);

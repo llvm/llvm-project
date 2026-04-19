@@ -29,10 +29,10 @@ entry:
   %cmp4 = icmp eq i32 %size, 0, !dbg !21
   br i1 %cmp4, label %for.end, label %for.body.lr.ph, !dbg !21
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   br label %for.body, !dbg !21
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %sum = phi i32 [ 0, %for.body.lr.ph ], [ %sum.next, %for.body ]
   %arrayidx.1 = getelementptr inbounds i32, ptr %a, i64 %indvars.iv, !dbg !19
@@ -47,12 +47,12 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %exitcond = icmp ne i32 %lftr.wideiv, %size, !dbg !21
   br i1 %exitcond, label %for.body, label %for.cond.for.end_crit_edge, !dbg !21
 
-for.cond.for.end_crit_edge:                       ; preds = %for.body
+for.cond.for.end_crit_edge:
   %add.lcssa = phi i32 [ %sum.next, %for.body ]
   call void @llvm.dbg.value(metadata i32 %add.lcssa, metadata !15, metadata !DIExpression()), !dbg !22
   br label %for.end, !dbg !21
 
-for.end:                                          ; preds = %entry, %for.cond.for.end_crit_edge
+for.end:
   %sum.0.lcssa = phi i32 [ %add.lcssa, %for.cond.for.end_crit_edge ], [ 0, %entry ]
   ret i32 %sum.0.lcssa, !dbg !26
 }
@@ -66,8 +66,7 @@ define i32 @test_debug_loc_on_branch_in_loop(ptr noalias %src, ptr noalias %dst)
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue, !dbg [[LOC3]]
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:
-; CHECK-NEXT:   [[IDX:%.+]] = add i64 %index, 0
-; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 [[IDX]]
+; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 %index
 ; CHECK-NEXT:   store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:   br label %pred.store.continue, !dbg [[LOC3]]
 ; CHECK-EMPTY:
@@ -105,8 +104,7 @@ define i32 @test_different_debug_loc_on_replicate_recipe(ptr noalias %src, ptr n
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue, !dbg [[LOC4]]
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:
-; CHECK-NEXT:   [[IDX:%.+]] = add i64 %index, 0
-; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 [[IDX]], !dbg [[LOC5:!.+]]
+; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 %index, !dbg [[LOC5:!.+]]
 ; CHECK-NEXT:   store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:   br label %pred.store.continue, !dbg [[LOC4]]
 ; CHECK-EMPTY:
@@ -214,9 +212,7 @@ exit:
 ; CHECK: [[LOC8]] = !DILocation(line: 650
 
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!18, !27}

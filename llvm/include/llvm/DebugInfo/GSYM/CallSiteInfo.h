@@ -12,12 +12,12 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/DebugInfo/GSYM/GsymTypes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <vector>
 
 namespace llvm {
-class DataExtractor;
 class raw_ostream;
 
 namespace yaml {
@@ -27,6 +27,7 @@ struct FunctionsYAML;
 namespace gsym {
 class FileWriter;
 class GsymCreator;
+class GsymDataExtractor;
 struct FunctionInfo;
 struct CallSiteInfo {
   enum Flags : uint8_t {
@@ -45,7 +46,7 @@ struct CallSiteInfo {
   uint64_t ReturnOffset = 0;
 
   /// Offsets into the string table for function names regex patterns.
-  std::vector<uint32_t> MatchRegex;
+  std::vector<gsym_strp_t> MatchRegex;
 
   /// Bitwise OR of CallSiteInfo::Flags values
   uint8_t Flags = CallSiteInfo::Flags::None;
@@ -64,7 +65,7 @@ struct CallSiteInfo {
   /// \param Data The binary stream to read the data from.
   /// \param Offset The current offset within the data stream.
   /// \returns A CallSiteInfo or an error describing the issue.
-  LLVM_ABI static llvm::Expected<CallSiteInfo> decode(DataExtractor &Data,
+  LLVM_ABI static llvm::Expected<CallSiteInfo> decode(GsymDataExtractor &Data,
                                                       uint64_t &Offset);
 
   /// Encode this CallSiteInfo object into a FileWriter stream.
@@ -82,7 +83,7 @@ struct CallSiteInfoCollection {
   /// \param Data The binary stream to read the data from.
   /// \returns A CallSiteInfoCollection or an error describing the issue.
   LLVM_ABI static llvm::Expected<CallSiteInfoCollection>
-  decode(DataExtractor &Data);
+  decode(GsymDataExtractor &Data);
 
   /// Encode this CallSiteInfoCollection object into a FileWriter stream.
   ///

@@ -5,6 +5,10 @@
 ; A call should be skipped if all lanes are zero, since we don't know
 ; what side effects should be avoided inside the call.
 define hidden void @func() #1 {
+; GCN-LABEL: func:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   ret void
 }
 
@@ -85,19 +89,20 @@ define amdgpu_kernel void @if_call_kernel() #0 {
 ; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; SDAG-NEXT:    s_mov_b32 s32, 0
 ; SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SDAG-NEXT:    s_and_saveexec_b64 s[12:13], vcc
+; SDAG-NEXT:    s_and_saveexec_b64 s[18:19], vcc
 ; SDAG-NEXT:    s_cbranch_execz .LBB3_2
 ; SDAG-NEXT:  ; %bb.1: ; %call
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; SDAG-NEXT:    s_mov_b32 s13, s15
 ; SDAG-NEXT:    s_getpc_b64 s[18:19]
 ; SDAG-NEXT:    s_add_u32 s18, s18, func@rel32@lo+4
 ; SDAG-NEXT:    s_addc_u32 s19, s19, func@rel32@hi+12
 ; SDAG-NEXT:    v_or_b32_e32 v31, v0, v2
 ; SDAG-NEXT:    s_mov_b32 s12, s14
-; SDAG-NEXT:    s_mov_b32 s13, s15
 ; SDAG-NEXT:    s_mov_b32 s14, s16
+; SDAG-NEXT:    ; implicit-def: $sgpr15
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; SDAG-NEXT:  .LBB3_2: ; %end
 ; SDAG-NEXT:    s_endpgm
@@ -111,19 +116,20 @@ define amdgpu_kernel void @if_call_kernel() #0 {
 ; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
+; GISEL-NEXT:    s_and_saveexec_b64 s[18:19], vcc
 ; GISEL-NEXT:    s_cbranch_execz .LBB3_2
 ; GISEL-NEXT:  ; %bb.1: ; %call
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 20, v2
+; GISEL-NEXT:    s_mov_b32 s13, s15
 ; GISEL-NEXT:    s_getpc_b64 s[18:19]
 ; GISEL-NEXT:    s_add_u32 s18, s18, func@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s19, s19, func@rel32@hi+12
 ; GISEL-NEXT:    v_or_b32_e32 v31, v0, v1
 ; GISEL-NEXT:    s_mov_b32 s12, s14
-; GISEL-NEXT:    s_mov_b32 s13, s15
 ; GISEL-NEXT:    s_mov_b32 s14, s16
+; GISEL-NEXT:    ; implicit-def: $sgpr15
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GISEL-NEXT:  .LBB3_2: ; %end
 ; GISEL-NEXT:    s_endpgm

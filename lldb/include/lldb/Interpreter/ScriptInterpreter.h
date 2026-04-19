@@ -572,6 +572,51 @@ public:
     return {};
   }
 
+  /// Holds an lldb_private::Module name and a "sanitized" version
+  /// of it for the purposes of loading a script of that name by
+  /// the relevant ScriptInterpreter.
+  ///
+  /// E.g., for Python the sanitized name can't include:
+  /// * Special characters: '-', ' ', '.'
+  /// * Python keywords
+  class SanitizedScriptingModuleName {
+  public:
+    SanitizedScriptingModuleName(std::string name, std::string sanitized_name,
+                                 std::string conflicting_keyword)
+        : m_original_name(std::move(name)),
+          m_sanitized_name(std::move(sanitized_name)),
+          m_conflicting_keyword(std::move(conflicting_keyword)) {}
+
+    /// Returns \c true if this name is a keyword in the associated scripting
+    /// language.
+    bool IsKeyword() const { return !m_conflicting_keyword.empty(); }
+
+    /// Returns \c true if the original name has been sanitized (i.e., required
+    /// changes).
+    bool RequiredSanitization() const {
+      return m_sanitized_name != m_original_name;
+    }
+
+    llvm::StringRef GetSanitizedName() const { return m_sanitized_name; }
+    llvm::StringRef GetOriginalName() const { return m_original_name; }
+    llvm::StringRef GetConflictingKeyword() const {
+      return m_conflicting_keyword;
+    }
+
+  private:
+    std::string m_original_name;
+    std::string m_sanitized_name;
+
+    /// If the m_sanitized_name conflicts with a keyword for the
+    /// ScriptInterpreter language associated with this
+    /// SanitizedScriptingModuleName, is set to the conflicting keyword. Empty
+    /// otherwise.
+    std::string m_conflicting_keyword;
+  };
+
+  virtual SanitizedScriptingModuleName
+  GetSanitizedScriptingModuleName(llvm::StringRef name);
+
   lldb::DataExtractorSP
   GetDataExtractorFromSBData(const lldb::SBData &data) const;
 

@@ -10,7 +10,7 @@ define void @gather_nxv4i32_loaded_index(ptr noalias nocapture readonly %a, ptr 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %b, i64 %indvars.iv
   %0 = load i64, ptr %arrayidx, align 8
@@ -22,7 +22,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -32,7 +32,7 @@ define void @scatter_nxv4i32_loaded_index(ptr noalias nocapture readonly %a, ptr
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %b, i64 %indvars.iv
   %0 = load i64, ptr %arrayidx, align 8
@@ -44,7 +44,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -56,7 +56,7 @@ define void @gather_nxv4i32_unknown_stride(ptr noalias nocapture readonly %a, pt
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %indvars.iv.stride2 = mul i64 %indvars.iv, %stride
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv.stride2
@@ -67,7 +67,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -79,7 +79,7 @@ define void @scatter_nxv4i32_unknown_stride(ptr noalias nocapture readonly %a, p
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %indvars.iv.stride2 = mul i64 %indvars.iv, %stride
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
@@ -90,7 +90,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -100,7 +100,7 @@ define void @gather_nxv4i32_stride2(ptr noalias nocapture readonly %a, ptr noali
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %indvars.iv.stride2 = mul i64 %indvars.iv, 2
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv.stride2
@@ -111,7 +111,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -121,7 +121,7 @@ define void @scatter_nxv4i32_stride2(ptr noalias nocapture readonly %a, ptr noal
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %indvars.iv.stride2 = mul i64 %indvars.iv, 2
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
@@ -132,7 +132,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -143,7 +143,7 @@ define void @gather_nxv4i32_stride64(ptr noalias nocapture readonly %a, ptr noal
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %indvars.iv.stride2 = mul i64 %indvars.iv, 64
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv.stride2
@@ -154,7 +154,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -164,7 +164,7 @@ define void @scatter_nxv4i32_stride64(ptr noalias nocapture readonly %a, ptr noa
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %indvars.iv.stride2 = mul i64 %indvars.iv, 64
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
@@ -175,7 +175,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
