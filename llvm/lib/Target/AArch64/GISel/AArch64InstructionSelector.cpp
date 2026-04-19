@@ -4783,13 +4783,26 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   std::optional<ValueAndVReg> C;
   if (CmpInst::isIntPredicate(CC)) {
     assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
-    C = getIConstantVRegValWithLookThrough(RHS, MRI);
-    if (!C || C->Value.sgt(31) || C->Value.slt(-31))
-      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
-    else if (C->Value.ule(31))
-      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWi : AArch64::CCMPXi;
-    else
-      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMNWi : AArch64::CCMNXi;
+    const bool Is32Bit = OpTy.getSizeInBits() == 32;
+    // Fold (icmp op, (sub 0, y)) into a register CCMN before immediate / plain
+    // CCMP forms.
+    if (MachineInstr *RHSDef = getDefIgnoringCopies(RHS, MRI);
+        isCMN(RHSDef, CC, MRI)) {
+      CCmpOpc = Is32Bit ? AArch64::CCMNWr : AArch64::CCMNXr;
+      RHS = RHSDef->getOperand(2).getReg();
+    } else if (MachineInstr *LHSDef = getDefIgnoringCopies(LHS, MRI);
+               CmpInst::isEquality(CC) && isCMN(LHSDef, CC, MRI)) {
+      CCmpOpc = Is32Bit ? AArch64::CCMNWr : AArch64::CCMNXr;
+      LHS = LHSDef->getOperand(2).getReg();
+    } else {
+      C = getIConstantVRegValWithLookThrough(RHS, MRI);
+      if (!C || C->Value.sgt(31) || C->Value.slt(-31))
+        CCmpOpc = Is32Bit ? AArch64::CCMPWr : AArch64::CCMPXr;
+      else if (C->Value.ule(31))
+        CCmpOpc = Is32Bit ? AArch64::CCMPWi : AArch64::CCMPXi;
+      else
+        CCmpOpc = Is32Bit ? AArch64::CCMNWi : AArch64::CCMNXi;
+    }
   } else {
     assert(OpTy.getSizeInBits() == 16 || OpTy.getSizeInBits() == 32 ||
            OpTy.getSizeInBits() == 64);
