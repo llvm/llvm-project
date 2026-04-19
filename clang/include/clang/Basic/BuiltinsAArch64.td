@@ -335,6 +335,7 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
 	def _ReadWriteBarrier       : AArch64NoPrefixTargetLibBuiltin<"void ()">;
 	def __getReg                : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (int)">;
+	def __getRegFp              : AArch64NoPrefixTargetLibBuiltin<"double (int)">;
 	def __setReg                : AArch64NoPrefixTargetLibBuiltin<"void (int, unsigned long long int)">;
 	def _ReadStatusReg          : AArch64NoPrefixTargetLibBuiltin<"long long int (int)">;
 	def _WriteStatusReg         : AArch64NoPrefixTargetLibBuiltin<"void (int, long long int)">;

@@ -377,6 +377,7 @@ static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
 \*----------------------------------------------------------------------------*/
 #if defined(__aarch64__) || defined(__arm64ec__)
 unsigned __int64 __getReg(int);
+double __getRegFp(int _Reg);
 void __setReg(int, unsigned __int64);
 unsigned char _interlockedbittestandreset_acq(long volatile *, long);
 unsigned char _interlockedbittestandreset_nf(long volatile *, long);

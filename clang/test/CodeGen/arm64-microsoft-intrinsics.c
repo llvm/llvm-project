@@ -170,6 +170,21 @@ void test__setReg(unsigned __int64 v)
 // CHECK-MSCOMPAT: call void @llvm.write_volatile_register.i64(metadata ![[MD3]], i64 %[[DATA_ADDR2]])
 // CHECK-LINUX: error: call to undeclared function '__setReg'
 
+double test__getRegFp(void)
+{
+  double volatile reg;
+  reg = __getRegFp(5);
+  reg = __getRegFp(31);
+  return reg;
+}
+
+// CHECK-MSCOMPAT-LABEL: define{{.*}}double @test__getRegFp(){{.*}}{
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata ![[MD4:.*]])
+// CHECK-MSCOMPAT:       bitcast i64 [[BITS]] to double
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata ![[MD5:.*]])
+// CHECK-MSCOMPAT:       bitcast i64 [[BITS]] to double
+// CHECK-LINUX: error: call to undeclared function '__getRegFp'
+
 #ifdef __LP64__
 #define LONG __int32
 #else
@@ -633,3 +648,5 @@ void check__prefetch(void *arg1) {
 
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
 // CHECK-MSCOMPAT: ![[MD3]] = !{!"sp"}
+// CHECK-MSCOMPAT: ![[MD4]] = !{!"d5"}
+// CHECK-MSCOMPAT: ![[MD5]] = !{!"d31"}
