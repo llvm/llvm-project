@@ -23,28 +23,26 @@ void test_init_list_with_dtor() {
 
 // CIR: cir.func {{.*}} @_Z24test_init_list_with_dtorv
 // CIR:   %[[O:.*]] = cir.alloca !rec_Outer, !cir.ptr<!rec_Outer>, ["o", init]
-// CIR:   cir.scope {
-// CIR:     %[[S1:.*]] = cir.get_member %[[O]][0] {name = "s1"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Struk>
-// CIR:     %[[ONE:.*]] = cir.const #cir.int<1>
-// CIR:     cir.call @_ZN5StrukC1Ei(%[[S1]], %[[ONE]])
+// CIR:   %[[S1:.*]] = cir.get_member %[[O]][0] {name = "s1"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Struk>
+// CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR:   cir.call @_ZN5StrukC1Ei(%[[S1]], %[[ONE]])
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[S2:.*]] = cir.get_member %[[O]][1] {name = "s2"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Struk>
+// CIR:     %[[TWO:.*]] = cir.const #cir.int<2>
+// CIR:     cir.call @_ZN5StrukC1Ei(%[[S2]], %[[TWO]])
 // CIR:     cir.cleanup.scope {
-// CIR:       %[[S2:.*]] = cir.get_member %[[O]][1] {name = "s2"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Struk>
-// CIR:       %[[TWO:.*]] = cir.const #cir.int<2>
-// CIR:       cir.call @_ZN5StrukC1Ei(%[[S2]], %[[TWO]])
-// CIR:       cir.cleanup.scope {
-// CIR:         %[[X:.*]] = cir.get_member %[[O]][2] {name = "x"}
-// CIR:         %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-// CIR:         cir.store align(4) %[[THREE]], %[[X]]
-// CIR:         cir.yield
-// CIR:       } cleanup eh {
-// CIR:         cir.call @_ZN5StrukD1Ev(%[[S2]])
-// CIR:         cir.yield
-// CIR:       }
+// CIR:       %[[X:.*]] = cir.get_member %[[O]][2] {name = "x"}
+// CIR:       %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CIR:       cir.store align(4) %[[THREE]], %[[X]]
 // CIR:       cir.yield
 // CIR:     } cleanup eh {
-// CIR:       cir.call @_ZN5StrukD1Ev(%[[S1]])
+// CIR:       cir.call @_ZN5StrukD1Ev(%[[S2]])
 // CIR:       cir.yield
 // CIR:     }
+// CIR:     cir.yield
+// CIR:   } cleanup eh {
+// CIR:     cir.call @_ZN5StrukD1Ev(%[[S1]])
+// CIR:     cir.yield
 // CIR:   }
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.yield
@@ -57,13 +55,13 @@ void test_init_list_with_dtor() {
 
 // LLVM: define {{.*}} void @_Z24test_init_list_with_dtorv
 // LLVM:   %[[O:.*]] = alloca %struct.Outer
-// LLVM:   %[[S1_ADDR:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 0
+// LLVM:   %[[S1_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 0
 // LLVM:   call void @_ZN5StrukC1Ei(ptr {{.*}} %[[S1_ADDR]], i32 {{.*}} 1)
-// LLVM:   %[[S2_ADDR:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 1
+// LLVM:   %[[S2_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 1
 // LLVM:   invoke void @_ZN5StrukC1Ei(ptr {{.*}} %[[S2_ADDR]], i32 {{.*}} 2)
 // LLVM:           to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM: [[CONT]]:
-// LLVM:   %[[X_ADDR:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 2
+// LLVM:   %[[X_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 2
 // LLVM:   store i32 3, ptr %[[X_ADDR]]
 // LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
 // LLVM: [[EXIT_CLEANUP_SCOPE]]:

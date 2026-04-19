@@ -239,8 +239,10 @@ bool LPPassManager::runOnFunction(Function &F) {
         // is that LPPassManager might run passes which do not require LCSSA
         // form (LoopPassPrinter for example). We should skip verification for
         // such passes.
+#ifndef NDEBUG
         if (mustPreserveAnalysisID(LCSSAVerificationPass::ID))
           assert(CurrentLoop->isRecursivelyLCSSAForm(*DT, *LI));
+#endif
 
         // Then call the regular verifyAnalysis functions.
         verifyPreservedAnalysis(P);

@@ -23,8 +23,7 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK: %[[REVERSE7:.*]] = call <vscale x 4 x double> @llvm.vector.reverse.nxv4f64(<vscale x 4 x double> %[[WIDEMSKLOAD]])
 ; CHECK: %[[FADD:.*]] = fadd <vscale x 4 x double> %[[REVERSE7]]
 ; CHECK: %[[REVERSE8:.*]] = call <vscale x 4 x double> @llvm.vector.reverse.nxv4f64(<vscale x 4 x double> %[[FADD]])
-; CHECK: %[[REVERSE9:.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> %{{.*}})
-; CHECK: call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> %[[REVERSE8]], ptr align 8 %{{.*}}, <vscale x 4 x i1> %[[REVERSE9]]
+; CHECK: call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> %[[REVERSE8]], ptr align 8 %{{.*}}, <vscale x 4 x i1> %[[REVERSE6]])
 
 entry:
   %cmp7 = icmp sgt i64 %N, 0
