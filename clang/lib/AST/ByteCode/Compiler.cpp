@@ -4765,7 +4765,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
     const Descriptor *D = Field.Desc;
     if (D->isPrimitive()) {
       QualType QT = D->getType();
-      PrimType T = classifyPrim(D->getType());
+      PrimType T = D->getPrimType();
       if (!this->visitZeroInitializer(T, QT, E))
         return false;
       if (R->isUnion()) {
@@ -4783,7 +4783,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
 
     if (D->isPrimitiveArray()) {
       QualType ET = D->getElemQualType();
-      PrimType T = classifyPrim(ET);
+      PrimType T = D->getPrimType();
       for (uint32_t I = 0, N = D->getNumElems(); I != N; ++I) {
         if (!this->visitZeroInitializer(T, ET, E))
           return false;
