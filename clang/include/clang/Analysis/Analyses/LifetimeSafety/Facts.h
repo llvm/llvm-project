@@ -303,7 +303,7 @@ public:
             const OriginManager &OM) const override;
 };
 
-// Inner origin has been destroyed, e.g. via `delete`.
+// Origin has been destroyed, e.g. via `delete`.
 class DestroyOriginFact : public Fact {
   OriginID OID;
   const Expr *DestroyExpr;
