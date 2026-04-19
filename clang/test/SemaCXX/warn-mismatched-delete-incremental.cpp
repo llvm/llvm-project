@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fincremental-extensions -verify %s
-// Regression test for incremental-mode handling of warn_mismatched_delete_new
+// Regression test for warn_mismatched_delete_new in incremental mode
 // in Sema::ActOnEndOfTranslationUnit(). Ensures the diagnostic fires correctly
 // in incremental mode and that DeleteExprs does not accumulate stale entries
 // across EndOfTU cycles.

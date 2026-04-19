@@ -686,12 +686,12 @@ void Sema::PrintStats() const {
 void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
                                                QualType SrcType,
                                                SourceLocation Loc) {
-  NullabilityKindOrNone ExprNullability = SrcType->getNullability();
+  std::optional<NullabilityKind> ExprNullability = SrcType->getNullability();
   if (!ExprNullability || (*ExprNullability != NullabilityKind::Nullable &&
                            *ExprNullability != NullabilityKind::NullableResult))
     return;
 
-  NullabilityKindOrNone TypeNullability = DstType->getNullability();
+  std::optional<NullabilityKind> TypeNullability = DstType->getNullability();
   if (!TypeNullability || *TypeNullability != NullabilityKind::NonNull)
     return;
 
