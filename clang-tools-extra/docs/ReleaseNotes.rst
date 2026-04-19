@@ -381,7 +381,7 @@ Changes in existing checks
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
   - Fixed false positives when pointers were later passed or bound through
-    const-qualified pointer references.
+    ``const``-qualified pointer references.
 
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when

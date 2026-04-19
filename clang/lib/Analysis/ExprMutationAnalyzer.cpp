@@ -150,12 +150,13 @@ class ExprPointeeResolve {
       if (kind == CK_NoOp) {
         // Binding `T *` to `T *const &` only adds top-level qualifiers to the
         // pointer object, so this `CK_NoOp` still refers to the same pointer.
+        const auto GetLocallyUnqualifiedCanonicalType = [](QualType Type) {
+          return Type.getLocalUnqualifiedType().getCanonicalType();
+        };
         const QualType CastType =
-            ICE->getType().getLocalUnqualifiedType().getCanonicalType();
-        const QualType SubExprType = ICE->getSubExpr()
-                                         ->getType()
-                                         .getLocalUnqualifiedType()
-                                         .getCanonicalType();
+            GetLocallyUnqualifiedCanonicalType(ICE->getType());
+        const QualType SubExprType =
+            GetLocallyUnqualifiedCanonicalType(ICE->getSubExpr()->getType());
         if (CastType == SubExprType)
           return resolveExpr(ICE->getSubExpr());
       }
@@ -238,10 +239,10 @@ const auto nonConstReferenceType = [] {
       referenceType(pointee(unless(isConstQualified()))));
 };
 
-const auto referenceToPointerWithNonConstPointeeType = [] {
-  return hasUnqualifiedDesugaredType(
-      referenceType(pointee(hasUnqualifiedDesugaredType(
-          pointerType(pointee(unless(isConstQualified())))))));
+const auto constReferenceToPointerWithNonConstPointeeType = [] {
+  return hasUnqualifiedDesugaredType(referenceType(pointee(qualType(
+      isConstQualified(), hasUnqualifiedDesugaredType(pointerType(
+                              pointee(unless(isConstQualified()))))))));
 };
 
 const auto nonConstPointerType = [] {
@@ -783,9 +784,9 @@ ExprMutationAnalyzer::Analyzer::findPointeeMemberMutation(const Expr *Exp) {
 
 const Stmt *
 ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
-  const auto NonConstPointerOrNonConstRefOrDependentType = type(
-      anyOf(nonConstPointerType(), nonConstReferenceType(),
-            referenceToPointerWithNonConstPointeeType(), isDependentType()));
+  const auto NonConstPointerOrNonConstRefOrDependentType = type(anyOf(
+      nonConstPointerType(), nonConstReferenceType(),
+      constReferenceToPointerWithNonConstPointeeType(), isDependentType()));
 
   // assign
   const auto InitToNonConst =

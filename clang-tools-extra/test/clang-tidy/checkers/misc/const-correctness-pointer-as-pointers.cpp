@@ -10,6 +10,7 @@
 // RUN: }}' \
 // RUN: -- -fno-delayed-template-parsing
 
+#include <memory>
 #include <vector>
 
 void pointee_to_const() {
@@ -137,33 +138,27 @@ void ignore_const_pointer_reference_sinks() {
   int value = 0;
 
   int *p_local0 = &value;
-  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local0'
   // CHECK-FIXES: int *p_local0 = &value;
   takesConstPointerRef(p_local0);
 
   int *p_local1 = &value;
-  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local1'
   // CHECK-FIXES: int *p_local1 = &value;
   int *const &ref = p_local1;
   (void)ref;
 
   IntPtrAlias p_local2 = &value;
-  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local2'
   // CHECK-FIXES: IntPtrAlias p_local2 = &value;
   takesAliasConstPointerRef(p_local2);
 
   int *p_local3 = &value;
-  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local3'
   // CHECK-FIXES: int *p_local3 = &value;
   takesConstPointerRRef(static_cast<int *const &&>(p_local3));
 
   IntPtrTypedef p_local4 = &value;
-  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local4'
   // CHECK-FIXES: IntPtrTypedef p_local4 = &value;
   takesTypedefConstPointerRef(p_local4);
 
   int *p_local5 = &value;
-  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local5'
   // CHECK-FIXES: int *p_local5 = &value;
   int *volatile &volatile_ref = p_local5;
   (void)volatile_ref;
@@ -175,6 +170,15 @@ void ignore_range_for_pointer_reference_sink() {
   std::vector<int *> sink;
   // CHECK-FIXES: for (int *element : source)
   for (int *element : source)
-    // CHECK-MESSAGES-NOT: warning: pointee of variable 'element'
     sink.push_back(element);
+}
+
+struct UniquePtrData {};
+
+void ignore_unique_ptr_emplace_sink() {
+  /*const*/ UniquePtrData *const newdata = new UniquePtrData;
+  // CHECK-FIXES: /*const*/ UniquePtrData *const newdata = new UniquePtrData;
+
+  std::vector<std::unique_ptr<UniquePtrData>> data;
+  data.emplace_back(newdata);
 }
