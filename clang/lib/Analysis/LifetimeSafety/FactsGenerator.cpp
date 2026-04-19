@@ -671,9 +671,7 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
 }
 
 void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
-  OriginList *List = getOriginsList(*DE->getArgument()->IgnoreImpCasts());
-  if (List = List->peelOuterOrigin(); !List)
-    return;
+  OriginList *List = getOriginsList(*DE->getArgument());
   CurrentBlockFacts.push_back(
       FactMgr.createFact<DestroyOriginFact>(List->getOuterOriginID(), DE));
 }

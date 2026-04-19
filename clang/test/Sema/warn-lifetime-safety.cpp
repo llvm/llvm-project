@@ -2703,6 +2703,16 @@ void conditional_delete(bool cond) {
   (void)*p1;               // expected-note {{later used here}}
 }
 
+int* foo(int* x [[clang::lifetimebound]], int* y [[clang::lifetimebound]]);
+
+void delete_returned_from_call() {
+  int* x = new int(1); // expected-warning {{allocated object does not live long enough}}
+  int* y = new int(2); // expected-warning {{allocated object does not live long enough}}
+  delete foo(x, y);    // expected-note 2 {{freed here}}
+  (void)x;             // expected-note {{later used here}}
+  (void)y;             // expected-note {{later used here}}
+}
+
 void new_pointer_from_pointer() {
   MyObj **p;
   {
