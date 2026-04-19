@@ -1252,6 +1252,11 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
 
     setOperationAction(ISD::MSTORE, VT, Expand);
+
+    setOperationAction(ISD::MASKED_UDIV, VT, Expand);
+    setOperationAction(ISD::MASKED_SDIV, VT, Expand);
+    setOperationAction(ISD::MASKED_UREM, VT, Expand);
+    setOperationAction(ISD::MASKED_SREM, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.

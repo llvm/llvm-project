@@ -35,7 +35,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK-SAME:  (ptr noalias noundef %[[TID_ADDR:.*]], ptr noalias noundef %[[ZERO_ADDR:.*]],
 // CHECK-SAME:  ptr %[[ARG_PTR:.*]])
 // CHECK-SAME:  #[[ATTRS1:[0-9]+]]
-// CHECK: call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB]] to ptr),
+// CHECK: call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @{{[0-9]+}} to ptr),
 // CHECK-SAME:   ptr @[[LOOP_BODY_FUNC:.*]], ptr %[[LOO_BODY_FUNC_ARG:.*]], i32 10,
 // CHECK-SAME:   i32 %[[THREAD_NUM:.*]], i8 0)
 

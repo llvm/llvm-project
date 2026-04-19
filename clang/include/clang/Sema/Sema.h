@@ -4996,7 +4996,16 @@ public:
                         StringRef Message, bool IsStrict, StringRef Replacement,
                         AvailabilityMergeKind AMK, int Priority,
                         const IdentifierInfo *IIEnvironment,
-                        VersionTuple OrigAnyAppleOSVersion = {});
+                        const IdentifierInfo *InferredPlatformII = nullptr);
+
+  AvailabilityAttr *mergeAndInferAvailabilityAttr(
+      NamedDecl *D, const AttributeCommonInfo &CI,
+      const IdentifierInfo *Platform, bool Implicit, VersionTuple Introduced,
+      VersionTuple Deprecated, VersionTuple Obsoleted, bool IsUnavailable,
+      StringRef Message, bool IsStrict, StringRef Replacement,
+      AvailabilityMergeKind AMK, int Priority,
+      const IdentifierInfo *IIEnvironment,
+      const IdentifierInfo *InferredPlatformII);
 
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
@@ -15105,6 +15114,13 @@ public:
   llvm::DenseMap<llvm::FoldingSetNodeID,
                  UnsubstitutedConstraintSatisfactionCacheResult>
       UnsubstitutedConstraintSatisfactionCache;
+
+  /// Cache the instantiation results of template parameter mappings within
+  /// concepts. Substituting into normalized concepts can be extremely expensive
+  /// due to the redundancy of template parameters. This cache is intended for
+  /// use by TemplateInstantiator to avoid redundant semantic checking.
+  llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+      *CurrentCachedTemplateArgs = nullptr;
 
 private:
   /// Caches pairs of template-like decls whose associated constraints were

@@ -37,6 +37,7 @@ add_flang_library(FIRDialect
   MLIR_LIBS
   MLIRArithDialect
   MLIROpenACCDialect
+  MLIROpenACCUtils
   MLIRBuiltinToLLVMIRTranslation
   MLIROpenMPToLLVM
   MLIRLLVMToLLVMIRTranslation

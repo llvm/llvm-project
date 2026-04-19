@@ -48,7 +48,6 @@ module Clang_Basic {
   textual header "clang/Basic/BuiltinsLoongArchLSX.def"
   textual header "clang/Basic/BuiltinsMips.def"
   textual header "clang/Basic/BuiltinsPPC.def"
-  textual header "clang/Basic/BuiltinsSystemZ.def"
   textual header "clang/Basic/BuiltinsVE.def"
   textual header "clang/Basic/BuiltinsVEVL.gen.def"
   textual header "clang/Basic/BuiltinsWebAssembly.def"

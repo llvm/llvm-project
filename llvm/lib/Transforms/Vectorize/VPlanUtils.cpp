@@ -372,7 +372,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
                                      all_of(Rep->operands(), isSingleScalar));
   }
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
+  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
     return preservesUniformity(WidenR->getOpcode()) &&
@@ -385,7 +385,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
   if (isa<VPCanonicalIVPHIRecipe, VPVectorPointerRecipe,
-          VPVectorEndPointerRecipe>(VPV))
+          VPVectorEndPointerRecipe, VPDerivedIVRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isSingleScalar();
@@ -402,18 +402,19 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   VPRecipeBase *R = V->getDefiningRecipe();
   VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
   VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
-  if (VPBB &&
-      (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
-    if (match(V->getDefiningRecipe(),
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
-      return false;
-    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
-  }
+  if (VPBB) {
+    if ((VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
+      if (match(V->getDefiningRecipe(),
+                m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
+        return false;
+      return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+    }
 
-  if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
-    // Canonical IV is uniform.
-    if (V == EnclosingRegion->getCanonicalIV())
-      return true;
+    if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
+      // Canonical IV is uniform.
+      if (V == EnclosingRegion->getCanonicalIV())
+        return true;
+    }
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
@@ -661,11 +662,11 @@ bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
 
 bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
                            const VPDominatorTree &VPDT) {
-  // A latch has a header as its second successor, with its other successor
+  // A latch has a header as its last successor, with its other successors
   // leaving the loop. A preheader OTOH has a header as its first (and only)
   // successor.
-  return VPB->getNumSuccessors() == 2 &&
-         VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
+  return VPB->getNumSuccessors() >= 2 &&
+         VPBlockUtils::isHeader(VPB->getSuccessors().back(), VPDT);
 }
 
 std::optional<MemoryLocation>

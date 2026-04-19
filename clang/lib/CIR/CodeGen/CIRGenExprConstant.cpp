@@ -751,8 +751,10 @@ bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
           builder.getI32IntegerAttr(addressPoint.VTableIndex),
           builder.getI32IntegerAttr(addressPoint.AddressPointIndex),
       });
+      auto vptrTy = cir::VPtrType::get(cgm.getBuilder().getContext());
+      auto symbol = mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr());
       cir::GlobalViewAttr vtableInit =
-          cgm.getBuilder().getGlobalViewAttr(vtable, indices);
+          cir::GlobalViewAttr::get(vptrTy, symbol, indices);
       if (!appendBytes(offset, vtableInit))
         return false;
     }
@@ -1402,9 +1404,10 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
           return cgm.getAddrOfGlobalVarAttr(vd);
 
         if (vd->isLocalVarDecl()) {
-          cgm.errorNYI(vd->getSourceRange(),
-                       "ConstantLValueEmitter: local var decl");
-          return {};
+          cir::GlobalLinkageKind linkage =
+              cgm.getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
+          return cgm.getBuilder().getGlobalViewAttr(
+              cgm.getOrCreateStaticVarDecl(*vd, linkage));
         }
       }
     }
