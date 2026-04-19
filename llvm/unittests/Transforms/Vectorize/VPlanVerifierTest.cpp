@@ -224,14 +224,8 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
 
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
-#if GTEST_HAS_STREAM_REDIRECTION
-  ::testing::internal::CaptureStderr();
-#endif
-  EXPECT_FALSE(verifyVPlanIsValid(Plan));
-#if GTEST_HAS_STREAM_REDIRECTION
-  EXPECT_STREQ("Multiple instances of the same successor.\n",
-               ::testing::internal::GetCapturedStderr().c_str());
-#endif
+  // Duplicate successors are allowed for blocks with conditional terminators.
+  EXPECT_TRUE(verifyVPlanIsValid(Plan));
 }
 
 TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
@@ -263,14 +257,8 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
-#if GTEST_HAS_STREAM_REDIRECTION
-  ::testing::internal::CaptureStderr();
-#endif
-  EXPECT_FALSE(verifyVPlanIsValid(Plan));
-#if GTEST_HAS_STREAM_REDIRECTION
-  EXPECT_STREQ("Multiple instances of the same successor.\n",
-               ::testing::internal::GetCapturedStderr().c_str());
-#endif
+  // Duplicate successors are allowed for blocks with conditional terminators.
+  EXPECT_TRUE(verifyVPlanIsValid(Plan));
 }
 
 TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
@@ -444,4 +432,62 @@ TEST_F(VPIRVerifierTest, testVerifyIRPhiInExitVPIRBB) {
       ::testing::internal::GetCapturedStderr().c_str());
 #endif
 }
+
+TEST_F(VPIRVerifierTest, BranchOnTwoCondsLatchHeaderVerification) {
+  const char *ModuleString =
+      "define void @f(ptr dereferenceable(40) align 2 %pred) {\n"
+      "entry:\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]\n"
+      "  %uncountable.addr = getelementptr inbounds nuw i16, ptr %pred, i64 "
+      "%iv\n"
+      "  %uncountable.val = load i16, ptr %uncountable.addr, align 2\n"
+      "  %uncountable.cond = icmp sgt i16 %uncountable.val, 500\n"
+      "  br i1 %uncountable.cond, label %exit, label %for.inc\n"
+      "for.inc:\n"
+      "  %iv.next = add nuw nsw i64 %iv, 1\n"
+      "  %countable.cond = icmp eq i64 %iv.next, 20\n"
+      "  br i1 %countable.cond, label %exit, label %for.body\n"
+      "exit:\n"
+      "  ret void\n"
+      "}\n";
+
+  Module &M = parseModule(ModuleString);
+
+  Function *F = M.getFunction("f");
+  BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
+  // Build a plain CFG VPlan with BranchOnTwoConds as the latch terminator
+  // (3 successors), without wrapping blocks in loop regions.
+  auto Plan = buildVPlan(LoopHeader, UncountableExitStyle::ReadOnly,
+                         /*CreateLoopRegions=*/false);
+
+  auto *MiddleVPBB =
+      cast<VPBasicBlock>(Plan->getScalarPreheader()->getPredecessors()[0]);
+  auto *Latch = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
+  auto *Header = Latch->getSuccessors().back();
+  ASSERT_EQ(Header->getPredecessors()[1], Latch);
+  ASSERT_EQ(Latch->getNumSuccessors(), 3u);
+  auto *Term = cast<VPInstruction>(&Latch->back());
+  EXPECT_EQ(Term->getOpcode(), VPInstruction::BranchOnTwoConds);
+
+  // Verify the plan is valid; this exercises isLatch with a 3-successor latch.
+  EXPECT_TRUE(verifyVPlanIsValid(*Plan));
+
+  // Swap the latch's first and last successors, placing the header at index 0
+  // instead of the last position. isLatch checks the last successor, so the
+  // latch is no longer recognized, triggering the header predecessor check.
+  auto &Succs = Latch->getSuccessors();
+  std::swap(Succs[0], Succs[2]);
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(*Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ("Header's second predecessor must be the latch!\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#endif
+}
+
 } // namespace
