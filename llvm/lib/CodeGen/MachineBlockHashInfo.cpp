@@ -12,7 +12,7 @@
 
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
