@@ -9782,7 +9782,7 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
     if (std::optional<bool> Res = getICmpZeroResultIfNonZero(RZeroCmpPred))
       if (isKnownNonZeroUnderICmp(RZeroCmpLHS, LPred.dropSameSign(), L0, L1,
                                   /*Depth=*/0))
-      return *Res;
+        return *Res;
 
   // a - b == NonZero -> a != b
   // ptrtoint(a) - ptrtoint(b) == NonZero -> a != b
