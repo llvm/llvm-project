@@ -930,6 +930,16 @@ void VPlanTransforms::createInLoopReductionRecipes(
         LinkVPBB->appendRecipe(RedRecipe);
 
       CurrentLink->replaceAllUsesWith(RedRecipe);
+      // Move any store recipes using the RedRecipe that appear before it in the
+      // same block to just after the RedRecipe.
+      for (VPUser *U : make_early_inc_range(RedRecipe->users())) {
+        auto *UserR = dyn_cast<VPRecipeBase>(U);
+        if (!UserR || UserR->getParent() != LinkVPBB)
+          continue;
+        if (!match(UserR, m_VPInstruction<Instruction::Store>()))
+          continue;
+        UserR->moveAfter(RedRecipe);
+      }
       ToDelete.push_back(CurrentLink);
       PreviousLink = RedRecipe;
     }
