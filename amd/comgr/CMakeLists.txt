@@ -77,6 +77,7 @@ set(SOURCES
   src/comgr-disassembly.cpp
   src/comgr-env.cpp
   src/comgr-hotswap.cpp
+  src/comgr-hotswap-elf.cpp
   src/comgr-libcxx-headers.cpp
   src/comgr-metadata.cpp
   src/comgr-signal.cpp
@@ -558,6 +559,10 @@ if(BUILD_TESTING)
   endif()
   add_subdirectory(test)
   add_subdirectory(test-lit)
+
+  if(TARGET llvm_gtest)
+    add_subdirectory(unittests)
+  endif()
 endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
