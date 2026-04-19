@@ -16,4 +16,4 @@
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Index, index, mlir::index::IndexDialect)
 
-// #include "mlir/Dialect/Index/IR/IndexOpsCAPIAttrs.cpp.inc"
+#include "mlir/Dialect/Index/IR/IndexOpsCAPIAttrs.cpp.inc"
