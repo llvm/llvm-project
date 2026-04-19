@@ -189,10 +189,8 @@ public:
 
   template <typename OriginFact, typename Predicate>
   void recordWarningsForMatchingLoans(const Expr *InvalidatingExpr,
-                                      LoanSet &DirectlyAffectedLoans,
-                                      LivenessMap &Origins, OriginFact OF,
-                                      Predicate Pred) {
-    for (auto &[OID, LiveInfo] : Origins) {
+                                      OriginFact OF, Predicate Pred) {
+    for (auto &[OID, LiveInfo] : LiveOrigins.getLiveOriginsAt(OF)) {
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, OF);
       for (LoanID HeldLoan : HeldLoans) {
         if (!Pred(HeldLoan))
@@ -235,8 +233,7 @@ public:
     };
     // For each live origin, check if it holds an invalidated loan and report.
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
-    recordWarningsForMatchingLoans(IOF->getInvalidationExpr(),
-                                   DirectlyInvalidatedLoans, Origins, IOF,
+    recordWarningsForMatchingLoans(IOF->getInvalidationExpr(), IOF,
                                    IsInvalidated);
   }
 
@@ -250,9 +247,7 @@ public:
       return DirectlyDestroyedLoans.contains(LID);
     };
 
-    recordWarningsForMatchingLoans(DOF->getDestroyExpr(),
-                                   DirectlyDestroyedLoans, Origins, DOF,
-                                   IsDestroyed);
+    recordWarningsForMatchingLoans(DOF->getDestroyExpr(), DOF, IsDestroyed);
   }
 
   void issuePendingWarnings() {
