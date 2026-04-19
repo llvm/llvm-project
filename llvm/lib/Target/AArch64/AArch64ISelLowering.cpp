@@ -3853,6 +3853,43 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 /// can only implement 1 of the inner (not) operations, but not both!
 /// @{
 
+/// CCMP/CCMN Wi/Xi immediates are restricted to 0..31. When lowering a
+/// \em conditional compare (not the leading CMP in a chain), snap RHS
+/// constants at ±32 to ±31 where equivalent so the CCMP/CCMN immediate form
+/// applies. Plain CMP;CCMP can use a separate \p mov for \p #32; only the
+/// conditional step needs this rewrite.
+static void snapCCmpImmEncodingBounds(SDValue &RHS, ISD::CondCode &CC,
+                                      SelectionDAG &DAG, const SDLoc &DL,
+                                      EVT VT) {
+  auto *C = dyn_cast<ConstantSDNode>(RHS);
+  if (!C)
+    return;
+  APInt Imm = C->getAPIntValue();
+
+  // x < 32  <=>  x <= 31 ;  x <u 32  <=>  x <=u 31
+  if (Imm == 32) {
+    if (CC == ISD::SETLT) {
+      CC = ISD::SETLE;
+      RHS = DAG.getConstant(31, DL, VT);
+    } else if (CC == ISD::SETULT) {
+      CC = ISD::SETULE;
+      RHS = DAG.getConstant(31, DL, VT);
+    }
+    return;
+  }
+
+  // x > -32  <=>  x >= -31
+  if (Imm.getSExtValue() == -32) {
+    if (CC == ISD::SETGT) {
+      CC = ISD::SETGE;
+      RHS = DAG.getSignedConstant(-31, DL, VT);
+    } else if (CC == ISD::SETUGT) {
+      CC = ISD::SETUGE;
+      RHS = DAG.getSignedConstant(-31, DL, VT);
+    }
+  }
+}
+
 /// Create a conditional comparison; Use CCMP, CCMN or FCCMP as appropriate.
 static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
                                          ISD::CondCode CC, SDValue CCOp,
@@ -4000,6 +4037,10 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
     SDLoc DL(Val);
     // Determine OutCC and handle FP special case.
     if (isInteger) {
+      // Immediate snap only for conditional CCMP/CCMN; leading CMP uses
+      // emitComparison and does not share the 0..31 Wi/Xi restriction.
+      if (CCOp)
+        snapCCmpImmEncodingBounds(RHS, CC, DAG, DL, LHS.getValueType());
       OutCC = changeIntCCToAArch64CC(CC, RHS);
     } else {
       assert(LHS.getValueType().isFloatingPoint());
@@ -4009,7 +4050,7 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
       // code. Construct an additional comparison in this case.
       if (ExtraCC != AArch64CC::AL) {
         SDValue ExtraCmp;
-        if (!CCOp.getNode())
+        if (!CCOp)
           ExtraCmp = emitComparison(LHS, RHS, CC, DL, DAG);
         else
           ExtraCmp = emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate,

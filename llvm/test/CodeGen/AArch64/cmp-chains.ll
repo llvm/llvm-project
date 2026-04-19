@@ -507,9 +507,8 @@ define i32 @compare_with_neg_32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SD-LABEL: compare_with_neg_32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    cmp w0, w2
-; CHECK-SD-NEXT:    mov w8, #-32 // =0xffffffe0
-; CHECK-SD-NEXT:    ccmp w1, w8, #4, lt
-; CHECK-SD-NEXT:    csel w0, w1, w0, gt
+; CHECK-SD-NEXT:    ccmn w1, #31, #8, lt
+; CHECK-SD-NEXT:    csel w0, w1, w0, ge
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: compare_with_neg_32:
@@ -530,9 +529,8 @@ define i32 @compare_with_32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SD-LABEL: compare_with_32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    cmp w0, w2
-; CHECK-SD-NEXT:    mov w8, #32 // =0x20
-; CHECK-SD-NEXT:    ccmp w1, w8, #0, lt
-; CHECK-SD-NEXT:    csel w0, w1, w0, lt
+; CHECK-SD-NEXT:    ccmp w1, #31, #0, lt
+; CHECK-SD-NEXT:    csel w0, w1, w0, le
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: compare_with_32:
@@ -553,9 +551,8 @@ define i32 @compare_with_neg_32_unsigned(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SD-LABEL: compare_with_neg_32_unsigned:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    cmp w0, w2
-; CHECK-SD-NEXT:    mov w8, #-32 // =0xffffffe0
-; CHECK-SD-NEXT:    ccmp w1, w8, #0, lo
-; CHECK-SD-NEXT:    csel w0, w1, w0, hi
+; CHECK-SD-NEXT:    ccmn w1, #31, #0, lo
+; CHECK-SD-NEXT:    csel w0, w1, w0, hs
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: compare_with_neg_32_unsigned:
@@ -576,9 +573,8 @@ define i32 @compare_with_32_unsigned(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SD-LABEL: compare_with_32_unsigned:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    cmp w0, w2
-; CHECK-SD-NEXT:    mov w8, #32 // =0x20
-; CHECK-SD-NEXT:    ccmp w1, w8, #2, lo
-; CHECK-SD-NEXT:    csel w0, w1, w0, lo
+; CHECK-SD-NEXT:    ccmp w1, #31, #2, lo
+; CHECK-SD-NEXT:    csel w0, w1, w0, ls
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: compare_with_32_unsigned:
