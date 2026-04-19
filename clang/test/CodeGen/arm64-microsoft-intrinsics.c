@@ -185,6 +185,18 @@ double test__getRegFp(void)
 // CHECK-MSCOMPAT:       bitcast i64 [[BITS]] to double
 // CHECK-LINUX: error: call to undeclared function '__getRegFp'
 
+void test__setRegFp(double v)
+{
+  __setRegFp(5, v);
+  __setRegFp(31, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @test__setRegFp(double{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = bitcast double {{.*}} to i64
+// CHECK-MSCOMPAT:       call void @llvm.write_volatile_register.i64(metadata ![[MD4:.*]], i64 [[BITS]])
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = bitcast double {{.*}} to i64
+// CHECK-MSCOMPAT:       call void @llvm.write_volatile_register.i64(metadata ![[MD5:.*]], i64 [[BITS]])
+// CHECK-LINUX: error: call to undeclared function '__setRegFp'
+
 #ifdef __LP64__
 #define LONG __int32
 #else

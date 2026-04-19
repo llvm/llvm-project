@@ -379,6 +379,7 @@ static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
 unsigned __int64 __getReg(int);
 double __getRegFp(int _Reg);
 void __setReg(int, unsigned __int64);
+void __setRegFp(int, double);
 unsigned char _interlockedbittestandreset_acq(long volatile *, long);
 unsigned char _interlockedbittestandreset_nf(long volatile *, long);
 unsigned char _interlockedbittestandreset_rel(long volatile *, long);
