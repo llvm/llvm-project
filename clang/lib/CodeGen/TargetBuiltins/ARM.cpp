@@ -4829,6 +4829,24 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return CI;
   }
 
+  if (BuiltinID == clang::AArch64::BI__getRegFp) {
+    Expr::EvalResult Result;
+    if (!E->getArg(0)->EvaluateAsInt(Result, CGM.getContext()))
+      llvm_unreachable("Sema will ensure that the parameter is constant");
+
+    llvm::APSInt Value = Result.Val.getInt();
+    LLVMContext &Context = CGM.getLLVMContext();
+    std::string Reg = "d" + toString(Value, 10);
+
+    llvm::Metadata *Ops[] = {llvm::MDString::get(Context, Reg)};
+    llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
+    llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
+
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::read_register, {Int64Ty});
+    llvm::Value *Bits = Builder.CreateCall(F, Metadata);
+    return Builder.CreateBitCast(Bits, llvm::Type::getDoubleTy(Context));
+  }
+
   if (BuiltinID == clang::AArch64::BI__break) {
     Expr::EvalResult Result;
     if (!E->getArg(0)->EvaluateAsInt(Result, CGM.getContext()))
