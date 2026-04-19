@@ -32,6 +32,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -765,6 +766,19 @@ static bool hasRuntimeUnrollDisablePragma(const Loop *L) {
   return getUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.disable");
 }
 
+/// Returns true if the SCEV expression is uniform, i.e., all threads in a
+/// convergent execution agree on its value. Recursively checks operands.
+static bool isSCEVUniform(const SCEV *S, UniformityInfo &UI) {
+  if (isa<SCEVConstant>(S))
+    return true;
+  if (auto *U = dyn_cast<SCEVUnknown>(S))
+    return UI.isUniform(U->getValue());
+  for (const SCEV *Op : S->operands())
+    if (!isSCEVUniform(Op, UI))
+      return false;
+  return true;
+}
+
 // If loop has an unroll_count pragma return the (necessarily
 // positive) value from the pragma.  Otherwise return 0.
 static unsigned unrollCountPragmaValue(const Loop *L) {
@@ -1236,7 +1250,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
                 std::optional<bool> ProvidedAllowPeeling,
                 std::optional<bool> ProvidedAllowProfileBasedPeeling,
                 std::optional<unsigned> ProvidedFullUnrollMaxCount,
-                AAResults *AA = nullptr) {
+                AAResults *AA = nullptr, UniformityInfo *UI = nullptr) {
 
   LLVM_DEBUG(dbgs() << "Loop Unroll: F["
                     << L->getHeader()->getParent()->getName() << "] Loop %"
@@ -1377,9 +1391,13 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // is unsafe -- it adds a control-flow dependency to the convergent
   // operation.  Therefore restrict remainder loop (try unrolling without).
   //
-  // TODO: This is somewhat conservative; we could allow the remainder if the
-  // trip count is uniform.
-  UP.AllowRemainder &= UCE.ConvergenceAllowsRuntime;
+  // However, if the trip count is uniform across all threads, all threads
+  // will take the same path through the prelude, so the remainder is safe.
+  const SCEV *BTC = SE.getBackedgeTakenCount(L);
+  bool TripCountIsUniform = !UCE.ConvergenceAllowsRuntime && UI &&
+                            !isa<SCEVCouldNotCompute>(BTC) &&
+                            isSCEVUniform(BTC, *UI);
+  UP.AllowRemainder &= UCE.ConvergenceAllowsRuntime || TripCountIsUniform;
 
   // Try to find the trip count upper bound if we cannot find the exact trip
   // count.
@@ -1407,7 +1425,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     return LoopUnrollResult::Unmodified;
   }
 
-  UP.Runtime &= UCE.ConvergenceAllowsRuntime;
+  UP.Runtime &= UCE.ConvergenceAllowsRuntime || TripCountIsUniform;
 
   if (PP.PeelCount) {
     assert(UP.Count == 1 && "Cannot perform peel and unroll in the same step");
@@ -1587,6 +1605,10 @@ public:
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    UniformityInfo *UI =
+        TTI.hasBranchDivergence(&F)
+            ? &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo()
+            : nullptr;
     // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
     // pass.  Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
@@ -1598,7 +1620,8 @@ public:
         /*OnlyFullUnroll*/ false, OnlyWhenForced, ForgetAllSCEV, ProvidedCount,
         ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime,
         ProvidedUpperBound, ProvidedAllowPeeling,
-        ProvidedAllowProfileBasedPeeling, ProvidedFullUnrollMaxCount);
+        ProvidedAllowProfileBasedPeeling, ProvidedFullUnrollMaxCount,
+        /*AA*/ nullptr, UI);
 
     if (Result == LoopUnrollResult::FullyUnrolled)
       LPM.markLoopAsDeleted(*L);
@@ -1611,6 +1634,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     // FIXME: Loop passes are required to preserve domtree, and for now we just
     // recreate dom info if anything gets unrolled.
     getLoopAnalysisUsage(AU);
@@ -1625,6 +1649,7 @@ INITIALIZE_PASS_BEGIN(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
 
 Pass *llvm::createLoopUnrollPass(int OptLevel, bool OnlyWhenForced,
@@ -1744,6 +1769,10 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   AAResults &AA = AM.getResult<AAManager>(F);
 
+  UniformityInfo *UI = nullptr;
+  if (TTI.hasBranchDivergence(&F))
+    UI = &AM.getResult<UniformityInfoAnalysis>(F);
+
   LoopAnalysisManager *LAM = nullptr;
   if (auto *LAMProxy = AM.getCachedResult<LoopAnalysisManagerFunctionProxy>(F))
     LAM = &LAMProxy->getManager();
@@ -1798,8 +1827,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
         /*Count*/ std::nullopt,
         /*Threshold*/ std::nullopt, UnrollOpts.AllowPartial,
         UnrollOpts.AllowRuntime, UnrollOpts.AllowUpperBound, LocalAllowPeeling,
-        UnrollOpts.AllowProfileBasedPeeling, UnrollOpts.FullUnrollMaxCount,
-        &AA);
+        UnrollOpts.AllowProfileBasedPeeling, UnrollOpts.FullUnrollMaxCount, &AA,
+        UI);
     Changed |= Result != LoopUnrollResult::Unmodified;
 
     // The parent must not be damaged by unrolling!
