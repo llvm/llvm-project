@@ -1910,14 +1910,18 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
       return getAddExpr(Ops, SCEV::FlagNUW, Depth + 1);
     }
 
-    const SCEVConstant *C;
-    const SCEV *A;
+    const APInt *C, *C2;
     // zext (C + A)<nsw> -> (sext(C) + sext(A))<nsw> if zext (C + A)<nsw> >=s 0.
-    if (SA->hasNoSignedWrap() && isKnownNonNegative(SA) &&
-        match(SA, m_scev_Add(m_SCEVConstant(C), m_SCEV(A)))) {
-      return getAddExpr(getSignExtendExpr(C, Ty, Depth + 1),
-                        getSignExtendExpr(A, Ty, Depth + 1), SCEV::FlagNSW,
-                        Depth + 1);
+    // Currently the non-negative check is done manually, as isKnownNonNegative
+    // is too expensive.
+    if (SA->hasNoSignedWrap() &&
+        match(SA, m_scev_Add(m_scev_APInt(C),
+                             m_scev_SMax(m_scev_APInt(C2), m_SCEV()))) &&
+        C->isNegative() && !C->isMinSignedValue() && C2->sge(C->abs())) {
+      assert(isKnownNonNegative(SA) && "incorrectly determined non-negative");
+      return getAddExpr(getSignExtendExpr(SA->getOperand(0), Ty, Depth + 1),
+                        getSignExtendExpr(SA->getOperand(1), Ty, Depth + 1),
+                        SCEV::FlagNSW, Depth + 1);
     }
 
     // zext(C + x + y + ...) --> (zext(D) + zext((C - D) + x + y + ...))
