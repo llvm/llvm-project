@@ -111,5 +111,15 @@ jobs:
           matrix.target != 'riscv32-unknown-elf'
         }}
       run: >
+        ninja -v -C ${{ steps.strings.outputs.build-output-dir }} libc
+
+    - name: Test
+      # Skip UEFI and baremetal tests until we have testing set up.
+      if: ${{
+          !endsWith(matrix.target, '-uefi-llvm') &&
+          !endsWith(matrix.target, '-none-eabi') &&
+          matrix.target != 'riscv32-unknown-elf'
+        }}
+      run: >
         ninja -v -C ${{ steps.strings.outputs.build-output-dir }} 
         libc.test.src.string.memcmp_opt_host_test.__unit__
