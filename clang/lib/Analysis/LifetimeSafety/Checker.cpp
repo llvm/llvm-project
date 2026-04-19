@@ -188,25 +188,25 @@ public:
   }
 
   template <typename OriginFact, typename Predicate>
-  void recordWarningsForMatchingLoans(const Expr *InvalidationExpr,
+  void recordWarningsForMatchingLoans(const Expr *InvalidatingExpr,
                                       LoanSet &DirectlyAffectedLoans,
                                       LivenessMap &Origins, OriginFact OF,
                                       Predicate Pred) {
     for (auto &[OID, LiveInfo] : Origins) {
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, OF);
-      for (LoanID DestroyedLoanID : HeldLoans) {
-        if (!Pred(DestroyedLoanID))
+      for (LoanID HeldLoan : HeldLoans) {
+        if (!Pred(HeldLoan))
           continue;
 
         bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
         bool LastDomination =
-            FinalWarningsMap.lookup(DestroyedLoanID).CausingFactDominatesExpiry;
+            FinalWarningsMap.lookup(HeldLoan).CausingFactDominatesExpiry;
         if (!LastDomination) {
-          FinalWarningsMap[DestroyedLoanID] = {
+          FinalWarningsMap[HeldLoan] = {
               /*ExpiryLoc=*/{},
               /*CausingFact=*/LiveInfo.CausingFact,
               /*MovedExpr=*/nullptr,
-              /*InvalidatedByExpr=*/InvalidationExpr,
+              /*InvalidatedByExpr=*/InvalidatingExpr,
               /*CausingFactDominatesExpiry=*/CurDomination};
         }
       }
