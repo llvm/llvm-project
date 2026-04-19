@@ -788,18 +788,21 @@ void GH67492() {
 // FIXME: This currently causes clang to crash in C++11 mode.
 #if __cplusplus >= 201402L
 namespace GH83267 {
-auto l = [](auto a) { return 1; };
+auto l = [](auto a) { return 1; }; // expected-note {{defined here}}
 using type = decltype(l);
 
 template<>
-auto type::operator()(int a) const { // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+auto type::operator()(int a) const { // expected-error {{a member of a lambda should not be explicitly specialized}}
   return c; // expected-error {{use of undeclared identifier 'c'}}
 }
 
-auto ll = [](auto a) { return 1; }; // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+auto ll = [](auto a) -> int { return 1; }; // expected-note 2 {{defined here}}
 using t = decltype(ll);
-template auto t::operator()<int>(int a) const; // expected-note {{in instantiation}}
+template auto t::operator()<int>(int a) const -> int; // expected-error {{a member of a lambda should not be explicitly instantiated}}
 
+template <typename T>
+using cll = int(*)(T);
+template t::operator cll<int>() const; // expected-error {{a member of a lambda should not be explicitly instantiated}}
 }
 #endif
 

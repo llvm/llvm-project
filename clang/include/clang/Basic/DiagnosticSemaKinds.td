@@ -8949,7 +8949,9 @@ let CategoryName = "Lambda Issue" in {
     "generic lambdas are incompatible with C++11">,
     InGroup<CXXPre14Compat>, DefaultIgnore;
   def err_lambda_explicit_spec : Error<
-    "lambda call operator should not be explicitly specialized or instantiated">;
+    "a member of a lambda should not be explicitly specialized">;
+  def err_lambda_explicit_inst : Error<
+    "a member of a lambda should not be explicitly instantiated">;
 
   // C++17 '*this' captures.
   def warn_cxx14_compat_star_this_lambda_capture : Warning<
