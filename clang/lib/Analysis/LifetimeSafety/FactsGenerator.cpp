@@ -332,12 +332,6 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   case CK_BuiltinFnToFnPtr:
     // Ignore function-to-pointer decays.
     return;
-  case CK_BitCast:
-    // Only flow if the shapes are the same (e.g. casting from int** to void*
-    // will not flow here).
-    if (Src && Dest && Dest->getLength() == Src->getLength())
-      flow(Dest, Src, /*Kill=*/true);
-    return;
   default:
     return;
   }
