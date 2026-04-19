@@ -743,3 +743,47 @@ define double @bitcast_constexpr_2b32_f64_poison() {
   %res = bitcast <2 x b32> <b32 poison, b32 1> to double
   ret double %res
 }
+
+define <3 x b8> @bitcast_constexpr_8b3_3b8() {
+; LE-LABEL: @bitcast_constexpr_8b3_3b8(
+; LE-NEXT:    ret <3 x b8> <b8 -120, b8 -58, b8 -6>
+;
+; BE-LABEL: @bitcast_constexpr_8b3_3b8(
+; BE-NEXT:    ret <3 x b8> <b8 5, b8 57, b8 119>
+;
+  %res = bitcast <8 x b3> <b3 0, b3 1, b3 2, b3 3, b3 4, b3 5, b3 6, b3 7> to <3 x b8>
+  ret <3 x b8> %res
+}
+
+define <3 x b8> @bitcast_constexpr_8b3_3b8_poison() {
+; LE-LABEL: @bitcast_constexpr_8b3_3b8_poison(
+; LE-NEXT:    ret <3 x b8> <b8 poison, b8 52, b8 -42>
+;
+; BE-LABEL: @bitcast_constexpr_8b3_3b8_poison(
+; BE-NEXT:    ret <3 x b8> <b8 poison, b8 -89, b8 46>
+;
+  %res = bitcast <8 x b3> <b3 poison, b3 poison, b3 1, b3 2, b3 3, b3 4, b3 5, b3 6> to <3 x b8>
+  ret <3 x b8> %res
+}
+
+define <3 x i8> @bitcast_constexpr_8b3_3i8_poison() {
+; LE-LABEL: @bitcast_constexpr_8b3_3i8_poison(
+; LE-NEXT:    ret <3 x i8> <i8 poison, i8 52, i8 -42>
+;
+; BE-LABEL: @bitcast_constexpr_8b3_3i8_poison(
+; BE-NEXT:    ret <3 x i8> <i8 poison, i8 -89, i8 46>
+;
+  %res = bitcast <8 x b3> <b3 poison, b3 poison, b3 1, b3 2, b3 3, b3 4, b3 5, b3 6> to <3 x i8>
+  ret <3 x i8> %res
+}
+
+define <3 x i8> @bitcast_constexpr_8b3_3i8_crossing_poison() {
+; LE-LABEL: @bitcast_constexpr_8b3_3i8_crossing_poison(
+; LE-NEXT:    ret <3 x i8> <i8 17, i8 poison, i8 -6>
+;
+; BE-LABEL: @bitcast_constexpr_8b3_3i8_crossing_poison(
+; BE-NEXT:    ret <3 x i8> <i8 0, i8 poison, i8 119>
+;
+  %res = bitcast <8 x b3> <b3 1, b3 2, b3 poison, b3 3, b3 4, b3 5, b3 6, b3 7> to <3 x i8>
+  ret <3 x i8> %res
+}
