@@ -21133,7 +21133,8 @@ TEST_F(FormatTest, FormatsLambdas) {
       "                           LambdaBodyMustBeBreak);\n"
       "};",
       LLVMWithBeforeLambdaBody);
-  LLVMWithBeforeLambdaBody.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
+  LLVMWithBeforeLambdaBody.PackParameters.BinPack =
+      FormatStyle::BPPS_OnePerLine;
   verifyFormat("FctAllOnSameLine_SLS_All([]() { return S; }, Fst, Second);",
                LLVMWithBeforeLambdaBody);
   verifyFormat(

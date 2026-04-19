@@ -685,8 +685,8 @@ TEST_F(AlignBracketsTest, FormatsDeclarationBreakAlways) {
                "       int cccccccccccccccccccccccc);",
                BreakAlways);
 
-  // Ensure AlignAfterOpenBracket interacts correctly with PackParameters.BinPack set
-  // to BPPS_AlwaysOnePerLine.
+  // Ensure AlignAfterOpenBracket interacts correctly with
+  // PackParameters.BinPack set to BPPS_AlwaysOnePerLine.
   BreakAlways.BreakAfterOpenBracketFunction = true;
   verifyFormat(
       "void someLongFunctionName(\n"
@@ -712,8 +712,8 @@ TEST_F(AlignBracketsTest, FormatsDefinitionBreakAlways) {
                "}",
                BreakAlways);
 
-  // Ensure BinPackArguments interact correctly when PackParameters.BinPack is set to
-  // BPPS_AlwaysOnePerLine.
+  // Ensure BinPackArguments interact correctly when PackParameters.BinPack is
+  // set to BPPS_AlwaysOnePerLine.
   verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "       int bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
                "       int cccccccccccccccccccccccc) {\n"
@@ -742,8 +742,8 @@ TEST_F(AlignBracketsTest, FormatsDefinitionBreakAlways) {
                BreakAlways);
   BreakAlways.BreakFunctionDefinitionParameters = false;
 
-  // Ensure AlignAfterOpenBracket interacts correctly with PackParameters.BinPack set
-  // to BPPS_AlwaysOnePerLine.
+  // Ensure AlignAfterOpenBracket interacts correctly with
+  // PackParameters.BinPack set to BPPS_AlwaysOnePerLine.
   BreakAlways.BreakAfterOpenBracketFunction = true;
   verifyFormat(
       "void someLongFunctionName(\n"

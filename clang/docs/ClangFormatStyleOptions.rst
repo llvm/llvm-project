@@ -5866,8 +5866,7 @@ the configuration (without a prefix: ``Auto``).
       If the ``BreakAfter`` limit is not exceeded, behave like ``BinPack``.
 
 
-  * ``unsigned BreakAfter`` :versionbadge:`clang-format 23`
-  An argument list with more arguments than the specified number will be
+  * ``unsigned BreakAfter`` :versionbadge:`clang-format 23` An argument list with more arguments than the specified number will be
     formatted with one argument per line. This option must be used with
     ``BinPack: UseBreakAfter``.
 
@@ -6013,8 +6012,7 @@ the configuration (without a prefix: ``Auto``).
       If the ``BreakAfter`` limit is not exceeded, behave like ``BinPack``.
 
 
-  * ``unsigned BreakAfter`` :versionbadge:`clang-format 23`
-  A parameter list with more parameters than the specified number will be
+  * ``unsigned BreakAfter`` :versionbadge:`clang-format 23` A parameter list with more parameters than the specified number will be
     formatted with one parameter per line. This option must be used with
     ``BinPack: UseBreakAfter``.
 
