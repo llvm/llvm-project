@@ -67,9 +67,11 @@ done:
   ret void
 }
 
-; CHECK-LABEL: @test_empty_tree(
-; CHECK-NEXT: ret void
 define void @test_empty_tree() {
+; CHECK-LABEL: define void @test_empty_tree(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    ret void
+;
   %tree = alloca ptr, align 8
   call void @ctor(ptr %tree)
   call void @dtor(ptr %tree)
