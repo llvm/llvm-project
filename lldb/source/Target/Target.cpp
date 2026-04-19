@@ -5432,6 +5432,30 @@ void Target::NotifyBreakpointChanged(
     BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
 }
 
+FileSpecList Target::GetSafeAutoLoadPaths() const {
+  FileSpecList fspecs = Debugger::GetDefaultSafeAutoLoadPaths();
+
+  // Add platform-specific safe-paths.
+  if (m_platform_sp) {
+    if (auto platform_fspecs_or_err =
+            m_platform_sp->GetSafeAutoLoadPaths(*this))
+      fspecs.Append(*platform_fspecs_or_err);
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Modules | LLDBLog::Platform),
+                     platform_fspecs_or_err.takeError(),
+                     "Skipping safe auto-load: {0}");
+  }
+
+  // Properties for testing get added last so they take priority.
+#ifndef NDEBUG
+  for (const auto &fspec :
+       TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
+    fspecs.Append(fspec);
+#endif
+
+  return fspecs;
+}
+
 // FIXME: the language plugin should expression options dynamically and
 // we should validate here (by asking the language plugin) that the options
 // being set/retrieved are actually valid options.
