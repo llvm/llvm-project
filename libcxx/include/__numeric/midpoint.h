@@ -16,6 +16,7 @@
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_unsigned.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cv.h>
