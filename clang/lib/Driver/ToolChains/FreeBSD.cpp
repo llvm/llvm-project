@@ -150,6 +150,9 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
+  if (Args.hasArg(options::OPT_s))
+    CmdArgs.push_back("-s");
+
   if (IsPIE)
     CmdArgs.push_back("-pie");
 
