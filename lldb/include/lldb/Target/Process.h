@@ -1247,6 +1247,11 @@ public:
   /// \return
   ///     A Target object pointer to the target that owns this
   ///     module.
+  lldb::TargetSP GetTargetSP() const { return m_target_wp.lock(); }
+
+  /// \return
+  ///     A Target object pointer to the target that owns this
+  ///     module.
   Target &GetTarget() { return *m_target_wp.lock(); }
 
   /// Get the const target object pointer for this module.

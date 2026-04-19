@@ -241,12 +241,15 @@ SBTarget SBProcess::GetTarget() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBTarget sb_target;
-  TargetSP target_sp;
   ProcessSP process_sp(GetSP());
-  if (process_sp) {
-    target_sp = process_sp->GetTarget().shared_from_this();
-    sb_target.SetSP(target_sp);
-  }
+  if (!process_sp)
+    return sb_target;
+
+  TargetSP target_sp = process_sp->GetTargetSP();
+  if (!target_sp)
+    return sb_target;
+
+  sb_target.SetSP(target_sp);
 
   return sb_target;
 }
@@ -1274,8 +1277,14 @@ lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
     return error;
   }
 
-  std::lock_guard<std::recursive_mutex> guard(
-      process_sp->GetTarget().GetAPIMutex());
+  TargetSP target_sp = process_sp->GetTargetSP();
+  if (!target_sp) {
+    error = Status::FromErrorString(
+        "SBProcess is invalid because its target has been deleted");
+    return error;
+  }
+
+  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
 
   if (process_sp->GetState() != eStateStopped) {
     error = Status::FromErrorString("the process is not stopped");
