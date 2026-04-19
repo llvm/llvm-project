@@ -96,7 +96,7 @@ int test_stmt_expr(int flag, struct s6 a1, struct s6 a2) {
 // LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP]], ptr {{.*}}, i64 4, i1 false)
 // LLVM:    br label %[[EXIT]]
 // LLVM:  [[EXIT]]:
-// LLVM:    getelementptr %struct.s6, ptr %[[TMP]], i32 0, i32 0
+// LLVM:    getelementptr inbounds nuw %struct.s6, ptr %[[TMP]], i32 0, i32 0
 
 // OGCG: define {{.*}} i32 @test_stmt_expr
 // OGCG:    %[[LOAD_FLAG:.*]] = load i32, ptr {{.*}}

@@ -3498,8 +3498,14 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
     // is always zero. The second offset tell us which member it will access.
     llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{0, op.getIndex()};
     const mlir::Type elementTy = getTypeConverter()->convertType(recordTy);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, llResTy, elementTy,
-                                                   adaptor.getAddr(), offset);
+    // Struct member accesses are always inbounds and nuw: the base pointer
+    // is valid and the member offset is a positive, constant offset within
+    // the struct layout, so it cannot wrap. This matches LLVM's
+    // IRBuilder::CreateStructGEP.
+    mlir::LLVM::GEPNoWrapFlags flags =
+        mlir::LLVM::GEPNoWrapFlags::inbounds | mlir::LLVM::GEPNoWrapFlags::nuw;
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        op, llResTy, elementTy, adaptor.getAddr(), offset, flags);
     return mlir::success();
   }
   case cir::RecordType::Union:

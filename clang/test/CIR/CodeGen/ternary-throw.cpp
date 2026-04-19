@@ -282,7 +282,7 @@ int test_agg_cond_throw_false(bool flag, struct s6 a1, struct s6 a2) {
 // LLVM:   %[[PHI:.*]] = phi ptr [ %[[A1_ALLOCA]], %[[TRUE_BB]] ]
 // LLVM:   br label %[[CONT_BB:.*]]
 // LLVM: [[CONT_BB]]:
-// LLVM:   %[[F0_PTR:.*]] = getelementptr %struct.s6, ptr %[[A1_ALLOCA]], i32 0, i32 0
+// LLVM:   %[[F0_PTR:.*]] = getelementptr inbounds nuw %struct.s6, ptr %[[A1_ALLOCA]], i32 0, i32 0
 // LLVM:   %[[F0_VAL:.*]] = load i32, ptr %[[F0_PTR]]
 // LLVM:   ret i32 %{{.*}}
 
@@ -347,7 +347,7 @@ int test_agg_cond_throw_true(bool flag, struct s6 a1, struct s6 a2) {
 // LLVM:   %[[PHI:.*]] = phi ptr [ %[[A1_ALLOCA]], %[[FALSE_BB]] ]
 // LLVM:   br label %[[CONT_BB:.*]]
 // LLVM: [[CONT_BB]]:
-// LLVM:   %[[F0_PTR:.*]] = getelementptr %struct.s6, ptr %[[A1_ALLOCA]], i32 0, i32 0
+// LLVM:   %[[F0_PTR:.*]] = getelementptr inbounds nuw %struct.s6, ptr %[[A1_ALLOCA]], i32 0, i32 0
 // LLVM:   %[[F0_VAL:.*]] = load i32, ptr %[[F0_PTR]]
 // LLVM:   ret i32 %{{.*}}
 
@@ -388,7 +388,7 @@ const int test_agg_cond_const_true_throw_false(struct s6 a1, struct s6 a2) {
 // LLVM: %[[A2_ALLOCA:.*]] = alloca %struct.s6
 // LLVM-NOT: br i1
 // LLVM-NOT: __cxa_throw
-// LLVM: %[[F0_PTR:.*]] = getelementptr %struct.s6, ptr %[[A1_ALLOCA]], i32 0, i32 0
+// LLVM: %[[F0_PTR:.*]] = getelementptr inbounds nuw %struct.s6, ptr %[[A1_ALLOCA]], i32 0, i32 0
 // LLVM: %[[F0_VAL:.*]] = load i32, ptr %[[F0_PTR]]
 // LLVM: ret i32 %{{.*}}
 
@@ -504,7 +504,7 @@ const int test_agg_cond_const_false_throw_true(struct s6 a1, struct s6 a2) {
 // LLVM: %[[A2_ALLOCA:.*]] = alloca %struct.s6
 // LLVM-NOT: br i1
 // LLVM-NOT: __cxa_throw
-// LLVM: %[[F0_PTR:.*]] = getelementptr %struct.s6, ptr %[[A1_ALLOCA]], i32 0, i32 0
+// LLVM: %[[F0_PTR:.*]] = getelementptr inbounds nuw %struct.s6, ptr %[[A1_ALLOCA]], i32 0, i32 0
 // LLVM: %[[F0_VAL:.*]] = load i32, ptr %[[F0_PTR]]
 // LLVM: ret i32 %{{.*}}
 
