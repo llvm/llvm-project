@@ -28,22 +28,21 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr bool is_integer(float16 x) {
-  using FPBits = fputil::FPBits<float16>;
-  FPBits xbits(x);
-  uint16_t x_u = xbits.uintval();
-  unsigned x_e = static_cast<unsigned>(xbits.get_biased_exponent());
-  unsigned lsb = static_cast<unsigned>(
-      cpp::countr_zero(static_cast<uint16_t>(x_u | FPBits::EXP_MASK)));
-  constexpr unsigned UNIT_EXPONENT =
-      static_cast<unsigned>(FPBits::EXP_BIAS + FPBits::FRACTION_LEN);
-  return x_e + lsb >= UNIT_EXPONENT;
-}
-
 LIBC_INLINE float16 tgammaf16(float16 x) {
   using FPBits = typename fputil::FPBits<float16>;
   FPBits xbits(x);
   uint16_t x_abs = xbits.abs().uintval();
+  auto is_integer = [](float16 x) {
+    using FPBits = fputil::FPBits<float16>;
+    FPBits xbits(x);
+    uint16_t x_u = xbits.uintval();
+    unsigned x_e = static_cast<unsigned>(xbits.get_biased_exponent());
+    unsigned lsb = static_cast<unsigned>(
+        cpp::countr_zero(static_cast<uint16_t>(x_u | FPBits::EXP_MASK)));
+    constexpr unsigned UNIT_EXPONENT =
+        static_cast<unsigned>(FPBits::EXP_BIAS + FPBits::FRACTION_LEN);
+    return x_e + lsb >= UNIT_EXPONENT;
+  };
 
   if (LIBC_UNLIKELY(x_abs >= 0x7c00U)) {
     if (x_abs == 0x7c00U) {
@@ -102,8 +101,8 @@ LIBC_INLINE float16 tgammaf16(float16 x) {
       return FPBits::quiet_nan().get_val();
     }
     // gamma(n) = (n-1)! for n = 1..9 (n >= 10 overflows float16)
-    static constexpr float16 FACTORIAL[9] = {1.0,   1.0,   2.0,    6.0,    24.0,
-                                             120.0, 720.0, 5040.0, 40320.0};
+    constexpr float16 FACTORIAL[9] = {1.0,   1.0,   2.0,    6.0,    24.0,
+                                      120.0, 720.0, 5040.0, 40320.0};
     return FACTORIAL[k - 1];
   }
 
@@ -127,10 +126,10 @@ LIBC_INLINE float16 tgammaf16(float16 x) {
   // Sollya with: > P = fpminimax(tgamma(x + 2.875),
   //                              [|0,1,2,3,4,5,6,7|], [|D...|], [-0.5, 0.5]);
 
-  static constexpr double COEFFS[8] = {
-      0x1.c9a76b7de6f60p+0, 0x1.8f2754874fe83p+0, 0x1.0d11cba0c229fp+0,
-      0x1.e1f47c012064dp-2, 0x1.828b9f2afb74fp-3, 0x1.e1cc49d830795p-5,
-      0x1.2c9af3e686836p-6, 0x1.1bf60c7e311f6p-8};
+  constexpr double COEFFS[8] = {0x1.c9a76b7de6f60p+0, 0x1.8f2754874fe83p+0,
+                                0x1.0d11cba0c229fp+0, 0x1.e1f47c012064dp-2,
+                                0x1.828b9f2afb74fp-3, 0x1.e1cc49d830795p-5,
+                                0x1.2c9af3e686836p-6, 0x1.1bf60c7e311f6p-8};
   double d2 = d * d, d4 = d2 * d2;
   double p01 = fputil::multiply_add(d, COEFFS[1], COEFFS[0]);
   double p23 = fputil::multiply_add(d, COEFFS[3], COEFFS[2]);
