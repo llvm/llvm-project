@@ -215,7 +215,8 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
     if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
       return AssignGUIDPass::getGUID(Fct);
 
-    return Function::getGUIDAssumingExternalLinkage(getIRPGOFuncName(Fct, InLTO));
+    return Function::getGUIDAssumingExternalLinkage(
+        getIRPGOFuncName(Fct, InLTO));
   };
 
   for (BasicBlock &BB : make_early_inc_range(F)) {
