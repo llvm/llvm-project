@@ -6982,7 +6982,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   VPTypeAnalysis TypeInfo(*Plan);
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
-  SmallVector<VPRecipeBase *> ToDelete;
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
   Builder.setInsertPoint(&*std::prev(std::prev(LatchVPBB->end())));
   VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
@@ -7011,7 +7010,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     }
 
     auto *OrigExitingVPV = PhiR->getBackedgeValue();
-    auto *NewExitingVPV = PhiR->getBackedgeValue();
+    auto *NewExitingVPV = OrigExitingVPV;
 
     // Remove the predicated select if the target doesn't want it.
     VPValue *V;
@@ -7066,24 +7065,47 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       if (TrueValIsPhi)
         Cmp = Builder.createNot(Cmp);
 
-      // Convert the reduction phi to operate on bools.
+      // Build a fresh i1 chain (phi, or, and i1 versions of any blend/select
+      // the exiting value flows through).
       auto *NewPhiR =
-          PhiR->cloneWithOperands(Plan->getFalse(), PhiR->getBackedgeValue());
+          PhiR->cloneWithOperands(Plan->getFalse(), Plan->getFalse());
       NewPhiR->insertBefore(PhiR);
-      PhiR->replaceAllUsesWith(NewPhiR);
+      VPValue *NewExiting = Builder.createOr(NewPhiR, Cmp);
 
-      VPValue *Or = Builder.createOr(NewPhiR, Cmp);
-      // Only replace uses inside the vector region with Or. External uses
-      // (e.g. scalar preheader resume phis) must be replaced by the user
-      // update loop below with FinalReductionResult.
-      AnyOfSelect->replaceUsesWithIf(Or, [](VPUser &U, unsigned) {
-        return cast<VPRecipeBase>(&U)->getRegion();
-      });
-      ToDelete.push_back(AnyOfSelect);
+      // The exiting value may flow through a VPBlendRecipe and/or a wrapping
+      // VPInstruction::Select before reaching OrigExitingVPV. Clone each level
+      // of the chain with the i1 substitutions propagated through.
+      DenseMap<VPValue *, VPValue *> Substitutions = {{AnyOfSelect, NewExiting},
+                                                      {PhiR, NewPhiR}};
+      auto CloneWithSubstitutions = [&](VPSingleDefRecipe *Old) {
+        SmallVector<VPValue *> NewOps;
+        for (VPValue *Op : Old->operands())
+          NewOps.push_back(Substitutions.lookup_or(Op, Op));
+        VPSingleDefRecipe *New;
+        if (auto *B = dyn_cast<VPBlendRecipe>(Old))
+          New = B->cloneWithOperands(NewOps);
+        else
+          New = cast<VPInstruction>(Old)->cloneWithOperands(NewOps);
+        New->insertBefore(Old);
+        NewExiting = New->getVPSingleValue();
+        Substitutions[Old->getVPSingleValue()] = NewExiting;
+      };
 
-      // Update NewExitingVPV if it was pointing to the now-replaced select.
-      if (NewExitingVPV == AnyOfSelect)
-        NewExitingVPV = Or;
+      // If there's an outer Select wrapping a Blend, clone the inner Blend
+      // first so the outer Select clone can refer to it.
+      if (OrigExitingVPV != AnyOfSelect) {
+        VPValue *Inner;
+        if (match(OrigExitingVPV,
+                  m_Select(m_VPValue(), m_VPValue(Inner), m_VPValue())))
+          if (auto *InnerBlend = dyn_cast<VPBlendRecipe>(Inner))
+            CloneWithSubstitutions(InnerBlend);
+        CloneWithSubstitutions(cast<VPSingleDefRecipe>(OrigExitingVPV));
+      }
+
+      NewPhiR->setOperand(1, NewExiting);
+      PhiR->replaceAllUsesWith(Start);
+      PhiR = NewPhiR;
+      NewExitingVPV = NewExiting;
 
       Builder.setInsertPoint(MiddleVPBB, IP);
 
@@ -7166,8 +7188,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       PhiR->setOperand(0, StartV);
     }
   }
-  for (VPRecipeBase *R : ToDelete)
-    R->eraseFromParent();
 
   RUN_VPLAN_PASS(VPlanTransforms::clearReductionWrapFlags, *Plan);
 }
