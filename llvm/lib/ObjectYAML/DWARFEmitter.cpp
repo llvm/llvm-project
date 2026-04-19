@@ -594,6 +594,15 @@ getStandardOpcodeLengths(uint16_t Version, std::optional<uint8_t> OpcodeBase) {
   return StandardOpcodeLengths;
 }
 
+static void writeV5EntryFormat(raw_ostream &OS, uint8_t Count,
+                               ArrayRef<DWARFYAML::LnctForm> Format) {
+  OS << static_cast<char>(Count);
+  for (const auto [ContentType, Form] : Format) {
+    encodeULEB128(ContentType, OS);
+    encodeULEB128(Form, OS);
+  }
+}
+
 Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (const DWARFYAML::LineTable &LineTable : DI.DebugLines) {
     // Buffer holds the bytes following the header_length (or prologue_length in
@@ -619,12 +628,14 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
       writeInteger(OpcodeLength, BufferOS, DI.IsLittleEndian);
 
     if (LineTable.Version >= 5) {
-      // TODO: Support directories and file names in DWARFv5
-      writeInteger(/*directory_entry_format_count=*/uint8_t(0), BufferOS,
-                   DI.IsLittleEndian);
+      writeV5EntryFormat(BufferOS, LineTable.DirectoryEntryFormatCount,
+                         LineTable.DirectoryEntryFormat);
+      // TODO: Support directories in DWARFv5
       encodeULEB128(/*directories_count=*/0, BufferOS);
-      writeInteger(/*file_name_entry_format_count=*/uint8_t(0), BufferOS,
-                   DI.IsLittleEndian);
+
+      writeV5EntryFormat(BufferOS, LineTable.FileNameEntryFormatCount,
+                         LineTable.FileNameEntryFormat);
+      // TODO: Support file names in DWARFv5
       encodeULEB128(/*file_names_count=*/0, BufferOS);
     } else {
       for (StringRef IncludeDir : LineTable.IncludeDirs) {

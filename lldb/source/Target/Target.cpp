@@ -3871,7 +3871,8 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
 
       if (default_to_use_pty) {
 #ifdef _WIN32
-        if (info.GetFlags().Test(eLaunchFlagUsePipes)) {
+        if (info.GetFlags().Test(eLaunchFlagUsePipes) ||
+            ::getenv("LLDB_LAUNCH_FLAG_USE_PIPES")) {
           llvm::Error Err = info.SetUpPipeRedirection();
           LLDB_LOG_ERROR(log, std::move(Err),
                          "SetUpPipeRedirection failed: {0}");
@@ -4454,7 +4455,7 @@ public:
     // we just use the one from this instance.
     if (exe_ctx) {
       Target *target = exe_ctx->GetTargetPtr();
-      if (target) {
+      if (target && !target->IsDummyTarget()) {
         TargetOptionValueProperties *target_properties =
             static_cast<TargetOptionValueProperties *>(
                 target->GetValueProperties().get());
