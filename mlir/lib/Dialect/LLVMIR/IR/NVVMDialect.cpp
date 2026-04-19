@@ -2928,8 +2928,14 @@ LogicalResult NVVM::SetMaxRegisterOp::verify() {
 }
 
 LogicalResult NVVM::BarrierOp::verify() {
-  if (getReductionOp() && getNumberOfThreads())
-    return emitOpError("reduction cannot be combined with number_of_threads");
+  // Temporary: the reduction lowering path still hardcodes the `.aligned`
+  // intrinsic spelling. A follow-up PR will extend it along the aligned axis
+  // (and add the `.red.*.count` variants); until then, reject non-aligned
+  // reductions here so users cannot construct an op whose `aligned = false`
+  // would be silently dropped during lowering.
+  if (getReductionOp() && !getAligned())
+    return emitOpError(
+        "non-aligned reduction is not supported yet; tracked as a follow-up");
 
   if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
     return emitOpError("reduction are only available when id is 0");
@@ -3481,26 +3487,6 @@ static llvm::Intrinsic::ID getBarrierSyncIntrinsic(bool aligned,
                  : llvm::Intrinsic::nvvm_barrier_cta_sync_all;
 }
 
-/// Returns the LLVM intrinsic ID for the `nvvm.barrier.cta.red.{and,or,popc}
-/// [.aligned].all` variant matching `aligned` and `red`. Only the `.all` shape
-/// is modeled: `BarrierOp::verify` rejects `reduction + numberOfThreads`, so
-/// the `.red.*.count` intrinsics are intentionally unreachable here.
-static llvm::Intrinsic::ID
-getBarrierReductionIntrinsic(bool aligned, NVVM::BarrierReduction red) {
-  switch (red) {
-  case NVVM::BarrierReduction::AND:
-    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all
-                   : llvm::Intrinsic::nvvm_barrier_cta_red_and_all;
-  case NVVM::BarrierReduction::OR:
-    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all
-                   : llvm::Intrinsic::nvvm_barrier_cta_red_or_all;
-  case NVVM::BarrierReduction::POPC:
-    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all
-                   : llvm::Intrinsic::nvvm_barrier_cta_red_popc_all;
-  }
-  llvm_unreachable("unknown BarrierReduction kind");
-}
-
 mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::BarrierOp>(op);
@@ -3513,8 +3499,17 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
     id = getBarrierSyncIntrinsic(thisOp.getAligned(), /*hasCount=*/true);
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
   } else if (thisOp.getReductionOp()) {
-    id = getBarrierReductionIntrinsic(thisOp.getAligned(),
-                                      *thisOp.getReductionOp());
+    switch (*thisOp.getReductionOp()) {
+    case NVVM::BarrierReduction::AND:
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all;
+      break;
+    case NVVM::BarrierReduction::OR:
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all;
+      break;
+    case NVVM::BarrierReduction::POPC:
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all;
+      break;
+    }
     args.push_back(builder.CreateICmpNE(
         mt.lookupValue(thisOp.getReductionPredicate()), builder.getInt32(0)));
   } else {
