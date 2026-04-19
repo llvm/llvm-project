@@ -161,3 +161,47 @@ loop1.header:                                              ; preds = %loop1.latc
 loop1.latch:                                              ; preds = %loop1.header
   br i1 false, label %funcexit, label %loop1.header
 }
+
+define i32 @regression4() {
+; CHECK-LABEL: define i32 @regression4() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[WHILE_COND_OUTER:.*]]
+; CHECK:       [[WHILE_COND_OUTER_LOOPEXIT:.*]]:
+; CHECK-NEXT:    br label %[[WHILE_COND_OUTER]]
+; CHECK:       [[WHILE_COND_OUTER]]:
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
+; CHECK-NEXT:    [[PHI3:%.*]] = phi i32 [ 0, %[[WHILE_COND_OUTER]] ], [ [[ADD5:%.*]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[ADD5]] = add i32 [[PHI3]], 1
+; CHECK-NEXT:    br i1 false, label %[[WHILE_COND]], label %[[FOR_BODY_PREHEADER:.*]]
+; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    [[PHI3_LCSSA1:%.*]] = phi i32 [ [[PHI3]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[PHI3_LCSSA1]]
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ], [ [[LSR_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i32 [[LSR_IV]], 0
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], -1
+; CHECK-NEXT:    br i1 false, label %[[WHILE_COND_OUTER_LOOPEXIT]], label %[[FOR_BODY]]
+;
+entry:
+  br label %while.cond.outer
+
+while.cond.outer:                                              ; preds = %for.body, %entry
+  %phi = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  br label %while.cond
+
+while.cond:                                              ; preds = %while.cond, %while.cond.outer
+  %phi3 = phi i32 [ 0, %while.cond.outer ], [ %add5, %while.cond ]
+  %phi4 = phi i32 [ 0, %while.cond.outer ], [ %add, %while.cond ]
+  %add = add i32 %phi4, 1
+  %add5 = add i32 %phi3, 1
+  br i1 false, label %while.cond, label %for.body
+
+for.body:                                              ; preds = %for.body, %while.cond
+  %phi7 = phi i32 [ %add8, %for.body ], [ 0, %while.cond ]
+  %add8 = add i32 %phi7, 1
+  %sub = sub i32 0, %phi3
+  %icmp = icmp eq i32 %phi7, %sub
+  br i1 false, label %while.cond.outer, label %for.body
+}
