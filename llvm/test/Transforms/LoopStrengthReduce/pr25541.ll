@@ -12,14 +12,13 @@ define void @f() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    br label %[[FOR_COND_I:.*]]
 ; CHECK:       [[FOR_COND_I]]:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_INC_I:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV_LCSSA1:%.*]] = inttoptr i64 [[LSR_IV]] to ptr
 ; CHECK-NEXT:    invoke void @g()
 ; CHECK-NEXT:            to label %[[FOR_INC_I]] unwind label %[[CATCH_DISPATCH_I:.*]]
 ; CHECK:       [[CATCH_DISPATCH_I]]:
-; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i64 [ [[LSR_IV]], %[[FOR_COND_I]] ]
 ; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %[[FOR_COND_1_PREHEADER_I:.*]]] unwind to caller
 ; CHECK:       [[FOR_COND_1_PREHEADER_I]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
-; CHECK-NEXT:    [[LSR_IV_LCSSA1:%.*]] = inttoptr i64 [[LSR_IV_LCSSA]] to ptr
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[LSR_IV_LCSSA1]], null
 ; CHECK-NEXT:    br label %[[FOR_COND_1_I:.*]]
 ; CHECK:       [[FOR_COND_1_I]]:

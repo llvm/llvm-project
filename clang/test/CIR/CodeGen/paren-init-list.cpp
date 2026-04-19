@@ -41,15 +41,13 @@ void test_init_list_with_dtor() {
 
 // CIR: cir.func {{.*}} @_Z24test_init_list_with_dtorv
 // CIR:   %[[O:.*]] = cir.alloca !rec_Outer, !cir.ptr<!rec_Outer>, ["o", init]
-// CIR:   cir.scope {
-// CIR:     %[[H:.*]] = cir.get_member %[[O]][0] {name = "h"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_HasDtor>
-// CIR:     %[[VAL:.*]] = cir.get_member %[[H]][0] {name = "val"} : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!s32i>
-// CIR:     %[[CONST:.*]] = cir.const #cir.int<1>
-// CIR:     cir.store{{.*}} %[[CONST]], %[[VAL]]
-// CIR:     %[[X:.*]] = cir.get_member %[[O]][1] {name = "x"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!s32i>
-// CIR:     %[[CONST:.*]] = cir.const #cir.int<2>
-// CIR:     cir.store{{.*}} %[[CONST]], %[[X]]
-// CIR:   }
+// CIR:   %[[H:.*]] = cir.get_member %[[O]][0] {name = "h"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_HasDtor>
+// CIR:   %[[VAL:.*]] = cir.get_member %[[H]][0] {name = "val"} : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!s32i>
+// CIR:   %[[CONST:.*]] = cir.const #cir.int<1>
+// CIR:   cir.store{{.*}} %[[CONST]], %[[VAL]]
+// CIR:   %[[X:.*]] = cir.get_member %[[O]][1] {name = "x"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!s32i>
+// CIR:   %[[CONST:.*]] = cir.const #cir.int<2>
+// CIR:   cir.store{{.*}} %[[CONST]], %[[X]]
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
@@ -61,10 +59,10 @@ void test_init_list_with_dtor() {
 
 // LLVM: define {{.*}} void @_Z24test_init_list_with_dtorv
 // LLVM:   %[[O:.*]] = alloca %struct.Outer
-// LLVM:   %[[O_ADDR:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 0
-// LLVM:   %[[H_ADDR:.*]] = getelementptr %struct.HasDtor, ptr %[[O_ADDR]], i32 0, i32 0
+// LLVM:   %[[O_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 0
+// LLVM:   %[[H_ADDR:.*]] = getelementptr inbounds nuw %struct.HasDtor, ptr %[[O_ADDR]], i32 0, i32 0
 // LLVM:   store i32 1, ptr %[[H_ADDR]]
-// LLVM:   %[[X_ADDR:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 1
+// LLVM:   %[[X_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 1
 // LLVM:   store i32 2, ptr %[[X_ADDR]]
 // LLVM:   call void @_ZN5OuterD1Ev(ptr{{.*}} %[[O]])
 // LLVM:   ret void

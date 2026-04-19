@@ -357,6 +357,10 @@ if platform.system() == "Windows":
     for v in ["SystemDrive"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
+    # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
+    # escape sequences into the output stream, which breaks tests that check
+    # for specific stdout/stderr content.
+    dotest_cmd += ["--env", "LLDB_LAUNCH_FLAG_USE_PIPES=1"]
 
 # Some steps required to initialize the tests dynamically link with python.dll
 # and need to know the location of the Python libraries. This ensures that we

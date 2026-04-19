@@ -1124,6 +1124,7 @@ namespace cwg367 { // cwg367: 2.7
   static_assert(__enable_constant_folding(true ? *new int : 4), "");
   // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   //   expected-note@-2 {{read of uninitialized object is not allowed in a constant expression}}
+  //   expected-note@-3 {{heap allocation performed here}}
   static_assert(__enable_constant_folding(true ? 4 : *new int), "");
 } // namespace cwg367
 
