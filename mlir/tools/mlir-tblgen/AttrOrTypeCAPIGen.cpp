@@ -16,6 +16,7 @@
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Pass.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -157,6 +158,9 @@ static std::string cppNamespaceToUpper(StringRef ns) {
   return result;
 } */
 
+struct AttrOrTypeOrBuilderParam;
+
+static bool isEnumParam(const AttrOrTypeOrBuilderParam &param);
 struct AttrOrTypeOrBuilderParam 
 {
   // Only one of these must be non-null at a type
@@ -203,16 +207,29 @@ struct AttrOrTypeOrBuilderParam
 
 
     bool isEnumParam() const {
-      const llvm::Init *def = getDef();
-      if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(def)) {
-        const Record *rec = defInit->getDef();
-        return rec->isSubClassOf("EnumParameter");
-      } else {
-        return false;
-      }
+      return ::isEnumParam(*this);
     }
 
 };
+
+// BuilderParams are just strings, so no way to tell if they are an enum or not. So when they
+// are seen elsewhere we register them here so when used in alt builders the types are here.
+static llvm::StringSet<> enum_types = llvm::StringSet();
+
+static bool isEnumParam(const AttrOrTypeOrBuilderParam &param) {
+  if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
+    const Record *rec = defInit->getDef();
+    if (rec->isSubClassOf("EnumParameter")) {
+      enum_types.insert(param.getCppType());
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return enum_types.contains(param.getCppType());
+  }
+} 
+
 
 /**
  * @brief Map an AttrOrTypeOrBuilderParam to its CAPI type
@@ -224,7 +241,7 @@ struct AttrOrTypeOrBuilderParam
 static std::string mapParamTypeToCAPI(const AttrOrTypeOrBuilderParam *param, bool return_type) {
   if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param->getDef())) {
     const Record *rec = defInit->getDef();
-    if (rec->isSubClassOf("EnumParameter")) {
+    if (rec->isSubClassOf("EnumParameter")) { // || rec->isSubClassOf("EnumInfo")) {
       std::string type = "";
       type += cppNamespaceToPrefix(param->getCppType());
       // type += rec->getValueAsString("underlyingEnumName");
@@ -257,7 +274,7 @@ std::string AttrOrTypeOrBuilderParam::getCAPIType() const {
     return mapParamTypeToCAPI(this, false);
 }
 
-static bool paramIsEnum(const AttrOrTypeParameter &param) {
+/* static bool paramIsEnum(const AttrOrTypeParameter &param) {
     if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
       const Record *rec = defInit->getDef();
       if (rec->isSubClassOf("EnumParameter")) {
@@ -265,17 +282,6 @@ static bool paramIsEnum(const AttrOrTypeParameter &param) {
       }
     }
     return false;
-}
-
-/* static bool isEnumParam(const AttrOrTypeParameter &param) {
-  // Do I need a case for StringInits? I've seen cases where some types are 
-  // encoded as strings
-  if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
-    const Record *rec = defInit->getDef();
-    return rec->isSubClassOf("EnumParameter");
-  } else {
-    return paramIsEnum(param);
-  }
 } */
 
 static SmallVector<AttrOrTypeOrBuilderParam>
@@ -311,9 +317,9 @@ static llvm::StringRef getDefCppType(const EnumInfo &def) {
 }
 
 
-
 static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypeOrBuilderParam> params,
                                 raw_ostream &os, bool isAttrGenerator, bool isDeclGenerator, unsigned altIndex) {
+  // Output *Get function signature
   os << "MLIR_CAPI_EXPORTED ";
   if (isAttrGenerator)
     os << "MlirAttribute ";
@@ -325,10 +331,7 @@ static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypeOrB
   } else {
     os << "Alt" << altIndex << "(";
   }
-/*  SmallVector<MethodParameter> prefix = {{"MlirContext", "context"}};
-  SmallVector<MethodParameter> params_;
-  params_.insert(params_.begin(), prefix.begin(), prefix.end());
-  params_.insert(params_.end(), params.begin(), params.end()); */
+
   os << "MlirContext context";
   if (!params.empty() > 0) {
     os << ",";
@@ -340,6 +343,7 @@ static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypeOrB
   if (isDeclGenerator) {
     os << ");\n";
   } else {
+    // Output *get function definition
     os << ") {\n";
     os << "\treturn wrap(";
     os << getDefCppType(def) << "::get(unwrap(context)";
@@ -349,9 +353,18 @@ static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypeOrB
     for (auto [i, param] : llvm::enumerate(params)) {
       // If this is an enum, just use C++ static cast
       if (param.isEnumParam()) {
-        os << "(" << param.getCppType() << ")" << param.getName();
+        os << "(" << formatv("/* Line {0} */", __LINE__) << param.getCppType() << ")" << param.getName();
       } else {
-        os << "llvm::cast<" << param.getCppType() << ">";
+        if (param.getCppType().contains(':')) {
+          // std::string debug_str;
+          // if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
+          //   defInit;
+          //   debug_str = formatv("/* def = {0} */", (void *)param.getDef()).str();
+          // } else {
+          //   debug_str = formatv("/* not a def {0} */", (void *)param.getDef()).str();
+          // }
+          os << /* debug_str << */ "llvm::cast<" << param.getCppType() << ">";
+        } 
         // Is this a wrapped type? If so unwrap it, otherwised don't
         if (StringRef(param.getCAPIType()).starts_with("Mlir")) {
           os << "(unwrap(" << param.getName() << "))";
@@ -385,7 +398,7 @@ static void emitAccessorDeclsOrDefs(const AttrOrTypeDef &def,
     if (isDeclGenerator) {
       os << ");\n";
      } else {
-      bool isEnumGenerator = paramIsEnum(param);
+      bool isEnumGenerator = isEnumParam(param);
       os << ") {\n";
       if (!isEnumGenerator) {
         os << "\treturn wrap(";
