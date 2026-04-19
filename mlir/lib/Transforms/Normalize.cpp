@@ -43,11 +43,11 @@ SmallVector<Operation *> collectOutputs(Operation *root) {
 
 /// The function returns the operation that dominates all other operations in
 /// the given list.
-Operation *getDominateOp(const SmallVectorImpl<Operation *> &ops) {
+Operation *getDominateOp(const SmallVectorImpl<Operation *> &ops,
+                         const DominanceInfo &domInfo) {
   if (ops.empty())
     return {};
   Operation *curDomOp = ops.front();
-  DominanceInfo domInfo(curDomOp);
   for (size_t i = 1, e = ops.size(); i < e; ++i) {
     bool dominateA = domInfo.dominates(ops[i], curDomOp);
     if (dominateA) {
@@ -71,15 +71,16 @@ Operation *getDominateOp(const SmallVectorImpl<Operation *> &ops) {
 
 /// Move used to its nearest user and recursively perform the same process on
 /// the defining operations of its operands.
-void reorderOutput(IRRewriter &rewriter, Operation *producer) {
+void reorderOutput(IRRewriter &rewriter, Operation *producer,
+                   const DominanceInfo &domInfo) {
   if (!isPure(producer))
     return;
   SmallVector<Operation *> users(producer->getUsers());
-  if (Operation *domOp = getDominateOp(users)) {
+  if (Operation *domOp = getDominateOp(users, domInfo)) {
     rewriter.moveOpBefore(producer, domOp);
     for (Value operand : producer->getOperands())
       if (Operation *defineOp = operand.getDefiningOp())
-        reorderOutput(rewriter, defineOp);
+        reorderOutput(rewriter, defineOp, domInfo);
   }
 }
 
@@ -88,14 +89,15 @@ void reorderOutput(IRRewriter &rewriter, Operation *producer) {
 /// collected top-down, otherwise the def-use chain may be broken. This method
 /// is a wrapper for recursive reorderOutput().
 void reorderOutputs(IRRewriter &rewriter,
-                    const SmallVectorImpl<Operation *> &outputs) {
+                    const SmallVectorImpl<Operation *> &outputs,
+                    const DominanceInfo &domInfo) {
   SmallPtrSet<Operation *, 16> visited;
   for (Operation *output : outputs) {
     for (Value operand : output->getOperands()) {
       if (Operation *defineOp = operand.getDefiningOp();
           defineOp && !visited.contains(defineOp)) {
         visited.insert(defineOp);
-        reorderOutput(rewriter, defineOp);
+        reorderOutput(rewriter, defineOp, domInfo);
       }
     }
   }
@@ -108,7 +110,11 @@ struct NormalizePass : public impl::NormalizePassBase<NormalizePass> {
 } // namespace
 
 void NormalizePass::runOnOperation() {
+  DominanceInfo &domInfo = getAnalysis<DominanceInfo>();
   IRRewriter rewriter(&getContext());
   SmallVector<Operation *> outputs = collectOutputs(getOperation());
-  reorderOutputs(rewriter, outputs);
+  reorderOutputs(rewriter, outputs, domInfo);
+  // Since we only changed the positions of the operations, DominanceInfo and
+  // PostDominanceInfo are marked as preserved.
+  markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
 }
