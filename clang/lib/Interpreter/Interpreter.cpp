@@ -72,7 +72,7 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
                                    "Unable to create a driver job");
 
   // The one job we find should be to invoke clang again.
-  const driver::Command *Cmd = cast<driver::Command>(&(*Jobs.begin()));
+  const driver::Command *Cmd = &*Jobs.begin();
   if (llvm::StringRef(Cmd->getCreator().getName()) != "clang")
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Driver initialization failed");
