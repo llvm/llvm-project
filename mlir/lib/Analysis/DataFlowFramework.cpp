@@ -170,6 +170,32 @@ void DataFlowSolver::propagateIfChanged(AnalysisState *state,
   }
 }
 
+ChangeResult DataFlowSolver::tryWidenAtMerge(AnalysisState *state,
+                                             TypeID stateTypeID,
+                                             ChangeResult changeFromJoin) {
+  assert(hasWideningEnabled() &&
+         "tryWidenAtMerge called without widening enabled; "
+         "gate callers on hasWideningEnabled()");
+  auto cfgIt = wideningConfigs.find(stateTypeID);
+  if (cfgIt == wideningConfigs.end())
+    return ChangeResult::NoChange;
+
+  const WideningConfig &cfg = cfgIt->second;
+  uint32_t &changes = mergeChangeCounts[state];
+  if (changes >= cfg.budget) {
+    // Budget exhausted; force a sound over-approximation. Only the widen
+    // result is returned — the caller unions it with its own change.
+    ChangeResult widened = cfg.widen(state);
+    DATAFLOW_DEBUG(LDBG() << "Widening state " << state->debugName << " of "
+                          << state->anchor << " after " << changes
+                          << " merge-site changes\n");
+    return widened;
+  }
+  if (changeFromJoin == ChangeResult::Change)
+    ++changes;
+  return ChangeResult::NoChange;
+}
+
 //===----------------------------------------------------------------------===//
 // DataFlowAnalysis
 //===----------------------------------------------------------------------===//

@@ -439,9 +439,64 @@ public:
   /// Get the configuration of the solver.
   const DataFlowConfig &getConfig() const { return config; }
 
+  //===--------------------------------------------------------------------===//
+  // Widening (opt-in convergence cap for infinite-height lattices)
+  //===--------------------------------------------------------------------===//
+
+  /// A widening function forces a state to a sound over-approximation (lattice
+  /// top) once its merge-site visit budget is exhausted. Invoked by
+  /// `tryWidenAtMerge`. Must return `Change` iff the state was modified.
+  using WidenFn = std::function<ChangeResult(AnalysisState *)>;
+
+  /// Enable widening for states of type `StateT`. After `budget` merge-site
+  /// joins that each produced a change, subsequent joins at the same state
+  /// trigger `widen`. Must be called before `initializeAndRun`. Analyses with
+  /// finite-height lattices should not call this; they converge naturally.
+  template <typename StateT>
+  void enableWidening(unsigned budget, WidenFn widen) {
+    wideningConfigs.try_emplace(TypeID::get<StateT>(),
+                                WideningConfig{budget, std::move(widen)});
+  }
+
+  /// Fast-path predicate: true if any analysis loaded in this solver has
+  /// opted into widening. Callers on the hot path should check this before
+  /// doing any further widening work. Derived from the configs map rather
+  /// than a redundant bool so there is only one source of truth.
+  bool hasWideningEnabled() const { return !wideningConfigs.empty(); }
+
+  /// If widening is configured for `stateTypeID` and this state's merge-site
+  /// change budget is exhausted, invoke the registered widen function and
+  /// return the change it produced. Otherwise, record `changeFromJoin`
+  /// against the budget (incrementing only on `Change`) and return
+  /// `NoChange`. The caller is responsible for unioning this result into its
+  /// own `ChangeResult`:
+  ///
+  ///   ChangeResult c = lhs->join(rhs);
+  ///   c |= solver.tryWidenAtMerge(lhs, typeID, c);
+  ///
+  /// Returning only the *additional* change from widening (rather than the
+  /// combined result) makes it structurally impossible for this function to
+  /// downgrade a preceding `Change` into `NoChange`, which would silently
+  /// lose a dataflow update.
+  ChangeResult tryWidenAtMerge(AnalysisState *state, TypeID stateTypeID,
+                               ChangeResult changeFromJoin);
+
 private:
   /// Configuration of the dataflow solver.
   DataFlowConfig config;
+
+  /// Per-state-type widening policy. Emptiness of this map is the canonical
+  /// answer to "is widening enabled for this solver"; see
+  /// `hasWideningEnabled`.
+  struct WideningConfig {
+    unsigned budget;
+    WidenFn widen;
+  };
+  DenseMap<TypeID, WideningConfig> wideningConfigs;
+
+  /// Per-state merge-change counter. Populated only for states whose type has
+  /// widening enabled; empty for any solver that never calls `enableWidening`.
+  DenseMap<AnalysisState *, uint32_t> mergeChangeCounts;
 
   /// The solver is working on the worklist.
   bool isRunning = false;
@@ -715,6 +770,10 @@ protected:
 
   /// Return the configuration of the solver used for this analysis.
   const DataFlowConfig &getSolverConfig() const { return solver.getConfig(); }
+
+  /// Return the solver that owns this analysis. Needed by sparse framework
+  /// code in subclasses (e.g. the merge-site widening path).
+  DataFlowSolver &getSolver() { return solver; }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// When compiling with debugging, keep a name for the analyis.

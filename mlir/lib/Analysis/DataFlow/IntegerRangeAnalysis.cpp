@@ -58,6 +58,21 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op) {
 }
 } // namespace mlir::dataflow
 
+/// Budget for merge-site joins per integer-range lattice element before the
+/// solver forces the element to max-range. Sized for realistic DAG nesting
+/// depth; loops with dynamic bounds trip well before 2^31 iterations.
+static constexpr unsigned kIntegerRangeWideningBudget = 16;
+
+IntegerRangeAnalysis::IntegerRangeAnalysis(DataFlowSolver &solver)
+    : SparseForwardDataFlowAnalysis(solver) {
+  solver.enableWidening<IntegerValueRangeLattice>(
+      kIntegerRangeWideningBudget, [](AnalysisState *state) -> ChangeResult {
+        auto *lattice = static_cast<IntegerValueRangeLattice *>(state);
+        return lattice->join(
+            IntegerValueRange::getMaxRange(cast<Value>(lattice->getAnchor())));
+      });
+}
+
 LogicalResult IntegerRangeAnalysis::visitOperation(
     Operation *op, ArrayRef<const IntegerValueRangeLattice *> operands,
     ArrayRef<IntegerValueRangeLattice *> results) {

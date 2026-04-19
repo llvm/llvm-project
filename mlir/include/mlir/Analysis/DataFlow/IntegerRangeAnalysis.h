@@ -40,7 +40,11 @@ public:
 class IntegerRangeAnalysis
     : public SparseForwardDataFlowAnalysis<IntegerValueRangeLattice> {
 public:
-  using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
+  /// Construct the analysis and opt into merge-site widening. Without this,
+  /// `scf.while` loops with dynamic bounds and nested region ops can keep the
+  /// solver ratcheting a loop-carried range by +1 per visit for up to 2^31
+  /// iterations on i32.
+  explicit IntegerRangeAnalysis(DataFlowSolver &solver);
 
   /// At an entry point, we cannot reason about integer value ranges.
   void setToEntryState(IntegerValueRangeLattice *lattice) override {
