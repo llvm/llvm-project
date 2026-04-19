@@ -23,6 +23,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/SmallString.h"
 #include <memory>
 #include <vector>
 
@@ -65,6 +66,8 @@ struct ParseInputs {
   FeatureModuleSet *FeatureModules = nullptr;
   // Used to build and manage (C++) modules.
   ModulesBuilder *ModulesManager = nullptr;
+  // Real path for extracting the CompileCommand
+  llvm::SmallString<128> RealFilePath;
 };
 
 /// Clears \p CI from options that are not supported by clangd, like codegen or
