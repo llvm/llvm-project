@@ -66,18 +66,19 @@ bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
   uint16_t Offset = 0;
   // Initialize hash components
   for (const MachineBasicBlock &MBB : F) {
+    auto &HashInfo = HashInfos[&MBB];
     // offset of the machine basic block
-    HashInfos[&MBB].Offset = Offset;
-    Offset += MBB.size();
+    HashInfo.Offset = Offset + MBB.size();
     // Hashing opcodes
-    HashInfos[&MBB].OpcodeHash = hashBlock(MBB, /*HashOperands=*/false);
+    HashInfo.OpcodeHash = hashBlock(MBB, /*HashOperands=*/false);
     // Hash complete instructions
-    HashInfos[&MBB].InstrHash = hashBlock(MBB, /*HashOperands=*/true);
+    HashInfo.InstrHash = hashBlock(MBB, /*HashOperands=*/true);
   }
 
   // Initialize neighbor hash
   for (const MachineBasicBlock &MBB : F) {
-    uint64_t Hash = HashInfos[&MBB].OpcodeHash;
+    auto &HashInfo = HashInfos[&MBB];
+    uint64_t Hash = HashInfo.OpcodeHash;
     // Append hashes of successors
     for (const MachineBasicBlock *SuccMBB : MBB.successors()) {
       uint64_t SuccHash = HashInfos[SuccMBB].OpcodeHash;
@@ -88,7 +89,7 @@ bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
       uint64_t PredHash = HashInfos[PredMBB].OpcodeHash;
       Hash = hashing::detail::hash_16_bytes(Hash, PredHash);
     }
-    HashInfos[&MBB].NeighborHash = Hash;
+    HashInfo.NeighborHash = Hash;
   }
 
   // Assign hashes
