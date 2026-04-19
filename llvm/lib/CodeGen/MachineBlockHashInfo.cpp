@@ -11,22 +11,37 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
+#include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
+// Forked from `hashing::detail::hash_16_bytes` to provide stability.
+static constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
+  // Murmur-inspired hashing.
+  const uint64_t kMul = 0x9ddfea08eb382d69ULL;
+  uint64_t a = (low ^ high) * kMul;
+  a ^= (a >> 47);
+  uint64_t b = (high ^ a) * kMul;
+  b ^= (b >> 47);
+  b *= kMul;
+  return b;
+}
+
+static_assert(hash_16_bytes(1, 2) == 9684580150926652833ull);
+static_assert(hash_16_bytes(-1, -2) == 7819786907124864172ull);
+
 static uint64_t hashBlock(const MachineBasicBlock &MBB, bool HashOperands) {
   uint64_t Hash = 0;
   for (const MachineInstr &MI : MBB) {
     if (MI.isMetaInstruction() || MI.isTerminator())
       continue;
-    Hash = hashing::detail::hash_16_bytes(Hash, MI.getOpcode());
+    Hash = hash_16_bytes(Hash, MI.getOpcode());
     if (HashOperands) {
       for (unsigned i = 0; i < MI.getNumOperands(); i++) {
-        Hash =
-            hashing::detail::hash_16_bytes(Hash, hash_value(MI.getOperand(i)));
+        Hash = hash_16_bytes(Hash, stableHashValue(MI.getOperand(i)));
       }
     }
   }
@@ -82,12 +97,12 @@ bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
     // Append hashes of successors
     for (const MachineBasicBlock *SuccMBB : MBB.successors()) {
       uint64_t SuccHash = HashInfos[SuccMBB].OpcodeHash;
-      Hash = hashing::detail::hash_16_bytes(Hash, SuccHash);
+      Hash = hash_16_bytes(Hash, SuccHash);
     }
     // Append hashes of predecessors
     for (const MachineBasicBlock *PredMBB : MBB.predecessors()) {
       uint64_t PredHash = HashInfos[PredMBB].OpcodeHash;
-      Hash = hashing::detail::hash_16_bytes(Hash, PredHash);
+      Hash = hash_16_bytes(Hash, PredHash);
     }
     HashInfo.NeighborHash = Hash;
   }
