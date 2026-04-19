@@ -75,6 +75,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.expm1();
   case Operation::Floor:
     return mpfrInput.floor();
+  case Operation::Lgamma:
+    return mpfrInput.lgamma();
   case Operation::Log:
     return mpfrInput.log();
   case Operation::Log2:

@@ -48,6 +48,7 @@ enum class Operation : int {
   Exp10m1,
   Expm1,
   Floor,
+  Lgamma,
   Log,
   Log2,
   Log2p1,

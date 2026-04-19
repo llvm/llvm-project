@@ -1568,6 +1568,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lgammaf16
+  SRCS
+    lgammaf16.cpp
+  HDRS
+    ../lgammaf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.math.lgammaf16
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   llogb
   SRCS
     llogb.cpp
