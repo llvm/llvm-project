@@ -5432,6 +5432,18 @@ void Target::NotifyBreakpointChanged(
     BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
 }
 
+FileSpecList Target::GetSafeAutoLoadPaths() const {
+  FileSpecList fspecs = Debugger::GetDefaultSafeAutoLoadPaths();
+
+#ifndef NDEBUG
+  for (const auto &fspec :
+       TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
+    fspecs.Append(fspec);
+#endif
+
+  return fspecs;
+}
+
 // FIXME: the language plugin should expression options dynamically and
 // we should validate here (by asking the language plugin) that the options
 // being set/retrieved are actually valid options.
