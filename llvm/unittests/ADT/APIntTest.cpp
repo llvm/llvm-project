@@ -3057,30 +3057,33 @@ TEST(APIntTest, isSubsetOf) {
   EXPECT_TRUE(i128_3.isSubsetOf(i128_3));
 }
 
-TEST(APIntTest, isExhaustive) {
+TEST(APIntTest, isInverseOf) {
   APInt i4_0(4, 0);
   APInt i4_1(4, 1);
+  APInt i4_3(4, 3);
   APInt i4_12(4, 12);
+  APInt i4_13(4, 13);
   APInt i4_14(4, 14);
   APInt i4_15(4, 15);
-  EXPECT_TRUE(i4_1.isExhaustive(i4_14));
-  EXPECT_TRUE(i4_14.isExhaustive(i4_1));
-  EXPECT_FALSE(i4_1.isExhaustive(i4_12));
-  EXPECT_FALSE(i4_0.isExhaustive(i4_0));
-  EXPECT_TRUE(i4_15.isExhaustive(i4_0));
+  EXPECT_TRUE(i4_1.isInverseOf(i4_14));
+  EXPECT_TRUE(i4_14.isInverseOf(i4_1));
+  EXPECT_FALSE(i4_1.isInverseOf(i4_12));
+  EXPECT_FALSE(i4_3.isInverseOf(i4_13));
+  EXPECT_FALSE(i4_0.isInverseOf(i4_0));
+  EXPECT_TRUE(i4_15.isInverseOf(i4_0));
 
   APInt i128Lo64 = APInt::getLowBitsSet(128, 64);
   APInt i128Hi64 = APInt::getHighBitsSet(128, 64);
   APInt i128Hi63 = APInt::getHighBitsSet(128, 63);
-  EXPECT_TRUE(i128Lo64.isExhaustive(i128Hi64));
-  EXPECT_TRUE(i128Hi64.isExhaustive(i128Lo64));
-  EXPECT_FALSE(i128Lo64.isExhaustive(i128Hi63));
+  EXPECT_TRUE(i128Lo64.isInverseOf(i128Hi64));
+  EXPECT_TRUE(i128Hi64.isInverseOf(i128Lo64));
+  EXPECT_FALSE(i128Lo64.isInverseOf(i128Hi63));
 
   APInt i65Lo64 = APInt::getLowBitsSet(65, 64);
   APInt i65Hi1 = APInt::getHighBitsSet(65, 1);
-  EXPECT_TRUE(i65Lo64.isExhaustive(i65Hi1));
-  EXPECT_TRUE(i65Hi1.isExhaustive(i65Lo64));
-  EXPECT_FALSE(i65Lo64.isExhaustive(APInt(65, 0)));
+  EXPECT_TRUE(i65Lo64.isInverseOf(i65Hi1));
+  EXPECT_TRUE(i65Hi1.isInverseOf(i65Lo64));
+  EXPECT_FALSE(i65Lo64.isInverseOf(APInt(65, 0)));
 }
 
 TEST(APIntTest, sext) {
