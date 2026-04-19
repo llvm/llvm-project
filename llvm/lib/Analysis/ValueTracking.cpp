@@ -875,6 +875,46 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
   return false;
 }
 
+/// Return true if Expr is known to be non-zero under the assumption that
+/// icmp Pred L0, L1 is true. Unlike isKnownNonZero(), this can use
+/// non-zero facts implied by that comparison and propagate them through
+/// a small set of zero-preserving wrappers.
+static bool isKnownNonZeroUnderICmp(const Value *Expr, CmpPredicate Pred,
+                                    const Value *L0, const Value *L1,
+                                    unsigned Depth) {
+  if (Depth == MaxAnalysisRecursionDepth)
+    return false;
+  if (Expr == L0)
+    return cmpExcludesZero(Pred, L1);
+  if (Expr == L1)
+    return cmpExcludesZero(ICmpInst::getSwappedCmpPredicate(Pred), L0);
+
+  if (const auto *Op = dyn_cast<Operator>(Expr)) {
+    switch (Op->getOpcode()) {
+    case Instruction::Or:
+      return isKnownNonZeroUnderICmp(Op->getOperand(0), Pred, L0, L1,
+                                     Depth + 1) ||
+             isKnownNonZeroUnderICmp(Op->getOperand(1), Pred, L0, L1,
+                                     Depth + 1);
+    case Instruction::SExt:
+    case Instruction::ZExt:
+    case Instruction::Freeze:
+      return isKnownNonZeroUnderICmp(Op->getOperand(0), Pred, L0, L1,
+                                     Depth + 1);
+    case Instruction::Trunc:
+      if (const auto *TI = dyn_cast<TruncInst>(Op))
+        if (TI->hasNoSignedWrap() || TI->hasNoUnsignedWrap())
+          return isKnownNonZeroUnderICmp(Op->getOperand(0), Pred, L0, L1,
+                                         Depth + 1);
+      return false;
+    default:
+      return false;
+    }
+  }
+
+  return false;
+}
+
 static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
                                     Value *LHS, Value *RHS, KnownBits &Known,
                                     const SimplifyQuery &Q) {
@@ -9630,6 +9670,22 @@ isImpliedCondCommonOperandWithCR(CmpPredicate LPred, const ConstantRange &LCR,
   return std::nullopt;
 }
 
+/// Return the result of "icmp Pred Expr, 0" if Expr is known non-zero.
+static std::optional<bool> getICmpZeroResultIfNonZero(CmpPredicate Pred) {
+  switch (Pred.dropSameSign()) {
+  case ICmpInst::ICMP_ULT:
+  case ICmpInst::ICMP_EQ:
+  case ICmpInst::ICMP_ULE:
+    return false;
+  case ICmpInst::ICMP_UGE:
+  case ICmpInst::ICMP_NE:
+  case ICmpInst::ICMP_UGT:
+    return true;
+  default:
+    return std::nullopt;
+  }
+}
+
 /// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
 /// is true.  Return false if LHS implies RHS is false. Otherwise, return
 /// std::nullopt if we can't infer anything.
@@ -9712,6 +9768,21 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
         ICmpInst::isImpliedByMatchingCmp(SignedLPred, RPred) == true)
       return true;
   }
+
+  // icmp Pred Expr, 0 -> true/false, if Expr is known non-zero.
+  const Value *RZeroCmpLHS = nullptr;
+  CmpPredicate RZeroCmpPred = RPred;
+  if (match(R1, m_Zero()))
+    RZeroCmpLHS = R0;
+  else if (match(R0, m_Zero())) {
+    RZeroCmpLHS = R1;
+    RZeroCmpPred = ICmpInst::getSwappedCmpPredicate(RZeroCmpPred);
+  }
+  if (RZeroCmpLHS)
+    if (std::optional<bool> Res = getICmpZeroResultIfNonZero(RZeroCmpPred))
+      if (isKnownNonZeroUnderICmp(RZeroCmpLHS, LPred.dropSameSign(), L0, L1,
+                                  /*Depth=*/0))
+      return *Res;
 
   // a - b == NonZero -> a != b
   // ptrtoint(a) - ptrtoint(b) == NonZero -> a != b
