@@ -91,7 +91,7 @@ public:
     return K == Kind::PlaceholderThis ? Root.dyn_cast<const CXXMethodDecl *>()
                                       : nullptr;
   }
-  const CXXNewExpr *getAsHeapAllocation() const {
+  const CXXNewExpr *getAsNewAllocation() const {
     return K == Kind::NewAllocation ? Root.dyn_cast<const CXXNewExpr *>()
                                     : nullptr;
   }

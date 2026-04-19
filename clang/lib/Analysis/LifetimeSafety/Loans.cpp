@@ -29,7 +29,7 @@ void AccessPath::dump(llvm::raw_ostream &OS) const {
     OS << "$this";
     break;
   case Kind::NewAllocation:
-    if (const auto *E = getAsHeapAllocation())
+    if (const auto *E = getAsNewAllocation())
       OS << "HeapAllocation at " << E;
     break;
   }
