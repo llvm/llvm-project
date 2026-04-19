@@ -2876,7 +2876,7 @@ void delete_stack_object_int() {
   (void)p;
 }
 
-} // namespace heap_allocation
+} // namespace new_allocation
 
 namespace method_call_uses_field_origins {
 int GLOBAL_INT;
