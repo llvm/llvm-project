@@ -4568,8 +4568,10 @@ class VPlan {
 
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
-  VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
-      : Entry(Entry), ScalarHeader(ScalarHeader) {
+  VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader,
+        Type *IdxTy = nullptr)
+      : Entry(Entry), ScalarHeader(ScalarHeader), VectorTripCount(IdxTy),
+        VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
     Entry->setPlan(this);
     assert(ScalarHeader->getNumSuccessors() == 0 &&
            "scalar header must be a leaf node");
@@ -4579,11 +4581,12 @@ public:
   /// Construct a VPlan for \p L. This will create VPIRBasicBlocks wrapping the
   /// original preheader and scalar header of \p L, to be used as entry and
   /// scalar header blocks of the new VPlan.
-  VPlan(Loop *L);
+  VPlan(Loop *L, Type *IdxTy = nullptr);
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
   /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
-  VPlan(BasicBlock *ScalarHeaderBB) {
+  VPlan(BasicBlock *ScalarHeaderBB, Type *IdxTy = nullptr)
+      : VectorTripCount(IdxTy), VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
     setEntry(createVPBasicBlock("preheader"));
     ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
   }
@@ -4682,8 +4685,9 @@ public:
 
   /// The backedge taken count of the original loop.
   VPValue *getOrCreateBackedgeTakenCount() {
+    // BTC shares the canonical IV type with VectorTripCount.
     if (!BackedgeTakenCount)
-      BackedgeTakenCount = new VPSymbolicValue();
+      BackedgeTakenCount = new VPSymbolicValue(VectorTripCount.getType());
     return BackedgeTakenCount;
   }
   VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }

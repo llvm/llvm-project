@@ -78,8 +78,9 @@ class PlainCFGBuilder {
   void createVPInstructionsForVPBB(VPBasicBlock *VPBB, BasicBlock *BB);
 
 public:
-  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer)
-      : TheLoop(Lp), LI(LI), LVer(LVer), Plan(std::make_unique<VPlan>(Lp)) {}
+  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer, Type *IdxTy)
+      : TheLoop(Lp), LI(LI), LVer(LVer),
+        Plan(std::make_unique<VPlan>(Lp, IdxTy)) {}
 
   /// Build plain CFG for TheLoop and connect it to Plan's entry.
   std::unique_ptr<VPlan> buildPlainCFG();
@@ -635,7 +636,7 @@ std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
                              DebugLoc IVDL, PredicatedScalarEvolution &PSE,
                              LoopVersioning *LVer) {
-  PlainCFGBuilder Builder(TheLoop, &LI, LVer);
+  PlainCFGBuilder Builder(TheLoop, &LI, LVer, InductionTy);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
   simplifyLiveInsWithSCEV(*VPlan0, PSE);
