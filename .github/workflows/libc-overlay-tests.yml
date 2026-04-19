@@ -125,29 +125,31 @@ jobs:
             libc6-dev-riscv64-cross libstdc++6-riscv64-cross \
             gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
 
-      - name: Setup GMP
-        run: |
-          mkdir build
-          cd build
-          wget https://gmplib.org/download/gmp/gmp-6.3.0.tar.xz
-          tar -xf gmp-6.3.0.tar.xz
-          cd gmp-6.3.0
-          ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu
-          make -j8
-          sudo make install
-          cd ../..
+      # TODO: Need to find a better way for GMP and MPFR instead of downloading
+      # and setting them up every time.
+      # - name: Setup GMP
+      #   run: |
+      #     mkdir build
+      #     cd build
+      #     wget https://gmplib.org/download/gmp/gmp-6.3.0.tar.xz
+      #     tar -xf gmp-6.3.0.tar.xz
+      #     cd gmp-6.3.0
+      #     ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu
+      #     make -j8
+      #     sudo make install
+      #     cd ../..
       
-      - name: Setup MPFR
-        run: |
-          cd build
-          wget https://www.mpfr.org/mpfr-4.2.1/mpfr-4.2.1.tar.xz
-          tar -xf mpfr-4.2.1.tar.xz
-          cd mpfr-4.2.1
-          ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu \
-                      --with-gmp=/usr/riscv64-linux-gnu
-          make -j8
-          sudo make install
-          cd ../..
+      # - name: Setup MPFR
+      #   run: |
+      #     cd build
+      #     wget https://www.mpfr.org/mpfr-4.2.1/mpfr-4.2.1.tar.xz
+      #     tar -xf mpfr-4.2.1.tar.xz
+      #     cd mpfr-4.2.1
+      #     ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu \
+      #                 --with-gmp=/usr/riscv64-linux-gnu
+      #     make -j8
+      #     sudo make install
+      #     cd ../..
       
       - name: Configure CMake - Clang
         run: |
