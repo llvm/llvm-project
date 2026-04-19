@@ -55,14 +55,22 @@ void test_iterator_sentinel() {
   {
     std::span s{std::begin(arr), std::integral_constant<size_t, 3>{}};
     ASSERT_SAME_TYPE(decltype(s), std::span<int, 3>);
-    assert(s.size() == std::size(arr));
+    assert(s.size() == 3);
     assert(s.data() == std::data(arr));
   }
 
   {
     std::span s{std::begin(arr), std::cw<3>};
     ASSERT_SAME_TYPE(decltype(s), std::span<int, 3>);
-    assert(s.size() == std::size(arr));
+    assert(s.size() == 3);
+    assert(s.data() == std::data(arr));
+  }
+  {
+    // LWG4351 integral-constant-like needs more remove_cvref_t
+    LIBCPP_STATIC_ASSERT(!std::__integral_constant_like<decltype(std::cw<true>)>);
+    std::span s(std::begin(arr), std::cw<true>);
+    ASSERT_SAME_TYPE(decltype(s), std::span<int, std::dynamic_extent>);
+    assert(s.size() == 1);
     assert(s.data() == std::data(arr));
   }
 #endif

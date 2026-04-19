@@ -198,7 +198,7 @@
 "`LWG4345 <https://wg21.link/LWG4345>`__","``task::promise_type::return_value`` default template parameter","2025-11 (Kona)","","","`#171356 <https://github.com/llvm/llvm-project/issues/171356>`__",""
 "`LWG4346 <https://wg21.link/LWG4346>`__","``task::promise_type::return_void``/``value lack`` a specification","2025-11 (Kona)","","","`#171357 <https://github.com/llvm/llvm-project/issues/171357>`__",""
 "`LWG4349 <https://wg21.link/LWG4349>`__","``task`` is not actually started lazily","2025-11 (Kona)","","","`#171358 <https://github.com/llvm/llvm-project/issues/171358>`__",""
-"`LWG4351 <https://wg21.link/LWG4351>`__","``integral-constant-like`` needs more ``remove_cvref_t``","2025-11 (Kona)","","","`#171359 <https://github.com/llvm/llvm-project/issues/171359>`__",""
+"`LWG4351 <https://wg21.link/LWG4351>`__","``integral-constant-like`` needs more ``remove_cvref_t``","2025-11 (Kona)","|Complete|","23","`#171359 <https://github.com/llvm/llvm-project/issues/171359>`__",""
 "`LWG4358 <https://wg21.link/LWG4358>`__","§[exec.as.awaitable] is using ""Preconditions:"" when it should probably be described in the constraint","2025-11 (Kona)","","","`#171360 <https://github.com/llvm/llvm-project/issues/171360>`__",""
 "`LWG4360 <https://wg21.link/LWG4360>`__","``awaitable-sender`` concept should qualify use of ``awaitable-receiver`` type","2025-11 (Kona)","","","`#171361 <https://github.com/llvm/llvm-project/issues/171361>`__",""
 "`LWG4366 <https://wg21.link/LWG4366>`__","Heterogeneous comparison of ``expected`` may be ill-formed","2025-11 (Kona)","","","`#171362 <https://github.com/llvm/llvm-project/issues/171362>`__",""
