@@ -214,7 +214,7 @@ struct AttrOrTypeOrBuilderParam
 
 // BuilderParams are just strings, so no way to tell if they are an enum or not. So when they
 // are seen elsewhere we register them here so when used in alt builders the types are here.
-static llvm::StringSet<> enum_types = llvm::StringSet();
+static llvm::StringSet<llvm::MallocAllocator> enum_types;
 
 static bool isEnumParam(const AttrOrTypeOrBuilderParam &param) {
   if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
