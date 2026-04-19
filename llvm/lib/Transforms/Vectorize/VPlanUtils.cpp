@@ -140,7 +140,8 @@ static bool poisonGuaranteesUB(const VPValue *V) {
 
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            PredicatedScalarEvolution &PSE,
-                                           const Loop *L) {
+                                           const Loop *L,
+                                           const VPDominatorTree *VPDT) {
   ScalarEvolution &SE = *PSE.getSE();
   if (isa<VPIRValue, VPSymbolicValue>(V)) {
     Value *LiveIn = V->getUnderlyingValue();
@@ -270,6 +271,30 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
             const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
             return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
                                     SCEV::FlagAnyWrap);
+          })
+          .Case([&SE, &PSE, L, VPDT](const VPPhi *R) -> const SCEV * {
+            if (!L || !VPDT || R->getNumOperands() != 2 ||
+                !VPBlockUtils::isHeader(R->getParent(), *VPDT))
+              return SE.getCouldNotCompute();
+            // Only construct AddRecExprs for phis in the top-level loop
+            // header. Inner loop header phis would need their own loop,
+            // not L.
+            const VPBlockBase *Entry = R->getParent()->getPlan()->getEntry();
+            if (Entry->getNumSuccessors() < 2 ||
+                R->getParent() !=
+                    Entry->getSuccessors()[1]->getSingleSuccessor())
+              return SE.getCouldNotCompute();
+            VPValue *StepVPV = nullptr;
+            if (!match(R->getOperand(1),
+                       m_c_Add(m_Specific(R), m_VPValue(StepVPV))))
+              return SE.getCouldNotCompute();
+            const SCEV *Step = getSCEVExprForVPValue(StepVPV, PSE, L);
+            if (isa<SCEVCouldNotCompute>(Step) || !SE.isLoopInvariant(Step, L))
+              return SE.getCouldNotCompute();
+            const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+            if (isa<SCEVCouldNotCompute>(Start))
+              return SE.getCouldNotCompute();
+            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
           })
           .Case([&SE, &PSE, L](const VPWidenIntOrFpInductionRecipe *R) {
             const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), PSE, L);

@@ -26,6 +26,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
@@ -37,6 +38,7 @@
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
+using namespace SCEVPatternMatch;
 
 namespace {
 // Class that is used to build the plain CFG for the incoming IR.
@@ -707,8 +709,8 @@ void VPlanTransforms::createHeaderPhiRecipes(
   // Retrieve the header manually from the intial plain-CFG VPlan.
   VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(
       Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
-  assert(VPDominatorTree(Plan).dominates(HeaderVPBB,
-                                         HeaderVPBB->getPredecessors()[1]) &&
+  VPDominatorTree VPDT(Plan);
+  assert(VPDT.dominates(HeaderVPBB, HeaderVPBB->getPredecessors()[1]) &&
          "header must dominate its latch");
 
   auto CreateHeaderPhiRecipe = [&](VPPhi *PhiR) -> VPHeaderPHIRecipe * {
@@ -730,6 +732,33 @@ void VPlanTransforms::createHeaderPhiRecipes(
       return new VPFirstOrderRecurrencePHIRecipe(Phi, *Start, *BackedgeValue);
     }
 
+    // Try VPlan-based induction detection for integer inductions.
+    const SCEV *StartSCEV, *StepSCEV;
+    if (!Reductions.contains(Phi) &&
+        match(vputils::getSCEVExprForVPValue(PhiR, PSE, &OrigLoop, &VPDT),
+              m_scev_AffineAddRec(m_SCEV(StartSCEV), m_SCEV(StepSCEV)))) {
+      BinaryOperator *BOp =
+          dyn_cast<BinaryOperator>(BackedgeValue->getUnderlyingValue());
+      InductionDescriptor IndDesc(Start->getValue(),
+                                  InductionDescriptor::IK_IntInduction,
+                                  StepSCEV, BOp);
+      ScalarEvolution &SE = *PSE.getSE();
+      assert([&]() {
+        if (!Inductions.contains(Phi))
+          return true;
+        const auto &Exp = Inductions.lookup(Phi);
+        return Exp.getKind() == IndDesc.getKind() &&
+               PSE.getPredicatedSCEV(Exp.getStep()) == IndDesc.getStep() &&
+               Exp.getInductionBinOp() == IndDesc.getInductionBinOp() &&
+               SE.getSCEV(Exp.getStartValue()) ==
+                   SE.getSCEV(IndDesc.getStartValue());
+      }() && "VPlan-detected induction must match pre-computed "
+             "InductionDescriptor");
+      return createWidenInductionRecipe(Phi, PhiR, Start, IndDesc, Plan, PSE,
+                                        OrigLoop, PhiR->getDebugLoc());
+    }
+
+    // Fallback: use pre-computed Inductions map.
     auto InductionIt = Inductions.find(Phi);
     if (InductionIt != Inductions.end())
       return createWidenInductionRecipe(Phi, PhiR, Start, InductionIt->second,
