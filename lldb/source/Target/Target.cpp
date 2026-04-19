@@ -5435,6 +5435,18 @@ void Target::NotifyBreakpointChanged(
 FileSpecList Target::GetSafeAutoLoadPaths() const {
   FileSpecList fspecs = Debugger::GetDefaultSafeAutoLoadPaths();
 
+  // Add platform-specific safe-paths.
+  if (m_platform_sp) {
+    if (auto platform_fspecs_or_err =
+            m_platform_sp->GetSafeAutoLoadPaths(*this))
+      fspecs.Append(*platform_fspecs_or_err);
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Modules | LLDBLog::Platform),
+                     platform_fspecs_or_err.takeError(),
+                     "Skipping safe auto-load: {0}");
+  }
+
+  // Properties for testing get added last so they take priority.
 #ifndef NDEBUG
   for (const auto &fspec :
        TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
