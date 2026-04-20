@@ -367,9 +367,24 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
   return success();
 }
 
-// Converts Powf(float a, float b) (meaning a^b) to exp^(b * ln(a))
-// Some special cases where b is constant are handled separately:
-// when b == 0, or |b| == 0.5, 1.0, or 2.0.
+static bool isKnownNonNegativeFloat(Value v) {
+  APFloat cst(0.0);
+  if (matchPattern(v, m_ConstantFloat(&cst)))
+    return !cst.isNegative() || cst.isZero();
+  Operation *defOp = v.getDefiningOp();
+  if (!defOp)
+    return false;
+  return isa<math::AbsFOp, math::SqrtOp, math::RsqrtOp, math::ExpOp,
+             math::Exp2Op>(defOp);
+}
+
+// Converts math.powf(a, b) (meaning a^b) using:
+//   1. Algebraic shortcuts when b is the constant 0, 1, -1, 0.5, -0.5, 2, -2, 3
+//   2. For a non-negative base, the classical identity a^b = exp(b * log(a))
+//   3. Otherwise, an IEEE-correct branching form (documented below) that
+//      computes |a|^b (using the classical identity) and fixes the sign for
+//      negative bases with integer exponents (producing NaN for negative bases
+//      with non-integer exponents)
 static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operandA = op.getOperand(0);
@@ -433,10 +448,58 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
     }
   }
 
-  Value logA = math::LogOp::create(b, operandA);
-  Value mult = arith::MulFOp::create(b, operandB, logA);
-  Value expResult = math::ExpOp::create(b, mult);
-  rewriter.replaceOp(op, expResult);
+  if (isKnownNonNegativeFloat(operandA)) {
+    Value logA = math::LogOp::create(b, operandA);
+    Value mult = arith::MulFOp::create(b, operandB, logA);
+    rewriter.replaceOp(op, math::ExpOp::create(b, mult));
+    return success();
+  }
+
+  // Implements a^b for any base that may be negative by computing the
+  // magnitude through |a| (so log is always defined) and then considering
+  // the sign and NaN cases:
+  //
+  //           |  a^b          if a >= 0  (== |a|^b)
+  //   pow  =  |  + |a|^b      if a <  0 and b is an even integer
+  //           |  - |a|^b      if a <  0 and b is an odd integer
+  //           |  NaN          if a <  0 and b is not an integer
+  //
+  // Sequence of operations:
+  //   magnitude = exp(b * log|a|)                     // == |a|^b
+  //   bIsInt    = (b == floor(b))
+  //   bIsEven   = (floor(b)/2 == floor(floor(b)/2))   // only makes sense if bIsInt
+  //   signedMag = bIsEven ? magnitude : -magnitude
+  //   negCase   = bIsInt  ? signedMag : NaN
+  //   result    = (a < 0) ? negCase    : magnitude
+
+  Value absA = math::AbsFOp::create(b, operandA);
+  Value logAbsA = math::LogOp::create(b, absA);
+  Value mult = arith::MulFOp::create(b, operandB, logAbsA);
+  Value magnitude = math::ExpOp::create(b, mult);
+
+  // Integer / parity tests on b
+  Value floorB = math::FloorOp::create(b, operandB);
+  Value bIsInt =
+      arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, operandB, floorB);
+  Value half = createFloatConst(op->getLoc(), typeB, 0.5, rewriter);
+  Value halfB = arith::MulFOp::create(b, floorB, half);
+  Value halfBFloor = math::FloorOp::create(b, halfB);
+  Value bIsEven =
+      arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, halfB, halfBFloor);
+
+  // Sign fix for a < 0: odd integer -> flip sign, non-integer -> NaN
+  Value negMagnitude = arith::NegFOp::create(b, magnitude);
+  Value signedMag =
+      arith::SelectOp::create(b, bIsEven, magnitude, negMagnitude);
+  Value nan =
+      createFloatConst(op->getLoc(), typeA, APFloat::getQNaN(sem), rewriter);
+  Value negCase = arith::SelectOp::create(b, bIsInt, signedMag, nan);
+
+  // Dispatch on the sign of a
+  Value zero = createFloatConst(op->getLoc(), typeA, 0.0, rewriter);
+  Value aNeg =
+      arith::CmpFOp::create(b, arith::CmpFPredicate::OLT, operandA, zero);
+  rewriter.replaceOp(op, arith::SelectOp::create(b, aNeg, negCase, magnitude));
   return success();
 }
 

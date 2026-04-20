@@ -259,6 +259,46 @@ func.func @powf() {
   %l_p = arith.constant -2.0 : f32
   %l_r = math.powf %k, %l_p : f32
   vector.print %l_r : f32
+
+  // @func_powff32 is used so that both operands are SSA arguments
+  // — to force a branching fallback way of computing `powf`
+
+  // CHECK-NEXT: -0.125
+  %m   = arith.constant -2.0 : f32
+  %m_p = arith.constant -3.0 : f32
+  call @func_powff32(%m, %m_p) : (f32, f32) -> ()
+
+  // CHECK-NEXT: 16
+  %n   = arith.constant -2.0 : f32
+  %n_p = arith.constant 4.0 : f32
+  call @func_powff32(%n, %n_p) : (f32, f32) -> ()
+
+  // CHECK-NEXT: nan
+  %o   = arith.constant -2.0 : f32
+  %o_p = arith.constant 3.5 : f32
+  call @func_powff32(%o, %o_p) : (f32, f32) -> ()
+
+  // CHECK-NEXT: -0
+  %p   = arith.constant -94.0 : f32
+  %p_p = arith.constant -47.0 : f32
+  call @func_powff32(%p, %p_p) : (f32, f32) -> ()
+
+  // CHECK-NEXT: 0.125
+  %q     = arith.constant -2.0 : f32
+  %q_abs = math.absf %q : f32
+  %q_p   = arith.constant -3.0 : f32
+  %q_r   = math.powf %q_abs, %q_p : f32
+  vector.print %q_r : f32
+
+  // CHECK-NEXT: 0
+  %r   = arith.constant 0.0 : f32
+  %r_p = arith.constant 5.0 : f32
+  call @func_powff32(%r, %r_p) : (f32, f32) -> ()
+
+  // CHECK-NEXT: inf
+  %s   = arith.constant 0.0 : f32
+  %s_p = arith.constant -5.0 : f32
+  call @func_powff32(%s, %s_p) : (f32, f32) -> ()
   return
 }
 
