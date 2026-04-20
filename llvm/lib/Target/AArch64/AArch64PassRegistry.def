@@ -28,6 +28,7 @@
 #endif
 MACHINE_FUNCTION_PASS("aarch64-a57-fp-load-balancing", AArch64A57FPLoadBalancingPass())
 MACHINE_FUNCTION_PASS("aarch64-branch-targets", AArch64BranchTargetsPass())
+MACHINE_FUNCTION_PASS("aarch64-ccmp", AArch64ConditionalComparesPass())
 MACHINE_FUNCTION_PASS("aarch64-collect-loh", AArch64CollectLOHPass())
 MACHINE_FUNCTION_PASS("aarch64-condopt", AArch64ConditionOptimizerPass())
 MACHINE_FUNCTION_PASS("aarch64-copyelim", AArch64RedundantCopyEliminationPass())
@@ -38,9 +39,14 @@ MACHINE_FUNCTION_PASS("aarch64-jump-tables", AArch64CompressJumpTablesPass())
 MACHINE_FUNCTION_PASS("aarch64-ldst-opt", AArch64LoadStoreOptPass())
 MACHINE_FUNCTION_PASS("aarch64-mi-peephole-opt", AArch64MIPeepholeOptPass())
 MACHINE_FUNCTION_PASS("aarch64-post-coalescer", AArch64PostCoalescerPass())
+MACHINE_FUNCTION_PASS("aarch64-post-select-optimize",
+                      AArch64PostSelectOptimizePass())
+MACHINE_FUNCTION_PASS("aarch64-postlegalizer-lowering",
+                      AArch64PostLegalizerLoweringPass())
 MACHINE_FUNCTION_PASS("aarch64-prelegalizer-combiner",
                       AArch64PreLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("aarch64-ptrauth", AArch64PointerAuthPass())
+MACHINE_FUNCTION_PASS("aarch64-redundantcondbranch", AArch64RedundantCondBranchPass())
 MACHINE_FUNCTION_PASS("aarch64-simd-scalar", AArch64AdvSIMDScalarPass())
 MACHINE_FUNCTION_PASS("aarch64-O0-prelegalizer-combiner",
                       AArch64O0PreLegalizerCombinerPass())

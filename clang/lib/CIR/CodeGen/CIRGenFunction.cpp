@@ -623,6 +623,10 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
     // FIXME(cir): should we clearInsertionPoint? breaks many testcases
     popCleanupBlocks(prologueCleanupDepth);
   }
+
+  assert(deferredConditionalCleanupStack.empty() &&
+         "deferred conditional cleanups were not consumed by a "
+         "FullExprCleanupScope");
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
@@ -1011,6 +1015,16 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   return retTy;
 }
 
+LValue CIRGenFunction::emitInitListLValue(const InitListExpr *e) {
+  // Initializing an aggregate temporary in C++11: T{...}.
+  if (!e->isGLValue())
+    return emitAggExprToLValue(e);
+
+  // An lvalue initializer list must be initializing a reference.
+  assert(e->isTransparent() && "non-transparent glvalue init list");
+  return emitLValue(e->getInit(0));
+}
+
 static std::variant<LValue, RValue>
 emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
                      bool forLValue, AggValueSlot slot) {
@@ -1164,7 +1178,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
   case Expr::CXXConstCastExprClass:
-    // TODO(cir): The above list is missing CXXFunctionalCastExprClass,
+  case Expr::CXXFunctionalCastExprClass:
+    // TODO(cir): The above list is missing
     // CXXAddrSpaceCastExprClass, and ObjCBridgedCastExprClass.
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
@@ -1175,6 +1190,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   case Expr::SubstNonTypeTemplateParmExprClass:
     return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
+  case Expr::InitListExprClass:
+    return emitInitListLValue(cast<InitListExpr>(e));
   case Expr::PseudoObjectExprClass:
     return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
   }

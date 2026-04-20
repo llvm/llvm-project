@@ -12,7 +12,7 @@ import os
 import re
 import sys
 import subprocess
-from typing import Dict
+from typing import Dict, Tuple
 
 # LLDB modules
 import lldb
@@ -903,7 +903,7 @@ def run_to_breakpoint_make_target(test, exe_name="a.out", in_cwd=True):
 
 def run_to_breakpoint_do_run(
     test, target, bkpt, launch_info=None, only_one_thread=True, extra_images=None
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     # Launch the process, and do not stop at the entry point.
     if not launch_info:
         launch_info = target.GetLaunchInfo()
@@ -986,7 +986,7 @@ def run_to_name_breakpoint(
     in_cwd=True,
     only_one_thread=True,
     extra_images=None,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by name on bkpt_name restricted to bkpt_module.
 
@@ -1039,7 +1039,7 @@ def run_to_source_breakpoint(
     only_one_thread=True,
     extra_images=None,
     has_locations_before_run=True,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by source regex bkpt_pattern.
 
@@ -1073,7 +1073,7 @@ def run_to_line_breakpoint(
     in_cwd=True,
     only_one_thread=True,
     extra_images=None,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by (source_spec, line_number(, column)).
 

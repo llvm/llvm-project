@@ -310,10 +310,9 @@ struct VPlanTransforms {
       const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
   /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
-  /// replaces all uses except the canonical IV increment of
-  /// VPCanonicalIVPHIRecipe with a VPCurrentIterationPHIRecipe.
-  /// VPCanonicalIVPHIRecipe is only used to control the loop after
-  /// this transformation.
+  /// replaces all uses of the canonical IV except for the canonical IV
+  /// increment with a VPCurrentIterationPHIRecipe. The canonical IV is only
+  /// used to control the loop after this transformation.
   static void
   addExplicitVectorLength(VPlan &Plan,
                           const std::optional<unsigned> &MaxEVLSafeElements);
@@ -334,7 +333,7 @@ struct VPlanTransforms {
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed);
+      VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
