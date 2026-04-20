@@ -1021,15 +1021,14 @@ void CIRGenFunction::emitNewArrayInitializer(
 
       const Expr *initExpr = ile ? ile->getInit(0) : init;
       mlir::Type initExprTy = convertType(initExpr->getType());
-      Address coercedPtrTy{
-          builder.createBitcast(curPtr.getPointer(),
-                                builder.getPointerTo(initExprTy)),
-          curPtr.getAlignment()};
+      Address coercedPtr = curPtr.withElementType(builder, initExprTy);
 
       AggValueSlot slot = AggValueSlot::forAddr(
-          coercedPtrTy, elementType.getQualifiers(), AggValueSlot::IsDestructed,
+          coercedPtr, elementType.getQualifiers(), AggValueSlot::IsDestructed,
           AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
           AggValueSlot::IsNotZeroed);
+      assert(!cir::MissingFeatures::aggValueSlotGC());
+      assert(!cir::MissingFeatures::sanitizers());
       emitAggExpr(initExpr, slot);
 
       // Move past these elements.
@@ -1038,12 +1037,10 @@ void CIRGenFunction::emitNewArrayInitializer(
               ->getZExtSize();
 
       bool alreadyInitedAll = false;
-      auto constElts =
-          mlir::dyn_cast<cir::ConstantOp>(numElements.getDefiningOp());
+      auto constElts = numElements.getDefiningOp<cir::ConstantOp>();
       if (constElts) {
-        if (auto constIntAttr =
-                mlir::dyn_cast<cir::IntAttr>(constElts.getValue()))
-          alreadyInitedAll = (constIntAttr.getUInt() == initListElements);
+        int64_t constVal = getZExtIntValueFromConstOp(numElements);
+        alreadyInitedAll = (constVal == initListElements);
       }
 
       // Init the rest with memset, unless we've already done everything.
@@ -1227,14 +1224,13 @@ void CIRGenFunction::emitNewArrayInitializer(
     if (ile->getNumInits() == 0 && tryMemsetInitialization())
       return;
 
-    if (const RecordType *rtype =
-            ile->getType()->getAsCanonical<RecordType>()) {
+    if (const auto *rtype = ile->getType()->getAsCanonical<RecordType>()) {
       if (rtype->getDecl()->isStruct()) {
         const RecordDecl *rd = rtype->getDecl()->getDefinitionOrSelf();
         unsigned numElements = 0;
         if (auto *cxxrd = dyn_cast<CXXRecordDecl>(rd))
           numElements = cxxrd->getNumBases();
-        for (auto *field : rd->fields())
+        for (FieldDecl *field : rd->fields())
           if (!field->isUnnamedBitField())
             ++numElements;
         // FIXME: Recurse into nested InitListExprs.
