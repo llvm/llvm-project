@@ -337,6 +337,8 @@ private:
 };
 
 bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
+  // Do not do clause checks while processing METADIRECTIVE.
+  // See comment in CheckAllowedClause.
   if (GetDirectiveNest(ContextSelectorNest) > 0) {
     return true;
   }
@@ -808,6 +810,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
         return CheckDirectiveSpelling(source, id);
       });
   parser::Walk(x, visitor);
+  if (GetOmpDirectiveName(x).v != llvm::omp::Directive::OMPD_section) {
+    dirStack_.push_back(&GetOmpDirectiveSpecification(x));
+  }
 
   CheckDirectiveDeprecation(x);
 
