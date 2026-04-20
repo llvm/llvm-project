@@ -3591,7 +3591,7 @@ private:
             [&](const Fortran::parser::CompilerDirective::IVDep &) {
               attachDirectiveToLoop(dir, &eval);
             },
-            [&] (const Fortran::parser::CompilerDirective::Simd &) {
+            [&](const Fortran::parser::CompilerDirective::Simd &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
