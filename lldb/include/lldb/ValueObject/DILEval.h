@@ -30,8 +30,7 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 /// Given the name of an identifier, check to see if it matches the name of a
 /// global variable. If so, find the ValueObject for that global variable, and
 /// create and return an IdentifierInfo object containing all the relevant
-/// information about it. If \p search_all_modules is true, also search global
-/// variables from all loaded modules (not just the current compile unit).
+/// information about it.
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            std::shared_ptr<StackFrame> frame_sp,
                                            lldb::TargetSP target_sp,
