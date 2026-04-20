@@ -1728,8 +1728,10 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
     }
   }
 
-  std::error_code EC =
-      ImportingInstance.getModuleCache().write(ModuleFileName, *Buffer);
+  off_t Size;
+  time_t ModTime;
+  std::error_code EC = ImportingInstance.getModuleCache().write(
+      ModuleFileName, *Buffer, Size, ModTime);
   if (EC) {
     ImportingInstance.getDiagnostics().Report(ModuleNameLoc,
                                               diag::err_module_not_written)
@@ -1756,7 +1758,7 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   Buffer = llvm::MemoryBuffer::getMemBufferCopy(ExtractedBuffer);
 
   ImportingInstance.getModuleCache().getInMemoryModuleCache().addBuiltPCM(
-      ModuleFileName, std::move(Buffer));
+      ModuleFileName, std::move(Buffer), Size, ModTime);
 
   return true;
 }
@@ -2685,8 +2687,11 @@ static bool addCachedModuleFileToInMemoryCache(StringRef Path,
     return false;
   }
 
-  ModCache.getInMemoryModuleCache().addPCM(Path, OutputProxy->getMemoryBuffer(),
-                                           OutputProxy->getID().toString());
+  auto Buf = OutputProxy->getMemoryBuffer();
+  size_t BufSize = Buf->getBufferSize();
+  time_t ModTime = 0;
+  ModCache.getInMemoryModuleCache().addPCM(
+      Path, std::move(Buf), BufSize, ModTime, OutputProxy->getID().toString());
   return false;
 }
 
