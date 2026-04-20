@@ -63,7 +63,7 @@ static void addFlagsFromAttrSet(ISD::ArgFlagsTy &Flags, AttributeSet Attrs) {
     Flags.setSwiftAsync();
   if (Attrs.hasAttribute(Attribute::SwiftError))
     Flags.setSwiftError();
-  if (AttrFn(Attribute::SwiftCoro))
+  if (Attrs.hasAttribute(Attribute::SwiftCoro))
     Flags.setSwiftCoro();
 }
 
