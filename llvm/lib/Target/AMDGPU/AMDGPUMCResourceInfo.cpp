@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCResourceInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -267,6 +268,31 @@ void MCResourceInfo::gatherResourceInfo(
 
   LLVM_DEBUG(dbgs() << "MCResUse: Gathering resource information for "
                     << FnSym->getName() << '\n');
+
+  auto SetToLocal = [&](int64_t Value, ResourceInfoKind RIK) {
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
+    Sym->setVariableValue(MCConstantExpr::create(Value, OutContext));
+  };
+
+  // When link-time object linking is enabled, set all resource symbols to
+  // concrete local values.
+  if (AMDGPUTargetMachine::EnableObjectLinking) {
+    LLVM_DEBUG(dbgs() << "MCResUse:   object linking enabled, no call-graph "
+                         "propagation; emitting local resource values only\n");
+    SetToLocal(FRI.NumVGPR, RIK_NumVGPR);
+    SetToLocal(FRI.NumAGPR, RIK_NumAGPR);
+    SetToLocal(FRI.NumExplicitSGPR, RIK_NumSGPR);
+    SetToLocal(FRI.NumNamedBarrier, RIK_NumNamedBarrier);
+    SetToLocal(FRI.PrivateSegmentSize, RIK_PrivateSegSize);
+    SetToLocal(FRI.UsesVCC, ResourceInfoKind::RIK_UsesVCC);
+    SetToLocal(FRI.UsesFlatScratch, ResourceInfoKind::RIK_UsesFlatScratch);
+    SetToLocal(FRI.HasDynamicallySizedStack,
+               ResourceInfoKind::RIK_HasDynSizedStack);
+    SetToLocal(FRI.HasRecursion, ResourceInfoKind::RIK_HasRecursion);
+    SetToLocal(FRI.HasIndirectCall, ResourceInfoKind::RIK_HasIndirectCall);
+    return;
+  }
+
   LLVM_DEBUG({
     if (!FRI.Callees.empty()) {
       dbgs() << "MCResUse: Callees:\n";
@@ -346,14 +372,6 @@ void MCResourceInfo::gatherResourceInfo(
     }
     Sym->setVariableValue(localConstExpr);
   }
-
-  auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
-    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
-    LLVM_DEBUG(
-        dbgs() << "MCResUse:   " << Sym->getName() << ": Adding " << LocalValue
-               << ", no further propagation as indirect callee found within\n");
-    Sym->setVariableValue(MCConstantExpr::create(LocalValue, OutContext));
-  };
 
   if (!FRI.HasIndirectCall) {
     assignResourceInfoExpr(FRI.UsesVCC, ResourceInfoKind::RIK_UsesVCC,
