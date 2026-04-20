@@ -4,7 +4,6 @@
 // CHECK-LABEL: define hidden void @_Z9setMatrixRu11matrix_typeILm4ELm4EfEiDv4_f(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], i32 noundef [[INDEX:%.*]], <4 x float> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 4
@@ -39,7 +38,6 @@ void setMatrix(out float4x4 M, int index, float4 V) {
 // CHECK-LABEL: define hidden void @_Z15setMatrixScalarRu11matrix_typeILm2ELm1EfEif(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(8) [[M:%.*]], i32 noundef [[INDEX:%.*]], float noundef nofpclass(nan inf) [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[S_ADDR:%.*]] = alloca float, align 4
@@ -64,7 +62,6 @@ void setMatrixScalar(out float2x1 M, int index, float S) {
 // CHECK-LABEL: define hidden void @_Z13setBoolMatrixRu11matrix_typeILm4ELm4EbEiDv4_b(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], i32 noundef [[INDEX:%.*]], <4 x i1> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
@@ -102,7 +99,6 @@ void setBoolMatrix(out bool4x4 M, int index, bool4 V) {
 // CHECK-LABEL: define hidden void @_Z19setBoolMatrixScalarRu11matrix_typeILm2ELm1EbEib(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(8) [[M:%.*]], i32 noundef [[INDEX:%.*]], i1 noundef [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[S_ADDR:%.*]] = alloca i32, align 4
@@ -130,7 +126,6 @@ void setBoolMatrixScalar(out bool2x1 M, int index, bool S) {
 // CHECK-LABEL: define hidden void @_Z19setMatrixConstIndexRu11matrix_typeILm4ELm4EiES_(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], <16 x i32> noundef [[N:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4

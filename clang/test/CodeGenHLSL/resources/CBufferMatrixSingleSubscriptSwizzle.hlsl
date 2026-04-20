@@ -9,7 +9,6 @@ cbuffer CB {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <2 x float> @_Z15get_row_swizzlev(
 // CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[MATRIX_BUF_COPY:%.*]] = alloca [3 x <2 x float>], align 4
 // CHECK-NEXT:    [[CBUF_DEST:%.*]] = getelementptr inbounds [3 x <2 x float>], ptr [[MATRIX_BUF_COPY]], i32 0, i32 0
 // CHECK-NEXT:    [[CBUF_LOAD:%.*]] = load <2 x float>, ptr addrspace(2) @Mat, align 4

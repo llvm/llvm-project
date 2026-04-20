@@ -14,7 +14,6 @@ RWStructuredBuffer<float> Out : register(u0);
 
 // CHECK: define internal void @_Z4mainv()
 // CHECK-NEXT: entry:
-// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 [numthreads(4,1,1)]
 void main() {
 // CHECK-NEXT:  %First = alloca [3 x %"class.hlsl::RWBuffer"], align 4
@@ -36,7 +35,6 @@ void main() {
 // CHECK-NEXT: br label %[[ArrayInitLoop:.*]]
 // CHECK: [[ArrayInitLoop]]:
 // CHECK-NEXT: %[[ArrayCurPtr:.*]] = phi ptr [ %[[ArrayBeginPtr]], %entry ], [ %[[ArrayNextPtr:.*]], %[[ArrayInitLoop]] ]
-// CHECK-NEXT: %[[#C_LOOP:]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %[[#C_ENTRY]]) ]
 // CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1Ev(ptr {{.*}} %[[ArrayCurPtr]])
 // CHECK-NEXT: %[[ArrayNextPtr]] = getelementptr inbounds %"class.hlsl::RWBuffer", ptr %[[ArrayCurPtr]], i32 1
 // CHECK-NEXT: %[[ArrayInitDone:.*]] = icmp eq ptr %[[ArrayNextPtr]], %[[ArrayEndPtr]]

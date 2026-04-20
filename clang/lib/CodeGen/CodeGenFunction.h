@@ -5437,11 +5437,11 @@ public:
   void maybeAttachRangeForLoad(llvm::LoadInst *Load, QualType Ty,
                                SourceLocation Loc);
 
+private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|
   // as it's parent convergence instr.
   llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
 
-private:
   // Adds a convergence_ctrl token with |ParentToken| as parent convergence
   // instr to the call |Input|.
   llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);

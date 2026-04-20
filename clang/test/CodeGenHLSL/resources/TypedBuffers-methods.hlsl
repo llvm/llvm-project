@@ -48,7 +48,7 @@ export float TestLoadWithStatus() {
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoadWithStatus()()
 // CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 1, ptr {{.*}} %tmp)
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 2, ptr {{.*}} %[[TMP0:.*]])
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 2, ptr {{.*}} %tmp1)
 // CHECK: add
 // CHECK: ret float
 
