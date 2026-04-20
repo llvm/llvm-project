@@ -6041,6 +6041,25 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   return computeKnownFPClass(Op, DemandedElts, InterestedClasses, Depth);
 }
 
+static KnownFPClass::MinMaxKind GetMinMaxKnownFPClass(unsigned Opcode) {
+  switch (Opcode) {
+  case ISD::FMAXNUM:
+    return KnownFPClass::MinMaxKind::maxnum;
+  case ISD::FMINNUM:
+    return KnownFPClass::MinMaxKind::minnum;
+  case ISD::FMAXIMUM:
+    return KnownFPClass::MinMaxKind::maximum;
+  case ISD::FMINIMUM:
+    return KnownFPClass::MinMaxKind::minimum;
+  case ISD::FMAXIMUMNUM:
+    return KnownFPClass::MinMaxKind::maximumnum;
+  case ISD::FMINIMUMNUM:
+    return KnownFPClass::MinMaxKind::minimumnum;
+  default:
+    llvm_unreachable("Illegal FP min/max opcode");
+  }
+}
+
 KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
                                                const APInt &DemandedElts,
                                                FPClassTest InterestedClasses,
@@ -6147,28 +6166,8 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
       break;
     KnownFPClass KnownLHS = computeKnownFPClass(Op.getOperand(0), DemandedElts,
                                                 InterestedClasses, Depth + 1);
-    KnownFPClass::MinMaxKind Kind;
-    switch (Opcode) {
-    case ISD::FMAXNUM:
-      Kind = KnownFPClass::MinMaxKind::maxnum;
-      break;
-    case ISD::FMINNUM:
-      Kind = KnownFPClass::MinMaxKind::minnum;
-      break;
-    case ISD::FMAXIMUM:
-      Kind = KnownFPClass::MinMaxKind::maximum;
-      break;
-    case ISD::FMINIMUM:
-      Kind = KnownFPClass::MinMaxKind::minimum;
-      break;
-    case ISD::FMAXIMUMNUM:
-      Kind = KnownFPClass::MinMaxKind::maximumnum;
-      break;
-    default:
-      Kind = KnownFPClass::MinMaxKind::minimumnum;
-      break;
-    }
-    Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, Kind,
+    Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS,
+                                     GetMinMaxKnownFPClass(Opcode),
                                      getDenormalMode(Op.getValueType()));
     break;
   }
