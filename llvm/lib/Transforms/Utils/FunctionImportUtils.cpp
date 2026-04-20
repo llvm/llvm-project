@@ -28,13 +28,7 @@ static cl::opt<bool> UseSourceFilenameForPromotedLocals(
              "This requires that the source filename has a unique name / "
              "path to avoid name collisions."));
 
-/// FIXME: The current optimization that avoids unnecessary renaming of
-/// promoted locals is incompatible with distributed ThinLTO and therefore
-/// must be enabled by default.
-cl::opt<bool>
-    AlwaysRenamePromotedLocals("always-rename-promoted-locals", cl::init(true),
-                               cl::Hidden,
-                               cl::desc("Always rename promoted locals."));
+extern cl::opt<bool> AlwaysRenamePromotedLocals;
 
 cl::list<GlobalValue::GUID> MoveSymbolGUID(
     "thinlto-move-symbols",
