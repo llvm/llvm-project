@@ -25,7 +25,9 @@ else
 endif
 
 ifeq "$(MAKE_PDB)" "YES"
-	SWIFT_DEBUG_INFO_FLAG ?= -g -debug-info-format=codeview
+	# Use lld until https://github.com/swiftlang/swift/issues/88566
+	# is resolved.
+	SWIFT_DEBUG_INFO_FLAG ?= -g -debug-info-format=codeview -use-ld=lld
 else ifeq "$(OS)" "Windows_NT"
 	SWIFT_DEBUG_INFO_FLAG ?= -g -use-ld=lld -Xlinker -debug:dwarf
 else
