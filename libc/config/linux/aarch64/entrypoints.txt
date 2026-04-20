@@ -1219,6 +1219,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.getsockopt
     libc.src.sys.socket.listen
     libc.src.sys.socket.setsockopt
+    libc.src.sys.socket.shutdown
     libc.src.sys.socket.socket
   )
 endif()
