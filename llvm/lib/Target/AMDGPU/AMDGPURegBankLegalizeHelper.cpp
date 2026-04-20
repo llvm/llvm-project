@@ -1112,8 +1112,8 @@ bool RegBankLegalizeHelper::lowerAbsToNegMax(MachineInstr &MI) {
 }
 
 bool RegBankLegalizeHelper::lowerAbsToS32(MachineInstr &MI) {
-  // Lower uniform V2S16 abs by unpacking to two S32 lanes and re-emitting
-  // G_ABS on each lane:
+  // Lower uniform V2S16 abs by unpacking the values to two separate SGPR
+  // registers and re-emitting G_ABS on each:
   //   packed  = bitcast <2 x s16> src to s32
   //   lo      = sext_inreg packed, 16
   //   hi      = ashr packed, 16
@@ -1121,13 +1121,13 @@ bool RegBankLegalizeHelper::lowerAbsToS32(MachineInstr &MI) {
   //
   // SALU only has s_abs_i32, with no direct uniform V2S16 abs. The
   // re-emitted G_ABS(SgprRB, S32) selects to s_abs_i32 on each value.
-  auto Bitcast = B.buildBitcast({SgprRB, S32}, MI.getOperand(1).getReg());
-  auto SextInReg = B.buildSExtInReg({SgprRB, S32}, Bitcast, 16);
+  auto Bitcast = B.buildBitcast({SgprRB_S32}, MI.getOperand(1).getReg());
+  auto SextInReg = B.buildSExtInReg({SgprRB_S32}, Bitcast, 16);
   auto ShiftHi =
-      B.buildAShr({SgprRB, S32}, Bitcast, B.buildConstant({SgprRB, S32}, 16));
+      B.buildAShr({SgprRB_S32}, Bitcast, B.buildConstant({SgprRB_S32}, 16));
 
-  auto AbsLo = B.buildInstr(AMDGPU::G_ABS, {{SgprRB, S32}}, {SextInReg});
-  auto AbsHi = B.buildInstr(AMDGPU::G_ABS, {{SgprRB, S32}}, {ShiftHi});
+  auto AbsLo = B.buildInstr(AMDGPU::G_ABS, {{SgprRB_S32}}, {SextInReg});
+  auto AbsHi = B.buildInstr(AMDGPU::G_ABS, {{SgprRB_S32}}, {ShiftHi});
   B.buildBuildVectorTrunc(MI.getOperand(0).getReg(),
                           {AbsLo.getReg(0), AbsHi.getReg(0)});
 
