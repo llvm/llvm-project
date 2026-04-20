@@ -8,6 +8,8 @@ declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
 declare double @llvm.maximum.f64(double, double)
 declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
 
+declare void @use(float)
+
 define float @constant_fold_maximum_f32() {
 ; CHECK-LABEL: @constant_fold_maximum_f32(
 ; CHECK-NEXT:    ret float 2.000000e+00
@@ -238,6 +240,128 @@ define float @maximum4(float %x, float %y, float %z, float %w) {
   ret float %c
 }
 
+define float @maximum_common_op(float %x, float %y, float %z) {
+; CHECK-LABEL: @maximum_common_op(
+; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[Z1:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M2]], float [[Y]])
+; CHECK-NEXT:    ret float [[M3]]
+;
+  %m1 = call float @llvm.maximum.f32(float %x, float %y)
+  %m2 = call float @llvm.maximum.f32(float %x, float %z)
+  %m3 = call float @llvm.maximum.f32(float %m1, float %m2)
+  ret float %m3
+}
+
+define float @maximum_reuse_lhs(float %x, float %y, float %z) {
+; CHECK-LABEL: @maximum_reuse_lhs(
+; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    call void @use(float [[M1]])
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximum.f32(float [[Z1:%.*]], float [[X]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M1]], float [[Z]])
+; CHECK-NEXT:    ret float [[M3]]
+;
+  %m1 = call float @llvm.maximum.f32(float %x, float %y)
+  call void @use(float %m1)
+  %m2 = call float @llvm.maximum.f32(float %z, float %x)
+  %m3 = call float @llvm.maximum.f32(float %m1, float %m2)
+  ret float %m3
+}
+
+define float @maximum_reuse_rhs(float %x, float %y, float %z) {
+; CHECK-LABEL: @maximum_reuse_rhs(
+; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.maximum.f32(float [[Z:%.*]], float [[X:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.maximum.f32(float [[Z1:%.*]], float [[X]])
+; CHECK-NEXT:    call void @use(float [[Y]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M2]], float [[Y]])
+; CHECK-NEXT:    ret float [[M3]]
+;
+  %m1 = call float @llvm.maximum.f32(float %y, float %x)
+  %m2 = call float @llvm.maximum.f32(float %z, float %x)
+  call void @use(float %m2)
+  %m3 = call float @llvm.maximum.f32(float %m1, float %m2)
+  ret float %m3
+}
+
+define float @maximum_reuse_lhs_nnan(float %x, float %y, float %z) {
+; CHECK-LABEL: @maximum_reuse_lhs_nnan(
+; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    call void @use(float [[M1]])
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximum.f32(float [[Z1:%.*]], float [[X]])
+; CHECK-NEXT:    [[M3:%.*]] = call nnan float @llvm.maximum.f32(float [[M1]], float [[Z]])
+; CHECK-NEXT:    ret float [[M3]]
+;
+  %m1 = call float @llvm.maximum.f32(float %x, float %y)
+  call void @use(float %m1)
+  %m2 = call float @llvm.maximum.f32(float %z, float %x)
+  %m3 = call nnan float @llvm.maximum.f32(float %m1, float %m2)
+  ret float %m3
+}
+
+define float @maximum_reuse_lhs_nnan_folded_only(float %x, float %y, float %z) {
+; CHECK-LABEL: @maximum_reuse_lhs_nnan_folded_only(
+; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    call void @use(float [[M1]])
+; CHECK-NEXT:    [[Z:%.*]] = call nnan float @llvm.maximum.f32(float [[Z1:%.*]], float [[X]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M1]], float [[Z]])
+; CHECK-NEXT:    ret float [[M3]]
+;
+  %m1 = call float @llvm.maximum.f32(float %x, float %y)
+  call void @use(float %m1)
+  %m2 = call nnan float @llvm.maximum.f32(float %z, float %x)
+  %m3 = call float @llvm.maximum.f32(float %m1, float %m2)
+  ret float %m3
+}
+
+define float @maximum_reuse_lhs_fmf_intersection(float %x, float %y, float %z) {
+; CHECK-LABEL: @maximum_reuse_lhs_fmf_intersection(
+; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    call void @use(float [[M1]])
+; CHECK-NEXT:    [[M2:%.*]] = call ninf afn float @llvm.maximum.f32(float [[Z:%.*]], float [[X]])
+; CHECK-NEXT:    [[M3:%.*]] = call ninf arcp float @llvm.maximum.f32(float [[M1]], float [[M2]])
+; CHECK-NEXT:    ret float [[M3]]
+;
+  %m1 = call float @llvm.maximum.f32(float %x, float %y)
+  call void @use(float %m1)
+  %m2 = call afn ninf float @llvm.maximum.f32(float %z, float %x)
+  %m3 = call arcp ninf float @llvm.maximum.f32(float %m1, float %m2)
+  ret float %m3
+}
+
+; Negative test - too many uses.
+
+define float @maximum_common_op_uses(float %x, float %y, float %z) {
+; CHECK-LABEL: @maximum_common_op_uses(
+; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    call void @use(float [[M1]])
+; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[Z:%.*]])
+; CHECK-NEXT:    call void @use(float [[M2]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M1]], float [[M2]])
+; CHECK-NEXT:    ret float [[M3]]
+;
+  %m1 = call float @llvm.maximum.f32(float %x, float %y)
+  call void @use(float %m1)
+  %m2 = call float @llvm.maximum.f32(float %x, float %z)
+  call void @use(float %m2)
+  %m3 = call float @llvm.maximum.f32(float %m1, float %m2)
+  ret float %m3
+}
+
+; Negative test - must have common operand.
+
+define float @maximum_no_common_op(float %x, float %y, float %z, float %w) {
+; CHECK-LABEL: @maximum_no_common_op(
+; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.maximum.f32(float [[W:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M1]], float [[M2]])
+; CHECK-NEXT:    ret float [[M3]]
+;
+  %m1 = call float @llvm.maximum.f32(float %x, float %y)
+  %m2 = call float @llvm.maximum.f32(float %w, float %z)
+  %m3 = call float @llvm.maximum.f32(float %m1, float %m2)
+  ret float %m3
+}
+
 ; PR37404 - https://bugs.llvm.org/show_bug.cgi?id=37404
 
 define <2 x float> @neg_neg(<2 x float> %x, <2 x float> %y) {
@@ -293,7 +417,6 @@ define float @unary_neg_neg_vec_fmf(float %x, float %y) {
 ; 1 extra use of an intermediate value should still allow the fold,
 ; but 2 would require more instructions than we started with.
 
-declare void @use(float)
 define float @neg_neg_extra_use_x(float %x, float %y) {
 ; CHECK-LABEL: @neg_neg_extra_use_x(
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
