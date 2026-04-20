@@ -2,8 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for test_umul_i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_smul_i128
+; CHECK-GI:  warning: Instruction selection used fallback path for test_smul_i128
 
 define i128 @test_uadd_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-SD-LABEL: test_uadd_i128:
@@ -222,41 +221,87 @@ cleanup:
 }
 
 define i128 @test_umul_i128(i128 noundef %x, i128 noundef %y) {
-; CHECK-LABEL: test_umul_i128:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    orr x8, x1, x3
-; CHECK-NEXT:    cbz x8, .LBB4_2
-; CHECK-NEXT:  // %bb.1: // %overflow
-; CHECK-NEXT:    mul x9, x3, x0
-; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    ccmp x3, #0, #4, ne
-; CHECK-NEXT:    umulh x10, x1, x2
-; CHECK-NEXT:    umulh x8, x3, x0
-; CHECK-NEXT:    madd x9, x1, x2, x9
-; CHECK-NEXT:    ccmp xzr, x10, #0, eq
-; CHECK-NEXT:    umulh x11, x0, x2
-; CHECK-NEXT:    ccmp xzr, x8, #0, eq
-; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    adds x1, x11, x9
-; CHECK-NEXT:    csinc w8, w8, wzr, lo
-; CHECK-NEXT:    cbnz w8, .LBB4_3
-; CHECK-NEXT:    b .LBB4_4
-; CHECK-NEXT:  .LBB4_2: // %overflow.no
-; CHECK-NEXT:    umulh x1, x0, x2
-; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    cbz w8, .LBB4_4
-; CHECK-NEXT:  .LBB4_3: // %if.then
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl error
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x0, w0
-; CHECK-NEXT:    asr x1, x0, #63
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB4_4: // %cleanup
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_umul_i128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    orr x8, x1, x3
+; CHECK-SD-NEXT:    cbz x8, .LBB4_2
+; CHECK-SD-NEXT:  // %bb.1: // %overflow
+; CHECK-SD-NEXT:    mul x9, x3, x0
+; CHECK-SD-NEXT:    cmp x1, #0
+; CHECK-SD-NEXT:    ccmp x3, #0, #4, ne
+; CHECK-SD-NEXT:    umulh x10, x1, x2
+; CHECK-SD-NEXT:    umulh x8, x3, x0
+; CHECK-SD-NEXT:    madd x9, x1, x2, x9
+; CHECK-SD-NEXT:    ccmp xzr, x10, #0, eq
+; CHECK-SD-NEXT:    umulh x11, x0, x2
+; CHECK-SD-NEXT:    ccmp xzr, x8, #0, eq
+; CHECK-SD-NEXT:    mul x0, x0, x2
+; CHECK-SD-NEXT:    cset w8, ne
+; CHECK-SD-NEXT:    adds x1, x11, x9
+; CHECK-SD-NEXT:    csinc w8, w8, wzr, lo
+; CHECK-SD-NEXT:    cbnz w8, .LBB4_3
+; CHECK-SD-NEXT:    b .LBB4_4
+; CHECK-SD-NEXT:  .LBB4_2: // %overflow.no
+; CHECK-SD-NEXT:    umulh x1, x0, x2
+; CHECK-SD-NEXT:    mul x0, x0, x2
+; CHECK-SD-NEXT:    cbz w8, .LBB4_4
+; CHECK-SD-NEXT:  .LBB4_3: // %if.then
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl error
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    sxtw x0, w0
+; CHECK-SD-NEXT:    asr x1, x0, #63
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:  .LBB4_4: // %cleanup
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_umul_i128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    orr x8, x1, x3
+; CHECK-GI-NEXT:    cbz x8, .LBB4_2
+; CHECK-GI-NEXT:  // %bb.1: // %overflow
+; CHECK-GI-NEXT:    umulh x8, x1, x2
+; CHECK-GI-NEXT:    cmp x1, #0
+; CHECK-GI-NEXT:    cset w12, ne
+; CHECK-GI-NEXT:    cmp x3, #0
+; CHECK-GI-NEXT:    mul x9, x0, x3
+; CHECK-GI-NEXT:    cset w13, ne
+; CHECK-GI-NEXT:    and w12, w12, w13
+; CHECK-GI-NEXT:    umulh x10, x0, x3
+; CHECK-GI-NEXT:    cmp x8, #0
+; CHECK-GI-NEXT:    madd x9, x1, x2, x9
+; CHECK-GI-NEXT:    cset w8, ne
+; CHECK-GI-NEXT:    umulh x11, x0, x2
+; CHECK-GI-NEXT:    cmp x10, #0
+; CHECK-GI-NEXT:    mul x0, x0, x2
+; CHECK-GI-NEXT:    cset w10, ne
+; CHECK-GI-NEXT:    orr w8, w8, w10
+; CHECK-GI-NEXT:    orr w8, w12, w8
+; CHECK-GI-NEXT:    adds x1, x11, x9
+; CHECK-GI-NEXT:    cset w9, hs
+; CHECK-GI-NEXT:    orr w8, w8, w9
+; CHECK-GI-NEXT:    tbnz w8, #0, .LBB4_3
+; CHECK-GI-NEXT:    b .LBB4_4
+; CHECK-GI-NEXT:  .LBB4_2: // %overflow.no
+; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    mul x0, x0, x2
+; CHECK-GI-NEXT:    umulh x1, x8, x2
+; CHECK-GI-NEXT:    mov w8, #0 // =0x0
+; CHECK-GI-NEXT:    tbz w8, #0, .LBB4_4
+; CHECK-GI-NEXT:  .LBB4_3: // %if.then
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl error
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-GI-NEXT:    asr w1, w0, #31
+; CHECK-GI-NEXT:    bfi x0, x1, #32, #32
+; CHECK-GI-NEXT:    bfi x1, x1, #32, #32
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:  .LBB4_4: // %cleanup
+; CHECK-GI-NEXT:    ret
 entry:
   %0 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %x, i128 %y)
   %1 = extractvalue { i128, i1 } %0, 1
