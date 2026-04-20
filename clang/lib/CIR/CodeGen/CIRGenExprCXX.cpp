@@ -488,9 +488,13 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // The equivalent code in CodeGen/CGExprCXX.cpp handles these cases as
     // overflow, but that should never happen. The size argument is implicitly
     // cast to a size_t, so it can never be negative and numElementsWidth will
-    // always equal sizeWidth.
+    // always equal sizeWidth. However, sometimes in operator-new, it seems that
+    // `numElements` might remain an 'int', so we have to support smaller than
+    // that.  We immediately do the zextOrTrunc below (which should really only
+    // do zext, since our assert handles the trunc), but it will make sure the
+    // width is correct.
     assert(!count.isNegative() && "Expected non-negative array size");
-    assert(numElementsWidth == sizeWidth &&
+    assert(numElementsWidth <= sizeWidth &&
            "Expected a size_t array size constant");
 
     // Okay, compute a count at the right width.
@@ -1006,8 +1010,52 @@ void CIRGenFunction::emitNewArrayInitializer(
     // Initializing from a (braced) string literal is a special case; the init
     // list element does not initialize a (single) array element.
     if ((ile && ile->isStringLiteralInit()) || sl || ocee) {
-      cgm.errorNYI(ile->getSourceRange(),
-                   "emitNewArrayInitializer: string literal init");
+      if (!ile)
+        init = ignoreParen;
+
+      // Initialize the initial portion of length equal to that of the string
+      // literal. The allocation must be for at least this much; we emitted a
+      // check for that earlier. Since we intend to use a cir.copy here, we must
+      // introduce a cast to the string-literal-size here, so that cir.copy does
+      // the right thing.
+
+      const Expr *initExpr = ile ? ile->getInit(0) : init;
+      mlir::Type initExprTy = convertType(initExpr->getType());
+      Address coercedPtr = curPtr.withElementType(builder, initExprTy);
+
+      AggValueSlot slot = AggValueSlot::forAddr(
+          coercedPtr, elementType.getQualifiers(), AggValueSlot::IsDestructed,
+          AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
+          AggValueSlot::IsNotZeroed);
+      assert(!cir::MissingFeatures::aggValueSlotGC());
+      assert(!cir::MissingFeatures::sanitizers());
+      emitAggExpr(initExpr, slot);
+
+      // Move past these elements.
+      initListElements =
+          cast<ConstantArrayType>(init->getType()->getAsArrayTypeUnsafe())
+              ->getZExtSize();
+
+      bool alreadyInitedAll = false;
+      auto constElts = numElements.getDefiningOp<cir::ConstantOp>();
+      if (constElts) {
+        int64_t constVal = getZExtIntValueFromConstOp(numElements);
+        alreadyInitedAll = (constVal == initListElements);
+      }
+
+      // Init the rest with memset, unless we've already done everything.
+      if (!alreadyInitedAll) {
+        mlir::Location initLoc = cgm.getLoc(init->getSourceRange());
+        mlir::Value initListElementsOp = builder.getUnsignedInt(
+            initLoc, initListElements,
+            getContext().getTypeSize(getContext().getSizeType()));
+        curPtr = curPtr.withPointer(builder.createPtrStride(
+            initLoc, curPtr.getPointer(), initListElementsOp));
+
+        bool ok = tryMemsetInitialization();
+        (void)ok;
+        assert(ok && "couldn't memset character type?");
+      }
       return;
     }
 
@@ -1020,10 +1068,9 @@ void CIRGenFunction::emitNewArrayInitializer(
     QualType allocType = e->getAllocatedType();
     if (const ConstantArrayType *cat = dyn_cast_or_null<ConstantArrayType>(
             allocType->getAsArrayTypeUnsafe())) {
-      (void)cat;
-      cgm.errorNYI(ile->getSourceRange(),
-                   "emitNewArrayInitializer: constant array init");
-      return;
+      elementTy = convertTypeForMem(allocType);
+      curPtr = curPtr.withElementType(builder, elementTy);
+      initListElements *= getContext().getConstantArrayElementCount(cat);
     }
 
     // Enter a partial-destruction Cleanup if necessary.
@@ -1154,14 +1201,53 @@ void CIRGenFunction::emitNewArrayInitializer(
   }
 
   // If this is value-initialization, we can usually use memset.
+  ImplicitValueInitExpr ivie(elementType);
   if (isa<ImplicitValueInitExpr>(init)) {
     if (tryMemsetInitialization())
       return;
-    cgm.errorNYI(init->getSourceRange(),
-                 "emitNewArrayInitializer: implicit value init");
-    return;
+    // Switch to an ImplicitValueInitExpr for the element type. This handles
+    // only one case: multidimensional array new of pointers to members. In
+    // all other cases, we already have an initializer for the array element.
+    init = &ivie;
   }
 
+  // At this point we should have found an initializer for the individual
+  // elements of the array.
+  assert(getContext().hasSameUnqualifiedType(elementType, init->getType()) &&
+         "got wrong type of element to initialize");
+
+  // If we have a struct whose every field is value-initialized, we can
+  // usually use memset.
+  if (auto *ile = dyn_cast<InitListExpr>(init)) {
+
+    // If we have an empty initializer list, we can usually use memset.
+    if (ile->getNumInits() == 0 && tryMemsetInitialization())
+      return;
+
+    if (const auto *rtype = ile->getType()->getAsCanonical<RecordType>()) {
+      if (rtype->getDecl()->isStruct()) {
+        const RecordDecl *rd = rtype->getDecl()->getDefinitionOrSelf();
+        unsigned numElements = 0;
+        if (auto *cxxrd = dyn_cast<CXXRecordDecl>(rd))
+          numElements = cxxrd->getNumBases();
+        for (FieldDecl *field : rd->fields())
+          if (!field->isUnnamedBitField())
+            ++numElements;
+        // FIXME: Recurse into nested InitListExprs.
+        if (ile->getNumInits() == numElements)
+          for (unsigned i = 0, e = ile->getNumInits(); i != e; ++i)
+            if (!isa<ImplicitValueInitExpr>(ile->getInit(i)))
+              --numElements;
+        if (ile->getNumInits() == numElements && tryMemsetInitialization())
+          return;
+      }
+    }
+  }
+
+  // The rest of this has to go through the rest of the initializer, generating
+  // a loop with cleanups/destruction/etc. See the test
+  // 'check_array_value_init'(currently disabled) in
+  // CodeGenCXX/new-array-init.cpp when we get more of this implemented.
   cgm.errorNYI(init->getSourceRange(),
                "emitNewArrayInitializer: unsupported initializer");
   return;
@@ -1376,14 +1462,19 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   // If there is a brace-initializer, cannot allocate fewer elements than inits.
   unsigned minElements = 0;
   if (e->isArray() && e->hasInitializer()) {
-    const InitListExpr *ile = dyn_cast<InitListExpr>(e->getInitializer());
-    if (ile && ile->isStringLiteralInit())
+    const Expr *init = e->getInitializer();
+    const InitListExpr *ile = dyn_cast<InitListExpr>(init);
+    const CXXParenListInitExpr *cplie = dyn_cast<CXXParenListInitExpr>(init);
+    const Expr *ignoreParen = init->IgnoreParenImpCasts();
+    if ((ile && ile->isStringLiteralInit()) ||
+        isa<StringLiteral>(ignoreParen) || isa<ObjCEncodeExpr>(ignoreParen)) {
       minElements =
-          cast<ConstantArrayType>(ile->getType()->getAsArrayTypeUnsafe())
+          cast<ConstantArrayType>(init->getType()->getAsArrayTypeUnsafe())
               ->getSize()
               .getZExtValue();
-    else if (ile)
-      minElements = ile->getNumInits();
+    } else if (ile || cplie) {
+      minElements = ile ? ile->getNumInits() : cplie->getInitExprs().size();
+    }
   }
 
   mlir::Value numElements = nullptr;
