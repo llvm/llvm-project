@@ -1101,12 +1101,8 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Instruction *AccInst = MA.getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
 
-  Value *PreloadVal = nullptr;
-  if (AlwaysExecuted) {
-    PreloadVal =
-        preloadUnconditionally(AccessRange.release(), Build.get(), AccInst);
-    return PreloadVal;
-  }
+  if (AlwaysExecuted)
+    return preloadUnconditionally(AccessRange.release(), Build.get(), AccInst);
 
   if (!materializeParameters(Domain.get()))
     return nullptr;
@@ -1152,7 +1148,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Builder.SetInsertPoint(MergeBB, MergeBB->getTerminator()->getIterator());
   auto *MergePHI = Builder.CreatePHI(
       AccInstTy, 2, "polly.preload." + AccInst->getName() + ".merge");
-  PreloadVal = MergePHI;
+  Value *PreloadVal = MergePHI;
 
   if (!PreAccInst) {
     PreloadVal = nullptr;
