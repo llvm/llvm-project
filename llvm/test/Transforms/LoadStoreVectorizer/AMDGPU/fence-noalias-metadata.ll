@@ -11,6 +11,7 @@
 ; the readonly attribute. The !alias.scope/!noalias metadata partially
 ; compensates, but getModRefInfo(FenceInst) did not check it.
 
+; Positive: fence declares !noalias for the load's scope -> vectorization.
 define void @vectorize_loads_across_fence_with_noalias(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @vectorize_loads_across_fence_with_noalias(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
@@ -33,7 +34,31 @@ define void @vectorize_loads_across_fence_with_noalias(ptr addrspace(1) %ptr) {
   ret void
 }
 
-; Negative test: without !noalias on the fence, vectorization is blocked.
+; Positive: fence declares !alias.scope, load declares !noalias covering that
+; scope. Exercises the symmetric branch in ScopedNoAliasAA::getModRefInfo.
+define void @vectorize_loads_across_fence_with_alias_scope(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: define void @vectorize_loads_across_fence_with_alias_scope(
+; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[PTR]], align 8, !alias.scope [[META0]], !noalias [[META6:![0-9]+]]
+; CHECK-NEXT:    [[LOAD01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    fence syncscope("workgroup") release, !alias.scope [[META6]]
+; CHECK-NEXT:    fence syncscope("workgroup") acquire, !alias.scope [[META6]]
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[LOAD01]], [[LOAD12]]
+; CHECK-NEXT:    call void @use(i32 [[SUM]])
+; CHECK-NEXT:    ret void
+;
+  %gep1 = getelementptr i32, ptr addrspace(1) %ptr, i64 1
+  %load0 = load i32, ptr addrspace(1) %ptr, align 8, !alias.scope !0, !noalias !7
+  fence syncscope("workgroup") release, !alias.scope !7
+  fence syncscope("workgroup") acquire, !alias.scope !7
+  %load1 = load i32, ptr addrspace(1) %gep1, align 4, !alias.scope !0, !noalias !7
+  %sum = add i32 %load0, %load1
+  call void @use(i32 %sum)
+  ret void
+}
+
+; Negative: no metadata on fence at all -> no vectorization.
 define void @no_vectorize_loads_across_fence_without_noalias(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @no_vectorize_loads_across_fence_without_noalias(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
@@ -56,17 +81,41 @@ define void @no_vectorize_loads_across_fence_without_noalias(ptr addrspace(1) %p
   ret void
 }
 
+; Negative: fence has !noalias but only for a different scope (other_arg_scope),
+; not the load's scope (arg_scope). Partial coverage does not help.
+define void @no_vectorize_loads_across_fence_with_partial_noalias(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: define void @no_vectorize_loads_across_fence_with_partial_noalias(
+; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i64 1
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 8, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    fence syncscope("workgroup") release, !noalias [[META3]]
+; CHECK-NEXT:    fence syncscope("workgroup") acquire, !noalias [[META3]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[GEP1]], align 4, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[LOAD0]], [[LOAD1]]
+; CHECK-NEXT:    call void @use(i32 [[SUM]])
+; CHECK-NEXT:    ret void
+;
+  %gep1 = getelementptr i32, ptr addrspace(1) %ptr, i64 1
+  %load0 = load i32, ptr addrspace(1) %ptr, align 8, !alias.scope !0, !noalias !3
+  fence syncscope("workgroup") release, !noalias !3
+  fence syncscope("workgroup") acquire, !noalias !3
+  %load1 = load i32, ptr addrspace(1) %gep1, align 4, !alias.scope !0, !noalias !3
+  %sum = add i32 %load0, %load1
+  call void @use(i32 %sum)
+  ret void
+}
+
 declare void @use(i32)
 
-; Metadata: two noalias scopes in the same domain.
-; Loads access memory in "arg_scope". Fences declare !noalias for both scopes,
-; meaning they do not concern memory in either scope.
+; Metadata: three noalias scopes in the same domain.
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"arg_scope"}
 !2 = distinct !{!2, !"kernel_domain"}
 !3 = !{!4}
 !4 = distinct !{!4, !2, !"other_arg_scope"}
 !5 = !{!1, !4}
+!6 = distinct !{!6, !2, !"fence_sync_scope"}
+!7 = !{!6}
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"arg_scope"}
@@ -74,4 +123,6 @@ declare void @use(i32)
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]], !"other_arg_scope"}
 ; CHECK: [[META5]] = !{[[META1]], [[META4]]}
+; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]], [[META2]], !"fence_sync_scope"}
 ;.

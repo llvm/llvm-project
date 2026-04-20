@@ -502,14 +502,14 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
   return ModRefInfo::Mod;
 }
 
-ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
+ModRefInfo AAResults::getModRefInfo(const FenceInst *F,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   if (Loc.Ptr) {
     ModRefInfo Result = ModRefInfo::ModRef;
 
     for (const auto &AA : AAs) {
-      Result &= AA->getModRefInfo(S, Loc, AAQI);
+      Result &= AA->getModRefInfo(F, Loc, AAQI);
 
       if (isNoModRef(Result))
         return ModRefInfo::NoModRef;

@@ -94,17 +94,17 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,
   return ModRefInfo::ModRef;
 }
 
-ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const FenceInst *S,
+ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const FenceInst *F,
                                                 const MemoryLocation &Loc,
                                                 AAQueryInfo &AAQI) {
   if (!EnableScopedNoAlias)
     return ModRefInfo::ModRef;
 
   if (!mayAliasInScopes(Loc.AATags.Scope,
-                        S->getMetadata(LLVMContext::MD_noalias)))
+                        F->getMetadata(LLVMContext::MD_noalias)))
     return ModRefInfo::NoModRef;
 
-  if (!mayAliasInScopes(S->getMetadata(LLVMContext::MD_alias_scope),
+  if (!mayAliasInScopes(F->getMetadata(LLVMContext::MD_alias_scope),
                         Loc.AATags.NoAlias))
     return ModRefInfo::NoModRef;
 

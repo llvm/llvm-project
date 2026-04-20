@@ -812,7 +812,7 @@ public:
 
   /// getModRefInfo (for fences) - Return information about whether
   /// a particular fence modifies or reads the specified memory location.
-  virtual ModRefInfo getModRefInfo(const FenceInst *S,
+  virtual ModRefInfo getModRefInfo(const FenceInst *F,
                                    const MemoryLocation &Loc,
                                    AAQueryInfo &AAQI) = 0;
 
@@ -869,9 +869,9 @@ public:
     return Result.getModRefInfo(Call1, Call2, AAQI);
   }
 
-  ModRefInfo getModRefInfo(const FenceInst *S, const MemoryLocation &Loc,
+  ModRefInfo getModRefInfo(const FenceInst *F, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI) override {
-    return Result.getModRefInfo(S, Loc, AAQI);
+    return Result.getModRefInfo(F, Loc, AAQI);
   }
 };
 
@@ -932,7 +932,7 @@ public:
     return ModRefInfo::ModRef;
   }
 
-  ModRefInfo getModRefInfo(const FenceInst *S, const MemoryLocation &Loc,
+  ModRefInfo getModRefInfo(const FenceInst *F, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI) {
     return ModRefInfo::ModRef;
   }
