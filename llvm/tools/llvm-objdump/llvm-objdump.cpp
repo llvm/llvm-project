@@ -75,6 +75,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AVRTargetParser.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cctype>
@@ -1458,6 +1459,68 @@ static char getMappingSymbolKind(ArrayRef<MappingSymbolPair> MappingSymbols,
   return (It - 1)->second;
 }
 
+// Owns a cache of ISA string -> DisassemblerTarget for RISC-V per-region
+// disassembly.  A single instance spans the whole disassembly pass so each
+// unique ISA string is parsed at most once regardless of how many sections
+// or regions reference it.
+class RISCVISATargetCache {
+  // Maps the "<ISAString>" part after "$x" to a disassembler target
+  // configured for that ISA.  A null unique_ptr caches a parse failure so
+  // we do not re-parse the same invalid string.
+  StringMap<std::unique_ptr<DisassemblerTarget>> Cache;
+
+public:
+  // Returns a DisassemblerTarget configured for ISAStr, layered on top of
+  // Base's feature string.  Base already encodes Tag_RISCV_arch, --mattr,
+  // and --mcpu, and the codegen-emitted initial "$x<ISA>" mapping symbol
+  // only captures module-level features; layering preserves function-level
+  // target-features and explicit --mattr overrides when the mapping symbol
+  // is a strict subset.  Falls back to &Base when ISAStr is empty or cannot
+  // be parsed; a parse failure is cached so the same bad string is consumed
+  // only once.
+  DisassemblerTarget *get(DisassemblerTarget &Base, StringRef ISAStr) {
+    if (ISAStr.empty())
+      return &Base;
+    auto [It, Inserted] = Cache.try_emplace(ISAStr);
+    if (Inserted) {
+      // The mapping symbol name (without the leading "$x") is a normalized
+      // RISC-V arch string like "rv64i2p1_m2p0_a2p1_c2p0_v1p0_...".
+      auto ParseResult = RISCVISAInfo::parseNormalizedArchString(ISAStr);
+      if (ParseResult) {
+        SubtargetFeatures Features(Base.SubtargetInfo->getFeatureString());
+        // toFeatures() only emits the extensions from Exts (i, m, f, ...),
+        // not the base-ISA XLEN.  Derive 64bit from getXLen() so mapping
+        // symbols that switch XLEN (e.g. rv64 inside an rv32 triple) reach
+        // the decoder correctly.
+        Features.AddFeature("64bit", (*ParseResult)->getXLen() == 64);
+        for (const std::string &F : (*ParseResult)->toFeatures())
+          Features.AddFeature(F);
+        It->second = std::make_unique<DisassemblerTarget>(Base, Features);
+      } else {
+        // Parse failed: leave the slot null so every future query for this
+        // same string falls back to Base (Tag_RISCV_arch / --mattr).
+        consumeError(ParseResult.takeError());
+      }
+    }
+    return It->second ? It->second.get() : &Base;
+  }
+};
+
+// Returns the DisassemblerTarget associated with the most recent RISC-V ISA
+// mapping symbol at or before Address, or nullptr if none exists.
+static DisassemblerTarget *getRISCVISAMappingTarget(
+    ArrayRef<std::pair<uint64_t, DisassemblerTarget *>> Syms,
+    uint64_t Address) {
+  auto It = partition_point(
+      Syms,
+      [Address](const std::pair<uint64_t, DisassemblerTarget *> &Val) {
+        return Val.first <= Address;
+      });
+  if (It == Syms.begin())
+    return nullptr;
+  return (It - 1)->second;
+}
+
 static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
                                uint64_t End, const ObjectFile &Obj,
                                ArrayRef<uint8_t> Bytes,
@@ -1796,6 +1859,19 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   // pretty print the symbols while disassembling.
   std::map<SectionRef, SectionSymbolsTy> AllSymbols;
   std::map<SectionRef, SmallVector<MappingSymbolPair, 0>> AllMappingSymbols;
+  // Owns the ISA-specific DisassemblerTargets referenced from
+  // AllRISCVISAMappingSymbols so each unique arch string is parsed at most
+  // once per disassembly pass.  Declared before AllRISCVISAMappingSymbols so
+  // the raw DisassemblerTarget * entries in that map never outlive the
+  // objects they point at.
+  RISCVISATargetCache ISATargets;
+  // Per-section RISC-V ISA mapping symbols: (offset, DisassemblerTarget *)
+  // pairs for "$x<ISAString>" symbols.  The DisassemblerTarget is resolved
+  // once when the symbol is collected and reused for every instruction in the
+  // region, avoiding repeated ISA-string lookups during disassembly.
+  std::map<SectionRef,
+           SmallVector<std::pair<uint64_t, DisassemblerTarget *>, 0>>
+      AllRISCVISAMappingSymbols;
   SectionSymbolsTy AbsoluteSymbols;
   const StringRef FileName = Obj.getFileName();
   const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(&Obj);
@@ -1828,6 +1904,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               strchr("adtx", Name[0])) {
             AllMappingSymbols[*SecI].emplace_back(Address - SectionAddr,
                                                   Name[0]);
+            // For RISC-V "$x<ISAString>" symbols, resolve the ISA string to a
+            // DisassemblerTarget once and record the pointer so per-instruction
+            // lookups are a single binary search.
+            if (isRISCVElf(Obj) && Name[0] == 'x' && Name.size() > 1)
+              AllRISCVISAMappingSymbols[*SecI].emplace_back(
+                  Address - SectionAddr,
+                  ISATargets.get(PrimaryTarget, Name.substr(1)));
             AllSymbols[*SecI].push_back(
                 createSymbolInfo(Obj, Symbol, /*MappingSymbol=*/true));
           }
@@ -2010,6 +2093,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     SectionSymbolsTy &Symbols = AllSymbols[Section];
     auto &MappingSymbols = AllMappingSymbols[Section];
     llvm::sort(MappingSymbols);
+    auto &RISCVISASyms = AllRISCVISAMappingSymbols[Section];
+    llvm::sort(RISCVISASyms);
 
     ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(
         unwrapOrError(Section.getContents(), Obj.getFileName()));
@@ -2330,6 +2415,18 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             } else if (Kind == 't') {
               DT = PrimaryIsThumb ? &PrimaryTarget : &*SecondaryTarget;
             }
+          }
+          // RISC-V ISA-aware disassembly: when a "$x<ISAString>" mapping
+          // symbol is active, use the pre-resolved DisassemblerTarget whose
+          // STI reflects the indicated ISA so that ISA-specific instructions
+          // (e.g., vector instructions inside .option arch, +v) are decoded
+          // correctly.
+          if (!RISCVISASyms.empty()) {
+            if (DisassemblerTarget *T =
+                    getRISCVISAMappingTarget(RISCVISASyms, Index))
+              DT = T;
+            else
+              DT = &PrimaryTarget;
           }
         } else if (!CHPECodeMap.empty()) {
           uint64_t Address = SectionAddr + Index;

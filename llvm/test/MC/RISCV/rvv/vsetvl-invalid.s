@@ -1,6 +1,6 @@
-# RUN: llvm-mc -filetype=obj -triple=riscv32 %s \
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+v %s \
 # RUN:     | llvm-objdump -d --mattr=+v - | FileCheck %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 %s \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+v %s \
 # RUN:     | llvm-objdump -d --mattr=+v - | FileCheck %s
 
 # CHECK: vsetvli a1, a0, e64, m1, tu, mu
