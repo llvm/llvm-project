@@ -254,8 +254,7 @@ public:
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
         if (Warning.InvalidatedByExpr) {
-          if (const CXXDeleteExpr *DE =
-                  dyn_cast<CXXDeleteExpr>(Warning.InvalidatedByExpr))
+          if (isa<CXXDeleteExpr>(Warning.InvalidatedByExpr))
             if (InvalidatedPVD)
               SemaHelper->reportUseAfterFree(InvalidatedPVD, UF->getUseExpr(),
                                              Warning.InvalidatedByExpr);
