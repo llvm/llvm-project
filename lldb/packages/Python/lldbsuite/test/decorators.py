@@ -995,6 +995,15 @@ def skipIfTargetDoesNotSupportThreads():
     )
 
 
+def skipIfTargetDoesNotSupportSharedLibraries():
+    """Skip tests that require shared library (dylib/so) support."""
+    platform = lldbplatformutil.getPlatform()
+    return unittest.skipIf(
+        platform.startswith("wasi"),
+        "shared libraries are not supported on %s" % platform,
+    )
+
+
 def skipUnlessArch(arch):
     """Decorate the item to skip tests unless running on the specified architecture."""
 

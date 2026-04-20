@@ -12,6 +12,7 @@ from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class CommandLineCompletionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
