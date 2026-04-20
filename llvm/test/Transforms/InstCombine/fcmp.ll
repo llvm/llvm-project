@@ -2734,3 +2734,40 @@ define i1 @fabs_sitofp_sub_ogt_one(i16 %x, i16 %y) {
   %cmp = fcmp ogt float %abs, 1.0
   ret i1 %cmp
 }
+
+define i1 @fabs_argstype_mismatch(i16 %x, i32 %y) {
+; CHECK-LABEL: @fabs_argstype_mismatch(
+; CHECK-NEXT:    [[FY:%.*]] = sitofp i16 [[Y:%.*]] to float
+; CHECK-NEXT:    [[FY1:%.*]] = sitofp i32 [[Y1:%.*]] to float
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FY]], [[FY1]]
+; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ABS]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = sitofp i16 %x to float
+  %fy = sitofp i32 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp ogt float %abs, 1.0
+  ret i1 %cmp
+}
+
+; negative test for canBeCastedExactlyIntToFP()
+
+define i1 @fabs_no_fold_i32_half(i32 %a, i32 %b) {
+; CHECK-LABEL: @fabs_no_fold_i32_half(
+; CHECK-NEXT:    [[FA:%.*]] = uitofp i32 [[A:%.*]] to half
+; CHECK-NEXT:    [[FB:%.*]] = uitofp i32 [[B:%.*]] to half
+; CHECK-NEXT:    [[SUB:%.*]] = fsub half [[FA]], [[FB]]
+; CHECK-NEXT:    [[ABS:%.*]] = call half @llvm.fabs.f16(half [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt half [[ABS]], 0xH3C00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+
+  %fa = uitofp i32 %a to half
+  %fb = uitofp i32 %b to half
+  %sub = fsub half %fa, %fb
+  %abs = call half @llvm.fabs.f16(half %sub)
+  %cmp = fcmp olt half %abs, 1.0
+  ret i1 %cmp
+}

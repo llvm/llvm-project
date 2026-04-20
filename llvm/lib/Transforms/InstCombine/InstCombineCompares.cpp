@@ -8785,15 +8785,15 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
   if (!match(I.getOperand(1), m_APFloat(C)))
     return nullptr;
 
+  if (!match(I.getOperand(1), PatternMatch::m_FiniteNonZero()))
+    return nullptr;
+
   FCmpInst::Predicate Pred = I.getPredicate();
   bool IsStrictLt = Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT;
   bool IsLe = Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE;
   bool IsStrictGt = Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT;
   bool IsGe = Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE;
   if (!IsStrictLt && !IsStrictGt && !IsGe)
-    return nullptr;
-
-  if (C->isNaN() || C->isZero() || C->isNegative())
     return nullptr;
 
   APFloat One = APFloat::getOne(C->getSemantics());
@@ -8812,23 +8812,23 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
 
   // Match: fsub(uitofp(A), uitofp(B)) where both casts are uitofp or sitofp
   Value *A, *B;
-  if (!match(FAbsArg, m_FSub(m_UIToFP(m_Value(A)), m_UIToFP(m_Value(B)))) &&
-      !match(FAbsArg, m_FSub(m_SIToFP(m_Value(A)), m_SIToFP(m_Value(B)))))
+  bool IsSigned;
+  if (match(FAbsArg, m_FSub(m_UIToFP(m_Value(A)), m_UIToFP(m_Value(B))))) {
+    IsSigned = false;
+  } else if (match(FAbsArg,
+                   m_FSub(m_SIToFP(m_Value(A)), m_SIToFP(m_Value(B))))) {
+    IsSigned = true;
+  } else {
     return nullptr;
+  }
 
   // A and B must have the same integer type
   if (A->getType() != B->getType())
     return nullptr;
 
-  auto *FPCastOp0 = cast<CastInst>(cast<Instruction>(FAbsArg)->getOperand(0));
-  auto *FPCastOp1 = cast<CastInst>(cast<Instruction>(FAbsArg)->getOperand(1));
-  bool is_signed = FPCastOp0->getOpcode() == CastInst::SIToFP &&
-                   FPCastOp1->getOpcode() == CastInst::SIToFP;
-  Type *FPTy = FPCastOp0->getType();
-  if (!IC.canBeCastedExactlyIntToFP(FPCastOp0->getOperand(0), FPTy, is_signed,
-                                    &I) ||
-      !IC.canBeCastedExactlyIntToFP(FPCastOp1->getOperand(0), FPTy, is_signed,
-                                    &I))
+  Type *FPTy = FAbsArg->getType();
+  if (!IC.canBeCastedExactlyIntToFP(A, FPTy, IsSigned, &I) ||
+      !IC.canBeCastedExactlyIntToFP(B, FPTy, IsSigned, &I))
     return nullptr;
   ICmpInst::Predicate ResultPred =
       IsStrictLt ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
