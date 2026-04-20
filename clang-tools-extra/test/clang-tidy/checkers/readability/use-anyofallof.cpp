@@ -174,11 +174,20 @@ bool bad_any_of7() {
   return false;
 }
 
+bool good_none_of() {
+  int v[] = {1, 2, 3};
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::none_of()' [readability-use-anyofallof]
+  for (int i : v)
+    if (i)
+      return false;
+  return true;
+}
+
 bool good_all_of() {
   int v[] = {1, 2, 3};
   // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::all_of()' [readability-use-anyofallof]
   for (int i : v)
-    if (i)
+    if (!cond(i))
       return false;
   return true;
 }
