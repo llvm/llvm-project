@@ -1534,7 +1534,7 @@ void SIRegisterInfo::buildSpillLoadStore(
   const TargetRegisterClass *RC = getRegClassForReg(MF->getRegInfo(), ValueReg);
   // On gfx90a+ AGPR is a regular VGPR acceptable for loads and stores.
   const bool IsAGPR = !ST.hasGFX90AInsts() && isAGPRClass(RC);
-  const unsigned RegWidth = AMDGPU::getRegBitWidth(*RC) / 8;
+  unsigned RegWidth = AMDGPU::getRegBitWidth(*RC) / 8;
 
   // On targets with register tuple alignment requirements,
   // for unaligned tuples, spill the first sub-reg as a 32-bit spill,
@@ -1562,6 +1562,10 @@ void SIRegisterInfo::buildSpillLoadStore(
         IsRegMisaligned = true;
     }
   }
+  if (IsRegMisaligned) {
+    // The first sub-register will be spilled as a 32-bit value
+    RegWidth -= 4u;
+  }
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
   // If we're using a block operation, the element should be the whole block.
@@ -1571,16 +1575,11 @@ void SIRegisterInfo::buildSpillLoadStore(
   unsigned NumSubRegs = RegWidth / EltSize;
   unsigned Size = NumSubRegs * EltSize;
   unsigned RemSize = RegWidth - Size;
-  // For unaligned tuples, the first sub-reg is spilt as a single 32-bit spill,
-  // and will count as an additional reg, so the last chunk will have one less
-  // register. In some cases, the last chunk could be completly eliminated,
-  // eg: SPILL_V160 $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 will be spilt as:
-  // SPILL_SCRATCH_DWORD $vgpr1
-  // SPILL_SCRATCH_DWORD $vgpr2_vgpr3_vgpr4_vgpr5
-  unsigned LastChunk = (((RemSize / 4) + 3) % 4) * 4;
-  if (IsRegMisaligned && LastChunk)
-    NumSubRegs += 1;
   unsigned NumRemSubRegs = RemSize ? 1 : 0;
+  if (IsRegMisaligned) {
+    // An additional sub-register is needed to spill the misaligned register.
+    NumSubRegs += 1;
+  }
   int64_t Offset = InstOffset + MFI.getObjectOffset(Index);
   int64_t MaterializedOffset = Offset;
 
@@ -1741,6 +1740,9 @@ void SIRegisterInfo::buildSpillLoadStore(
     Desc = &TII->get(LoadStoreOp);
   }
 
+  // Save a copy of the original element size before its potentially changed for
+  // misaligned tuples.
+  unsigned OrigEltSize = EltSize;
   for (unsigned i = 0, e = NumSubRegs + NumRemSubRegs, RegOffset = 0; i != e;
        ++i, RegOffset += EltSize) {
     if (IsRegMisaligned) {
@@ -1748,16 +1750,18 @@ void SIRegisterInfo::buildSpillLoadStore(
         // For misaligned register tuples, spill only the first sub-reg in the
         // first iteration.
         EltSize = 4u;
-      } else if (i == 1) {
-        // The first sub-reg was spilt in the previous iteration.
-        EltSize = RegWidth <= 16 ? RegWidth - 4u : 16u;
-      } else if (LastChunk && (i + 1) == e)
-        EltSize = LastChunk;
-    } else if (i == NumSubRegs) {
-      EltSize = RemSize;
-    }
-    if (i == NumSubRegs || IsRegMisaligned)
+      } else {
+        // The misaligned register was spilt. Now the rest of the tuple is
+        // properly aligned.
+        IsRegMisaligned = false;
+        EltSize = OrigEltSize;
+      }
       LoadStoreOp = getFlatScratchSpillOpcode(TII, LoadStoreOp, EltSize);
+    }
+    if (i == NumSubRegs) {
+      EltSize = RemSize;
+      LoadStoreOp = getFlatScratchSpillOpcode(TII, LoadStoreOp, EltSize);
+    }
     Desc = &TII->get(LoadStoreOp);
 
     if (!IsFlat && UseVGPROffset) {
