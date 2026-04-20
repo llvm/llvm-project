@@ -1828,6 +1828,7 @@ def GPU_SetDefaultDeviceOp : GPU_Op<"set_default_device",
   let assemblyFormat = "attr-dict $devIndex";
 }
 
+// Promises IndexedAccessOpInterface.
 def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     [MemoryEffects<[MemRead]>]>{
 
@@ -1844,6 +1845,9 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     `leadDimension` attribute specifies the leading dimension size of the source
     matrix which eventually allows the lowering to determine the size of each
     row.  If the `transpose` attribute is present then the op does a transposed load.
+
+    The memory indices along each dimension must be in-bounds for that dimension
+    as with an ordinary `memref.load`.
 
     For integer types, the resulting `!gpu.mma_matrix` type needs to specify the
     signedness of the data if the matrix type is an `A` or `B` operand for
@@ -1874,6 +1878,7 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
   let hasVerifier = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
     [MemoryEffects<[MemWrite]>]>{
 
@@ -1892,6 +1897,9 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
 
     This op is often meant to be used along with `gpu.subgroup_mma_load_matrix` and
     `gpu.subgroup_mma_compute`.
+
+    The memory indices along each dimension must be in-bounds for that dimension
+    as with an ordinary `memref.load`.
 
     Example:
 
