@@ -1929,6 +1929,14 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f32mm,neon" in {
   def VMMLA_F32_MF8 : VInst<"vmmla_f32_mf8_fpm", "(>>F)(>>F)..V", "Qm">;
 }
 
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16mm,neon" in {
+  def VMMLA_F16_F16 : SInst<"vmmlaq_f16_f16", "....", "Qh">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16f32mm,neon" in {
+  def VMMLA_F32_F16 : SInst<"vmmlaq_f32_f16", ">>..", "Qh">;
+}
+
 let TargetGuard = "i8mm,neon" in {
   def VMMLA   : SInst<"vmmla", "..(<<)(<<)", "QUiQi">;
   def VUSMMLA : SInst<"vusmmla", "..(<<U)(<<)", "Qi">;
