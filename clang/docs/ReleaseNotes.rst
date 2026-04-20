@@ -282,6 +282,11 @@ Attribute Changes in Clang
   ``[[clang::always_inline]]`` with additional checks to ensure that they
   are only accepted in places where MSVC also does.
 
+- The AMDGPU ``amdgpu_num_sgpr`` and ``amdgpu_num_vgpr`` attributes are now
+  deprecated. Clang emits a ``-Wdeprecated-declarations`` warning when they
+  are used. Use ``amdgpu_waves_per_eu`` instead to control SGPR and VGPR
+  usage.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
@@ -544,6 +549,9 @@ AMDGPU Support
 - Introduced a new target specific builtin ``__builtin_amdgcn_is_invocable``,
   a late / deferred query for the availability of target specific builtins.
 - Initial support for gfx1310
+- The ``amdgpu_num_sgpr`` and ``amdgpu_num_vgpr`` function attributes are now
+  deprecated. Using them produces a ``-Wdeprecated-declarations`` warning. Use
+  ``amdgpu_waves_per_eu`` instead.
 
 NVPTX Support
 ^^^^^^^^^^^^^^
