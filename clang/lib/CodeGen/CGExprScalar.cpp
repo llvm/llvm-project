@@ -2213,7 +2213,14 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   if (CGF.SanOpts.has(SanitizerKind::ArrayBounds))
     CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/true);
 
-  return Builder.CreateExtractElement(Base, Idx, "vecext");
+  Value *Ret = Builder.CreateExtractElement(Base, Idx, "vecext");
+
+  // Even being a scalar the `__mfp8` type corresponds to `<1 x i8>` in LLVM IR.
+  // Cast the extracted element to the vector type to keep it consistent in
+  // Clang.
+  if (E->getType()->isMFloat8Type())
+    Ret = Builder.CreateBitCast(Ret, ConvertType(E->getType()), "mfp8ext");
+  return Ret;
 }
 
 Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
