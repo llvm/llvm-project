@@ -1,3 +1,4 @@
+#include <atomic>
 #include <chrono>
 #include <pthread.h>
 #include <thread>
@@ -14,9 +15,11 @@ static void set_thread_name(const char *name) {
 
 volatile int g_helper_count = 0;
 volatile bool g_stop = false;
+std::atomic<bool> g_ready{false};
 
 void helper_thread_func() {
   set_thread_name("always-run");
+  g_ready.store(true);
   while (!g_stop) {
     g_helper_count++;
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -32,8 +35,9 @@ int step_over_me() {
 
 int main() {
   std::thread helper(helper_thread_func);
-  // Give the helper thread time to start and set its name.
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  // Wait for the helper thread to start and set its name.
+  while (!g_ready.load())
+    ;
 
   int val = step_over_me(); // break here
   val += step_over_me();    // after step
