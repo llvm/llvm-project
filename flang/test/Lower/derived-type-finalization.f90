@@ -140,9 +140,9 @@ contains
 ! CHECK: %[[RES:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = ".result"}
 ! CHECK: %[[TY:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
 ! CHECK: %[[TY_DECL:.*]]:2 = hlfir.declare %[[TY]]
-! CHECK: %[[CALL_RES:.*]] = fir.call @_QMderived_type_finalizationPret_type()
-! CHECK: fir.save_result %[[CALL_RES]] to %[[RES]] :
 ! CHECK: %[[RES_DECL:.*]]:2 = hlfir.declare %[[RES]]
+! CHECK: %[[CALL_RES:.*]] = fir.call @_QMderived_type_finalizationPret_type()
+! CHECK: fir.save_result %[[CALL_RES]] to %[[RES_DECL]]#0
 ! CHECK: hlfir.assign %[[RES_DECL]]#0 to %[[TY_DECL]]#0 realloc
 ! CHECK: fir.call @_FortranADestroy(%{{.*}})
 ! CHECK: return

@@ -869,7 +869,11 @@ static void genDerivedTypeComponentInit(
   Fortran::semantics::UltimateComponentIterator ultimateIter{derivedSpec};
   for (auto it = ultimateIter.begin(); it != ultimateIter.end(); ++it) {
     const Fortran::semantics::Symbol &comp = *it;
-    if (!comp.has<Fortran::semantics::ObjectEntityDetails>() ||
+    const auto *objDetails =
+        comp.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    const auto *procDetails =
+        comp.detailsIf<Fortran::semantics::ProcEntityDetails>();
+    if ((!objDetails && !procDetails) ||
         !Fortran::semantics::IsAllocatableOrPointer(comp))
       continue;
     // Retrieve the nested symbol path from the root type to this ultimate
@@ -893,9 +897,15 @@ static void genDerivedTypeComponentInit(
       currentRecTy = mlir::dyn_cast<fir::RecordType>(compFirTy);
     }
     mlir::Type finalCompFirTy = fir::unwrapPassByRefType(currentAddr.getType());
-    mlir::Value nullBox = fir::factory::createUnallocatedBox(
-        builder, loc, finalCompFirTy, mlir::ValueRange{});
-    fir::StoreOp::create(builder, loc, nullBox, currentAddr);
+    mlir::Value initVal;
+    if (objDetails) {
+      initVal = fir::factory::createUnallocatedBox(
+          builder, loc, finalCompFirTy, mlir::ValueRange{});
+    } else {
+      initVal =
+          fir::factory::createNullBoxProc(builder, loc, finalCompFirTy);
+    }
+    fir::StoreOp::create(builder, loc, initVal, currentAddr);
   }
 }
 

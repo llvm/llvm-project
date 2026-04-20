@@ -37,12 +37,20 @@ module my_types
   end type FallbackExplicitType
 
   ! ============================================================================
-  ! Test Case 4: Type triggering fallback C (contains explicit pointer initialization)
+  ! Test Case 4: Type triggering fallback C (contains explicit initialization)
   ! ============================================================================
   type :: ProcPointerType
     real, pointer :: p
     procedure(), pointer, nopass :: pp => null()
   end type ProcPointerType
+
+  ! ============================================================================
+  ! Test Case 5: Type with uninitialized procedure pointer.
+  ! ============================================================================
+  type :: ProcPointerNoInitType
+    real, pointer :: p
+    procedure(), pointer, nopass :: pp
+  end type ProcPointerNoInitType
 end module my_types
 
 
@@ -117,3 +125,28 @@ end subroutine test_proc_pointer
 ! CHECK: %[[VAR_DECL:.*]] = fir.declare %[[ALLOCA]] {{.*}}
 ! CHECK: %[[GLOBAL_INIT_PROC:.*]] = fir.address_of(@_QQ_QMmy_typesTprocpointertype.DerivedInit)
 ! CHECK: fir.copy %[[GLOBAL_INIT_PROC]] to %[[VAR_DECL]]
+
+
+! ------------------------------------------------------------------------------
+! Test 5: Procedure pointers
+! Procedure pointers without explicit initialization should be initialized
+! component-wise, without falling back to template copy initialization.
+! ------------------------------------------------------------------------------
+subroutine test_proc_pointer_no_init()
+  use my_types
+  type(ProcPointerNoInitType) :: var_proc
+  call do_something_proc_no_init(var_proc)
+end subroutine test_proc_pointer_no_init
+
+! CHECK-LABEL: func.func @_QPtest_proc_pointer_no_init()
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.type<_QMmy_typesTprocpointernoinittype{{.*}}>
+! CHECK: %[[VAR_DECL:.*]] = fir.declare %[[ALLOCA]] {{.*}}
+! CHECK: %[[COORD_P:.*]] = fir.coordinate_of %[[VAR_DECL]], p
+! CHECK: %[[NULL_P:.*]] = fir.zero_bits !fir.ptr<f32>
+! CHECK: %[[BOX_P:.*]] = fir.embox %[[NULL_P]] : (!fir.ptr<f32>) -> !fir.box<!fir.ptr<f32>>
+! CHECK: fir.store %[[BOX_P]] to %[[COORD_P]]
+! CHECK: %[[COORD_PP:.*]] = fir.coordinate_of %[[VAR_DECL]], pp
+! CHECK: %[[NULL_FUNC:.*]] = fir.zero_bits () -> ()
+! CHECK: %[[BOX_PP:.*]] = fir.emboxproc %[[NULL_FUNC]] : (() -> ()) -> !fir.boxproc<() -> ()>
+! CHECK: fir.store %[[BOX_PP]] to %[[COORD_PP]]
+! CHECK-NOT: fir.copy
