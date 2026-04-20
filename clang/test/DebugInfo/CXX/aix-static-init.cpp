@@ -52,10 +52,10 @@ X v;
 // CHECK:   ret void
 // CHECK: }
 
-// CHECK: ![[DBGVAR16]] = distinct !DISubprogram(name: "__cxx_global_var_init", linkageName: "__cxx_global_var_init", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, type: !{{[0-9]+}}, flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !{{[0-9]+}})
+// CHECK: ![[DBGVAR16]] = distinct !DISubprogram(name: "__cxx_global_var_init", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, type: !{{[0-9]+}}, flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !{{[0-9]+}})
 // CHECK: ![[DBGVAR19]] = !DILocation(line: 14, column: 3, scope: ![[DBGVAR16]])
 // CHECK: ![[DBGVAR19b]] = !DILocation(line: 0, scope: ![[DBGVAR16]])
-// CHECK: ![[DBGVAR20]] = distinct !DISubprogram(name: "__dtor_v", linkageName: "__dtor_v", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 14, type: !{{[0-9]+}}, scopeLine: 14, flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !{{[0-9]+}})
+// CHECK: ![[DBGVAR20]] = distinct !DISubprogram(name: "__dtor_v", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 14, type: !{{[0-9]+}}, scopeLine: 14, flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !{{[0-9]+}})
 // CHECK: ![[DBGVAR21b]] = !DILocation(line: 0, scope: ![[DBGVAR20]])
 // CHECK: ![[DBGVAR21]] = !DILocation(line: 14, column: 3, scope: ![[DBGVAR20]])
 // CHECK: ![[DBGVAR22]] = distinct !DISubprogram(linkageName: "__finalize_v", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 14, type: !{{[0-9]+}}, scopeLine: 14, flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !{{[0-9]+}})

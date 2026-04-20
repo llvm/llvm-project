@@ -29,12 +29,12 @@ template <typename U>
 A FooTpl<T>::sdm_tpl(sizeof(U) + sizeof(T));
 template A FooTpl<int>::sdm_tpl<int>;
 
-// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_var_init", linkageName: "__cxx_global_var_init",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-NOKEXT: !DISubprogram(name: "__dtor_glob", linkageName: "__dtor_glob",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_var_init.1", linkageName: "__cxx_global_var_init.1",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_array_dtor", linkageName: "__cxx_global_array_dtor",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-NOKEXT: !DISubprogram(name: "__dtor_array", linkageName: "__dtor_array",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-NOKEXT: !DISubprogram(name: "__dtor__ZZ3foovE4stat", linkageName: "__dtor__ZZ3foovE4stat",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_var_init",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__dtor_glob",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_var_init.1",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_array_dtor",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__dtor_array",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__dtor__ZZ3foovE4stat",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK-NOKEXT: !DISubprogram({{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
 
 // CHECK-KEXT: !DISubprogram({{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
@@ -42,7 +42,7 @@ template A FooTpl<int>::sdm_tpl<int>;
 // CHECK-MSVC: !DISubprogram(name: "`dynamic initializer for 'glob'", linkageName: "??__Eglob@@YAXXZ",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK-MSVC: !DISubprogram(name: "`dynamic atexit destructor for 'glob'", linkageName: "??__Fglob@@YAXXZ",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK-MSVC: !DISubprogram(name: "`dynamic initializer for 'array'", linkageName: "??__Earray@@YAXXZ",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-MSVC: !DISubprogram(name: "__cxx_global_array_dtor", linkageName: "__cxx_global_array_dtor",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-MSVC: !DISubprogram(name: "__cxx_global_array_dtor",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK-MSVC: !DISubprogram(name: "`dynamic atexit destructor for 'array'", linkageName: "??__Farray@@YAXXZ",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK-MSVC: !DISubprogram(name: "`dynamic atexit destructor for 'stat'", linkageName: "??__Fstat@?1??foo@@YAXXZ@YAXXZ",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
 
