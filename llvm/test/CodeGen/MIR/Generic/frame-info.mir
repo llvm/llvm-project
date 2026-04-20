@@ -20,44 +20,24 @@
     ret i32 %c
   }
 
-  define i32 @test_framePointerPolicy_none(i32 %a) {
-  entry:
-    %b = alloca i32
-    store i32 %a, ptr %b
-    %c = load i32, ptr %b
-    ret i32 %c
+  define void @test_framePointerPolicy_none() {
+    ret void
   }
 
-  define i32 @test_framePointerPolicy_non_leaf(i32 %a) {
-  entry:
-    %b = alloca i32
-    store i32 %a, ptr %b
-    %c = load i32, ptr %b
-    ret i32 %c
+  define void @test_framePointerPolicy_non_leaf() {
+    ret void
   }
 
-  define i32 @test_framePointerPolicy_all(i32 %a) {
-  entry:
-    %b = alloca i32
-    store i32 %a, ptr %b
-    %c = load i32, ptr %b
-    ret i32 %c
+  define void @test_framePointerPolicy_all() {
+    ret void
   }
 
-  define i32 @test_framePointerPolicy_reserved(i32 %a) {
-  entry:
-    %b = alloca i32
-    store i32 %a, ptr %b
-    %c = load i32, ptr %b
-    ret i32 %c
+  define void @test_framePointerPolicy_reserved() {
+    ret void
   }
 
-  define i32 @test_framePointerPolicy_non_leaf_no_reserve(i32 %a) {
-  entry:
-    %b = alloca i32
-    store i32 %a, ptr %b
-    %c = load i32, ptr %b
-    ret i32 %c
+  define void @test_framePointerPolicy_non_leaf_no_reserve() {
+    ret void
   }
 
 ...
@@ -146,54 +126,39 @@ body: |
 name:            test_framePointerPolicy_none
 
 # CHECK: test_framePointerPolicy_none
-# CHECK: frameInfo:
 # CHECK: framePointerPolicy: none
 frameInfo:
   framePointerPolicy: none
-body: |
-  bb.0.entry:
 ...
 ---
 name:            test_framePointerPolicy_non_leaf
 
 # CHECK: test_framePointerPolicy_non_leaf
-# CHECK: frameInfo:
 # CHECK: framePointerPolicy: non-leaf
 frameInfo:
   framePointerPolicy: non-leaf
-body: |
-  bb.0.entry:
 ...
 ---
 name:            test_framePointerPolicy_all
 
 # CHECK: test_framePointerPolicy_all
-# CHECK: frameInfo:
 # CHECK: framePointerPolicy: all
 frameInfo:
   framePointerPolicy: all
-body: |
-  bb.0.entry:
 ...
 ---
 name:            test_framePointerPolicy_reserved
 
 # CHECK: test_framePointerPolicy_reserved
-# CHECK: frameInfo:
 # CHECK: framePointerPolicy: reserved
 frameInfo:
   framePointerPolicy: reserved
-body: |
-  bb.0.entry:
 ...
 ---
 name:            test_framePointerPolicy_non_leaf_no_reserve
 
 # CHECK: test_framePointerPolicy_non_leaf_no_reserve
-# CHECK: frameInfo:
 # CHECK: framePointerPolicy: non-leaf-no-reserve
 frameInfo:
   framePointerPolicy: non-leaf-no-reserve
-body: |
-  bb.0.entry:
 ...
