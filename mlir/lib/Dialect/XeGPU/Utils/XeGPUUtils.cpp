@@ -55,18 +55,6 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   // e.g. for 1D layout, sgSize = laneLayout[0]
   int64_t sgSize = llvm::product_of(laneLayout);
 
-  // Case 1: regular loads/stores
-  auto scatterAttr = tdescTy.getEncodingOfType<ScatterTensorDescAttr>();
-  if (scatterAttr) {
-    auto chunkSize = scatterAttr.getChunkSize().getInt();
-    // Verify if the first dimension of the tensor descriptor shape is
-    // distributable.
-    assert(tdescShape[0] == laneLayout[0] &&
-           "tensor descriptor shape is not distributable");
-    return VectorType::get({chunkSize}, elementType);
-  }
-
-  // Case 2: block loads/stores
   // Check if the tensor descriptor shape is distributable.
   int64_t tensorSize = 1;
   for (auto [tdescDim, laneDim, laneDataDim] :
@@ -690,6 +678,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
+  // TODO: Remove these get/setTemporaryLayout calls after we deprecate the old
+  // XeGPUSubgroupDistribute pass.
   auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
   auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
   // Reduction result should have the same layout as the accumulator.

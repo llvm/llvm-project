@@ -9,5 +9,6 @@ add_llvm_library(LLVMUBAwareInterpreter
   Context.cpp
   ExecutorBase.cpp
   Interpreter.cpp
+  Library.cpp
   Value.cpp
   )

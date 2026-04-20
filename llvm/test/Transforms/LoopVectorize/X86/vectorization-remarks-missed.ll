@@ -181,7 +181,7 @@ loop:
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !16
   %0 = trunc i64 %iv to i32, !dbg !16
   %ld = load i32, ptr %arrayidx, align 4
-  store i32 %0, ptr %arrayidx, align 4, !dbg !16, !tbaa !18
+  store i32 %0, ptr %arrayidx, align 4, !dbg !16
   %cmp3 = icmp sle i32 %ld, %Length, !dbg !22
   %iv.next = add nuw nsw i64 %iv, 1, !dbg !12
   %1 = trunc i64 %iv.next to i32
@@ -206,7 +206,7 @@ loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !30
   %0 = trunc i64 %iv to i32, !dbg !30
-  store i32 %0, ptr %arrayidx, align 4, !dbg !30, !tbaa !18
+  store i32 %0, ptr %arrayidx, align 4, !dbg !30
   %iv.next = add nuw nsw i64 %iv, 1, !dbg !25
   %lftr.wideiv = trunc i64 %iv.next to i32, !dbg !25
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !25
@@ -231,12 +231,12 @@ loop.preheader:
 loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i64 %iv, !dbg !35
-  %0 = load i32, ptr %arrayidx, align 4, !dbg !35, !tbaa !18
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !35
   %idxprom1 = sext i32 %0 to i64, !dbg !35
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %idxprom1, !dbg !35
-  %1 = load i32, ptr %arrayidx2, align 4, !dbg !35, !tbaa !18
+  %1 = load i32, ptr %arrayidx2, align 4, !dbg !35
   %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !35
-  store i32 %1, ptr %arrayidx4, align 4, !dbg !35, !tbaa !18
+  store i32 %1, ptr %arrayidx4, align 4, !dbg !35
   %iv.next = add nuw nsw i64 %iv, 1, !dbg !32
   %lftr.wideiv = trunc i64 %iv.next to i32, !dbg !32
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !32
@@ -306,7 +306,6 @@ declare i32 @foo(...)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}
-!llvm.ident = !{!11}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0", isOptimized: true, runtimeVersion: 6, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "source.cpp", directory: ".")
@@ -318,17 +317,12 @@ declare i32 @foo(...)
 !8 = distinct !DISubprogram(name: "test_array_bounds", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 16, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !9 = !{i32 2, !"Dwarf Version", i32 2}
 !10 = !{i32 2, !"Debug Info Version", i32 3}
-!11 = !{!"clang version 3.5.0"}
 !12 = !DILocation(line: 3, column: 8, scope: !13)
 !13 = distinct !DILexicalBlock(line: 3, column: 3, file: !1, scope: !4)
 !14 = !{!14, !15, !15}
 !15 = !{!"llvm.loop.vectorize.enable", i1 true}
 !16 = !DILocation(line: 4, column: 5, scope: !17)
 !17 = distinct !DILexicalBlock(line: 3, column: 36, file: !1, scope: !13)
-!18 = !{!19, !19, i64 0}
-!19 = !{!"int", !20, i64 0}
-!20 = !{!"omnipotent char", !21, i64 0}
-!21 = !{!"Simple C/C++ TBAA"}
 !22 = !DILocation(line: 5, column: 9, scope: !23)
 !23 = distinct !DILexicalBlock(line: 5, column: 9, file: !1, scope: !17)
 !24 = !DILocation(line: 8, column: 1, scope: !4)
