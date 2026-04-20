@@ -654,24 +654,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   if (!createNewScope) {
     handleReturnVal();
   } else {
-    mlir::Location scopeLoc =
-        getLoc(rv ? rv->getSourceRange() : s.getSourceRange());
-    // First create cir.scope and later emit it's body. Otherwise all CIRGen
-    // dispatched by `handleReturnVal()` might needs to manipulate blocks and
-    // look into parents, which are all unlinked.
-    mlir::OpBuilder::InsertPoint scopeBody;
-    cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
-                         [&](mlir::OpBuilder &b, mlir::Location loc) {
-                           scopeBody = b.saveInsertionPoint();
-                         });
-    {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.restoreInsertionPoint(scopeBody);
-      CIRGenFunction::LexicalScope lexScope{*this, scopeLoc,
-                                            builder.getInsertionBlock()};
-      FullExprCleanupScope fullExprScope(*this, rv);
-      handleReturnVal();
-    }
+    FullExprCleanupScope fullExprScope(*this, rv);
+    handleReturnVal();
   }
 
   cleanupScope.forceCleanup();
