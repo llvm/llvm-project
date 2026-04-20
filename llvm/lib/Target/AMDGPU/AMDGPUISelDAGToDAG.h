@@ -71,6 +71,8 @@ public:
   void Select(SDNode *N) override;
   void PostprocessISelDAG() override;
 
+  bool isSDWAOperand(const SDNode *N) const;
+
 protected:
   void SelectBuildVector(SDNode *N, unsigned RegClassID);
   void SelectVectorShuffle(SDNode *N);
