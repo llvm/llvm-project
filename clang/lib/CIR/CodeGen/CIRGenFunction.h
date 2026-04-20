@@ -1372,6 +1372,12 @@ public:
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
+  void pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
+                                        Address arrayEndPointer,
+                                        QualType elementType,
+                                        CharUnits elementAlign,
+                                        Destroyer *destroyer);
+
   /// Start generating a thunk function.
   void startThunk(cir::FuncOp fn, GlobalDecl gd,
                   const CIRGenFunctionInfo &fnInfo, bool isUnprototyped);
