@@ -450,10 +450,10 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-  OffloadArch OffloadArch = StringToOffloadArch(Arch);
-  if (IsIntelGPUOffloadArch(OffloadArch))
+  OffloadArch OA = StringToOffloadArch(Arch);
+  if (IsIntelGPUOffloadArch(OA))
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
-  if (IsIntelCPUOffloadArch(OffloadArch))
+  if (IsIntelCPUOffloadArch(OA))
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
 
   return createStringError(inconvertibleErrorCode(), "Unsupported arch");
@@ -501,18 +501,20 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
       StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
 
+  StringRef OutputFileNameExt = ".spv";
+
   // Code generation step.
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
     StringRef Stem = OutputFile.rsplit('.').first;
-    std::string SPVFile = (Stem + "_" + Twine(I) + ".spv").str();
-    if (Error Err = runCodeGen(SplitModules[I], Args, SPVFile, C))
+    std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
+
+    if (Error Err = runCodeGen(SplitModules[I], Args, CodeGenFile, C))
       return Err;
-    if (!IsAOTCompileNeeded) {
-      SplitModules[I] = SPVFile;
-    } else {
-      // AOT compilation step.
+
+    SplitModules[I] = CodeGenFile;
+    if (IsAOTCompileNeeded) {
       std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
-      if (Error Err = runAOTCompile(SPVFile, AOTFile, Args))
+      if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
         return Err;
       SplitModules[I] = AOTFile;
     }
