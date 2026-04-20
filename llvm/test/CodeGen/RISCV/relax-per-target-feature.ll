@@ -11,7 +11,7 @@ declare dso_local i32 @ext(i32)
 ; CHECK-NEXT:    c.li a0, 0x1f
 ; CHECK-NEXT:    auipc t1, 0x0
 ; CHECK-NEXT:    R_RISCV_CALL_PLT     ext
-; CHECK-NEXT:    R_RISCV_RELAX *ABS*
+; CHECK-NEXT:    R_RISCV_RELAX $xrv64i2p1
 ; CHECK-NEXT:    jalr zero, 0x0(t1)
 define dso_local i32 @f() #0 {
 entry:

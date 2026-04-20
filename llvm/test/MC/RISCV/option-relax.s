@@ -34,7 +34,7 @@ beq s1, s1, .L1
 
 # CHECK-INST: call bar
 # CHECK-RELOC-NEXT: R_RISCV_CALL_PLT bar 0x0
-# CHECK-RELOC-NEXT: R_RISCV_RELAX - 0x0
+# CHECK-RELOC-NEXT: R_RISCV_RELAX {{.*}} 0x0
 call bar
 
 .dword .L2-.L1
@@ -49,7 +49,7 @@ beq s1, s1, .L1
 
 # CHECK-INST: call baz
 # CHECK-RELOC-NEXT: R_RISCV_CALL_PLT baz 0x0
-# CHECK-RELOC-NOT: R_RISCV_RELAX - 0x0
+# CHECK-RELOC-NOT: R_RISCV_RELAX {{.*}} 0x0
 call baz
 
 .dword .L2-.L1

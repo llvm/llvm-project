@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVAsmBackend.h"
+#include "RISCVELFStreamer.h"
 #include "RISCVFixupKinds.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -899,10 +900,14 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
 
     if (NeedsRelax) {
       // Some Fixups get a RELAX relocation, record it (directly) after we add
-      // the relocation.
+      // the relocation. If there is an ISA mapping symbol associated with this
+      // fragment, reference it so the linker can determine which ISA extensions
+      // are available for relaxation in this code region.
+      MCSymbol *ISASym =
+          ELFStreamer ? ELFStreamer->getFragmentISASym(F) : nullptr;
       MCFixup RelaxFixup =
           MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
-      MCValue RelaxTarget = MCValue::get(nullptr);
+      MCValue RelaxTarget = MCValue::get(ISASym);
       uint64_t RelaxValue;
       Asm->getWriter().recordRelocation(F, RelaxFixup, RelaxTarget, RelaxValue);
     }
