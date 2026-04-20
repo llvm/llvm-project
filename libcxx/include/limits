@@ -187,12 +187,11 @@ protected:
 
   static _LIBCPP_CONSTEXPR const bool is_signed = type(-1) < type(0);
   // For _BitInt(N), sizeof(type) * CHAR_BIT may exceed N due to padding
-  // bits. Count the actual value bits: ~unsigned_type(0) leaves padding
-  // zero, so popcount yields the value-bit width. Standard integer types
-  // have no padding, so the result matches sizeof * CHAR_BIT.
-  using __unsigned_type = __make_unsigned_t<type>;
+  // bits. Count the actual value bits: ~make_unsigned_t<type>(0) leaves
+  // padding zero, so popcount yields the value-bit width. Standard
+  // integer types have no padding, so the result matches sizeof * CHAR_BIT.
   static _LIBCPP_CONSTEXPR const int digits =
-      __builtin_popcountg(static_cast<__unsigned_type>(~__unsigned_type(0))) - is_signed;
+      __builtin_popcountg(static_cast<__make_unsigned_t<type>>(~__make_unsigned_t<type>(0))) - is_signed;
   // digits10 = floor(digits * log10(2)). 1936274/6432163 is a continued-fraction
   // convergent of log10(2) and matches floor(d * log10(2)) exactly for every d
   // in [1, 8388608], i.e. up to __BITINT_MAXWIDTH__ on x86.
