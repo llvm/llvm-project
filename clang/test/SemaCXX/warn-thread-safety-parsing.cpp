@@ -612,7 +612,7 @@ class ElfFoo {
 };
 
 class EXCLUSIVE_LOCK_FUNCTION() ElfTestClass { // \
-  // expected-warning {{'exclusive_lock_function' attribute only applies to functions, parameters, variables, and non-static data members}}
+  // expected-warning {{'exclusive_lock_function' attribute only applies to functions, variables, and non-static data members}}
 };
 
 void elf_fun_params1(MutexLock& scope EXCLUSIVE_LOCK_FUNCTION(mu1));
@@ -712,7 +712,7 @@ class SlfFoo {
 };
 
 class SHARED_LOCK_FUNCTION() SlfTestClass { // \
-  // expected-warning {{'shared_lock_function' attribute only applies to functions, parameters, variables, and non-static data members}}
+  // expected-warning {{'shared_lock_function' attribute only applies to functions, variables, and non-static data members}}
 };
 
 // Check argument parsing.
@@ -1171,7 +1171,7 @@ class LeFoo {
 };
 
 class LOCKS_EXCLUDED(mu1) LeTestClass { // \
-  // expected-warning {{'locks_excluded' attribute only applies to functions, parameters, variables, and non-static data members}}
+  // expected-warning {{'locks_excluded' attribute only applies to functions, variables, and non-static data members}}
 };
 
 // Check argument parsing.
@@ -1256,7 +1256,7 @@ class ElrFoo {
 };
 
 class EXCLUSIVE_LOCKS_REQUIRED(mu1) ElrTestClass { // \
-  // expected-warning {{'exclusive_locks_required' attribute only applies to functions, parameters, variables, and non-static data members}}
+  // expected-warning {{'exclusive_locks_required' attribute only applies to functions, variables, and non-static data members}}
 };
 
 // Check argument parsing.
@@ -1343,7 +1343,7 @@ class SlrFoo {
 };
 
 class SHARED_LOCKS_REQUIRED(mu1) SlrTestClass { // \
-  // expected-warning {{'shared_locks_required' attribute only applies to functions, parameters, variables, and non-static data members}}
+  // expected-warning {{'shared_locks_required' attribute only applies to functions, variables, and non-static data members}}
 };
 
 // Check argument parsing.
