@@ -16562,27 +16562,51 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       CmpPredicate CurrentPred = ScalarTy->isFloatingPointTy()
                                      ? CmpInst::BAD_FCMP_PREDICATE
                                      : CmpInst::BAD_ICMP_PREDICATE;
+      Value *LHS = nullptr, *RHS = nullptr;
       auto MatchCmp = m_Cmp(CurrentPred, m_Value(), m_Value());
-      if ((!match(VI, m_Select(MatchCmp, m_Value(), m_Value())) &&
-           !match(VI, MatchCmp)) ||
+      bool IsSelect =
+          ShuffleOrOp == Instruction::Select &&
+          (match(VI, m_Select(MatchCmp, m_Value(LHS), m_Value(RHS))) ||
+           match(VI, m_Select(m_Value(), m_Value(LHS), m_Value(RHS))));
+      if ((!IsSelect && !match(VI, MatchCmp)) ||
           (CurrentPred != static_cast<CmpInst::Predicate>(VecPred) &&
            CurrentPred != static_cast<CmpInst::Predicate>(SwappedVecPred)))
         VecPred = SwappedVecPred = ScalarTy->isFloatingPointTy()
                                        ? CmpInst::BAD_FCMP_PREDICATE
                                        : CmpInst::BAD_ICMP_PREDICATE;
 
-      // For selects, the "condition type" arg is the condition operand's
-      // type; for standalone compares, it is the result type (i1).
-      InstructionCost ScalarCost = TTI->getCmpSelInstrCost(
-          E->getOpcode(), OrigScalarTy,
-          ShuffleOrOp == Instruction::Select ? VL0->getOperand(0)->getType()
-                                             : VL0->getType(),
-          CurrentPred, CostKind,
-          getOperandInfo(
-              VI->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
-          getOperandInfo(
-              VI->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
-          VI);
+      // Check if operands are of i1 types, like a condition expression.
+      // TODO: consider implementing this in TTI.
+      InstructionCost ScalarCost = InstructionCost::getInvalid();
+      if (IsSelect && LHS->getType() == VI->getOperand(0)->getType()) {
+        assert(LHS->getType() == RHS->getType() &&
+               "Expected same type for LHS/RHS");
+        // select i1 v, i1 true, i1 b -> or i1 v, i1 b
+        if (match(LHS, m_AllOnes())) {
+          ScalarCost = TTI->getArithmeticInstrCost(
+              Instruction::Or, LHS->getType(), CostKind,
+              getOperandInfo(VI->getOperand(0)), getOperandInfo(RHS));
+        } else if (match(RHS, m_Zero())) {
+          // select i1 v, i1 b, i1 false -> and i1 v, i1 b
+          ScalarCost = TTI->getArithmeticInstrCost(
+              Instruction::And, LHS->getType(), CostKind,
+              getOperandInfo(VI->getOperand(0)), getOperandInfo(LHS));
+        }
+      }
+      if (!ScalarCost.isValid()) {
+        // For selects, the "condition type" arg is the condition operand's
+        // type; for standalone compares, it is the result type (i1).
+        ScalarCost = TTI->getCmpSelInstrCost(
+            E->getOpcode(), OrigScalarTy,
+            ShuffleOrOp == Instruction::Select ? VL0->getOperand(0)->getType()
+                                               : VL0->getType(),
+            CurrentPred, CostKind,
+            getOperandInfo(
+                VI->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
+            getOperandInfo(
+                VI->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
+            VI);
+      }
       InstructionCost IntrinsicCost = GetMinMaxCost(OrigScalarTy, VI);
       if (IntrinsicCost.isValid())
         ScalarCost = IntrinsicCost;
@@ -16599,26 +16623,52 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                         : VL0->getType(),
                                     VL.size());
 
-      InstructionCost VecCost = TTI->getCmpSelInstrCost(
-          E->getOpcode(), VecTy, MaskTy, VecPred, CostKind,
-          getOperandInfo(
-              E->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
-          getOperandInfo(
-              E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
-          VL0);
-      if (isa<SelectInst>(VL0)) {
-        unsigned CondNumElements = getNumElements(MaskTy);
-        unsigned VecTyNumElements = getNumElements(VecTy);
-        assert(VecTyNumElements >= CondNumElements &&
-               VecTyNumElements % CondNumElements == 0 &&
-               "Cannot vectorize Instruction::Select");
-        if (CondNumElements != VecTyNumElements) {
-          // When the return type is i1 but the source is fixed vector type, we
-          // need to duplicate the condition value.
-          VecCost += ::getShuffleCost(
-              *TTI, TTI::SK_PermuteSingleSrc, MaskTy,
-              createReplicatedMask(VecTyNumElements / CondNumElements,
-                                   CondNumElements));
+      InstructionCost VecCost = InstructionCost::getInvalid();
+      if (ShuffleOrOp == Instruction::Select) {
+        ArrayRef<Value *> Cond = E->getOperand(0);
+        ArrayRef<Value *> LHS = E->getOperand(1);
+        ArrayRef<Value *> RHS = E->getOperand(2);
+        // select <VF x i1>, <VF x i1>, <VF x i1>?
+        // TODO: consider implementing this in TTI.
+        if (Cond.front()->getType() == LHS.front()->getType()) {
+          // select <VF x i1> v, <VF x i1> true, <VF x i1> b -> or <VF x i1> v,
+          // <VF x i1> b
+          if (all_of(LHS, [&](Value *V) { return match(V, m_AllOnes()); })) {
+            VecCost = TTI->getArithmeticInstrCost(
+                Instruction::Or, VecTy, CostKind, getOperandInfo(Cond),
+                getOperandInfo(RHS));
+          } else if (all_of(RHS,
+                            [&](Value *V) { return match(V, m_Zero()); })) {
+            // select <VF x i1> v, <VF x i1> b, <VF x i1> false -> and <VF x i1>
+            // v, <VF x i1> b
+            VecCost = TTI->getArithmeticInstrCost(
+                Instruction::And, VecTy, CostKind, getOperandInfo(Cond),
+                getOperandInfo(LHS));
+          }
+        }
+      }
+      if (!VecCost.isValid()) {
+        VecCost = TTI->getCmpSelInstrCost(
+            E->getOpcode(), VecTy, MaskTy, VecPred, CostKind,
+            getOperandInfo(
+                E->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
+            getOperandInfo(
+                E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
+            VL0);
+        if (isa<SelectInst>(VL0)) {
+          unsigned CondNumElements = getNumElements(MaskTy);
+          unsigned VecTyNumElements = getNumElements(VecTy);
+          assert(VecTyNumElements >= CondNumElements &&
+                 VecTyNumElements % CondNumElements == 0 &&
+                 "Cannot vectorize Instruction::Select");
+          if (CondNumElements != VecTyNumElements) {
+            // When the return type is i1 but the source is fixed vector type,
+            // we need to duplicate the condition value.
+            VecCost += ::getShuffleCost(
+                *TTI, TTI::SK_PermuteSingleSrc, MaskTy,
+                createReplicatedMask(VecTyNumElements / CondNumElements,
+                                     CondNumElements));
+          }
         }
       }
       return VecCost + CommonCost;
