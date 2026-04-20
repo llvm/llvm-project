@@ -104,6 +104,10 @@ int main(int, char**)
     // Pin the exact upper bound of the approximation.
     test<unsigned _BitInt(8388608), 2525222>();
 #  endif
+    // The 1936274/6432163 convergent stays exact up to d=51132156. 8388608 is
+    // the largest width tested above, so if Clang raises __BITINT_MAXWIDTH__,
+    // extend the coverage before trusting the formula at the new range.
+    LIBCPP_STATIC_ASSERT(__BITINT_MAXWIDTH__ <= 8388608);
 #endif // TEST_HAS_EXTENSION(bit_int)
 
     return 0;
