@@ -51,8 +51,21 @@ AbstractSparseForwardDataFlowAnalysis::AbstractSparseForwardDataFlowAnalysis(
   registerAnchorKind<CFGEdge>();
 }
 
+void AbstractSparseForwardDataFlowAnalysis::getDependentAnalyses(
+    AnalysisDependencies &deps) const {
+  deps.insert<DeadCodeAnalysis>();
+}
+
 LogicalResult
 AbstractSparseForwardDataFlowAnalysis::initialize(Operation *top) {
+  // Sparse forward analyses require `DeadCodeAnalysis` to be loaded. This is
+  // normally enforced by the solver's dependency validator, but a concrete
+  // subclass can silently drop the base's declared dependency by overriding
+  // `getDependentAnalyses` without calling the parent. Assert here as a
+  // second line of defense.
+  assert(getSolver().lookupAnalysis<DeadCodeAnalysis>() &&
+         "DeadCodeAnalysis must be loaded alongside a sparse forward analysis");
+
   // Mark the entry block arguments as having reached their pessimistic
   // fixpoints.
   for (Region &region : top->getRegions()) {
@@ -371,8 +384,16 @@ AbstractSparseBackwardDataFlowAnalysis::AbstractSparseBackwardDataFlowAnalysis(
   registerAnchorKind<CFGEdge>();
 }
 
+void AbstractSparseBackwardDataFlowAnalysis::getDependentAnalyses(
+    AnalysisDependencies &deps) const {
+  deps.insert<DeadCodeAnalysis>();
+}
+
 LogicalResult
 AbstractSparseBackwardDataFlowAnalysis::initialize(Operation *top) {
+  assert(getSolver().lookupAnalysis<DeadCodeAnalysis>() &&
+         "DeadCodeAnalysis must be loaded alongside a sparse backward "
+         "analysis");
   return initializeRecursively(top);
 }
 

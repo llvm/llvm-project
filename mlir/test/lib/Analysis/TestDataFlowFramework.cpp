@@ -177,6 +177,77 @@ struct TestStagedAnalysesPass
 
   void runOnOperation() override;
 };
+
+/// An analysis that declares a dependency on `FooAnalysis` but does nothing
+/// else. Used to test that `DataFlowSolver::initializeAndRun` reports missing
+/// dependencies via diagnostic.
+class FooDependentAnalysis : public DataFlowAnalysis {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FooDependentAnalysis)
+
+  using DataFlowAnalysis::DataFlowAnalysis;
+
+  LogicalResult initialize(Operation *) override { return success(); }
+  LogicalResult visit(ProgramPoint *) override { return success(); }
+
+  void getDependentAnalyses(AnalysisDependencies &deps) const override {
+    deps.insert<FooAnalysis>();
+  }
+};
+
+/// A second analysis that also declares a dependency on `FooAnalysis`. Paired
+/// with `FooDependentAnalysis` to test that the solver emits a separate
+/// diagnostic note per requester when multiple analyses share an unsatisfied
+/// dependency. The name is intentionally *not* a prefix/suffix of
+/// `FooDependentAnalysis` so lit-test regex matches stay disjoint.
+class BazDependentAnalysis : public DataFlowAnalysis {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(BazDependentAnalysis)
+
+  using DataFlowAnalysis::DataFlowAnalysis;
+
+  LogicalResult initialize(Operation *) override { return success(); }
+  LogicalResult visit(ProgramPoint *) override { return success(); }
+
+  void getDependentAnalyses(AnalysisDependencies &deps) const override {
+    deps.insert<FooAnalysis>();
+  }
+};
+
+struct TestAnalysisDepsPass
+    : public PassWrapper<TestAnalysisDepsPass, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAnalysisDepsPass)
+
+  StringRef getArgument() const override { return "test-analysis-deps"; }
+
+  void runOnOperation() override {
+    DataFlowSolver solver;
+    solver.load<FooDependentAnalysis>();
+    if (failed(solver.initializeAndRun(getOperation())))
+      return signalPassFailure();
+  }
+};
+
+/// Loads two analyses that both depend on `FooAnalysis` (which is not loaded).
+/// The solver should emit one error with two notes, one per requester.
+struct TestAnalysisDepsMultiRequesterPass
+    : public PassWrapper<TestAnalysisDepsMultiRequesterPass,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestAnalysisDepsMultiRequesterPass)
+
+  StringRef getArgument() const override {
+    return "test-analysis-deps-multi-requester";
+  }
+
+  void runOnOperation() override {
+    DataFlowSolver solver;
+    solver.load<FooDependentAnalysis>();
+    solver.load<BazDependentAnalysis>();
+    if (failed(solver.initializeAndRun(getOperation())))
+      return signalPassFailure();
+  }
+};
 } // namespace
 
 LogicalResult FooAnalysis::initialize(Operation *top) {
@@ -362,6 +433,12 @@ namespace test {
 void registerTestFooAnalysisPass() { PassRegistration<TestFooAnalysisPass>(); }
 void registerTestStagedAnalysesPass() {
   PassRegistration<TestStagedAnalysesPass>();
+}
+void registerTestAnalysisDepsPass() {
+  PassRegistration<TestAnalysisDepsPass>();
+}
+void registerTestAnalysisDepsMultiRequesterPass() {
+  PassRegistration<TestAnalysisDepsMultiRequesterPass>();
 }
 } // namespace test
 } // namespace mlir

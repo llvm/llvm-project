@@ -23,8 +23,15 @@ namespace dataflow {
 /// Populates a DataFlowSolver with analyses that are required to ensure
 /// user-defined analyses are run properly.
 ///
+/// `DeadCodeAnalysis` and `SparseConstantPropagation` have a circular
+/// co-dependency: SCP only propagates along live CFG edges (produced by DCA),
+/// and DCA refines branches using `Lattice<ConstantValue>` (produced by SCP).
+/// Only SCP's dep on DCA is declared (inherited from the sparse forward driver
+/// base); DCA works without SCP at reduced precision, so clients are free to
+/// substitute another `Lattice<ConstantValue>` producer.
+///
 /// This helper is intended to be an interim fix until a more robust solution
-/// can be implemented in the DataFlow framework directly. Cf.
+/// can be implemented in the DataFlow framework directly. See
 /// https://discourse.llvm.org/t/mlir-dead-code-analysis/67568
 inline void loadBaselineAnalyses(DataFlowSolver &solver) {
   solver.load<dataflow::DeadCodeAnalysis>();
@@ -34,4 +41,4 @@ inline void loadBaselineAnalyses(DataFlowSolver &solver) {
 } // end namespace dataflow
 } // end namespace mlir
 
-#endif // MLIR_ANALYSIS_DATAFLOW_INTEGERANGEANALYSIS_H
+#endif // MLIR_ANALYSIS_DATAFLOW_UTILS_H

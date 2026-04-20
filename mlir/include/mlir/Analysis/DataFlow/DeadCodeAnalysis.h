@@ -173,6 +173,15 @@ public:
 /// for region entry blocks and region control-flow operations. For the
 /// callgraph, this analysis determines the callsites and live returns of every
 /// function.
+///
+/// This analysis reads `Lattice<ConstantValue>` state to refine branches on
+/// constant conditions. The producer of that lattice is *not* declared as a
+/// hard dependency: if no producer is loaded, operand constants remain
+/// uninitialized and `DeadCodeAnalysis` conservatively marks all successors
+/// live (still correct, just less precise). Pair with
+/// `SparseConstantPropagation` (see `loadBaselineAnalyses` in
+/// `mlir/Analysis/DataFlow/Utils.h`) or a custom `Lattice<ConstantValue>`
+/// producer for best precision.
 class DeadCodeAnalysis : public DataFlowAnalysis {
 public:
   explicit DeadCodeAnalysis(DataFlowSolver &solver);

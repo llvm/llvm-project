@@ -193,6 +193,10 @@ public:
   /// accordingly.  Otherwise, the operation transfer function is invoked.
   LogicalResult visit(ProgramPoint *point) override;
 
+  /// Sparse forward analyses use `DeadCodeAnalysis` to skip dead blocks and
+  /// control-flow edges during propagation.
+  void getDependentAnalyses(AnalysisDependencies &deps) const override;
+
 protected:
   explicit AbstractSparseForwardDataFlowAnalysis(DataFlowSolver &solver);
 
@@ -412,6 +416,10 @@ public:
   /// block or region control-flow, then operand lattices are set accordingly.
   /// Otherwise, invokes the operation transfer function (`visitOperationImpl`).
   LogicalResult visit(ProgramPoint *point) override;
+
+  /// Sparse backward analyses use `DeadCodeAnalysis` to skip dead blocks and
+  /// control-flow edges during propagation.
+  void getDependentAnalyses(AnalysisDependencies &deps) const override;
 
 protected:
   explicit AbstractSparseBackwardDataFlowAnalysis(
