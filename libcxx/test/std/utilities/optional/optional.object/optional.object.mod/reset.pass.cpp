@@ -43,6 +43,25 @@ TEST_CONSTEXPR_CXX20 bool check_reset() {
     opt.reset();
     assert(static_cast<bool>(opt) == false);
   }
+#if TEST_STD_VER >= 20
+  {
+    // https://llvm.org/PR192852
+    // Verify that a disengaged optional<T> can also be constexpr, where T is not trivially destructible.
+
+    struct NonTriviallyDestructible {
+      constexpr NonTriviallyDestructible() {}
+      constexpr ~NonTriviallyDestructible() {}
+    };
+
+    struct Derived : optional<NonTriviallyDestructible> {
+      using Base = optional<NonTriviallyDestructible>;
+
+      constexpr Derived() : Base(std::in_place) { Base::reset(); }
+    };
+
+    [[maybe_unused]] constexpr Derived d;
+  }
+#endif
   return true;
 }
 
