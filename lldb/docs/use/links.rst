@@ -42,14 +42,15 @@ custom breakpoints for more powerful debugging. Get the most out of
 Xcode’s view debugging tools to solve UI issues in your app more
 efficiently.
 
-Conference Talks
-~~~~~~~~~~~~~~~~
+LLVM Developers' Meeting Talks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * `2025 EuroLLVM - What is LLDB-DAP? <https://www.youtube.com/watch?v=sfJkf7U2FUg>`__
 * `2025 US LLVM Developers' Meeting: LLDB MCP <https://www.youtube.com/watch?v=OJas4nknp0o>`__
 * `2025 EuroLLVM - LLDB Statusline <https://www.youtube.com/watch?v=BQFwcsN1dJU>`__
 * `2025 EuroLLVM - LLDB support for Propeller optimized code <https://www.youtube.com/watch?v=osE0UDJULoM>`__
 * `2025 AsiaLLVM - The Data Inspection Language: Fast & Simple Expression Evaluation in LLDB <https://www.youtube.com/watch?v=tgsDbrQga_w>`__
+* `2024 EuroLLVM - From C++ ranges to shorter template names: A C++ Debugging journey <https://www.youtube.com/watch?v=VT6-fL2hiN8>`__
 * `2024 EuroLLVM - Simplifying, Consolidating & Documenting LLDB's Scripting Functionalities <https://www.youtube.com/watch?v=hNvFmZ1iB78>`__
 * `2024 EuroLLVM - LLDB: What's in a Register? <https://www.youtube.com/watch?v=Hb7DbdIr3Rk>`__
 * `2024 EuroLLVM - Mojo debugging: extending MLIR and LLDB <https://www.youtube.com/watch?v=9jfukpjCPIg>`__
