@@ -156,10 +156,8 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
         *CB, InstrProfValueKind::IPVK_IndirectCallTarget,
         std::numeric_limits<uint32_t>::max(), TotalCount);
 
-    for (const auto &[G, C] : Targets) {
-      [[maybe_unused]] auto It = GuidToCounter.insert({G, C});
-      assert(It.second);
-    }
+    for (const auto &[G, C] : Targets)
+      GuidToCounter[G] += C;
   }
   for (auto [Index, Func] : llvm::enumerate(JT.Funcs)) {
     BasicBlock *B = BasicBlock::Create(Func->getContext(),
