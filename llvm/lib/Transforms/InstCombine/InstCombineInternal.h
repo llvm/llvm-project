@@ -432,6 +432,9 @@ private:
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
 
+  bool matchShiftConstNUWSub(BinaryOperator &I, const APInt *&C1, uint64_t &C2,
+                             Value *&X);
+  Instruction *foldShrConstToShl(BinaryOperator &I);
   Instruction *foldLShrOverflowBit(BinaryOperator &I);
   Instruction *foldExtractOfOverflowIntrinsic(ExtractValueInst &EV);
   Instruction *foldIntrinsicWithOverflowCommon(IntrinsicInst *II);

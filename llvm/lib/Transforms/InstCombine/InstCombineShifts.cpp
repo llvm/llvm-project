@@ -1043,6 +1043,35 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
   return Changed;
 }
 
+// Match (C1 bop (C2 sub nuw X))
+// or (C1 bop (X xor C2)) if equivalent to the above.
+bool InstCombinerImpl::matchShiftConstNUWSub(BinaryOperator &I,
+                                             const APInt *&C1, uint64_t &C2,
+                                             Value *&X) {
+  if (!match(I.getOperand(0), m_APInt(C1)))
+    return false;
+  if (match(I.getOperand(1), m_NUWSub(m_ConstantInt(C2), m_Value(X))))
+    return true;
+  return match(I.getOperand(1), m_Xor(m_Value(X), m_ConstantInt(C2))) &&
+         isMask_64(C2) && (C2 | computeKnownBits(X, &I).Zero).isAllOnes();
+}
+
+// C1 >> (C2 - X) -> (C1 >> C2) << X
+// X must be >= (checked by NUWSub).
+// C1 must have at least C2 trailing zeros.
+// Also match (X ^ C2) if equivalent to (C2 - X).
+Instruction *InstCombinerImpl::foldShrConstToShl(BinaryOperator &I) {
+  const APInt *C1;
+  uint64_t C2;
+  Value *X;
+  if (!matchShiftConstNUWSub(I, C1, C2, X))
+    return nullptr;
+  if (C1->countr_zero() < C2)
+    return nullptr;
+  APInt C = I.getOpcode() == Instruction::LShr ? C1->lshr(C2) : C1->ashr(C2);
+  return BinaryOperator::CreateShl(ConstantInt::get(I.getType(), C), X);
+}
+
 Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
 
@@ -1266,7 +1295,7 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
   if (match(Op0, m_One())) {
     // (1 << (C - x)) -> ((1 << C) >> x) if C is bitwidth - 1
     if (match(Op1, m_Sub(m_SpecificInt(BitWidth - 1), m_Value(X))))
-      return BinaryOperator::CreateLShr(
+      return BinaryOperator::CreateExactLShr(
           ConstantInt::get(Ty, APInt::getSignMask(BitWidth)), X);
 
     // Canonicalize "extract lowest set bit" using cttz to and-with-negate:
@@ -1275,6 +1304,24 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
               m_OneUse(m_Intrinsic<Intrinsic::cttz>(m_Value(X), m_Value())))) {
       Value *NegX = Builder.CreateNeg(X, "neg");
       return BinaryOperator::CreateAnd(NegX, X);
+    }
+  }
+
+  {
+    const APInt *C1;
+    uint64_t C2;
+    // C1 << (C2 - X) -> (C1 << C2) >> X
+    // X must be >=0 (checked by NUWSub).
+    // C1 must have at least C2 leading zeros (for LShr)
+    // or at least C2+1 leading ones (for AShr).
+    // Also match (X ^ C2) if equivalent to (C2 - X).
+    if (matchShiftConstNUWSub(I, C1, C2, X)) {
+      if (C1->countl_zero() >= C2)
+        return BinaryOperator::CreateExactLShr(
+            ConstantInt::get(Ty, C1->shl(C2)), X);
+      if (C1->countl_one() > C2)
+        return BinaryOperator::CreateExactAShr(
+            ConstantInt::get(Ty, C1->shl(C2)), X);
     }
   }
 
@@ -1641,6 +1688,9 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       return BinaryOperator::CreateLShr(NewShl, Shl1_Op1);
     }
   }
+
+  if (Instruction *R = foldShrConstToShl(I))
+    return R;
   return nullptr;
 }
 
@@ -1849,5 +1899,7 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
     return BinaryOperator::CreateNot(NewAShr);
   }
 
+  if (Instruction *R = foldShrConstToShl(I))
+    return R;
   return nullptr;
 }
