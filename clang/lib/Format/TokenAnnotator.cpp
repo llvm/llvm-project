@@ -5721,6 +5721,20 @@ isEmptyLambdaAllowed(const FormatToken &Tok,
   return Tok.Children.empty() && ShortLambdaOption != FormatStyle::SLS_None;
 }
 
+static bool
+isInlineLambdaAllowed(const FormatToken &Tok,
+                      FormatStyle::ShortLambdaStyle ShortLambdaOption,
+                      unsigned ColumnLimit) {
+  const auto *Line = Tok.Children.size() == 1 ? Tok.Children.front() : nullptr;
+  return isEmptyLambdaAllowed(Tok, ShortLambdaOption) ||
+         (ColumnLimit == 0 && Line && Line->First && Line->Last &&
+          Line->First->isNot(TT_LineComment) &&
+          Line->Last->isNot(TT_LineComment) &&
+          (ShortLambdaOption == FormatStyle::SLS_All ||
+           (ShortLambdaOption == FormatStyle::SLS_Inline &&
+            IsFunctionArgument(Tok))));
+}
+
 static bool isAllmanLambdaBrace(const FormatToken &Tok) {
   return Tok.is(tok::l_brace) && Tok.is(BK_Block) &&
          Tok.isNoneOf(TT_ObjCBlockLBrace, TT_DictLiteral);
@@ -6601,9 +6615,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   auto ShortLambdaOption = Style.AllowShortLambdasOnASingleLine;
   if (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace)) {
     if (isAllmanLambdaBrace(Left))
-      return !isEmptyLambdaAllowed(Left, ShortLambdaOption);
-    if (isAllmanLambdaBrace(Right))
-      return !isEmptyLambdaAllowed(Right, ShortLambdaOption);
+      return !isInlineLambdaAllowed(Left, ShortLambdaOption, Style.ColumnLimit);
+    if (isAllmanLambdaBrace(Right)) {
+      return !isInlineLambdaAllowed(Right, ShortLambdaOption,
+                                    Style.ColumnLimit);
+    }
   }
 
   if (Right.is(tok::kw_noexcept) && Right.is(TT_TrailingAnnotation)) {

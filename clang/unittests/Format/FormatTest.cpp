@@ -21441,6 +21441,8 @@ TEST_F(FormatTest, LambdaWithLineComments) {
 
   LLVMWithBeforeLambdaBody.ColumnLimit = 0;
 
+  verifyFormat("foo([]() { return 1; }());", LLVMWithBeforeLambdaBody);
+
   verifyFormat("foo([]()\n"
                "    {\n"
                "      bar();    //\n"
