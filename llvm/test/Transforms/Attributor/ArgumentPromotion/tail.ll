@@ -12,22 +12,18 @@ declare ptr @foo(ptr)
 define internal void @bar(ptr byval(%pair) %Data) {
 ; TUNIT: Function Attrs: memory(readwrite, argmem: none)
 ; TUNIT-LABEL: define {{[^@]+}}@bar
-; TUNIT-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
-; TUNIT-NEXT:    [[DATA_PRIV:%.*]] = alloca [[PAIR:%.*]], align 8
-; TUNIT-NEXT:    store i32 [[TMP0]], ptr [[DATA_PRIV]], align 4
-; TUNIT-NEXT:    [[DATA_PRIV_B4:%.*]] = getelementptr i8, ptr [[DATA_PRIV]], i64 4
-; TUNIT-NEXT:    store i32 [[TMP1]], ptr [[DATA_PRIV_B4]], align 4
-; TUNIT-NEXT:    [[TMP3:%.*]] = call ptr @foo(ptr nonnull dereferenceable(8) [[DATA_PRIV]])
+; TUNIT-SAME: (i64 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-NEXT:    [[DATA_PRIV:%.*]] = alloca i64, align 8
+; TUNIT-NEXT:    store i64 [[TMP0]], ptr [[DATA_PRIV]], align 8
+; TUNIT-NEXT:    [[TMP2:%.*]] = call ptr @foo(ptr nonnull dereferenceable(8) [[DATA_PRIV]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: memory(readwrite, argmem: none)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
-; CGSCC-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CGSCC-NEXT:    [[DATA_PRIV:%.*]] = alloca [[PAIR:%.*]], align 8
-; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[DATA_PRIV]], align 4
-; CGSCC-NEXT:    [[DATA_PRIV_B4:%.*]] = getelementptr i8, ptr [[DATA_PRIV]], i64 4
-; CGSCC-NEXT:    store i32 [[TMP1]], ptr [[DATA_PRIV_B4]], align 4
-; CGSCC-NEXT:    [[TMP3:%.*]] = call ptr @foo(ptr noundef nonnull dereferenceable(8) [[DATA_PRIV]])
+; CGSCC-SAME: (i64 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-NEXT:    [[DATA_PRIV:%.*]] = alloca i64, align 8
+; CGSCC-NEXT:    store i64 [[TMP0]], ptr [[DATA_PRIV]], align 8
+; CGSCC-NEXT:    [[TMP2:%.*]] = call ptr @foo(ptr noundef nonnull dereferenceable(8) [[DATA_PRIV]])
 ; CGSCC-NEXT:    ret void
 ;
   tail call ptr @foo(ptr %Data)
@@ -37,18 +33,14 @@ define internal void @bar(ptr byval(%pair) %Data) {
 define void @zed(ptr byval(%pair) %Data) {
 ; TUNIT-LABEL: define {{[^@]+}}@zed
 ; TUNIT-SAME: (ptr noalias nonnull readonly byval([[PAIR:%.*]]) captures(none) dereferenceable(8) [[DATA:%.*]]) {
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DATA]], align 1
-; TUNIT-NEXT:    [[DATA_B4:%.*]] = getelementptr i8, ptr [[DATA]], i64 4
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DATA_B4]], align 1
-; TUNIT-NEXT:    call void @bar(i32 [[TMP1]], i32 [[TMP2]])
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[DATA]], align 1
+; TUNIT-NEXT:    call void @bar(i64 [[TMP1]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@zed
 ; CGSCC-SAME: (ptr noalias nofree noundef nonnull readonly byval([[PAIR:%.*]]) captures(none) dereferenceable(8) [[DATA:%.*]]) {
-; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DATA]], align 1
-; CGSCC-NEXT:    [[DATA_B4:%.*]] = getelementptr i8, ptr [[DATA]], i64 4
-; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DATA_B4]], align 1
-; CGSCC-NEXT:    call void @bar(i32 [[TMP1]], i32 [[TMP2]])
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i64, ptr [[DATA]], align 1
+; CGSCC-NEXT:    call void @bar(i64 [[TMP1]])
 ; CGSCC-NEXT:    ret void
 ;
   call void @bar(ptr byval(%pair) %Data)
