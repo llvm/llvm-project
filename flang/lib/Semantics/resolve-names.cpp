@@ -6022,10 +6022,7 @@ void DeclarationVisitor::Post(const parser::EnumDef &) {
 // and popped in Post(EndEnumerationTypeStmt).
 bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
   BeginAttrs();
-  // TODO: Remove this and set true when ENUMERATION TYPEs are implemented.
-  Say(std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source,
-      "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
-  return false;
+  return true;
 }
 
 // F2023 R767 EnumerationTypeStmt — create the enumeration type symbol
