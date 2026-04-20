@@ -2541,8 +2541,10 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
   }
   if (I->getModule()->getTargetTriple().getVendor() == Triple::AMD &&
       isa<AtomicRMWInst>(I)) {
+    // If present, we encode AMDGPU atomic metadata as UserSemantic string
+    // decorations, which will be parsed during reverse translation.
     auto &Ctx = B.getContext();
-    auto US = ConstantAsMetadata::get(ConstantInt::get(
+    auto *US = ConstantAsMetadata::get(ConstantInt::get(
         B.getInt32Ty(), SPIRV::Decoration::UserSemantic));
 
     SmallVector<Metadata *> MDs;
