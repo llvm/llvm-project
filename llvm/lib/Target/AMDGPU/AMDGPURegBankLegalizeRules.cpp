@@ -1740,12 +1740,33 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivV6S32}, {{VgprV6S32}, {IntrId, VgprV32S32, Vgpr32, Vgpr32}}});
 
   addRulesForIOpcs({amdgcn_global_load_tr_b64})
-      .Any({{DivB64}, {{VgprB64}, {IntrId, SgprP1}}})
-      .Any({{DivB32}, {{VgprB32}, {IntrId, SgprP1}}});
+      .Any({{DivB64, _, UniP1}, {{VgprB64}, {IntrId, SgprP1}}})
+      .Any({{DivB64, _, DivP1}, {{VgprB64}, {IntrId, VgprP1}}})
+      .Any({{DivB32, _, UniP1}, {{VgprB32}, {IntrId, SgprP1}}})
+      .Any({{DivB32, _, DivP1}, {{VgprB32}, {IntrId, VgprP1}}});
 
   addRulesForIOpcs({amdgcn_global_load_tr_b128})
-      .Any({{DivB64}, {{VgprB64}, {IntrId, SgprP1}}})
-      .Any({{DivB128}, {{VgprB128}, {IntrId, SgprP1}}});
+      .Any({{DivB64, _, UniP1}, {{VgprB64}, {IntrId, SgprP1}}})
+      .Any({{DivB64, _, DivP1}, {{VgprB64}, {IntrId, VgprP1}}})
+      .Any({{DivB128, _, UniP1}, {{VgprB128}, {IntrId, SgprP1}}})
+      .Any({{DivB128, _, DivP1}, {{VgprB128}, {IntrId, VgprP1}}});
+
+  addRulesForIOpcs({amdgcn_global_load_tr4_b64})
+      .Any({{DivV2S32, _, UniP1}, {{VgprV2S32}, {IntrId, SgprP1}}})
+      .Any({{DivV2S32, _, DivP1}, {{VgprV2S32}, {IntrId, VgprP1}}});
+
+  addRulesForIOpcs({amdgcn_global_load_tr6_b96})
+      .Any({{DivV3S32, _, UniP1}, {{VgprV3S32}, {IntrId, SgprP1}}})
+      .Any({{DivV3S32, _, DivP1}, {{VgprV3S32}, {IntrId, VgprP1}}});
+
+  addRulesForIOpcs({amdgcn_ds_load_tr4_b64, amdgcn_ds_load_tr8_b64})
+      .Any({{DivV2S32}, {{VgprV2S32}, {IntrId, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_ds_load_tr6_b96})
+      .Any({{DivV3S32}, {{VgprV3S32}, {IntrId, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_ds_load_tr16_b128})
+      .Any({{DivB128}, {{VgprB128}, {IntrId, VgprP3}}});
 
   addRulesForIOpcs({amdgcn_global_atomic_ordered_add_b64})
       .Any({{DivS64}, {{Vgpr64}, {IntrId, VgprP1, Vgpr64}}});
