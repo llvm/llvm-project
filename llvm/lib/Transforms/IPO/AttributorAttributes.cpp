@@ -4609,12 +4609,14 @@ struct AAIsDeadFunction : public AAIsDead {
     if (!AssumedLiveBlocks.count(I->getParent()))
       return true;
 
-    // We cache the *first* dead instruction in the block.
-    // If such an instruction exists and precedes I, then I is dead.
+    // We cache the *first* liveness barrier in the block. A liveness barrier
+    // is an instruction in KnownDeadEnds or ToBeExploredFrom — these are
+    // always terminators or calls that are known or assumed to not transfer
+    // control to their successor. If such an instruction exists and precedes
+    // I in the block, then I is unreachable and therefore dead.
     // Previously, we used to do a backwards linear scan from I to
     // the beginning of the block, checking KnownDeadEnds and ToBeExploredFrom
     // at each step. By caching we trade complexity for storage.
-
     const BasicBlock *BB = I->getParent();
     auto It = FirstDeadInstCache.find(BB);
     if (It == FirstDeadInstCache.end()) {
