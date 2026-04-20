@@ -1428,8 +1428,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, II.getArgOperand(1));
     [[fallthrough]];
   case Intrinsic::amdgcn_mbcnt_lo: {
-    ConstantRange AccRange = computeConstantRange(II.getArgOperand(1),
-                                                  /*ForSigned=*/false);
+    ConstantRange AccRange =
+        computeConstantRange(II.getArgOperand(1),
+                             /*ForSigned=*/false, IC.getSimplifyQuery());
     if (AccRange.isFullSet())
       return nullptr;
 

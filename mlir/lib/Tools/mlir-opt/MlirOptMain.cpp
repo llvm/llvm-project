@@ -621,8 +621,13 @@ performActions(raw_ostream &os,
   if (config.bytecodeVersionToEmit().has_value())
     return emitError(UnknownLoc::get(pm.getContext()))
            << "bytecode version while not emitting bytecode";
-  AsmState asmState(op.get(), OpPrintingFlags(), /*locationMap=*/nullptr,
-                    &fallbackResourceMap);
+
+  // Don't re-run the verifier if we already ran the verifier at the end of the
+  // pass pipeline.
+  AsmState asmState(op.get(),
+                    OpPrintingFlags().assumeVerified(
+                        config.shouldVerifyPasses() && !pm.empty()),
+                    /*locationMap=*/nullptr, &fallbackResourceMap);
   os << OpWithState(op.get(), asmState) << '\n';
 
   // This is required if the remark policy is final. Otherwise, the remarks are

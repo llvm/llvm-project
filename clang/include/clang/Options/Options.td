@@ -10097,12 +10097,12 @@ def fhlsl_spv_enable_maximal_reconvergence
                "well-defined merge points as defined by the Vulkan spec.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
 
-def fexperimental_emit_sgep
-    : Flag<["-"], "fexperimental-emit-sgep">,
+def fexperimental_logical_pointer
+    : Flag<["-"], "fexperimental-logical-pointer">,
       Visibility<[CC1Option, DXCOption]>,
-      HelpText<"Emit structured GEP intrinsic instead of GEP instructions "
-               "(experimental).">,
-      MarshallingInfoFlag<LangOpts<"EmitStructuredGEP">>;
+      HelpText<"Allow emitting structured GEP/alloca intrinsics instead of "
+               "normal GEP/alloca instructions (experimental).">,
+      MarshallingInfoFlag<LangOpts<"EmitLogicalPointer">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,

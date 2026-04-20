@@ -25,8 +25,9 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; SCALAR-NEXT:  Successor(s): vector loop
 ; SCALAR-EMPTY:
 ; SCALAR-NEXT:  <x1> vector loop: {
+; SCALAR-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
+; SCALAR-EMPTY:
 ; SCALAR-NEXT:    vector.body:
-; SCALAR-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; SCALAR-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
 ; SCALAR-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>, vp<[[VP0]]>
 ; SCALAR-NEXT:      EMIT branch-on-cond ir<%c>
@@ -101,8 +102,9 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-NEXT:  Successor(s): vector loop
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:  <x1> vector loop: {
+; VECTOR-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
+; VECTOR-EMPTY:
 ; VECTOR-NEXT:    vector.body:
-; VECTOR-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; VECTOR-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
 ; VECTOR-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>, ir<1>
 ; VECTOR-NEXT:    Successor(s): pred.load

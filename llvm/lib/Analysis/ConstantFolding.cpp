@@ -22,6 +22,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -105,6 +106,76 @@ static Constant *foldConstVectorToAPInt(APInt &Result, Type *DestTy,
   return nullptr;
 }
 
+/// Check whether folding this bitcast into a byte vector would mix poison and
+/// non-poison bits in the same output lane. While integer types track poison on
+/// a per-value basis, byte types track it on a per-bit basis. However,
+/// `ConstantByte` cannot represent values with both poison and non-poison bits.
+///
+/// Source elements are grouped by the output lane they map to. Returns true if
+/// any group contains both poison and non-poison elements.
+static bool foldMixesPoisonBits(Constant *C, unsigned NumSrcElt,
+                                unsigned NumDstElt) {
+  // If element counts don't divide evenly, bail out if a poison source element
+  // might span multiple destination lanes.
+  if (NumSrcElt % NumDstElt != 0)
+    return C->containsPoisonElement();
+  unsigned Ratio = NumSrcElt / NumDstElt;
+  for (unsigned i = 0; i != NumSrcElt; i += Ratio) {
+    bool HasPoison = false;
+    bool HasNonPoison = false;
+    for (unsigned j = 0; j != Ratio; ++j) {
+      Constant *Src = C->getAggregateElement(i + j);
+      // Conservatively bail out.
+      if (!Src)
+        return true;
+      if (isa<PoisonValue>(Src))
+        HasPoison = true;
+      else
+        HasNonPoison = true;
+    }
+    if (HasPoison && HasNonPoison)
+      return true;
+  }
+  return false;
+}
+
+/// Track which destination lanes of a bitcast are produced from poison bytes.
+/// A destination lane is marked if any source element mapped to it is poison.
+/// Returns false if an aggregate element cannot be inspected. The caller should
+/// bail out of folding.
+static bool computePoisonDstLanes(Constant *C, unsigned NumSrcElt,
+                                  unsigned NumDstElt,
+                                  SmallBitVector &PoisonDstElts) {
+  // If element counts don't divide evenly, bail out if a poison source element
+  // might span multiple destination lanes.
+  if ((NumDstElt < NumSrcElt ? NumSrcElt % NumDstElt : NumDstElt % NumSrcElt))
+    return !C->containsPoisonElement();
+  if (NumDstElt < NumSrcElt) {
+    unsigned Ratio = NumSrcElt / NumDstElt;
+    for (unsigned i = 0; i != NumDstElt; ++i) {
+      for (unsigned j = 0; j != Ratio; ++j) {
+        Constant *Src = C->getAggregateElement(i * Ratio + j);
+        if (!Src)
+          return false;
+        if (isa<PoisonValue>(Src)) {
+          PoisonDstElts[i] = true;
+          break;
+        }
+      }
+    }
+  } else {
+    unsigned Ratio = NumDstElt / NumSrcElt;
+    for (unsigned i = 0; i != NumSrcElt; ++i) {
+      Constant *Src = C->getAggregateElement(i);
+      if (!Src)
+        return false;
+      if (isa<PoisonValue>(Src))
+        PoisonDstElts.set(i * Ratio, (i + 1) * Ratio);
+    }
+  }
+  return true;
+}
+
 /// Constant fold bitcast, symbolically evaluating it with DataLayout.
 /// This always returns a non-null constant, but it may be a
 /// ConstantExpr if unfoldable.
@@ -122,12 +193,17 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       unsigned NumSrcElts = cast<FixedVectorType>(VTy)->getNumElements();
       Type *SrcEltTy = VTy->getElementType();
 
-      // If the vector is a vector of floating point, convert it to vector of int
-      // to simplify things.
-      if (SrcEltTy->isFloatingPointTy()) {
-        unsigned FPWidth = SrcEltTy->getPrimitiveSizeInBits();
+      // Bitcasting a byte containing any poison bit to an integer or fp type
+      // yields poison.
+      if (SrcEltTy->isByteTy() && C->containsPoisonElement())
+        return PoisonValue::get(DestTy);
+
+      // If the vector is a vector of floating point or bytes, convert it to a
+      // vector of int to simplify things.
+      if (SrcEltTy->isFloatingPointTy() || SrcEltTy->isByteTy()) {
+        unsigned Width = SrcEltTy->getPrimitiveSizeInBits();
         auto *SrcIVTy = FixedVectorType::get(
-            IntegerType::get(C->getContext(), FPWidth), NumSrcElts);
+            IntegerType::get(C->getContext(), Width), NumSrcElts);
         // Ask IR to do the conversion now that #elts line up.
         C = ConstantExpr::getBitCast(C, SrcIVTy);
       }
@@ -153,7 +229,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   // If this is a scalar -> vector cast, convert the input into a <1 x scalar>
   // vector so the code below can handle it uniformly.
   if (!isa<VectorType>(C->getType()) &&
-      (isa<ConstantFP>(C) || isa<ConstantInt>(C))) {
+      (isa<ConstantFP>(C) || isa<ConstantInt>(C) || isa<ConstantByte>(C))) {
     Constant *Ops = C; // don't take the address of C!
     return FoldBitCast(ConstantVector::get(Ops), DestTy, DL);
   }
@@ -165,7 +241,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   // If this is a bitcast from constant vector -> vector, fold it.
   if (!isa<ConstantDataVector>(C) && !isa<ConstantVector>(C) &&
-      !isa<ConstantInt>(C) && !isa<ConstantFP>(C))
+      !isa<ConstantInt>(C) && !isa<ConstantFP>(C) && !isa<ConstantByte>(C))
     return ConstantExpr::getBitCast(C, DestTy);
 
   // If the element types match, IR can fold it.
@@ -199,6 +275,22 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     return ConstantExpr::getBitCast(C, DestTy);
   }
 
+  // Handle byte destination type by folding through integers.
+  if (DstEltTy->isByteTy()) {
+    // When combining elements into larger byte values, bail out if the fold
+    // mixes poison and non-poison bits in the same destination element. Byte
+    // types track poison per bit, and no constant value can represent that.
+    if (NumDstElt < NumSrcElt && foldMixesPoisonBits(C, NumSrcElt, NumDstElt))
+      return ConstantExpr::getBitCast(C, DestTy);
+
+    // Fold to a vector of integers with same size as the byte type.
+    unsigned ByteWidth = DstEltTy->getPrimitiveSizeInBits();
+    auto *DestIVTy = FixedVectorType::get(
+        IntegerType::get(C->getContext(), ByteWidth), NumDstElt);
+    C = FoldBitCast(C, DestIVTy, DL);
+    return ConstantExpr::getBitCast(C, DestTy);
+  }
+
   // Okay, we know the destination is integer, if the input is FP, convert
   // it to integer first.
   if (SrcEltTy->isFloatingPointTy()) {
@@ -210,6 +302,25 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     assert((isa<ConstantVector>(C) || // FIXME: Remove ConstantVector.
             isa<ConstantDataVector>(C) || isa<ConstantInt>(C)) &&
            "Constant folding cannot fail for plain fp->int bitcast!");
+  }
+
+  // Handle byte source type by folding through integers. Byte types track
+  // poison per bit, so any poison bit makes the destination lane poison.
+  // Record which destination lanes contain poison bits, before the generic
+  // fold below refines them to undef/zero, so they can be restored.
+  SmallBitVector PoisonDstElts(NumDstElt);
+  if (SrcEltTy->isByteTy()) {
+    if (!computePoisonDstLanes(C, NumSrcElt, NumDstElt, PoisonDstElts))
+      return ConstantExpr::getBitCast(C, DestTy);
+
+    unsigned ByteWidth = SrcEltTy->getPrimitiveSizeInBits();
+    auto *SrcIVTy = FixedVectorType::get(
+        IntegerType::get(C->getContext(), ByteWidth), NumSrcElt);
+    // Ask IR to do the conversion now that #elts line up.
+    C = ConstantExpr::getBitCast(C, SrcIVTy);
+    assert((isa<ConstantVector>(C) || // FIXME: Remove ConstantVector.
+            isa<ConstantDataVector>(C) || isa<ConstantInt>(C)) &&
+           "Constant folding cannot fail for plain byte->int bitcast!");
   }
 
   // Now we know that the input and output vectors are both integer vectors
@@ -287,6 +398,10 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       BufferBitSize -= DstBitSize;
     }
   }
+
+  // Restore destination lanes whose source bytes contained poison bits.
+  for (unsigned I : PoisonDstElts.set_bits())
+    Result[I] = PoisonValue::get(DstEltTy);
 
   return ConstantVector::get(Result);
 }

@@ -278,7 +278,7 @@ NaryReassociatePass::matchAndReassociateMinOrMax(Instruction *I,
   Value *RHS = nullptr;
 
   auto MinMaxMatcher =
-      MaxMin_match<ICmpInst, bind_ty<Value>, bind_ty<Value>, PredT>(
+      MaxMin_match<ICmpInst, match_bind<Value>, match_bind<Value>, PredT>(
           m_Value(LHS), m_Value(RHS));
   if (match(I, MinMaxMatcher)) {
     OrigSCEV = SE->getSCEV(I);

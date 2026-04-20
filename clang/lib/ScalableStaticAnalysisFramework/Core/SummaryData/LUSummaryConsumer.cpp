@@ -30,7 +30,7 @@ LUSummaryConsumer::build(LUDataIterator LUIt) {
   Builder->finalize();
   LU->Data.erase(LUIt);
 
-  return std::move(*Builder).getData();
+  return std::move(*Builder).takeData();
 }
 
 llvm::Expected<std::unique_ptr<SummaryData>>

@@ -5,7 +5,7 @@ target triple = "aarch64"
 
 %"class.std::complex" = type { { double, double } }
 
-; Zero initialized reduction. The IR is generated with predicated tail folding (-prefer-predicate-over-epilogue=predicate-dont-vectorize)
+; Zero initialized reduction. The IR is generated with predicated tail folding (-tail-folding-policy=must-fold-tail)
 ;
 ;   complex<double> x = 0.0 + 0.0i;
 ;   for (int i = 0; i < 100; ++i)
@@ -100,7 +100,7 @@ exit.block:                                     ; preds = %vector.body
   ret %"class.std::complex" %.fca.0.1.insert
 }
 
-; Zero initialized reduction with conditional block. The IR is generated with scalar tail folding (-prefer-predicate-over-epilogue=scalar-epilogue)
+; Zero initialized reduction with conditional block. The IR is generated with scalar tail folding (-tail-folding-policy=dont-fold-tail)
 ;
 ;   complex<double> x = 0.0 + 0.0i;
 ;   for (int i = 0; i < 100; ++i)

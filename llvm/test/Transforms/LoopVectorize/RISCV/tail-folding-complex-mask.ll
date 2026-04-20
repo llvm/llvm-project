@@ -3,7 +3,7 @@
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s --check-prefix=IF-EVL
 
 ; RUN: opt -passes=loop-vectorize \
-; RUN: -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s --check-prefix=NO-VP
 
 define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src2, ptr noalias %dst, i1 %c1, i1 %c2, i1 %c3) {

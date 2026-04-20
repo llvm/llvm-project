@@ -419,11 +419,11 @@ define void @histogram_zext_from_i16_to_i32(ptr %base, <vscale x 4 x i16> %indic
 define void @histogram_2_lane_zext(ptr %base, <vscale x 2 x i32> %indices, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: histogram_2_lane_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
 ; CHECK-NEXT:    mov z3.d, #1 // =0x1
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x0, z0.d, uxtw #2]
-; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
 ; CHECK-NEXT:    histcnt z1.d, p0/z, z1.d, z1.d
 ; CHECK-NEXT:    mad z1.d, p1/m, z3.d, z2.d
 ; CHECK-NEXT:    st1w { z1.d }, p0, [x0, z0.d, uxtw #2]

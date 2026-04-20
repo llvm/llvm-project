@@ -346,58 +346,56 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
 Response HandleFunctionTemplateDecl(Sema &SemaRef,
                                     const FunctionTemplateDecl *FTD,
                                     MultiLevelTemplateArgumentList &Result) {
-  if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
-    Result.addOuterTemplateArguments(
-        const_cast<FunctionTemplateDecl *>(FTD),
-        const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(
-            SemaRef.Context),
-        /*Final=*/false);
+  Result.addOuterTemplateArguments(
+      const_cast<FunctionTemplateDecl *>(FTD),
+      const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(
+          SemaRef.Context),
+      /*Final=*/false);
 
-    NestedNameSpecifier NNS = FTD->getTemplatedDecl()->getQualifier();
+  NestedNameSpecifier NNS = FTD->getTemplatedDecl()->getQualifier();
 
-    for (const Type *Ty = NNS.getKind() == NestedNameSpecifier::Kind::Type
-                              ? NNS.getAsType()
-                              : nullptr,
-                    *NextTy = nullptr;
-         Ty && Ty->isInstantiationDependentType();
-         Ty = std::exchange(NextTy, nullptr)) {
-      if (NestedNameSpecifier P = Ty->getPrefix();
-          P.getKind() == NestedNameSpecifier::Kind::Type)
-        NextTy = P.getAsType();
-      const auto *TSTy = dyn_cast<TemplateSpecializationType>(Ty);
-      if (!TSTy)
-        continue;
+  for (const Type *Ty = NNS.getKind() == NestedNameSpecifier::Kind::Type
+                            ? NNS.getAsType()
+                            : nullptr,
+                  *NextTy = nullptr;
+       Ty && Ty->isInstantiationDependentType();
+       Ty = std::exchange(NextTy, nullptr)) {
+    if (NestedNameSpecifier P = Ty->getPrefix();
+        P.getKind() == NestedNameSpecifier::Kind::Type)
+      NextTy = P.getAsType();
+    const auto *TSTy = dyn_cast<TemplateSpecializationType>(Ty);
+    if (!TSTy)
+      continue;
 
-      ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
-      // Prefer template arguments from the injected-class-type if possible.
-      // For example,
-      // ```cpp
-      // template <class... Pack> struct S {
-      //   template <class T> void foo();
-      // };
-      // template <class... Pack> template <class T>
-      //           ^^^^^^^^^^^^^ InjectedTemplateArgs
-      //           They're of kind TemplateArgument::Pack, not of
-      //           TemplateArgument::Type.
-      // void S<Pack...>::foo() {}
-      //        ^^^^^^^
-      //        TSTy->template_arguments() (which are of PackExpansionType)
-      // ```
-      // This meets the contract in
-      // TreeTransform::TryExpandParameterPacks that the template arguments
-      // for unexpanded parameters should be of a Pack kind.
-      if (TSTy->isCurrentInstantiation()) {
-        auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
-        if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
-          Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
-        else if (auto *Specialization =
-                     dyn_cast<ClassTemplateSpecializationDecl>(RD))
-          Arguments = Specialization->getTemplateInstantiationArgs().asArray();
-      }
-      Result.addOuterTemplateArguments(
-          TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
-          /*Final=*/false);
+    ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
+    // Prefer template arguments from the injected-class-type if possible.
+    // For example,
+    // ```cpp
+    // template <class... Pack> struct S {
+    //   template <class T> void foo();
+    // };
+    // template <class... Pack> template <class T>
+    //           ^^^^^^^^^^^^^ InjectedTemplateArgs
+    //           They're of kind TemplateArgument::Pack, not of
+    //           TemplateArgument::Type.
+    // void S<Pack...>::foo() {}
+    //        ^^^^^^^
+    //        TSTy->template_arguments() (which are of PackExpansionType)
+    // ```
+    // This meets the contract in
+    // TreeTransform::TryExpandParameterPacks that the template arguments
+    // for unexpanded parameters should be of a Pack kind.
+    if (TSTy->isCurrentInstantiation()) {
+      auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
+      if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
+        Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
+      else if (auto *Specialization =
+                   dyn_cast<ClassTemplateSpecializationDecl>(RD))
+        Arguments = Specialization->getTemplateInstantiationArgs().asArray();
     }
+    Result.addOuterTemplateArguments(
+        TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
+        /*Final=*/false);
   }
 
   return Response::ChangeDecl(FTD->getLexicalDeclContext());

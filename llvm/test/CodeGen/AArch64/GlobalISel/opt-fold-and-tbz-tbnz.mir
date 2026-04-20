@@ -25,17 +25,17 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %bit:gpr(s64) = G_CONSTANT i64 8
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %fold_cst:gpr(s64) = G_CONSTANT i64 8
+    %copy:gpr(i64) = COPY $x0
+    %bit:gpr(i64) = G_CONSTANT i64 8
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %fold_cst:gpr(i64) = G_CONSTANT i64 8
 
     ; tbnz (and x, 8), 3 == tbnz x, 3 because the third bit of x & 8 is 1 when
     ; the third bit of x is 1.
-    %fold_me:gpr(s64) = G_AND %copy, %fold_cst
+    %fold_me:gpr(i64) = G_AND %copy, %fold_cst
 
-    %and:gpr(s64) = G_AND %fold_me, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
+    %and:gpr(i64) = G_AND %fold_me, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(ne), %and(i64), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -63,16 +63,16 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %bit:gpr(s64) = G_CONSTANT i64 8
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %fold_cst:gpr(s64) = G_CONSTANT i64 8
+    %copy:gpr(i64) = COPY $x0
+    %bit:gpr(i64) = G_CONSTANT i64 8
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %fold_cst:gpr(i64) = G_CONSTANT i64 8
 
     ; Same as above, but with the constant on the other side.
-    %fold_me:gpr(s64) = G_AND %fold_cst, %copy
+    %fold_me:gpr(i64) = G_AND %fold_cst, %copy
 
-    %and:gpr(s64) = G_AND %fold_me, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
+    %and:gpr(i64) = G_AND %fold_me, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(ne), %and(i64), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -101,17 +101,17 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %bit:gpr(s64) = G_CONSTANT i64 8
-    %zero:gpr(s64) = G_CONSTANT i64 0
+    %copy:gpr(i64) = COPY $x0
+    %bit:gpr(i64) = G_CONSTANT i64 8
+    %zero:gpr(i64) = G_CONSTANT i64 0
 
     ; tbnz (and x, 7), 3 != tbnz x, 3, because the third bit of x & 7 is always
     ; zero.
-    %fold_cst:gpr(s64) = G_CONSTANT i64 7
+    %fold_cst:gpr(i64) = G_CONSTANT i64 7
 
-    %fold_me:gpr(s64) = G_AND %copy, %fold_cst
-    %and:gpr(s64) = G_AND %fold_me, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
+    %fold_me:gpr(i64) = G_AND %copy, %fold_cst
+    %and:gpr(i64) = G_AND %fold_me, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(ne), %and(i64), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:

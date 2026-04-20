@@ -216,6 +216,11 @@ static Error verifyOptions(const DsymutilOptions &Options) {
         "--allow and --disallow cannot be specified together",
         errc::invalid_argument);
 
+  if (Options.Flat && !Options.LinkOpts.EmbedResources.empty())
+    return make_error<StringError>(
+        "--embed-resource is not supported with --flat",
+        errc::invalid_argument);
+
   return Error::success();
 }
 
@@ -414,6 +419,27 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
 
   if (opt::Arg *BuildVariantSuffix = Args.getLastArg(OPT_build_variant_suffix))
     Options.LinkOpts.BuildVariantSuffix = BuildVariantSuffix->getValue();
+
+  for (auto *Arg : Args.filtered(OPT_embed_resource)) {
+    StringRef Val = Arg->getValue();
+    auto [Src, Dst] = Val.split('=');
+    if (Src.empty() || Dst.empty())
+      return make_error<StringError>("invalid --embed-resource argument '" +
+                                         Val +
+                                         "': expected <src-path>=<dst-path>",
+                                     inconvertibleErrorCode());
+
+    // Reject destinations that would escape the Resources directory.
+    SmallString<128> NormalizedDst(Dst);
+    sys::path::remove_dots(NormalizedDst, /*remove_dot_dot=*/true);
+    if (sys::path::is_absolute(NormalizedDst) ||
+        NormalizedDst.starts_with(".."))
+      return make_error<StringError>(
+          "invalid --embed-resource destination '" + Dst +
+              "': must be a relative path within the bundle",
+          inconvertibleErrorCode());
+    Options.LinkOpts.EmbedResources[NormalizedDst] = Src.str();
+  }
 
   for (auto *SearchPath : Args.filtered(OPT_dsym_search_path))
     Options.LinkOpts.DSYMSearchPaths.push_back(SearchPath->getValue());

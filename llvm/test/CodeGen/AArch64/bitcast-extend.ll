@@ -2,10 +2,6 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for load_zext_i8_v4bf16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for load_zext_i16_v4bf16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for load_zext_i32_v4bf16
-
 define <4 x i16> @z_i32_v4i16(i32 %x) {
 ; CHECK-SD-LABEL: z_i32_v4i16:
 ; CHECK-SD:       // %bb.0:

@@ -9,22 +9,22 @@
 define <vscale x 16 x i8> @clmul_nxv16i8(<vscale x 16 x i8> %x, <vscale x 16 x i8> %y) {
 ; CHECK-SVE-LABEL: clmul_nxv16i8:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    ptrue p0.b
-; CHECK-SVE-NEXT:    and z1.b, z1.b, #0x80
+; CHECK-SVE-NEXT:    movprfx z2, z1
 ; CHECK-SVE-NEXT:    and z2.b, z2.b, #0x2
+; CHECK-SVE-NEXT:    movprfx z3, z1
 ; CHECK-SVE-NEXT:    and z3.b, z3.b, #0x1
+; CHECK-SVE-NEXT:    movprfx z4, z1
 ; CHECK-SVE-NEXT:    and z4.b, z4.b, #0x4
+; CHECK-SVE-NEXT:    movprfx z5, z1
 ; CHECK-SVE-NEXT:    and z5.b, z5.b, #0x8
+; CHECK-SVE-NEXT:    movprfx z6, z1
 ; CHECK-SVE-NEXT:    and z6.b, z6.b, #0x10
+; CHECK-SVE-NEXT:    movprfx z7, z1
 ; CHECK-SVE-NEXT:    and z7.b, z7.b, #0x20
+; CHECK-SVE-NEXT:    ptrue p0.b
+; CHECK-SVE-NEXT:    movprfx z24, z1
 ; CHECK-SVE-NEXT:    and z24.b, z24.b, #0x40
+; CHECK-SVE-NEXT:    and z1.b, z1.b, #0x80
 ; CHECK-SVE-NEXT:    mul z2.b, p0/m, z2.b, z0.b
 ; CHECK-SVE-NEXT:    mul z3.b, p0/m, z3.b, z0.b
 ; CHECK-SVE-NEXT:    mul z4.b, p0/m, z4.b, z0.b
@@ -44,22 +44,22 @@ define <vscale x 16 x i8> @clmul_nxv16i8(<vscale x 16 x i8> %x, <vscale x 16 x i
 ;
 ; CHECK-SVE-AES-LABEL: clmul_nxv16i8:
 ; CHECK-SVE-AES:       // %bb.0:
-; CHECK-SVE-AES-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-AES-NEXT:    ptrue p0.b
-; CHECK-SVE-AES-NEXT:    and z1.b, z1.b, #0x80
+; CHECK-SVE-AES-NEXT:    movprfx z2, z1
 ; CHECK-SVE-AES-NEXT:    and z2.b, z2.b, #0x2
+; CHECK-SVE-AES-NEXT:    movprfx z3, z1
 ; CHECK-SVE-AES-NEXT:    and z3.b, z3.b, #0x1
+; CHECK-SVE-AES-NEXT:    movprfx z4, z1
 ; CHECK-SVE-AES-NEXT:    and z4.b, z4.b, #0x4
+; CHECK-SVE-AES-NEXT:    movprfx z5, z1
 ; CHECK-SVE-AES-NEXT:    and z5.b, z5.b, #0x8
+; CHECK-SVE-AES-NEXT:    movprfx z6, z1
 ; CHECK-SVE-AES-NEXT:    and z6.b, z6.b, #0x10
+; CHECK-SVE-AES-NEXT:    movprfx z7, z1
 ; CHECK-SVE-AES-NEXT:    and z7.b, z7.b, #0x20
+; CHECK-SVE-AES-NEXT:    ptrue p0.b
+; CHECK-SVE-AES-NEXT:    movprfx z24, z1
 ; CHECK-SVE-AES-NEXT:    and z24.b, z24.b, #0x40
+; CHECK-SVE-AES-NEXT:    and z1.b, z1.b, #0x80
 ; CHECK-SVE-AES-NEXT:    mul z2.b, p0/m, z2.b, z0.b
 ; CHECK-SVE-AES-NEXT:    mul z3.b, p0/m, z3.b, z0.b
 ; CHECK-SVE-AES-NEXT:    mul z4.b, p0/m, z4.b, z0.b
@@ -103,62 +103,62 @@ define <vscale x 16 x i8> @clmul_nxv16i8(<vscale x 16 x i8> %x, <vscale x 16 x i
 define <vscale x 8 x i16> @clmul_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16> %y) {
 ; CHECK-SVE-LABEL: clmul_nxv8i16:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    ptrue p0.h
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z2, z1
 ; CHECK-SVE-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SVE-NEXT:    movprfx z3, z1
 ; CHECK-SVE-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SVE-NEXT:    movprfx z4, z1
 ; CHECK-SVE-NEXT:    and z4.h, z4.h, #0x4
+; CHECK-SVE-NEXT:    movprfx z5, z1
 ; CHECK-SVE-NEXT:    and z5.h, z5.h, #0x8
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
+; CHECK-SVE-NEXT:    ptrue p0.h
+; CHECK-SVE-NEXT:    movprfx z6, z1
 ; CHECK-SVE-NEXT:    and z6.h, z6.h, #0x10
+; CHECK-SVE-NEXT:    movprfx z7, z1
 ; CHECK-SVE-NEXT:    and z7.h, z7.h, #0x20
+; CHECK-SVE-NEXT:    movprfx z24, z1
 ; CHECK-SVE-NEXT:    and z24.h, z24.h, #0x80
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.h, z25.h, #0x100
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.h, z26.h, #0x800
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.h, z27.h, #0x1000
 ; CHECK-SVE-NEXT:    mul z2.h, p0/m, z2.h, z0.h
 ; CHECK-SVE-NEXT:    mul z3.h, p0/m, z3.h, z0.h
-; CHECK-SVE-NEXT:    and z25.h, z25.h, #0x100
 ; CHECK-SVE-NEXT:    mul z4.h, p0/m, z4.h, z0.h
-; CHECK-SVE-NEXT:    mul z5.h, p0/m, z5.h, z0.h
-; CHECK-SVE-NEXT:    mov z28.d, z1.d
-; CHECK-SVE-NEXT:    mul z6.h, p0/m, z6.h, z0.h
-; CHECK-SVE-NEXT:    mul z7.h, p0/m, z7.h, z0.h
-; CHECK-SVE-NEXT:    and z26.h, z26.h, #0x800
-; CHECK-SVE-NEXT:    mul z24.h, p0/m, z24.h, z0.h
-; CHECK-SVE-NEXT:    mul z25.h, p0/m, z25.h, z0.h
-; CHECK-SVE-NEXT:    and z27.h, z27.h, #0x1000
-; CHECK-SVE-NEXT:    mov z29.d, z1.d
-; CHECK-SVE-NEXT:    mov z30.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z28, z1
 ; CHECK-SVE-NEXT:    and z28.h, z28.h, #0x40
-; CHECK-SVE-NEXT:    mul z26.h, p0/m, z26.h, z0.h
-; CHECK-SVE-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE-NEXT:    eor z3.d, z4.d, z5.d
-; CHECK-SVE-NEXT:    mul z27.h, p0/m, z27.h, z0.h
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    mul z28.h, p0/m, z28.h, z0.h
+; CHECK-SVE-NEXT:    mul z5.h, p0/m, z5.h, z0.h
+; CHECK-SVE-NEXT:    mul z6.h, p0/m, z6.h, z0.h
+; CHECK-SVE-NEXT:    movprfx z29, z1
 ; CHECK-SVE-NEXT:    and z29.h, z29.h, #0x200
+; CHECK-SVE-NEXT:    mul z7.h, p0/m, z7.h, z0.h
+; CHECK-SVE-NEXT:    mul z24.h, p0/m, z24.h, z0.h
+; CHECK-SVE-NEXT:    movprfx z30, z1
 ; CHECK-SVE-NEXT:    and z30.h, z30.h, #0x2000
+; CHECK-SVE-NEXT:    mul z25.h, p0/m, z25.h, z0.h
+; CHECK-SVE-NEXT:    mul z26.h, p0/m, z26.h, z0.h
+; CHECK-SVE-NEXT:    mul z27.h, p0/m, z27.h, z0.h
+; CHECK-SVE-NEXT:    eor z2.d, z3.d, z2.d
+; CHECK-SVE-NEXT:    mul z28.h, p0/m, z28.h, z0.h
+; CHECK-SVE-NEXT:    eor z3.d, z4.d, z5.d
+; CHECK-SVE-NEXT:    mul z29.h, p0/m, z29.h, z0.h
+; CHECK-SVE-NEXT:    movprfx z4, z1
+; CHECK-SVE-NEXT:    and z4.h, z4.h, #0x400
+; CHECK-SVE-NEXT:    mul z30.h, p0/m, z30.h, z0.h
+; CHECK-SVE-NEXT:    movprfx z5, z1
+; CHECK-SVE-NEXT:    and z5.h, z5.h, #0x4000
 ; CHECK-SVE-NEXT:    eor z6.d, z6.d, z7.d
 ; CHECK-SVE-NEXT:    eor z7.d, z24.d, z25.d
 ; CHECK-SVE-NEXT:    and z1.h, z1.h, #0x8000
-; CHECK-SVE-NEXT:    and z4.h, z4.h, #0x400
-; CHECK-SVE-NEXT:    and z5.h, z5.h, #0x4000
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    mul z29.h, p0/m, z29.h, z0.h
-; CHECK-SVE-NEXT:    mul z30.h, p0/m, z30.h, z0.h
 ; CHECK-SVE-NEXT:    eor z24.d, z26.d, z27.d
-; CHECK-SVE-NEXT:    eor z3.d, z6.d, z28.d
 ; CHECK-SVE-NEXT:    mul z4.h, p0/m, z4.h, z0.h
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
 ; CHECK-SVE-NEXT:    mul z5.h, p0/m, z5.h, z0.h
-; CHECK-SVE-NEXT:    mul z0.h, p0/m, z0.h, z1.h
+; CHECK-SVE-NEXT:    eor z3.d, z6.d, z28.d
 ; CHECK-SVE-NEXT:    eor z6.d, z7.d, z29.d
+; CHECK-SVE-NEXT:    mul z0.h, p0/m, z0.h, z1.h
 ; CHECK-SVE-NEXT:    eor z7.d, z24.d, z30.d
 ; CHECK-SVE-NEXT:    eor z1.d, z2.d, z3.d
 ; CHECK-SVE-NEXT:    eor z2.d, z6.d, z4.d
@@ -170,62 +170,62 @@ define <vscale x 8 x i16> @clmul_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ;
 ; CHECK-SVE-AES-LABEL: clmul_nxv8i16:
 ; CHECK-SVE-AES:       // %bb.0:
-; CHECK-SVE-AES-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-AES-NEXT:    ptrue p0.h
-; CHECK-SVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z25.d, z1.d
+; CHECK-SVE-AES-NEXT:    movprfx z2, z1
 ; CHECK-SVE-AES-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SVE-AES-NEXT:    movprfx z3, z1
 ; CHECK-SVE-AES-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SVE-AES-NEXT:    movprfx z4, z1
 ; CHECK-SVE-AES-NEXT:    and z4.h, z4.h, #0x4
+; CHECK-SVE-AES-NEXT:    movprfx z5, z1
 ; CHECK-SVE-AES-NEXT:    and z5.h, z5.h, #0x8
-; CHECK-SVE-AES-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z27.d, z1.d
+; CHECK-SVE-AES-NEXT:    ptrue p0.h
+; CHECK-SVE-AES-NEXT:    movprfx z6, z1
 ; CHECK-SVE-AES-NEXT:    and z6.h, z6.h, #0x10
+; CHECK-SVE-AES-NEXT:    movprfx z7, z1
 ; CHECK-SVE-AES-NEXT:    and z7.h, z7.h, #0x20
+; CHECK-SVE-AES-NEXT:    movprfx z24, z1
 ; CHECK-SVE-AES-NEXT:    and z24.h, z24.h, #0x80
+; CHECK-SVE-AES-NEXT:    movprfx z25, z1
+; CHECK-SVE-AES-NEXT:    and z25.h, z25.h, #0x100
+; CHECK-SVE-AES-NEXT:    movprfx z26, z1
+; CHECK-SVE-AES-NEXT:    and z26.h, z26.h, #0x800
+; CHECK-SVE-AES-NEXT:    movprfx z27, z1
+; CHECK-SVE-AES-NEXT:    and z27.h, z27.h, #0x1000
 ; CHECK-SVE-AES-NEXT:    mul z2.h, p0/m, z2.h, z0.h
 ; CHECK-SVE-AES-NEXT:    mul z3.h, p0/m, z3.h, z0.h
-; CHECK-SVE-AES-NEXT:    and z25.h, z25.h, #0x100
 ; CHECK-SVE-AES-NEXT:    mul z4.h, p0/m, z4.h, z0.h
-; CHECK-SVE-AES-NEXT:    mul z5.h, p0/m, z5.h, z0.h
-; CHECK-SVE-AES-NEXT:    mov z28.d, z1.d
-; CHECK-SVE-AES-NEXT:    mul z6.h, p0/m, z6.h, z0.h
-; CHECK-SVE-AES-NEXT:    mul z7.h, p0/m, z7.h, z0.h
-; CHECK-SVE-AES-NEXT:    and z26.h, z26.h, #0x800
-; CHECK-SVE-AES-NEXT:    mul z24.h, p0/m, z24.h, z0.h
-; CHECK-SVE-AES-NEXT:    mul z25.h, p0/m, z25.h, z0.h
-; CHECK-SVE-AES-NEXT:    and z27.h, z27.h, #0x1000
-; CHECK-SVE-AES-NEXT:    mov z29.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z30.d, z1.d
+; CHECK-SVE-AES-NEXT:    movprfx z28, z1
 ; CHECK-SVE-AES-NEXT:    and z28.h, z28.h, #0x40
-; CHECK-SVE-AES-NEXT:    mul z26.h, p0/m, z26.h, z0.h
-; CHECK-SVE-AES-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE-AES-NEXT:    eor z3.d, z4.d, z5.d
-; CHECK-SVE-AES-NEXT:    mul z27.h, p0/m, z27.h, z0.h
-; CHECK-SVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-AES-NEXT:    mul z28.h, p0/m, z28.h, z0.h
+; CHECK-SVE-AES-NEXT:    mul z5.h, p0/m, z5.h, z0.h
+; CHECK-SVE-AES-NEXT:    mul z6.h, p0/m, z6.h, z0.h
+; CHECK-SVE-AES-NEXT:    movprfx z29, z1
 ; CHECK-SVE-AES-NEXT:    and z29.h, z29.h, #0x200
+; CHECK-SVE-AES-NEXT:    mul z7.h, p0/m, z7.h, z0.h
+; CHECK-SVE-AES-NEXT:    mul z24.h, p0/m, z24.h, z0.h
+; CHECK-SVE-AES-NEXT:    movprfx z30, z1
 ; CHECK-SVE-AES-NEXT:    and z30.h, z30.h, #0x2000
+; CHECK-SVE-AES-NEXT:    mul z25.h, p0/m, z25.h, z0.h
+; CHECK-SVE-AES-NEXT:    mul z26.h, p0/m, z26.h, z0.h
+; CHECK-SVE-AES-NEXT:    mul z27.h, p0/m, z27.h, z0.h
+; CHECK-SVE-AES-NEXT:    eor z2.d, z3.d, z2.d
+; CHECK-SVE-AES-NEXT:    mul z28.h, p0/m, z28.h, z0.h
+; CHECK-SVE-AES-NEXT:    eor z3.d, z4.d, z5.d
+; CHECK-SVE-AES-NEXT:    mul z29.h, p0/m, z29.h, z0.h
+; CHECK-SVE-AES-NEXT:    movprfx z4, z1
+; CHECK-SVE-AES-NEXT:    and z4.h, z4.h, #0x400
+; CHECK-SVE-AES-NEXT:    mul z30.h, p0/m, z30.h, z0.h
+; CHECK-SVE-AES-NEXT:    movprfx z5, z1
+; CHECK-SVE-AES-NEXT:    and z5.h, z5.h, #0x4000
 ; CHECK-SVE-AES-NEXT:    eor z6.d, z6.d, z7.d
 ; CHECK-SVE-AES-NEXT:    eor z7.d, z24.d, z25.d
 ; CHECK-SVE-AES-NEXT:    and z1.h, z1.h, #0x8000
-; CHECK-SVE-AES-NEXT:    and z4.h, z4.h, #0x400
-; CHECK-SVE-AES-NEXT:    and z5.h, z5.h, #0x4000
-; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-AES-NEXT:    mul z29.h, p0/m, z29.h, z0.h
-; CHECK-SVE-AES-NEXT:    mul z30.h, p0/m, z30.h, z0.h
 ; CHECK-SVE-AES-NEXT:    eor z24.d, z26.d, z27.d
-; CHECK-SVE-AES-NEXT:    eor z3.d, z6.d, z28.d
 ; CHECK-SVE-AES-NEXT:    mul z4.h, p0/m, z4.h, z0.h
+; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z3.d
 ; CHECK-SVE-AES-NEXT:    mul z5.h, p0/m, z5.h, z0.h
-; CHECK-SVE-AES-NEXT:    mul z0.h, p0/m, z0.h, z1.h
+; CHECK-SVE-AES-NEXT:    eor z3.d, z6.d, z28.d
 ; CHECK-SVE-AES-NEXT:    eor z6.d, z7.d, z29.d
+; CHECK-SVE-AES-NEXT:    mul z0.h, p0/m, z0.h, z1.h
 ; CHECK-SVE-AES-NEXT:    eor z7.d, z24.d, z30.d
 ; CHECK-SVE-AES-NEXT:    eor z1.d, z2.d, z3.d
 ; CHECK-SVE-AES-NEXT:    eor z2.d, z6.d, z4.d
@@ -237,57 +237,57 @@ define <vscale x 8 x i16> @clmul_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ;
 ; CHECK-SME-STREAMING-LABEL: clmul_nxv8i16:
 ; CHECK-SME-STREAMING:       // %bb.0:
-; CHECK-SME-STREAMING-NEXT:    mov z2.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z2, z1
 ; CHECK-SME-STREAMING-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
 ; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SME-STREAMING-NEXT:    movprfx z4, z1
 ; CHECK-SME-STREAMING-NEXT:    and z4.h, z4.h, #0x8
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x20
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x10
 ; CHECK-SME-STREAMING-NEXT:    mul z2.h, z0.h, z2.h
 ; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z3.h
 ; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z4.h
 ; CHECK-SME-STREAMING-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    mul z6.h, z0.h, z6.h
 ; CHECK-SME-STREAMING-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x10
+; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
+; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x20
 ; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SME-STREAMING-NEXT:    and z4.h, z4.h, #0x80
-; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x40
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SME-STREAMING-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z3.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x200
-; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x100
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SME-STREAMING-NEXT:    mul z6.h, z0.h, z6.h
-; CHECK-SME-STREAMING-NEXT:    and z4.h, z4.h, #0x800
-; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x400
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SME-STREAMING-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x2000
-; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x1000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z1.h, z1.h, #0x4000
 ; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z3.h
 ; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x80
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x40
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x200
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x100
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x800
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x400
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x2000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x1000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x8000
+; CHECK-SME-STREAMING-NEXT:    and z1.h, z1.h, #0x4000
 ; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
 ; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
 ; CHECK-SME-STREAMING-NEXT:    mul z0.h, z0.h, z1.h
@@ -297,57 +297,57 @@ define <vscale x 8 x i16> @clmul_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ;
 ; CHECK-SME-STREAMING-SSVE-AES-LABEL: clmul_nxv8i16:
 ; CHECK-SME-STREAMING-SSVE-AES:       // %bb.0:
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z2.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z6.d, z1.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z2, z1
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z3, z1
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z4, z1
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z4.h, z4.h, #0x8
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x20
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x10
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z2.h, z0.h, z2.h
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z3.h
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z4.h
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z6.h, z0.h, z6.h
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x10
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z3, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x20
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z4.h, z4.h, #0x80
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x40
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z3.d, z6.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x200
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x100
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z6.h, z0.h, z6.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z4.h, z4.h, #0x800
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x400
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x2000
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x1000
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z1.h, z1.h, #0x4000
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z3.h
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x80
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x40
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x200
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x100
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x800
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x400
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x2000
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x1000
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x8000
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z1.h, z1.h, #0x4000
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z0.h, z0.h, z1.h
@@ -357,57 +357,57 @@ define <vscale x 8 x i16> @clmul_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ;
 ; CHECK-SVE2-LABEL: clmul_nxv8i16:
 ; CHECK-SVE2:       // %bb.0:
-; CHECK-SVE2-NEXT:    mov z2.d, z1.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
+; CHECK-SVE2-NEXT:    movprfx z2, z1
 ; CHECK-SVE2-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SVE2-NEXT:    movprfx z3, z1
 ; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SVE2-NEXT:    movprfx z4, z1
 ; CHECK-SVE2-NEXT:    and z4.h, z4.h, #0x8
+; CHECK-SVE2-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x20
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x10
 ; CHECK-SVE2-NEXT:    mul z2.h, z0.h, z2.h
 ; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z3.h
 ; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z4.h
 ; CHECK-SVE2-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    mul z6.h, z0.h, z6.h
 ; CHECK-SVE2-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x10
+; CHECK-SVE2-NEXT:    movprfx z3, z1
+; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x20
 ; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SVE2-NEXT:    and z4.h, z4.h, #0x80
-; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x40
-; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SVE2-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z3.d, z6.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x200
-; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x100
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SVE2-NEXT:    mul z6.h, z0.h, z6.h
-; CHECK-SVE2-NEXT:    and z4.h, z4.h, #0x800
-; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x400
-; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SVE2-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x2000
-; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x1000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    and z1.h, z1.h, #0x4000
 ; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z3.h
 ; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x80
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x40
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x200
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x100
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x800
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x400
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x2000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x1000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SVE2-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x8000
+; CHECK-SVE2-NEXT:    and z1.h, z1.h, #0x4000
 ; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
 ; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
 ; CHECK-SVE2-NEXT:    mul z0.h, z0.h, z1.h
@@ -417,57 +417,57 @@ define <vscale x 8 x i16> @clmul_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ;
 ; CHECK-SVE2-AES-LABEL: clmul_nxv8i16:
 ; CHECK-SVE2-AES:       // %bb.0:
-; CHECK-SVE2-AES-NEXT:    mov z2.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z6.d, z1.d
+; CHECK-SVE2-AES-NEXT:    movprfx z2, z1
 ; CHECK-SVE2-AES-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SVE2-AES-NEXT:    movprfx z3, z1
 ; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SVE2-AES-NEXT:    movprfx z4, z1
 ; CHECK-SVE2-AES-NEXT:    and z4.h, z4.h, #0x8
+; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x20
+; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
+; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x10
 ; CHECK-SVE2-AES-NEXT:    mul z2.h, z0.h, z2.h
 ; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z3.h
 ; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z4.h
 ; CHECK-SVE2-AES-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    mul z6.h, z0.h, z6.h
 ; CHECK-SVE2-AES-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE2-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x10
+; CHECK-SVE2-AES-NEXT:    movprfx z3, z1
+; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x20
 ; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SVE2-AES-NEXT:    and z4.h, z4.h, #0x80
-; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x40
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SVE2-AES-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z3.d, z6.d
-; CHECK-SVE2-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x200
-; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x100
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SVE2-AES-NEXT:    mul z6.h, z0.h, z6.h
-; CHECK-SVE2-AES-NEXT:    and z4.h, z4.h, #0x800
-; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x400
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SVE2-AES-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x2000
-; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x1000
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-AES-NEXT:    and z1.h, z1.h, #0x4000
 ; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z3.h
 ; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
+; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x80
+; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
+; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x40
+; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
+; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x200
+; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
+; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x100
+; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
+; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x800
+; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
+; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x400
+; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
+; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x2000
+; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
+; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x1000
+; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
+; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
+; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x8000
+; CHECK-SVE2-AES-NEXT:    and z1.h, z1.h, #0x4000
 ; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
 ; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
 ; CHECK-SVE2-AES-NEXT:    mul z0.h, z0.h, z1.h
@@ -481,264 +481,282 @@ define <vscale x 8 x i16> @clmul_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i1
 define <vscale x 4 x i32> @clmul_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
 ; CHECK-SVE-LABEL: clmul_nxv4i32:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    ptrue p0.s
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
+; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SVE-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_offset w29, -16
+; CHECK-SVE-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
+; CHECK-SVE-NEXT:    movprfx z2, z1
 ; CHECK-SVE-NEXT:    and z2.s, z2.s, #0x2
+; CHECK-SVE-NEXT:    movprfx z3, z1
 ; CHECK-SVE-NEXT:    and z3.s, z3.s, #0x1
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z4, z1
 ; CHECK-SVE-NEXT:    and z4.s, z4.s, #0x4
+; CHECK-SVE-NEXT:    movprfx z5, z1
 ; CHECK-SVE-NEXT:    and z5.s, z5.s, #0x8
+; CHECK-SVE-NEXT:    movprfx z6, z1
 ; CHECK-SVE-NEXT:    and z6.s, z6.s, #0x10
+; CHECK-SVE-NEXT:    movprfx z7, z1
 ; CHECK-SVE-NEXT:    and z7.s, z7.s, #0x20
-; CHECK-SVE-NEXT:    and z24.s, z24.s, #0x80
-; CHECK-SVE-NEXT:    and z25.s, z25.s, #0x100
+; CHECK-SVE-NEXT:    ptrue p0.s
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.s, z24.s, #0x40
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.s, z25.s, #0x80
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.s, z26.s, #0x100
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.s, z27.s, #0x200
+; CHECK-SVE-NEXT:    movprfx z29, z1
+; CHECK-SVE-NEXT:    and z29.s, z29.s, #0x800
 ; CHECK-SVE-NEXT:    mul z2.s, p0/m, z2.s, z0.s
 ; CHECK-SVE-NEXT:    mul z3.s, p0/m, z3.s, z0.s
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z30, z1
+; CHECK-SVE-NEXT:    and z30.s, z30.s, #0x400000
 ; CHECK-SVE-NEXT:    mul z4.s, p0/m, z4.s, z0.s
 ; CHECK-SVE-NEXT:    mul z5.s, p0/m, z5.s, z0.s
-; CHECK-SVE-NEXT:    and z26.s, z26.s, #0x40
+; CHECK-SVE-NEXT:    movprfx z31, z1
+; CHECK-SVE-NEXT:    and z31.s, z31.s, #0x800000
 ; CHECK-SVE-NEXT:    mul z6.s, p0/m, z6.s, z0.s
 ; CHECK-SVE-NEXT:    mul z7.s, p0/m, z7.s, z0.s
-; CHECK-SVE-NEXT:    mov z28.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z28, z1
+; CHECK-SVE-NEXT:    and z28.s, z28.s, #0x400
 ; CHECK-SVE-NEXT:    mul z24.s, p0/m, z24.s, z0.s
 ; CHECK-SVE-NEXT:    mul z25.s, p0/m, z25.s, z0.s
-; CHECK-SVE-NEXT:    and z27.s, z27.s, #0x200
+; CHECK-SVE-NEXT:    movprfx z8, z1
+; CHECK-SVE-NEXT:    and z8.s, z8.s, #0x2000000
 ; CHECK-SVE-NEXT:    mul z26.s, p0/m, z26.s, z0.s
 ; CHECK-SVE-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z5.d
-; CHECK-SVE-NEXT:    mov z29.d, z1.d
-; CHECK-SVE-NEXT:    and z28.s, z28.s, #0x8000
 ; CHECK-SVE-NEXT:    mul z27.s, p0/m, z27.s, z0.s
-; CHECK-SVE-NEXT:    eor z5.d, z6.d, z7.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    and z3.s, z3.s, #0x400
-; CHECK-SVE-NEXT:    eor z6.d, z24.d, z25.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    mul z28.s, p0/m, z28.s, z0.s
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z4.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    eor z4.d, z5.d, z26.d
-; CHECK-SVE-NEXT:    and z7.s, z7.s, #0x800
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    mul z3.s, p0/m, z3.s, z0.s
-; CHECK-SVE-NEXT:    eor z5.d, z6.d, z27.d
-; CHECK-SVE-NEXT:    and z24.s, z24.s, #0x1000
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    and z25.s, z25.s, #0x800000
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
-; CHECK-SVE-NEXT:    mul z7.s, p0/m, z7.s, z0.s
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z4.d
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    mul z24.s, p0/m, z24.s, z0.s
-; CHECK-SVE-NEXT:    and z26.s, z26.s, #0x40000
-; CHECK-SVE-NEXT:    and z29.s, z29.s, #0x100000
-; CHECK-SVE-NEXT:    mul z25.s, p0/m, z25.s, z0.s
-; CHECK-SVE-NEXT:    eor z3.d, z5.d, z3.d
-; CHECK-SVE-NEXT:    and z6.s, z6.s, #0x2000
-; CHECK-SVE-NEXT:    and z4.s, z4.s, #0x10000
-; CHECK-SVE-NEXT:    and z27.s, z27.s, #0x1000000
-; CHECK-SVE-NEXT:    mul z26.s, p0/m, z26.s, z0.s
+; CHECK-SVE-NEXT:    eor z3.d, z4.d, z5.d
+; CHECK-SVE-NEXT:    movprfx z5, z1
+; CHECK-SVE-NEXT:    and z5.s, z5.s, #0x1000
 ; CHECK-SVE-NEXT:    mul z29.s, p0/m, z29.s, z0.s
-; CHECK-SVE-NEXT:    mul z6.s, p0/m, z6.s, z0.s
+; CHECK-SVE-NEXT:    eor z4.d, z6.d, z7.d
+; CHECK-SVE-NEXT:    movprfx z6, z1
+; CHECK-SVE-NEXT:    and z6.s, z6.s, #0x10000
+; CHECK-SVE-NEXT:    movprfx z7, z1
+; CHECK-SVE-NEXT:    and z7.s, z7.s, #0x20000
+; CHECK-SVE-NEXT:    mul z30.s, p0/m, z30.s, z0.s
+; CHECK-SVE-NEXT:    mul z31.s, p0/m, z31.s, z0.s
+; CHECK-SVE-NEXT:    eor z25.d, z25.d, z26.d
 ; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    mul z4.s, p0/m, z4.s, z0.s
-; CHECK-SVE-NEXT:    mul z27.s, p0/m, z27.s, z0.s
-; CHECK-SVE-NEXT:    eor z5.d, z7.d, z24.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    and z3.s, z3.s, #0x20000
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z6.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    and z24.s, z24.s, #0x400000
-; CHECK-SVE-NEXT:    and z7.s, z7.s, #0x4000
-; CHECK-SVE-NEXT:    mul z3.s, p0/m, z3.s, z0.s
-; CHECK-SVE-NEXT:    and z6.s, z6.s, #0x80000
-; CHECK-SVE-NEXT:    mul z24.s, p0/m, z24.s, z0.s
-; CHECK-SVE-NEXT:    mul z7.s, p0/m, z7.s, z0.s
-; CHECK-SVE-NEXT:    eor z3.d, z4.d, z3.d
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
+; CHECK-SVE-NEXT:    mul z5.s, p0/m, z5.s, z0.s
+; CHECK-SVE-NEXT:    eor z3.d, z4.d, z24.d
+; CHECK-SVE-NEXT:    movprfx z4, z1
+; CHECK-SVE-NEXT:    and z4.s, z4.s, #0x2000
 ; CHECK-SVE-NEXT:    mul z6.s, p0/m, z6.s, z0.s
-; CHECK-SVE-NEXT:    eor z24.d, z24.d, z25.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z7.d
-; CHECK-SVE-NEXT:    and z4.s, z4.s, #0x2000000
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z26.d
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    and z25.s, z25.s, #0x4000000
-; CHECK-SVE-NEXT:    eor z7.d, z24.d, z27.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
+; CHECK-SVE-NEXT:    mul z7.s, p0/m, z7.s, z0.s
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.s, z24.s, #0x40000
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.s, z26.s, #0x1000000
+; CHECK-SVE-NEXT:    mul z28.s, p0/m, z28.s, z0.s
+; CHECK-SVE-NEXT:    mul z8.s, p0/m, z8.s, z0.s
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
+; CHECK-SVE-NEXT:    eor z3.d, z25.d, z27.d
 ; CHECK-SVE-NEXT:    mul z4.s, p0/m, z4.s, z0.s
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z6.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    and z26.s, z26.s, #0x200000
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z28.d
-; CHECK-SVE-NEXT:    mul z25.s, p0/m, z25.s, z0.s
-; CHECK-SVE-NEXT:    and z24.s, z24.s, #0x20000000
-; CHECK-SVE-NEXT:    and z6.s, z6.s, #0x8000000
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z29.d
-; CHECK-SVE-NEXT:    eor z4.d, z7.d, z4.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.s, z25.s, #0x4000
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.s, z27.s, #0x80000
+; CHECK-SVE-NEXT:    mul z24.s, p0/m, z24.s, z0.s
 ; CHECK-SVE-NEXT:    mul z26.s, p0/m, z26.s, z0.s
-; CHECK-SVE-NEXT:    and z27.s, z27.s, #0x40000000
-; CHECK-SVE-NEXT:    mul z24.s, p0/m, z24.s, z0.s
-; CHECK-SVE-NEXT:    and z1.s, z1.s, #0x80000000
-; CHECK-SVE-NEXT:    mul z6.s, p0/m, z6.s, z0.s
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z5.d
-; CHECK-SVE-NEXT:    and z7.s, z7.s, #0x10000000
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z25.d
+; CHECK-SVE-NEXT:    eor z5.d, z29.d, z5.d
+; CHECK-SVE-NEXT:    eor z6.d, z6.d, z7.d
+; CHECK-SVE-NEXT:    eor z7.d, z30.d, z31.d
+; CHECK-SVE-NEXT:    movprfx z29, z1
+; CHECK-SVE-NEXT:    and z29.s, z29.s, #0x8000
+; CHECK-SVE-NEXT:    movprfx z30, z1
+; CHECK-SVE-NEXT:    and z30.s, z30.s, #0x100000
+; CHECK-SVE-NEXT:    mul z25.s, p0/m, z25.s, z0.s
 ; CHECK-SVE-NEXT:    mul z27.s, p0/m, z27.s, z0.s
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z26.d
+; CHECK-SVE-NEXT:    movprfx z31, z1
+; CHECK-SVE-NEXT:    and z31.s, z31.s, #0x4000000
+; CHECK-SVE-NEXT:    eor z4.d, z5.d, z4.d
+; CHECK-SVE-NEXT:    eor z5.d, z6.d, z24.d
+; CHECK-SVE-NEXT:    eor z3.d, z3.d, z28.d
+; CHECK-SVE-NEXT:    eor z6.d, z7.d, z26.d
+; CHECK-SVE-NEXT:    mul z29.s, p0/m, z29.s, z0.s
+; CHECK-SVE-NEXT:    movprfx z7, z1
+; CHECK-SVE-NEXT:    and z7.s, z7.s, #0x200000
+; CHECK-SVE-NEXT:    mul z30.s, p0/m, z30.s, z0.s
+; CHECK-SVE-NEXT:    mul z31.s, p0/m, z31.s, z0.s
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.s, z24.s, #0x8000000
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z25.d
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z27.d
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
+; CHECK-SVE-NEXT:    eor z6.d, z6.d, z8.d
 ; CHECK-SVE-NEXT:    mul z7.s, p0/m, z7.s, z0.s
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z6.d
+; CHECK-SVE-NEXT:    movprfx z3, z1
+; CHECK-SVE-NEXT:    and z3.s, z3.s, #0x10000000
+; CHECK-SVE-NEXT:    mul z24.s, p0/m, z24.s, z0.s
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.s, z25.s, #0x20000000
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.s, z26.s, #0x40000000
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z29.d
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z30.d
+; CHECK-SVE-NEXT:    and z1.s, z1.s, #0x80000000
+; CHECK-SVE-NEXT:    eor z6.d, z6.d, z31.d
+; CHECK-SVE-NEXT:    mul z3.s, p0/m, z3.s, z0.s
+; CHECK-SVE-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK-SVE-NEXT:    mul z25.s, p0/m, z25.s, z0.s
+; CHECK-SVE-NEXT:    mul z26.s, p0/m, z26.s, z0.s
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z4.d
+; CHECK-SVE-NEXT:    eor z4.d, z5.d, z7.d
 ; CHECK-SVE-NEXT:    mul z0.s, p0/m, z0.s, z1.s
-; CHECK-SVE-NEXT:    eor z1.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    eor z3.d, z24.d, z27.d
-; CHECK-SVE-NEXT:    eor z2.d, z4.d, z7.d
-; CHECK-SVE-NEXT:    eor z0.d, z3.d, z0.d
+; CHECK-SVE-NEXT:    eor z5.d, z6.d, z24.d
+; CHECK-SVE-NEXT:    eor z1.d, z2.d, z4.d
+; CHECK-SVE-NEXT:    eor z2.d, z5.d, z3.d
+; CHECK-SVE-NEXT:    eor z3.d, z25.d, z26.d
 ; CHECK-SVE-NEXT:    eor z1.d, z1.d, z2.d
+; CHECK-SVE-NEXT:    eor z0.d, z3.d, z0.d
 ; CHECK-SVE-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-SVE-NEXT:    addvl sp, sp, #1
+; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-SVE-AES-LABEL: clmul_nxv4i32:
 ; CHECK-SVE-AES:       // %bb.0:
-; CHECK-SVE-AES-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-AES-NEXT:    ptrue p0.s
-; CHECK-SVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z25.d, z1.d
+; CHECK-SVE-AES-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SVE-AES-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE-AES-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK-SVE-AES-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-AES-NEXT:    .cfi_offset w29, -16
+; CHECK-SVE-AES-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
+; CHECK-SVE-AES-NEXT:    movprfx z2, z1
 ; CHECK-SVE-AES-NEXT:    and z2.s, z2.s, #0x2
+; CHECK-SVE-AES-NEXT:    movprfx z3, z1
 ; CHECK-SVE-AES-NEXT:    and z3.s, z3.s, #0x1
-; CHECK-SVE-AES-NEXT:    mov z26.d, z1.d
+; CHECK-SVE-AES-NEXT:    movprfx z4, z1
 ; CHECK-SVE-AES-NEXT:    and z4.s, z4.s, #0x4
+; CHECK-SVE-AES-NEXT:    movprfx z5, z1
 ; CHECK-SVE-AES-NEXT:    and z5.s, z5.s, #0x8
+; CHECK-SVE-AES-NEXT:    movprfx z6, z1
 ; CHECK-SVE-AES-NEXT:    and z6.s, z6.s, #0x10
+; CHECK-SVE-AES-NEXT:    movprfx z7, z1
 ; CHECK-SVE-AES-NEXT:    and z7.s, z7.s, #0x20
-; CHECK-SVE-AES-NEXT:    and z24.s, z24.s, #0x80
-; CHECK-SVE-AES-NEXT:    and z25.s, z25.s, #0x100
+; CHECK-SVE-AES-NEXT:    ptrue p0.s
+; CHECK-SVE-AES-NEXT:    movprfx z24, z1
+; CHECK-SVE-AES-NEXT:    and z24.s, z24.s, #0x40
+; CHECK-SVE-AES-NEXT:    movprfx z25, z1
+; CHECK-SVE-AES-NEXT:    and z25.s, z25.s, #0x80
+; CHECK-SVE-AES-NEXT:    movprfx z26, z1
+; CHECK-SVE-AES-NEXT:    and z26.s, z26.s, #0x100
+; CHECK-SVE-AES-NEXT:    movprfx z27, z1
+; CHECK-SVE-AES-NEXT:    and z27.s, z27.s, #0x200
+; CHECK-SVE-AES-NEXT:    movprfx z29, z1
+; CHECK-SVE-AES-NEXT:    and z29.s, z29.s, #0x800
 ; CHECK-SVE-AES-NEXT:    mul z2.s, p0/m, z2.s, z0.s
 ; CHECK-SVE-AES-NEXT:    mul z3.s, p0/m, z3.s, z0.s
-; CHECK-SVE-AES-NEXT:    mov z27.d, z1.d
+; CHECK-SVE-AES-NEXT:    movprfx z30, z1
+; CHECK-SVE-AES-NEXT:    and z30.s, z30.s, #0x400000
 ; CHECK-SVE-AES-NEXT:    mul z4.s, p0/m, z4.s, z0.s
 ; CHECK-SVE-AES-NEXT:    mul z5.s, p0/m, z5.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z26.s, z26.s, #0x40
+; CHECK-SVE-AES-NEXT:    movprfx z31, z1
+; CHECK-SVE-AES-NEXT:    and z31.s, z31.s, #0x800000
 ; CHECK-SVE-AES-NEXT:    mul z6.s, p0/m, z6.s, z0.s
 ; CHECK-SVE-AES-NEXT:    mul z7.s, p0/m, z7.s, z0.s
-; CHECK-SVE-AES-NEXT:    mov z28.d, z1.d
+; CHECK-SVE-AES-NEXT:    movprfx z28, z1
+; CHECK-SVE-AES-NEXT:    and z28.s, z28.s, #0x400
 ; CHECK-SVE-AES-NEXT:    mul z24.s, p0/m, z24.s, z0.s
 ; CHECK-SVE-AES-NEXT:    mul z25.s, p0/m, z25.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z27.s, z27.s, #0x200
+; CHECK-SVE-AES-NEXT:    movprfx z8, z1
+; CHECK-SVE-AES-NEXT:    and z8.s, z8.s, #0x2000000
 ; CHECK-SVE-AES-NEXT:    mul z26.s, p0/m, z26.s, z0.s
 ; CHECK-SVE-AES-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-AES-NEXT:    eor z4.d, z4.d, z5.d
-; CHECK-SVE-AES-NEXT:    mov z29.d, z1.d
-; CHECK-SVE-AES-NEXT:    and z28.s, z28.s, #0x8000
 ; CHECK-SVE-AES-NEXT:    mul z27.s, p0/m, z27.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z5.d, z6.d, z7.d
-; CHECK-SVE-AES-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-AES-NEXT:    and z3.s, z3.s, #0x400
-; CHECK-SVE-AES-NEXT:    eor z6.d, z24.d, z25.d
-; CHECK-SVE-AES-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-AES-NEXT:    mul z28.s, p0/m, z28.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z4.d
-; CHECK-SVE-AES-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-AES-NEXT:    eor z4.d, z5.d, z26.d
-; CHECK-SVE-AES-NEXT:    and z7.s, z7.s, #0x800
-; CHECK-SVE-AES-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-AES-NEXT:    mul z3.s, p0/m, z3.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z5.d, z6.d, z27.d
-; CHECK-SVE-AES-NEXT:    and z24.s, z24.s, #0x1000
-; CHECK-SVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-AES-NEXT:    and z25.s, z25.s, #0x800000
-; CHECK-SVE-AES-NEXT:    mov z27.d, z1.d
-; CHECK-SVE-AES-NEXT:    mul z7.s, p0/m, z7.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z4.d
-; CHECK-SVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-AES-NEXT:    mul z24.s, p0/m, z24.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z26.s, z26.s, #0x40000
-; CHECK-SVE-AES-NEXT:    and z29.s, z29.s, #0x100000
-; CHECK-SVE-AES-NEXT:    mul z25.s, p0/m, z25.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z3.d, z5.d, z3.d
-; CHECK-SVE-AES-NEXT:    and z6.s, z6.s, #0x2000
-; CHECK-SVE-AES-NEXT:    and z4.s, z4.s, #0x10000
-; CHECK-SVE-AES-NEXT:    and z27.s, z27.s, #0x1000000
-; CHECK-SVE-AES-NEXT:    mul z26.s, p0/m, z26.s, z0.s
+; CHECK-SVE-AES-NEXT:    eor z3.d, z4.d, z5.d
+; CHECK-SVE-AES-NEXT:    movprfx z5, z1
+; CHECK-SVE-AES-NEXT:    and z5.s, z5.s, #0x1000
 ; CHECK-SVE-AES-NEXT:    mul z29.s, p0/m, z29.s, z0.s
-; CHECK-SVE-AES-NEXT:    mul z6.s, p0/m, z6.s, z0.s
+; CHECK-SVE-AES-NEXT:    eor z4.d, z6.d, z7.d
+; CHECK-SVE-AES-NEXT:    movprfx z6, z1
+; CHECK-SVE-AES-NEXT:    and z6.s, z6.s, #0x10000
+; CHECK-SVE-AES-NEXT:    movprfx z7, z1
+; CHECK-SVE-AES-NEXT:    and z7.s, z7.s, #0x20000
+; CHECK-SVE-AES-NEXT:    mul z30.s, p0/m, z30.s, z0.s
+; CHECK-SVE-AES-NEXT:    mul z31.s, p0/m, z31.s, z0.s
+; CHECK-SVE-AES-NEXT:    eor z25.d, z25.d, z26.d
 ; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-AES-NEXT:    mul z4.s, p0/m, z4.s, z0.s
-; CHECK-SVE-AES-NEXT:    mul z27.s, p0/m, z27.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z5.d, z7.d, z24.d
-; CHECK-SVE-AES-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-AES-NEXT:    and z3.s, z3.s, #0x20000
-; CHECK-SVE-AES-NEXT:    eor z5.d, z5.d, z6.d
-; CHECK-SVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-AES-NEXT:    and z24.s, z24.s, #0x400000
-; CHECK-SVE-AES-NEXT:    and z7.s, z7.s, #0x4000
-; CHECK-SVE-AES-NEXT:    mul z3.s, p0/m, z3.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z6.s, z6.s, #0x80000
-; CHECK-SVE-AES-NEXT:    mul z24.s, p0/m, z24.s, z0.s
-; CHECK-SVE-AES-NEXT:    mul z7.s, p0/m, z7.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z3.d, z4.d, z3.d
-; CHECK-SVE-AES-NEXT:    mov z4.d, z1.d
+; CHECK-SVE-AES-NEXT:    mul z5.s, p0/m, z5.s, z0.s
+; CHECK-SVE-AES-NEXT:    eor z3.d, z4.d, z24.d
+; CHECK-SVE-AES-NEXT:    movprfx z4, z1
+; CHECK-SVE-AES-NEXT:    and z4.s, z4.s, #0x2000
 ; CHECK-SVE-AES-NEXT:    mul z6.s, p0/m, z6.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z24.d, z24.d, z25.d
-; CHECK-SVE-AES-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-AES-NEXT:    eor z5.d, z5.d, z7.d
-; CHECK-SVE-AES-NEXT:    and z4.s, z4.s, #0x2000000
-; CHECK-SVE-AES-NEXT:    eor z3.d, z3.d, z26.d
-; CHECK-SVE-AES-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-AES-NEXT:    and z25.s, z25.s, #0x4000000
-; CHECK-SVE-AES-NEXT:    eor z7.d, z24.d, z27.d
-; CHECK-SVE-AES-NEXT:    mov z24.d, z1.d
+; CHECK-SVE-AES-NEXT:    mul z7.s, p0/m, z7.s, z0.s
+; CHECK-SVE-AES-NEXT:    movprfx z24, z1
+; CHECK-SVE-AES-NEXT:    and z24.s, z24.s, #0x40000
+; CHECK-SVE-AES-NEXT:    movprfx z26, z1
+; CHECK-SVE-AES-NEXT:    and z26.s, z26.s, #0x1000000
+; CHECK-SVE-AES-NEXT:    mul z28.s, p0/m, z28.s, z0.s
+; CHECK-SVE-AES-NEXT:    mul z8.s, p0/m, z8.s, z0.s
+; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z3.d
+; CHECK-SVE-AES-NEXT:    eor z3.d, z25.d, z27.d
 ; CHECK-SVE-AES-NEXT:    mul z4.s, p0/m, z4.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z3.d, z3.d, z6.d
-; CHECK-SVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-AES-NEXT:    and z26.s, z26.s, #0x200000
-; CHECK-SVE-AES-NEXT:    mov z27.d, z1.d
-; CHECK-SVE-AES-NEXT:    eor z5.d, z5.d, z28.d
-; CHECK-SVE-AES-NEXT:    mul z25.s, p0/m, z25.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z24.s, z24.s, #0x20000000
-; CHECK-SVE-AES-NEXT:    and z6.s, z6.s, #0x8000000
-; CHECK-SVE-AES-NEXT:    eor z3.d, z3.d, z29.d
-; CHECK-SVE-AES-NEXT:    eor z4.d, z7.d, z4.d
-; CHECK-SVE-AES-NEXT:    mov z7.d, z1.d
+; CHECK-SVE-AES-NEXT:    movprfx z25, z1
+; CHECK-SVE-AES-NEXT:    and z25.s, z25.s, #0x4000
+; CHECK-SVE-AES-NEXT:    movprfx z27, z1
+; CHECK-SVE-AES-NEXT:    and z27.s, z27.s, #0x80000
+; CHECK-SVE-AES-NEXT:    mul z24.s, p0/m, z24.s, z0.s
 ; CHECK-SVE-AES-NEXT:    mul z26.s, p0/m, z26.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z27.s, z27.s, #0x40000000
-; CHECK-SVE-AES-NEXT:    mul z24.s, p0/m, z24.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z1.s, z1.s, #0x80000000
-; CHECK-SVE-AES-NEXT:    mul z6.s, p0/m, z6.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z5.d
-; CHECK-SVE-AES-NEXT:    and z7.s, z7.s, #0x10000000
-; CHECK-SVE-AES-NEXT:    eor z4.d, z4.d, z25.d
+; CHECK-SVE-AES-NEXT:    eor z5.d, z29.d, z5.d
+; CHECK-SVE-AES-NEXT:    eor z6.d, z6.d, z7.d
+; CHECK-SVE-AES-NEXT:    eor z7.d, z30.d, z31.d
+; CHECK-SVE-AES-NEXT:    movprfx z29, z1
+; CHECK-SVE-AES-NEXT:    and z29.s, z29.s, #0x8000
+; CHECK-SVE-AES-NEXT:    movprfx z30, z1
+; CHECK-SVE-AES-NEXT:    and z30.s, z30.s, #0x100000
+; CHECK-SVE-AES-NEXT:    mul z25.s, p0/m, z25.s, z0.s
 ; CHECK-SVE-AES-NEXT:    mul z27.s, p0/m, z27.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z3.d, z3.d, z26.d
+; CHECK-SVE-AES-NEXT:    movprfx z31, z1
+; CHECK-SVE-AES-NEXT:    and z31.s, z31.s, #0x4000000
+; CHECK-SVE-AES-NEXT:    eor z4.d, z5.d, z4.d
+; CHECK-SVE-AES-NEXT:    eor z5.d, z6.d, z24.d
+; CHECK-SVE-AES-NEXT:    eor z3.d, z3.d, z28.d
+; CHECK-SVE-AES-NEXT:    eor z6.d, z7.d, z26.d
+; CHECK-SVE-AES-NEXT:    mul z29.s, p0/m, z29.s, z0.s
+; CHECK-SVE-AES-NEXT:    movprfx z7, z1
+; CHECK-SVE-AES-NEXT:    and z7.s, z7.s, #0x200000
+; CHECK-SVE-AES-NEXT:    mul z30.s, p0/m, z30.s, z0.s
+; CHECK-SVE-AES-NEXT:    mul z31.s, p0/m, z31.s, z0.s
+; CHECK-SVE-AES-NEXT:    movprfx z24, z1
+; CHECK-SVE-AES-NEXT:    and z24.s, z24.s, #0x8000000
+; CHECK-SVE-AES-NEXT:    eor z4.d, z4.d, z25.d
+; CHECK-SVE-AES-NEXT:    eor z5.d, z5.d, z27.d
+; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z3.d
+; CHECK-SVE-AES-NEXT:    eor z6.d, z6.d, z8.d
 ; CHECK-SVE-AES-NEXT:    mul z7.s, p0/m, z7.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z4.d, z4.d, z6.d
+; CHECK-SVE-AES-NEXT:    movprfx z3, z1
+; CHECK-SVE-AES-NEXT:    and z3.s, z3.s, #0x10000000
+; CHECK-SVE-AES-NEXT:    mul z24.s, p0/m, z24.s, z0.s
+; CHECK-SVE-AES-NEXT:    movprfx z25, z1
+; CHECK-SVE-AES-NEXT:    and z25.s, z25.s, #0x20000000
+; CHECK-SVE-AES-NEXT:    movprfx z26, z1
+; CHECK-SVE-AES-NEXT:    and z26.s, z26.s, #0x40000000
+; CHECK-SVE-AES-NEXT:    eor z4.d, z4.d, z29.d
+; CHECK-SVE-AES-NEXT:    eor z5.d, z5.d, z30.d
+; CHECK-SVE-AES-NEXT:    and z1.s, z1.s, #0x80000000
+; CHECK-SVE-AES-NEXT:    eor z6.d, z6.d, z31.d
+; CHECK-SVE-AES-NEXT:    mul z3.s, p0/m, z3.s, z0.s
+; CHECK-SVE-AES-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK-SVE-AES-NEXT:    mul z25.s, p0/m, z25.s, z0.s
+; CHECK-SVE-AES-NEXT:    mul z26.s, p0/m, z26.s, z0.s
+; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z4.d
+; CHECK-SVE-AES-NEXT:    eor z4.d, z5.d, z7.d
 ; CHECK-SVE-AES-NEXT:    mul z0.s, p0/m, z0.s, z1.s
-; CHECK-SVE-AES-NEXT:    eor z1.d, z2.d, z3.d
-; CHECK-SVE-AES-NEXT:    eor z3.d, z24.d, z27.d
-; CHECK-SVE-AES-NEXT:    eor z2.d, z4.d, z7.d
-; CHECK-SVE-AES-NEXT:    eor z0.d, z3.d, z0.d
+; CHECK-SVE-AES-NEXT:    eor z5.d, z6.d, z24.d
+; CHECK-SVE-AES-NEXT:    eor z1.d, z2.d, z4.d
+; CHECK-SVE-AES-NEXT:    eor z2.d, z5.d, z3.d
+; CHECK-SVE-AES-NEXT:    eor z3.d, z25.d, z26.d
 ; CHECK-SVE-AES-NEXT:    eor z1.d, z1.d, z2.d
+; CHECK-SVE-AES-NEXT:    eor z0.d, z3.d, z0.d
 ; CHECK-SVE-AES-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-SVE-AES-NEXT:    addvl sp, sp, #1
+; CHECK-SVE-AES-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-AES-NEXT:    ret
 ;
 ; CHECK-SME-STREAMING-LABEL: clmul_nxv4i32:
@@ -775,261 +793,271 @@ define <vscale x 4 x i32> @clmul_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i3
 define <vscale x 2 x i64> @clmul_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y) {
 ; CHECK-SVE-LABEL: clmul_nxv2i64:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    ptrue p0.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
+; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SVE-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_offset w29, -16
+; CHECK-SVE-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
+; CHECK-SVE-NEXT:    movprfx z2, z1
 ; CHECK-SVE-NEXT:    and z2.d, z2.d, #0x2
+; CHECK-SVE-NEXT:    movprfx z3, z1
 ; CHECK-SVE-NEXT:    and z3.d, z3.d, #0x1
+; CHECK-SVE-NEXT:    movprfx z4, z1
 ; CHECK-SVE-NEXT:    and z4.d, z4.d, #0x4
+; CHECK-SVE-NEXT:    movprfx z5, z1
 ; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x8
+; CHECK-SVE-NEXT:    ptrue p0.d
+; CHECK-SVE-NEXT:    movprfx z6, z1
 ; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x10
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z7, z1
 ; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x20
-; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x40
-; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x80
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x80
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x100
 ; CHECK-SVE-NEXT:    mul z2.d, p0/m, z2.d, z0.d
 ; CHECK-SVE-NEXT:    mul z3.d, p0/m, z3.d, z0.d
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x40
 ; CHECK-SVE-NEXT:    mul z4.d, p0/m, z4.d, z0.d
 ; CHECK-SVE-NEXT:    mul z5.d, p0/m, z5.d, z0.d
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x100
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x200
 ; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
 ; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    mov z28.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z28, z1
+; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x800
 ; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
 ; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
-; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x20000
+; CHECK-SVE-NEXT:    movprfx z29, z1
+; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x1000
 ; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
-; CHECK-SVE-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE-NEXT:    mov z29.d, z1.d
-; CHECK-SVE-NEXT:    eor z3.d, z4.d, z5.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x400000
 ; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
-; CHECK-SVE-NEXT:    eor z4.d, z6.d, z7.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x800000
-; CHECK-SVE-NEXT:    mov z30.d, z1.d
-; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
-; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x200
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x800
-; CHECK-SVE-NEXT:    eor z3.d, z4.d, z24.d
-; CHECK-SVE-NEXT:    eor z4.d, z25.d, z26.d
-; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
-; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x1000
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    mul z5.d, p0/m, z5.d, z0.d
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    and z30.d, z30.d, #0x800000000
-; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x2000
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x10000
-; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x400
-; CHECK-SVE-NEXT:    mul z30.d, p0/m, z30.d, z0.d
+; CHECK-SVE-NEXT:    eor z2.d, z3.d, z2.d
 ; CHECK-SVE-NEXT:    eor z3.d, z4.d, z5.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
-; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z4, z1
+; CHECK-SVE-NEXT:    and z4.d, z4.d, #0x400
+; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
+; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z5, z1
+; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x2000
 ; CHECK-SVE-NEXT:    eor z6.d, z6.d, z7.d
-; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x40000
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    and z4.d, z4.d, #0x4000
-; CHECK-SVE-NEXT:    eor z6.d, z6.d, z25.d
-; CHECK-SVE-NEXT:    mul z5.d, p0/m, z5.d, z0.d
-; CHECK-SVE-NEXT:    eor z25.d, z26.d, z27.d
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
+; CHECK-SVE-NEXT:    eor z7.d, z24.d, z25.d
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x10000
+; CHECK-SVE-NEXT:    movprfx z30, z1
+; CHECK-SVE-NEXT:    and z30.d, z30.d, #0x80000000
 ; CHECK-SVE-NEXT:    mul z4.d, p0/m, z4.d, z0.d
-; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x80000
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z24.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x1000000
-; CHECK-SVE-NEXT:    eor z5.d, z25.d, z5.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x8000
-; CHECK-SVE-NEXT:    eor z4.d, z6.d, z4.d
-; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x2000000
-; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
-; CHECK-SVE-NEXT:    eor z6.d, z28.d, z29.d
-; CHECK-SVE-NEXT:    mov z28.d, z1.d
-; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x100000
-; CHECK-SVE-NEXT:    mov z29.d, z1.d
 ; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
-; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z7.d
-; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x4000000
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
-; CHECK-SVE-NEXT:    eor z6.d, z6.d, z27.d
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
-; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x40000000
-; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
-; CHECK-SVE-NEXT:    eor z3.d, z4.d, z26.d
-; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x200000
-; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x20000000
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    eor z4.d, z5.d, z25.d
-; CHECK-SVE-NEXT:    eor z5.d, z6.d, z24.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
-; CHECK-SVE-NEXT:    eor z3.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x4000000000
-; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x80000000
-; CHECK-SVE-NEXT:    eor z2.d, z5.d, z28.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    mov z28.d, z1.d
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z7.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x2000000000
-; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
-; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x100000000
-; CHECK-SVE-NEXT:    eor z24.d, z27.d, z29.d
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
-; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
-; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x8000000000
-; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x8000000
-; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
-; CHECK-SVE-NEXT:    mov z29.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z3, z1
+; CHECK-SVE-NEXT:    and z3.d, z3.d, #0x4000
 ; CHECK-SVE-NEXT:    mul z5.d, p0/m, z5.d, z0.d
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z4.d
-; CHECK-SVE-NEXT:    eor z6.d, z24.d, z6.d
-; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x200000000
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
+; CHECK-SVE-NEXT:    eor z6.d, z6.d, z26.d
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x20000
+; CHECK-SVE-NEXT:    eor z7.d, z7.d, z27.d
+; CHECK-SVE-NEXT:    eor z24.d, z28.d, z29.d
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x400000
+; CHECK-SVE-NEXT:    mul z3.d, p0/m, z3.d, z0.d
+; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z29, z1
+; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x80000
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z6.d
+; CHECK-SVE-NEXT:    movprfx z6, z1
+; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x800000
+; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
+; CHECK-SVE-NEXT:    eor z4.d, z7.d, z4.d
+; CHECK-SVE-NEXT:    movprfx z7, z1
+; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x40000
+; CHECK-SVE-NEXT:    eor z5.d, z24.d, z5.d
+; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x40000000
+; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
+; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z28, z1
+; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x8000
+; CHECK-SVE-NEXT:    movprfx z31, z1
+; CHECK-SVE-NEXT:    and z31.d, z31.d, #0x100000
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z4.d
+; CHECK-SVE-NEXT:    movprfx z4, z1
+; CHECK-SVE-NEXT:    and z4.d, z4.d, #0x1000000
 ; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
-; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x10000000
+; CHECK-SVE-NEXT:    eor z3.d, z5.d, z3.d
+; CHECK-SVE-NEXT:    movprfx z5, z1
+; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x20000000
 ; CHECK-SVE-NEXT:    eor z25.d, z25.d, z26.d
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    eor z5.d, z6.d, z5.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
-; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x400000000
-; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x20000000000
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z7.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x10000000000
-; CHECK-SVE-NEXT:    eor z4.d, z25.d, z28.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x2000000
 ; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z27.d
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
-; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
-; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x40000000000
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z29.d
-; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
-; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x400000000000
-; CHECK-SVE-NEXT:    mov z28.d, z1.d
-; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x800000000000
-; CHECK-SVE-NEXT:    mov z29.d, z1.d
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z24.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
-; CHECK-SVE-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x400000000000000
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z6.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
-; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x1000000000
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z30.d
-; CHECK-SVE-NEXT:    mov z30.d, z1.d
 ; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
-; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x200000000000
-; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x80000000000
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z26.d
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
-; CHECK-SVE-NEXT:    and z30.d, z30.d, #0x800000000000000
-; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
-; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x1000000000000
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z7.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
+; CHECK-SVE-NEXT:    mul z4.d, p0/m, z4.d, z0.d
+; CHECK-SVE-NEXT:    eor z6.d, z27.d, z6.d
 ; CHECK-SVE-NEXT:    mul z30.d, p0/m, z30.d, z0.d
-; CHECK-SVE-NEXT:    eor z3.d, z5.d, z24.d
-; CHECK-SVE-NEXT:    eor z5.d, z25.d, z27.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
+; CHECK-SVE-NEXT:    mul z5.d, p0/m, z5.d, z0.d
+; CHECK-SVE-NEXT:    eor z7.d, z25.d, z7.d
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x4000000
 ; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
-; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x2000000000000
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z6.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x100000000000000
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x100000000
+; CHECK-SVE-NEXT:    mul z31.d, p0/m, z31.d, z0.d
+; CHECK-SVE-NEXT:    eor z3.d, z3.d, z28.d
+; CHECK-SVE-NEXT:    movprfx z28, z1
+; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x400000000
+; CHECK-SVE-NEXT:    movprfx z8, z1
+; CHECK-SVE-NEXT:    and z8.d, z8.d, #0x800000000000000
+; CHECK-SVE-NEXT:    eor z4.d, z6.d, z4.d
+; CHECK-SVE-NEXT:    eor z6.d, z7.d, z29.d
+; CHECK-SVE-NEXT:    movprfx z7, z1
+; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x200000
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z24.d
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x8000000
+; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
+; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z29, z1
+; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x200000000
 ; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x200000000000000
-; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x100000000000
 ; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x4000000000000
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z26.d
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z26.d
+; CHECK-SVE-NEXT:    eor z6.d, z6.d, z31.d
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z30.d
 ; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
-; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
-; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
-; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x8000000000000
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z7.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z27.d
-; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x10000000000000
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x10000000
+; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
+; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z30, z1
+; CHECK-SVE-NEXT:    and z30.d, z30.d, #0x200000000000000
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z25.d
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x800000000000
+; CHECK-SVE-NEXT:    movprfx z31, z1
+; CHECK-SVE-NEXT:    and z31.d, z31.d, #0x400000000000000
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z27.d
+; CHECK-SVE-NEXT:    eor z3.d, z6.d, z7.d
 ; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z6.d
-; CHECK-SVE-NEXT:    eor z6.d, z24.d, z25.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    eor z3.d, z4.d, z29.d
-; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x20000000000000
-; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x1000000000000000
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z26.d
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    eor z6.d, z6.d, z28.d
-; CHECK-SVE-NEXT:    mov z28.d, z1.d
-; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z6, z1
+; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x800000000
+; CHECK-SVE-NEXT:    movprfx z7, z1
+; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x2000000000
+; CHECK-SVE-NEXT:    mul z30.d, p0/m, z30.d, z0.d
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z24.d
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x4000000000
 ; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z7.d
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x40000000000000
-; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x2000000000000000
-; CHECK-SVE-NEXT:    eor z6.d, z6.d, z30.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    mov z30.d, z1.d
-; CHECK-SVE-NEXT:    and z1.d, z1.d, #0x8000000000000000
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z29.d
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
+; CHECK-SVE-NEXT:    movprfx z3, z1
+; CHECK-SVE-NEXT:    and z3.d, z3.d, #0x400000000000
+; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
+; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z29, z1
+; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x100000000000000
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z26.d
+; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x8000000000
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z28.d
+; CHECK-SVE-NEXT:    movprfx z27, z0
+; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z3.d
+; CHECK-SVE-NEXT:    movprfx z28, z1
+; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x1000000000000
+; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
+; CHECK-SVE-NEXT:    mul z31.d, p0/m, z31.d, z0.d
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z4.d
+; CHECK-SVE-NEXT:    movprfx z4, z1
+; CHECK-SVE-NEXT:    and z4.d, z4.d, #0x10000000000
+; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
+; CHECK-SVE-NEXT:    eor z3.d, z5.d, z6.d
+; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z5, z1
+; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x2000000000000
+; CHECK-SVE-NEXT:    eor z6.d, z7.d, z24.d
+; CHECK-SVE-NEXT:    eor z24.d, z27.d, z25.d
+; CHECK-SVE-NEXT:    movprfx z7, z1
+; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x20000000000
+; CHECK-SVE-NEXT:    mul z4.d, p0/m, z4.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x4000000000000
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x1000000000
+; CHECK-SVE-NEXT:    mul z5.d, p0/m, z5.d, z0.d
+; CHECK-SVE-NEXT:    mul z8.d, p0/m, z8.d, z0.d
+; CHECK-SVE-NEXT:    eor z6.d, z6.d, z26.d
+; CHECK-SVE-NEXT:    eor z24.d, z24.d, z28.d
+; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x40000000000
+; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z28, z1
+; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x8000000000000
+; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
+; CHECK-SVE-NEXT:    eor z4.d, z6.d, z4.d
+; CHECK-SVE-NEXT:    eor z5.d, z24.d, z5.d
+; CHECK-SVE-NEXT:    movprfx z6, z1
+; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x80000000000
+; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x10000000000000
+; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z7.d
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z27.d
+; CHECK-SVE-NEXT:    eor z7.d, z29.d, z30.d
+; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x100000000000
+; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z29, z1
+; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x20000000000000
+; CHECK-SVE-NEXT:    movprfx z30, z1
+; CHECK-SVE-NEXT:    and z30.d, z30.d, #0x1000000000000000
+; CHECK-SVE-NEXT:    eor z3.d, z3.d, z25.d
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z26.d
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z28.d
+; CHECK-SVE-NEXT:    eor z7.d, z7.d, z31.d
+; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x200000000000
+; CHECK-SVE-NEXT:    movprfx z28, z1
+; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x40000000000000
+; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
+; CHECK-SVE-NEXT:    mul z30.d, p0/m, z30.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z31, z1
+; CHECK-SVE-NEXT:    and z31.d, z31.d, #0x2000000000000000
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z6.d
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z24.d
+; CHECK-SVE-NEXT:    eor z6.d, z7.d, z8.d
 ; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
 ; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z24.d
+; CHECK-SVE-NEXT:    movprfx z7, z1
 ; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x80000000000000
-; CHECK-SVE-NEXT:    and z30.d, z30.d, #0x4000000000000000
-; CHECK-SVE-NEXT:    eor z6.d, z6.d, z25.d
+; CHECK-SVE-NEXT:    mul z31.d, p0/m, z31.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x4000000000000000
+; CHECK-SVE-NEXT:    and z1.d, z1.d, #0x8000000000000000
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z27.d
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z29.d
+; CHECK-SVE-NEXT:    eor z6.d, z6.d, z30.d
 ; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    mul z30.d, p0/m, z30.d, z0.d
-; CHECK-SVE-NEXT:    eor z4.d, z5.d, z26.d
-; CHECK-SVE-NEXT:    eor z5.d, z6.d, z28.d
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
+; CHECK-SVE-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
 ; CHECK-SVE-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; CHECK-SVE-NEXT:    eor z3.d, z4.d, z26.d
+; CHECK-SVE-NEXT:    eor z4.d, z5.d, z28.d
+; CHECK-SVE-NEXT:    eor z5.d, z6.d, z31.d
 ; CHECK-SVE-NEXT:    eor z1.d, z2.d, z3.d
 ; CHECK-SVE-NEXT:    eor z2.d, z4.d, z7.d
-; CHECK-SVE-NEXT:    eor z3.d, z5.d, z30.d
+; CHECK-SVE-NEXT:    eor z3.d, z5.d, z24.d
 ; CHECK-SVE-NEXT:    eor z1.d, z1.d, z2.d
 ; CHECK-SVE-NEXT:    eor z0.d, z3.d, z0.d
 ; CHECK-SVE-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-SVE-NEXT:    addvl sp, sp, #1
+; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-SVE-AES-LABEL: clmul_nxv2i64:
@@ -1041,225 +1069,225 @@ define <vscale x 2 x i64> @clmul_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ;
 ; CHECK-SME-STREAMING-LABEL: clmul_nxv2i64:
 ; CHECK-SME-STREAMING:       // %bb.0:
-; CHECK-SME-STREAMING-NEXT:    mov z2.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z2, z1
 ; CHECK-SME-STREAMING-NEXT:    and z2.d, z2.d, #0x2
+; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
 ; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x1
+; CHECK-SME-STREAMING-NEXT:    movprfx z4, z1
 ; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x8
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x4
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x20
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10
 ; CHECK-SME-STREAMING-NEXT:    mul z2.d, z0.d, z2.d
 ; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
 ; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
 ; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
 ; CHECK-SME-STREAMING-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x10
+; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
+; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x20
 ; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x80
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x40
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z3.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x200
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x800
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x400
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x2000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x8000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x4000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x20000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x80000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x40000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x200000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x800000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x400000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x2000000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x8000000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x4000000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x20000000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x80000000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x40000000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x200000000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x800000000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x400000000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x2000000000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x8000000000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x4000000000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x20000000000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10000000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x80000000000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x40000000000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x200000000000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100000000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x800000000000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x400000000000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x2000000000000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000000000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x8000000000000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x4000000000000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x20000000000000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10000000000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x80000000000000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x40000000000000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x200000000000000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100000000000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x800000000000000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x400000000000000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x2000000000000000
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000000000000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z1.d, z1.d, #0x4000000000000000
 ; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
 ; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x80
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x40
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x200
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x800
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x400
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x2000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x8000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x4000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x20000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x80000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x40000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x200000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x800000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x400000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x2000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x8000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x4000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x20000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x80000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x40000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x200000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x800000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x400000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x2000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x8000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x4000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x20000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x80000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x40000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x200000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x800000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x400000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x2000000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x8000000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x4000000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x20000000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10000000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x80000000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x40000000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x200000000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100000000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x800000000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x400000000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x2000000000000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000000000000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x8000000000000000
+; CHECK-SME-STREAMING-NEXT:    and z1.d, z1.d, #0x4000000000000000
 ; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
 ; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
 ; CHECK-SME-STREAMING-NEXT:    mul z0.d, z0.d, z1.d
@@ -1276,225 +1304,225 @@ define <vscale x 2 x i64> @clmul_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ;
 ; CHECK-SVE2-LABEL: clmul_nxv2i64:
 ; CHECK-SVE2:       // %bb.0:
-; CHECK-SVE2-NEXT:    mov z2.d, z1.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
+; CHECK-SVE2-NEXT:    movprfx z2, z1
 ; CHECK-SVE2-NEXT:    and z2.d, z2.d, #0x2
+; CHECK-SVE2-NEXT:    movprfx z3, z1
 ; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x1
+; CHECK-SVE2-NEXT:    movprfx z4, z1
 ; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x8
+; CHECK-SVE2-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x4
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x20
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10
 ; CHECK-SVE2-NEXT:    mul z2.d, z0.d, z2.d
 ; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
 ; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
 ; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
 ; CHECK-SVE2-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x10
+; CHECK-SVE2-NEXT:    movprfx z3, z1
+; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x20
 ; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x80
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x40
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z3.d, z6.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x200
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x800
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x400
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x2000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x8000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x4000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x20000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x80000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x40000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x200000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x800000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x400000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x2000000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x8000000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x4000000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x20000000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x80000000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x40000000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x200000000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x800000000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x400000000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x2000000000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x8000000000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x4000000000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x20000000000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10000000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x80000000000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x40000000000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x200000000000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100000000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x800000000000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x400000000000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x2000000000000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000000000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x8000000000000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x4000000000000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x20000000000000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10000000000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x80000000000000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x40000000000000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x200000000000000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100000000000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x800000000000000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x400000000000000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x2000000000000000
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000000000000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    and z1.d, z1.d, #0x4000000000000000
 ; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
 ; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x80
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x40
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x200
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x800
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x400
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x2000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x8000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x4000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x20000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x80000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x40000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x200000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x800000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x400000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x2000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x8000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x4000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x20000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x80000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x40000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x200000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x800000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x400000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x2000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x8000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x4000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x20000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x80000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x40000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x200000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x800000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x400000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x2000000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x8000000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x4000000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x20000000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10000000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x80000000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x40000000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x200000000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100000000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x800000000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x400000000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x2000000000000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000000000000000
+; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x8000000000000000
+; CHECK-SVE2-NEXT:    and z1.d, z1.d, #0x4000000000000000
 ; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
 ; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
 ; CHECK-SVE2-NEXT:    mul z0.d, z0.d, z1.d
@@ -1521,15 +1549,15 @@ define <vscale x 2 x i64> @clmul_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i6
 define <vscale x 16 x i8> @clmul_nxv16i8_zext(<vscale x 16 x i4> %x, <vscale x 16 x i4> %y) {
 ; CHECK-SVE-LABEL: clmul_nxv16i8_zext:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
 ; CHECK-SVE-NEXT:    and z0.b, z0.b, #0xf
+; CHECK-SVE-NEXT:    movprfx z2, z1
+; CHECK-SVE-NEXT:    and z2.b, z2.b, #0x2
+; CHECK-SVE-NEXT:    movprfx z3, z1
+; CHECK-SVE-NEXT:    and z3.b, z3.b, #0x1
+; CHECK-SVE-NEXT:    movprfx z4, z1
+; CHECK-SVE-NEXT:    and z4.b, z4.b, #0x4
 ; CHECK-SVE-NEXT:    and z1.b, z1.b, #0x8
 ; CHECK-SVE-NEXT:    ptrue p0.b
-; CHECK-SVE-NEXT:    and z2.b, z2.b, #0x2
-; CHECK-SVE-NEXT:    and z3.b, z3.b, #0x1
-; CHECK-SVE-NEXT:    and z4.b, z4.b, #0x4
 ; CHECK-SVE-NEXT:    mul z2.b, p0/m, z2.b, z0.b
 ; CHECK-SVE-NEXT:    mul z3.b, p0/m, z3.b, z0.b
 ; CHECK-SVE-NEXT:    mul z4.b, p0/m, z4.b, z0.b
@@ -1541,15 +1569,15 @@ define <vscale x 16 x i8> @clmul_nxv16i8_zext(<vscale x 16 x i4> %x, <vscale x 1
 ;
 ; CHECK-SVE-AES-LABEL: clmul_nxv16i8_zext:
 ; CHECK-SVE-AES:       // %bb.0:
-; CHECK-SVE-AES-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z4.d, z1.d
 ; CHECK-SVE-AES-NEXT:    and z0.b, z0.b, #0xf
+; CHECK-SVE-AES-NEXT:    movprfx z2, z1
+; CHECK-SVE-AES-NEXT:    and z2.b, z2.b, #0x2
+; CHECK-SVE-AES-NEXT:    movprfx z3, z1
+; CHECK-SVE-AES-NEXT:    and z3.b, z3.b, #0x1
+; CHECK-SVE-AES-NEXT:    movprfx z4, z1
+; CHECK-SVE-AES-NEXT:    and z4.b, z4.b, #0x4
 ; CHECK-SVE-AES-NEXT:    and z1.b, z1.b, #0x8
 ; CHECK-SVE-AES-NEXT:    ptrue p0.b
-; CHECK-SVE-AES-NEXT:    and z2.b, z2.b, #0x2
-; CHECK-SVE-AES-NEXT:    and z3.b, z3.b, #0x1
-; CHECK-SVE-AES-NEXT:    and z4.b, z4.b, #0x4
 ; CHECK-SVE-AES-NEXT:    mul z2.b, p0/m, z2.b, z0.b
 ; CHECK-SVE-AES-NEXT:    mul z3.b, p0/m, z3.b, z0.b
 ; CHECK-SVE-AES-NEXT:    mul z4.b, p0/m, z4.b, z0.b
@@ -1595,21 +1623,21 @@ define <vscale x 16 x i8> @clmul_nxv16i8_zext(<vscale x 16 x i4> %x, <vscale x 1
 define <vscale x 8 x i16> @clmul_nxv8i16_zext(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-SVE-LABEL: clmul_nxv8i16_zext:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
 ; CHECK-SVE-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    ptrue p0.h
+; CHECK-SVE-NEXT:    movprfx z2, z1
 ; CHECK-SVE-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SVE-NEXT:    movprfx z3, z1
 ; CHECK-SVE-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SVE-NEXT:    movprfx z4, z1
 ; CHECK-SVE-NEXT:    and z4.h, z4.h, #0x4
+; CHECK-SVE-NEXT:    movprfx z5, z1
 ; CHECK-SVE-NEXT:    and z5.h, z5.h, #0x8
+; CHECK-SVE-NEXT:    movprfx z6, z1
 ; CHECK-SVE-NEXT:    and z6.h, z6.h, #0x10
+; CHECK-SVE-NEXT:    movprfx z7, z1
 ; CHECK-SVE-NEXT:    and z7.h, z7.h, #0x20
+; CHECK-SVE-NEXT:    ptrue p0.h
+; CHECK-SVE-NEXT:    movprfx z24, z1
 ; CHECK-SVE-NEXT:    and z24.h, z24.h, #0x40
 ; CHECK-SVE-NEXT:    and z1.h, z1.h, #0x80
 ; CHECK-SVE-NEXT:    mul z2.h, p0/m, z2.h, z0.h
@@ -1631,21 +1659,21 @@ define <vscale x 8 x i16> @clmul_nxv8i16_zext(<vscale x 8 x i8> %x, <vscale x 8 
 ;
 ; CHECK-SVE-AES-LABEL: clmul_nxv8i16_zext:
 ; CHECK-SVE-AES:       // %bb.0:
-; CHECK-SVE-AES-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z7.d, z1.d
 ; CHECK-SVE-AES-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-SVE-AES-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-AES-NEXT:    ptrue p0.h
+; CHECK-SVE-AES-NEXT:    movprfx z2, z1
 ; CHECK-SVE-AES-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SVE-AES-NEXT:    movprfx z3, z1
 ; CHECK-SVE-AES-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SVE-AES-NEXT:    movprfx z4, z1
 ; CHECK-SVE-AES-NEXT:    and z4.h, z4.h, #0x4
+; CHECK-SVE-AES-NEXT:    movprfx z5, z1
 ; CHECK-SVE-AES-NEXT:    and z5.h, z5.h, #0x8
+; CHECK-SVE-AES-NEXT:    movprfx z6, z1
 ; CHECK-SVE-AES-NEXT:    and z6.h, z6.h, #0x10
+; CHECK-SVE-AES-NEXT:    movprfx z7, z1
 ; CHECK-SVE-AES-NEXT:    and z7.h, z7.h, #0x20
+; CHECK-SVE-AES-NEXT:    ptrue p0.h
+; CHECK-SVE-AES-NEXT:    movprfx z24, z1
 ; CHECK-SVE-AES-NEXT:    and z24.h, z24.h, #0x40
 ; CHECK-SVE-AES-NEXT:    and z1.h, z1.h, #0x80
 ; CHECK-SVE-AES-NEXT:    mul z2.h, p0/m, z2.h, z0.h
@@ -1667,134 +1695,134 @@ define <vscale x 8 x i16> @clmul_nxv8i16_zext(<vscale x 8 x i8> %x, <vscale x 8 
 ;
 ; CHECK-SME-STREAMING-LABEL: clmul_nxv8i16_zext:
 ; CHECK-SME-STREAMING:       // %bb.0:
-; CHECK-SME-STREAMING-NEXT:    mov z2.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SME-STREAMING-NEXT:    movprfx z2, z0
+; CHECK-SME-STREAMING-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-SME-STREAMING-NEXT:    movprfx z0, z1
+; CHECK-SME-STREAMING-NEXT:    and z0.h, z0.h, #0x2
+; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
 ; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SME-STREAMING-NEXT:    movprfx z4, z1
 ; CHECK-SME-STREAMING-NEXT:    and z4.h, z4.h, #0x8
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x20
-; CHECK-SME-STREAMING-NEXT:    mul z2.h, z0.h, z2.h
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SME-STREAMING-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x10
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-NEXT:    and z1.h, z1.h, #0x40
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z3.h
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x10
+; CHECK-SME-STREAMING-NEXT:    mul z0.h, z2.h, z0.h
+; CHECK-SME-STREAMING-NEXT:    mul z3.h, z2.h, z3.h
+; CHECK-SME-STREAMING-NEXT:    mul z4.h, z2.h, z4.h
+; CHECK-SME-STREAMING-NEXT:    mul z5.h, z2.h, z5.h
+; CHECK-SME-STREAMING-NEXT:    eor z0.d, z3.d, z0.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
+; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x20
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z5.d, z4.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.h, z2.h, z3.h
+; CHECK-SME-STREAMING-NEXT:    mul z4.h, z2.h, z6.h
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z3.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    mul z0.h, z0.h, z1.h
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z0.d, z2.d
+; CHECK-SME-STREAMING-NEXT:    and z1.h, z1.h, #0x40
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.h, z2.h, z5.h
+; CHECK-SME-STREAMING-NEXT:    mul z1.h, z2.h, z1.h
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z1.d, z3.d
 ; CHECK-SME-STREAMING-NEXT:    ret
 ;
 ; CHECK-SME-STREAMING-SSVE-AES-LABEL: clmul_nxv8i16_zext:
 ; CHECK-SME-STREAMING-SSVE-AES:       // %bb.0:
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z2.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z2, z0
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z0, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z0.h, z0.h, #0x2
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z3, z1
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z4, z1
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z4.h, z4.h, #0x8
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x20
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z2.h, z0.h, z2.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x10
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z1.h, z1.h, #0x40
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z3.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x10
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z0.h, z2.h, z0.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z2.h, z3.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z2.h, z4.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z5.h, z2.h, z5.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor z0.d, z3.d, z0.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z3, z1
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x20
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z0.d, z0.d, z5.d, z4.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z2.h, z3.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z2.h, z6.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z3.d, z4.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z0.h, z0.h, z1.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z0.d, z3.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z0.d, z2.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z1.h, z1.h, #0x40
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z2.h, z5.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z1.h, z2.h, z1.h
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z0.d, z0.d, z1.d, z3.d
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    ret
 ;
 ; CHECK-SVE2-LABEL: clmul_nxv8i16_zext:
 ; CHECK-SVE2:       // %bb.0:
-; CHECK-SVE2-NEXT:    mov z2.d, z1.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SVE2-NEXT:    movprfx z2, z0
+; CHECK-SVE2-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-SVE2-NEXT:    movprfx z0, z1
+; CHECK-SVE2-NEXT:    and z0.h, z0.h, #0x2
+; CHECK-SVE2-NEXT:    movprfx z3, z1
 ; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SVE2-NEXT:    movprfx z4, z1
 ; CHECK-SVE2-NEXT:    and z4.h, z4.h, #0x8
+; CHECK-SVE2-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x20
-; CHECK-SVE2-NEXT:    mul z2.h, z0.h, z2.h
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SVE2-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x10
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-NEXT:    and z1.h, z1.h, #0x40
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z3.h
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x10
+; CHECK-SVE2-NEXT:    mul z0.h, z2.h, z0.h
+; CHECK-SVE2-NEXT:    mul z3.h, z2.h, z3.h
+; CHECK-SVE2-NEXT:    mul z4.h, z2.h, z4.h
+; CHECK-SVE2-NEXT:    mul z5.h, z2.h, z5.h
+; CHECK-SVE2-NEXT:    eor z0.d, z3.d, z0.d
+; CHECK-SVE2-NEXT:    movprfx z3, z1
+; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x20
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z5.d, z4.d
+; CHECK-SVE2-NEXT:    mul z3.h, z2.h, z3.h
+; CHECK-SVE2-NEXT:    mul z4.h, z2.h, z6.h
+; CHECK-SVE2-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z3.d, z4.d
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    mul z0.h, z0.h, z1.h
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mov z0.d, z2.d
+; CHECK-SVE2-NEXT:    and z1.h, z1.h, #0x40
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.h, z2.h, z5.h
+; CHECK-SVE2-NEXT:    mul z1.h, z2.h, z1.h
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z1.d, z3.d
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-AES-LABEL: clmul_nxv8i16_zext:
 ; CHECK-SVE2-AES:       // %bb.0:
-; CHECK-SVE2-AES-NEXT:    mov z2.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-AES-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-SVE2-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-AES-NEXT:    and z2.h, z2.h, #0x2
+; CHECK-SVE2-AES-NEXT:    movprfx z2, z0
+; CHECK-SVE2-AES-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-SVE2-AES-NEXT:    movprfx z0, z1
+; CHECK-SVE2-AES-NEXT:    and z0.h, z0.h, #0x2
+; CHECK-SVE2-AES-NEXT:    movprfx z3, z1
 ; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x1
+; CHECK-SVE2-AES-NEXT:    movprfx z4, z1
 ; CHECK-SVE2-AES-NEXT:    and z4.h, z4.h, #0x8
+; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x20
-; CHECK-SVE2-AES-NEXT:    mul z2.h, z0.h, z2.h
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SVE2-AES-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE2-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x10
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-AES-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-AES-NEXT:    and z1.h, z1.h, #0x40
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z3.h
+; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
+; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x10
+; CHECK-SVE2-AES-NEXT:    mul z0.h, z2.h, z0.h
+; CHECK-SVE2-AES-NEXT:    mul z3.h, z2.h, z3.h
+; CHECK-SVE2-AES-NEXT:    mul z4.h, z2.h, z4.h
+; CHECK-SVE2-AES-NEXT:    mul z5.h, z2.h, z5.h
+; CHECK-SVE2-AES-NEXT:    eor z0.d, z3.d, z0.d
+; CHECK-SVE2-AES-NEXT:    movprfx z3, z1
+; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x20
+; CHECK-SVE2-AES-NEXT:    eor3 z0.d, z0.d, z5.d, z4.d
+; CHECK-SVE2-AES-NEXT:    mul z3.h, z2.h, z3.h
+; CHECK-SVE2-AES-NEXT:    mul z4.h, z2.h, z6.h
+; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z3.d, z4.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    mul z0.h, z0.h, z1.h
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z0.d, z3.d
-; CHECK-SVE2-AES-NEXT:    mov z0.d, z2.d
+; CHECK-SVE2-AES-NEXT:    and z1.h, z1.h, #0x40
+; CHECK-SVE2-AES-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-AES-NEXT:    mul z3.h, z2.h, z5.h
+; CHECK-SVE2-AES-NEXT:    mul z1.h, z2.h, z1.h
+; CHECK-SVE2-AES-NEXT:    eor3 z0.d, z0.d, z1.d, z3.d
 ; CHECK-SVE2-AES-NEXT:    ret
   %zextx = zext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %zexty = zext <vscale x 8 x i8> %y to <vscale x 8 x i16>
@@ -1805,63 +1833,63 @@ define <vscale x 8 x i16> @clmul_nxv8i16_zext(<vscale x 8 x i8> %x, <vscale x 8 
 define <vscale x 4 x i32> @clmul_nxv4i32_zext(<vscale x 4 x i16> %x, <vscale x 4 x i16> %y) {
 ; CHECK-SVE-LABEL: clmul_nxv4i32_zext:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
 ; CHECK-SVE-NEXT:    and z0.s, z0.s, #0xffff
-; CHECK-SVE-NEXT:    ptrue p0.s
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z2, z1
 ; CHECK-SVE-NEXT:    and z2.s, z2.s, #0x2
+; CHECK-SVE-NEXT:    movprfx z3, z1
 ; CHECK-SVE-NEXT:    and z3.s, z3.s, #0x1
+; CHECK-SVE-NEXT:    movprfx z4, z1
 ; CHECK-SVE-NEXT:    and z4.s, z4.s, #0x4
+; CHECK-SVE-NEXT:    movprfx z5, z1
 ; CHECK-SVE-NEXT:    and z5.s, z5.s, #0x8
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
+; CHECK-SVE-NEXT:    ptrue p0.s
+; CHECK-SVE-NEXT:    movprfx z6, z1
 ; CHECK-SVE-NEXT:    and z6.s, z6.s, #0x10
+; CHECK-SVE-NEXT:    movprfx z7, z1
 ; CHECK-SVE-NEXT:    and z7.s, z7.s, #0x20
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.s, z24.s, #0x80
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.s, z25.s, #0x100
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.s, z26.s, #0x800
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.s, z27.s, #0x1000
 ; CHECK-SVE-NEXT:    mul z2.s, p0/m, z2.s, z0.s
 ; CHECK-SVE-NEXT:    mul z3.s, p0/m, z3.s, z0.s
-; CHECK-SVE-NEXT:    and z24.s, z24.s, #0x80
+; CHECK-SVE-NEXT:    movprfx z28, z1
+; CHECK-SVE-NEXT:    and z28.s, z28.s, #0x40
 ; CHECK-SVE-NEXT:    mul z4.s, p0/m, z4.s, z0.s
 ; CHECK-SVE-NEXT:    mul z5.s, p0/m, z5.s, z0.s
-; CHECK-SVE-NEXT:    and z25.s, z25.s, #0x100
+; CHECK-SVE-NEXT:    movprfx z29, z1
+; CHECK-SVE-NEXT:    and z29.s, z29.s, #0x200
 ; CHECK-SVE-NEXT:    mul z6.s, p0/m, z6.s, z0.s
 ; CHECK-SVE-NEXT:    mul z7.s, p0/m, z7.s, z0.s
-; CHECK-SVE-NEXT:    mov z28.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z30, z1
+; CHECK-SVE-NEXT:    and z30.s, z30.s, #0x2000
 ; CHECK-SVE-NEXT:    mul z24.s, p0/m, z24.s, z0.s
-; CHECK-SVE-NEXT:    and z26.s, z26.s, #0x800
-; CHECK-SVE-NEXT:    and z27.s, z27.s, #0x1000
 ; CHECK-SVE-NEXT:    mul z25.s, p0/m, z25.s, z0.s
-; CHECK-SVE-NEXT:    mov z29.d, z1.d
-; CHECK-SVE-NEXT:    mov z30.d, z1.d
-; CHECK-SVE-NEXT:    and z28.s, z28.s, #0x40
-; CHECK-SVE-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE-NEXT:    eor z3.d, z4.d, z5.d
 ; CHECK-SVE-NEXT:    mul z26.s, p0/m, z26.s, z0.s
 ; CHECK-SVE-NEXT:    mul z27.s, p0/m, z27.s, z0.s
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    and z29.s, z29.s, #0x200
-; CHECK-SVE-NEXT:    and z30.s, z30.s, #0x2000
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
+; CHECK-SVE-NEXT:    eor z2.d, z3.d, z2.d
+; CHECK-SVE-NEXT:    eor z3.d, z4.d, z5.d
 ; CHECK-SVE-NEXT:    mul z28.s, p0/m, z28.s, z0.s
+; CHECK-SVE-NEXT:    mul z29.s, p0/m, z29.s, z0.s
+; CHECK-SVE-NEXT:    movprfx z4, z1
+; CHECK-SVE-NEXT:    and z4.s, z4.s, #0x400
+; CHECK-SVE-NEXT:    mul z30.s, p0/m, z30.s, z0.s
+; CHECK-SVE-NEXT:    movprfx z5, z1
+; CHECK-SVE-NEXT:    and z5.s, z5.s, #0x4000
 ; CHECK-SVE-NEXT:    eor z6.d, z6.d, z7.d
 ; CHECK-SVE-NEXT:    eor z7.d, z24.d, z25.d
-; CHECK-SVE-NEXT:    and z4.s, z4.s, #0x400
 ; CHECK-SVE-NEXT:    and z1.s, z1.s, #0x8000
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    mul z29.s, p0/m, z29.s, z0.s
-; CHECK-SVE-NEXT:    mul z30.s, p0/m, z30.s, z0.s
-; CHECK-SVE-NEXT:    and z5.s, z5.s, #0x4000
 ; CHECK-SVE-NEXT:    eor z24.d, z26.d, z27.d
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
 ; CHECK-SVE-NEXT:    mul z4.s, p0/m, z4.s, z0.s
-; CHECK-SVE-NEXT:    eor z3.d, z6.d, z28.d
 ; CHECK-SVE-NEXT:    mul z5.s, p0/m, z5.s, z0.s
-; CHECK-SVE-NEXT:    mul z0.s, p0/m, z0.s, z1.s
+; CHECK-SVE-NEXT:    eor z3.d, z6.d, z28.d
 ; CHECK-SVE-NEXT:    eor z6.d, z7.d, z29.d
+; CHECK-SVE-NEXT:    mul z0.s, p0/m, z0.s, z1.s
 ; CHECK-SVE-NEXT:    eor z7.d, z24.d, z30.d
 ; CHECK-SVE-NEXT:    eor z1.d, z2.d, z3.d
 ; CHECK-SVE-NEXT:    eor z2.d, z6.d, z4.d
@@ -1873,63 +1901,63 @@ define <vscale x 4 x i32> @clmul_nxv4i32_zext(<vscale x 4 x i16> %x, <vscale x 4
 ;
 ; CHECK-SVE-AES-LABEL: clmul_nxv4i32_zext:
 ; CHECK-SVE-AES:       // %bb.0:
-; CHECK-SVE-AES-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z5.d, z1.d
 ; CHECK-SVE-AES-NEXT:    and z0.s, z0.s, #0xffff
-; CHECK-SVE-AES-NEXT:    ptrue p0.s
-; CHECK-SVE-AES-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z24.d, z1.d
+; CHECK-SVE-AES-NEXT:    movprfx z2, z1
 ; CHECK-SVE-AES-NEXT:    and z2.s, z2.s, #0x2
+; CHECK-SVE-AES-NEXT:    movprfx z3, z1
 ; CHECK-SVE-AES-NEXT:    and z3.s, z3.s, #0x1
+; CHECK-SVE-AES-NEXT:    movprfx z4, z1
 ; CHECK-SVE-AES-NEXT:    and z4.s, z4.s, #0x4
+; CHECK-SVE-AES-NEXT:    movprfx z5, z1
 ; CHECK-SVE-AES-NEXT:    and z5.s, z5.s, #0x8
-; CHECK-SVE-AES-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z27.d, z1.d
+; CHECK-SVE-AES-NEXT:    ptrue p0.s
+; CHECK-SVE-AES-NEXT:    movprfx z6, z1
 ; CHECK-SVE-AES-NEXT:    and z6.s, z6.s, #0x10
+; CHECK-SVE-AES-NEXT:    movprfx z7, z1
 ; CHECK-SVE-AES-NEXT:    and z7.s, z7.s, #0x20
+; CHECK-SVE-AES-NEXT:    movprfx z24, z1
+; CHECK-SVE-AES-NEXT:    and z24.s, z24.s, #0x80
+; CHECK-SVE-AES-NEXT:    movprfx z25, z1
+; CHECK-SVE-AES-NEXT:    and z25.s, z25.s, #0x100
+; CHECK-SVE-AES-NEXT:    movprfx z26, z1
+; CHECK-SVE-AES-NEXT:    and z26.s, z26.s, #0x800
+; CHECK-SVE-AES-NEXT:    movprfx z27, z1
+; CHECK-SVE-AES-NEXT:    and z27.s, z27.s, #0x1000
 ; CHECK-SVE-AES-NEXT:    mul z2.s, p0/m, z2.s, z0.s
 ; CHECK-SVE-AES-NEXT:    mul z3.s, p0/m, z3.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z24.s, z24.s, #0x80
+; CHECK-SVE-AES-NEXT:    movprfx z28, z1
+; CHECK-SVE-AES-NEXT:    and z28.s, z28.s, #0x40
 ; CHECK-SVE-AES-NEXT:    mul z4.s, p0/m, z4.s, z0.s
 ; CHECK-SVE-AES-NEXT:    mul z5.s, p0/m, z5.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z25.s, z25.s, #0x100
+; CHECK-SVE-AES-NEXT:    movprfx z29, z1
+; CHECK-SVE-AES-NEXT:    and z29.s, z29.s, #0x200
 ; CHECK-SVE-AES-NEXT:    mul z6.s, p0/m, z6.s, z0.s
 ; CHECK-SVE-AES-NEXT:    mul z7.s, p0/m, z7.s, z0.s
-; CHECK-SVE-AES-NEXT:    mov z28.d, z1.d
+; CHECK-SVE-AES-NEXT:    movprfx z30, z1
+; CHECK-SVE-AES-NEXT:    and z30.s, z30.s, #0x2000
 ; CHECK-SVE-AES-NEXT:    mul z24.s, p0/m, z24.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z26.s, z26.s, #0x800
-; CHECK-SVE-AES-NEXT:    and z27.s, z27.s, #0x1000
 ; CHECK-SVE-AES-NEXT:    mul z25.s, p0/m, z25.s, z0.s
-; CHECK-SVE-AES-NEXT:    mov z29.d, z1.d
-; CHECK-SVE-AES-NEXT:    mov z30.d, z1.d
-; CHECK-SVE-AES-NEXT:    and z28.s, z28.s, #0x40
-; CHECK-SVE-AES-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE-AES-NEXT:    eor z3.d, z4.d, z5.d
 ; CHECK-SVE-AES-NEXT:    mul z26.s, p0/m, z26.s, z0.s
 ; CHECK-SVE-AES-NEXT:    mul z27.s, p0/m, z27.s, z0.s
-; CHECK-SVE-AES-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-AES-NEXT:    and z29.s, z29.s, #0x200
-; CHECK-SVE-AES-NEXT:    and z30.s, z30.s, #0x2000
-; CHECK-SVE-AES-NEXT:    mov z5.d, z1.d
+; CHECK-SVE-AES-NEXT:    eor z2.d, z3.d, z2.d
+; CHECK-SVE-AES-NEXT:    eor z3.d, z4.d, z5.d
 ; CHECK-SVE-AES-NEXT:    mul z28.s, p0/m, z28.s, z0.s
+; CHECK-SVE-AES-NEXT:    mul z29.s, p0/m, z29.s, z0.s
+; CHECK-SVE-AES-NEXT:    movprfx z4, z1
+; CHECK-SVE-AES-NEXT:    and z4.s, z4.s, #0x400
+; CHECK-SVE-AES-NEXT:    mul z30.s, p0/m, z30.s, z0.s
+; CHECK-SVE-AES-NEXT:    movprfx z5, z1
+; CHECK-SVE-AES-NEXT:    and z5.s, z5.s, #0x4000
 ; CHECK-SVE-AES-NEXT:    eor z6.d, z6.d, z7.d
 ; CHECK-SVE-AES-NEXT:    eor z7.d, z24.d, z25.d
-; CHECK-SVE-AES-NEXT:    and z4.s, z4.s, #0x400
 ; CHECK-SVE-AES-NEXT:    and z1.s, z1.s, #0x8000
-; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-AES-NEXT:    mul z29.s, p0/m, z29.s, z0.s
-; CHECK-SVE-AES-NEXT:    mul z30.s, p0/m, z30.s, z0.s
-; CHECK-SVE-AES-NEXT:    and z5.s, z5.s, #0x4000
 ; CHECK-SVE-AES-NEXT:    eor z24.d, z26.d, z27.d
+; CHECK-SVE-AES-NEXT:    eor z2.d, z2.d, z3.d
 ; CHECK-SVE-AES-NEXT:    mul z4.s, p0/m, z4.s, z0.s
-; CHECK-SVE-AES-NEXT:    eor z3.d, z6.d, z28.d
 ; CHECK-SVE-AES-NEXT:    mul z5.s, p0/m, z5.s, z0.s
-; CHECK-SVE-AES-NEXT:    mul z0.s, p0/m, z0.s, z1.s
+; CHECK-SVE-AES-NEXT:    eor z3.d, z6.d, z28.d
 ; CHECK-SVE-AES-NEXT:    eor z6.d, z7.d, z29.d
+; CHECK-SVE-AES-NEXT:    mul z0.s, p0/m, z0.s, z1.s
 ; CHECK-SVE-AES-NEXT:    eor z7.d, z24.d, z30.d
 ; CHECK-SVE-AES-NEXT:    eor z1.d, z2.d, z3.d
 ; CHECK-SVE-AES-NEXT:    eor z2.d, z6.d, z4.d
@@ -1983,134 +2011,143 @@ define <vscale x 4 x i32> @clmul_nxv4i32_zext(<vscale x 4 x i16> %x, <vscale x 4
 define <vscale x 2 x i64> @clmul_nxv2i64_zext(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y) {
 ; CHECK-SVE-LABEL: clmul_nxv2i64_zext:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    mov z2.d, z1.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    mov z4.d, z1.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
+; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SVE-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_offset w29, -16
+; CHECK-SVE-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
 ; CHECK-SVE-NEXT:    and z0.d, z0.d, #0xffffffff
-; CHECK-SVE-NEXT:    ptrue p0.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z2, z1
 ; CHECK-SVE-NEXT:    and z2.d, z2.d, #0x2
+; CHECK-SVE-NEXT:    movprfx z3, z1
 ; CHECK-SVE-NEXT:    and z3.d, z3.d, #0x1
+; CHECK-SVE-NEXT:    movprfx z4, z1
 ; CHECK-SVE-NEXT:    and z4.d, z4.d, #0x4
+; CHECK-SVE-NEXT:    movprfx z5, z1
 ; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x8
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z6, z1
 ; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x10
+; CHECK-SVE-NEXT:    movprfx z7, z1
 ; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x20
+; CHECK-SVE-NEXT:    ptrue p0.d
+; CHECK-SVE-NEXT:    movprfx z24, z1
 ; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x80
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x100
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x40
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x200
 ; CHECK-SVE-NEXT:    mul z2.d, p0/m, z2.d, z0.d
 ; CHECK-SVE-NEXT:    mul z3.d, p0/m, z3.d, z0.d
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z29, z1
+; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x20000
 ; CHECK-SVE-NEXT:    mul z4.d, p0/m, z4.d, z0.d
 ; CHECK-SVE-NEXT:    mul z5.d, p0/m, z5.d, z0.d
-; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x100
+; CHECK-SVE-NEXT:    movprfx z30, z1
+; CHECK-SVE-NEXT:    and z30.d, z30.d, #0x40000
 ; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
 ; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x40
+; CHECK-SVE-NEXT:    movprfx z31, z1
+; CHECK-SVE-NEXT:    and z31.d, z31.d, #0x1000000
 ; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
-; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x200
-; CHECK-SVE-NEXT:    mov z28.d, z1.d
 ; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z28, z1
+; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x400
+; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
 ; CHECK-SVE-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE-NEXT:    mov z29.d, z1.d
-; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
-; CHECK-SVE-NEXT:    eor z3.d, z4.d, z5.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
 ; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
-; CHECK-SVE-NEXT:    eor z4.d, z6.d, z7.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x8000
-; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x100000
-; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x400
-; CHECK-SVE-NEXT:    eor z6.d, z24.d, z25.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    eor z3.d, z4.d, z26.d
-; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x800
-; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
+; CHECK-SVE-NEXT:    eor z3.d, z4.d, z5.d
+; CHECK-SVE-NEXT:    movprfx z5, z1
+; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x800
 ; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    mul z5.d, p0/m, z5.d, z0.d
-; CHECK-SVE-NEXT:    eor z4.d, z6.d, z27.d
-; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x1000
-; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x800000
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
-; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
-; CHECK-SVE-NEXT:    eor z3.d, z4.d, z5.d
-; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x2000
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x40000
-; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x1000000
-; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-SVE-NEXT:    mov z3.d, z1.d
-; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
-; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
-; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x20000
-; CHECK-SVE-NEXT:    eor z4.d, z7.d, z24.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    and z3.d, z3.d, #0x10000
-; CHECK-SVE-NEXT:    mul z5.d, p0/m, z5.d, z0.d
-; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x400000
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z6.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    mul z3.d, p0/m, z3.d, z0.d
-; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x4000
-; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
-; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x80000
-; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z5.d
-; CHECK-SVE-NEXT:    mov z5.d, z1.d
-; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
+; CHECK-SVE-NEXT:    eor z4.d, z6.d, z7.d
+; CHECK-SVE-NEXT:    movprfx z6, z1
+; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x1000
+; CHECK-SVE-NEXT:    movprfx z7, z1
+; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x10000
 ; CHECK-SVE-NEXT:    eor z24.d, z24.d, z25.d
-; CHECK-SVE-NEXT:    mov z25.d, z1.d
-; CHECK-SVE-NEXT:    and z5.d, z5.d, #0x2000000
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z26.d
-; CHECK-SVE-NEXT:    mov z26.d, z1.d
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z7.d
-; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x4000000
-; CHECK-SVE-NEXT:    eor z7.d, z24.d, z27.d
-; CHECK-SVE-NEXT:    mov z24.d, z1.d
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x400000
+; CHECK-SVE-NEXT:    mul z30.d, p0/m, z30.d, z0.d
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
 ; CHECK-SVE-NEXT:    mul z5.d, p0/m, z5.d, z0.d
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z6.d
-; CHECK-SVE-NEXT:    mov z6.d, z1.d
-; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x200000
-; CHECK-SVE-NEXT:    mov z27.d, z1.d
-; CHECK-SVE-NEXT:    eor z4.d, z4.d, z28.d
-; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
-; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x20000000
-; CHECK-SVE-NEXT:    and z6.d, z6.d, #0x8000000
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z29.d
-; CHECK-SVE-NEXT:    eor z5.d, z7.d, z5.d
-; CHECK-SVE-NEXT:    mov z7.d, z1.d
-; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
-; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x40000000
-; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
-; CHECK-SVE-NEXT:    and z1.d, z1.d, #0x80000000
+; CHECK-SVE-NEXT:    mul z31.d, p0/m, z31.d, z0.d
+; CHECK-SVE-NEXT:    eor z3.d, z4.d, z26.d
+; CHECK-SVE-NEXT:    movprfx z4, z1
+; CHECK-SVE-NEXT:    and z4.d, z4.d, #0x800000
 ; CHECK-SVE-NEXT:    mul z6.d, p0/m, z6.d, z0.d
-; CHECK-SVE-NEXT:    eor z2.d, z2.d, z4.d
-; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x10000000
-; CHECK-SVE-NEXT:    eor z5.d, z5.d, z25.d
-; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
-; CHECK-SVE-NEXT:    eor z3.d, z3.d, z26.d
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x2000
 ; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
-; CHECK-SVE-NEXT:    eor z4.d, z5.d, z6.d
-; CHECK-SVE-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; CHECK-SVE-NEXT:    eor z1.d, z2.d, z3.d
+; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z8, z1
+; CHECK-SVE-NEXT:    and z8.d, z8.d, #0x2000000
+; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
+; CHECK-SVE-NEXT:    mul z4.d, p0/m, z4.d, z0.d
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
 ; CHECK-SVE-NEXT:    eor z3.d, z24.d, z27.d
-; CHECK-SVE-NEXT:    eor z2.d, z4.d, z7.d
-; CHECK-SVE-NEXT:    eor z0.d, z3.d, z0.d
+; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x4000
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x80000
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z6.d
+; CHECK-SVE-NEXT:    eor z6.d, z7.d, z29.d
+; CHECK-SVE-NEXT:    movprfx z7, z1
+; CHECK-SVE-NEXT:    and z7.d, z7.d, #0x8000
+; CHECK-SVE-NEXT:    mul z8.d, p0/m, z8.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z29, z1
+; CHECK-SVE-NEXT:    and z29.d, z29.d, #0x4000000
+; CHECK-SVE-NEXT:    eor z3.d, z3.d, z28.d
+; CHECK-SVE-NEXT:    eor z4.d, z25.d, z4.d
+; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
+; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z25, z1
+; CHECK-SVE-NEXT:    and z25.d, z25.d, #0x100000
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z26.d
+; CHECK-SVE-NEXT:    eor z6.d, z6.d, z30.d
+; CHECK-SVE-NEXT:    mul z7.d, p0/m, z7.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z26, z1
+; CHECK-SVE-NEXT:    and z26.d, z26.d, #0x200000
+; CHECK-SVE-NEXT:    mul z29.d, p0/m, z29.d, z0.d
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z31.d
+; CHECK-SVE-NEXT:    movprfx z28, z1
+; CHECK-SVE-NEXT:    and z28.d, z28.d, #0x8000000
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z3.d
+; CHECK-SVE-NEXT:    mul z25.d, p0/m, z25.d, z0.d
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z24.d
+; CHECK-SVE-NEXT:    eor z6.d, z6.d, z27.d
+; CHECK-SVE-NEXT:    mul z26.d, p0/m, z26.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z3, z1
+; CHECK-SVE-NEXT:    and z3.d, z3.d, #0x10000000
+; CHECK-SVE-NEXT:    movprfx z24, z1
+; CHECK-SVE-NEXT:    and z24.d, z24.d, #0x20000000
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z8.d
+; CHECK-SVE-NEXT:    mul z28.d, p0/m, z28.d, z0.d
+; CHECK-SVE-NEXT:    movprfx z27, z1
+; CHECK-SVE-NEXT:    and z27.d, z27.d, #0x40000000
+; CHECK-SVE-NEXT:    eor z5.d, z5.d, z7.d
+; CHECK-SVE-NEXT:    and z1.d, z1.d, #0x80000000
+; CHECK-SVE-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK-SVE-NEXT:    eor z6.d, z6.d, z25.d
+; CHECK-SVE-NEXT:    mul z3.d, p0/m, z3.d, z0.d
+; CHECK-SVE-NEXT:    mul z24.d, p0/m, z24.d, z0.d
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z29.d
+; CHECK-SVE-NEXT:    mul z27.d, p0/m, z27.d, z0.d
+; CHECK-SVE-NEXT:    eor z2.d, z2.d, z5.d
+; CHECK-SVE-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; CHECK-SVE-NEXT:    eor z5.d, z6.d, z26.d
+; CHECK-SVE-NEXT:    eor z4.d, z4.d, z28.d
+; CHECK-SVE-NEXT:    eor z1.d, z2.d, z5.d
+; CHECK-SVE-NEXT:    eor z2.d, z4.d, z3.d
+; CHECK-SVE-NEXT:    eor z3.d, z24.d, z27.d
 ; CHECK-SVE-NEXT:    eor z1.d, z1.d, z2.d
+; CHECK-SVE-NEXT:    eor z0.d, z3.d, z0.d
 ; CHECK-SVE-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-SVE-NEXT:    addvl sp, sp, #1
+; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-SVE-AES-LABEL: clmul_nxv2i64_zext:
@@ -2124,119 +2161,119 @@ define <vscale x 2 x i64> @clmul_nxv2i64_zext(<vscale x 2 x i32> %x, <vscale x 2
 ;
 ; CHECK-SME-STREAMING-LABEL: clmul_nxv2i64_zext:
 ; CHECK-SME-STREAMING:       // %bb.0:
-; CHECK-SME-STREAMING-NEXT:    mov z2.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z0.d, z0.d, #0xffffffff
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z2.d, z2.d, #0x2
+; CHECK-SME-STREAMING-NEXT:    movprfx z2, z0
+; CHECK-SME-STREAMING-NEXT:    and z2.d, z2.d, #0xffffffff
+; CHECK-SME-STREAMING-NEXT:    movprfx z0, z1
+; CHECK-SME-STREAMING-NEXT:    and z0.d, z0.d, #0x2
+; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
 ; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x1
+; CHECK-SME-STREAMING-NEXT:    movprfx z4, z1
 ; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x8
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x4
-; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x20
-; CHECK-SME-STREAMING-NEXT:    mul z2.d, z0.d, z2.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x10
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x80
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x40
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z3.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x200
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10
+; CHECK-SME-STREAMING-NEXT:    mul z0.d, z2.d, z0.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z4.d
+; CHECK-SME-STREAMING-NEXT:    mul z5.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    eor z0.d, z3.d, z0.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
+; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x20
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z5.d, z4.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x80
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x40
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x200
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
 ; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x800
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x400
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x2000
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x800
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x400
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x2000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
 ; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x8000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x4000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x20000
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x8000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x4000
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x20000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
 ; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x80000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x40000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x200000
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x80000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x40000
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x200000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
 ; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x100000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x800000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x400000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x2000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x800000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x400000
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x2000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
 ; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x1000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z4.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SME-STREAMING-NEXT:    and z4.d, z4.d, #0x8000000
-; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x4000000
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z3.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    mov z6.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z3.d, z3.d, #0x20000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x8000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
+; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x4000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
+; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x20000000
+; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
 ; CHECK-SME-STREAMING-NEXT:    and z6.d, z6.d, #0x10000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mov z5.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    and z1.d, z1.d, #0x40000000
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
 ; CHECK-SME-STREAMING-NEXT:    and z5.d, z5.d, #0x80000000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.d, z0.d, z5.d
-; CHECK-SME-STREAMING-NEXT:    mul z0.d, z0.d, z1.d
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z0.d, z2.d
+; CHECK-SME-STREAMING-NEXT:    and z1.d, z1.d, #0x40000000
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SME-STREAMING-NEXT:    mul z1.d, z2.d, z1.d
+; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z1.d, z3.d
 ; CHECK-SME-STREAMING-NEXT:    ret
 ;
 ; CHECK-SME-STREAMING-SSVE-AES-LABEL: clmul_nxv2i64_zext:
@@ -2250,119 +2287,119 @@ define <vscale x 2 x i64> @clmul_nxv2i64_zext(<vscale x 2 x i32> %x, <vscale x 2
 ;
 ; CHECK-SVE2-LABEL: clmul_nxv2i64_zext:
 ; CHECK-SVE2:       // %bb.0:
-; CHECK-SVE2-NEXT:    mov z2.d, z1.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    and z0.d, z0.d, #0xffffffff
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z2.d, z2.d, #0x2
+; CHECK-SVE2-NEXT:    movprfx z2, z0
+; CHECK-SVE2-NEXT:    and z2.d, z2.d, #0xffffffff
+; CHECK-SVE2-NEXT:    movprfx z0, z1
+; CHECK-SVE2-NEXT:    and z0.d, z0.d, #0x2
+; CHECK-SVE2-NEXT:    movprfx z3, z1
 ; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x1
+; CHECK-SVE2-NEXT:    movprfx z4, z1
 ; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x8
+; CHECK-SVE2-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x4
-; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x20
-; CHECK-SVE2-NEXT:    mul z2.d, z0.d, z2.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x10
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x80
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x40
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z3.d, z6.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x200
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10
+; CHECK-SVE2-NEXT:    mul z0.d, z2.d, z0.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z3.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z4.d
+; CHECK-SVE2-NEXT:    mul z5.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    eor z0.d, z3.d, z0.d
+; CHECK-SVE2-NEXT:    movprfx z3, z1
+; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x20
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z5.d, z4.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z3.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x80
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x40
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x200
+; CHECK-SVE2-NEXT:    movprfx z6, z1
 ; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x800
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x400
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x2000
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x800
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x400
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x2000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
 ; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x8000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x4000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x20000
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x8000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x4000
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x20000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
 ; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x80000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x40000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x200000
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x80000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x40000
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x200000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
 ; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x100000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x800000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x400000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x2000000
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x800000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x400000
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x2000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
 ; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x1000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z6.d, z0.d, z6.d
-; CHECK-SVE2-NEXT:    and z4.d, z4.d, #0x8000000
-; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x4000000
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z4.d
-; CHECK-SVE2-NEXT:    mul z5.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z6.d, z3.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    and z3.d, z3.d, #0x20000000
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x8000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
+; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x4000000
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
+; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x20000000
+; CHECK-SVE2-NEXT:    movprfx z6, z1
 ; CHECK-SVE2-NEXT:    and z6.d, z6.d, #0x10000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mov z5.d, z1.d
-; CHECK-SVE2-NEXT:    and z1.d, z1.d, #0x40000000
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mul z4.d, z0.d, z6.d
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z4.d, z2.d, z6.d
+; CHECK-SVE2-NEXT:    movprfx z5, z1
 ; CHECK-SVE2-NEXT:    and z5.d, z5.d, #0x80000000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-NEXT:    mul z3.d, z0.d, z5.d
-; CHECK-SVE2-NEXT:    mul z0.d, z0.d, z1.d
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mov z0.d, z2.d
+; CHECK-SVE2-NEXT:    and z1.d, z1.d, #0x40000000
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
+; CHECK-SVE2-NEXT:    mul z3.d, z2.d, z5.d
+; CHECK-SVE2-NEXT:    mul z1.d, z2.d, z1.d
+; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z1.d, z3.d
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-AES-LABEL: clmul_nxv2i64_zext:

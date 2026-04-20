@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <vector>
@@ -278,6 +279,10 @@ private:
 
   /// Set to true if this function has any function calls.
   bool HasCalls = false;
+
+  /// Frame-pointer policy for this function to avoid repeated attribute
+  /// lookups in hot paths.
+  FramePointerKind FramePointerPolicy = FramePointerKind::None;
 
   /// The frame index for the stack protector.
   int StackProtectorIdx = -1;
@@ -640,6 +645,11 @@ public:
   /// Return true if the current function has any function calls.
   bool hasCalls() const { return HasCalls; }
   void setHasCalls(bool V) { HasCalls = V; }
+
+  FramePointerKind getFramePointerPolicy() const { return FramePointerPolicy; }
+  void setFramePointerPolicy(FramePointerKind Kind) {
+    FramePointerPolicy = Kind;
+  }
 
   /// Returns true if the function contains opaque dynamic stack adjustments.
   bool hasOpaqueSPAdjustment() const { return HasOpaqueSPAdjustment; }

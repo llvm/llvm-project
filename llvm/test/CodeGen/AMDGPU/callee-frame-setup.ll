@@ -1968,7 +1968,56 @@ define void @spill_fp_to_memory_scratch_reg_needed_mubuf_offset(ptr addrspace(5)
   ret void
 }
 
+define void @dont_save_fp_bp_for_noreturn_funcs() #4 {
+; MUBUF-LABEL: dont_save_fp_bp_for_noreturn_funcs:
+; MUBUF:       ; %bb.0:
+; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MUBUF-NEXT:    s_add_i32 s33, s32, 0x1fc0
+; MUBUF-NEXT:    s_and_b32 s33, s33, 0xffffe000
+; MUBUF-NEXT:    s_or_saveexec_b64 s[16:17], -1
+; MUBUF-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; MUBUF-NEXT:    s_mov_b64 exec, s[16:17]
+; MUBUF-NEXT:    s_mov_b32 s34, s32
+; MUBUF-NEXT:    s_addk_i32 s32, 0x4000
+; MUBUF-NEXT:    s_getpc_b64 s[16:17]
+; MUBUF-NEXT:    s_add_u32 s16, s16, dont_save_fp_bp_for_noreturn_funcs@gotpcrel32@lo+4
+; MUBUF-NEXT:    s_addc_u32 s17, s17, dont_save_fp_bp_for_noreturn_funcs@gotpcrel32@hi+12
+; MUBUF-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; MUBUF-NEXT:    v_writelane_b32 v40, s30, 0
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 0
+; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s33
+; MUBUF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+;
+; FLATSCR-LABEL: dont_save_fp_bp_for_noreturn_funcs:
+; FLATSCR:       ; %bb.0:
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    s_add_i32 s33, s32, 0x7f
+; FLATSCR-NEXT:    s_and_b32 s33, s33, 0xffffff80
+; FLATSCR-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; FLATSCR-NEXT:    scratch_store_dword off, v40, s33 offset:4 ; 4-byte Folded Spill
+; FLATSCR-NEXT:    s_mov_b64 exec, s[0:1]
+; FLATSCR-NEXT:    s_mov_b32 s34, s32
+; FLATSCR-NEXT:    s_addk_i32 s32, 0x100
+; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
+; FLATSCR-NEXT:    s_add_u32 s0, s0, dont_save_fp_bp_for_noreturn_funcs@gotpcrel32@lo+4
+; FLATSCR-NEXT:    s_addc_u32 s1, s1, dont_save_fp_bp_for_noreturn_funcs@gotpcrel32@hi+12
+; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; FLATSCR-NEXT:    v_writelane_b32 v40, s30, 0
+; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
+; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
+; FLATSCR-NEXT:    scratch_store_dword off, v0, s33
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+  %alloca = alloca i32, align 128, addrspace(5)
+  store volatile i32 0, ptr addrspace(5) %alloca
+  call void @dont_save_fp_bp_for_noreturn_funcs()
+  unreachable
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "frame-pointer"="all" }
 attributes #2 = { nounwind "frame-pointer"="non-leaf" }
 attributes #3 = { nounwind "frame-pointer"="all" "amdgpu-waves-per-eu"="6,6" }
+attributes #4 = { nounwind noreturn }

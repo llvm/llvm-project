@@ -78,7 +78,8 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_readlane:
-  case AMDGPU::BI__builtin_amdgcn_readfirstlane: {
+  case AMDGPU::BI__builtin_amdgcn_readfirstlane:
+  case AMDGPU::BI__builtin_amdgcn_wave_shuffle: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinId));

@@ -168,11 +168,12 @@ transform::detail::mergeSymbolsInto(Operation *target,
     }
   }
 
-  // TODO: This duplicates pass infrastructure. We should split this pass into
-  //       several and let the pass infrastructure do the verification.
+  // We only modified symbols above, so there is no need to verify everything
+  // again, just the symbol table.
   for (auto *op : SmallVector<Operation *>{target, *other}) {
-    if (failed(mlir::verify(op)))
-      return op->emitError() << "failed to verify input op after renaming";
+    if (failed(mlir::detail::verifySymbolTable(op)))
+      return op->emitError()
+             << "failed to verify symbol table after symbol renaming";
   }
 
   // Step 2:
@@ -234,6 +235,9 @@ transform::detail::mergeSymbolsInto(Operation *target,
     }
   }
 
+  // Need full verification here because merging/inlining may have broken some
+  // nesting invariants that were not broken in the sources.
+  // TODO: implement and use InlinerDialectInterface to avoid this check.
   if (failed(mlir::verify(target)))
     return target->emitError()
            << "failed to verify target op after merging symbols";

@@ -2986,13 +2986,9 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
               const Fortran::parser::Name &name =
                   Fortran::parser::GetLastName(arrayElement->Base());
               newSym = name.symbol;
-            } else if (const auto *component = Fortran::parser::Unwrap<
+            } else if (Fortran::parser::Unwrap<
                            Fortran::parser::StructureComponent>(*designator)) {
-              const Fortran::parser::DataRef &base{component->Base()};
-              if (const auto *name =
-                      std::get_if<Fortran::parser::Name>(&base.u)) {
-                newSym = name->symbol;
-              }
+              newSym = Fortran::parser::GetFirstName(*designator).symbol;
             }
           } else if (const auto *name =
                          std::get_if<Fortran::parser::Name>(&accObject.u)) {

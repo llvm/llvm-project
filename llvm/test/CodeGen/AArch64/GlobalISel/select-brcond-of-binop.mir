@@ -26,10 +26,10 @@ body:             |
     liveins: $x0
 
     %0:gpr(p0) = COPY $x0
-    %8:gpr(s8) = G_LOAD %0(p0) :: (load (s8))
-    %4:gpr(s32) = G_ANYEXT %8(s8)
-    %5:gpr(s32) = G_CONSTANT i32 1
-    %6:gpr(s32) = G_XOR %4, %5
+    %8:gpr(i8) = G_LOAD %0(p0) :: (load (s8))
+    %4:gpr(i32) = G_ANYEXT %8(i8)
+    %5:gpr(i32) = G_CONSTANT i32 1
+    %6:gpr(i32) = G_XOR %4, %5
     G_BRCOND %6, %bb.3
 
   bb.2:
@@ -67,12 +67,12 @@ body:             |
     liveins: $x0
 
     %0:gpr(p0) = COPY $x0
-    %8:gpr(s8) = G_LOAD %0(p0) :: (load (s8))
-    %4:gpr(s64) = G_ANYEXT %8(s8)
-    %5:gpr(s64) = G_CONSTANT i64 1
-    %6:gpr(s64) = G_XOR %4, %5
-    %3:gpr(s32) = G_TRUNC %6(s64)
-    G_BRCOND %3(s32), %bb.3
+    %8:gpr(i8) = G_LOAD %0(p0) :: (load (s8))
+    %4:gpr(i64) = G_ANYEXT %8(i8)
+    %5:gpr(i64) = G_CONSTANT i64 1
+    %6:gpr(i64) = G_XOR %4, %5
+    %3:gpr(i32) = G_TRUNC %6(i64)
+    G_BRCOND %3(i32), %bb.3
 
   bb.2:
     RET_ReallyLR
@@ -102,9 +102,9 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $w0
-    %lhs:gpr(s32) = COPY $w0
-    %rhs:gpr(s32) = G_CONSTANT i32 1
-    %op:gpr(s32) = G_AND %lhs, %rhs
+    %lhs:gpr(i32) = COPY $w0
+    %rhs:gpr(i32) = G_CONSTANT i32 1
+    %op:gpr(i32) = G_AND %lhs, %rhs
     G_BRCOND %op, %bb.3
 
   bb.2:
@@ -137,9 +137,9 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $w0, $w1
-    %lhs:gpr(s32) = COPY $w0
-    %rhs:gpr(s32) = COPY $w1
-    %op:gpr(s32) = G_AND %lhs, %rhs
+    %lhs:gpr(i32) = COPY $w0
+    %rhs:gpr(i32) = COPY $w1
+    %op:gpr(i32) = G_AND %lhs, %rhs
     G_BRCOND %op, %bb.3
 
   bb.2:
@@ -174,9 +174,9 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $w0
-    %lhs:gpr(s32) = COPY $w0
-    %rhs:gpr(s32) = G_CONSTANT i32 1
-    %op:gpr(s32) = G_SHL %lhs, %rhs
+    %lhs:gpr(i32) = COPY $w0
+    %rhs:gpr(i32) = G_CONSTANT i32 1
+    %op:gpr(i32) = G_SHL %lhs, %rhs
     G_BRCOND %op, %bb.3
 
   bb.2:
@@ -209,9 +209,9 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $w0
-    %lhs:gpr(s32) = COPY $w0
-    %rhs:gpr(s32) = G_CONSTANT i32 1
-    %op:gpr(s32) = G_ASHR %lhs, %rhs
+    %lhs:gpr(i32) = COPY $w0
+    %rhs:gpr(i32) = G_CONSTANT i32 1
+    %op:gpr(i32) = G_ASHR %lhs, %rhs
     G_BRCOND %op, %bb.3
 
   bb.2:
@@ -242,10 +242,10 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $x0
-    %lhs:gpr(s64) = COPY $x0
-    %rhs:gpr(s64) = G_CONSTANT i64 8589934592
-    %op:gpr(s64) = G_ASHR %lhs, %rhs
-    %trunc:gpr(s32) = G_TRUNC %op(s64)
+    %lhs:gpr(i64) = COPY $x0
+    %rhs:gpr(i64) = G_CONSTANT i64 8589934592
+    %op:gpr(i64) = G_ASHR %lhs, %rhs
+    %trunc:gpr(i32) = G_TRUNC %op(i64)
     G_BRCOND %trunc, %bb.3
   bb.2:
     RET_ReallyLR

@@ -222,6 +222,34 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
+        Generates a cast from `value` to `resultType` when the implementing
+        pointer-like type can emit a lowering for that conversion.
+
+        This is intentionally a single operation (rather than separate
+        "cast to" / "cast from" hooks): the source type is always
+        `value.getType()` and the destination is always `resultType`.
+
+        Call sites typically dispatch on the `PointerLikeType` that owns the
+        conversion: use the source value's type when casting *from* a
+        pointer-like representation.
+
+        Returns the cast result on success, or an empty value if the cast is
+        unsupported (callers may then try the other endpoint's interface or
+        apply their own fallback).
+      }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"genCast",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::Value":$value,
+                    "::mlir::Type":$resultType),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
         Returns true if the pointer points to device data.
       }],
       /*retTy=*/"bool",

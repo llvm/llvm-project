@@ -4,6 +4,7 @@
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <6 x float> @_Z5case1v(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    ret <6 x float> <float 0.000000e+00, float 2.000000e+00, float 4.000000e+00, float 1.000000e+00, float 3.000000e+00, float 5.000000e+00>
 //
 float3x2 case1() {
@@ -24,6 +25,7 @@ RWStructuredBuffer<float> In;
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <6 x float> @_Z5case2v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 0) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    [[CALL1:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 1) #[[ATTR4]]
 // CHECK-NEXT:    [[CALL2:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 2) #[[ATTR4]]
@@ -60,6 +62,7 @@ float3x2 case2() {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <6 x float> @_Z5case3Dv3_fS_(
 // CHECK-SAME: <3 x float> noundef nofpclass(nan inf) [[A:%.*]], <3 x float> noundef nofpclass(nan inf) [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <3 x float>, align 4
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <3 x float>, align 4
 // CHECK-NEXT:    store <3 x float> [[A]], ptr [[A_ADDR]], align 4

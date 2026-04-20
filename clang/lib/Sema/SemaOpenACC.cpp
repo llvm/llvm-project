@@ -996,11 +996,13 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
     }
   }
 
-  // Adding two APSInts requires matching sign, so extract that here.
+  // Adding two APSInts requires matching sign and width, so extract those here.
   auto AddAPSInt = [](llvm::APSInt LHS, llvm::APSInt RHS) -> llvm::APSInt {
-    if (LHS.isSigned() == RHS.isSigned())
+    if (LHS.isSigned() == RHS.isSigned() &&
+        LHS.getBitWidth() == RHS.getBitWidth())
       return LHS + RHS;
 
+    // Width is + 1 so that unsigned->signed conversion just works.
     unsigned Width = std::max(LHS.getBitWidth(), RHS.getBitWidth()) + 1;
     return llvm::APSInt(LHS.sext(Width) + RHS.sext(Width), /*Signed=*/true);
   };

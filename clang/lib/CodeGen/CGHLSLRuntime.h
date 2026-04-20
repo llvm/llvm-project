@@ -304,6 +304,8 @@ public:
                       QualType CType);
 
   LValue emitBufferMemberExpr(CodeGenFunction &CGF, const MemberExpr *E);
+  std::optional<LValue> emitResourceMemberExpr(CodeGenFunction &CGF,
+                                               const MemberExpr *E);
 
 private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,

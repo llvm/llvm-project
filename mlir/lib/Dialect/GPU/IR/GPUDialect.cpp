@@ -301,6 +301,9 @@ void GPUDialect::initialize() {
                             BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp,
                             LaneIdOp, SubgroupIdOp, GlobalIdOp, NumSubgroupsOp,
                             SubgroupSizeOp, LaunchOp, SubgroupBroadcastOp>();
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface,
+                            SubgroupMmaLoadMatrixOp,
+                            SubgroupMmaStoreMatrixOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {

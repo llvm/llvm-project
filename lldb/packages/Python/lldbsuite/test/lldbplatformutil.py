@@ -345,7 +345,7 @@ def getDwarfVersion():
         return str(configuration.dwarf_version)
     if "clang" in getCompiler():
         try:
-            triple = builder_module().getTriple(getArchitecture())
+            triple = builder_module().getTriple()
             target = ["-target", triple] if triple else []
             driver_output = subprocess.check_output(
                 [getCompiler()] + target + "-g -c -x c - -o - -###".split(),

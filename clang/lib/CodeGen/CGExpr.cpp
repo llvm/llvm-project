@@ -107,7 +107,12 @@ RawAddress
 CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits Align,
                                              const Twine &Name,
                                              llvm::Value *ArraySize) {
-  auto Alloca = CreateTempAlloca(Ty, Name, ArraySize);
+  if (getLangOpts().EmitLogicalPointer) {
+    auto Alloca = Builder.CreateStructuredAlloca(Ty, Name);
+    return RawAddress(Alloca, Ty, Align, KnownNonNull);
+  }
+
+  auto *Alloca = CreateTempAlloca(Ty, Name, ArraySize);
   Alloca->setAlignment(Align.getAsAlign());
   return RawAddress(Alloca, Ty, Align, KnownNonNull);
 }
@@ -4602,7 +4607,7 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
     assert(isa<llvm::ArrayType>(Addr.getElementType()) &&
            "Expected pointer to array");
 
-    if (getLangOpts().EmitStructuredGEP) {
+    if (getLangOpts().EmitLogicalPointer) {
       // Array-to-pointer decay for an SGEP is a no-op as we don't do any
       // logical indexing. See #179951 for some additional context.
       auto *SGEP =
@@ -4649,7 +4654,7 @@ static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
                                           bool signedIndices,
                                           SourceLocation loc,
                                     const llvm::Twine &name = "arrayidx") {
-  if (inbounds && CGF.getLangOpts().EmitStructuredGEP)
+  if (inbounds && CGF.getLangOpts().EmitLogicalPointer)
     return CGF.Builder.CreateStructuredGEP(elemType, ptr, indices);
 
   if (inbounds) {
@@ -4668,7 +4673,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                      bool signedIndices, SourceLocation loc,
                                      CharUnits align,
                                      const llvm::Twine &name = "arrayidx") {
-  if (inbounds && CGF.getLangOpts().EmitStructuredGEP)
+  if (inbounds && CGF.getLangOpts().EmitLogicalPointer)
     return RawAddress(CGF.Builder.CreateStructuredGEP(arrayType,
                                                       addr.emitRawPointer(CGF),
                                                       indices.drop_front()),
@@ -5511,10 +5516,18 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
     EmitIgnoredExpr(E->getBase());
     return EmitDeclRefLValue(DRE);
   }
-  if (getLangOpts().HLSL &&
-      E->getType().getAddressSpace() == LangAS::hlsl_constant) {
-    // We have an HLSL buffer - emit using HLSL's layout rules.
-    return CGM.getHLSLRuntime().emitBufferMemberExpr(*this, E);
+
+  if (getLangOpts().HLSL) {
+    QualType QT = E->getType();
+    if (QT.getAddressSpace() == LangAS::hlsl_constant)
+      return CGM.getHLSLRuntime().emitBufferMemberExpr(*this, E);
+
+    if (QT->isHLSLResourceRecord() || QT->isHLSLResourceRecordArray()) {
+      std::optional<LValue> LV;
+      LV = CGM.getHLSLRuntime().emitResourceMemberExpr(*this, E);
+      if (LV.has_value())
+        return *LV;
+    }
   }
 
   Expr *BaseExpr = E->getBase();
@@ -5661,7 +5674,7 @@ static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   llvm::Type *StructType =
       CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMType();
 
-  if (CGF.getLangOpts().EmitStructuredGEP)
+  if (CGF.getLangOpts().EmitLogicalPointer)
     return RawAddress(
         CGF.Builder.CreateStructuredGEP(StructType, base.emitRawPointer(CGF),
                                         {CGF.Builder.getSize(idx)}),

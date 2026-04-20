@@ -20,8 +20,6 @@ DWARF:
       LineBase:            1
       LineRange:           14
       OpcodeBase:          13
-      DirectoryEntryFormat:
-      FileNameEntryFormat:
 
 # RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB -DFORMAT=DWARF32 %s | \
 # RUN:   llvm-readelf --hex-dump=.debug_line - | \
@@ -241,3 +239,146 @@ DWARF:
 ##                                     ^-                         file_name_entry_format[0].form (ULEB128)
 ##                                       ^-                       file_names_count (ULEB128)
 ##                                         ^----                  EOF
+
+
+## Check file name and directory handling, including the cases where the
+## specified length of a list does not match its contents.
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  [[FORMAT]]
+  Type:  ET_EXEC
+Sections:
+  - Name:    .debug_line_str
+    Type:    SHT_PROGBITS
+    Content: 666f6f2e63707000  # foo.cpp
+DWARF:
+  debug_line:
+    - Format:              DWARF32
+      Version:             5
+      AddressSize:         8
+      MinInstLength:       1
+      MaxOpsPerInst:       1
+      DefaultIsStmt:       1
+      LineBase:            1
+      LineRange:           14
+      OpcodeBase:          13
+      DirectoryEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+      # DirectoriesCount:    2  # Implicit
+      Directories:
+        - - CStr: "bar"
+        - - CStr: "baz"
+      FileNameEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_line_strp
+        - ContentType:     DW_LNCT_directory_index
+          Form:            DW_FORM_udata
+        - ContentType:     DW_LNCT_timestamp
+          Form:            DW_FORM_block
+        - ContentType:     DW_LNCT_size
+          Form:            DW_FORM_data4
+      FileNamesCount:      1  # Explicit
+      FileNames:
+        - - Value: 0
+          - Value: 1
+          - BlockData: [ 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47 ]
+          - Value: 0xdead
+
+# RUN: yaml2obj --docnum=4 -DFORMAT=ELFDATA2LSB %s | llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefixes=FILEDIR1,FILEDIR1LE
+# RUN: yaml2obj --docnum=4 -DFORMAT=ELFDATA2MSB %s | llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefixes=FILEDIR1,FILEDIR1BE
+# FILEDIR1:        Hex dump of section '.debug_line':
+## Start of header tested above.
+# FILEDIR1:        0x00000010 0e0d0001 01010100 00000100 00010101
+##                            ^-                                  line_range (1-byte)
+##                              ^-                                opcode_base (1-byte)
+##                                ^--- -------- -------- ----     standard_opcode_lengths
+##                                                           ^-   directory_entry_format_count (1-byte)
+##                                                             ^- directories_entry_format[0].content_type (ULEB128)
+# FILEDIR1-NEXT:   0x00000020 08026261 72006261 7a000401 1f020f03
+##                            ^-                                  directories_entry_format[0].form (ULEB128)
+##                              ^-                                directories_count (ULEB128)
+##                                ^--- ----                       directories[0][path] ("bar")
+##                                         ^--- ----              directories[1][path] ("baz")
+##                                                  ^-            file_name_entry_format_count (1-byte)
+##                                                    ^-          file_name_entry_format[0].content_type (ULEB128)
+##                                                       ^-       file_name_entry_format[0].form (ULEB128)
+##                                                         ^-     file_name_entry_format[1].content_type (ULEB128)
+##                                                           ^-   file_name_entry_format[1].form (ULEB128)
+##                                                             ^- file_name_entry_format[2].content_type (ULEB128)
+# FILEDIR1-NEXT:   0x00000030 09040601 00000000 01084041 42434445
+##                            ^-                                  file_name_entry_format[2].form (ULEB128)
+##                              ^-                                file_name_entry_format[3].content_type (ULEB128)
+##                                ^-                              file_name_entry_format[3].form (ULEB128)
+##                                  ^-                            file_names_count (ULEB128)
+##                                     ^-------                   file_names[0].path (4-byte)
+##                                              ^-                file_names[0].directory_index (ULEB128)
+##                                                ^----- -------- file_names[0].timestamp (block)
+# FILEDIR1LE-NEXT: 0x00000040 4647adde 0000{{ }}
+# FILEDIR1BE-NEXT: 0x00000040 46470000 dead{{ }}
+##                            ----
+##                                ^--- ----                       file_names[0].path (4-byte)
+##                                         ^----                  EOF
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Format:              DWARF32
+      Version:             5
+      AddressSize:         8
+      MinInstLength:       1
+      MaxOpsPerInst:       1
+      DefaultIsStmt:       1
+      LineBase:            1
+      LineRange:           14
+      OpcodeBase:          13
+      DirectoryEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+      DirectoriesCount:    1  # Larger than the actual length
+      Directories:
+      FileNameEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+        - ContentType:     DW_LNCT_directory_index
+          Form:            DW_FORM_indirect
+      FileNamesCount:      0  # Smaller than the actual length
+      FileNames:
+        - - CStr: foo.cpp
+          - Value: 0x0b  # DW_FORM_data1
+          - Value: 1
+        - - CStr: foo.c  # Shorter list ends the entry early
+        - - CStr: bar.cpp
+          - Value: 0x0b  # DW_FORM_data1
+          - Value: 2
+          - Value: 0xdead  # Extra values ignored
+
+# RUN: yaml2obj --docnum=5 %s | llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefixes=FILEDIR2
+# FILEDIR2:      Hex dump of section '.debug_line':
+## Start of header tested above.
+# FILEDIR2:      0x00000020 08010201 08021600 666f6f2e 63707000
+##                          ^-                                  directories_entry_format[0].form (ULEB128)
+##                            ^-                                directories_count (ULEB128)
+##                              ^-                              file_name_entry_format_count (1-byte)
+##                                ^-                            file_name_entry_format[0].content_type (ULEB128)
+##                                   ^-                         file_name_entry_format[0].form (ULEB128)
+##                                     ^-                       file_name_entry_format[1].content_type (ULEB128)
+##                                       ^-                     file_name_entry_format[1].form (ULEB128)
+##                                         ^-                   file_names_count (ULEB128)
+##                                            ^------- -------- file_names[0].path (foo.cpp)
+# FILEDIR2-NEXT: 0x00000030 0b01666f 6f2e6300 6261722e 63707000
+##                          ^---                                file_names[0].directory_index (ULEB128 + 1-byte)
+##                              ^--- --------                   file_names[1].path (foo.c)
+##                                            ^------- -------- file_names[2].path (bar.c)
+# FILEDIR2-NEXT: 0b02{{ }}
+##               ^---                                           file_names[0].directory_index (ULEB128 + 1-byte)
+##                   ^----                                      EOF

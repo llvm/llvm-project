@@ -686,12 +686,6 @@ template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::print(raw_ostream &OS) const {
   for (unsigned i = 0; i < TopLevelLoops.size(); ++i)
     TopLevelLoops[i]->print(OS);
-#if 0
-  for (DenseMap<BasicBlock*, LoopT*>::const_iterator I = BBMap.begin(),
-         E = BBMap.end(); I != E; ++I)
-    OS << "BB '" << I->first->getName() << "' level = "
-       << I->second->getLoopDepth() << "\n";
-#endif
 }
 
 template <typename T>

@@ -109,8 +109,8 @@ public:
 
   llvm::Error initialize(const TagsAnalysisResult &Tags,
                          const PairsAnalysisResult &Pairs) override {
-    result().UniqueTagCount = static_cast<int>(Tags.Tags.size());
-    result().EntityCount = static_cast<int>(Pairs.PairCounts.size());
+    getResult().UniqueTagCount = static_cast<int>(Tags.Tags.size());
+    getResult().EntityCount = static_cast<int>(Pairs.PairCounts.size());
 
     int Total = 0;
     int Max = 0;
@@ -119,8 +119,8 @@ public:
       if (Count > Max)
         Max = Count;
     }
-    result().TotalPairCount = Total;
-    result().MaxPairsPerEntity = Max;
+    getResult().TotalPairCount = Total;
+    getResult().MaxPairsPerEntity = Max;
 
     return llvm::Error::success();
   }

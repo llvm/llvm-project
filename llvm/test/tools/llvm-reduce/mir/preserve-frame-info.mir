@@ -13,6 +13,7 @@
 # RESULT-NEXT: maxAlignment:    64
 # RESULT-NEXT: adjustsStack:    true
 # RESULT-NEXT: hasCalls:        true
+# RESULT-NEXT: framePointerPolicy: none
 # RESULT-NEXT: stackProtector: '%stack.9.guard'
 # RESULT-NEXT: maxCallFrameSize: 420
 # RESULT-NEXT: cvBytesOfCalleeSavedRegisters: 48
@@ -110,6 +111,7 @@ frameInfo:
   maxAlignment:    1
   adjustsStack:    true
   hasCalls:        true
+  framePointerPolicy: none
   stackProtector:  '%stack.9'
   maxCallFrameSize: 420
   cvBytesOfCalleeSavedRegisters: 48

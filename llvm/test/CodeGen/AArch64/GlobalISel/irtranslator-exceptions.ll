@@ -12,16 +12,16 @@ define { ptr, i32 } @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $w0 = COPY [[C]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   BL @foo, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -32,15 +32,15 @@ define { ptr, i32 } @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY2]](p0)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY2]](p0)
   ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
-  ; CHECK-NEXT:   $w1 = COPY [[PTRTOINT]](s32)
+  ; CHECK-NEXT:   $w1 = COPY [[PTRTOINT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0, implicit $w1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.continue:
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   $x0 = COPY [[DEF]](p0)
-  ; CHECK-NEXT:   $w1 = COPY [[C1]](s32)
+  ; CHECK-NEXT:   $w1 = COPY [[C1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0, implicit $w1
   %res32 = invoke i32 @foo(i32 42) to label %continue unwind label %broken
 
@@ -77,7 +77,7 @@ define void @test_invoke_indirect(ptr %callee) personality ptr @__gxx_personalit
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY2]](p0)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY2]](p0)
   ; CHECK-NEXT:   RET_ReallyLR
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.continue:
@@ -99,19 +99,19 @@ define void @test_invoke_varargs() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(f32) = G_FCONSTANT float 1.000000e+00
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s32)
-  ; CHECK-NEXT:   G_STORE [[ANYEXT]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 1)
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s64)
-  ; CHECK-NEXT:   G_STORE [[C2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into stack + 8, align 1)
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](i64)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[C1]](i32)
+  ; CHECK-NEXT:   G_STORE [[ANYEXT]](i64), [[PTR_ADD]](p0) :: (store (i64) into stack, align 1)
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](i64)
+  ; CHECK-NEXT:   G_STORE [[C2]](f32), [[PTR_ADD1]](p0) :: (store (f32) into stack + 8, align 1)
   ; CHECK-NEXT:   $x0 = COPY [[C]](p0)
   ; CHECK-NEXT:   BL @printf, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -125,7 +125,7 @@ define void @test_invoke_varargs() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY2]](p0)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY2]](p0)
   ; CHECK-NEXT:   RET_ReallyLR
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.continue:
@@ -148,12 +148,12 @@ define i32 @test_lpad_phi() personality ptr @__gxx_personality_v0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @global_var
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 13
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 55
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[GV]](p0) :: (store (s32) into @global_var)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 11
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 13
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 55
+  ; CHECK-NEXT:   G_STORE [[C]](i32), [[GV]](p0) :: (store (i32) into @global_var)
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
@@ -166,18 +166,18 @@ define i32 @test_lpad_phi() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT:   liveins: $x0, $x1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[C1]](s32), %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[C1]](i32), %bb.1
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p0)
-  ; CHECK-NEXT:   G_STORE [[PHI]](s32), [[GV]](p0) :: (store (s32) into @global_var)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY1]](p0)
+  ; CHECK-NEXT:   G_STORE [[PHI]](i32), [[GV]](p0) :: (store (i32) into @global_var)
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.continue:
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[C2]](s32), %bb.1, [[C3]](s32), %bb.2
-  ; CHECK-NEXT:   $w0 = COPY [[PHI1]](s32)
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(i32) = G_PHI [[C2]](i32), %bb.1, [[C3]](i32), %bb.2
+  ; CHECK-NEXT:   $w0 = COPY [[PHI1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   store i32 42, ptr @global_var
   invoke void @may_throw()

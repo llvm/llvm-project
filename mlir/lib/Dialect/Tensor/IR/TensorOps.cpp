@@ -104,9 +104,12 @@ FailureOr<Value> tensor::getOrCreateDestination(OpBuilder &b, Location loc,
       mixedSizes.push_back(b.getIndexAttr(sz));
   }
 
-  // Create empty tensor.
-  Value emptyTensor =
-      tensor::EmptyOp::create(b, loc, mixedSizes, tensorType.getElementType());
+  // Create empty tensor with the same encoding as the result type.
+  Attribute encoding;
+  if (auto rankedTensorType = dyn_cast<RankedTensorType>(tensorType))
+    encoding = rankedTensorType.getEncoding();
+  Value emptyTensor = tensor::EmptyOp::create(
+      b, loc, mixedSizes, tensorType.getElementType(), encoding);
   return emptyTensor;
 }
 

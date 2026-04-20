@@ -1809,8 +1809,8 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
       SubCVElems.push_back(CV->getAggregateElement(I));
 
     // Optionally pad with zeros.
-    for (auto _ : llvm::seq(NumPaddingZeros))
-      SubCVElems.push_back(ConstantInt::getNullValue(ElemTy));
+    if (NumPaddingZeros)
+      SubCVElems.append(NumPaddingZeros, ConstantInt::getNullValue(ElemTy));
 
     auto SubCV = ConstantVector::get(SubCVElems);
     Type *Int8Ty = IntegerType::get(SubCV->getContext(), 8);

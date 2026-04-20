@@ -49,10 +49,10 @@ body: |
     ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY]]
     ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
     ; CHECK-NEXT: DBG_VALUE [[ADDWrr]], $noreg, !7, !DIExpression(),  debug-location !9
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_ADD %0, %0
-    $w0 = COPY %1(s32)
-    DBG_VALUE %1(s32), $noreg, !7, !DIExpression(), debug-location !9
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_ADD %0, %0
+    $w0 = COPY %1(i32)
+    DBG_VALUE %1(i32), $noreg, !7, !DIExpression(), debug-location !9
 ...
 
 ---
@@ -66,7 +66,7 @@ body: |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: DBG_VALUE %1:gpr64, $noreg, !7, !DIExpression(),  debug-location !9
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s64) = G_ZEXT %0:gpr(s32)
-    DBG_VALUE %1(s64), $noreg, !7, !DIExpression(), debug-location !9
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i64) = G_ZEXT %0:gpr(i32)
+    DBG_VALUE %1(i64), $noreg, !7, !DIExpression(), debug-location !9
 ...

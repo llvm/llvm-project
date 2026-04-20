@@ -89,6 +89,7 @@ add_libc_unittest(
     libc.include.sys_socket
     libc.hdr.sys_socket_macros
     libc.hdr.types.socklen_t
+    libc.hdr.types.struct_linger
     libc.src.errno.errno
     libc.src.sys.socket.getsockopt
     libc.src.sys.socket.setsockopt

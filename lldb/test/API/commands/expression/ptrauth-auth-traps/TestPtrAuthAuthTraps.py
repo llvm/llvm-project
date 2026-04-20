@@ -8,14 +8,21 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import configuration
 
 
 class TestPtrAuthAuthTraps(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
+
+    def build_arm64e(self):
+        self.build(
+            dictionary={"TRIPLE": configuration.triple.replace("arm64", "arm64e")}
+        )
 
     @skipUnlessArm64eSupported
     def test_static_function_pointer(self):
-        self.build()
+        self.build_arm64e()
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.c", False)
         )
@@ -32,7 +39,7 @@ class TestPtrAuthAuthTraps(TestBase):
 
     @skipUnlessArm64eSupported
     def test_indirect_call_through_caller(self):
-        self.build()
+        self.build_arm64e()
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.c", False)
         )

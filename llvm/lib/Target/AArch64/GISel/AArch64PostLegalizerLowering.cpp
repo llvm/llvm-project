@@ -98,7 +98,8 @@ void applyFConstantToConstant(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
   MachineIRBuilder MIB(MI);
   const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
-  MIB.buildConstant(MI.getOperand(0).getReg(), ImmValAPF.bitcastToAPInt());
+  const Register DstReg = MI.getOperand(0).getReg();
+  MIB.buildConstant(DstReg, ImmValAPF.bitcastToAPInt());
   MI.eraseFromParent();
 }
 
@@ -417,8 +418,9 @@ void applyShuffleVectorPseudo(MachineInstr &MI, MachineRegisterInfo &MRI,
     LLT DstTy = MRI.getType(MatchInfo.Dst);
     assert(DstTy == LLT::fixed_vector(8, 8) ||
            DstTy == LLT::fixed_vector(16, 8));
-    LLT BSTy = DstTy == LLT::fixed_vector(8, 8) ? LLT::fixed_vector(4, 16)
-                                                : LLT::fixed_vector(8, 16);
+    LLT BSTy = DstTy == LLT::fixed_vector(8, 8)
+                   ? LLT::fixed_vector(4, LLT::integer(16))
+                   : LLT::fixed_vector(8, LLT::integer(16));
     // FIXME: NVCAST
     auto BS1 = MIRBuilder.buildInstr(TargetOpcode::G_BITCAST, {BSTy},
                                      MatchInfo.SrcOps[0]);
@@ -438,8 +440,8 @@ void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
     MIRBuilder.buildCopy(MatchInfo.Dst, MatchInfo.SrcOps[0]);
   else {
     // Tablegen patterns expect an i32 G_CONSTANT as the final op.
-    auto Cst =
-        MIRBuilder.buildConstant(LLT::scalar(32), MatchInfo.SrcOps[2].getImm());
+    auto Cst = MIRBuilder.buildConstant(LLT::integer(32),
+                                        MatchInfo.SrcOps[2].getImm());
     MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst},
                           {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
   }
@@ -453,7 +455,7 @@ void applyFullRev(MachineInstr &MI, MachineRegisterInfo &MRI) {
   assert(DstTy.getSizeInBits() == 128 &&
          "Expected 128bit vector in applyFullRev");
   MachineIRBuilder MIRBuilder(MI);
-  auto Cst = MIRBuilder.buildConstant(LLT::scalar(32), 8);
+  auto Cst = MIRBuilder.buildConstant(LLT::integer(32), 8);
   auto Rev = MIRBuilder.buildInstr(AArch64::G_REV64, {DstTy}, {Src});
   MIRBuilder.buildInstr(AArch64::G_EXT, {Dst}, {Rev, Rev, Cst});
   MI.eraseFromParent();
@@ -558,9 +560,9 @@ void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register DstVec, SrcVec;
   int DstLane, SrcLane;
   std::tie(DstVec, DstLane, SrcVec, SrcLane) = MatchInfo;
-  auto SrcCst = Builder.buildConstant(LLT::scalar(64), SrcLane);
+  auto SrcCst = Builder.buildConstant(LLT::integer(64), SrcLane);
   auto Extract = Builder.buildExtractVectorElement(ScalarTy, SrcVec, SrcCst);
-  auto DstCst = Builder.buildConstant(LLT::scalar(64), DstLane);
+  auto DstCst = Builder.buildConstant(LLT::integer(64), DstLane);
   Builder.buildInsertVectorElement(Dst, DstVec, Extract, DstCst);
   MI.eraseFromParent();
 }
@@ -806,7 +808,7 @@ void applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   const LLT SrcTy = MRI.getType(Src1Reg);
 
   B.setInstrAndDebugLoc(MI);
-  auto Lane = B.buildConstant(LLT::scalar(64), MatchInfo.second);
+  auto Lane = B.buildConstant(LLT::integer(64), MatchInfo.second);
 
   Register DupSrc = MI.getOperand(1).getReg();
   // For types like <2 x s32>, we can use G_DUPLANE32, with a <4 x s32> source.
@@ -973,9 +975,10 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
 std::function<Register(MachineIRBuilder &)>
 getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool NoNans,
               MachineRegisterInfo &MRI) {
-  LLT DstTy = MRI.getType(LHS);
+  LLT OldTy = MRI.getType(LHS);
+  LLT DstTy = LLT::fixed_vector(OldTy.getNumElements(),
+                                LLT::integer(OldTy.getScalarSizeInBits()));
   assert(DstTy.isVector() && "Expected vector types only?");
-  assert(DstTy == MRI.getType(RHS) && "Src and Dst types must match!");
   switch (CC) {
   default:
     llvm_unreachable("Unexpected condition code!");
@@ -1104,7 +1107,7 @@ void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
     Register SrcReg = GBuildVec->getSourceReg(I);
     if (mi_match(SrcReg, MRI, m_GImplicitDef()))
       continue;
-    auto IdxReg = B.buildConstant(LLT::scalar(64), I);
+    auto IdxReg = B.buildConstant(LLT::integer(64), I);
     DstReg =
         B.buildInsertVectorElement(DstTy, DstReg, SrcReg, IdxReg).getReg(0);
   }

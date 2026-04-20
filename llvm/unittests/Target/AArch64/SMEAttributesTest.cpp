@@ -230,8 +230,7 @@ TEST(SMEAttributes, Transitions) {
   // Normal -> Normal
   ASSERT_FALSE(CA(SA::Normal, SA::Normal).requiresSMChange());
   ASSERT_FALSE(CA(SA::Normal, SA::Normal).requiresPreservingZT0());
-  ASSERT_FALSE(CA(SA::Normal, SA::Normal).requiresDisablingZABeforeCall());
-  ASSERT_FALSE(CA(SA::Normal, SA::Normal).requiresEnablingZAAfterCall());
+  ASSERT_FALSE(CA(SA::Normal, SA::Normal).requiresLazySave());
   // Normal -> Normal + LocallyStreaming
   ASSERT_FALSE(CA(SA::Normal, SA::Normal | SA::SM_Body).requiresSMChange());
 
@@ -287,30 +286,26 @@ TEST(SMEAttributes, Transitions) {
                         SA::encodeZT0State(SA::StateValue::In));
 
   // Shared ZA -> Private ZA Interface
-  ASSERT_FALSE(CA(ZA_Shared, Private_ZA).requiresDisablingZABeforeCall());
-  ASSERT_FALSE(CA(ZA_Shared, Private_ZA).requiresEnablingZAAfterCall());
+  ASSERT_FALSE(CA(ZA_Shared, Private_ZA).requiresPreservingZT0());
+  ASSERT_TRUE(CA(ZA_Shared, Private_ZA).requiresLazySave());
 
   // Shared ZT0 -> Private ZA Interface
-  ASSERT_TRUE(CA(ZT0_Shared, Private_ZA).requiresDisablingZABeforeCall());
   ASSERT_TRUE(CA(ZT0_Shared, Private_ZA).requiresPreservingZT0());
-  ASSERT_TRUE(CA(ZT0_Shared, Private_ZA).requiresEnablingZAAfterCall());
+  ASSERT_FALSE(CA(ZT0_Shared, Private_ZA).requiresLazySave());
 
   // Shared ZA & ZT0 -> Private ZA Interface
-  ASSERT_FALSE(CA(ZA_ZT0_Shared, Private_ZA).requiresDisablingZABeforeCall());
   ASSERT_TRUE(CA(ZA_ZT0_Shared, Private_ZA).requiresPreservingZT0());
-  ASSERT_FALSE(CA(ZA_ZT0_Shared, Private_ZA).requiresEnablingZAAfterCall());
+  ASSERT_TRUE(CA(ZA_ZT0_Shared, Private_ZA).requiresLazySave());
 
   // Shared ZA -> Shared ZA Interface
-  ASSERT_FALSE(CA(ZA_Shared, ZT0_Shared).requiresDisablingZABeforeCall());
-  ASSERT_FALSE(CA(ZA_Shared, ZT0_Shared).requiresEnablingZAAfterCall());
+  ASSERT_FALSE(CA(ZA_Shared, ZT0_Shared).requiresPreservingZT0());
+  ASSERT_FALSE(CA(ZA_Shared, ZT0_Shared).requiresLazySave());
 
   // Shared ZT0 -> Shared ZA Interface
-  ASSERT_FALSE(CA(ZT0_Shared, ZT0_Shared).requiresDisablingZABeforeCall());
   ASSERT_FALSE(CA(ZT0_Shared, ZT0_Shared).requiresPreservingZT0());
-  ASSERT_FALSE(CA(ZT0_Shared, ZT0_Shared).requiresEnablingZAAfterCall());
+  ASSERT_FALSE(CA(ZT0_Shared, ZT0_Shared).requiresLazySave());
 
   // Shared ZA & ZT0 -> Shared ZA Interface
-  ASSERT_FALSE(CA(ZA_ZT0_Shared, ZT0_Shared).requiresDisablingZABeforeCall());
   ASSERT_FALSE(CA(ZA_ZT0_Shared, ZT0_Shared).requiresPreservingZT0());
-  ASSERT_FALSE(CA(ZA_ZT0_Shared, ZT0_Shared).requiresEnablingZAAfterCall());
+  ASSERT_FALSE(CA(ZA_ZT0_Shared, ZT0_Shared).requiresLazySave());
 }

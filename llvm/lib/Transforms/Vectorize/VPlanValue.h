@@ -25,6 +25,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 
@@ -39,6 +40,8 @@ class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
 class VPPhiAccessors;
+class VPRegionValue;
+class VPRegionBlock;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -47,6 +50,7 @@ class LLVM_ABI_FOR_TEST VPValue {
   friend struct VPIRValue;
   friend struct VPSymbolicValue;
   friend class VPRecipeValue;
+  friend class VPRegionValue;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -78,6 +82,8 @@ public:
     VPVIRValueSC,     /// A live-in VPValue wrapping an IR Value.
     VPVSymbolicSC,    /// A symbolic live-in VPValue without IR backing.
     VPVRecipeValueSC, /// A VPValue defined by a recipe.
+    VPRegionValueSC,  /// A VPValue sub-class that is defined by a region, like
+                      /// the canonical IV of a loop region.
   };
 
   VPValue(const VPValue &) = delete;
@@ -196,6 +202,33 @@ public:
   void setUnderlyingValue(Value *Val) {
     assert(!UnderlyingVal && "Underlying Value is already set.");
     UnderlyingVal = Val;
+  }
+};
+
+/// VPValues defined by a VPRegionBlock, like the canonical IV.
+class VPRegionValue : public VPValue {
+  VPRegionBlock *DefiningRegion;
+  Type *Ty;
+  DebugLoc DL;
+
+public:
+  VPRegionValue(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
+      : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty),
+        DL(DL) {}
+
+  ~VPRegionValue() override = default;
+
+  /// Returns the region that defines this value.
+  VPRegionBlock *getDefiningRegion() const { return DefiningRegion; }
+
+  /// Returns the type of the VPRegionValue.
+  Type *getType() const { return Ty; }
+
+  /// Returns the debug location of the VPRegionValue.
+  DebugLoc getDebugLoc() const { return DL; }
+
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPRegionValueSC;
   }
 };
 

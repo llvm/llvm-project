@@ -534,6 +534,9 @@ bool AArch64ExpandPseudoImpl::expand_DestructiveOp(
     //      ==> MOVPRFX Zd Zs; EXT_ZZI Zd, Zd, Zs, Imm
     std::tie(DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 1, 2);
     break;
+  case AArch64::DestructiveBinaryImmUnpred:
+    std::tie(DOPIdx, SrcIdx) = std::make_tuple(1, 2);
+    break;
   case AArch64::DestructiveBinaryShImmUnpred:
     std::tie(DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 2, 3);
     break;
@@ -557,6 +560,7 @@ bool AArch64ExpandPseudoImpl::expand_DestructiveOp(
     break;
   case AArch64::DestructiveUnaryPassthru:
   case AArch64::DestructiveBinaryImm:
+  case AArch64::DestructiveBinaryImmUnpred:
   case AArch64::DestructiveBinaryShImmUnpred:
   case AArch64::Destructive2xRegImmUnpred:
     DOPRegIsUnique = true;
@@ -684,6 +688,10 @@ bool AArch64ExpandPseudoImpl::expand_DestructiveOp(
         .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(SrcIdx))
         .add(MI.getOperand(Src2Idx));
+    break;
+  case AArch64::DestructiveBinaryImmUnpred:
+    DOP.addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
+        .add(MI.getOperand(SrcIdx));
     break;
   case AArch64::DestructiveBinaryShImmUnpred:
   case AArch64::Destructive2xRegImmUnpred:

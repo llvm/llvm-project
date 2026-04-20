@@ -178,3 +178,20 @@ void incomplete_use(Incomplete &i) {
 #pragma acc parallel private(i)
   while (1);
 }
+
+namespace gh192783 {
+  constexpr char getChar() { return 3; }
+  constexpr unsigned long long getULL() { return 3; }
+
+void use() {
+  int array[5];
+#pragma acc parallel private(array[getChar():1])
+  while(1);
+#pragma acc parallel private(array[1:getChar()])
+  while(1);
+#pragma acc parallel private(array[getULL():1])
+  while(1);
+#pragma acc parallel private(array[1:getULL()])
+  while(1);
+}
+}

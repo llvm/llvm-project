@@ -9,6 +9,7 @@
 // Main header include
 #include "DynamicLoaderPOSIXDYLD.h"
 
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
@@ -27,6 +28,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <memory>
@@ -814,6 +816,26 @@ addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
   return m_entry_point;
 }
 
+static lldb::addr_t GetPTTLSVAddr(const lldb::ModuleSP &module_sp) {
+  if (!module_sp)
+    return LLDB_INVALID_ADDRESS;
+
+  ObjectFile *objfile = module_sp->GetObjectFile();
+  if (!objfile)
+    return LLDB_INVALID_ADDRESS;
+
+  auto *elf_obj = llvm::dyn_cast<ObjectFileELF>(objfile);
+  if (!elf_obj)
+    return LLDB_INVALID_ADDRESS;
+
+  for (const auto &phdr : elf_obj->ProgramHeaders()) {
+    if (phdr.p_type == llvm::ELF::PT_TLS)
+      return phdr.p_vaddr;
+  }
+
+  return LLDB_INVALID_ADDRESS;
+}
+
 lldb::addr_t
 DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
                                            const lldb::ThreadSP thread,
@@ -894,6 +916,18 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
       dtv_ptr = tp;
     }
   }
+  const llvm::Triple &triple = module_sp->GetArchitecture().GetTriple();
+
+  // On RISC-V with glibc the TLS layout uses Variant I (TLS_DTV_AT_TP).
+  // The thread pointer (tp) points just past a tcbhead_t header which
+  // contains two pointers: { dtv, private }. This means the DTV pointer
+  // itself is located two pointer-sized slots before tp, so dtv_ptr must
+  // be computed as tp - 2 * sizeof(void*). See MaskRay, “All about
+  // thread-local storage” (RISC-V/glibc section) and glibc's RISC-V
+  // TLS port (__tls_get_addr / THREAD_DTV).
+  if (triple.isRISCV())
+    dtv_ptr = tp - 2 * triple.getArchPointerBitWidth() / 8;
+
   addr_t dtv = (dtv_ptr != LLDB_INVALID_ADDRESS) ? ReadPointer(dtv_ptr)
                                                  : LLDB_INVALID_ADDRESS;
   if (dtv == LLDB_INVALID_ADDRESS) {
@@ -915,8 +949,26 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   if (tls_block == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read tls_block");
     return LLDB_INVALID_ADDRESS;
-  } else
-    return tls_block + tls_file_addr;
+  }
+
+  // DW_OP_GNU_push_tls_address gives us a value in tls_file_addr that can be
+  // either:
+  //   - a pure offset inside the TLS block (e.g. x86_64/glibc), or
+  //   - a virtual address inside the PT_TLS segment (e.g. RISC-V/glibc),
+  //     roughly PT_TLS.p_vaddr + TPOFF(sym).
+  // To handle both cases, we try to normalize it to a plain offset (tpoff)
+  // by subtracting PT_TLS.p_vaddr when available.
+  addr_t pt_tls_vaddr = GetPTTLSVAddr(module_sp);
+  addr_t tpoff = tls_file_addr;
+
+  // If the module has a PT_TLS segment and the DWARF value lies at or above
+  // its p_vaddr, treat tls_file_addr as a VMA within PT_TLS and convert it
+  // to an offset. Otherwise, keep the original value (it is already an offset
+  // on targets like x86_64).
+  if (pt_tls_vaddr != LLDB_INVALID_ADDRESS && tls_file_addr >= pt_tls_vaddr)
+    tpoff = tls_file_addr - pt_tls_vaddr;
+
+  return tls_block + tpoff;
 }
 
 void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(

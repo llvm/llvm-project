@@ -939,7 +939,7 @@ public:
     Other.CGF = nullptr;
   }
 
-  // Define copy assignment operator.
+  // Define move assignment operator.
   ApplyDebugLocation &operator=(ApplyDebugLocation &&Other) {
     if (this != &Other) {
       CGF = Other.CGF;

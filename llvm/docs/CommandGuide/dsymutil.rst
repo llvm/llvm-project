@@ -64,6 +64,13 @@ OPTIONS
  for dSYM files with  debug information about symbols present in those
  libraries.
 
+.. option:: --embed-resource <src-path>=<bundle-relative-path>
+
+ Copy a file or directory into the dSYM bundle's ``Contents/Resources/``
+ directory. The argument is ``<source-path>=<destination-relative-to-Resources>``.
+ If the source is a directory, its contents are copied recursively. This option
+ can be specified multiple times.
+
 .. option:: --fat64
 
  Use a 64-bit header when emitting universal binaries.

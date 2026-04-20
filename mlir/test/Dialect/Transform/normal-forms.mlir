@@ -139,17 +139,14 @@ transform.payload attributes {
 
 // We have surprisingly many invocations of the verifier here:
 //  1. after the initial parsing (reasonable)
-//  2. in transform::detail::mergeSymbolsInto (looks excessive)
-//  3. also in transform::detail::mergeSymbolsInto (has a TODO to be removed)
-//  4. after the transform interpreter pass (reasonable)
-//  5. before printing (generally reasonable, but would be nice to avoid if 
-//     the IR is known-verified after by the pass manager).
+//  2. also in transform::detail::mergeSymbolsInto (has a TODO to be removed)
+//  3. after the transform interpreter pass (reasonable)
 // Notably this doesn't include an extra run from checkPayload, which is
 // what we intend to test here.
 
 // CHECK-LABEL: @verification_count
 // CHECK: transform.payload
-// CHECK-SAME: test.counting_normal_form_count = 5
+// CHECK-SAME: test.counting_normal_form_count = 3
 
 module @verification_count attributes {transform.with_named_sequence} {
   transform.payload attributes {

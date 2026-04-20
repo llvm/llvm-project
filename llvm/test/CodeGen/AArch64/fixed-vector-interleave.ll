@@ -453,3 +453,172 @@ define <32 x bfloat> @interleave4_v32bf16(<8 x bfloat> %vec0, <8 x bfloat> %vec1
   %retval = call <32 x bfloat> @llvm.vector.interleave4.v32bf16(<8 x bfloat> %vec0, <8 x bfloat> %vec1, <8 x bfloat> %vec2, <8 x bfloat> %vec3)
   ret <32 x bfloat> %retval
 }
+
+define <6 x double> @interleave3_v6f64(ptr %p, ptr %p0, <2 x double> %vec0, <2 x double> %vec1, <2 x double> %vec2) {
+; CHECK-LABEL: interleave3_v6f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    st3 { v0.2d, v1.2d, v2.2d }, [x8]
+; CHECK-NEXT:    ldp q0, q2, [sp]
+; CHECK-NEXT:    ldr q4, [sp, #32]
+; CHECK-NEXT:    ext v5.16b, v4.16b, v4.16b, #8
+; CHECK-NEXT:    // kill: def $d4 killed $d4 killed $q4
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-NEXT:    // kill: def $d5 killed $d5 killed $q5
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-NEXT:    // kill: def $d3 killed $d3 killed $q3
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %retval = call <6 x double> @llvm.vector.interleave3.v6f64(<2 x double> %vec0, <2 x double> %vec1, <2 x double> %vec2)
+  ret <6 x double> %retval
+}
+
+define <12 x float> @interleave3_v12f32(ptr %p, ptr %p0, <4 x float> %vec0, <4 x float> %vec1, <4 x float> %vec2) {
+; CHECK-LABEL: interleave3_v12f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x9]
+; CHECK-NEXT:    ldp q1, q0, [sp, #16]
+; CHECK-NEXT:    ldr q2, [sp]
+; CHECK-NEXT:    stp q1, q0, [x8, #16]
+; CHECK-NEXT:    str q2, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %retval = call <12 x float> @llvm.vector.interleave3.v12f32(<4 x float> %vec0, <4 x float> %vec1, <4 x float> %vec2)
+  ret <12 x float> %retval
+}
+
+define <24 x i16> @interleave3_v24i16(ptr %p, ptr %p0, <8 x i16> %vec0, <8 x i16> %vec1, <8 x i16> %vec2) {
+; CHECK-LABEL: interleave3_v24i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    st3 { v0.8h, v1.8h, v2.8h }, [x9]
+; CHECK-NEXT:    ldp q1, q0, [sp, #16]
+; CHECK-NEXT:    ldr q2, [sp]
+; CHECK-NEXT:    stp q1, q0, [x8, #16]
+; CHECK-NEXT:    str q2, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %retval = call <24 x i16> @llvm.vector.interleave3.v24i16(<8 x i16> %vec0, <8 x i16> %vec1, <8 x i16> %vec2)
+  ret <24 x i16> %retval
+}
+
+define <24 x half> @interleave3_v24f16(ptr %p, ptr %p0, <8 x half> %vec0, <8 x half> %vec1, <8 x half> %vec2) {
+; CHECK-LABEL: interleave3_v24f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    st3 { v0.8h, v1.8h, v2.8h }, [x9]
+; CHECK-NEXT:    ldp q1, q0, [sp, #16]
+; CHECK-NEXT:    ldr q2, [sp]
+; CHECK-NEXT:    stp q1, q0, [x8, #16]
+; CHECK-NEXT:    str q2, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %retval = call <24 x half> @llvm.vector.interleave3.v24f16(<8 x half> %vec0, <8 x half> %vec1, <8 x half> %vec2)
+  ret <24 x half> %retval
+}
+
+define <24 x bfloat> @interleave3_v24bf16(ptr %p, ptr %p0, <8 x bfloat> %vec0, <8 x bfloat> %vec1, <8 x bfloat> %vec2) {
+; CHECK-LABEL: interleave3_v24bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    st3 { v0.8h, v1.8h, v2.8h }, [x9]
+; CHECK-NEXT:    ldp q1, q0, [sp, #16]
+; CHECK-NEXT:    ldr q2, [sp]
+; CHECK-NEXT:    stp q1, q0, [x8, #16]
+; CHECK-NEXT:    str q2, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %retval = call <24 x bfloat> @llvm.vector.interleave3.v24bf16(<8 x bfloat> %vec0, <8 x bfloat> %vec1, <8 x bfloat> %vec2)
+  ret <24 x bfloat> %retval
+}
+
+define <48 x i8> @interleave3_v48i8(ptr %p, ptr %p0, <16 x i8> %vec0, <16 x i8> %vec1, <16 x i8> %vec2) {
+; CHECK-LABEL: interleave3_v48i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    st3 { v0.16b, v1.16b, v2.16b }, [x9]
+; CHECK-NEXT:    ldp q1, q0, [sp, #16]
+; CHECK-NEXT:    ldr q2, [sp]
+; CHECK-NEXT:    stp q1, q0, [x8, #16]
+; CHECK-NEXT:    str q2, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %retval = call <48 x i8> @llvm.vector.interleave3.v48i8(<16 x i8> %vec0, <16 x i8> %vec1, <16 x i8> %vec2)
+  ret <48 x i8> %retval
+}
+
+define <12 x i16> @interleave3_v12i16(ptr %p, ptr %p0, <4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2) {
+; CHECK-LABEL: interleave3_v12i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    add x9, sp, #8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    st3 { v0.4h, v1.4h, v2.4h }, [x9]
+; CHECK-NEXT:    ldp d1, d0, [sp, #8]
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    ldr d0, [sp, #24]
+; CHECK-NEXT:    str d0, [x8, #16]
+; CHECK-NEXT:    str q1, [x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %retval = call <12 x i16> @llvm.vector.interleave3.v12i16(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2)
+  ret <12 x i16> %retval
+}
+
+define <24 x i8> @interleave3_v24i8(ptr %p, ptr %p0, <8 x i8> %vec0, <8 x i8> %vec1, <8 x i8> %vec2) {
+; CHECK-LABEL: interleave3_v24i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    add x9, sp, #8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    st3 { v0.8b, v1.8b, v2.8b }, [x9]
+; CHECK-NEXT:    ldp d1, d0, [sp, #8]
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    ldr d0, [sp, #24]
+; CHECK-NEXT:    str d0, [x8, #16]
+; CHECK-NEXT:    str q1, [x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %retval = call <24 x i8> @llvm.vector.interleave3.v24i8(<8 x i8> %vec0, <8 x i8> %vec1, <8 x i8> %vec2)
+  ret <24 x i8> %retval
+}

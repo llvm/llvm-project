@@ -573,6 +573,29 @@ WMMA with per-operand scale factors applied during the computation.
 }];
 }
 
+//===----------------------------------------------------------------------===//
+// Wave Data Exchange Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatWaveDataExchange : DocumentationCategory<"Wave Data Exchange Builtins"> {
+  let Content = [{
+These builtins provide cross-lane data exchange within a wavefront.
+}];
+}
+
+def DocWaveShuffle : Documentation {
+  let Category = DocCatWaveDataExchange;
+  let Content = [{
+Returns the value of ``src`` held by the lane identified by ``idx``. This is
+a high-level wave shuffle operation that is correctly lowered for both wave32
+and wave64 without requiring the caller to compute byte offsets.
+
+If the index is outside the valid range ``[0, wavefront_size)``, it wraps
+around modulo the wavefront size. Reading from an inactive lane returns a
+nondeterministic value.
+}];
+}
+
 def DocWMMA_scale16_GFX1250 : Documentation {
   let Category = DocCatWMMA;
   let Content = [{

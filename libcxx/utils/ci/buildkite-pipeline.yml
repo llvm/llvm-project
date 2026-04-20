@@ -144,8 +144,8 @@ steps:
   - label: FreeBSD 13 amd64
     command: libcxx/utils/ci/run-buildbot generic-cxx26
     env:
-      CC: clang20
-      CXX: clang++20
+      CC: clang21
+      CXX: clang++21
     agents:
       queue: libcxx-builders
       os: freebsd

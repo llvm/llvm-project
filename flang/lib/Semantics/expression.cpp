@@ -1497,14 +1497,24 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
         Say(name,
             "A type parameter inquiry must be applied to a designator"_err_en_US);
       }
-    } else if (!dtSpec || !dtSpec->scope()) {
+    } else if (!dtSpec || !dtSpec->GetScope()) {
       CHECK(context_.AnyFatalError() || !foldingContext_.messages().empty());
       return std::nullopt;
     } else if (std::optional<DataRef> dataRef{
                    ExtractDataRef(std::move(*dtExpr))}) {
+      // The base may use a forked DerivedTypeSpec (e.g. OpenACC use_device with
+      // CUDA) while the parse tree still points at host-associated component
+      // symbols; resolve the component in the base type's instantiated scope.
+      const semantics::Scope &typeScope{DEREF(dtSpec->GetScope())};
+      Symbol *compSym{sym};
+      if (sym && sym->owner().IsDerivedType() && &sym->owner() != &typeScope) {
+        if (Symbol * via{typeScope.FindComponent(sym->name())}) {
+          compSym = via;
+        }
+      }
       auto restorer{GetContextualMessages().SetLocation(name)};
       if (auto component{
-              CreateComponent(std::move(*dataRef), *sym, *dtSpec->scope())}) {
+              CreateComponent(std::move(*dataRef), *compSym, typeScope)}) {
         return Designate(DataRef{std::move(*component)});
       } else {
         Say(name, "Component is not in scope of derived TYPE(%s)"_err_en_US,
@@ -2841,13 +2851,24 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
   if (actual) {
     if (auto *expr{actual->UnwrapExpr()}) {
-      const auto *actualLastSymbol{evaluate::GetLastSymbol(*expr)};
-      if (actualLastSymbol) {
-        actualLastSymbol = &semantics::ResolveAssociations(*actualLastSymbol);
-        if (const auto *actualObject{actualLastSymbol
-                    ? actualLastSymbol
-                          ->detailsIf<semantics::ObjectEntityDetails>()
-                    : nullptr}) {
+      if (evaluate::IsVariable(*expr)) {
+        // Match check-call.cpp: walk the whole designator so e.g. b%a picks up
+        // ATTRIBUTES(DEVICE) from the base b when the component a has no CUDA
+        // attribute (OpenACC use_device(b) + doit(b%a)), not only from the
+        // last symbol (GetLastSymbol would only see a).
+        for (const Symbol &s : evaluate::GetSymbolVector(*expr)) {
+          if (const auto *object{
+                  s.detailsIf<semantics::ObjectEntityDetails>()}) {
+            if (auto cudaAttr{object->cudaDataAttr()}) {
+              actualDataAttr = *cudaAttr;
+            }
+          }
+        }
+      } else if (const auto *actualLastSymbol{evaluate::GetLastSymbol(*expr)}) {
+        const Symbol &resolved{
+            semantics::ResolveAssociations(*actualLastSymbol)};
+        if (const auto *actualObject{
+                resolved.detailsIf<semantics::ObjectEntityDetails>()}) {
           actualDataAttr = actualObject->cudaDataAttr();
         }
       }

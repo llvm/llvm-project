@@ -7,21 +7,22 @@
 define i3 @bug47619(i64 %arg, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %arg5, i64 %arg6, i64 %arg7, i3 %arg8) {
   ; CHECK-LABEL: name: bug47619
   ; CHECK: bb.1.bb:
-  ; CHECK:   liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-  ; CHECK:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
-  ; CHECK:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x5
-  ; CHECK:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x6
-  ; CHECK:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x7
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s32) from %fixed-stack.0, align 16)
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s3) = G_TRUNC [[LOAD]](s32)
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s3)
-  ; CHECK:   $w0 = COPY [[ANYEXT]](s32)
-  ; CHECK:   RET_ReallyLR implicit $w0
+  ; CHECK-NEXT:   liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY $x4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(i64) = COPY $x5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(i64) = COPY $x6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(i64) = COPY $x7
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (i32) from %fixed-stack.0, align 16)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i3) = G_TRUNC [[LOAD]](i32)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i3)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 bb:
   ret i3 %arg8
 }

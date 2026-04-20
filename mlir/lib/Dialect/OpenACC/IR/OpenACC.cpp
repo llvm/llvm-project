@@ -14,6 +14,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
@@ -246,6 +247,37 @@ struct MemRefPointerLikeModel
     return true;
   }
 
+  Value genCast(Type, OpBuilder &builder, Location loc, Value value,
+                Type resultType) const {
+    if (value.getType() == resultType)
+      return value;
+
+    if (isa<BaseMemRefType>(value.getType()) &&
+        isa<BaseMemRefType>(resultType)) {
+      if (memref::CastOp::areCastCompatible(TypeRange(value.getType()),
+                                            TypeRange(resultType)))
+        return memref::CastOp::create(builder, loc, resultType, value);
+      if (memref::MemorySpaceCastOp::areCastCompatible(
+              TypeRange(value.getType()), TypeRange(resultType)))
+        return memref::MemorySpaceCastOp::create(builder, loc, resultType,
+                                                 value);
+    }
+
+    // If one side is not a memref, try the other type's `PointerLikeType`
+    // implementation (since it may be an out-of-tree reference type that
+    // we cannot generate here).
+    if (auto resPtrLike = dyn_cast<PointerLikeType>(resultType))
+      if (!isa<BaseMemRefType>(resPtrLike))
+        if (Value v = resPtrLike.genCast(builder, loc, value, resultType))
+          return v;
+    if (auto valPtrLike = dyn_cast<PointerLikeType>(value.getType()))
+      if (!isa<BaseMemRefType>(valPtrLike))
+        if (Value v = valPtrLike.genCast(builder, loc, value, resultType))
+          return v;
+
+    return {};
+  }
+
   bool isDeviceData(Type pointer, Value var) const {
     auto memrefTy = cast<T>(pointer);
     Attribute memSpace = memrefTy.getMemorySpace();
@@ -272,6 +304,45 @@ struct LLVMPointerPointerLikeModel
                 Value valueToStore, TypedValue<PointerLikeType> destPtr) const {
     LLVM::StoreOp::create(builder, loc, valueToStore, destPtr);
     return true;
+  }
+
+  Value genCast(Type, OpBuilder &builder, Location loc, Value value,
+                Type resultType) const {
+    if (value.getType() == resultType)
+      return value;
+
+    auto srcPtrTy = dyn_cast<LLVM::LLVMPointerType>(value.getType());
+    auto dstPtrTy = dyn_cast<LLVM::LLVMPointerType>(resultType);
+    if (srcPtrTy && dstPtrTy) {
+      if (srcPtrTy.getAddressSpace() != dstPtrTy.getAddressSpace())
+        return LLVM::AddrSpaceCastOp::create(builder, loc, resultType, value);
+      return value;
+    }
+
+    if (srcPtrTy && isa<IntegerType>(resultType))
+      return LLVM::PtrToIntOp::create(builder, loc, resultType, value);
+
+    if (dstPtrTy) {
+      Value intVal = value;
+      if (isa<IndexType>(value.getType()))
+        intVal = arith::IndexCastUIOp::create(builder, loc,
+                                              builder.getI64Type(), value);
+      if (isa<IntegerType>(intVal.getType()))
+        return LLVM::IntToPtrOp::create(builder, loc, resultType, intVal);
+    }
+
+    if (auto resPtrLike = dyn_cast<PointerLikeType>(resultType))
+      if (!isa<LLVM::LLVMPointerType>(resPtrLike))
+        if (Value v = resPtrLike.genCast(builder, loc, value, resultType))
+          return v;
+    if (auto valPtrLike = dyn_cast<PointerLikeType>(value.getType()))
+      if (!isa<LLVM::LLVMPointerType>(valPtrLike))
+        if (Value v = valPtrLike.genCast(builder, loc, value, resultType))
+          return v;
+
+    return UnrealizedConversionCastOp::create(builder, loc,
+                                              TypeRange(resultType), value)
+        .getResult(0);
   }
 };
 

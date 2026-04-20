@@ -219,8 +219,7 @@ define void @load_store_interleave_group_block_var_cond(ptr noalias %data, ptr %
 ; VF2IC2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP10]], i32 0
 ; VF2IC2-NEXT:    br i1 [[TMP17]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
 ; VF2IC2:       [[PRED_STORE_IF9]]:
-; VF2IC2-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 2
-; VF2IC2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[MASKS]], i64 [[TMP18]]
+; VF2IC2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[MASKS]], i64 [[TMP0]]
 ; VF2IC2-NEXT:    store i8 1, ptr [[TMP19]], align 1
 ; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
 ; VF2IC2:       [[PRED_STORE_CONTINUE10]]:

@@ -86,9 +86,9 @@ class DerivedAnalysis : public DerivedAnalysisBase {
 
 public:
   /// Used by AnalysisRegistry::Add to derive the registry entry name.
-  AnalysisName analysisName() const final { return ResultT::analysisName(); }
+  AnalysisName getAnalysisName() const final { return ResultT::analysisName(); }
 
-  const std::vector<AnalysisName> &dependencyNames() const final {
+  const std::vector<AnalysisName> &getDependencyNames() const final {
     static const std::vector<AnalysisName> Names = {
         DepResultTs::analysisName()...};
     return Names;
@@ -106,10 +106,10 @@ public:
 
 protected:
   /// Read-only access to the result being built.
-  const ResultT &result() const & { return *Result; }
+  const ResultT &getResult() const & { return *Result; }
 
   /// Mutable access to the result being built.
-  ResultT &result() & { return *Result; }
+  ResultT &getResult() & { return *Result; }
 
 private:
   /// Seals the type-erased base overload, downcasts, and dispatches to the
@@ -130,7 +130,7 @@ private:
   }
 
   /// Type-erased result extraction for the driver.
-  std::unique_ptr<AnalysisResult> result() && final {
+  std::unique_ptr<AnalysisResult> takeResult() && final {
     return std::move(Result);
   }
 };

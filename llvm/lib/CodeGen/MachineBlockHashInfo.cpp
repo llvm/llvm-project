@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
@@ -25,8 +27,8 @@ static uint64_t hashBlock(const MachineBasicBlock &MBB, bool HashOperands) {
     Hash = hashing::detail::hash_16_bytes(Hash, MI.getOpcode());
     if (HashOperands) {
       for (unsigned i = 0; i < MI.getNumOperands(); i++) {
-        Hash =
-            hashing::detail::hash_16_bytes(Hash, hash_value(MI.getOperand(i)));
+        Hash = hashing::detail::hash_16_bytes(
+            Hash, stableHashValue(MI.getOperand(i)));
       }
     }
   }

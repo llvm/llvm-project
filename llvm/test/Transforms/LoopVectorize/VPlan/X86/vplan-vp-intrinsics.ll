@@ -1,11 +1,11 @@
 ; RUN: opt -passes=loop-vectorize -vplan-print-after=printOptimizedVPlan -force-vector-width=4 \
 ; RUN: -force-tail-folding-style=data-with-evl \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -tail-folding-policy=must-fold-tail \
 ; RUN: -mtriple=x86_64 -mattr=+avx512f -disable-output < %s 2>&1 | FileCheck --check-prefix=IF-EVL %s
 
 ; RUN: opt -passes=loop-vectorize -vplan-print-after=printOptimizedVPlan -force-vector-width=4 \
 ; RUN: -force-tail-folding-style=none \
-; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: -tail-folding-policy=prefer-fold-tail \
 ; RUN: -mtriple=x86_64 -mattr=+avx512f -disable-output < %s 2>&1 | FileCheck --check-prefix=NO-VP %s
 
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
@@ -20,8 +20,9 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 ; IF-EVL-EMPTY:
 ; IF-EVL-NEXT: <x1> vector loop: {
-; IF-EVL-NEXT:  vector.body:
-; IF-EVL-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
+; IF-EVL-NEXT:   vector.body:
 ; IF-EVL-NEXT:    vp<[[ST:%[0-9]+]]>    = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; IF-EVL-NEXT:    EMIT vp<[[VIV:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[IV]]>
 ; IF-EVL-NEXT:    EMIT vp<[[MASK:%[0-9]+]]> = icmp ule vp<[[VIV]]>, vp<[[BETC]]>
@@ -50,8 +51,9 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT: Successor(s): vector loop
 ; NO-VP-EMPTY:
 ; NO-VP-NEXT: <x1> vector loop: {
-; NO-VP-NEXT:  vector.body:
-; NO-VP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
+; NO-VP-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; NO-VP-EMPTY:
+; NO-VP-NEXT:   vector.body:
 ; NO-VP-NEXT:    vp<[[ST:%[0-9]+]]>    = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; NO-VP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; NO-VP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>

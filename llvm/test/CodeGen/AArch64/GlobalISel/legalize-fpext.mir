@@ -21,8 +21,8 @@ body:             |
     ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x s32>)
     ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV1]](<2 x s32>)
     ; CHECK-NEXT: G_STORE [[FPEXT]](<2 x s64>), [[COPY1]](p0) :: (store (<2 x s64>), align 32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](i64)
     ; CHECK-NEXT: G_STORE [[FPEXT1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(<4 x s32>) = COPY $q0
@@ -61,9 +61,9 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x s32>)
-    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x s32>)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x f32>) = G_FPEXT [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x f32>), [[UV1:%[0-9]+]]:_(<2 x f32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x f32>)
+    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x f32>)
     ; CHECK-NEXT: $q0 = COPY [[FPEXT1]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %1:_(<4 x s16>) = COPY $d0
@@ -83,10 +83,10 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x s32>)
-    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x s32>)
-    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV1]](<2 x s32>)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x f32>) = G_FPEXT [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x f32>), [[UV1:%[0-9]+]]:_(<2 x f32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x f32>)
+    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x f32>)
+    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV1]](<2 x f32>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT1]](<2 x s64>)
     ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT2]](<2 x s64>)
     ; CHECK-NEXT: $d0 = COPY [[UV2]](s64)
@@ -114,10 +114,10 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x s32>)
-    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x s32>)
-    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV1]](<2 x s32>)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x f32>) = G_FPEXT [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x f32>), [[UV1:%[0-9]+]]:_(<2 x f32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x f32>)
+    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x f32>)
+    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV1]](<2 x f32>)
     ; CHECK-NEXT: $q0 = COPY [[FPEXT1]](<2 x s64>)
     ; CHECK-NEXT: $q1 = COPY [[FPEXT2]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
@@ -140,14 +140,14 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV]](<4 x s16>)
-    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV1]](<4 x s16>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x s32>), [[UV3:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x s32>)
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(<2 x s32>), [[UV5:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FPEXT1]](<4 x s32>)
-    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV2]](<2 x s32>)
-    ; CHECK-NEXT: [[FPEXT3:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV3]](<2 x s32>)
-    ; CHECK-NEXT: [[FPEXT4:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV4]](<2 x s32>)
-    ; CHECK-NEXT: [[FPEXT5:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV5]](<2 x s32>)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x f32>) = G_FPEXT [[UV]](<4 x s16>)
+    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<4 x f32>) = G_FPEXT [[UV1]](<4 x s16>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x f32>), [[UV3:%[0-9]+]]:_(<2 x f32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x f32>)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(<2 x f32>), [[UV5:%[0-9]+]]:_(<2 x f32>) = G_UNMERGE_VALUES [[FPEXT1]](<4 x f32>)
+    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV2]](<2 x f32>)
+    ; CHECK-NEXT: [[FPEXT3:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV3]](<2 x f32>)
+    ; CHECK-NEXT: [[FPEXT4:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV4]](<2 x f32>)
+    ; CHECK-NEXT: [[FPEXT5:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV5]](<2 x f32>)
     ; CHECK-NEXT: $q0 = COPY [[FPEXT2]](<2 x s64>)
     ; CHECK-NEXT: $q1 = COPY [[FPEXT3]](<2 x s64>)
     ; CHECK-NEXT: $q2 = COPY [[FPEXT4]](<2 x s64>)

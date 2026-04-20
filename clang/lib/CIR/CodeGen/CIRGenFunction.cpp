@@ -1194,6 +1194,11 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitInitListLValue(cast<InitListExpr>(e));
   case Expr::PseudoObjectExprClass:
     return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
+  case Expr::CXXDefaultInitExprClass: {
+    auto *die = cast<CXXDefaultInitExpr>(e);
+    CXXDefaultInitExprScope scope(*this, die);
+    return emitLValue(die->getExpr());
+  }
   }
 }
 

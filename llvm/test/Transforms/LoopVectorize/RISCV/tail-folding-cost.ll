@@ -1,8 +1,8 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -force-tail-folding-style=data \
+; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=prefer-fold-tail -force-tail-folding-style=data \
 ; RUN:   -mtriple riscv64-linux-gnu -mattr=+v,+f -S -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=DATA
 
-; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=prefer-fold-tail \
 ; RUN:   -mtriple riscv64-linux-gnu -mattr=+v,+f -S \
 ; RUN:   -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=EVL
 

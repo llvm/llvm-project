@@ -141,13 +141,13 @@ public:
 
   llvm::Error add(EntityId, const TagsEntitySummary &S) override {
     for (const auto &Tag : S.Tags) {
-      result().Tags.push_back(Tag);
+      getResult().Tags.push_back(Tag);
     }
     return llvm::Error::success();
   }
 
   llvm::Error finalize() override {
-    auto &Tags = result().Tags;
+    auto &Tags = getResult().Tags;
     std::sort(Tags.begin(), Tags.end());
     Tags.erase(std::unique(Tags.begin(), Tags.end()), Tags.end());
     return llvm::Error::success();
