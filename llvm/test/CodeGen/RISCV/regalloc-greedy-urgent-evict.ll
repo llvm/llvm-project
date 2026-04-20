@@ -1,11 +1,11 @@
-; RUN: not llc -mtriple=riscv64 -mattr=+v,+zvfh -O1 < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=riscv64 -mattr=+v,+zvfh < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: inline assembly requires more registers than available
 
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux-gnu"
 
-define void @foo() #0 {
+define void @foo() {
 entry:
   br label %for.body3.us312
 
@@ -17,5 +17,3 @@ for.body3.us312:                                  ; preds = %for.body3.us312, %e
   %asmresult153.us = extractvalue { half, half, <vscale x 16 x half>, <vscale x 16 x float>, <vscale x 16 x float>, half, half, <vscale x 16 x half>, half, half, <vscale x 16 x half>, half, half, <vscale x 16 x half>, half, half, <vscale x 16 x half>, half, half, <vscale x 16 x half>, half, half, <vscale x 16 x half>, half, half, <vscale x 16 x half> } %0, 4
   br label %for.body3.us312
 }
-
-attributes #0 = { "target-features"="+zvfh" }
