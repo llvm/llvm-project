@@ -169,8 +169,6 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<CallGraphJSONFormatInfo>
                        "JSON Format info for CallGraph summary");
 
 namespace clang::ssaf {
-// This anchor is used to force the linker to link in the generated object file
-// and thus register the JSON format for CallGraphSummary.
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 const volatile int CallGraphJSONFormatAnchorSource = 0;
 } // namespace clang::ssaf

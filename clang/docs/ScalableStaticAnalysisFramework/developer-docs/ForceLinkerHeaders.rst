@@ -37,7 +37,7 @@ Each registration translation unit defines a ``const volatile int`` **anchor sym
 
 .. code-block:: c++
 
-  // In MyExtractor.cpp - next to the registry Add<> object in the `clang::ssaf` namespace
+  // In MyExtractor.cpp - next to the registry Add<> object in the ``clang::ssaf`` namespace
   // NOLINTNEXTLINE(misc-use-internal-linkage)
   const volatile int MyExtractorAnchorSource = 0;
 
