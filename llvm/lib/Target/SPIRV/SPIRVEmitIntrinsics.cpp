@@ -2253,6 +2253,20 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
 Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
+  // OpAbortKHR is itself a SPIR-V block terminator. If the previous instruction
+  // is a call to llvm.spv.abort, do not emit an additional OpUnreachable, which
+  // would leave the block with two terminators and produce invalid SPIR-V.
+  for (Instruction *Prev = I.getPrevNode(); Prev; Prev = Prev->getPrevNode()) {
+    if (Prev->isDebugOrPseudoInst())
+      continue;
+    auto *CI = dyn_cast<CallInst>(Prev);
+    if (!CI)
+      break;
+    Intrinsic::ID IID = CI->getIntrinsicID();
+    if (IID == Intrinsic::spv_abort)
+      return &I;
+    break;
+  }
   B.CreateIntrinsic(Intrinsic::spv_unreachable, {});
   return &I;
 }

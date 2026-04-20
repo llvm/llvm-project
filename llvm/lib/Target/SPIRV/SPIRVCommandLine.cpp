@@ -176,7 +176,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_EXT_image_raw10_raw12",
      SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12},
     {"SPV_INTEL_unstructured_loop_controls",
-     SPIRV::Extension::Extension::SPV_INTEL_unstructured_loop_controls}};
+     SPIRV::Extension::Extension::SPV_INTEL_unstructured_loop_controls},
+    {"SPV_KHR_abort", SPIRV::Extension::Extension::SPV_KHR_abort}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue, ExtensionSet &Vals) {

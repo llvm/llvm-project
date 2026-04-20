@@ -350,6 +350,7 @@ private:
 
   bool diagnoseUnsupported(const MachineInstr &I, const Twine &Msg) const;
 
+  bool selectAbort(MachineInstr &I) const;
   bool selectFrameIndex(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I) const;
   bool selectAllocaArray(Register ResVReg, SPIRVTypeInst ResType,
@@ -4635,6 +4636,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpUnreachable))
         .constrainAllUses(TII, TRI, RBI);
     return true;
+  case Intrinsic::spv_abort:
+    return selectAbort(I);
   case Intrinsic::spv_alloca:
     return selectFrameIndex(ResVReg, ResType, I);
   case Intrinsic::spv_alloca_array:
@@ -6247,6 +6250,64 @@ bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
     unsigned Alignment = I.getOperand(3).getImm();
     buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::Alignment, {Alignment});
   }
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
+  if (!STI.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
+    report_fatal_error("OpAbortKHR instruction requires the following "
+                       "SPIR-V extension: SPV_KHR_abort",
+                       false);
+  // The intrinsic is declared as variadic so it can carry composite message
+  // types (vectors and structs) without LLVM IR mangling restrictions, but
+  // OpAbortKHR takes exactly one Message operand.
+  if (I.getNumExplicitOperands() != 2)
+    report_fatal_error("llvm.spv.abort must be called with exactly one "
+                       "message argument",
+                       false);
+  Register MsgReg = I.getOperand(1).getReg();
+  SPIRVTypeInst MsgType = GR.getSPIRVTypeForVReg(MsgReg);
+  assert(MsgType && "Message argument of llvm.spv.abort has no SPIR-V type");
+  // SPV_KHR_abort requires Message Type to be a concrete type. Per the
+  // SPIR-V "Concrete Type" definition, that means a numerical scalar
+  // (int/float), a vector, matrix, or any aggregate (array/struct)
+  // recursively containing only such types. OpTypeBool, OpTypeVoid,
+  // pointers, opaque handles and similar abstract/non-concrete types are
+  // rejected up front rather than emitting invalid SPIR-V. Validate
+  // recursively so that e.g. a struct containing a bool or pointer is also
+  // rejected.
+  SmallVector<SPIRVTypeInst, 4> Worklist{MsgType};
+  while (!Worklist.empty()) {
+    SPIRVTypeInst Ty = Worklist.pop_back_val();
+    switch (Ty->getOpcode()) {
+    case SPIRV::OpTypeInt:
+    case SPIRV::OpTypeFloat:
+      break;
+    case SPIRV::OpTypeVector:
+    case SPIRV::OpTypeMatrix:
+    case SPIRV::OpTypeArray:
+      // Operand 1 holds the element/component type id.
+      Worklist.push_back(
+          GR.getSPIRVTypeForVReg(Ty->getOperand(1).getReg()));
+      break;
+    case SPIRV::OpTypeStruct:
+      // Operands 1..N hold the field type ids.
+      for (unsigned Idx = 1, E = Ty->getNumOperands(); Idx < E; ++Idx)
+        Worklist.push_back(
+            GR.getSPIRVTypeForVReg(Ty->getOperand(Idx).getReg()));
+      break;
+    default:
+      report_fatal_error("llvm.spv.abort message type must be a concrete "
+                         "SPIR-V type (numerical scalar, vector, matrix, "
+                         "or aggregate of such types)",
+                         false);
+    }
+  }
+  MachineBasicBlock &BB = *I.getParent();
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAbortKHR))
+      .addUse(GR.getSPIRVTypeID(MsgType))
+      .addUse(MsgReg)
+      .constrainAllUses(TII, TRI, RBI);
   return true;
 }
 
