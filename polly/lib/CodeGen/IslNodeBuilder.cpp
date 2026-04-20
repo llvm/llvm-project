@@ -1037,7 +1037,7 @@ bool IslNodeBuilder::materializeValue(__isl_take isl_id *Id) {
   return true;
 }
 
-bool IslNodeBuilder::materializeParameters(__isl_take isl_set *Set) {
+bool IslNodeBuilder::materializeParameters(__isl_keep isl_set *Set) {
   for (unsigned i = 0, e = isl_set_dim(Set, isl_dim_param); i < e; ++i) {
     if (!isl_set_involves_dims(Set, isl_dim_param, i, 1))
       continue;
@@ -1085,55 +1085,36 @@ Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
   return PreloadVal;
 }
 
-Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,  isl::set Domain2      ) {
-      isl::set AccessRange2 = MA.getAddressFunction().range();
-      AccessRange2 = AccessRange2.gist_params(S.getContext());
+Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
+                                            isl::set Domain) {
+  isl::set AccessRange = MA.getAddressFunction().range();
+  AccessRange = AccessRange.gist_params(S.getContext());
 
-
-
-
-  if (!materializeParameters(AccessRange2.get())) 
+  if (!materializeParameters(AccessRange.get()))
     return nullptr;
-  
-    
-  isl::ast_build    Build2 =   isl::ast_build ::from_context(isl::set::universe(  S.getParamSpace()) ) ;
-  auto Universe2 = isl::set::universe(Domain2.get_space() );
-    bool AlwaysExecuted = Domain2.is_equal(Universe2);
 
-
+  isl::ast_build Build =
+      isl::ast_build::from_context(isl::set::universe(S.getParamSpace()));
+  isl::set Universe = isl::set::universe(Domain.get_space());
+  bool AlwaysExecuted = Domain.is_equal(Universe);
 
   Instruction *AccInst = MA.getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
-     
-
-      
 
   Value *PreloadVal = nullptr;
   if (AlwaysExecuted) {
-     PreloadVal = preloadUnconditionally(AccessRange2.release(), Build2.get(), AccInst);
+    PreloadVal =
+        preloadUnconditionally(AccessRange.release(), Build.get(), AccInst);
     return PreloadVal;
   }
 
-
-
-  if (!materializeParameters(Domain2.get())) {
-   // isl_ast_build_free(Build);
-  //  isl_set_free(AccessRange);
-  //  isl_set_free(Domain);
+  if (!materializeParameters(Domain.get()))
     return nullptr;
-  }
 
-          auto *Build =  Build2.release();
-    __isl_take isl_set *Domain =  Domain2.copy();
-             isl_set *AccessRange = AccessRange2.release(); 
-         
-
-
-  isl_ast_expr *DomainCond = isl_ast_build_expr_from_set(Build, Domain);
-  Domain = nullptr;
+  isl::ast_expr DomainCond = Build.expr_from(Domain);
 
   ExprBuilder.setTrackOverflow(true);
-  Value *Cond = ExprBuilder.createBool(DomainCond);
+  Value *Cond = ExprBuilder.createBool(DomainCond.release());
   Value *OverflowHappened = Builder.CreateNot(ExprBuilder.getOverflowState(),
                                               "polly.preload.cond.overflown");
   Cond = Builder.CreateAnd(Cond, OverflowHappened, "polly.preload.cond.result");
@@ -1166,7 +1147,8 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,  isl::set Do
   Builder.CreateBr(MergeBB);
 
   Builder.SetInsertPoint(ExecBB, ExecBB->getTerminator()->getIterator());
-  Value *PreAccInst = preloadUnconditionally(AccessRange, Build, AccInst);
+  Value *PreAccInst =
+      preloadUnconditionally(AccessRange.release(), Build.get(), AccInst);
   Builder.SetInsertPoint(MergeBB, MergeBB->getTerminator()->getIterator());
   auto *MergePHI = Builder.CreatePHI(
       AccInstTy, 2, "polly.preload." + AccInst->getName() + ".merge");
@@ -1180,7 +1162,6 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,  isl::set Do
   MergePHI->addIncoming(PreAccInst, ExecBB);
   MergePHI->addIncoming(Constant::getNullValue(AccInstTy), CondBB);
 
-  isl_ast_build_free(Build);
   return PreloadVal;
 }
 
