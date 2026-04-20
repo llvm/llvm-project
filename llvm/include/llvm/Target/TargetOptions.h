@@ -140,7 +140,7 @@ public:
         DebugStrictDwarf(false), Hotpatch(false),
         PPCGenScalarMASSEntries(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
-        VerifyArgABICompliance(true) {}
+        VerifyArgABICompliance(true), XCOFFInlineGlueCode(true) {}
 
   /// DisableFramePointerElim - This returns true if frame pointer elimination
   /// optimization should be disabled for the given machine function.
@@ -352,6 +352,12 @@ public:
   /// not done with internal tools like llc that run many tests that ignore
   /// (lack) these extensions.
   unsigned VerifyArgABICompliance : 1;
+
+  /// When set to true, the code to form an indirect call sequence
+  /// is placed inline at the call site. When false an indirect call
+  /// is implemented with a branch to a trampoline which contains the
+  /// indriect call sequence.
+  unsigned XCOFFInlineGlueCode : 1;
 
   /// Name of the stack usage file (i.e., .su file) if user passes
   /// -fstack-usage. If empty, it can be implied that -fstack-usage is not

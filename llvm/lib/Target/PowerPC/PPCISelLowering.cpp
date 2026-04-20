@@ -5359,8 +5359,11 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     // immediately followed by a load of the TOC pointer from the stack save
     // slot into gpr2. For 64-bit ELFv2 ABI with PCRel, do not restore the TOC
     // as it is not saved or used.
-    RetOpc = isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
-                                                 : PPCISD::BCTRL;
+    if (!TM.Options.XCOFFInlineGlueCode)
+      RetOpc = PPCISD::CALL;
+    else
+      RetOpc = isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
+                                                   : PPCISD::BCTRL;
   } else if (Subtarget.isUsingPCRelativeCalls()) {
     assert(Subtarget.is64BitELFABI() && "PC Relative is only on ELF ABI.");
     RetOpc = PPCISD::CALL_NOTOC;
@@ -5539,6 +5542,11 @@ static void prepareDescriptorIndirectCall(SelectionDAG &DAG, SDValue &Callee,
   // copies together, a TOC access in the caller could be scheduled between
   // the assignment of the callee TOC and the branch to the callee, which leads
   // to incorrect code.
+  // On AIX there is a feature ("out of line glue code") which uses a special
+  // trampoline function __ptrgl to do the indirect call. If this option is
+  // enabled we instead simply load the address of the descriptor into r11,
+  // with the arguments in the 'normal' registers and branch to the __ptrgl
+  // stub.
 
   // Start by loading the function address from the descriptor.
   SDValue LDChain = getOutputChainFromCallSeq(CallSeqStart);
@@ -5600,6 +5608,18 @@ static void prepareDescriptorIndirectCall(SelectionDAG &DAG, SDValue &Callee,
   prepareIndirectCall(DAG, LoadFuncPtr, Glue, Chain, dl);
 }
 
+static void prepareOutOfLineGlueCall(SelectionDAG &DAG, SDValue &Callee,
+                                     SDValue &Glue, SDValue &Chain,
+                                     SDValue CallSeqStart, const CallBase *CB,
+                                     const SDLoc &dl, bool hasNest,
+                                     const PPCSubtarget &Subtarget) {
+  const MCRegister PtrGlueReg = Subtarget.getGlueCodeDescriptorRegister();
+  SDValue MoveToPhysicalReg =
+      DAG.getCopyToReg(Chain, dl, PtrGlueReg, Callee, Glue);
+  Chain = MoveToPhysicalReg.getValue(0);
+  Glue = MoveToPhysicalReg.getValue(1);
+}
+
 static void
 buildCallOperands(SmallVectorImpl<SDValue> &Ops,
                   PPCTargetLowering::CallFlags CFlags, const SDLoc &dl,
@@ -5611,13 +5631,29 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
   // MVT for a general purpose register.
   const MVT RegVT = Subtarget.getScalarIntVT();
 
+  const TargetMachine &TM = Subtarget.getTargetMachine();
+
   // First operand is always the chain.
   Ops.push_back(Chain);
 
   // If it's a direct call pass the callee as the second operand.
   if (!CFlags.IsIndirect)
     Ops.push_back(Callee);
-  else {
+  else if (!TM.Options.XCOFFInlineGlueCode) {
+    // An indirect call with out of line glue code. We create a target
+    // external symbol for '.__ptrgl' as the callee.
+    auto &Context = DAG.getMachineFunction().getContext();
+    MCSectionXCOFF *Sec = Context.getXCOFFSection(
+        ".__ptrgl", SectionKind::getMetadata(),
+        XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER));
+    MCSymbolXCOFF *CalleeSym = Sec->getQualNameSymbol();
+    Callee = DAG.getTargetExternalSymbol(CalleeSym->getName().data(),
+                                         Callee.getValueType(), 0);
+    Ops.push_back(Callee);
+    // Add the register used to pass the descriptor address.
+    Ops.push_back(
+        DAG.getRegister(Subtarget.getGlueCodeDescriptorRegister(), RegVT));
+  } else {
     assert(!CFlags.IsPatchPoint && "Patch point calls are not indirect.");
 
     // For the TOC based ABIs, we have saved the TOC pointer to the linkage area
@@ -5689,8 +5725,10 @@ SDValue PPCTargetLowering::FinishCall(
     unsigned NumBytes, const SmallVectorImpl<ISD::InputArg> &Ins,
     SmallVectorImpl<SDValue> &InVals, const CallBase *CB) const {
 
+  const auto &TM = getTargetMachine();
+
   if ((Subtarget.is64BitELFABI() && !Subtarget.isUsingPCRelativeCalls()) ||
-      Subtarget.isAIXABI())
+      (Subtarget.isAIXABI() && !TM.Options.XCOFFInlineGlueCode))
     setUsesTOCBasePtr(DAG);
 
   unsigned CallOpc =
@@ -5700,8 +5738,12 @@ SDValue PPCTargetLowering::FinishCall(
   if (!CFlags.IsIndirect)
     Callee = transformCallee(Callee, DAG, dl, Subtarget);
   else if (Subtarget.usesFunctionDescriptors())
-    prepareDescriptorIndirectCall(DAG, Callee, Glue, Chain, CallSeqStart, CB,
-                                  dl, CFlags.HasNest, Subtarget);
+    if (!TM.Options.XCOFFInlineGlueCode)
+      prepareOutOfLineGlueCall(DAG, Callee, Glue, Chain, CallSeqStart, CB, dl,
+                               CFlags.HasNest, Subtarget);
+    else
+      prepareDescriptorIndirectCall(DAG, Callee, Glue, Chain, CallSeqStart, CB,
+                                    dl, CFlags.HasNest, Subtarget);
   else
     prepareIndirectCall(DAG, Callee, Glue, Chain, dl);
 
@@ -5744,6 +5786,30 @@ SDValue PPCTargetLowering::FinishCall(
                          getTargetMachine().Options.GuaranteedTailCallOpt)
                             ? NumBytes
                             : 0;
+
+  if (!TM.Options.XCOFFInlineGlueCode) {
+    const Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
+    const MCRegister TOCReg = Subtarget.getTOCPointerRegister();
+    const MCRegister StackPtrReg = Subtarget.getStackPointerRegister();
+    const unsigned TOCSaveOffset =
+        Subtarget.getFrameLowering()->getTOCSaveOffset();
+    const MVT RegVT = Subtarget.getScalarIntVT();
+
+    // Load the original toc value from the stack save slot.
+    SDValue PtrOffset = DAG.getIntPtrConstant(TOCSaveOffset, dl);
+    SDValue StackPtr = DAG.getRegister(StackPtrReg, RegVT);
+    SDValue AddPtr = DAG.getNode(ISD::ADD, dl, RegVT, StackPtr, PtrOffset);
+    SDValue TOCLoad = DAG.getLoad(
+        RegVT, dl, Chain, AddPtr,
+        MachinePointerInfo::getStack(DAG.getMachineFunction(), TOCSaveOffset),
+        Alignment, MachineMemOperand::MONone);
+
+    // TODO FIXME Causing scheduling overflow ...
+    // Copy back to the physical toc register.
+    // SDValue TOCVal = DAG.getCopyToReg(Chain, dl, TOCReg, TOCLoad, Glue);
+    // Chain = TOCVal.getValue(0);
+    // Glue = TOCVal.getValue(1);
+  }
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, BytesCalleePops, Glue, dl);
   Glue = Chain.getValue(1);
@@ -7745,9 +7811,11 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   if (!MemOpChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains);
 
+  const auto &TM = getTargetMachine();
+
   // For indirect calls, we need to save the TOC base to the stack for
   // restoration after the call.
-  if (CFlags.IsIndirect) {
+  if (CFlags.IsIndirect && TM.Options.XCOFFInlineGlueCode) {
     assert(!CFlags.IsTailCall && "Indirect tail-calls not supported.");
     const MCRegister TOCBaseReg = Subtarget.getTOCPointerRegister();
     const MCRegister StackPtrReg = Subtarget.getStackPointerRegister();

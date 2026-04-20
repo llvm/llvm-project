@@ -154,6 +154,8 @@ LLVM_ABI bool getJMCInstrument();
 
 LLVM_ABI bool getXCOFFReadOnlyPointers();
 
+LLVM_ABI bool getXCOFFInlineGlueCode();
+
 enum SaveStatsMode { None, Cwd, Obj };
 
 LLVM_ABI SaveStatsMode getSaveStats();
