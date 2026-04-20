@@ -99,6 +99,12 @@ typedef enum service_rc {
 // So we a have a manual copy of llvm TypeID enum from Type.h
 // The codegen for _emissary_exec puts this ID in the key for
 // each arg and the host runtime needs to decode this key.
+//
+// NOTE: This enum MUST stay in lockstep with llvm::Type::TypeID in
+// llvm/include/llvm/IR/Type.h. The device encoder
+// (clang/lib/CodeGen/CGEmitEmissaryExec.cpp) stores getTypeID() from the live
+// LLVM enum into the per-arg key, so any drift between the two enums silently
+// mis-routes args.
 enum TypeID {
   // PrimitiveTypes
   HalfTyID = 0,  ///< 16-bit floating point type
@@ -116,6 +122,7 @@ enum TypeID {
 
   // Derived types... see DerivedTypes.h file.
   IntegerTyID,        ///< Arbitrary bit width integers
+  ByteTyID,           ///< Arbitrary bit width bytes
   FunctionTyID,       ///< Functions
   PointerTyID,        ///< Pointers
   StructTyID,         ///< Structures

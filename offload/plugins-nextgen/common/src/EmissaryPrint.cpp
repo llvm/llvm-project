@@ -306,6 +306,7 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
     case PPC_FP128TyID:      ///<  6: 128-bit floating point type (two 64-bits,
                              ///<  PowerPC)
     case X86_FP80TyID:       ///<  4: 80-bit floating point type (X87)
+    case ByteTyID:           ///<     Arbitrary bit width bytes
     case FixedVectorTyID:    ///< 16: Fixed width SIMD vector type
     case ScalableVectorTyID: ///< 17: Scalable SIMD vector type
     case TypedPointerTyID:   ///< Typed pointer used by some GPU targets
