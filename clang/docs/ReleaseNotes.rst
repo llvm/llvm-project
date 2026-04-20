@@ -119,7 +119,7 @@ Clang Python Bindings Potentially Breaking Changes
   ``locations`` argument are passed. Previousy, ``locations`` took precedence.
 - ``_CXUnsavedFile`` will be renamed to ``UnsavedFile`` for consistency.
   ``UnsavedFile`` is already available to use and existing uses should
-  be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a 
+  be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a
   future release.
 
 What's New in Clang |release|?
@@ -357,7 +357,7 @@ Improvements to Clang's diagnostics
   when accessing a member function on a past-the-end array element.
   (#GH179128)
 
-- Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and 
+- Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and
   made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
 
 - Fixed the Fix-It insertion point for ``expected ';' after alias declaration``
@@ -370,7 +370,7 @@ Improvements to Clang's diagnostics
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
-- Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof 
+- Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof
   the destination buffer(dynamically allocated) in the len parameter(#GH162366)
 
 - Added ``-Wmodule-map-path-outside-directory`` (off by default) to warn on
@@ -487,8 +487,8 @@ Bug Fixes to C++ Support
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
 - Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
 
-- Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching 
-  MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported 
+- Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching
+  MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported
   and produce a warning. (#GH162640)
 - Correctly diagnose invalid non-dependent calls in dependent contexts. (#GH135694)
 - Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
