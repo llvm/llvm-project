@@ -506,8 +506,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   // Code generation step.
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
     StringRef Stem = OutputFile.rsplit('.').first;
-    std::string CodeGenFile =
-        (Stem + "_" + Twine(I) + OutputFileNameExt).str();
+    std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
 
     if (Error Err = runCodeGen(SplitModules[I], Args, CodeGenFile, C))
       return Err;
