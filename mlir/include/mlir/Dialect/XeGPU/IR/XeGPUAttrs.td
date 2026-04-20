@@ -72,49 +72,6 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
 
 }
 
-def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scatter_tdesc_attr"> {
-  let summary = [{a composite attribute for `TensorDescType`}];
-  let description = [{
-    `ScatterTensorDesc` is a composite attribute defined for `TensorDescType`
-    for describing following properties of a `TensorDesc`:
-
-    1. `memory_space`: It describes where the data block described by the
-        TensorDesc is located, `Global` device memory or `Shared` local memory.
-        It is default to `Global`.
-
-    2. `chunk_size`: Specifies the number of contiguous elements accessed per offset.
-      The default value is 1.
-  }];
-
-  let parameters = (ins
-    DefaultValuedParameter<
-      "MemorySpaceAttr",
-      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
-      "Data memory location"
-    >: $memory_space,
-    DefaultValuedParameter<
-      "IntegerAttr",
-      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
-      "Number of contiguous elements"
-    >: $chunk_size
-  );
-
-  let builders = [
-    AttrBuilder<(ins
-      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
-      CArg<"int", "1">: $chunk_size
-    )>
-  ];
-
-  let extraClassDeclaration = [{
-    int64_t getChunkSizeAsInt() {
-      return getChunkSize().getInt();
-    }
-  }];
-
-  let genVerifyDecl = 1;
- }
-
 //===----------------------------------------------------------------------===//
 // XeGPU Memory Scope Enums.
 //===----------------------------------------------------------------------===//

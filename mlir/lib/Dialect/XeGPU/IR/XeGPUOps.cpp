@@ -75,53 +75,6 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
 }
 
 static LogicalResult
-isValidGatherScatterParams(Type maskTy, VectorType valueTy,
-                           TensorDescType tdescTy,
-                           function_ref<InFlightDiagnostic()> emitError) {
-
-  if (!tdescTy.isScattered())
-    return emitError() << "Expects a scattered TensorDesc.";
-
-  auto chunkSize = tdescTy.getChunkSizeAsInt();
-  if (!valueTy) {
-    if (chunkSize > 1)
-      return emitError() << "Expecting chunk size == 1 for scalar result";
-    if (dyn_cast<VectorType>(maskTy))
-      return emitError() << "Expecting a vector type result.";
-    return success();
-  }
-
-  auto maskShape = getShapeOf(maskTy);
-  auto valueShape = getShapeOf(valueTy);
-  auto tdescShape = getShapeOf(tdescTy);
-
-  if (valueTy.getElementType() != tdescTy.getElementType())
-    return emitError()
-           << "Value should have the same element type as TensorDesc.";
-
-  llvm::SmallVector<int64_t> expectedMaskShape(tdescShape);
-  if (chunkSize > 1)
-    expectedMaskShape.pop_back();
-  if (expectedMaskShape != maskShape)
-    return emitError()
-           << "Mask should match TensorDesc except the chunk size dim.";
-
-  // a valid shape for SIMT case
-  if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
-    if (tdescTy.getLayoutAttr())
-      return emitError() << "TensorDesc doesn't need LayoutAttr for SIMT code";
-    return success();
-  }
-
-  if (tdescShape != valueShape)
-    return emitError() << "Value shape " << makeString(valueShape)
-                       << " is neither a valid distribution for SIMT nor "
-                          "consistent with the tensor descriptor for SIMD "
-                       << tdescTy;
-  return success();
-}
-
-static LogicalResult
 isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
                                  VectorType valueTy, int64_t chunkSize,
                                  function_ref<InFlightDiagnostic()> emitError) {
@@ -408,9 +361,6 @@ LogicalResult CreateNdDescOp::verify() {
     return emitOpError("TensorDesc should have the same element "
                        "type with the source if it is a memref.\n");
 
-  if (getType().isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
-
   return success();
 }
 
@@ -491,8 +441,6 @@ void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
 
 LogicalResult PrefetchNdOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (tdescTy.isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -555,9 +503,6 @@ void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
 LogicalResult LoadNdOp::verify() {
   auto tdescTy = getTensorDescType();
   auto valueTy = getType();
-
-  if (tdescTy.isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (tdescTy.getRank() > 2)
     return emitOpError("Expects a 1D or 2D TensorDesc.\n");
@@ -682,9 +627,6 @@ LogicalResult StoreNdOp::verify() {
   auto dstTy = getTensorDescType(); // Tile
   auto valTy = getValueType();      // Vector
 
-  if (dstTy.isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
-
   if (dstTy.getRank() > 2)
     return emitOpError("Expects a 1D or 2D TensorDesc.\n");
 
@@ -752,66 +694,11 @@ LogicalResult StoreNdOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult UpdateNdOffsetOp::verify() {
   auto ty = getTensorDescType();
-  if (ty.isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   // number of offsets specified must match the rank of the tensor descriptor
   if (ty.getRank() != (int64_t)getNumOffsets()) {
     return emitOpError("Invalid number of offsets.");
   }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// XeGPU_CreateDescOp
-//===----------------------------------------------------------------------===//
-
-void CreateDescOp::build(OpBuilder &builder, OperationState &state,
-                         TensorDescType TensorDesc, Value source,
-                         llvm::ArrayRef<OpFoldResult> offsets) {
-  auto loc = source.getLoc();
-  int64_t size = static_cast<int64_t>(offsets.size());
-  auto type = VectorType::get(size, builder.getIndexType());
-  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
-  build(builder, state, TensorDesc, source, offset);
-}
-
-void CreateDescOp::build(OpBuilder &builder, OperationState &state,
-                         TensorDescType TensorDesc, Value source,
-                         llvm::ArrayRef<int64_t> offsets) {
-  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
-  build(builder, state, TensorDesc, source, ofrs);
-}
-
-LogicalResult CreateDescOp::verify() {
-  auto tdescTy = getTensorDescType();
-
-  if (!tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
-
-  // Memory space of created TensorDesc should match with the source.
-  // Both source and TensorDesc are considered for global memory by default,
-  // if the memory scope attr is not specified. If source is an integer,
-  // it is considered as ptr to global memory.
-  auto srcMemorySpace = getSourceMemorySpace();
-  auto tdescMemorySpace = static_cast<unsigned>(tdescTy.getMemorySpace());
-  if (srcMemorySpace != tdescMemorySpace)
-    return emitOpError("Memory space mismatch.")
-           << " Source: " << srcMemorySpace
-           << ", TensorDesc: " << tdescMemorySpace;
-
-  // check total size
-  auto chunkSize = tdescTy.getChunkSizeAsInt();
-  SmallVector<int64_t> shape(getOffsetsType().getShape());
-  if (chunkSize != 1)
-    shape.push_back(chunkSize);
-
-  auto tdescShape = getShapeOf(tdescTy);
-  if (shape != tdescShape)
-    return emitOpError("Incorrect TensorDesc shape. ")
-           << "Expected is " << makeString(shape) << "\n";
-
   return success();
 }
 
@@ -826,9 +713,6 @@ LogicalResult PrefetchOp::verify() {
 
   if (tdescTy && getOffsets())
     return emitOpError("offsets not allowed.");
-
-  if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -881,9 +765,6 @@ LogicalResult LoadGatherOp::verify() {
   if (tdescTy && getOffsets())
     return emitOpError("offsets not allowed.");
 
-  if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.");
-
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
@@ -893,9 +774,6 @@ LogicalResult LoadGatherOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  if (tdescTy)
-    return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
-                                      [&]() { return emitOpError(); });
   auto srcTy = getSourceType();
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
   auto memTy = dyn_cast<MemRefType>(srcTy);
@@ -969,9 +847,6 @@ LogicalResult StoreScatterOp::verify() {
   if (tdescTy && getOffsets())
     return emitOpError("offsets not allowed.");
 
-  if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.");
-
   if (!isWriteHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
@@ -980,10 +855,6 @@ LogicalResult StoreScatterOp::verify() {
 
   if (!isWriteHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
-
-  if (tdescTy)
-    return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
-                                      [&]() { return emitOpError(); });
 
   auto destTy = getDestType();
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
@@ -1043,45 +914,6 @@ void StoreScatterOp::build(
   // Call the correct builder overload that does not expect result types.
   build(builder, state, value, dest, offset, mask, chunk_size, l1_hint, l2_hint,
         l3_hint, layout);
-}
-
-//===----------------------------------------------------------------------===//
-// XeGPU_UpdateOffsetOp
-//===----------------------------------------------------------------------===//
-void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
-                           mlir::Value tensorDesc,
-                           llvm::ArrayRef<OpFoldResult> offsets) {
-  auto tdescTy = mlir::dyn_cast<TensorDescType>(tensorDesc.getType());
-  assert(tdescTy && "Expecting the source is a TensorDescType value.");
-  auto loc = tensorDesc.getLoc();
-  int64_t size = static_cast<int64_t>(offsets.size());
-  auto type = VectorType::get({size}, builder.getIndexType());
-  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
-  build(builder, state, tdescTy, tensorDesc, offset);
-}
-
-void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
-                           Value tensorDesc, llvm::ArrayRef<int64_t> offsets) {
-  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
-  build(builder, state, tensorDesc, ofrs);
-}
-
-LogicalResult UpdateOffsetOp::verify() {
-  auto tdescTy = getTensorDescType();
-  if (!tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
-
-  SmallVector<int64_t> expectedOffsetShape = getShapeOf(tdescTy);
-  SmallVector<int64_t> offsetShape = getShapeOf(getOffsetsType());
-  if (tdescTy.getChunkSizeAsInt() > 1)
-    expectedOffsetShape.pop_back();
-
-  if (expectedOffsetShape != offsetShape)
-    return emitOpError(
-        "Offsets should match TensorDesc except the chunk size dim.");
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
