@@ -167,8 +167,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[EXT:%[0-9]+]]:_(<2 x s64>) = G_EXT [[COPY]], [[COPY1]], [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[EXT:%[0-9]+]]:_(<2 x s64>) = G_EXT [[COPY]], [[COPY1]], [[C]](i32)
     ; CHECK-NEXT: $q0 = COPY [[EXT]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<2 x s64>) = COPY $q0
