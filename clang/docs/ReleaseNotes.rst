@@ -694,7 +694,7 @@ Improvements
 
 - Clang now preserves the left-hand side of a binary expression (such as an
   assignment or comparison) in a ``RecoveryExpr`` when the right-hand side fails
-  to parse. This improves IDE features like go-to-definition in ``clangd``. (#GH2640)
+  to parse. This improves IDE features like go-to-definition in ``clangd``.
 
 Additional Information
 ======================
