@@ -569,7 +569,7 @@ void X86PassConfig::addPreEmitPass() {
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInstsLegacyPass());
-    addPass(createX86PadShortFunctions());
+    addPass(createX86PadShortFunctionsLegacyPass());
     addPass(createX86FixupLEAsLegacyPass());
     addPass(createX86FixupInstTuningLegacyPass());
     addPass(createX86FixupVectorConstantsLegacyPass());

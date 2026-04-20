@@ -184,8 +184,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(X86FixupBWInstsPass(), PMW);
-    // TODO(boomanaiden154): Add X86PadShortFunctionsPass here once it has been
-    // ported.
+    addMachineFunctionPass(X86PadShortFunctionsPass(), PMW);
     addMachineFunctionPass(X86FixupLEAsPass(), PMW);
     addMachineFunctionPass(X86FixupInstTuningPass(), PMW);
     addMachineFunctionPass(X86FixupVectorConstantsPass(), PMW);

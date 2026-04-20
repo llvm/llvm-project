@@ -173,6 +173,7 @@
 ; O2-NEXT: BreakFalseDepsPass
 ; O2-NEXT: x86-indirect-branch-tracking
 ; O2-NEXT: x86-fixup-bw-insts
+; O2-NEXT: x86-pad-short-functions
 ; O2-NEXT: x86-fixup-leas
 ; O2-NEXT: x86-fixup-inst-tuning
 ; O2-NEXT: x86-fixup-inst-tuning
@@ -360,6 +361,7 @@
 ; O3-WINDOWS-NEXT: BreakFalseDepsPass
 ; O3-WINDOWS-NEXT: x86-indirect-branch-tracking
 ; O3-WINDOWS-NEXT: x86-fixup-bw-insts
+; O3-WINDOWS-NEXT: x86-pad-short-functions
 ; O3-WINDOWS-NEXT: x86-fixup-leas
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
