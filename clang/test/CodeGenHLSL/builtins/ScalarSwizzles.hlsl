@@ -233,7 +233,7 @@ int AssignInt(int V){
 
 // CHECK: lor.end:
 // CHECK-NEXT: [[H:%.*]] = phi i1 [ true, %entry ], [ [[G]], %lor.rhs ]
-// CHECK-NEXT: [[J:%.*]] = zext i1 %9 to i32
+// CHECK-NEXT: [[J:%.*]] = zext i1 [[H]] to i32
 // CHECK-NEXT: store i32 [[J]], ptr [[XAddr]], align 4
 // CHECK-NEXT: [[I:%.*]] = load i32, ptr [[XAddr]], align 4
 // CHECK-NEXT: [[LoadV:%.*]] = trunc i32 [[I]] to i1

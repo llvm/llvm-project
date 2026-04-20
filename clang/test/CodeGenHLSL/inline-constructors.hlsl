@@ -46,10 +46,11 @@ void NionsDay(int hours) {
 
 // CHECK:      define void @main()
 // CHECK-NEXT: entry:
+// NOINLINE-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // Verify constructor is emitted
 // NOINLINE-NEXT: call void @_GLOBAL__sub_I_inline_constructors.hlsl()
-// NOINLINE-NEXT: %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-// NOINLINE-NEXT: call void @_Z4mainj(i32 %0)
+// NOINLINE-NEXT: %[[#THREAD_ID:]] = call i32 @llvm.dx.flattened.thread.id.in.group()
+// NOINLINE-NEXT: call void @_Z4mainj(i32 %[[#THREAD_ID]])
 // Verify inlining leaves only calls to "llvm." intrinsics
 // INLINE-NOT:    call {{[^@]*}} @{{[^l][^l][^v][^m][^\.]}}
 // CHECK:         ret void
@@ -62,6 +63,7 @@ void main(unsigned GI : SV_GroupIndex) {
 
 // CHECK:      define void @rainyMain()
 // CHECK-NEXT: entry:
+// NOINLINE-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // Verify constructor is emitted
 // NOINLINE-NEXT:   call void @_GLOBAL__sub_I_inline_constructors.hlsl()
 // NOINLINE-NEXT:   call void @_Z9rainyMainv()

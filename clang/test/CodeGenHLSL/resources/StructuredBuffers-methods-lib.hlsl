@@ -47,7 +47,7 @@ export void TestAppend(float value) {
 }
 
 // CHECK: define void @TestAppend(float)(float {{.*}} %value)
-// CHECK: call void @hlsl::AppendStructuredBuffer<float>::Append(float)(ptr {{.*}} @ASB, float noundef nofpclass(nan inf) %0)
+// CHECK: call void @hlsl::AppendStructuredBuffer<float>::Append(float)(ptr {{.*}} @ASB, float noundef nofpclass(nan inf) %[[#]])
 // CHECK: ret void
 
 // CHECK: define {{.*}} void @hlsl::AppendStructuredBuffer<float>::Append(float)(ptr {{.*}} %this, float noundef nofpclass(nan inf) %value)
@@ -114,7 +114,7 @@ export float TestLoadWithStatus() {
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoadWithStatus()()
 // CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @RWSB1, i32 noundef 1, ptr {{.*}} %tmp)
-// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @SB1, i32 noundef 2, ptr {{.*}} %tmp1)
+// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @SB1, i32 noundef 2, ptr {{.*}} %[[TMP0:.*]])
 // CHECK: add
 // CHECK: ret float
 
