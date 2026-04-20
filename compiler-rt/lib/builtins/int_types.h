@@ -75,6 +75,10 @@ typedef union {
 #undef CRT_HAS_128BIT
 #endif
 
+#if defined(__SPIRV__)
+#undef CRT_HAS_128BIT
+#endif
+
 #ifdef CRT_HAS_128BIT
 typedef int ti_int __attribute__((mode(TI)));
 typedef unsigned tu_int __attribute__((mode(TI)));
