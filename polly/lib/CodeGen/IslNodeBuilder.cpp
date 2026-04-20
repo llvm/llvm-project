@@ -1057,14 +1057,13 @@ bool IslNodeBuilder::materializeParameters() {
   return true;
 }
 
-Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
-                                              isl_ast_build *Build,
+Value *IslNodeBuilder::preloadUnconditionally(isl::set AccessRange,
+                                              isl::ast_build Build,
                                               Instruction *AccInst) {
-  isl_pw_multi_aff *PWAccRel = isl_pw_multi_aff_from_set(AccessRange);
-  isl_ast_expr *Access =
-      isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
-  auto *Address = isl_ast_expr_address_of(Access);
-  auto *AddressValue = ExprBuilder.create(Address);
+  isl::pw_multi_aff PWAccRel = isl::pw_multi_aff::from_set(AccessRange);
+  isl::ast_expr Access = Build.access_from(PWAccRel);
+  isl::ast_expr Address = Access.address_of();
+  Value *AddressValue = ExprBuilder.create(Address.release());
   Value *PreloadVal;
 
   // Correct the type as the SAI might have a different type than the user
@@ -1102,7 +1101,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Type *AccInstTy = AccInst->getType();
 
   if (AlwaysExecuted)
-    return preloadUnconditionally(AccessRange.release(), Build.get(), AccInst);
+    return preloadUnconditionally(AccessRange, Build, AccInst);
 
   if (!materializeParameters(Domain.get()))
     return nullptr;
@@ -1143,8 +1142,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Builder.CreateBr(MergeBB);
 
   Builder.SetInsertPoint(ExecBB, ExecBB->getTerminator()->getIterator());
-  Value *PreAccInst =
-      preloadUnconditionally(AccessRange.release(), Build.get(), AccInst);
+  Value *PreAccInst = preloadUnconditionally(AccessRange, Build, AccInst);
   Builder.SetInsertPoint(MergeBB, MergeBB->getTerminator()->getIterator());
   auto *MergePHI = Builder.CreatePHI(
       AccInstTy, 2, "polly.preload." + AccInst->getName() + ".merge");
