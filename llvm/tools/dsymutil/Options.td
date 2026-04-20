@@ -256,6 +256,12 @@ def disallow: Separate<["--", "-"], "disallow">,
   Group<grp_general>;
 def: Joined<["--", "-"], "disallow=">, Alias<disallow>;
 
+def codesign: Separate<["--", "-"], "codesign">,
+  MetaVarName<"<identity>">,
+  HelpText<"Code sign the dSYM bundle with the given signing identity after linking.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "codesign=">, Alias<codesign>;
+
 def dsym_search_path: Separate<["-", "--"], "D">,
   MetaVarName<"<path>">,
   HelpText<"Specify a directory that contain dSYM files to search for.">,
