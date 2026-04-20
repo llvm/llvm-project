@@ -7860,6 +7860,33 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       isa<Function>(StrippedV) || isa<ConstantPointerNull>(StrippedV))
     return true;
 
+  // A GEP matching with PtrAdd into a known-size allocation cannot produce
+  // poison if the constant offset in bytes is non-negative, within the
+  // allocated range, and does not wrap at truncation to the pointer index type.
+  // Note that for PtrAdd, the offset in bytes is equal to the first & only
+  // index, and when the index is non-negative, no signed wrap (nusw) implies no
+  // unsigned wrap (nuw).
+  const Value *BasePtr;
+  const APInt *ConstIdx;
+  if (match(V, m_PtrAdd(m_Value(BasePtr), m_APInt(ConstIdx))) &&
+      ConstIdx->isNonNegative()) {
+    const DataLayout *DL = nullptr;
+    if (auto *AI = dyn_cast<AllocaInst>(BasePtr))
+      DL = &AI->getDataLayout();
+    else if (auto *GV = dyn_cast<GlobalVariable>(BasePtr))
+      DL = &GV->getDataLayout();
+    if (DL) {
+      unsigned IdxBitWidth = DL->getIndexTypeSizeInBits(V->getType());
+      if (ConstIdx->isSignedIntN(IdxBitWidth)) {
+        bool CanBeNull, CanBeFreed;
+        uint64_t DerefBytes =
+            BasePtr->getPointerDereferenceableBytes(*DL, CanBeNull, CanBeFreed);
+        if (!CanBeNull && DerefBytes != 0 && ConstIdx->ule(DerefBytes))
+          return true;
+      }
+    }
+  }
+
   auto OpCheck = [&](const Value *V) {
     return isGuaranteedNotToBeUndefOrPoison(V, AC, CtxI, DT, Depth + 1, Kind);
   };
