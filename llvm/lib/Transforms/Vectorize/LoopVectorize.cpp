@@ -3805,8 +3805,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
 
-  // When there is a hint to always prefer scalable vectors,
-  // honour that hint.
+  // When there is a hint to always prefer scalable vectors, honour that hint.
   if (Hints.isScalableVectorizationAlwaysPreferred())
     if (A.Width.isScalable() && CostA.isValid() && !B.Width.isScalable() &&
         !B.Width.isScalar())
