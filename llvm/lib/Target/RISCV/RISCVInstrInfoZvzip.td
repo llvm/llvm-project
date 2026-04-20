@@ -138,3 +138,12 @@ defm : VPatBinaryV_VV<"int_riscv_vpairo", "PseudoVPAIRO", AllVectors,
 defm : VPatBinaryW_VV<"int_riscv_vzip", "PseudoVZIP", AllZvzipVectors,
                       ExtraPreds = [HasStdExtZvzip],
                       requireMinimal = true>;
+
+// These are modeled after the int binop VL nodes
+let HasPassthruOp = true, HasMaskOp = true in {
+def vpaire_vl  : RVSDNode<"VPAIRE_VL", SDT_RISCVIntBinOp_VL>;
+def vpairo_vl  : RVSDNode<"VPAIRO_VL", SDT_RISCVIntBinOp_VL>;
+} // HasPassthruOp = true, HasMaskOp = true
+
+defm : VPatBinaryVL_VV<vpaire_vl, "PseudoVPAIRE">;
+defm : VPatBinaryVL_VV<vpairo_vl, "PseudoVPAIRO">;
