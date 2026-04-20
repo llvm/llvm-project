@@ -3805,6 +3805,12 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
 
+  // When there is a hint to always prefer scalable vectors,
+  // honour that hint.
+  if (Hints.isScalableVectorizationAlwaysPreferred())
+    if (A.Width.isScalable() && CostA.isValid() && !B.Width.isScalable())
+      return true;
+
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
   unsigned EstimatedWidthB = B.Width.getKnownMinValue();
@@ -3814,12 +3820,6 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
     if (B.Width.isScalable())
       EstimatedWidthB *= *VScale;
   }
-
-  // When there is a hint to always prefer scalable vectors,
-  // honour that hint.
-  if (Hints.isScalableVectorizationAlwaysPreferred())
-    if (A.Width.isScalable() && A.Cost.isValid() && !B.Width.isScalable())
-      return true;
 
   // When optimizing for size choose whichever is smallest, which will be the
   // one with the smallest cost for the whole loop. On a tie pick the larger
