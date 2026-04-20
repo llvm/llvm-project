@@ -532,7 +532,8 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   // to the RegBankCombiner where register banks are known and we can limit it
   // to VGPR (divergent) values only.
   if (STI.hasSALUFloatInsts() &&
-      (ScalarDestTy == LLT::scalar(32) || ScalarDestTy == LLT::scalar(16)))
+      (ScalarDestTy == LLT::scalar(64) || ScalarDestTy == LLT::scalar(32) ||
+       ScalarDestTy == LLT::scalar(16)))
     return false;
 
   return matchFmulWithSelectToFldexpImpl(MI, Sel, MatchInfo, MRI, TII);

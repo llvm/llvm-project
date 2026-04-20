@@ -140,6 +140,16 @@ def combine_fmul_with_select_to_fldexp : GICombineRule<
           [{ return Helper.matchCombineFmulWithSelectToFldexp(*${root}, *${sel}, ${matchinfo}); }]),
   (apply  [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+// Like combine_fmul_with_select_to_fldexp but with VGPR detection for RegBankCombiner.
+// Note that the combine for s64, s32, and s16 would not trigger under the combine_fmul_with_select_to_fldexp
+// in the pre/post legalizer (it is only gating s{64,32,16} with SALU for the regcombiner).
+def combine_fmul_select_to_fldexp_regbank : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match  (G_FMUL $dst, $x, $select):$root,
+          (G_SELECT $select, $y, $A, $B):$sel,
+          [{ return matchFmulSelectToFldexpVgpr(*${root}, *${sel}, ${matchinfo}); }]),
+  (apply  [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 // (shift x, (zext amt)) -> (shift x, (and (anyext amt), mask)
 //
 // The pattern is longer, but is better for matching during ISel.
@@ -231,14 +241,6 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
    binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
-
-// Like combine_fmul_with_select_to_fldexp but with VGPR detection for RegBankCombiner.
-def combine_fmul_select_to_fldexp_regbank : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match  (G_FMUL $dst, $x, $select):$root,
-          (G_SELECT $select, $y, $A, $B):$sel,
-          [{ return matchFmulSelectToFldexpVgpr(*${root}, *${sel}, ${matchinfo}); }]),
-  (apply  [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 def AMDGPURegBankCombiner : GICombiner<
   "AMDGPURegBankCombinerImpl",
