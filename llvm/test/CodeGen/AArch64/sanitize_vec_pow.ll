@@ -8,10 +8,12 @@ define <4 x float> @foo_false_is_pow_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; CHECK-ARMPL-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-ARMPL-NEXT:    .cfi_offset w30, -16
 ; CHECK-ARMPL-NEXT:    mov v16.16b, v2.16b
+; CHECK-ARMPL-NEXT:    fmov v2.4s, #5.00000000
+; CHECK-ARMPL-NEXT:    fcmge v17.4s, v2.4s, v16.4s
+; CHECK-ARMPL-NEXT:    fmov v2.4s, #1.00000000
+; CHECK-ARMPL-NEXT:    bit v0.16b, v2.16b, v17.16b
 ; CHECK-ARMPL-NEXT:    bl armpl_vpowq_f32
-; CHECK-ARMPL-NEXT:    fmov v1.4s, #5.00000000
-; CHECK-ARMPL-NEXT:    fcmge v1.4s, v1.4s, v16.4s
-; CHECK-ARMPL-NEXT:    bit v0.16b, v16.16b, v1.16b
+; CHECK-ARMPL-NEXT:    bit v0.16b, v16.16b, v17.16b
 ; CHECK-ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-ARMPL-NEXT:    ret
   %pow = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %a, <4 x float> %b)
@@ -27,11 +29,12 @@ define <2 x double> @foo_false_is_pow_v2f64(<2 x double> %a, <2 x double> %b, <2
 ; CHECK-ARMPL-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-ARMPL-NEXT:    .cfi_offset w30, -16
 ; CHECK-ARMPL-NEXT:    mov v16.16b, v3.16b
-; CHECK-ARMPL-NEXT:    mov v17.16b, v2.16b
+; CHECK-ARMPL-NEXT:    fmov v3.2d, #5.00000000
+; CHECK-ARMPL-NEXT:    fcmge v17.2d, v3.2d, v2.2d
+; CHECK-ARMPL-NEXT:    fmov v2.2d, #1.00000000
+; CHECK-ARMPL-NEXT:    bit v0.16b, v2.16b, v17.16b
 ; CHECK-ARMPL-NEXT:    bl armpl_vpowq_f64
-; CHECK-ARMPL-NEXT:    fmov v1.2d, #5.00000000
-; CHECK-ARMPL-NEXT:    fcmge v1.2d, v1.2d, v17.2d
-; CHECK-ARMPL-NEXT:    bit v0.16b, v16.16b, v1.16b
+; CHECK-ARMPL-NEXT:    bit v0.16b, v16.16b, v17.16b
 ; CHECK-ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-ARMPL-NEXT:    ret
   %pow = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %a, <2 x double> %b)
@@ -51,15 +54,15 @@ define <vscale x 4 x float> @foo_false_is_pow_nxv4f32(<vscale x 4 x float> %a, <
 ; CHECK-ARMPL-NEXT:    .cfi_offset w30, -8
 ; CHECK-ARMPL-NEXT:    .cfi_offset w29, -16
 ; CHECK-ARMPL-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
-; CHECK-ARMPL-NEXT:    ptrue p4.s
+; CHECK-ARMPL-NEXT:    fmov z3.s, #5.00000000
 ; CHECK-ARMPL-NEXT:    mov z8.d, z2.d
-; CHECK-ARMPL-NEXT:    mov p0.b, p4.b
+; CHECK-ARMPL-NEXT:    ptrue p0.s
+; CHECK-ARMPL-NEXT:    fcmge p4.s, p0/z, z3.s, z2.s
+; CHECK-ARMPL-NEXT:    fmov z0.s, p4/m, #1.00000000
 ; CHECK-ARMPL-NEXT:    bl armpl_svpow_f32_x
-; CHECK-ARMPL-NEXT:    fmov z1.s, #5.00000000
-; CHECK-ARMPL-NEXT:    fcmge p0.s, p4/z, z1.s, z8.s
-; CHECK-ARMPL-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-ARMPL-NEXT:    mov z0.s, p0/m, z8.s
+; CHECK-ARMPL-NEXT:    mov z0.s, p4/m, z8.s
 ; CHECK-ARMPL-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-ARMPL-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-ARMPL-NEXT:    addvl sp, sp, #2
 ; CHECK-ARMPL-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-ARMPL-NEXT:    ret
@@ -73,27 +76,23 @@ define <vscale x 2 x double> @foo_false_is_pow_nxv2f64(<vscale x 2 x double> %a,
 ; CHECK-ARMPL-LABEL: foo_false_is_pow_nxv2f64:
 ; CHECK-ARMPL:       // %bb.0:
 ; CHECK-ARMPL-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-ARMPL-NEXT:    addvl sp, sp, #-3
+; CHECK-ARMPL-NEXT:    addvl sp, sp, #-2
 ; CHECK-ARMPL-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
-; CHECK-ARMPL-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-ARMPL-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-ARMPL-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-ARMPL-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-ARMPL-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-ARMPL-NEXT:    .cfi_offset w30, -8
 ; CHECK-ARMPL-NEXT:    .cfi_offset w29, -16
 ; CHECK-ARMPL-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
-; CHECK-ARMPL-NEXT:    .cfi_escape 0x10, 0x49, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x40, 0x1c // $d9 @ cfa - 16 * VG - 16
-; CHECK-ARMPL-NEXT:    ptrue p4.d
 ; CHECK-ARMPL-NEXT:    mov z8.d, z3.d
-; CHECK-ARMPL-NEXT:    mov z9.d, z2.d
-; CHECK-ARMPL-NEXT:    mov p0.b, p4.b
+; CHECK-ARMPL-NEXT:    fmov z3.d, #5.00000000
+; CHECK-ARMPL-NEXT:    ptrue p0.d
+; CHECK-ARMPL-NEXT:    fcmge p4.d, p0/z, z3.d, z2.d
+; CHECK-ARMPL-NEXT:    fmov z0.d, p4/m, #1.00000000
 ; CHECK-ARMPL-NEXT:    bl armpl_svpow_f64_x
-; CHECK-ARMPL-NEXT:    fmov z1.d, #5.00000000
-; CHECK-ARMPL-NEXT:    fcmge p0.d, p4/z, z1.d, z9.d
-; CHECK-ARMPL-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-ARMPL-NEXT:    mov z0.d, p4/m, z8.d
+; CHECK-ARMPL-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-ARMPL-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-ARMPL-NEXT:    mov z0.d, p0/m, z8.d
-; CHECK-ARMPL-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-ARMPL-NEXT:    addvl sp, sp, #3
+; CHECK-ARMPL-NEXT:    addvl sp, sp, #2
 ; CHECK-ARMPL-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-ARMPL-NEXT:    ret
   %pow = call fast <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b)
@@ -110,10 +109,12 @@ define <4 x float> @foo_true_is_pow_v4f32(<4 x float> %a, <4 x float> %b, <4 x f
 ; CHECK-ARMPL-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-ARMPL-NEXT:    .cfi_offset w30, -16
 ; CHECK-ARMPL-NEXT:    mov v16.16b, v2.16b
+; CHECK-ARMPL-NEXT:    fmov v2.4s, #5.00000000
+; CHECK-ARMPL-NEXT:    fcmge v17.4s, v2.4s, v16.4s
+; CHECK-ARMPL-NEXT:    fmov v2.4s, #1.00000000
+; CHECK-ARMPL-NEXT:    bif v0.16b, v2.16b, v17.16b
 ; CHECK-ARMPL-NEXT:    bl armpl_vpowq_f32
-; CHECK-ARMPL-NEXT:    fmov v1.4s, #5.00000000
-; CHECK-ARMPL-NEXT:    fcmge v1.4s, v1.4s, v16.4s
-; CHECK-ARMPL-NEXT:    bif v0.16b, v16.16b, v1.16b
+; CHECK-ARMPL-NEXT:    bif v0.16b, v16.16b, v17.16b
 ; CHECK-ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-ARMPL-NEXT:    ret
   %pow = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %a, <4 x float> %b)

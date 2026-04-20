@@ -27762,6 +27762,65 @@ static SDValue trySwapVSelectOperands(SDNode *N, SelectionDAG &DAG) {
                      {InverseSetCC, SelectB, SelectA});
 }
 
+static SDValue performVselectPowCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue FalseVal = N->getOperand(2);
+  bool TrueValIsPow = TrueVal.getOpcode() == ISD::FPOW;
+  bool FalseValIsPow = FalseVal.getOpcode() == ISD::FPOW;
+
+  // If both inputs are pow we could equally remove the select and simply
+  // select between pow inputs instead.
+  if (TrueValIsPow && FalseValIsPow)
+    return SDValue();
+
+  if ((TrueValIsPow && !TrueVal.hasOneUse()) ||
+      (FalseValIsPow && !FalseVal.hasOneUse()))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  RTLIB::Libcall LC = RTLIB::getPOW(VT);
+  SelectionDAG &DAG = DCI.DAG;
+  auto &TLI = DAG.getTargetLoweringInfo();
+  bool HasLibCall =
+      TLI.getLibcallLoweringInfo().getLibcallImpl(LC) != RTLIB::Unsupported;
+  if (!HasLibCall)
+    return SDValue();
+
+  // TODO: For scalable vectors we should really just be able to pass in the
+  // mask when lowering FPOW to a call instruction.
+
+  // For a given call pow(x, y) when x=1.0 it is guaranteed to return 1.0 for
+  // any value of y.
+  SDLoc DL(N);
+  SDValue One = DAG.getConstantFP(1.0, DL, VT.getVectorElementType());
+  SDValue SplatOne = DAG.getSplatVector(VT, DL, One);
+
+  SDValue OldPow = TrueValIsPow ? TrueVal : FalseVal;
+  SDValue OldPowArg0 = OldPow->getOperand(0);
+
+  // Bail out if argument 0 is already a select.
+  if (OldPowArg0.getOpcode() == ISD::VSELECT)
+    return SDValue();
+
+  SDValue NewPowArg0;
+  if (TrueValIsPow)
+    NewPowArg0 = DAG.getNode(ISD::VSELECT, DL, VT, Cond, OldPowArg0, SplatOne);
+  else
+    NewPowArg0 = DAG.getNode(ISD::VSELECT, DL, VT, Cond, SplatOne, OldPowArg0);
+  SDValue NewPow =
+      DAG.getNode(ISD::FPOW, DL, VT, NewPowArg0, OldPow->getOperand(1));
+  NewPow->setFlags(OldPow->getFlags());
+
+  SDValue Res;
+  if (TrueValIsPow)
+    Res = DAG.getNode(ISD::VSELECT, DL, VT, Cond, NewPow, FalseVal);
+  else
+    Res = DAG.getNode(ISD::VSELECT, DL, VT, Cond, TrueVal, NewPow);
+  return Res;
+}
+
 // vselect (v1i1 setcc) ->
 //     vselect (v1iXX setcc)  (XX is the size of the compared operand type)
 // FIXME: Currently the type legalizer can't handle VSELECT having v1i1 as
@@ -27848,6 +27907,10 @@ static SDValue performVSelectCombine(SDNode *N,
       return DAG.getSelect(DL, ResVT, ExtCond, IfTrue, IfFalse);
     }
   }
+
+  if ((IfTrue.getOpcode() == ISD::FPOW || IfFalse.getOpcode() == ISD::FPOW))
+    if (SDValue R = performVselectPowCombine(N, DCI))
+      return R;
 
   EVT CmpVT = N0.getOperand(0).getValueType();
   if (N0.getOpcode() != ISD::SETCC ||
