@@ -32,8 +32,9 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1:       middle.block:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP11:%.*]] = sub i32 0, [[TMP9]]
-; CHECK-INTERLEAVE1-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
-; CHECK-INTERLEAVE1:       scalar.ph:
+; CHECK-INTERLEAVE1-NEXT:    br label [[FOR_EXIT:%.*]]
+; CHECK-INTERLEAVE1:       for.exit:
+; CHECK-INTERLEAVE1-NEXT:    ret i32 [[TMP11]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @dotp(
 ; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -71,8 +72,9 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[BIN_RDX]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = sub i32 0, [[TMP19]]
-; CHECK-INTERLEAVED-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
-; CHECK-INTERLEAVED:       scalar.ph:
+; CHECK-INTERLEAVED-NEXT:    br label [[FOR_EXIT:%.*]]
+; CHECK-INTERLEAVED:       for.exit:
+; CHECK-INTERLEAVED-NEXT:    ret i32 [[TMP17]]
 ;
 ; CHECK-MAXBW-LABEL: define i32 @dotp(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -99,8 +101,9 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW:       middle.block:
 ; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-MAXBW-NEXT:    [[TMP11:%.*]] = sub i32 0, [[TMP9]]
-; CHECK-MAXBW-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
-; CHECK-MAXBW:       scalar.ph:
+; CHECK-MAXBW-NEXT:    br label [[FOR_EXIT:%.*]]
+; CHECK-MAXBW:       for.exit:
+; CHECK-MAXBW-NEXT:    ret i32 [[TMP11]]
 ;
 entry:
   br label %for.body

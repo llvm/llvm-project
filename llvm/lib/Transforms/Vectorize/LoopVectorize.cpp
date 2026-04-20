@@ -7029,10 +7029,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
   // Convert loops with variable-length stepping after regions are dissolved.
   VPlanTransforms::convertToVariableLengthStep(BestVPlan);
-  // Remove dead back-edges for single-iteration loops with BranchOnCond(true).
-  // Only process loop latches to avoid removing edges from the middle block,
-  // which may be needed for epilogue vectorization.
-  VPlanTransforms::removeBranchOnConst(BestVPlan, /*OnlyLatches=*/true);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
   std::optional<uint64_t> MaxRuntimeStep;
   if (auto MaxVScale = getMaxVScale(*CM.TheFunction, CM.TTI))
@@ -7044,6 +7040,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
+  // Removing branches and incoming values may expose additional simplification
+  // opportunities.
+  if (VPlanTransforms::removeBranchOnConst(
+          BestVPlan,
+          /*OnlyLatches=*/EpilogueVecKind != EpilogueVectorizationKind::None)) {
+    VPlanTransforms::simplifyRecipes(BestVPlan);
+  }
   VPlanTransforms::simplifyKnownEVL(BestVPlan, BestVF, PSE);
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before

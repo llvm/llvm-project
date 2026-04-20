@@ -74,14 +74,12 @@ define void @truncate_i16_to_i8_cse(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4294967296
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4294967296, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[COUNT_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[COUNT_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i16, ptr [[SRC]], align 2
 ; CHECK-NEXT:    [[VAL_ZEXT:%.*]] = zext i16 [[VAL]] to i64
 ; CHECK-NEXT:    [[VAL_TRUNC_ZEXT:%.*]] = trunc i64 [[VAL_ZEXT]] to i8

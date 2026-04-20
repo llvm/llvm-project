@@ -316,15 +316,7 @@ define void @phi_used_in_vector_compare_and_scalar_indvar_update_and_store(ptr %
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    br i1 poison, label [[IF_END_SINK_SPLIT:%.*]], label [[IF_END1:%.*]]
-; CHECK:       if.end.sink.split:
-; CHECK-NEXT:    br label [[IF_END1]]
-; CHECK:       if.end:
-; CHECK-NEXT:    br i1 poison, label [[IF_END]], label [[FOR_END]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br label [[IF_END1:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
