@@ -57,18 +57,18 @@ void main(unsigned GI : SV_GroupIndex) {
 
 // CHECK:      define void @main()
 // CHECK-NEXT: entry:
+// CHECK:   %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // Verify destructor is emitted
-// NOINLINE-DXIL-NEXT:   call void @_GLOBAL__sub_I_GlobalDestructors.hlsl()
-// NOINLINE-DXIL-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-// NOINLINE-DXIL-NEXT:   call void @_Z4mainj(i32 %0)
-// NOINLINE-DXIL-NEXT:   call void @_GLOBAL__D_a()
+// NOINLINE-DXIL-NEXT:   call void @_GLOBAL__sub_I_GlobalDestructors.hlsl() [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// NOINLINE-DXIL-NEXT:   %[[#THREAD_ID:]] = call i32 @llvm.dx.flattened.thread.id.in.group()
+// NOINLINE-DXIL-NEXT:   call void @_Z4mainj(i32 %[[#THREAD_ID]]) [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// NOINLINE-DXIL-NEXT:   call void @_GLOBAL__D_a() [ "convergencectrl"(token %[[#C_ENTRY]]) ]
 // NOINLINE-DXIL-NEXT:   ret void
 
-// NOINLINE-SPIRV-NEXT:   %0 = call token @llvm.experimental.convergence.entry()
-// NOINLINE-SPIRV-NEXT:   call spir_func void @_GLOBAL__sub_I_GlobalDestructors.hlsl() [ "convergencectrl"(token %0) ]
-// NOINLINE-SPIRV-NEXT:   %1 = call i32 @llvm.spv.flattened.thread.id.in.group()
-// NOINLINE-SPIRV-NEXT:   call spir_func void @_Z4mainj(i32 %1) [ "convergencectrl"(token %0) ]
-// NOINLINE-SPIRV-NEXT:   call spir_func void @_GLOBAL__D_a() [ "convergencectrl"(token %0) ]
+// NOINLINE-SPIRV-NEXT:   call spir_func void @_GLOBAL__sub_I_GlobalDestructors.hlsl() [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// NOINLINE-SPIRV-NEXT:   %[[#THREAD_ID:]] = call i32 @llvm.spv.flattened.thread.id.in.group()
+// NOINLINE-SPIRV-NEXT:   call spir_func void @_Z4mainj(i32 %[[#THREAD_ID]]) [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// NOINLINE-SPIRV-NEXT:   call spir_func void @_GLOBAL__D_a() [ "convergencectrl"(token %[[#C_ENTRY]]) ]
 // NOINLINE-SPIRV-NEXT:   ret void
 
 // Verify inlining leaves only calls to "llvm." intrinsics
@@ -80,15 +80,16 @@ void main(unsigned GI : SV_GroupIndex) {
 
 // NOINLINE-DXIL:       define internal void @_GLOBAL__D_a() [[IntAttr:\#[0-9]+]]
 // NOINLINE-DXIL-NEXT:  entry:
-// NOINLINE-DXIL-NEXT:    call void @_ZN4TailD1Ev(ptr @_ZZ3WagvE1T)
-// NOINLINE-DXIL-NEXT:    call void @_ZN6PupperD1Ev(ptr @GlobalPup)
+// NOINLINE-DXIL:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// NOINLINE-DXIL-NEXT:    call void @_ZN4TailD1Ev(ptr @_ZZ3WagvE1T) [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// NOINLINE-DXIL-NEXT:    call void @_ZN6PupperD1Ev(ptr @GlobalPup) [ "convergencectrl"(token %[[#C_ENTRY]]) ]
 // NOINLINE-DXIL-NEXT:    ret void
 
 // NOINLINE-SPIRV:      define internal spir_func void @_GLOBAL__D_a() [[IntAttr:\#[0-9]+]]
 // NOINLINE-SPIRV-NEXT: entry:
-// NOINLINE-SPIRV-NEXT:   %0 = call token @llvm.experimental.convergence.entry()
-// NOINLINE-SPIRV-NEXT:   call spir_func void @_ZN4TailD1Ev(ptr addrspacecast (ptr addrspace(10) @_ZZ3WagvE1T to ptr)) [ "convergencectrl"(token %0) ]
-// NOINLINE-SPIRV-NEXT:   call spir_func void @_ZN6PupperD1Ev(ptr @GlobalPup) [ "convergencectrl"(token %0) ]
+// NOINLINE-SPIRV-NEXT:   %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// NOINLINE-SPIRV-NEXT:   call spir_func void @_ZN4TailD1Ev(ptr addrspacecast (ptr addrspace(10) @_ZZ3WagvE1T to ptr)) [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// NOINLINE-SPIRV-NEXT:   call spir_func void @_ZN6PupperD1Ev(ptr @GlobalPup) [ "convergencectrl"(token %[[#C_ENTRY]]) ]
 // NOINLINE-SPIRV-NEXT:   ret void
 
 // NOINLINE: attributes [[IntAttr]] = {{.*}} alwaysinline

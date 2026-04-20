@@ -10,6 +10,7 @@ struct S {
 // CHECK-LABEL: define hidden noundef i1 @_Z3fn1v(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 4
 // CHECK-NEXT:    [[B:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[B]], align 4
@@ -27,6 +28,7 @@ bool fn1() {
 // CHECK-LABEL: define hidden noundef <4 x i1> @_Z3fn2b(
 // CHECK-SAME: i1 noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x i1>, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[A:%.*]] = alloca [2 x <2 x i32>], align 4
@@ -55,6 +57,7 @@ bool2x2 fn2(bool V) {
 // CHECK-LABEL: define hidden noundef i1 @_Z3fn3v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 4
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 @__const._Z3fn3v.s, i32 20, i1 false)
@@ -73,6 +76,7 @@ bool fn3() {
 // CHECK-LABEL: define hidden noundef i1 @_Z3fn4v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 4
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x [2 x <2 x i32>]], align 4
 // CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[ARR]], align 4
@@ -93,6 +97,7 @@ bool fn4() {
 // CHECK-LABEL: define hidden void @_Z3fn5v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[M]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <4 x i32>, ptr [[M]], i32 0, i32 3
@@ -107,6 +112,7 @@ void fn5() {
 // CHECK-LABEL: define hidden void @_Z3fn6v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // CHECK-NEXT:    store i32 0, ptr [[V]], align 4
@@ -128,6 +134,7 @@ void fn6() {
 // CHECK-LABEL: define hidden void @_Z3fn7v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x [2 x <2 x i32>]], align 4
 // CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[ARR]], align 4
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [2 x <2 x i32>], ptr [[ARR]], i32 1
@@ -145,6 +152,7 @@ void fn7() {
 // CHECK-LABEL: define hidden noundef <16 x i1> @_Z3fn8u11matrix_typeILm4ELm4EbE(
 // CHECK-SAME: <16 x i1> noundef [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca <16 x i1>, align 4
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i1> [[M]] to <16 x i32>
