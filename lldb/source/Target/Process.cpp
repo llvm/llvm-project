@@ -342,6 +342,13 @@ bool ProcessProperties::GetSteppingRunsAllThreads() const {
       idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+Args ProcessProperties::GetAlwaysRunThreadNames() const {
+  Args args;
+  const uint32_t idx = ePropertyAlwaysRunThreadNames;
+  m_collection_sp->GetPropertyAtIndexAsArgs(idx, args);
+  return args;
+}
+
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
   const bool fail_value = true;
   const Property *exp_property =
