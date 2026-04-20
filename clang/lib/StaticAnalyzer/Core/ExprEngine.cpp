@@ -1812,6 +1812,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPStripeDirectiveClass:
     case Stmt::OMPTileDirectiveClass:
     case Stmt::OMPInterchangeDirectiveClass:
+    case Stmt::OMPSplitDirectiveClass:
     case Stmt::OMPFuseDirectiveClass:
     case Stmt::OMPInteropDirectiveClass:
     case Stmt::OMPDispatchDirectiveClass:
@@ -1885,7 +1886,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       // GNU __null is a pointer-width integer, not an actual pointer.
       ProgramStateRef state = Pred->getState();
       state = state->BindExpr(
-          S, Pred->getLocationContext(),
+          cast<Expr>(S), Pred->getLocationContext(),
           svalBuilder.makeIntValWithWidth(getContext().VoidPtrTy, 0));
       Bldr.generateNode(S, Pred, state);
       break;
@@ -2017,7 +2018,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       const LocationContext *LCtx = Pred->getLocationContext();
       for (const auto I : PreVisit) {
         ProgramStateRef State = I->getState();
-        State = State->BindExpr(S, LCtx, *ConstantVal);
+        State = State->BindExpr(cast<Expr>(S), LCtx, *ConstantVal);
         if (IsTemporary)
           State = createTemporaryRegionIfNeeded(State, LCtx,
                                                 cast<Expr>(S),
@@ -2443,13 +2444,15 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       const auto *PE = cast<PseudoObjectExpr>(S);
       if (const Expr *Result = PE->getResultExpr()) {
         SVal V = state->getSVal(Result, Pred->getLocationContext());
-        Bldr.generateNode(S, Pred,
-                          state->BindExpr(S, Pred->getLocationContext(), V));
+        Bldr.generateNode(
+            S, Pred,
+            state->BindExpr(cast<Expr>(S), Pred->getLocationContext(), V));
       }
       else
         Bldr.generateNode(S, Pred,
-                          state->BindExpr(S, Pred->getLocationContext(),
-                                                   UnknownVal()));
+                          state->BindExpr(cast<Expr>(S),
+                                          Pred->getLocationContext(),
+                                          UnknownVal()));
 
       Bldr.addNodes(Dst);
       break;
@@ -2464,8 +2467,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       const auto *OIE = cast<ObjCIndirectCopyRestoreExpr>(S);
       const Expr *E = OIE->getSubExpr();
       SVal V = state->getSVal(E, Pred->getLocationContext());
-      Bldr.generateNode(S, Pred,
-              state->BindExpr(S, Pred->getLocationContext(), V));
+      Bldr.generateNode(
+          S, Pred,
+          state->BindExpr(cast<Expr>(S), Pred->getLocationContext(), V));
       Bldr.addNodes(Dst);
       break;
     }
@@ -2478,7 +2482,7 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
   const StackFrameContext *CallerSF = CalleeSF->getParent()->getStackFrame();
   assert(CalleeSF && CallerSF);
   ExplodedNode *BeforeProcessingCall = nullptr;
-  const Stmt *CE = CalleeSF->getCallSite();
+  const Expr *CE = CalleeSF->getCallSite();
 
   // Find the first node before we started processing the call expression.
   while (N) {
@@ -2515,9 +2519,16 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
       BeforeProcessingCall->getLocationContext(), CE, nullptr, &PT);
   // Add the special flag to GDM to signal retrying with no inlining.
   // Note, changing the state ensures that we are not going to cache out.
+  // NOTE: This stores the call site (CE) in the state trait, but the the
+  // actual pointer value is only checked by an assertion; for the analysis,
+  // only the presence or absence of this trait matters.
+  // TODO: If we are handling a destructor call, CE is nullpointer (because it
+  // ultimately comes from the `Origin` of a `CXXDestructorCall`), which is
+  // indistinguishable from the absence (default state) of this state trait.
+  // I don't think that this bad logic causes actually observable problems, but
+  // it would be nice to clean it up if somebody has time to do so.
   ProgramStateRef NewNodeState = BeforeProcessingCall->getState();
-  NewNodeState =
-    NewNodeState->set<ReplayWithoutInlining>(const_cast<Stmt *>(CE));
+  NewNodeState = NewNodeState->set<ReplayWithoutInlining>(CE);
 
   // Make the new node a successor of BeforeProcessingCall.
   bool IsNew = false;

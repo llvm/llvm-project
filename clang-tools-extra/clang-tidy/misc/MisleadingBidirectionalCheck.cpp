@@ -66,16 +66,18 @@ static bool containsMisleadingBidi(StringRef Buffer,
     if (CodePoint == RLO || CodePoint == RLE || CodePoint == LRO ||
         CodePoint == LRE) {
       BidiContexts.push_back(PDF);
+    }
     // Close PDF Context.
-    } else if (CodePoint == PDF) {
+    else if (CodePoint == PDF) {
       if (!BidiContexts.empty() && BidiContexts.back() == PDF)
         BidiContexts.pop_back();
     }
     // Open a PDI Context.
     else if (CodePoint == RLI || CodePoint == LRI || CodePoint == FSI) {
       BidiContexts.push_back(PDI);
+    }
     // Close a PDI Context.
-    } else if (CodePoint == PDI) {
+    else if (CodePoint == PDI) {
       auto R = llvm::find(llvm::reverse(BidiContexts), PDI);
       if (R != BidiContexts.rend())
         BidiContexts.resize(BidiContexts.rend() - R - 1);

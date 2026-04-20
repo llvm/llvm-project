@@ -98,15 +98,6 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
       (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
        [{ return lhs == rhs; }]
     >,
-    InterfaceMethod<[{
-      This method is called to returns the operands of this operation that
-      are passed to the specified successor's block arguments. If the successor
-      is not valid for this operation, or no operands are forwarded, an empty
-      ValueRange is returned.
-      }],
-      "ValueRange", "getSuccessorForwardOperands",
-      (ins "Block *":$successor), [{}],[{ return {};}]
-    >,
   ];
 
   let verify = [{

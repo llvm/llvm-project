@@ -176,6 +176,19 @@ add_header_library(
 )
 
 add_header_library(
+  wctype_impl
+  HDRS
+    wctype_impl.h
+  DEPENDS
+    .wctype_utils
+    libc.hdr.types.wctype_t
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   str_to_num_result
   HDRS
     str_to_num_result.h
@@ -452,12 +465,8 @@ add_subdirectory(fixed_point)
 
 add_subdirectory(time)
 
-# Requires access to uchar header which is not on macos
-# Therefore, cannot currently build this on macos in overlay mode
-if(NOT (LIBC_TARGET_OS_IS_DARWIN))
-  add_subdirectory(wchar)
-  add_subdirectory(wctype)
-endif()
+add_subdirectory(wchar)
+add_subdirectory(wctype)
 
 add_subdirectory(math)
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)

@@ -29,10 +29,6 @@ class InMemoryModuleCache;
 /// operations the compiler might want to perform on the cache.
 class ModuleCache {
 public:
-  /// May perform any work that only needs to be performed once for multiple
-  /// calls \c getLock() with the same module filename.
-  virtual void prepareForGetLock(StringRef ModuleFilename) = 0;
-
   /// Returns lock for the given module file. The lock is initially unlocked.
   virtual std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) = 0;
@@ -58,8 +54,8 @@ public:
   virtual const InMemoryModuleCache &getInMemoryModuleCache() const = 0;
 
   /// Write the PCM contents to the given path in the module cache.
-  virtual std::error_code write(StringRef Path,
-                                llvm::MemoryBufferRef Buffer) = 0;
+  virtual std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer,
+                                off_t &Size, time_t &ModTime) = 0;
 
   virtual Expected<std::unique_ptr<llvm::MemoryBuffer>>
   read(StringRef FileName, off_t &Size, time_t &ModTime) = 0;
@@ -74,10 +70,12 @@ public:
 std::shared_ptr<ModuleCache> createCrossProcessModuleCache();
 
 /// Shared implementation of `ModuleCache::maybePrune()`.
-void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter);
+void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter,
+                    bool PruneTopLevel = false);
 
 /// Shared implementation of `ModuleCache::write()`.
-std::error_code writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer);
+std::error_code writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer,
+                          off_t &Size, time_t &ModTime);
 
 /// Shared implementation of `ModuleCache::read()`.
 Expected<std::unique_ptr<llvm::MemoryBuffer>>

@@ -1652,8 +1652,8 @@ void ObjectFileMachO::ProcessSegmentCommand(
         log->Printf(
             "Installing dSYM's %s segment file address over ObjectFile's "
             "so symbol table/debug info resolves correctly for %s",
-            const_segname.AsCString(),
-            module_sp->GetFileSpec().GetFilename().AsCString());
+            const_segname.AsCString(""),
+            module_sp->GetFileSpec().GetFilename().AsCString(""));
       }
 
       // Make sure we've parsed the symbol table from the ObjectFile before
@@ -2134,7 +2134,7 @@ static SymbolType GetSymbolType(const char *&symbol_name,
                                 const SectionSP &symbol_section) {
   SymbolType type = eSymbolTypeInvalid;
 
-  const char *symbol_sect_name = symbol_section->GetName().AsCString();
+  const char *symbol_sect_name = symbol_section->GetName().AsCString(nullptr);
   if (symbol_section->IsDescendant(text_section_sp.get())) {
     if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
                                 S_ATTR_SELF_MODIFYING_CODE |
@@ -3335,7 +3335,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
                           if (type == eSymbolTypeInvalid) {
                             const char *symbol_sect_name =
-                                symbol_section->GetName().AsCString();
+                                symbol_section->GetName().AsCString(nullptr);
                             if (symbol_section->IsDescendant(
                                     text_section_sp.get())) {
                               if (symbol_section->IsClear(
@@ -4095,7 +4095,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
             if (type == eSymbolTypeInvalid) {
               const char *symbol_sect_name =
-                  symbol_section->GetName().AsCString();
+                  symbol_section->GetName().AsCString(nullptr);
               if (symbol_section->IsDescendant(text_section_sp.get())) {
                 if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
                                             S_ATTR_SELF_MODIFYING_CODE |
@@ -6037,11 +6037,10 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
       // sections that size on disk (to avoid __PAGEZERO) and load them
       SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
       if (SectionIsLoadable(section_sp.get())) {
-        LLDB_LOGF(log,
-                  "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
-                  "0x%" PRIx64,
-                  section_sp->GetName().AsCString(),
-                  section_sp->GetFileAddress() + value);
+        LLDB_LOG(
+            log,
+            "ObjectFileMachO::SetLoadAddress segment '{0}' load addr is {1:x}",
+            section_sp->GetName(), section_sp->GetFileAddress() + value);
         if (target.SetSectionLoadAddress(section_sp,
                                          section_sp->GetFileAddress() + value,
                                          warn_multiple))
@@ -6061,10 +6060,10 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
             CalculateSectionLoadAddressForMemoryImage(
                 value, mach_header_section, section_sp.get());
         if (section_load_addr != LLDB_INVALID_ADDRESS) {
-          LLDB_LOGF(log,
-                    "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
-                    "0x%" PRIx64,
-                    section_sp->GetName().AsCString(), section_load_addr);
+          LLDB_LOG(log,
+                   "ObjectFileMachO::SetLoadAddress segment '{0}' load addr is "
+                   "{1:x}",
+                   section_sp->GetName(), section_load_addr);
           if (target.SetSectionLoadAddress(section_sp, section_load_addr,
                                            warn_multiple))
             ++num_loaded_sections;
@@ -6223,7 +6222,7 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         // is not guaranteed to be nul-terminated if all 16 characters are
         // used.
         // coverity[buffer_size_warning]
-        strncpy(seg_vmaddr.segname, name.AsCString(),
+        strncpy(seg_vmaddr.segname, name.AsCString(nullptr),
                 sizeof(seg_vmaddr.segname));
         seg_vmaddr.vmaddr = vmaddr;
         seg_vmaddr.unused = 0;

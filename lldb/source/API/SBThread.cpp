@@ -54,7 +54,7 @@ using namespace lldb_private;
 const char *SBThread::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Thread::GetStaticBroadcasterClass()).AsCString();
+  return ConstString(Thread::GetStaticBroadcasterClass()).AsCString(nullptr);
 }
 
 // Constructors

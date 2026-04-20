@@ -167,9 +167,22 @@ llvm::StringRef commentKindToString(CommentKind Kind);
 // A representation of a parsed comment.
 struct CommentInfo : public llvm::ilist_node<CommentInfo> {
   CommentInfo() = default;
-  CommentInfo(CommentInfo &Other) = delete;
+  CommentInfo(const CommentInfo &Other) = default;
+  CommentInfo &operator=(const CommentInfo &Other) = default;
   CommentInfo(CommentInfo &&Other) = default;
   CommentInfo &operator=(CommentInfo &&Other) = default;
+
+  CommentInfo(CommentKind Kind, llvm::ArrayRef<CommentInfo> Children = {},
+              StringRef Text = StringRef(), StringRef Name = StringRef(),
+              StringRef CloseName = StringRef(),
+              StringRef Direction = StringRef(),
+              StringRef ParamName = StringRef(), bool Explicit = false,
+              bool SelfClosing = false, llvm::ArrayRef<StringRef> AttrKeys = {},
+              llvm::ArrayRef<StringRef> AttrValues = {})
+      : Children(Children), Direction(Direction), Name(Name),
+        ParamName(ParamName), CloseName(CloseName), Text(Text),
+        AttrKeys(AttrKeys), AttrValues(AttrValues), Kind(Kind),
+        SelfClosing(SelfClosing), Explicit(Explicit) {}
 
   bool operator==(const CommentInfo &Other) const;
 
@@ -179,7 +192,7 @@ struct CommentInfo : public llvm::ilist_node<CommentInfo> {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  OwningPtrVec<CommentInfo>
+  llvm::ArrayRef<CommentInfo>
       Children;              // List of child comments for this CommentInfo.
   StringRef Direction;       // Parameter direction (for (T)ParamCommand).
   StringRef Name;            // Name of the comment (for Verbatim and HTML).
@@ -759,6 +772,7 @@ struct ClangDocContext {
 
 // Ensure arena allocated types remain safe to allocate in the arena.
 // Only trivially destructible types are safe, so enforce that at compile-time.
+static_assert(std::is_trivially_destructible_v<CommentInfo>);
 static_assert(std::is_trivially_destructible_v<ConstraintInfo>);
 static_assert(std::is_trivially_destructible_v<FieldTypeInfo>);
 static_assert(std::is_trivially_destructible_v<Location>);
@@ -767,7 +781,6 @@ static_assert(std::is_trivially_destructible_v<TemplateParamInfo>);
 static_assert(std::is_trivially_destructible_v<TypeInfo>);
 
 // FIXME: These types need to be trivially destructible for arena allocation.
-static_assert(!std::is_trivially_destructible_v<CommentInfo>);
 static_assert(!std::is_trivially_destructible_v<ConceptInfo>);
 static_assert(!std::is_trivially_destructible_v<EnumInfo>);
 static_assert(!std::is_trivially_destructible_v<FriendInfo>);
