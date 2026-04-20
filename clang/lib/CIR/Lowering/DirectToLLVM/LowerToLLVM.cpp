@@ -4588,32 +4588,22 @@ mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
     cir::IndirectBrOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
 
-  llvm::SmallVector<mlir::Block *, 8> successors;
-  llvm::SmallVector<mlir::ValueRange, 8> succOperands;
-  bool poison = op.getPoison();
-  for (mlir::Block *succ : op->getSuccessors())
-    successors.push_back(succ);
+  mlir::Value targetAddr = adaptor.getAddr();
 
-  for (mlir::ValueRange operand : op.getSuccOperands()) {
-    succOperands.push_back(operand);
-  }
-
-  auto llvmPtrType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  mlir::Value targetAddr;
-  if (!poison) {
-    targetAddr = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(),
-                                               llvmPtrType, adaptor.getAddr());
-  } else {
+  // If the poison attribute is set, use llvm.mlir.poison as the address.
+  // This happens when the block has no predecessors and is essentially
+  // unreachable. Do NOT erase the block argument directly, as that violates
+  // the MLIR dialect conversion framework contract (the framework tracks block
+  // arguments and will clean them up). A block with no predecessors simply
+  // produces no PHI node.
+  if (op.getPoison()) {
+    auto llvmPtrType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
     targetAddr =
         mlir::LLVM::PoisonOp::create(rewriter, op->getLoc(), llvmPtrType);
-    // Remove the block argument to avoid generating an empty PHI during
-    // lowering.
-    op->getBlock()->eraseArgument(0);
   }
 
-  auto newOp = mlir::LLVM::IndirectBrOp::create(
-      rewriter, op.getLoc(), targetAddr, succOperands, successors);
-  rewriter.replaceOp(op, newOp);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::IndirectBrOp>(
+      op, targetAddr, adaptor.getSuccOperands(), op.getSuccessors());
   return mlir::success();
 }
 
