@@ -63,7 +63,8 @@ enum LangFeatures {
   GNUMode = (1 << 14),
   HexFloat = (1 << 15),
   OpenCL = (1 << 16),
-  HLSL = (1 << 17)
+  HLSL = (1 << 17),
+  C89 = (1 << 18)
 };
 
 /// LangStandard - Information about the properties of a particular language
@@ -96,6 +97,9 @@ public:
 
   /// Language supports '//' comments.
   bool hasLineComments() const { return Flags & LineComment; }
+
+  /// isC89 - Language is a superset of C89.
+  bool isC89() const { return Flags & C89; }
 
   /// isC99 - Language is a superset of C99.
   bool isC99() const { return Flags & C99; }

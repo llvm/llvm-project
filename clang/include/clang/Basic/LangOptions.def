@@ -38,6 +38,7 @@
 #endif
 
 // FIXME: A lot of the Benign options should be Compatible instead.
+LANGOPT(C89               , 1, 0, NotCompatible, "C89")
 LANGOPT(C99               , 1, 0, NotCompatible, "C99")
 LANGOPT(C11               , 1, 0, NotCompatible, "C11")
 LANGOPT(C17               , 1, 0, NotCompatible, "C17")

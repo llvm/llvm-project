@@ -111,6 +111,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   const LangStandard &Std = LangStandard::getLangStandardForKind(LangStd);
   Opts.LangStd = LangStd;
   Opts.LineComment = Std.hasLineComments();
+  Opts.C89 = Std.isC89();
   Opts.C99 = Std.isC99();
   Opts.C11 = Std.isC11();
   Opts.C17 = Std.isC17();
