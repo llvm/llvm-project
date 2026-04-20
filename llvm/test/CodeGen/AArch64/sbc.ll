@@ -171,6 +171,107 @@ define i64 @test_ugt_mixed_i32_i64(i32 %a, i32 %b, i64 %x, i64 %y) {
   ret i64 %res
 }
 
+define i32 @test_ugt_multi_use_flags(i32 %a, i32 %b, i32 %x, i32 %y, i32 %z) {
+; CHECK-SD-LABEL: test_ugt_multi_use_flags:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    sub w8, w2, w3
+; CHECK-SD-NEXT:    cset w9, hi
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    sub w8, w8, w9
+; CHECK-SD-NEXT:    csel w0, w8, w4, eq
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ugt_multi_use_flags:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmp w0, w1
+; CHECK-GI-NEXT:    sub w9, w2, w3
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    sub w8, w9, w8
+; CHECK-GI-NEXT:    csel w0, w8, w4, eq
+; CHECK-GI-NEXT:    ret
+  %cc = icmp ugt i32 %a, %b
+  %carry = zext i1 %cc to i32
+  %sub = sub i32 %x, %y
+  %res = sub i32 %sub, %carry
+  %cc2 = icmp eq i32 %a, %b
+  %sel = select i1 %cc2, i32 %res, i32 %z
+  ret i32 %sel
+}
+
+define i32 @test_ugt_42(i32 %a, i32 %x, i32 %y) {
+; CHECK-SD-LABEL: test_ugt_42:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #42 // =0x2a
+; CHECK-SD-NEXT:    cmp w8, w0
+; CHECK-SD-NEXT:    sbc w0, w1, w2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ugt_42:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmp w0, #42
+; CHECK-GI-NEXT:    sub w9, w1, w2
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    sub w0, w9, w8
+; CHECK-GI-NEXT:    ret
+  %cc = icmp ugt i32 %a, 42
+  %carry = zext i1 %cc to i32
+  %sub = sub i32 %x, %y
+  %res = sub i32 %sub, %carry
+  ret i32 %res
+}
+
+define i32 @test_only_borrow_ugt_42(i32 %a, i32 %x) {
+; CHECK-LABEL: test_only_borrow_ugt_42:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, #42
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    sub w0, w1, w8
+; CHECK-NEXT:    ret
+  %cc = icmp ugt i32 %a, 42
+  %carry = zext i1 %cc to i32
+  %res = sub i32 %x, %carry
+  ret i32 %res
+}
+
+define i32 @test_only_borrow_ugt_42_combine(i32 %a, i32 %x) {
+; CHECK-LABEL: test_only_borrow_ugt_42_combine:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, #42
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    sub w0, w1, w8
+; CHECK-NEXT:    ret
+  %cc = icmp ugt i32 %a, 42
+  %carry = zext i1 %cc to i32
+  %res = sub i32 %x, %carry
+  ret i32 %res
+}
+
+define i32 @test_ugt_huge_imm(i32 %a, i32 %x, i32 %y) {
+; CHECK-SD-LABEL: test_ugt_huge_imm:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #52501 // =0xcd15
+; CHECK-SD-NEXT:    movk w8, #1883, lsl #16
+; CHECK-SD-NEXT:    cmp w8, w0
+; CHECK-SD-NEXT:    sbc w0, w1, w2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ugt_huge_imm:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #52501 // =0xcd15
+; CHECK-GI-NEXT:    sub w9, w1, w2
+; CHECK-GI-NEXT:    movk w8, #1883, lsl #16
+; CHECK-GI-NEXT:    cmp w0, w8
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    sub w0, w9, w8
+; CHECK-GI-NEXT:    ret
+  %cc = icmp ugt i32 %a, 123456789
+  %carry = zext i1 %cc to i32
+  %sub = sub i32 %x, %y
+  %res = sub i32 %sub, %carry
+  ret i32 %res
+}
+
 define i32 @test_unsupported_cc_slt(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-SD-LABEL: test_unsupported_cc_slt:
 ; CHECK-SD:       // %bb.0:

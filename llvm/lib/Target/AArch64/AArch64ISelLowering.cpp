@@ -23121,18 +23121,27 @@ static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
   if (Flags.getOpcode() != AArch64ISD::SUBS)
     return SDValue();
 
+  SDValue N0 = N->getOperand(0);
+  bool CanFoldSub = N0.getOpcode() == ISD::SUB;
+
   // For HI (unsigned >), swap the SUBS operands to obtain LO (unsigned <).
   if (CC == AArch64CC::HI) {
+    if (!Flags.hasOneUse())
+      return SDValue();
+    // Skip only-borrow + encodable cmp immediate: swap costs a mov with
+    // no savings to offset it.
+    auto *RHSC = dyn_cast<ConstantSDNode>(Flags.getOperand(1));
+    if (!CanFoldSub && RHSC && isLegalCmpImmed(RHSC->getAPIntValue()))
+      return SDValue();
     EVT SubsVT = Flags.getNode()->getValueType(0);
     Flags = DAG.getNode(AArch64ISD::SUBS, SDLoc(Flags),
                         DAG.getVTList(SubsVT, FlagsVT), Flags.getOperand(1),
-                        Flags.getOperand(0));
-    Flags = Flags.getValue(1);
+                        Flags.getOperand(0))
+                .getValue(1);
   }
 
   SDLoc DL(N);
-  SDValue N0 = N->getOperand(0);
-  if (N0->getOpcode() == ISD::SUB)
+  if (CanFoldSub)
     return DAG.getNode(AArch64ISD::SBC, DL, VT, N0.getOperand(0),
                        N0.getOperand(1), Flags);
   return DAG.getNode(AArch64ISD::SBC, DL, VT, N0, DAG.getConstant(0, DL, VT),
