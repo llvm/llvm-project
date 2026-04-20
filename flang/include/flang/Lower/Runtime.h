@@ -48,10 +48,6 @@ class AbstractConverter;
 
 // Lowering of Fortran statement related runtime (other than IO and maths)
 
-void genNotifyWaitStatement(AbstractConverter &,
-                            const parser::NotifyWaitStmt &);
-void genEventPostStatement(AbstractConverter &, const parser::EventPostStmt &);
-void genEventWaitStatement(AbstractConverter &, const parser::EventWaitStmt &);
 void genLockStatement(AbstractConverter &, const parser::LockStmt &);
 void genFailImageStatement(AbstractConverter &);
 void genStopStatement(AbstractConverter &, const parser::StopStmt &);
