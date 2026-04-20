@@ -218,6 +218,13 @@ protected:
       ValueRange nonSuccessorInputs,
       ArrayRef<AbstractSparseLattice *> nonSuccessorInputLattices) = 0;
 
+  /// Given an operation with region non-control-flow, the lattices of the entry
+  /// block arguments, compute the lattice values for block arguments.(ex. the
+  /// block arguments of gpu.launch).
+  virtual void visitNonControlFlowArgumentsImpl(
+      Operation *op, Region *const region, ValueRange arguments,
+      ArrayRef<AbstractSparseLattice *> argLattices) = 0;
+
   /// Get the lattice element of a value.
   virtual AbstractSparseLattice *getLatticeElement(Value value) = 0;
 
@@ -335,6 +342,16 @@ public:
     setAllToEntryStates(nonSuccessorInputLattices);
   }
 
+  /// Given an operation with region non-control-flow, the lattices of the entry
+  /// block arguments, compute the lattice values for block arguments.(ex. the
+  /// block argument of gpu.launch). By default, this method marks all lattice
+  /// elements as having reached a pessimistic fixpoint.
+  virtual void visitNonControlFlowArguments(Operation *op, Region *const region,
+                                            ValueRange arguments,
+                                            ArrayRef<StateT *> argLattices) {
+    setAllToEntryStates(argLattices);
+  }
+
 protected:
   /// Get the lattice element for a value.
   StateT *getLatticeElement(Value value) override {
@@ -389,6 +406,15 @@ private:
         op, successor, nonSuccessorInputs,
         {reinterpret_cast<StateT *const *>(nonSuccessorInputLattices.begin()),
          nonSuccessorInputLattices.size()});
+  }
+
+  virtual void visitNonControlFlowArgumentsImpl(
+      Operation *op, Region *const region, ValueRange arguments,
+      ArrayRef<AbstractSparseLattice *> argLattices) override {
+    visitNonControlFlowArguments(
+        op, region, arguments,
+        {reinterpret_cast<StateT *const *>(argLattices.begin()),
+         argLattices.size()});
   }
 
   void setToEntryState(AbstractSparseLattice *lattice) override {
