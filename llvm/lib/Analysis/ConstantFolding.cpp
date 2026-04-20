@@ -348,14 +348,6 @@ bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
   return true;
 }
 
-static bool shouldPreserveLargeStringLoad(Constant *C, uint64_t LoadBytes) {
-  if (LoadBytes <= 32)
-    return false;
-
-  auto *CDS = dyn_cast<ConstantDataSequential>(C);
-  return CDS && CDS->isString();
-}
-
 Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
                                                const DataLayout &DL) {
   do {
@@ -372,10 +364,6 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
     // pointers legally).
     if (Constant *Res = ConstantFoldLoadFromUniformValue(C, DestTy, DL))
       return Res;
-
-    if (SrcTy != DestTy && !DestSize.isScalable() &&
-        shouldPreserveLargeStringLoad(C, DestSize.getFixedValue() / 8))
-      return nullptr;
 
     // If the type sizes are the same and a cast is legal, just directly
     // cast the constant.
@@ -570,7 +558,8 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 }
 
 Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
-                                       int64_t Offset, const DataLayout &DL) {
+                                       Type *RequestedLoadTy, int64_t Offset,
+                                       const DataLayout &DL) {
   // Bail out early. Not expect to load from scalable global variable.
   if (isa<ScalableVectorType>(LoadTy))
     return nullptr;
@@ -589,7 +578,8 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
 
     Type *MapTy = Type::getIntNTy(C->getContext(),
                                   DL.getTypeSizeInBits(LoadTy).getFixedValue());
-    if (Constant *Res = FoldReinterpretLoadFromConst(C, MapTy, Offset, DL)) {
+    if (Constant *Res = FoldReinterpretLoadFromConst(C, MapTy, RequestedLoadTy,
+                                                     Offset, DL)) {
       if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
         // Materializing a zero can be done trivially without a bitcast
         return Constant::getNullValue(LoadTy);
@@ -613,7 +603,7 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
   if (BytesLoaded > 128 || BytesLoaded == 0)
     return nullptr;
 
-  if (shouldPreserveLargeStringLoad(C, BytesLoaded))
+  if (BytesLoaded > 32 && RequestedLoadTy->isIntegerTy())
     return nullptr;
 
   // If we're not accessing anything in this constant, the result is undefined.
@@ -742,7 +732,7 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
   // Try hard to fold loads from bitcasted strange and non-type-safe things.
   if (Offset.getSignificantBits() <= 64)
     if (Constant *Result =
-            FoldReinterpretLoadFromConst(C, Ty, Offset.getSExtValue(), DL))
+            FoldReinterpretLoadFromConst(C, Ty, Ty, Offset.getSExtValue(), DL))
       return Result;
 
   return nullptr;
