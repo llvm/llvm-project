@@ -884,8 +884,10 @@ static bool isKnownNonZeroUnderICmp(const Value *Expr, CmpPredicate Pred,
                                     unsigned Depth) {
   if (Depth == MaxAnalysisRecursionDepth)
     return false;
+  // icmp Pred X, 0 proves X is non-zero.
   if (Expr == L0)
     return cmpExcludesZero(Pred, L1);
+  // icmp Pred 0, Y proves Y is non-zero.
   if (Expr == L1)
     return cmpExcludesZero(ICmpInst::getSwappedCmpPredicate(Pred), L0);
 
