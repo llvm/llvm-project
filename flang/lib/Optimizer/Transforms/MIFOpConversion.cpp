@@ -1308,7 +1308,6 @@ struct MIFImageIndexOpConversion
     mlir::Value result = builder.createTemporary(loc, i32Ty);
 
     mlir::func::FuncOp funcOp;
-    mlir::FunctionType ftype;
     llvm::SmallVector<mlir::Value> args;
     mlir::Value coarrayHandle = getCoarrayHandle(builder, loc, op.getCoarray());
     if (!op.getTeam()) {
