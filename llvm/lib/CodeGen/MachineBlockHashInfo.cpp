@@ -63,7 +63,10 @@ struct CollectHashInfo {
   uint64_t NeighborHash;
 };
 
-bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
+MachineBlockHashInfoResult::MachineBlockHashInfoResult() = default;
+
+MachineBlockHashInfoResult::MachineBlockHashInfoResult(
+    const MachineFunction &F) {
   DenseMap<const MachineBasicBlock *, CollectHashInfo> HashInfos;
   uint16_t Offset = 0;
   // Initialize hash components
@@ -103,12 +106,21 @@ bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
                                  fold_64_to_16(HashInfo.NeighborHash));
     MBBHashInfo[&MBB] = BlendedHash.combine();
   }
+}
 
+uint64_t
+MachineBlockHashInfoResult::getMBBHash(const MachineBasicBlock &MBB) const {
+  auto it = MBBHashInfo.find(&MBB);
+  return it == MBBHashInfo.end() ? 0 : it->second;
+}
+
+bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
+  Result = MachineBlockHashInfoResult{F};
   return false;
 }
 
-uint64_t MachineBlockHashInfo::getMBBHash(const MachineBasicBlock &MBB) {
-  return MBBHashInfo[&MBB];
+uint64_t MachineBlockHashInfo::getMBBHash(const MachineBasicBlock &MBB) const {
+  return Result.getMBBHash(MBB);
 }
 
 MachineFunctionPass *llvm::createMachineBlockHashInfoPass() {
