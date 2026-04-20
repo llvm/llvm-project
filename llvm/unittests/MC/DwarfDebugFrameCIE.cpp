@@ -146,7 +146,7 @@ TEST_F(DwarfDebugFrameCIE, DistinctReturnColumnsGetDistinctCIEs) {
   // Extract .debug_frame section contents.
   StringRef FrameContents;
   bool Found = false;
-  for (const auto &Section : ELF->sections()) {
+  for (const object::SectionRef &Section : ELF->sections()) {
     Expected<StringRef> NameOrErr = Section.getName();
     ASSERT_TRUE(static_cast<bool>(NameOrErr));
     if (*NameOrErr == ".debug_frame") {
@@ -216,7 +216,7 @@ TEST_F(DwarfDebugFrameCIE, SameReturnColumnsShareCIE) {
 
   StringRef FrameContents;
   bool Found = false;
-  for (const auto &Section : ELF->sections()) {
+  for (const object::SectionRef &Section : ELF->sections()) {
     Expected<StringRef> NameOrErr = Section.getName();
     ASSERT_TRUE(static_cast<bool>(NameOrErr));
     if (*NameOrErr == ".debug_frame") {
