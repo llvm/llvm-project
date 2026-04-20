@@ -11,7 +11,7 @@ define i64 @mul_nsw_pow2(i64 %x) {
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
-  ; CHECK-NEXT:   [[SLLI:%[0-9]+]]:gpr = SLLI [[COPY]], 2
+  ; CHECK-NEXT:   [[SLLI:%[0-9]+]]:gpr = nsw SLLI [[COPY]], 2
   ; CHECK-NEXT:   $x10 = COPY [[SLLI]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %mul = mul nsw i64 %x, 4
