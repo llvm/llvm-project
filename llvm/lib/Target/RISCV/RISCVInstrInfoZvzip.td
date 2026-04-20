@@ -139,11 +139,37 @@ defm : VPatBinaryW_VV<"int_riscv_vzip", "PseudoVZIP", AllZvzipVectors,
                       ExtraPreds = [HasStdExtZvzip],
                       requireMinimal = true>;
 
-// These are modeled after the int binop VL nodes
+def SDT_RISCVVecBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
+                                                SDTCisSameAs<0, 2>,
+                                                SDTCisVec<0>,
+                                                SDTCisSameAs<0, 3>,
+                                                SDTCVecEltisVT<4, i1>,
+                                                SDTCisSameNumEltsAs<0, 4>,
+                                                SDTCisVT<5, XLenVT>]>;
+
 let HasPassthruOp = true, HasMaskOp = true in {
-def vpaire_vl  : RVSDNode<"VPAIRE_VL", SDT_RISCVIntBinOp_VL>;
-def vpairo_vl  : RVSDNode<"VPAIRO_VL", SDT_RISCVIntBinOp_VL>;
+def vpaire_vl  : RVSDNode<"VPAIRE_VL", SDT_RISCVVecBinOp_VL>;
+def vpairo_vl  : RVSDNode<"VPAIRO_VL", SDT_RISCVVecBinOp_VL>;
 } // HasPassthruOp = true, HasMaskOp = true
 
-defm : VPatBinaryVL_VV<vpaire_vl, "PseudoVPAIRE">;
-defm : VPatBinaryVL_VV<vpairo_vl, "PseudoVPAIRO">;
+multiclass VPatVPAIR<SDPatternOperator op, string instruction_name> {
+  foreach vti = AllVectors in {
+    let Predicates = !listconcat([HasStdExtZvzip],
+                                 GetVTypeMinimalPredicates<vti>.Predicates) in {
+      def : Pat<(vti.Vector (op
+                       (vti.Vector vti.RegClass:$rs1),
+                       (vti.Vector vti.RegClass:$rs2),
+                       (vti.Vector vti.RegClass:$passthru),
+                       (vti.Mask VMV0:$vm),
+                       VLOpFrag)),
+                (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX#"_MASK")
+                             vti.RegClass:$passthru,
+                             vti.RegClass:$rs1,
+                             vti.RegClass:$rs2,
+                             (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    }
+  }
+}
+
+defm : VPatVPAIR<vpaire_vl, "PseudoVPAIRE">;
+defm : VPatVPAIR<vpairo_vl, "PseudoVPAIRO">;
