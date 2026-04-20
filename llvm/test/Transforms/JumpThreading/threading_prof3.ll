@@ -1,7 +1,7 @@
-; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
+; RUN: opt -passes="require<branch-prob>,jump-threading" -S < %s | FileCheck %s
 
 ; Check that all zero branch weights do not cause a crash.
-define void @zero_branch_weights(i32 %tmp, i32 %tmp3) {
+define void @zero_branch_weights(i32 %tmp, i32 %tmp3) !prof !0 {
 bb:
   %tmp1 = icmp eq i32 %tmp, 1
   br i1 %tmp1, label %bb5, label %bb2
@@ -27,3 +27,4 @@ bb9:
 }
 
 ;CHECK: ![[PROF]] = !{!"branch_weights", i32 -2147483648, i32 0}
+!0 = !{!"function_entry_count", i64 1}

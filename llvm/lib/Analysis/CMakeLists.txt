@@ -89,6 +89,7 @@ add_llvm_component_library(LLVMAnalysis
   IVDescriptors.cpp
   IVUsers.cpp
   ImportedFunctionsInliningStatistics.cpp
+  IncrementalUpdateProfileAnalysis.cpp
   IndirectCallPromotionAnalysis.cpp
   InlineCost.cpp
   InlineAdvisor.cpp

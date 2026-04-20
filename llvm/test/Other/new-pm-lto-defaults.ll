@@ -97,6 +97,7 @@
 ; CHECK-O23SZ-NEXT: Running analysis: ScalarEvolutionAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
+; CHECK-O23SZ-NEXT: Running analysis: IncrementalUpdateProfileAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: SROAPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: TailCallElimPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: PostOrderFunctionAttrsPass on (foo)

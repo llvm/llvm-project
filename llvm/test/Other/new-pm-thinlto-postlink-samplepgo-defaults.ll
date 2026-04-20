@@ -86,6 +86,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: SpeculativeExecutionPass
 ; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
+; CHECK-O23SZ-NEXT: Running analysis: IncrementalUpdateProfileAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23SZ-NEXT: Invalidating analysis: LazyValueAnalysis
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass

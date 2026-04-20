@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/IncrementalUpdateProfileAnalysis.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -84,8 +85,6 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   LazyValueInfo *LVI = nullptr;
   AAResults *AA = nullptr;
   std::unique_ptr<DomTreeUpdater> DTU;
-  BlockFrequencyInfo *BFI = nullptr;
-  BranchProbabilityInfo *BPI = nullptr;
   bool ChangedSinceLastAnalysisUpdate = false;
   bool HasGuards = false;
 #ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -93,6 +92,7 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
 #else
   SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
 #endif
+  IncrementalProfDataVerifier *PVer = nullptr;
 
   // JumpThreading must not processes blocks unreachable from entry. It's a
   // waste of compute time and can potentially lead to hangs.
@@ -179,10 +179,7 @@ private:
   BasicBlock *splitBlockPreds(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
                               const char *Suffix);
   void updateBlockFreqAndEdgeWeight(BasicBlock *PredBB, BasicBlock *BB,
-                                    BasicBlock *NewBB, BasicBlock *SuccBB,
-                                    BlockFrequencyInfo *BFI,
-                                    BranchProbabilityInfo *BPI,
-                                    bool HasProfile);
+                                    BasicBlock *NewBB, BasicBlock *SuccBB);
   /// Check if the block has profile metadata for its outgoing edges.
   bool doesBlockHaveProfileData(BasicBlock *BB);
 
@@ -194,26 +191,6 @@ private:
   /// before/after  running the "external" one.
   template <typename AnalysisT>
   typename AnalysisT::Result *runExternalAnalysis();
-
-  /// Returns an existing instance of BPI if any, otherwise nullptr. By
-  /// "existing" we mean either cached result provided by FunctionAnalysisManger
-  /// or created by preceding call to 'getOrCreateBPI'.
-  BranchProbabilityInfo *getBPI();
-
-  /// Returns an existing instance of BFI if any, otherwise nullptr. By
-  /// "existing" we mean either cached result provided by FunctionAnalysisManger
-  /// or created by preceding call to 'getOrCreateBFI'.
-  BlockFrequencyInfo *getBFI();
-
-  /// Returns an existing instance of BPI if any, otherwise:
-  ///   if 'HasProfile' is true creates new instance through
-  ///   FunctionAnalysisManager, otherwise nullptr.
-  BranchProbabilityInfo *getOrCreateBPI(bool Force = false);
-
-  /// Returns an existing instance of BFI if any, otherwise:
-  ///   if 'HasProfile' is true creates new instance through
-  ///   FunctionAnalysisManager, otherwise nullptr.
-  BlockFrequencyInfo *getOrCreateBFI(bool Force = false);
 
   // Internal overload of evaluateOnPredecessorEdge().
   Constant *evaluateOnPredecessorEdge(BasicBlock *BB, BasicBlock *PredPredBB,

@@ -1,5 +1,5 @@
-; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
-define void @test() {
+; RUN: opt -passes="require<branch-prob>,jump-threading" -S < %s | FileCheck %s
+define void @test() !prof !1 {
 bb:
   %tmp = call i32 @a()
   %tmp1 = icmp eq i32 %tmp, 1
@@ -39,3 +39,4 @@ declare i32 @b()
 !0 = !{!"branch_weights", i32 2146410443, i32 1073205}
 ;CHECK: ![[PROF1]] = !{!"branch_weights", i32 1073205, i32 2146410443}
 ;CHECK: ![[PROF2]] = !{!"branch_weights", i32 -2147483648, i32 0}
+!1 = !{!"function_entry_count", i64 1}

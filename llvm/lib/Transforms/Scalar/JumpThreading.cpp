@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/GuardUtils.h"
+#include "llvm/Analysis/IncrementalUpdateProfileAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/Loads.h"
@@ -296,8 +297,8 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
   LVI = LVI_;
   AA = AA_;
   DTU = std::move(DTU_);
-  BFI = BFI_;
-  BPI = BPI_;
+  PVer = FAM->getResult<IncrementalUpdateProfileAnalysis>(*F).get();
+
   auto *GuardDecl = Intrinsic::getDeclarationIfExists(
       F->getParent(), Intrinsic::experimental_guard);
   HasGuards = GuardDecl && !GuardDecl->use_empty();
@@ -1043,8 +1044,8 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
                       << '\n');
     ++NumFolds;
     ConstantFoldTerminator(BB, true, nullptr, DTU.get());
-    if (auto *BPI = getBPI())
-      BPI->eraseBlock(BB);
+    if (PVer)
+      PVer->bpi().eraseBlock(BB);
     return true;
   }
 
@@ -1196,8 +1197,8 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
         FICond->eraseFromParent();
 
       DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, RemoveSucc}});
-      if (auto *BPI = getBPI())
-        BPI->eraseBlock(BB);
+      if (PVer)
+        PVer->bpi().eraseBlock(BB);
       return true;
     }
     CurrentBB = CurrentPred;
@@ -1669,8 +1670,8 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
       ++NumFolds;
       Term->eraseFromParent();
       DTU->applyUpdatesPermissive(Updates);
-      if (auto *BPI = getBPI())
-        BPI->eraseBlock(BB);
+      if (PVer)
+        PVer->bpi().eraseBlock(BB);
 
       // If the condition is now dead due to the removal of the old terminator,
       // erase it.
@@ -2272,11 +2273,6 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
   LLVM_DEBUG(dbgs() << "  Threading through '" << PredBB->getName() << "' and '"
                     << BB->getName() << "'\n");
 
-  // Build BPI/BFI before any changes are made to IR.
-  bool HasProfile = doesBlockHaveProfileData(BB);
-  auto *BFI = getOrCreateBFI(HasProfile);
-  auto *BPI = getOrCreateBPI(BFI != nullptr);
-
   CondBrInst *CondBr = cast<CondBrInst>(BB->getTerminator());
   CondBrInst *PredBBBranch = cast<CondBrInst>(PredBB->getTerminator());
 
@@ -2286,11 +2282,10 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
   NewBB->moveAfter(PredBB);
 
   // Set the block frequency of NewBB.
-  if (BFI) {
-    assert(BPI && "It's expected BPI to exist along with BFI");
-    auto NewBBFreq = BFI->getBlockFreq(PredPredBB) *
-                     BPI->getEdgeProbability(PredPredBB, PredBB);
-    BFI->setBlockFreq(NewBB, NewBBFreq);
+  if (PVer) {
+    auto NewBBFreq = PVer->bfi().getBlockFreq(PredPredBB) *
+                     PVer->bpi().getEdgeProbability(PredPredBB, PredBB);
+    PVer->bfi().setBlockFreq(NewBB, NewBBFreq);
   }
 
   // We are going to have to map operands from the original BB block to the new
@@ -2301,8 +2296,8 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
                     PredPredBB);
 
   // Copy the edge probabilities from PredBB to NewBB.
-  if (BPI)
-    BPI->copyEdgeProbabilities(PredBB, NewBB);
+  if (PVer)
+    PVer->bpi().copyEdgeProbabilities(PredBB, NewBB);
 
   // Update the terminator of PredPredBB to jump to NewBB instead of PredBB.
   // This eliminates predecessors from PredPredBB, which requires us to simplify
@@ -2388,11 +2383,6 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
   assert(!LoopHeaders.count(BB) && !LoopHeaders.count(SuccBB) &&
          "Don't thread across loop headers");
 
-  // Build BPI/BFI before any changes are made to IR.
-  bool HasProfile = doesBlockHaveProfileData(BB);
-  auto *BFI = getOrCreateBFI(HasProfile);
-  auto *BPI = getOrCreateBPI(BFI != nullptr);
-
   // And finally, do it!  Start by factoring the predecessors if needed.
   BasicBlock *PredBB;
   if (PredBBs.size() == 1)
@@ -2416,11 +2406,10 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
   NewBB->moveAfter(PredBB);
 
   // Set the block frequency of NewBB.
-  if (BFI) {
-    assert(BPI && "It's expected BPI to exist along with BFI");
-    auto NewBBFreq =
-        BFI->getBlockFreq(PredBB) * BPI->getEdgeProbability(PredBB, BB);
-    BFI->setBlockFreq(NewBB, NewBBFreq);
+  if (PVer) {
+    auto NewBBFreq = PVer->bfi().getBlockFreq(PredBB) *
+                     PVer->bpi().getEdgeProbability(PredBB, BB);
+    PVer->bfi().setBlockFreq(NewBB, NewBBFreq);
   }
 
   // Copy all the instructions from BB to NewBB except the terminator.
@@ -2461,7 +2450,7 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
   SimplifyInstructionsInBlock(NewBB, TLI);
 
   // Update the edge weight from BB to SuccBB, which should be less than before.
-  updateBlockFreqAndEdgeWeight(PredBB, BB, NewBB, SuccBB, BFI, BPI, HasProfile);
+  updateBlockFreqAndEdgeWeight(PredBB, BB, NewBB, SuccBB);
 
   // Threaded an edge!
   ++NumThreads;
@@ -2478,12 +2467,11 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
   // Collect the frequencies of all predecessors of BB, which will be used to
   // update the edge weight of the result of splitting predecessors.
   DenseMap<BasicBlock *, BlockFrequency> FreqMap;
-  auto *BFI = getBFI();
-  if (BFI) {
-    auto *BPI = getOrCreateBPI(true);
+  if (PVer) {
     for (auto *Pred : Preds)
-      FreqMap.insert(std::make_pair(
-          Pred, BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, BB)));
+      FreqMap.insert(
+          std::make_pair(Pred, PVer->bfi().getBlockFreq(Pred) *
+                                   PVer->bpi().getEdgeProbability(Pred, BB)));
   }
 
   // In the case when BB is a LandingPad block we create 2 new predecessors
@@ -2503,11 +2491,11 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
     for (auto *Pred : predecessors(NewBB)) {
       Updates.push_back({DominatorTree::Delete, Pred, BB});
       Updates.push_back({DominatorTree::Insert, Pred, NewBB});
-      if (BFI) // Update frequencies between Pred -> NewBB.
+      if (PVer) // Update frequencies between Pred -> NewBB.
         NewBBFreq += FreqMap.lookup(Pred);
     }
-    if (BFI) // Apply the summed frequency to NewBB.
-      BFI->setBlockFreq(NewBB, NewBBFreq);
+    if (PVer) // Apply the summed frequency to NewBB.
+      PVer->bfi().setBlockFreq(NewBB, NewBBFreq);
   }
 
   DTU->applyUpdatesPermissive(Updates);
@@ -2528,31 +2516,23 @@ bool JumpThreadingPass::doesBlockHaveProfileData(BasicBlock *BB) {
 void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
                                                      BasicBlock *BB,
                                                      BasicBlock *NewBB,
-                                                     BasicBlock *SuccBB,
-                                                     BlockFrequencyInfo *BFI,
-                                                     BranchProbabilityInfo *BPI,
-                                                     bool HasProfile) {
-  assert(((BFI && BPI) || (!BFI && !BFI)) &&
-         "Both BFI & BPI should either be set or unset");
-
-  if (!BFI) {
-    assert(!HasProfile &&
-           "It's expected to have BFI/BPI when profile info exists");
+                                                     BasicBlock *SuccBB) {
+  if (!PVer)
     return;
-  }
 
   // As the edge from PredBB to BB is deleted, we have to update the block
   // frequency of BB.
-  auto BBOrigFreq = BFI->getBlockFreq(BB);
-  auto NewBBFreq = BFI->getBlockFreq(NewBB);
+  auto BBOrigFreq = PVer->bfi().getBlockFreq(BB);
+  auto NewBBFreq = PVer->bfi().getBlockFreq(NewBB);
   auto BBNewFreq = BBOrigFreq - NewBBFreq;
-  BFI->setBlockFreq(BB, BBNewFreq);
+  PVer->bfi().setBlockFreq(BB, BBNewFreq);
 
   // Collect updated outgoing edges' frequencies from BB and use them to update
   // edge probabilities.
   SmallVector<uint64_t, 4> BBSuccFreq;
   for (auto It : enumerate(successors(BB))) {
-    auto BB2SuccBBFreq = BBOrigFreq * BPI->getEdgeProbability(BB, It.index());
+    auto BB2SuccBBFreq =
+        BBOrigFreq * PVer->bpi().getEdgeProbability(BB, It.index());
     auto SuccFreq =
         (It.value() == SuccBB) ? BB2SuccBBFreq - NewBBFreq : BB2SuccBBFreq;
     BBSuccFreq.push_back(SuccFreq.getFrequency());
@@ -2574,7 +2554,7 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
   }
 
   // Update edge probabilities in BPI.
-  BPI->setEdgeProbability(BB, BBSuccProbs);
+  PVer->bpi().setEdgeProbability(BB, BBSuccProbs);
 
   // Update the profile metadata as well.
   //
@@ -2610,7 +2590,7 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
   // FIXME this locally as well so that BPI and BFI are consistent as well.  We
   // shouldn't make edges extremely likely or unlikely based solely on static
   // estimation.
-  if (BBSuccProbs.size() >= 2 && HasProfile) {
+  if (BBSuccProbs.size() >= 2) {
     SmallVector<uint32_t, 4> Weights;
     for (auto Prob : BBSuccProbs)
       Weights.push_back(Prob.getNumerator());
@@ -2757,8 +2737,8 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 
   // Remove the unconditional branch at the end of the PredBB block.
   OldPredBranch->eraseFromParent();
-  if (auto *BPI = getBPI())
-    BPI->copyEdgeProbabilities(BB, PredBB);
+  if (PVer)
+    PVer->bpi().copyEdgeProbabilities(BB, PredBB);
   DTU->applyUpdatesPermissive(Updates);
 
   ++NumDupes;
@@ -2806,19 +2786,19 @@ void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
     BP.emplace_back(BranchProbability::getBranchProbability(
         FalseWeight, TrueWeight + FalseWeight));
     // Update BPI if exists.
-    if (auto *BPI = getBPI())
-      BPI->setEdgeProbability(Pred, BP);
+    if (PVer)
+      PVer->bpi().setEdgeProbability(Pred, BP);
   }
   // Set the block frequency of NewBB.
-  if (auto *BFI = getBFI()) {
+  if (PVer) {
     if ((TrueWeight + FalseWeight) == 0) {
       TrueWeight = 1;
       FalseWeight = 1;
     }
     BranchProbability PredToNewBBProb = BranchProbability::getBranchProbability(
         TrueWeight, TrueWeight + FalseWeight);
-    auto NewBBFreq = BFI->getBlockFreq(Pred) * PredToNewBBProb;
-    BFI->setBlockFreq(NewBB, NewBBFreq);
+    auto NewBBFreq = PVer->bfi().getBlockFreq(Pred) * PredToNewBBProb;
+    PVer->bfi().setBlockFreq(NewBB, NewBBFreq);
   }
 
   // The select is now dead.
@@ -2998,8 +2978,6 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
     NewPN->setDebugLoc(SI->getDebugLoc());
     SI->replaceAllUsesWith(NewPN);
 
-    auto *BPI = getBPI();
-    auto *BFI = getBFI();
     if (!ProfcheckDisableMetadataFixes && BranchWeights) {
       SmallVector<uint32_t, 2> BW;
       [[maybe_unused]] bool Extracted = extractBranchWeights(BranchWeights, BW);
@@ -3014,14 +2992,12 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
           BranchProbability::getBranchProbability(BW[1], Denominator);
       SmallVector<BranchProbability, 2> BP = {TrueProb, FalseProb};
 
-      if (BPI)
-        BPI->setEdgeProbability(BB, BP);
-
-      if (BFI) {
-        auto BBOrigFreq = BFI->getBlockFreq(BB);
+      if (PVer) {
+        PVer->bpi().setEdgeProbability(BB, BP);
+        auto BBOrigFreq = PVer->bfi().getBlockFreq(BB);
         auto NewBBFreq = BBOrigFreq * TrueProb;
-        BFI->setBlockFreq(NewBB, NewBBFreq);
-        BFI->setBlockFreq(SplitBB, BBOrigFreq);
+        PVer->bfi().setBlockFreq(NewBB, NewBBFreq);
+        PVer->bfi().setBlockFreq(SplitBB, BBOrigFreq);
       }
     }
     SI->eraseFromParent();
@@ -3174,7 +3150,6 @@ PreservedAnalyses JumpThreadingPass::getPreservedAnalysis() const {
   PA.preserve<DominatorTreeAnalysis>();
 
   // TODO: We would like to preserve BPI/BFI. Enable once all paths update them.
-  // TODO: Would be nice to verify BPI/BFI consistency as well.
   return PA;
 }
 
@@ -3215,45 +3190,4 @@ typename AnalysisT::Result *JumpThreadingPass::runExternalAnalysis() {
   AA = &FAM->getResult<AAManager>(*F);
 
   return Result;
-}
-
-BranchProbabilityInfo *JumpThreadingPass::getBPI() {
-  if (!BPI) {
-    assert(FAM && "Can't create BPI without FunctionAnalysisManager");
-    BPI = FAM->getCachedResult<BranchProbabilityAnalysis>(*F);
-  }
-  return BPI;
-}
-
-BlockFrequencyInfo *JumpThreadingPass::getBFI() {
-  if (!BFI) {
-    assert(FAM && "Can't create BFI without FunctionAnalysisManager");
-    BFI = FAM->getCachedResult<BlockFrequencyAnalysis>(*F);
-  }
-  return BFI;
-}
-
-// Important note on validity of BPI/BFI. JumpThreading tries to preserve
-// BPI/BFI as it goes. Thus if cached instance exists it will be updated.
-// Otherwise, new instance of BPI/BFI is created (up to date by definition).
-BranchProbabilityInfo *JumpThreadingPass::getOrCreateBPI(bool Force) {
-  auto *Res = getBPI();
-  if (Res)
-    return Res;
-
-  if (Force)
-    BPI = runExternalAnalysis<BranchProbabilityAnalysis>();
-
-  return BPI;
-}
-
-BlockFrequencyInfo *JumpThreadingPass::getOrCreateBFI(bool Force) {
-  auto *Res = getBFI();
-  if (Res)
-    return Res;
-
-  if (Force)
-    BFI = runExternalAnalysis<BlockFrequencyAnalysis>();
-
-  return BFI;
 }

@@ -44,6 +44,7 @@
 #include "llvm/Analysis/HashRecognize.h"
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/IVUsers.h"
+#include "llvm/Analysis/IncrementalUpdateProfileAnalysis.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/KernelInfo.h"

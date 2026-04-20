@@ -97,8 +97,7 @@ eq_1:
 check_2:
   %cond2 = icmp eq i32 %v, 2
   br i1 %cond2, label %eq_2, label %check_3
-; No metadata:
-; CHECK: br i1 %cond2, label %eq_2, label %check_3{{$}}
+; CHECK: br i1 %cond2, label %eq_2, label %check_3, !prof ![[PROF2:[0-9]+]]{{$}}
 
 eq_2:
   call void @bar()
@@ -111,8 +110,7 @@ eq_2:
 check_3:
   %condE = icmp eq i32 %v, 3
   br i1 %condE, label %exit, label %latch
-; No metadata:
-; CHECK: br i1 %condE, label %exit, label %latch{{$}}
+; CHECK: br i1 %condE, label %exit, label %latch, !prof ![[PROF2]]{{$}}
 
 latch:
   br label %check_1
@@ -122,7 +120,6 @@ exit:
 }
 
 !0 = !{!"function_entry_count", i64 120}
-; CHECK-NOT: branch_weights
 !1 = !{!"branch_weights", i32 119, i32 1}
 ; CHECK: !1 = !{!"branch_weights", i32 119, i32 1}
-; CHECK-NOT: branch_weights
+; CHECK: ![[PROF2]] = !{!"branch_weights", i32 -2147483648, i32 0}

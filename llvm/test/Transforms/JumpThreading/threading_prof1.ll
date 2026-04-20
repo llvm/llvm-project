@@ -1,6 +1,6 @@
-; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
+; RUN: opt -passes="require<branch-prob>,jump-threading" -S < %s | FileCheck %s
 
-define void @test() {
+define void @test() !prof !1 {
 ; CHECK-LABEL: @test()
 bb:
   %tmp = call i32 @a()
@@ -26,7 +26,7 @@ bb8:                                              ; preds = %bb7, %bb5
   ret void
 }
 
-define void @test_single_pred1() {
+define void @test_single_pred1() !prof !1 {
 ; CHECK-LABEL: @test_single_pred1()
 bb:
   %tmp = call i32 @a()
@@ -55,7 +55,7 @@ bb8:
   ret void
 }
 
-define void @test_single_pred2() {
+define void @test_single_pred2() !prof !1 {
 ; CHECK-LABEL: @test_single_pred2()
 bb:
   %tmp = call i32 @a()
@@ -96,3 +96,4 @@ declare i32 @b()
 !0 = !{!"branch_weights", i32 2146410443, i32 1073205}
 ;CHECK: ![[PROF1]] = !{!"branch_weights", i32 1073205, i32 2146410443}
 ;CHECK: ![[PROF2]] = !{!"branch_weights", i32 -2147483648, i32 0}
+!1 = !{!"function_entry_count", i64 1}
