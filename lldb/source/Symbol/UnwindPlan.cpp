@@ -444,12 +444,6 @@ const UnwindPlan::Row *UnwindPlan::GetRowAtIndex(uint32_t idx) const {
   return nullptr;
 }
 
-const UnwindPlan::Row *UnwindPlan::GetFirstRow() const {
-  if (m_row_list.empty())
-    return nullptr;
-  return &m_row_list.front();
-}
-
 const UnwindPlan::Row *UnwindPlan::GetLastRow() const {
   if (m_row_list.empty()) {
     LLDB_LOG(GetLog(LLDBLog::Unwind),
