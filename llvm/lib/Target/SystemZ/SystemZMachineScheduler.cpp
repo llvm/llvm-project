@@ -90,8 +90,7 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
   if (RegionPolicy.ShouldTrackPressure) {
     auto schedLow = [&](const SUnit *SU) {
       return SU->getHeight() <= Zone->getScheduledLatency() &&
-             SU->getHeight() < LivenessHeightCutOff &&
-             closesLiveRange(SU, DAG);
+             SU->getHeight() < LivenessHeightCutOff && closesLiveRange(SU, DAG);
     };
     // One SU closes a live range while preserving the scheduled latency.
     if (tryGreater(schedLow(TryCand.SU), schedLow(Cand.SU), TryCand, Cand,
@@ -167,7 +166,7 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
     // Disable latency reduction if region has many SUs relative to the
     // overall height.
     RegionPolicy.DisableLatencyHeuristic =
-      DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
+        DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
 }
 
 void SystemZPreRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
