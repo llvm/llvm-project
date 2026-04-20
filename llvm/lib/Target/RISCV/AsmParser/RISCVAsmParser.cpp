@@ -914,8 +914,8 @@ public:
            VK == RISCV::S_QC_ABS20;
   }
 
-  bool isSImm8Unsigned() const { return isSImm<8>() || isUImm<8>(); }
-  bool isSImm10Unsigned() const { return isSImm<10>() || isUImm<10>(); }
+  bool isSImm8PLI_B() const { return isSImm<8>() || isUImm<8>(); }
+  bool isSImm10PLUI() const { return isSImm<10>() || isUImm<10>(); }
 
   bool isSImm10PLI_H() const {
     return isSImm<10>() || isUImmPred([](int64_t Imm) {
@@ -1083,7 +1083,7 @@ public:
       break;
     case KindTy::FRM:
       OS << "<frm: ";
-      roundingModeToString(getFRM());
+      OS << roundingModeToString(getFRM());
       OS << '>';
       break;
     case KindTy::Fence:
@@ -1228,20 +1228,13 @@ public:
     addExpr(Inst, getExpr(), isRV64Expr());
   }
 
-  void addSImm8UnsignedOperands(MCInst &Inst, unsigned N) const {
+  template <unsigned Bits>
+  void addSExtImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     int64_t Imm;
     [[maybe_unused]] bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
     assert(IsConstant);
-    Inst.addOperand(MCOperand::createImm(SignExtend64<8>(Imm)));
-  }
-
-  void addSImm10UnsignedOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    int64_t Imm;
-    [[maybe_unused]] bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
-    assert(IsConstant);
-    Inst.addOperand(MCOperand::createImm(SignExtend64<10>(Imm)));
+    Inst.addOperand(MCOperand::createImm(SignExtend64<Bits>(Imm)));
   }
 
   void addFPImmOperands(MCInst &Inst, unsigned N) const {
@@ -1598,7 +1591,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 8,
         "immediate must be a multiple of 8 bytes in the range");
-  case Match_InvalidSImm8Unsigned:
+  case Match_InvalidSImm8PLI_B:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 7),
                                       (1 << 8) - 1);
   case Match_InvalidSImm10:
@@ -1606,7 +1599,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm10PLI_W:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
                                       (1 << 9) - 1);
-  case Match_InvalidSImm10Unsigned:
+  case Match_InvalidSImm10PLUI:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
                                       (1 << 10) - 1);
   case Match_InvalidUImm10Lsb00NonZero:

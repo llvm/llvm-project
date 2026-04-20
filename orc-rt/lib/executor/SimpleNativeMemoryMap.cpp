@@ -15,6 +15,8 @@
 
 #include "orc-rt/SimpleNativeMemoryMap.h"
 #include "orc-rt/Session.h"
+
+#include <optional>
 #include <sstream>
 
 #if defined(__APPLE__) || defined(__linux__)

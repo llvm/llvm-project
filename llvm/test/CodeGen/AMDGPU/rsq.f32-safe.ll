@@ -124,7 +124,6 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-DAZ-NEXT:    v_cmp_gt_f32_e32 vcc, s0, v2
 ; GCN-DAZ-NEXT:    v_cndmask_b32_e32 v2, v2, v5, vcc
 ; GCN-DAZ-NEXT:    v_rsq_f32_e32 v5, v2
-; GCN-DAZ-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; GCN-DAZ-NEXT:    v_mul_f32_e32 v7, v2, v5
 ; GCN-DAZ-NEXT:    v_mul_f32_e32 v5, 0.5, v5
 ; GCN-DAZ-NEXT:    v_fma_f32 v8, -v5, v7, 0.5
@@ -137,10 +136,11 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, v2, v6
 ; GCN-DAZ-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; GCN-DAZ-NEXT:    v_mul_f32_e32 v2, v2, v3
-; GCN-DAZ-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, v4
+; GCN-DAZ-NEXT:    v_div_scale_f32 v3, s[0:1], v2, v2, v4
 ; GCN-DAZ-NEXT:    v_rcp_f32_e32 v5, v3
 ; GCN-DAZ-NEXT:    v_div_scale_f32 v6, vcc, v4, v2, v4
 ; GCN-DAZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
+; GCN-DAZ-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; GCN-DAZ-NEXT:    v_fma_f32 v7, -v3, v5, 1.0
 ; GCN-DAZ-NEXT:    v_fma_f32 v5, v7, v5, v5
 ; GCN-DAZ-NEXT:    v_mul_f32_e32 v7, v6, v5

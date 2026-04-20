@@ -623,8 +623,10 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
     SDValue Result = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
     ReplaceNode(SDValue(Node, 0), Result);
   } else {
-    switch (TLI.getTruncStoreAction(ST->getValue().getValueType(), StVT)) {
-    default: llvm_unreachable("This action is not supported yet!");
+    switch (TLI.getTruncStoreAction(ST->getValue().getValueType(), StVT,
+                                    ST->getAlign(), ST->getAddressSpace())) {
+    default:
+      llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Legal: {
       EVT MemVT = ST->getMemoryVT();
       // If this is an unaligned store and the target doesn't support it,
@@ -1863,8 +1865,9 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   Align DestAlign = DAG.getDataLayout().getPrefTypeAlign(DestType);
 
   // Don't convert with stack if the load/store is expensive.
-  if ((SrcVT.bitsGT(SlotVT) &&
-       !TLI.isTruncStoreLegalOrCustom(SrcOp.getValueType(), SlotVT)) ||
+  if ((SrcVT.bitsGT(SlotVT) && !TLI.isTruncStoreLegalOrCustom(
+                                   SrcOp.getValueType(), SlotVT, DestAlign,
+                                   DAG.getDataLayout().getAllocaAddrSpace())) ||
       (SlotVT.bitsLT(DestVT) &&
        !TLI.isLoadLegalOrCustom(DestVT, SlotVT, DestAlign,
                                 DAG.getDataLayout().getAllocaAddrSpace(),
@@ -3780,26 +3783,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   }
   case ISD::FCANONICALIZE: {
-    // This implements llvm.canonicalize.f* by multiplication with 1.0, as
-    // suggested in
-    // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
-    // It uses strict_fp operations even outside a strict_fp context in order
-    // to guarantee that the canonicalization is not optimized away by later
-    // passes. The result chain introduced by that is intentionally ignored
-    // since no ordering requirement is intended here.
-
-    // Create strict multiplication by 1.0.
-    SDValue Operand = Node->getOperand(0);
-    EVT VT = Operand.getValueType();
-    SDValue One = DAG.getConstantFP(1.0, dl, VT);
-    SDValue Chain = DAG.getEntryNode();
-    // Propagate existing flags on canonicalize, and additionally set
-    // NoFPExcept.
-    SDNodeFlags CanonicalizeFlags = Node->getFlags();
-    CanonicalizeFlags.setNoFPExcept(true);
-    SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
-                              {Chain, Operand, One}, CanonicalizeFlags);
-
+    SDValue Mul = TLI.expandFCANONICALIZE(Node, DAG);
     Results.push_back(Mul);
     break;
   }

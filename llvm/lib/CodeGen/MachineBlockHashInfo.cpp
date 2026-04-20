@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-uint64_t hashBlock(const MachineBasicBlock &MBB, bool HashOperands) {
+static uint64_t hashBlock(const MachineBasicBlock &MBB, bool HashOperands) {
   uint64_t Hash = 0;
   for (const MachineInstr &MI : MBB) {
     if (MI.isMetaInstruction() || MI.isTerminator())
@@ -34,7 +34,7 @@ uint64_t hashBlock(const MachineBasicBlock &MBB, bool HashOperands) {
 }
 
 /// Fold a 64-bit integer to a 16-bit one.
-uint16_t fold_64_to_16(const uint64_t Value) {
+static uint16_t fold_64_to_16(const uint64_t Value) {
   uint16_t Res = static_cast<uint16_t>(Value);
   Res ^= static_cast<uint16_t>(Value >> 16);
   Res ^= static_cast<uint16_t>(Value >> 32);
@@ -66,18 +66,19 @@ bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
   uint16_t Offset = 0;
   // Initialize hash components
   for (const MachineBasicBlock &MBB : F) {
+    auto &HashInfo = HashInfos[&MBB];
     // offset of the machine basic block
-    HashInfos[&MBB].Offset = Offset;
-    Offset += MBB.size();
+    HashInfo.Offset = Offset + MBB.size();
     // Hashing opcodes
-    HashInfos[&MBB].OpcodeHash = hashBlock(MBB, /*HashOperands=*/false);
+    HashInfo.OpcodeHash = hashBlock(MBB, /*HashOperands=*/false);
     // Hash complete instructions
-    HashInfos[&MBB].InstrHash = hashBlock(MBB, /*HashOperands=*/true);
+    HashInfo.InstrHash = hashBlock(MBB, /*HashOperands=*/true);
   }
 
   // Initialize neighbor hash
   for (const MachineBasicBlock &MBB : F) {
-    uint64_t Hash = HashInfos[&MBB].OpcodeHash;
+    auto &HashInfo = HashInfos[&MBB];
+    uint64_t Hash = HashInfo.OpcodeHash;
     // Append hashes of successors
     for (const MachineBasicBlock *SuccMBB : MBB.successors()) {
       uint64_t SuccHash = HashInfos[SuccMBB].OpcodeHash;
@@ -88,7 +89,7 @@ bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
       uint64_t PredHash = HashInfos[PredMBB].OpcodeHash;
       Hash = hashing::detail::hash_16_bytes(Hash, PredHash);
     }
-    HashInfos[&MBB].NeighborHash = Hash;
+    HashInfo.NeighborHash = Hash;
   }
 
   // Assign hashes

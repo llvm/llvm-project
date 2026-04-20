@@ -480,15 +480,26 @@ def unicode_test(func):
     """Decorate the item as a test which requires Unicode to be enabled.
 
     lldb checks the value of the `LANG` environment variable for the substring "utf-8"
-    to determine if the terminal supports Unicode (except on Windows, where we assume
-    it's always supported).
+    to determine if the terminal supports Unicode (except on Windows, where stdout
+    being connected to an interactive console is used as the signal instead).
     This decorator sets LANG to `utf-8` before running the test and resets it to its
     previous value afterwards.
     """
 
     if sys.platform == "win32":
-        # Unicode support on Windows is flaky in CI.
-        return expectedFailureWindows
+        import ctypes
+
+        STD_OUTPUT_HANDLE = -11
+        FILE_TYPE_CHAR = 0x0002
+        handle = ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+        file_type = ctypes.windll.kernel32.GetFileType(handle)
+        # Mirror Terminal::SupportsUnicode(): Unicode is supported only when
+        # stdout is connected to a real console.
+        if file_type != FILE_TYPE_CHAR:
+            return unittest.skip(
+                "Unicode test requires an interactive console (stderr is redirected)"
+            )
+        return func
 
     def unicode_wrapped(*args, **kwargs):
         import os
@@ -1186,6 +1197,17 @@ def skipUnlessBoundsSafety(func):
     return skipTestIfFn(is_compiler_with_bounds_safety)(func)
 
 
+def skipUnlessCompilerSupports(flag):
+    """Decorate the item to skip the test unless the compiler supports this flag."""
+
+    def does_compiler_support_flag():
+        if not _compiler_supports(lldbplatformutil.getCompiler(), flag):
+            return f"Compiler does not support flag {flag}"
+        return None
+
+    return skipTestIfFn(does_compiler_support_flag)
+
+
 def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""
     return skipTestIfFn(is_running_under_asan)(func)
@@ -1334,6 +1356,12 @@ def skipUnlessArm64eSupported(func):
         # Need debugserver built with arm64e support.
         if not configuration.arm64e_debugserver:
             return "debugserver not built with arm64e support"
+
+        # Technically ASan is supported, but we need an arm64e sanitizer
+        # runtime and we assume that's not the case unless we run the whole
+        # test suite as arm64e.
+        if is_running_under_asan():
+            return "Sanitizer runtime may not support arm64e"
 
         return None
 

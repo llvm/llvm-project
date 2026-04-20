@@ -132,8 +132,8 @@ public:
     return false;
   }
 
-  virtual InstructionUniformity getInstructionUniformity(const Value *V) const {
-    return InstructionUniformity::Default;
+  virtual ValueUniformity getValueUniformity(const Value *V) const {
+    return ValueUniformity::Default;
   }
 
   virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
@@ -274,7 +274,7 @@ public:
 
   virtual unsigned getEpilogueVectorizationMinVF() const { return 16; }
 
-  virtual bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
+  virtual bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
     return false;
   }
 
@@ -668,7 +668,8 @@ public:
   virtual unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     return 0;
   }
-  virtual unsigned getStoreMinimumVF(unsigned VF, Type *, Type *) const {
+  virtual unsigned getStoreMinimumVF(unsigned VF, Type *, Type *, Align,
+                                     unsigned) const {
     return VF;
   }
 

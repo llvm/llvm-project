@@ -152,6 +152,10 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
       return rewriter.notifyMatchFailure(
           gpuFuncOp, "Subgroup distribution requires target attribute attached "
                      "to set the warp size");
+    if (!gpuFuncOp.getBody().hasOneBlock())
+      return rewriter.notifyMatchFailure(
+          gpuFuncOp, "expected gpu.func to have a single block");
+
     // If the function only contains a single void return, skip.
     if (llvm::all_of(gpuFuncOp.getBody().getOps(), [](Operation &op) {
           return isa<gpu::ReturnOp>(op) && !op.getNumOperands();
@@ -252,7 +256,7 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     auto descOp = operand->get().getDefiningOp<xegpu::CreateNdDescOp>();
     unsigned operandIdx = operand->getOperandNumber();
 
-    xegpu::LayoutAttr layout = descOp.getType().getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = descOp.getType().getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           descOp, "the tensor descriptor lacks layout attribute");
@@ -338,7 +342,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Type> offsetTypes = llvm::map_to_vector(
         offsetsAsValues, [](Value v) { return v.getType(); });
     xegpu::TensorDescType tensorDescTy = storeOp.getTensorDescType();
-    xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           storeOp, "the source tensor descriptor lacks layout attribute");
@@ -470,7 +474,7 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         offsetsAsValues, [](Value v) { return v.getType(); });
 
     xegpu::TensorDescType tensorDescTy = loadOp.getTensorDescType();
-    xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           loadOp, "the source tensor descriptor lacks layout attribute");
@@ -705,7 +709,8 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Type> offsetTypes = llvm::map_to_vector(
         offsetsAsValues, [](Value v) { return v.getType(); });
 
-    xegpu::LayoutAttr layout = prefetchOp.getTensorDescType().getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout =
+        prefetchOp.getTensorDescType().getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           prefetchOp, "the source tensor descriptor lacks layout attribute");
@@ -799,8 +804,8 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
     auto storeScatterOp = dyn_cast_or_null<xegpu::StoreScatterOp>(lastNode);
     if (!storeScatterOp)
       return failure();
-    auto offsets = storeScatterOp.getOffsets();
-    if (!offsets || !isa<VectorType>(offsets.getType()))
+    Value offsets = storeScatterOp.getOffsets();
+    if (!isa<VectorType>(offsets.getType()))
       return rewriter.notifyMatchFailure(
           storeScatterOp, "Store op must have a vector of offsets argument");
     VectorType offsetsTy = cast<VectorType>(offsets.getType());
@@ -820,12 +825,10 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
       }
     }
 
-    auto layoutPayload =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(0));
+    auto layoutPayload = storeScatterOp.getLayoutAttr();
     auto layoutOffsets =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(2));
-    auto layoutMask =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(3));
+        xegpu::inferMaskOffsetLayoutForScatterIO(layoutPayload, chunkSize);
+    auto layoutMask = layoutOffsets;
 
     FailureOr<VectorType> distStoreVecByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutPayload, storeVecTy);
@@ -1106,12 +1109,12 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
 
     auto loadGatherOp =
         producedByLastLoad->get().getDefiningOp<xegpu::LoadGatherOp>();
-    auto offsets = loadGatherOp.getOffsets();
-    if (!offsets || !isa<VectorType>(offsets.getType()) ||
+    Value offsets = loadGatherOp.getOffsets();
+    if (!isa<VectorType>(offsets.getType()) ||
         !isa<VectorType>(loadGatherOp.getMask().getType()))
       return rewriter.notifyMatchFailure(
           loadGatherOp,
-          "Load op must have a vector arguments for offsets and mask");
+          "Load op must have vector arguments for offsets and mask");
     VectorType offsetsTy = cast<VectorType>(offsets.getType());
     VectorType maskTy = cast<VectorType>(loadGatherOp.getMask().getType());
     VectorType resultVecTy =
@@ -1127,9 +1130,10 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
       }
     }
 
+    auto layoutPayload = loadGatherOp.getLayoutAttr();
     auto layoutOffsets =
-        xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(1));
-    auto layoutMask = xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(2));
+        xegpu::inferMaskOffsetLayoutForScatterIO(layoutPayload, chunkSize);
+    auto layoutMask = layoutOffsets;
 
     FailureOr<VectorType> distOffsetsByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutOffsets, offsetsTy);
@@ -2083,11 +2087,16 @@ struct ConvertLayoutDistribution
                                 PatternRewriter &rewriter) const override {
     auto inputLayout = op.getInputLayoutAttr();
     auto targetLayout = op.getTargetLayoutAttr();
-    auto resShape = cast<VectorType>(op.getResult().getType()).getShape();
+    Type valType = op.getResult().getType();
 
     if (!inputLayout || !targetLayout)
       return rewriter.notifyMatchFailure(op, "missing layout attributes");
 
+    if (valType.isIntOrFloat()) {
+      rewriter.replaceOp(op, op.getSource());
+      return success();
+    }
+    auto resShape = cast<VectorType>(valType).getShape();
     SmallVector<int64_t> resShapeVec(resShape.begin(), resShape.end());
     if (!inputLayout.isCompatibleWith(targetLayout, resShapeVec,
                                       xegpu::LayoutKind::Lane)) {

@@ -170,6 +170,9 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
           args.getLastArg(clang::options::OPT_dwarf_debug_flags))
     opts.DwarfDebugFlags = arg->getValue();
 
+  opts.DebugInfoForProfiling =
+      args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
   return true;
 }
 
@@ -349,6 +352,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasArg(clang::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
 
+  // -fno-integrated-as: emit GNU Assembler compatible assembly.
+  if (!args.hasFlag(clang::options::OPT_fintegrated_as,
+                    clang::options::OPT_fno_integrated_as, true))
+    opts.DisableIntegratedAS = 1;
+
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
@@ -465,6 +473,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
     opts.ProfileInstrumentUsePath = A->getValue();
   }
+
+  opts.SampleProfileFile =
+      args.getLastArgValue(clang::options::OPT_fprofile_sample_use_EQ);
 
   // -mcmodel option.
   if (const llvm::opt::Arg *a =

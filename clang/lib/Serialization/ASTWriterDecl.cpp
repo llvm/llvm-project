@@ -361,7 +361,8 @@ namespace clang {
 // compilation of that unit, not by its users. (Inline variables are still
 // emitted in module users.)
 static bool shouldVarGenerateHereOnly(const VarDecl *VD) {
-  if (VD->getStorageDuration() != SD_Static)
+  if (VD->getStorageDuration() != SD_Static &&
+      VD->getStorageDuration() != SD_Thread)
     return false;
 
   if (VD->getDescribedVarTemplate())
@@ -2922,6 +2923,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
   // CXXOperatorCallExpr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Operator Kind
+  Abv->Add(BitCodeAbbrevOp(0));                       // IsReversed
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
   CXXOperatorCallExprAbbrev = Stream.EmitAbbrev(std::move(Abv));
 

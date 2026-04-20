@@ -176,10 +176,12 @@ let Definition = "target", Path = "target" in {
   def UseFastStepping: Property<"use-fast-stepping", "Boolean">,
     DefaultTrue,
     Desc<"Use a fast stepping algorithm based on running from branch to branch rather than instruction single-stepping.">;
-  def LoadScriptFromSymbolFile: Property<"load-script-from-symbol-file", "Enum">,
-    DefaultEnumValue<"eLoadScriptFromSymFileWarn">,
-    EnumValues<"OptionEnumValues(g_load_script_from_sym_file_values)">,
-    Desc<"Allow LLDB to load scripting resources embedded in symbol files when available.">;
+  def LoadScriptFromSymbolFile
+      : Property<"load-script-from-symbol-file", "Enum">,
+        DefaultEnumValue<"eLoadScriptFromSymFileTrusted">,
+        EnumValues<"OptionEnumValues(g_load_script_from_sym_file_values)">,
+        Desc<"Allow LLDB to load scripting resources embedded in symbol files "
+             "when available.">;
   def LoadCWDlldbinitFile: Property<"load-cwd-lldbinit", "Enum">,
     DefaultEnumValue<"eLoadCWDlldbinitWarn">,
     EnumValues<"OptionEnumValues(g_load_cwd_lldbinit_values)">,
@@ -220,6 +222,12 @@ let Definition = "target", Path = "target" in {
   def ParallelModuleLoad: Property<"parallel-module-load", "Boolean">,
     DefaultTrue,
     Desc<"Enable loading of modules in parallel for the dynamic loader.">;
+  def AutoLoadScriptsForModules
+      : Property<"auto-load-scripts-for-modules", "Dictionary">,
+        ElementType<"Enum">,
+        EnumValues<"OptionEnumValues(g_load_script_from_sym_file_values)">,
+        Desc<"A list of module/image names and whether LLDB should auto-load scripting "
+             "resources for it from safe paths.">;
 }
 
 let Definition = "process_experimental", Path = "target.process.experimental" in {

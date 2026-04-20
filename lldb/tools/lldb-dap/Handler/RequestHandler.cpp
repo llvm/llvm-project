@@ -118,7 +118,8 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
       arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
-
+  // We need to wait for the client to connect to the pipe.
+  comm_file->Connect();
   if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
     attach_info.SetProcessID(*pid);
   else
@@ -223,6 +224,10 @@ llvm::Error BaseRequestHandler::LaunchProcess(
       SetLaunchFlag(flags, arguments.disableASLR, lldb::eLaunchFlagDisableASLR);
   flags = SetLaunchFlag(flags, arguments.disableSTDIO,
                         lldb::eLaunchFlagDisableSTDIO);
+#ifdef _WIN32
+  flags = SetLaunchFlag(flags, arguments.console == protocol::eConsoleInternal,
+                        lldb::eLaunchFlagUsePipes);
+#endif
   launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
                              lldb::eLaunchFlagStopAtEntry);
 

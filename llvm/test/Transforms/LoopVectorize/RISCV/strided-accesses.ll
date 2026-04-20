@@ -156,7 +156,7 @@ define void @single_constant_stride_int_iv(ptr %p) {
 ; CHECK-UF2:       vector.body:
 ; CHECK-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UF2-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP8]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-UF2-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 4 x i64> [[VEC_IND]], [[TMP6]]
+; CHECK-UF2-NEXT:    [[STEP_ADD:%.*]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[TMP6]]
 ; CHECK-UF2-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[P:%.*]], <vscale x 4 x i64> [[VEC_IND]]
 ; CHECK-UF2-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[P]], <vscale x 4 x i64> [[STEP_ADD]]
 ; CHECK-UF2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP9]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
@@ -636,10 +636,9 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED:       middle.block:
 ; NOSTRIDED-NEXT:    br label [[EXIT:%.*]]
 ; NOSTRIDED:       scalar.ph:
-; NOSTRIDED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; NOSTRIDED-NEXT:    br label [[LOOP:%.*]]
 ; NOSTRIDED:       loop:
-; NOSTRIDED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; NOSTRIDED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; NOSTRIDED-NEXT:    [[OFFSET:%.*]] = mul nuw nsw i64 [[I]], [[STRIDE]]
 ; NOSTRIDED-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET]]
 ; NOSTRIDED-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
@@ -788,10 +787,9 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED:       middle.block:
 ; STRIDED-NEXT:    br label [[EXIT:%.*]]
 ; STRIDED:       scalar.ph:
-; STRIDED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[VECTOR_MEMCHECK1]] ]
 ; STRIDED-NEXT:    br label [[LOOP:%.*]]
 ; STRIDED:       loop:
-; STRIDED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; STRIDED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; STRIDED-NEXT:    [[OFFSET:%.*]] = mul nuw nsw i64 [[I]], [[STRIDE]]
 ; STRIDED-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET]]
 ; STRIDED-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4

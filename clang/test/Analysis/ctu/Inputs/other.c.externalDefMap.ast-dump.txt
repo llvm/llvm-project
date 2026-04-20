@@ -1,0 +1,7 @@
+14:c:@F@inlineAsm other.c.ast
+6:c:@F@g other.c.ast
+6:c:@F@f other.c.ast
+14:c:@F@enumCheck other.c.ast
+18:c:@F@identImplicit other.c.ast
+18:c:@F@structInProto other.c.ast
+23:c:@F@switchWithoutCases other.c.ast
