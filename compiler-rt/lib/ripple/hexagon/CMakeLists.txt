@@ -55,7 +55,11 @@ set(RIPPLE_RT_SRC
   HVX_Vdeal
   HVX_Narrow_Shift
   HVX_Splice
-  )
+  HVX_Quantize
+  HVX_Dequantize
+  HVX_Vavg
+  HVX_Vmpy_Scalar
+  HVX_Vmpy_x32x16)
 set(RIPPLE_RT_SRC_DIR     ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(RIPPLE_RT_HEADER_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/header)
 
