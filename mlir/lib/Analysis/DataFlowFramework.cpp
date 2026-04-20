@@ -181,7 +181,7 @@ ChangeResult DataFlowSolver::tryWidenAtMerge(AnalysisState *state,
     return ChangeResult::NoChange;
 
   const WideningConfig &cfg = cfgIt->second;
-  uint32_t &changes = mergeChangeCounts[state];
+  unsigned &changes = mergeChangeCounts[state];
   if (changes >= cfg.budget) {
     // Budget exhausted; force a sound over-approximation. Only the widen
     // result is returned — the caller unions it with its own change.

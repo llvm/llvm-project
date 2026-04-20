@@ -496,7 +496,7 @@ private:
 
   /// Per-state merge-change counter. Populated only for states whose type has
   /// widening enabled; empty for any solver that never calls `enableWidening`.
-  DenseMap<AnalysisState *, uint32_t> mergeChangeCounts;
+  DenseMap<AnalysisState *, unsigned> mergeChangeCounts;
 
   /// The solver is working on the worklist.
   bool isRunning = false;
