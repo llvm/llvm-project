@@ -8769,7 +8769,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMODF(MachineInstr &MI) {
   auto [DstFrac, DstInt, Src] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Src);
   auto Flags = MI.getFlags();
-  const LLT CondTy = Ty.changeElementType(LLT::scalar(1));
+  const LLT CondTy = Ty.changeElementType(LLT::integer(1));
 
   auto IntPart = MIRBuilder.buildIntrinsicTrunc(Ty, Src, Flags);
   auto FracPart = MIRBuilder.buildFSub(Ty, Src, IntPart, Flags);
@@ -8987,7 +8987,7 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   auto [Dst, Src0, Src1] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
-  const LLT CmpTy = Ty.changeElementType(LLT::scalar(1));
+  const LLT CmpTy = Ty.changeElementType(LLT::integer(1));
 
   bool IsMax = (Opc == TargetOpcode::G_FMAXIMUM);
   unsigned OpcIeee =
@@ -9071,7 +9071,7 @@ LegalizerHelper::lowerIntrinsicRound(MachineInstr &MI) {
   auto [DstReg, X] = MI.getFirst2Regs();
   const unsigned Flags = MI.getFlags();
   const LLT Ty = MRI.getType(DstReg);
-  const LLT CondTy = Ty.changeElementType(LLT::scalar(1));
+  const LLT CondTy = Ty.changeElementType(LLT::integer(1));
 
   // round(x) =>
   //  t = trunc(x);
@@ -9104,7 +9104,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFFloor(MachineInstr &MI) {
   auto [DstReg, SrcReg] = MI.getFirst2Regs();
   unsigned Flags = MI.getFlags();
   LLT Ty = MRI.getType(DstReg);
-  const LLT CondTy = Ty.changeElementType(LLT::scalar(1));
+  const LLT CondTy = Ty.changeElementType(LLT::integer(1));
 
   // result = trunc(src);
   // if (src < 0.0 && src != result)
