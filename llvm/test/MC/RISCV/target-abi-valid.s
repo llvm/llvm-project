@@ -51,6 +51,10 @@
 # RUN:   | llvm-readobj --file-headers - \
 # RUN:   | FileCheck -check-prefix=CHECK-RVE %s
 
+# RUN: llvm-mc -triple=riscv32 -mattr=+xcheriot -target-abi cheriot -filetype=obj < %s \
+# RUN:   | llvm-readobj --file-headers - \
+# RUN:   | FileCheck -check-prefix=CHECK-CHERIOT %s
+
 # CHECK-NONE:               Flags [ (0x0)
 # CHECK-NONE-NEXT:          ]
 
@@ -65,5 +69,10 @@
 # CHECK-RVE:                Flags [ (0x8)
 # CHECK-RVE-NEXT:             EF_RISCV_RVE (0x8)
 # CHECK-RVE-NEXT:           ]
+
+# CHECK-CHERIOT:                Flags [ (0x9)
+# CHECK-CHERIOT-NEXT:             EF_RISCV_RVC (0x1)
+# CHECK-CHERIOT-NEXT:             EF_RISCV_RVE (0x8)
+# CHECK-CHERIOT-NEXT:           ]
 
 nop
