@@ -2092,9 +2092,8 @@ bool Type::hasIntegerRepresentation() const {
   }
   if (CanonicalType->isRVVVLSBuiltinType()) {
     const auto *VT = cast<BuiltinType>(CanonicalType);
-    return VT->isRVVBool() ||
-           (VT->getKind() >= BuiltinType::RvvInt8mf8 &&
-            VT->getKind() <= BuiltinType::RvvUint64m8);
+    return VT->isRVVBool() || (VT->getKind() >= BuiltinType::RvvInt8mf8 &&
+                               VT->getKind() <= BuiltinType::RvvUint64m8);
   }
 
   return isIntegerType();
@@ -2280,8 +2279,8 @@ bool Type::hasSignedIntegerRepresentation() const {
     switch (BT->getKind()) {
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
                             IsSigned)                                          \
-    case BuiltinType::Id:                                                      \
-      return IsSigned;
+  case BuiltinType::Id:                                                        \
+    return IsSigned;
 #include "clang/Basic/RISCVVTypes.def"
     default:
       break;
@@ -2351,8 +2350,8 @@ bool Type::hasUnsignedIntegerRepresentation() const {
     switch (BT->getKind()) {
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
                             IsSigned)                                          \
-    case BuiltinType::Id:                                                      \
-      return !IsSigned;
+  case BuiltinType::Id:                                                        \
+    return !IsSigned;
 #include "clang/Basic/RISCVVTypes.def"
     default:
       break;

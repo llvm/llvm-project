@@ -10590,7 +10590,8 @@ static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
   } else if (VectorTy->isVLSBuiltinType()) {
     VectorEltTy = VectorTy->getSizelessVectorEltType(S.getASTContext());
   } else {
-    llvm_unreachable("Only Fixed-Length and sizeless vector types are handled here");
+    llvm_unreachable(
+        "Only Fixed-Length and sizeless vector types are handled here");
   }
 
   // Reject cases where the vector element type or the scalar element type are
@@ -12080,16 +12081,18 @@ static QualType checkSizelessVectorShift(Sema &S, ExprResult &LHS,
   QualType LHSType = LHS.get()->getType();
   const BuiltinType *LHSBuiltinTy = LHSType->castAs<BuiltinType>();
 
-  QualType LHSEleType = LHSType->isVLSBuiltinType()
-                            ? LHSType->getSizelessVectorEltType(S.getASTContext())
-                            : LHSType;
+  QualType LHSEleType =
+      LHSType->isVLSBuiltinType()
+          ? LHSType->getSizelessVectorEltType(S.getASTContext())
+          : LHSType;
 
   // Note that RHS might not be a vector
   QualType RHSType = RHS.get()->getType();
   const BuiltinType *RHSBuiltinTy = RHSType->castAs<BuiltinType>();
-  QualType RHSEleType = RHSType->isVLSBuiltinType()
-                            ? RHSType->getSizelessVectorEltType(S.getASTContext())
-                            : RHSType;
+  QualType RHSEleType =
+      RHSType->isVLSBuiltinType()
+          ? RHSType->getSizelessVectorEltType(S.getASTContext())
+          : RHSType;
 
   if ((LHSBuiltinTy && LHSBuiltinTy->isSizelessVectorBool()) ||
       (RHSBuiltinTy && RHSBuiltinTy->isSizelessVectorBool())) {
