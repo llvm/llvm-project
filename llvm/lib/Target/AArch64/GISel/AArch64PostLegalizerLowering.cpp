@@ -19,6 +19,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64ExpandImm.h"
 #include "AArch64GlobalISelUtils.h"
 #include "AArch64PerfectShuffle.h"
@@ -37,11 +38,12 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
@@ -56,11 +58,11 @@ using namespace llvm;
 using namespace MIPatternMatch;
 using namespace AArch64GISelUtils;
 
-namespace {
-
 #define GET_GICOMBINER_TYPES
 #include "AArch64GenPostLegalizeGILowering.inc"
 #undef GET_GICOMBINER_TYPES
+
+namespace {
 
 /// Represents a pseudo instruction which replaces a G_SHUFFLE_VECTOR.
 ///
@@ -74,6 +76,31 @@ struct ShuffleVectorPseudo {
       : Opc(Opc), Dst(Dst), SrcOps(SrcOps){};
   ShuffleVectorPseudo() = default;
 };
+
+/// Return true if a G_FCONSTANT instruction is known to be better-represented
+/// as a G_CONSTANT.
+bool matchFConstantToConstant(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
+  Register DstReg = MI.getOperand(0).getReg();
+  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+  if (DstSize != 16 && DstSize != 32 && DstSize != 64)
+    return false;
+
+  // When we're storing a value, it doesn't matter what register bank it's on.
+  // Since not all floating point constants can be materialized using a fmov,
+  // it makes more sense to just use a GPR.
+  return all_of(MRI.use_nodbg_instructions(DstReg),
+                [](const MachineInstr &Use) { return Use.mayStore(); });
+}
+
+/// Change a G_FCONSTANT into a G_CONSTANT.
+void applyFConstantToConstant(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
+  MachineIRBuilder MIB(MI);
+  const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
+  MIB.buildConstant(MI.getOperand(0).getReg(), ImmValAPF.bitcastToAPInt());
+  MI.eraseFromParent();
+}
 
 /// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
 /// sources of the shuffle are different.
@@ -174,7 +201,7 @@ bool matchREV(MachineInstr &MI, MachineRegisterInfo &MRI,
       else if (LaneSize == 32U)
         Opcode = AArch64::G_REV32;
       else
-        Opcode = AArch64::G_REV16;
+        Opcode = AArch64::G_BSWAP;
 
       MatchInfo = ShuffleVectorPseudo(Opcode, Dst, {Src});
       return true;
@@ -190,14 +217,15 @@ bool matchTRN(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
+  unsigned OperandOrder;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isTRNMask(ShuffleMask, NumElts, WhichResult))
+  if (!isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_TRN1 : AArch64::G_TRN2;
-  Register V1 = MI.getOperand(1).getReg();
-  Register V2 = MI.getOperand(2).getReg();
+  Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -227,14 +255,15 @@ bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
+  unsigned OperandOrder;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isZIPMask(ShuffleMask, NumElts, WhichResult))
+  if (!isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_ZIP1 : AArch64::G_ZIP2;
-  Register V1 = MI.getOperand(1).getReg();
-  Register V2 = MI.getOperand(2).getReg();
+  Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -380,10 +409,23 @@ bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 /// Replace a G_SHUFFLE_VECTOR instruction with a pseudo.
 /// \p Opc is the opcode to use. \p MI is the G_SHUFFLE_VECTOR.
-void applyShuffleVectorPseudo(MachineInstr &MI,
+void applyShuffleVectorPseudo(MachineInstr &MI, MachineRegisterInfo &MRI,
                               ShuffleVectorPseudo &MatchInfo) {
   MachineIRBuilder MIRBuilder(MI);
-  MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst}, MatchInfo.SrcOps);
+  if (MatchInfo.Opc == TargetOpcode::G_BSWAP) {
+    assert(MatchInfo.SrcOps.size() == 1);
+    LLT DstTy = MRI.getType(MatchInfo.Dst);
+    assert(DstTy == LLT::fixed_vector(8, 8) ||
+           DstTy == LLT::fixed_vector(16, 8));
+    LLT BSTy = DstTy == LLT::fixed_vector(8, 8) ? LLT::fixed_vector(4, 16)
+                                                : LLT::fixed_vector(8, 16);
+    // FIXME: NVCAST
+    auto BS1 = MIRBuilder.buildInstr(TargetOpcode::G_BITCAST, {BSTy},
+                                     MatchInfo.SrcOps[0]);
+    auto BS2 = MIRBuilder.buildInstr(MatchInfo.Opc, {BSTy}, {BS1});
+    MIRBuilder.buildInstr(TargetOpcode::G_BITCAST, {MatchInfo.Dst}, {BS2});
+  } else
+    MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst}, MatchInfo.SrcOps);
   MI.eraseFromParent();
 }
 
@@ -556,8 +598,7 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned NewOpc =
       Opc == TargetOpcode::G_ASHR ? AArch64::G_VASHR : AArch64::G_VLSHR;
   MachineIRBuilder MIB(MI);
-  auto ImmDef = MIB.buildConstant(LLT::scalar(32), Imm);
-  MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1), ImmDef});
+  MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1)}).addImm(Imm);
   MI.eraseFromParent();
 }
 
@@ -928,7 +969,7 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
 
 /// \returns a function which builds a vector floating point compare instruction
 /// for a condition code \p CC.
-/// \param [in] NoNans - True if the target has NoNansFPMath.
+/// \param [in] NoNans - True if the instruction has nnan flag.
 std::function<Register(MachineIRBuilder &)>
 getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool NoNans,
               MachineRegisterInfo &MRI) {
@@ -990,7 +1031,6 @@ bool matchLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
 void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
                           MachineIRBuilder &MIB) {
   assert(MI.getOpcode() == TargetOpcode::G_FCMP);
-  const auto &ST = MI.getMF()->getSubtarget<AArch64Subtarget>();
 
   const auto &CmpMI = cast<GFCmp>(MI);
 
@@ -1019,8 +1059,8 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   // Instead of having an apply function, just build here to simplify things.
   MIB.setInstrAndDebugLoc(MI);
 
-  const bool NoNans =
-      ST.getTargetLowering()->getTargetMachine().Options.NoNaNsFPMath;
+  // TODO: Also consider GISelValueTracking result if eligible.
+  const bool NoNans = MI.getFlag(MachineInstr::FmNoNans);
 
   auto Cmp = getVectorFCMP(CC, LHS, RHS, NoNans, MRI);
   Register CmpRes;
@@ -1189,8 +1229,7 @@ protected:
 
 public:
   AArch64PostLegalizerLoweringImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelCSEInfo *CSEInfo,
       const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI);
 
@@ -1209,11 +1248,10 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64PostLegalizerLoweringImpl::AArch64PostLegalizerLoweringImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI)
-    : Combiner(MF, CInfo, TPC, /*VT*/ nullptr, CSEInfo),
+    : Combiner(MF, CInfo, /*VT*/ nullptr, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ true), RuleConfig(RuleConfig),
       STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -1222,11 +1260,32 @@ AArch64PostLegalizerLoweringImpl::AArch64PostLegalizerLoweringImpl(
 {
 }
 
-class AArch64PostLegalizerLowering : public MachineFunctionPass {
+bool runPostLegalizerLowering(
+    MachineFunction &MF,
+    const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig) {
+  if (MF.getProperties().hasFailedISel())
+    return false;
+  const Function &F = MF.getFunction();
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  CombinerInfo CInfo(/*AllowIllegalOps=*/true, /*ShouldLegalizeIllegal=*/false,
+                     /*LegalizerInfo=*/nullptr, /*OptEnabled=*/true,
+                     F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // PostLegalizerCombiner performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
+  AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, /*CSEInfo=*/nullptr,
+                                        RuleConfig, ST);
+  return Impl.combineMachineInstrs();
+}
+
+class AArch64PostLegalizerLoweringLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AArch64PostLegalizerLowering();
+  AArch64PostLegalizerLoweringLegacy();
 
   StringRef getPassName() const override {
     return "AArch64PostLegalizerLowering";
@@ -1240,51 +1299,61 @@ private:
 };
 } // end anonymous namespace
 
-void AArch64PostLegalizerLowering::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
+void AArch64PostLegalizerLoweringLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-AArch64PostLegalizerLowering::AArch64PostLegalizerLowering()
+AArch64PostLegalizerLoweringLegacy::AArch64PostLegalizerLoweringLegacy()
     : MachineFunctionPass(ID) {
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
 
-bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasFailedISel())
-    return false;
+bool AArch64PostLegalizerLoweringLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
-  auto *TPC = &getAnalysis<TargetPassConfig>();
-  const Function &F = MF.getFunction();
-
-  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
-  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, /*OptEnabled=*/true,
-                     F.hasOptSize(), F.hasMinSize());
-  // Disable fixed-point iteration to reduce compile-time
-  CInfo.MaxIterations = 1;
-  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
-  // PostLegalizerCombiner performs DCE, so a full DCE pass is unnecessary.
-  CInfo.EnableFullDCE = false;
-  AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, TPC, /*CSEInfo*/ nullptr,
-                                        RuleConfig, ST);
-  return Impl.combineMachineInstrs();
+  return runPostLegalizerLowering(MF, RuleConfig);
 }
 
-char AArch64PostLegalizerLowering::ID = 0;
-INITIALIZE_PASS_BEGIN(AArch64PostLegalizerLowering, DEBUG_TYPE,
+char AArch64PostLegalizerLoweringLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(AArch64PostLegalizerLoweringLegacy, DEBUG_TYPE,
                       "Lower AArch64 MachineInstrs after legalization", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(AArch64PostLegalizerLowering, DEBUG_TYPE,
+INITIALIZE_PASS_END(AArch64PostLegalizerLoweringLegacy, DEBUG_TYPE,
                     "Lower AArch64 MachineInstrs after legalization", false,
                     false)
 
+AArch64PostLegalizerLoweringPass::AArch64PostLegalizerLoweringPass()
+    : RuleConfig(
+          std::make_unique<AArch64PostLegalizerLoweringImplRuleConfig>()) {
+  if (!RuleConfig->parseCommandLineOption())
+    reportFatalUsageError("invalid rule identifier");
+}
+
+AArch64PostLegalizerLoweringPass::AArch64PostLegalizerLoweringPass(
+    AArch64PostLegalizerLoweringPass &&) = default;
+
+AArch64PostLegalizerLoweringPass::~AArch64PostLegalizerLoweringPass() = default;
+
+PreservedAnalyses
+AArch64PostLegalizerLoweringPass::run(MachineFunction &MF,
+                                      MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  const bool Changed = runPostLegalizerLowering(MF, *RuleConfig);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
 namespace llvm {
 FunctionPass *createAArch64PostLegalizerLowering() {
-  return new AArch64PostLegalizerLowering();
+  return new AArch64PostLegalizerLoweringLegacy();
 }
 } // end namespace llvm

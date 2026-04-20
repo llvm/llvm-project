@@ -175,7 +175,7 @@ private:
   unsigned GetInstance(unsigned LocalLabelVal);
 
   /// SHT_LLVM_BB_ADDR_MAP version to emit.
-  uint8_t BBAddrMapVersion = 3;
+  uint8_t BBAddrMapVersion = 5;
 
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique
@@ -326,8 +326,6 @@ private:
   /// Do automatic reset in destructor
   bool AutoReset;
 
-  MCTargetOptions const *TargetOptions;
-
   bool HadError = false;
 
   void reportCommon(SMLoc Loc,
@@ -382,7 +380,6 @@ public:
                               const MCRegisterInfo *MRI,
                               const MCSubtargetInfo *MSTI,
                               const SourceMgr *Mgr = nullptr,
-                              MCTargetOptions const *TargetOpts = nullptr,
                               bool DoAutoReset = true,
                               StringRef Swift5ReflSegmentName = {});
   MCContext(const MCContext &) = delete;
@@ -417,7 +414,7 @@ public:
 
   const MCSubtargetInfo *getSubtargetInfo() const { return MSTI; }
 
-  const MCTargetOptions *getTargetOptions() const { return TargetOptions; }
+  LLVM_ABI const MCTargetOptions *getTargetOptions() const;
 
   LLVM_ABI CodeViewContext &getCVContext();
 
@@ -460,7 +457,7 @@ public:
 
   /// Get or create a symbol for a basic block. For non-always-emit symbols,
   /// this behaves like createTempSymbol, except that it uses the
-  /// PrivateLabelPrefix instead of the PrivateGlobalPrefix. When AlwaysEmit is
+  /// PrivateLabelPrefix instead of the InternalSymbolPrefix. When AlwaysEmit is
   /// true, behaves like getOrCreateSymbol, prefixed with PrivateLabelPrefix.
   LLVM_ABI MCSymbol *createBlockSymbol(const Twine &Name,
                                        bool AlwaysEmit = false);

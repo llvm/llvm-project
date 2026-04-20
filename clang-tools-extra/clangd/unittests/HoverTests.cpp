@@ -57,6 +57,137 @@ TEST(Hover, Structured) {
          HI.Type = "void ()";
          HI.Parameters.emplace();
        }},
+      {R"cpp(
+          // Best foo ever.
+          void [[fo^o]](auto x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo(auto x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("x:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"auto"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          // Best foo ever.
+          template <class T>
+          void [[fo^o]](T x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <class T> void foo(T x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          // Best foo ever.
+          template <class T>
+          void [[fo^o]](T x, auto y) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <class T> void foo(T x, auto y)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T, auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+             {{"class"}, std::string("y:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+             {{"auto"}, std::string("y"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          template<C<int> T>
+          void [[fo^o]](T x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <C<int> T> void foo(T x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          void [[fo^o]](C<int> auto x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo(C<int> auto x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (C<int> auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("x:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"C<int> auto"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          template<C<int> T>
+          void [[fo^o]](T x, C<int> auto y) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <C<int> T> void foo(T x, C<int> auto y)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T, C<int> auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+             {{"class"}, std::string("y:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+             {{"C<int> auto"}, std::string("y"), std::nullopt},
+         };
+       }},
       // Inside namespace
       {R"cpp(
           namespace ns1 { namespace ns2 {
@@ -885,6 +1016,26 @@ class Foo final {})cpp";
          HI.Parameters.emplace();
          HI.AccessSpecifier = "public";
        }},
+      {// Getter with comment
+       R"cpp(
+          struct X {
+            // An int named Y
+            int Y;
+            float [[^y]]() { return Y; }
+          };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "y";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "float y()";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial accessor for `Y`.\n\nAn int named Y";
+         HI.Type = "float ()";
+         HI.ReturnType = "float";
+         HI.Parameters.emplace();
+         HI.AccessSpecifier = "public";
+       }},
       {// Setter
        R"cpp(
           struct X { int Y; void [[^setY]](float v) { Y = v; } };
@@ -935,6 +1086,29 @@ class Foo final {})cpp";
          HI.Definition = "void setY(float v)";
          HI.LocalScope = "X::";
          HI.Documentation = "Trivial setter for `Y`.";
+         HI.Type = "void (float)";
+         HI.ReturnType = "void";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "float";
+         HI.Parameters->back().Name = "v";
+         HI.AccessSpecifier = "public";
+       }},
+      {// Setter with comment
+       R"cpp(
+          struct X {
+            // An int named Y
+            int Y;
+            void [[^setY]](float v) { Y = v; }
+          };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "setY";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "void setY(float v)";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial setter for `Y`.\n\nAn int named Y";
          HI.Type = "void (float)";
          HI.ReturnType = "void";
          HI.Parameters.emplace();
@@ -3457,13 +3631,15 @@ template <typename T, typename C = bool> class Foo {}
 ```
 
 ---
-**Template Parameters:**
+### Brief
+
+documentation
+
+---
+### Template Parameters
 
 - `typename T`
 - `typename C = bool`
-
----
-documentation
 
 ---
 Size: 10 bytes)",
@@ -3506,7 +3682,7 @@ ret_type foo(params) {}
 ```
 
 ---
-**Parameters:**
+### Parameters
 
 - 
 - `type (aka can_type)`
@@ -3514,7 +3690,7 @@ ret_type foo(params) {}
 - `type foo = default (aka can_type)`
 
 ---
-**Returns:**
+### Returns
 
 `ret_type (aka can_ret_type)`)",
       },
@@ -3649,7 +3825,7 @@ protected: size_t method()
 ```
 
 ---
-**Returns:**
+### Returns
 
 `size_t (aka unsigned long)`)",
       },
@@ -3688,7 +3864,7 @@ public: cls(int a, int b = 5)
 ```
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a`
 - `int b = 5`)",
@@ -4001,9 +4177,13 @@ void foo()
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
+### Details
+
 longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
@@ -4034,20 +4214,34 @@ int foo()
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Returns:**
+### Returns
 
 `int`
 
 ---
+### Details
+
 longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
-         HI.Documentation = "@brief brief doc\n\n"
-                            "longer doc\n@param a this is a param\n@return it "
-                            "returns something";
+         HI.Documentation = R"(@brief brief doc
+
+longer doc
+@note this is a note
+
+As you see, notes are "inlined".
+@warning this is a warning
+
+As well as warnings
+@param a this is a param
+@return it returns something
+@retval 0 if successful
+@retval 1 if failed)";
          HI.Definition = "int foo(int a)";
          HI.ReturnType = "int";
          HI.Name = "foo";
@@ -4067,9 +4261,17 @@ Parameters:
 
 @brief brief doc
 
-longer doc
-@param a this is a param
-@return it returns something
+longer doc  
+@note this is a note
+
+As you see, notes are "inlined".  
+@warning this is a warning
+
+As well as warnings  
+@param a this is a param  
+@return it returns something  
+@retval 0 if successful  
+@retval 1 if failed
 
 ---
 ```cpp
@@ -4083,20 +4285,37 @@ int foo(int a)
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a` - this is a param
 
 ---
-**Returns:**
+### Returns
 
 `int` - it returns something
 
+- `0` - if successful
+- `1` - if failed
+
 ---
-longer doc)"},
+### Details
+
+longer doc
+
+**Note:**  
+this is a note
+
+As you see, notes are "inlined".
+
+**Warning:**  
+this is a warning
+
+As well as warnings)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
          HI.Documentation = "@brief brief doc\n\n"
@@ -4121,9 +4340,9 @@ Parameters:
 
 @brief brief doc
 
-longer doc
-@param a this is a param
-@param b does not exist
+longer doc  
+@param a this is a param  
+@param b does not exist  
 @return it returns something
 
 ---
@@ -4138,19 +4357,23 @@ int foo(int a)
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a` - this is a param
 
 ---
-**Returns:**
+### Returns
 
 `int` - it returns something
 
 ---
+### Details
+
 longer doc)"},
   };
 
@@ -4266,19 +4489,19 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo.\nbar",
-                   "foo.\nbar",
-                   "foo.\nbar",
+                   "foo.  \nbar",
+                   "foo.  \nbar",
                    "foo.\nbar",
                },
                {
                    "foo. \nbar",
-                   "foo. \nbar",
-                   "foo. \nbar",
+                   "foo.   \nbar",
+                   "foo.   \nbar",
                    "foo.\nbar",
                },
                {
                    "foo\n*bar",
-                   "foo\n\\*bar",
+                   "foo  \n\\*bar",
                    "foo\n*bar",
                    "foo\n*bar",
                },
@@ -4305,6 +4528,24 @@ TEST(Hover, ParseDocumentation) {
                    "\\`not\nparsed\\`",
                    "`not\nparsed`",
                    "`not parsed`",
+               },
+               {
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
+@return something)",
+                   R"(@brief this is a typical use case  
+@param x this is x  
+\\param y this is y  
+@return something)",
+                   R"(@brief this is a typical use case  
+@param x this is x  
+\param y this is y  
+@return something)",
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
+@return something)",
                }};
 
   for (const auto &C : Cases) {

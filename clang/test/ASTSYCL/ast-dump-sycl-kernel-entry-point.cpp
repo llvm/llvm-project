@@ -28,6 +28,9 @@
 // A unique kernel name type is required for each declared kernel entry point.
 template<int, int=0> struct KN;
 
+template<typename KernelName, typename... Ts>
+void sycl_kernel_launch(const char *, Ts... Args) {}
+
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void skep1() {
 }
@@ -62,7 +65,7 @@ void skep4(F f) {
 void test_skep4() {
   skep4<KNT<4>>([]{});
 }
-// CHECK:      | `-FunctionDecl {{.*}} used skep4 'void ((lambda at {{.*}}))' implicit_instantiation
+// CHECK:      | `-FunctionDecl {{.*}} used skep4 'void ((lambda at {{.*}}))' implicit_instantiation instantiated_from 0x{{.+}}
 // CHECK-NEXT: |   |-TemplateArgument type 'KN<4>'
 // CHECK:      |   |-TemplateArgument type '(lambda at {{.*}})'
 // CHECK:      |   `-SYCLKernelEntryPointAttr {{.*}} struct KN<4>
@@ -79,7 +82,7 @@ void skep5(T) {
 // CHECK:      | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
 // Checks for the explicit template instantiation declaration below.
-// CHECK:      | `-FunctionDecl {{.*}} skep5 'void (int)' explicit_instantiation_definition
+// CHECK:      | `-FunctionDecl {{.*}} skep5 'void (int)' explicit_instantiation_definition instantiated_from 0x{{.+}}
 // CHECK-NEXT: |   |-TemplateArgument type 'KN<5, 4>'
 // CHECK:      |   |-TemplateArgument type 'int'
 // CHECK:      |   `-SYCLKernelEntryPointAttr {{.*}} KN<5, 4>

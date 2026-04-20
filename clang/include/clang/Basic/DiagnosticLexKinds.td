@@ -90,6 +90,14 @@ def err_unterminated___pragma : Error<"missing terminating ')' character">;
 
 def err_conflict_marker : Error<"version control conflict marker in file">;
 
+def err_counter_overflow : Error<
+  "'__COUNTER__' value cannot exceed 2'147'483'647">;
+def ext_counter : Extension<
+  "'__COUNTER__' is a C2y extension">, InGroup<C2y>;
+def warn_counter : Warning<
+  "'__COUNTER__' is incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
+
 def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
   "; use PREFIX( )PREFIX to delimit raw string">;
@@ -369,9 +377,12 @@ class NonportablePath  : Warning<
   "non-portable path to file '%0'; specified path differs in case from file"
   " name on disk">;
 def pp_nonportable_path : NonportablePath,
-  InGroup<DiagGroup<"nonportable-include-path">>;
+  InGroup<NonportableIncludePath>;
 def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
   InGroup<DiagGroup<"nonportable-system-include-path">>;
+def pp_nonportable_path_separator : Warning<
+  "non-portable path to file '%0'; specified path contains backslashes">,
+  DefaultIgnore, InGroup<NonportableIncludePathSeparator>;
 
 def pp_pragma_once_in_main_file : Warning<"#pragma once in main file">,
   InGroup<DiagGroup<"pragma-once-outside-header">>;
@@ -495,8 +506,8 @@ def warn_cxx98_compat_variadic_macro : Warning<
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def ext_named_variadic_macro : Extension<
   "named variadic macros are a GNU extension">, InGroup<VariadicMacros>;
-def err_embedded_directive : Error<
-  "embedding a #%0 directive within macro arguments is not supported">;
+def err_embedded_directive : Error<"embedding a %select{|#}0%1 directive "
+                                   "within macro arguments is not supported">;
 def ext_embedded_directive : Extension<
   "embedding a directive within macro arguments has undefined behavior">,
   InGroup<DiagGroup<"embedded-directive">>;
@@ -761,7 +772,9 @@ def err_paste_at_start : Error<
   "'##' cannot appear at start of macro expansion">;
 def err_paste_at_end : Error<"'##' cannot appear at end of macro expansion">;
 def ext_paste_comma : Extension<
-  "token pasting of ',' and __VA_ARGS__ is a GNU extension">, InGroup<GNUZeroVariadicMacroArguments>;
+  "token pasting of ',' and '__VA_ARGS__' is a GNU extension%select{|; "
+  "consider using '__VA_OPT__(,)' instead}0">,
+  InGroup<GNUZeroVariadicMacroArguments>;
 def err_unterm_macro_invoc : Error<
   "unterminated function-like macro invocation">;
 def err_too_many_args_in_macro_invoc : Error<
@@ -867,6 +880,13 @@ def err_mmap_module_redefinition : Error<
 def note_mmap_prev_definition : Note<"previously defined here">;
 def err_mmap_umbrella_clash : Error<
   "umbrella for module '%0' already covers this directory">;
+def warn_mmap_duplicate_header_ownership : Warning<
+  "header '%0' is owned by multiple modules">,
+  InGroup<DiagGroup<"duplicate-header-ownership">>, DefaultIgnore;
+def note_mmap_header_owned_by : Note<
+  "header owned by module '%0' here">;
+def note_mmap_header_covered_by_umbrella : Note<
+  "header covered by umbrella for module '%0' here">;
 def err_mmap_module_id : Error<
   "expected a module name or '*'">;
 def err_mmap_expected_library_name : Error<
@@ -951,6 +971,10 @@ def warn_quoted_include_in_framework_header : Warning<
 def warn_framework_include_private_from_public : Warning<
   "public framework header includes private framework header '%0'"
   >, InGroup<FrameworkIncludePrivateFromPublic>;
+def warn_header_shadowing : Warning<
+  "multiple candidates for header '%0' found; "
+  "directory '%1' chosen, ignoring others including '%2'">,
+  InGroup<ShadowHeader>, DefaultIgnore;
 def warn_deprecated_module_dot_map : Warning<
   "'%0' as a module map name is deprecated, rename it to %select{module.modulemap|module.private.modulemap}1%select{| in the 'Modules' directory of the framework}2">,
   InGroup<DeprecatedModuleDotMap>;
@@ -984,8 +1008,34 @@ def warn_non_modular_include_in_module : Warning<
 def warn_module_conflict : Warning<
   "module '%0' conflicts with already-imported module '%1': %2">,
   InGroup<ModuleConflict>;
+def warn_mmap_path_outside_directory : Warning<
+  "path refers outside of the module directory; such paths in implicitly "
+  "discovered module maps are deprecated">,
+  InGroup<DiagGroup<"module-map-path-outside-directory">>, DefaultIgnore;
+def warn_mmap_deprecated_symlink_to_modular_header : Warning<
+  "header '%0' may be a symlink to '%1' owned by module '%2'; "
+  "symlinks to modular headers are deprecated, replace with a textual "
+  "forwarding header">,
+  InGroup<DiagGroup<"mmap-deprecated-symlink-to-modular-header">>,
+  DefaultIgnore;
+def note_mmap_module_defined_here : Note<"module defined here">;
 
 // C++20 modules
+def err_pp_module_name_is_macro : Error<
+  "%select{module|partition}0 name component %1 cannot be a object-like macro">;
+def err_pp_module_expected_ident : Error<
+  "expected %select{identifier after '.' in |}0module name">;
+def err_pp_unexpected_tok_after_module_name : Error<
+  "unexpected preprocessing token '%0' after module name, "
+  "only ';' and '[' (start of attribute specifier sequence) are allowed">;
+def warn_pp_extra_tokens_at_module_directive_eol
+    : Warning<"extra tokens after semicolon in '%0' directive">,
+      InGroup<ExtraTokens>;
+def err_pp_module_decl_in_header
+    : Error<"module declaration must not come from an #include directive">;
+def err_pp_cond_span_module_decl
+    : Error<"module directive lines are not allowed on lines controlled "
+    "by preprocessor conditionals">;
 def err_header_import_semi_in_macro : Error<
   "semicolon terminating header import declaration cannot be produced "
   "by a macro">;

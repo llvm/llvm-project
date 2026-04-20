@@ -1,8 +1,8 @@
-FROM docker.io/library/ubuntu:24.04 as base
+FROM docker.io/library/ubuntu:24.04 AS base
 ENV LLVM_SYSROOT=/opt/llvm
 
-FROM base as stage1-toolchain
-ENV LLVM_VERSION=21.1.0
+FROM base AS stage1-toolchain
+ENV LLVM_VERSION=22.1.0
 
 RUN apt-get update && \
     apt-get install -y \
@@ -37,7 +37,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
 
 RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution
 
-FROM base as ci-container
+FROM base AS ci-container
 
 COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 
@@ -45,9 +45,10 @@ COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 # Need nodejs for some of the GitHub actions.
 # Need perl-modules for clang analyzer tests.
 # Need git for SPIRV-Tools tests.
+# Need binutils-dev instead of binutils to build the linker LTO plugin.
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    binutils \
+    binutils-dev \
     cmake \
     curl \
     git \
@@ -97,9 +98,9 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER gha
 WORKDIR /home/gha
 
-FROM ci-container as ci-container-agent
+FROM ci-container AS ci-container-agent
 
-ENV GITHUB_RUNNER_VERSION=2.328.0
+ENV GITHUB_RUNNER_VERSION=2.332.0
 
 RUN mkdir actions-runner && \
     cd actions-runner && \

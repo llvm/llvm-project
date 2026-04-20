@@ -3,6 +3,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
 endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+add_subdirectory(syscall_wrappers)
 
 add_object_library(
   linux_util
@@ -22,6 +23,19 @@ add_object_library(
     libc.hdr.types.struct_f_owner_ex
     libc.hdr.types.off_t
     libc.include.sys_syscall
+)
+
+add_header_library(
+  auxv
+  HDRS
+    auxv.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_auxv_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.CPP.optional
+    libc.src.__support.threads.callonce
 )
 
 add_header_library(
@@ -58,11 +72,12 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.threads.callonce
     libc.src.__support.threads.linux.futex_word_type
-    libc.hdr.types.struct_timeval
-    libc.hdr.types.struct_timespec
-    libc.hdr.types.clockid_t
-    libc.hdr.types.time_t
+    libc.src.__support.OSUtil.linux.auxv
+    libc.hdr.elf_proxy
     libc.hdr.link_macros
-    libc.src.errno.errno
-    libc.src.sys.auxv.getauxval
+    libc.hdr.sys_auxv_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.struct_timeval
+    libc.hdr.types.time_t
 )

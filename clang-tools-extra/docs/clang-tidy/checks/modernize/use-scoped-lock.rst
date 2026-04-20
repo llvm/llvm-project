@@ -51,8 +51,8 @@ Multiple ``std::lock_guard`` declarations only emit warnings:
 
   std::mutex M1, M2;
   std::lock(M1, M2);
-  std::lock_guard Lock1(M, std::adopt_lock); // warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
-  std::lock_guard Lock2(M, std::adopt_lock); // note: additional 'std::lock_guard' declared here
+  std::lock_guard Lock1(M1, std::adopt_lock); // warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+  std::lock_guard Lock2(M2, std::adopt_lock); // note: additional 'std::lock_guard' declared here
 
 
 Limitations
@@ -93,9 +93,9 @@ Options
 
     template <typename T>
     using Lock = std::lock_guard<T>; // warning: use 'std::scoped_lock' instead of 'std::lock_guard'
-    
+
     using LockMutex = std::lock_guard<std::mutex>; // warning: use 'std::scoped_lock' instead of 'std::lock_guard'
-    
+
     typedef std::lock_guard<std::mutex> LockDef; // warning: use 'std::scoped_lock' instead of 'std::lock_guard'
 
     using std::lock_guard; // warning: use 'std::scoped_lock' instead of 'std::lock_guard'

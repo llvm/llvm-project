@@ -21,11 +21,13 @@ namespace __xray {
 
 // The machine codes for some instructions used in runtime patching.
 enum PatchOpcodes : uint32_t {
-  PO_JUMPI_14 = 0x5800c00a, // jump #0x014 (PC + 0x014)
-  PO_CALLR_R6 = 0x50a6c000, // indirect call: callr r6
-  PO_TFR_IMM = 0x78000000,  // transfer immed
-                            // ICLASS 0x7 - S2-type A-type
-  PO_IMMEXT = 0x00000000, // constant extender
+  PO_JUMPI_1C = 0x5800c00e,     // jump #0x01c (PC + 0x01c)
+  PO_CALLR_R6 = 0x50a6c000,     // indirect call: callr r6
+  PO_TFR_IMM = 0x78000000,      // transfer immed
+                                // ICLASS 0x7 - S2-type A-type
+  PO_IMMEXT = 0x00000000,       // constant extender
+  PO_ALLOCFRAME_0 = 0xa09dc000, // allocframe(#0)
+  PO_DEALLOCFRAME = 0x901ec01e, // deallocframe
 };
 
 enum PacketWordParseBits : uint32_t {
@@ -92,43 +94,61 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
   //
   // .L_xray_sled_N:
   // <xray_sled_base>:
-  // {  jump .Ltmp0 }
-  // {  nop
-  //    nop
-  //    nop
-  //    nop }
+  // { jump .Ltmp0 }
+  // { nop } x 6
   // .Ltmp0:
-
+  //
   // With the following runtime patch:
   //
-  // xray_sled_n (32-bit):
-  //
   // <xray_sled_n>:
-  // {  immext(#...) // upper 26-bits of func id
-  //    r7 = ##...   // lower  6-bits of func id
-  //    immext(#...) // upper 26-bits of trampoline
-  //    r6 = ##... }  // lower 6 bits of trampoline
-  // {  callr r6 }
+  // { allocframe(#0) }
+  // { immext(#...) // upper 26-bits of func id
+  //   r7 = ##...   // lower  6-bits of func id
+  //   immext(#...) // upper 26-bits of trampoline
+  //   r6 = ##... } // lower  6-bits of trampoline
+  // { callr r6 }
+  // { deallocframe }
+  //
+  // allocframe(#0) saves the caller's r31:30 (LR:FP) before the callr
+  // clobbers r31, and deallocframe restores them afterward.  This ensures
+  // the instrumented function's allocframe later saves the correct return
+  // address.
+  //
+  // Replacement of the first 4-byte instruction should be the last and
+  // atomic operation, so that user code reaching the sled concurrently
+  // either jumps over the whole sled, or executes the whole sled when it
+  // is ready.
   //
   // When |Enable|==false, we set back the first instruction in the sled to be
-  // {  jump .Ltmp0 }
+  // { jump .Ltmp0 }
 
   uint32_t *FirstAddress = reinterpret_cast<uint32_t *>(Sled.address());
   if (Enable) {
     uint32_t *CurAddress = FirstAddress + 1;
+    // Word 1: immext for r7 = FuncId
+    *CurAddress = encodeConstantExtender(FuncId);
+    CurAddress++;
+    // Word 2: r7 = ##FuncId (low 6 bits)
     *CurAddress = encodeExtendedTransferImmediate(FuncId, RN_R7);
     CurAddress++;
-    *CurAddress = encodeConstantExtender(reinterpret_cast<uint32_t>(TracingHook));
-    CurAddress++;
+    // Word 3: immext for r6 = TracingHook
     *CurAddress =
-        encodeExtendedTransferImmediate(reinterpret_cast<uint32_t>(TracingHook), RN_R6, true);
+        encodeConstantExtender(reinterpret_cast<uint32_t>(TracingHook));
     CurAddress++;
-
+    // Word 4: r6 = ##TracingHook (low 6 bits), packet end
+    *CurAddress = encodeExtendedTransferImmediate(
+        reinterpret_cast<uint32_t>(TracingHook), RN_R6, true);
+    CurAddress++;
+    // Word 5: callr r6
     *CurAddress = uint32_t(PO_CALLR_R6);
+    CurAddress++;
+    // Word 6: deallocframe
+    *CurAddress = uint32_t(PO_DEALLOCFRAME);
 
-    WriteInstFlushCache(FirstAddress, uint32_t(encodeConstantExtender(FuncId)));
+    // Word 0 (written last, atomically): allocframe(#0) replaces jump
+    WriteInstFlushCache(FirstAddress, uint32_t(PO_ALLOCFRAME_0));
   } else {
-    WriteInstFlushCache(FirstAddress, uint32_t(PatchOpcodes::PO_JUMPI_14));
+    WriteInstFlushCache(FirstAddress, uint32_t(PO_JUMPI_1C));
   }
   return true;
 }

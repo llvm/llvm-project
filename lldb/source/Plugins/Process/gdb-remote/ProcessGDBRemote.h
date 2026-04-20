@@ -137,6 +137,22 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
 
+  /// Override of ReadMemoryRanges that uses MultiMemRead to optimize this
+  /// operation.
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                   llvm::MutableArrayRef<uint8_t> buf) override;
+
+private:
+  llvm::Expected<StringExtractorGDBRemote>
+  SendMultiMemReadPacket(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges);
+
+  llvm::Error ParseMultiMemReadPacket(
+      llvm::StringRef response_str, llvm::MutableArrayRef<uint8_t> buffer,
+      unsigned expected_num_ranges,
+      llvm::SmallVectorImpl<llvm::MutableArrayRef<uint8_t>> &memory_regions);
+
+public:
   Status
   WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) override;
 
@@ -217,9 +233,11 @@ public:
   ConfigureStructuredData(llvm::StringRef type_name,
                           const StructuredData::ObjectSP &config_sp) override;
 
-  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos() override;
+  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level) override;
 
   StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level,
       const std::vector<lldb::addr_t> &load_addresses) override;
 
   StructuredData::ObjectSP
@@ -281,6 +299,8 @@ protected:
                                               // registers and memory for all
                                               // threads if "jThreadsInfo"
                                               // packet is supported
+  StructuredData::ObjectSP m_shared_cache_info_sp;
+  std::mutex m_shared_cache_info_mutex;
   tid_collection m_continue_c_tids;           // 'c' for continue
   tid_sig_collection m_continue_C_tids;       // 'C' for continue with signal
   tid_collection m_continue_s_tids;           // 's' for step
@@ -400,7 +420,7 @@ protected:
   void AddRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
                           const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information
-  bool GetGDBServerRegisterInfo(ArchSpec &arch);
+  llvm::Error GetGDBServerRegisterInfo(ArchSpec &arch);
 
   lldb::ModuleSP LoadModuleAtAddress(const FileSpec &file,
                                      lldb::addr_t link_map,

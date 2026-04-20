@@ -66,7 +66,7 @@ EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(
   if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance, rt::SimpleExecutorDylibManagerInstanceName},
            {SAs.Open, rt::SimpleExecutorDylibManagerOpenWrapperName},
-           {SAs.Lookup, rt::SimpleExecutorDylibManagerLookupWrapperName}}))
+           {SAs.Resolve, rt::SimpleExecutorDylibManagerResolveWrapperName}}))
     return std::move(Err);
   return EPCGenericDylibManager(EPC, std::move(SAs));
 }
@@ -84,11 +84,12 @@ Expected<tpctypes::DylibHandle> EPCGenericDylibManager::open(StringRef Path,
 void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
                                          const SymbolLookupSet &Lookup,
                                          SymbolLookupCompleteFn Complete) {
-  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
-      SAs.Lookup,
+  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerResolveSignature>(
+      SAs.Resolve,
       [Complete = std::move(Complete)](
           Error SerializationErr,
-          Expected<std::vector<ExecutorSymbolDef>> Result) mutable {
+          Expected<std::vector<std::optional<ExecutorSymbolDef>>>
+              Result) mutable {
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
@@ -96,17 +97,18 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         }
         Complete(std::move(Result));
       },
-      SAs.Instance, H, Lookup);
+      H, Lookup);
 }
 
 void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
                                          const RemoteSymbolLookupSet &Lookup,
                                          SymbolLookupCompleteFn Complete) {
-  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
-      SAs.Lookup,
+  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerResolveSignature>(
+      SAs.Resolve,
       [Complete = std::move(Complete)](
           Error SerializationErr,
-          Expected<std::vector<ExecutorSymbolDef>> Result) mutable {
+          Expected<std::vector<std::optional<ExecutorSymbolDef>>>
+              Result) mutable {
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
@@ -114,7 +116,45 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         }
         Complete(std::move(Result));
       },
-      SAs.Instance, H, Lookup);
+      H, Lookup);
+}
+
+Expected<tpctypes::DylibHandle>
+EPCGenericDylibManager::loadDylib(const char *DylibPath) {
+  return open(DylibPath, 0);
+}
+
+/// Async helper to chain together calls to lookupAsync to fulfill all
+/// the requests.
+/// FIXME: The dylib manager should support multiple LookupRequests natively.
+static void
+lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
+                         ArrayRef<DylibManager::LookupRequest> Request,
+                         std::vector<tpctypes::LookupResult> Result,
+                         DylibManager::SymbolLookupCompleteFn Complete) {
+  if (Request.empty())
+    return Complete(std::move(Result));
+
+  auto &Element = Request.front();
+  DylibMgr.lookupAsync(Element.Handle, Element.Symbols,
+                       [&DylibMgr, Request, Complete = std::move(Complete),
+                        Result = std::move(Result)](auto R) mutable {
+                         if (!R)
+                           return Complete(R.takeError());
+                         Result.push_back({});
+                         Result.back().reserve(R->size());
+                         llvm::append_range(Result.back(), *R);
+
+                         lookupSymbolsAsyncHelper(
+                             DylibMgr, Request.drop_front(), std::move(Result),
+                             std::move(Complete));
+                       });
+}
+
+void EPCGenericDylibManager::lookupSymbolsAsync(
+    ArrayRef<DylibManager::LookupRequest> Request,
+    DylibManager::SymbolLookupCompleteFn Complete) {
+  lookupSymbolsAsyncHelper(*this, Request, {}, std::move(Complete));
 }
 
 } // end namespace orc

@@ -12,8 +12,12 @@
 
 #include "SPIRVTargetMachine.h"
 #include "SPIRV.h"
+#include "SPIRVCBufferAccess.h"
+#include "SPIRVEmitIntrinsics.h"
 #include "SPIRVGlobalRegistry.h"
+#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVPushConstantAccess.h"
 #include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
@@ -30,6 +34,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
@@ -48,8 +53,11 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVAsmPrinterPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
+  initializeSPIRVCBufferAccessLegacyPass(PR);
+  initializeSPIRVPushConstantAccessLegacyPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
   initializeSPIRVLegalizePointerCastPass(PR);
+  initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
   initializeSPIRVRegularizerPass(PR);
   initializeSPIRVPreLegalizerPass(PR);
   initializeSPIRVPostLegalizerPass(PR);
@@ -57,7 +65,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVEmitIntrinsicsPass(PR);
   initializeSPIRVEmitNonSemanticDIPass(PR);
   initializeSPIRVPrepareFunctionsPass(PR);
-  initializeSPIRVStripConvergentIntrinsicsPass(PR);
+  initializeSPIRVPrepareGlobalsPass(PR);
+  initializeSPIRVCtorDtorLoweringLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -67,7 +76,7 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
 }
 
 // Pin SPIRVTargetObjectFile's vtables to this file.
-SPIRVTargetObjectFile::~SPIRVTargetObjectFile() {}
+SPIRVTargetObjectFile::~SPIRVTargetObjectFile() = default;
 
 SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
@@ -166,10 +175,21 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+
   TargetPassConfig::addIRPasses();
 
+  // Variadic function calls aren't supported in shader code.
+  // This needs to come before SPIRVPrepareFunctions because this
+  // may introduce intrinsic calls.
+  if (!TM.getSubtargetImpl()->isShader()) {
+    addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+  }
+
   addPass(createSPIRVRegularizerPass());
+  addPass(createSPIRVCtorDtorLoweringLegacyPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
+  addPass(createSPIRVPrepareGlobalsPass());
 }
 
 void SPIRVPassConfig::addISelPrepare() {
@@ -202,13 +222,20 @@ void SPIRVPassConfig::addISelPrepare() {
     // 5. Reduce the amount of variables required by pushing some operations
     // back to virtual registers.
     addPass(createPromoteMemoryToRegisterPass());
+  } else {
+    // Canonicalize loops so they have a single latch and preheader.
+    // This enables OpLoopMerge emission for non-shader targets.
+    addPass(createLoopSimplifyPass());
   }
-
-  addPass(createSPIRVStripConvergenceIntrinsicsPass());
+  SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
+  addPass(createStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
-  addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
+  addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
+  addPass(createSPIRVCBufferAccessLegacyPass());
+  addPass(createSPIRVPushConstantAccessLegacyPass(&TM));
+  addPass(createSPIRVEmitIntrinsicsPass(TM));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
-    addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
+    addPass(createSPIRVLegalizePointerCastPass(&TM));
   TargetPassConfig::addISelPrepare();
 }
 
@@ -237,13 +264,15 @@ bool SPIRVPassConfig::addRegBankSelect() {
 
 static cl::opt<bool> SPVEnableNonSemanticDI(
     "spv-emit-nonsemantic-debug-info",
-    cl::desc("Emit SPIR-V NonSemantic.Shader.DebugInfo.100 instructions"),
+    cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
+             "instructions"),
     cl::Optional, cl::init(false));
 
 void SPIRVPassConfig::addPreEmitPass() {
-  if (SPVEnableNonSemanticDI) {
-    addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
-  }
+  // The SPIRVEmitNonSemanticDI pass self-activates when the module contains
+  // debug info (llvm.dbg.cu). --spv-emit-nonsemantic-debug-info is a
+  // deprecated synonym for -g.
+  addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
 }
 
 namespace {

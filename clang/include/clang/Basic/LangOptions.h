@@ -25,6 +25,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/AllocToken.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
@@ -112,6 +113,25 @@ public:
     SOB_Trapping
   };
 
+  // Used by __attribute__((overflow_behavior())) to describe overflow behavior
+  // on a per-type basis.
+  enum OverflowBehaviorKind {
+    // Default C standard behavior (type dependent).
+    OB_Unset,
+
+    // __attribute__((overflow_behavior("wrap")))
+    OB_Wrap,
+
+    // __attribute__((overflow_behavior("trap")))
+    OB_Trap,
+
+    // Signed types defined as wrapping via -fwrapv can still be instrumented
+    // by sanitizers (PR82432). This field is needed to disambiguate canonical
+    // wrapping type behaviors from -fwrapv behaviors.
+    // -fwrapv
+    OB_SignedAndDefined
+  };
+
   // FIXME: Unify with TUKind.
   enum CompilingModuleKind {
     /// Not compiling a module interface at all.
@@ -157,6 +177,7 @@ public:
     MSVC2017 = 1910,
     MSVC2017_5 = 1912,
     MSVC2017_7 = 1914,
+    MSVC2017_8 = 1915,
     MSVC2019 = 1920,
     MSVC2019_5 = 1925,
     MSVC2019_8 = 1928,
@@ -248,6 +269,13 @@ public:
     /// line and so the target should be queried for its default evaluation
     /// method instead.
     FEM_UnsetOnCommandLine = 3
+  };
+
+  enum class MatrixMemoryLayout : unsigned {
+    // Use column-major layout for matrices
+    MatrixColMajor = 0,
+    // Use row-major layout for matrices
+    MatrixRowMajor = 1,
   };
 
   enum ExcessPrecisionKind { FPP_Standard, FPP_Fast, FPP_None };
@@ -413,6 +441,16 @@ public:
     None,
   };
 
+  enum class LayoutCompatibilityKind {
+    /// Use default layout rules of the target.
+    Default = 0,
+    /// Use Itanium rules for bit-field layout and fundamental types alignment.
+    Itanium = 1,
+    /// Use Microsoft C++ ABI rules for bit-field layout and fundamental types
+    /// alignment.
+    Microsoft = 2,
+  };
+
   // Define simple language options (with no accessors).
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
   unsigned Name : Bits;
@@ -440,6 +478,9 @@ public:
   SanitizerSet Sanitize;
   /// Is at least one coverage instrumentation type enabled.
   bool SanitizeCoverage = false;
+  /// Set of (UBSan) sanitizers that when enabled do not cause
+  /// `__has_feature(undefined_behavior_sanitizer)` to evaluate true.
+  SanitizerSet UBSanFeatureIgnoredSanitize;
 
   /// Paths to files specifying which objects
   /// (files, functions, variables) should not be instrumented.
@@ -471,6 +512,11 @@ public:
   CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;
 
   std::string ObjCConstantStringClass;
+  std::string ObjCConstantArrayClass;
+  std::string ObjCConstantDictionaryClass;
+  std::string ObjCConstantIntegerNumberClass;
+  std::string ObjCConstantFloatNumberClass;
+  std::string ObjCConstantDoubleNumberClass;
 
   /// The name of the handler function to be called when -ftrapv is
   /// specified.
@@ -549,8 +595,7 @@ public:
   bool CheckNew = false;
 
   /// The HLSL root signature version for dxil.
-  llvm::dxbc::RootSignatureVersion HLSLRootSigVer =
-      llvm::dxbc::RootSignatureVersion::V1_1;
+  llvm::dxbc::RootSignatureVersion HLSLRootSigVer;
 
   /// The HLSL root signature that will be used to overide the root signature
   /// used for the shader entry point.
@@ -565,6 +610,13 @@ public:
   bool AtomicRemoteMemory = false;
   bool AtomicFineGrainedMemory = false;
   bool AtomicIgnoreDenormalMode = false;
+
+  /// Maximum number of allocation tokens (0 = target SIZE_MAX), nullopt if none
+  /// set (use target SIZE_MAX).
+  std::optional<uint64_t> AllocTokenMax;
+
+  /// The allocation token mode.
+  std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
   LangOptions();
 
@@ -615,6 +667,8 @@ public:
     return ObjCRuntime.isSubscriptPointerArithmetic() &&
            !ObjCSubscriptingLegacyRuntime;
   }
+
+  bool isCompatibleWithMSVC() const { return MSCompatibilityVersion > 0; }
 
   bool isCompatibleWithMSVC(MSVCMajorVersion MajorVersion) const {
     return MSCompatibilityVersion >= MajorVersion * 100000U;
@@ -757,6 +811,15 @@ public:
   bool isTargetDevice() const {
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
   }
+
+  /// Returns the most applicable C standard-compliant language version code.
+  /// If none could be determined, returns \ref std::nullopt.
+  std::optional<uint32_t> getCLangStd() const;
+
+  /// Returns the most applicable C++ standard-compliant language
+  /// version code.
+  /// If none could be determined, returns \ref std::nullopt.
+  std::optional<uint32_t> getCPlusPlusLangStd() const;
 };
 
 /// Floating point control options

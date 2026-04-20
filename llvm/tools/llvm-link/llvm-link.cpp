@@ -75,9 +75,12 @@ static cl::opt<std::string>
     OutputFilename("o", cl::desc("Override output filename"), cl::init("-"),
                    cl::value_desc("filename"), cl::cat(LinkCategory));
 
-static cl::opt<bool> Internalize("internalize",
-                                 cl::desc("Internalize linked symbols"),
-                                 cl::cat(LinkCategory));
+static cl::opt<bool>
+    Internalize("internalize",
+                cl::desc("Internalize linked symbols - maintains existing "
+                         "linkage for the first input and converts linkage in"
+                         " all other inputs to `internal`"),
+                cl::cat(LinkCategory));
 
 static cl::opt<bool>
     DisableDITypeMap("disable-debug-info-type-map",
@@ -109,16 +112,6 @@ static cl::opt<bool> DumpAsm("d", cl::desc("Print assembly as linked"),
 static cl::opt<bool> SuppressWarnings("suppress-warnings",
                                       cl::desc("Suppress all linking warnings"),
                                       cl::init(false), cl::cat(LinkCategory));
-
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden, cl::cat(LinkCategory));
-
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden, cl::cat(LinkCategory));
 
 static cl::opt<bool> NoVerify("disable-verify",
                               cl::desc("Do not run the verifier"), cl::Hidden,
@@ -430,9 +423,9 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       // does not do the ThinLink that would normally determine what values to
       // promote.
       for (auto &I : *Index) {
-        for (auto &S : I.second.SummaryList) {
+        for (auto &S : I.second.getSummaryList()) {
           if (GlobalValue::isLocalLinkage(S->linkage()))
-            S->setLinkage(GlobalValue::ExternalLinkage);
+            S->setExternalLinkageForTest();
         }
       }
 
@@ -525,9 +518,10 @@ int main(int argc, char **argv) {
     errs() << "Writing bitcode...\n";
   Composite->removeDebugIntrinsicDeclarations();
   if (OutputAssembly) {
-    Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
+    Composite->print(Out.os(), nullptr, /* ShouldPreserveUseListOrder */ false);
   } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {
-    WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
+    WriteBitcodeToFile(*Composite, Out.os(),
+                       /* ShouldPreserveUseListOrder */ true);
   }
 
   // Declare success.

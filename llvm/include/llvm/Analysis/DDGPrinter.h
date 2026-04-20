@@ -64,6 +64,10 @@ struct DOTGraphTraits<const DataDependenceGraph *>
   /// will be printed when their containing pi-block is being printed.
   bool isNodeHidden(const DDGNode *Node, const DataDependenceGraph *G);
 
+  /// Return DOT attributes for a node (e.g. border and fill for pi-blocks).
+  static std::string getNodeAttributes(const DDGNode *Node,
+                                       const DataDependenceGraph *G);
+
 private:
   /// Print a DDG node in concise form.
   static std::string getSimpleNodeLabel(const DDGNode *Node,

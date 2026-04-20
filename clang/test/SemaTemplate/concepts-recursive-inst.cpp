@@ -12,7 +12,7 @@ void g() {
   // expected-note@#FDEF{{because 'int' does not satisfy 'c'}}
   // expected-note@#CDEF{{because 'f(t)' would be invalid: no matching function for call to 'f'}}
 }
-} // namespace GH53213 
+} // namespace GH53213
 
 namespace GH45736 {
 struct constrained;
@@ -67,14 +67,13 @@ struct my_range{
 
 void baz() {
 auto it = begin(rng); // #BEGIN_CALL
-// expected-error@#INF_BEGIN {{satisfaction of constraint 'Inf<Inf auto>' depends on itself}}
-// expected-note@#INF_BEGIN {{while substituting template arguments into constraint expression here}}
+// expected-error-re@#INF_REQ {{satisfaction of constraint {{.*}} depends on itself}}
+// expected-note@#INF_BEGIN {{while checking the satisfaction of concept 'Inf<DirectRecursiveCheck::my_range>' requested here}}
 // expected-note@#INF_BEGIN_EXPR {{while checking constraint satisfaction for template 'begin<DirectRecursiveCheck::my_range>' required here}}
 // expected-note@#INF_BEGIN_EXPR {{while substituting deduced template arguments into function template 'begin'}}
 // expected-note@#INF_BEGIN_EXPR {{in instantiation of requirement here}}
 // expected-note@#INF_REQ {{while substituting template arguments into constraint expression here}}
 // expected-note@#INF_BEGIN {{while checking the satisfaction of concept 'Inf<DirectRecursiveCheck::my_range>' requested here}}
-// expected-note@#INF_BEGIN {{while substituting template arguments into constraint expression here}}
 // expected-note@#BEGIN_CALL {{while checking constraint satisfaction for template 'begin<DirectRecursiveCheck::my_range>' required here}}
 // expected-note@#BEGIN_CALL {{while substituting deduced template arguments into function template}}
 
@@ -88,29 +87,16 @@ auto it = begin(rng); // #BEGIN_CALL
 
 namespace GH50891 {
   template <typename T>
-  concept Numeric = requires(T a) { // #NUMERIC
-      foo(a); // #FOO_CALL
+  concept Numeric = requires(T a) {
+      foo(a);
     };
 
   struct Deferred {
     friend void foo(Deferred);
-    template <Numeric TO> operator TO(); // #OP_TO
+    template <Numeric TO> operator TO();
   };
 
-  static_assert(Numeric<Deferred>); // #STATIC_ASSERT
-  // expected-error@#NUMERIC{{satisfaction of constraint 'requires (T a) { foo(a); }' depends on itself}}
-  // expected-note@#NUMERIC {{while substituting template arguments into constraint expression here}}
-  // expected-note@#OP_TO {{while checking the satisfaction of concept 'Numeric<GH50891::Deferred>' requested here}}
-  // expected-note@#OP_TO {{while substituting template arguments into constraint expression here}}
-  // expected-note@#FOO_CALL {{while checking constraint satisfaction for template}}
-  // expected-note@#FOO_CALL {{while substituting deduced template arguments into function template}}
-  // expected-note@#FOO_CALL {{in instantiation of requirement here}}
-  // expected-note@#NUMERIC {{while substituting template arguments into constraint expression here}}
-
-  // expected-error@#STATIC_ASSERT {{static assertion failed}}
-  // expected-note@#STATIC_ASSERT{{while checking the satisfaction of concept 'Numeric<GH50891::Deferred>' requested here}}
-  // expected-note@#STATIC_ASSERT{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
-
+  static_assert(Numeric<Deferred>);
 } // namespace GH50891
 
 
@@ -360,5 +346,29 @@ static_assert(!StreamCanReceiveString<NotAStream>);
 
 static_assert(StreamCanReceiveString<std::stringstream>);
 #endif
+}
+}
+
+
+namespace GH149443 {
+template<class T>
+concept can_simply_copy_construct = requires (const T& x) {
+  T(x);
+};
+
+struct A {
+  template <can_simply_copy_construct T>
+  operator T() const noexcept {
+    return T{};
+  }
+};
+
+template<can_simply_copy_construct T1, can_simply_copy_construct T0>
+T1 f(T0 t) {
+  return t;
+}
+
+int main() {
+  (void) f<int>(A{});
 }
 }

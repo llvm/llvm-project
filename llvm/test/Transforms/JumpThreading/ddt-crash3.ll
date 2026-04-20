@@ -9,9 +9,9 @@ target triple = "x86_64-unknown-linux-gnu"
 @global.2 = external local_unnamed_addr global i64, align 8
 
 ; Function Attrs: norecurse noreturn nounwind uwtable
-define void @hoge() local_unnamed_addr #0 {
+define void @hoge() local_unnamed_addr {
 ; CHECK-LABEL: define void @hoge(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ) local_unnamed_addr {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
@@ -47,8 +47,6 @@ bb26:                                             ; preds = %bb27, %bb23
 bb27:                                             ; preds = %bb1
   br label %bb26
 }
-
-attributes #0 = { norecurse noreturn nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

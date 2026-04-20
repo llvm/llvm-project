@@ -16,23 +16,39 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// This file implements the various stream objects provided inside <iostream>. We're doing some ODR violations in here,
+// so this quite fragile. Specifically, the size of the stream objects (i.e. cout, cin etc.) needs to stay the same.
+// For that reason, we have `stream` and `stream_data` separated into two objects. The public `stream` objects only
+// contain the actual stream, while the private `stream_data` objects contains the `basic_streambuf` we're using as well
+// as the mbstate_t. `stream_data` objects are only accessible within the library, so they aren't ABI sensitive and we
+// can change them as we want.
+
+template <class StreamT>
+union stream {
+  constexpr stream() {}
+  stream(const stream&)            = delete;
+  stream& operator=(const stream&) = delete;
+  constexpr ~stream() {}
+
+  StreamT value;
+};
+
 template <class StreamT, class BufferT>
 union stream_data {
   constexpr stream_data() {}
   constexpr ~stream_data() {}
   struct {
-    // The stream has to be the first element, since that's referenced by the stream declarations in <iostream>
-    StreamT stream;
     BufferT buffer;
     mbstate_t mb;
   };
-
-  void init(FILE* stdstream) {
-    mb = {};
-    std::construct_at(&buffer, stdstream, &mb);
-    std::construct_at(&stream, &buffer);
-  }
 };
+
+template <class StreamT, class BufferT>
+void init_stream(FILE* stdstream, stream<StreamT>& stream, stream_data<StreamT, BufferT>& data) {
+  data.mb = {};
+  std::construct_at(&data.buffer, stdstream, &data.mb);
+  std::construct_at(&stream.value, &data.buffer);
+}
 
 #define CHAR_MANGLING_char "D"
 #define CHAR_MANGLING_wchar_t "_W"
@@ -46,25 +62,28 @@ union stream_data {
 
 #ifdef _LIBCPP_ABI_MICROSOFT
 #  define STREAM(StreamT, BufferT, CharT, var)                                                                         \
-    STRING_DATA_CONSTINIT stream_data<StreamT<CharT>, BufferT<CharT>> var __asm__(                                     \
+    STRING_DATA_CONSTINIT stream_data<StreamT<CharT>, BufferT<CharT>> var##_data;                                      \
+    _LIBCPP_EXPORTED_FROM_ABI STRING_DATA_CONSTINIT stream<StreamT<CharT>> var __asm__(                                \
         "?" #var "@" ABI_NAMESPACE_STR "@std@@3V?$" #StreamT                                                           \
         "@" CHAR_MANGLING(CharT) "U?$char_traits@" CHAR_MANGLING(CharT) "@" ABI_NAMESPACE_STR "@std@@@12@A")
 #else
-#  define STREAM(StreamT, BufferT, CharT, var) STRING_DATA_CONSTINIT stream_data<StreamT<CharT>, BufferT<CharT>> var
+#  define STREAM(StreamT, BufferT, CharT, var)                                                                         \
+    STRING_DATA_CONSTINIT stream_data<StreamT<CharT>, BufferT<CharT>> var##_data;                                      \
+    _LIBCPP_EXPORTED_FROM_ABI STRING_DATA_CONSTINIT stream<StreamT<CharT>> var
 #endif
 
 // These definitions and the declarations in <iostream> technically cause ODR violations, since they have different
 // types (stream_data and {i,o}stream respectively). This means that <iostream> should never be included in this TU.
 
-_LIBCPP_EXPORTED_FROM_ABI STREAM(basic_istream, __stdinbuf, char, cin);
-_LIBCPP_EXPORTED_FROM_ABI STREAM(basic_ostream, __stdoutbuf, char, cout);
-_LIBCPP_EXPORTED_FROM_ABI STREAM(basic_ostream, __stdoutbuf, char, cerr);
-_LIBCPP_EXPORTED_FROM_ABI STREAM(basic_ostream, __stdoutbuf, char, clog);
+STREAM(basic_istream, __stdinbuf, char, cin);
+STREAM(basic_ostream, __stdoutbuf, char, cout);
+STREAM(basic_ostream, __stdoutbuf, char, cerr);
+STREAM(basic_ostream, __stdoutbuf, char, clog);
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-_LIBCPP_EXPORTED_FROM_ABI STREAM(basic_istream, __stdinbuf, wchar_t, wcin);
-_LIBCPP_EXPORTED_FROM_ABI STREAM(basic_ostream, __stdoutbuf, wchar_t, wcout);
-_LIBCPP_EXPORTED_FROM_ABI STREAM(basic_ostream, __stdoutbuf, wchar_t, wcerr);
-_LIBCPP_EXPORTED_FROM_ABI STREAM(basic_ostream, __stdoutbuf, wchar_t, wclog);
+STREAM(basic_istream, __stdinbuf, wchar_t, wcin);
+STREAM(basic_ostream, __stdoutbuf, wchar_t, wcout);
+STREAM(basic_ostream, __stdoutbuf, wchar_t, wcerr);
+STREAM(basic_ostream, __stdoutbuf, wchar_t, wclog);
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 // Pretend we're inside a system header so the compiler doesn't flag the use of the init_priority
@@ -98,34 +117,34 @@ public:
 DoIOSInit::DoIOSInit() {
   force_locale_initialization();
 
-  cin.init(stdin);
-  cout.init(stdout);
-  cerr.init(stderr);
-  clog.init(stderr);
+  init_stream(stdin, cin, cin_data);
+  init_stream(stdout, cout, cout_data);
+  init_stream(stderr, cerr, cerr_data);
+  init_stream(stderr, clog, clog_data);
 
-  cin.stream.tie(&cout.stream);
-  std::unitbuf(cerr.stream);
-  cerr.stream.tie(&cout.stream);
+  cin.value.tie(&cout.value);
+  std::unitbuf(cerr.value);
+  cerr.value.tie(&cout.value);
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-  wcin.init(stdin);
-  wcout.init(stdout);
-  wcerr.init(stderr);
-  wclog.init(stderr);
+  init_stream(stdin, wcin, wcin_data);
+  init_stream(stdout, wcout, wcout_data);
+  init_stream(stderr, wcerr, wcerr_data);
+  init_stream(stderr, wclog, wclog_data);
 
-  wcin.stream.tie(&wcout.stream);
-  std::unitbuf(wcerr.stream);
-  wcerr.stream.tie(&wcout.stream);
+  wcin.value.tie(&wcout.value);
+  std::unitbuf(wcerr.value);
+  wcerr.value.tie(&wcout.value);
 #endif
 }
 
 DoIOSInit::~DoIOSInit() {
-  cout.stream.flush();
-  clog.stream.flush();
+  cout.value.flush();
+  clog.value.flush();
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-  wcout.stream.flush();
-  wclog.stream.flush();
+  wcout.value.flush();
+  wclog.value.flush();
 #endif
 }
 

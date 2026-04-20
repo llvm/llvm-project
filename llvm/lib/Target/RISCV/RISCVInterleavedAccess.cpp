@@ -169,9 +169,9 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
   }
   case Intrinsic::masked_load: {
     Ptr = II->getOperand(0);
-    Alignment = cast<ConstantInt>(II->getArgOperand(1))->getAlignValue();
+    Alignment = II->getParamAlign(0).valueOrOne();
 
-    if (!isa<UndefValue>(II->getOperand(3)))
+    if (!isa<UndefValue>(II->getOperand(2)))
       return false;
 
     assert(Mask && "masked.load needs a mask!");
@@ -183,7 +183,7 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
   }
   case Intrinsic::masked_store: {
     Ptr = II->getOperand(1);
-    Alignment = cast<ConstantInt>(II->getArgOperand(2))->getAlignValue();
+    Alignment = II->getParamAlign(1).valueOrOne();
 
     assert(Mask && "masked.store needs a mask!");
 
@@ -214,12 +214,11 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
   assert(GapMask.getBitWidth() == Factor);
 
   // We only support cases where the skipped fields are the trailing ones.
-  // TODO: Lower to strided load if there is only a single active field.
-  unsigned MaskFactor = GapMask.popcount();
-  if (MaskFactor < 2 || !GapMask.isMask())
+  if (!GapMask.isMask())
     return false;
   IRBuilder<> Builder(Load);
 
+  unsigned MaskFactor = GapMask.popcount();
   const DataLayout &DL = Load->getDataLayout();
   auto *VTy = cast<FixedVectorType>(Shuffles[0]->getType());
   auto *XLenTy = Builder.getIntNTy(Subtarget.getXLen());
@@ -235,7 +234,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
     return false;
 
   CallInst *SegLoad = nullptr;
-  if (MaskFactor < Factor) {
+  if (MaskFactor < Factor && MaskFactor != 1) {
     // Lower to strided segmented load.
     unsigned ScalarSizeInBytes = DL.getTypeStoreSize(VTy->getElementType());
     Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);

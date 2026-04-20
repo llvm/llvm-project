@@ -146,7 +146,8 @@ public:
     if (isScalable() || Other.isScalable())
       return afterPointer();
 
-    return upperBound(std::max(getValue(), Other.getValue()));
+    return upperBound(
+        std::max(getValue().getFixedValue(), Other.getValue().getFixedValue()));
   }
 
   bool hasValue() const {

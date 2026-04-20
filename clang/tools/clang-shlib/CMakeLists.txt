@@ -41,6 +41,10 @@ if (CLANG_LINK_CLANG_DYLIB)
   set(INSTALL_WITH_TOOLCHAIN INSTALL_WITH_TOOLCHAIN)
 endif()
 
+if (HAIKU)
+  list(APPEND _DEPS network)
+endif()
+
 add_clang_library(clang-cpp
                   SHARED
                   ${INSTALL_WITH_TOOLCHAIN}

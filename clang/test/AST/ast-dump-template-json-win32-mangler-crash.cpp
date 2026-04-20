@@ -244,6 +244,7 @@ int main()
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
+// CHECK-NEXT:    "isReferenced": true,
 // CHECK-NEXT:    "name": "integral_constant",
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
@@ -815,6 +816,7 @@ int main()
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
+// CHECK-NEXT:    "isReferenced": true,
 // CHECK-NEXT:    "name": "bool_constant",
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
@@ -867,6 +869,7 @@ int main()
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
+// CHECK-NEXT:      "isReferenced": true,
 // CHECK-NEXT:      "name": "bool_constant",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "integral_constant<bool, _Val>"
@@ -1024,6 +1027,7 @@ int main()
 // CHECK-NEXT:      "inline": true,
 // CHECK-NEXT:      "constexpr": true,
 // CHECK-NEXT:      "init": "c",
+// CHECK-NEXT:      "TemplateInstantiationPattern": "0x{{.*}}",
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
@@ -1251,6 +1255,7 @@ int main()
 // CHECK-NEXT:      "inline": true,
 // CHECK-NEXT:      "constexpr": true,
 // CHECK-NEXT:      "init": "c",
+// CHECK-NEXT:      "TemplateInstantiationPattern": "0x{{.*}}",
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
@@ -1761,6 +1766,7 @@ int main()
 // CHECK-NEXT:      "inline": true,
 // CHECK-NEXT:      "constexpr": true,
 // CHECK-NEXT:      "init": "c",
+// CHECK-NEXT:      "TemplateInstantiationPattern": "0x{{.*}}",
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
@@ -2781,6 +2787,7 @@ int main()
 // CHECK-NEXT:      "inline": true,
 // CHECK-NEXT:      "constexpr": true,
 // CHECK-NEXT:      "init": "c",
+// CHECK-NEXT:      "TemplateInstantiationPattern": "0x{{.*}}",
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
@@ -3077,6 +3084,7 @@ int main()
 // CHECK-NEXT:      "inline": true,
 // CHECK-NEXT:      "constexpr": true,
 // CHECK-NEXT:      "init": "c",
+// CHECK-NEXT:      "TemplateInstantiationPattern": "0x{{.*}}",
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",

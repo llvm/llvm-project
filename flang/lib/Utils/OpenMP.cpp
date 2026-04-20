@@ -22,8 +22,9 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
     llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
     llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
-    uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
-    mlir::Type retTy, bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
+    mlir::omp::ClauseMapFlags mapType,
+    mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
+    bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
 
   if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
     baseAddr = fir::BoxAddrOp::create(builder, loc, baseAddr);
@@ -42,7 +43,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
 
   mlir::omp::MapInfoOp op =
       mlir::omp::MapInfoOp::create(builder, loc, retTy, baseAddr, varType,
-          builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
+          builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
           builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
           varPtrPtr, members, membersIndex, bounds, mapperId,
           builder.getStringAttr(name), builder.getBoolAttr(partialMap));
@@ -75,8 +76,7 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
 
   firOpBuilder.setInsertionPoint(targetOp);
 
-  llvm::omp::OpenMPOffloadMappingFlags mapFlag =
-      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+  mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::implicit;
   mlir::omp::VariableCaptureKind captureKind =
       mlir::omp::VariableCaptureKind::ByRef;
 
@@ -88,16 +88,14 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
   if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
     captureKind = mlir::omp::VariableCaptureKind::ByCopy;
   } else if (!fir::isa_builtin_cptr_type(eleType)) {
-    mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+    mapFlag |= mlir::omp::ClauseMapFlags::to;
   }
 
   mlir::Value mapOp = createMapInfoOp(firOpBuilder, copyVal.getLoc(), copyVal,
       /*varPtrPtr=*/mlir::Value{}, name.str(), bounds,
       /*members=*/llvm::SmallVector<mlir::Value>{},
-      /*membersIndex=*/mlir::ArrayAttr{},
-      static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-          mapFlag),
-      captureKind, copyVal.getType());
+      /*membersIndex=*/mlir::ArrayAttr{}, mapFlag, captureKind,
+      copyVal.getType());
 
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
   mlir::Region &region = targetOp.getRegion();
@@ -114,7 +112,7 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
   mlir::Block *entryBlock = &region.getBlocks().front();
   firOpBuilder.setInsertionPointToStart(entryBlock);
   auto loadOp =
-      firOpBuilder.create<fir::LoadOp>(clonedValArg.getLoc(), clonedValArg);
+      fir::LoadOp::create(firOpBuilder, clonedValArg.getLoc(), clonedValArg);
   return loadOp.getResult();
 }
 
@@ -156,5 +154,109 @@ void cloneOrMapRegionOutsiders(
     valuesDefinedAbove.clear();
     mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
   }
+}
+
+/// Gets or generates a default declare mapper for a given record type.
+///
+/// \param firOpBuilder The builder to use for generating the mapper.
+/// \param loc The location to use for the generated operations.
+/// \param recordType The record type to generate the mapper for.
+/// \param mapperNameStr The name of the mapper to generate.
+/// \param mangler A function to mangle the mapper name for nested types.
+mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
+    fir::FirOpBuilder &firOpBuilder, mlir::Location loc,
+    fir::RecordType recordType, llvm::StringRef mapperNameStr,
+    RecordMemberMapperMangler mangler) {
+  if (mapperNameStr.empty())
+    return {};
+
+  mlir::ModuleOp moduleOp = firOpBuilder.getModule();
+  if (moduleOp.lookupSymbol(mapperNameStr))
+    return mlir::FlatSymbolRefAttr::get(
+        firOpBuilder.getContext(), mapperNameStr);
+
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+
+  firOpBuilder.setInsertionPointToStart(moduleOp.getBody());
+  auto declMapperOp = mlir::omp::DeclareMapperOp::create(
+      firOpBuilder, loc, mapperNameStr, recordType);
+  auto &region = declMapperOp.getRegion();
+  firOpBuilder.createBlock(&region);
+  auto mapperArg = region.addArgument(firOpBuilder.getRefType(recordType), loc);
+
+  auto declareOp = hlfir::DeclareOp::create(firOpBuilder, loc, mapperArg,
+      /*uniq_name=*/"");
+
+  const auto genBoundsOps = [&](mlir::Value mapVal,
+                                llvm::SmallVectorImpl<mlir::Value> &bounds) {
+    fir::ExtendedValue extVal = hlfir::translateToExtendedValue(mapVal.getLoc(),
+        firOpBuilder, hlfir::Entity{mapVal},
+        /*contiguousHint=*/true)
+                                    .first;
+    fir::factory::AddrAndBoundsInfo info = fir::factory::getDataOperandBaseAddr(
+        firOpBuilder, mapVal, /*isOptional=*/false, mapVal.getLoc());
+    bounds = fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+        mlir::omp::MapBoundsType>(firOpBuilder, info, extVal,
+        /*dataExvIsAssumedSize=*/false, mapVal.getLoc());
+  };
+
+  const auto getFieldRef = [&](mlir::Value rec, llvm::StringRef fieldName,
+                               mlir::Type fieldTy, mlir::Type recType) {
+    mlir::Value field = fir::FieldIndexOp::create(firOpBuilder, loc,
+        fir::FieldType::get(recType.getContext()), fieldName, recType,
+        fir::getTypeParams(rec));
+    return fir::CoordinateOp::create(
+        firOpBuilder, loc, firOpBuilder.getRefType(fieldTy), rec, field);
+  };
+
+  llvm::SmallVector<mlir::Value> clauseMapVars;
+  llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
+  llvm::SmallVector<mlir::Value> memberMapOps;
+
+  mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::to |
+      mlir::omp::ClauseMapFlags::from | mlir::omp::ClauseMapFlags::implicit;
+  mlir::omp::VariableCaptureKind captureKind =
+      mlir::omp::VariableCaptureKind::ByRef;
+
+  for (const auto &entry : llvm::enumerate(recordType.getTypeList())) {
+    const auto &memberName = entry.value().first;
+    const auto &memberType = entry.value().second;
+    mlir::FlatSymbolRefAttr mapperId;
+    if (auto recType = mlir::dyn_cast<fir::RecordType>(
+            fir::getFortranElementType(memberType))) {
+      std::string mapperIdName =
+          recType.getName().str() + llvm::omp::OmpDefaultMapperName;
+      mangler(mapperIdName, memberName);
+      mapperId = getOrGenImplicitDefaultDeclareMapper(
+          firOpBuilder, loc, recType, mapperIdName, mangler);
+    }
+
+    auto ref =
+        getFieldRef(declareOp.getBase(), memberName, memberType, recordType);
+    llvm::SmallVector<mlir::Value> bounds;
+    genBoundsOps(ref, bounds);
+    mlir::Value mapOp = Fortran::utils::openmp::createMapInfoOp(firOpBuilder,
+        loc, ref, /*varPtrPtr=*/mlir::Value{}, /*name=*/"", bounds,
+        /*members=*/{},
+        /*membersIndex=*/mlir::ArrayAttr{}, mapFlag, captureKind, ref.getType(),
+        /*partialMap=*/false, mapperId);
+    memberMapOps.emplace_back(mapOp);
+    memberPlacementIndices.emplace_back(
+        llvm::SmallVector<int64_t>{(int64_t)entry.index()});
+  }
+
+  llvm::SmallVector<mlir::Value> bounds;
+  genBoundsOps(declareOp.getOriginalBase(), bounds);
+  mlir::omp::ClauseMapFlags parentMapFlag = mlir::omp::ClauseMapFlags::implicit;
+  mlir::omp::MapInfoOp mapOp = Fortran::utils::openmp::createMapInfoOp(
+      firOpBuilder, loc, declareOp.getOriginalBase(),
+      /*varPtrPtr=*/mlir::Value(), /*name=*/"", bounds, memberMapOps,
+      firOpBuilder.create2DI64ArrayAttr(memberPlacementIndices), parentMapFlag,
+      captureKind, declareOp.getType(0),
+      /*partialMap=*/true);
+
+  clauseMapVars.emplace_back(mapOp);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseMapVars);
+  return mlir::FlatSymbolRefAttr::get(firOpBuilder.getContext(), mapperNameStr);
 }
 } // namespace Fortran::utils::openmp

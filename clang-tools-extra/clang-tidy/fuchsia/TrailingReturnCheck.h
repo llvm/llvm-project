@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_TRAILING_RETURN_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_TRAILING_RETURN_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_TRAILINGRETURNCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_TRAILINGRETURNCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -18,7 +18,7 @@ namespace clang::tidy::fuchsia {
 /// return types.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/trailing-return.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/trailing-return.html
 class TrailingReturnCheck : public ClangTidyCheck {
 public:
   TrailingReturnCheck(StringRef Name, ClangTidyContext *Context)
@@ -32,4 +32,4 @@ public:
 
 } // namespace clang::tidy::fuchsia
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_TRAILING_RETURN_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_TRAILINGRETURNCHECK_H

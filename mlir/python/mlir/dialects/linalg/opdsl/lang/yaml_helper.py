@@ -5,22 +5,25 @@
 
 import sys
 
+
+def multiline_str_representer(dumper, data):
+    if len(data.splitlines()) > 1:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    else:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
+
 try:
-    import yaml
+    from yaml import YAMLObject as _YAMLObject, add_representer
+
+    add_representer(str, multiline_str_representer)
 except ModuleNotFoundError as e:
-    raise ModuleNotFoundError(
-        f"This tool requires PyYAML but it was not installed. "
-        f"Recommend: {sys.executable} -m pip install PyYAML"
-    ) from e
 
-__all__ = [
-    "yaml_dump",
-    "yaml_dump_all",
-    "YAMLObject",
-]
+    class _YAMLObject:
+        pass
 
 
-class YAMLObject(yaml.YAMLObject):
+class YAMLObject(_YAMLObject):
     @classmethod
     def to_yaml(cls, dumper, self):
         """Default to a custom dictionary mapping."""
@@ -33,21 +36,34 @@ class YAMLObject(yaml.YAMLObject):
         return yaml_dump(self)
 
 
-def multiline_str_representer(dumper, data):
-    if len(data.splitlines()) > 1:
-        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
-    else:
-        return dumper.represent_scalar("tag:yaml.org,2002:str", data)
-
-
-yaml.add_representer(str, multiline_str_representer)
-
-
 def yaml_dump(data, sort_keys=False, **kwargs):
-    return yaml.dump(data, sort_keys=sort_keys, **kwargs)
+    try:
+        import yaml
+
+        return yaml.dump(data, sort_keys=sort_keys, **kwargs)
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError(
+            f"This tool requires PyYAML but it was not installed. "
+            f"Recommend: {sys.executable} -m pip install PyYAML"
+        ) from e
 
 
 def yaml_dump_all(data, sort_keys=False, explicit_start=True, **kwargs):
-    return yaml.dump_all(
-        data, sort_keys=sort_keys, explicit_start=explicit_start, **kwargs
-    )
+    try:
+        import yaml
+
+        return yaml.dump_all(
+            data, sort_keys=sort_keys, explicit_start=explicit_start, **kwargs
+        )
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError(
+            f"This tool requires PyYAML but it was not installed. "
+            f"Recommend: {sys.executable} -m pip install PyYAML"
+        ) from e
+
+
+__all__ = [
+    "yaml_dump",
+    "yaml_dump_all",
+    "YAMLObject",
+]

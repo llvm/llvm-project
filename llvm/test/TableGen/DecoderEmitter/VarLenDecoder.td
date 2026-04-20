@@ -1,5 +1,4 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL
-// RUN: llvm-tblgen -gen-disassembler --large-decoder-table -I %p/../../../include %s | FileCheck %s --check-prefixes=CHECK,CHECK-LARGE
+// RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s | FileCheck %s --check-prefixes=CHECK
 
 include "llvm/Target/Target.td"
 
@@ -53,19 +52,16 @@ def FOO32 : MyVarInst<MemOp32> {
 // CHECK-NEXT: 43,
 // CHECK-NEXT: };
 
-// CHECK-SMALL:      /* 0 */       OPC_ExtractField, 3, 5,                // Field = Inst{7-3}
-// CHECK-SMALL-NEXT: /* 3 */       OPC_FilterValueOrSkip, 8, 4, 0,        // if Field != 0x8 skip to 11
-// CHECK-SMALL-NEXT: /* 7 */       OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0, // Opcode: FOO16
-// CHECK-SMALL-NEXT: /* 11 */      OPC_FilterValue, 9,                    // if Field != 0x9 pop scope
-// CHECK-SMALL-NEXT: /* 13 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: FOO32
-// CHECK-SMALL-NEXT: };
-
-// CHECK-LARGE:      /* 0 */       OPC_ExtractField, 3, 5,                // Field = Inst{7-3}
-// CHECK-LARGE-NEXT: /* 3 */       OPC_FilterValueOrSkip, 8, 4, 0, 0,     // if Field != 0x8 skip to 12
-// CHECK-LARGE-NEXT: /* 8 */       OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0, // Opcode: FOO16
-// CHECK-LARGE-NEXT: /* 12 */      OPC_FilterValue, 9,                    // if Field != 0x9 pop scope
-// CHECK-LARGE-NEXT: /* 14 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: FOO32
-// CHECK-LARGE-NEXT: };
+// CHECK-LABEL: static const uint8_t DecoderTable43[15] = {
+// CHECK-NEXT:    OPC_SwitchField, 3, 5,       //  0: switch Inst[7:3] {
+// CHECK-NEXT:    8, 4,                        //  3: case 0x8: {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, //  5:  decode to FOO16 using decoder 0
+// CHECK-NEXT:                                 //  5: }
+// CHECK-NEXT:    9, 0,                        //  9: case 0x9: {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 11:  decode to FOO32 using decoder 1
+// CHECK-NEXT:                                 // 11: }
+// CHECK-NEXT:                                 // 11: } // switch Inst[7:3]
+// CHECK-NEXT:  };
 
 // CHECK:      case 0:
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 8, 3);
@@ -86,7 +82,7 @@ def FOO32 : MyVarInst<MemOp32> {
 // CHECK-NEXT: MI.addOperand(MCOperand::createImm(tmp));
 // CHECK-NEXT: return S;
 
-// CHECK-LABEL: case OPC_ExtractField: {
+// CHECK-LABEL: case OPC_SwitchField: {
 // CHECK: makeUp(insn, Start + Len);
 
 // CHECK-LABEL: case OPC_CheckField: {

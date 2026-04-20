@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangTidyPortabilityModule STATIC
   AvoidPlatformSpecificFundamentalTypesCheck.cpp
   AvoidPragmaOnceCheck.cpp
+  NoAssemblerCheck.cpp
   PortabilityTidyModule.cpp
   RestrictSystemIncludesCheck.cpp
   SIMDIntrinsicsCheck.cpp

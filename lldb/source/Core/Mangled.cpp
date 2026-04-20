@@ -40,7 +40,7 @@ bool Mangled::IsMangledName(llvm::StringRef name) {
   return Mangled::GetManglingScheme(name) != Mangled::eManglingSchemeNone;
 }
 
-Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
+Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
 
@@ -393,10 +393,8 @@ void Mangled::Dump(Stream *s) const {
   if (m_mangled) {
     *s << ", mangled = " << m_mangled;
   }
-  if (m_demangled) {
-    const char *demangled = m_demangled.AsCString();
-    s->Printf(", demangled = %s", demangled[0] ? demangled : "<error>");
-  }
+  if (m_demangled)
+    s->Format(", demangled = {0}", m_demangled.GetStringRef());
 }
 
 // Dumps a debug version of this string with extra object and state information
@@ -428,9 +426,9 @@ lldb::LanguageType Mangled::GuessLanguage() const {
   Language::ForEach([this, &result](Language *l) {
     if (l->SymbolNameFitsToLanguage(*this)) {
       result = l->GetLanguageType();
-      return false;
+      return IterationAction::Stop;
     }
-    return true;
+    return IterationAction::Continue;
   });
   return result;
 }
@@ -566,8 +564,7 @@ ConstString Mangled::GetBaseName() const {
   if (!demangled_name)
     return {};
 
-  const char *name_str = demangled_name.AsCString();
   const auto &range = demangled_info->BasenameRange;
   return ConstString(
-      llvm::StringRef(name_str + range.first, range.second - range.first));
+      demangled_name.GetStringRef().slice(range.first, range.second));
 }

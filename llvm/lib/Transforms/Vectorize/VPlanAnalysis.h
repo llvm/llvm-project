@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Type.h"
 
 namespace llvm {
@@ -24,13 +25,15 @@ class VPWidenRecipe;
 class VPWidenCallRecipe;
 class VPWidenIntOrFpInductionRecipe;
 class VPWidenMemoryRecipe;
-struct VPWidenSelectRecipe;
 class VPReplicateRecipe;
 class VPRecipeBase;
 class VPlan;
 class Value;
 class TargetTransformInfo;
 class Type;
+class InstructionCost;
+
+struct VPCostContext;
 
 /// An analysis for type-inference for VPValues.
 /// It infers the scalar type for a given VPValue by bottom-up traversing
@@ -47,6 +50,7 @@ class VPTypeAnalysis {
   /// count).
   Type *CanonicalIVTy;
   LLVMContext &Ctx;
+  const DataLayout &DL;
 
   Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
   Type *inferScalarTypeForRecipe(const VPInstruction *R);
@@ -54,7 +58,6 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPWidenRecipe *R);
   Type *inferScalarTypeForRecipe(const VPWidenIntOrFpInductionRecipe *R);
   Type *inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPWidenSelectRecipe *R);
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
@@ -81,11 +84,11 @@ struct VPRegisterUsage {
   /// The key is ClassID of target-provided register class.
   SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
 
-  /// Check if any of the tracked live intervals exceeds the number of
-  /// available registers for the target. If non-zero, OverrideMaxNumRegs
+  /// Calculate the estimated cost of any spills due to using more registers
+  /// than the number available for the target. If non-zero, OverrideMaxNumRegs
   /// is used in place of the target's number of registers.
-  bool exceedsMaxNumRegs(const TargetTransformInfo &TTI,
-                         unsigned OverrideMaxNumRegs = 0) const;
+  InstructionCost spillCost(VPCostContext &Ctx,
+                            unsigned OverrideMaxNumRegs = 0) const;
 };
 
 /// Estimate the register usage for \p Plan and vectorization factors in \p VFs

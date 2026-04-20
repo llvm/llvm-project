@@ -82,6 +82,9 @@
 // RUN: --gcc-toolchain=%S/Inputs/aarch64-linux-gnu-tree/gcc-7.5.0 \
 // RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
 
+// RUN: %clang --target=aarch64-unknown-hurd-gnu -rtlib=libgcc \
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
+
 // RUN: %clang --target=aarch64-unknown-haiku -rtlib=libgcc \
 // RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
 

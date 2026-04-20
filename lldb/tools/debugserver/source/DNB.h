@@ -105,6 +105,9 @@ nub_bool_t DNBProcessMemoryDeallocate(nub_process_t pid,
                                       nub_addr_t addr) DNB_EXPORT;
 int DNBProcessMemoryRegionInfo(nub_process_t pid, nub_addr_t addr,
                                DNBRegionInfo *region_info) DNB_EXPORT;
+nub_bool_t DNBProcessGetMemoryTags(nub_process_t pid, nub_addr_t addr,
+                                   nub_size_t size,
+                                   std::vector<uint8_t> &tags) DNB_EXPORT;
 std::string
 DNBProcessGetProfileData(nub_process_t pid,
                          DNBProfileDataScanType scanType) DNB_EXPORT;
@@ -213,13 +216,14 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
 std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
 DNBGetMainBinaryCPUTypes(nub_process_t pid);
 JSONGenerator::ObjectSP
-DNBGetAllLoadedLibrariesInfos(nub_process_t pid, bool report_load_commands);
+DNBGetAllLoadedLibrariesInfos(nub_process_t pid,
+                              DNBBinaryInformationLevel info_level);
 JSONGenerator::ObjectSP
 DNBGetLibrariesInfoForAddresses(nub_process_t pid,
+                                DNBBinaryInformationLevel info_level,
                                 std::vector<uint64_t> &macho_addresses);
 JSONGenerator::ObjectSP DNBGetSharedCacheInfo(nub_process_t pid);
 
-//
 // Breakpoint functions
 nub_bool_t DNBBreakpointSet(nub_process_t pid, nub_addr_t addr, nub_size_t size,
                             nub_bool_t hardware);

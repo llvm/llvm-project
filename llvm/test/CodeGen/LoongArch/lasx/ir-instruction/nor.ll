@@ -74,8 +74,7 @@ define void @nor_u_v32i8(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: nor_u_v32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvrepli.b $xr1, 31
-; CHECK-NEXT:    xvnor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvnori.b $xr0, $xr0, 31
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -132,4 +131,37 @@ entry:
   %v2 = xor <4 x i64> %v1, <i64 -1, i64 -1, i64 -1, i64 -1>
   store <4 x i64> %v2, ptr %res
   ret void
+}
+
+define <16 x i16> @nor_u_v16i16_1(<16 x i16> %a) nounwind {
+; CHECK-LABEL: nor_u_v16i16_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvnori.b $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = or <16 x i16> %a, splat (i16 257)
+  %1 = xor <16 x i16> %0, splat (i16 65535)
+  ret <16 x i16> %1
+}
+
+define <8 x i32> @nor_u_v8i32_1(<8 x i32> %a) nounwind {
+; CHECK-LABEL: nor_u_v8i32_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvnori.b $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = or <8 x i32> %a, splat (i32 16843009)
+  %1 = xor <8 x i32> %0, splat (i32 4294967295)
+  ret <8 x i32> %1
+}
+
+define <4 x i64> @nor_u_v4i64_1(<4 x i64> %a) nounwind {
+; CHECK-LABEL: nor_u_v4i64_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvnori.b $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = or <4 x i64> %a, splat (i64 72340172838076673)
+  %1 = xor <4 x i64> %0, splat (i64 18446744073709551615)
+  ret <4 x i64> %1
 }

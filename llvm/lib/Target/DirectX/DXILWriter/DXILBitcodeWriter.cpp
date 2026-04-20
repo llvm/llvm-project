@@ -1051,6 +1051,12 @@ void DXILBitcodeWriter::writeTypeTable() {
     case Type::MetadataTyID:
       Code = bitc::TYPE_CODE_METADATA;
       break;
+    case Type::ByteTyID:
+      // BYTE: [width]
+      // Note: we downgrade by converting to the equivalent integer.
+      Code = bitc::TYPE_CODE_INTEGER;
+      TypeVals.push_back(T->getByteBitWidth());
+      break;
     case Type::IntegerTyID:
       // INTEGER: [width]
       Code = bitc::TYPE_CODE_INTEGER;
@@ -1165,12 +1171,15 @@ void DXILBitcodeWriter::writeValueSymbolTableForwardDecl() {}
 /// Returns the bit offset to backpatch with the location of the real VST.
 void DXILBitcodeWriter::writeModuleInfo() {
   // Emit various pieces of data attached to a module.
-  if (!M.getTargetTriple().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE,
-                      M.getTargetTriple().str(), 0 /*TODO*/);
-  const std::string &DL = M.getDataLayoutStr();
-  if (!DL.empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
+
+  // We need to hardcode a triple and datalayout that's compatible with the
+  // historical DXIL triple and datalayout from DXC.
+  StringRef Triple = "dxil-ms-dx";
+  StringRef DL = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-"
+                 "f16:16-f32:32-f64:64-n8:16:32:64";
+  writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE, Triple, 0 /*TODO*/);
+  writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
+
   if (!M.getModuleInlineAsm().empty())
     writeStringRecord(Stream, bitc::MODULE_CODE_ASM, M.getModuleInlineAsm(),
                       0 /*TODO*/);
@@ -1507,7 +1516,7 @@ void DXILBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
                                            SmallVectorImpl<uint64_t> &Record,
                                            unsigned Abbrev) {
   Record.push_back(N->isDistinct());
-  Record.push_back(N->getSourceLanguage());
+  Record.push_back(N->getSourceLanguage().getUnversionedName());
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawProducer()));
   Record.push_back(N->isOptimized());
@@ -2011,9 +2020,25 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         }
         Code = bitc::CST_CODE_WIDE_INTEGER;
       }
+    } else if (const ConstantByte *BV = dyn_cast<ConstantByte>(C)) {
+      // Note: we downgrade by converting to the equivalent integer - this logic
+      // should match the `ConstantInt` case above.
+      if (BV->getBitWidth() <= 64) {
+        uint64_t V = BV->getSExtValue();
+        emitSignedInt64(Record, V);
+        Code = bitc::CST_CODE_INTEGER;
+        AbbrevToUse = CONSTANTS_INTEGER_ABBREV;
+      } else { // Wide bytes, > 64 bits in size.
+        unsigned NWords = BV->getValue().getActiveWords();
+        const uint64_t *RawWords = BV->getValue().getRawData();
+        for (unsigned i = 0; i != NWords; ++i) {
+          emitSignedInt64(Record, RawWords[i]);
+        }
+        Code = bitc::CST_CODE_WIDE_INTEGER;
+      }
     } else if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
       Code = bitc::CST_CODE_FLOAT;
-      Type *Ty = CFP->getType();
+      Type *Ty = CFP->getType()->getScalarType();
       if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy()) {
         Record.push_back(CFP->getValueAPF().bitcastToAPInt().getZExtValue());
       } else if (Ty->isX86_FP80Ty()) {
@@ -2062,7 +2087,7 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
                    dyn_cast<ConstantDataSequential>(C)) {
       Code = bitc::CST_CODE_DATA;
       Type *EltTy = CDS->getElementType();
-      if (isa<IntegerType>(EltTy)) {
+      if (isa<IntegerType>(EltTy) || isa<ByteType>(EltTy)) {
         for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(CDS->getElementAsInteger(i));
       } else if (EltTy->isFloatTy()) {
@@ -2332,14 +2357,16 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
         pushValueAndType(I.getOperand(i), InstID, Vals);
     }
   } break;
-  case Instruction::Br: {
+  case Instruction::UncondBr:
     Code = bitc::FUNC_CODE_INST_BR;
-    const BranchInst &II = cast<BranchInst>(I);
+    Vals.push_back(VE.getValueID(cast<UncondBrInst>(I).getSuccessor()));
+    break;
+  case Instruction::CondBr: {
+    Code = bitc::FUNC_CODE_INST_BR;
+    const CondBrInst &II = cast<CondBrInst>(I);
     Vals.push_back(VE.getValueID(II.getSuccessor(0)));
-    if (II.isConditional()) {
-      Vals.push_back(VE.getValueID(II.getSuccessor(1)));
-      pushValue(II.getCondition(), InstID, Vals);
-    }
+    Vals.push_back(VE.getValueID(II.getSuccessor(1)));
+    pushValue(II.getCondition(), InstID, Vals);
   } break;
   case Instruction::Switch: {
     Code = bitc::FUNC_CODE_INST_SWITCH;

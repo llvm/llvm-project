@@ -148,6 +148,11 @@ TargetStats::ToJSON(Target &target,
     target_metrics_json.try_emplace("targetCreateTime",
                                     m_create_time.get().count());
 
+    if (m_load_core_time.get().count() > 0) {
+      target_metrics_json.try_emplace("loadCoreTime",
+                                      m_load_core_time.get().count());
+    }
+
     json::Array breakpoints_array;
     double totalBreakpointResolveTime = 0.0;
     // Report both the normal breakpoint list and the internal breakpoint list.
@@ -202,6 +207,10 @@ TargetStats::ToJSON(Target &target,
     if (process_sp->GetDynamicLoader())
       dyld_plugin_name = process_sp->GetDynamicLoader()->GetPluginName();
     target_metrics_json.try_emplace("dyldPluginName", dyld_plugin_name);
+
+    if (process_sp->GetCoreFile())
+      target_metrics_json.try_emplace("coreFile",
+                                      process_sp->GetCoreFile().GetFilename());
   }
   target_metrics_json.try_emplace("sourceMapDeduceCount",
                                   m_source_map_deduce_count);

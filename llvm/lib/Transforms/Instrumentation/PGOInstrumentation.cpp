@@ -222,7 +222,6 @@ cl::opt<bool> NoPGOWarnMismatchComdatWeak(
     cl::desc("The option is used to turn on/off "
              "warnings about hash mismatch for comdat "
              "or weak functions."));
-} // namespace llvm
 
 // Command line option to enable/disable select instruction instrumentation.
 static cl::opt<bool>
@@ -347,7 +346,6 @@ cl::list<std::string> CtxPGOSkipCallsiteInstrument(
 
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
-namespace llvm {
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
 extern cl::opt<PGOViewCountsType> PGOViewCounts;
@@ -409,8 +407,8 @@ public:
 // Return a string describing the branch condition that can be
 // used in static branch probability heuristics:
 static std::string getBranchCondString(Instruction *TI) {
-  BranchInst *BI = dyn_cast<BranchInst>(TI);
-  if (!BI || !BI->isConditional())
+  CondBrInst *BI = dyn_cast<CondBrInst>(TI);
+  if (!BI)
     return std::string();
 
   Value *Cond = BI->getCondition();
@@ -458,7 +456,7 @@ createIRLevelProfileFlagVar(Module &M,
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
   if (PGOInstrumentLoopEntries)
     ProfileVersion |= VARIANT_MASK_INSTR_LOOP_ENTRIES;
-  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
   if (PGOFunctionEntryCoverage)
     ProfileVersion |=
@@ -471,9 +469,6 @@ createIRLevelProfileFlagVar(Module &M,
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
   IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
-  if (isGPUProfTarget(M))
-    IRLevelVersionVariable->setVisibility(
-        llvm::GlobalValue::ProtectedVisibility);
 
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
@@ -736,7 +731,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   FunctionHash = (((uint64_t)JCH.getCRC()) << 28) + JC.getCRC();
 
   // Reserve bit 60-63 for other information purpose.
-  FunctionHash &= 0x0FFFFFFFFFFFFFFF;
+  FunctionHash &= NamedInstrProfRecord::FUNC_HASH_MASK;
   if (IsCS)
     NamedInstrProfRecord::setCSFlagInHash(FunctionHash);
   LLVM_DEBUG(dbgs() << "Function Hash Computation for " << F.getName() << ":\n"
@@ -1694,7 +1689,7 @@ void PGOUseFunc::setBranchWeights() {
     Instruction *TI = BB.getTerminator();
     if (TI->getNumSuccessors() < 2)
       continue;
-    if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
+    if (!(isa<CondBrInst>(TI) || isa<SwitchInst>(TI) ||
           isa<IndirectBrInst>(TI) || isa<InvokeInst>(TI) ||
           isa<CallBrInst>(TI)))
       continue;
@@ -1959,7 +1954,7 @@ static bool InstrumentAllFunctions(
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
     function_ref<LoopInfo *(Function &)> LookupLI,
     PGOInstrumentationType InstrumentationType) {
-  // For the context-sensitve instrumentation, we should have a separated pass
+  // For the context-sensitive instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
   if (InstrumentationType == PGOInstrumentationType::FDO)
     createIRLevelProfileFlagVar(M, InstrumentationType);
@@ -2250,7 +2245,7 @@ static bool annotateAllFunctions(
       Func.populateCoverage();
       continue;
     }
-    // When PseudoKind is set to a vaule other than InstrProfRecord::NotPseudo,
+    // When PseudoKind is set to a value other than InstrProfRecord::NotPseudo,
     // it means the profile for the function is unrepresentative and this
     // function is actually hot / warm. We will reset the function hot / cold
     // attribute and drop all the profile counters.

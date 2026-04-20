@@ -57,7 +57,7 @@ using LIBC_NAMESPACE::cpp::span;
     RunTest(*freelist_heap, freelist_heap->region().size());                   \
   }                                                                            \
   void LlvmLibcFreeListHeapTest##TestCase::RunTest(FreeListHeap &allocator,    \
-                                                   size_t N)
+                                                   [[maybe_unused]] size_t N)
 
 TEST_FOR_EACH_ALLOCATOR(CanAllocate, 2048) {
   constexpr size_t ALLOC_SIZE = 512;
@@ -123,12 +123,12 @@ TEST_FOR_EACH_ALLOCATOR(ReturnedPointersAreAligned, 2048) {
   void *ptr1 = allocator.allocate(1);
 
   uintptr_t ptr1_start = reinterpret_cast<uintptr_t>(ptr1);
-  EXPECT_EQ(ptr1_start % alignof(max_align_t), static_cast<size_t>(0));
+  EXPECT_EQ(ptr1_start % Block::MIN_ALIGN, static_cast<size_t>(0));
 
   void *ptr2 = allocator.allocate(1);
   uintptr_t ptr2_start = reinterpret_cast<uintptr_t>(ptr2);
 
-  EXPECT_EQ(ptr2_start % alignof(max_align_t), static_cast<size_t>(0));
+  EXPECT_EQ(ptr2_start % Block::MIN_ALIGN, static_cast<size_t>(0));
 }
 
 TEST_FOR_EACH_ALLOCATOR(CanRealloc, 2048) {

@@ -7,7 +7,7 @@ function f1() result(x)
 
   integer, parameter :: x2 = 1
   integer :: x3
-  !ERROR: A named constant 'x2' may not appear in a COMMON block
+  !ERROR: Named constant 'x2' may not appear in COMMON block /blk/
   common /blk/ x2, x3
 
 end

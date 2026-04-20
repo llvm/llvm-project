@@ -33,6 +33,7 @@ enum EditingFlags {
   blankZero = 1, // BLANK=ZERO or BZ edit
   decimalComma = 2, // DECIMAL=COMMA or DC edit
   signPlus = 4, // SIGN=PLUS or SP edit
+  leadingZeroSuppress = 8, // LZS edit; clear for LZ & LZP
 };
 
 struct MutableModes {
@@ -44,7 +45,7 @@ struct MutableModes {
     return editingFlags & decimalComma ? char32_t{','} : char32_t{'.'};
   }
 
-  std::uint8_t editingFlags{0}; // BN, DP, SS
+  std::uint8_t editingFlags{0}; // BN, DP, SS, LZS
   enum decimal::FortranRounding round{
       executionEnvironment
           .defaultOutputRoundingMode}; // RP/ROUND='PROCESSOR_DEFAULT'
@@ -86,12 +87,11 @@ struct DataEdit {
   // defined I/O data edit descriptor
   RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr std::size_t maxIoTypeChars{32};
-  static constexpr std::size_t maxVListEntries{4};
+  static constexpr std::size_t maxVListEntries{16};
   RT_OFFLOAD_VAR_GROUP_END
   std::uint8_t ioTypeChars{0};
   std::uint8_t vListEntries{0};
   char ioType[maxIoTypeChars];
-  int vList[maxVListEntries];
 };
 
 // Generates a sequence of DataEdits from a FORMAT statement or

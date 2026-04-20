@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/shared/vstore.h>
-#include <clc/shared/clc_vstore.h>
+#include "clc/shared/clc_vstore.h"
 
 #define __CLC_BODY "vstore.inc"
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"
 
 #define __CLC_BODY "vstore.inc"
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

@@ -1793,9 +1793,7 @@ define <2 x i1> @masked_icmps_bmask_notmixed_or_vec(<2 x i8> %A) {
 define <2 x i1> @masked_icmps_bmask_notmixed_or_vec_poison1(<2 x i8> %A) {
 ; CHECK-LABEL: @masked_icmps_bmask_notmixed_or_vec_poison1(
 ; CHECK-NEXT:    [[MASK1:%.*]] = and <2 x i8> [[A:%.*]], splat (i8 15)
-; CHECK-NEXT:    [[TST1:%.*]] = icmp eq <2 x i8> [[MASK1]], <i8 3, i8 poison>
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq <2 x i8> [[A]], splat (i8 -13)
-; CHECK-NEXT:    [[RES:%.*]] = or <2 x i1> [[TST1]], [[TST2]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8> [[MASK1]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %mask1 = and <2 x i8> %A, <i8 15, i8 15> ; 0x0f

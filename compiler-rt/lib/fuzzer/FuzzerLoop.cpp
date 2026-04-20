@@ -448,9 +448,9 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
   if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
       secondsSinceProcessStartUp() >= 2)
     PrintStats("pulse ");
-  auto Threshhold =
+  auto Threshold =
       static_cast<long>(static_cast<double>(TimeOfLongestUnitInSeconds) * 1.1);
-  if (TimeOfUnit > Threshhold && TimeOfUnit >= Options.ReportSlowUnits) {
+  if (TimeOfUnit > Threshold && TimeOfUnit >= Options.ReportSlowUnits) {
     TimeOfLongestUnitInSeconds = TimeOfUnit;
     Printf("Slowest unit: %ld s:\n", TimeOfLongestUnitInSeconds);
     WriteUnitToFileWithPrefix({Data, Data + Size}, "slow-unit-");
@@ -666,7 +666,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
 }
 
 void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
-  II->NumSuccessfullMutations++;
+  II->NumSuccessfulMutations++;
   MD.RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U, II->Reduced ? "REDUCE" : "NEW   ");
   WriteToOutputCorpus(U);

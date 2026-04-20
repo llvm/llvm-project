@@ -2,6 +2,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.arpa_inet
     libc.include.assert
     libc.include.complex
+    libc.include.cpio
     libc.include.ctype
     libc.include.dirent
     libc.include.dlfcn
@@ -18,6 +19,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.locale
     libc.include.malloc
     libc.include.math
+    libc.include.netinet_in
     libc.include.poll
     libc.include.pthread
     libc.include.sched
@@ -50,6 +52,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_types
     libc.include.sys_utsname
     libc.include.sys_wait
+    libc.include.syscall
     libc.include.sysexits
     libc.include.termios
     libc.include.threads

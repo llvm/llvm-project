@@ -52,7 +52,6 @@
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Pass.h"
 #include <set>
 
 namespace polly {
@@ -62,13 +61,12 @@ using llvm::AnalysisInfoMixin;
 using llvm::AnalysisKey;
 using llvm::AnalysisUsage;
 using llvm::BatchAAResults;
-using llvm::BranchInst;
 using llvm::CallInst;
+using llvm::CondBrInst;
 using llvm::DenseMap;
 using llvm::DominatorTree;
 using llvm::Function;
 using llvm::FunctionAnalysisManager;
-using llvm::FunctionPass;
 using llvm::IntrinsicInst;
 using llvm::LoopInfo;
 using llvm::Module;
@@ -403,6 +401,10 @@ private:
   /// @param Context The context of scop detection.
   bool isValidMemoryAccess(MemAccInst Inst, DetectionContext &Context) const;
 
+  /// Filter out types that we do not support.
+  bool isCompatibleType(Instruction *Inst, llvm::Type *Ty,
+                        DetectionContext &Context);
+
   /// Check if an instruction can be part of a Scop.
   ///
   /// @param Inst The instruction to check.
@@ -426,7 +428,7 @@ private:
   /// @param Condition    The branch condition.
   /// @param IsLoopBranch Flag to indicate the branch is a loop exit/latch.
   /// @param Context      The context of scop detection.
-  bool isValidBranch(BasicBlock &BB, BranchInst *BI, Value *Condition,
+  bool isValidBranch(BasicBlock &BB, CondBrInst *BI, Value *Condition,
                      bool IsLoopBranch, DetectionContext &Context);
 
   /// Check if the SCEV @p S is affine in the current @p Context.
@@ -631,31 +633,6 @@ struct ScopAnalysisPrinterPass final : PassInfoMixin<ScopAnalysisPrinterPass> {
 
   raw_ostream &OS;
 };
-
-class ScopDetectionWrapperPass final : public FunctionPass {
-  std::unique_ptr<ScopDetection> Result;
-
-public:
-  ScopDetectionWrapperPass();
-
-  /// @name FunctionPass interface
-  ///@{
-  static char ID;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void releaseMemory() override;
-  bool runOnFunction(Function &F) override;
-  void print(raw_ostream &OS, const Module *M = nullptr) const override;
-  ///@}
-
-  ScopDetection &getSD() const { return *Result; }
-};
-
-llvm::Pass *createScopDetectionPrinterLegacyPass(llvm::raw_ostream &OS);
 } // namespace polly
-
-namespace llvm {
-void initializeScopDetectionWrapperPassPass(llvm::PassRegistry &);
-void initializeScopDetectionPrinterLegacyPassPass(llvm::PassRegistry &);
-} // namespace llvm
 
 #endif // POLLY_SCOPDETECTION_H

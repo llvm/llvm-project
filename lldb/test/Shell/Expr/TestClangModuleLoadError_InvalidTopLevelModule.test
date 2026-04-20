@@ -1,0 +1,59 @@
+## Tests the case where a module fails to load. We force this by
+## replacing the contents of the 'module foo' declaration with garbage.
+#
+# REQUIRES: system-darwin
+#
+# RUN: split-file %s %t/sources
+# RUN: %clang_host -g %t/sources/main.m -fmodules -fcxx-modules \
+# RUN:             -fmodule-map-file=%t/sources/module.modulemap \
+# RUN:             -fmodules-cache-path=%t/ModuleCache -o %t.out
+# RUN: sed -i '' -e 's/foo\.h/baz\.h/' %t/sources/module.modulemap
+# RUN: sed -i '' -e 's/bar\.h/qux\.h/' %t/sources/module.modulemap
+#
+# RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/sources/commands.input %t.out -o exit 2>&1 | FileCheck %s --check-prefix=NO_LOG
+#
+# RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/sources/commands-with-log.input %t.out -o exit 2>&1 | FileCheck %s --check-prefix=LOG
+
+#--- main.m
+@import foo;
+@import bar;
+
+int main() { __builtin_debugtrap(); }
+
+#--- foo.h
+struct foo {};
+
+#--- bar.h
+struct bar {};
+
+#--- module.modulemap
+module foo {
+    header "foo.h"
+    export *
+}
+
+module bar {
+    header "bar.h"
+    export *
+}
+
+#--- commands.input
+run
+## Make sure expression fails so the 'note' diagnostics get printed.
+expr blah
+
+# NO_LOG-NOT: couldn't load top-level module foo
+# NO_LOG-NOT: error: header
+
+#--- commands-with-log.input
+log enable lldb expr
+run
+## Make sure expression fails so the 'note' diagnostics get printed.
+expr blah
+
+# LOG: couldn't load top-level module foo
+# LOG: error: header 'baz.h'
+# LOG: couldn't load top-level module bar
+# LOG: error: header 'qux.h'

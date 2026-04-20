@@ -436,8 +436,8 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
 
   const BasicBlock *LLVM_BB = BB.getBasicBlock();
   MachineBasicBlock *loopMBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *loop1MBB;
-  MachineBasicBlock *loop2MBB;
+  MachineBasicBlock *loop1MBB = nullptr;
+  MachineBasicBlock *loop2MBB = nullptr;
   if (NoMovnInstr) {
     loop1MBB = MF->CreateMachineBasicBlock(LLVM_BB);
     loop2MBB = MF->CreateMachineBasicBlock(LLVM_BB);
@@ -463,12 +463,12 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   } else {
     loopMBB->addSuccessor(sinkMBB);
     loopMBB->addSuccessor(loopMBB);
+    loopMBB->normalizeSuccProbs();
   }
-  loopMBB->normalizeSuccProbs();
   if (NoMovnInstr) {
     loop1MBB->addSuccessor(loop2MBB);
     loop2MBB->addSuccessor(loopMBB);
-    loop2MBB->addSuccessor(exitMBB, BranchProbability::getOne());
+    loop2MBB->addSuccessor(sinkMBB);
   }
 
   BuildMI(loopMBB, DL, TII->get(LL), OldVal).addReg(Ptr).addImm(0);
@@ -599,7 +599,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
           .addReg(Scratch4)
           .addReg(Mips::ZERO)
           .addMBB(loop1MBB);
-      BuildMI(loopMBB, DL, TII->get(Mips::B)).addMBB(loop2MBB);
+      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
     }
 
     //  and BinOpRes, BinOpRes, Mask
@@ -691,7 +691,8 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
 
   LivePhysRegs LiveRegs;
   computeAndAddLiveIns(LiveRegs, *loopMBB);
-  if (NoMovnInstr) {
+  if (loop1MBB) {
+    assert(loop2MBB && "should have 2 loop blocks");
     computeAndAddLiveIns(LiveRegs, *loop1MBB);
     computeAndAddLiveIns(LiveRegs, *loop2MBB);
   }
@@ -844,8 +845,8 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   bool NoMovnInstr = (IsMin || IsMax) && !STI->hasMips4() && !STI->hasMips32();
   const BasicBlock *LLVM_BB = BB.getBasicBlock();
   MachineBasicBlock *loopMBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *loop1MBB;
-  MachineBasicBlock *loop2MBB;
+  MachineBasicBlock *loop1MBB = nullptr;
+  MachineBasicBlock *loop2MBB = nullptr;
   if (NoMovnInstr) {
     loop1MBB = MF->CreateMachineBasicBlock(LLVM_BB);
     loop2MBB = MF->CreateMachineBasicBlock(LLVM_BB);
@@ -874,13 +875,40 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   if (NoMovnInstr) {
     loop1MBB->addSuccessor(loop2MBB);
     loop2MBB->addSuccessor(loopMBB);
-    loop2MBB->addSuccessor(exitMBB, BranchProbability::getOne());
+    loop2MBB->addSuccessor(exitMBB);
   }
 
   BuildMI(loopMBB, DL, TII->get(LL), OldVal).addReg(Ptr).addImm(0);
   assert((OldVal != Ptr) && "Clobbered the wrong ptr reg!");
   assert((OldVal != Incr) && "Clobbered the wrong reg!");
   if (IsMin || IsMax) {
+    // Remove trailing kill/dead register operands added by
+    // MachineInstr::addRegisterKilled. These are super-register markers that
+    // must correspond to one of the physical registers in operands 1-4.
+    // The kill/dead markers may also appear on preceding subregs.
+    const TargetRegisterInfo *TRI = STI->getRegisterInfo();
+    while (I->getNumOperands() > 5) {
+      auto &Op = I->getOperand(I->getNumOperands() - 1);
+      // Check if this register overlaps with any physical register in
+      // operands 1-4 that has kill/dead marker (i.e., it's a super-register
+      // marker for subregs).
+      bool HasOverlapWithKill = false;
+      for (unsigned i = 1; i <= 4; ++i) {
+        auto &RefOp = I->getOperand(i);
+        if (RefOp.isReg() && RefOp.getReg().isPhysical() &&
+            TRI->regsOverlap(Op.getReg(), RefOp.getReg()) &&
+            (RefOp.isKill() || RefOp.isDead())) {
+          HasOverlapWithKill = true;
+          break;
+        }
+      }
+      // Remove if HasOverlapWithKill is true or Op has kill/dead marker.
+      bool HasKillOrDead = Op.isReg() && Op.getReg().isPhysical() &&
+                           (Op.isKill() || Op.isDead());
+      if (!HasOverlapWithKill && !HasKillOrDead)
+        break;
+      I->removeOperand(I->getNumOperands() - 1);
+    }
 
     assert(I->getNumOperands() == 5 &&
            "Atomics min|max|umin|umax use an additional register");
@@ -961,7 +989,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
           .addReg(Scratch2_32)
           .addReg(ZERO)
           .addMBB(loop1MBB);
-      BuildMI(loopMBB, DL, TII->get(Mips::B)).addMBB(loop2MBB);
+      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
     }
 
   } else if (Opcode) {
@@ -1002,7 +1030,8 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
 
   LivePhysRegs LiveRegs;
   computeAndAddLiveIns(LiveRegs, *loopMBB);
-  if (!STI->hasMips4() && !STI->hasMips32()) {
+  if (loop1MBB) {
+    assert(loop2MBB && "should have 2 loop blocks");
     computeAndAddLiveIns(LiveRegs, *loop1MBB);
     computeAndAddLiveIns(LiveRegs, *loop2MBB);
   }

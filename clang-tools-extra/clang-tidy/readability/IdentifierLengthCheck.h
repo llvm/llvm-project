@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// Warns about identifiers names whose length is too short.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/identifier-length.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/identifier-length.html
 class IdentifierLengthCheck : public ClangTidyCheck {
 public:
   IdentifierLengthCheck(StringRef Name, ClangTidyContext *Context);

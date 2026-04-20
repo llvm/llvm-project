@@ -56,9 +56,9 @@ define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_many_svepred_arg(<
 ; CHECK: name: caller_with_many_svepred_arg
 ; CHECK: stack:
 ; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 2, alignment: 2,
-; CHECK-NEXT:     stack-id: scalable-vector
+; CHECK-NEXT:     stack-id: scalable-predicate-vector
 ; CHECK:      - { id: 1, name: '', type: default, offset: 0, size: 2, alignment: 2,
-; CHECK-NEXT:     stack-id: scalable-vector
+; CHECK-NEXT:     stack-id: scalable-predicate-vector
 ; CHECK-DAG: STR_PXI %{{[0-9]+}}, %stack.0, 0
 ; CHECK-DAG: STR_PXI %{{[0-9]+}}, %stack.1, 0
 ; CHECK-DAG: [[BASE1:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0
@@ -90,7 +90,7 @@ define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_svepred_arg_1xv16i
 ; CHECK: name: caller_with_svepred_arg_1xv16i1_4xv16i1
 ; CHECK: stack:
 ; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 2, alignment: 2,
-; CHECK-NEXT:     stack-id: scalable-vector,
+; CHECK-NEXT:     stack-id: scalable-predicate-vector,
 ; CHECK:    [[PRED0:%[0-9]+]]:ppr = COPY $p0
 ; CHECK:    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
 ; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
@@ -139,7 +139,7 @@ define [4 x <vscale x 16 x i1>] @caller_with_svepred_arg_4xv16i1_4xv16i1([4 x <v
 ; CHECK: name: caller_with_svepred_arg_4xv16i1_4xv16i1
 ; CHECK: stack:
 ; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 2,
-; CHECK-NEXT:     stack-id: scalable-vector,
+; CHECK-NEXT:     stack-id: scalable-predicate-vector,
 ; CHECK:    [[PRED3:%[0-9]+]]:ppr = COPY $p3
 ; CHECK:    [[PRED2:%[0-9]+]]:ppr = COPY $p2
 ; CHECK:    [[PRED1:%[0-9]+]]:ppr = COPY $p1
@@ -200,7 +200,7 @@ define [2 x <vscale x 32 x i1>] @caller_with_svepred_arg_2xv32i1_1xv16i1([2 x <v
 ; CHECK: name: caller_with_svepred_arg_2xv32i1_1xv16i1
 ; CHECK: stack:
 ; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 2,
-; CHECK-NEXT:     stack-id: scalable-vector,
+; CHECK-NEXT:     stack-id: scalable-predicate-vector,
 ; CHECK:    [[PRED3:%[0-9]+]]:ppr = COPY $p3
 ; CHECK:    [[PRED2:%[0-9]+]]:ppr = COPY $p2
 ; CHECK:    [[PRED1:%[0-9]+]]:ppr = COPY $p1

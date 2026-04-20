@@ -133,16 +133,18 @@ TEST(Remarks, LinkingGoodBitstream) {
         "...\n",
         remarks::Format::Bitstream,
         "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=12 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=2/>\n"
+        "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
-        "  <String table codeid=3 abbrevid=6/> blob data = "
-        "'inline\\x00NoDefinition\\x00foo\\x00file.c\\x00'\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=4 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=1 op2=0 op3=2/>\n"
         "  <Remark debug location codeid=6 abbrevid=5 op0=3 op1=3 op2=12/>\n"
-        "</Remark>\n");
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=10 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
+        "'inline\\x00NoDefinition\\x00foo\\x00file.c\\x00'\n"
+        "</Meta>\n");
 
   // Check that we keep remarks without debug info.
   check(remarks::Format::YAML,
@@ -153,15 +155,17 @@ TEST(Remarks, LinkingGoodBitstream) {
         "...\n",
         remarks::Format::Bitstream,
         "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=10 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=2/>\n"
+        "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
-        "  <String table codeid=3 abbrevid=6/> blob data = "
-        "'inline\\x00NoDefinition\\x00foo\\x00'\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=1 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=1 op2=0 op3=2/>\n"
-        "</Remark>\n");
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=8 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
+        "'inline\\x00NoDefinition\\x00foo\\x00'\n"
+        "</Meta>\n");
 
   // Check that we deduplicate remarks.
   check(remarks::Format::YAML,
@@ -179,16 +183,18 @@ TEST(Remarks, LinkingGoodBitstream) {
         "...\n",
         remarks::Format::Bitstream,
         "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=12 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=2/>\n"
+        "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
-        "  <String table codeid=3 abbrevid=6/> blob data = "
-        "'inline\\x00NoDefinition\\x00foo\\x00file.c\\x00'\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=4 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=1 op2=0 op3=2/>\n"
         "  <Remark debug location codeid=6 abbrevid=5 op0=3 op1=3 op2=12/>\n"
-        "</Remark>\n");
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=10 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
+        "'inline\\x00NoDefinition\\x00foo\\x00file.c\\x00'\n"
+        "</Meta>\n");
 }
 
 TEST(Remarks, LinkingGoodStrTab) {
@@ -209,11 +215,9 @@ TEST(Remarks, LinkingGoodStrTab) {
         "...\n",
         remarks::Format::Bitstream,
         "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=13 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=2/>\n"
+        "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
-        "  <String table codeid=3 abbrevid=6/> blob data = "
-        "'inline\\x00NoDefinition\\x00foo\\x00file.c\\x00Ok\\x00'\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=4 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=1 op1=4 op2=0 op3=2/>\n"
@@ -222,7 +226,11 @@ TEST(Remarks, LinkingGoodStrTab) {
         "<Remark BlockID=9 NumWords=4 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=1 op2=0 op3=2/>\n"
         "  <Remark debug location codeid=6 abbrevid=5 op0=3 op1=3 op2=12/>\n"
-        "</Remark>\n");
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=11 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
+        "'inline\\x00NoDefinition\\x00foo\\x00file.c\\x00Ok\\x00'\n"
+        "</Meta>\n");
 }
 
 // Check that we propagate parsing errors.

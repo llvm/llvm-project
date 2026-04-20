@@ -617,14 +617,11 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       [](const JITDylibSearchOrder &SO) { return SO; });
   StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
   bool dlupdate = false;
-  const Triple &TT = ES.getTargetTriple();
-  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatELF()) {
-    if (InitializedDylib.contains(&JD)) {
-      WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
-      dlupdate = true;
-    } else
-      InitializedDylib.insert(&JD);
-  }
+  if (InitializedDylib.contains(&JD)) {
+    WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
+    dlupdate = true;
+  } else
+    InitializedDylib.insert(&JD);
 
   if (auto WrapperAddr =
           ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
@@ -831,9 +828,10 @@ Error LLJITBuilderState::prepareForConstruction() {
       if (!JTMB->getCodeModel())
         JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
-      CreateObjectLinkingLayer =
-          [](ExecutionSession &ES) -> Expected<std::unique_ptr<ObjectLayer>> {
-        return std::make_unique<ObjectLinkingLayer>(ES);
+      CreateObjectLinkingLayer = [](ExecutionSession &ES,
+                                    jitlink::JITLinkMemoryManager &MemMgr)
+          -> Expected<std::unique_ptr<ObjectLayer>> {
+        return std::make_unique<ObjectLinkingLayer>(ES, MemMgr);
       };
     }
   }
@@ -846,7 +844,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       auto &JD =
           J.getExecutionSession().createBareJITDylib("<Process Symbols>");
       auto G = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          J.getExecutionSession());
+          J.getExecutionSession(), J.getDylibMgr());
       if (!G)
         return G.takeError();
       JD.addGenerator(std::move(*G));
@@ -876,7 +874,7 @@ Expected<JITDylib &> LLJIT::createJITDylib(std::string Name) {
 }
 
 Expected<JITDylib &> LLJIT::loadPlatformDynamicLibrary(const char *Path) {
-  auto G = EPCDynamicLibrarySearchGenerator::Load(*ES, Path);
+  auto G = EPCDynamicLibrarySearchGenerator::Load(*ES, *DylibMgr, Path);
   if (!G)
     return G.takeError();
 
@@ -946,11 +944,12 @@ Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
 }
 
 Expected<std::unique_ptr<ObjectLayer>>
-LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
+LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
+                                jitlink::JITLinkMemoryManager &MemMgr) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer)
-    return S.CreateObjectLinkingLayer(ES);
+    return S.CreateObjectLinkingLayer(ES, MemMgr);
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
@@ -1015,7 +1014,15 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
   }
 
-  auto ObjLayer = createObjectLinkingLayer(S, *ES);
+  if (auto DM = ES->getExecutorProcessControl().createDefaultDylibMgr())
+    DylibMgr = std::move(*DM);
+  else {
+    Err = DM.takeError();
+    return;
+  }
+
+  auto ObjLayer = createObjectLinkingLayer(
+      S, *ES, ES->getExecutorProcessControl().getMemMgr());
   if (!ObjLayer) {
     Err = ObjLayer.takeError();
     return;

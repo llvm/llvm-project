@@ -51,12 +51,13 @@ protected:
 /// TypeConverter, but otherwise don't care what type conversions are happening.
 void populateSCFStructuralTypeConversionsAndLegality(
     const TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target);
+    ConversionTarget &target, PatternBenefit benefit = 1);
 
 /// Similar to `populateSCFStructuralTypeConversionsAndLegality` but does not
 /// populate the conversion target.
 void populateSCFStructuralTypeConversions(const TypeConverter &typeConverter,
-                                          RewritePatternSet &patterns);
+                                          RewritePatternSet &patterns,
+                                          PatternBenefit benefit = 1);
 
 /// Updates the ConversionTarget with dynamic legality of SCF operations based
 /// on the provided type converter.

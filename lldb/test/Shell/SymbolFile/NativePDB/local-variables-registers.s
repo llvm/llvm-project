@@ -578,12 +578,12 @@ main:                                   # @main
 # CHECK:      (lldb) image lookup -a 0x14000104e -v
 # CHECK:          LineEntry: [0x000000014000104e-0x0000000140001050): C:\src\test\a.cpp:1004
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "simple_type1", type = "int64_t", valid ranges = <block>, location = [0x000000014000104e, 0x000000014000104f) -> DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "simple_type1", type = "long long", valid ranges = <block>, location = [0x000000014000104e, 0x000000014000104f) -> DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_reg24 XMM7, DW_OP_piece 0x4
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x14000104f -v
 # CHECK:          LineEntry: [0x000000014000104e-0x0000000140001050): C:\src\test\a.cpp:1004
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "simple_type1", type = "int64_t", valid ranges = <block>, location = [0x000000014000104f, 0x0000000140001050) -> DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_piece 0x4
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "simple_type1", type = "long long", valid ranges = <block>, location = [0x000000014000104f, 0x0000000140001050) -> DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_piece 0x4
 # CHECK-EMPTY:
 
 .Ltmp26:

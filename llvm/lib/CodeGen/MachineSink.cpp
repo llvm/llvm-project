@@ -293,9 +293,7 @@ class MachineSinkingLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  MachineSinkingLegacy() : MachineFunctionPass(ID) {
-    initializeMachineSinkingLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineSinkingLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -309,8 +307,10 @@ public:
     AU.addPreserved<MachineCycleInfoWrapperPass>();
     AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    if (UseBlockFreqInfo)
+    if (UseBlockFreqInfo) {
       AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+    }
     AU.addRequired<TargetPassConfig>();
   }
 };
@@ -504,6 +504,13 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
         if (!RC->contains(DstReg))
           return false;
       } else if (UseInst.mayLoadOrStore()) {
+        // If the destination instruction contains more than one use of the
+        // register, we won't be able to remove the original instruction, so
+        // don't sink.
+        if (llvm::count_if(UseInst.operands(), [Reg](const MachineOperand &MO) {
+              return MO.isReg() && MO.getReg() == Reg;
+            }) > 1)
+          return false;
         ExtAddrMode AM;
         if (!TII->canFoldIntoAddrMode(UseInst, Reg, MI, AM))
           return false;
@@ -569,7 +576,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       // Sink a copy of the instruction, replacing a COPY instruction.
       MachineBasicBlock::iterator InsertPt = SinkDst->getIterator();
       Register DstReg = SinkDst->getOperand(0).getReg();
-      TII->reMaterialize(*SinkDst->getParent(), InsertPt, DstReg, 0, MI, *TRI);
+      TII->reMaterialize(*SinkDst->getParent(), InsertPt, DstReg, 0, MI);
       New = &*std::prev(InsertPt);
       if (!New->getDebugLoc())
         New->setDebugLoc(SinkDst->getDebugLoc());
@@ -781,6 +788,8 @@ MachineSinkingPass::run(MachineFunction &MF,
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineCycleAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
+  if (UseBlockFreqInfo)
+    PA.preserve<MachineBlockFrequencyAnalysis>();
   return PA;
 }
 
@@ -1209,7 +1218,7 @@ MachineSinking::getBBRegisterPressure(const MachineBasicBlock &MBB,
                                          MIE = MBB.instr_begin();
        MII != MIE; --MII) {
     const MachineInstr &MI = *std::prev(MII);
-    if (MI.isDebugInstr() || MI.isPseudoProbe())
+    if (MI.isDebugOrPseudoInstr())
       continue;
     RegisterOperands RegOpers;
     RegOpers.collect(MI, *TRI, *MRI, false, false);
@@ -2187,11 +2196,9 @@ static void clearKillFlags(MachineInstr *MI, MachineBasicBlock &CurBB,
 static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
                          const SmallVectorImpl<unsigned> &UsedOpsInCopy,
                          const SmallVectorImpl<Register> &DefedRegsInCopy) {
-  MachineFunction &MF = *SuccBB->getParent();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   for (Register DefReg : DefedRegsInCopy)
-    for (MCPhysReg S : TRI->subregs_inclusive(DefReg))
-      SuccBB->removeLiveIn(S);
+    SuccBB->removeLiveInOverlappedWith(DefReg);
+
   for (auto U : UsedOpsInCopy)
     SuccBB->addLiveIn(MI->getOperand(U).getReg());
   SuccBB->sortUniqueLiveIns();
@@ -2288,6 +2295,10 @@ bool PostRAMachineSinkingImpl::tryToSinkCopy(MachineBasicBlock &CurBB,
       }
       continue;
     }
+
+    // Don't postRASink instructions that the target prefers not to sink.
+    if (!TII->shouldPostRASink(MI))
+      continue;
 
     if (MI.isDebugOrPseudoInstr())
       continue;

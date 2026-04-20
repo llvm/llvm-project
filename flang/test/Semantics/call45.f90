@@ -7,10 +7,11 @@ program call45
     call sub(v([1,2,2,3,3,3,4,4,4,4]))
     !PORTABILITY: The array section 'v(21_8:30_8:1_8)' should not be associated with dummy argument 'v=' with VOLATILE attribute, unless the dummy is assumed-shape or assumed-rank [-Wportability]
     call sub(v(21:30))
-    !PORTABILITY: The array section 'v(21_8:40_8:2_8)' should not be associated with dummy argument 'v=' with VOLATILE attribute, unless the dummy is assumed-shape or assumed-rank [-Wportability]
+    !WARNING: The array section 'v(21_8:40_8:2_8)' should not be associated with dummy argument 'v=' with VOLATILE attribute, unless the dummy is assumed-shape or assumed-rank [-Wvolatile-or-asynchronous-temporary]
     call sub(v(21:40:2))
     call sub2(v(21:40:2))
     call sub4(p)
+    call sub5(p)
     print *, v
 contains
     subroutine sub(v)
@@ -23,7 +24,7 @@ contains
     end subroutine sub1
     subroutine sub2(v)
         integer :: v(:)
-        !TODO: This should either be an portability warning or copy-in-copy-out warning
+        !PORTABILITY: The actual argument 'v' should not be associated with dummy argument 'v=' with VOLATILE attribute, because a temporary copy is required during the call [-Wportability]
         call sub(v)
         call sub1(v)
     end subroutine sub2
@@ -33,9 +34,13 @@ contains
     end subroutine sub3
     subroutine sub4(v)
         integer, pointer :: v(:)
-        !TODO: This should either be a portability warning or copy-in-copy-out warning
+        !PORTABILITY: The actual argument 'v' should not be associated with dummy argument 'v=' with VOLATILE attribute, because a temporary copy is required during the call [-Wportability]
         call sub(v)
         call sub1(v)
         call sub3(v)
+        call sub5(v)
     end subroutine sub4
+    subroutine sub5(v)
+        integer, pointer, volatile :: v(:)
+    end subroutine sub5
 end program call45

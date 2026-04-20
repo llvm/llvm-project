@@ -52,15 +52,12 @@ struct TestCompiler {
     PtrSize = TInfo.getPointerWidth(clang::LangAS::Default) / 8;
 
     compiler.createFileManager();
-    compiler.createSourceManager(compiler.getFileManager());
+    compiler.createSourceManager();
     compiler.createPreprocessor(clang::TU_Prefix);
 
     compiler.createASTContext();
 
-    CG.reset(CreateLLVMCodeGen(
-        compiler.getDiagnostics(), "main-module",
-        compiler.getVirtualFileSystemPtr(), compiler.getHeaderSearchOpts(),
-        compiler.getPreprocessorOpts(), compiler.getCodeGenOpts(), Context));
+    CG = CreateLLVMCodeGen(compiler, "main-module", Context);
   }
 
   void init(const char *TestProgram,

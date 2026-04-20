@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 23 && __has_builtin(__reference_constructs_from_temporary)
+#if _LIBCPP_STD_VER >= 23
 
 template <class _Tp, class _Up>
 struct _LIBCPP_NO_SPECIALIZATIONS reference_constructs_from_temporary
@@ -30,14 +30,8 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool reference_constructs_from_tempo
 
 #endif
 
-#if __has_builtin(__reference_constructs_from_temporary)
 template <class _Tp, class _Up>
 inline const bool __reference_constructs_from_temporary_v = __reference_constructs_from_temporary(_Tp, _Up);
-#else
-// TODO(LLVM 22): Remove this as all supported compilers should have __reference_constructs_from_temporary implemented.
-template <class _Tp, class _Up>
-inline const bool __reference_constructs_from_temporary_v = __reference_binds_to_temporary(_Tp, _Up);
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

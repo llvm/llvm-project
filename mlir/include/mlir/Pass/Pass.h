@@ -17,6 +17,7 @@
 #include <optional>
 
 namespace mlir {
+class PassInstrumentation;
 namespace detail {
 class OpToOpPassAdaptor;
 struct OpPassManagerImpl;
@@ -193,6 +194,13 @@ protected:
   /// This is useful for generic operation passes to add restrictions on the
   /// operations they operate on.
   virtual bool canScheduleOn(RegisteredOperationName opName) const = 0;
+  virtual bool canScheduleOn(Operation *op) const {
+    std::optional<RegisteredOperationName> registeredInfo =
+        op->getName().getRegisteredInfo();
+    if (!registeredInfo)
+      return false;
+    return canScheduleOn(*registeredInfo);
+  }
 
   /// Schedule an arbitrary pass pipeline on the provided operation.
   /// This can be invoke any time in a pass to dynamic schedule more passes.
@@ -334,6 +342,9 @@ private:
 
   /// Allow access to 'passOptions'.
   friend class PassInfo;
+
+  /// Allow access to 'signalPassFailure'.
+  friend class PassInstrumentation;
 };
 
 //===----------------------------------------------------------------------===//
@@ -436,6 +447,7 @@ protected:
   /// Indicate if the current pass can be scheduled on the given operation type.
   /// For an InterfacePass, this checks if the operation implements the given
   /// interface.
+  bool canScheduleOn(Operation *op) const final { return isa<InterfaceT>(op); }
   bool canScheduleOn(RegisteredOperationName opName) const final {
     return opName.hasInterface<InterfaceT>();
   }

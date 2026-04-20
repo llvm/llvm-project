@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -aarch64-enable-sink-fold=true -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -aarch64-enable-sink-fold=true -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK_GI:        warning: Instruction selection used fallback path for mulv_v3i64
+; CHECK-GI:       warning: Instruction selection used fallback path for mulv_v3i32
 
 declare i8 @llvm.vector.reduce.mul.v2i8(<2 x i8>)
 declare i8 @llvm.vector.reduce.mul.v3i8(<3 x i8>)

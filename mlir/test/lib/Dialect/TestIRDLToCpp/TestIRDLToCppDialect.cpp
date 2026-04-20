@@ -13,6 +13,7 @@
 // #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Region.h"
 
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -54,16 +55,34 @@ struct TestOpConversion : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
   }
 };
 
+struct TestRegionConversion
+    : public OpConversionPattern<test_irdl_to_cpp::ConditionalOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(mlir::test_irdl_to_cpp::ConditionalOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Just exercising the C++ API even though these are not enforced in the
+    // dialect definition
+    assert(op.getThen().getBlocks().size() == 1);
+    assert(adaptor.getElse().getBlocks().size() == 1);
+    auto ifOp = scf::IfOp::create(rewriter, op.getLoc(), op.getInput());
+    rewriter.replaceOp(op, ifOp);
+    return success();
+  }
+};
+
 struct ConvertTestDialectToSomethingPass
     : PassWrapper<ConvertTestDialectToSomethingPass, OperationPass<ModuleOp>> {
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    patterns.add<TestOpConversion>(ctx);
+    patterns.add<TestOpConversion, TestRegionConversion>(ctx);
     ConversionTarget target(getContext());
-    target.addIllegalOp<test_irdl_to_cpp::BeefOp>();
-    target.addLegalOp<test_irdl_to_cpp::BarOp>();
-    target.addLegalOp<test_irdl_to_cpp::HashOp>();
+    target.addIllegalOp<test_irdl_to_cpp::BeefOp,
+                        test_irdl_to_cpp::ConditionalOp>();
+    target.addLegalOp<test_irdl_to_cpp::BarOp, test_irdl_to_cpp::HashOp,
+                      scf::IfOp, scf::YieldOp>();
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -72,6 +91,10 @@ struct ConvertTestDialectToSomethingPass
   StringRef getArgument() const final { return "test-irdl-conversion-check"; }
   StringRef getDescription() const final {
     return "Checks the convertability of an irdl dialect";
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<scf::SCFDialect>();
   }
 };
 

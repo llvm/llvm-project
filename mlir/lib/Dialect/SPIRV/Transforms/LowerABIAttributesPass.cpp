@@ -244,7 +244,7 @@ namespace {
 /// Vulkan requires all shader entry points to be of void(void) type.
 class ProcessInterfaceVarABI final : public OpConversionPattern<spirv::FuncOp> {
 public:
-  using OpConversionPattern<spirv::FuncOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(spirv::FuncOp funcOp, OpAdaptor adaptor,

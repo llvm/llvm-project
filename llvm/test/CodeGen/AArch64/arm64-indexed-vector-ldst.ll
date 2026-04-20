@@ -13348,24 +13348,23 @@ define <16 x i8> @test_v16i8_post_reg_ld1lane_zero(ptr %bar, ptr %ptr, i64 %inc)
 ; CHECK-GI-LABEL: test_v16i8_post_reg_ld1lane_zero:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    ldr b0, [x0]
-; CHECK-GI-NEXT:    mov w8, #0 ; =0x0
-; CHECK-GI-NEXT:    mov.b v0[1], w8
-; CHECK-GI-NEXT:    mov.b v0[2], w8
-; CHECK-GI-NEXT:    mov.b v0[3], w8
-; CHECK-GI-NEXT:    mov.b v0[4], w8
-; CHECK-GI-NEXT:    mov.b v0[5], w8
-; CHECK-GI-NEXT:    mov.b v0[6], w8
-; CHECK-GI-NEXT:    mov.b v0[7], w8
-; CHECK-GI-NEXT:    mov.b v0[8], w8
-; CHECK-GI-NEXT:    mov.b v0[9], w8
-; CHECK-GI-NEXT:    mov.b v0[10], w8
-; CHECK-GI-NEXT:    mov.b v0[11], w8
-; CHECK-GI-NEXT:    mov.b v0[12], w8
-; CHECK-GI-NEXT:    mov.b v0[13], w8
-; CHECK-GI-NEXT:    mov.b v0[14], w8
-; CHECK-GI-NEXT:    mov.b v0[15], w8
 ; CHECK-GI-NEXT:    add x8, x0, x2
 ; CHECK-GI-NEXT:    str x8, [x1]
+; CHECK-GI-NEXT:    mov.b v0[1], wzr
+; CHECK-GI-NEXT:    mov.b v0[2], wzr
+; CHECK-GI-NEXT:    mov.b v0[3], wzr
+; CHECK-GI-NEXT:    mov.b v0[4], wzr
+; CHECK-GI-NEXT:    mov.b v0[5], wzr
+; CHECK-GI-NEXT:    mov.b v0[6], wzr
+; CHECK-GI-NEXT:    mov.b v0[7], wzr
+; CHECK-GI-NEXT:    mov.b v0[8], wzr
+; CHECK-GI-NEXT:    mov.b v0[9], wzr
+; CHECK-GI-NEXT:    mov.b v0[10], wzr
+; CHECK-GI-NEXT:    mov.b v0[11], wzr
+; CHECK-GI-NEXT:    mov.b v0[12], wzr
+; CHECK-GI-NEXT:    mov.b v0[13], wzr
+; CHECK-GI-NEXT:    mov.b v0[14], wzr
+; CHECK-GI-NEXT:    mov.b v0[15], wzr
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <16 x i8> zeroinitializer, i8 %tmp1, i32 0

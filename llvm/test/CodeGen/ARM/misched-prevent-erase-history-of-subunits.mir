@@ -14,7 +14,7 @@
 # CHECK: SU(1):   %1:dpr = VABSD %0:dpr, 14, $noreg
 # CHECK: SU(2):   %2:dpr = VLDRD %const.0, 0, 14, $noreg :: (load (s64) from constant-pool)
 # CHECK: SU(4):   %3:rgpr = t2MOVi 0, 14, $noreg, $noreg
-# CHECK: SU(3):   VCMPD %1:dpr, %2:dpr, 14, $noreg, implicit-def $fpscr_nzcv
+# CHECK: SU(3):   VCMPD %1:dpr, %2:dpr, 14, $noreg, implicit-def $fpscr_nzcv, implicit $fpscr_rm
 # CHECK: SU(5):   $r0 = COPY %3:rgpr
 ---
 name:            test
@@ -29,7 +29,7 @@ body:             |
     %0:dpr = COPY $d0
     %1:dpr = VABSD %0, 14 /* CC::al */, $noreg
     %2:dpr = VLDRD %const.0, 0, 14 /* CC::al */, $noreg :: (load (s64) from constant-pool)
-    VCMPD %1, %2, 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    VCMPD %1, %2, 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv, implicit $fpscr_rm
     %4:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
     $r0 = COPY %4
     tBX_RET 14 /* CC::al */, $noreg, implicit killed $r0

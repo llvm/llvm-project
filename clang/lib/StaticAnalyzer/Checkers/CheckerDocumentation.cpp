@@ -262,6 +262,15 @@ public:
   /// state. This callback allows a checker to provide domain specific knowledge
   /// about the particular functions it knows about.
   ///
+  /// Note that to evaluate a call, the handler MUST bind the return value if
+  /// its a non-void function. Invalidate the arguments if necessary.
+  ///
+  /// Note that in general, user-provided functions should not be eval-called
+  /// because the checker can't predict the exact semantics/contract of the
+  /// callee, and by having the eval::Call callback, we also prevent it from
+  /// getting inlined, potentially regressing analysis quality.
+  /// Consider using check::PreCall or check::PostCall to allow inlining.
+  ///
   /// \returns true if the call has been successfully evaluated
   /// and false otherwise. Note, that only one checker can evaluate a call. If
   /// more than one checker claims that they can evaluate the same call the

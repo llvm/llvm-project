@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Transform/IR/Utils.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Verifier.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -20,10 +21,7 @@ using namespace mlir;
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.cpp.inc"
 
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
-
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 void transform::detail::checkImplementsTransformOpInterface(
     StringRef name, MLIRContext *context) {
   // Since the operation is being inserted into the Transform dialect and the
@@ -35,13 +33,15 @@ void transform::detail::checkImplementsTransformOpInterface(
           opName.hasInterface<PatternDescriptorOpInterface>() ||
           opName.hasInterface<ConversionPatternDescriptorOpInterface>() ||
           opName.hasInterface<TypeConverterBuilderOpInterface>() ||
-          opName.hasTrait<OpTrait::IsTerminator>()) &&
+          opName.hasTrait<OpTrait::IsTerminator>() ||
+          opName.hasInterface<NormalFormCheckedOpInterface>()) &&
          "non-terminator ops injected into the transform dialect must "
          "implement TransformOpInterface or PatternDescriptorOpInterface or "
          "ConversionPatternDescriptorOpInterface");
   if (!opName.hasInterface<PatternDescriptorOpInterface>() &&
       !opName.hasInterface<ConversionPatternDescriptorOpInterface>() &&
-      !opName.hasInterface<TypeConverterBuilderOpInterface>()) {
+      !opName.hasInterface<TypeConverterBuilderOpInterface>() &&
+      !opName.hasInterface<NormalFormCheckedOpInterface>()) {
     assert(opName.hasInterface<MemoryEffectOpInterface>() &&
            "ops injected into the transform dialect must implement "
            "MemoryEffectsOpInterface");
@@ -60,7 +60,7 @@ void transform::detail::checkImplementsTransformHandleTypeInterface(
          "expected Transform dialect type to implement one of the three "
          "interfaces");
 }
-#endif // NDEBUG
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 void transform::TransformDialect::initialize() {
   // Using the checked versions to enable the same assertions as for the ops
@@ -69,12 +69,32 @@ void transform::TransformDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
+  initializeAttributes();
   initializeTypes();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
-      >();
   initializeLibraryModule();
+}
+
+Attribute transform::TransformDialect::parseAttribute(DialectAsmParser &parser,
+                                                      Type type) const {
+  StringRef keyword;
+  SMLoc loc = parser.getCurrentLocation();
+  if (failed(parser.parseKeyword(&keyword)))
+    return nullptr;
+
+  auto it = attributeParsingHooks.find(keyword);
+  if (it == attributeParsingHooks.end()) {
+    parser.emitError(loc) << "unknown attribute mnemonic: " << keyword;
+    return nullptr;
+  }
+
+  return it->getValue()(parser, type);
+}
+
+void transform::TransformDialect::printAttribute(
+    Attribute attribute, DialectAsmPrinter &printer) const {
+  auto it = attributePrintingHooks.find(attribute.getTypeID());
+  assert(it != attributePrintingHooks.end() && "printing unknown attribute");
+  it->getSecond()(attribute, printer);
 }
 
 Type transform::TransformDialect::parseType(DialectAsmParser &parser) const {
@@ -113,6 +133,15 @@ void transform::TransformDialect::initializeLibraryModule() {
                                UnitAttr::get(context));
 }
 
+void transform::TransformDialect::reportDuplicateAttributeRegistration(
+    StringRef attrName) {
+  std::string buffer;
+  llvm::raw_string_ostream msg(buffer);
+  msg << "extensible dialect attribute '" << attrName
+      << "' is already registered with a different implementation";
+  llvm::report_fatal_error(StringRef(buffer));
+}
+
 void transform::TransformDialect::reportDuplicateTypeRegistration(
     StringRef mnemonic) {
   std::string buffer;
@@ -139,6 +168,20 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
                                      << " attribute can only be attached to "
                                         "operations with symbol tables";
     }
+
+    // Pre-verify calls and callables because call graph construction below
+    // assumes they are valid, but this verifier runs before verifying the
+    // nested operations.
+    WalkResult walkResult = op->walk([](Operation *nested) {
+      if (!isa<CallableOpInterface, CallOpInterface>(nested))
+        return WalkResult::advance();
+
+      if (failed(verify(nested, /*verifyRecursively=*/false)))
+        return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+    if (walkResult.wasInterrupted())
+      return failure();
 
     const mlir::CallGraph callgraph(op);
     for (auto scc = llvm::scc_begin(&callgraph); !scc.isAtEnd(); ++scc) {
