@@ -215,14 +215,6 @@ constexpr inline NextUseDistance operator-(NextUseDistance A,
   return A -= B;
 }
 
-constexpr inline NextUseDistance min(NextUseDistance A, NextUseDistance B) {
-  return A < B ? A : B;
-}
-
-constexpr inline NextUseDistance max(NextUseDistance A, NextUseDistance B) {
-  return A > B ? A : B;
-}
-
 //==============================================================================
 // AMDGPUNextUseAnalysis - Provides next-use distances for live registers or
 // sub-registers at a given MachineInstruction suitable for making spilling

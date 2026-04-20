@@ -678,8 +678,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
-  initializeAMDGPUNextUseAnalysisLegacyPassPass(*PR);
-  initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(*PR);
+  initializeAMDGPUNextUseAnalysisLegacyPass(*PR);
+  initializeAMDGPUNextUseAnalysisPrinterLegacyPass(*PR);
   initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
