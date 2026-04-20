@@ -293,7 +293,8 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
   // When VLEN is exactly known, extract m1 pieces and build a mul tree.
   // This greatly reduces register pressure during the reduction, and
   // avoids all but one vsetvli (the one from original LMUL to m1).
-  if (MinVLen == ST->getRealMaxVLen()) {
+  // TODO: Generalize to handle the splitting case.
+  if (MinVLen == ST->getRealMaxVLen() && VF <= 8 * M1VF) {
     unsigned NumM1 = VF / M1VF;
     assert(isPowerOf2_32(NumM1) && NumM1 <= 8);
     SmallVector<Value *, 8> Pieces(NumM1);
