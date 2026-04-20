@@ -155,9 +155,15 @@ if(TARGET libc.src.__support.threads.futex_utils)
     DEPENDS
       .futex_utils
       .mutex
+      .mutex_common
       .raw_mutex
       libc.hdr.stdint_proxy
+      libc.src.__support.CPP.expected
+      libc.src.__support.CPP.limits
       libc.src.__support.CPP.mutex
+      libc.src.__support.CPP.new
+      libc.src.__support.threads.sleep
+      libc.src.__support.time.monotonicity
   )
 endif()
 
