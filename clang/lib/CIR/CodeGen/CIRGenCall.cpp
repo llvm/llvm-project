@@ -19,6 +19,7 @@
 #include "mlir/IR/Attributes.h"
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/TypeSize.h"
 
 using namespace clang;
@@ -575,6 +576,16 @@ static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
   return false;
 }
 
+/// Compute the nofpclass mask for FP types based on language options.
+static unsigned getNoFPClassTestMask(const LangOptions &langOpts) {
+  unsigned mask = 0;
+  if (langOpts.NoHonorInfs)
+    mask |= llvm::fcInf;
+  if (langOpts.NoHonorNaNs)
+    mask |= llvm::fcNan;
+  return mask;
+}
+
 void CIRGenModule::constructFunctionReturnAttributes(
     const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
     mlir::NamedAttrList &retAttrs) {
@@ -589,9 +600,10 @@ void CIRGenModule::constructFunctionReturnAttributes(
     retAttrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                  mlir::UnitAttr::get(&getMLIRContext()));
 
-  // TODO(cir): classic codegen adds a bunch of attributes based on
-  // calling-convention lowering results.  However, since calling conventions
-  // haven't happened yet, this work likely has to happen there.
+  if (retTy->hasFloatingRepresentation())
+    if (unsigned mask = getNoFPClassTestMask(getLangOpts()))
+      retAttrs.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
+                   builder.getI64IntegerAttr(mask));
 
   if (!isThunk) {
     // TODO(cir): following comment taken from classic codegen, so if anything
@@ -700,6 +712,11 @@ void CIRGenModule::constructFunctionArgumentAttributes(
             builder.getI64IntegerAttr(
                 getNaturalPointeeTypeAlignment(argType).getQuantity()));
     }
+
+    if (argType->hasFloatingRepresentation())
+      if (unsigned mask = getNoFPClassTestMask(getLangOpts()))
+        argAttrList.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
+                        builder.getI64IntegerAttr(mask));
   }
 }
 
