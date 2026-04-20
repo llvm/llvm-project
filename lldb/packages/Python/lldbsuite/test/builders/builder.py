@@ -245,11 +245,13 @@ class Builder:
         return []
 
     def getLLDBObjRoot(self):
-        return ["LLDB_OBJ_ROOT={}".format(configuration.lldb_obj_root)]
+        if configuration.lldb_obj_root:
+            return [f"LLDB_OBJ_ROOT={configuration.lldb_obj_root}"]
+        return []
 
     def getResourceDirArgs(self):
         if configuration.resource_dir:
-            return ["RESOURCE_DIR={}".format(configuration.resource_dir)]
+            return [f"RESOURCE_DIR={configuration.resource_dir}"]
         return []
 
     def _getDebugInfoArgs(self, debug_info):

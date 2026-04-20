@@ -1,7 +1,7 @@
 USE_SYSTEM_STDLIB = 1
 
 ifneq "$(RESOURCE_DIR)" ""
-ARCH_CFLAGS += -resource-dir $(RESOURCE_DIR)
+  ARCH_CFLAGS += -resource-dir $(RESOURCE_DIR)
 endif
 
 ARCH_CXXFLAGS += \

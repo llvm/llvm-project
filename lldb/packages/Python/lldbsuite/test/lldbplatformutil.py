@@ -116,7 +116,7 @@ def finalize_build_dictionary(dictionary):
             configuration.triple.split("-")[1] if "-" in configuration.triple else ""
         )
         if triple_os.startswith("wasi"):
-            dictionary["OS"] = "Wasm"
+            dictionary["OS"] = "WASI"
         elif triple_os == "linux" or triple_os.startswith("linux"):
             dictionary["OS"] = "Linux"
         elif triple_os == "windows" or triple_os.startswith("windows"):
