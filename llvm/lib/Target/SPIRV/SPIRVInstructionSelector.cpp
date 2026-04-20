@@ -6287,8 +6287,7 @@ bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
     case SPIRV::OpTypeMatrix:
     case SPIRV::OpTypeArray:
       // Operand 1 holds the element/component type id.
-      Worklist.push_back(
-          GR.getSPIRVTypeForVReg(Ty->getOperand(1).getReg()));
+      Worklist.push_back(GR.getSPIRVTypeForVReg(Ty->getOperand(1).getReg()));
       break;
     case SPIRV::OpTypeStruct:
       // Operands 1..N hold the field type ids.
