@@ -878,6 +878,7 @@ enum DestructiveInstType {
   Destructive2xRegImmUnpred     = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
   DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0xa),
   DestructivePredicate          = TSFLAG_DESTRUCTIVE_INST_TYPE(0xb),
+  DestructiveBinaryImmUnpred    = TSFLAG_DESTRUCTIVE_INST_TYPE(0xc),
 };
 
 enum FalseLaneType {
