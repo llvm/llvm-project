@@ -8035,11 +8035,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   };
 
   // Replace (and (sign_extend ...) #bitmask) with (zero_extend ...).
-  if (!VT.isVector() ||
-      (LegalOperations && TLI.isOperationLegal(ISD::ZERO_EXTEND, VT))) {
-    if (IsAndZeroExtMask(N0, N1))
-      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
-  }
+  if (IsAndZeroExtMask(N0, N1) &&
+      (!LegalOperations || TLI.isOperationLegal(ISD::ZERO_EXTEND, VT)))
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
 
   if (hasOperation(ISD::USUBSAT, VT))
     if (SDValue V = foldAndToUsubsat(N, DAG, DL))
