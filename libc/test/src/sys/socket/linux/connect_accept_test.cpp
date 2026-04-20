@@ -143,6 +143,10 @@ TEST_F(LlvmLibcConnectAcceptTest, Accept4Flags) {
                   sizeof(struct sockaddr_un)),
               Succeeds(0));
 
+  // This should fail as the other side is not listen()ing yet.
+  ASSERT_THAT(LIBC_NAMESPACE::accept4(accepting_socket, nullptr, nullptr, 0),
+              Fails(EINVAL));
+
   ASSERT_THAT(LIBC_NAMESPACE::listen(accepting_socket, 1), Succeeds(0));
 
   int connecting_socket = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_STREAM, 0);
@@ -155,14 +159,20 @@ TEST_F(LlvmLibcConnectAcceptTest, Accept4Flags) {
                   sizeof(struct sockaddr_un)),
               Succeeds(0));
 
+  struct sockaddr_un accepted_addr;
+  socklen_t accepted_addr_len = sizeof(accepted_addr);
   int accepted_socket = LIBC_NAMESPACE::accept4(
-      accepting_socket, nullptr, nullptr, SOCK_CLOEXEC | SOCK_NONBLOCK);
+      accepting_socket, reinterpret_cast<struct sockaddr *>(&accepted_addr),
+      &accepted_addr_len, SOCK_CLOEXEC | SOCK_NONBLOCK);
   ASSERT_GE(accepted_socket, 0);
   ASSERT_ERRNO_SUCCESS();
 
   ASSERT_THAT(LIBC_NAMESPACE::close(connecting_socket), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(accepting_socket), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::remove(ACCEPT_PATH), Succeeds(0));
+
+  ASSERT_EQ(accepted_addr_len, sizeof(sa_family_t));
+  ASSERT_EQ(accepted_addr.sun_family, static_cast<sa_family_t>(AF_UNIX));
 
   // Check FD_CLOEXEC
   int fd_flags = LIBC_NAMESPACE::fcntl(accepted_socket, F_GETFD);
