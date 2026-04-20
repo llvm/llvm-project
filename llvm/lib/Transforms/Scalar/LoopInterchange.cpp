@@ -62,11 +62,17 @@ static cl::opt<int> LoopInterchangeCostThreshold(
 
 // Maximum number of load-stores that can be handled in the dependency matrix.
 static cl::opt<unsigned int> MaxMemInstrCount(
-    "loop-interchange-max-meminstr-count", cl::init(64), cl::Hidden,
+    "loop-interchange-max-meminstr-count", cl::init(20), cl::Hidden,
     cl::desc(
         "Maximum number of load-store instructions that should be handled "
         "in the dependency matrix. Higher value may lead to more interchanges "
         "at the cost of compile-time"));
+
+static cl::opt<unsigned int> MaxMemSquaredRatio(
+    "loop-interchange-max-meminstr-squared-ratio", cl::init(4), cl::Hidden,
+    cl::desc("Maximum number of load-store instructions squared in relation to "
+             "the total number of instructions. Higher value may lead to more "
+             "interchanges at the cost of compile-time"));
 
 namespace {
 
@@ -169,6 +175,24 @@ static bool inThisOrder(const Instruction *Src, const Instruction *Dst) {
 }
 #endif
 
+/// Test if the number of memory instructions is too many so that the analysis
+/// will be too expensive.
+static bool tooManyMemInstr(unsigned NumMemInstr, unsigned NumInsts) {
+  if (NumMemInstr <= MaxMemInstrCount)
+    return false;
+
+  // To populate the dependence matrix, we perform dependence test for each pair
+  // of memory instructions, which has O(NumMemInstr^2) complexity. This implies
+  // that even if the number of memory instructions is small, the analysis can
+  // still be expensive if the most of the instructions in the loop are memory
+  // instructions. On the other hand, if the number of memory instructions is
+  // not small, but the loop is large (i.e., it contains many non-memory
+  // instructions), the analysis can still be affordable.
+  if (NumMemInstr * NumMemInstr <= MaxMemSquaredRatio * NumInsts)
+    return false;
+  return true;
+}
+
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
                                      ScalarEvolution *SE,
@@ -176,6 +200,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   using ValueVector = SmallVector<Value *, 16>;
 
   ValueVector MemInstr;
+  unsigned NumInsts = 0;
 
   // For each block.
   for (BasicBlock *BB : L->blocks()) {
@@ -183,6 +208,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
     for (Instruction &I : *BB) {
       if (!isa<Instruction>(I))
         return false;
+      NumInsts++;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
           return false;
@@ -197,15 +223,13 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 
   LLVM_DEBUG(dbgs() << "Found " << MemInstr.size()
                     << " Loads and Stores to analyze\n");
-  if (MemInstr.size() > MaxMemInstrCount) {
-    LLVM_DEBUG(dbgs() << "The transform doesn't support more than "
-                      << MaxMemInstrCount << " load/stores in a loop\n");
+  if (tooManyMemInstr(MemInstr.size(), NumInsts)) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoop",
                                       L->getStartLoc(), L->getHeader())
-             << "Number of loads/stores exceeded, the supported maximum "
-                "can be increased with option "
-                "-loop-interchange-maxmeminstr-count.";
+             << "Number of loads/stores exceeded, the supported maximum can be "
+                "increased with option -loop-interchange-maxmeminstr-count or "
+                "-loop-interchange-max-meminstr-squared-ratio.";
     });
     return false;
   }
