@@ -337,6 +337,8 @@ private:
 };
 
 bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
+  // Do not do clause checks while processing METADIRECTIVE.
+  // See comment in CheckAllowedClause.
   if (GetDirectiveNest(ContextSelectorNest) > 0) {
     return true;
   }
