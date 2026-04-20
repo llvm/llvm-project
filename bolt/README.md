@@ -180,7 +180,7 @@ llvm runtimes, similar to compiler-rt. Thus it can be cross compiled for
 multiple targets as a part of an LLVM build. This enables bolt to
 instrument binaries across architectures.
 
-Cross compiling bolt-rtj
+Cross compiling bolt-rt
 ```
 > ANDROID_NDK_BIN="<android ndk>/toolchains/llvm/prebuilt/linux-x86_64/bin"
 > cmake \
@@ -192,7 +192,6 @@ Cross compiling bolt-rtj
     -DLLVM_ENABLE_RUNTIMES="bolt-rt" \
     -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
     -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-gnu;aarch64-unknown-linux-android21" \
-    -DRUNTIMES_x86_64-unknown-linux-gnu_CMAKE_CXX_COMPILER=clang++ \
     -DRUNTIMES_aarch64-unknown-linux-android21_CMAKE_CXX_COMPILER=$ANDROID_NDK_BIN/clang++
 
 > cmake --build build --target bolt-rt

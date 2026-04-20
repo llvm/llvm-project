@@ -47,10 +47,13 @@
 
 #ifdef ENABLE_DEBUG
 #define DEBUG(X)                                                               \
-  { X; }
+  {                                                                            \
+    X;                                                                         \
+  }
 #else
 #define DEBUG(X)                                                               \
-  {}
+  {                                                                            \
+  }
 #endif
 
 #pragma GCC visibility push(hidden)
@@ -134,8 +137,7 @@ public:
 #if defined(__ANDROID__)
   __attribute__((noinline))
 #endif
-  void *
-  allocate(size_t Size) {
+  void *allocate(size_t Size) {
     Lock L(M);
 
     if (StackBase == nullptr) {
@@ -165,8 +167,7 @@ public:
 #if defined(__ANDROID__)
   __attribute__((noinline))
 #endif
-  void
-  deallocate(void *Ptr) {
+  void deallocate(void *Ptr) {
     Lock L(M);
     uint8_t MetadataOffset = sizeof(EntryMetadata);
     auto *M = reinterpret_cast<EntryMetadata *>(
@@ -610,9 +611,8 @@ int compareStr(const char *Str1, const char *Str2, int Size) {
 #if defined(__ANDROID__)
 __attribute__((noinline))
 #endif
-char *
-serializeLoc(const ProfileWriterContext &Ctx, char *OutBuf, const Location Loc,
-             uint32_t BufSize) {
+char *serializeLoc(const ProfileWriterContext &Ctx, char *OutBuf,
+                   const Location Loc, uint32_t BufSize) {
   // fdata location format: Type Name Offset
   // Type 1 - regular symbol
   OutBuf = strCopy(OutBuf, "1 ");
