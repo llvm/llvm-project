@@ -2324,9 +2324,9 @@ static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
                                                     QualType srcRecordTy,
                                                     QualType destRecordTy) {
   auto srcRtti = mlir::cast<cir::GlobalViewAttr>(
-      cgf.cgm.getAddrOfRTTIDescriptor(loc, srcRecordTy));
+      cgf.cgm.getAddrOfRTTIDescriptor(loc, srcRecordTy.getUnqualifiedType()));
   auto destRtti = mlir::cast<cir::GlobalViewAttr>(
-      cgf.cgm.getAddrOfRTTIDescriptor(loc, destRecordTy));
+      cgf.cgm.getAddrOfRTTIDescriptor(loc, destRecordTy.getUnqualifiedType()));
 
   cir::FuncOp runtimeFuncOp = getItaniumDynamicCastFn(cgf);
   cir::FuncOp badCastFuncOp = getBadCastFn(cgf);
