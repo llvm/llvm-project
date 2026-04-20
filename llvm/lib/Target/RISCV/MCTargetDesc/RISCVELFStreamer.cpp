@@ -34,6 +34,19 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
                                           MAB.getTargetOptions().getABIName()));
   setFlagsFromFeatures(STI);
+
+  // Compute the initial ISA string.  This serves two purposes:
+  //   1. Deduplication: subsequent .option arch/rvc/norvc directives compare
+  //      against ISAString to avoid propagating redundant ISA updates.
+  //   2. Initial symbol: seed the streamer's active ISA so a "$x<ISAString>"
+  //      mapping symbol is emitted before the first instruction, recording
+  //      the full ISA in the object even when no .option directive is present.
+  if (auto ParseResult = RISCVFeatures::parseFeatureBits(
+          STI.hasFeature(RISCV::Feature64Bit), Features)) {
+    InitialISAString = (*ParseResult)->toString();
+    ISAString = InitialISAString;
+    getStreamer().setCurrentISAString(ISAString);
+  }
 }
 
 RISCVELFStreamer::RISCVELFStreamer(MCContext &C,
@@ -46,12 +59,30 @@ RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
   return static_cast<RISCVELFStreamer &>(Streamer);
 }
 
+void RISCVTargetELFStreamer::setArchString(StringRef Arch) {
+  if (Arch == ISAString)
+    return;
+  ISAString = std::string(Arch);
+  getStreamer().setCurrentISAString(Arch);
+}
+
+void RISCVTargetELFStreamer::emitISAMappingSymbol(StringRef ISAStr) {
+  setArchString(ISAStr);
+}
+
+void RISCVTargetELFStreamer::emitDirectiveOptionPush() {
+  ISAStringStack.push_back(ISAString);
+}
+
+void RISCVTargetELFStreamer::emitDirectiveOptionPop() {
+  if (!ISAStringStack.empty())
+    setArchString(ISAStringStack.pop_back_val());
+}
+
 void RISCVTargetELFStreamer::emitDirectiveOptionExact() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoExact() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionPIC() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoPIC() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionRelax() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoRelax() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionRVC() {}
@@ -119,6 +150,13 @@ void RISCVTargetELFStreamer::finish() {
 
 void RISCVTargetELFStreamer::reset() {
   AttributeSection = nullptr;
+  ISAString = InitialISAString;
+  ISAStringStack.clear();
+  // Re-seed the streamer's active ISA so the first instruction after reset
+  // still records the full ISA via "$x<ISA>", matching the behaviour set up
+  // in the constructor.
+  if (!InitialISAString.empty())
+    getStreamer().setCurrentISAString(InitialISAString);
 }
 
 void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
@@ -127,10 +165,15 @@ void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
 }
 
 void RISCVELFStreamer::reset() {
-  static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
   MCELFStreamer::reset();
   LastMappingSymbols.clear();
   LastEMS = EMS_None;
+  CurrentISAString.clear();
+  LastEmittedISA.clear();
+  LastEmittedISAInSection.clear();
+  // Call target streamer reset last: it may call setCurrentISAString to
+  // re-seed the initial ISA after our state has been cleared.
+  static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
 }
 
 void RISCVELFStreamer::emitDataMappingSymbol() {
@@ -141,9 +184,22 @@ void RISCVELFStreamer::emitDataMappingSymbol() {
 }
 
 void RISCVELFStreamer::emitInstructionsMappingSymbol() {
-  if (LastEMS == EMS_Instructions)
-    return;
-  emitMappingSymbol("$x");
+  // Emit a mapping symbol at the start of each instruction run, and whenever
+  // the active ISA has changed since the last one emitted in this section.
+  // The symbol takes the form "$x<ISA>" when CurrentISAString is known, or
+  // plain "$x" as a fallback.  The comparison with LastEmittedISA provides
+  // deduplication: repeating .option arch with the same ISA, or re-entering a
+  // section whose last mapping symbol already matches the active ISA, emits
+  // no redundant symbol.
+  bool NeedSymbol =
+      LastEMS != EMS_Instructions || LastEmittedISA != CurrentISAString;
+  if (NeedSymbol) {
+    if (CurrentISAString.empty())
+      emitMappingSymbol("$x");
+    else
+      emitMappingSymbol("$x" + CurrentISAString);
+    LastEmittedISA = CurrentISAString;
+  }
   LastEMS = EMS_Instructions;
 }
 
@@ -155,12 +211,22 @@ void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
   Symbol->setBinding(ELF::STB_LOCAL);
 }
 
+void RISCVELFStreamer::setCurrentISAString(StringRef Arch) {
+  CurrentISAString = std::string(Arch);
+}
+
 void RISCVELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // We have to keep track of the mapping symbol state of any sections we
   // use. Each one should start off as EMS_None, which is provided as the
-  // default constructor by DenseMap::lookup.
-  LastMappingSymbols[getPreviousSection().first] = LastEMS;
+  // default constructor by DenseMap::lookup.  The last ISA suffix emitted in
+  // each section is also preserved so that re-entering a section only emits a
+  // new "$x<ISA>" symbol when the active ISA has actually changed.
+  const MCSection *Prev = getPreviousSection().first;
+  LastMappingSymbols[Prev] = LastEMS;
+  LastEmittedISAInSection[Prev] = LastEmittedISA;
   LastEMS = LastMappingSymbols.lookup(Section);
+  auto It = LastEmittedISAInSection.find(Section);
+  LastEmittedISA = It != LastEmittedISAInSection.end() ? It->second : "";
 
   MCELFStreamer::changeSection(Section, Subsection);
 }
