@@ -56,9 +56,9 @@ struct HasNonTrivialArray {
 // LLVM: %[[RHS_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[ITR_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[THIS_LOAD:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM: %[[THIS_ARR:.*]] = getelementptr %struct.HasNonTrivialArray, ptr %[[THIS_LOAD]], i32 0, i32 0
+// LLVM: %[[THIS_ARR:.*]] = getelementptr inbounds nuw %struct.HasNonTrivialArray, ptr %[[THIS_LOAD]], i32 0, i32 0
 // LLVM: %[[RHS_LOAD:.*]] = load ptr, ptr %[[RHS_ALLOCA]]
-// LLVM: %[[RHS_ARR:.*]] = getelementptr %struct.HasNonTrivialArray, ptr %[[RHS_LOAD]], i32 0, i32 0
+// LLVM: %[[RHS_ARR:.*]] = getelementptr inbounds nuw %struct.HasNonTrivialArray, ptr %[[RHS_LOAD]], i32 0, i32 0
 // LLVM: %[[THIS_ARR_DECAY:.*]] = getelementptr %struct.NonTrivial, ptr %[[THIS_ARR]], i32 0
 // LLVM: store ptr %[[THIS_ARR_DECAY]], ptr %[[ITR_ALLOCA]]
 // LLVM: %[[END_ITR:.*]] = getelementptr %struct.NonTrivial, ptr %[[THIS_ARR_DECAY]], i64 3
@@ -213,9 +213,9 @@ struct HasMultiDimArray {
 // LLVM: %[[ITR2_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[ITR3_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[THIS_LOAD:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM: %[[THIS_ARR:.*]] = getelementptr %struct.HasMultiDimArray, ptr %[[THIS_LOAD]], i32 0, i32 0
+// LLVM: %[[THIS_ARR:.*]] = getelementptr inbounds nuw %struct.HasMultiDimArray, ptr %[[THIS_LOAD]], i32 0, i32 0
 // LLVM: %[[RHS_LOAD:.*]] = load ptr, ptr %[[RHS_ALLOCA]]
-// LLVM: %[[RHS_ARR:.*]] = getelementptr %struct.HasMultiDimArray, ptr %[[RHS_LOAD]], i32 0, i32 0
+// LLVM: %[[RHS_ARR:.*]] = getelementptr inbounds nuw %struct.HasMultiDimArray, ptr %[[RHS_LOAD]], i32 0, i32 0
 // LLVM: %[[THIS_ARR_DECAY:.*]] = getelementptr [3 x [4 x %struct.NonTrivial]], ptr %[[THIS_ARR]], i32 0
 // LLVM: store ptr %[[THIS_ARR_DECAY]], ptr %[[ITR1_ALLOCA]]
 // LLVM: %[[END_ITR1:.*]] = getelementptr [3 x [4 x %struct.NonTrivial]], ptr %[[THIS_ARR_DECAY]], i64 2

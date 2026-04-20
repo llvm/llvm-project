@@ -4021,7 +4021,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPScalarIVStepsSC:
       case VPRecipeBase::VPReplicateSC:
       case VPRecipeBase::VPInstructionSC:
-      case VPRecipeBase::VPCanonicalIVPHISC:
       case VPRecipeBase::VPCurrentIterationPHISC:
       case VPRecipeBase::VPVectorPointerSC:
       case VPRecipeBase::VPVectorEndPointerSC:
@@ -7681,12 +7680,12 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, &LVer);
 
   // Create recipes for header phis.
-  VPlanTransforms::createHeaderPhiRecipes(
-      *VPlan0, PSE, *OrigLoop, Legal->getInductionVars(),
-      Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
-      CM.getInLoopReductions(), Hints.allowReordering());
+  RUN_VPLAN_PASS(VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE,
+                 *OrigLoop, Legal->getInductionVars(),
+                 Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
+                 CM.getInLoopReductions(), Hints.allowReordering());
 
-  VPlanTransforms::simplifyRecipes(*VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
@@ -7698,15 +7697,16 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                   ? UncountableExitStyle::MaskedHandleExitInScalarLoop
                   : UncountableExitStyle::ReadOnly;
 
-  if (!VPlanTransforms::handleEarlyExits(*VPlan0, EEStyle, OrigLoop, PSE, *DT,
-                                         Legal->getAssumptionCache()))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleEarlyExits, *VPlan0, EEStyle,
+                      OrigLoop, PSE, *DT, Legal->getAssumptionCache()))
     return;
-  VPlanTransforms::addMiddleCheck(*VPlan0, CM.foldTailByMasking());
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *VPlan0);
+
+  RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
+                 CM.foldTailByMasking());
+  RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0);
   if (CM.foldTailByMasking())
-    RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *VPlan0);
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize,
-                           *VPlan0);
+    RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -7785,7 +7785,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                  m_VPInstruction<Instruction::Add>(
                      m_Specific(LoopRegion->getCanonicalIV()), m_VPValue())) &&
            "Did not find the canonical IV increment");
-    cast<VPRecipeWithIRFlags>(IVInc)->dropPoisonGeneratingFlags();
+    LoopRegion->clearCanonicalIVNUW(cast<VPInstruction>(IVInc));
   }
 
   // ---------------------------------------------------------------------------
@@ -7831,8 +7831,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     if (CM.blockNeedsPredicationForAnyReason(BB))
       BlocksNeedingPredication.insert(BB);
 
-  VPlanTransforms::createInLoopReductionRecipes(*Plan, BlocksNeedingPredication,
-                                                Range.Start);
+  RUN_VPLAN_PASS(VPlanTransforms::createInLoopReductionRecipes, *Plan,
+                 BlocksNeedingPredication, Range.Start);
 
   VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
                         OrigLoop);
@@ -7891,9 +7891,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
-  // TODO: We can't call runPass on these transforms yet, due to verifier
-  // failures.
-  VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
+  RUN_VPLAN_PASS(VPlanTransforms::addExitUsersForFirstOrderRecurrences, *Plan,
+                 Range);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -7922,7 +7921,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
 
-  VPlanTransforms::removeBranchOnConst(*Plan);
+  RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
 
   // Create partial reduction recipes for scaled reductions and transform
   // recipes to abstract recipes if it is legal and beneficial and clamp the
@@ -8612,11 +8611,6 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       });
   VPPhi *ResumePhi = nullptr;
   if (ResumePhiIter == MainScalarPH->phis().end()) {
-    using namespace llvm::VPlanPatternMatch;
-    assert(
-        match(MainPlan.getVectorLoopRegion()->getCanonicalIV()->getStartValue(),
-              m_ZeroInt()) &&
-        "canonical IV must start at 0");
     Type *Ty = VPTypeAnalysis(MainPlan).inferScalarType(VectorTC);
     VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
     ResumePhi = ScalarPHBuilder.createScalarPhi(
@@ -8659,7 +8653,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
 
-  VPCanonicalIVPHIRecipe *IV = VectorLoop->getCanonicalIV();
+  VPValue *IV = VectorLoop->getCanonicalIV();
   // When vectorizing the epilogue loop, the canonical induction needs to start
   // at the resume value from the main vector loop. Find the resume value
   // created during execution of the main VPlan. It must be the first phi in the
@@ -8701,22 +8695,21 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPInstruction *Add = Builder.createAdd(IV, VPV);
   // Replace all users of the canonical IV and its increment with the offset
   // version, except for the Add itself and the canonical IV increment.
-  auto *Increment = cast<VPInstruction>(IV->getBackedgeValue());
+  auto *Increment = vputils::findCanonicalIVIncrement(Plan);
+  assert(Increment && "Must have a canonical IV increment at this point");
   IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U, unsigned) {
     return &U != Add && &U != Increment;
   });
   VPInstruction *OffsetIVInc =
       VPBuilder::getToInsertAfter(Increment).createAdd(Increment, VPV);
-  Increment->replaceUsesWithIf(OffsetIVInc,
-                               [IV](VPUser &U, unsigned) { return &U != IV; });
+  Increment->replaceAllUsesWith(OffsetIVInc);
   OffsetIVInc->setOperand(0, Increment);
 
   DenseMap<Value *, Value *> ToFrozen;
   SmallVector<Instruction *> InstsToMove;
   // Ensure that the start values for all header phi recipes are updated before
-  // vectorizing the epilogue loop. Skip the canonical IV, which has been
-  // handled above.
-  for (VPRecipeBase &R : drop_begin(Header->phis())) {
+  // vectorizing the epilogue loop.
+  for (VPRecipeBase &R : Header->phis()) {
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {

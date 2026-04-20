@@ -2056,11 +2056,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8f16, Legal);
-      // We can use SVE2p1 fdot to emulate the fixed-length variant.
-      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
-                                MVT::v8f16, Custom);
-      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v2f32,
-                                MVT::v4f16, Custom);
+
+      // We can use SVE2p1 fdot or SVE2 fmlalb/t to emulate the fixed-length
+      // variant (unless NEON fdot is natively available).
+      if (!Subtarget->isNeonAvailable() ||
+          (!Subtarget->hasF16F32DOT() && !Subtarget->hasFP16FML())) {
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
+                                  MVT::v8f16, Custom);
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v2f32,
+                                  MVT::v4f16, Custom);
+      }
     }
 
     if (Subtarget->hasBF16())
@@ -18980,14 +18985,14 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
   // NEON dup + scalar store works for any alignment and is efficient.
   if (CanUseNEON && Op.isMemset() && !IsSmallZeroMemset &&
       AlignmentIsAcceptable(MVT::v16i8, Align(1)))
-    return LLT::fixed_vector(2, 64);
+    return LLT::fixed_vector(2, LLT::integer(64));
   if (CanUseFP && !IsSmallZeroMemset &&
       AlignmentIsAcceptable(MVT::f128, Align(16)))
-    return LLT::scalar(128);
+    return LLT::floatIEEE(128);
   if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))
-    return LLT::scalar(64);
+    return LLT::integer(64);
   if (Op.size() >= 4 && AlignmentIsAcceptable(MVT::i32, Align(4)))
-    return LLT::scalar(32);
+    return LLT::integer(32);
   return LLT();
 }
 
