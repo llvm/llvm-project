@@ -73,3 +73,7 @@ TEST_F(LlvmLibcShutdownTest, ShutRdWrDoesBoth) {
   ASSERT_THAT(LIBC_NAMESPACE::close(sv[0]), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(sv[1]), Succeeds(0));
 }
+
+TEST_F(LlvmLibcShutdownTest, FailsOnInvalidSocket) {
+  ASSERT_THAT(LIBC_NAMESPACE::shutdown(-1, SHUT_WR), Fails(EBADF));
+}
