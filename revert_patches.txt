@@ -5,9 +5,6 @@ rocwmma and CK needs changes
 breaks build of hipblaslt
 [AMDGPU][AsmParser] Forbid Fake16 instructions in Real16 mode (#176934)
 ---
-breaks smoke*
-[Reland][IR] Add initial support for the byte type (#186888)
----
 breaks rocgdb UT
 [Clang][CodeGen] Restore isEmptyFieldForLayout for empty class handling
 ---
@@ -19,7 +16,4 @@ breaks build of llvm
 ---
 ubsan issues
 Reapply "[compiler-rt] Enable minimal ubsan for GPU targets (#188289)"
----
-breaks flang tests in smoke
-[Flang] [OpenMP] [MLIR] Add lowering support for OMP ALLOCATE dire
 ---

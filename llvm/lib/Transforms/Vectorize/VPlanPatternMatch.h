@@ -306,7 +306,6 @@ private:
     auto *DefR = dyn_cast<RecipeTy>(R);
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same_v<RecipeTy, VPScalarIVStepsRecipe> ||
-                  std::is_same_v<RecipeTy, VPCanonicalIVPHIRecipe> ||
                   std::is_same_v<RecipeTy, VPDerivedIVRecipe> ||
                   std::is_same_v<RecipeTy, VPVectorEndPointerRecipe>)
       return DefR;
@@ -807,7 +806,10 @@ inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Select(Op0, m_True(), Op1);
 }
 
-inline auto m_CanonicalIV() { return m_Isa<VPCanonicalIVPHIRecipe>(); }
+inline auto m_CanonicalIV() {
+  // TODO: Don't assume all region values are canonical IVs.
+  return m_Isa<VPRegionValue>();
+}
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline auto m_ScalarIVSteps(const Op0_t &Op0, const Op1_t &Op1,

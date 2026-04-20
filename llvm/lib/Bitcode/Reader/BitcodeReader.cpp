@@ -73,6 +73,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -2657,6 +2658,17 @@ Error BitcodeReader::parseTypeTableBody() {
     case bitc::TYPE_CODE_TOKEN:     // TOKEN
       ResultTy = Type::getTokenTy(Context);
       break;
+    case bitc::TYPE_CODE_BYTE: { // BYTE: [width]
+      if (Record.empty())
+        return error("Invalid record");
+
+      uint64_t NumBits = Record[0];
+      if (NumBits < ByteType::MIN_BYTE_BITS ||
+          NumBits > ByteType::MAX_BYTE_BITS)
+        return error("Bitwidth for byte type out of range");
+      ResultTy = ByteType::get(Context, NumBits);
+      break;
+    }
     case bitc::TYPE_CODE_INTEGER: { // INTEGER: [width]
       if (Record.empty())
         return error("Invalid integer record");
@@ -3355,6 +3367,20 @@ Error BitcodeReader::parseConstants() {
       V = ConstantInt::get(CurTy, VInt);
       break;
     }
+    case bitc::CST_CODE_BYTE: // BYTE: [byteval]
+      if (!CurTy->isByteOrByteVectorTy() || Record.empty())
+        return error("Invalid byte const record");
+      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]));
+      break;
+    case bitc::CST_CODE_WIDE_BYTE: { // WIDE_BYTE: [n x byteval]
+      if (!CurTy->isByteOrByteVectorTy() || Record.empty())
+        return error("Invalid wide byte const record");
+
+      auto *ScalarTy = cast<ByteType>(CurTy->getScalarType());
+      APInt VByte = readWideAPInt(Record, ScalarTy->getBitWidth());
+      V = ConstantByte::get(CurTy, VByte);
+      break;
+    }
     case bitc::CST_CODE_FLOAT: {    // FLOAT: [fpval]
       if (Record.empty())
         return error("Invalid float const record");
@@ -3417,70 +3443,32 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid string record");
 
       SmallString<16> Elts(Record.begin(), Record.end());
-      V = ConstantDataArray::getString(Context, Elts,
-                                       BitCode == bitc::CST_CODE_CSTRING);
+      V = ConstantDataArray::getString(
+          Context, Elts, BitCode == bitc::CST_CODE_CSTRING,
+          cast<ArrayType>(CurTy)->getElementType()->isByteTy());
       break;
     }
     case bitc::CST_CODE_DATA: {// DATA: [n x value]
       if (Record.empty())
         return error("Invalid data record");
 
-      Type *EltTy;
-      if (auto *Array = dyn_cast<ArrayType>(CurTy))
-        EltTy = Array->getElementType();
-      else
-        EltTy = cast<VectorType>(CurTy)->getElementType();
-      if (EltTy->isIntegerTy(8)) {
-        SmallVector<uint8_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(16)) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(32)) {
-        SmallVector<uint32_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(64)) {
-        SmallVector<uint64_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isHalfTy()) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isBFloatTy()) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isFloatTy()) {
-        SmallVector<uint32_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isDoubleTy()) {
-        SmallVector<uint64_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else {
+      Type *EltTy = CurTy->getContainedType(0);
+      if (!ConstantDataSequential::isElementTypeCompatible(EltTy))
         return error("Invalid type for value");
+
+      const unsigned EltBytes = EltTy->getScalarSizeInBits() / 8;
+      SmallString<128> RawData;
+      RawData.reserve(Record.size() * EltBytes);
+      for (uint64_t Val : Record) {
+        const char *Src = reinterpret_cast<const char *>(&Val);
+        if constexpr (sys::IsBigEndianHost)
+          Src += sizeof(uint64_t) - EltBytes;
+        RawData.append(Src, Src + EltBytes);
       }
+
+      V = isa<VectorType>(CurTy)
+              ? ConstantDataVector::getRaw(RawData.str(), Record.size(), EltTy)
+              : ConstantDataArray::getRaw(RawData.str(), Record.size(), EltTy);
       break;
     }
     case bitc::CST_CODE_CE_UNOP: {  // CE_UNOP: [opcode, opval]
