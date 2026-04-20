@@ -14,11 +14,11 @@
 //===----------------------------------------------------------------------===//
 
 def C1PremiumModel : SchedMachineModel {
-  let IssueWidth            =   9;
+  let IssueWidth            =   10;
   let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.
-  let LoopMicroOpBufferSize =  16;   
+  let LoopMicroOpBufferSize =  16;
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
@@ -77,7 +77,6 @@ def : ReadAdvance<ReadAdrBase, 0>;
 def : ReadAdvance<ReadST,      0>;
 def : ReadAdvance<ReadVLD,     0>;
 
-// NOTE: Copied from NeoverseC1P
 def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }
 def : WriteRes<WriteBarrier, []> { let Latency = 1; }
 def : WriteRes<WriteHint,    []> { let Latency = 1; }
@@ -536,8 +535,8 @@ def : SchedAlias<WriteBrReg, C1PWrite_2c_1B>;
 def : InstRW<[C1PWrite_2c_1B_1I], (instrs BL, BLR)>;
 
 
-// // Arithmetic and logical operations
-// // -----------------------------------------------------------------------------
+// Arithmetic and logical operations
+// -----------------------------------------------------------------------------
 
 // ALU, basic
 def : SchedAlias<WriteI, C1PWrite_1c_1I>;
@@ -750,18 +749,18 @@ def : SchedAlias<WriteFCmp,  C1PWrite_2c_1V01>;
 def : SchedAlias<WriteFDiv,  C1PWrite_5c_1V1_8rc>;
 
 // FP divide, H-form
-def : InstRW<[C1PWrite_5c_1V1_8rc],  (instrs FDIVHrr)>;
+def : InstRW<[C1PWrite_5c_1V1],  (instrs FDIVHrr)>;
 // FP divide, S-form
-def : InstRW<[C1PWrite_8c_1V1_4rc], (instrs FDIVSrr)>;
+def : InstRW<[C1PWrite_8c_1V1], (instrs FDIVSrr)>;
 // FP divide, D-form
-def : InstRW<[C1PWrite_12c_1V1_2rc], (instrs FDIVDrr)>;
+def : InstRW<[C1PWrite_12c_1V1], (instrs FDIVDrr)>;
 
 // FP square root, H-form
-def : InstRW<[C1PWrite_5c_1V1_8rc],  (instrs FSQRTHr)>;
+def : InstRW<[C1PWrite_5c_1V1],  (instrs FSQRTHr)>;
 // FP square root, S-form
-def : InstRW<[C1PWrite_8c_1V1_4rc],  (instrs FSQRTSr)>;
+def : InstRW<[C1PWrite_8c_1V1],  (instrs FSQRTSr)>;
 // FP square root, D-form
-def : InstRW<[C1PWrite_12c_1V1_2rc], (instrs FSQRTDr)>;
+def : InstRW<[C1PWrite_12c_1V1], (instrs FSQRTDr)>;
 
 // FP multiply
 def : SchedAlias<WriteFMul, C1PWrite_3c_1V>;
@@ -1823,7 +1822,7 @@ def : InstRW<[C1PWrite_4c_2V], (instregex "^URECPE_ZPmZ_S", "^URSQRTE_ZPmZ_S")>;
 def : InstRW<[C1PWrite_8c_4V], (instregex "^[SU]ADDV_VPZ_B")>;
 def : InstRW<[C1PWrite_6c_3V], (instregex "^[SU](MAX|MIN)V_VPZ_B")>;
 
-// // Reduction, arithmetic, H form
+// Reduction, arithmetic, H form
 def : InstRW<[C1PWrite_6c_3V], (instregex "^[SU]ADDV_VPZ_H")>;
 def : InstRW<[C1PWrite_6c_3V], (instregex "^[SU](MAX|MIN)V_VPZ_H")>;
 
