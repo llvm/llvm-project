@@ -10508,7 +10508,7 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
     }
     if (inlineAlways->v->ToString() != sym->name().ToString()) {
       context().Warn(common::UsageWarning::IgnoredDirective, x.source,
-          "IGNOREALWAYS function name does not match the function"_warn_en_US);
+          "INLINEALWAYS name does not match the subroutine or function name"_warn_en_US);
     }
   } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
     Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US)
