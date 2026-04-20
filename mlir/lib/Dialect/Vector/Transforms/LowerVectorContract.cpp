@@ -489,6 +489,65 @@ struct UnrolledOuterProductGenerator
         return outerProd(tRhs, lhs, res, lhsType, *reductionSize, tMask);
       }
     }
+    // Layouts where N comes from LHS and M comes from RHS.
+    // Result = {m, n}: RHS-derived dimension determines rows.
+    if (layout({{k, n}, {m, k}, {m, n}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tRhs = t(rhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tRhs, lhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
+    if (layout({{n, k}, {m, k}, {m, n}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tLhs = t(lhs);
+        Value tRhs = t(rhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tRhs, tLhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
+    if (layout({{k, n}, {k, m}, {m, n}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(rhs, lhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
+    if (layout({{n, k}, {k, m}, {m, n}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tLhs = t(lhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(rhs, tLhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
+    // Transposed output: N from LHS, M from RHS.
+    if (layout({{k, n}, {m, k}, {n, m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tRhs = t(rhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(lhs, tRhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
+    if (layout({{n, k}, {m, k}, {n, m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tLhs = t(lhs);
+        Value tRhs = t(rhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tLhs, tRhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
+    if (layout({{k, n}, {k, m}, {n, m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(lhs, rhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
+    if (layout({{n, k}, {k, m}, {n, m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tLhs = t(lhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tLhs, rhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     return failure();
   }
 
