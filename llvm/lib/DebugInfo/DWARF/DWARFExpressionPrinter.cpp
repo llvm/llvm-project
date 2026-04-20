@@ -57,20 +57,21 @@ static bool decodeVirtualRegisterName(uint64_t DwarfRegNum,
   return true;
 }
 
-/// \p DecodedScratch must stay alive as long as the returned \p StringRef is
-/// used (it points into \p DecodedScratch when the virtual-register decode
-/// path is taken).
-static StringRef resolveRegName(
+/// Resolves a DWARF register number to a display name: first via \p
+/// GetNameForDWARFReg (MC register names), otherwise try decoding
+/// ASCII-encoded virtual register names (NVPTX-specific).
+/// Returns empty if neither applies.
+static std::string resolveRegName(
     uint64_t DwarfRegNum, bool IsEH,
-    const std::function<StringRef(uint64_t, bool)> &GetNameForDWARFReg,
-    SmallString<32> &DecodedScratch) {
+    const std::function<StringRef(uint64_t, bool)> &GetNameForDWARFReg) {
   if (GetNameForDWARFReg) {
     StringRef R = GetNameForDWARFReg(DwarfRegNum, IsEH);
     if (!R.empty())
-      return R;
+      return std::string(R);
   }
-  if (decodeVirtualRegisterName(DwarfRegNum, DecodedScratch))
-    return DecodedScratch;
+  SmallString<32> Decoded;
+  if (decodeVirtualRegisterName(DwarfRegNum, Decoded))
+    return std::string(Decoded);
   return {};
 }
 
@@ -294,9 +295,8 @@ static bool printCompactDWARFExpr(
       // DW_OP_regx: A register, with the register num given as an operand.
       // Printed as the plain register name.
       const uint64_t DwarfRegNum = Op.getRawOperand(0);
-      SmallString<32> DecodedScratch;
-      StringRef RegName = resolveRegName(DwarfRegNum, false, GetNameForDWARFReg,
-                                         DecodedScratch);
+      std::string RegName =
+          resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
       if (RegName.empty())
         return false;
       raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
@@ -304,11 +304,10 @@ static bool printCompactDWARFExpr(
       break;
     }
     case dwarf::DW_OP_bregx: {
-      const int64_t DwarfRegNum = Op.getRawOperand(0);
+      const uint64_t DwarfRegNum = Op.getRawOperand(0);
       const int64_t Offset = Op.getRawOperand(1);
-      SmallString<32> DecodedScratch;
-      StringRef RegName = resolveRegName(DwarfRegNum, false, GetNameForDWARFReg,
-                                         DecodedScratch);
+      std::string RegName =
+          resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
       if (RegName.empty())
         return false;
       raw_svector_ostream S(Stack.emplace_back().String);
@@ -417,9 +416,8 @@ bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
   else
     DwarfRegNum = Opcode - DW_OP_reg0;
 
-  SmallString<32> DecodedScratch;
-  StringRef RegName = resolveRegName(
-      DwarfRegNum, DumpOpts.IsEH, DumpOpts.GetNameForDWARFReg, DecodedScratch);
+  std::string RegName =
+      resolveRegName(DwarfRegNum, DumpOpts.IsEH, DumpOpts.GetNameForDWARFReg);
 
   if (!RegName.empty()) {
     if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
