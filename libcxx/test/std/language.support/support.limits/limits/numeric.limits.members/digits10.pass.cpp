@@ -57,10 +57,7 @@ int main(int, char**)
     test<double, DBL_DIG>();
     test<long double, LDBL_DIG>();
 
-    // _BitInt(N): digits10 = floor((N - is_signed) * log10(2)). The formula
-    // `digits * 3 / 10` was wrong for digits >= 256: e.g. unsigned
-    // _BitInt(256) has digits=256 and log10(2^256) ~= 77.06, so digits10
-    // must be 77, not 76.
+    // _BitInt(N): digits10 = floor((N - is_signed) * log10(2)).
 #if TEST_HAS_EXTENSION(bit_int)
     test<unsigned _BitInt(8), 2>();   // digits=8,   log10=2.4
     test<signed _BitInt(8), 2>();     // digits=7,   log10=2.1
@@ -79,7 +76,7 @@ int main(int, char**)
 #  if __BITINT_MAXWIDTH__ >= 256
     test<unsigned _BitInt(129), 38>(); // digits=129, log10=38.8
     test<unsigned _BitInt(255), 76>(); // digits=255, log10=76.8
-    test<unsigned _BitInt(256), 77>(); // digits=256, log10=77.1 (old: 76)
+    test<unsigned _BitInt(256), 77>(); // digits=256, log10=77.1
     test<signed _BitInt(256), 76>();   // digits=255, log10=76.8
     test<unsigned _BitInt(257), 77>(); // digits=257, log10=77.4
 #  endif
@@ -93,11 +90,11 @@ int main(int, char**)
     // of log10(2) would give the wrong floor, so these tests bite if the
     // formula ever regresses.
 #  if __BITINT_MAXWIDTH__ >= 15437
-    // 643/2136 (the pre-fix approximation) gives 4646 here; correct is 4647.
+    // A coarser convergent (643/2136) would give 4646 here; correct is 4647.
     test<unsigned _BitInt(15437), 4647>();
 #  endif
 #  if __BITINT_MAXWIDTH__ >= 70777
-    // 8651/28738 gives 21305 here; correct is 21306.
+    // A coarser convergent (8651/28738) would give 21305 here; correct is 21306.
     test<unsigned _BitInt(70777), 21306>();
 #  endif
 #  if __BITINT_MAXWIDTH__ >= 1000000

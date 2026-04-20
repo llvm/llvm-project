@@ -197,11 +197,9 @@ protected:
 #  else
   static _LIBCPP_CONSTEXPR const int digits = static_cast<int>(sizeof(type) * __CHAR_BIT__ - is_signed);
 #  endif
-  // digits10 = floor(digits * log10(2)). The rational 1936274/6432163 is a
-  // continued-fraction convergent of log10(2) and matches floor(d*log10(2))
-  // exactly for every d in [1, 8388608], i.e. up to __BITINT_MAXWIDTH__ on
-  // x86. The old digits*3/10 was wrong for digits >= 256 (gave 76 instead
-  // of 77); 643/2136 would have broken again at digits=15437.
+  // digits10 = floor(digits * log10(2)). 1936274/6432163 is a continued-fraction
+  // convergent of log10(2) and matches floor(d * log10(2)) exactly for every d
+  // in [1, 8388608], i.e. up to __BITINT_MAXWIDTH__ on x86.
   static _LIBCPP_CONSTEXPR const int digits10     = static_cast<int>((digits * 1936274LL) / 6432163);
   static _LIBCPP_CONSTEXPR const int max_digits10 = 0;
   static _LIBCPP_CONSTEXPR const type __min       = is_signed ? _Tp(_Tp(1) << digits) : 0;

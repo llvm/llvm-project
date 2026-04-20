@@ -54,11 +54,9 @@ int main(int, char**)
     test<long double, LDBL_MANT_DIG>();
 
     // _BitInt(N): digits must equal N for unsigned and N-1 for signed,
-    // regardless of padding. The old sizeof*CHAR_BIT form counted padding
-    // bits for non-byte-aligned widths (e.g. unsigned _BitInt(13) reported
-    // 16 instead of 13).
+    // regardless of padding bits for non-byte-aligned widths.
 #if TEST_HAS_EXTENSION(bit_int)
-    // Byte-aligned widths (historically correct).
+    // Byte-aligned widths.
     test<unsigned _BitInt(8), 8>();
     test<signed _BitInt(8), 7>();
     test<unsigned _BitInt(32), 32>();
@@ -66,7 +64,7 @@ int main(int, char**)
     test<unsigned _BitInt(64), 64>();
     test<signed _BitInt(64), 63>();
 
-    // Odd widths: these are the cases the old formula got wrong.
+    // Non-byte-aligned widths.
     test<unsigned _BitInt(7), 7>();
     test<signed _BitInt(7), 6>();
     test<unsigned _BitInt(13), 13>();
