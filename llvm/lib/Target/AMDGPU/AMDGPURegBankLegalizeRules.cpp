@@ -1486,6 +1486,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   using namespace Intrinsic;
 
+  addRulesForIOpcs({returnaddress}).Any({{UniP0}, {{SgprP0}, {}}});
+
   addRulesForIOpcs({amdgcn_s_getpc}).Any({{UniS64, _}, {{Sgpr64}, {None}}});
 
   addRulesForIOpcs({amdgcn_s_getreg}).Any({{}, {{Sgpr32}, {IntrId, Imm}}});
