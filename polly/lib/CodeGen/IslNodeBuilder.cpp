@@ -1085,40 +1085,49 @@ Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
   return PreloadVal;
 }
 
-Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
-                                            __isl_take isl_set *Domain) {
-  isl_set *AccessRange = isl_map_range(MA.getAddressFunction().release());
-  AccessRange = isl_set_gist_params(AccessRange, S.getContext().release());
+Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,  isl::set Domain2      ) {
+      isl::set AccessRange2 = MA.getAddressFunction().range();
+      AccessRange2 = AccessRange2.gist_params(S.getContext());
 
-  if (!materializeParameters(AccessRange)) {
-    isl_set_free(AccessRange);
-    isl_set_free(Domain);
+
+
+
+  if (!materializeParameters(AccessRange2.get())) 
     return nullptr;
-  }
+  
+    
+  isl::ast_build    Build2 =   isl::ast_build ::from_context(isl::set::universe(  S.getParamSpace()) ) ;
+  auto Universe2 = isl::set::universe(Domain2.get_space() );
+    bool AlwaysExecuted = Domain2.is_equal(Universe2);
 
-  auto *Build =
-      isl_ast_build_from_context(isl_set_universe(S.getParamSpace().release()));
-  isl_set *Universe = isl_set_universe(isl_set_get_space(Domain));
-  bool AlwaysExecuted = isl_set_is_equal(Domain, Universe);
-  isl_set_free(Universe);
+
 
   Instruction *AccInst = MA.getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
+     
+
+      
 
   Value *PreloadVal = nullptr;
   if (AlwaysExecuted) {
-    PreloadVal = preloadUnconditionally(AccessRange, Build, AccInst);
-    isl_ast_build_free(Build);
-    isl_set_free(Domain);
+     PreloadVal = preloadUnconditionally(AccessRange2.release(), Build2.get(), AccInst);
     return PreloadVal;
   }
 
-  if (!materializeParameters(Domain)) {
-    isl_ast_build_free(Build);
-    isl_set_free(AccessRange);
-    isl_set_free(Domain);
+
+
+  if (!materializeParameters(Domain2.get())) {
+   // isl_ast_build_free(Build);
+  //  isl_set_free(AccessRange);
+  //  isl_set_free(Domain);
     return nullptr;
   }
+
+          auto *Build =  Build2.release();
+    __isl_take isl_set *Domain =  Domain2.copy();
+             isl_set *AccessRange = AccessRange2.release(); 
+         
+
 
   isl_ast_expr *DomainCond = isl_ast_build_expr_from_set(Build, Domain);
   Domain = nullptr;
@@ -1238,7 +1247,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   Instruction *AccInst = MA->getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
 
-  Value *PreloadVal = preloadInvariantLoad(*MA, ExecutionCtx.copy());
+  Value *PreloadVal = preloadInvariantLoad(*MA, ExecutionCtx);
   if (!PreloadVal)
     return false;
 

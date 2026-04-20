@@ -296,7 +296,7 @@ protected:
   ///   MA_preload = load MA;
   /// use MA_preload
   Value *preloadInvariantLoad(const MemoryAccess &MA,
-                              __isl_take isl_set *Domain);
+                              isl::set Domain);
 
   /// Preload the invariant access equivalence class @p IAClass
   ///
