@@ -180,8 +180,6 @@ private:
       return D->transfer(In, *F->getAs<TestPointFact>());
     case Fact::Kind::InvalidateOrigin:
       return D->transfer(In, *F->getAs<InvalidateOriginFact>());
-    case Fact::Kind::DestroyOrigin:
-      return D->transfer(In, *F->getAs<DestroyOriginFact>());
     case Fact::Kind::KillOrigin:
       return D->transfer(In, *F->getAs<KillOriginFact>());
     }
@@ -197,7 +195,6 @@ public:
   Lattice transfer(Lattice In, const UseFact &) { return In; }
   Lattice transfer(Lattice In, const TestPointFact &) { return In; }
   Lattice transfer(Lattice In, const InvalidateOriginFact &) { return In; }
-  Lattice transfer(Lattice In, const DestroyOriginFact &) { return In; }
   Lattice transfer(Lattice In, const KillOriginFact &) { return In; }
 };
 } // namespace clang::lifetimes::internal

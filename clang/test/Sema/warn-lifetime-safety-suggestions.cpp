@@ -601,10 +601,14 @@ HasCtorField test_dangling_field_ctor() {
 }
 
 struct HasSetterField {
-  LifetimeBoundCtor* field;
-  // FIXME: Does not currently warn (even without `new`)
+  LifetimeBoundCtor* field; // expected-note {{this field dangles}}
+  // FIXME: Does not currently suggest `lifetime_capture_by(this)` (even without `new`)
   void set(const MyObj& obj) {
     field = new LifetimeBoundCtor(obj);
+  }
+  void reset() {
+    MyObj obj;
+    field = new LifetimeBoundCtor(obj); // expected-warning {{address of stack memory escapes to a field}}
   }
 };
 
@@ -615,4 +619,4 @@ HasSetterField test_dangling_field_member_fn() {
   return x;
 }
 
-}
+} // namespace new_allocation_suggestion

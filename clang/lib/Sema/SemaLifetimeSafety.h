@@ -67,6 +67,15 @@ public:
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
+  void reportUseAfterFree(const ParmVarDecl *IssueDecl, const Expr *UseExpr,
+                          const Expr *FreedExpr) override {
+    S.Diag(IssueDecl->getBeginLoc(), diag::warn_lifetime_safety_use_after_free)
+        << IssueDecl->getSourceRange();
+    S.Diag(FreedExpr->getExprLoc(), diag::note_lifetime_safety_freed_here)
+        << FreedExpr->getSourceRange();
+    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
+        << UseExpr->getSourceRange();
+  }
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
                             const Expr *MovedExpr,

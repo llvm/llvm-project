@@ -2814,8 +2814,8 @@ void delete_pointer_propagation_use_after_free() {
   (void)(*pp)->id;      // expected-note {{later used here}}
 }
 
-void delete_param_pointer(int* x) { // expected-warning {{parameter is later invalidated}}
-  delete x;                         // expected-note {{invalidated here}}
+void delete_param_pointer(int* x) { // expected-warning {{allocated object does not live long enough}}
+  delete x;                         // expected-note {{freed here}}
   (void)x;                          // expected-note {{later used here}}
 }
 
@@ -2828,11 +2828,12 @@ struct S {
   }
 };
 
-void use_innerr_origin_after_delete(MyObj* obj) { // expected-warning {{parameter is later invalidated}}
+void use_inner_origin_after_delete(MyObj* obj) { // expected-warning {{allocated object does not live long enough}}
     int* p = &obj->id;
-    delete obj;                                   // expected-note {{invalidated here}}
+    delete obj;                                   // expected-note {{freed here}}
     (void)*p;                                     // expected-note {{later used here}}
 }
+
 void delete_nullptr_no_warning() {
   int *p = nullptr;
   delete p;
@@ -2878,15 +2879,15 @@ void delete_through_pointer_field() {
 
 void delete_stack_object() {
   MyObj obj;
-  MyObj* p = &obj; // expected-warning {{object whose reference is captured is later invalidated}}
-  delete &obj;     // expected-note {{invalidated here}}
+  MyObj* p = &obj; // expected-warning {{allocated object does not live long enough}}
+  delete &obj;     // expected-note {{freed here}}
   (void)p->id;     // expected-note {{later used here}}
 }
 
 void delete_stack_object_int() {
   int obj;
-  int* p = &obj;  // expected-warning {{object whose reference is captured is later invalidated}}
-  delete &obj;    // expected-note {{invalidated here}}
+  int* p = &obj;  // expected-warning {{allocated object does not live long enough}}
+  delete &obj;    // expected-note {{freed here}}
   (void)*p;       // expected-note {{later used here}}
 }
 

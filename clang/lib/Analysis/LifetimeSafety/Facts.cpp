@@ -98,13 +98,6 @@ void InvalidateOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << ")\n";
 }
 
-void DestroyOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                             const OriginManager &OM) const {
-  OS << "DestroyOrigin (";
-  OM.dump(getDestroyedOrigin(), OS);
-  OS << ")\n";
-}
-
 void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                          const OriginManager &) const {
   OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";

@@ -98,8 +98,6 @@ public:
           checkInvalidation(IOF);
         else if (const auto *OEF = F->getAs<OriginEscapesFact>())
           checkAnnotations(OEF);
-        else if (const auto *DOF = F->getAs<DestroyOriginFact>())
-          checkDestroyed(DOF);
     issuePendingWarnings();
     suggestAnnotations();
     reportNoescapeViolations();
@@ -187,33 +185,31 @@ public:
     }
   }
 
-  /// Records warnings for live loans whose access paths match loan invalidated
-  /// by `InvalidatingExpr`.
-  ///
+  /// Records warnings for live loans whose access paths match loans directly
+  /// held by the `InvalidatedOrigin`.
   /// \param InvalidatingExpr The invalidating expression.
   /// \param InvalidatedOrigin The origin being invalidated.
-  /// \param OF The fact where the invalidation happens.
-  template <typename OriginFact>
-  void recordWarningsForMatchingLoans(const Expr *InvalidatingExpr,
-                                      OriginID InvalidatedOrigin,
-                                      OriginFact OF) {
+  /// \param PP The fact where the invalidation happens.
+  void checkLiveLoansForInvalidation(const Expr *InvalidatingExpr,
+                                     OriginID InvalidatedOrigin,
+                                     ProgramPoint PP) {
 
     LoanSet DirectlyInvalidatedLoans =
-        LoanPropagation.getLoans(InvalidatedOrigin, OF);
+        LoanPropagation.getLoans(InvalidatedOrigin, PP);
 
     auto IsInvalidated = [&](const LoanID LID) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
       for (LoanID InvalidID : DirectlyInvalidatedLoans) {
         const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-
         if (InvalidL->getAccessPath() == L->getAccessPath())
           return true;
       }
       return false;
     };
 
-    for (auto &[OID, LiveInfo] : LiveOrigins.getLiveOriginsAt(OF)) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, OF);
+    // For each live origin, check if it holds an invalidated loan and report.
+    for (auto &[OID, LiveInfo] : LiveOrigins.getLiveOriginsAt(PP)) {
+      LoanSet HeldLoans = LoanPropagation.getLoans(OID, PP);
       for (LoanID HeldLoan : HeldLoans) {
         if (!IsInvalidated(HeldLoan))
           continue;
@@ -239,13 +235,8 @@ public:
   /// and checks if they hold loans that are invalidated by the operation
   /// (e.g., iterators into a vector that is being pushed to).
   void checkInvalidation(const InvalidateOriginFact *IOF) {
-    recordWarningsForMatchingLoans(IOF->getInvalidationExpr(),
-                                   IOF->getInvalidatedOrigin(), IOF);
-  }
-
-  void checkDestroyed(const DestroyOriginFact *DOF) {
-    recordWarningsForMatchingLoans(DOF->getDestroyExpr(),
-                                   DOF->getDestroyedOrigin(), DOF);
+    checkLiveLoansForInvalidation(IOF->getInvalidationExpr(),
+                                  IOF->getInvalidatedOrigin(), IOF);
   }
 
   void issuePendingWarnings() {
@@ -263,10 +254,14 @@ public:
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
         if (Warning.InvalidatedByExpr) {
-          if (const CXXNewExpr *NE = dyn_cast_or_null<CXXNewExpr>(IssueExpr);
-              NE)
-            SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(),
-                                           Warning.InvalidatedByExpr);
+          if (const CXXDeleteExpr *DE =
+                  dyn_cast<CXXDeleteExpr>(Warning.InvalidatedByExpr))
+            if (InvalidatedPVD)
+              SemaHelper->reportUseAfterFree(InvalidatedPVD, UF->getUseExpr(),
+                                             Warning.InvalidatedByExpr);
+            else
+              SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(),
+                                             Warning.InvalidatedByExpr);
           else if (IssueExpr)
             // Use-after-invalidation of an object on stack.
             SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),

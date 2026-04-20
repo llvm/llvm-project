@@ -53,10 +53,8 @@ public:
     TestPoint,
     /// An origin that escapes the function scope (e.g., via return).
     OriginEscapes,
-    /// An origin is invalidated (e.g. vector resized).
+    /// An origin is invalidated (e.g. vector resized, `delete` called).
     InvalidateOrigin,
-    // An origin is explicitly destroyed (e.g. via `delete`).
-    DestroyOrigin,
     /// All loans of an origin are cleared.
     KillOrigin,
   };
@@ -299,25 +297,6 @@ public:
   OriginID getMovedOrigin() const { return MovedOrigin; }
   const Expr *getMoveExpr() const { return MoveExpr; }
 
-  void dump(llvm::raw_ostream &OS, const LoanManager &,
-            const OriginManager &OM) const override;
-};
-
-// Origin has been destroyed, e.g. via `delete`.
-class DestroyOriginFact : public Fact {
-  OriginID OID;
-  const Expr *DestroyExpr;
-
-public:
-  static bool classof(const Fact *F) {
-    return F->getKind() == Kind::DestroyOrigin;
-  }
-
-  DestroyOriginFact(OriginID OID, const Expr *DestroyExpr)
-      : Fact(Kind::DestroyOrigin), OID(OID), DestroyExpr(DestroyExpr) {}
-
-  OriginID getDestroyedOrigin() const { return OID; }
-  const Expr *getDestroyExpr() const { return DestroyExpr; }
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
