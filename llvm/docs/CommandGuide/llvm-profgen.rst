@@ -24,6 +24,25 @@ At least one of the following commands are required:
   Path of perf-script trace created by Linux perf tool with `script`
   command(the raw perf.data should be profiled with -b).
 
+.. option:: --perfdata=<perfdata>, --pd
+
+   Path of raw perf data created by Linux perf tool (it should be profiled
+   with -b).
+
+.. option:: --unsymbolized-profile=<unsymbolized profile>, --up
+
+   Path of the unsymbolized profile created by ``llvm-profgen`` with
+   ``--skip-symbolization``.
+   
+.. option:: --llvm-sample-profile=<llvm sample profile>
+
+   Path of the LLVM sample profile.
+   
+.. note::
+
+   Only one of ``--perfscript``, ``--perfdata``, ``--unsymbolized-profile``,
+   or ``--llvm-sample-profile`` may be specified at a time.  
+
 .. option:: --binary=<string[,string,...]>
 
   Path of the input profiled binary files.
@@ -32,19 +51,6 @@ At least one of the following commands are required:
 
   Path of the output profile file.
   
-.. option:: --perfdata=<perfdata>, --pd
-
-   Path of raw perf data created by Linux perf tool (it should be profiled
-   with -b).
-
-.. option:: --llvm-sample-profile=<llvm sample profile>
-
-   Path of the LLVM sample profile.
-   
-.. option:: --unsymbolized-profile=<unsymbolized profile>, --up
-
-   Path of the unsymbolized profile created by ``llvm-profgen`` with
-   ``--skip-symbolization``.
 
 OPTIONS
 -------
