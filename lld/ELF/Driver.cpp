@@ -254,6 +254,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 
   if (ctx.arg.formatBinary) {
     files.push_back(std::make_unique<BinaryFile>(ctx, mbref));
+    if (!isInGroup)
+      ++nextGroupId;
     return;
   }
 
@@ -321,7 +323,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
         ctx, mbref, withLOption ? path::filename(path) : path);
     f->init();
     files.push_back(std::move(f));
-    return;
+    break;
   }
   case file_magic::bitcode:
     files.push_back(std::make_unique<BitcodeFile>(ctx, mbref, "", 0, inLib));
@@ -332,7 +334,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     break;
   default:
     ErrAlways(ctx) << path << ": unknown file type";
+    return;
   }
+  // All files within the same --{start,end}-group get the same group ID.
+  // Otherwise, a new file will get a new group ID.
+  if (!isInGroup)
+    ++nextGroupId;
 }
 
 // Add a given library by searching it from input search paths.
@@ -1209,6 +1216,54 @@ static CGProfileSortKind getCGProfileSortKind(Ctx &ctx,
 }
 
 static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
+  auto addCompressionSortSpec = [&](StringRef value) {
+    SmallVector<StringRef, 3> parts;
+    value.split(parts, '=');
+
+    StringRef globString = parts[0];
+    unsigned layoutPriority = 0;
+    std::optional<unsigned> matchPriority;
+
+    if (parts.size() > 1 && !parts[1].empty()) {
+      if (!to_integer(parts[1], layoutPriority)) {
+        ErrAlways(ctx) << "--bp-compression-sort-section: expected integer "
+                          "for layout_priority, got '"
+                       << parts[1] << "'";
+        return;
+      }
+    }
+    if (parts.size() > 2 && !parts[2].empty()) {
+      unsigned mp;
+      if (!to_integer(parts[2], mp)) {
+        ErrAlways(ctx) << "--bp-compression-sort-section: expected integer "
+                          "for match_priority, got '"
+                       << parts[2] << "'";
+        return;
+      }
+      matchPriority = mp;
+    }
+    if (parts.size() > 3) {
+      ErrAlways(ctx) << "--bp-compression-sort-section: too many '=' in '"
+                     << value << "'";
+      return;
+    }
+
+    auto spec = BPCompressionSortSpec::create(globString, layoutPriority,
+                                              matchPriority);
+    if (!spec) {
+      ErrAlways(ctx) << "--bp-compression-sort-section: "
+                     << toString(spec.takeError());
+      return;
+    }
+    ctx.arg.bpCompressionSortSpecs.emplace_back(std::move(*spec));
+  };
+
+  for (auto *arg : args.filtered(OPT_bp_compression_sort_section))
+    addCompressionSortSpec(arg->getValue());
+  if (!ctx.arg.bpCompressionSortSpecs.empty() &&
+      args.hasArg(OPT_call_graph_ordering_file))
+    ErrAlways(ctx) << "--bp-compression-sort-section is incompatible with "
+                      "--call-graph-ordering-file";
   if (auto *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef s = arg->getValue();
     if (s == "function") {

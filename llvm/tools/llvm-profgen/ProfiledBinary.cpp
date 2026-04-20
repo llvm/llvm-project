@@ -11,6 +11,8 @@
 #include "MissingFrameInferrer.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
@@ -246,6 +248,19 @@ void ProfiledBinary::load() {
   // Find the preferred load address for text sections.
   setPreferredTextSegmentAddresses(Obj);
 
+  // For shared libraries, read build ID to filter perfscript addresses
+  // in [buildid:]addr format. Main executables (including PIE) use empty
+  // FilterBuildID since their addresses have no buildid prefix.
+  // Both PIE executables and shared libraries are ET_DYN, but only PIE
+  // executables have a PT_INTERP program header.
+  file_magic Magic;
+  if (auto EC = identify_magic(Path, Magic);
+      !EC && Magic == file_magic::elf_shared_object && !HasInterp) {
+    auto BID = object::getBuildID(Obj);
+    if (!BID.empty())
+      FilterBuildID = llvm::toHex(BID, /*LowerCase=*/true);
+  }
+
   // Load debug info of subprograms from DWARF section.
   // If path of debug info binary is specified, use the debug info from it,
   // otherwise use the debug info from the executable binary.
@@ -351,6 +366,8 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
   // because we may build the tools on non-linux.
   uint64_t PageSize = 0x1000;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
+    if (Phdr.p_type == ELF::PT_INTERP)
+      HasInterp = true;
     if (Phdr.p_type == ELF::PT_LOAD) {
       if (!FirstLoadableAddress)
         FirstLoadableAddress = Phdr.p_vaddr & ~(PageSize - 1U);
@@ -628,6 +645,8 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       if (MCDesc.isCall()) {
         CallAddressSet.insert(Address);
         UncondBranchAddrSet.insert(Address);
+        // Record the instruction after call as the branch target of a ret
+        BranchTargetAddressSet.insert(Address + Size);
       } else if (MCDesc.isReturn()) {
         RetAddressSet.insert(Address);
         UncondBranchAddrSet.insert(Address);
@@ -635,6 +654,17 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
         if (MCDesc.isUnconditionalBranch())
           UncondBranchAddrSet.insert(Address);
         BranchAddressSet.insert(Address);
+      }
+
+      if (MCDesc.isIndirectBranch()) {
+        IndirectBranchAddressSet.insert(Address);
+      }
+
+      // Record branch target addresses for branches and calls.
+      if (MCDesc.isCall() || MCDesc.isBranch()) {
+        uint64_t Target = 0;
+        if (MIA->evaluateBranch(Inst, Address, Size, Target))
+          BranchTargetAddressSet.insert(Target);
       }
 
       // Record potential call targets for tail frame inference later-on.

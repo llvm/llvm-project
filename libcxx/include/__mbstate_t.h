@@ -43,6 +43,8 @@
 #  include <bits/types/mbstate_t.h> // works on most Unixes
 #elif __has_include(<sys/_types/_mbstate_t.h>)
 #  include <sys/_types/_mbstate_t.h> // works on Darwin
+#elif __has_include(<bits/mbstate_t.h>)
+#  include <bits/mbstate_t.h> // works for Android
 #elif __has_include_next(<wchar.h>)
 #  include_next <wchar.h> // use the C standard provider of mbstate_t if present
 #elif __has_include_next(<uchar.h>)

@@ -491,10 +491,11 @@ public:
 
     // - Declare all functions that have definitions so that definition
     //   signatures prevail over call site signatures.
-    // - Define module variables and OpenMP/OpenACC declarative constructs so
-    //   they are available before lowering any function that may use them.
+    // - Module variables are lowered once all the function declarations are
+    // available.
     bool hasMainProgram = false;
-    const Fortran::semantics::Symbol *globalOmpRequiresSymbol = nullptr;
+    llvm::SmallVector<const Fortran::semantics::Symbol *>
+        globalOmpRequiresSymbols;
     createBuilderOutsideOfFuncOpAndDo([&]() {
       for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
         Fortran::common::visit(
@@ -503,26 +504,36 @@ public:
                   if (f.isMainProgram())
                     hasMainProgram = true;
                   declareFunction(f);
-                  if (!globalOmpRequiresSymbol)
-                    globalOmpRequiresSymbol = f.getScope().symbol();
+                  globalOmpRequiresSymbols.push_back(f.getScope().symbol());
                 },
                 [&](Fortran::lower::pft::ModuleLikeUnit &m) {
-                  lowerModuleDeclScope(m);
                   for (Fortran::lower::pft::ContainedUnit &unit :
                        m.containedUnitList)
                     if (auto *f =
                             std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
-                                &unit))
+                                &unit)) {
                       declareFunction(*f);
+                      globalOmpRequiresSymbols.push_back(
+                          f->getScope().symbol());
+                    }
+                  globalOmpRequiresSymbols.push_back(m.getScope().symbol());
                 },
                 [&](Fortran::lower::pft::BlockDataUnit &b) {
-                  if (!globalOmpRequiresSymbol)
-                    globalOmpRequiresSymbol = b.symTab.symbol();
+                  globalOmpRequiresSymbols.push_back(b.symTab.symbol());
                 },
                 [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
                 [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
             },
             u);
+      }
+    });
+
+    // Lower module declaration scopes now that all function
+    // declarations are available with their final signatures.
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
+        if (auto *m = std::get_if<Fortran::lower::pft::ModuleLikeUnit>(&u))
+          lowerModuleDeclScope(*m);
       }
     });
 
@@ -567,7 +578,7 @@ public:
                                   Fortran::common::LanguageFeature::Coarray));
       });
 
-    finalizeOpenMPLowering(globalOmpRequiresSymbol);
+    finalizeOpenMPLowering(globalOmpRequiresSymbols);
   }
 
   /// Declare a function.
@@ -2490,6 +2501,16 @@ private:
     Fortran::lower::pft::Evaluation &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
 
+    // If this do-loop was absorbed by a collapse clause on a parent acc.loop,
+    // skip generating any loop — just lower the body.  The IV value is
+    // already available from the parent acc.loop's block argument.
+    if (Fortran::lower::isCollapsedDoConstruct(doConstruct)) {
+      auto iter = eval.getNestedEvaluations().begin();
+      for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
+        genFIR(*iter, unstructuredContext);
+      return;
+    }
+
     // Loops with induction variables inside OpenACC compute constructs
     // need special handling to ensure that the IVs are privatized.
     if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
@@ -3580,6 +3601,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
+    Fortran::lower::clearCollapsedDoConstructs();
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
 
     // Cache constructs should not push/pop a scope because they need to update
@@ -3638,8 +3660,11 @@ private:
 
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
-        for (uint64_t i = 1; i < loopCount; i++)
+        for (uint64_t i = 1; i < loopCount; i++) {
+          if (!curEval->hasNestedEvaluations())
+            break;
           curEval = &*std::next(curEval->getNestedEvaluations().begin());
+        }
       }
     }
 
@@ -3666,9 +3691,8 @@ private:
           }
           prologue.push_back(&*it);
         }
-        // Semantics guarantees collapseDepth does not exceed nest depth
-        // so childLoop must be found here.
-        assert(childLoop && "Expected inner DoConstruct for collapse");
+        if (!childLoop)
+          break;
         parent = childLoop;
         innermostLoopEval = childLoop;
       }
@@ -3689,16 +3713,19 @@ private:
       sink(prologue);
 
       // Lower innermost loop body, skipping sunk
-      for (Fortran::lower::pft::Evaluation &e :
-           innermostLoopEval->getNestedEvaluations())
-        if (!sunk.contains(&e))
-          genFIR(e);
+      if (innermostLoopEval && innermostLoopEval->hasNestedEvaluations())
+        for (Fortran::lower::pft::Evaluation &e :
+             innermostLoopEval->getNestedEvaluations())
+          if (!sunk.contains(&e))
+            genFIR(e);
 
       sink(epilogue);
     } else {
       // Normal lowering
-      for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
-        genFIR(e);
+      if (curEval->hasNestedEvaluations())
+        for (Fortran::lower::pft::Evaluation &e :
+             curEval->getNestedEvaluations())
+          genFIR(e);
     }
     if (!isCacheConstruct)
       localSymbols.popScope();
@@ -6892,8 +6919,14 @@ private:
         if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
             DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
-      }
 
+        if (Fortran::evaluate::IsCoarray(sym) &&
+            !Fortran::semantics::IsAllocatable(sym) &&
+            Fortran::semantics::IsSaved(sym)) {
+          mlir::Location loc = toLocation();
+          TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
+        }
+      }
       Fortran::lower::defineModuleVariable(*this, var);
     }
     for (auto &eval : mod.evaluationList)
@@ -7201,7 +7234,8 @@ private:
   /// Performing OpenMP lowering actions that were deferred to the end of
   /// lowering.
   void finalizeOpenMPLowering(
-      const Fortran::semantics::Symbol *globalOmpRequiresSymbol) {
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+          &globalOmpRequiresSymbol) {
     if (!ompDeferredDeclareTarget.empty()) {
       bool deferredDeviceFuncFound =
           Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
@@ -7210,9 +7244,10 @@ private:
     }
 
     // Set the module attribute related to OpenMP requires directives
-    if (ompDeviceCodeFound)
-      Fortran::lower::genOpenMPRequires(getModuleOp().getOperation(),
-                                        globalOmpRequiresSymbol);
+    if (ompDeviceCodeFound) {
+      for (const Fortran::semantics::Symbol *sym : globalOmpRequiresSymbol)
+        Fortran::lower::genOpenMPRequires(getModuleOp().getOperation(), sym);
+    }
   }
 
   /// Record fir.dummy_scope operation for this function.
@@ -7442,6 +7477,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
+  fir::setRelocationModel(*module, cgOpts.getRelocationModel());
+  fir::setIsPIE(*module, cgOpts.IsPIE);
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
 }

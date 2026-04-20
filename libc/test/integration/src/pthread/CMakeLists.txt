@@ -13,6 +13,7 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
@@ -63,6 +64,7 @@ add_integration_test(
     libc.src.pthread.pthread_rwlockattr_setpshared
     libc.src.pthread.pthread_rwlockattr_setkind_np
     libc.src.__support.threads.raw_mutex
+    libc.src.__support.threads.raw_rwlock
     libc.src.stdio.printf
     libc.src.stdlib.getenv
     libc.src.sys.mman.mmap

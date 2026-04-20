@@ -196,7 +196,7 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
   Operation *nextOp = fromOp->getNextNode();
   auto result =
       memEffectsCache.try_emplace(fromOp, std::make_pair(fromOp, nullptr));
-  if (result.second) {
+  if (!result.second) {
     auto memEffectsCachePair = result.first->second;
     if (memEffectsCachePair.second == nullptr) {
       // No MemoryEffects::Write has been detected until the cached operation.
@@ -258,13 +258,6 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
 
-  // If the operation is already trivially dead just add it to the erase list.
-  if (isOpTriviallyDead(op)) {
-    opsToErase.push_back(op);
-    ++numDCE;
-    return success();
-  }
-
   // Don't simplify operations with regions that have multiple blocks.
   // TODO: We need additional tests to verify that we handle such IR correctly.
   if (!llvm::all_of(op->getRegions(),
@@ -298,7 +291,6 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   // Look for an existing definition for the operation.
   if (auto *existing = knownValues.lookup(op)) {
     replaceUsesAndDelete(knownValues, op, existing, hasSSADominance);
-    ++numCSE;
     return success();
   }
 
@@ -309,7 +301,16 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
 void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                               bool hasSSADominance) {
-  for (auto &op : *bb) {
+  for (auto &op : llvm::make_early_inc_range(*bb)) {
+    // If the operation is already trivially dead just add it to the erase list.
+    // This also avoids calling `simplifyRegion` on dead region ops
+    // unnecessarily.
+    if (isOpTriviallyDead(&op)) {
+      opsToErase.push_back(&op);
+      ++numDCE;
+      continue;
+    }
+
     // Most operations don't have regions, so fast path that case.
     if (op.getNumRegions() != 0) {
       // If this operation is isolated above, we can't process nested regions
@@ -395,9 +396,13 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   for (auto &region : op->getRegions())
     simplifyRegion(knownValues, region);
 
-  /// Erase any operations that were marked as dead during simplification.
-  for (auto *op : opsToErase)
+  /// Erase any operations that were marked as dead during simplification, and
+  /// remove their associated dominator trees.
+  for (auto *op : opsToErase) {
+    for (Region &region : op->getRegions())
+      domInfo->invalidate(&region);
     rewriter.eraseOp(op);
+  }
   if (changed)
     *changed = !opsToErase.empty();
 
@@ -434,7 +439,8 @@ void CSE::runOnOperation() {
   if (!changed)
     return markAllAnalysesPreserved();
 
-  // We currently don't remove region operations, so mark dominance as
-  // preserved.
+  // We only delete redundant operations without moving any operation to a
+  // different block, so the dominance tree structure remains unchanged and
+  // DominanceInfo/PostDominanceInfo can be safely preserved.
   markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
 }

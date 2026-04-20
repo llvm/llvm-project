@@ -2442,7 +2442,7 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   auto pid_tid = packet.GetPidTid(default_process ? default_process->GetID()
                                                   : LLDB_INVALID_PROCESS_ID);
   if (!pid_tid)
-    return SendErrorResponse(llvm::createStringError("Malformed thread-id"));
+    return SendErrorResponse(llvm::createStringError("malformed thread-id"));
 
   lldb::pid_t pid = pid_tid->first;
   lldb::tid_t tid = pid_tid->second;
@@ -2451,13 +2451,13 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
     return SendUnimplementedResponse("Selecting all processes not supported");
   if (pid == LLDB_INVALID_PROCESS_ID)
     return SendErrorResponse(
-        llvm::createStringError("No current process and no PID provided"));
+        llvm::createStringError("no current process and no PID provided"));
 
   // Check the process ID and find respective process instance.
   auto new_process_it = m_debugged_processes.find(pid);
   if (new_process_it == m_debugged_processes.end())
     return SendErrorResponse(
-        llvm::createStringErrorV("No process with PID {0} debugged", pid));
+        llvm::createStringErrorV("no process with PID {0} debugged", pid));
 
   // Ensure we have the given thread when not specifying -1 (all threads) or 0
   // (any thread).
@@ -2873,18 +2873,16 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     }
 
     // Flags
-    MemoryRegionInfo::OptionalBool memory_tagged =
-        region_info.GetMemoryTagged();
-    MemoryRegionInfo::OptionalBool is_shadow_stack =
-        region_info.IsShadowStack();
+    LazyBool memory_tagged = region_info.GetMemoryTagged();
+    LazyBool is_shadow_stack = region_info.IsShadowStack();
 
-    if (memory_tagged != MemoryRegionInfo::eDontKnow ||
-        is_shadow_stack != MemoryRegionInfo::eDontKnow) {
+    if (memory_tagged != eLazyBoolDontKnow ||
+        is_shadow_stack != eLazyBoolDontKnow) {
       response.PutCString("flags:");
       // Space is the separator.
-      if (memory_tagged == MemoryRegionInfo::eYes)
+      if (memory_tagged == eLazyBoolYes)
         response.PutCString("mt ");
-      if (is_shadow_stack == MemoryRegionInfo::eYes)
+      if (is_shadow_stack == eLazyBoolYes)
         response.PutCString("ss ");
 
       response.PutChar(';');
@@ -4123,7 +4121,7 @@ GDBRemoteCommunicationServerLLGS::Handle_T(StringExtractorGDBRemote &packet) {
   auto pid_tid = packet.GetPidTid(m_current_process ? m_current_process->GetID()
                                                     : LLDB_INVALID_PROCESS_ID);
   if (!pid_tid)
-    return SendErrorResponse(llvm::createStringError("Malformed thread-id"));
+    return SendErrorResponse(llvm::createStringError("malformed thread-id"));
 
   lldb::pid_t pid = pid_tid->first;
   lldb::tid_t tid = pid_tid->second;
@@ -4132,7 +4130,7 @@ GDBRemoteCommunicationServerLLGS::Handle_T(StringExtractorGDBRemote &packet) {
   // explicit about the error.
   if (pid == LLDB_INVALID_PROCESS_ID)
     return SendErrorResponse(
-        llvm::createStringError("No current process and no PID provided"));
+        llvm::createStringError("no current process and no PID provided"));
 
   // Check the process ID and find respective process instance.
   auto new_process_it = m_debugged_processes.find(pid);

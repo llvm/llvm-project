@@ -48,6 +48,10 @@ public:
 
   operator bool() const { return MI; }
 
+  // Returns true if this is an OpTypeInt instruction.
+  // If N is non-zero, also checks that the bit width matches N.
+  bool isTypeIntN(unsigned N = 0) const;
+
   friend struct DenseMapInfo<SPIRVTypeInst>;
 };
 

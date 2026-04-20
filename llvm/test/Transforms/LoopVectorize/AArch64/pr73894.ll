@@ -76,8 +76,6 @@ exit:
   ret i32 %res
 }
 
-declare i32 @llvm.smax.i32(i32, i32)
-declare i32 @llvm.umax.i32(i32, i32)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

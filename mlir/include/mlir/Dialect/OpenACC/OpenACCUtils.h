@@ -29,6 +29,11 @@ namespace acc {
 /// `ACC_COMPUTE_CONSTRUCT_OPS`.
 mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
 
+/// If `v` is not a block argument of an `acc.compute_region` body, returns
+/// nullptr. Otherwise maps the block argument to its operand and returns the
+/// defining operation if it is one of `ACC_DATA_ENTRY_OPS`.
+mlir::Operation *getACCDataClauseOpForBlockArg(mlir::Value v);
+
 /// Returns true if this value is only used by `acc.private` operations in the
 /// `region`.
 bool isOnlyUsedByPrivateClauses(mlir::Value val, mlir::Region &region);

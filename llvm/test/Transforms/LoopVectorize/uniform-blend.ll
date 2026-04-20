@@ -26,15 +26,15 @@ define void @blend_uniform_iv_trunc(i1 %c) {
 entry:
   br label %loop.header
 
-loop.header:                                      ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %iv.trunc.2 = trunc i64 %iv to i16
   br i1 %c, label %loop.next, label %loop.latch
 
-loop.next:                                        ; preds = %loop.header
+loop.next:
   br label %loop.latch
 
-loop.latch:                                       ; preds = %loop.next, %loop.header
+loop.latch:
   %blend = phi i16 [ %iv.trunc.2, %loop.header ], [ %iv.trunc.2, %loop.next ]
   %dst.ptr = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i16 %blend
   store i16 0, ptr %dst.ptr
@@ -42,7 +42,7 @@ loop.latch:                                       ; preds = %loop.next, %loop.he
   %cmp439 = icmp ult i64 %iv, 31
   br i1 %cmp439, label %loop.header, label %exit
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 
@@ -69,14 +69,14 @@ define void @blend_uniform_iv(i1 %c) {
 entry:
   br label %loop.header
 
-loop.header:                                      ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 %c, label %loop.next, label %loop.latch
 
-loop.next:                                        ; preds = %loop.header
+loop.next:
   br label %loop.latch
 
-loop.latch:                                       ; preds = %loop.next, %loop.header
+loop.latch:
   %blend = phi i64 [ %iv, %loop.header ], [ %iv, %loop.next ]
   %dst.ptr = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 %blend
   store i16 0, ptr %dst.ptr
@@ -84,7 +84,7 @@ loop.latch:                                       ; preds = %loop.next, %loop.he
   %cmp439 = icmp ult i64 %iv, 31
   br i1 %cmp439, label %loop.header, label %exit
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 
@@ -120,11 +120,11 @@ define void @blend_chain_iv(i1 %c) {
 entry:
   br label %loop.header
 
-loop.header:                                      ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 %c, label %loop.next, label %loop.latch
 
-loop.next:                                        ; preds = %loop.header
+loop.next:
   br i1 %c, label %loop.next.2, label %loop.next.3
 
 loop.next.2:
@@ -134,7 +134,7 @@ loop.next.3:
   %blend.1 = phi i64 [ %iv, %loop.next ], [ %iv, %loop.next.2 ]
   br label %loop.latch
 
-loop.latch:                                       ; preds = %loop.next, %loop.header
+loop.latch:
   %blend = phi i64 [ %iv, %loop.header ], [ %blend.1, %loop.next.3 ]
   %dst.ptr = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 %blend
   store i16 0, ptr %dst.ptr
@@ -142,7 +142,7 @@ loop.latch:                                       ; preds = %loop.next, %loop.he
   %cmp439 = icmp ult i64 %iv, 31
   br i1 %cmp439, label %loop.header, label %exit
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 

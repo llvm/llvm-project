@@ -2749,9 +2749,13 @@ violates the strict aliasing rules. For example:
        if Clang is able to inline this function. */
   }
 
-Strict aliasing can be explicitly enabled with ``-fstrict-aliasing`` and
-disabled with ``-fno-strict-aliasing``. ``clang-cl`` defaults to
-``-fno-strict-aliasing``. Otherwise, Clang defaults to ``-fstrict-aliasing``.
+.. option:: -fstrict-aliasing, -fno-strict-aliasing
+
+Strict aliasing can be explicitly enabled with :option:`-fstrict-aliasing` and
+disabled with :option:`-fno-strict-aliasing`. Windows MSVC platforms and UEFI
+platforms default to :option:`-fno-strict-aliasing`. Otherwise, Clang defaults
+to :option:`-fstrict-aliasing`. These options may also be affected by
+:option:`-Ofast`.
 
 C and C++ specify slightly different rules for strict aliasing. To improve
 language interoperability, Clang allows two types to alias if either language
@@ -2769,7 +2773,7 @@ works in one version of Clang may not work in another because of changes to the
 optimizer. Clang provides a :doc:`TypeSanitizer` to help detect
 violations of the strict aliasing rules, but it is currently still experimental.
 Code that is known to violate strict aliasing should generally be built with
-``-fno-strict-aliasing`` if the violation cannot be fixed.
+:option:`-fno-strict-aliasing` if the violation cannot be fixed.
 
 Clang supports several ways to fix a violation of strict aliasing:
 
