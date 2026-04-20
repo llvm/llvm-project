@@ -80,12 +80,11 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/, *VPI,
-              Ingredient.getDebugLoc());
+              false /*Consecutive*/, *VPI, Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
-              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/, *VPI,
+              nullptr /*Mask*/, false /*Consecutive*/, *VPI,
               Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands(), *VPI,
@@ -678,7 +677,7 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
 /// recipe, if it exists.
 static void removeRedundantCanonicalIVs(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPCanonicalIVPHIRecipe *CanonicalIV = LoopRegion->getCanonicalIV();
+  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
   VPWidenCanonicalIVRecipe *WidenNewIV = nullptr;
   for (VPUser *U : CanonicalIV->users()) {
     WidenNewIV = dyn_cast<VPWidenCanonicalIVRecipe>(U);
@@ -734,8 +733,9 @@ static bool isDeadRecipe(VPRecipeBase &R) {
 }
 
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_post_order_deep(Plan.getEntry()))) {
+  PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
@@ -770,7 +770,7 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     VPBuilder &Builder) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
-  VPCanonicalIVPHIRecipe *CanonicalIV = LoopRegion->getCanonicalIV();
+  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
   VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
       Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
 
@@ -1217,13 +1217,14 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       .Case([](const VPWidenIntrinsicRecipe *I) {
         return std::make_pair(true, I->getVectorIntrinsicID());
       })
-      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
-        // For recipes that do not directly map to LLVM IR instructions,
-        // assign opcodes after the last VPInstruction opcode (which is also
-        // after the last IR Instruction opcode), based on the VPRecipeID.
-        return std::make_pair(false,
-                              VPInstruction::OpsEnd + 1 + I->getVPRecipeID());
-      })
+      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
+          [](auto *I) {
+            // For recipes that do not directly map to LLVM IR instructions,
+            // assign opcodes after the last VPInstruction opcode (which is also
+            // after the last IR Instruction opcode), based on the VPRecipeID.
+            return std::make_pair(false, VPInstruction::OpsEnd + 1 +
+                                             I->getVPRecipeID());
+          })
       .Default([](auto *) { return std::nullopt; });
 }
 
@@ -1485,12 +1486,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
         {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
         *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc()));
 
-  // Don't convert udiv to lshr inside a replicate region, as VPInstructions are
-  // not allowed in them.
-  const VPRegionBlock *ParentRegion = Def->getParent()->getParent();
-  bool IsInReplicateRegion = ParentRegion && ParentRegion->isReplicator();
-  if (CanCreateNewRecipe && !IsInReplicateRegion &&
-      match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) && APC->isPowerOf2())
+  if (CanCreateNewRecipe && match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) &&
+      APC->isPowerOf2())
     return Def->replaceAllUsesWith(Builder.createNaryOp(
         Instruction::LShr,
         {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
@@ -1688,7 +1685,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // Fold the increment Y into the phi's start value, replace Def with IVInc,
   // and if Inc exists, replace it with X.
   if (match(Def, m_Add(m_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) &&
-      isa<VPIRValue>(Y) && !isa<VPConstantInt>(Y) &&
+      isa<VPIRValue>(Y) &&
       match(X, m_VPPhi(m_ZeroInt(), m_Specific(Def->getOperand(0))))) {
     auto *Phi = cast<VPPhi>(X);
     auto *IVInc = Def->getOperand(0);
@@ -1813,8 +1810,6 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
       if (WidenStoreR && vputils::isSingleScalar(WidenStoreR->getAddr()) &&
           !WidenStoreR->isConsecutive()) {
-        assert(!WidenStoreR->isReverse() &&
-               "Not consecutive memory recipes shouldn't be reversed");
         VPValue *Mask = WidenStoreR->getMask();
 
         // Only convert the scatter to a scalar store if it is unmasked.
@@ -2081,9 +2076,10 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
     });
 
   auto *CanIV = Plan.getVectorLoopRegion()->getCanonicalIV();
-  if (!match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ,
-                                  m_Specific(CanIV->getBackedgeValue()),
-                                  m_Specific(&Plan.getVectorTripCount()))))
+  if (!match(Cond, m_SpecificICmp(
+                       CmpInst::ICMP_EQ,
+                       m_c_Add(m_Specific(CanIV), m_Specific(&Plan.getVFxUF())),
+                       m_Specific(&Plan.getVectorTripCount()))))
     return false;
 
   // The compare checks CanIV + VFxUF == vector trip count. The vector trip
@@ -2616,6 +2612,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
       if (RFlags->hasPredicate())
         return hash_combine(Result, RFlags->getPredicate());
+    if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Def))
+      return hash_combine(Result, SIVSteps->getInductionOpcode());
     return Result;
   }
 
@@ -2635,6 +2633,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LFlags->hasPredicate() &&
           LFlags->getPredicate() !=
               cast<VPRecipeWithIRFlags>(R)->getPredicate())
+        return false;
+    if (auto *LSIV = dyn_cast<VPScalarIVStepsRecipe>(L))
+      if (LSIV->getInductionOpcode() !=
+          cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
     // Recipes in replicate regions implicitly depend on predicate. If either
     // recipe is in a replicate region, only consider them equal if both have
@@ -2711,8 +2713,9 @@ static void licm(VPlan &Plan) {
   // Sink recipes with no users inside the vector loop region if all users are
   // in the same exit block of the region.
   // TODO: Extend to sink recipes from inner loops.
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_post_order_shallow(LoopRegion->getEntry()))) {
+  PostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> POT(
+      LoopRegion->getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (cannotHoistOrSinkRecipe(R))
         continue;
@@ -2872,8 +2875,11 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   if (OnlyLatches)
     VPDT.emplace(Plan);
 
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getEntry()))) {
+  // Collect all blocks before modifying the CFG so we can identify unreachable
+  // ones after constant branch removal.
+  SmallVector<VPBlockBase *> AllBlocks(vp_depth_first_shallow(Plan.getEntry()));
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(AllBlocks)) {
     VPValue *Cond;
     // Skip blocks that are not terminated by BranchOnCond.
     if (VPBB->empty() || !match(&VPBB->back(), m_BranchOnCond(m_VPValue(Cond))))
@@ -2896,15 +2902,41 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
         cast<VPBasicBlock>(VPBB->getSuccessors()[RemovedIdx]);
     assert(count(RemovedSucc->getPredecessors(), VPBB) == 1 &&
            "There must be a single edge between VPBB and its successor");
-    // Values coming from VPBB into phi recipes of RemoveSucc are removed from
+    // Values coming from VPBB into phi recipes of RemovedSucc are removed from
     // these recipes.
     for (VPRecipeBase &R : RemovedSucc->phis())
       cast<VPPhiAccessors>(&R)->removeIncomingValueFor(VPBB);
 
-    // Disconnect blocks and remove the terminator. RemovedSucc will be deleted
-    // automatically on VPlan destruction if it becomes unreachable.
+    // Disconnect blocks and remove the terminator.
     VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);
     VPBB->back().eraseFromParent();
+  }
+
+  // Compute which blocks are still reachable from the entry after constant
+  // branch removal.
+  SmallPtrSet<VPBlockBase *, 16> Reachable(
+      llvm::from_range, vp_depth_first_shallow(Plan.getEntry()));
+
+  // Detach all unreachable blocks from their successors, removing their recipes
+  // and incoming values from phi recipes.
+  VPSymbolicValue Tmp;
+  for (VPBlockBase *B : AllBlocks) {
+    if (Reachable.contains(B))
+      continue;
+    for (VPBlockBase *Succ : to_vector(B->successors())) {
+      if (auto *SuccBB = dyn_cast<VPBasicBlock>(Succ))
+        for (VPRecipeBase &R : SuccBB->phis())
+          cast<VPPhiAccessors>(&R)->removeIncomingValueFor(B);
+      VPBlockUtils::disconnectBlocks(B, Succ);
+    }
+    for (VPBasicBlock *DeadBB :
+         VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_deep(B))) {
+      for (VPRecipeBase &R : make_early_inc_range(*DeadBB)) {
+        for (VPValue *Def : R.definedValues())
+          Def->replaceAllUsesWith(&Tmp);
+        R.eraseFromParent();
+      }
+    }
   }
 }
 
@@ -2957,13 +2989,10 @@ static VPActiveLaneMaskPHIRecipe *
 addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
-  auto *CanonicalIVPHI = TopRegion->getCanonicalIV();
-  VPValue *StartV = CanonicalIVPHI->getStartValue();
-
-  auto *CanonicalIVIncrement =
-      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
+  VPValue *StartV = Plan.getZero(TopRegion->getCanonicalIVType());
+  auto *CanonicalIVIncrement = TopRegion->getOrCreateCanonicalIVIncrement();
   // TODO: Check if dropping the flags is needed.
-  CanonicalIVIncrement->dropPoisonGeneratingFlags();
+  TopRegion->clearCanonicalIVNUW(CanonicalIVIncrement);
   DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
   // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
   // we have to take unrolling into account. Each part needs to start at
@@ -2990,7 +3019,8 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   // preheader ActiveLaneMask instruction.
   auto *LaneMaskPhi =
       new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc::getUnknown());
-  LaneMaskPhi->insertAfter(CanonicalIVPHI);
+  auto *HeaderVPBB = TopRegion->getEntryBasicBlock();
+  LaneMaskPhi->insertBefore(*HeaderVPBB, HeaderVPBB->begin());
 
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
@@ -3088,20 +3118,32 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return EVLEndPtr;
   };
 
+  auto GetVPReverse = [&CurRecipe, &EVL, &TypeInfo, Plan,
+                       DL](VPValue *V) -> VPWidenIntrinsicRecipe * {
+    if (!V)
+      return nullptr;
+    auto *Reverse = new VPWidenIntrinsicRecipe(
+        Intrinsic::experimental_vp_reverse, {V, Plan->getTrue(), &EVL},
+        TypeInfo.inferScalarType(V), {}, {}, DL);
+    Reverse->insertBefore(&CurRecipe);
+    return Reverse;
+  };
+
   if (match(&CurRecipe,
-            m_MaskedLoad(m_VPValue(Addr), m_RemoveMask(HeaderMask, Mask))) &&
-      !cast<VPWidenLoadRecipe>(CurRecipe).isReverse())
+            m_MaskedLoad(m_VPValue(Addr), m_RemoveMask(HeaderMask, Mask))))
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe), Addr,
                                     EVL, Mask);
 
   VPValue *ReversedVal;
   if (match(&CurRecipe, m_Reverse(m_VPValue(ReversedVal))) &&
       match(ReversedVal,
-            m_MaskedLoad(m_VPValue(EndPtr), m_RemoveMask(HeaderMask, Mask))) &&
-      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
-      cast<VPWidenLoadRecipe>(ReversedVal)->isReverse()) {
+            m_MaskedLoad(m_VPValue(EndPtr),
+                         m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
+    Mask = GetVPReverse(Mask);
+    Addr = AdjustEndPtr(EndPtr);
     auto *LoadR = new VPWidenLoadEVLRecipe(
-        *cast<VPWidenLoadRecipe>(ReversedVal), AdjustEndPtr(EndPtr), EVL, Mask);
+        *cast<VPWidenLoadRecipe>(ReversedVal), Addr, EVL, Mask);
     LoadR->insertBefore(&CurRecipe);
     return new VPWidenIntrinsicRecipe(
         Intrinsic::experimental_vp_reverse, {LoadR, Plan->getTrue(), &EVL},
@@ -3110,24 +3152,19 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 
   VPValue *StoredVal;
   if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(StoredVal),
-                                      m_RemoveMask(HeaderMask, Mask))) &&
-      !cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
+                                      m_RemoveMask(HeaderMask, Mask))))
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
                                      StoredVal, EVL, Mask);
 
   if (match(&CurRecipe,
             m_MaskedStore(m_VPValue(EndPtr), m_Reverse(m_VPValue(ReversedVal)),
-                          m_RemoveMask(HeaderMask, Mask))) &&
-      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
-      cast<VPWidenStoreRecipe>(CurRecipe).isReverse()) {
-    auto *NewReverse = new VPWidenIntrinsicRecipe(
-        Intrinsic::experimental_vp_reverse,
-        {ReversedVal, Plan->getTrue(), &EVL},
-        TypeInfo.inferScalarType(ReversedVal), {}, {}, DL);
-    NewReverse->insertBefore(&CurRecipe);
-    return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe),
-                                     AdjustEndPtr(EndPtr), NewReverse, EVL,
-                                     Mask);
+                          m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
+    Mask = GetVPReverse(Mask);
+    Addr = AdjustEndPtr(EndPtr);
+    StoredVal = GetVPReverse(ReversedVal);
+    return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
+                                     StoredVal, EVL, Mask);
   }
 
   if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
@@ -3290,6 +3327,17 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   if (!HeaderMask)
     return;
 
+  // Ensure that any reduction that uses a select to mask off tail lanes does so
+  // in the vector loop, not the middle block, since EVL tail folding can have
+  // tail elements in the penultimate iteration.
+  assert(all_of(*Plan.getMiddleBlock(), [&Plan, HeaderMask](VPRecipeBase &R) {
+    if (match(&R, m_ComputeReductionResult(m_Select(m_Specific(HeaderMask),
+                                                    m_VPValue(), m_VPValue()))))
+      return R.getOperand(0)->getDefiningRecipe()->getRegion() ==
+             Plan.getVectorLoopRegion();
+    return true;
+  }));
+
   // Replace header masks with a mask equivalent to predicating by EVL:
   //
   // icmp ule widen-canonical-iv backedge-taken-count
@@ -3309,10 +3357,9 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 /// iteration.
 ///
 /// - Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
-///   replaces all uses except the canonical IV increment of
-///   VPCanonicalIVPHIRecipe with a VPCurrentIterationPHIRecipe.
-///   VPCanonicalIVPHIRecipe is used only for loop iterations counting after
-///   this transformation.
+///   replaces all uses of the canonical IV except for the canonical IV
+///   increment with a VPCurrentIterationPHIRecipe. The canonical IV is used
+///   only for loop iterations counting after this transformation.
 ///
 /// - The header mask is replaced with a header mask based on the EVL.
 ///
@@ -3365,14 +3412,15 @@ void VPlanTransforms::addExplicitVectorLength(
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  auto *CanonicalIVPHI = LoopRegion->getCanonicalIV();
+  auto *CanonicalIV = LoopRegion->getCanonicalIV();
   auto *CanIVTy = LoopRegion->getCanonicalIVType();
-  VPValue *StartV = CanonicalIVPHI->getStartValue();
+  VPValue *StartV = Plan.getZero(CanIVTy);
+  auto *CanonicalIVIncrement = LoopRegion->getOrCreateCanonicalIVIncrement();
 
   // Create the CurrentIteration recipe in the vector loop.
   auto *CurrentIteration =
       new VPCurrentIterationPHIRecipe(StartV, DebugLoc::getUnknown());
-  CurrentIteration->insertAfter(CanonicalIVPHI);
+  CurrentIteration->insertBefore(*Header, Header->begin());
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Create the AVL (application vector length), starting from TC -> 0 in steps
   // of EVL.
@@ -3390,8 +3438,6 @@ void VPlanTransforms::addExplicitVectorLength(
   auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
                                      DebugLoc::getUnknown(), "evl");
 
-  auto *CanonicalIVIncrement =
-      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
   Builder.setInsertPoint(CanonicalIVIncrement);
   VPValue *OpVPEVL = VPEVL;
 
@@ -3412,10 +3458,10 @@ void VPlanTransforms::addExplicitVectorLength(
   fixupVFUsersForEVL(Plan, *VPEVL);
   removeDeadRecipes(Plan);
 
-  // Replace all uses of VPCanonicalIVPHIRecipe by
-  // VPCurrentIterationPHIRecipe except for the canonical IV increment.
-  CanonicalIVPHI->replaceAllUsesWith(CurrentIteration);
-  CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
+  // Replace all uses of the canonical IV with VPCurrentIterationPHIRecipe
+  // except for the canonical IV increment.
+  CanonicalIV->replaceAllUsesWith(CurrentIteration);
+  CanonicalIVIncrement->setOperand(0, CanonicalIV);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
 }
@@ -3450,32 +3496,24 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
   CurrentIteration->replaceAllUsesWith(ScalarR);
   CurrentIteration->eraseFromParent();
 
-  // Replace CanonicalIVInc with CurrentIteration increment.
+  // Replace CanonicalIVInc with CurrentIteration increment if it exists.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
-  VPValue *Backedge = CanonicalIV->getIncomingValue(1);
-  assert(match(Backedge, m_c_Add(m_Specific(CanonicalIV),
-                                 m_Specific(&Plan.getVFxUF()))) &&
-         "Unexpected canonical iv");
-  Backedge->replaceAllUsesWith(CurrentIterationIncr);
-
-  // Remove unused phi and increment.
-  VPRecipeBase *CanonicalIVIncrement = Backedge->getDefiningRecipe();
-  CanonicalIVIncrement->eraseFromParent();
-  CanonicalIV->eraseFromParent();
+  if (auto *CanIVInc = vputils::findUserOf(
+          CanonicalIV, m_c_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())))) {
+    cast<VPInstruction>(CanIVInc)->replaceAllUsesWith(CurrentIterationIncr);
+    CanIVInc->eraseFromParent();
+  }
 }
 
 void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  // The canonical IV may not exist at this stage.
-  if (!LoopRegion ||
-      !isa<VPCanonicalIVPHIRecipe>(LoopRegion->getEntryBasicBlock()->front()))
+  if (!LoopRegion)
     return;
-  VPCanonicalIVPHIRecipe *CanIV = LoopRegion->getCanonicalIV();
-  if (std::next(CanIV->getIterator()) == CanIV->getParent()->end())
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+  if (Header->empty())
     return;
-  // The EVL IV is always immediately after the canonical IV.
-  auto *EVLPhi = dyn_cast_or_null<VPCurrentIterationPHIRecipe>(
-      std::next(CanIV->getIterator()));
+  // The EVL IV is always at the beginning.
+  auto *EVLPhi = dyn_cast<VPCurrentIterationPHIRecipe>(&Header->front());
   if (!EVLPhi)
     return;
 
@@ -3504,13 +3542,16 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   if (match(LatchBr, m_BranchOnCond(m_True())))
     return;
 
-  assert(
-      match(LatchBr,
-            m_BranchOnCond(m_SpecificCmp(
-                CmpInst::ICMP_EQ, m_Specific(CanIV->getIncomingValue(1)),
-                m_Specific(&Plan.getVectorTripCount())))) &&
-      "Expected BranchOnCond with ICmp comparing CanIV increment with vector "
-      "trip count");
+  VPValue *CanIVInc;
+  [[maybe_unused]] bool FoundIncrement = match(
+      LatchBr,
+      m_BranchOnCond(m_SpecificCmp(CmpInst::ICMP_EQ, m_VPValue(CanIVInc),
+                                   m_Specific(&Plan.getVectorTripCount()))));
+  assert(FoundIncrement &&
+         match(CanIVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
+                               m_Specific(&Plan.getVFxUF()))) &&
+         "Expected BranchOnCond with ICmp comparing CanIV + VFxUF with vector "
+         "trip count");
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
   VPBuilder Builder(LatchBr);
@@ -3674,7 +3715,7 @@ void VPlanTransforms::createInterleaveGroups(
     VPlan &Plan,
     const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
         &InterleaveGroups,
-    VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed) {
+    VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed) {
   if (InterleaveGroups.empty())
     return;
 
@@ -3701,7 +3742,7 @@ void VPlanTransforms::createInterleaveGroups(
     }
 
     bool NeedsMaskForGaps =
-        (IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed) ||
+        (IG->requiresScalarEpilogue() && !EpilogueAllowed) ||
         (!StoredValues.empty() && !IG->isFull());
 
     Instruction *IRInsertPos = IG->getInsertPos();
@@ -4098,6 +4139,19 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
                "Unmasked MaskedCond should be simplified earlier");
         VPI->replaceAllUsesWith(Builder.createNaryOp(
             VPInstruction::LogicalAnd, {VPI->getMask(), VPI->getOperand(0)}));
+        ToRemove.push_back(VPI);
+        continue;
+      }
+
+      // Lower CanonicalIVIncrementForPart to plain Add.
+      if (match(
+              &R,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
+        auto *VPI = cast<VPInstruction>(&R);
+        VPValue *Add = Builder.createOverflowingOp(
+            Instruction::Add, VPI->operands(), VPI->getNoWrapFlags(),
+            VPI->getDebugLoc());
+        VPI->replaceAllUsesWith(Add);
         ToRemove.push_back(VPI);
         continue;
       }
@@ -5060,7 +5114,7 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBBsInsideLoopRegion) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (isa<VPReplicateRecipe, VPInstruction, VPScalarIVStepsRecipe,
-              VPDerivedIVRecipe, VPCanonicalIVPHIRecipe>(&R))
+              VPDerivedIVRecipe>(&R))
         continue;
       for (VPValue *Def : R.definedValues()) {
         // Skip recipes that are single-scalar or only have their first lane
@@ -5376,9 +5430,9 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
     // Narrow interleave group to wide load, as transformed VPlan will only
     // process one original iteration.
     auto *LI = cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos());
-    auto *L = new VPWidenLoadRecipe(
-        *LI, LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-        /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
+    auto *L = new VPWidenLoadRecipe(*LI, LoadGroup->getAddr(),
+                                    LoadGroup->getMask(), /*Consecutive=*/true,
+                                    {}, LoadGroup->getDebugLoc());
     L->insertBefore(LoadGroup);
     NarrowedOps.insert(L);
     return L;
@@ -5432,9 +5486,6 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   SmallVector<VPInterleaveRecipe *> StoreGroups;
   std::optional<ElementCount> VFToOptimize;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
-
     if (isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(&R) &&
         vputils::onlyFirstLaneUsed(cast<VPSingleDefRecipe>(&R)))
       continue;
@@ -5533,38 +5584,37 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
         narrowInterleaveGroupOp(StoreGroup->getStoredValues()[0], NarrowedOps);
     auto *SI =
         cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos());
-    auto *S = new VPWidenStoreRecipe(
-        *SI, StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
-        /*Reverse=*/false, {}, StoreGroup->getDebugLoc());
+    auto *S = new VPWidenStoreRecipe(*SI, StoreGroup->getAddr(), Res, nullptr,
+                                     /*Consecutive=*/true, {},
+                                     StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
   }
 
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
-  auto *CanIV = VectorLoop->getCanonicalIV();
-  auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
+  VPInstruction *CanIVInc = vputils::findCanonicalIVIncrement(Plan);
+  Type *CanIVTy = VectorLoop->getCanonicalIVType();
   VPBasicBlock *VectorPH = Plan.getVectorPreheader();
   VPBuilder PHBuilder(VectorPH, VectorPH->begin());
 
   VPValue *UF = &Plan.getUF();
   VPValue *Step;
   if (VFToOptimize->isScalable()) {
-    VPValue *VScale = PHBuilder.createElementCount(
-        VectorLoop->getCanonicalIVType(), ElementCount::getScalable(1));
+    VPValue *VScale =
+        PHBuilder.createElementCount(CanIVTy, ElementCount::getScalable(1));
     Step = PHBuilder.createOverflowingOp(Instruction::Mul, {VScale, UF},
                                          {true, false});
     Plan.getVF().replaceAllUsesWith(VScale);
   } else {
     Step = UF;
-    Plan.getVF().replaceAllUsesWith(
-        Plan.getConstantInt(CanIV->getScalarType(), 1));
+    Plan.getVF().replaceAllUsesWith(Plan.getConstantInt(CanIVTy, 1));
   }
   // Materialize vector trip count with the narrowed step.
   materializeVectorTripCount(Plan, VectorPH, /*TailByMasking=*/false,
                              RequiresScalarEpilogue, Step);
 
-  Inc->setOperand(1, Step);
+  CanIVInc->setOperand(1, Step);
   Plan.getVFxUF().replaceAllUsesWith(Step);
 
   removeDeadRecipes(Plan);
@@ -5871,21 +5921,26 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         BackedgeVal,
         match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
 
-    // If IV is an expression to sink, create a new select that tracks the
-    // underlying IV directly and update the backedge value.
-    if (IVOfExpressionToSink) {
-      auto *OrigFindLastSelectR = FindLastSelect->getDefiningRecipe();
-      VPBuilder LoopBuilder(OrigFindLastSelectR);
-      DebugLoc DL = OrigFindLastSelectR->getDebugLoc();
-      VPValue *SelectCond = OrigFindLastSelectR->getOperand(0);
-      if (OrigFindLastSelectR->getOperand(1) == PhiR) {
-        FindLastSelect = LoopBuilder.createSelect(SelectCond, PhiR,
-                                                  IVOfExpressionToSink, DL);
-      } else {
-        assert(OrigFindLastSelectR->getOperand(2) == PhiR &&
-               "PhiR expected as operand 1 or 2");
-        FindLastSelect = LoopBuilder.createSelect(
-            SelectCond, IVOfExpressionToSink, PhiR, DL);
+    VPValue *NewFindLastSelect = BackedgeVal;
+    VPValue *SelectCond = Cond;
+    if (!SentinelVal || IVOfExpressionToSink) {
+      // When we need to create a new select, normalize the condition so that
+      // PhiR is the last operand and include the header mask if needed.
+      DebugLoc DL = FindLastSelect->getDefiningRecipe()->getDebugLoc();
+      VPBuilder LoopBuilder(FindLastSelect->getDefiningRecipe());
+      if (FindLastSelect->getDefiningRecipe()->getOperand(1) == PhiR)
+        SelectCond = LoopBuilder.createNot(SelectCond);
+
+      // When tail folding, mask the condition with the header mask to prevent
+      // propagating poison from inactive lanes in the last vector iteration.
+      if (HeaderMask)
+        SelectCond = LoopBuilder.createLogicalAnd(HeaderMask, SelectCond);
+
+      if (SelectCond != Cond || IVOfExpressionToSink) {
+        NewFindLastSelect = LoopBuilder.createSelect(
+            SelectCond,
+            IVOfExpressionToSink ? IVOfExpressionToSink : FindLastExpression,
+            PhiR, DL);
       }
     }
 
@@ -5897,8 +5952,9 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                     FastMathFlags());
     DebugLoc ExitDL = RdxResult->getDebugLoc();
     VPBuilder MiddleBuilder(RdxResult);
-    VPValue *ReducedIV = MiddleBuilder.createNaryOp(
-        VPInstruction::ComputeReductionResult, FindLastSelect, Flags, ExitDL);
+    VPValue *ReducedIV =
+        MiddleBuilder.createNaryOp(VPInstruction::ComputeReductionResult,
+                                   NewFindLastSelect, Flags, ExitDL);
 
     // If IVOfExpressionToSink is an expression to sink, sink it now.
     VPValue *VectorRegionExitingVal = ReducedIV;
@@ -5928,15 +5984,11 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       AnyOfPhi->insertAfter(PhiR);
 
       VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
-      VPValue *AnyOfCond = Cond;
-      if (FindLastSelect->getOperand(1) == PhiR)
-        AnyOfCond = LoopBuilder.createNot(Cond);
-      VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, AnyOfCond);
+      VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, SelectCond);
       AnyOfPhi->setOperand(1, OrVal);
 
-      NewRdxResult = MiddleBuilder.createNaryOp(
-          VPInstruction::ComputeAnyOfResult,
-          {StartVPV, VectorRegionExitingVal, OrVal}, {}, ExitDL);
+      NewRdxResult = MiddleBuilder.createAnyOfReduction(
+          OrVal, VectorRegionExitingVal, StartVPV, ExitDL);
 
       // Initialize the IV reduction phi with the neutral element, not the
       // original start value, to ensure correct min/max reduction results.
@@ -5948,7 +6000,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     auto *NewPhiR = new VPReductionPHIRecipe(
         cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
-        *FindLastSelect, RdxUnordered{1}, {},
+        *NewFindLastSelect, RdxUnordered{1}, {},
         PhiR->hasUsesOutsideReductionChain());
     NewPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(NewPhiR);
@@ -5958,66 +6010,106 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
 namespace {
 
-/// Holds the binary operation used to compute the extended operand and the
-/// casts that feed into it.
+using ExtendKind = TTI::PartialReductionExtendKind;
+struct ReductionExtend {
+  Type *SrcType = nullptr;
+  ExtendKind Kind = ExtendKind::PR_None;
+};
+
+/// Describes the extends used to compute the extended reduction operand.
+/// ExtendB is optional. If ExtendB is present, ExtendsUser is a binary
+/// operation.
 struct ExtendedReductionOperand {
-  VPWidenRecipe *BinOp = nullptr;
-  // Note: The second cast recipe may be null.
-  std::array<VPWidenCastRecipe *, 2> CastRecipes = {};
+  /// The recipe that consumes the extends.
+  VPWidenRecipe *ExtendsUser = nullptr;
+  /// Extend descriptions (inputs to getPartialReductionCost).
+  ReductionExtend ExtendA, ExtendB;
 };
 
 /// A chain of recipes that form a partial reduction. Matches either
-///   reduction_bin_op (extend (A), accumulator), or
-///   reduction_bin_op (bin_op (extend (A), (extend (B))), accumulator).
+///   reduction_bin_op (extended op, accumulator), or
+///   reduction_bin_op (accumulator, extended op).
+/// The possible forms of the "extended op" are listed in
+/// matchExtendedReductionOperand.
 struct VPPartialReductionChain {
   /// The top-level binary operation that forms the reduction to a scalar
   /// after the loop body.
-  VPWidenRecipe *ReductionBinOp;
+  VPWidenRecipe *ReductionBinOp = nullptr;
   /// The user of the extends that is then reduced.
   ExtendedReductionOperand ExtendedOp;
-  unsigned ScaleFactor;
   /// The recurrence kind for the entire partial reduction chain.
   /// This allows distinguishing between Sub and AddWithSub recurrences,
   /// when the ReductionBinOp is a Instruction::Sub.
   RecurKind RK;
+  /// The index of the accumulator operand of ReductionBinOp. The extended op
+  /// is `1 - AccumulatorOpIdx`.
+  unsigned AccumulatorOpIdx;
+  unsigned ScaleFactor;
 };
 
 static VPSingleDefRecipe *
-optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
+optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op,
                                    VPTypeAnalysis &TypeInfo) {
   // reduce.add(mul(ext(A), C))
   // -> reduce.add(mul(ext(A), ext(trunc(C))))
   const APInt *Const;
-  if (match(BinOp, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
-    auto *ExtA = cast<VPWidenCastRecipe>(BinOp->getOperand(0));
+  if (match(Op, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
+    auto *ExtA = cast<VPWidenCastRecipe>(Op->getOperand(0));
     Instruction::CastOps ExtOpc = ExtA->getOpcode();
     Type *NarrowTy = TypeInfo.inferScalarType(ExtA->getOperand(0));
-    if (!BinOp->hasOneUse() ||
+    if (!Op->hasOneUse() ||
         !llvm::canConstantBeExtended(
             Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc)))
-      return BinOp;
+      return Op;
 
-    VPBuilder Builder(BinOp);
+    VPBuilder Builder(Op);
     auto *Trunc = Builder.createWidenCast(Instruction::CastOps::Trunc,
-                                          BinOp->getOperand(1), NarrowTy);
+                                          Op->getOperand(1), NarrowTy);
     Type *WideTy = TypeInfo.inferScalarType(ExtA);
-    BinOp->setOperand(1, Builder.createWidenCast(ExtOpc, Trunc, WideTy));
-    return BinOp;
+    Op->setOperand(1, Builder.createWidenCast(ExtOpc, Trunc, WideTy));
+    return Op;
+  }
+
+  // reduce.add(abs(sub(ext(A), ext(B))))
+  // -> reduce.add(ext(absolute-difference(A, B)))
+  VPValue *X, *Y;
+  if (match(Op, m_WidenIntrinsic<Intrinsic::abs>(m_Sub(
+                    m_ZExtOrSExt(m_VPValue(X)), m_ZExtOrSExt(m_VPValue(Y)))))) {
+    auto *Sub = Op->getOperand(0)->getDefiningRecipe();
+    auto *Ext = cast<VPWidenCastRecipe>(Sub->getOperand(0));
+    assert(Ext->getOpcode() ==
+               cast<VPWidenCastRecipe>(Sub->getOperand(1))->getOpcode() &&
+           "Expected both the LHS and RHS extends to be the same");
+    bool IsSigned = Ext->getOpcode() == Instruction::SExt;
+    VPBuilder Builder(Op);
+    Type *SrcTy = TypeInfo.inferScalarType(X);
+    auto *FreezeX = Builder.insert(new VPWidenRecipe(Instruction::Freeze, {X}));
+    auto *FreezeY = Builder.insert(new VPWidenRecipe(Instruction::Freeze, {Y}));
+    auto *Max = Builder.insert(
+        new VPWidenIntrinsicRecipe(IsSigned ? Intrinsic::smax : Intrinsic::umax,
+                                   {FreezeX, FreezeY}, SrcTy));
+    auto *Min = Builder.insert(
+        new VPWidenIntrinsicRecipe(IsSigned ? Intrinsic::smin : Intrinsic::umin,
+                                   {FreezeX, FreezeY}, SrcTy));
+    auto *AbsDiff =
+        Builder.insert(new VPWidenRecipe(Instruction::Sub, {Max, Min}));
+    return Builder.createWidenCast(Instruction::CastOps::ZExt, AbsDiff,
+                                   TypeInfo.inferScalarType(Op));
   }
 
   // reduce.add(ext(mul(ext(A), ext(B))))
   // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
   // TODO: Support this optimization for float types.
-  if (match(BinOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
-                                      m_ZExtOrSExt(m_VPValue()))))) {
-    auto *Ext = cast<VPWidenCastRecipe>(BinOp);
+  if (match(Op, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                   m_ZExtOrSExt(m_VPValue()))))) {
+    auto *Ext = cast<VPWidenCastRecipe>(Op);
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
     auto *MulLHS = cast<VPWidenCastRecipe>(Mul->getOperand(0));
     auto *MulRHS = cast<VPWidenCastRecipe>(Mul->getOperand(1));
     if (!Mul->hasOneUse() ||
         (Ext->getOpcode() != MulLHS->getOpcode() && MulLHS != MulRHS) ||
         MulLHS->getOpcode() != MulRHS->getOpcode())
-      return BinOp;
+      return Op;
     VPBuilder Builder(Mul);
     Mul->setOperand(0, Builder.createWidenCast(MulLHS->getOpcode(),
                                                MulLHS->getOperand(0),
@@ -6030,7 +6122,7 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
     return Mul;
   }
 
-  return BinOp;
+  return Op;
 }
 
 // Helper to transform a partial reduction chain into a partial reduction
@@ -6041,14 +6133,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
   assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
 
-  VPValue *BinOpVal = WidenRecipe->getOperand(0);
-  VPValue *Accumulator = WidenRecipe->getOperand(1);
-
-  // Swap if needed to ensure Accumulator is the PHI or partial reduction.
-  if (isa<VPReductionPHIRecipe, VPReductionRecipe>(BinOpVal) ||
-      isa<VPExpressionRecipe>(BinOpVal))
-    std::swap(BinOpVal, Accumulator);
-  auto *BinOp = cast<VPSingleDefRecipe>(BinOpVal->getDefiningRecipe());
+  VPValue *Accumulator = WidenRecipe->getOperand(Chain.AccumulatorOpIdx);
+  auto *ExtendedOp = cast<VPSingleDefRecipe>(
+      WidenRecipe->getOperand(1 - Chain.AccumulatorOpIdx));
 
   // Sub-reductions can be implemented in two ways:
   // (1) negate the operand in the vector loop (the default way).
@@ -6067,19 +6154,17 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   if (WidenRecipe->getOpcode() == Instruction::Sub &&
       Chain.RK != RecurKind::Sub) {
     VPBuilder Builder(WidenRecipe);
-    Type *ElemTy = TypeInfo.inferScalarType(BinOp);
+    Type *ElemTy = TypeInfo.inferScalarType(ExtendedOp);
     auto *Zero = Plan.getZero(ElemTy);
-    VPIRFlags Flags = WidenRecipe->getUnderlyingInstr()
-                          ? VPIRFlags(*WidenRecipe->getUnderlyingInstr())
-                          : VPIRFlags();
-    auto *NegRecipe = new VPWidenRecipe(Instruction::Sub, {Zero, BinOp}, Flags,
-                                        VPIRMetadata(), DebugLoc::getUnknown());
+    auto *NegRecipe =
+        new VPWidenRecipe(Instruction::Sub, {Zero, ExtendedOp}, VPIRFlags(),
+                          VPIRMetadata(), DebugLoc::getUnknown());
     Builder.insert(NegRecipe);
-    BinOp = NegRecipe;
+    ExtendedOp = NegRecipe;
   }
 
   // FIXME: Do these transforms before invoking the cost-model.
-  BinOp = optimizeExtendsForPartialReduction(BinOp, TypeInfo);
+  ExtendedOp = optimizeExtendsForPartialReduction(ExtendedOp, TypeInfo);
 
   // Check if WidenRecipe is the final result of the reduction. If so look
   // through selects for predicated reductions.
@@ -6099,7 +6184,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       RdxKind,
       RdxKind == RecurKind::FAdd ? WidenRecipe->getFastMathFlags()
                                  : FastMathFlags(),
-      WidenRecipe->getUnderlyingInstr(), Accumulator, BinOp, Cond,
+      WidenRecipe->getUnderlyingInstr(), Accumulator, ExtendedOp, Cond,
       RdxUnordered{/*VFScaleFactor=*/Chain.ScaleFactor});
   PartialRed->insertBefore(WidenRecipe);
 
@@ -6149,44 +6234,13 @@ static InstructionCost
 getPartialReductionLinkCost(VPCostContext &CostCtx,
                             const VPPartialReductionChain &Link,
                             ElementCount VF) {
-  auto GetExtInfo = [&CostCtx](VPWidenCastRecipe *Ext)
-      -> std::pair<Type *, TargetTransformInfo::PartialReductionExtendKind> {
-    if (!Ext)
-      return {nullptr, TargetTransformInfo::PR_None};
-    Type *ExtOpType = CostCtx.Types.inferScalarType(Ext->getOperand(0));
-    auto ExtKind = TargetTransformInfo::getPartialReductionExtendKind(
-        static_cast<Instruction::CastOps>(Ext->getOpcode()));
-    return {ExtOpType, ExtKind};
-  };
-
-  const ExtendedReductionOperand &ExtendedOp = Link.ExtendedOp;
-  VPWidenCastRecipe *ExtendA = ExtendedOp.CastRecipes[0];
-  VPWidenCastRecipe *ExtendB = ExtendedOp.CastRecipes[1];
-
-  Type *ExtOpTypeA, *ExtOpTypeB;
-  TargetTransformInfo::PartialReductionExtendKind ExtKindA, ExtKindB;
-  std::tie(ExtOpTypeA, ExtKindA) = GetExtInfo(ExtendA);
-  std::tie(ExtOpTypeB, ExtKindB) = GetExtInfo(ExtendB);
-
-  std::optional<unsigned> BinOpc;
-  if (ExtendedOp.BinOp && ExtendedOp.BinOp != Link.ReductionBinOp)
-    BinOpc = ExtendedOp.BinOp->getOpcode();
-
-  // If ExtendB is nullptr but there's a separate BinOp, the second operand
-  // was a constant that can use the same extend kind as the first.
-  if (!ExtendB && BinOpc) {
-    const APInt *Const = nullptr;
-    for (VPValue *Op : ExtendedOp.BinOp->operands()) {
-      if (match(Op, m_APInt(Const)))
-        break;
-    }
-    if (!Const || !canConstantBeExtended(Const, ExtOpTypeA, ExtKindA))
-      return InstructionCost::getInvalid();
-    ExtOpTypeB = ExtOpTypeA;
-    ExtKindB = ExtKindA;
-  }
-
   Type *RdxType = CostCtx.Types.inferScalarType(Link.ReductionBinOp);
+  const ExtendedReductionOperand &ExtendedOp = Link.ExtendedOp;
+  std::optional<unsigned> BinOpc = std::nullopt;
+  // If ExtendB is not none, then the "ExtendsUser" is the binary operation.
+  if (ExtendedOp.ExtendB.Kind != ExtendKind::PR_None)
+    BinOpc = ExtendedOp.ExtendsUser->getOpcode();
+
   std::optional<llvm::FastMathFlags> Flags;
   if (RdxType->isFloatingPointTy())
     Flags = Link.ReductionBinOp->getFastMathFlags();
@@ -6194,13 +6248,13 @@ getPartialReductionLinkCost(VPCostContext &CostCtx,
   unsigned Opcode = Link.RK == RecurKind::Sub
                         ? (unsigned)Instruction::Add
                         : Link.ReductionBinOp->getOpcode();
-  return CostCtx.TTI.getPartialReductionCost(Opcode, ExtOpTypeA, ExtOpTypeB,
-                                             RdxType, VF, ExtKindA, ExtKindB,
-                                             BinOpc, CostCtx.CostKind, Flags);
+  return CostCtx.TTI.getPartialReductionCost(
+      Opcode, ExtendedOp.ExtendA.SrcType, ExtendedOp.ExtendB.SrcType, RdxType,
+      VF, ExtendedOp.ExtendA.Kind, ExtendedOp.ExtendB.Kind, BinOpc,
+      CostCtx.CostKind, Flags);
 }
 
-static TTI::PartialReductionExtendKind
-getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
+static ExtendKind getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
   return TTI::getPartialReductionExtendKind(Cast->getOpcode());
 }
 
@@ -6216,17 +6270,47 @@ getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
 ///  - UpdateR(PrevValue, neg(BinOp(ext(...), Constant)))
 ///  - UpdateR(PrevValue, ext(mul(ext(...), ext(...))))
 ///  - UpdateR(PrevValue, ext(mul(ext(...), Constant)))
+///  - UpdateR(PrevValue, abs(sub(ext(...), ext(...)))
 ///
 /// Note: The second operand of UpdateR corresponds to \p Op in the examples.
 static std::optional<ExtendedReductionOperand>
-matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
+matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op,
+                              VPTypeAnalysis &TypeInfo) {
   assert(is_contained(UpdateR->operands(), Op) &&
          "Op should be operand of UpdateR");
+
+  // Try matching an absolute difference operand of the form
+  // `abs(sub(ext(A), ext(B)))`. This will be later transformed into
+  // `ext(absolute-difference(A, B))`. This allows us to perform the absolute
+  // difference on a wider type and get the extend for "free" from the partial
+  // reduction.
+  VPValue *X, *Y;
+  if (Op->hasOneUse() &&
+      match(Op, m_WidenIntrinsic<Intrinsic::abs>(
+                    m_OneUse(m_Sub(m_WidenAnyExtend(m_VPValue(X)),
+                                   m_WidenAnyExtend(m_VPValue(Y))))))) {
+    auto *Abs = cast<VPWidenIntrinsicRecipe>(Op);
+    auto *Sub = cast<VPWidenRecipe>(Abs->getOperand(0));
+    auto *LHSExt = cast<VPWidenCastRecipe>(Sub->getOperand(0));
+    auto *RHSExt = cast<VPWidenCastRecipe>(Sub->getOperand(1));
+    Type *LHSInputType = TypeInfo.inferScalarType(X);
+    Type *RHSInputType = TypeInfo.inferScalarType(Y);
+    if (LHSInputType != RHSInputType ||
+        LHSExt->getOpcode() != RHSExt->getOpcode())
+      return std::nullopt;
+    // Note: This is essentially the same as matching ext(...) as we will
+    // rewrite this operand to ext(absolute-difference(A, B)).
+    return ExtendedReductionOperand{
+        Sub,
+        /*ExtendA=*/{LHSInputType, getPartialReductionExtendKind(LHSExt)},
+        /*ExtendB=*/{}};
+  }
 
   std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
   if (match(Op, m_WidenAnyExtend(m_VPValue()))) {
     auto *CastRecipe = cast<VPWidenCastRecipe>(Op);
     VPValue *CastSource = CastRecipe->getOperand(0);
+    OuterExtKind = getPartialReductionExtendKind(CastRecipe);
     if (match(CastSource, m_Mul(m_VPValue(), m_VPValue())) ||
         match(CastSource, m_FMul(m_VPValue(), m_VPValue()))) {
       // Match: ext(mul(...))
@@ -6235,13 +6319,15 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
       // by widening the inner extends to match it. See
       // optimizeExtendsForPartialReduction.
       Op = CastSource;
-      OuterExtKind = getPartialReductionExtendKind(CastRecipe);
     } else if (UpdateR->getOpcode() == Instruction::Add ||
                UpdateR->getOpcode() == Instruction::FAdd) {
       // Match: UpdateR(PrevValue, ext(...))
       // TODO: Remove the add/fadd restriction (we should be able to handle this
       // case for sub reductions too).
-      return ExtendedReductionOperand{UpdateR, {CastRecipe, nullptr}};
+      return ExtendedReductionOperand{
+          UpdateR,
+          /*ExtendA=*/{TypeInfo.inferScalarType(CastSource), *OuterExtKind},
+          /*ExtendB=*/{}};
     }
   }
 
@@ -6268,13 +6354,16 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
     return std::nullopt;
 
   auto *LHSCast = cast<VPWidenCastRecipe>(LHS);
+  Type *LHSInputType = TypeInfo.inferScalarType(LHSCast->getOperand(0));
+  ExtendKind LHSExtendKind = getPartialReductionExtendKind(LHSCast);
 
   // The RHS of the operation can be an extend or a constant integer.
-  // The constant will be validated in isValidPartialReduction.
+  const APInt *RHSConst = nullptr;
   VPWidenCastRecipe *RHSCast = nullptr;
   if (match(RHS, m_WidenAnyExtend(m_VPValue())))
     RHSCast = cast<VPWidenCastRecipe>(RHS);
-  else if (!isa<VPConstantInt>(RHS))
+  else if (!match(RHS, m_APInt(RHSConst)) ||
+           !canConstantBeExtended(RHSConst, LHSInputType, LHSExtendKind))
     return std::nullopt;
 
   // The outer extend kind must match the inner extends for folding.
@@ -6283,7 +6372,15 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
         getPartialReductionExtendKind(Cast) != OuterExtKind)
       return std::nullopt;
 
-  return ExtendedReductionOperand{BinOp, {LHSCast, RHSCast}};
+  Type *RHSInputType = LHSInputType;
+  ExtendKind RHSExtendKind = LHSExtendKind;
+  if (RHSCast) {
+    RHSInputType = TypeInfo.inferScalarType(RHSCast->getOperand(0));
+    RHSExtendKind = getPartialReductionExtendKind(RHSCast);
+  }
+
+  return ExtendedReductionOperand{
+      BinOp, {LHSInputType, LHSExtendKind}, {RHSInputType, RHSExtendKind}};
 }
 
 /// Examines each operation in the reduction chain corresponding to \p RedPhiR,
@@ -6302,9 +6399,10 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
   VPValue *ExitValue = RdxResult->getOperand(0);
   match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
+  VPTypeAnalysis &TypeInfo = CostCtx.Types;
   SmallVector<VPPartialReductionChain> Chain;
   RecurKind RK = RedPhiR->getRecurrenceKind();
-  Type *PhiType = CostCtx.Types.inferScalarType(RedPhiR);
+  Type *PhiType = TypeInfo.inferScalarType(RedPhiR);
   TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
 
   // Work backwards from the ExitValue examining each reduction operation.
@@ -6320,16 +6418,15 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
     // Find the extended operand. The other operand (PrevValue) is the next link
     // in the reduction chain.
     std::optional<ExtendedReductionOperand> ExtendedOp =
-        matchExtendedReductionOperand(UpdateR, Op);
+        matchExtendedReductionOperand(UpdateR, Op, TypeInfo);
     if (!ExtendedOp) {
-      ExtendedOp = matchExtendedReductionOperand(UpdateR, PrevValue);
+      ExtendedOp = matchExtendedReductionOperand(UpdateR, PrevValue, TypeInfo);
       if (!ExtendedOp)
         return std::nullopt;
       std::swap(Op, PrevValue);
     }
 
-    Type *ExtSrcType = CostCtx.Types.inferScalarType(
-        ExtendedOp->CastRecipes[0]->getOperand(0));
+    Type *ExtSrcType = ExtendedOp->ExtendA.SrcType;
     TypeSize ExtSrcSize = ExtSrcType->getPrimitiveSizeInBits();
     if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
       return std::nullopt;
@@ -6338,8 +6435,9 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
     // not have an invalid cost) for the given VF range. Clamps the range and
     // returns true if feasible for any VF.
     VPPartialReductionChain Link(
-        {UpdateR, *ExtendedOp,
-         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize)), RK});
+        {UpdateR, *ExtendedOp, RK,
+         PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
+         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize))});
     Chain.push_back(Link);
     CurrentValue = PrevValue;
   }
@@ -6378,15 +6476,15 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   DenseMap<VPSingleDefRecipe *, unsigned> ScaledReductionMap;
   for (const auto &[_, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains) {
-      PartialReductionOps.insert(Chain.ExtendedOp.BinOp);
+      PartialReductionOps.insert(Chain.ExtendedOp.ExtendsUser);
       ScaledReductionMap[Chain.ReductionBinOp] = Chain.ScaleFactor;
     }
 
   // A partial reduction is invalid if any of its extends are used by
   // something that isn't another partial reduction. This is because the
   // extends are intended to be lowered along with the reduction itself.
-  auto ExtendUsersValid = [&](VPWidenCastRecipe *Ext) {
-    return !Ext || all_of(Ext->users(), [&](VPUser *U) {
+  auto ExtendUsersValid = [&](VPValue *Ext) {
+    return !isa<VPWidenCastRecipe>(Ext) || all_of(Ext->users(), [&](VPUser *U) {
       return PartialReductionOps.contains(cast<VPRecipeBase>(U));
     });
   };
@@ -6406,10 +6504,11 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 
       PartialCost += LinkCost;
       RegularCost += Link.ReductionBinOp->computeCost(VF, CostCtx);
-      if (ExtendedOp.BinOp && ExtendedOp.BinOp != Link.ReductionBinOp)
-        RegularCost += ExtendedOp.BinOp->computeCost(VF, CostCtx);
-      for (VPWidenCastRecipe *Extend : ExtendedOp.CastRecipes)
-        if (Extend)
+      // If ExtendB is not none, then the "ExtendsUser" is the binary operation.
+      if (ExtendedOp.ExtendB.Kind != ExtendKind::PR_None)
+        RegularCost += ExtendedOp.ExtendsUser->computeCost(VF, CostCtx);
+      for (VPValue *Op : ExtendedOp.ExtendsUser->operands())
+        if (auto *Extend = dyn_cast<VPWidenCastRecipe>(Op))
           RegularCost += Extend->computeCost(VF, CostCtx);
     }
     return PartialCost.isValid() && PartialCost <= RegularCost;
@@ -6422,7 +6521,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   // reductions where the types of the other operands don't match.
   for (auto &[RedPhiR, Chains] : ChainsByPhi) {
     for (const VPPartialReductionChain &Chain : Chains) {
-      if (!all_of(Chain.ExtendedOp.CastRecipes, ExtendUsersValid)) {
+      if (!all_of(Chain.ExtendedOp.ExtendsUser->operands(), ExtendUsersValid)) {
         Chains.clear();
         break;
       }
@@ -6466,4 +6565,58 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   for (auto &[Phi, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains)
       transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi);
+}
+
+void VPlanTransforms::makeMemOpWideningDecisions(
+    VPlan &Plan, VFRange &Range, VPRecipeBuilder &RecipeBuilder) {
+  // Collect all loads/stores first. We will start with ones having simpler
+  // decisions followed by more complex ones that are potentially
+  // guided/dependent on the simpler ones.
+  SmallVector<VPInstruction *> MemOps;
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (VPI && VPI->getUnderlyingValue() &&
+          is_contained({Instruction::Load, Instruction::Store},
+                       VPI->getOpcode()))
+        MemOps.push_back(VPI);
+    }
+  }
+
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  VPBuilder FinalRedStoresBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+
+  for (VPInstruction *VPI : MemOps) {
+    auto ReplaceWith = [&](VPRecipeBase *New) {
+      RecipeBuilder.setRecipe(cast<Instruction>(VPI->getUnderlyingValue()),
+                              New);
+      New->insertBefore(VPI);
+      if (VPI->getOpcode() == Instruction::Load)
+        VPI->replaceAllUsesWith(New->getVPSingleValue());
+      VPI->eraseFromParent();
+    };
+
+    // Note: we must do that for scalar VPlan as well.
+    if (RecipeBuilder.replaceWithFinalIfReductionStore(VPI,
+                                                       FinalRedStoresBuilder))
+      continue;
+
+    // Filter out scalar VPlan for the remaining memory operations.
+    if (LoopVectorizationPlanner::getDecisionAndClampRange(
+            [](ElementCount VF) { return VF.isScalar(); }, Range))
+      continue;
+
+    if (VPHistogramRecipe *Histogram = RecipeBuilder.widenIfHistogram(VPI)) {
+      ReplaceWith(Histogram);
+      continue;
+    }
+
+    VPRecipeBase *Recipe = RecipeBuilder.tryToWidenMemory(VPI, Range);
+    if (!Recipe)
+      Recipe = RecipeBuilder.handleReplication(VPI, Range);
+
+    ReplaceWith(Recipe);
+  }
 }

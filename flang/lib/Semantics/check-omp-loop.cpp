@@ -295,6 +295,8 @@ void OmpStructureChecker::CheckNestedConstruct(
     }
   }
 
+  // The loop sequence will correspond to the nest associated with the
+  // loop-associated construct being visited.
   LoopSequence sequence(body, version, true);
   auto assoc{llvm::omp::getDirectiveAssociation(dir)};
   auto needRange{GetAffectedLoopRangeWithReason(beginSpec, version)};
@@ -329,6 +331,14 @@ void OmpStructureChecker::CheckNestedConstruct(
     auto haveDepth{needPerfect ? havePerf : haveSema};
     std::string_view perfectTxt{needPerfect ? " perfect" : ""};
 
+    if (needDepth.value > 1 && IsDoConcurrentLegal(version)) {
+      if (auto *conc{sequence.getNestedDoConcurrent()}) {
+        auto &msg{context_.Say(*parser::GetSource(*conc->owner()),
+            "DO CONCURRENT must be the only affected loop in a loop nest"_err_en_US)};
+        needDepth.reason.AttachTo(msg);
+      }
+    }
+
     // If the present depth is 0, it's likely that the construct doesn't
     // have any loops in it, which would be diagnosed above.
     if (needDepth && haveDepth.value > 0) {
@@ -354,10 +364,10 @@ void OmpStructureChecker::CheckNestedConstruct(
         auto &msg{context_.Say(beginSource, MsgRequiresCanonical, "sequence")};
         whyNot.AttachTo(msg);
       }
-      if (auto requiredCount{GetRequiredCount(needRange.value)}) {
+      if (auto requiredCount{GetMinimumSequenceCount(needRange.value)}) {
         if (*requiredCount > 0 && haveLength.value < *requiredCount) {
           auto &msg{context_.Say(beginSource,
-              "This construct requires a sequence of %" PRId64
+              "This construct requires a sequence of at least %" PRId64
               " loops, but the loop sequence has a length of %" PRId64
               ""_err_en_US,
               *requiredCount, *haveLength.value)};
@@ -678,6 +688,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
   CheckCrayPointee(objects, "LINEAR", false);
   GetSymbolsInObjectList(objects, symbols);
+  CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_linear);
 
   auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
     if (!symbol->GetType()->IsNumeric(TypeCategory::Integer)) {

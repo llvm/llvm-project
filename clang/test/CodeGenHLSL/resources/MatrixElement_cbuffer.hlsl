@@ -14,6 +14,7 @@ cbuffer CB {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z23getCBufferScalarElementv(
 // CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // COL-CHECK-NEXT:    [[MATRIX_BUF_COPY:%.*]] = alloca [2 x <3 x float>], align 4
 // COL-CHECK-NEXT:    [[CBUF_DEST:%.*]] = getelementptr inbounds [2 x <3 x float>], ptr [[MATRIX_BUF_COPY]], i32 0, i32 0
 // COL-CHECK-NEXT:    [[CBUF_LOAD:%.*]] = load <3 x float>, ptr addrspace(2) @Mat, align 4
@@ -47,6 +48,7 @@ float getCBufferScalarElement() {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z23getCBufferSwizzleAccessv(
 // CHECK-SAME: ) #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // COL-CHECK-NEXT:    [[MATRIX_BUF_COPY:%.*]] = alloca [2 x <3 x float>], align 4
 // COL-CHECK-NEXT:    [[CBUF_DEST:%.*]] = getelementptr inbounds [2 x <3 x float>], ptr [[MATRIX_BUF_COPY]], i32 0, i32 0
 // COL-CHECK-NEXT:    [[CBUF_LOAD:%.*]] = load <3 x float>, ptr addrspace(2) @Mat, align 4
@@ -79,6 +81,7 @@ float4 getCBufferSwizzleAccess() {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <2 x float> @_Z22getZeroBasedSwizzleEltu11matrix_typeILm3ELm2EfE(
 // CHECK-SAME: <6 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // COL-CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [2 x <3 x float>], align 4
 // COL-CHECK-NEXT:    store <6 x float> [[M]], ptr [[M_ADDR]], align 4
 // COL-CHECK-NEXT:    [[TMP0:%.*]] = load <6 x float>, ptr [[M_ADDR]], align 4

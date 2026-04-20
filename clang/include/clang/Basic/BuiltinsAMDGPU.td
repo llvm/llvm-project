@@ -213,6 +213,10 @@ def __builtin_amdgcn_ds_permute : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_ds_bpermute : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_readfirstlane : AMDGPUBuiltin<"int(int)", [Const]>;
 def __builtin_amdgcn_readlane : AMDGPUBuiltin<"int(int, int)", [Const]>;
+def __builtin_amdgcn_wave_shuffle : AMDGPUBuiltin<"int(int, int)", [Const]> {
+  let Documentation = [DocWaveShuffle];
+  let ArgNames = ["src", "idx"];
+}
 def __builtin_amdgcn_fmed3f : AMDGPUBuiltin<"float(float, float, float)", [Const]>;
 def __builtin_amdgcn_ds_faddf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">;
 def __builtin_amdgcn_ds_fminf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">;
@@ -603,13 +607,13 @@ def __builtin_amdgcn_mfma_f32_4x4x2bf16 : AMDGPUBuiltin<"_ExtVector<4, float>(_E
 def __builtin_amdgcn_mfma_f32_32x32x4bf16 : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<2, short>, _ExtVector<2, short>, _ExtVector<16, float>, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;
 def __builtin_amdgcn_mfma_f32_16x16x8bf16 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<2, short>, _ExtVector<2, short>, _ExtVector<4, float>, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;
 
-def __builtin_amdgcn_mfma_f32_32x32x4bf16_1k : AMDGPUBuiltin<"_ExtVector<32, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<32, float>, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_mfma_f32_16x16x4bf16_1k : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<16, float>, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_mfma_f32_4x4x4bf16_1k : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<4, float>, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_mfma_f32_32x32x8bf16_1k : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<16, float>, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_mfma_f32_16x16x16bf16_1k : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<4, float>, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_mfma_f64_16x16x4f64 : AMDGPUBuiltin<"_ExtVector<4, double>(double, double, _ExtVector<4, double>, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_mfma_f64_4x4x4f64 : AMDGPUBuiltin<"double(double, double, double, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;
+def __builtin_amdgcn_mfma_f32_32x32x4bf16_1k : AMDGPUBuiltin<"_ExtVector<32, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<32, float>, _Constant int, _Constant int, _Constant int)", [Const], "gfx90a-insts">;
+def __builtin_amdgcn_mfma_f32_16x16x4bf16_1k : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<16, float>, _Constant int, _Constant int, _Constant int)", [Const], "gfx90a-insts">;
+def __builtin_amdgcn_mfma_f32_4x4x4bf16_1k : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<4, float>, _Constant int, _Constant int, _Constant int)", [Const], "gfx90a-insts">;
+def __builtin_amdgcn_mfma_f32_32x32x8bf16_1k : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<16, float>, _Constant int, _Constant int, _Constant int)", [Const], "gfx90a-insts">;
+def __builtin_amdgcn_mfma_f32_16x16x16bf16_1k : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<4, float>, _Constant int, _Constant int, _Constant int)", [Const], "gfx90a-insts">;
+def __builtin_amdgcn_mfma_f64_16x16x4f64 : AMDGPUBuiltin<"_ExtVector<4, double>(double, double, _ExtVector<4, double>, _Constant int, _Constant int, _Constant int)", [Const], "gfx90a-insts">;
+def __builtin_amdgcn_mfma_f64_4x4x4f64 : AMDGPUBuiltin<"double(double, double, double, _Constant int, _Constant int, _Constant int)", [Const], "gfx90a-insts">;
 
 def __builtin_amdgcn_mfma_i32_16x16x32_i8 : AMDGPUBuiltin<"_ExtVector<4, int>(int64_t, int64_t, _ExtVector<4, int>, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;
 def __builtin_amdgcn_mfma_i32_32x32x16_i8 : AMDGPUBuiltin<"_ExtVector<16, int>(int64_t, int64_t, _ExtVector<16, int>, _Constant int, _Constant int, _Constant int)", [Const], "mai-insts">;

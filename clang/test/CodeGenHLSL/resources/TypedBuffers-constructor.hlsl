@@ -33,6 +33,7 @@ export void foo() {
 // Buf1 initialization part 1 - global init function that calls RWBuffer<float>::__createFromBinding
 // CHECK: define internal void @__cxx_global_var_init()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 @Buf1, i32 noundef 5, i32 noundef 3, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf1Str]])
 
@@ -50,6 +51,7 @@ export void foo() {
 // Buf2 initialization part 1 - global init function that RWBuffer<float>::__createFromImplicitBinding
 // CHECK: define internal void @__cxx_global_var_init.1()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::Buffer<double>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} @Buf2, i32 noundef 0, i32 noundef 0, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf2Str]])
 
@@ -67,6 +69,7 @@ export void foo() {
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by RWBuffer<int> C1 default constructor
 // CHECK: define void @foo()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: %Buf3 = alloca %"class.hlsl::RWBuffer.0", align 4
 // CHECK-NEXT: call void @hlsl::RWBuffer<int>::RWBuffer()(ptr {{.*}} %Buf3)
 
@@ -82,5 +85,6 @@ export void foo() {
 // Module initialization
 // CHECK: define internal void @_GLOBAL__sub_I_TypedBuffers_constructor.hlsl()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @__cxx_global_var_init()
 // CHECK-NEXT: call void @__cxx_global_var_init.1()

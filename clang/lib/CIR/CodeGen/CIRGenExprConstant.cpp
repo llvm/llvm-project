@@ -751,8 +751,10 @@ bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
           builder.getI32IntegerAttr(addressPoint.VTableIndex),
           builder.getI32IntegerAttr(addressPoint.AddressPointIndex),
       });
+      auto vptrTy = cir::VPtrType::get(cgm.getBuilder().getContext());
+      auto symbol = mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr());
       cir::GlobalViewAttr vtableInit =
-          cgm.getBuilder().getGlobalViewAttr(vtable, indices);
+          cir::GlobalViewAttr::get(vptrTy, symbol, indices);
       if (!appendBytes(offset, vtableInit))
         return false;
     }

@@ -1721,6 +1721,12 @@ public:
 
   void SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info);
 
+  /// Get the list of paths that LLDB will consider automatically loading
+  /// scripting resources from. Currently whether to load scripts
+  /// unconditionally is controlled via the
+  /// `target.load-script-from-symbol-file` setting.
+  FileSpecList GetSafeAutoLoadPaths() const;
+
   /// Add a signal for the target.  This will get copied over to the process
   /// if the signal exists on that target.  Only the values with Yes and No are
   /// set, Calculate values will be ignored.
@@ -1828,6 +1834,7 @@ protected:
   llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor>
       m_frame_provider_descriptors;
   mutable std::recursive_mutex m_frame_provider_descriptors_mutex;
+  uint32_t m_next_frame_provider_id = 1;
 
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;

@@ -125,6 +125,13 @@ New checks
   Finds functions where throwing exceptions is unsafe but the function is still
   marked as potentially throwing.
 
+- New :doc:`llvm-redundant-casting
+  <clang-tidy/checks/llvm/redundant-casting>` check.
+
+  Points out uses of ``cast<>``, ``dyn_cast<>`` and their ``or_null`` variants
+  that are unnecessary because the argument already is of the target type, or a
+  derived type thereof.
+
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
 
@@ -168,6 +175,11 @@ New checks
   Suggests insertion of ``std::move(...)`` to turn copy assignment operator
   calls into move assignment ones, when deemed valid and profitable.
 
+- New :doc:`readability-redundant-lambda-parameter-list
+  <clang-tidy/checks/readability/redundant-lambda-parameter-list>` check.
+
+  Finds lambda expressions with a redundant empty parameter list and removes it.
+
 - New :doc:`readability-redundant-qualified-alias
   <clang-tidy/checks/readability/redundant-qualified-alias>` check.
 
@@ -204,6 +216,11 @@ New check aliases
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
   name is kept as an alias.
 
+- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
+  to :doc:`bugprone-signed-bitwise
+  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
+  name is kept as an alias.
+
 - Renamed :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` to
   :doc:`performance-prefer-single-char-overloads
@@ -226,7 +243,7 @@ Changes in existing checks
   C++ files because suggested ``reinterpret_cast`` is not available in pure C.
 
 - Improved :doc:`bugprone-derived-method-shadowing-base-method
-  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by 
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by
   correctly ignoring function templates.
 
 - Improved :doc:`bugprone-exception-escape
@@ -245,9 +262,19 @@ Changes in existing checks
   positive when increment/decrement operators appear inside lambda bodies that
   are part of a condition expression.
 
+- Improved :doc:`bugprone-incorrect-enable-if
+  <clang-tidy/checks/bugprone/incorrect-enable-if>` check to not
+  insert an extraneous ``typename`` on code like
+  ``typename std::enable_if<...>``, where there's already a ``typename`` and
+  only the ``::type`` at the end is missing.
+
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
+
+- Improved :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing a false
+  positive when converting a ``bool`` to a signed integer type.
 
 - Improved :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
@@ -257,12 +284,17 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
   user-defined type and by removing detection of the compiler generated ``std``
-  namespace extensions. 
+  namespace extensions.
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
   string constructor calls when the string class constructor has a default
   allocator argument.
+
+- Improved :doc:`bugprone-throwing-static-initialization
+  <clang-tidy/checks/bugprone/throwing-static-initialization>` check by adding
+  the `AllowedTypes` option. With this option it is possible to exclude
+  static declarations with specific types from the check.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
@@ -286,6 +318,9 @@ Changes in existing checks
 
   - Do not report explicit call to destructor after move as an invalid use.
 
+  - Avoid false positives when moving object to a base type then accessing
+    non-base members.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,
@@ -296,9 +331,17 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
 
+- Fixed :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by excluding
+  Objective-C for-in loop variable declaration.
+
 - Improved :doc:`cppcoreguidelines-missing-std-forward
-  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by fixing
-  a false positive for constrained template parameters.
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check:
+  
+  - Fixed false positive for constrained template parameters
+  
+  - Fixed false positive with ``std::forward`` in brace-init and paren-init
+    lambda captures such as ``[t{std::forward<T>(t)}]``.
 
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by fixing
@@ -456,8 +499,12 @@ Changes in existing checks
   it easier to see which specific enumerators need explicit initialization.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check by fixing incorrect
-  naming style application to C++17 structured bindings.
+  <clang-tidy/checks/readability/identifier-naming>` check:
+
+  - Fixed incorrect naming style application to C++17 structured bindings.
+
+  - Fixed a false positive where function templates could be diagnosed as generic 
+    identifiers when `DefaultCase` was enabled.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
@@ -475,9 +522,18 @@ Changes in existing checks
     to ``bool`` in C.
 
 - Improved :doc:`readability-non-const-parameter
-  <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
-  positives on parameters used in dependent expressions (e.g. inside generic
-  lambdas).
+  <clang-tidy/checks/readability/non-const-parameter>` check:
+
+  - Avoid false positives on parameters used in dependent expressions
+    (e.g. inside generic lambdas).
+
+  - Fixed a false positive in array subscript expressions where the types are
+    not yet resolved.
+
+- Improved :doc:`readability-redundant-member-init
+  <clang-tidy/checks/readability/redundant-member-init>` check by adding an
+  `IgnoreMacros` option to suppress warnings when the initializer involves
+  macros that may expand differently in other configurations.
 
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a

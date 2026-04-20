@@ -3721,8 +3721,6 @@ llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
   if (!descriptor.IsValid())
     return llvm::createStringError("invalid frame provider descriptor");
 
-  uint32_t descriptor_id = descriptor.GetID();
-
   llvm::StringRef name = descriptor.GetName();
   if (name.empty())
     return llvm::createStringError(
@@ -3731,12 +3729,27 @@ llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
   {
     std::unique_lock<std::recursive_mutex> guard(
         m_frame_provider_descriptors_mutex);
-    m_frame_provider_descriptors[descriptor_id] = descriptor;
+
+    // Check for duplicate: same class name and args (content hash).
+    uint32_t descriptor_hash = descriptor.GetHash();
+    for (const auto &entry : m_frame_provider_descriptors) {
+      if (entry.second.GetHash() == descriptor_hash)
+        GetDebugger().ReportWarning(
+            llvm::formatv("frame provider idx={0} with the same class name and "
+                          "arguments is already registered",
+                          entry.second.GetID())
+                .str());
+    }
+
+    uint32_t descriptor_id = m_next_frame_provider_id++;
+    ScriptedFrameProviderDescriptor new_descriptor = descriptor;
+    new_descriptor.SetID(descriptor_id);
+    m_frame_provider_descriptors[descriptor_id] = new_descriptor;
+
+    InvalidateThreadFrameProviders();
+
+    return descriptor_id;
   }
-
-  InvalidateThreadFrameProviders();
-
-  return descriptor_id;
 }
 
 bool Target::RemoveScriptedFrameProviderDescriptor(uint32_t id) {
@@ -3757,6 +3770,7 @@ void Target::ClearScriptedFrameProviderDescriptors() {
     std::lock_guard<std::recursive_mutex> guard(
         m_frame_provider_descriptors_mutex);
     m_frame_provider_descriptors.clear();
+    m_next_frame_provider_id = 1;
   }
 
   InvalidateThreadFrameProviders();
@@ -3857,7 +3871,8 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
 
       if (default_to_use_pty) {
 #ifdef _WIN32
-        if (info.GetFlags().Test(eLaunchFlagUsePipes)) {
+        if (info.GetFlags().Test(eLaunchFlagUsePipes) ||
+            ::getenv("LLDB_LAUNCH_FLAG_USE_PIPES")) {
           llvm::Error Err = info.SetUpPipeRedirection();
           LLDB_LOG_ERROR(log, std::move(Err),
                          "SetUpPipeRedirection failed: {0}");
@@ -4440,7 +4455,7 @@ public:
     // we just use the one from this instance.
     if (exe_ctx) {
       Target *target = exe_ctx->GetTargetPtr();
-      if (target) {
+      if (target && !target->IsDummyTarget()) {
         TargetOptionValueProperties *target_properties =
             static_cast<TargetOptionValueProperties *>(
                 target->GetValueProperties().get());
@@ -5415,6 +5430,30 @@ void Target::NotifyBreakpointChanged(
     Breakpoint &bp, const lldb::EventDataSP &breakpoint_data_sp) {
   if (EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
     BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
+}
+
+FileSpecList Target::GetSafeAutoLoadPaths() const {
+  FileSpecList fspecs = Debugger::GetDefaultSafeAutoLoadPaths();
+
+  // Add platform-specific safe-paths.
+  if (m_platform_sp) {
+    if (auto platform_fspecs_or_err =
+            m_platform_sp->GetSafeAutoLoadPaths(*this))
+      fspecs.Append(*platform_fspecs_or_err);
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Modules | LLDBLog::Platform),
+                     platform_fspecs_or_err.takeError(),
+                     "Skipping safe auto-load: {0}");
+  }
+
+  // Properties for testing get added last so they take priority.
+#ifndef NDEBUG
+  for (const auto &fspec :
+       TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
+    fspecs.Append(fspec);
+#endif
+
+  return fspecs;
 }
 
 // FIXME: the language plugin should expression options dynamically and
