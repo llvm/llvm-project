@@ -791,9 +791,7 @@ bool X86InstructionSelector::selectGlobalValue(MachineInstr &I,
         AM.GVOpFlags == X86II::MO_GOTPCREL_NORELAX)
       AM.Base.Reg = X86::RIP;
 
-    auto Is64Bit = STI.getTargetLowering()->getPointerTy(
-                       I.getMF()->getDataLayout()) == MVT::i64;
-    NewOpc = Is64Bit ? X86::MOV64rm : X86::MOV32rm;
+    NewOpc = STI.isTarget64BitLP64() ? X86::MOV64rm : X86::MOV32rm;
   } else {
     if (!X86SelectAddress(I, TM, MRI, STI, AM))
       return false;
