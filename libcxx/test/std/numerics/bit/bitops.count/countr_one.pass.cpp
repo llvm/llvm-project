@@ -141,12 +141,12 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
-    // _BitInt tests
-#if defined(__has_extension) && __has_extension(bit_int)
+    // _BitInt tests. Width tiers follow C23 §7.18.2.5.
+#if TEST_HAS_EXTENSION(bit_int)
     {
-      using T32  = unsigned _BitInt(32);
-      using T64  = unsigned _BitInt(64);
-      using T128 = unsigned _BitInt(128);
+      using T13 = unsigned _BitInt(13);
+      using T32 = unsigned _BitInt(32);
+      using T64 = unsigned _BitInt(64);
 
       // Byte-aligned widths: numeric_limits::digits is correct, so all
       // values including all-ones are safe to test.
@@ -166,14 +166,8 @@ int main(int, char**)
       assert(std::countr_one(T64(1)) == 1);
       assert(std::countr_one(T64(7)) == 3);
       assert(std::countr_one(T64(~T64(0))) == 64);
-      assert(std::countr_one(T128(0)) == 0);
-      assert(std::countr_one(T128(1)) == 1);
-      assert(std::countr_one(T128(~T128(0))) == 128);
 
-      // Odd (non-byte-aligned) widths: safe for values that are not all-ones
-      // (calls countr_zero(~x); digits fallback triggers when x is all-ones).
-      using T13 = unsigned _BitInt(13);
-      using T77 = unsigned _BitInt(77);
+      // Odd widths: safe for values that are not all-ones.
       assert(std::countr_one(T13(0)) == 0);
       assert(std::countr_one(T13(1)) == 1);
       assert(std::countr_one(T13(3)) == 2);
@@ -181,20 +175,47 @@ int main(int, char**)
       assert(std::countr_one(T13(15)) == 4);
       assert(std::countr_one(T13(127)) == 7);
       assert(std::countr_one(T13(128)) == 0);
+    }
+#  if __BITINT_MAXWIDTH__ >= 128
+    {
+      using T77  = unsigned _BitInt(77);
+      using T128 = unsigned _BitInt(128);
       assert(std::countr_one(T77(0)) == 0);
       assert(std::countr_one(T77(1)) == 1);
       assert(std::countr_one(T77(3)) == 2);
       assert(std::countr_one(T77(7)) == 3);
       assert(std::countr_one(T77(127)) == 7);
+
+      assert(std::countr_one(T128(0)) == 0);
+      assert(std::countr_one(T128(1)) == 1);
+      assert(std::countr_one(T128(~T128(0))) == 128);
+      // Mask of low 64 bits: 64 trailing ones, then a zero.
+      assert(std::countr_one(T128((T128(1) << 64) - 1)) == 64);
+      // Mask of low 65 bits: 65 trailing ones (spans 64-bit boundary).
+      assert(std::countr_one(T128((T128(1) << 65) - 1)) == 65);
     }
+#  endif
 #  if __BITINT_MAXWIDTH__ >= 256
     {
       using T256 = unsigned _BitInt(256);
       assert(std::countr_one(T256(0)) == 0);
       assert(std::countr_one(T256(~T256(0))) == 256);
+      // Mask of low 128 bits: 128 trailing ones.
+      assert(std::countr_one(T256((T256(1) << 128) - 1)) == 128);
+      // Mask of low 200 bits: 200 trailing ones.
+      assert(std::countr_one(T256((T256(1) << 200) - 1)) == 200);
     }
 #  endif
-#endif // __has_extension(bit_int)
+#  if __BITINT_MAXWIDTH__ >= 4096
+    {
+      using T4096 = unsigned _BitInt(4096);
+      assert(std::countr_one(T4096(0)) == 0);
+      assert(std::countr_one(T4096(~T4096(0))) == 4096);
+      // Mask of low 1000 bits: 1000 trailing ones.
+      assert(std::countr_one(T4096((T4096(1) << 1000) - 1)) == 1000);
+    }
+#  endif
+#endif // TEST_HAS_EXTENSION(bit_int)
 
     return 0;
 }

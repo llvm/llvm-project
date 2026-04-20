@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__type_traits/is_integral.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/is_unsigned.h>
 
@@ -26,25 +27,28 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Character types (char, wchar_t, char8_t, char16_t, char32_t) and bool
 // are integral but are NOT signed/unsigned integer types.
 
-// clang-format off
-template <class _Tp> inline const bool __is_character_or_bool_v = false;
-template <> inline const bool __is_character_or_bool_v<bool>     = true;
-template <> inline const bool __is_character_or_bool_v<char>     = true;
-template <> inline const bool __is_character_or_bool_v<wchar_t>  = true;
+template <class _Tp>
+inline const bool __is_character_v = false;
+template <>
+inline const bool __is_character_v<char> = true;
+template <>
+inline const bool __is_character_v<wchar_t> = true;
 #if _LIBCPP_HAS_CHAR8_T
-template <> inline const bool __is_character_or_bool_v<char8_t>  = true;
+template <>
+inline const bool __is_character_v<char8_t> = true;
 #endif
-template <> inline const bool __is_character_or_bool_v<char16_t> = true;
-template <> inline const bool __is_character_or_bool_v<char32_t> = true;
-// clang-format on
+template <>
+inline const bool __is_character_v<char16_t> = true;
+template <>
+inline const bool __is_character_v<char32_t> = true;
 
 template <class _Tp>
 inline const bool __is_signed_integer_v =
-    is_integral<_Tp>::value && is_signed<_Tp>::value && !__is_character_or_bool_v<_Tp>;
+    is_integral<_Tp>::value && is_signed<_Tp>::value && !__is_character_v<_Tp> && !is_same<_Tp, bool>::value;
 
 template <class _Tp>
 inline const bool __is_unsigned_integer_v =
-    is_integral<_Tp>::value && is_unsigned<_Tp>::value && !__is_character_or_bool_v<_Tp>;
+    is_integral<_Tp>::value && is_unsigned<_Tp>::value && !__is_character_v<_Tp> && !is_same<_Tp, bool>::value;
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
