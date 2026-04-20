@@ -9,6 +9,7 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 #define LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -89,7 +90,7 @@ struct LinkOptions {
   std::optional<std::string> ResourceDir;
 
   /// Resources to embed in the dSYM bundle's Contents/Resources/ directory.
-  std::vector<std::pair<std::string, std::string>> EmbedResources;
+  StringMap<std::string> EmbedResources;
 
   /// Virtual File System.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =

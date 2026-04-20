@@ -438,8 +438,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
           "invalid --embed-resource destination '" + Dst +
               "': must be a relative path within the bundle",
           inconvertibleErrorCode());
-    Options.LinkOpts.EmbedResources.emplace_back(Src.str(),
-                                                 std::string(NormalizedDst));
+    Options.LinkOpts.EmbedResources[NormalizedDst] = Src.str();
   }
 
   for (auto *SearchPath : Args.filtered(OPT_dsym_search_path))

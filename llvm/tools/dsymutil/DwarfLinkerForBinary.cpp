@@ -549,7 +549,9 @@ Error DwarfLinkerForBinary::copyEmbeddedResources() const {
     return sys::fs::copy_file(SrcPath, DstPath);
   };
 
-  for (const auto &[Src, Dst] : Options.EmbedResources) {
+  for (const auto &Entry : Options.EmbedResources) {
+    StringRef Dst = Entry.first();
+    StringRef Src = Entry.second;
     bool IsDir = false;
     if (auto EC = sys::fs::is_directory(Src, IsDir))
       return make_error<StringError>("cannot embed resource " + Src + ": " +
