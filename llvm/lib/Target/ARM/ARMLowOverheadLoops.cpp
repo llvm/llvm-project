@@ -299,7 +299,8 @@ namespace {
           return true;
 
         SmallPtrSet<MachineInstr *, 2> Defs;
-        RDI.getGlobalReachingDefs(MI, MO.getReg(), Defs);
+        bool HasLiveInPath = false;
+        RDI.getGlobalReachingDefs(MI, MO.getReg(), Defs, HasLiveInPath);
         if (Defs.empty())
           return true;
 
@@ -647,8 +648,9 @@ bool LowOverheadLoop::ValidateTailPredicate() {
 
     if (StartInsertPt != StartInsertBB->end() &&
         !RDI.isReachingDefLiveOut(&*StartInsertPt, NumElements)) {
-      if (auto *ElemDef =
-              RDI.getLocalLiveOutMIDef(StartInsertBB, NumElements)) {
+      bool IsFunctionLiveIn = false;
+      if (auto *ElemDef = RDI.getLocalLiveOutMIDef(StartInsertBB, NumElements,
+                                                   IsFunctionLiveIn)) {
         if (RDI.isSafeToMoveForwards(ElemDef, &*StartInsertPt)) {
           ElemDef->removeFromParent();
           StartInsertBB->insert(StartInsertPt, ElemDef);
@@ -890,7 +892,8 @@ static bool producesFalseLanesZero(MachineInstr &MI,
     // - If it's predicated, it only matters that it's def register already has
     //   false lane zeros, so we can ignore the uses.
     SmallPtrSet<MachineInstr *, 2> Defs;
-    RDI.getGlobalReachingDefs(&MI, MO.getReg(), Defs);
+    bool HasLiveInPath = false;
+    RDI.getGlobalReachingDefs(&MI, MO.getReg(), Defs, HasLiveInPath);
     if (Defs.empty())
       return false;
     for (auto *Def : Defs) {
@@ -1020,9 +1023,12 @@ bool LowOverheadLoop::ValidateLiveOuts() {
     }
     // Check Q-regs that are live in the exit blocks. We don't collect scalars
     // because they won't be affected by lane predication.
-    if (QPRs->contains(RegMask.PhysReg))
-      if (auto *MI = RDI.getLocalLiveOutMIDef(Header, RegMask.PhysReg))
+    if (QPRs->contains(RegMask.PhysReg)) {
+      bool IsFunctionLiveIn = false;
+      if (auto *MI = RDI.getLocalLiveOutMIDef(Header, RegMask.PhysReg,
+                                              IsFunctionLiveIn))
         LiveOutMIs.insert(MI);
+    }
   }
 
   // We've already validated that any VPT predication within the loop will be
