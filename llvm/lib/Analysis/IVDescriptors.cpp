@@ -92,6 +92,10 @@ static Instruction *lookThroughAnd(PHINode *Phi, Type *&RT,
   return Phi;
 }
 
+bool RecurrenceDescriptor::isSubRecurrenceKind(RecurKind Kind) {
+  return (Kind == RecurKind::Sub || Kind == RecurKind::FSub);
+}
+
 /// Compute the minimal bit width needed to represent a reduction whose exit
 /// instruction is given by Exit.
 static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,

@@ -246,6 +246,9 @@ public:
   /// Returns true if the recurrence kind is a floating point kind.
   LLVM_ABI static bool isFloatingPointRecurrenceKind(RecurKind Kind);
 
+  /// Returns true if the recurrence kind is for a sub operation.
+  LLVM_ABI static bool isSubRecurrenceKind(RecurKind Kind);
+
   /// Returns true if the recurrence kind is an integer min/max kind.
   static bool isIntMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::UMin || Kind == RecurKind::UMax ||
