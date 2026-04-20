@@ -99,6 +99,39 @@ struct Foo
   }
 };
 
+struct Iterator {
+  bool operator!=(const Iterator &) const;
+  bool operator>=(const Iterator &) const;
+};
+
+struct Functor {
+  bool operator()() const;
+};
+
+void overloadedOperators() {
+  Iterator it, end;
+
+  // Single parens around overloaded operator: no warning (consistent with
+  // built-in binary operators, which are not in the matcher).
+  if ((it != end)) {
+  }
+  if ((it >= end)) {
+  }
+
+  // Double parens: outer paren wraps a ParenExpr, so outer paren still warns.
+  if (((it != end))) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    if ((it != end)) {
+  }
+
+  // Functor call via operator(): still warns (treated like a regular call).
+  Functor f{};
+  if ((f())) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    if (f()) {
+  }
+}
+
 void memberExpr() {
   Foo foo{};
   if ((foo.x)) {
