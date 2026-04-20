@@ -298,13 +298,13 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
     assert(isPowerOf2_32(NumM1) && NumM1 <= 8);
     SmallVector<Value *, 8> Pieces(NumM1);
     for (unsigned i = 0; i < NumM1; i++)
-      Pieces[i] = Builder.CreateExtractVector(M1Ty, TmpVec,
-                                              (uint64_t)(i * M1VF));
+      Pieces[i] =
+          Builder.CreateExtractVector(M1Ty, TmpVec, (uint64_t)(i * M1VF));
 
     while (Pieces.size() > 1) {
       for (unsigned i = 0; i < Pieces.size() / 2; i++)
-        Pieces[i] = Builder.CreateMul(Pieces[i * 2], Pieces[i * 2 + 1],
-                                      "bin.rdx");
+        Pieces[i] =
+            Builder.CreateMul(Pieces[i * 2], Pieces[i * 2 + 1], "bin.rdx");
       Pieces.truncate(Pieces.size() / 2);
     }
     TmpVec = Pieces[0];
