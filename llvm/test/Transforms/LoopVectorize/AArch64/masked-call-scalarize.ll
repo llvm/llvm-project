@@ -169,7 +169,6 @@ end:
 }
 
 
-declare double @llvm.exp.f64(double)
 
 ; fixed-width variant of exp
 declare <2 x double> @exp_fixed(<2 x double>)

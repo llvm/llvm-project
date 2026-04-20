@@ -201,7 +201,7 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
       // Some debug files may stored in the module directory like this:
       //   /usr/lib/debug/usr/lib/library.so.debug
       if (!file_dir.IsEmpty())
-        files.push_back(dirname + file_dir.AsCString() + "/" +
+        files.push_back(dirname + file_dir.GetString() + "/" +
                         symbol_file_spec.GetFilename().GetCString());
     }
 

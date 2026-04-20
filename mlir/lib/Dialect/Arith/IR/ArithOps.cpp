@@ -34,6 +34,10 @@
 using namespace mlir;
 using namespace mlir::arith;
 
+/// Default rounding mode according to default LLVM floating-point environment.
+static constexpr llvm::RoundingMode kDefaultRoundingMode =
+    llvm::RoundingMode::NearestTiesToEven;
+
 //===----------------------------------------------------------------------===//
 // Pattern helpers
 //===----------------------------------------------------------------------===//
@@ -105,8 +109,10 @@ arith::CmpIPredicate arith::invertPredicate(arith::CmpIPredicate pred) {
 /// circular dependency with MLIRArithAttrToLLVMConversion and make arith depend
 /// on the LLVM dialect and on translation to LLVM.
 static llvm::RoundingMode
-convertArithRoundingModeToLLVMIR(RoundingMode roundingMode) {
-  switch (roundingMode) {
+convertArithRoundingModeToLLVMIR(std::optional<RoundingMode> roundingMode) {
+  if (!roundingMode)
+    return kDefaultRoundingMode;
+  switch (*roundingMode) {
   case RoundingMode::downward:
     return llvm::RoundingMode::TowardNegative;
   case RoundingMode::to_nearest_away:
@@ -1107,9 +1113,13 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()))
     return getLhs();
 
+  auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(),
-      [](const APFloat &a, const APFloat &b) { return a + b; });
+      adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
+        APFloat result(a);
+        result.add(b, convertArithRoundingModeToLLVMIR(rm));
+        return result;
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1121,9 +1131,13 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
     return getLhs();
 
+  auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(),
-      [](const APFloat &a, const APFloat &b) { return a - b; });
+      adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
+        APFloat result(a);
+        result.subtract(b, convertArithRoundingModeToLLVMIR(rm));
+        return result;
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1312,9 +1326,13 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
       return getRhs();
   }
 
+  auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(),
-      [](const APFloat &a, const APFloat &b) { return a * b; });
+      adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
+        APFloat result(a);
+        result.multiply(b, convertArithRoundingModeToLLVMIR(rm));
+        return result;
+      });
 }
 
 void arith::MulFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -1331,9 +1349,13 @@ OpFoldResult arith::DivFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_OneFloat()))
     return getLhs();
 
+  auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(),
-      [](const APFloat &a, const APFloat &b) { return a / b; });
+      adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
+        APFloat result(a);
+        result.divide(b, convertArithRoundingModeToLLVMIR(rm));
+        return result;
+      });
 }
 
 void arith::DivFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -1461,9 +1483,10 @@ static bool checkWidthChangeCast(TypeRange inputs, TypeRange outputs) {
 
 /// Attempts to convert `sourceValue` to an APFloat value with
 /// `targetSemantics` and `roundingMode`, without any information loss.
-static FailureOr<APFloat> convertFloatValue(
-    APFloat sourceValue, const llvm::fltSemantics &targetSemantics,
-    llvm::RoundingMode roundingMode = llvm::RoundingMode::NearestTiesToEven) {
+static FailureOr<APFloat>
+convertFloatValue(APFloat sourceValue,
+                  const llvm::fltSemantics &targetSemantics,
+                  llvm::RoundingMode roundingMode = kDefaultRoundingMode) {
   // Reject special values that are not representable in the target type before
   // calling APFloat::convert, which would llvm_unreachable on them.
   using fltNonfiniteBehavior = llvm::fltNonfiniteBehavior;
@@ -1685,10 +1708,8 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
       [this, &targetSemantics](const APFloat &a, bool &castStatus) {
-        RoundingMode roundingMode =
-            getRoundingmode().value_or(RoundingMode::to_nearest_even);
         llvm::RoundingMode llvmRoundingMode =
-            convertArithRoundingModeToLLVMIR(roundingMode);
+            convertArithRoundingModeToLLVMIR(getRoundingmode());
         FailureOr<APFloat> result =
             convertFloatValue(a, targetSemantics, llvmRoundingMode);
         if (failed(result)) {
@@ -1722,10 +1743,8 @@ OpFoldResult arith::ConvertFOp::fold(FoldAdaptor adaptor) {
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
       [this, &targetSemantics](const APFloat &a, bool &castStatus) {
-        RoundingMode roundingMode =
-            getRoundingmode().value_or(RoundingMode::to_nearest_even);
         llvm::RoundingMode llvmRoundingMode =
-            convertArithRoundingModeToLLVMIR(roundingMode);
+            convertArithRoundingModeToLLVMIR(getRoundingmode());
         FailureOr<APFloat> result =
             convertFloatValue(a, targetSemantics, llvmRoundingMode);
         if (failed(result)) {
@@ -1909,6 +1928,15 @@ OpFoldResult arith::FPToSIOp::fold(FoldAdaptor adaptor) {
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
+/// Return the bit-width of \p t for the purpose of index_cast width checks.
+/// For vector types use the element type; index maps to its internal storage
+/// width (64 on all current targets).
+static unsigned getIndexCastWidth(Type t) {
+  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(t)))
+    return intTy.getWidth();
+  return IndexType::kInternalStorageBitWidth;
+}
+
 static bool areIndexCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (!areValidCastInputsAndOutputs(inputs, outputs))
     return false;
@@ -1933,16 +1961,29 @@ OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
   if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
     resultBitwidth = intTy.getWidth();
 
-  return constFoldCastOp<IntegerAttr, IntegerAttr>(
-      adaptor.getOperands(), getType(),
-      [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
-        return a.sextOrTrunc(resultBitwidth);
-      });
+  if (auto foldResult = constFoldCastOp<IntegerAttr, IntegerAttr>(
+          adaptor.getOperands(), getType(),
+          [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
+            return a.sextOrTrunc(resultBitwidth);
+          }))
+    return foldResult;
+
+  // index_cast(index_cast(x : A) : B) : A -> x, but only when B is at least
+  // as wide as A. If B is narrower, the inner cast truncates and the outer
+  // cast sign-extends, so the round-trip is lossy.
+  if (auto inner = getOperand().getDefiningOp<arith::IndexCastOp>()) {
+    Value x = inner.getOperand();
+    if (x.getType() == getType()) {
+      if (getIndexCastWidth(inner.getType()) >= getIndexCastWidth(x.getType()))
+        return x;
+    }
+  }
+  return {};
 }
 
 void arith::IndexCastOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<IndexCastOfIndexCast, IndexCastOfExtSI>(context);
+  patterns.add<IndexCastOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1960,16 +2001,29 @@ OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
   if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
     resultBitwidth = intTy.getWidth();
 
-  return constFoldCastOp<IntegerAttr, IntegerAttr>(
-      adaptor.getOperands(), getType(),
-      [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
-        return a.zextOrTrunc(resultBitwidth);
-      });
+  if (auto foldResult = constFoldCastOp<IntegerAttr, IntegerAttr>(
+          adaptor.getOperands(), getType(),
+          [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
+            return a.zextOrTrunc(resultBitwidth);
+          }))
+    return foldResult;
+
+  // index_castui(index_castui(x : A) : B) : A -> x, but only when B is at
+  // least as wide as A. If B is narrower, the inner cast truncates and the
+  // outer cast zero-extends, so the round-trip is lossy.
+  if (auto inner = getOperand().getDefiningOp<arith::IndexCastUIOp>()) {
+    Value x = inner.getOperand();
+    if (x.getType() == getType()) {
+      if (getIndexCastWidth(inner.getType()) >= getIndexCastWidth(x.getType()))
+        return x;
+    }
+  }
+  return {};
 }
 
 void arith::IndexCastUIOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<IndexCastUIOfIndexCastUI, IndexCastUIOfExtUI>(context);
+  patterns.add<IndexCastUIOfExtUI>(context);
 }
 
 //===----------------------------------------------------------------------===//

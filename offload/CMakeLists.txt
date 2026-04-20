@@ -4,6 +4,10 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "liboffload")
 
+# The minimum versions required for dependencies.
+set(OFFLOAD_MIN_CUDA_VERSION 11.8.0)
+set(OFFLOAD_MIN_CUDA_VERSION_CODE 11080)
+
 # Check that the library can actually be built.
 if(APPLE OR WIN32 OR WASM)
   message(WARNING "libomptarget cannot be built on Windows and MacOS X!")
@@ -149,10 +153,6 @@ if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(AMD64)$" AND
                    "Linux/Windows x86_64 or ppc64le hosts")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
   endif()
-endif()
-if("level_zero" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD AND
-   NOT LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND)
-  list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
 endif()
 message(STATUS "Building the offload library with support for "
                "the \"${LIBOMPTARGET_PLUGINS_TO_BUILD}\" plugins")

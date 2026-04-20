@@ -9,6 +9,7 @@
 #include "Context.h"
 #include "Boolean.h"
 #include "ByteCodeEmitter.h"
+#include "Char.h"
 #include "Compiler.h"
 #include "EvalEmitter.h"
 #include "Integral.h"
@@ -186,7 +187,7 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       return false;
 
     // Must be char.
-    if (Ptr.getFieldDesc()->getElemSize() != 1 /*bytes*/)
+    if (Ptr.getFieldDesc()->getElemDataSize() != 1 /*bytes*/)
       return false;
 
     if (Size > Ptr.getNumElems()) {

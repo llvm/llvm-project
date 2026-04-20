@@ -248,3 +248,12 @@ void memmove_uninit_without_outofbound() {
   memmove(dst, src, sizeof(src)); // uninit-warning{{The first element of the 2nd argument is undefined}}
                                   // uninit-note@-1{{Other elements might also be undefined}}
 }
+
+// #190457 - In C++ the sizeof of an empty struct is 1, so this should not
+// crash and should not warn about overflow (unlike the C case where it is 0
+// with the GNU extension).
+void nocrash_on_empty_struct_memcpy_cpp() {
+  struct {} a[10];
+  __builtin_memcpy(&a[2], a, 2); // should not crash
+  // no-warning
+}

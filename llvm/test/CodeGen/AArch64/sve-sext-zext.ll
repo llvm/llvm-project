@@ -612,3 +612,14 @@ define <vscale x 16 x i16> @sext_inreg_i2_to_i16_from_i8(<vscale x 16 x i8> %a) 
   %a.sextinreg = sext <vscale x 16 x i2> %a.trunc to <vscale x 16 x i16>
   ret <vscale x 16 x i16> %a.sextinreg
 }
+
+define <vscale x 7 x i16> @widen_sext_inreg_result(<vscale x 7 x i16> %a) {
+; CHECK-LABEL: widen_sext_inreg_result:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %a.trunc = trunc <vscale x 7 x i16> %a to <vscale x 7 x i8>
+  %a.sextinreg = sext <vscale x 7 x i8> %a.trunc to <vscale x 7 x i16>
+  ret <vscale x 7 x i16> %a.sextinreg
+}

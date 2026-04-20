@@ -58,12 +58,9 @@ public:
                          PassInstrumentationCallbacks *PIC);
 
   void addPreISel(PassManagerWrapper &PMW) const;
-  void addAsmPrinterBegin(PassManagerWrapper &PMW,
-                          CreateMCStreamer CreateStreamer) const;
-  void addAsmPrinter(PassManagerWrapper &PMW,
-                     CreateMCStreamer CreateStreamer) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW,
-                        CreateMCStreamer CreateStreamer) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
+  void addAsmPrinter(PassManagerWrapper &PMW) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
 };
 
@@ -168,11 +165,12 @@ TargetPassConfig *R600TargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 Error R600TargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts, MCContext &Ctx,
+    ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+    const CGPassBuilderOption &Opts, MCContext &Ctx,
     PassInstrumentationCallbacks *PIC) {
   R600CodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
+  return CGPB.buildPipeline(MPM, MAM, Out, DwoOut, FileType, Ctx);
 }
 
 MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
@@ -197,18 +195,15 @@ void R600CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
   // TODO: Add passes pre instruction selection.
 }
 
-void R600CodeGenPassBuilder::addAsmPrinterBegin(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+void R600CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) const {
   // TODO: Add AsmPrinterBegin
 }
 
-void R600CodeGenPassBuilder::addAsmPrinter(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+void R600CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
   // TODO: Add AsmPrinter.
 }
 
-void R600CodeGenPassBuilder::addAsmPrinterEnd(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+void R600CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
   // TODO: Add AsmPrinterEnd
 }
 

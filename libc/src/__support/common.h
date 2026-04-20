@@ -103,30 +103,4 @@
 
 #define LLVM_LIBC_VARIABLE(type, name) LLVM_LIBC_VARIABLE_IMPL(type, name)
 
-namespace LIBC_NAMESPACE_DECL {
-namespace internal {
-LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
-  for (; *lhs || *rhs; ++lhs, ++rhs)
-    if (*lhs != *rhs)
-      return false;
-  return true;
-}
-} // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
-
-#define __LIBC_MACRO_TO_STRING(str) #str
-#define LIBC_MACRO_TO_STRING(str) __LIBC_MACRO_TO_STRING(str)
-
-// LLVM_LIBC_IS_DEFINED checks whether a particular macro is defined.
-// Usage: constexpr bool kUseAvx = LLVM_LIBC_IS_DEFINED(__AVX__);
-//
-// This works by comparing the stringified version of the macro with and without
-// evaluation. If FOO is not undefined both stringifications yield "FOO". If FOO
-// is defined, one stringification yields "FOO" while the other yields its
-// stringified value "1".
-#define LLVM_LIBC_IS_DEFINED(macro)                                            \
-  !LIBC_NAMESPACE::internal::same_string(                                      \
-      LLVM_LIBC_IS_DEFINED__EVAL_AND_STRINGIZE(macro), #macro)
-#define LLVM_LIBC_IS_DEFINED__EVAL_AND_STRINGIZE(s) #s
-
 #endif // LLVM_LIBC_SRC___SUPPORT_COMMON_H
