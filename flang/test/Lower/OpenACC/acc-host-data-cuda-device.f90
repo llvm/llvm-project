@@ -16,9 +16,12 @@ subroutine __host_sub(a)
 end
 end interface
 type t
-    integer, pointer :: p1
-    integer, pointer :: p2
-  end type
+  integer, pointer :: p1
+  integer, pointer :: p2
+end type
+type t2
+  type(t) :: obj
+end type
 interface foo
 subroutine foo_device(p)
   integer, pointer, device :: p
@@ -41,6 +44,7 @@ contains
 
   subroutine test(obj)
     type(t) :: obj
+    type(t2) :: obj2
     !$acc host_data use_device(obj%p1)
     call foo(obj%p1)
     call foo(obj%p2)
@@ -52,6 +56,11 @@ contains
     call foo(obj%p1)
     call foo(obj%p2)
     !$acc end host_data
+
+    !$acc host_data use_device(obj2%obj%p1)
+    call foo(obj2%obj%p1)
+    call foo(obj2%obj%p2)
+    !$acc end host_data
   end subroutine
 ! CHECK-LABEL: func.func @_QMmPtest
 ! CHECK: fir.call @_QPfoo_device
@@ -59,6 +68,8 @@ contains
 ! CHECK: fir.call @_QPfoo_host
 ! CHECK: fir.call @_QPfoo_device
 ! CHECK: fir.call @_QPfoo_device
+! CHECK: fir.call @_QPfoo_device
+! CHECK: fir.call @_QPfoo_host
 
   subroutine test_array(a, i)
     real :: a(4,4,4)
