@@ -392,3 +392,316 @@ define {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>} @vector_deinterl
   ret {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>} %retval
 }
 
+define {<2 x double>, <2 x double>, <2 x double>} @vector_deinterleave3_v6f64(<6 x double> %vec) {
+; CHECK-LABEL: vector_deinterleave3_v6f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov v4.d[1], v5.d[0]
+; CHECK-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    stp q2, q4, [sp, #16]
+; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %retval = call {<2 x double>, <2 x double>, <2 x double>} @llvm.vector.deinterleave3.v6f64(<6 x double> %vec)
+  ret {<2 x double>, <2 x double>, <2 x double>} %retval
+}
+
+define {<4 x float>, <4 x float>, <4 x float>} @vector_deinterleave3_v12f32(<12 x float> %vec) {
+; CHECK-LABEL: vector_deinterleave3_v12f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    // kill: def $s4 killed $s4 def $q4
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    // kill: def $s5 killed $s5 def $q5
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-NEXT:    ldr s16, [sp, #48]
+; CHECK-NEXT:    add x8, sp, #56
+; CHECK-NEXT:    // kill: def $s6 killed $s6 def $q6
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-NEXT:    // kill: def $s7 killed $s7 def $q7
+; CHECK-NEXT:    // kill: def $s3 killed $s3 def $q3
+; CHECK-NEXT:    mov v4.s[1], v5.s[0]
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    ld1 { v16.s }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #64
+; CHECK-NEXT:    mov v4.s[2], v6.s[0]
+; CHECK-NEXT:    mov v0.s[2], v2.s[0]
+; CHECK-NEXT:    ld1 { v16.s }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #72
+; CHECK-NEXT:    ld1 { v16.s }[3], [x8]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov v4.s[3], v7.s[0]
+; CHECK-NEXT:    mov v0.s[3], v3.s[0]
+; CHECK-NEXT:    stp q4, q16, [sp, #16]
+; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %retval = call {<4 x float>, <4 x float>, <4 x float>} @llvm.vector.deinterleave3.v12f32(<12 x float> %vec)
+  ret {<4 x float>, <4 x float>, <4 x float>} %retval
+}
+
+define {<8 x half>, <8 x half>, <8 x half>} @vector_deinterleave3_v24f16(<24 x half> %vec) {
+; CHECK-LABEL: vector_deinterleave3_v24f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $q1
+; CHECK-NEXT:    // kill: def $h2 killed $h2 def $q2
+; CHECK-NEXT:    add x8, sp, #120
+; CHECK-NEXT:    ldr h16, [sp, #48]
+; CHECK-NEXT:    // kill: def $h3 killed $h3 def $q3
+; CHECK-NEXT:    // kill: def $h4 killed $h4 def $q4
+; CHECK-NEXT:    // kill: def $h5 killed $h5 def $q5
+; CHECK-NEXT:    // kill: def $h6 killed $h6 def $q6
+; CHECK-NEXT:    // kill: def $h7 killed $h7 def $q7
+; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    ldr h1, [sp, #112]
+; CHECK-NEXT:    ld1 { v1.h }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #56
+; CHECK-NEXT:    ld1 { v16.h }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #128
+; CHECK-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-NEXT:    ld1 { v1.h }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #64
+; CHECK-NEXT:    ld1 { v16.h }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #136
+; CHECK-NEXT:    mov v0.h[3], v3.h[0]
+; CHECK-NEXT:    ld1 { v1.h }[3], [x8]
+; CHECK-NEXT:    add x8, sp, #72
+; CHECK-NEXT:    ld1 { v16.h }[3], [x8]
+; CHECK-NEXT:    add x8, sp, #144
+; CHECK-NEXT:    ld1 { v1.h }[4], [x8]
+; CHECK-NEXT:    add x8, sp, #80
+; CHECK-NEXT:    mov v0.h[4], v4.h[0]
+; CHECK-NEXT:    ld1 { v16.h }[4], [x8]
+; CHECK-NEXT:    add x8, sp, #152
+; CHECK-NEXT:    ld1 { v1.h }[5], [x8]
+; CHECK-NEXT:    add x8, sp, #88
+; CHECK-NEXT:    ld1 { v16.h }[5], [x8]
+; CHECK-NEXT:    add x8, sp, #160
+; CHECK-NEXT:    mov v0.h[5], v5.h[0]
+; CHECK-NEXT:    ld1 { v1.h }[6], [x8]
+; CHECK-NEXT:    add x8, sp, #96
+; CHECK-NEXT:    ld1 { v16.h }[6], [x8]
+; CHECK-NEXT:    add x8, sp, #168
+; CHECK-NEXT:    mov v0.h[6], v6.h[0]
+; CHECK-NEXT:    ld1 { v1.h }[7], [x8]
+; CHECK-NEXT:    add x8, sp, #104
+; CHECK-NEXT:    ld1 { v16.h }[7], [x8]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov v0.h[7], v7.h[0]
+; CHECK-NEXT:    stp q16, q1, [sp, #16]
+; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    ld3 { v0.8h, v1.8h, v2.8h }, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %retval = call {<8 x half>, <8 x half>, <8 x half>} @llvm.vector.deinterleave3.v6f64(<24 x half> %vec)
+  ret {<8 x half>, <8 x half>, <8 x half>} %retval
+}
+
+define {<16 x i8>, <16 x i8>, <16 x i8>} @vector_deinterleave3_v48i8(<48 x i8> %vec) {
+; CHECK-LABEL: vector_deinterleave3_v48i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    str x29, [sp, #48] // 8-byte Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ldr b1, [sp, #256]
+; CHECK-NEXT:    add x8, sp, #264
+; CHECK-NEXT:    ldr b2, [sp, #128]
+; CHECK-NEXT:    add x9, sp, #328
+; CHECK-NEXT:    ld1 { v1.b }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #136
+; CHECK-NEXT:    mov v0.b[1], w1
+; CHECK-NEXT:    ld1 { v2.b }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #272
+; CHECK-NEXT:    ld1 { v1.b }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #144
+; CHECK-NEXT:    ld1 { v2.b }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #280
+; CHECK-NEXT:    mov v0.b[2], w2
+; CHECK-NEXT:    ld1 { v1.b }[3], [x8]
+; CHECK-NEXT:    add x8, sp, #152
+; CHECK-NEXT:    ld1 { v2.b }[3], [x8]
+; CHECK-NEXT:    add x8, sp, #288
+; CHECK-NEXT:    mov v0.b[3], w3
+; CHECK-NEXT:    ld1 { v1.b }[4], [x8]
+; CHECK-NEXT:    add x8, sp, #160
+; CHECK-NEXT:    ld1 { v2.b }[4], [x8]
+; CHECK-NEXT:    add x8, sp, #296
+; CHECK-NEXT:    ld1 { v1.b }[5], [x8]
+; CHECK-NEXT:    add x8, sp, #168
+; CHECK-NEXT:    mov v0.b[4], w4
+; CHECK-NEXT:    ld1 { v2.b }[5], [x8]
+; CHECK-NEXT:    add x8, sp, #304
+; CHECK-NEXT:    ld1 { v1.b }[6], [x8]
+; CHECK-NEXT:    add x8, sp, #176
+; CHECK-NEXT:    ld1 { v2.b }[6], [x8]
+; CHECK-NEXT:    add x8, sp, #312
+; CHECK-NEXT:    mov v0.b[5], w5
+; CHECK-NEXT:    ld1 { v1.b }[7], [x8]
+; CHECK-NEXT:    add x8, sp, #184
+; CHECK-NEXT:    ld1 { v2.b }[7], [x8]
+; CHECK-NEXT:    add x8, sp, #320
+; CHECK-NEXT:    mov v0.b[6], w6
+; CHECK-NEXT:    ld1 { v1.b }[8], [x8]
+; CHECK-NEXT:    add x8, sp, #192
+; CHECK-NEXT:    ld1 { v2.b }[8], [x8]
+; CHECK-NEXT:    add x8, sp, #64
+; CHECK-NEXT:    ld1 { v1.b }[9], [x9]
+; CHECK-NEXT:    add x9, sp, #336
+; CHECK-NEXT:    mov v0.b[7], w7
+; CHECK-NEXT:    ld1 { v1.b }[10], [x9]
+; CHECK-NEXT:    add x9, sp, #344
+; CHECK-NEXT:    ld1 { v0.b }[8], [x8]
+; CHECK-NEXT:    add x8, sp, #200
+; CHECK-NEXT:    ld1 { v2.b }[9], [x8]
+; CHECK-NEXT:    add x8, sp, #72
+; CHECK-NEXT:    ld1 { v1.b }[11], [x9]
+; CHECK-NEXT:    add x9, sp, #352
+; CHECK-NEXT:    ld1 { v0.b }[9], [x8]
+; CHECK-NEXT:    add x8, sp, #208
+; CHECK-NEXT:    ld1 { v2.b }[10], [x8]
+; CHECK-NEXT:    add x8, sp, #80
+; CHECK-NEXT:    ld1 { v1.b }[12], [x9]
+; CHECK-NEXT:    add x9, sp, #360
+; CHECK-NEXT:    ld1 { v0.b }[10], [x8]
+; CHECK-NEXT:    add x8, sp, #216
+; CHECK-NEXT:    ld1 { v2.b }[11], [x8]
+; CHECK-NEXT:    add x8, sp, #88
+; CHECK-NEXT:    ld1 { v1.b }[13], [x9]
+; CHECK-NEXT:    add x9, sp, #368
+; CHECK-NEXT:    ld1 { v0.b }[11], [x8]
+; CHECK-NEXT:    add x8, sp, #224
+; CHECK-NEXT:    ld1 { v2.b }[12], [x8]
+; CHECK-NEXT:    add x8, sp, #96
+; CHECK-NEXT:    ld1 { v1.b }[14], [x9]
+; CHECK-NEXT:    add x9, sp, #376
+; CHECK-NEXT:    ld1 { v0.b }[12], [x8]
+; CHECK-NEXT:    add x8, sp, #232
+; CHECK-NEXT:    ld1 { v2.b }[13], [x8]
+; CHECK-NEXT:    add x8, sp, #104
+; CHECK-NEXT:    ld1 { v1.b }[15], [x9]
+; CHECK-NEXT:    ld1 { v0.b }[13], [x8]
+; CHECK-NEXT:    add x8, sp, #240
+; CHECK-NEXT:    ld1 { v2.b }[14], [x8]
+; CHECK-NEXT:    add x8, sp, #112
+; CHECK-NEXT:    ld1 { v0.b }[14], [x8]
+; CHECK-NEXT:    add x8, sp, #248
+; CHECK-NEXT:    ld1 { v2.b }[15], [x8]
+; CHECK-NEXT:    add x8, sp, #120
+; CHECK-NEXT:    ld1 { v0.b }[15], [x8]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    stp q2, q1, [sp, #16]
+; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    ld3 { v0.16b, v1.16b, v2.16b }, [x8]
+; CHECK-NEXT:    ldr x29, [sp, #48] // 8-byte Reload
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ret
+  %retval = call {<16 x i8>, <16 x i8>, <16 x i8>} @llvm.vector.deinterleave3.v48i8(<48 x i8> %vec)
+  ret {<16 x i8>, <16 x i8>, <16 x i8>} %retval
+}
+
+define {<4 x half>, <4 x half>, <4 x half>} @vector_deinterleave3_v12f16(<12 x half> %vec) {
+; CHECK-LABEL: vector_deinterleave3_v12f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    // kill: def $h4 killed $h4 def $q4
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
+; CHECK-NEXT:    // kill: def $h5 killed $h5 def $q5
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $q1
+; CHECK-NEXT:    ldr h16, [sp, #32]
+; CHECK-NEXT:    add x8, sp, #40
+; CHECK-NEXT:    // kill: def $h6 killed $h6 def $q6
+; CHECK-NEXT:    // kill: def $h2 killed $h2 def $q2
+; CHECK-NEXT:    // kill: def $h7 killed $h7 def $q7
+; CHECK-NEXT:    // kill: def $h3 killed $h3 def $q3
+; CHECK-NEXT:    mov v4.h[1], v5.h[0]
+; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    ld1 { v16.h }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #48
+; CHECK-NEXT:    mov v4.h[2], v6.h[0]
+; CHECK-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-NEXT:    ld1 { v16.h }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #56
+; CHECK-NEXT:    ld1 { v16.h }[3], [x8]
+; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    mov v4.h[3], v7.h[0]
+; CHECK-NEXT:    mov v0.h[3], v3.h[0]
+; CHECK-NEXT:    stp d4, d16, [sp, #16]
+; CHECK-NEXT:    str d0, [sp, #8]
+; CHECK-NEXT:    ld3 { v0.4h, v1.4h, v2.4h }, [x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %retval = call {<4 x half>, <4 x half>, <4 x half>} @llvm.vector.deinterleave3.v12f16(<12 x half> %vec)
+  ret {<4 x half>, <4 x half>, <4 x half>} %retval
+}
+
+
+define {<8 x i8>, <8 x i8>, <8 x i8>} @vector_deinterleave3_v24i8(<24 x i8> %vec) {
+; CHECK-LABEL: vector_deinterleave3_v24i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ldr b1, [sp, #96]
+; CHECK-NEXT:    add x8, sp, #104
+; CHECK-NEXT:    ldr b2, [sp, #32]
+; CHECK-NEXT:    ld1 { v1.b }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #40
+; CHECK-NEXT:    mov v0.b[1], w1
+; CHECK-NEXT:    ld1 { v2.b }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #112
+; CHECK-NEXT:    ld1 { v1.b }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #48
+; CHECK-NEXT:    ld1 { v2.b }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #120
+; CHECK-NEXT:    mov v0.b[2], w2
+; CHECK-NEXT:    ld1 { v1.b }[3], [x8]
+; CHECK-NEXT:    add x8, sp, #56
+; CHECK-NEXT:    ld1 { v2.b }[3], [x8]
+; CHECK-NEXT:    add x8, sp, #128
+; CHECK-NEXT:    mov v0.b[3], w3
+; CHECK-NEXT:    ld1 { v1.b }[4], [x8]
+; CHECK-NEXT:    add x8, sp, #64
+; CHECK-NEXT:    ld1 { v2.b }[4], [x8]
+; CHECK-NEXT:    add x8, sp, #136
+; CHECK-NEXT:    ld1 { v1.b }[5], [x8]
+; CHECK-NEXT:    add x8, sp, #72
+; CHECK-NEXT:    mov v0.b[4], w4
+; CHECK-NEXT:    ld1 { v2.b }[5], [x8]
+; CHECK-NEXT:    add x8, sp, #144
+; CHECK-NEXT:    ld1 { v1.b }[6], [x8]
+; CHECK-NEXT:    add x8, sp, #80
+; CHECK-NEXT:    ld1 { v2.b }[6], [x8]
+; CHECK-NEXT:    add x8, sp, #152
+; CHECK-NEXT:    mov v0.b[5], w5
+; CHECK-NEXT:    ld1 { v1.b }[7], [x8]
+; CHECK-NEXT:    add x8, sp, #88
+; CHECK-NEXT:    ld1 { v2.b }[7], [x8]
+; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    mov v0.b[6], w6
+; CHECK-NEXT:    stp d2, d1, [sp, #16]
+; CHECK-NEXT:    mov v0.b[7], w7
+; CHECK-NEXT:    str d0, [sp, #8]
+; CHECK-NEXT:    ld3 { v0.8b, v1.8b, v2.8b }, [x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %retval = call {<8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave3.v24i8(<24 x i8> %vec)
+  ret {<8 x i8>, <8 x i8>, <8 x i8>} %retval
+}
