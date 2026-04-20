@@ -484,6 +484,10 @@ CodeGenModule::CodeGenModule(ASTContext &C,
     TBAA.reset(new CodeGenTBAA(Context, getTypes(), TheModule, CodeGenOpts,
                                getLangOpts()));
 
+  if (LangOpts.EmitLogicalPointer)
+    getModule().addModuleFlag(llvm::Module::Error,
+                              "ExperimentalEmitLogicalPointer", true);
+
   // If debug info or coverage generation is enabled, create the CGDebugInfo
   // object.
   if (CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo ||
