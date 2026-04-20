@@ -1407,7 +1407,7 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
     if (!FoldableSpillCopy)
       return false;
     std::optional<DestSourcePair> FoldableReloadCopy = GetFoldableCopy(Reload);
-    if (!FoldableSpillCopy)
+    if (!FoldableReloadCopy)
       return false;
     return FoldableSpillCopy->Source->getReg() ==
                FoldableReloadCopy->Destination->getReg() &&
