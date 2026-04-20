@@ -5,6 +5,8 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
+#include <cstring>
+#include <iterator>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -17,13 +19,13 @@ typedef ol_result_t (*ol_mock_callback_t)(void *pParams);
 namespace mock {
 
 struct dummy_handle_t_ {
-  dummy_handle_t_(size_t DataSize = 0)
-      : MStorage(DataSize), MData(MStorage.data()), MSize(DataSize) {}
+  dummy_handle_t_(size_t DataSize = 0) : MStorage(DataSize), MSize(DataSize) {}
   dummy_handle_t_(unsigned char *Data, size_t Size)
-      : MData(Data), MSize(Size) {}
+      : MStorage(Size), MSize(Size) {
+    std::memcpy(MStorage.data(), Data, Size);
+  }
   std::atomic<size_t> MRefCounter = 1;
   std::vector<unsigned char> MStorage;
-  unsigned char *MData = nullptr;
   size_t MSize;
 
   template <typename T> T getDataAs() {
@@ -104,3 +106,31 @@ _LIB_EXPORT ol_error_struct_t *
 getErrorUnimplementedFunction(const std::string &FunctionName);
 
 } // namespace mock
+
+namespace unittest {
+
+class OffloadMock {
+public:
+  OffloadMock() = default;
+
+  OffloadMock(OffloadMock &&Other) = delete;
+  OffloadMock(const OffloadMock &) = delete;
+  OffloadMock &operator=(const OffloadMock &) = delete;
+  ~OffloadMock() {
+    // mock::getCallbacks() is an application lifetime object, we need to reset
+    // these between tests
+    mock::getCallbacks().resetCallbacks();
+  }
+
+  template <typename ParamType, typename... Args>
+  static ol_result_t callCallback(std::string FunctionName, Args &&...args) {
+    auto Callback = mock::getCallbacks().getCallback(FunctionName);
+    if (!Callback)
+      return mock::getErrorUnimplementedFunction(FunctionName);
+
+    ParamType params = {&args...};
+    return Callback(&params);
+  }
+};
+
+} // namespace unittest

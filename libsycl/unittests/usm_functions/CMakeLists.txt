@@ -40,9 +40,10 @@ function(add_sycl_unittest test_dirname)
 
   target_include_directories(${test_dirname}
     PRIVATE SYSTEM
-      ${sycl_inc_dir}
-      ${SYCL_SOURCE_DIR}/src/
-      ${SYCL_SOURCE_DIR}/unittests/
+      ${LIBSYCL_BUILD_INCLUDE_DIR}
+      ${LIBSYCL_SOURCE_DIR}/src/
+      ${LIBSYCL_SOURCE_DIR}/unittests/
+      $<TARGET_PROPERTY:LLVMOffload,INTERFACE_INCLUDE_DIRECTORIES>
     )
   if (UNIX)
     # These warnings are coming from Google Test code.

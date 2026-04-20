@@ -1,6 +1,6 @@
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes/cmake/Modules")
 include(WarningFlags)
-
+add_definitions(-g -O0)
 function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
   cmake_parse_arguments(ARG "" "" "COMPILE_OPTIONS;SOURCES" ${ARGN})
 
