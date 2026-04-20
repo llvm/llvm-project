@@ -2366,8 +2366,11 @@ fir::ExtendedValue Fortran::lower::convertExprToBox(
     Fortran::lower::StatementContext &stmtCtx) {
   hlfir::EntityWithAttributes loweredExpr =
       HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+  unsigned corank = 0;
+  if (auto coarray{evaluate::ExtractCoarrayRef(expr)})
+    corank = coarray->GetLastSymbol().Corank();
   return convertToBox(loc, converter, loweredExpr, stmtCtx,
-                      converter.genType(expr));
+                      converter.genType(expr), corank);
 }
 
 fir::ExtendedValue Fortran::lower::convertToAddress(
