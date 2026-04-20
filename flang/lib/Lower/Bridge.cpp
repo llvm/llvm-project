@@ -5616,14 +5616,9 @@ private:
     // Polymorphic allocatable LHS always requires reallocation semantics
     // regardless of -fno-realloc-lhs: assignment to a polymorphic variable
     // is a F2003+ feature that requires dynamic type tracking, which cannot
-    // be safely skipped.  When -fno-realloc-lhs is specified but the LHS is
-    // polymorphic, emit a warning and proceed with reallocation semantics.
+    // be safely skipped.  A warning is emitted by the semantics phase.
     const bool lhsIsPolymorphic =
         lhsType.has_value() && lhsType->IsPolymorphic();
-    if (lhsIsWholeAllocatable && lhsIsPolymorphic &&
-        !bridge.getLoweringOptions().getReallocateLHS())
-      mlir::emitWarning(loc, "-fno-realloc-lhs is ignored for assignment to "
-                             "polymorphic allocatable");
     const bool isWholeAllocatableAssignment =
         lhsIsWholeAllocatable &&
         (bridge.getLoweringOptions().getReallocateLHS() || lhsIsPolymorphic);

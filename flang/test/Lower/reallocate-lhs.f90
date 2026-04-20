@@ -1,13 +1,11 @@
 ! RUN: bbc %s -o - -emit-hlfir | FileCheck %s --check-prefixes=ALL,REALLOCLHS
 ! RUN: bbc %s -o - -emit-hlfir -frealloc-lhs | FileCheck %s --check-prefixes=ALL,REALLOCLHS
-! RUN: bbc %s -o - -emit-hlfir -frealloc-lhs=false 2>&1 | FileCheck %s --check-prefixes=ALL,NOREALLOCLHS,POLYWARNING
+! RUN: bbc %s -o - -emit-hlfir -frealloc-lhs=false | FileCheck %s --check-prefixes=ALL,NOREALLOCLHS
 ! RUN: %flang_fc1 %s -o - -emit-hlfir | FileCheck %s --check-prefixes=ALL,REALLOCLHS
 ! RUN: %flang_fc1 %s -o - -emit-hlfir -frealloc-lhs | FileCheck %s --check-prefixes=ALL,REALLOCLHS
 ! RUN: %flang_fc1 %s -o - -emit-hlfir -fno-realloc-lhs 2>&1 | FileCheck %s --check-prefixes=ALL,NOREALLOCLHS,POLYWARNING
 
 ! -fno-realloc-lhs must be ignored for polymorphic allocatable LHS (test3 below).
-! The warning below is emitted before the MLIR output, so it must be checked first.
-! POLYWARNING: warning: {{.*}}-fno-realloc-lhs is ignored for assignment to polymorphic allocatable
 
 subroutine test1(a, b)
   integer, allocatable :: a(:), b(:)
