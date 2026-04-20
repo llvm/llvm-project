@@ -6,10 +6,10 @@
 
 ;; Global ISel successfully generates code for some functions for little-endian
 ;; without +bf16, and falls back to SelectionDAG in all others.
-; RUN: llc -mtriple=armv8m.main-none-eabi   < %s -frame-pointer=none -mattr=+fp-armv8d16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=LE-GISEL
-; RUN: llc -mtriple=armebv8m.main-none-eabi < %s -frame-pointer=none -mattr=+fp-armv8d16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=BE
-; RUN: llc -mtriple=armv8m.main-none-eabi   < %s -frame-pointer=none -mattr=+fp-armv8d16,+bf16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=LE-BF16
-; RUN: llc -mtriple=armebv8m.main-none-eabi < %s -frame-pointer=none -mattr=+fp-armv8d16,+bf16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=BE-BF16
+; RUN: llc -mtriple=armv8m.main-none-eabi   < %s -frame-pointer=none -mattr=+fp-armv8d16 -global-isel=1 -global-isel-abort=2 -verify-machineinstrs | FileCheck %s --check-prefix=LE-GISEL
+; RUN: llc -mtriple=armebv8m.main-none-eabi < %s -frame-pointer=none -mattr=+fp-armv8d16 -global-isel=1 -global-isel-abort=2 -verify-machineinstrs | FileCheck %s --check-prefix=BE
+; RUN: llc -mtriple=armv8m.main-none-eabi   < %s -frame-pointer=none -mattr=+fp-armv8d16,+bf16 -global-isel=1 -global-isel-abort=2 -verify-machineinstrs | FileCheck %s --check-prefix=LE-BF16
+; RUN: llc -mtriple=armebv8m.main-none-eabi < %s -frame-pointer=none -mattr=+fp-armv8d16,+bf16 -global-isel=1 -global-isel-abort=2 -verify-machineinstrs | FileCheck %s --check-prefix=BE-BF16
 
 define arm_aapcscc bfloat @callee_soft_bfloat_in_reg(bfloat %f) {
 ; LE-LABEL: callee_soft_bfloat_in_reg:
