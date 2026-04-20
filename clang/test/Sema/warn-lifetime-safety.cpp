@@ -2814,12 +2814,25 @@ void delete_pointer_propagation_use_after_free() {
   (void)(*pp)->id;      // expected-note {{later used here}}
 }
 
-// Currently crashes the program on dyn_cast to CXXNewExpr
-// void delete_param_pointer(int* x) {
-//   delete x;
-//   (void)x;
-// }
+void delete_param_pointer(int* x) { // expected-warning {{parameter is later invalidated}}
+  delete x;                         // expected-note {{invalidated here}}
+  (void)x;                          // expected-note {{later used here}}
+}
 
+// FIXME: false-negative
+struct S {
+  int *x;
+  void foo() {
+    delete x;
+    (void)x;
+  }
+};
+
+void use_innerr_origin_after_delete(MyObj* obj) { // expected-warning {{parameter is later invalidated}}
+    int* p = &obj->id;
+    delete obj;                                   // expected-note {{invalidated here}}
+    (void)*p;                                     // expected-note {{later used here}}
+}
 void delete_nullptr_no_warning() {
   int *p = nullptr;
   delete p;
