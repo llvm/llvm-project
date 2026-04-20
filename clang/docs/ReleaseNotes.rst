@@ -444,6 +444,7 @@ Bug Fixes in This Version
   to "lambda" instead of "block". (#GH188661)
 - Fixed a crash on _BitInt(N) arrays where 129 ≤ N ≤ 192 due to incorrect array filler lowering. (#GH189643)
 - Fixed the behavior in C23 of ``auto``, by emitting an error when an array type is specified for a ``char *``. (#GH162694)
+- Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with ``--triple spirv``. (#GH189964)
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
@@ -474,9 +475,11 @@ Bug Fixes to C++ Support
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
+- Fixed a bug matching constrained out-of-line definitions of class members.
 - Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
-- Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable 
+- Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
+- Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
 - Fixed a crash when `explicit(bool)` is used with an incomplete enumeration. (#GH183887)
@@ -517,6 +520,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 - Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
+- Fixed a crash when attempting to diagnose incompatible conversions involving function types (#GH182534)
 - Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
 - Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
 - Fixed a crash when ``decltype(__builtin_FUNCTION())`` is used as a template type argument. (#GH167433)
@@ -689,6 +693,10 @@ OpenMP Support
 Improvements
 ^^^^^^^^^^^^
 - Improved substitution performance in concept checking. (#GH172266)
+
+- Clang now preserves the left-hand side of a binary expression (such as an
+  assignment or comparison) in a ``RecoveryExpr`` when the right-hand side fails
+  to parse. This improves IDE features like go-to-definition in ``clangd``.
 
 Additional Information
 ======================

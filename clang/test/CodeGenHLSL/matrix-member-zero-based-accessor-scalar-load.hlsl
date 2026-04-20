@@ -7,6 +7,7 @@
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return00u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -20,6 +21,7 @@ float Return00(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return01u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -33,6 +35,7 @@ float Return01(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return02u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -46,6 +49,7 @@ float Return02(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return03u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -59,6 +63,7 @@ float Return03(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return10u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -72,6 +77,7 @@ float Return10(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return11u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -85,6 +91,7 @@ float Return11(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return12u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -98,6 +105,7 @@ float Return12(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return13u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -111,6 +119,7 @@ float Return13(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return20u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -124,6 +133,7 @@ float Return20(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return21u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -137,6 +147,7 @@ float Return21(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return22u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -150,6 +161,7 @@ float Return22(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return23u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -163,6 +175,7 @@ float Return23(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return30u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -176,6 +189,7 @@ float Return30(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return31u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -189,6 +203,7 @@ float Return31(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return32u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
@@ -202,6 +217,7 @@ float Return32(float4x4 A) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return33u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
