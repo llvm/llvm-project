@@ -29,13 +29,11 @@ class EntitySummary;
 class SummaryName;
 
 class JSONFormat final : public SerializationFormat {
+public:
   using Array = llvm::json::Array;
   using Object = llvm::json::Object;
   using Value = llvm::json::Value;
 
-  friend class JSONEntitySummaryEncoding;
-
-public:
   llvm::Expected<TUSummary> readTUSummary(llvm::StringRef Path) override;
 
   llvm::Error writeTUSummary(const TUSummary &Summary,
@@ -90,6 +88,8 @@ public:
           JSONFormat, AnalysisResultSerializerFn, AnalysisResultDeserializerFn>;
 
 private:
+  friend class JSONEntitySummaryEncoding;
+
   static std::map<SummaryName, FormatInfo> initFormatInfos();
   const std::map<SummaryName, FormatInfo> FormatInfos = initFormatInfos();
 

@@ -32,6 +32,11 @@ namespace clang::ssaf {
 /// full EntitySummary objects. This enables efficient entity ID patching
 /// during the linking process.
 class TUSummaryEncoding {
+public:
+  explicit TUSummaryEncoding(BuildNamespace TUNamespace)
+      : TUNamespace(std::move(TUNamespace)) {}
+
+private:
   friend class EntityLinker;
   friend class SerializationFormat;
   friend class TestFixture;
@@ -49,10 +54,6 @@ class TUSummaryEncoding {
   std::map<SummaryName,
            std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
       Data;
-
-public:
-  explicit TUSummaryEncoding(BuildNamespace TUNamespace)
-      : TUNamespace(std::move(TUNamespace)) {}
 };
 
 } // namespace clang::ssaf

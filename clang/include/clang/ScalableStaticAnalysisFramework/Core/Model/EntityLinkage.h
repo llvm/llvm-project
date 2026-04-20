@@ -26,9 +26,6 @@ enum class EntityLinkageType {
 /// or external linkage, which determines its visibility and accessibility
 /// across translation units.
 class EntityLinkage {
-  friend class SerializationFormat;
-  friend class TestFixture;
-
 public:
   constexpr explicit EntityLinkage(EntityLinkageType L) : Linkage(L) {}
 
@@ -38,6 +35,9 @@ public:
   bool operator!=(const EntityLinkage &Other) const;
 
 private:
+  friend class SerializationFormat;
+  friend class TestFixture;
+
   EntityLinkageType Linkage;
 };
 

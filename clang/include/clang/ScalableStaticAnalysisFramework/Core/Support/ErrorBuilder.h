@@ -38,27 +38,6 @@ namespace clang::ssaf {
 ///       .build();
 /// \endcode
 class ErrorBuilder {
-  std::error_code Code;
-  std::vector<std::string> ContextStack;
-
-  explicit ErrorBuilder(std::error_code EC) : Code(EC) {}
-
-  void pushContext(std::string Msg) {
-    if (!Msg.empty()) {
-      ContextStack.push_back(std::move(Msg));
-    }
-  }
-
-  template <typename... Args>
-  static std::string formatErrorMessage(const char *Fmt, Args &&...ArgVals) {
-    return llvm::formatv(Fmt, std::forward<Args>(ArgVals)...).str();
-  }
-
-  template <typename... Args>
-  void addFormattedContext(const char *Fmt, Args &&...ArgVals) {
-    pushContext(formatErrorMessage(Fmt, std::forward<Args>(ArgVals)...));
-  }
-
 public:
   /// Create an ErrorBuilder with an error code and formatted message.
   ///
@@ -202,6 +181,28 @@ public:
     llvm::report_fatal_error(llvm::StringRef(formatErrorMessage(
                                  Fmt, std::forward<Args>(ArgVals)...)),
                              false);
+  }
+
+private:
+  std::error_code Code;
+  std::vector<std::string> ContextStack;
+
+  explicit ErrorBuilder(std::error_code EC) : Code(EC) {}
+
+  void pushContext(std::string Msg) {
+    if (!Msg.empty()) {
+      ContextStack.push_back(std::move(Msg));
+    }
+  }
+
+  template <typename... Args>
+  static std::string formatErrorMessage(const char *Fmt, Args &&...ArgVals) {
+    return llvm::formatv(Fmt, std::forward<Args>(ArgVals)...).str();
+  }
+
+  template <typename... Args>
+  void addFormattedContext(const char *Fmt, Args &&...ArgVals) {
+    pushContext(formatErrorMessage(Fmt, std::forward<Args>(ArgVals)...));
   }
 };
 

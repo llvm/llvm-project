@@ -37,8 +37,6 @@ namespace clang::ssaf {
 class SummaryDataBuilderRegistry {
   using RegistryT = llvm::Registry<SummaryDataBuilderBase>;
 
-  SummaryDataBuilderRegistry() = delete;
-
 public:
   /// Registers \p BuilderT under the name returned by
   /// \c BuilderT::summaryName(). Only a description is required.
@@ -65,6 +63,9 @@ public:
   /// if no such builder is registered.
   static std::unique_ptr<SummaryDataBuilderBase>
   instantiate(llvm::StringRef Name);
+
+private:
+  SummaryDataBuilderRegistry() = delete;
 };
 
 } // namespace clang::ssaf

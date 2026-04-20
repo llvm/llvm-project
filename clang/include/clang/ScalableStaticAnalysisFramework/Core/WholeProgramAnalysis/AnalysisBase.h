@@ -30,16 +30,6 @@ class SummaryAnalysisBase;
 /// Not subclassed directly -- use SummaryAnalysis<...> or
 /// DerivedAnalysis<...> instead.
 class AnalysisBase {
-  friend class AnalysisDriver;
-  friend class DerivedAnalysisBase;
-  friend class SummaryAnalysisBase;
-
-  enum class Kind { Summary, Derived };
-  Kind TheKind;
-
-protected:
-  explicit AnalysisBase(Kind K) : TheKind(K) {}
-
 public:
   virtual ~AnalysisBase() = default;
 
@@ -53,6 +43,17 @@ public:
   /// Transfers ownership of the built result. Called once after finalize().
   /// The rvalue ref-qualifier enforces single use.
   virtual std::unique_ptr<AnalysisResult> takeResult() && = 0;
+
+protected:
+  enum class Kind { Summary, Derived };
+  explicit AnalysisBase(Kind K) : TheKind(K) {}
+
+private:
+  friend class AnalysisDriver;
+  friend class DerivedAnalysisBase;
+  friend class SummaryAnalysisBase;
+
+  Kind TheKind;
 };
 
 } // namespace clang::ssaf

@@ -26,9 +26,6 @@ namespace clang::ssaf {
 class TUSummaryEncoding;
 
 class EntityLinker {
-  LUSummaryEncoding Output;
-  std::set<BuildNamespace> ProcessedTUNamespaces;
-
 public:
   /// Constructs an EntityLinker to link TU summaries into a LU summary.
   ///
@@ -54,6 +51,9 @@ public:
   LUSummaryEncoding takeOutput() && { return std::move(Output); }
 
 private:
+  LUSummaryEncoding Output;
+  std::set<BuildNamespace> ProcessedTUNamespaces;
+
   /// Resolves a TU entity name to an LU entity name and ID.
   ///
   /// \param OldName The entity name in the TU namespace.

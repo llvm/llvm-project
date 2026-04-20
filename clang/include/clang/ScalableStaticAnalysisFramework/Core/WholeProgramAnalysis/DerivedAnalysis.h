@@ -36,12 +36,12 @@ class AnalysisRegistry;
 /// A derived analysis consumes previously produced AnalysisResult objects
 /// and computes a new one via an initialize/step/finalize lifecycle.
 class DerivedAnalysisBase : public AnalysisBase {
-  friend class AnalysisDriver;
-
 protected:
   DerivedAnalysisBase() : AnalysisBase(AnalysisBase::Kind::Derived) {}
 
 private:
+  friend class AnalysisDriver;
+
   /// Called once with the dependency results before the step() loop.
   ///
   /// \param DepResults  Immutable results of all declared dependencies, keyed
@@ -70,20 +70,6 @@ private:
 /// finalize() post-processes after convergence.
 template <typename ResultT, typename... DepResultTs>
 class DerivedAnalysis : public DerivedAnalysisBase {
-  static_assert(std::is_base_of_v<AnalysisResult, ResultT>,
-                "ResultT must derive from AnalysisResult");
-  static_assert(HasAnalysisName_v<ResultT>,
-                "ResultT must have a static analysisName() method");
-  static_assert((std::is_base_of_v<AnalysisResult, DepResultTs> && ...),
-                "Every DepResultT must derive from AnalysisResult");
-  static_assert((HasAnalysisName_v<DepResultTs> && ...),
-                "Every DepResultT must have a static analysisName() method");
-
-  friend class AnalysisRegistry;
-  using ResultType = ResultT;
-
-  std::unique_ptr<ResultT> Result = std::make_unique<ResultT>();
-
 public:
   /// Used by AnalysisRegistry::Add to derive the registry entry name.
   AnalysisName getAnalysisName() const final { return ResultT::analysisName(); }
@@ -112,6 +98,20 @@ protected:
   ResultT &getResult() & { return *Result; }
 
 private:
+  static_assert(std::is_base_of_v<AnalysisResult, ResultT>,
+                "ResultT must derive from AnalysisResult");
+  static_assert(HasAnalysisName_v<ResultT>,
+                "ResultT must have a static analysisName() method");
+  static_assert((std::is_base_of_v<AnalysisResult, DepResultTs> && ...),
+                "Every DepResultT must derive from AnalysisResult");
+  static_assert((HasAnalysisName_v<DepResultTs> && ...),
+                "Every DepResultT must have a static analysisName() method");
+
+  friend class AnalysisRegistry;
+  using ResultType = ResultT;
+
+  std::unique_ptr<ResultT> Result = std::make_unique<ResultT>();
+
   /// Seals the type-erased base overload, downcasts, and dispatches to the
   /// typed initialize(). All dependencies are guaranteed present by the driver.
   llvm::Error

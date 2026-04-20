@@ -22,6 +22,15 @@ namespace clang::ssaf {
 
 /// Data extracted for a given translation unit and for a given set of analyses.
 class TUSummary {
+public:
+  explicit TUSummary(BuildNamespace TUNamespace)
+      : TUNamespace(std::move(TUNamespace)) {}
+
+private:
+  friend class SerializationFormat;
+  friend class TestFixture;
+  friend class TUSummaryBuilder;
+
   /// Identifies the translation unit.
   BuildNamespace TUNamespace;
 
@@ -31,14 +40,6 @@ class TUSummary {
 
   std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>
       Data;
-
-public:
-  explicit TUSummary(BuildNamespace TUNamespace)
-      : TUNamespace(std::move(TUNamespace)) {}
-
-  friend class SerializationFormat;
-  friend class TestFixture;
-  friend class TUSummaryBuilder;
 };
 
 } // namespace clang::ssaf

@@ -34,15 +34,6 @@ namespace clang::ssaf {
 /// - '(p, 1)' is associated with the 'int *[10]' part of the declared type of
 /// 'p'.
 class EntityPointerLevel {
-  EntityId Entity;
-  unsigned PointerLevel;
-
-  friend class EntityPointerLevelTranslator;
-  friend EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
-
-  EntityPointerLevel(EntityId Entity, unsigned PointerLevel)
-      : Entity(Entity), PointerLevel(PointerLevel) {}
-
 public:
   EntityId getEntity() const { return Entity; }
   unsigned getPointerLevel() const { return PointerLevel; }
@@ -76,6 +67,16 @@ public:
       return L.getEntity() < R;
     }
   };
+
+private:
+  friend class EntityPointerLevelTranslator;
+  friend EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
+
+  EntityId Entity;
+  unsigned PointerLevel;
+
+  EntityPointerLevel(EntityId Entity, unsigned PointerLevel)
+      : Entity(Entity), PointerLevel(PointerLevel) {}
 };
 
 using EntityPointerLevelSet =
