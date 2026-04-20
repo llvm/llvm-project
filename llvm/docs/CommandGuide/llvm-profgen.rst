@@ -31,6 +31,20 @@ At least one of the following commands are required:
 .. option:: --output=<string>
 
   Path of the output profile file.
+  
+.. option:: --perfdata=<perfdata>, --pd
+
+   Path of raw perf data created by Linux perf tool (it should be profiled
+   with -b).
+
+.. option:: --llvm-sample-profile=<llvm sample profile>
+
+   Path of the LLVM sample profile.
+   
+.. option:: --unsymbolized-profile=<unsymbolized profile>, --up
+
+   Path of the unsymbolized profile created by ``llvm-profgen`` with
+   ``--skip-symbolization``.
 
 OPTIONS
 -------
@@ -54,3 +68,17 @@ OPTIONS
 
   Specify whether to print assembly code in AT&T syntax (the default) or Intel
   syntax.
+
+.. option:: --debug-binary=<debug-binary>
+    
+   Path of debug info binary. ``llvm-profgen`` will load the DWARF info from
+   it instead of the executable binary.
+  
+.. option:: --pid
+
+   Process Id for the profiled executable binary.
+
+.. option:: --output=<output>
+    
+   Path of the output profile file.
+
