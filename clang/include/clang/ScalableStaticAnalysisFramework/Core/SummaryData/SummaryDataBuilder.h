@@ -30,7 +30,7 @@ class LUSummaryConsumer;
 ///
 /// Known to the registry and LUSummaryConsumer. Receives entities one at a
 /// time via \c addSummary(), is finalized via \c finalize(), and transfers
-/// ownership of the built data via \c getData().
+/// ownership of the built data via \c takeData().
 class SummaryDataBuilderBase {
   friend class LUSummaryConsumer;
 
@@ -49,7 +49,7 @@ private:
   /// Transfers ownership of the built data. Called by LUSummaryConsumer after
   /// finalize(). The rvalue ref-qualifier enforces single use — the builder
   /// cannot be accessed after this call.
-  virtual std::unique_ptr<SummaryData> getData() && = 0;
+  virtual std::unique_ptr<SummaryData> takeData() && = 0;
 };
 
 /// Typed intermediate template that concrete builders inherit from.
@@ -81,7 +81,9 @@ protected:
   DataT &getData() & { return *Data; }
 
 private:
-  std::unique_ptr<SummaryData> getData() && override { return std::move(Data); }
+  std::unique_ptr<SummaryData> takeData() && override {
+    return std::move(Data);
+  }
 
   /// Seals the base overload, downcasts, and dispatches to the typed overload.
   void addSummary(EntityId Id, std::unique_ptr<EntitySummary> Summary) final {
