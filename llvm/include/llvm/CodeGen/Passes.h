@@ -80,6 +80,10 @@ LLVM_ABI MachineFunctionPass *createInsertCodePrefetchPass();
 /// createMachineBlockHashInfoPass - This pass computes basic block hashes.
 LLVM_ABI MachineFunctionPass *createMachineBlockHashInfoPass();
 
+/// createMachineBlockHashInfoPrinterPass - This pass prints basic block hashes.
+LLVM_ABI MachineFunctionPass *
+createMachineBlockHashInfoPrinterPass(raw_ostream &OS);
+
 /// createMachineFunctionSplitterPass - This pass splits machine functions
 /// using profile information.
 LLVM_ABI MachineFunctionPass *createMachineFunctionSplitterPass();
