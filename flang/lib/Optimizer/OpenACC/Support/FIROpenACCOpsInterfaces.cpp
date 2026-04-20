@@ -274,8 +274,9 @@ bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
 
 // Return true iff 'candidate' can be hoisted out of 'op',
 // which is an OpenACC compute operation (e.g. kernels, parallel, etc.).
-static bool canMoveOutOfComputeRegion(mlir::Operation *op,
-                                      mlir::Operation *candidate) {
+template <typename Op>
+bool OperationMoveModel<Op>::canMoveOutOf(mlir::Operation *op,
+                                          mlir::Operation *candidate) const {
   // In general, some movement out of the compute operations is allowed,
   // so return true if candidate is nullptr.
   if (!candidate)
@@ -298,11 +299,8 @@ bool OperationMoveModel<mlir::acc::KernelsOp>::canMoveFromDescendant(
   return true;
 }
 
-template <>
-bool OperationMoveModel<mlir::acc::KernelsOp>::canMoveOutOf(
-    mlir::Operation *op, mlir::Operation *candidate) const {
-  return canMoveOutOfComputeRegion(op, candidate);
-}
+template bool OperationMoveModel<mlir::acc::KernelsOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const;
 
 template <>
 bool OperationMoveModel<mlir::acc::ParallelOp>::canMoveFromDescendant(
@@ -311,11 +309,8 @@ bool OperationMoveModel<mlir::acc::ParallelOp>::canMoveFromDescendant(
   return true;
 }
 
-template <>
-bool OperationMoveModel<mlir::acc::ParallelOp>::canMoveOutOf(
-    mlir::Operation *op, mlir::Operation *candidate) const {
-  return canMoveOutOfComputeRegion(op, candidate);
-}
+template bool OperationMoveModel<mlir::acc::ParallelOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const;
 
 template <>
 bool OperationMoveModel<mlir::acc::SerialOp>::canMoveFromDescendant(
@@ -324,10 +319,7 @@ bool OperationMoveModel<mlir::acc::SerialOp>::canMoveFromDescendant(
   return true;
 }
 
-template <>
-bool OperationMoveModel<mlir::acc::SerialOp>::canMoveOutOf(
-    mlir::Operation *op, mlir::Operation *candidate) const {
-  return canMoveOutOfComputeRegion(op, candidate);
-}
+template bool OperationMoveModel<mlir::acc::SerialOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const;
 
 } // namespace fir::acc
