@@ -348,8 +348,7 @@ bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
   return true;
 }
 
-static bool shouldPreserveLargeStringLoad(Constant *C,
-                                                 uint64_t LoadBytes) {
+static bool shouldPreserveLargeStringLoad(Constant *C, uint64_t LoadBytes) {
   if (LoadBytes <= 32)
     return false;
 
