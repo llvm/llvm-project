@@ -4,7 +4,6 @@
 // CHECK-LABEL: define hidden void @_Z10setMatrix1Ru11matrix_typeILm4ELm4EfEDv4_f(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], <4 x float> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
@@ -32,7 +31,6 @@ void setMatrix1(out float4x4 M, float4 V) {
 // CHECK-LABEL: define hidden void @_Z10setMatrix2Ru11matrix_typeILm4ELm4EiEDv4_i(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], <4 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
@@ -60,7 +58,6 @@ void setMatrix2(out int4x4 M, int4 V) {
 // CHECK-LABEL: define hidden void @_Z22setMatrixVectorSwizzleRu11matrix_typeILm2ELm3EiEDv3_i(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <3 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <3 x i32>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
@@ -86,7 +83,6 @@ void setMatrixVectorSwizzle(out int2x3 M, int3 V) {
 // CHECK-LABEL: define hidden void @_Z24setVectorOnMatrixSwizzleRu11matrix_typeILm2ELm3EiEDv3_i(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <3 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <3 x i32>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
@@ -111,7 +107,6 @@ void setVectorOnMatrixSwizzle(out int2x3 M, int3 V) {
 // CHECK-LABEL: define hidden void @_Z19setMatrixFromMatrixRu11matrix_typeILm2ELm3EiES_i(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <6 x i32> noundef [[N:%.*]], i32 noundef [[MINDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    [[MINDEX_ADDR:%.*]] = alloca i32, align 4
@@ -143,7 +138,6 @@ void setMatrixFromMatrix(out int2x3 M, int2x3 N, int MIndex) {
 // CHECK-LABEL: define hidden void @_Z26setMatrixSwizzleFromMatrixRu11matrix_typeILm2ELm3EiES_i(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <6 x i32> noundef [[N:%.*]], i32 noundef [[NINDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    [[NINDEX_ADDR:%.*]] = alloca i32, align 4
@@ -181,7 +175,6 @@ void setMatrixSwizzleFromMatrix(out int2x3 M, int2x3 N, int NIndex) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <2 x float> @_Z2fnu11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[M_ADDR]], align 4

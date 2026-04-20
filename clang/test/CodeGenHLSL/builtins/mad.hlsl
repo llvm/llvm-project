@@ -15,49 +15,49 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF,SPIR_CHECK
 
 #ifdef __HLSL_ENABLE_16_BIT
-// DXIL_NATIVE_HALF: %dx.umad = call i16 @llvm.dx.umad.i16(i16 %[[#]], i16 %[[#]], i16 %[[#]])
+// DXIL_NATIVE_HALF: %dx.umad = call i16 @llvm.dx.umad.i16(i16 %0, i16 %1, i16 %2)
 // DXIL_NATIVE_HALF: ret i16 %dx.umad
 // SPIR_NATIVE_HALF: mul nuw i16 %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nuw i16 %{{.*}}, %{{.*}}
 uint16_t test_mad_uint16_t(uint16_t p0, uint16_t p1, uint16_t p2) { return mad(p0, p1, p2); }
 
-// DXIL_NATIVE_HALF: %dx.umad = call <2 x i16>  @llvm.dx.umad.v2i16(<2 x i16> %[[#]], <2 x i16> %[[#]], <2 x i16> %[[#]])
+// DXIL_NATIVE_HALF: %dx.umad = call <2 x i16>  @llvm.dx.umad.v2i16(<2 x i16> %0, <2 x i16> %1, <2 x i16> %2)
 // DXIL_NATIVE_HALF: ret <2 x i16> %dx.umad
 // SPIR_NATIVE_HALF: mul nuw <2 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nuw <2 x i16>  %{{.*}}, %{{.*}}
 uint16_t2 test_mad_uint16_t2(uint16_t2 p0, uint16_t2 p1, uint16_t2 p2) { return mad(p0, p1, p2); }
 
-// DXIL_NATIVE_HALF: %dx.umad = call <3 x i16>  @llvm.dx.umad.v3i16(<3 x i16> %[[#]], <3 x i16> %[[#]], <3 x i16> %[[#]])
+// DXIL_NATIVE_HALF: %dx.umad = call <3 x i16>  @llvm.dx.umad.v3i16(<3 x i16> %0, <3 x i16> %1, <3 x i16> %2)
 // DXIL_NATIVE_HALF: ret <3 x i16> %dx.umad
 // SPIR_NATIVE_HALF: mul nuw <3 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nuw <3 x i16>  %{{.*}}, %{{.*}}
 uint16_t3 test_mad_uint16_t3(uint16_t3 p0, uint16_t3 p1, uint16_t3 p2) { return mad(p0, p1, p2); }
 
-// DXIL_NATIVE_HALF: %dx.umad = call <4 x i16>  @llvm.dx.umad.v4i16(<4 x i16> %[[#]], <4 x i16> %[[#]], <4 x i16> %[[#]])
+// DXIL_NATIVE_HALF: %dx.umad = call <4 x i16>  @llvm.dx.umad.v4i16(<4 x i16> %0, <4 x i16> %1, <4 x i16> %2)
 // DXIL_NATIVE_HALF: ret <4 x i16> %dx.umad
 // SPIR_NATIVE_HALF: mul nuw <4 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nuw <4 x i16>  %{{.*}}, %{{.*}}
 uint16_t4 test_mad_uint16_t4(uint16_t4 p0, uint16_t4 p1, uint16_t4 p2) { return mad(p0, p1, p2); }
 
-// DXIL_NATIVE_HALF: %dx.imad = call i16 @llvm.dx.imad.i16(i16 %[[#]], i16 %[[#]], i16 %[[#]])
+// DXIL_NATIVE_HALF: %dx.imad = call i16 @llvm.dx.imad.i16(i16 %0, i16 %1, i16 %2)
 // DXIL_NATIVE_HALF: ret i16 %dx.imad
 // SPIR_NATIVE_HALF: mul nsw i16 %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nsw i16 %{{.*}}, %{{.*}}
 int16_t test_mad_int16_t(int16_t p0, int16_t p1, int16_t p2) { return mad(p0, p1, p2); }
 
-// DXIL_NATIVE_HALF: %dx.imad = call <2 x i16>  @llvm.dx.imad.v2i16(<2 x i16> %[[#]], <2 x i16> %[[#]], <2 x i16> %[[#]])
+// DXIL_NATIVE_HALF: %dx.imad = call <2 x i16>  @llvm.dx.imad.v2i16(<2 x i16> %0, <2 x i16> %1, <2 x i16> %2)
 // DXIL_NATIVE_HALF: ret <2 x i16> %dx.imad
 // SPIR_NATIVE_HALF: mul nsw <2 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nsw <2 x i16>  %{{.*}}, %{{.*}}
 int16_t2 test_mad_int16_t2(int16_t2 p0, int16_t2 p1, int16_t2 p2) { return mad(p0, p1, p2); }
 
-// DXIL_NATIVE_HALF: %dx.imad = call <3 x i16>  @llvm.dx.imad.v3i16(<3 x i16> %[[#]], <3 x i16> %[[#]], <3 x i16> %[[#]])
+// DXIL_NATIVE_HALF: %dx.imad = call <3 x i16>  @llvm.dx.imad.v3i16(<3 x i16> %0, <3 x i16> %1, <3 x i16> %2)
 // DXIL_NATIVE_HALF: ret <3 x i16> %dx.imad
 // SPIR_NATIVE_HALF: mul nsw <3 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nsw <3 x i16>  %{{.*}}, %{{.*}}
 int16_t3 test_mad_int16_t3(int16_t3 p0, int16_t3 p1, int16_t3 p2) { return mad(p0, p1, p2); }
 
-// DXIL_NATIVE_HALF: %dx.imad = call <4 x i16>  @llvm.dx.imad.v4i16(<4 x i16> %[[#]], <4 x i16> %[[#]], <4 x i16> %[[#]])
+// DXIL_NATIVE_HALF: %dx.imad = call <4 x i16>  @llvm.dx.imad.v4i16(<4 x i16> %0, <4 x i16> %1, <4 x i16> %2)
 // DXIL_NATIVE_HALF: ret <4 x i16> %dx.imad
 // SPIR_NATIVE_HALF: mul nsw <4 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nsw <4 x i16>  %{{.*}}, %{{.*}}
@@ -168,97 +168,97 @@ double3 test_mad_double3(double3 p0, double3 p1, double3 p2) { return mad(p0, p1
 // CHECK: ret <4 x double> %hlsl.fmad
 double4 test_mad_double4(double4 p0, double4 p1, double4 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.imad = call i32 @llvm.dx.imad.i32(i32 %[[#]], i32 %[[#]], i32 %[[#]])
+// DXIL_CHECK: %dx.imad = call i32 @llvm.dx.imad.i32(i32 %0, i32 %1, i32 %2)
 // DXIL_CHECK: ret i32 %dx.imad
 // SPIR_CHECK: mul nsw i32 %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nsw i32 %{{.*}}, %{{.*}}
 int test_mad_int(int p0, int p1, int p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.imad = call <2 x i32>  @llvm.dx.imad.v2i32(<2 x i32> %[[#]], <2 x i32> %[[#]], <2 x i32> %[[#]])
+// DXIL_CHECK: %dx.imad = call <2 x i32>  @llvm.dx.imad.v2i32(<2 x i32> %0, <2 x i32> %1, <2 x i32> %2)
 // DXIL_CHECK: ret <2 x i32> %dx.imad
 // SPIR_CHECK: mul nsw <2 x i32>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nsw <2 x i32>  %{{.*}}, %{{.*}}
 int2 test_mad_int2(int2 p0, int2 p1, int2 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.imad = call <3 x i32>  @llvm.dx.imad.v3i32(<3 x i32> %[[#]], <3 x i32> %[[#]], <3 x i32> %[[#]])
+// DXIL_CHECK: %dx.imad = call <3 x i32>  @llvm.dx.imad.v3i32(<3 x i32> %0, <3 x i32> %1, <3 x i32> %2)
 // DXIL_CHECK: ret <3 x i32> %dx.imad
 // SPIR_CHECK: mul nsw <3 x i32>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nsw <3 x i32>  %{{.*}}, %{{.*}}
 int3 test_mad_int3(int3 p0, int3 p1, int3 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.imad = call <4 x i32>  @llvm.dx.imad.v4i32(<4 x i32> %[[#]], <4 x i32> %[[#]], <4 x i32> %[[#]])
+// DXIL_CHECK: %dx.imad = call <4 x i32>  @llvm.dx.imad.v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2)
 // DXIL_CHECK: ret <4 x i32> %dx.imad
 // SPIR_CHECK: mul nsw <4 x i32>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nsw <4 x i32>  %{{.*}}, %{{.*}}
 int4 test_mad_int4(int4 p0, int4 p1, int4 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.imad = call i64 @llvm.dx.imad.i64(i64 %[[#]], i64 %[[#]], i64 %[[#]])
+// DXIL_CHECK: %dx.imad = call i64 @llvm.dx.imad.i64(i64 %0, i64 %1, i64 %2)
 // DXIL_CHECK: ret i64 %dx.imad
 // SPIR_CHECK: mul nsw i64 %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nsw i64 %{{.*}}, %{{.*}}
 int64_t test_mad_int64_t(int64_t p0, int64_t p1, int64_t p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.imad = call <2 x i64>  @llvm.dx.imad.v2i64(<2 x i64> %[[#]], <2 x i64> %[[#]], <2 x i64> %[[#]])
+// DXIL_CHECK: %dx.imad = call <2 x i64>  @llvm.dx.imad.v2i64(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2)
 // DXIL_CHECK: ret <2 x i64> %dx.imad
 // SPIR_CHECK: mul nsw <2 x i64>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nsw <2 x i64>  %{{.*}}, %{{.*}}
 int64_t2 test_mad_int64_t2(int64_t2 p0, int64_t2 p1, int64_t2 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.imad = call <3 x i64>  @llvm.dx.imad.v3i64(<3 x i64> %[[#]], <3 x i64> %[[#]], <3 x i64> %[[#]])
+// DXIL_CHECK: %dx.imad = call <3 x i64>  @llvm.dx.imad.v3i64(<3 x i64> %0, <3 x i64> %1, <3 x i64> %2)
 // DXIL_CHECK: ret <3 x i64> %dx.imad
 // SPIR_CHECK: mul nsw <3 x i64>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nsw <3 x i64>  %{{.*}}, %{{.*}}
 int64_t3 test_mad_int64_t3(int64_t3 p0, int64_t3 p1, int64_t3 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.imad = call <4 x i64>  @llvm.dx.imad.v4i64(<4 x i64> %[[#]], <4 x i64> %[[#]], <4 x i64> %[[#]])
+// DXIL_CHECK: %dx.imad = call <4 x i64>  @llvm.dx.imad.v4i64(<4 x i64> %0, <4 x i64> %1, <4 x i64> %2)
 // DXIL_CHECK: ret <4 x i64> %dx.imad
 // SPIR_CHECK: mul nsw <4 x i64>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nsw <4 x i64>  %{{.*}}, %{{.*}}
 int64_t4 test_mad_int64_t4(int64_t4 p0, int64_t4 p1, int64_t4 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.umad = call i32 @llvm.dx.umad.i32(i32 %[[#]], i32 %[[#]], i32 %[[#]])
+// DXIL_CHECK: %dx.umad = call i32 @llvm.dx.umad.i32(i32 %0, i32 %1, i32 %2)
 // DXIL_CHECK: ret i32 %dx.umad
 // SPIR_CHECK: mul nuw i32 %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nuw i32 %{{.*}}, %{{.*}}
 uint test_mad_uint(uint p0, uint p1, uint p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.umad = call <2 x i32>  @llvm.dx.umad.v2i32(<2 x i32> %[[#]], <2 x i32> %[[#]], <2 x i32> %[[#]])
+// DXIL_CHECK: %dx.umad = call <2 x i32>  @llvm.dx.umad.v2i32(<2 x i32> %0, <2 x i32> %1, <2 x i32> %2)
 // DXIL_CHECK: ret <2 x i32> %dx.umad
 // SPIR_CHECK: mul nuw <2 x i32>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nuw <2 x i32>  %{{.*}}, %{{.*}}
 uint2 test_mad_uint2(uint2 p0, uint2 p1, uint2 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.umad = call <3 x i32>  @llvm.dx.umad.v3i32(<3 x i32> %[[#]], <3 x i32> %[[#]], <3 x i32> %[[#]])
+// DXIL_CHECK: %dx.umad = call <3 x i32>  @llvm.dx.umad.v3i32(<3 x i32> %0, <3 x i32> %1, <3 x i32> %2)
 // DXIL_CHECK: ret <3 x i32> %dx.umad
 // SPIR_CHECK: mul nuw <3 x i32>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nuw <3 x i32>  %{{.*}}, %{{.*}}
 uint3 test_mad_uint3(uint3 p0, uint3 p1, uint3 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.umad = call <4 x i32>  @llvm.dx.umad.v4i32(<4 x i32> %[[#]], <4 x i32> %[[#]], <4 x i32> %[[#]])
+// DXIL_CHECK: %dx.umad = call <4 x i32>  @llvm.dx.umad.v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2)
 // DXIL_CHECK: ret <4 x i32> %dx.umad
 // SPIR_CHECK: mul nuw <4 x i32>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nuw <4 x i32>  %{{.*}}, %{{.*}}
 uint4 test_mad_uint4(uint4 p0, uint4 p1, uint4 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.umad = call i64 @llvm.dx.umad.i64(i64 %[[#]], i64 %[[#]], i64 %[[#]])
+// DXIL_CHECK: %dx.umad = call i64 @llvm.dx.umad.i64(i64 %0, i64 %1, i64 %2)
 // DXIL_CHECK: ret i64 %dx.umad
 // SPIR_CHECK: mul nuw i64 %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nuw i64 %{{.*}}, %{{.*}}
 uint64_t test_mad_uint64_t(uint64_t p0, uint64_t p1, uint64_t p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.umad = call <2 x i64>  @llvm.dx.umad.v2i64(<2 x i64> %[[#]], <2 x i64> %[[#]], <2 x i64> %[[#]])
+// DXIL_CHECK: %dx.umad = call <2 x i64>  @llvm.dx.umad.v2i64(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2)
 // DXIL_CHECK: ret <2 x i64> %dx.umad
 // SPIR_CHECK: mul nuw <2 x i64>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nuw <2 x i64>  %{{.*}}, %{{.*}}
 uint64_t2 test_mad_uint64_t2(uint64_t2 p0, uint64_t2 p1, uint64_t2 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.umad = call <3 x i64>  @llvm.dx.umad.v3i64(<3 x i64> %[[#]], <3 x i64> %[[#]], <3 x i64> %[[#]])
+// DXIL_CHECK: %dx.umad = call <3 x i64>  @llvm.dx.umad.v3i64(<3 x i64> %0, <3 x i64> %1, <3 x i64> %2)
 // DXIL_CHECK: ret <3 x i64> %dx.umad
 // SPIR_CHECK: mul nuw <3 x i64>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nuw <3 x i64>  %{{.*}}, %{{.*}}
 uint64_t3 test_mad_uint64_t3(uint64_t3 p0, uint64_t3 p1, uint64_t3 p2) { return mad(p0, p1, p2); }
 
-// DXIL_CHECK: %dx.umad = call <4 x i64>  @llvm.dx.umad.v4i64(<4 x i64> %[[#]], <4 x i64> %[[#]], <4 x i64> %[[#]])
+// DXIL_CHECK: %dx.umad = call <4 x i64>  @llvm.dx.umad.v4i64(<4 x i64> %0, <4 x i64> %1, <4 x i64> %2)
 // DXIL_CHECK: ret <4 x i64> %dx.umad
 // SPIR_CHECK: mul nuw <4 x i64>  %{{.*}}, %{{.*}}
 // SPIR_CHECK: add nuw <4 x i64>  %{{.*}}, %{{.*}}

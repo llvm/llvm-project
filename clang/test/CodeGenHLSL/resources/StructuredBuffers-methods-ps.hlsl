@@ -74,7 +74,7 @@ export float TestLoadWithStatus() {
 
 // CHECK: define {{.*}} float @TestLoadWithStatus()()
 // CHECK: call {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @ROSB1, i32 noundef 10, ptr {{.*}} %tmp)
-// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @ROSB2, i32 noundef 20, ptr {{.*}} %[[TMP0:.*]])
+// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @ROSB2, i32 noundef 20, ptr {{.*}} %tmp2)
 // CHECK: ret
 
 // CHECK: define {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
