@@ -1083,6 +1083,58 @@ bool RegBankLegalizeHelper::lowerInsVecEltTo32(MachineInstr &MI) {
   return true;
 }
 
+bool RegBankLegalizeHelper::lowerAbsToNegMax(MachineInstr &MI) {
+  // Lower divergent G_ABS to smax(x, 0 - x) in the VGPR bank:
+  //   zero = 0
+  //   neg  = G_SUB zero, x
+  //   dst  = G_SMAX x, neg
+  //
+  // There is no integer v_abs instruction on AMDGPU, so divergent G_ABS is
+  // expanded to this sub/smax pair.
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(DstReg);
+
+  Register Zero;
+  if (Ty == V2S16) {
+    // buildConstant cannot produce a V2S16 directly; pack two S16 zeros.
+    Register Zero16 = B.buildConstant({VgprRB, S16}, 0).getReg(0);
+    Zero = B.buildBuildVector({VgprRB, Ty}, {Zero16, Zero16}).getReg(0);
+  } else {
+    assert((Ty == S32 || Ty == S16) && "unexpected type for AbsToNegMax");
+    Zero = B.buildConstant({VgprRB, Ty}, 0).getReg(0);
+  }
+
+  auto Neg = B.buildSub({VgprRB, Ty}, Zero, SrcReg);
+  B.buildSMax(DstReg, SrcReg, Neg);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RegBankLegalizeHelper::lowerAbsToS32(MachineInstr &MI) {
+  // Lower uniform V2S16 abs by unpacking the values to two separate SGPR
+  // registers and re-emitting G_ABS on each:
+  //   packed  = bitcast <2 x s16> src to s32
+  //   lo      = sext_inreg packed, 16
+  //   hi      = ashr packed, 16
+  //   dst     = build_vector_trunc G_ABS(lo), G_ABS(hi)
+  //
+  // SALU only has s_abs_i32, with no direct uniform V2S16 abs. The
+  // re-emitted G_ABS(SgprRB, S32) selects to s_abs_i32 on each value.
+  auto Bitcast = B.buildBitcast({SgprRB_S32}, MI.getOperand(1).getReg());
+  auto SextInReg = B.buildSExtInReg({SgprRB_S32}, Bitcast, 16);
+  auto ShiftHi =
+      B.buildAShr({SgprRB_S32}, Bitcast, B.buildConstant({SgprRB_S32}, 16));
+
+  auto AbsLo = B.buildInstr(AMDGPU::G_ABS, {{SgprRB_S32}}, {SextInReg});
+  auto AbsHi = B.buildInstr(AMDGPU::G_ABS, {{SgprRB_S32}}, {ShiftHi});
+  B.buildBuildVectorTrunc(MI.getOperand(0).getReg(),
+                          {AbsLo.getReg(0), AbsHi.getReg(0)});
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RegBankLegalizeHelper::lower(MachineInstr &MI,
                                   const RegBankLLTMapping &Mapping,
                                   WaterfallInfo &WFI) {
@@ -1365,6 +1417,10 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerInsVecEltToSel(MI);
   case InsVecEltTo32:
     return lowerInsVecEltTo32(MI);
+  case AbsToNegMax:
+    return lowerAbsToNegMax(MI);
+  case AbsToS32:
+    return lowerAbsToS32(MI);
   }
 
   if (!WFI.SgprWaterfallOperandRegs.empty()) {
