@@ -451,7 +451,7 @@ Bug Fixes to C++ Support
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching 
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported 
   and produce a warning. (#GH162640)
-
+- Correctly diagnose invalid non-dependent calls in dependent contexts. (#GH135694)
 - Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
 - Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
 - We no longer consider conversion operators when copy-initializing from the same type. This was non
