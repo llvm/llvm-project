@@ -346,58 +346,56 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
 Response HandleFunctionTemplateDecl(Sema &SemaRef,
                                     const FunctionTemplateDecl *FTD,
                                     MultiLevelTemplateArgumentList &Result) {
-  if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
-    Result.addOuterTemplateArguments(
-        const_cast<FunctionTemplateDecl *>(FTD),
-        const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(
-            SemaRef.Context),
-        /*Final=*/false);
+  Result.addOuterTemplateArguments(
+      const_cast<FunctionTemplateDecl *>(FTD),
+      const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(
+          SemaRef.Context),
+      /*Final=*/false);
 
-    NestedNameSpecifier NNS = FTD->getTemplatedDecl()->getQualifier();
+  NestedNameSpecifier NNS = FTD->getTemplatedDecl()->getQualifier();
 
-    for (const Type *Ty = NNS.getKind() == NestedNameSpecifier::Kind::Type
-                              ? NNS.getAsType()
-                              : nullptr,
-                    *NextTy = nullptr;
-         Ty && Ty->isInstantiationDependentType();
-         Ty = std::exchange(NextTy, nullptr)) {
-      if (NestedNameSpecifier P = Ty->getPrefix();
-          P.getKind() == NestedNameSpecifier::Kind::Type)
-        NextTy = P.getAsType();
-      const auto *TSTy = dyn_cast<TemplateSpecializationType>(Ty);
-      if (!TSTy)
-        continue;
+  for (const Type *Ty = NNS.getKind() == NestedNameSpecifier::Kind::Type
+                            ? NNS.getAsType()
+                            : nullptr,
+                  *NextTy = nullptr;
+       Ty && Ty->isInstantiationDependentType();
+       Ty = std::exchange(NextTy, nullptr)) {
+    if (NestedNameSpecifier P = Ty->getPrefix();
+        P.getKind() == NestedNameSpecifier::Kind::Type)
+      NextTy = P.getAsType();
+    const auto *TSTy = dyn_cast<TemplateSpecializationType>(Ty);
+    if (!TSTy)
+      continue;
 
-      ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
-      // Prefer template arguments from the injected-class-type if possible.
-      // For example,
-      // ```cpp
-      // template <class... Pack> struct S {
-      //   template <class T> void foo();
-      // };
-      // template <class... Pack> template <class T>
-      //           ^^^^^^^^^^^^^ InjectedTemplateArgs
-      //           They're of kind TemplateArgument::Pack, not of
-      //           TemplateArgument::Type.
-      // void S<Pack...>::foo() {}
-      //        ^^^^^^^
-      //        TSTy->template_arguments() (which are of PackExpansionType)
-      // ```
-      // This meets the contract in
-      // TreeTransform::TryExpandParameterPacks that the template arguments
-      // for unexpanded parameters should be of a Pack kind.
-      if (TSTy->isCurrentInstantiation()) {
-        auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
-        if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
-          Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
-        else if (auto *Specialization =
-                     dyn_cast<ClassTemplateSpecializationDecl>(RD))
-          Arguments = Specialization->getTemplateInstantiationArgs().asArray();
-      }
-      Result.addOuterTemplateArguments(
-          TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
-          /*Final=*/false);
+    ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
+    // Prefer template arguments from the injected-class-type if possible.
+    // For example,
+    // ```cpp
+    // template <class... Pack> struct S {
+    //   template <class T> void foo();
+    // };
+    // template <class... Pack> template <class T>
+    //           ^^^^^^^^^^^^^ InjectedTemplateArgs
+    //           They're of kind TemplateArgument::Pack, not of
+    //           TemplateArgument::Type.
+    // void S<Pack...>::foo() {}
+    //        ^^^^^^^
+    //        TSTy->template_arguments() (which are of PackExpansionType)
+    // ```
+    // This meets the contract in
+    // TreeTransform::TryExpandParameterPacks that the template arguments
+    // for unexpanded parameters should be of a Pack kind.
+    if (TSTy->isCurrentInstantiation()) {
+      auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
+      if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
+        Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
+      else if (auto *Specialization =
+                   dyn_cast<ClassTemplateSpecializationDecl>(RD))
+        Arguments = Specialization->getTemplateInstantiationArgs().asArray();
     }
+    Result.addOuterTemplateArguments(
+        TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
+        /*Final=*/false);
   }
 
   return Response::ChangeDecl(FTD->getLexicalDeclContext());
@@ -1329,6 +1327,8 @@ namespace {
     // Whether an incomplete substituion should be treated as an error.
     bool BailOutOnIncomplete;
 
+    std::optional<llvm::FoldingSetNodeID> TemplateArgsHashValue;
+
     // CWG2770: Function parameters should be instantiated when they are
     // needed by a satisfaction check of an atomic constraint or
     // (recursively) by another function parameter.
@@ -1358,7 +1358,14 @@ namespace {
                          SourceLocation Loc,
                          const MultiLevelTemplateArgumentList &TemplateArgs)
         : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
-          BailOutOnIncomplete(false) {}
+          BailOutOnIncomplete(false) {
+      if (!SemaRef.CurrentCachedTemplateArgs)
+        return;
+      auto &V = TemplateArgsHashValue.emplace();
+      for (auto &Level : TemplateArgs)
+        for (auto &Arg : Level.Args)
+          Arg.Profile(V, SemaRef.Context);
+    }
 
     /// Determine whether the given type \p T has already been
     /// transformed.
@@ -1611,15 +1618,38 @@ namespace {
       }
       return Type;
     }
+
     // Override the default version to handle a rewrite-template-arg-pack case
-    // for building a deduction guide.
+    // for building a deduction guide, and to cache substitution results in
+    // concepts checking.
     bool TransformTemplateArgument(const TemplateArgumentLoc &Input,
                                    TemplateArgumentLoc &Output,
                                    bool Uneval = false) {
       const TemplateArgument &Arg = Input.getArgument();
-      std::vector<TemplateArgument> TArgs;
+      if (auto *Cache = SemaRef.CurrentCachedTemplateArgs;
+          Cache && TemplateArgsHashValue) {
+        llvm::FoldingSetNodeID ID = *TemplateArgsHashValue;
+        ID.AddInteger(SemaRef.ArgPackSubstIndex.toInternalRepresentation());
+        // FIXME: We may have better performance if we profile Arg without
+        // sugars.
+        Arg.Profile(ID, SemaRef.Context);
+        // FIXME: Ideally, we should only cache and restore the TemplateArgument
+        // and rebuild the uncached TypeLoc separately in place.
+        // We choose to accept loss of TypeLoc fidelity in cases where TypeLocs
+        // are less critical for performance trade-off: currently, this is only
+        // applied to concept substitutions and their valid template arguments.
+        if (auto Iter = Cache->find(ID); Iter != Cache->end()) {
+          Output = Iter->second;
+          return false;
+        }
+        bool Ret = inherited::TransformTemplateArgument(Input, Output, Uneval);
+        if (!Ret)
+          Cache->insert({ID, Output});
+        return Ret;
+      }
       switch (Arg.getKind()) {
-      case TemplateArgument::Pack:
+      case TemplateArgument::Pack: {
+        std::vector<TemplateArgument> TArgs;
         assert(SemaRef.CodeSynthesisContexts.empty() ||
                SemaRef.CodeSynthesisContexts.back().Kind ==
                    Sema::CodeSynthesisContext::BuildingDeductionGuides);
@@ -1637,6 +1667,7 @@ namespace {
             TemplateArgument(llvm::ArrayRef(TArgs).copy(SemaRef.Context)),
             QualType(), SourceLocation{});
         return false;
+      }
       default:
         break;
       }
@@ -2777,8 +2808,8 @@ TemplateInstantiator::TransformNestedRequirement(
       return nullptr;
 
     Success = !SemaRef.CheckConstraintSatisfaction(
-        Req, AssociatedConstraint(Constraint, SemaRef.ArgPackSubstIndex),
-        TemplateArgs, Constraint->getSourceRange(), Satisfaction,
+        Req, AssociatedConstraint(Constraint), TemplateArgs,
+        Constraint->getSourceRange(), Satisfaction,
         /*TopLevelConceptId=*/nullptr, &NewConstraint);
   }
 
@@ -3052,7 +3083,13 @@ bool Sema::SubstTypeConstraint(
 
   if (!EvaluateConstraints && !inParameterMappingSubstitution()) {
     UnsignedOrNone Index = TC->getArgPackSubstIndex();
-    if (!Index)
+    bool ContainsUnexpandedPack =
+        TemplArgInfo &&
+        llvm::any_of(
+            TemplArgInfo->arguments(), [](const TemplateArgumentLoc &TA) {
+              return TA.getArgument().containsUnexpandedParameterPack();
+            });
+    if (!Index && ContainsUnexpandedPack)
       Index = SemaRef.ArgPackSubstIndex;
     Inst->setTypeConstraint(TC->getConceptReference(),
                             TC->getImmediatelyDeclaredConstraint(), Index);

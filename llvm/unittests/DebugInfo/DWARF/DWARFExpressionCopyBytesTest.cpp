@@ -191,7 +191,7 @@ void DWARFExpressionCopyBytesTest::testExpr(ArrayRef<uint8_t> ExprData) {
   if (!MRI)
     GTEST_SKIP();
 
-  DataExtractor DE(ExprData, true, 8);
+  DataExtractor DE(ExprData, true);
   DWARFExpression Expr(DE, 8);
 
   // Copy this expression into the CFI of a binary and check that we are able to

@@ -752,7 +752,7 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count {
     // [1]: https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
     size_t __bytes           = __elements == 0 ? sizeof(__unbounded_array_control_block)
                                                : (__elements - 1) * sizeof(_Tp) + sizeof(__unbounded_array_control_block);
-    constexpr size_t __align = alignof(_Tp);
+    constexpr size_t __align = alignof(__unbounded_array_control_block);
     return (__bytes + __align - 1) & ~(__align - 1);
   }
 

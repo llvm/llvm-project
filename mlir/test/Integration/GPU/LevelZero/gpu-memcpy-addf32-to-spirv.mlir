@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(gpu-async-region),spirv-attach-target{ver=v1.0 caps=Addresses,Int64,Kernel},convert-gpu-to-spirv{use-64bit-index=true},gpu.module(spirv.module(spirv-lower-abi-attrs,spirv-update-vce)),func.func(llvm-request-c-wrappers),convert-scf-to-cf,convert-to-llvm,gpu-to-llvm{use-bare-pointers-for-kernels=true},gpu-module-to-binary,expand-strided-metadata,lower-affine,reconcile-unrealized-casts)' \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(gpu-async-region),spirv-attach-target{ver=v1.0 caps=Addresses,Int64,Kernel},convert-gpu-to-spirv{use-64bit-index=true},gpu.module(spirv.module(spirv-lower-abi-attrs,spirv-update-vce)),func.func(llvm-request-c-wrappers),convert-scf-to-cf,convert-to-llvm,gpu-to-llvm{use-bare-pointers-for-kernels=true},gpu-module-to-binary{format=isa},expand-strided-metadata,lower-affine,reconcile-unrealized-casts)' \
 // RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_levelzero_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \

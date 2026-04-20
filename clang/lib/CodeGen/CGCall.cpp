@@ -866,9 +866,13 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   assert(inserted && "Recursively being processed?");
 
   // Compute ABI information.
-  if (CC == llvm::CallingConv::SPIR_KERNEL) {
+  if (info.getCC() == CC_DeviceKernel &&
+      (CC == llvm::CallingConv::SPIR_KERNEL || CC == llvm::CallingConv::C)) {
     // Force target independent argument handling for the host visible
     // kernel functions.
+    //
+    // For CPU targets, this currently only works for OpenCL.
+    assert(CC != llvm::CallingConv::C || getContext().getLangOpts().OpenCL);
     computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
@@ -6242,6 +6246,18 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (IsMustTail) {
     for (auto it = EHStack.find(CurrentCleanupScopeDepth); it != EHStack.end();
          ++it) {
+      // A noexcept caller pushes an EHTerminateScope to call std::terminate()
+      // if an exception escapes. A musttail call replaces the caller's frame,
+      // removing this handler. This is safe if the callee is also nounwind:
+      // the callee's own noexcept handler prevents any exception from reaching
+      // where the caller's handler would have been.
+      if (isa<EHTerminateScope>(&*it)) {
+        if (CI->doesNotThrow())
+          continue;
+        CGM.getDiags().Report(MustTailCall->getBeginLoc(),
+                              diag::err_musttail_noexcept_mismatch);
+        break;
+      }
       EHCleanupScope *Cleanup = dyn_cast<EHCleanupScope>(&*it);
       // Fake uses can be safely emitted immediately prior to the tail call, so
       // we choose to emit them just before the call here.

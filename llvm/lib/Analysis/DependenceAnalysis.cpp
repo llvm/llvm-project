@@ -1071,6 +1071,9 @@ bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
   if (!L)
     return false;
 
+  if (!AddRec->hasNoSignedWrap())
+    return false;
+
   const SCEV *Start = AddRec->getStart();
   const SCEV *Step = AddRec->getStepRecurrence(*SE);
   if (!isLoopInvariant(Step, LoopNest))
@@ -1818,9 +1821,6 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
 
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
-    return false;
-
   const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
   if (!Delta)
     return false;
@@ -1960,9 +1960,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  bool SrcAnalyzable = SrcAddRec != nullptr && SrcAddRec->hasNoSignedWrap();
-  bool DstAnalyzable = DstAddRec != nullptr && DstAddRec->hasNoSignedWrap();
-  if (SrcAnalyzable && DstAnalyzable) {
+  if (SrcAddRec && DstAddRec) {
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
@@ -1979,18 +1977,17 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
     return disproven || exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
   }
-  if (SrcAnalyzable && DstAddRec == nullptr) {
+  if (SrcAddRec) {
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
     Level = mapSrcLoop(CurSrcLoop);
     return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result);
   }
-  if (DstAnalyzable && SrcAddRec == nullptr) {
+  if (DstAddRec) {
     const Loop *CurDstLoop = DstAddRec->getLoop();
     Level = mapDstLoop(CurDstLoop);
     return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result);
   }
-  assert((SrcAddRec != nullptr || DstAddRec != nullptr) &&
-         "SIV test expected at least one AddRec");
+  llvm_unreachable("SIV test expected at least one AddRec");
   return false;
 }
 
@@ -2087,8 +2084,6 @@ static const SCEV *analyzeCoefficientsForGCD(const SCEV *Coefficients,
                                              ScalarEvolution *SE) {
   while (const SCEVAddRecExpr *AddRec =
              dyn_cast<SCEVAddRecExpr>(Coefficients)) {
-    if (!AddRec->hasNoSignedWrap())
-      return nullptr;
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
@@ -2255,7 +2250,9 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
   SmallVector<CoefficientInfo, 4> B;
   collectCoeffInfo(Dst, false, B0, B);
   SmallVector<BoundInfo, 4> Bound(MaxLevels + 1);
-  const SCEV *Delta = SE->getMinusSCEV(B0, A0);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(B0, A0, *SE);
+  if (!Delta)
+    return false;
   LLVM_DEBUG(dbgs() << "\tDelta = " << *Delta << '\n');
 
   // Compute bounds for all the * directions.
