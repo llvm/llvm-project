@@ -35,19 +35,7 @@ bool SPIRVTypeInst::isTypeIntN(unsigned N) const {
   return true;
 }
 
-bool SPIRVTypeInst::isTypeFloat(unsigned Width,
-                                std::optional<unsigned> Encoding) const {
-  if (MI->getOpcode() != SPIRV::OpTypeFloat)
-    return false;
-  if (Width)
-    return MI->getOperand(1).getImm() == Width;
-  if (Encoding) {
-    if (MI->getNumOperands() < 3)
-      return false;
-    const MachineOperand &EO = MI->getOperand(2);
-    assert(EO.isImm() && "Encoding operand must be an immediate");
-    return EO.getImm() == *Encoding;
-  }
-  return true;
+bool SPIRVTypeInst::isAnyTypeFloat() const {
+  return MI->getOpcode() == SPIRV::OpTypeFloat;
 }
 } // namespace llvm

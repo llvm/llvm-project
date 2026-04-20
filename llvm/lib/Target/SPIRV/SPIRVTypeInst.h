@@ -52,13 +52,9 @@ public:
   // If N is non-zero, also checks that the bit width matches N.
   bool isTypeIntN(unsigned N = 0) const;
   // Returns true if this is an OpTypeFloat instruction.
-  // If Width is non-zero, also checks that the bit width matches Width.
-  // If Encoding is set, also checks that the optional
-  // encoding.
-  bool isTypeFloat(unsigned Width = 0,
-                   std::optional<unsigned> Encoding = std::nullopt) const;
+  bool isAnyTypeFloat() const;
   // Returns true if this is an OpTypeInt or OpTypeFloat instruction.
-  bool isTypeIntOrFloat() const { return isTypeIntN() || isTypeFloat(); }
+  bool isTypeIntOrFloat() const { return isTypeIntN() || isAnyTypeFloat(); }
 
   friend struct DenseMapInfo<SPIRVTypeInst>;
 };
