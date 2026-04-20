@@ -67,7 +67,7 @@ public:
       return s->GetCurrentValue();
     return SymbolLocatorSymStore::GetSystemDefaultCachePath();
   }
-  
+
   uint64_t GetTimeout() const {
     const uint32_t idx = ePropertyTimeout;
     return GetPropertyAtIndexAs<uint64_t>(
