@@ -265,6 +265,8 @@ define <4 x float> @vfadd_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32
 define <4 x float> @vfsub_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vfsub_v4f32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfsub.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.fsub.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m, i32 0)
   ret <4 x float> %s
@@ -273,6 +275,8 @@ define <4 x float> @vfsub_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x 
 define <4 x float> @vfsub_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32 %evl) {
 ; CHECK-LABEL: vfsub_v4f32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfsub.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.fsub.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x float> %s
