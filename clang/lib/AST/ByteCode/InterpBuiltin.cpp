@@ -2838,7 +2838,7 @@ static bool interp__builtin_ia32_dbpsadbw(InterpState &S, CodePtr OpPC,
   // Phase 1: Shuffle Src2 using all four 2-bit fields of imm8.
   // Within each 128-bit lane, for group j (0..3), select a 4-byte block
   // from Src2 based on bits [2*j+1:2*j] of imm8.
-  uint8_t Shuffled[64]; // max 512-bit = 64 bytes
+  SmallVector<uint8_t, 64> Shuffled(SourceLen);
   for (unsigned I = 0; I < SourceLen; I += LaneSize) {
     for (unsigned J = 0; J < 4; ++J) {
       unsigned Part = (Imm >> (2 * J)) & 3;
@@ -2855,7 +2855,6 @@ static bool interp__builtin_ia32_dbpsadbw(InterpState &S, CodePtr OpPC,
   // For every group of 4 output u16 values, compute absolute differences
   // using overlapping windows into Src1 and the shuffled array.
   unsigned Size = SourceLen / 2; // number of output u16 elements
-  unsigned DstIdx = 0;
   for (unsigned I = 0; I < Size; I += 4) {
     unsigned Sad[4] = {0, 0, 0, 0};
     for (unsigned J = 0; J < 4; ++J) {
@@ -2875,7 +2874,7 @@ static bool interp__builtin_ia32_dbpsadbw(InterpState &S, CodePtr OpPC,
     }
     for (unsigned R = 0; R < 4; ++R) {
       INT_TYPE_SWITCH_NO_BOOL(DestElemT, {
-        Dst.elem<T>(DstIdx++) =
+        Dst.elem<T>(I + R) =
             static_cast<T>(APSInt(APInt(16, Sad[R]), DestUnsigned));
       });
     }
