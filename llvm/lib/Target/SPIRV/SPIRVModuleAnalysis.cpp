@@ -965,7 +965,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageImageArrayDynamicIndexing,
                     Capability::DerivativeControl, Capability::MinLod,
                     Capability::ImageQuery, Capability::ImageGatherExtended,
-                    Capability::Addresses, Capability::VulkanMemoryModelKHR});
+                    Capability::Addresses, Capability::VulkanMemoryModelKHR,
+                    Capability::StorageImageExtendedFormats});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
