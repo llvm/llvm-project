@@ -21,6 +21,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/RISCVAttributes.h"
 
 using namespace llvm;
 
@@ -47,6 +48,10 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
     ArchString = InitialArchString;
     getStreamer().setMappingSymbolArch(ArchString);
   }
+
+  // Give the backend a pointer to this ELF streamer so it can look up the
+  // per-fragment ISA mapping symbol when recording R_RISCV_RELAX relocations.
+  MAB.setELFStreamer(&getStreamer());
 }
 
 RISCVELFStreamer::RISCVELFStreamer(MCContext &C,
@@ -91,6 +96,10 @@ void RISCVTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
 void RISCVTargetELFStreamer::emitTextAttribute(unsigned Attribute,
                                                StringRef String) {
   getStreamer().setAttributeItem(Attribute, String, /*OverwriteExisting=*/true);
+
+  // Track arch for emitting R_RISCV_RELAX with correct ISA string.
+  if (Attribute == RISCVAttrs::ARCH)
+    setArchString(String);
 }
 
 void RISCVTargetELFStreamer::emitIntTextAttribute(unsigned Attribute,
@@ -175,6 +184,9 @@ void RISCVELFStreamer::reset() {
   MappingSymbolArch.clear();
   LastEmittedArch.clear();
   LastEmittedArchInSection.clear();
+  CurrentISARelaxSym = nullptr;
+  FragmentISASym.clear();
+  LastISARelaxSymInSection.clear();
   // Call target streamer reset last: it may call setMappingSymbolArch to
   // re-seed the initial ISA after our state has been cleared.
   static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
@@ -198,21 +210,24 @@ void RISCVELFStreamer::emitInstructionsMappingSymbol() {
   bool NeedSymbol =
       LastEMS != EMS_Instructions || LastEmittedArch != MappingSymbolArch;
   if (NeedSymbol) {
-    if (MappingSymbolArch.empty())
+    if (MappingSymbolArch.empty()) {
       emitMappingSymbol("$x");
-    else
-      emitMappingSymbol("$x" + MappingSymbolArch);
+      CurrentISARelaxSym = nullptr;
+    } else {
+      CurrentISARelaxSym = emitMappingSymbol("$x" + MappingSymbolArch);
+    }
     LastEmittedArch = MappingSymbolArch;
   }
   LastEMS = EMS_Instructions;
 }
 
-void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
+MCSymbol *RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
   auto *Symbol =
       static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
   emitLabel(Symbol);
   Symbol->setType(ELF::STT_NOTYPE);
   Symbol->setBinding(ELF::STB_LOCAL);
+  return Symbol;
 }
 
 void RISCVELFStreamer::setMappingSymbolArch(StringRef Arch) {
@@ -228,9 +243,11 @@ void RISCVELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   const MCSection *Prev = getPreviousSection().first;
   LastMappingSymbols[Prev] = LastEMS;
   LastEmittedArchInSection[Prev] = LastEmittedArch;
+  LastISARelaxSymInSection[Prev] = CurrentISARelaxSym;
   LastEMS = LastMappingSymbols.lookup(Section);
   auto It = LastEmittedArchInSection.find(Section);
   LastEmittedArch = It != LastEmittedArchInSection.end() ? It->second : "";
+  CurrentISARelaxSym = LastISARelaxSymInSection.lookup(Section);
 
   MCELFStreamer::changeSection(Section, Subsection);
 }
@@ -238,7 +255,16 @@ void RISCVELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 void RISCVELFStreamer::emitInstruction(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
   emitInstructionsMappingSymbol();
+
+  MCFragment *PreFrag = getCurrentFragment();
   MCELFStreamer::emitInstruction(Inst, STI);
+  MCFragment *PostFrag = getCurrentFragment();
+
+  if (CurrentISARelaxSym) {
+    FragmentISASym[PreFrag] = CurrentISARelaxSym;
+    if (PostFrag != PreFrag)
+      FragmentISASym[PostFrag] = CurrentISARelaxSym;
+  }
 }
 
 void RISCVELFStreamer::emitBytes(StringRef Data) {
