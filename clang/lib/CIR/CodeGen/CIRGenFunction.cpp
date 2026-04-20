@@ -623,6 +623,10 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
     // FIXME(cir): should we clearInsertionPoint? breaks many testcases
     popCleanupBlocks(prologueCleanupDepth);
   }
+
+  assert(deferredConditionalCleanupStack.empty() &&
+         "deferred conditional cleanups were not consumed by a "
+         "FullExprCleanupScope");
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
