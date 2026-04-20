@@ -291,6 +291,10 @@ Changes in existing checks
   string constructor calls when the string class constructor has a default
   allocator argument.
 
+- Improved :doc:`bugprone-stringview-nullptr
+  <clang-tidy/checks/bugprone/stringview-nullptr>` to flag more subtle
+  cases where a string view is initialized from a ``nullptr``.
+
 - Improved :doc:`bugprone-throwing-static-initialization
   <clang-tidy/checks/bugprone/throwing-static-initialization>` check by adding
   the `AllowedTypes` option. With this option it is possible to exclude

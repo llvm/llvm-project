@@ -13,10 +13,6 @@ The single-argument ``const CharT*`` constructor does not check for the null
 case before dereferencing its input. The standard is slated to add an
 explicitly-deleted overload to catch some of these cases: wg21.link/p2166
 
-To catch the additional cases of ``NULL`` (which expands to ``__null``) and
-``0``, first run the ``modernize-use-nullptr`` check to convert the callers to
-``nullptr``.
-
 .. code-block:: c++
 
   std::string_view sv = nullptr;
