@@ -451,7 +451,7 @@ define void @srd(ptr %a, i32 %b, i64 %c) {
 ; RV32I-NEXT:    slli a1, a1, 3
 ; RV32I-NEXT:    sltu a2, a4, a2
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    add a2, a3, a2
+; RV32I-NEXT:    or a2, a3, a2
 ; RV32I-NEXT:    sw a4, 0(a0)
 ; RV32I-NEXT:    sw a2, 4(a0)
 ; RV32I-NEXT:    ret
@@ -462,7 +462,7 @@ define void @srd(ptr %a, i32 %b, i64 %c) {
 ; RV32IZBA-NEXT:    add a3, a3, a3
 ; RV32IZBA-NEXT:    sh3add a0, a1, a0
 ; RV32IZBA-NEXT:    sltu a1, a4, a2
-; RV32IZBA-NEXT:    add a1, a3, a1
+; RV32IZBA-NEXT:    or a1, a3, a1
 ; RV32IZBA-NEXT:    sw a4, 0(a0)
 ; RV32IZBA-NEXT:    sw a1, 4(a0)
 ; RV32IZBA-NEXT:    ret
@@ -473,7 +473,7 @@ define void @srd(ptr %a, i32 %b, i64 %c) {
 ; RV32IZBAXQCISLS-NEXT:    add a3, a3, a3
 ; RV32IZBAXQCISLS-NEXT:    sh3add a0, a1, a0
 ; RV32IZBAXQCISLS-NEXT:    sltu a1, a4, a2
-; RV32IZBAXQCISLS-NEXT:    add a1, a3, a1
+; RV32IZBAXQCISLS-NEXT:    or a1, a3, a1
 ; RV32IZBAXQCISLS-NEXT:    sw a4, 0(a0)
 ; RV32IZBAXQCISLS-NEXT:    sw a1, 4(a0)
 ; RV32IZBAXQCISLS-NEXT:    ret

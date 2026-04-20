@@ -187,6 +187,8 @@ def err_drv_incompatible_unwindlib : Error<
   "--rtlib=libgcc requires --unwindlib=libgcc">;
 def err_drv_incompatible_options : Error<
   "the combination of '%0' and '%1' is incompatible">;
+def err_drv_invalid_cstdlib_name : Error<
+  "invalid C library name in argument '%0'">;
 def err_drv_invalid_stdlib_name : Error<
   "invalid library name in argument '%0'">;
 def err_drv_invalid_output_with_multiple_archs : Error<
@@ -490,8 +492,8 @@ def warn_drv_clang_unsupported : Warning<
 def warn_drv_deprecated_arg : Warning<
   "argument '%0' is deprecated%select{|, use '%2' instead}1">, InGroup<Deprecated>;
 def warn_drv_deprecated_arg_ofast : Warning<
-  "argument '-Ofast' is deprecated; use '-O3 -ffast-math' for the same behavior,"
-  " or '-O3' to enable only conforming optimizations">,
+  "argument '-Ofast' is deprecated; use '-O3' to enable only conforming optimizations, "
+  "or consult the documentation for the same behavior">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_arg_ofast_for_flang : Warning<
   "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays -fno-protect-parens' for the same behavior,"
@@ -622,6 +624,17 @@ def remark_using_modules_manifest : Remark<
   InGroup<ModulesDriver>;
 def err_modules_manifest_failed_parse : Error<
   "failure while parsing standard modules manifest: '%0'">;
+def err_default_modules_cache_not_available : Error<
+  "unable to determine the default -fmodules-cache-path. Please specify it "
+  "explicitly using -fmodules-cache-path or the CLANG_MODULE_CACHE_PATH "
+  "environment variable">;
+def err_dependency_scan_failed : Error<
+  "failed to perform dependency scan">;
+def err_modules_driver_named_module_redefinition : Error<
+  "duplicate definitions of C++20 named module '%0' in '%1' and '%2'">;
+def remark_printing_module_graph : Remark<
+  "printing module dependency graph">,
+  InGroup<ModulesDriver>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -860,6 +873,9 @@ def err_drv_hlsl_bad_shader_unsupported : Error<
 def warn_drv_dxc_missing_dxv : Warning<
   "dxv not found; resulting DXIL will not be validated or signed for use in "
   "release environment">, InGroup<DXILValidation>;
+def warn_drv_dxc_missing_spirv_val : Warning<
+  "spirv-val not found; resulting SPIR-V will not be validated">,
+  InGroup<SPIRVValidation>;
 
 def err_drv_invalid_range_dxil_validator_version : Error<
   "invalid validator version : %0; validator version must be less than or "

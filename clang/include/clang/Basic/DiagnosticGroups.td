@@ -176,6 +176,9 @@ def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
   DiagGroup<"implicit-conversion-floating-point-to-bool">;
 def ObjCLiteralConversion : DiagGroup<"objc-literal-conversion">;
+def NonportableIncludePathSeparator : DiagGroup<"nonportable-include-path-separator">;
+def NonportableIncludePath : DiagGroup<"nonportable-include-path",
+                                       [NonportableIncludePathSeparator]>;
 def MacroRedefined : DiagGroup<"macro-redefined">;
 def BuiltinMacroRedefined : DiagGroup<"builtin-macro-redefined">;
 def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
@@ -270,6 +273,7 @@ def UnguardedAvailability : DiagGroup<"unguarded-availability",
 def : DiagGroup<"partial-availability", [UnguardedAvailability]>;
 def DeprecatedDynamicExceptionSpec
     : DiagGroup<"deprecated-dynamic-exception-spec">;
+def HipDeprecatedBuiltins : DiagGroup<"hip-deprecated-builtins">;
 def DeprecatedBuiltins : DiagGroup<"deprecated-builtins">;
 def DeprecatedImplementations :DiagGroup<"deprecated-implementations">;
 def DeprecatedIncrementBool : DiagGroup<"deprecated-increment-bool">;
@@ -595,6 +599,19 @@ This may contain false-positives, e.g. when the borrowed storage is potentially 
   }];
 }
 
+def LifetimeSafetyDanglingGlobal : DiagGroup<"lifetime-safety-dangling-global"> {
+  code Documentation = [{
+Warning to detect dangling global references.
+  }];
+}
+
+def LifetimeSafetyDanglingGlobalMoved : DiagGroup<"lifetime-safety-dangling-global-moved"> {
+  code Documentation = [{
+Warning to detect dangling global references.
+This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at function exit.
+  }];
+}
+
 def LifetimeSafetyInvalidation : DiagGroup<"lifetime-safety-invalidation"> {
   code Documentation = [{
 Warning to detect invalidation of references.
@@ -604,11 +621,14 @@ Warning to detect invalidation of references.
 def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyUseAfterScope,
                                          LifetimeSafetyReturnStackAddr,
-                                         LifetimeSafetyDanglingField]>;
+                                         LifetimeSafetyDanglingField,
+                                         LifetimeSafetyDanglingGlobal]>;
+
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     [LifetimeSafetyUseAfterScopeMoved,
                                     LifetimeSafetyReturnStackAddrMoved,
                                     LifetimeSafetyDanglingFieldMoved,
+                                    LifetimeSafetyDanglingGlobal,
                                     LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
@@ -1142,7 +1162,9 @@ def UnusedValue : DiagGroup<"unused-value", [UnusedComparison, UnusedResult,
 def UnusedConstVariable : DiagGroup<"unused-const-variable">;
 def UnusedVariable : DiagGroup<"unused-variable",
                                [UnusedConstVariable]>;
-def UnusedButSetVariable : DiagGroup<"unused-but-set-variable">;
+def UnusedButSetGlobal : DiagGroup<"unused-but-set-global">;
+def UnusedButSetVariable
+    : DiagGroup<"unused-but-set-variable", [UnusedButSetGlobal]>;
 def UnusedLocalTypedef : DiagGroup<"unused-local-typedef">;
 def UnusedPropertyIvar :  DiagGroup<"unused-property-ivar">;
 def UnusedGetterReturnValue : DiagGroup<"unused-getter-return-value">;
@@ -1782,6 +1804,7 @@ def BoundsSafetyCountedByEltTyUnknownSize :
 
 // A group for cross translation unit static analysis related warnings.
 def CrossTU : DiagGroup<"ctu">;
+def CrossTURemarks : DiagGroup<"ctu-remarks">;
 
 def CTADMaybeUnsupported : DiagGroup<"ctad-maybe-unsupported">;
 
@@ -1853,8 +1876,14 @@ def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
 // Warning for implicit resource bindings.
 def HLSLImplicitBinding : DiagGroup<"hlsl-implicit-binding">;
 
+// Warning for explicit resource bindings.
+def HLSLExplicitBinding : DiagGroup<"hlsl-explicit-binding">;
+
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
+
+// Warnings for SPIRV validation
+def SPIRVValidation : DiagGroup<"spirv-validation">;
 
 // Warning for HLSL API availability
 def HLSLAvailability : DiagGroup<"hlsl-availability">;
@@ -1888,6 +1917,9 @@ def BitIntExtension : DiagGroup<"bit-int-extension">;
 // Warnings about misuse of ExtractAPI options.
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 
+// Warnings related to the "Scalable Static Analysis Framework" - SSAF.
+def ScalableStaticAnalysisFramework : DiagGroup<"scalable-static-analysis-framework">;
+
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
 def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
@@ -1903,3 +1935,6 @@ def TrivialAutoVarInit : DiagGroup<"trivial-auto-var-init">;
 
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;
+
+// Warnings about unguarded usages of AMDGPU target specific constructs
+def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;

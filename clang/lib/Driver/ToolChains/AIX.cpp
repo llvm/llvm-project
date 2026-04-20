@@ -212,7 +212,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // language link invocations. This has to come before AddLinkerInputs as the
   // implied option needs to precede any other '-bcdtors' settings or
   // '-bnocdtors' that '-Wl' might forward.
-  CmdArgs.push_back("-bcdtors:all:0:s");
+  CmdArgs.push_back("-bcdtors:mbr:0:s");
 
   if (Args.hasArg(options::OPT_rpath)) {
     for (const auto &bopt : Args.getAllArgValues(options::OPT_b))
@@ -310,6 +310,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           // Already diagnosed.
           break;
         }
+        // libpthreads is required for -fopenmp.
+        CmdArgs.push_back("-lpthreads");
       }
 
       // Support POSIX threads if "-pthreads" or "-pthread" is present.

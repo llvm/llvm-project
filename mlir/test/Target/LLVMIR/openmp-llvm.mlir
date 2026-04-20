@@ -375,7 +375,7 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // CHECK: %struct.ident_t = type
 // CHECK: @[[$loc:.*]] = private unnamed_addr constant {{.*}} c";unknown;unknown;{{[0-9]+}};{{[0-9]+}};;\00"
-// CHECK: @[[$loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$loc]] {{.*}}
+// CHECK: @{{.*}} = private unnamed_addr constant %struct.ident_t {{.*}} @[[$loc]] {{.*}}
 
 // CHECK-LABEL: @wsloop_simple
 llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
@@ -388,7 +388,7 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
         // The form of the emitted IR is controlled by OpenMPIRBuilder and
         // tested there. Just check that the right functions are called.
         // CHECK: call i32 @__kmpc_global_thread_num
-        // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$loc_struct]],
+        // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$loc_struct:[0-9]+]],
         %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
         %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
         llvm.store %3, %4 : f32, !llvm.ptr
@@ -3589,3 +3589,37 @@ llvm.func @nested_task_with_deps() {
 
 // CHECK:         ret void
 // CHECK:       }
+
+llvm.func @task_affinity_plain(%arr: !llvm.ptr {llvm.nocapture}) {
+  %len = llvm.mlir.constant(4 : i64) : i64
+
+  omp.parallel {
+    omp.single {
+      %ae = omp.affinity_entry %arr, %len
+        : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+
+      omp.task affinity(%ae : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define internal void @task_affinity_plain
+// CHECK: [[BASE:%.*]] = load ptr, ptr %gep_, align 8
+// CHECK: [[AFFLIST:%.*]] = alloca { i64, i64, i32 }, i64 1, align 8
+// CHECK: [[ENTRY:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr [[AFFLIST]], i64 0
+// addr
+// CHECK: [[ADDRI64:%.*]] = ptrtoint ptr [[BASE]] to i64
+// CHECK: [[ADDRGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 0
+// CHECK: store i64 [[ADDRI64]], ptr [[ADDRGEP]]
+// len
+// CHECK: [[LENGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 1
+// CHECK: store i64 4, ptr [[LENGEP]]
+// flags is always 0
+// CHECK: [[FLAGGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 2
+// CHECK: store i32 0, ptr [[FLAGGEP]]
+// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity{{.*}}i32 1, ptr [[AFFLIST]]

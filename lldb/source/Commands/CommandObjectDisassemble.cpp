@@ -254,12 +254,12 @@ CommandObjectDisassemble::CheckRangeSize(std::vector<AddressRange> ranges,
     return ranges;
 
   StreamString msg;
-  msg << "Not disassembling " << what << " because it is very large ";
+  msg << "not disassembling " << what << " because it is very large ";
   for (const AddressRange &r : ranges)
     r.Dump(&msg, &GetTarget(), Address::DumpStyleLoadAddress,
            Address::DumpStyleFileAddress);
   msg << ". To disassemble specify an instruction count limit, start/stop "
-         "addresses or use the --force option.";
+         "addresses or use the --force option";
   return llvm::createStringError(msg.GetString());
 }
 
@@ -498,8 +498,8 @@ void CommandObjectDisassemble::DoExecute(Args &command,
     return;
   } else if (flavor_string != nullptr && !disassembler->FlavorValidForArchSpec(
                                              m_options.arch, flavor_string))
-    result.AppendWarningWithFormat(
-        "invalid disassembler flavor \"%s\", using default.\n", flavor_string);
+    result.AppendWarningWithFormatv(
+        "invalid disassembler flavor \"{0}\", using default", flavor_string);
 
   result.SetStatus(eReturnStatusSuccessFinishResult);
 

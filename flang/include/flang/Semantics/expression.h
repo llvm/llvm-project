@@ -169,6 +169,7 @@ public:
   MaybeExpr Analyze(const parser::DataStmtValue &);
   MaybeExpr Analyze(const parser::AllocateObject &);
   MaybeExpr Analyze(const parser::PointerObject &);
+  MaybeExpr Analyze(const parser::ConditionalExpr &);
 
   template <typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
     return Analyze(x.value());
@@ -377,7 +378,8 @@ private:
       const AdjustActuals &, bool isSubroutine, SymbolVector &&tried,
       bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals,
-      bool isSubroutine, ActualArguments &, const SymbolVector &);
+      bool isSubroutine, const ActualArguments &, const SymbolVector &,
+      const AdjustActuals &);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);
   std::optional<CalleeAndArguments> GetCalleeAndArguments(const parser::Name &,

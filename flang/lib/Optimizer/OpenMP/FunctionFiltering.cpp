@@ -309,6 +309,8 @@ private:
       // Variables unused by the device.
       targetOp.getDependVarsMutable().clear();
       targetOp.setDependKindsAttr(nullptr);
+      targetOp.getDependIteratedMutable().clear();
+      targetOp.setDependIteratedKindsAttr(nullptr);
       targetOp.getDeviceMutable().clear();
       targetOp.getIfExprMutable().clear();
 

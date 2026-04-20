@@ -286,8 +286,22 @@ void AggExprEmitter::withReturnValueSlot(
   // We need to always provide our own temporary if destruction is required.
   // Otherwise, EmitCall will emit its own, notice that it's "unused", and end
   // its lifetime before we have the chance to emit a proper destructor call.
+  //
+  // We also need a temporary if the destination is in a different address space
+  // from the alloca AS, to avoid an invalid addrspacecast on the sret pointer.
+  // Look through addrspacecasts to avoid unnecessary temps when the
+  // destination is already in the alloca AS.
+  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(
+      CGF.CGM.getASTAllocaAddressSpace());
+  bool DestASMismatch = !Dest.isIgnored() &&
+                        RetTy.isTriviallyCopyableType(CGF.getContext()) &&
+                        Dest.getAddress()
+                                .getBasePointer()
+                                ->stripPointerCasts()
+                                ->getType()
+                                ->getPointerAddressSpace() != SRetAS;
   bool UseTemp = Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
-                 (RequiresDestruction && Dest.isIgnored());
+                 (RequiresDestruction && Dest.isIgnored()) || DestASMismatch;
 
   Address RetAddr = Address::invalid();
 
@@ -295,6 +309,13 @@ void AggExprEmitter::withReturnValueSlot(
   llvm::IntrinsicInst *LifetimeStartInst = nullptr;
   if (!UseTemp) {
     RetAddr = Dest.getAddress();
+    if (RetAddr.isValid() && RetAddr.getAddressSpace() != SRetAS) {
+      llvm::Type *SRetPtrTy =
+          llvm::PointerType::get(CGF.getLLVMContext(), SRetAS);
+      RetAddr = RetAddr.withPointer(
+          CGF.performAddrSpaceCast(RetAddr.getBasePointer(), SRetPtrTy),
+          RetAddr.isKnownNonNull());
+    }
   } else {
     RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
     if (CGF.EmitLifetimeStart(RetAddr.getBasePointer())) {
@@ -694,6 +715,9 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
         Builder.CreatePHI(element->getType(), 2, "arrayinit.cur");
     currentElement->addIncoming(element, entryBB);
 
+    if (CGF.CGM.shouldEmitConvergenceTokens())
+      CGF.ConvergenceTokenStack.push_back(CGF.emitConvergenceLoopToken(bodyBB));
+
     // Emit the actual filler expression.
     {
       // C++1z [class.temporary]p5:
@@ -724,6 +748,9 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     llvm::BasicBlock *endBB = CGF.createBasicBlock("arrayinit.end");
     Builder.CreateCondBr(done, endBB, bodyBB);
     currentElement->addIncoming(nextElement, Builder.GetInsertBlock());
+
+    if (CGF.CGM.shouldEmitConvergenceTokens())
+      CGF.ConvergenceTokenStack.pop_back();
 
     CGF.EmitBlock(endBB);
   }
@@ -1966,6 +1993,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
   llvm::Value *element =
       Builder.CreateInBoundsGEP(llvmElementType, begin, index);
 
+  if (CGF.CGM.shouldEmitConvergenceTokens())
+    CGF.ConvergenceTokenStack.push_back(CGF.emitConvergenceLoopToken(bodyBB));
+
   // Prepare for a cleanup.
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   EHScopeStack::stable_iterator cleanup;
@@ -2012,6 +2042,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
       "arrayinit.done");
   llvm::BasicBlock *endBB = CGF.createBasicBlock("arrayinit.end");
   Builder.CreateCondBr(done, endBB, bodyBB);
+
+  if (CGF.CGM.shouldEmitConvergenceTokens())
+    CGF.ConvergenceTokenStack.pop_back();
 
   CGF.EmitBlock(endBB);
 

@@ -193,14 +193,17 @@ static void buildMatmulOp(OpBuilder &b, OperationState &state,
                           ValueRange inputs, ValueRange outputs,
                           ArrayRef<NamedAttribute> attributes,
                           RegionBuilderFn regionBuilder,
-                          ArrayRef<AffineMap> indexingMaps) {
-  // Initialize indexingMaps attribute, for MatmulOp.
-  SmallVector<Attribute, 3> indexingMapsAttrVal;
-  indexingMapsAttrVal =
-      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
-        return AffineMapAttr::get(map);
-      });
-  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+                          ArrayRef<AffineMap> defaultIndexingMaps) {
+  // If indexing maps are not provided, apply the default ones.
+  if (none_of(attributes, [](NamedAttribute attr) {
+        return attr.getName() == "indexing_maps";
+      })) {
+    SmallVector<Attribute, 3> indexingMapsAttrVal;
+    indexingMapsAttrVal = llvm::map_to_vector(
+        defaultIndexingMaps,
+        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+    state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  }
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
 }
@@ -210,14 +213,17 @@ static void buildBatchMatmulOp(OpBuilder &b, OperationState &state,
                                ValueRange inputs, ValueRange outputs,
                                ArrayRef<NamedAttribute> attributes,
                                RegionBuilderFn regionBuilder,
-                               ArrayRef<AffineMap> indexingMaps) {
-  // Initialize indexingMaps attribute, for BatchMatmulOp.
-  SmallVector<Attribute, 4> indexingMapsAttrVal;
-  indexingMapsAttrVal =
-      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
-        return AffineMapAttr::get(map);
-      });
-  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+                               ArrayRef<AffineMap> defaultIndexingMaps) {
+  // If indexing maps are not provided, apply the default ones.
+  if (none_of(attributes, [](NamedAttribute attr) {
+        return attr.getName() == "indexing_maps";
+      })) {
+    SmallVector<Attribute, 4> indexingMapsAttrVal;
+    indexingMapsAttrVal = llvm::map_to_vector(
+        defaultIndexingMaps,
+        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+    state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  }
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
 }
@@ -613,17 +619,10 @@ public:
   // Build the ternary functions defined by OpDSL.
   Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1, Value arg2,
                        function_ref<InFlightDiagnostic()> emitError = {}) {
-    bool headBool =
-        isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
-    bool tailFloatingPoint =
-        isFloatingPoint(arg0) && isFloatingPoint(arg1) && isFloatingPoint(arg2);
-    bool tailInteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg2);
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     switch (ternaryFn) {
     case TernaryFn::select:
-      if (!headBool && !(tailFloatingPoint || tailInteger))
-        llvm_unreachable("unsupported non numeric type");
       return arith::SelectOp::create(builder, arg0.getLoc(), arg0, arg1, arg2);
     }
     if (emitError) {
@@ -1883,6 +1882,21 @@ void ReduceOp::print(OpAsmPrinter &p) {
 
 LogicalResult ReduceOp::verify() {
   ArrayRef<int64_t> dimensionsRef = getDimensions();
+
+  // The ReduceOp uses `SameVariadicOperandSize`, which requires equal numbers
+  // of inputs and inits. Detect a mismatch early: when they differ, the
+  // ODS-generated getInputs()/getInits() accessors compute each group's size
+  // via floordiv of the total operand count, producing incorrect slices that
+  // would cause out-of-bounds accesses below.
+  if (getInputs().size() != static_cast<size_t>(getNumDpsInputs()))
+    return emitOpError()
+           << "expected equal number of inputs and outputs (required by "
+              "SameVariadicOperandSize), got "
+           << getNumDpsInputs() << " input(s) and " << getNumDpsInits()
+           << " output(s)";
+
+  if (getInputs().empty())
+    return emitOpError() << "expected at least one input";
 
   for (int64_t i = 1; i < getNumDpsInputs(); ++i) {
     if (llvm::cast<ShapedType>(getInputs()[i].getType()).getShape() !=
@@ -5010,8 +5024,8 @@ getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
                                .getShape()
                                .take_back(mixedTiles.size()),
                            mixedTiles)) {
-    int64_t shape = std::get<0>(it);
-    if (shape == ShapedType::kDynamic) {
+    int64_t dimSize = std::get<0>(it);
+    if (dimSize == ShapedType::kDynamic) {
       newMixedTileSizes.push_back(std::get<1>(it));
       continue;
     }
@@ -5023,10 +5037,10 @@ getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
       // Already a constant
       newMixedTileSizes.push_back(tile);
     } else {
-      assert(getConstantIntValue(tile).value() == shape &&
+      assert(getConstantIntValue(tile).value() == dimSize &&
              "tile size and dim size don't match!");
       newMixedTileSizes.push_back(
-          (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
+          (rewriter.getIntegerAttr(rewriter.getIndexType(), dimSize)));
     }
   }
 
@@ -5041,8 +5055,9 @@ reifyResultShapesImpl(OpTy op, OpBuilder &builder,
                 "applies to only pack or unpack operations");
   int64_t destRank = op.getDestRank();
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(destRank));
-  reifiedReturnShapes[0] =
-      tensor::getMixedSizes(builder, op.getLoc(), op.getDest());
+  for (auto dim : llvm::seq<int64_t>(0, destRank))
+    reifiedReturnShapes[0][dim] =
+        createFoldedDimOp(builder, op.getLoc(), op.getDest(), dim);
   return success();
 }
 
@@ -5112,7 +5127,9 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
 
   // Return true if we have a zero-value tile.
   auto hasZeros = [&](ArrayRef<OpFoldResult> tiles) {
-    return llvm::any_of(tiles, isZeroInteger);
+    return llvm::any_of(tiles, [](OpFoldResult tile) {
+      return isa<Attribute>(tile) && isZeroInteger(tile);
+    });
   };
 
   // Verify that the source and destination are ranked types.
@@ -5178,21 +5195,23 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   SmallVector<int64_t> expectedPackedShape = PackOp::inferPackedShape(
       unpackedType.getShape(), packOrUnPack.getStaticTiles(),
       packOrUnPack.getInnerDimsPos(), packOrUnPack.getOuterDimsPerm());
-  if (!llvm::all_of(
-          llvm::zip(packedType.getShape().take_back(mixedTiles.size()),
-                    mixedTiles),
-          [](std::tuple<int64_t, OpFoldResult> it) {
-            int64_t shape = std::get<0>(it);
-            if (Attribute attr =
-                    llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
-              IntegerAttr intAttr = dyn_cast_or_null<IntegerAttr>(attr);
-              int64_t staticTileSize = intAttr.getValue().getSExtValue();
-              return shape == staticTileSize;
-            }
-            return ShapedType::isDynamic(shape);
-          })) {
-    return op->emitError("mismatch in inner tile sizes specified and shaped of "
-                         "tiled dimension in the packed type");
+  for (auto it : llvm::enumerate(llvm::zip(
+           packedType.getShape().take_back(mixedTiles.size()), mixedTiles))) {
+    int64_t dimSize = std::get<0>(it.value());
+    if (Attribute attr =
+            llvm::dyn_cast_if_present<Attribute>(std::get<1>(it.value()))) {
+      IntegerAttr intAttr = dyn_cast_or_null<IntegerAttr>(attr);
+      int64_t staticTileSize = intAttr.getValue().getSExtValue();
+      if (dimSize != staticTileSize)
+        return op->emitError(
+                   "mismatch in inner tile sizes specified and shaped of "
+                   "tiled dimension in the packed type at index ")
+               << it.index() << ": got " << dimSize << " != " << staticTileSize;
+    } else if (!ShapedType::isDynamic(dimSize)) {
+      return op->emitError("mismatch in inner tile sizes specified at index ")
+             << it.index() << ": got static shape " << dimSize
+             << " but dynamic tile size";
+    }
   }
   if (failed(
           verifyCompatibleShape(expectedPackedShape, packedType.getShape()))) {
@@ -5440,8 +5459,6 @@ void PackOp::build(OpBuilder &builder, OperationState &state, Value source,
 LogicalResult
 PackOp::reifyResultShapes(OpBuilder &builder,
                           ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  if (!hasPureTensorSemantics())
-    return failure();
   return reifyResultShapesImpl(*this, builder, reifiedReturnShapes);
 }
 
@@ -5498,13 +5515,15 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
     if (ShapedType::isDynamic(inputShape[pos]))
       continue;
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
-
     if (!constantTile) {
       if (ShapedType::isStatic(outputTileSizes[pos]) &&
           (inputShape[pos] % outputTileSizes[pos] != 0))
         return true;
-    } else if (inputShape[pos] % (*constantTile) != 0) {
-      return true;
+    } else {
+      assert(*constantTile != 0 && "static tile size can't be zero");
+      if (inputShape[pos] % (*constantTile) != 0) {
+        return true;
+      }
     }
   }
   return false;
@@ -5530,6 +5549,7 @@ bool PackOp::requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
     if (!constantTile)
       return true;
+    assert(*constantTile != 0 && "static tile size can't be zero");
     if (inputShape[pos] % (*constantTile) != 0)
       return true;
   }
@@ -5999,6 +6019,8 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
     // Get the updated mixed-tile-sizes attribute.
     SmallVector<OpFoldResult> newMixedTileSizes =
         getNewMixedTileSizes(rewriter, newResultTypes[0], op.getMixedTiles());
+    if (llvm::any_of(newMixedTileSizes, isZeroInteger))
+      return failure();
 
     // Clone op.
     // TODO: Strictly speaking, discardable attributes should be _discarded_ at
@@ -6164,8 +6186,6 @@ void UnPackOp::print(OpAsmPrinter &p) {
 LogicalResult
 UnPackOp::reifyResultShapes(OpBuilder &builder,
                             ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  if (!hasPureTensorSemantics())
-    return failure();
   return reifyResultShapesImpl(*this, builder, reifiedReturnShapes);
 }
 

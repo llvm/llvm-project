@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %0 = type { i32 }
 %1 = type { i64 }
 
-define ptr @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
+define ptr @foo(ptr %p, ptr %p.last) #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -67,7 +67,7 @@ exit:
   ret ptr %v
 }
 
-define ptr @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
+define ptr @bar(ptr %p, ptr %p.last) #0 {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64

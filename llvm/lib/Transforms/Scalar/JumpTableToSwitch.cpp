@@ -181,7 +181,7 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
     // just some of the jump targets are taken (for the given profile).
     BranchWeights.push_back(FctID == 0U ? 0U
                                         : GuidToCounter.lookup_or(FctID, 0U));
-    BranchInst::Create(Tail, B);
+    UncondBrInst::Create(Tail, B);
     if (PHI)
       PHI->addIncoming(Call, B);
   }
@@ -211,11 +211,12 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
-  auto FuncToGuid = [&](const Function &Fct) {
+  auto FuncToGuid = [InLTO = this->InLTO](const Function &Fct) {
     if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
       return AssignGUIDPass::getGUID(Fct);
 
-    return Function::getGUIDAssumingExternalLinkage(getIRPGOFuncName(F, InLTO));
+    return Function::getGUIDAssumingExternalLinkage(
+        getIRPGOFuncName(Fct, InLTO));
   };
 
   for (BasicBlock &BB : make_early_inc_range(F)) {

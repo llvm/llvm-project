@@ -76,8 +76,9 @@ static_library("Host") {
       "windows/MainLoopWindows.cpp",
       "windows/PipeWindows.cpp",
       "windows/ProcessLauncherWindows.cpp",
-      "windows/PseudoConsole.cpp",
       "windows/ProcessRunLock.cpp",
+      "windows/PseudoConsole.cpp",
+      "windows/WindowsFileAction.cpp",
     ]
   } else {
     sources += [

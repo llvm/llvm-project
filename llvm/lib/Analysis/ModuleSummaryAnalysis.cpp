@@ -712,7 +712,8 @@ static void computeFunctionSummary(
   GlobalValueSummary::GVFlags Flags(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
       /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable(),
-      GlobalValueSummary::ImportKind::Definition);
+      GlobalValueSummary::ImportKind::Definition,
+      /* NoRenameOnPromotion = */ false);
   FunctionSummary::FFlags FunFlags{
       F.doesNotAccessMemory(), F.onlyReadsMemory() && !F.doesNotAccessMemory(),
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
@@ -765,7 +766,7 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
   // look for virtual function pointers.
   const DataLayout &DL = M.getDataLayout();
   if (auto *C = dyn_cast<ConstantStruct>(I)) {
-    StructType *STy = dyn_cast<StructType>(C->getType());
+    StructType *STy = C->getType();
     assert(STy);
     const StructLayout *SL = DL.getStructLayout(C->getType());
 
@@ -870,7 +871,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,
       /* Live = */ false, V.isDSOLocal(), V.canBeOmittedFromSymbolTable(),
-      GlobalValueSummary::Definition);
+      GlobalValueSummary::Definition, /* NoRenameOnPromotion = */ false);
 
   VTableFuncList VTableFuncs;
   // If splitting is not enabled, then we compute the summary information
@@ -917,7 +918,7 @@ static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   GlobalValueSummary::GVFlags Flags(
       A.getLinkage(), A.getVisibility(), NonRenamableLocal,
       /* Live = */ false, A.isDSOLocal(), A.canBeOmittedFromSymbolTable(),
-      GlobalValueSummary::Definition);
+      GlobalValueSummary::Definition, /* NoRenameOnPromotion = */ false);
   auto AS = std::make_unique<AliasSummary>(Flags);
   auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
   assert(AliaseeVI && "Alias expects aliasee summary to be available");
@@ -999,7 +1000,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
               /* NotEligibleToImport = */ true,
               /* Live = */ true,
               /* Local */ GV->isDSOLocal(), GV->canBeOmittedFromSymbolTable(),
-              GlobalValueSummary::Definition);
+              GlobalValueSummary::Definition,
+              /* NoRenameOnPromotion = */ false);
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {

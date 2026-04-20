@@ -86,26 +86,6 @@ void genOpenACCRoutineConstruct(
     AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
     const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
 
-/// Get a acc.private.recipe op for the given type or create it if it does not
-/// exist yet.
-mlir::acc::PrivateRecipeOp
-createOrGetPrivateRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
-                         mlir::Type,
-                         llvm::SmallVector<mlir::Value> &dataOperationBounds);
-
-/// Get a acc.reduction.recipe op for the given type or create it if it does not
-/// exist yet.
-mlir::acc::ReductionRecipeOp
-createOrGetReductionRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
-                           mlir::Type, mlir::acc::ReductionOperator,
-                           llvm::SmallVector<mlir::Value> &dataOperationBounds);
-
-/// Get a acc.firstprivate.recipe op for the given type or create it if it does
-/// not exist yet.
-mlir::acc::FirstprivateRecipeOp createOrGetFirstprivateRecipe(
-    fir::FirOpBuilder &, llvm::StringRef, mlir::Location, mlir::Type,
-    llvm::SmallVector<mlir::Value> &dataOperationBounds);
-
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
 void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
@@ -130,6 +110,16 @@ getCollapseSizeAndForce(const Fortran::parser::AccClauseList &);
 /// Checks whether the current insertion point is inside OpenACC loop.
 bool isInOpenACCLoop(fir::FirOpBuilder &);
 
+/// Record a DoConstruct as having been absorbed by a collapse clause.
+/// The PFT walker should skip generating a loop for it.
+void markDoConstructAsCollapsed(const Fortran::parser::DoConstruct &);
+
+/// Check whether a DoConstruct was absorbed by a collapse clause.
+bool isCollapsedDoConstruct(const Fortran::parser::DoConstruct &);
+
+/// Clear the collapsed DoConstruct tracking set.
+void clearCollapsedDoConstructs();
+
 /// Checks whether the current insertion point is inside OpenACC compute
 /// construct.
 bool isInsideOpenACCComputeConstruct(fir::FirOpBuilder &);
@@ -137,6 +127,14 @@ bool isInsideOpenACCComputeConstruct(fir::FirOpBuilder &);
 void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
 
 void genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &, mlir::Location);
+
+/// If \p targetBlock is outside the ACC region containing the current
+/// insertion point, generate the appropriate region terminator
+/// (acc.terminator or acc.yield) instead of a cross-region branch.
+/// Returns true if the exit was handled, false if no ACC region boundary
+/// is crossed.
+bool genOpenACCRegionExitBranch(fir::FirOpBuilder &, mlir::Location,
+                                mlir::Block *targetBlock);
 
 /// Generates an OpenACC loop from a do construct in order to
 /// properly capture the loop bounds, parallelism determination mode,

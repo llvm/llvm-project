@@ -86,11 +86,13 @@ static cl::opt<unsigned>
                             "when sorting profitable allocas"),
                    cl::init(4));
 
-// We support vector indices of the form (A * stride) + B
-// All parts are optional.
+// We support vector indices of the form ((A * stride) >> shift) + B
+// VarIndex is A, VarMul is stride, VarShift is shift and ConstIndex is B. All
+// parts are optional.
 struct GEPToVectorIndex {
-  Value *VarIndex = nullptr;         // defaults to 0
+  WeakTrackingVH VarIndex = nullptr; // defaults to 0
   ConstantInt *VarMul = nullptr;     // defaults to 1
+  ConstantInt *VarShift = nullptr;   // defaults to 0
   ConstantInt *ConstIndex = nullptr; // defaults to 0
   Value *Full = nullptr;
 };
@@ -421,8 +423,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
       std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(*DL);
-      if (!Size)
-        continue; // Skip dynamic allocas
+      assert(Size); // Expected to succeed on non-array alloca.
       const unsigned AllocaCost = Size->getFixedValue() * 8;
       // First, check if we have enough budget to vectorize this alloca.
       if (AllocaCost <= VectorizationBudget) {
@@ -492,6 +493,9 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
 
       if (I->second.VarMul)
         Result = B.CreateMul(Result, I->second.VarMul);
+
+      if (I->second.VarShift)
+        Result = B.CreateAShr(Result, I->second.VarShift, "", /*isExact*/ true);
     }
 
     if (I->second.ConstIndex) {
@@ -552,33 +556,64 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   if (VarOffsets.size() > 1)
     return {};
 
-  APInt IndexQuot;
-  int64_t Rem;
-  APInt::sdivrem(ConstOffset, VecElemSize, IndexQuot, Rem);
-  if (Rem != 0)
+  // We support vector indices of the form ((VarIndex * stride) >> shift) + B.
+  // IndexQuot represents B. Check that the constant offset is a multiple
+  // of the vector element size.
+  if (ConstOffset.srem(VecElemSize) != 0)
     return {};
+  APInt IndexQuot = ConstOffset.sdiv(VecElemSize);
 
   GEPToVectorIndex Result;
 
   if (!ConstOffset.isZero())
     Result.ConstIndex = ConstantInt::get(Ctx, IndexQuot.sextOrTrunc(BW));
 
+  // If there are no variable offsets, only a constant offset, then we're done.
   if (VarOffsets.empty())
     return Result;
 
+  // Scale is the stride in the (A * stride) part. Check that there is only one
+  // variable offset and extract the scale factor.
   const auto &VarOffset = VarOffsets.front();
-  APInt OffsetQuot;
-  APInt::sdivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
-  if (Rem != 0 || OffsetQuot.isZero())
+  auto ScaleOpt = VarOffset.second.tryZExtValue();
+  if (!ScaleOpt || *ScaleOpt == 0)
     return {};
 
+  uint64_t Scale = *ScaleOpt;
   Result.VarIndex = VarOffset.first;
   auto *OffsetType = dyn_cast<IntegerType>(Result.VarIndex->getType());
   if (!OffsetType)
     return {};
 
-  if (!OffsetQuot.isOne())
-    Result.VarMul = ConstantInt::get(Ctx, OffsetQuot.sextOrTrunc(BW));
+  // The vector index for the variable part is: VarIndex * Scale / VecElemSize.
+  if (Scale >= (uint64_t)VecElemSize) {
+    if (Scale % VecElemSize != 0)
+      return {};
+
+    // Scale is a multiple of VecElemSize, so the index is just: VarIndex *
+    // (Scale / VecElemSize).
+    uint64_t VarMul = Scale / VecElemSize;
+    // Only the multiplier is needed.
+    if (VarMul != 1)
+      Result.VarMul = ConstantInt::get(Ctx, APInt(BW, VarMul));
+  } else {
+    if ((uint64_t)VecElemSize % Scale != 0)
+      return {};
+
+    // VecElemSize is a multiple of Scale, so the index is just: VarIndex /
+    // (VecElemSize / Scale).
+    uint64_t Divisor = VecElemSize / Scale;
+    // The divisor must be a power of 2 so we can use a right shift.
+    if (!isPowerOf2_64(Divisor))
+      return {};
+
+    // VarIndex must be known to be divisible by that divisor.
+    KnownBits KB = computeKnownBits(VarOffset.first, DL);
+    if (KB.countMinTrailingZeros() < Log2_64(Divisor))
+      return {};
+
+    Result.VarShift = ConstantInt::get(Ctx, APInt(BW, Log2_64(Divisor)));
+  }
 
   return Result;
 }
@@ -1105,7 +1140,7 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   //
   // Insert a placeholder whenever we need the vector value at the top of a
   // basic block.
-  SmallVector<Instruction *> Placeholders;
+  SmallSetVector<Instruction *, 8> Placeholders;
   forEachWorkListItem(AA.Vector.Worklist, [&](Instruction *I) {
     BasicBlock *BB = I->getParent();
     auto GetCurVal = [&]() -> Value * {
@@ -1120,29 +1155,27 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
       IRBuilder<> Builder(I);
       auto *Placeholder = cast<Instruction>(Builder.CreateFreeze(
           PoisonValue::get(AA.Vector.Ty), "promotealloca.placeholder"));
-      Placeholders.push_back(Placeholder);
+      Placeholders.insert(Placeholder);
       return Placeholders.back();
     };
 
     Value *Result = promoteAllocaUserToVector(I, *DL, AA, VecStoreSize,
                                               ElementSize, GetCurVal);
-    if (Result)
+    // If the returned result is a placeholder, it means the instruction does
+    // not really modify the alloca. So no need to make it being available value
+    // to SSAUpdater.
+    // This will stop placeholder being cached in SSAUpdater. The cached
+    // placeholder may cause stale pointer being referenced when doing
+    // placeholder replacement.
+    if (Result && (!isa<Instruction>(Result) ||
+                   !Placeholders.contains(cast<Instruction>(Result))))
       Updater.AddAvailableValue(BB, Result);
   });
 
   // Now fixup the placeholders.
-  SmallVector<Value *> PlaceholderToNewVal(Placeholders.size());
-  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
-    Value *NewVal = Updater.GetValueInMiddleOfBlock(Placeholder->getParent());
-    PlaceholderToNewVal[Index] = NewVal;
-    Placeholder->replaceAllUsesWith(NewVal);
-  }
-  // Note: we cannot merge this loop with the previous one because it is
-  // possible that the placeholder itself can be used in the SSAUpdater. The
-  // replaceAllUsesWith doesn't replace those uses.
-  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
-    if (!Placeholder->use_empty())
-      Placeholder->replaceAllUsesWith(PlaceholderToNewVal[Index]);
+  for (Instruction *Placeholder : Placeholders) {
+    Placeholder->replaceAllUsesWith(
+        Updater.GetValueInMiddleOfBlock(Placeholder->getParent()));
     Placeholder->eraseFromParent();
   }
 

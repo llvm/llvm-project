@@ -669,6 +669,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     return;
   case Type::X86_AMXTyID:   OS << "x86_amx"; return;
   case Type::TokenTyID:     OS << "token"; return;
+  case Type::ByteTyID:
+    OS << 'b' << Ty->getByteBitWidth();
+    return;
   case Type::IntegerTyID:
     OS << 'i' << cast<IntegerType>(Ty)->getBitWidth();
     return;
@@ -1648,6 +1651,23 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
+  if (const auto *CB = dyn_cast<ConstantByte>(CV)) {
+    Type *Ty = CB->getType();
+
+    if (Ty->isVectorTy()) {
+      Out << "splat (";
+      WriterCtx.TypePrinter->print(Ty->getScalarType(), Out);
+      Out << " ";
+    }
+
+    Out << CB->getValue();
+
+    if (Ty->isVectorTy())
+      Out << ")";
+
+    return;
+  }
+
   if (const auto *CFP = dyn_cast<ConstantFP>(CV)) {
     Type *Ty = CFP->getType();
 
@@ -1773,7 +1793,8 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     // TODO: Remove this block when the UseConstant{Int,FP}ForFixedLengthSplat
     // options are removed.
     if (auto *SplatVal = CV->getSplatValue()) {
-      if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+      if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal) ||
+          isa<ConstantByte>(SplatVal)) {
         Out << "splat (";
         writeAsOperandInternal(Out, SplatVal, WriterCtx, /*PrintType=*/true);
         Out << ')';
@@ -1820,7 +1841,8 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     // options are removed.
     if (CE->getOpcode() == Instruction::ShuffleVector) {
       if (auto *SplatVal = CE->getSplatValue()) {
-        if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+        if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal) ||
+            isa<ConstantByte>(SplatVal)) {
           Out << "splat (";
           writeAsOperandInternal(Out, SplatVal, WriterCtx, /*PrintType=*/true);
           Out << ')';
@@ -3730,6 +3752,7 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   Out << ", canAutoHide: " << GVFlags.CanAutoHide;
   Out << ", importType: "
       << getImportTypeName(GlobalValueSummary::ImportKind(GVFlags.ImportType));
+  Out << ", noRenameOnPromotion: " << GVFlags.NoRenameOnPromotion;
   Out << ")";
 
   if (Summary.getSummaryKind() == GlobalValueSummary::AliasKind)
@@ -4452,15 +4475,13 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   const Value *Operand = I.getNumOperands() ? I.getOperand(0) : nullptr;
 
   // Special case conditional branches to swizzle the condition out to the front
-  if (isa<BranchInst>(I) && cast<BranchInst>(I).isConditional()) {
-    const BranchInst &BI(cast<BranchInst>(I));
+  if (const auto *BI = dyn_cast<CondBrInst>(&I)) {
     Out << ' ';
-    writeOperand(BI.getCondition(), true);
+    writeOperand(BI->getCondition(), true);
     Out << ", ";
-    writeOperand(BI.getSuccessor(0), true);
+    writeOperand(BI->getSuccessor(0), true);
     Out << ", ";
-    writeOperand(BI.getSuccessor(1), true);
-
+    writeOperand(BI->getSuccessor(1), true);
   } else if (isa<SwitchInst>(I)) {
     const SwitchInst& SI(cast<SwitchInst>(I));
     // Special case switch instruction to get formatting nice and correct.

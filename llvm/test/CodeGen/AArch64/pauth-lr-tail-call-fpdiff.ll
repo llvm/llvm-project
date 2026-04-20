@@ -66,14 +66,14 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; COMPAT-NEXT:   adrp x15, .Ltmp0
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp0
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   hint #12
 ; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
+; COMPAT-NEXT:   hint #12
 
 ; V83A-NEXT:     adrp x15, .Ltmp0
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp0
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     autia1716
 ; V83A-NEXT:     .cfi_negate_ra_state_with_pc
+; V83A-NEXT:     autia1716
 
 ; V9A-NEXT:      adrp x15, .Ltmp0
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp0
@@ -144,14 +144,14 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; COMPAT-NEXT:   adrp x15, .Ltmp1
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp1
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   hint #14
 ; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
+; COMPAT-NEXT:   hint #14
 
 ; V83A-NEXT:     adrp x15, .Ltmp1
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp1
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     autib1716
 ; V83A-NEXT:     .cfi_negate_ra_state_with_pc
+; V83A-NEXT:     autib1716
 
 ; V9A-NEXT:      adrp x15, .Ltmp1
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp1
@@ -209,14 +209,14 @@ define swifttailcc void @tail_call_no_fpdiff_a_key(ptr swiftasync %ctx) "branch-
 ; COMPAT-NEXT:   adrp x16, .Ltmp2
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp2
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   hint #29
 ; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
+; COMPAT-NEXT:   hint #29
 
 ; V83A-NEXT:     adrp x16, .Ltmp2
 ; V83A-NEXT:     add x16, x16, :lo12:.Ltmp2
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     autiasp
 ; V83A-NEXT:     .cfi_negate_ra_state_with_pc
+; V83A-NEXT:     autiasp
 
 ; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autiasppc .Ltmp2
@@ -272,14 +272,14 @@ define swifttailcc void @tail_call_no_fpdiff_b_key(ptr swiftasync %ctx) "branch-
 ; COMPAT-NEXT:   adrp x16, .Ltmp3
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp3
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   hint #31
 ; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
+; COMPAT-NEXT:   hint #31
 
 ; V83A-NEXT:     adrp x16, .Ltmp3
 ; V83A-NEXT:     add x16, x16, :lo12:.Ltmp3
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     autibsp
 ; V83A-NEXT:     .cfi_negate_ra_state_with_pc
+; V83A-NEXT:     autibsp
 
 ; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autibsppc .Ltmp3

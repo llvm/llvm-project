@@ -339,9 +339,12 @@ private:
     root->walk([&](Operation *child) {
       if (isa<transform::PatternDescriptorOpInterface>(child))
         return;
+      // Ops without the interface are assumed not to free any transform values.
       // TODO: extend this to conservatively handle operations with undeclared
       // side effects as maybe freeing the operands.
-      auto iface = cast<MemoryEffectOpInterface>(child);
+      auto iface = dyn_cast<MemoryEffectOpInterface>(child);
+      if (!iface)
+        return;
       instances.clear();
       iface.getEffectsOnResource(transform::TransformMappingResource::get(),
                                  instances);

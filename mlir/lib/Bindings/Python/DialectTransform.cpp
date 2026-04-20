@@ -11,6 +11,7 @@
 #include "Rewrite.h"
 #include "mlir-c/Dialect/Transform.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Rewrite.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/IRInterfaces.h"
@@ -45,18 +46,20 @@ public:
 
   MlirTransformResults get() const { return results; }
 
-  void setOps(PyValue &result, const nb::list &ops) {
+  void setOps(PyValue &result,
+              const nb::typed<nb::sequence, PyOperationBase> &ops) {
     std::vector<MlirOperation> opsVec;
-    opsVec.reserve(ops.size());
+    opsVec.reserve(nb::len(ops));
     for (auto op : ops) {
       opsVec.push_back(nb::cast<MlirOperation>(op));
     }
     mlirTransformResultsSetOps(results, result, opsVec.size(), opsVec.data());
   }
 
-  void setValues(PyValue &result, const nb::list &values) {
+  void setValues(PyValue &result,
+                 const nb::typed<nb::sequence, PyValue> &values) {
     std::vector<MlirValue> valuesVec;
-    valuesVec.reserve(values.size());
+    valuesVec.reserve(nb::len(values));
     for (auto item : values) {
       valuesVec.push_back(nb::cast<MlirValue>(item));
     }
@@ -64,9 +67,10 @@ public:
                                   valuesVec.data());
   }
 
-  void setParams(PyValue &result, const nb::list &params) {
+  void setParams(PyValue &result,
+                 const nb::typed<nb::sequence, PyAttribute> &params) {
     std::vector<MlirAttribute> paramsVec;
-    paramsVec.reserve(params.size());
+    paramsVec.reserve(nb::len(params));
     for (auto item : params) {
       paramsVec.push_back(nb::cast<MlirAttribute>(item));
     }
@@ -227,6 +231,104 @@ public:
 
     // Attach a FallbackModel, which calls into Python, to the named operation.
     mlirTransformOpInterfaceAttachFallbackModel(
+        ctx->get(), mlirStringRefCreate(opName.c_str(), opName.size()),
+        callbacks);
+  }
+
+  static void bindDerived(ClassTy &cls) {
+    cls.attr("attach") = classmethod(
+        [](const nb::object &cls, const nb::object &opName, nb::object target,
+           DefaultingPyMlirContext context) {
+          if (target.is_none())
+            target = cls;
+          return attach(target, nb::cast<std::string>(opName), context);
+        },
+        nb::arg("cls"), nb::arg("op_name"), nb::kw_only(),
+        nb::arg("target").none() = nb::none(),
+        nb::arg("context").none() = nb::none(),
+        "Attach the interface subclass to the given operation name.");
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// PatternDescriptorOpInterface
+//===----------------------------------------------------------------------===//
+class PyPatternDescriptorOpInterface
+    : public PyConcreteOpInterface<PyPatternDescriptorOpInterface> {
+public:
+  using PyConcreteOpInterface<
+      PyPatternDescriptorOpInterface>::PyConcreteOpInterface;
+
+  constexpr static const char *pyClassName = "PatternDescriptorOpInterface";
+  constexpr static GetTypeIDFunctionTy getInterfaceID =
+      &mlirPatternDescriptorOpInterfaceTypeID;
+
+  /// Attach a new PatternDescriptorOpInterface FallbackModel to the named
+  /// operation. The FallbackModel acts as a trampoline for callbacks on the
+  /// Python class.
+  static void attach(nb::object &target, const std::string &opName,
+                     DefaultingPyMlirContext ctx) {
+    // Prepare the callbacks that will be used by the FallbackModel.
+    MlirPatternDescriptorOpInterfaceCallbacks callbacks;
+    // Make the pointer to the Python class available to the callbacks.
+    callbacks.userData = target.ptr();
+    nb::handle(static_cast<PyObject *>(callbacks.userData)).inc_ref();
+
+    // The above ref bump is all we need as initialization, no need to run the
+    // construct callback.
+    callbacks.construct = nullptr;
+    // Upon the FallbackModel's destruction, drop the ref to the Python class.
+    callbacks.destruct = [](void *userData) {
+      nb::handle(static_cast<PyObject *>(userData)).dec_ref();
+    };
+
+    // The populatePatterns callback which calls into Python.
+    callbacks.populatePatterns =
+        [](MlirOperation op, MlirRewritePatternSet patterns, void *userData) {
+          nb::handle pyClass(static_cast<PyObject *>(userData));
+
+          auto pyPopulatePatterns =
+              nb::cast<nb::callable>(nb::getattr(pyClass, "populate_patterns"));
+
+          auto pyPatterns = PyRewritePatternSet(patterns);
+
+          // Invoke `pyClass.populate_patterns(opview(op), patterns)` as a
+          // staticmethod.
+          MlirContext ctx = mlirOperationGetContext(op);
+          PyMlirContextRef context = PyMlirContext::forContext(ctx);
+          auto opview = PyOperation::forOperation(context, op)->createOpView();
+          pyPopulatePatterns(opview, pyPatterns);
+        };
+
+    // The populatePatternsWithState callback which calls into Python.
+    // Check if the Python class has populate_patterns_with_state method.
+    if (nb::hasattr(target, "populate_patterns_with_state")) {
+      callbacks.populatePatternsWithState = [](MlirOperation op,
+                                               MlirRewritePatternSet patterns,
+                                               MlirTransformState state,
+                                               void *userData) {
+        nb::handle pyClass(static_cast<PyObject *>(userData));
+
+        auto pyPopulatePatternsWithState = nb::cast<nb::callable>(
+            nb::getattr(pyClass, "populate_patterns_with_state"));
+
+        auto pyPatterns = PyRewritePatternSet(patterns);
+        auto pyState = PyTransformState(state);
+
+        // Invoke `pyClass.populate_patterns_with_state(opview(op), patterns,
+        // state)` as a staticmethod.
+        MlirContext ctx = mlirOperationGetContext(op);
+        PyMlirContextRef context = PyMlirContext::forContext(ctx);
+        auto opview = PyOperation::forOperation(context, op)->createOpView();
+        pyPopulatePatternsWithState(opview, pyPatterns, pyState);
+      };
+    } else {
+      // Use default implementation (will call populatePatterns).
+      callbacks.populatePatternsWithState = nullptr;
+    }
+
+    // Attach a FallbackModel, which calls into Python, to the named operation.
+    mlirPatternDescriptorOpInterfaceAttachFallbackModel(
         ctx->get(), mlirStringRefCreate(opName.c_str(), opName.size()),
         callbacks);
   }
@@ -444,6 +546,7 @@ static void populateDialectTransformSubmodule(nb::module_ &m) {
   PyTransformResults::bind(m);
   PyTransformState::bind(m);
   PyTransformOpInterface::bind(m);
+  PyPatternDescriptorOpInterface::bind(m);
 
   m.def("only_reads_handle", onlyReadsHandle,
         "Mark operands as only reading handles.", nb::arg("operands"),

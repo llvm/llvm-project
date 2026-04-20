@@ -239,7 +239,7 @@ class HelpCommandTestCase(TestBase):
     def test_help_format_output(self):
         """Test that help output reaches TerminalWidth and wraps to the next
         line if needed."""
-        self.runCmd("settings set term-width 118")
+        self.runCmd("settings set term-width 105")
         self.expect(
             "help format",
             matching=True,
@@ -249,9 +249,9 @@ class HelpCommandTestCase(TestBase):
             ],
         )
 
-        # The length of the first line will not be exactly 108 because we split
+        # The length of the first line will not be exactly 105 because we split
         # at the last whitespace point before the limit.
-        self.runCmd("settings set term-width 108")
+        self.runCmd("settings set term-width 104")
         self.expect(
             "help format",
             matching=True,
@@ -269,6 +269,16 @@ class HelpCommandTestCase(TestBase):
                 r"<format> -- One of the format names \(or one-character names\) that can be used to show a\n"
                 r"\s+variable's value:\n"
             ],
+        )
+
+        # Check that line splitting works with newline characters too. The raw
+        # input after the word "pointer" does not contain spaces among more than
+        # a hundred subsequent characters, the words are separated by newlines.
+        self.runCmd("settings set term-width 80")
+        self.expect(
+            "help format",
+            matching=True,
+            substrs=["'p' or \"pointer\""],
         )
 
     @no_debug_info_test
@@ -325,6 +335,8 @@ class HelpCommandTestCase(TestBase):
     def test_help_option_description_terminal_width_with_ansi(self):
         """Test that help on commands formats option descriptions that include
         ANSI codes acccording to the terminal width."""
+        # Note that because color is enabled, we will use ANSI cursor codes to
+        # indent, rather than spaces.
         self.runCmd("settings set use-color on")
 
         # Should fit on one line.
@@ -332,9 +344,9 @@ class HelpCommandTestCase(TestBase):
         self.expect(
             "help breakpoint set",
             matching=True,
-            patterns=[
+            substrs=[
                 # The "S" of "Set" is underlined.
-                r"\s+\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option multiple times to specify multiple shared libraries.\n"
+                "\x1b[12C\x1b[4mS\x1b[0met the breakpoint only in this shared library.  Can repeat this option multiple times to specify multiple shared libraries.\n"
             ],
         )
 
@@ -342,9 +354,9 @@ class HelpCommandTestCase(TestBase):
         self.expect(
             "help breakpoint set",
             matching=True,
-            patterns=[
-                r"\s+\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option multiple times\n"
-                r"\s+to specify multiple shared libraries.\n"
+            substrs=[
+                "\x1b[12C\x1b[4mS\x1b[0met the breakpoint only in this shared library.  Can repeat this option multiple times\n"
+                "\x1b[12Cto specify multiple shared libraries.\n"
             ],
         )
 

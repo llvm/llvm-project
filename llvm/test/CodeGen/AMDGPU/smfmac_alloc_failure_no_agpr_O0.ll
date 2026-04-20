@@ -7,43 +7,86 @@ declare <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.f16(<8 x half>, <16 x half
 define amdgpu_kernel void @test_smfmac_f32_32x32x32_f16__vgpr(ptr addrspace(1) %arg, <8 x half> %a, <16 x half> %b, i32 %idx) #0 {
 ; CHECK-LABEL: test_smfmac_f32_32x32x32_f16__vgpr:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
-; CHECK-NEXT:    s_load_dwordx4 s[12:15], s[2:3], 0x34
-; CHECK-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x44
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    s_load_dword s2, s[2:3], 0x64
-; CHECK-NEXT:    s_mov_b32 s3, 0x3ff
-; CHECK-NEXT:    v_and_b32_e64 v1, v1, s3
-; CHECK-NEXT:    s_mov_b32 s3, 6
-; CHECK-NEXT:    v_lshlrev_b32_e64 v8, s3, v1
+; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x64
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v8, s[0:1] offset:48
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
+; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x44
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; CHECK-NEXT:    s_load_dwordx4 s[16:19], s[4:5], 0x34
+; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x44
+; CHECK-NEXT:    s_load_dword s2, s[4:5], 0x64
+; CHECK-NEXT:    s_mov_b32 s3, 0x3ff
+; CHECK-NEXT:    v_and_b32_e64 v2, v1, s3
+; CHECK-NEXT:    v_ashrrev_i32_e64 v1, 31, v2
+; CHECK-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; CHECK-NEXT:    v_mov_b32_e32 v3, v1
+; CHECK-NEXT:    s_mov_b32 s3, 6
+; CHECK-NEXT:    v_lshlrev_b64 v[2:3], s3, v[2:3]
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_lshl_add_u64 v[2:3], s[0:1], 0, v[2:3]
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v7
-; CHECK-NEXT:    v_mov_b32_e32 v2, v6
-; CHECK-NEXT:    v_mov_b32_e32 v3, v5
+; CHECK-NEXT:    v_mov_b32_e32 v12, v6
+; CHECK-NEXT:    v_mov_b32_e32 v13, v5
+; CHECK-NEXT:    v_mov_b32_e32 v14, v4
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v15, v7
+; CHECK-NEXT:    v_mov_b32_e32 v16, v6
+; CHECK-NEXT:    v_mov_b32_e32 v17, v5
 ; CHECK-NEXT:    ; kill: def $vgpr4 killed $vgpr4 killed $vgpr4_vgpr5_vgpr6_vgpr7 killed $exec
-; CHECK-NEXT:    global_load_dwordx4 v[10:13], v8, s[0:1] offset:32
+; CHECK-NEXT:    ; kill: def $vgpr4 killed $vgpr4 def $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
+; CHECK-NEXT:    v_mov_b32_e32 v5, v17
+; CHECK-NEXT:    v_mov_b32_e32 v6, v16
+; CHECK-NEXT:    v_mov_b32_e32 v7, v15
+; CHECK-NEXT:    v_mov_b32_e32 v8, v14
+; CHECK-NEXT:    v_mov_b32_e32 v9, v13
+; CHECK-NEXT:    v_mov_b32_e32 v10, v12
+; CHECK-NEXT:    v_mov_b32_e32 v11, v1
+; CHECK-NEXT:    v_mov_b32_e32 v25, v11
+; CHECK-NEXT:    v_mov_b32_e32 v26, v10
+; CHECK-NEXT:    v_mov_b32_e32 v27, v9
+; CHECK-NEXT:    v_mov_b32_e32 v28, v8
+; CHECK-NEXT:    v_mov_b32_e32 v29, v7
+; CHECK-NEXT:    v_mov_b32_e32 v30, v6
+; CHECK-NEXT:    v_mov_b32_e32 v31, v5
+; CHECK-NEXT:    v_mov_b32_e32 v8, v4
+; CHECK-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v13
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v12
 ; CHECK-NEXT:    v_mov_b32_e32 v7, v11
+; CHECK-NEXT:    ; kill: def $vgpr10 killed $vgpr10 killed $vgpr10_vgpr11_vgpr12_vgpr13 killed $exec
+; CHECK-NEXT:    s_mov_b64 s[6:7], 32
+; CHECK-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], 0, s[6:7]
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v[2:3], off offset:16
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v1, v15
+; CHECK-NEXT:    v_mov_b32_e32 v2, v14
+; CHECK-NEXT:    v_mov_b32_e32 v3, v13
+; CHECK-NEXT:    v_mov_b32_e32 v4, v12
+; CHECK-NEXT:    ; kill: def $vgpr10 killed $vgpr10 def $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 killed $exec
+; CHECK-NEXT:    v_mov_b32_e32 v11, v7
+; CHECK-NEXT:    v_mov_b32_e32 v12, v6
+; CHECK-NEXT:    v_mov_b32_e32 v13, v5
+; CHECK-NEXT:    v_mov_b32_e32 v14, v4
+; CHECK-NEXT:    v_mov_b32_e32 v15, v3
+; CHECK-NEXT:    v_mov_b32_e32 v16, v2
+; CHECK-NEXT:    v_mov_b32_e32 v17, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, v17
+; CHECK-NEXT:    v_mov_b32_e32 v2, v16
+; CHECK-NEXT:    v_mov_b32_e32 v3, v15
+; CHECK-NEXT:    v_mov_b32_e32 v4, v14
+; CHECK-NEXT:    v_mov_b32_e32 v5, v13
+; CHECK-NEXT:    v_mov_b32_e32 v6, v12
+; CHECK-NEXT:    v_mov_b32_e32 v7, v11
 ; CHECK-NEXT:    v_mov_b32_e32 v24, v10
-; CHECK-NEXT:    global_load_dwordx4 v[10:13], v8, s[0:1] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v25, v13
-; CHECK-NEXT:    v_mov_b32_e32 v26, v12
-; CHECK-NEXT:    v_mov_b32_e32 v27, v11
-; CHECK-NEXT:    v_mov_b32_e32 v28, v10
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v8, s[0:1]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v29, v11
-; CHECK-NEXT:    v_mov_b32_e32 v30, v10
-; CHECK-NEXT:    v_mov_b32_e32 v31, v9
-; CHECK-NEXT:    ; kill: def $vgpr8 killed $vgpr8 killed $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
 ; CHECK-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 killed $exec
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v31
 ; CHECK-NEXT:    v_mov_b32_e32 v10, v30
@@ -60,12 +103,12 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x32_f16__vgpr(ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v21, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v22, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v23, v1
-; CHECK-NEXT:    v_mov_b64_e32 v[2:3], s[12:13]
-; CHECK-NEXT:    v_mov_b64_e32 v[4:5], s[14:15]
-; CHECK-NEXT:    v_mov_b64_e32 v[30:31], s[10:11]
-; CHECK-NEXT:    v_mov_b64_e32 v[28:29], s[8:9]
-; CHECK-NEXT:    v_mov_b64_e32 v[26:27], s[6:7]
-; CHECK-NEXT:    v_mov_b64_e32 v[24:25], s[4:5]
+; CHECK-NEXT:    v_mov_b64_e32 v[2:3], s[16:17]
+; CHECK-NEXT:    v_mov_b64_e32 v[4:5], s[18:19]
+; CHECK-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
+; CHECK-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
+; CHECK-NEXT:    v_mov_b64_e32 v[26:27], s[10:11]
+; CHECK-NEXT:    v_mov_b64_e32 v[24:25], s[8:9]
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_smfmac_f32_32x32x32_f16 v[8:23], v[2:5], v[24:31], v1 cbsz:1 abid:2
@@ -78,7 +121,15 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x32_f16__vgpr(ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v7
 ; CHECK-NEXT:    v_mov_b32_e32 v4, v6
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v1
-; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[0:1] offset:48
+; CHECK-NEXT:    s_mov_b32 s2, s0
+; CHECK-NEXT:    s_mov_b32 s3, s1
+; CHECK-NEXT:    s_mov_b32 s5, s6
+; CHECK-NEXT:    s_mov_b32 s4, s7
+; CHECK-NEXT:    s_add_u32 s2, s2, s5
+; CHECK-NEXT:    s_addc_u32 s4, s3, s4
+; CHECK-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; CHECK-NEXT:    s_mov_b32 s3, s4
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[2:3] offset:16
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v19
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v18
 ; CHECK-NEXT:    v_mov_b32_e32 v7, v17
