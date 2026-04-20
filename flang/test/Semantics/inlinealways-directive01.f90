@@ -7,6 +7,6 @@ module m
 end module
 
 subroutine test_function3()
-! WARNING: INLINEALWAYS function name does not match the function [-Wignored-directive]
+! WARNING: INLINEALWAYS name does not match the subroutine or function name [-Wignored-directive]
   !DIR$ INLINEALWAYS wrong_func
 end subroutine
