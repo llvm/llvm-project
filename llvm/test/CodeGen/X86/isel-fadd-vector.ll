@@ -2,93 +2,73 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse2 | FileCheck %s --check-prefixes=SSE
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse2 -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=SSE
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=SSE
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx | FileCheck %s --check-prefixes=AVX
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=AVX
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=AVX
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=AVX512
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=AVX512
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=AVX,AVX1
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=AVX,AVX1
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefixes=AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=AVX,AVX512
 
-define <4 x float> @test_fadd_v4s32(<4 x float> %arg1, <4 x float> %arg2) {
-; SSE-LABEL: test_fadd_v4s32:
+define <4 x float> @test_fadd_v4f32(<4 x float> %arg1, <4 x float> %arg2) {
+; SSE-LABEL: test_fadd_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_fadd_v4s32:
+; AVX-LABEL: test_fadd_v4f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-;
-; AVX512-LABEL: test_fadd_v4s32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    retq
   %ret = fadd <4 x float> %arg1, %arg2
   ret <4 x float> %ret
 }
 
-define <2 x double> @test_fadd_v2s64(<2 x double> %arg1, <2 x double> %arg2) {
-; SSE-LABEL: test_fadd_v2s64:
+define <2 x double> @test_fadd_v2f64(<2 x double> %arg1, <2 x double> %arg2) {
+; SSE-LABEL: test_fadd_v2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_fadd_v2s64:
+; AVX-LABEL: test_fadd_v2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-;
-; AVX512-LABEL: test_fadd_v2s64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    retq
   %ret = fadd <2 x double> %arg1, %arg2
   ret <2 x double> %ret
 }
 
-define <8 x float> @test_fadd_v8s32(<8 x float> %arg1, <8 x float> %arg2) {
-; SSE-LABEL: test_fadd_v8s32:
+define <8 x float> @test_fadd_v8f32(<8 x float> %arg1, <8 x float> %arg2) {
+; SSE-LABEL: test_fadd_v8f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addps %xmm2, %xmm0
 ; SSE-NEXT:    addps %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_fadd_v8s32:
+; AVX-LABEL: test_fadd_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
-;
-; AVX512-LABEL: test_fadd_v8s32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    retq
   %ret = fadd <8 x float> %arg1, %arg2
   ret <8 x float> %ret
 }
 
-define <4 x double> @test_fadd_v4s64(<4 x double> %arg1, <4 x double> %arg2) {
-; SSE-LABEL: test_fadd_v4s64:
+define <4 x double> @test_fadd_v4f64(<4 x double> %arg1, <4 x double> %arg2) {
+; SSE-LABEL: test_fadd_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addpd %xmm2, %xmm0
 ; SSE-NEXT:    addpd %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_fadd_v4s64:
+; AVX-LABEL: test_fadd_v4f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
-;
-; AVX512-LABEL: test_fadd_v4s64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    retq
   %ret = fadd <4 x double> %arg1, %arg2
   ret <4 x double> %ret
 }
 
-define <16 x float> @test_fadd_v16s32(<16 x float> %arg1, <16 x float> %arg2) {
-; SSE-LABEL: test_fadd_v16s32:
+define <16 x float> @test_fadd_v16f32(<16 x float> %arg1, <16 x float> %arg2) {
+; SSE-LABEL: test_fadd_v16f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addps %xmm4, %xmm0
 ; SSE-NEXT:    addps %xmm5, %xmm1
@@ -96,13 +76,13 @@ define <16 x float> @test_fadd_v16s32(<16 x float> %arg1, <16 x float> %arg2) {
 ; SSE-NEXT:    addps %xmm7, %xmm3
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_fadd_v16s32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vaddps %ymm2, %ymm0, %ymm0
-; AVX-NEXT:    vaddps %ymm3, %ymm1, %ymm1
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_fadd_v16f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vaddps %ymm3, %ymm1, %ymm1
+; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: test_fadd_v16s32:
+; AVX512-LABEL: test_fadd_v16f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
@@ -110,8 +90,8 @@ define <16 x float> @test_fadd_v16s32(<16 x float> %arg1, <16 x float> %arg2) {
   ret <16 x float> %ret
 }
 
-define <8 x double> @test_fadd_v8s64(<8 x double> %arg1, <8 x double> %arg2) {
-; SSE-LABEL: test_fadd_v8s64:
+define <8 x double> @test_fadd_v8f64(<8 x double> %arg1, <8 x double> %arg2) {
+; SSE-LABEL: test_fadd_v8f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addpd %xmm4, %xmm0
 ; SSE-NEXT:    addpd %xmm5, %xmm1
@@ -119,13 +99,13 @@ define <8 x double> @test_fadd_v8s64(<8 x double> %arg1, <8 x double> %arg2) {
 ; SSE-NEXT:    addpd %xmm7, %xmm3
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_fadd_v8s64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
-; AVX-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_fadd_v8f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
+; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: test_fadd_v8s64:
+; AVX512-LABEL: test_fadd_v8f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq

@@ -2,62 +2,78 @@
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s --check-prefixes=SDAG-X86
 ; RUN: llc < %s -mtriple=i686-- -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=FASTISEL-X86
 ; RUN: llc < %s -mtriple=i686-- -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=GISEL-X86
-; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefixes=X64
-; RUN: llc < %s -mtriple=x86_64-- -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=X64
-; RUN: llc < %s -mtriple=x86_64-- -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=X64
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse2 | FileCheck %s --check-prefixes=SSE
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse2 -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=SSE
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=SSE
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx | FileCheck %s --check-prefixes=AVX
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=AVX
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=AVX
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefixes=AVX
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=AVX
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=AVX
 
-define float @test_fsub_float(float %arg1, float %arg2) {
-; SDAG-X86-LABEL: test_fsub_float:
+define float @test_fsub_f32(float %arg1, float %arg2) {
+; SDAG-X86-LABEL: test_fsub_f32:
 ; SDAG-X86:       # %bb.0:
 ; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fsubs {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    retl
 ;
-; FASTISEL-X86-LABEL: test_fsub_float:
+; FASTISEL-X86-LABEL: test_fsub_f32:
 ; FASTISEL-X86:       # %bb.0:
 ; FASTISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; FASTISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; FASTISEL-X86-NEXT:    fsubp %st, %st(1)
 ; FASTISEL-X86-NEXT:    retl
 ;
-; GISEL-X86-LABEL: test_fsub_float:
+; GISEL-X86-LABEL: test_fsub_f32:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fsubrs {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    retl
 ;
-; X64-LABEL: test_fsub_float:
-; X64:       # %bb.0:
-; X64-NEXT:    subss %xmm1, %xmm0
-; X64-NEXT:    retq
+; SSE-LABEL: test_fsub_f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    subss %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_fsub_f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %ret = fsub float %arg1, %arg2
   ret float %ret
 }
 
-define double @test_fsub_double(double %arg1, double %arg2) {
-; SDAG-X86-LABEL: test_fsub_double:
+define double @test_fsub_f64(double %arg1, double %arg2) {
+; SDAG-X86-LABEL: test_fsub_f64:
 ; SDAG-X86:       # %bb.0:
 ; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fsubl {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    retl
 ;
-; FASTISEL-X86-LABEL: test_fsub_double:
+; FASTISEL-X86-LABEL: test_fsub_f64:
 ; FASTISEL-X86:       # %bb.0:
 ; FASTISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; FASTISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; FASTISEL-X86-NEXT:    fsubp %st, %st(1)
 ; FASTISEL-X86-NEXT:    retl
 ;
-; GISEL-X86-LABEL: test_fsub_double:
+; GISEL-X86-LABEL: test_fsub_f64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fsubl {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    retl
 ;
-; X64-LABEL: test_fsub_double:
-; X64:       # %bb.0:
-; X64-NEXT:    subsd %xmm1, %xmm0
-; X64-NEXT:    retq
+; SSE-LABEL: test_fsub_f64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    subsd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_fsub_f64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %ret = fsub double %arg1, %arg2
   ret double %ret
 }
