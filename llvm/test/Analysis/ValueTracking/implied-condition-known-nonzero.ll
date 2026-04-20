@@ -39,6 +39,18 @@ define i1 @eq_nonzero_implies_or_nonzero(i32 %x, i32 %y) {
   ret i1 %r
 }
 
+define i1 @eq_nonconst_nonzero_implies_zero_false(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @eq_nonconst_nonzero_implies_zero_false(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %rhs = or i32 %y, 1
+  %eq = icmp eq i32 %x, %rhs
+  %xz = icmp eq i32 %x, 0
+  %r = and i1 %eq, %xz
+  ret i1 %r
+}
+
 define i1 @x_nonzero_implies_or_ugt_zero(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @x_nonzero_implies_or_ugt_zero(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
