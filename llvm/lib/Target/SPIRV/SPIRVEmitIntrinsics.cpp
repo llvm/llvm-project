@@ -2544,8 +2544,8 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
     // If present, we encode AMDGPU atomic metadata as UserSemantic string
     // decorations, which will be parsed during reverse translation.
     auto &Ctx = B.getContext();
-    auto *US = ConstantAsMetadata::get(ConstantInt::get(
-        B.getInt32Ty(), SPIRV::Decoration::UserSemantic));
+    auto *US = ConstantAsMetadata::get(
+        ConstantInt::get(B.getInt32Ty(), SPIRV::Decoration::UserSemantic));
 
     SmallVector<Metadata *> MDs;
     if (I->hasMetadata("amdgpu.no.fine.grained.memory"))
