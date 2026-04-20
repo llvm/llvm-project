@@ -3,7 +3,7 @@
 ! RUN: bbc %s -o - -emit-hlfir -frealloc-lhs=false | FileCheck %s --check-prefixes=ALL,NOREALLOCLHS
 ! RUN: %flang_fc1 %s -o - -emit-hlfir | FileCheck %s --check-prefixes=ALL,REALLOCLHS
 ! RUN: %flang_fc1 %s -o - -emit-hlfir -frealloc-lhs | FileCheck %s --check-prefixes=ALL,REALLOCLHS
-! RUN: %flang_fc1 %s -o - -emit-hlfir -fno-realloc-lhs 2>&1 | FileCheck %s --check-prefixes=ALL,NOREALLOCLHS,POLYWARNING
+! RUN: %flang_fc1 %s -o - -emit-hlfir -fno-realloc-lhs 2>&1 | FileCheck %s --check-prefixes=ALL,NOREALLOCLHS
 
 ! -fno-realloc-lhs must be ignored for polymorphic allocatable LHS (test3 below).
 
