@@ -806,6 +806,38 @@
 //  CHECK-SVE-F16F32MM: __ARM_FEATURE_SVE 1
 //  CHECK-SVE-F16F32MM: __ARM_FEATURE_SVE_F16F32MM 1
 
+// RUN: %clang --target=aarch64 -march=armv9-a+f16f32dot -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16F32DOT %s
+// CHECK-F16F32DOT: __ARM_FEATURE_F16F32DOT 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+f16f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16F32MM %s
+// CHECK-F16F32MM: __ARM_FEATURE_F16F32MM 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+f16mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16MM %s
+// CHECK-F16MM: __ARM_FEATURE_F16MM 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sve-b16mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-B16MM %s
+// CHECK-SVE-B16MM: __ARM_FEATURE_SVE 1
+// CHECK-SVE-B16MM: __ARM_FEATURE_SVE_B16MM 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sve2p3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p3 %s
+// CHECK-SVE2p3: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-SVE2p3: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-SVE2p3: __ARM_FEATURE_SVE2 1
+// CHECK-SVE2p3: __ARM_FEATURE_SVE2p1 1
+// CHECK-SVE2p3: __ARM_FEATURE_SVE2p2 1
+// CHECK-SVE2p3: __ARM_FEATURE_SVE2p3 1
+// CHECK-SVE2p3: __ARM_NEON 1
+// CHECK-SVE2p3: __ARM_NEON_FP 0xE
+// CHECK-SVE2p3: __ARM_NEON_SVE_BRIDGE 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sme2p3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SME2p3 %s
+// CHECK-SME2p3: __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SME2p3: __ARM_FEATURE_SME 1
+// CHECK-SME2p3: __ARM_FEATURE_SME2 1
+// CHECK-SME2p3: __ARM_FEATURE_SME2p1 1
+// CHECK-SME2p3: __ARM_FEATURE_SME2p2 1
+// CHECK-SME2p3: __ARM_FEATURE_SME2p3 1
+
 //  RUN: %clang --target=aarch64 -march=armv9-a+sve-bfscale -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-BFSCALE %s
 //  CHECK-SVE-BFSCALE: __ARM_FEATURE_SVE_BFSCALE 1
 
