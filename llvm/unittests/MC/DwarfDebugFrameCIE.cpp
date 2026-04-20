@@ -244,7 +244,7 @@ TEST_F(DwarfDebugFrameCIE, SameReturnColumnsShareCIE) {
   }
 
   EXPECT_EQ(FDECount, 2u);
-  // Same return-address register → single shared CIE.
+  // Same return-address register -> single shared CIE.
   EXPECT_EQ(CIECount, 1u);
 }
 
