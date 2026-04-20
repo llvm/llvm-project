@@ -35,8 +35,7 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            std::shared_ptr<StackFrame> frame_sp,
                                            lldb::TargetSP target_sp,
-                                           lldb::DynamicValueType use_dynamic,
-                                           bool search_all_modules = false);
+                                           lldb::DynamicValueType use_dynamic);
 
 class Interpreter : Visitor {
 public:
@@ -149,7 +148,7 @@ private:
   bool m_check_ptr_vs_member;
   // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
   [[maybe_unused]] bool m_allow_var_updates;
-  bool m_allow_all_globals = false;
+  bool m_disallow_globals = false;
 };
 
 } // namespace lldb_private::dil

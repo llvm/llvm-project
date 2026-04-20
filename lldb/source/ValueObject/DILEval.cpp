@@ -293,8 +293,7 @@ static lldb::VariableSP DILFindVariable(ConstString name,
 
 lldb::ValueObjectSP LookupGlobalIdentifier(
     llvm::StringRef name_ref, std::shared_ptr<StackFrame> stack_frame,
-    lldb::TargetSP target_sp, lldb::DynamicValueType use_dynamic,
-    bool search_all_modules) {
+    lldb::TargetSP target_sp, lldb::DynamicValueType use_dynamic) {
   // Get a global variables list without the locals from the current frame
   SymbolContext symbol_context =
       stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
@@ -314,9 +313,6 @@ lldb::ValueObjectSP LookupGlobalIdentifier(
 
   if (value_sp)
     return value_sp;
-
-  if (!search_all_modules)
-    return nullptr;
 
   // Check for match in modules global variables.
   VariableList modules_var_list;
@@ -398,14 +394,14 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
       (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
   const bool allow_var_updates =
       (options & StackFrame::eExpressionPathOptionsAllowVarUpdates) != 0;
-  const bool allow_all_globals =
-      (options & StackFrame::eExpressionPathOptionsAllowAllGlobals) != 0;
+  const bool disallow_globals =
+      (options & StackFrame::eExpressionPathOptionsDisallowGlobals) != 0;
 
   m_use_synthetic = !no_synth_child;
   m_fragile_ivar = !no_fragile_ivar;
   m_check_ptr_vs_member = check_ptr_vs_member;
   m_allow_var_updates = allow_var_updates;
-  m_allow_all_globals = allow_all_globals;
+  m_disallow_globals = disallow_globals;
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
@@ -443,10 +439,9 @@ Interpreter::Visit(const IdentifierNode &node) {
   lldb::ValueObjectSP identifier =
       LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
-  if (!identifier)
-    identifier =
-        LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope, m_target,
-                               use_dynamic, m_allow_all_globals);
+  if (!identifier && !m_disallow_globals)
+    identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
+                                        m_target, use_dynamic);
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());

@@ -406,8 +406,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
     ValueObjectSP value_sp(frame->GetValueForVariableExpressionPath(
         var_path, eNoDynamicValues,
         StackFrame::eExpressionPathOptionCheckPtrVsMember |
-            StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
-            StackFrame::eExpressionPathOptionsAllowAllGlobals,
+            StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
         var_sp, error, mode));
     sb_value.SetSP(value_sp, use_dynamic);
   }

@@ -58,7 +58,7 @@ public:
     eExpressionPathOptionsAllowDirectIVarAccess = (1u << 4),
     eExpressionPathOptionsInspectAnonymousUnions = (1u << 5),
     eExpressionPathOptionsAllowVarUpdates = (1u << 6),
-    eExpressionPathOptionsAllowAllGlobals = (1u << 7)
+    eExpressionPathOptionsDisallowGlobals = (1u << 7)
   };
 
   enum class Kind {
