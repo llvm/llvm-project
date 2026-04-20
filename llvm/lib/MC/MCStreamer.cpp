@@ -1268,7 +1268,14 @@ void MCStreamer::visitUsedExpr(const MCExpr &Expr) {
   }
 }
 
+void MCStreamer::emitInlineAsmSourceLoc(SMLoc Loc) {
+  if (InlineAsmSourceLocCallback)
+    InlineAsmSourceLocCallback(Loc);
+}
+
 void MCStreamer::emitInstruction(const MCInst &Inst, const MCSubtargetInfo &) {
+  emitInlineAsmSourceLoc(getStartTokLoc());
+
   // Scan for values.
   for (unsigned i = Inst.getNumOperands(); i--;)
     if (Inst.getOperand(i).isExpr())

@@ -2595,6 +2595,8 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
   if (LFIRewriter && LFIRewriter->rewriteInst(Inst, *this, STI))
     return;
 
+  emitInlineAsmSourceLoc(getStartTokLoc());
+
   if (CurFrag) {
     MCSection *Sec = getCurrentSectionOnly();
     Sec->setHasInstructions(true);

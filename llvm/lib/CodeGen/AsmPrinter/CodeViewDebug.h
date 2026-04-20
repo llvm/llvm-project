@@ -551,6 +551,10 @@ public:
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
+
+  /// Process beginning of an instruction parsed from an inline asm blob.
+  void beginInlineAsmInstruction(const MachineInstr *MI,
+                                 const DILocation *Loc) override;
 };
 
 template <> struct DenseMapInfo<CodeViewDebug::LocalVarDef> {

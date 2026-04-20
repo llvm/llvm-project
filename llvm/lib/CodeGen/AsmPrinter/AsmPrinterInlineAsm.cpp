@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -22,6 +23,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
@@ -131,9 +133,51 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   Parser->setTargetParser(*TAP);
 
   emitInlineAsmStart();
+  const MDNode *InlineAsmSourceLocs =
+      MI ? MI->getInlineAsmSourceLocMD() : nullptr;
+  if (InlineAsmSourceLocs) {
+    unsigned SyntheticLineOffset =
+        TM.getTargetTriple().isX86() && Dialect == InlineAsm::AD_Intel ? 1 : 0;
+    OutStreamer->setInlineAsmSourceLocCallback(
+        [this, &SrcMgr, BufNum, SyntheticLineOffset, InlineAsmSourceLocs,
+         MI](SMLoc Loc) {
+          if (!Loc.isValid() || SrcMgr.FindBufferContainingLoc(Loc) != BufNum)
+            return;
+
+          unsigned ParserLine = SrcMgr.FindLineNumber(Loc, BufNum);
+          if (ParserLine <= SyntheticLineOffset)
+            return;
+
+          unsigned SourceLine = ParserLine - SyntheticLineOffset;
+          unsigned LocIdx = (SourceLine - 1) * 2 + 1;
+          if (LocIdx + 1 >= InlineAsmSourceLocs->getNumOperands())
+            return;
+
+          const auto *Line = mdconst::dyn_extract<ConstantInt>(
+              InlineAsmSourceLocs->getOperand(LocIdx));
+          const auto *Column = mdconst::dyn_extract<ConstantInt>(
+              InlineAsmSourceLocs->getOperand(LocIdx + 1));
+          if (!Line || !Column || Line->isZero())
+            return;
+
+          DebugLoc BaseDL = MI->getDebugLoc();
+          if (!BaseDL)
+            return;
+
+          auto *DIL = DILocation::get(
+              MI->getMF()->getFunction().getContext(), Line->getZExtValue(),
+              Column->getZExtValue(), BaseDL->getScope(),
+              BaseDL->getInlinedAt(), BaseDL->isImplicitCode(),
+              BaseDL->getAtomGroup(), BaseDL->getAtomRank());
+          for (auto &Handler : Handlers)
+            Handler->beginInlineAsmInstruction(MI, DIL);
+        });
+  }
   // Don't implicitly switch to the text section before the asm.
   (void)Parser->Run(/*NoInitialTextSection*/ true,
                     /*NoFinalize*/ true);
+  if (InlineAsmSourceLocs)
+    OutStreamer->setInlineAsmSourceLocCallback(nullptr);
   emitInlineAsmEnd(STI, &TAP->getSTI(), MI);
 }
 
