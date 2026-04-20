@@ -11,8 +11,8 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Casting.h"
@@ -144,16 +144,14 @@ LogicalResult DataFlowSolver::initializeAndRunImpl(Operation *top,
     config.setInterprocedural(false);
 
   // Initialize equivalent lattice anchors.
-  for (DataFlowAnalysis &analysis :
-       llvm::make_pointee_range(llvm::drop_begin(childAnalyses,
-                                                 firstAnalysis))) {
+  for (DataFlowAnalysis &analysis : llvm::make_pointee_range(
+           llvm::drop_begin(childAnalyses, firstAnalysis))) {
     analysis.initializeEquivalentLatticeAnchor(top);
   }
 
   // Initialize the analyses.
-  for (DataFlowAnalysis &analysis :
-       llvm::make_pointee_range(llvm::drop_begin(childAnalyses,
-                                                 firstAnalysis))) {
+  for (DataFlowAnalysis &analysis : llvm::make_pointee_range(
+           llvm::drop_begin(childAnalyses, firstAnalysis))) {
     DATAFLOW_DEBUG(LDBG() << "Priming analysis: " << analysis.debugName);
     if (failed(analysis.initialize(top)))
       return failure();
