@@ -108,6 +108,7 @@ template<> class numeric_limits<cv long double>;
 #  include <__config>
 #  include <__type_traits/is_arithmetic.h>
 #  include <__type_traits/is_same.h>
+#  include <__type_traits/make_unsigned.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -177,21 +178,6 @@ protected:
   static _LIBCPP_CONSTEXPR const float_round_style round_style = round_toward_zero;
 };
 
-// Maps an integer type _Tp to its unsigned counterpart. Used by the digits
-// computation below so it can apply __builtin_popcountg uniformly regardless
-// of signedness. __make_unsigned isn't used directly because it rejects
-// already-unsigned types.
-#  if __has_builtin(__builtin_popcountg) && __has_builtin(__make_unsigned)
-template <class _Tp, bool _IsSigned = (_Tp(-1) < _Tp(0))>
-struct __numeric_limits_unsigned_type {
-  using type = _Tp;
-};
-template <class _Tp>
-struct __numeric_limits_unsigned_type<_Tp, true> {
-  using type = __make_unsigned(_Tp);
-};
-#  endif
-
 template <class _Tp>
 class __libcpp_numeric_limits<_Tp, true> {
 protected:
@@ -204,8 +190,8 @@ protected:
   // bits. Count the actual value bits: ~unsigned_type(0) leaves padding
   // zero, so popcount yields the value-bit width. Standard integer types
   // have no padding, so the result matches sizeof * CHAR_BIT.
-#  if __has_builtin(__builtin_popcountg) && __has_builtin(__make_unsigned)
-  using __unsigned_type = typename __numeric_limits_unsigned_type<type>::type;
+#  if __has_builtin(__builtin_popcountg)
+  using __unsigned_type = __make_unsigned_t<type>;
   static _LIBCPP_CONSTEXPR const int digits =
       __builtin_popcountg(static_cast<__unsigned_type>(~__unsigned_type(0))) - is_signed;
 #  else
