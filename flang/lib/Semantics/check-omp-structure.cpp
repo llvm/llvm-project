@@ -336,6 +336,16 @@ private:
   SemanticsContext &context_;
 };
 
+bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
+  // Do not do clause checks while processing METADIRECTIVE.
+  // See comment in CheckAllowedClause.
+  if (GetDirectiveNest(ContextSelectorNest) > 0) {
+    return true;
+  }
+  return llvm::omp::isAllowedClauseForDirective(
+      GetContext().directive, clauseId, context_.langOptions().OpenMPVersion);
+}
+
 bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
   // Do not do clause checks while processing METADIRECTIVE.
   // Context selectors can contain clauses that are not given as a part
@@ -772,6 +782,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
         return CheckDirectiveSpelling(source, id);
       });
   parser::Walk(x, visitor);
+  if (GetOmpDirectiveName(x).v != llvm::omp::Directive::OMPD_section) {
+    dirStack_.push_back(&GetOmpDirectiveSpecification(x));
+  }
 
   // Simd Construct with Ordered Construct Nesting check
   // We cannot use CurrentDirectiveIsNested() here because
@@ -788,12 +801,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPConstruct &) {
+void OmpStructureChecker::Leave(const parser::OpenMPConstruct &x) {
   for (const auto &[sym, source] : deferredNonVariables_) {
     context_.SayWithDecl(
         *sym, source, "'%s' must be a variable"_err_en_US, sym->name());
   }
   deferredNonVariables_.clear();
+  if (GetOmpDirectiveName(x).v != llvm::omp::Directive::OMPD_section) {
+    dirStack_.pop_back();
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
@@ -803,11 +819,13 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
       });
   parser::Walk(x, visitor);
 
+  dirStack_.push_back(&GetOmpDirectiveSpecification(x));
   EnterDirectiveNest(DeclarativeNest);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeConstruct &x) {
   ExitDirectiveNest(DeclarativeNest);
+  dirStack_.pop_back();
 }
 
 void OmpStructureChecker::AddEndDirectiveClauses(
@@ -2007,6 +2025,50 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
       if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
         context_.Say(OmpGetModifierSource(modifiers, align),
             "The alignment value should be a constant positive integer"_err_en_US);
+      }
+    }
+  }
+
+  // If the clause is not allowed, don't diagnose specific problems with it.
+  if (!IsAllowedClause(llvm::omp::Clause::OMPC_allocate)) {
+    return;
+  }
+
+  llvm::omp::Directive dirId{GetContext().directive};
+  // For any list item that is specified in the allocate clause on a directive
+  // other than the allocators directive, a data-sharing attribute clause that
+  // may create a private copy of that list item must be specified on the same
+  // directive.
+  if (dirId != llvm::omp::Directive::OMPD_allocators &&
+      dirId != llvm::omp::Directive::OMPD_section) {
+    static llvm::omp::Clause privatizingDSAClauses[] = {
+        llvm::omp::Clause::OMPC_private,
+        llvm::omp::Clause::OMPC_firstprivate,
+        llvm::omp::Clause::OMPC_lastprivate,
+        llvm::omp::Clause::OMPC_is_device_ptr,
+        llvm::omp::Clause::OMPC_use_device_ptr,
+    };
+    const parser::OmpDirectiveSpecification &spec{*dirStack_.back()};
+
+    std::set<const Symbol *> privatized;
+    for (auto dsaClause : privatizingDSAClauses) {
+      if (auto *found{parser::omp::FindClause(spec, dsaClause)}) {
+        for (auto &object : GetOmpObjectList(*found)->v) {
+          if (auto *symbol{GetObjectSymbol(object)}) {
+            privatized.insert(symbol);
+          }
+        }
+      }
+    }
+
+    for (auto &object : GetOmpObjectList(x)->v) {
+      if (auto *symbol{GetObjectSymbol(object)}) {
+        if (!privatized.count(symbol)) {
+          context_.Say(
+              GetObjectSource(object).value_or(GetContext().clauseSource),
+              "The ALLOCATE clause requires that '%s' must be listed in a private data-sharing attribute clause on the same directive"_err_en_US,
+              symbol->name());
+        }
       }
     }
   }
