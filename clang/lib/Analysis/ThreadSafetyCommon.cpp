@@ -392,6 +392,7 @@ static const ParmVarDecl *getCanonicalParamDecl(const Decl *D, unsigned I) {
       TypeLoc TL = TSI->getTypeLoc();
       if (auto RTL = TL.getAsAdjusted<ReferenceTypeLoc>())
         TL = RTL.getPointeeLoc();
+      // A function pointer can be multiple levels deep.
       while (auto PTL = TL.getAsAdjusted<PointerTypeLoc>())
         TL = PTL.getPointeeLoc();
       if (auto FPTL = TL.getAsAdjusted<FunctionProtoTypeLoc>())
@@ -419,6 +420,8 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
         Match = (MD->getCanonicalDecl() == Canonical);
       else if (getCanonicalParamDecl(Canonical, I) == PV->getCanonicalDecl())
         Match = true;
+      else
+        llvm_unreachable("ParmVarDecl does not belong to current declaration");
 
       if (Match) {
         // Substitute call arguments for references to function parameters
