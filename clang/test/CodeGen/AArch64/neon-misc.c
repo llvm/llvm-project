@@ -3639,45 +3639,6 @@ uint32x4_t test_vrecpeq_u32(uint32x4_t a) {
   return vrecpeq_u32(a);
 }
 
-// CHECK-LABEL: define dso_local <2 x float> @test_vsqrt_f32(
-// CHECK-SAME: <2 x float> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
-// CHECK-NEXT:    [[VSQRT_I:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[TMP2]])
-// CHECK-NEXT:    ret <2 x float> [[VSQRT_I]]
-//
-float32x2_t test_vsqrt_f32(float32x2_t a) {
-  return vsqrt_f32(a);
-}
-
-// CHECK-LABEL: define dso_local <4 x float> @test_vsqrtq_f32(
-// CHECK-SAME: <4 x float> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
-// CHECK-NEXT:    [[VSQRT_I:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP2]])
-// CHECK-NEXT:    ret <4 x float> [[VSQRT_I]]
-//
-float32x4_t test_vsqrtq_f32(float32x4_t a) {
-  return vsqrtq_f32(a);
-}
-
-// CHECK-LABEL: define dso_local <2 x double> @test_vsqrtq_f64(
-// CHECK-SAME: <2 x double> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
-// CHECK-NEXT:    [[VSQRT_I:%.*]] = call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP2]])
-// CHECK-NEXT:    ret <2 x double> [[VSQRT_I]]
-//
-float64x2_t test_vsqrtq_f64(float64x2_t a) {
-  return vsqrtq_f64(a);
-}
-
 // CHECK-LABEL: define dso_local <2 x float> @test_vcvt_f32_s32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

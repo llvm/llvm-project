@@ -1230,6 +1230,68 @@ float64x2_t test_vmaxnmq_f64(float64x2_t v1, float64x2_t v2) {
  return vmaxnmq_f64(v1, v2);
 }
 
+//===----------------------------------------------------------------------===//
+// 2.1.1.11. Square root
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#square-root
+//===----------------------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vsqrt_f32(
+// CIR-LABEL: @vsqrt_f32(
+float32x2_t test_vsqrt_f32(float32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+// LLVM-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// LLVM-NEXT:    [[VSQRT_I:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[TMP2]])
+// LLVM-NEXT:    ret <2 x float> [[VSQRT_I]]
+  return vsqrt_f32(a);
+}
+
+// LLVM-LABEL: @test_vsqrtq_f32(
+// CIR-LABEL: @vsqrtq_f32(
+float32x4_t test_vsqrtq_f32(float32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// LLVM-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// LLVM-NEXT:    [[VSQRT_I:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP2]])
+// LLVM-NEXT:    ret <4 x float> [[VSQRT_I]]
+  return vsqrtq_f32(a);
+}
+
+// LLVM-LABEL: @test_vsqrt_f64(
+// CIR-LABEL: @vsqrt_f64(
+float64x1_t test_vsqrt_f64(float64x1_t a) {
+// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
+
+// LLVM-SAME: <1 x double> {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
+// LLVM-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
+// LLVM-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
+// LLVM-NEXT:    [[VSQRT_I:%.*]] = call <1 x double> @llvm.sqrt.v1f64(<1 x double> [[TMP2]])
+// LLVM-NEXT:    ret <1 x double> [[VSQRT_I]]
+  return vsqrt_f64(a);
+}
+
+// LLVM-LABEL: @test_vsqrtq_f64(
+// CIR-LABEL: @vsqrtq_f64(
+float64x2_t test_vsqrtq_f64(float64x2_t a) {
+// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM-NEXT:    [[VSQRT_I:%.*]] = call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP2]])
+// LLVM-NEXT:    ret <2 x double> [[VSQRT_I]]
+  return vsqrtq_f64(a);
+}
+
 //===------------------------------------------------------===//
 // 2.1.1.2.8. Widening Multiplication
 //===------------------------------------------------------===//
