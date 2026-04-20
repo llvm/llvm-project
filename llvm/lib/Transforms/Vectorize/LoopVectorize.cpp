@@ -3808,7 +3808,8 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   // When there is a hint to always prefer scalable vectors,
   // honour that hint.
   if (Hints.isScalableVectorizationAlwaysPreferred())
-    if (A.Width.isScalable() && CostA.isValid() && !B.Width.isScalable())
+    if (A.Width.isScalable() && CostA.isValid() && !B.Width.isScalable() &&
+        !B.Width.isScalar())
       return true;
 
   // Improve estimate for the vector width if it is scalable.
