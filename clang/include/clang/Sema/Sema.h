@@ -4996,7 +4996,16 @@ public:
                         StringRef Message, bool IsStrict, StringRef Replacement,
                         AvailabilityMergeKind AMK, int Priority,
                         const IdentifierInfo *IIEnvironment,
-                        VersionTuple OrigAnyAppleOSVersion = {});
+                        const IdentifierInfo *InferredPlatformII = nullptr);
+
+  AvailabilityAttr *mergeAndInferAvailabilityAttr(
+      NamedDecl *D, const AttributeCommonInfo &CI,
+      const IdentifierInfo *Platform, bool Implicit, VersionTuple Introduced,
+      VersionTuple Deprecated, VersionTuple Obsoleted, bool IsUnavailable,
+      StringRef Message, bool IsStrict, StringRef Replacement,
+      AvailabilityMergeKind AMK, int Priority,
+      const IdentifierInfo *IIEnvironment,
+      const IdentifierInfo *InferredPlatformII);
 
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,

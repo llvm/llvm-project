@@ -1441,6 +1441,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
     return LLT::fixed_vector(4, 16);
   case SgprV4S32:
   case SgprV4S32_WF:
+  case SgprV4S32_ReadFirstLane:
   case VgprV4S32:
   case UniInVgprV4S32:
     return LLT::fixed_vector(4, 32);
@@ -1449,6 +1450,12 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case VgprV2S64:
   case UniInVgprV2S64:
     return LLT::fixed_vector(2, 64);
+  case VgprV6S32:
+    return LLT::fixed_vector(6, 32);
+  case VgprV32S16:
+    return LLT::fixed_vector(32, 16);
+  case VgprV32S32:
+    return LLT::fixed_vector(32, 32);
   default:
     return LLT();
   }
@@ -1562,6 +1569,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprV2S32:
   case SgprV4S32:
   case SgprV4S32_WF:
+  case SgprV4S32_ReadFirstLane:
   case SgprB32:
   case SgprB64:
   case SgprB96:
@@ -1609,7 +1617,9 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprV3S32:
   case VgprV4S16:
   case VgprV4S32:
+  case VgprV6S32:
   case VgprV8S32:
+  case VgprV32S16:
   case VgprB32:
   case VgprB64:
   case VgprB96:
@@ -1673,7 +1683,9 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprV3S32:
     case VgprV4S16:
     case VgprV4S32:
-    case VgprV8S32: {
+    case VgprV6S32:
+    case VgprV8S32:
+    case VgprV32S16: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
       break;
@@ -1866,7 +1878,10 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprV3S32:
     case VgprV4S16:
     case VgprV4S32:
-    case VgprV8S32: {
+    case VgprV6S32:
+    case VgprV8S32:
+    case VgprV32S16:
+    case VgprV32S32: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB != VgprRB) {
         auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
@@ -1933,6 +1948,16 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case SgprB32_ReadFirstLane:
     case SgprB64_ReadFirstLane: {
       assert(Ty == getBTyFromID(MethodIDs[i], Ty));
+      if (RB == SgprRB)
+        break;
+      assert(RB == VgprRB);
+      Register NewSGPR = MRI.createVirtualRegister({SgprRB, Ty});
+      buildReadFirstLane(B, NewSGPR, Op.getReg(), RBI);
+      Op.setReg(NewSGPR);
+      break;
+    }
+    case SgprV4S32_ReadFirstLane: {
+      assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB == SgprRB)
         break;
       assert(RB == VgprRB);

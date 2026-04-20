@@ -71,28 +71,30 @@ public:
            const UniformityInfo &UA);
 };
 
-class AMDGPUUnifyDivergentExitNodes : public FunctionPass {
+class AMDGPUUnifyDivergentExitNodesLegacy : public FunctionPass {
 public:
   static char ID;
-  AMDGPUUnifyDivergentExitNodes() : FunctionPass(ID) {}
+  AMDGPUUnifyDivergentExitNodesLegacy() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 };
 } // end anonymous namespace
 
-char AMDGPUUnifyDivergentExitNodes::ID = 0;
+char AMDGPUUnifyDivergentExitNodesLegacy::ID = 0;
 
-char &llvm::AMDGPUUnifyDivergentExitNodesID = AMDGPUUnifyDivergentExitNodes::ID;
+char &llvm::AMDGPUUnifyDivergentExitNodesID =
+    AMDGPUUnifyDivergentExitNodesLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(AMDGPUUnifyDivergentExitNodes, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPUUnifyDivergentExitNodesLegacy, DEBUG_TYPE,
                       "Unify divergent function exit nodes", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
-INITIALIZE_PASS_END(AMDGPUUnifyDivergentExitNodes, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPUUnifyDivergentExitNodesLegacy, DEBUG_TYPE,
                     "Unify divergent function exit nodes", false, false)
 
-void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const {
+void AMDGPUUnifyDivergentExitNodesLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   if (RequireAndPreserveDomTree)
     AU.addRequired<DominatorTreeWrapperPass>();
 
@@ -344,7 +346,7 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
   return true;
 }
 
-bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
+bool AMDGPUUnifyDivergentExitNodesLegacy::runOnFunction(Function &F) {
   DominatorTree *DT = nullptr;
   if (RequireAndPreserveDomTree)
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();

@@ -83,6 +83,17 @@ static void diagnoseMissingInitializer(InterpState &S, CodePtr OpPC,
   S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
 }
 
+static void noteValueLocation(InterpState &S, const Block *B) {
+  const Descriptor *Desc = B->getDescriptor();
+
+  if (B->isDynamic())
+    S.Note(Desc->getLocation(), diag::note_constexpr_dynamic_alloc_here);
+  else if (B->isTemporary())
+    S.Note(Desc->getLocation(), diag::note_constexpr_temporary_here);
+  else
+    S.Note(Desc->getLocation(), diag::note_declared_at);
+}
+
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD);
 static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
@@ -185,8 +196,7 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
         !MTE->isUsableInConstantExpressions(S.getASTContext())) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
-      S.Note(B->getDescriptor()->getLocation(),
-             diag::note_constexpr_temporary_here);
+      noteValueLocation(S, B);
       return false;
     }
   }
@@ -418,14 +428,9 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     if (Ptr.isDynamic()) {
       S.FFDiag(Src, diag::note_constexpr_access_deleted_object) << AK;
     } else if (!S.checkingPotentialConstantExpression()) {
-      bool IsTemp = Ptr.isTemporary();
       S.FFDiag(Src, diag::note_constexpr_access_uninit)
           << AK << /*uninitialized=*/false << S.Current->getRange(OpPC);
-
-      if (IsTemp)
-        S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
-      else
-        S.Note(Ptr.getDeclLoc(), diag::note_declared_at);
+      noteValueLocation(S, Ptr.block());
     }
 
     return false;
@@ -574,9 +579,11 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
     return true;
 
-  const QualType Ty = Ptr.getType();
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_modify_const_type) << Ty;
+  if (!S.checkingPotentialConstantExpression()) {
+    const QualType Ty = Ptr.getType();
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_modify_const_type) << Ty;
+  }
   return false;
 }
 
@@ -648,13 +655,15 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK) {
   assert(Ptr.isLive());
   assert(!Ptr.isInitialized());
-  return DiagnoseUninitialized(S, OpPC, Ptr.isExtern(), Ptr.getDeclDesc(), AK);
+  return DiagnoseUninitialized(S, OpPC, Ptr.isExtern(), Ptr.block(), AK);
 }
 
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
-                           const Descriptor *Desc, AccessKinds AK) {
+                           const Block *B, AccessKinds AK) {
   if (Extern && S.checkingPotentialConstantExpression())
     return false;
+
+  const Descriptor *Desc = B->getDescriptor();
 
   if (const auto *VD = Desc->asVarDecl();
       VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {
@@ -670,6 +679,7 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
         // Diagnose as "read of object outside its lifetime".
         S.FFDiag(Loc, diag::note_constexpr_access_uninit)
             << AK << /*IsIndeterminate=*/false;
+        S.Note(VD->getLocation(), diag::note_declared_at);
       }
       return false;
     }
@@ -687,20 +697,26 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
   if (!S.checkingPotentialConstantExpression()) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
         << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
+    noteValueLocation(S, B);
   }
   return false;
 }
 
 static bool CheckLifetime(InterpState &S, CodePtr OpPC, Lifetime LT,
-                          AccessKinds AK) {
+                          const Block *B, AccessKinds AK) {
   if (LT == Lifetime::Started)
     return true;
 
   if (!S.checkingPotentialConstantExpression()) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
         << AK << /*uninitialized=*/false << S.Current->getRange(OpPC);
+    noteValueLocation(S, B);
   }
   return false;
+}
+static bool CheckLifetime(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                          AccessKinds AK) {
+  return CheckLifetime(S, OpPC, Ptr.getLifetime(), Ptr.block(), AK);
 }
 
 static bool CheckWeak(InterpState &S, CodePtr OpPC, const Block *B) {
@@ -733,8 +749,7 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   if (!CheckConstant(S, OpPC, B->getDescriptor()))
     return false;
   if (Desc.InitState != GlobalInitState::Initialized)
-    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B->getDescriptor(),
-                                 AK_Read);
+    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B, AK_Read);
   if (!CheckTemporary(S, OpPC, B, AK_Read))
     return false;
   if (B->getDescriptor()->IsVolatile) {
@@ -755,11 +770,10 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
   const auto &Desc = *reinterpret_cast<const InlineDescriptor *>(B->rawData());
-  if (!CheckLifetime(S, OpPC, Desc.LifeState, AK_Read))
+  if (!CheckLifetime(S, OpPC, Desc.LifeState, B, AK_Read))
     return false;
   if (!Desc.IsInitialized)
-    return DiagnoseUninitialized(S, OpPC, /*Extern=*/false, B->getDescriptor(),
-                                 AK_Read);
+    return DiagnoseUninitialized(S, OpPC, /*Extern=*/false, B, AK_Read);
   if (B->getDescriptor()->IsVolatile) {
     if (!S.getLangOpts().CPlusPlus)
       return Invalid(S, OpPC);
@@ -805,7 +819,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckActive(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), AK))
+  if (!CheckLifetime(S, OpPC, Ptr, AK))
     return false;
   if (!Ptr.isInitialized())
     return DiagnoseUninitialized(S, OpPC, Ptr, AK);
@@ -843,7 +857,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   if (!CheckActive(S, OpPC, Ptr, AK_Read))
     return false;
-  if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), AK_Read))
+  if (!CheckLifetime(S, OpPC, Ptr, AK_Read))
     return false;
   if (!Ptr.isInitialized())
     return DiagnoseUninitialized(S, OpPC, Ptr, AK_Read);
@@ -868,7 +882,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       return false;
     return CheckDummy(S, OpPC, Ptr.block(), AK_Assign);
   }
-  if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), AK_Assign))
+  if (!CheckLifetime(S, OpPC, Ptr, AK_Assign))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Assign))
     return false;
@@ -993,9 +1007,6 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     S.CCEDiag(Loc, diag::note_constexpr_virtual_call);
     return false;
   }
-
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
-    return false;
 
   if (F->isValid() && F->hasBody() &&
       (F->isConstexpr() || (S.Current->MSVCConstexprAllowed &&
@@ -1138,11 +1149,7 @@ bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_delete_not_heap_alloc)
       << Ptr.toDiagnosticString(S.getASTContext());
-
-  if (Ptr.isTemporary())
-    S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
-  else
-    S.Note(Ptr.getDeclLoc(), diag::note_declared_at);
+  noteValueLocation(S, Ptr.block());
   return false;
 }
 
@@ -1498,6 +1505,22 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   return false;
 }
 
+static bool diagnoseOutOfLifetimeDestroy(InterpState &S, CodePtr OpPC,
+                                         const Pointer &Ptr) {
+  assert(Ptr.getLifetime() != Lifetime::Started);
+  // Try to use the declaration for better diagnostics
+  if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
+    auto *ND = cast<NamedDecl>(D);
+    S.FFDiag(ND->getLocation(), diag::note_constexpr_destroy_out_of_lifetime)
+        << ND->getNameAsString();
+  } else {
+    S.FFDiag(Ptr.getDeclDesc()->getLocation(),
+             diag::note_constexpr_destroy_out_of_lifetime)
+        << Ptr.toDiagnosticString(S.getASTContext());
+  }
+  return false;
+}
+
 bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Destroy))
     return false;
@@ -1505,8 +1528,11 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Destroy))
     return false;
-  if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), AK_Destroy))
-    return false;
+
+  if (Ptr.getLifetime() == Lifetime::Destroyed)
+    return diagnoseOutOfLifetimeDestroy(S, OpPC, Ptr);
+  if (Ptr.getLifetime() == Lifetime::Ended)
+    return CheckLifetime(S, OpPC, Ptr, AK_Destroy);
 
   // Can't call a dtor on a global variable.
   if (Ptr.block()->isStatic()) {
@@ -1946,11 +1972,11 @@ bool StartLifetime(InterpState &S, CodePtr OpPC) {
 
 // FIXME: It might be better to the recursing as part of the generated code for
 // a destructor?
-static void endLifetimeRecurse(const Pointer &Ptr) {
+static void setLifeStateRecurse(const Pointer &Ptr, Lifetime L) {
   if (const Record *R = Ptr.getRecord()) {
-    Ptr.endLifetime();
+    Ptr.setLifeState(L);
     for (const Record::Field &Fi : R->fields())
-      endLifetimeRecurse(Ptr.atField(Fi.Offset));
+      setLifeStateRecurse(Ptr.atField(Fi.Offset), L);
     return;
   }
 
@@ -1959,11 +1985,11 @@ static void endLifetimeRecurse(const Pointer &Ptr) {
     // No endLifetime() for array roots.
     assert(Ptr.getLifetime() == Lifetime::Started);
     for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I)
-      endLifetimeRecurse(Ptr.atIndex(I).narrow());
+      setLifeStateRecurse(Ptr.atIndex(I).narrow(), L);
     return;
   }
 
-  Ptr.endLifetime();
+  Ptr.setLifeState(L);
 }
 
 /// Ends the lifetime of the peek'd pointer.
@@ -1972,7 +1998,7 @@ bool EndLifetime(InterpState &S, CodePtr OpPC) {
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
 
-  endLifetimeRecurse(Ptr.narrow());
+  setLifeStateRecurse(Ptr.narrow(), Lifetime::Ended);
   return true;
 }
 
@@ -1982,7 +2008,16 @@ bool EndLifetimePop(InterpState &S, CodePtr OpPC) {
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
 
-  endLifetimeRecurse(Ptr.narrow());
+  setLifeStateRecurse(Ptr.narrow(), Lifetime::Ended);
+  return true;
+}
+
+bool MarkDestroyed(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
+    return false;
+
+  setLifeStateRecurse(Ptr.narrow(), Lifetime::Destroyed);
   return true;
 }
 
@@ -2028,7 +2063,7 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
 
   // CheckLifetime for this and all base pointers.
   for (Pointer P = Ptr;;) {
-    if (!CheckLifetime(S, OpPC, P.getLifetime(), AK_Construct))
+    if (!CheckLifetime(S, OpPC, P, AK_Construct))
       return false;
 
     if (P.isRoot())
@@ -2481,20 +2516,8 @@ bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
     if (!S.Current->getLocalBlock(Local.Offset)->isInitialized())
       continue;
     const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
-    if (Ptr.getLifetime() == Lifetime::Ended) {
-      // Try to use the declaration for better diagnostics
-      if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
-        auto *ND = cast<NamedDecl>(D);
-        S.FFDiag(ND->getLocation(),
-                 diag::note_constexpr_destroy_out_of_lifetime)
-            << ND->getNameAsString();
-      } else {
-        S.FFDiag(Ptr.getDeclDesc()->getLocation(),
-                 diag::note_constexpr_destroy_out_of_lifetime)
-            << Ptr.toDiagnosticString(S.getASTContext());
-      }
-      return false;
-    }
+    if (Ptr.getLifetime() == Lifetime::Ended)
+      return diagnoseOutOfLifetimeDestroy(S, OpPC, Ptr);
   }
 
   S.Current->destroy(I);

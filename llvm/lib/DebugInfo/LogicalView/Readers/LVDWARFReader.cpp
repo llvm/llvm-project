@@ -21,6 +21,7 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -210,7 +211,7 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
           FoundLowPC = false;
           // We are dealing with an index into the .debug_addr section.
           LLVM_DEBUG({
-            dbgs() << format("indexed (%8.8x) address = ", (uint32_t)UValue);
+            dbgs() << formatv("indexed ({0:x-8}) address = ", (uint32_t)UValue);
           });
         }
       }
@@ -262,9 +263,8 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
           GetRanges(FormValue, U);
       if (!RangesOrError) {
         LLVM_DEBUG({
-          std::string TheError(toString(RangesOrError.takeError()));
-          dbgs() << format("error decoding address ranges = ",
-                           TheError.c_str());
+          dbgs() << formatv("error decoding address ranges = {0}",
+                            fmt_consume(RangesOrError.takeError()));
         });
         consumeError(RangesOrError.takeError());
         break;

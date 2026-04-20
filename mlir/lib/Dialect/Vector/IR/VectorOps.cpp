@@ -2453,12 +2453,73 @@ struct ExtractToShapeCast final : OpRewritePattern<vector::ExtractOp> {
   }
 };
 
+/// Folds vector.extract from vector.insert when the extract position is a
+/// prefix of the insert position and the remaining (un-indexed) dimensions
+/// of the extracted sub-vector are all size 1. In that case the extracted
+/// value is fully determined by the inserted value.
+///
+/// Examples:
+///   %ins = vector.insert %s, %v [3, 0] : f32 into vector<16x1xf32>
+///   %ext = vector.extract %ins [3] : vector<1xf32> from vector<16x1xf32>
+/// folds to:
+///   %ext = vector.broadcast %s : f32 to vector<1xf32>
+///
+///   %ins = vector.insert %s, %v [0, 0] : vector<1xf32> into vector<16x1x1xf32>
+//    %ext = vector.extract %ins [0] : vector<1x1xf32> from vector<16x1x1xf32>
+/// folds to:
+///   %ext = vector.shape_cast %arg0 : vector<1xf32> to vector<1x1xf32>
+struct FoldExtractFromInsertUnitDim final
+    : OpRewritePattern<vector::ExtractOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    if (extractOp.hasDynamicPosition())
+      return failure();
+
+    auto insertOp = extractOp.getSource().getDefiningOp<vector::InsertOp>();
+    if (!insertOp || insertOp.hasDynamicPosition())
+      return failure();
+
+    ArrayRef<int64_t> extractPos = extractOp.getStaticPosition();
+    ArrayRef<int64_t> insertPos = insertOp.getStaticPosition();
+
+    // The extract position must be a strict prefix of the insert position.
+    if (extractPos.size() >= insertPos.size() ||
+        extractPos != insertPos.take_front(extractPos.size()))
+      return failure();
+
+    // The remaining dimensions (those not indexed by the extract) must all
+    // be size 1 in the source vector type. This guarantees that the inserted
+    // value fully determines the extracted sub-vector.
+    auto srcVecType = extractOp.getSourceVectorType();
+    for (int64_t i = extractPos.size(), e = srcVecType.getRank(); i < e; ++i)
+      if (srcVecType.getDimSize(i) != 1)
+        return failure();
+
+    Value inserted = insertOp.getValueToStore();
+    Type extractedType = extractOp.getResult().getType();
+    if (isa<VectorType>(inserted.getType())) {
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(extractOp, extractedType,
+                                                       inserted);
+    } else {
+      // The inserted value fully determines the extracted sub-vector; broadcast
+      // it to the extracted type.
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+          extractOp, extractOp.getResult().getType(),
+          insertOp.getValueToStore());
+    }
+    return success();
+  }
+};
+
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<ExtractOpFromBroadcast, ExtractOpFromCreateMask,
-              ExtractOpFromConstantMask, ExtractToShapeCast>(context);
+              ExtractOpFromConstantMask, ExtractToShapeCast,
+              FoldExtractFromInsertUnitDim>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
 }
@@ -3289,40 +3350,65 @@ static bool isStepIndexArray(ArrayRef<T> idxArr, uint64_t begin, size_t width) {
          });
 }
 
-OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
-  auto v1Type = getV1VectorType();
-  auto v2Type = getV2VectorType();
-
-  assert(!v1Type.isScalable() && !v2Type.isScalable() &&
-         "Vector shuffle does not support scalable vectors");
-
-  // For consistency: 0-D shuffle return type is 1-D, this cannot be a folding
-  // but must be a canonicalization into a vector.broadcast.
-  if (v1Type.getRank() == 0)
-    return {};
-
-  // Fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1.
-  auto mask = getMask();
+/// Fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1.
+/// Fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2.
+static OpFoldResult foldShuffleIdentityMask(ShuffleOp op) {
+  auto v1Type = op.getV1VectorType();
+  auto v2Type = op.getV2VectorType();
+  auto mask = op.getMask();
   if (isStepIndexArray(mask, 0, v1Type.getDimSize(0)))
-    return getV1();
-  // Fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2.
+    return op.getV1();
   if (isStepIndexArray(mask, v1Type.getDimSize(0), v2Type.getDimSize(0)))
-    return getV2();
+    return op.getV2();
+  return {};
+}
 
-  Attribute v1Attr = adaptor.getV1(), v2Attr = adaptor.getV2();
-  if (!v1Attr || !v2Attr)
+/// If a shuffle operand is poison, replace all mask indices that reference it
+/// with kPoisonIndex. This is an in-place fold.
+static OpFoldResult foldShufflePoisonOperandToMask(ShuffleOp op) {
+  bool isV1Poison = matchPattern(op.getV1(), ub::m_Poison());
+  bool isV2Poison = matchPattern(op.getV2(), ub::m_Poison());
+  if (!isV1Poison && !isV2Poison)
     return {};
 
-  // Fold shuffle poison, poison -> poison.
-  bool isV1Poison = matchPattern(v1Attr, ub::m_Poison());
-  bool isV2Poison = matchPattern(v2Attr, ub::m_Poison());
-  if (isV1Poison && isV2Poison)
-    return ub::PoisonAttr::get(getContext());
+  int64_t v1Size = op.getV1VectorType().getDimSize(0);
+  bool changed = false;
+  SmallVector<int64_t> newMask = llvm::to_vector(op.getMask());
+  for (int64_t &idx : newMask) {
+    if (idx == ShuffleOp::kPoisonIndex)
+      continue;
+    if ((isV1Poison && idx < v1Size) || (isV2Poison && idx >= v1Size)) {
+      idx = ShuffleOp::kPoisonIndex;
+      changed = true;
+    }
+  }
 
-  // Only support 1-D for now to avoid complicated n-D DenseElementsAttr
-  // manipulation.
+  if (!changed)
+    return {};
+
+  op.setMask(newMask);
+  return op.getResult();
+}
+
+/// Fold shuffle poison, poison -> poison.
+static OpFoldResult foldShufflePoisonInputs(MLIRContext *context,
+                                            Attribute v1Attr,
+                                            Attribute v2Attr) {
+  if (matchPattern(v1Attr, ub::m_Poison()) &&
+      matchPattern(v2Attr, ub::m_Poison()))
+    return ub::PoisonAttr::get(context);
+  return {};
+}
+
+/// Fold a shuffle of constant 1-D inputs by evaluating the mask.
+static OpFoldResult foldShuffleConstantInputs(ShuffleOp op, Attribute v1Attr,
+                                              Attribute v2Attr) {
+  auto v1Type = op.getV1VectorType();
   if (v1Type.getRank() != 1)
     return {};
+
+  bool isV1Poison = matchPattern(v1Attr, ub::m_Poison());
+  bool isV2Poison = matchPattern(v2Attr, ub::m_Poison());
 
   // Poison input attributes need special handling as they are not
   // DenseElementsAttr. If an index is poison, we select the first element of
@@ -3344,6 +3430,7 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
     poisonElement = v1Elements[0];
   }
 
+  ArrayRef<int64_t> mask = op.getMask();
   SmallVector<Attribute> results;
   int64_t v1Size = v1Type.getDimSize(0);
   for (int64_t maskIdx : mask) {
@@ -3361,7 +3448,35 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
     results.push_back(indexedElm);
   }
 
-  return DenseElementsAttr::get(getResultVectorType(), results);
+  return DenseElementsAttr::get(op.getResultVectorType(), results);
+}
+
+OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
+  auto v1Type = getV1VectorType();
+
+  assert(!v1Type.isScalable() && !getV2VectorType().isScalable() &&
+         "Vector shuffle does not support scalable vectors");
+
+  // For consistency: 0-D shuffle return type is 1-D, this cannot be a folding
+  // but must be a canonicalization into a vector.broadcast.
+  if (v1Type.getRank() == 0)
+    return {};
+
+  if (auto res = foldShuffleIdentityMask(*this))
+    return res;
+  if (auto res = foldShufflePoisonOperandToMask(*this))
+    return res;
+
+  Attribute v1Attr = adaptor.getV1(), v2Attr = adaptor.getV2();
+  if (!v1Attr || !v2Attr)
+    return {};
+
+  if (auto res = foldShufflePoisonInputs(getContext(), v1Attr, v2Attr))
+    return res;
+  if (auto res = foldShuffleConstantInputs(*this, v1Attr, v2Attr))
+    return res;
+
+  return {};
 }
 
 namespace {
