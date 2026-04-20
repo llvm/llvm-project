@@ -156,9 +156,9 @@ Error replayKernel() {
 
   // Retrieve the values from the JSON file.
   uint32_t NumTeams, NumThreads, SharedMemorySize, DeviceId, NumArgs;
-  if (auto Err = getInteger(JsonObj, "NumTeamsClause", NumTeams))
+  if (auto Err = getInteger(JsonObj, "NumTeams", NumTeams))
     return Err;
-  if (auto Err = getInteger(JsonObj, "ThreadLimitClause", NumThreads))
+  if (auto Err = getInteger(JsonObj, "NumThreads", NumThreads))
     return Err;
   if (auto Err = getInteger(JsonObj, "SharedMemorySize", SharedMemorySize))
     return Err;
@@ -186,8 +186,35 @@ Error replayKernel() {
   NumThreads = NumThreadsOpt > 0 ? NumThreadsOpt : NumThreads;
   DeviceId = DeviceIdOpt >= 0 ? DeviceIdOpt : DeviceId;
 
+  // Retrieve the teams and threads limits (min and max).
+  SmallVector<uint32_t> TeamsLimits;
+  auto Err = processIntegerArray(JsonObj, "TeamsLimits", [&](uint64_t Val) {
+    TeamsLimits.push_back(static_cast<uint32_t>(Val));
+  });
+  if (Err)
+    return Err;
+
+  SmallVector<uint32_t> ThreadsLimits;
+  Err = processIntegerArray(JsonObj, "ThreadsLimits", [&](uint64_t Val) {
+    ThreadsLimits.push_back(static_cast<uint32_t>(Val));
+  });
+  if (Err)
+    return Err;
+
+  if (TeamsLimits.size() != 2 || ThreadsLimits.size() != 2)
+    return createErr("TeamsLimits and ThreadsLimits must have a min and max");
+
+  // If the limits were specified, verify the selected values are valid.
+  if (TeamsLimits[0] > 0 &&
+      (NumTeams < TeamsLimits[0] || NumTeams > TeamsLimits[1]))
+    return createErr("number of teams is out of the allowed limits");
+  if (ThreadsLimits[0] > 0 &&
+      (NumThreads < ThreadsLimits[0] || NumThreads > ThreadsLimits[1]))
+    return createErr("number of threads is out of the allowed limits");
+
+  // Retrieve the arguments of the kernel.
   SmallVector<void *> TgtArgs;
-  auto Err = processIntegerArray(JsonObj, "ArgPtrs", [&](uint64_t Val) {
+  Err = processIntegerArray(JsonObj, "ArgPtrs", [&](uint64_t Val) {
     TgtArgs.push_back(reinterpret_cast<void *>(Val));
   });
   if (Err)
