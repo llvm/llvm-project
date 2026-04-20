@@ -3569,15 +3569,10 @@ private:
     if (currentFunctionUnit && !currentFunctionUnit->isMainProgram()) {
       const std::string symName =
           currentFunctionUnit->getSubprogramSymbol().name().ToString();
-      if (!llvm::StringRef(dir.v->ToString()).equals_insensitive(symName)) {
-        mlir::emitWarning(toLocation())
-            << "Directive Ignored: INLINEALWAYS directive function name '"
-            << dir.v->ToString() << "' does not match the function '" << symName
-            << "' where this is declared.";
-        return;
+      if (dir.v->ToString() == symName) {
+        func->setAttr("llvm.always_inline", builder->getUnitAttr());
       }
     }
-    func->setAttr("llvm.always_inline", builder->getUnitAttr());
   }
 
   void
