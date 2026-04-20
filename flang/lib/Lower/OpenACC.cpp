@@ -1880,7 +1880,8 @@ void AccDataMap::remapDataOperandSymbols(
       llvm::cast<hlfir::DeclareOp>(*computeDef).setSkipRebox(true);
 
     symbolMap.addVariableDefinition(
-        symbol, llvm::cast<fir::FortranVariableOpInterface>(computeDef));
+        symbol, llvm::cast<fir::FortranVariableOpInterface>(computeDef),
+        /*force=*/true);
   }
 
   for (const auto &comp : components) {
@@ -2966,10 +2967,10 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  // When CUDA Fortran is enabled, extra symbols are created in the host_data
-  // scope for use_device objects. Bind them to the outer scope's symbols before
-  // processing any clauses, since the if clause may reference these symbols.
-  if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
+  // Extra symbols are created in the host_data scope for use_device objects.
+  // Bind them to the outer scope's symbols before processing any clauses,
+  // since the if clause may reference these symbols.
+  {
     for (const Fortran::parser::AccClause &clause : accClauseList.v) {
       if (const auto *useDevice =
               std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
@@ -2981,18 +2982,8 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
             if (const auto *name =
                     Fortran::parser::GetDesignatorNameIfDataRef(*designator)) {
               newSym = name->symbol;
-            } else if (const auto *arrayElement = Fortran::parser::Unwrap<
-                           Fortran::parser::ArrayElement>(*designator)) {
-              const Fortran::parser::Name &name =
-                  Fortran::parser::GetLastName(arrayElement->Base());
-              newSym = name.symbol;
-            } else if (const auto *component = Fortran::parser::Unwrap<
-                           Fortran::parser::StructureComponent>(*designator)) {
-              const Fortran::parser::DataRef &base{component->Base()};
-              if (const auto *name =
-                      std::get_if<Fortran::parser::Name>(&base.u)) {
-                newSym = name->symbol;
-              }
+            } else {
+              newSym = Fortran::parser::GetFirstName(*designator).symbol;
             }
           } else if (const auto *name =
                          std::get_if<Fortran::parser::Name>(&accObject.u)) {

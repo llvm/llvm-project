@@ -260,9 +260,8 @@ define <8 x i32> @test7(ptr %base, <8 x i32> %ind, i8 %mask) {
 ; X64-KNL-LABEL: test7:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X64-KNL-NEXT:    kmovw %esi, %k0
-; X64-KNL-NEXT:    kshiftlw $8, %k0, %k0
-; X64-KNL-NEXT:    kshiftrw $8, %k0, %k1
+; X64-KNL-NEXT:    movzbl %sil, %eax
+; X64-KNL-NEXT:    kmovw %eax, %k1
 ; X64-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-KNL-NEXT:    kmovw %k1, %k2
 ; X64-KNL-NEXT:    vpgatherdd (%rdi,%zmm0,4), %zmm1 {%k2}
@@ -274,16 +273,14 @@ define <8 x i32> @test7(ptr %base, <8 x i32> %ind, i8 %mask) {
 ; X86-KNL-LABEL: test7:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X86-KNL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-KNL-NEXT:    kmovw %ecx, %k0
-; X86-KNL-NEXT:    kshiftlw $8, %k0, %k0
-; X86-KNL-NEXT:    kshiftrw $8, %k0, %k1
+; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-KNL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-KNL-NEXT:    kmovw %eax, %k1
 ; X86-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-KNL-NEXT:    kmovw %k1, %k2
-; X86-KNL-NEXT:    vpgatherdd (%eax,%zmm0,4), %zmm1 {%k2}
+; X86-KNL-NEXT:    vpgatherdd (%ecx,%zmm0,4), %zmm1 {%k2}
 ; X86-KNL-NEXT:    vmovdqa %ymm1, %ymm2
-; X86-KNL-NEXT:    vpgatherdd (%eax,%zmm0,4), %zmm1 {%k1}
+; X86-KNL-NEXT:    vpgatherdd (%ecx,%zmm0,4), %zmm1 {%k1}
 ; X86-KNL-NEXT:    vpaddd %ymm1, %ymm2, %ymm0
 ; X86-KNL-NEXT:    retl
 ;
@@ -4702,9 +4699,8 @@ define void @scaleidx_scatter(<8 x float> %value, ptr %base, <8 x i32> %index, i
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X64-KNL-NEXT:    vpaddd %ymm1, %ymm1, %ymm1
-; X64-KNL-NEXT:    kmovw %esi, %k0
-; X64-KNL-NEXT:    kshiftlw $8, %k0, %k0
-; X64-KNL-NEXT:    kshiftrw $8, %k0, %k1
+; X64-KNL-NEXT:    movzbl %sil, %eax
+; X64-KNL-NEXT:    kmovw %eax, %k1
 ; X64-KNL-NEXT:    vscatterdps %zmm0, (%rdi,%zmm1,4) {%k1}
 ; X64-KNL-NEXT:    vzeroupper
 ; X64-KNL-NEXT:    retq
@@ -4712,13 +4708,11 @@ define void @scaleidx_scatter(<8 x float> %value, ptr %base, <8 x i32> %index, i
 ; X86-KNL-LABEL: scaleidx_scatter:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X86-KNL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-KNL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-KNL-NEXT:    vpaddd %ymm1, %ymm1, %ymm1
-; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-KNL-NEXT:    kmovw %ecx, %k0
-; X86-KNL-NEXT:    kshiftlw $8, %k0, %k0
-; X86-KNL-NEXT:    kshiftrw $8, %k0, %k1
-; X86-KNL-NEXT:    vscatterdps %zmm0, (%eax,%zmm1,4) {%k1}
+; X86-KNL-NEXT:    kmovw %eax, %k1
+; X86-KNL-NEXT:    vscatterdps %zmm0, (%ecx,%zmm1,4) {%k1}
 ; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ;
@@ -4749,9 +4743,8 @@ define void @scaleidx_scatter_outofrange(<8 x float> %value, ptr %base, <8 x i32
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X64-KNL-NEXT:    vpslld $2, %ymm1, %ymm1
-; X64-KNL-NEXT:    kmovw %esi, %k0
-; X64-KNL-NEXT:    kshiftlw $8, %k0, %k0
-; X64-KNL-NEXT:    kshiftrw $8, %k0, %k1
+; X64-KNL-NEXT:    movzbl %sil, %eax
+; X64-KNL-NEXT:    kmovw %eax, %k1
 ; X64-KNL-NEXT:    vscatterdps %zmm0, (%rdi,%zmm1,4) {%k1}
 ; X64-KNL-NEXT:    vzeroupper
 ; X64-KNL-NEXT:    retq
@@ -4759,13 +4752,11 @@ define void @scaleidx_scatter_outofrange(<8 x float> %value, ptr %base, <8 x i32
 ; X86-KNL-LABEL: scaleidx_scatter_outofrange:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X86-KNL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-KNL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-KNL-NEXT:    vpslld $2, %ymm1, %ymm1
-; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-KNL-NEXT:    kmovw %ecx, %k0
-; X86-KNL-NEXT:    kshiftlw $8, %k0, %k0
-; X86-KNL-NEXT:    kshiftrw $8, %k0, %k1
-; X86-KNL-NEXT:    vscatterdps %zmm0, (%eax,%zmm1,4) {%k1}
+; X86-KNL-NEXT:    kmovw %eax, %k1
+; X86-KNL-NEXT:    vscatterdps %zmm0, (%ecx,%zmm1,4) {%k1}
 ; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ;
