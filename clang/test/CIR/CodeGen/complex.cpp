@@ -816,7 +816,7 @@ void foo31() {
 
 // LLVM: %[[W_ADDR:.*]] = alloca %struct.Wrapper, i64 1, align 4
 // LLVM: %[[REAL_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[ELEM_PTR:.*]] = getelementptr %struct.Wrapper, ptr %[[W_ADDR]], i32 0, i32 0
+// LLVM: %[[ELEM_PTR:.*]] = getelementptr inbounds nuw %struct.Wrapper, ptr %[[W_ADDR]], i32 0, i32 0
 // LLVM: %[[TMP_ELEM_PTR:.*]] = load { i32, i32 }, ptr %[[ELEM_PTR]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { i32, i32 } %[[TMP_ELEM_PTR]], 0
 // LLVM: store i32 %[[REAL]], ptr %[[REAL_ADDR]], align 4

@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_MACHINEBLOCKHASHINFO_H
 #define LLVM_CODEGEN_MACHINEBLOCKHASHINFO_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
@@ -95,8 +96,18 @@ private:
   uint16_t NeighborHash{0};
 };
 
-class MachineBlockHashInfo : public MachineFunctionPass {
+/// Result object for MachineBlockHashInfo.
+class MachineBlockHashInfoResult {
   DenseMap<const MachineBasicBlock *, uint64_t> MBBHashInfo;
+
+public:
+  MachineBlockHashInfoResult();
+  explicit MachineBlockHashInfoResult(const MachineFunction &MBB);
+  uint64_t getMBBHash(const MachineBasicBlock &MBB) const;
+};
+
+class MachineBlockHashInfo : public MachineFunctionPass {
+  MachineBlockHashInfoResult Result;
 
 public:
   static char ID;
@@ -108,7 +119,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
-  uint64_t getMBBHash(const MachineBasicBlock &MBB);
+  uint64_t getMBBHash(const MachineBasicBlock &MBB) const;
 };
 
 } // end namespace llvm
