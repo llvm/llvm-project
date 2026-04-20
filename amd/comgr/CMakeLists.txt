@@ -559,10 +559,7 @@ if(BUILD_TESTING)
   endif()
   add_subdirectory(test)
   add_subdirectory(test-lit)
-
-  if(TARGET llvm_gtest)
-    add_subdirectory(unittests)
-  endif()
+  add_subdirectory(test-unit)
 endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
