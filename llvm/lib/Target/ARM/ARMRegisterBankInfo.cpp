@@ -436,6 +436,9 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_RESET_FPENV:
     OperandsMapping = getOperandsMapping({nullptr});
     break;
+  case G_BITCAST:
+    OperandsMapping = &ARM::ValueMappings[ARM::SPR3OpsIdx];
+    break;
   default:
     return getInvalidInstructionMapping();
   }

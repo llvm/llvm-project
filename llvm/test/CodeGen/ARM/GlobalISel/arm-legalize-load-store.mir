@@ -67,14 +67,14 @@ body:             |
 
     ; CHECK: [[LD:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load (s8))
     ; CHECK: [[ASSERTZ:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[LD]], 1
-    ; CHECK: [[ONE:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ASSERTZ]]
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[EXT]], [[ONE]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[AND]]
-    ; CHECK: G_STORE [[TRUNC]](s8), {{%[0-9]+}}(p0) :: (store (s8))
+    ; CHECK: [[ONE:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK: [[EXT:%[0-9]+]]:_(i32) = G_ANYEXT [[ASSERTZ]]
+    ; CHECK: [[AND:%[0-9]+]]:_(i32) = G_AND [[EXT]], [[ONE]]
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[AND]]
+    ; CHECK: G_STORE [[TRUNC]](i8), {{%[0-9]+}}(p0) :: (store (i8))
     %0:_(p0) = COPY $r0
-    %5:_(s1) = G_LOAD %0(p0) :: (load (s1))
-    G_STORE %5(s1), %0(p0) :: (store (s1))
+    %5:_(i1) = G_LOAD %0(p0) :: (load (s1))
+    G_STORE %5(i1), %0(p0) :: (store (s1))
     BX_RET 14, $noreg
 ...
 ---
@@ -126,22 +126,22 @@ body:             |
     ; Can't use the VFP support for unaligned operations, we need to use 32-bits
     ; operations instead.
     ; CHECK: [[ADDR1:%[0-9]+]]:_(p0) = COPY $r0
-    ; CHECK-NEXT: [[V1:%[0-9]+]]:_(s32) = G_LOAD [[ADDR1]](p0) :: (load (s32), align 1)
-    ; CHECK-NEXT: [[OFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[V1:%[0-9]+]]:_(i32) = G_LOAD [[ADDR1]](p0) :: (load (i32), align 1)
+    ; CHECK-NEXT: [[OFF:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
     ; CHECK-NEXT: [[ADDR2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR1]], [[OFF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
-    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from unknown-address + 4, align 1)
-    ; CHECK-NEXT: G_STORE [[V1]](s32), [[ADDR1]](p0) :: (store (s32), align 1)
-    ; CHECK-NEXT: G_STORE [[V2]](s32), [[ADDR2]](p0) :: (store (s32) into unknown-address + 4, align 1)
+    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i32) from unknown-address + 4, align 1)
+    ; CHECK-NEXT: G_STORE [[V1]](i32), [[ADDR1]](p0) :: (store (i32), align 1)
+    ; CHECK-NEXT: G_STORE [[V2]](i32), [[ADDR2]](p0) :: (store (i32) into unknown-address + 4, align 1)
     %0(p0) = COPY $r0
-    %1(s64) = G_LOAD %0(p0) :: (load (s64), align 1)
-    G_STORE %1(s64), %0(p0) :: (store (s64), align 1)
+    %1(i64) = G_LOAD %0(p0) :: (load (s64), align 1)
+    G_STORE %1(i64), %0(p0) :: (store (s64), align 1)
 
     ; For word-aligned we can use VFP operations.
-    ; CHECK: [[V:%[0-9]+]]:_(s64) = G_LOAD %0(p0) :: (load (s64), align 4)
-    ; CHECK: G_STORE [[V]](s64), %0(p0) :: (store (s64), align 4)
-    %2(s64) = G_LOAD %0(p0) :: (load (s64), align 4)
-    G_STORE %2(s64), %0(p0) :: (store (s64), align 4)
+    ; CHECK: [[V:%[0-9]+]]:_(i64) = G_LOAD %0(p0) :: (load (s64), align 4)
+    ; CHECK: G_STORE [[V]](i64), %0(p0) :: (store (s64), align 4)
+    %2(i64) = G_LOAD %0(p0) :: (load (s64), align 4)
+    G_STORE %2(i64), %0(p0) :: (store (s64), align 4)
 
     BX_RET 14, $noreg
 ...
@@ -164,7 +164,7 @@ body:             |
     ; When we don't have VFP support, we need to use 32-bit operations.
     ; CHECK: [[ADDR1:%[0-9]+]]:_(p0) = COPY $r0
     ; CHECK-NEXT: [[V1:%[0-9]+]]:_(s32) = G_LOAD [[ADDR1]](p0) :: (load (s32), align 1)
-    ; CHECK-NEXT: [[OFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[OFF:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
     ; CHECK-NEXT: [[ADDR2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR1]], [[OFF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
     ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from unknown-address + 4, align 1)

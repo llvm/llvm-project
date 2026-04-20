@@ -28,18 +28,18 @@ body:             |
   bb.0:
     liveins: $r0, $s1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $s1
+    %0(i32) = COPY $r0
+    %1(f32) = COPY $s1
 
-    %2(s32) = G_ADD %0, %0
+    %2(i32) = G_ADD %0, %0
 
     ; DBG_VALUE {{%[0-9]+}}:gpr, $noreg, !7, !DIExpression(), debug-location !9
-    DBG_VALUE %2(s32), $noreg, !7, !DIExpression(), debug-location !9
+    DBG_VALUE %2(i32), $noreg, !7, !DIExpression(), debug-location !9
 
-    %3(s32) = G_FADD %1, %1
+    %3(f32) = G_FADD %1, %1
 
     ; DBG_VALUE {{%[0-9]+}}:spr, $noreg, !7, !DIExpression(), debug-location !9
-    DBG_VALUE %3(s32), $noreg, !7, !DIExpression(), debug-location !9
+    DBG_VALUE %3(f32), $noreg, !7, !DIExpression(), debug-location !9
 
     ; DBG_VALUE i32 42, 0, !7, !DIExpression(), debug-location !9
     DBG_VALUE i32 42, 0, !7, !DIExpression(), debug-location !9
@@ -50,8 +50,8 @@ body:             |
     ; DBG_VALUE $noreg, 0, !7, !DIExpression(), debug-location !9
     DBG_VALUE $noreg, 0, !7, !DIExpression(), debug-location !9
 
-    $r0 = COPY %2(s32)
-    $s1 = COPY %3(s32)
+    $r0 = COPY %2(i32)
+    $s1 = COPY %3(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $s1
 
 ...

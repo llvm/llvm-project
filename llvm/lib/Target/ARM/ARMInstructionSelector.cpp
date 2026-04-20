@@ -1037,6 +1037,9 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     I.setDesc(TII.get(COPY));
     return selectCopy(I, TII, MRI, TRI, RBI);
   }
+  case TargetOpcode::G_BITCAST:
+    I.setDesc(TII.get(COPY));
+    return selectCopy(I, TII, MRI, TRI, RBI);
   case G_SELECT:
     return selectSelect(MIB, MRI);
   case G_ICMP: {
