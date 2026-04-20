@@ -458,12 +458,19 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
              "expected input range not to be inverted");
       A.InputEndCol = UINT_MAX;
       Annotations.push_back(A);
-      for (unsigned L = DiagItr->InputStartLine + 1, E = DiagItr->InputEndLine;
-           L <= E; ++L) {
+      // A diagnostic can cover multiple input lines due to [[:space:]] matching
+      // a new line or a "not found" diagnostic (Lead='X').
+      unsigned E = DiagItr->InputEndLine;
+      unsigned LastRenderable = DiagItr->InputEndCol == 1 ? E - 1 : E;
+      for (unsigned L = DiagItr->InputStartLine + 1; L <= E; ++L) {
         // If a range ends before the first column on a line, then it has no
         // characters on that line, so there's nothing to render.
         if (DiagItr->InputEndCol == 1 && L == E)
           break;
+        // For a "not found", emit only the last-renderable-line marker to avoid
+        // `~~~` continuation obscuring the content.
+        if (A.Marker.Lead == 'X' && L != LastRenderable)
+          continue;
         InputAnnotation B;
         B.DiagIndex = A.DiagIndex;
         B.Label = A.Label;
