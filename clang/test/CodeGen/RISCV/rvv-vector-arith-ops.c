@@ -228,24 +228,6 @@ vfloat32m1_t fsub_scalar_f32(vfloat32m1_t a, float b) {
   return a - b;
 }
 
-// TERNARY
-
-// CHECK-LABEL: @ternary_i32(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[C:%.*]], 0
-// CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-// CHECK:       cond.true:
-// CHECK-NEXT:    br label [[COND_END:%.*]]
-// CHECK:       cond.false:
-// CHECK-NEXT:    br label [[COND_END]]
-// CHECK:       cond.end:
-// CHECK-NEXT:    [[COND:%.*]] = phi <vscale x 2 x i32> [ [[A:%.*]], [[COND_TRUE]] ], [ [[B:%.*]], [[COND_FALSE]] ]
-// CHECK-NEXT:    ret <vscale x 2 x i32> [[COND]]
-//
-vint32m1_t ternary_i32(int c, vint32m1_t a, vint32m1_t b) {
-  return c ? a : b;
-}
-
 // COMPOUND ASSIGNMENT
 
 // CHECK-LABEL: @compound_add_i32(

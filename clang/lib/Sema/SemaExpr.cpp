@@ -10956,8 +10956,6 @@ QualType Sema::CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
   const BuiltinType *RHSBuiltinTy = RHSType->getAs<BuiltinType>();
 
   unsigned DiagID = diag::err_typecheck_invalid_operands;
-
-
   if ((OperationKind == ArithConvKind::Arithmetic) &&
       ((LHSBuiltinTy && LHSBuiltinTy->isSizelessVectorBool()) ||
        (RHSBuiltinTy && RHSBuiltinTy->isSizelessVectorBool()))) {
@@ -12894,8 +12892,8 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       RHS.get()->getType()->isVectorType())
     return CheckVectorCompareOperands(LHS, RHS, Loc, Opc);
 
-  if (LHS.get()->getType()->isVLSBuiltinType() ||
-      RHS.get()->getType()->isVLSBuiltinType())
+  if (LHS.get()->getType()->isSveVLSBuiltinType() ||
+      RHS.get()->getType()->isSveVLSBuiltinType())
     return CheckSizelessVectorCompareOperands(LHS, RHS, Loc, Opc);
 
   diagnoseLogicalNotOnLHSofCheck(*this, LHS, RHS, Loc, Opc);
@@ -13395,7 +13393,7 @@ QualType Sema::GetSignedSizelessVectorType(QualType V) {
   const BuiltinType *VTy = V->castAs<BuiltinType>();
   assert(VTy->isSizelessBuiltinType() && "expected sizeless type");
 
-  const QualType ETy = V->getSizelessVectorEltType(Context);
+  const QualType ETy = V->getSveEltType(Context);
   const auto TypeSize = Context.getTypeSize(ETy);
 
   const QualType IntTy = Context.getIntTypeForBitwidth(TypeSize, true);
@@ -13497,8 +13495,8 @@ QualType Sema::CheckSizelessVectorCompareOperands(ExprResult &LHS,
   const BuiltinType *LHSBuiltinTy = LHSType->getAs<BuiltinType>();
   const BuiltinType *RHSBuiltinTy = RHS.get()->getType()->getAs<BuiltinType>();
 
-  if (LHSBuiltinTy && RHSBuiltinTy && LHSBuiltinTy->isSizelessVectorBool() &&
-      RHSBuiltinTy->isSizelessVectorBool())
+  if (LHSBuiltinTy && RHSBuiltinTy && LHSBuiltinTy->isSVEBool() &&
+      RHSBuiltinTy->isSVEBool())
     return LHSType;
 
   // Return a signed type for the vector.
