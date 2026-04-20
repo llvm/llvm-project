@@ -31,11 +31,8 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              uint32_t addr_byte_size,
                                              lldb::addr_t address,
                                              ValueObjectManager *manager) {
-  std::shared_ptr<ValueObjectManager> manager_sp;
-  if (!manager) {
-    manager_sp = ValueObjectManager::Create();
-    manager = manager_sp.get();
-  }
+  std::shared_ptr<ValueObjectManager> manager_sp = CreateManagerIfEmpty(manager);
+
   return (new ValueObjectConstResult(exe_scope, *manager, byte_order,
                                      addr_byte_size, address))
       ->GetSP();
@@ -60,11 +57,7 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              const DataExtractor &data,
                                              lldb::addr_t address,
                                              ValueObjectManager *manager) {
-  std::shared_ptr<ValueObjectManager> manager_sp;
-  if (!manager) {
-    manager_sp = ValueObjectManager::Create();
-    manager = manager_sp.get();
-  }
+  std::shared_ptr<ValueObjectManager> manager_sp = CreateManagerIfEmpty(manager);
   return (new ValueObjectConstResult(exe_scope, *manager, compiler_type, name,
                                      data, address))
       ->GetSP();
@@ -97,11 +90,7 @@ ValueObjectSP ValueObjectConstResult::Create(
     ConstString name, const lldb::DataBufferSP &data_sp,
     lldb::ByteOrder data_byte_order, uint32_t data_addr_size,
     lldb::addr_t address, ValueObjectManager *manager) {
-  std::shared_ptr<ValueObjectManager> manager_sp;
-  if (!manager) {
-    manager_sp = ValueObjectManager::Create();
-    manager = manager_sp.get();
-  }
+  std::shared_ptr<ValueObjectManager> manager_sp = CreateManagerIfEmpty(manager);
   return (new ValueObjectConstResult(exe_scope, *manager, compiler_type, name,
                                      data_sp, data_byte_order, data_addr_size,
                                      address))
@@ -112,11 +101,7 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              Value &value, ConstString name,
                                              Module *module,
                                              ValueObjectManager *manager) {
-  std::shared_ptr<ValueObjectManager> manager_sp;
-  if (!manager) {
-    manager_sp = ValueObjectManager::Create();
-    manager = manager_sp.get();
-  }
+  std::shared_ptr<ValueObjectManager> manager_sp = CreateManagerIfEmpty(manager);
   return (new ValueObjectConstResult(exe_scope, *manager, value, name, module))
       ->GetSP();
 }
@@ -126,11 +111,7 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              Scalar &scalar, ConstString name,
                                              Module *module,
                                              ValueObjectManager *manager) {
-  std::shared_ptr<ValueObjectManager> manager_sp;
-  if (!manager) {
-    manager_sp = ValueObjectManager::Create();
-    manager = manager_sp.get();
-  }
+  std::shared_ptr<ValueObjectManager> manager_sp = CreateManagerIfEmpty(manager);
   return (new ValueObjectConstResult(exe_scope, *manager, compiler_type, scalar,
                                      name, module))
       ->GetSP();
@@ -158,11 +139,7 @@ ValueObjectSP ValueObjectConstResult::Create(
     ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
     ConstString name, lldb::addr_t address, AddressType address_type,
     uint32_t addr_byte_size, ValueObjectManager *manager) {
-  std::shared_ptr<ValueObjectManager> manager_sp;
-  if (!manager) {
-    manager_sp = ValueObjectManager::Create();
-    manager = manager_sp.get();
-  }
+  std::shared_ptr<ValueObjectManager> manager_sp = CreateManagerIfEmpty(manager);
   return (new ValueObjectConstResult(exe_scope, *manager, compiler_type, name,
                                      address, address_type, addr_byte_size))
       ->GetSP();
@@ -202,11 +179,7 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              Status &&error,
                                              ValueObjectManager *manager) {
 
-  std::shared_ptr<ValueObjectManager> manager_sp;
-  if (!manager) {
-    manager_sp = ValueObjectManager::Create();
-    manager = manager_sp.get();
-  }
+  std::shared_ptr<ValueObjectManager> manager_sp = CreateManagerIfEmpty(manager);
   return (new ValueObjectConstResult(exe_scope, *manager, std::move(error)))
       ->GetSP();
 }

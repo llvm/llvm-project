@@ -77,41 +77,26 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
 
   CompilerType voidstar =
       scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
-  if (owned_by_valobj) {
-    if (name_sp)
-      *name_sp = valobj.CreateChildValueObjectFromData(
-          "name", name_isw.GetAsData(process_sp->GetByteOrder()),
-          valobj.GetExecutionContextRef(), voidstar);
-    if (reason_sp)
-      *reason_sp = valobj.CreateChildValueObjectFromData(
-          "reason", reason_isw.GetAsData(process_sp->GetByteOrder()),
-          valobj.GetExecutionContextRef(), voidstar);
-    if (userinfo_sp)
-      *userinfo_sp = valobj.CreateChildValueObjectFromData(
-          "userInfo", userinfo_isw.GetAsData(process_sp->GetByteOrder()),
-          valobj.GetExecutionContextRef(), voidstar);
-    if (reserved_sp)
-      *reserved_sp = valobj.CreateChildValueObjectFromData(
-          "reserved", reserved_isw.GetAsData(process_sp->GetByteOrder()),
-          valobj.GetExecutionContextRef(), voidstar);
-  } else {
-    if (name_sp)
-      *name_sp = ValueObject::CreateValueObjectFromData(
-          "name", name_isw.GetAsData(process_sp->GetByteOrder()),
-          valobj.GetExecutionContextRef(), voidstar);
-    if (reason_sp)
-      *reason_sp = ValueObject::CreateValueObjectFromData(
-          "reason", reason_isw.GetAsData(process_sp->GetByteOrder()),
-          valobj.GetExecutionContextRef(), voidstar);
-    if (userinfo_sp)
-      *userinfo_sp = ValueObject::CreateValueObjectFromData(
-          "userInfo", userinfo_isw.GetAsData(process_sp->GetByteOrder()),
-          valobj.GetExecutionContextRef(), voidstar);
-    if (reserved_sp)
-      *reserved_sp = ValueObject::CreateValueObjectFromData(
-          "reserved", reserved_isw.GetAsData(process_sp->GetByteOrder()),
-          valobj.GetExecutionContextRef(), voidstar);
-  }
+  ExecutionContextRef exe_ref = valobj.GetExecutionContextRef();
+  ByteOrder byte_order = process_sp->GetByteOrder();
+  
+  auto set_sp = [&] (llvm::StringRef name, InferiorSizedWord &data_source, 
+                     ValueObjectSP *set_me_sp) {
+    if (!set_me_sp)
+      return;
+    if (owned_by_valobj) 
+      *set_me_sp = valobj.CreateChildValueObjectFromData(name, 
+          data_source.GetAsData(byte_order), exe_ref, voidstar);
+    else
+      *set_me_sp = valobj.CreateValueObjectFromData(name, 
+          data_source.GetAsData(byte_order), exe_ref, voidstar);
+  };
+  
+  set_sp("name", name_isw, name_sp);
+  set_sp("reason", reason_isw, reason_sp);
+  set_sp("userInfo", userinfo_isw, userinfo_sp);
+  set_sp("reserved", reserved_isw, reserved_sp);
+
   return true;
 }
 

@@ -378,15 +378,18 @@ bool ValueObject::IsLogicalTrue(Status &error) {
 }
 
 ValueObjectSP ValueObject::CheckValueObjectOwnership(ValueObject *child) {
-  if (GetTargetSP()->GetCheckValueObjectOwnership()) {
+  Target *target_ptr = GetTargetSP().get();
+  if (!target_ptr)
+    return {};
+
+  if (target_ptr->GetCheckValueObjectOwnership()) {
     // Child value objects should always be owned by their parent's manager.
     if (child && (child->GetManager() != GetManager())) {
       Status error = Status::FromErrorStringWithFormatv(
           "ValueObject: '{0}' not owned by its parent: '{1}'", child->GetName(),
           GetName());
-      ValueObjectSP ret_sp = ValueObjectConstResult::Create(
-          GetTargetSP().get(), std::move(error), this->GetManager());
-      return ret_sp;
+      return ValueObjectConstResult::Create(
+          target_ptr, std::move(error), this->GetManager());
     }
   }
   return {};
@@ -3557,8 +3560,6 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
     return retval_sp;
   if (expression.empty())
     return retval_sp;
-  if (parent)
-    retval_sp = parent->GetSP();
 
   target_sp->EvaluateExpression(expression, exe_ctx.GetFrameSP().get(),
                                 retval_sp, options);
