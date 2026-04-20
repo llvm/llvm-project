@@ -138,7 +138,7 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
-    // _BitInt tests. Width tiers follow C23 §7.18.2.5.
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
 #if TEST_HAS_EXTENSION(bit_int)
     {
       using T8  = unsigned _BitInt(8);

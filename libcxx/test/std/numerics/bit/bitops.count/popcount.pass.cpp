@@ -148,7 +148,7 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
-    // _BitInt tests. Width tiers follow C23 §7.18.2.5: BITINT_MAXWIDTH is
+    // _BitInt tests. Width tiers follow C23 7.18.2.5: BITINT_MAXWIDTH is
     // guaranteed to be >= ULLONG_WIDTH (>= 64). Anything beyond that is
     // optional and must be guarded by __BITINT_MAXWIDTH__.
 #if TEST_HAS_EXTENSION(bit_int)

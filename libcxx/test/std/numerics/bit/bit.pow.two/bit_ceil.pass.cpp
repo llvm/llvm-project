@@ -140,7 +140,7 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
-    // _BitInt tests. Width tiers follow C23 §7.18.2.5.
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
     // bit_ceil uses numeric_limits::digits, so only byte-aligned widths.
 #if TEST_HAS_EXTENSION(bit_int)
     {

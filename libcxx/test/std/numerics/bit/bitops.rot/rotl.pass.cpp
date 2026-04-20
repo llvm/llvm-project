@@ -165,7 +165,7 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
-    // _BitInt tests. Width tiers follow C23 §7.18.2.5.
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
     // rotl uses numeric_limits::digits internally, so only byte-aligned
     // widths are safe (where digits matches the actual bit width).
 #if TEST_HAS_EXTENSION(bit_int)
