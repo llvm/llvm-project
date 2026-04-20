@@ -452,8 +452,8 @@ static void printTail(llvm::raw_ostream &Out,
 //===----------------------------------------------------------------------===//
 
 static const SubRegion *
-  getConstructedSubRegion(const CXXConstructorDecl *CtorDecl,
-                       CheckerContext &Context) {
+getConstructedSubRegion(const CXXConstructorDecl *CtorDecl,
+                        CheckerContext &Context) {
   Loc ThisLoc =
       Context.getSValBuilder().getCXXThis(CtorDecl, Context.getStackFrame());
   SVal ObjectV = Context.getState()->getSVal(ThisLoc);
@@ -479,8 +479,8 @@ getConstructedRegion(const CXXConstructorDecl *CtorDecl,
   auto &MemMgr = Context.getState()->getStateManager().getRegionManager();
   auto &SVB = Context.getSValBuilder();
 
-  const auto *ElemR = MemMgr.getElementRegion(
-      DynType, SVB.makeZeroArrayIndex(), SR, Context.getASTContext());
+  const auto *ElemR = MemMgr.getElementRegion(DynType, SVB.makeZeroArrayIndex(),
+                                              SR, Context.getASTContext());
 
   return ElemR;
 }
