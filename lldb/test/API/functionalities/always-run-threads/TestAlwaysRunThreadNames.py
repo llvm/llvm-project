@@ -17,9 +17,7 @@ class AlwaysRunThreadNamesTestCase(TestBase):
         )
 
         # Configure the setting to keep our helper thread running.
-        self.runCmd(
-            "settings set target.process.always-run-thread-names always-run"
-        )
+        self.runCmd("settings set target.process.always-run-thread-names always-run")
 
         # Record the helper thread's counter before stepping.
         counter_before = target.FindFirstGlobalVariable("g_helper_count")
