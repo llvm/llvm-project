@@ -756,6 +756,16 @@ void reportVectorizationFailure(const StringRef DebugMsg,
       << "loop not vectorized: " << OREMsg);
 }
 
+void reportVectorizationInfo(const char *PassName, const StringRef Msg, const StringRef ORETag,
+                                    OptimizationRemarkEmitter *ORE,
+                                    Loop *TheLoop, Instruction *I = nullptr,
+                                    DebugLoc DL = {}) {
+  LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
+  ORE->emit(createLVAnalysis(PassName, ORETag, TheLoop,
+                             I, DL)
+            << Msg);
+}
+
 /// Report successful vectorization of the loop. In case an outer loop is
 /// vectorized, prepend "outer" to the vectorization remark.
 static void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,

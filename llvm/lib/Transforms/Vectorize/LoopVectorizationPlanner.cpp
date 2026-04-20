@@ -193,8 +193,7 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
   return MaxVF;
 }
 
-namespace llvm {
-std::optional<unsigned> getMaxVScale(const Function &F,
+std::optional<unsigned> llvm::getMaxVScale(const Function &F,
                                      const TargetTransformInfo &TTI) {
   if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
     return MaxVScale;
@@ -204,33 +203,6 @@ std::optional<unsigned> getMaxVScale(const Function &F,
 
   return std::nullopt;
 }
-
-#ifndef NDEBUG
-void debugVectorizationMessage(const StringRef Prefix, const StringRef DebugMsg,
-                               Instruction *I) {
-  dbgs() << "LV: " << Prefix << DebugMsg;
-  if (I != nullptr)
-    dbgs() << " " << *I;
-  else
-    dbgs() << '.';
-  dbgs() << '\n';
-}
-#endif
-
-void reportVectorizationInfo(const char *PassName, const StringRef Msg,
-                             const StringRef ORETag,
-                             OptimizationRemarkEmitter *ORE,
-                             const Loop *TheLoop, Instruction *I, DebugLoc DL) {
-  LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
-  BasicBlock *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
-  if (I && I->getDebugLoc())
-    DL = I->getDebugLoc();
-  else if (!DL)
-    DL = TheLoop->getStartLoc();
-  ORE->emit(OptimizationRemarkAnalysis(PassName, ORETag, DL, CodeRegion)
-            << Msg);
-}
-} // namespace llvm
 
 bool VFSelectionContext::isScalableVectorizationAllowed() {
   if (IsScalableVectorizationAllowed)
