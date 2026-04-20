@@ -647,6 +647,16 @@ void check__prefetch(void *arg1) {
 // CHECK-MSCOMPAT: call void @llvm.prefetch.p0(ptr %[[VAR0]], i32 0, i32 3, i32 1)
 // CHECK-MSCOMPAT: ret void
 
+void check__prefetch2(void *arg1) {
+  __prefetch2(arg1, 0x00);
+  __prefetch2(arg1, 0x13);
+}
+
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @check__prefetch2(ptr{{.*}}%arg1){{.*}}{
+// CHECK-MSCOMPAT: call void @llvm.aarch64.prefetch(ptr %{{.*}}, i32 0, i32 0, i32 1, i32 1)
+// CHECK-MSCOMPAT: call void @llvm.aarch64.prefetch(ptr %{{.*}}, i32 1, i32 1, i32 0, i32 1)
+// CHECK-LINUX: error: call to undeclared function '__prefetch2'
+
 
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
 // CHECK-MSCOMPAT: ![[MD3]] = !{!"sp"}

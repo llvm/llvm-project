@@ -5286,6 +5286,26 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Address, RW, Locality, Data});
   }
 
+  if (BuiltinID == AArch64::BI__prefetch2) {
+    Value *Address = EmitScalarExpr(E->getArg(0));
+    llvm::APSInt PrfOp = E->getArg(1)->EvaluateKnownConstInt(CGM.getContext());
+    // Decode 5-bit PRFM encoding: bits[4:3]=type, bits[2:1]=target,
+    // bit[0]=policy
+    //   type: PLD=0(load), PLI=1(instr), PST=2(store)
+    //   target: L1=0, L2=1, L3=2
+    //   policy: KEEP=0, STRM=1
+    uint64_t Op = PrfOp.getZExtValue();
+    uint64_t Type = (Op >> 3) & 0x3;
+    uint64_t Target = (Op >> 1) & 0x3;
+    uint64_t Policy = Op & 0x1;
+    Value *RW = ConstantInt::get(Int32Ty, Type == 2 ? 1 : 0);
+    Value *Local = ConstantInt::get(Int32Ty, Target);
+    Value *Retain = ConstantInt::get(Int32Ty, Policy == 0 ? 1 : 0);
+    Value *IsData = ConstantInt::get(Int32Ty, Type == 1 ? 0 : 1);
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_prefetch);
+    return Builder.CreateCall(F, {Address, RW, Local, Retain, IsData});
+  }
+
   if (BuiltinID == AArch64::BI__hlt) {
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_hlt);
     Builder.CreateCall(F, {EmitScalarExpr(E->getArg(0))});
