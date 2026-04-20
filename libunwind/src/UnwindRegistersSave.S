@@ -795,8 +795,9 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   stp    x20,x21, [x0, #0x0A0]
   stp    x22,x23, [x0, #0x0B0]
 #if defined(__LFI__)
-  stp    x24,xzr, [x0, #0x0C0]
-  stp    xzr,x29, [x0, #0x0E0]
+  str    x24,     [x0, #0x0C0]
+  // Skip spilling x25-x28; reserved by LFI ABI.
+  str    x29,     [x0, #0x0E8]
 #else
   stp    x24,x25, [x0, #0x0C0]
   stp    x26,x27, [x0, #0x0D0]

@@ -679,8 +679,9 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x20,x21, [x0, #0x0A0]
   ldp    x22,x23, [x0, #0x0B0]
 #if defined(__LFI__)
-  ldp    x24,xzr, [x0, #0x0C0]
-  ldp    xzr,x29, [x0, #0x0E0]
+  ldr    x24,     [x0, #0x0C0]
+  // Skip reloading x25-x28; reserved by LFI ABI.
+  ldr    x29,     [x0, #0x0E8]
 #else
   ldp    x24,x25, [x0, #0x0C0]
   ldp    x26,x27, [x0, #0x0D0]
