@@ -24912,11 +24912,11 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     return InOp;
   }
 
-  // extract_vector_elt of out-of-bounds element -> UNDEF
+  // extract_vector_elt of out-of-bounds element -> POISON
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
   if (IndexC && VecVT.isFixedLengthVector() &&
       IndexC->getAPIntValue().uge(VecVT.getVectorNumElements()))
-    return DAG.getUNDEF(ScalarVT);
+    return DAG.getPOISON(ScalarVT);
 
   // extract_vector_elt (build_vector x, y), 1 -> y
   if (((IndexC && VecOp.getOpcode() == ISD::BUILD_VECTOR) ||
