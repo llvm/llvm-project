@@ -4280,4 +4280,98 @@ TEST_F(AArch64GISelMITest, MoreElementsSelect) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+// Test that lowerIntrinsicRound with extended LLT float types doesn't crash
+// when computing the condition type (changeElementSize(1) on a float).
+TEST_F(AArch64GISelMITest, LowerIntrinsicRoundExtLLT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT::setUseExtended(true);
+
+  DefineLegalizerInfo(A, {});
+  LLT F64 = LLT::float64();
+  Register Src = MRI->createGenericVirtualRegister(F64);
+  auto Round = B.buildInstr(TargetOpcode::G_INTRINSIC_ROUND, {F64}, {Src});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*Round, 0, LLT()));
+
+  LLT::setUseExtended(false);
+}
+
+// Test that lowerFFloor with extended LLT float types doesn't crash
+// when computing the condition type (changeElementSize(1) on a float).
+TEST_F(AArch64GISelMITest, LowerFFloorExtLLT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT::setUseExtended(true);
+
+  DefineLegalizerInfo(A, {});
+  LLT F64 = LLT::float64();
+  Register Src = MRI->createGenericVirtualRegister(F64);
+  auto Floor = B.buildFFloor(F64, Src);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*Floor, 0, LLT()));
+
+  LLT::setUseExtended(false);
+}
+
+// Test that lowerFMODF with extended LLT float types doesn't crash
+// when computing the condition type (changeElementSize(1) on a float).
+TEST_F(AArch64GISelMITest, LowerFMODFExtLLT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT::setUseExtended(true);
+
+  DefineLegalizerInfo(A, {});
+  LLT F64 = LLT::float64();
+  Register Src = MRI->createGenericVirtualRegister(F64);
+  auto FMODF = B.buildInstr(TargetOpcode::G_FMODF, {F64, F64}, {Src});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*FMODF, 0, LLT()));
+
+  LLT::setUseExtended(false);
+}
+
+// Test that lowerFMinimumMaximum with extended LLT float types doesn't crash
+// when computing the condition type (changeElementSize(1) on a float).
+TEST_F(AArch64GISelMITest, LowerFMinimumExtLLT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT::setUseExtended(true);
+
+  DefineLegalizerInfo(A, {});
+  LLT F64 = LLT::float64();
+  Register Src0 = MRI->createGenericVirtualRegister(F64);
+  Register Src1 = MRI->createGenericVirtualRegister(F64);
+  auto FMin = B.buildInstr(TargetOpcode::G_FMINIMUM, {F64}, {Src0, Src1},
+                           MachineInstr::FmNoNans | MachineInstr::FmNsz);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*FMin, 0, LLT()));
+
+  LLT::setUseExtended(false);
+}
+
 } // namespace
