@@ -403,6 +403,7 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
 	def __prefetch : AArch64NoPrefixTargetLibBuiltin<"void (void const *)">;
+	def __prefetch2 : AArch64NoPrefixTargetLibBuiltin<"void (void const *, unsigned char)">;
 }
 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
