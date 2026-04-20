@@ -2226,9 +2226,15 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI_exception_info:
   case Builtin::BI__abnormal_termination:
   case Builtin::BI_abnormal_termination:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI_setjmpex:
   case Builtin::BI_setjmp:
-    return errorBuiltinNYI(*this, e, builtinID);
+    if (getTarget().getTriple().isOSMSVCRT()) {
+      cgm.errorNYI(e->getSourceRange(), "setjmp/setjmpex on MSVCRT");
+      return getUndefRValue(e->getType());
+    }
+    // Else break and this will be handled as a library call.
+    break;
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
   case Builtin::BIforward:
