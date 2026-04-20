@@ -431,12 +431,22 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
     return true;
   });
 
-  // Don't create implicit string table sections when there are no section
-  // headers and no real sections (e.g., core files with only program header
-  // content). When there are real sections, .strtab is still needed even
-  // with NoHeaders.
+  // Don't create implicit string table sections when there are no real
+  // sections (e.g., core files with only program header content). When there
+  // are real sections, .strtab is still needed even with NoHeaders.
+  // Also check that all program headers use Content (not section references),
+  // there are no symbols, and no DWARF data that would need sections.
+  bool AllPhdrsUseContent =
+      !Doc.ProgramHeaders.empty() &&
+      llvm::all_of(Doc.ProgramHeaders, [](const ELFYAML::ProgramHeader &PH) {
+        return PH.Content.has_value() || (!PH.FirstSec && !PH.LastSec);
+      });
+  bool NoSectionDataNeeded =
+      !HasRealSections && !Doc.Symbols && !Doc.DynamicSymbols && !Doc.DWARF;
   bool SuppressImplicitSections =
-      SecHdrTable && SecHdrTable->NoHeaders.value_or(false) && !HasRealSections;
+      NoSectionDataNeeded &&
+      (AllPhdrsUseContent ||
+       (SecHdrTable && SecHdrTable->NoHeaders.value_or(false)));
   if (!SuppressImplicitSections) {
     // TODO: Only create the .strtab here if any symbols have been requested.
     ImplicitSections.insert(".strtab");
@@ -476,9 +486,15 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
 
   // Insert the section header table implicitly at the end, when it is not
   // explicitly defined.
-  if (!SecHdrTable)
-    Doc.Chunks.push_back(
-        std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/true));
+  if (!SecHdrTable) {
+    auto ImplicitSHT =
+        std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/true);
+    // When all data lives in program header Content and there are no real
+    // sections, suppress section header generation.
+    if (SuppressImplicitSections)
+      ImplicitSHT->NoHeaders = true;
+    Doc.Chunks.push_back(std::move(ImplicitSHT));
+  }
 }
 
 template <class ELFT>
