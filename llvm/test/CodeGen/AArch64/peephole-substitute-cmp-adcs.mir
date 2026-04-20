@@ -33,7 +33,6 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY $x3
     ; CHECK-NEXT: [[ADDSXrr:%[0-9]+]]:gpr64 = ADDSXrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: [[ADCSXr:%[0-9]+]]:gpr64common = ADCSXr [[COPY2]], [[COPY3]], implicit-def $nzcv, implicit $nzcv
-    ; CHECK-NEXT: dead [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri killed [[ADCSXr]], 0, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -73,7 +72,6 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $w3
     ; CHECK-NEXT: [[ADDSWrr:%[0-9]+]]:gpr32 = ADDSWrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: [[ADCSWr:%[0-9]+]]:gpr32common = ADCSWr [[COPY2]], [[COPY3]], implicit-def $nzcv, implicit $nzcv
-    ; CHECK-NEXT: dead [[ADDSWri:%[0-9]+]]:gpr32 = ADDSWri killed [[ADCSWr]], 0, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -113,7 +111,6 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY $x3
     ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: [[SBCSXr:%[0-9]+]]:gpr64common = SBCSXr [[COPY2]], [[COPY3]], implicit-def $nzcv, implicit $nzcv
-    ; CHECK-NEXT: dead [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri killed [[SBCSXr]], 0, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -146,8 +143,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: [[ADDWrs:%[0-9]+]]:gpr32common = ADDWrs [[COPY]], [[COPY1]], 0
-    ; CHECK-NEXT: dead [[ADDSWri:%[0-9]+]]:gpr32 = ADDSWri killed [[ADDWrs]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ADDSWrs:%[0-9]+]]:gpr32common = ADDSWrs [[COPY]], [[COPY1]], 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -177,8 +173,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[ADDXrs:%[0-9]+]]:gpr64common = ADDXrs [[COPY]], [[COPY1]], 0
-    ; CHECK-NEXT: dead [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri killed [[ADDXrs]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ADDSXrs:%[0-9]+]]:gpr64common = ADDSXrs [[COPY]], [[COPY1]], 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -208,8 +203,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: [[SUBWrs:%[0-9]+]]:gpr32common = SUBWrs [[COPY]], [[COPY1]], 0
-    ; CHECK-NEXT: dead [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri killed [[SUBWrs]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[SUBSWrs:%[0-9]+]]:gpr32common = SUBSWrs [[COPY]], [[COPY1]], 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -239,8 +233,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[SUBXrs:%[0-9]+]]:gpr64common = SUBXrs [[COPY]], [[COPY1]], 0
-    ; CHECK-NEXT: dead [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri killed [[SUBXrs]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[SUBSXrs:%[0-9]+]]:gpr64common = SUBSXrs [[COPY]], [[COPY1]], 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -277,7 +270,6 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $w3
     ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: [[SBCSWr:%[0-9]+]]:gpr32common = SBCSWr [[COPY2]], [[COPY3]], implicit-def $nzcv, implicit $nzcv
-    ; CHECK-NEXT: dead [[ADDSWri:%[0-9]+]]:gpr32 = ADDSWri killed [[SBCSWr]], 0, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
