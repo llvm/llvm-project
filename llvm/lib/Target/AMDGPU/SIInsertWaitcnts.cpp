@@ -3067,6 +3067,8 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   unsigned OtherSize = OtherMarks.size();
   unsigned OurSize = AsyncMarks.size();
   unsigned MergeCount = std::min(OtherSize, OurSize);
+  if (MergeCount == 0)
+    return StrictDom;
   for (auto Idx : seq_inclusive<unsigned>(1, MergeCount)) {
     for (auto T : inst_counter_types(Context->MaxCounter)) {
       StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
