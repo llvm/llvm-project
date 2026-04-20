@@ -4,7 +4,7 @@
 # RUN: llc -o /dev/null %s -mtriple=aarch64 -mattr=+fuse-address \
 # RUN:   -run-pass machine-scheduler -debug-only=machine-scheduler 2>&1 \
 # RUN:   | FileCheck %s
-# RUN: llc -o /dev/null %s -mtriple=aarch64-apple-macos -mcpu=apple-m5 \
+# RUN: llc -o /dev/null %s -mtriple=aarch64-apple-macos -mcpu=apple-m4 \
 # RUN:   -run-pass machine-scheduler -debug-only=machine-scheduler 2>&1 \
 # RUN:   | FileCheck %s
 
