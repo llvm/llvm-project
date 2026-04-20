@@ -596,7 +596,7 @@ createMIRProfileLoaderPass(std::string File, std::string RemappingFile,
                            IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
 /// Creates MIR Debugify pass. \see MachineDebugify.cpp
-LLVM_ABI ModulePass *createDebugifyMachineModulePass();
+LLVM_ABI ModulePass *createDebugifyMachineModuleLegacyPass();
 
 /// Creates MIR Strip Debug pass. \see MachineStripDebug.cpp
 /// If OnlyDebugified is true then it will only strip debug info if it was

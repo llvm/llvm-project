@@ -13,8 +13,10 @@
 /// This isn't intended to have feature parity with Debugify.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -29,9 +31,10 @@
 using namespace llvm;
 
 namespace {
-bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
-                                            DIBuilder &DIB, Function &F) {
-  MachineFunction *MaybeMF = MMI.getMachineFunction(F);
+bool applyDebugifyMetadataToMachineFunction(
+    DIBuilder &DIB, Function &F,
+    llvm::function_ref<MachineFunction *(Function &)> GetMF) {
+  MachineFunction *MaybeMF = GetMF(F);
   if (!MaybeMF)
     return false;
   MachineFunction &MF = *MaybeMF;
@@ -182,7 +185,10 @@ struct DebugifyMachineModule : public ModulePass {
     return applyDebugifyMetadata(
         M, M.functions(),
         "ModuleDebugify: ", [&](DIBuilder &DIB, Function &F) -> bool {
-          return applyDebugifyMetadataToMachineFunction(MMI, DIB, F);
+          return applyDebugifyMetadataToMachineFunction(
+              DIB, F, [&MMI](Function &F) -> MachineFunction * {
+                return MMI.getMachineFunction(F);
+              });
         });
   }
 
@@ -205,6 +211,33 @@ INITIALIZE_PASS_BEGIN(DebugifyMachineModule, DEBUG_TYPE,
 INITIALIZE_PASS_END(DebugifyMachineModule, DEBUG_TYPE,
                     "Machine Debugify Module", false, false)
 
-ModulePass *llvm::createDebugifyMachineModulePass() {
+ModulePass *llvm::createDebugifyMachineModuleLegacyPass() {
   return new DebugifyMachineModule();
+}
+
+PreservedAnalyses DebugifyMachineModulePass::run(Module &M,
+                                                 ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  const bool Changed = applyDebugifyMetadata(
+      M, M.functions(),
+      "ModuleDebugify: ", [&](DIBuilder &DIB, Function &F) -> bool {
+        return applyDebugifyMetadataToMachineFunction(
+            DIB, F, [&FAM](Function &F) -> MachineFunction * {
+              MachineFunctionAnalysis::Result *MFA =
+                  FAM.getCachedResult<MachineFunctionAnalysis>(F);
+              if (MFA == nullptr) {
+                return nullptr;
+              }
+              return &MFA->getMF();
+            });
+      });
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<MachineModuleAnalysis>();
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
