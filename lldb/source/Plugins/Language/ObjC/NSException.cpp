@@ -79,19 +79,19 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
       scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
   ExecutionContextRef exe_ref = valobj.GetExecutionContextRef();
   ByteOrder byte_order = process_sp->GetByteOrder();
-  
-  auto set_sp = [&] (llvm::StringRef name, InferiorSizedWord &data_source, 
-                     ValueObjectSP *set_me_sp) {
+
+  auto set_sp = [&](llvm::StringRef name, InferiorSizedWord &data_source,
+                    ValueObjectSP *set_me_sp) {
     if (!set_me_sp)
       return;
-    if (owned_by_valobj) 
-      *set_me_sp = valobj.CreateChildValueObjectFromData(name, 
-          data_source.GetAsData(byte_order), exe_ref, voidstar);
+    if (owned_by_valobj)
+      *set_me_sp = valobj.CreateChildValueObjectFromData(
+          name, data_source.GetAsData(byte_order), exe_ref, voidstar);
     else
-      *set_me_sp = valobj.CreateValueObjectFromData(name, 
-          data_source.GetAsData(byte_order), exe_ref, voidstar);
+      *set_me_sp = valobj.CreateValueObjectFromData(
+          name, data_source.GetAsData(byte_order), exe_ref, voidstar);
   };
-  
+
   set_sp("name", name_isw, name_sp);
   set_sp("reason", reason_isw, reason_sp);
   set_sp("userInfo", userinfo_isw, userinfo_sp);

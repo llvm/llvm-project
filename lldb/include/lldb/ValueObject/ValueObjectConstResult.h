@@ -164,15 +164,15 @@ private:
 
   ValueObjectConstResult(ExecutionContextScope *exe_scope,
                          ValueObjectManager &manager, Status &&error);
-                         
-  static std::shared_ptr<ValueObjectManager> CreateManagerIfEmpty(ValueObjectManager *&manager)
-  {
+
+  static std::shared_ptr<ValueObjectManager>
+  CreateManagerIfEmpty(ValueObjectManager *&manager) {
     std::shared_ptr<ValueObjectManager> manager_sp;
     if (!manager) {
       manager_sp = ValueObjectManager::Create();
       manager = manager_sp.get();
     }
-    return manager_sp;  
+    return manager_sp;
   }
 
   ValueObject *CreateChildAtIndex(size_t idx) override {

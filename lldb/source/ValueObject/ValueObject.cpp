@@ -388,8 +388,8 @@ ValueObjectSP ValueObject::CheckValueObjectOwnership(ValueObject *child) {
       Status error = Status::FromErrorStringWithFormatv(
           "ValueObject: '{0}' not owned by its parent: '{1}'", child->GetName(),
           GetName());
-      return ValueObjectConstResult::Create(
-          target_ptr, std::move(error), this->GetManager());
+      return ValueObjectConstResult::Create(target_ptr, std::move(error),
+                                            this->GetManager());
     }
   }
   return {};
