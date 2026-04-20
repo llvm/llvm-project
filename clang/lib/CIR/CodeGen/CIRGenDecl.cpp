@@ -1086,6 +1086,11 @@ void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
   pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
 }
 
+void CIRGenFunction::pushEHDestroy(QualType::DestructionKind dtorKind,
+                                   Address addr, QualType type) {
+  pushDestroy(EHCleanup, addr, type, getDestroyer(dtorKind));
+}
+
 void CIRGenFunction::pushDestroyAndDeferDeactivation(
     QualType::DestructionKind dtorKind, Address addr, QualType type) {
   assert(dtorKind && "cannot push destructor for trivial type");

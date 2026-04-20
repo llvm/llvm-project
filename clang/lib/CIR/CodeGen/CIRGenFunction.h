@@ -1401,6 +1401,9 @@ public:
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
                    Destroyer *destroyer);
 
+  void pushEHDestroy(QualType::DestructionKind dtorKind, Address addr,
+                     QualType type);
+
   void pushLifetimeExtendedDestroy(CleanupKind kind, Address addr,
                                    QualType type, Destroyer *destroyer,
                                    bool useEHCleanupForArray);
