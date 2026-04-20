@@ -75,6 +75,10 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       Value *Acc = II->getArgOperand(0);
       Value *Vec = II->getArgOperand(1);
       unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      if (isa<ScalableVectorType>(Vec->getType())) {
+        Rdx = expandReductionViaLoop(Builder, Vec, RdxOpcode, Acc);
+        break;
+      }
       if (!FMF.allowReassoc())
         Rdx = getOrderedReduction(Builder, Acc, Vec, RdxOpcode, RK);
       else {
@@ -125,10 +129,16 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       Value *Vec = II->getArgOperand(0);
+      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      if (isa<ScalableVectorType>(Vec->getType())) {
+        Type *EltTy = Vec->getType()->getScalarType();
+        Value *Ident = getReductionIdentity(ID, EltTy, FMF);
+        Rdx = expandReductionViaLoop(Builder, Vec, RdxOpcode, Ident);
+        break;
+      }
       if (!isPowerOf2_32(
               cast<FixedVectorType>(Vec->getType())->getNumElements()))
         continue;
-      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
       Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
