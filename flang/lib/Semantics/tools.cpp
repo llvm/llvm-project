@@ -338,6 +338,10 @@ const Symbol *FindExternallyVisibleObject(
         IsPureProcedure(ultimate.owner()) && IsFunction(ultimate.owner())) {
       return &ultimate;
     }
+  } else if (IsFunctionResult(ultimate)) {
+    // A function result variable is local to its function and not an
+    // externally visible object for C1594 checks.
+    return nullptr;
   } else if (ultimate.owner().IsDerivedType()) {
     return nullptr;
   } else if (&GetProgramUnitContaining(ultimate) !=
