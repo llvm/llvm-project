@@ -20,6 +20,7 @@
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/TypeSize.h"
 
 using namespace clang;
@@ -475,10 +476,22 @@ void CIRGenModule::constructAttributeList(
       attrs.erase(cir::CIRDialect::getConvergentAttrName());
   }
 
+  // Collect non-call-site function IR attributes from declaration-specific
+  // information.
+  if (!attrOnCallSite) {
+    // These functions require the returns_twice attribute for correct
+    // codegen, but the attribute may not be added if -fno-builtin is
+    // specified. We explicitly add that attribute here.
+    static const llvm::StringSet<> returnsTwiceFn{
+        "_setjmpex", "setjmp",      "_setjmp", "vfork",
+        "sigsetjmp", "__sigsetjmp", "savectx", "getcontext"};
+    if (returnsTwiceFn.contains(name))
+      addUnitAttr(cir::CIRDialect::getReturnsTwiceAttrName());
+  }
+
   // TODO(cir): A bunch of non-call-site function IR attributes from
   // declaration-specific information, including tail calls,
-  // cmse_nonsecure_entry, additional/automatic 'returns-twice' functions,
-  // CPU-features/overrides, and hotpatch support.
+  // cmse_nonsecure_entry, CPU-features/overrides, and hotpatch support.
 
   // TODO(cir): Add loader-replaceable attribute here.
 
