@@ -311,21 +311,6 @@ define double @test_fcmp_ord_commuted_select_fabs_fcmp_one_select_var_const(doub
   ret double %sel2
 }
 
-define double @test_fcmp_uno_select_fabs_fcmp_one_select_var_var(double %x, double %y) {
-; CHECK-LABEL: @test_fcmp_uno_select_fabs_fcmp_one_select_var_var(
-; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], 0x7FF0000000000000
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
-; CHECK-NEXT:    ret double [[SEL]]
-;
-  %cmp1 = fcmp uno double %x, 0.000000e+00
-  %sel1 = select i1 %cmp1, double %y, double %x
-  %abs = call double @llvm.fabs.f64(double %sel1)
-  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
-  %sel2 = select i1 %cmp2, double %sel1, double %y
-  ret double %sel2
-}
-
 define double @test_fcmp_ord_select_fabs_fcmp_one_select_nonnan_const(double %x, double %y) {
 ; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_one_select_nonnan_const(
 ; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
@@ -382,22 +367,6 @@ define double @test_fcmp_ord_commuted_select_fabs_fcmp_one_select_sitofp_nonnan(
   %nonnan = sitofp i32 %i to double
   %cmp1 = fcmp ord double %nonnan, %x
   %sel1 = select i1 %cmp1, double %x, double %y
-  %abs = call double @llvm.fabs.f64(double %sel1)
-  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
-  %sel2 = select i1 %cmp2, double %sel1, double %y
-  ret double %sel2
-}
-
-define double @test_fcmp_uno_select_fabs_fcmp_one_select_uitofp_nonnan(double %x, double %y, i32 %i) {
-; CHECK-LABEL: @test_fcmp_uno_select_fabs_fcmp_one_select_uitofp_nonnan(
-; CHECK:         [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], 0x7FF0000000000000
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
-; CHECK-NEXT:    ret double [[SEL]]
-;
-  %nonnan = uitofp i32 %i to double
-  %cmp1 = fcmp uno double %x, %nonnan
-  %sel1 = select i1 %cmp1, double %y, double %x
   %abs = call double @llvm.fabs.f64(double %sel1)
   %cmp2 = fcmp one double %abs, 0x7FF0000000000000
   %sel2 = select i1 %cmp2, double %sel1, double %y

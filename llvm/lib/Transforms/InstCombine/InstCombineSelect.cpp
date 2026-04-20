@@ -3347,20 +3347,20 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
   return ChangedFMF ? &SI : nullptr;
 }
 
-static bool matchIsNaNTest(FCmpInst *Cmp, Value *X, bool MatchIsNaN,
-                           InstCombinerImpl &IC) {
-  FCmpInst::Predicate ExpectedPred =
-      MatchIsNaN ? FCmpInst::FCMP_UNO : FCmpInst::FCMP_ORD;
-  if (Cmp->getPredicate() != ExpectedPred)
+static bool matchIsNotNaNTest(Value *Cond, Value *X, InstCombinerImpl &IC) {
+  Instruction *CmpI;
+  Value *Cmp0, *Cmp1;
+  if (!match(Cond, m_OneUse(m_Instruction(
+                       CmpI, m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Value(Cmp0),
+                                            m_Value(Cmp1))))))
     return false;
 
-  Value *Cmp0 = Cmp->getOperand(0), *Cmp1 = Cmp->getOperand(1);
   if (Cmp0 == X && Cmp1 == X)
     return true;
 
   auto IsKnownNeverNaN = [&](Value *V) {
     return match(V, m_NonNaN()) ||
-           isKnownNeverNaN(V, IC.getSimplifyQuery().getWithInstruction(Cmp));
+           isKnownNeverNaN(V, IC.getSimplifyQuery().getWithInstruction(CmpI));
   };
 
   return (Cmp0 == X && IsKnownNeverNaN(Cmp1)) ||
@@ -3368,25 +3368,12 @@ static bool matchIsNaNTest(FCmpInst *Cmp, Value *X, bool MatchIsNaN,
 }
 
 // Match a select that returns X when X is not NaN, and Y otherwise.
-static Value *matchNaNScrubbedValue(SelectInst *SI, Value *Y,
-                                    InstCombinerImpl &IC) {
-  auto *Cmp = dyn_cast<FCmpInst>(SI->getCondition());
-  if (!Cmp || !Cmp->hasOneUse())
+static Value *matchNaNScrubbedValue(Value *V, Value *Y, InstCombinerImpl &IC) {
+  Value *Cond, *X;
+  if (!match(V, m_Select(m_Value(Cond), m_Value(X), m_Specific(Y))))
     return nullptr;
 
-  Value *X;
-  bool MatchIsNaN;
-  if (SI->getFalseValue() == Y) {
-    X = SI->getTrueValue();
-    MatchIsNaN = false;
-  } else if (SI->getTrueValue() == Y) {
-    X = SI->getFalseValue();
-    MatchIsNaN = true;
-  } else {
-    return nullptr;
-  }
-
-  return matchIsNaNTest(Cmp, X, MatchIsNaN, IC) ? X : nullptr;
+  return matchIsNotNaNTest(Cond, X, IC) ? X : nullptr;
 }
 
 // Fold a select of an ordered fcmp using fabs of a NaN-scrubbed value:
@@ -3401,9 +3388,15 @@ static Value *matchNaNScrubbedValue(SelectInst *SI, Value *Y,
 static Instruction *
 foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
                                              InstCombinerImpl &IC) {
-  auto *OuterCmp = dyn_cast<FCmpInst>(SI.getCondition());
-  if (!OuterCmp || !OuterCmp->hasOneUse() ||
-      !FCmpInst::isOrdered(OuterCmp->getPredicate()))
+  Instruction *OuterCmpI;
+  Value *Cmp0, *Cmp1;
+  if (!match(SI.getCondition(),
+             m_OneUse(m_Instruction(OuterCmpI,
+                                    m_FCmp(m_Value(Cmp0), m_Value(Cmp1))))))
+    return nullptr;
+
+  auto *OuterCmp = cast<FCmpInst>(OuterCmpI);
+  if (!FCmpInst::isOrdered(OuterCmp->getPredicate()))
     return nullptr;
 
   // The NaN path now evaluates fabs(X) instead of fabs(Y), so preserving nnan
@@ -3412,28 +3405,18 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
     return nullptr;
 
   Value *Y = SI.getFalseValue();
-  Value *X = nullptr;
-
-  auto *InnerSel = dyn_cast<SelectInst>(SI.getTrueValue());
-  if (!InnerSel)
-    return nullptr;
-
-  X = matchNaNScrubbedValue(InnerSel, Y, IC);
+  Value *InnerSel = SI.getTrueValue();
+  Value *X = matchNaNScrubbedValue(InnerSel, Y, IC);
   if (!X)
     return nullptr;
 
   bool Swapped = false;
   Value *OtherOp = nullptr;
-  auto *FAbs = dyn_cast<IntrinsicInst>(OuterCmp->getOperand(0));
-
-  if (FAbs && FAbs->hasOneUse() && FAbs->getIntrinsicID() == Intrinsic::fabs &&
-      FAbs->getArgOperand(0) == InnerSel) {
-    OtherOp = OuterCmp->getOperand(1);
-  } else if ((FAbs = dyn_cast<IntrinsicInst>(OuterCmp->getOperand(1))) &&
-             FAbs->hasOneUse() && FAbs->getIntrinsicID() == Intrinsic::fabs &&
-             FAbs->getArgOperand(0) == InnerSel) {
+  if (match(Cmp0, m_OneUse(m_FAbs(m_Specific(InnerSel))))) {
+    OtherOp = Cmp1;
+  } else if (match(Cmp1, m_OneUse(m_FAbs(m_Specific(InnerSel))))) {
     Swapped = true;
-    OtherOp = OuterCmp->getOperand(0);
+    OtherOp = Cmp0;
   } else {
     return nullptr;
   }
