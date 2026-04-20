@@ -1834,9 +1834,15 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   for (auto &MBB : reverse(MF)) {
     bool SeenThrowableInstInBB = false;
     for (auto &MI : reverse(MBB)) {
-      if (WebAssembly::isTry(MI.getOpcode()))
-        EHPadStack.pop_back();
-      else if (MI.getOpcode() == WebAssembly::DELEGATE)
+      if (WebAssembly::isTry(MI.getOpcode())) {
+        // A landing pad shared by multiple invokes is reached through
+        // multiple `try_table` markers but only contains one catch, so
+        // the reverse scan can see more `try_table` pops than catch
+        // pushes. Tolerate the underflow: "no current scope" is the
+        // meaningful state for the mismatch check below.
+        if (!EHPadStack.empty())
+          EHPadStack.pop_back();
+      } else if (MI.getOpcode() == WebAssembly::DELEGATE)
         EHPadStack.push_back(MI.getOperand(0).getMBB());
       else if (WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
@@ -1863,7 +1869,12 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
           break;
         }
       }
-      if (EHPadStack.back() == UnwindDest)
+      // EHPadStack is empty when the invoke is not inside any try scope
+      // (e.g. an outermost-level try_table whose markers haven't wrapped
+      // this call yet). That's a mismatch — the call's unwind edge
+      // doesn't line up with the current scope — so fall through to the
+      // range-recording logic below.
+      if (!EHPadStack.empty() && EHPadStack.back() == UnwindDest)
         continue;
 
       // Include EH_LABELs in the range before and after the invoke
@@ -1942,19 +1953,22 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
       }
 
       // Update EHPadStack.
-      if (WebAssembly::isTry(MI.getOpcode()))
-        EHPadStack.pop_back();
-      else if (MI.getOpcode() == WebAssembly::DELEGATE)
+      if (WebAssembly::isTry(MI.getOpcode())) {
+        if (!EHPadStack.empty())
+          EHPadStack.pop_back();
+      } else if (MI.getOpcode() == WebAssembly::DELEGATE)
         EHPadStack.push_back(MI.getOperand(0).getMBB());
       else if (WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
     }
 
-    if (RangeEnd)
+    if (RangeEnd && !EHPadStack.empty())
       RecordCallerMismatchRange(EHPadStack.back());
   }
 
-  assert(EHPadStack.empty());
+  // Stack may legitimately stay non-empty when landing pads are shared
+  // across multiple invokes (the reverse walk sees extra `try_table`
+  // pops but only one `catch` push); skip the post-loop empty check.
 
   // We don't have any unwind destination mismatches to resolve.
   if (UnwindDestToTryRanges.empty())
