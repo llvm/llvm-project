@@ -266,7 +266,8 @@ Error replayKernel() {
     uint64_t Size = *((const uint64_t *)(BufferPtr));
     BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint64_t));
     Global.Size = Size;
-    Global.SymbolName = const_cast<char*>(static_cast<const char*>(BufferPtr));
+    Global.SymbolName =
+        const_cast<char *>(static_cast<const char *>(BufferPtr));
     BufferPtr = utils::advancePtr(BufferPtr, NameSize);
     Global.AuxAddr = const_cast<void *>(BufferPtr);
     BufferPtr = utils::advancePtr(BufferPtr, Size);
@@ -316,7 +317,8 @@ Error replayKernel() {
   KernelReplayOutcomeTy Outcome;
   Rc = __tgt_target_kernel_replay(
       /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
-      const_cast<char *>(RecordInputBuffer->getBufferStart()), RecordInputBuffer->getBufferSize(),
+      const_cast<char *>(RecordInputBuffer->getBufferStart()),
+      RecordInputBuffer->getBufferSize(),
       NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
       LoopTripCount, &Outcome);
