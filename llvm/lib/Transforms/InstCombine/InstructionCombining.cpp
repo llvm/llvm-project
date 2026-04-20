@@ -5360,8 +5360,22 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
     Changed = true;
   }
 
-  Changed |= Op->replaceUsesWithIf(
-      &FI, [&](Use &U) -> bool { return DT.dominates(&FI, U); });
+  SmallVector<User *> Users;
+  Changed |= Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
+    if (!DT.dominates(&FI, U))
+      return false;
+
+    Users.push_back(U.getUser());
+    return true;
+  });
+
+  for (auto *U : Users) {
+    for (auto &AssumeVH : AC.assumptionsFor(U)) {
+      if (!AssumeVH)
+        continue;
+      AC.updateAffectedValues(cast<AssumeInst>(AssumeVH));
+    }
+  }
 
   return Changed;
 }
