@@ -48,6 +48,7 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
+        "cross-project-tests",
     },
     "lld": {"bolt", "cross-project-tests"},
     "clang": {"clang-tools-extra", "cross-project-tests", "lldb"},
@@ -94,7 +95,6 @@ DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
 }
 
 EXCLUDE_LINUX = {
-    "cross-project-tests",  # TODO(issues/132796): Tests are failing.
     "openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
 }
 
@@ -153,7 +153,7 @@ PROJECT_CHECK_TARGETS = {
     "flang": "check-flang",
     "flang-rt": "check-flang-rt",
     "libc": "check-libc",
-    "libclc": "check-libclc-amdgcn-amd-amdhsa-llvm",
+    "libclc": "check-libclc",
     "lld": "check-lld",
     "lldb": "check-lldb",
     "mlir": "check-mlir",

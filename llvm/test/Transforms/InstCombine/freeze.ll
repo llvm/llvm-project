@@ -1721,6 +1721,18 @@ bb.13:                                             ; preds = %bb.8, %bb.2
   br label %bb.2
 }
 
+define float @freeze_fabs_nofpclass(float %a) {
+; CHECK-LABEL: define float @freeze_fabs_nofpclass(
+; CHECK-SAME: float [[A:%.*]]) {
+; CHECK-NEXT:    [[A_FR:%.*]] = freeze float [[A]]
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.fabs.f32(float [[A_FR]])
+; CHECK-NEXT:    ret float [[X]]
+;
+  %x = call nofpclass(nan) float @llvm.fabs.f32(float %a)
+  %x.fr = freeze float %x
+  ret float %x.fr
+}
+
 !0 = !{}
 !1 = !{i64 4}
 !2 = !{i32 0, i32 100}

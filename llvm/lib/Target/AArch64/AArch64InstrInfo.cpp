@@ -151,7 +151,8 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
 
   // LFI rewriter expansions that supersede normal sizing.
-  if (Subtarget.isLFI())
+  const auto &STI = MF->getSubtarget<AArch64Subtarget>();
+  if (STI.isLFI())
     if (auto Size = getLFIInstSizeInBytes(MI))
       return *Size;
 
@@ -162,7 +163,6 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (!MFI->shouldSignReturnAddress(*MF))
       return NumBytes;
 
-    const auto &STI = MF->getSubtarget<AArch64Subtarget>();
     auto Method = STI.getAuthenticatedLRCheckMethod(*MF);
     NumBytes += AArch64PAuth::getCheckerSizeInBytes(Method);
     return NumBytes;

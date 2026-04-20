@@ -979,6 +979,110 @@ bool RegBankLegalizeHelper::lowerExtrVecEltTo32(MachineInstr &MI) {
   return true;
 }
 
+bool RegBankLegalizeHelper::lowerInsVecEltToSel(MachineInstr &MI) {
+  // Lower insert vector element to a compare-select chain:
+  //   for i in 0..N-1:
+  //     result[i] = (idx == i) ? elt : srcVec[i]
+  //   dst = merge(result[0..N-1])
+  //
+  // VGPR B64 requires splitting to lo/hi s32 pairs since there is no
+  // v_cndmask_b64. SGPR B64/B32 and VGPR B32 can be handled natively.
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register Elt = MI.getOperand(2).getReg();
+  Register Idx = MI.getOperand(3).getReg();
+
+  LLT VecTy = MRI.getType(Src);
+  LLT ScalarTy = VecTy.getScalarType();
+  unsigned NumElts = VecTy.getNumElements();
+  const RegisterBank *SrcRB = MRI.getRegBank(Src);
+  bool IsSGPR = (SrcRB == SgprRB);
+  SmallVector<Register, 16> Selects;
+
+  if (!IsSGPR && ScalarTy.getSizeInBits() == 64) {
+    // VGPR B64: split to 32-bit lo/hi since there is no v_cndmask_b64.
+    auto Unmerge = B.buildUnmerge(VgprRB_S32, Src);
+    auto EltUnmerge = B.buildUnmerge(VgprRB_S32, Elt);
+    Register EltLo = EltUnmerge.getReg(0);
+    Register EltHi = EltUnmerge.getReg(1);
+    for (unsigned I = 0; I < NumElts; ++I) {
+      auto IdxConst = B.buildConstant(VgprRB_S32, I);
+      auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, VccRB_S1, Idx, IdxConst);
+      Selects.push_back(
+          B.buildSelect(VgprRB_S32, Cmp, EltLo, Unmerge.getReg(2 * I))
+              .getReg(0));
+      Selects.push_back(
+          B.buildSelect(VgprRB_S32, Cmp, EltHi, Unmerge.getReg(2 * I + 1))
+              .getReg(0));
+    }
+    LLT Vec32Ty = LLT::fixed_vector(2 * NumElts, 32);
+    auto Vec32 = B.buildBuildVector({VgprRB, Vec32Ty}, Selects);
+    B.buildBitcast(Dst, Vec32);
+  } else if (ScalarTy.getSizeInBits() == 32 || ScalarTy.getSizeInBits() == 64) {
+    // B32 (any bank) and SGPR B64: element-wise select at native width.
+    MachineRegisterInfo::VRegAttrs SrcRB_EltTy = {SrcRB, ScalarTy};
+    MachineRegisterInfo::VRegAttrs CmpTy = IsSGPR ? SgprRB_S32 : VccRB_S1;
+    auto Unmerge = B.buildUnmerge(SrcRB_EltTy, Src);
+    for (unsigned I = 0; I < NumElts; ++I) {
+      auto IdxConst = B.buildConstant(SgprRB_S32, I);
+      auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, CmpTy, Idx, IdxConst);
+      Selects.push_back(
+          B.buildSelect(SrcRB_EltTy, Cmp, Elt, Unmerge.getReg(I)).getReg(0));
+    }
+    B.buildMergeLikeInstr(Dst, Selects);
+  } else {
+    reportGISelFailure(
+        MF, MORE, "amdgpu-regbanklegalize",
+        "AMDGPU RegBankLegalize: InsVecEltToSel unsupported element type", MI);
+    return false;
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RegBankLegalizeHelper::lowerInsVecEltTo32(MachineInstr &MI) {
+  // Reduce a 64-bit element insert to two 32-bit inserts:
+  //   vec32 = bitcast <N x s64> to <2N x s32>
+  //   lo, hi = unmerge elt
+  //   vec32[idx * 2] = lo
+  //   vec32[idx * 2 + 1] = hi
+  //   dst = bitcast <2N x s32> to <N x s64>
+  //
+  // When the index is uniform, all lanes insert at the same position, so we
+  // can split the s64 insert into two s32 inserts which lower to MOVREL/GPRIDX.
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register Elt = MI.getOperand(2).getReg();
+  Register Idx = MI.getOperand(3).getReg();
+
+  LLT SrcTy = MRI.getType(Src);
+  LLT Vec32Ty = LLT::fixed_vector(2 * SrcTy.getNumElements(), 32);
+
+  assert(MRI.getRegBank(Src) == VgprRB && MRI.getRegBank(Idx) == SgprRB &&
+         "expected VGPR src and SGPR idx");
+
+  MachineRegisterInfo::VRegAttrs VgprRB_Vec32Ty = {VgprRB, Vec32Ty};
+
+  auto CastSrc = B.buildBitcast(VgprRB_Vec32Ty, Src);
+  auto EltUnmerge = B.buildUnmerge(VgprRB_S32, Elt);
+
+  // Calculate new Lo and Hi indices
+  auto One = B.buildConstant(SgprRB_S32, 1);
+  auto IdxLo = B.buildShl(SgprRB_S32, Idx, One);
+  auto IdxHi = B.buildAdd(SgprRB_S32, IdxLo, One);
+
+  auto InsLo = B.buildInsertVectorElement(VgprRB_Vec32Ty, CastSrc,
+                                          EltUnmerge.getReg(0), IdxLo);
+  auto InsHi = B.buildInsertVectorElement(VgprRB_Vec32Ty, InsLo,
+                                          EltUnmerge.getReg(1), IdxHi);
+
+  B.buildBitcast(Dst, InsHi);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RegBankLegalizeHelper::lower(MachineInstr &MI,
                                   const RegBankLLTMapping &Mapping,
                                   WaterfallInfo &WFI) {
@@ -1257,6 +1361,10 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerExtrVecEltToSel(MI);
   case ExtrVecEltTo32:
     return lowerExtrVecEltTo32(MI);
+  case InsVecEltToSel:
+    return lowerInsVecEltToSel(MI);
+  case InsVecEltTo32:
+    return lowerInsVecEltTo32(MI);
   }
 
   if (!WFI.SgprWaterfallOperandRegs.empty()) {
@@ -1333,6 +1441,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
     return LLT::fixed_vector(4, 16);
   case SgprV4S32:
   case SgprV4S32_WF:
+  case SgprV4S32_ReadFirstLane:
   case VgprV4S32:
   case UniInVgprV4S32:
     return LLT::fixed_vector(4, 32);
@@ -1341,6 +1450,12 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case VgprV2S64:
   case UniInVgprV2S64:
     return LLT::fixed_vector(2, 64);
+  case VgprV6S32:
+    return LLT::fixed_vector(6, 32);
+  case VgprV32S16:
+    return LLT::fixed_vector(32, 16);
+  case VgprV32S32:
+    return LLT::fixed_vector(32, 32);
   default:
     return LLT();
   }
@@ -1454,6 +1569,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprV2S32:
   case SgprV4S32:
   case SgprV4S32_WF:
+  case SgprV4S32_ReadFirstLane:
   case SgprB32:
   case SgprB64:
   case SgprB96:
@@ -1501,7 +1617,9 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprV3S32:
   case VgprV4S16:
   case VgprV4S32:
+  case VgprV6S32:
   case VgprV8S32:
+  case VgprV32S16:
   case VgprB32:
   case VgprB64:
   case VgprB96:
@@ -1565,7 +1683,9 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprV3S32:
     case VgprV4S16:
     case VgprV4S32:
-    case VgprV8S32: {
+    case VgprV6S32:
+    case VgprV8S32:
+    case VgprV32S16: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
       break;
@@ -1758,7 +1878,10 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprV3S32:
     case VgprV4S16:
     case VgprV4S32:
-    case VgprV8S32: {
+    case VgprV6S32:
+    case VgprV8S32:
+    case VgprV32S16:
+    case VgprV32S32: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB != VgprRB) {
         auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
@@ -1825,6 +1948,16 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case SgprB32_ReadFirstLane:
     case SgprB64_ReadFirstLane: {
       assert(Ty == getBTyFromID(MethodIDs[i], Ty));
+      if (RB == SgprRB)
+        break;
+      assert(RB == VgprRB);
+      Register NewSGPR = MRI.createVirtualRegister({SgprRB, Ty});
+      buildReadFirstLane(B, NewSGPR, Op.getReg(), RBI);
+      Op.setReg(NewSGPR);
+      break;
+    }
+    case SgprV4S32_ReadFirstLane: {
+      assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB == SgprRB)
         break;
       assert(RB == VgprRB);
