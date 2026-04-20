@@ -925,9 +925,8 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   // be computed as tp - 2 * sizeof(void*). See MaskRay, “All about
   // thread-local storage” (RISC-V/glibc section) and glibc's RISC-V
   // TLS port (__tls_get_addr / THREAD_DTV).
-  if (triple.isRISCV()) {
+  if (triple.isRISCV())
     dtv_ptr = tp - 2 * triple.getArchPointerBitWidth() / 8;
-  }
 
   addr_t dtv = (dtv_ptr != LLDB_INVALID_ADDRESS) ? ReadPointer(dtv_ptr)
                                                  : LLDB_INVALID_ADDRESS;
