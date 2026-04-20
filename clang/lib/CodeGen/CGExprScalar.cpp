@@ -6419,8 +6419,10 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
 
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
-  // Common case: if the total offset is zero, don't emit a check.
-  if (EvaluatedGEP.TotalOffset == Zero)
+  // Common case: if the total offset is zero and has not overflowed, don't emit
+  // a check.
+  if (EvaluatedGEP.TotalOffset == Zero &&
+      EvaluatedGEP.OffsetOverflows == Builder.getFalse())
     return GEPVal;
 
   // Now that we've computed the total offset, add it to the base pointer (with
