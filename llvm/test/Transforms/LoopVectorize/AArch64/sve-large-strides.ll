@@ -1,5 +1,5 @@
 ; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -passes=loop-vectorize,dce,instcombine -S \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue <%s | FileCheck %s
+; RUN:   -tail-folding-policy=dont-fold-tail <%s | FileCheck %s
 
 define void @stride7_i32(ptr noalias nocapture %dst, i64 %n) #0 {
 ; CHECK-LABEL: @stride7_i32(
