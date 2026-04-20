@@ -16,7 +16,7 @@ volatile int g_helper_count = 0;
 volatile bool g_stop = false;
 
 void helper_thread_func() {
-  set_thread_name("always-run-helper");
+  set_thread_name("always-run");
   while (!g_stop) {
     g_helper_count++;
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
