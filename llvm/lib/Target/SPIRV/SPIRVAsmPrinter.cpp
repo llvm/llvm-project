@@ -140,6 +140,7 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
 // Any cleanup actions with the Module after we don't care about its content
 // anymore.
 void SPIRVAsmPrinter::cleanUp(Module &M) {
+  clearCachedSPIRVModuleAnalysis(M);
   // Verifier disallows uses of intrinsic global variables.
   for (StringRef GVName :
        {"llvm.global_ctors", "llvm.global_dtors", "llvm.used"}) {
@@ -819,7 +820,12 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // Get the global subtarget to output module-level info.
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
   TII = ST->getInstrInfo();
-  MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
+  if (!MAI) {
+    if (auto *ModuleAnalysis = getAnalysisIfAvailable<SPIRVModuleAnalysis>())
+      MAI = &ModuleAnalysis->MAI;
+    else if (M)
+      MAI = getCachedSPIRVModuleAnalysis(*M);
+  }
   assert(ST && TII && MAI && M && "Module analysis is required");
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension
@@ -861,6 +867,7 @@ void SPIRVAsmPrinter::outputModuleSections() {
 
 bool SPIRVAsmPrinter::doInitialization(Module &M) {
   ModuleSectionsEmitted = false;
+  MAI = nullptr;
   // We need to call the parent's one explicitly.
   return AsmPrinter::doInitialization(M);
 }
