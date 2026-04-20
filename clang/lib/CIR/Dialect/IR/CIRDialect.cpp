@@ -372,6 +372,45 @@ LogicalResult cir::BreakOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// LocalInitOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::LocalInitOp::verify() {
+  if (!getOperation()->getParentOfType<FuncOp>())
+    return emitOpError("must be inside of a function");
+
+  if (getStaticLocal() && getTls())
+    return emitOpError("cannot be both static and thread local");
+
+  if (!getStaticLocal() && !getTls())
+    return emitOpError("must be one of static and thread local");
+
+  return success();
+}
+
+LogicalResult
+cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  mlir::Operation *op =
+      symbolTable.lookupNearestSymbolFrom(*this, getGlobalNameAttr());
+  if (op == nullptr || !isa<GlobalOp>(op))
+    return emitOpError("'")
+           << getGlobalName() << "' does not reference a valid cir.global";
+
+  auto global = cast<GlobalOp>(op);
+
+  if (getTls() && !global.getTlsModel())
+    return emitOpError("access to global not marked thread local");
+
+  bool isStaticLocal = getStaticLocal();
+  bool globalIsStaticLocal = global.getStaticLocalGuard().has_value();
+
+  if (isStaticLocal != globalIsStaticLocal)
+    return emitOpError("static_local attribute mismatch");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConditionOp
 //===----------------------------------------------------------------------===//
 
@@ -1843,6 +1882,13 @@ mlir::LogicalResult cir::GlobalOp::verify() {
             .failed())
       return failure();
   }
+
+  if ((getStaticLocalGuard().has_value() || getTlsModel()) &&
+      (!getCtorRegion().empty() || !getDtorRegion().empty()))
+    return emitOpError(
+        "Cannot have a thread-local or static-local global-op "
+        "with a constructor or destructor, they require in-function "
+        "initialization via LocalInitOp");
 
   // TODO(CIR): Many other checks for properties that haven't been upstreamed
   // yet.
